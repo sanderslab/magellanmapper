@@ -16,8 +16,8 @@ from skimage import morphology
 from scipy import ndimage
 
 from traits.api import HasTraits, Range, Instance, \
-                    on_trait_change
-from traitsui.api import View, Item, VGroup
+                    on_trait_change, Button
+from traitsui.api import View, Item, HGroup, VGroup, Handler
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import \
                     MlabSceneModel
@@ -27,7 +27,7 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 filename = 'P21_L5_CONT_DENDRITE.czi'
 filename = '../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi'
 subset = 1 # arbitrary series for demonstration
-
+cube_len = 100
 def start_jvm(heap_size="8G"):
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
 
@@ -79,12 +79,11 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         print('file save time: %f' %(time() - time_start))
     return image5d
 
-def denoise(roi, segment):
+def denoise(roi):
     # saturating extreme values to maximize contrast
     vmin, vmax = stats.scoreatpercentile(roi, (0.5, 99.5))
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
-    
     
     '''
     # denoise_bilateral apparently only works on 2D images
@@ -126,19 +125,29 @@ def denoise(roi, segment):
     t6 = time()
     print('time for total variation: %f' %(t6 - t5))
     
-    # random-walker segmentation
-    labels = None
-    if segment:
-        markers = np.zeros(denoised.shape, dtype=np.uint8)
-        markers[denoised > 0.4] = 1
-        markers[denoised < 0.33] = 2
-        walker = segmentation.random_walker(denoised, markers, beta=1000., mode='cg_mg')
-        walker = morphology.remove_small_objects(walker == 1, 200)
-        labels = measure.label(walker, background=0)
-    
-    return denoised, labels
+    return denoised
 
-def plot(roi, vis, labels=None):
+def segment_roi(roi, vis):
+    print("segmenting...")
+    # random-walker segmentation
+    markers = np.zeros(roi.shape, dtype=np.uint8)
+    markers[roi > 0.4] = 1
+    markers[roi < 0.33] = 2
+    walker = segmentation.random_walker(roi, markers, beta=1000., mode='cg_mg')
+    walker = morphology.remove_small_objects(walker == 1, 200)
+    labels = measure.label(walker, background=0)
+    surf2 = vis.scene.mlab.contour3d(labels)
+
+def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
+    #offset = (10, 50, 200)
+    cube_slices = []
+    for i in range(len(offset)):
+        cube_slices.append(slice(offset[i], offset[i] + cube_len))
+    print(cube_slices)
+    roi = image5d[0, cube_slices[0], cube_slices[1], cube_slices[2], 0]
+    #roi = load_roi(image5d, cube_len, offset)
+    roi = denoise(roi)
+    
     # Plot in Mayavi
     #mlab.figure()
     vis.scene.mlab.clf()
@@ -157,55 +166,52 @@ def plot(roi, vis, labels=None):
     module_manager = curv.children[0]
     module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
     module_manager.scalar_lut_manager.lut_mode = 'RdBu'
-    if labels is not None:
-        surf2 = vis.scene.mlab.contour3d(labels)
     #mlab.show()
+    return roi
 
-def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
-    cube_len = 100
-    #offset = (10, 50, 200)
-    cube_slices = []
-    for i in range(len(offset)):
-        cube_slices.append(slice(offset[i], offset[i] + cube_len))
-    print(cube_slices)
-    roi = image5d[0, cube_slices[0], cube_slices[1], cube_slices[2], 0]
-    #roi = load_roi(image5d, cube_len, offset)
-    roi, labels = denoise(roi, False)
-    plot(roi, vis, labels)
+class VisHandler(Handler):
+    def closed(self, info, is_ok):
+        jb.kill_vm()
 
 class Visualization(HasTraits):
     x_offset = Range(0, 100,  0)
     y_offset = Range(0, 100, 0)
     z_offset = Range(0, 100, 0)
     scene = Instance(MlabSceneModel, ())
+    btn_redraw_trait = Button("Redraw")
+    btn_segment_trait = Button("Segment")
+    roi = None
     
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
-        #x, y, z, t = curve(self.meridional, self.transverse)
-        #self.plot = self.scene.mlab.plot3d(x, y, z, t, colormap='Spectral')
-        
-        show_roi(image5d, self)
+        self.roi = show_roi(image5d, self, cube_len=cube_len)
+        #segment_roi(Visualization.roi, self)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
-        #x, y, z, t = curve()
+        print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, self.z_offset))
+    
+    def _btn_redraw_trait_fired(self):
         size = sizes[subset]
         offset=(math.floor(float(self.z_offset) / 100 * size[1]), # z
                 math.floor(float(self.x_offset) / 100 * size[2]), # x
                 math.floor(float(self.y_offset) / 100 * size[3])) # y
         print(offset)
-        show_roi(image5d, self, offset=offset)
-
+        self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
+    
+    def _btn_segment_trait_fired(self):
+        #print(Visualization.roi)
+        segment_roi(self.roi, self)
 
     # the layout of the dialog created
     view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
                     height=250, width=300, show_label=False),
-                VGroup(
-                        'x_offset', 'y_offset', 'z_offset'
-                    ),
-                )
-    #jb.kill_vm()
+                VGroup('x_offset', 'y_offset', 'z_offset'),
+                HGroup(Item("btn_redraw_trait", show_label=False), 
+                       Item("btn_segment_trait", show_label=False)),
+                handler=VisHandler()
+               )
 
 start_jvm()
 names, sizes = parse_ome(filename)

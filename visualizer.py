@@ -24,14 +24,18 @@ from mayavi.tools.mlab_scene_model import \
 from mayavi.core.ui.mayavi_scene import MayaviScene
 
 
-filename = 'P21_L5_CONT_DENDRITE.czi'
-filename = '../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi'
-subset = 1 # arbitrary series for demonstration
+filename = "P21_L5_CONT_DENDRITE.czi"
+filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
+filename = "../../Downloads/Rbp4cre_4-28-16_Subset3_2.sis"
+filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
+subset = 0 # arbitrary series for demonstration
 cube_len = 100
+
 def start_jvm(heap_size="8G"):
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
 
 def parse_ome(filename):
+    time_start = time()
     metadata = bf.get_omexml_metadata(filename)
     ome = bf.OMEXML(metadata)
     count = ome.image_count
@@ -43,7 +47,23 @@ def parse_ome(filename):
         size = ( pixel.SizeT, pixel.SizeZ, pixel.SizeX, pixel.SizeY, pixel.SizeC )
         sizes.append(size)
     print("names: {}\nsizes: {}".format(names, sizes))
+    print('time for parsing OME XML: %f' %(time() - time_start))
     return names, sizes
+
+def find_sizes(filename):
+    time_start = time()
+    sizes = []
+    with bf.ImageReader(filename) as rdr:
+        format_reader = rdr.rdr
+        count = format_reader.getSeriesCount()
+        for i in range(count):
+            size = ( format_reader.getSizeT(), format_reader.getSizeZ(), 
+                     format_reader.getSizeX(), format_reader.getSizeY(), 
+                     format_reader.getSizeC() )
+            print(size)
+            sizes.append(size)
+    print('time for finding sizes: %f' %(time() - time_start))
+    return sizes
 
 def read_file(filename, save=True, load=True, z_max=-1, offset=None):
     filename_npz = filename + ".npz"
@@ -51,7 +71,7 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         try:
             time_start = time()
             output = np.load(filename_npz)
-            print('file load time: %f' %(time() - time_start))
+            print('file opening time: %f' %(time() - time_start))
             return output["image5d"]
         except IOError as err:
             print("Unable to load {}, will attempt to reload {}".format(filename_npz, filename))
@@ -62,13 +82,14 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         nz = z_max
     if offset == None:
     	offset = (0, 0, 0) # (z, x, y)
-    image5d = np.empty((nt, nz, size[2], size[3], 3), np.uint8)
+    channels = 3 if size[4] <= 3 else size[4]
+    image5d = np.empty((nt, nz, size[2], size[3], channels), np.uint8)
     #print(image5d.shape)
     time_start = time()
     for t in range(nt):
         for z in range(nz):
             print("loading planes from [{}, {}]".format(t, z))
-            image5d[t, z] = rdr.read(z=(z + offset[0]), t=t, series=idx, rescale=False)
+            image5d[t, z] = rdr.read(z=(z + offset[0]), t=t, series=subset, rescale=False)
     print('file import time: %f' %(time() - time_start))
     outfile = open(filename_npz, "wb")
     if save:
@@ -120,10 +141,9 @@ def denoise(roi):
     '''
     
     # total variation denoising
-    t5 = time()
+    time_start = time()
     denoised = restoration.denoise_tv_chambolle(denoised, weight=0.2)
-    t6 = time()
-    print('time for total variation: %f' %(t6 - t5))
+    print('time for total variation: %f' %(time() - time_start))
     
     return denoised
 
@@ -193,7 +213,7 @@ class Visualization(HasTraits):
         print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, self.z_offset))
     
     def _btn_redraw_trait_fired(self):
-        size = sizes[subset]
+        #size = sizes[subset]
         offset=(math.floor(float(self.z_offset) / 100 * size[1]), # z
                 math.floor(float(self.x_offset) / 100 * size[2]), # x
                 math.floor(float(self.y_offset) / 100 * size[3])) # y
@@ -214,7 +234,8 @@ class Visualization(HasTraits):
                )
 
 start_jvm()
-names, sizes = parse_ome(filename)
+#names, sizes = parse_ome(filename)
+sizes = find_sizes(filename)
 image5d = read_file(filename) #, z_max=cube_len)
 visualization = Visualization()
 visualization.configure_traits()

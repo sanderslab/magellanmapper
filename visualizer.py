@@ -3,6 +3,7 @@
 import javabridge as jb
 import bioformats as bf
 import numpy as np
+import math
 from time import time
 from mayavi import mlab
 from matplotlib import pyplot as plt, cm
@@ -14,8 +15,18 @@ from skimage import measure
 from skimage import morphology
 from scipy import ndimage
 
+from traits.api import HasTraits, Range, Instance, \
+                    on_trait_change
+from traitsui.api import View, Item, VGroup
+from tvtk.pyface.scene_editor import SceneEditor
+from mayavi.tools.mlab_scene_model import \
+                    MlabSceneModel
+from mayavi.core.ui.mayavi_scene import MayaviScene
+
+
 filename = 'P21_L5_CONT_DENDRITE.czi'
 filename = '../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi'
+subset = 1 # arbitrary series for demonstration
 
 def start_jvm(heap_size="8G"):
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
@@ -45,8 +56,7 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         except IOError as err:
             print("Unable to load {}, will attempt to reload {}".format(filename_npz, filename))
     rdr = bf.ImageReader(filename, perform_init=True)
-    idx = 1 # arbitrary series for demonstration
-    size = sizes[idx]
+    size = sizes[subset]
     nt, nz = size[:2]
     if z_max != -1:
         nz = z_max
@@ -69,7 +79,7 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         print('file save time: %f' %(time() - time_start))
     return image5d
 
-def denoise(roi):
+def denoise(roi, segment):
     # saturating extreme values to maximize contrast
     vmin, vmax = stats.scoreatpercentile(roi, (0.5, 99.5))
     denoised = np.clip(roi, vmin, vmax)
@@ -117,53 +127,88 @@ def denoise(roi):
     print('time for total variation: %f' %(t6 - t5))
     
     # random-walker segmentation
-    markers = np.zeros(denoised.shape, dtype=np.uint8)
-    markers[denoised > 0.4] = 1
-    markers[denoised < 0.33] = 2
-    walker = segmentation.random_walker(denoised, markers, beta=1000., mode='cg_mg')
-    walker = morphology.remove_small_objects(walker == 1, 200)
-    labels = measure.label(walker, background=0)
+    labels = None
+    if segment:
+        markers = np.zeros(denoised.shape, dtype=np.uint8)
+        markers[denoised > 0.4] = 1
+        markers[denoised < 0.33] = 2
+        walker = segmentation.random_walker(denoised, markers, beta=1000., mode='cg_mg')
+        walker = morphology.remove_small_objects(walker == 1, 200)
+        labels = measure.label(walker, background=0)
     
     return denoised, labels
 
-def plot(roi, labels):
+def plot(roi, vis, labels=None):
     # Plot in Mayavi
-    mlab.figure()
-    #print(image5d[0, :, :, :, 0])
-    #scalars = mlab.pipeline.scalar_field(image5d[0, :, :, :, 0])
-    scalars = mlab.pipeline.scalar_field(roi)
+    #mlab.figure()
+    vis.scene.mlab.clf()
+    
+    scalars = vis.scene.mlab.pipeline.scalar_field(roi)
     # appears to add some transparency to the cube
-    contour = mlab.pipeline.contour(scalars)
+    contour = vis.scene.mlab.pipeline.contour(scalars)
     # removes many more extraneous points
-    smooth = mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
+    smooth = vis.scene.mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
     smooth.filter.number_of_iterations = 400
     smooth.filter.relaxation_factor = 0.015
     # holes within cells?
-    curv = mlab.pipeline.user_defined(smooth, filter='Curvatures')
-    surf = mlab.pipeline.surface(curv)
-    surf2 = mlab.contour3d(labels)
+    curv = vis.scene.mlab.pipeline.user_defined(smooth, filter='Curvatures')
+    surf = vis.scene.mlab.pipeline.surface(curv)
     # colorizes
     module_manager = curv.children[0]
     module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
     module_manager.scalar_lut_manager.lut_mode = 'RdBu'
-    mlab.show()
+    if labels is not None:
+        surf2 = vis.scene.mlab.contour3d(labels)
+    #mlab.show()
 
+def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
+    cube_len = 100
+    #offset = (10, 50, 200)
+    cube_slices = []
+    for i in range(len(offset)):
+        cube_slices.append(slice(offset[i], offset[i] + cube_len))
+    print(cube_slices)
+    roi = image5d[0, cube_slices[0], cube_slices[1], cube_slices[2], 0]
+    #roi = load_roi(image5d, cube_len, offset)
+    roi, labels = denoise(roi, False)
+    plot(roi, vis, labels)
+
+class Visualization(HasTraits):
+    x_offset = Range(0, 100,  0)
+    y_offset = Range(0, 100, 0)
+    z_offset = Range(0, 100, 0)
+    scene = Instance(MlabSceneModel, ())
+    
+    def __init__(self):
+        # Do not forget to call the parent's __init__
+        HasTraits.__init__(self)
+        #x, y, z, t = curve(self.meridional, self.transverse)
+        #self.plot = self.scene.mlab.plot3d(x, y, z, t, colormap='Spectral')
+        
+        show_roi(image5d, self)
+    
+    @on_trait_change('x_offset,y_offset,z_offset')
+    def update_plot(self):
+        #x, y, z, t = curve()
+        size = sizes[subset]
+        offset=(math.floor(float(self.z_offset) / 100 * size[1]), # z
+                math.floor(float(self.x_offset) / 100 * size[2]), # x
+                math.floor(float(self.y_offset) / 100 * size[3])) # y
+        print(offset)
+        show_roi(image5d, self, offset=offset)
+
+
+    # the layout of the dialog created
+    view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
+                    height=250, width=300, show_label=False),
+                VGroup(
+                        'x_offset', 'y_offset', 'z_offset'
+                    ),
+                )
+    #jb.kill_vm()
 
 start_jvm()
 names, sizes = parse_ome(filename)
-
-cube_len = 100
-offset = (0, 0, 0)
-#offset = (10, 50, 200)
 image5d = read_file(filename) #, z_max=cube_len)
-cube_slices = []
-for i in range(3):
-    cube_slices.append(slice(offset[i], offset[i] + cube_len))
-roi = image5d[0, cube_slices[0], cube_slices[1], cube_slices[2], 0]
-roi, labels = denoise(roi)
-plot(roi, labels)
-
-
-#mlab.points3d(np.array(range(size[2])), np.array(range(size[3])), np.array(range(nz)), image5d[0, :, :, :, 0])
-
-jb.kill_vm()
+visualization = Visualization()
+visualization.configure_traits()

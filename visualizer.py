@@ -120,9 +120,7 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
             output = np.load(filename_npz)
             print('file opening time: %f' %(time() - time_start))
             image5d = output["image5d"]
-            size = image5d.shape
-            print(size)
-            return image5d, size
+            return image5d
         except IOError as err:
             print("Unable to load {}, will attempt to reload {}".format(filename_npz, filename))
     sizes = find_sizes(filename)
@@ -149,7 +147,7 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         np.savez(outfile, image5d=image5d)
         outfile.close()
         print('file save time: %f' %(time() - time_start))
-    return image5d, size
+    return image5d
 
 def denoise(roi):
     """Denoises an image.
@@ -316,8 +314,8 @@ class Visualization(HasTraits):
         print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, self.z_offset))
     
     def _btn_redraw_trait_fired(self):
-        #size = sizes[subset]
         # find offset using slider values as selected percentage
+        size = image5d.shape
         z = math.floor(float(self.z_offset) / 100 * size[1])
         x = math.floor(float(self.x_offset) / 100 * size[2])
         y = math.floor(float(self.y_offset) / 100 * size[3])
@@ -340,18 +338,25 @@ class Visualization(HasTraits):
         segment_roi(self.roi, self)
 
     # the layout of the dialog created
-    view = View(Item('scene', editor=SceneEditor(scene_class=MayaviScene),
-                    height=250, width=300, show_label=False),
-                VGroup('x_offset', 'y_offset', 'z_offset'),
-                HGroup(Item("btn_redraw_trait", show_label=False), 
-                       Item("btn_segment_trait", show_label=False)),
-                handler=VisHandler()
-               )
+    view = View(
+        Item(
+            'scene', 
+            editor=SceneEditor(scene_class=MayaviScene),
+            height=250, width=300, show_label=False
+        ),
+        VGroup('x_offset', 'y_offset', 'z_offset'),
+        HGroup(
+            Item("btn_redraw_trait", show_label=False), 
+            Item("btn_segment_trait", show_label=False)
+        ),
+        handler=VisHandler(),
+        title = "clrbrain"
+    )
 
 # loads the image and GUI
 start_jvm()
 #names, sizes = parse_ome(filename)
 #sizes = find_sizes(filename)
-image5d, size = read_file(filename) #, z_max=cube_len)
+image5d = read_file(filename) #, z_max=cube_len)
 visualization = Visualization()
 visualization.configure_traits()

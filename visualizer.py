@@ -1,4 +1,5 @@
 #!/bin/bash
+# Author: David Young, 2017
 
 import javabridge as jb
 import bioformats as bf
@@ -33,9 +34,24 @@ channel = 0 # channel of interest
 cube_len = 100
 
 def start_jvm(heap_size="8G"):
+    """Starts the JVM for Python-Bioformats.
+    
+    Args:
+        heap_size: JVM heap size, defaulting to 8G.
+    """
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
 
 def parse_ome(filename):
+    """Parses metadata for image name and size information.
+    
+    Args:
+        filename: Image file, assumed to have metadata in OME XML format.
+    
+    Returns:
+        names: array of names of subsets within the file.
+        sizes: array of tuples with dimensions for each subset. Dimensions
+            will be given as (time, z, x, y, channels).
+    """
     time_start = time()
     metadata = bf.get_omexml_metadata(filename)
     ome = bf.OMEXML(metadata)
@@ -52,6 +68,15 @@ def parse_ome(filename):
     return names, sizes
 
 def find_sizes(filename):
+    """Finds image size information using the ImageReader.
+    
+    Args:
+        filename: Image file, assumed to have metadata in OME XML format.
+    
+    Returns:
+        sizes: array of tuples with dimensions for each subset. Dimensions
+            will be given as (time, z, x, y, channels).
+    """
     time_start = time()
     sizes = []
     with bf.ImageReader(filename) as rdr:
@@ -67,6 +92,27 @@ def find_sizes(filename):
     return sizes
 
 def read_file(filename, save=True, load=True, z_max=-1, offset=None):
+    """Reads in an imaging file.
+    
+    Can load the file from a saved Numpy array and also for only a subset
+    of z-planes if asked.
+    
+    Args:
+        filename: Image file, assumed to have metadata in OME XML format.
+        save: True to save the resulting Numpy array (default).
+        load: If True, attempts to load a Numpy array from the same 
+            location and name except for ".npz" appended to the end 
+            (default). The array can be accessed as "output['image5d']".
+        z_max: Number of z-planes to load, or -1 if all should be loaded
+            (default).
+        offset: Tuple of offset given as (z, x, y) from which to start
+            loading z-plane (x, y ignored for now). Defaults to 
+            (0, 0, 0).
+    
+    Returns:
+        image5d: array of image data.
+        size: tuple of dimensions given as (time, z, x, y, channels).
+    """
     filename_npz = filename + ".npz"
     if load:
         try:
@@ -106,6 +152,14 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
     return image5d, size
 
 def denoise(roi):
+    """Denoises an image.
+    
+    Args:
+        roi: Region of interest.
+    
+    Returns:
+        Denoised region of interest.
+    """
     # saturating extreme values to maximize contrast
     vmin, vmax = stats.scoreatpercentile(roi, (0.5, 99.5))
     denoised = np.clip(roi, vmin, vmax)
@@ -153,6 +207,12 @@ def denoise(roi):
     return denoised
 
 def segment_roi(roi, vis):
+    """Segments an image, drawing contours around segmented regions.
+    
+    Args:
+        roi: Region of interest to segment.
+        vis: Visualization object on which to draw the contour.
+    """
     print("segmenting...")
     # random-walker segmentation
     markers = np.zeros(roi.shape, dtype=np.uint8)
@@ -164,6 +224,22 @@ def segment_roi(roi, vis):
     surf2 = vis.scene.mlab.contour3d(labels)
 
 def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
+    """Finds and shows the region of interest.
+    
+    This region will be denoised and displayed in Mayavi.
+    
+    Args:
+        image5d: Image array.
+        vis: Visualization object on which to draw the contour. Any 
+            current image will be cleared first.
+        cube_len: Length of each side of the region of interest as a 
+            cube. Defaults to 100.
+        offset: Tuple of offset given as (z, x, y) for the region 
+            of interest. Defaults to (0, 0, 0).
+    
+    Returns:
+        The region of interest, including denoising.
+    """
     #offset = (10, 50, 200)
     cube_slices = []
     for i in range(len(offset)):
@@ -198,10 +274,29 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     return roi
 
 class VisHandler(Handler):
+    """Simple handler for Visualization object events.
+    
+    Closes the JVM when the window is closed.
+    """
     def closed(self, info, is_ok):
         jb.kill_vm()
 
 class Visualization(HasTraits):
+    """GUI for choosing a region of interest and segmenting it.
+    
+    TraitUI-based graphical interface for selecting dimensions of an
+    image to view and segment.
+    
+    Attributes:
+        x_offset: Range editor for x-offset.
+        y_offset: Range editor for y-offset.
+        z_offset: Range editor for z-offset.
+        scene: The main scene
+        btn_redraw_trait: Button editor for drawing the reiong of 
+            interest.
+        btn_segment_trait: Button editor for segmenting the ROI.
+        roi: The ROI.
+    """
     x_offset = Range(0, 100,  0)
     y_offset = Range(0, 100, 0)
     z_offset = Range(0, 100, 0)
@@ -222,9 +317,21 @@ class Visualization(HasTraits):
     
     def _btn_redraw_trait_fired(self):
         #size = sizes[subset]
-        offset=(math.floor(float(self.z_offset) / 100 * size[1]), # z
-                math.floor(float(self.x_offset) / 100 * size[2]), # x
-                math.floor(float(self.y_offset) / 100 * size[3])) # y
+        # find offset using slider values as selected percentage
+        z = math.floor(float(self.z_offset) / 100 * size[1])
+        x = math.floor(float(self.x_offset) / 100 * size[2])
+        y = math.floor(float(self.y_offset) / 100 * size[3])
+        
+        # ensure that cube dimensions don't exceed array
+        if z + cube_len > size[1]:
+            z = size[1] - cube_len
+        if x + cube_len > size[2]:
+            x = size[2] - cube_len
+        if y + cube_len > size[3]:
+            y = size[3] - cube_len
+        
+        # show updated region of interest
+        offset=(z, x, y)
         print(offset)
         self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
     
@@ -241,6 +348,7 @@ class Visualization(HasTraits):
                 handler=VisHandler()
                )
 
+# loads the image and GUI
 start_jvm()
 #names, sizes = parse_ome(filename)
 #sizes = find_sizes(filename)

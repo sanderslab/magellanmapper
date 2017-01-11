@@ -24,11 +24,12 @@ from mayavi.tools.mlab_scene_model import \
 from mayavi.core.ui.mayavi_scene import MayaviScene
 
 
-filename = "P21_L5_CONT_DENDRITE.czi"
+filename = "../../Downloads/P21_L5_CONT_DENDRITE.czi"
 filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
-filename = "../../Downloads/Rbp4cre_4-28-16_Subset3_2.sis"
-filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
+#filename = "../../Downloads/Rbp4cre_4-28-16_Subset3_2.sis"
+#filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
 subset = 0 # arbitrary series for demonstration
+channel = 0 # channel of interest
 cube_len = 100
 
 def start_jvm(heap_size="8G"):
@@ -72,9 +73,13 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
             time_start = time()
             output = np.load(filename_npz)
             print('file opening time: %f' %(time() - time_start))
-            return output["image5d"]
+            image5d = output["image5d"]
+            size = image5d.shape
+            print(size)
+            return image5d, size
         except IOError as err:
             print("Unable to load {}, will attempt to reload {}".format(filename_npz, filename))
+    sizes = find_sizes(filename)
     rdr = bf.ImageReader(filename, perform_init=True)
     size = sizes[subset]
     nt, nz = size[:2]
@@ -98,7 +103,7 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         np.savez(outfile, image5d=image5d)
         outfile.close()
         print('file save time: %f' %(time() - time_start))
-    return image5d
+    return image5d, size
 
 def denoise(roi):
     # saturating extreme values to maximize contrast
@@ -164,8 +169,8 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     for i in range(len(offset)):
         cube_slices.append(slice(offset[i], offset[i] + cube_len))
     print(cube_slices)
-    roi = image5d[0, cube_slices[0], cube_slices[1], cube_slices[2], 0]
-    #roi = load_roi(image5d, cube_len, offset)
+    roi = image5d[0, cube_slices[0], cube_slices[1], cube_slices[2], channel]
+    #roi = image5d[0, :, :, :, 1]
     roi = denoise(roi)
     
     # Plot in Mayavi
@@ -175,6 +180,8 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     scalars = vis.scene.mlab.pipeline.scalar_field(roi)
     # appears to add some transparency to the cube
     contour = vis.scene.mlab.pipeline.contour(scalars)
+    #surf = vis.scene.mlab.pipeline.surface(contour)
+    
     # removes many more extraneous points
     smooth = vis.scene.mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
     smooth.filter.number_of_iterations = 400
@@ -186,6 +193,7 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     module_manager = curv.children[0]
     module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
     module_manager.scalar_lut_manager.lut_mode = 'RdBu'
+    
     #mlab.show()
     return roi
 
@@ -235,7 +243,7 @@ class Visualization(HasTraits):
 
 start_jvm()
 #names, sizes = parse_ome(filename)
-sizes = find_sizes(filename)
-image5d = read_file(filename) #, z_max=cube_len)
+#sizes = find_sizes(filename)
+image5d, size = read_file(filename) #, z_max=cube_len)
 visualization = Visualization()
 visualization.configure_traits()

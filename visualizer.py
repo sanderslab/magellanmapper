@@ -1,6 +1,7 @@
 #!/bin/bash
 # Author: David Young, 2017
 
+import sys
 import javabridge as jb
 import bioformats as bf
 import numpy as np
@@ -17,8 +18,8 @@ from skimage import morphology
 from scipy import ndimage
 
 from traits.api import HasTraits, Range, Instance, \
-                    on_trait_change, Button
-from traitsui.api import View, Item, HGroup, VGroup, Handler
+                    on_trait_change, Button, Int
+from traitsui.api import View, Item, HGroup, VGroup, Handler, RangeEditor
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import \
                     MlabSceneModel
@@ -32,6 +33,28 @@ filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
 subset = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
 cube_len = 100
+offset = None
+
+ARG_OFFSET = "offset"
+ARG_CHANNEL = "channel"
+ARG_SUBSET = "subset"
+
+for arg in sys.argv:
+    arg_split = arg.split("=")
+    if len(arg_split) == 1:
+        print("Skipped argument: {}".format(arg_split[0]))
+    elif len(arg_split) >= 2:
+        if arg_split[0] == ARG_OFFSET:
+            offset_split = arg_split[1].split(",")
+            if len(offset_split) >= 3:
+                offset = tuple(int(i) for i in offset_split)
+                print("Set offset: {}".format(offset))
+            else:
+                print("Offset ({}) should be given as 3 values".format(arg_split[1]))
+        elif arg_split[0] == ARG_CHANNEL:
+            channel = int(arg_split[1])
+        elif arg_split[0] == ARG_SUBSET:
+            subset = int(arg_split[1])
 
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
@@ -61,7 +84,7 @@ def parse_ome(filename):
         image = ome.image(i)
         names.append(image.Name)
         pixel = image.Pixels
-        size = ( pixel.SizeT, pixel.SizeZ, pixel.SizeX, pixel.SizeY, pixel.SizeC )
+        size = (pixel.SizeT, pixel.SizeZ, pixel.SizeX, pixel.SizeY, pixel.SizeC)
         sizes.append(size)
     print("names: {}\nsizes: {}".format(names, sizes))
     print('time for parsing OME XML: %f' %(time() - time_start))
@@ -254,6 +277,9 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     scalars = vis.scene.mlab.pipeline.scalar_field(roi)
     # appears to add some transparency to the cube
     contour = vis.scene.mlab.pipeline.contour(scalars)
+    #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
+    #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
+    # TESTING: use when excluding further processing
     #surf = vis.scene.mlab.pipeline.surface(contour)
     
     # removes many more extraneous points
@@ -267,6 +293,7 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     module_manager = curv.children[0]
     module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
     module_manager.scalar_lut_manager.lut_mode = 'RdBu'
+    
     
     #mlab.show()
     return roi
@@ -286,18 +313,25 @@ class Visualization(HasTraits):
     image to view and segment.
     
     Attributes:
-        x_offset: Range editor for x-offset.
-        y_offset: Range editor for y-offset.
-        z_offset: Range editor for z-offset.
+        x_low, x_high, ...: Low and high values for each offset.
+        x_offset: Integer trait for x-offset.
+        y_offset: Integer trait for y-offset.
+        z_offset: Integer trait for z-offset.
         scene: The main scene
         btn_redraw_trait: Button editor for drawing the reiong of 
             interest.
         btn_segment_trait: Button editor for segmenting the ROI.
         roi: The ROI.
     """
-    x_offset = Range(0, 100,  0)
-    y_offset = Range(0, 100, 0)
-    z_offset = Range(0, 100, 0)
+    x_low = 0
+    x_high = 100
+    y_low = 0
+    y_high = 100
+    z_low = 0
+    z_high = 100
+    x_offset = Int
+    y_offset = Int
+    z_offset = Int
     scene = Instance(MlabSceneModel, ())
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Segment")
@@ -306,8 +340,17 @@ class Visualization(HasTraits):
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
-        self.roi = show_roi(image5d, self, cube_len=cube_len)
-        #segment_roi(Visualization.roi, self)
+        size = image5d.shape
+        self.z_high = size[1]
+        self.x_high = size[2]
+        self.y_high = size[3]
+        if offset is not None:
+            self.z_offset = offset[0]
+            self.x_offset = offset[1]
+            self.y_offset = offset[2]
+            self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
+        else:
+            self.roi = show_roi(image5d, self, cube_len=cube_len)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
@@ -316,20 +359,17 @@ class Visualization(HasTraits):
     def _btn_redraw_trait_fired(self):
         # find offset using slider values as selected percentage
         size = image5d.shape
-        z = math.floor(float(self.z_offset) / 100 * size[1])
-        x = math.floor(float(self.x_offset) / 100 * size[2])
-        y = math.floor(float(self.y_offset) / 100 * size[3])
         
         # ensure that cube dimensions don't exceed array
-        if z + cube_len > size[1]:
-            z = size[1] - cube_len
-        if x + cube_len > size[2]:
-            x = size[2] - cube_len
-        if y + cube_len > size[3]:
-            y = size[3] - cube_len
+        if self.z_offset + cube_len > size[1]:
+            self.z_offset = size[1] - cube_len
+        if self.x_offset + cube_len > size[2]:
+            self.x_offset = size[2] - cube_len
+        if self.y_offset + cube_len > size[3]:
+            self.y_offset = size[3] - cube_len
         
         # show updated region of interest
-        offset=(z, x, y)
+        offset=(self.z_offset, self.x_offset, self.y_offset)
         print(offset)
         self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
     
@@ -342,9 +382,31 @@ class Visualization(HasTraits):
         Item(
             'scene', 
             editor=SceneEditor(scene_class=MayaviScene),
-            height=250, width=300, show_label=False
+            height=500, width=500, show_label=False
         ),
-        VGroup('x_offset', 'y_offset', 'z_offset'),
+        VGroup(
+            Item(
+                'x_offset',
+                editor=RangeEditor(
+                    low_name="x_low",
+                    high_name="x_high",
+                    mode="slider")
+            ),
+            Item(
+                'y_offset',
+                editor=RangeEditor(
+                    low_name="y_low",
+                    high_name="y_high",
+                    mode="slider")
+            ),
+            Item(
+                'z_offset',
+                editor=RangeEditor(
+                    low_name="z_low",
+                    high_name="z_high",
+                    mode="slider")
+            ),
+        ),
         HGroup(
             Item("btn_redraw_trait", show_label=False), 
             Item("btn_segment_trait", show_label=False)

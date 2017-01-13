@@ -32,12 +32,13 @@ filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
 #filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
 subset = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
-cube_len = 100
+cube_len = 50
 offset = None
 
 ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
 ARG_SUBSET = "subset"
+ARG_SIDE = "side"
 
 for arg in sys.argv:
     arg_split = arg.split("=")
@@ -50,11 +51,14 @@ for arg in sys.argv:
                 offset = tuple(int(i) for i in offset_split)
                 print("Set offset: {}".format(offset))
             else:
-                print("Offset ({}) should be given as 3 values".format(arg_split[1]))
+                print("Offset ({}) should be given as 3 values (x, y, z)"
+                      .format(arg_split[1]))
         elif arg_split[0] == ARG_CHANNEL:
             channel = int(arg_split[1])
         elif arg_split[0] == ARG_SUBSET:
             subset = int(arg_split[1])
+        elif arg_split[0] == ARG_SIDE:
+            cube_len = int(arg_split[1])
 
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
@@ -73,7 +77,7 @@ def parse_ome(filename):
     Returns:
         names: array of names of subsets within the file.
         sizes: array of tuples with dimensions for each subset. Dimensions
-            will be given as (time, z, x, y, channels).
+            will be given as (time, z, y, x, channels).
     """
     time_start = time()
     metadata = bf.get_omexml_metadata(filename)
@@ -84,7 +88,7 @@ def parse_ome(filename):
         image = ome.image(i)
         names.append(image.Name)
         pixel = image.Pixels
-        size = (pixel.SizeT, pixel.SizeZ, pixel.SizeX, pixel.SizeY, pixel.SizeC)
+        size = (pixel.SizeT, pixel.SizeZ, pixel.SizeY, pixel.SizeX, pixel.SizeC)
         sizes.append(size)
     print("names: {}\nsizes: {}".format(names, sizes))
     print('time for parsing OME XML: %f' %(time() - time_start))
@@ -98,7 +102,7 @@ def find_sizes(filename):
     
     Returns:
         sizes: array of tuples with dimensions for each subset. Dimensions
-            will be given as (time, z, x, y, channels).
+            will be given as (time, z, y, x, channels).
     """
     time_start = time()
     sizes = []
@@ -107,7 +111,7 @@ def find_sizes(filename):
         count = format_reader.getSeriesCount()
         for i in range(count):
             size = ( format_reader.getSizeT(), format_reader.getSizeZ(), 
-                     format_reader.getSizeX(), format_reader.getSizeY(), 
+                     format_reader.getSizeY(), format_reader.getSizeX(), 
                      format_reader.getSizeC() )
             print(size)
             sizes.append(size)
@@ -128,13 +132,13 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
             (default). The array can be accessed as "output['image5d']".
         z_max: Number of z-planes to load, or -1 if all should be loaded
             (default).
-        offset: Tuple of offset given as (z, x, y) from which to start
+        offset: Tuple of offset given as (x, y, z) from which to start
             loading z-plane (x, y ignored for now). Defaults to 
             (0, 0, 0).
     
     Returns:
         image5d: array of image data.
-        size: tuple of dimensions given as (time, z, x, y, channels).
+        size: tuple of dimensions given as (time, z, y, x, channels).
     """
     filename_npz = filename + ".npz"
     if load:
@@ -153,15 +157,14 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
     if z_max != -1:
         nz = z_max
     if offset == None:
-    	offset = (0, 0, 0) # (z, x, y)
+    	offset = (0, 0, 0) # (x, y, z)
     channels = 3 if size[4] <= 3 else size[4]
     image5d = np.empty((nt, nz, size[2], size[3], channels), np.uint8)
-    #print(image5d.shape)
     time_start = time()
     for t in range(nt):
         for z in range(nz):
             print("loading planes from [{}, {}]".format(t, z))
-            image5d[t, z] = rdr.read(z=(z + offset[0]), t=t, series=subset, rescale=False)
+            image5d[t, z] = rdr.read(z=(z + offset[2]), t=t, series=subset, rescale=False)
     print('file import time: %f' %(time() - time_start))
     outfile = open(filename_npz, "wb")
     if save:
@@ -255,33 +258,52 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
             current image will be cleared first.
         cube_len: Length of each side of the region of interest as a 
             cube. Defaults to 100.
-        offset: Tuple of offset given as (z, x, y) for the region 
+        offset: Tuple of offset given as (x, y, z) for the region 
             of interest. Defaults to (0, 0, 0).
     
     Returns:
         The region of interest, including denoising.
     """
-    #offset = (10, 50, 200)
     cube_slices = []
     for i in range(len(offset)):
         cube_slices.append(slice(offset[i], offset[i] + cube_len))
     print(cube_slices)
-    roi = image5d[0, cube_slices[0], cube_slices[1], cube_slices[2], channel]
+    
+    # cube with corner at offset, side of cube_len
+    roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0], channel]
+    
+    # thinner z
+    #roi = image5d[0, slice(offset[2], offset[2] + 20), cube_slices[1], cube_slices[0], channel]
+    
+    # thin z, entire x-y
+    #roi = image5d[0, slice(offset[2], offset[2] + 10), :, :, channel]
+    #roi = image5d[0, 0, :, :, channel]
+    
+    # thin segment along x-axis to verify x-y orientation
+    #roi = image5d[0, 0, cube_slices[1], :, channel]
+    
+    # thin segment along y-axis to verify x-y orientation
+    #roi = image5d[0, 0, :, cube_slices[0], channel]
+    
+    # entire stack
     #roi = image5d[0, :, :, :, 1]
+    
     roi = denoise(roi)
     
     # Plot in Mayavi
     #mlab.figure()
     vis.scene.mlab.clf()
     
+    #np.transpose(roi, (0, 1, 3, 2, 4))
     scalars = vis.scene.mlab.pipeline.scalar_field(roi)
     # appears to add some transparency to the cube
     contour = vis.scene.mlab.pipeline.contour(scalars)
     #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
     #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
     # TESTING: use when excluding further processing
-    #surf = vis.scene.mlab.pipeline.surface(contour)
+    surf = vis.scene.mlab.pipeline.surface(contour)
     
+    '''
     # removes many more extraneous points
     smooth = vis.scene.mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
     smooth.filter.number_of_iterations = 400
@@ -293,7 +315,7 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     module_manager = curv.children[0]
     module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
     module_manager.scalar_lut_manager.lut_mode = 'RdBu'
-    
+    '''
     
     #mlab.show()
     return roi
@@ -340,14 +362,16 @@ class Visualization(HasTraits):
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
+        # dimension max values in pixels
         size = image5d.shape
         self.z_high = size[1]
-        self.x_high = size[2]
-        self.y_high = size[3]
+        self.y_high = size[2]
+        self.x_high = size[3]
+        # apply user-defined offsets
         if offset is not None:
-            self.z_offset = offset[0]
-            self.x_offset = offset[1]
-            self.y_offset = offset[2]
+            self.x_offset = offset[0]
+            self.y_offset = offset[1]
+            self.z_offset = offset[2]
             self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
         else:
             self.roi = show_roi(image5d, self, cube_len=cube_len)
@@ -361,15 +385,15 @@ class Visualization(HasTraits):
         size = image5d.shape
         
         # ensure that cube dimensions don't exceed array
+        if self.x_offset + cube_len > size[3]:
+            self.x_offset = size[3] - cube_len
+        if self.y_offset + cube_len > size[2]:
+            self.y_offset = size[2] - cube_len
         if self.z_offset + cube_len > size[1]:
             self.z_offset = size[1] - cube_len
-        if self.x_offset + cube_len > size[2]:
-            self.x_offset = size[2] - cube_len
-        if self.y_offset + cube_len > size[3]:
-            self.y_offset = size[3] - cube_len
         
         # show updated region of interest
-        offset=(self.z_offset, self.x_offset, self.y_offset)
+        offset=(self.x_offset, self.y_offset, self.z_offset)
         print(offset)
         self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
     
@@ -412,7 +436,8 @@ class Visualization(HasTraits):
             Item("btn_segment_trait", show_label=False)
         ),
         handler=VisHandler(),
-        title = "clrbrain"
+        title = "clrbrain",
+        resizable = True
     )
 
 # loads the image and GUI

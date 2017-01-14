@@ -34,13 +34,13 @@ filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
 #filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
 subset = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
-cube_len = 50
+roi_size = [50, 50, 50]
 offset = None
 
 ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
 ARG_SUBSET = "subset"
-ARG_SIDE = "side"
+ARG_SIDES = "sides"
 
 for arg in sys.argv:
     arg_split = arg.split("=")
@@ -59,8 +59,14 @@ for arg in sys.argv:
             channel = int(arg_split[1])
         elif arg_split[0] == ARG_SUBSET:
             subset = int(arg_split[1])
-        elif arg_split[0] == ARG_SIDE:
-            cube_len = int(arg_split[1])
+        elif arg_split[0] == ARG_SIDES:
+            sides_split = arg_split[1].split(",")
+            if len(sides_split) >= 3:
+                roi_size = tuple(int(i) for i in sides_split)
+                print("Set roi_size: {}".format(roi_size))
+            else:
+                print("Sides ({}) should be given as 3 values (x, y, z)"
+                      .format(arg_split[1]))
 
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
@@ -249,7 +255,7 @@ def segment_roi(roi, vis):
     labels = measure.label(walker, background=0)
     surf2 = vis.scene.mlab.contour3d(labels)
 
-def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
+def show_roi(image5d, vis, offset=(0, 0, 0)):
     """Finds and shows the region of interest.
     
     This region will be denoised and displayed in Mayavi.
@@ -268,7 +274,7 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     """
     cube_slices = []
     for i in range(len(offset)):
-        cube_slices.append(slice(offset[i], offset[i] + cube_len))
+        cube_slices.append(slice(offset[i], offset[i] + roi_size[i]))
     print(cube_slices)
     
     # cube with corner at offset, side of cube_len
@@ -338,32 +344,36 @@ def show_subplot(gs, subploti, offset):
     z = offset[2]
     if z < 0 or z >= size[1]:
         print("skipping z-plane {}".format(z))
-        plt.imshow(np.zeros((cube_len, cube_len)))
+        plt.imshow(np.zeros(roi_size[0:2]))
     else:
         #i = subploti - 1
         #plt.imshow(image5d[0, i * nz//6, :, :, 0], cmap=cm.rainbow)
         plt.imshow(image5d[0, offset[2], 
-                           slice(offset[1], offset[1] + cube_len), 
-                           slice(offset[0], offset[0] + cube_len), channel], 
+                           slice(offset[1], offset[1] + roi_size[1]), 
+                           slice(offset[0], offset[0] + roi_size[0]), channel], 
                    cmap=cm.rainbow)
    
 def plot_2d_stack(offset):
     fig = plt.figure()
-    gs = gridspec.GridSpec(2, 7, wspace=0.0, hspace=0.0)
-    ax = plt.subplot(gs[0, :3])
+    z_planes = roi_size[2]
+    if z_planes % 2 == 0:
+        z_planes = z_planes + 1
+    gs = gridspec.GridSpec(2, z_planes, wspace=0.0, hspace=0.0)
+    half_z_planes = z_planes // 2
+    ax = plt.subplot(gs[0, :half_z_planes])
     #ax = plt.subplot2grid((2, 7), (0, 0), colspan=4)
     #ax.set_axis_off()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     plt.imshow(image5d[0, offset[2], :, :, channel], 
                cmap=cm.rainbow)
-    ax.add_patch(patches.Rectangle(offset[0:2], cube_len, cube_len, 
-                                   fill=False, edgecolor="yellow"))
+    ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
+                                   fill=False, edgecolor="black"))
     z = offset[2]
-    for i in range(7):
-    	show_subplot(gs, i, (offset[0], offset[1], z - 3 + i))
+    for i in range(z_planes):
+    	show_subplot(gs, i, (offset[0], offset[1], z - half_z_planes + i))
     img3d = mlab.screenshot()
-    ax = plt.subplot(gs[3:7])
+    ax = plt.subplot(gs[half_z_planes:z_planes])
     ax.imshow(img3d)
     _hide_axes(ax)
     gs.tight_layout(fig, pad=0)
@@ -433,7 +443,7 @@ class Visualization(HasTraits):
             print("No offset, using standard one")
             curr_offset = self._curr_offset()
             #self.roi = show_roi(image5d, self, cube_len=cube_len)
-        self.roi = show_roi(image5d, self, cube_len=cube_len, offset=curr_offset)
+        self.roi = show_roi(image5d, self, offset=curr_offset)
         #plot_2d_stack(curr_offset)
     
     @on_trait_change('x_offset,y_offset,z_offset')
@@ -443,17 +453,17 @@ class Visualization(HasTraits):
     def _btn_redraw_trait_fired(self):
         # ensure that cube dimensions don't exceed array
         size = image5d.shape
-        if self.x_offset + cube_len > size[3]:
-            self.x_offset = size[3] - cube_len
-        if self.y_offset + cube_len > size[2]:
-            self.y_offset = size[2] - cube_len
-        if self.z_offset + cube_len > size[1]:
-            self.z_offset = size[1] - cube_len
+        if self.x_offset + roi_size[0] > size[3]:
+            self.x_offset = size[3] - roi_size[0]
+        if self.y_offset + roi_size[1] > size[2]:
+            self.y_offset = size[2] - roi_size[1]
+        if self.z_offset + roi_size[2] > size[1]:
+            self.z_offset = size[1] - roi_size[2]
         
         # show updated region of interest
         offset = self._curr_offset()
         print(offset)
-        self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
+        self.roi = show_roi(image5d, self, offset=offset)
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
@@ -494,7 +504,7 @@ class Visualization(HasTraits):
                     low_name="z_low",
                     high_name="z_high",
                     mode="slider")
-            ),
+            )
         ),
         HGroup(
             Item("btn_redraw_trait", show_label=False), 

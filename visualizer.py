@@ -20,7 +20,7 @@ from skimage import morphology
 from scipy import ndimage
 
 from traits.api import HasTraits, Range, Instance, \
-                    on_trait_change, Button, Int
+                    on_trait_change, Button, Int, Array
 from traitsui.api import View, Item, HGroup, VGroup, Handler, RangeEditor
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import \
@@ -255,7 +255,44 @@ def segment_roi(roi, vis):
     labels = measure.label(walker, background=0)
     surf2 = vis.scene.mlab.contour3d(labels)
 
-def show_roi(image5d, vis, offset=(0, 0, 0)):
+def plot_3d_surface(roi, vis):
+    # Plot in Mayavi
+    #mlab.figure()
+    vis.scene.mlab.clf()
+    
+    # prepare the data source
+    #np.transpose(roi, (0, 1, 3, 2, 4))
+    scalars = vis.scene.mlab.pipeline.scalar_field(roi)
+    
+    # create the surface
+    contour = vis.scene.mlab.pipeline.contour(scalars)
+    # TESTING: use when excluding further processing
+    #surf = vis.scene.mlab.pipeline.surface(contour)
+    
+    # removes many more extraneous points
+    smooth = vis.scene.mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
+    smooth.filter.number_of_iterations = 400
+    smooth.filter.relaxation_factor = 0.015
+    # holes within cells?
+    curv = vis.scene.mlab.pipeline.user_defined(smooth, filter='Curvatures')
+    surf = vis.scene.mlab.pipeline.surface(curv)
+    # colorizes
+    module_manager = curv.children[0]
+    module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
+    module_manager.scalar_lut_manager.lut_mode = 'RdBu'
+    
+    
+    # based on Surface with contours enabled
+    #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
+    
+    # uses unique IsoSurface module but appears to have 
+    # similar output to contour_surface
+    #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
+
+def plot_3d_points(roi, vis):
+    print("plotting as 3D points")
+
+def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
     """Finds and shows the region of interest.
     
     This region will be denoised and displayed in Mayavi.
@@ -297,41 +334,8 @@ def show_roi(image5d, vis, offset=(0, 0, 0)):
     #roi = image5d[0, :, :, :, 1]
     
     roi = denoise(roi)
+    plot_3d_surface(roi, vis)
     
-    # Plot in Mayavi
-    #mlab.figure()
-    vis.scene.mlab.clf()
-    
-    # prepare the data source
-    #np.transpose(roi, (0, 1, 3, 2, 4))
-    scalars = vis.scene.mlab.pipeline.scalar_field(roi)
-    
-    # create the surface
-    contour = vis.scene.mlab.pipeline.contour(scalars)
-    # TESTING: use when excluding further processing
-    #surf = vis.scene.mlab.pipeline.surface(contour)
-    
-    # removes many more extraneous points
-    smooth = vis.scene.mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
-    smooth.filter.number_of_iterations = 400
-    smooth.filter.relaxation_factor = 0.015
-    # holes within cells?
-    curv = vis.scene.mlab.pipeline.user_defined(smooth, filter='Curvatures')
-    surf = vis.scene.mlab.pipeline.surface(curv)
-    # colorizes
-    module_manager = curv.children[0]
-    module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
-    module_manager.scalar_lut_manager.lut_mode = 'RdBu'
-    
-    
-    # based on Surface with contours enabled
-    #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
-    
-    # uses unique IsoSurface module but appears to have 
-    # similar output to contour_surface
-    #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
-    
-    #mlab.show()
     return roi
 
 def show_subplot(gs, subploti, offset):
@@ -419,6 +423,7 @@ class Visualization(HasTraits):
     x_offset = Int
     y_offset = Int
     z_offset = Int
+    roi_array = Array(Int, shape=(1, 3))
     scene = Instance(MlabSceneModel, ())
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Segment")
@@ -443,6 +448,7 @@ class Visualization(HasTraits):
             print("No offset, using standard one")
             curr_offset = self._curr_offset()
             #self.roi = show_roi(image5d, self, cube_len=cube_len)
+        self.roi_array[0] = roi_size
         self.roi = show_roi(image5d, self, offset=curr_offset)
         #plot_2d_stack(curr_offset)
     
@@ -461,9 +467,10 @@ class Visualization(HasTraits):
             self.z_offset = size[1] - roi_size[2]
         
         # show updated region of interest
-        offset = self._curr_offset()
+        curr_offset = self._curr_offset()
+        curr_roi_size = self.roi_array[0]
         print(offset)
-        self.roi = show_roi(image5d, self, offset=offset)
+        self.roi = show_roi(image5d, self, offset=curr_offset, roi_size=curr_roi_size)
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
@@ -484,22 +491,23 @@ class Visualization(HasTraits):
             height=500, width=500, show_label=False
         ),
         VGroup(
+            Item("roi_array", label="ROI dimensions (x,y,z)"),
             Item(
-                'x_offset',
+                "x_offset",
                 editor=RangeEditor(
                     low_name="x_low",
                     high_name="x_high",
                     mode="slider")
             ),
             Item(
-                'y_offset',
+                "y_offset",
                 editor=RangeEditor(
                     low_name="y_low",
                     high_name="y_high",
                     mode="slider")
             ),
             Item(
-                'z_offset',
+                "z_offset",
                 editor=RangeEditor(
                     low_name="z_low",
                     high_name="z_high",

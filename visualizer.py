@@ -9,6 +9,8 @@ import math
 from time import time
 from mayavi import mlab
 from matplotlib import pyplot as plt, cm
+import matplotlib.gridspec as gridspec
+import matplotlib.patches as patches
 from scipy import stats
 from skimage import restoration
 from skimage import exposure
@@ -276,8 +278,8 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     #roi = image5d[0, slice(offset[2], offset[2] + 20), cube_slices[1], cube_slices[0], channel]
     
     # thin z, entire x-y
-    #roi = image5d[0, slice(offset[2], offset[2] + 10), :, :, channel]
-    #roi = image5d[0, 0, :, :, channel]
+    #roi = image5d[0, slice(offset[2], offset[2] + 5), :, :, channel]
+    #roi = image5d[0, 0:5, :, :, channel]
     
     # thin segment along x-axis to verify x-y orientation
     #roi = image5d[0, 0, cube_slices[1], :, channel]
@@ -294,16 +296,15 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     #mlab.figure()
     vis.scene.mlab.clf()
     
+    # prepare the data source
     #np.transpose(roi, (0, 1, 3, 2, 4))
     scalars = vis.scene.mlab.pipeline.scalar_field(roi)
-    # appears to add some transparency to the cube
-    contour = vis.scene.mlab.pipeline.contour(scalars)
-    #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
-    #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
-    # TESTING: use when excluding further processing
-    surf = vis.scene.mlab.pipeline.surface(contour)
     
-    '''
+    # create the surface
+    contour = vis.scene.mlab.pipeline.contour(scalars)
+    # TESTING: use when excluding further processing
+    #surf = vis.scene.mlab.pipeline.surface(contour)
+    
     # removes many more extraneous points
     smooth = vis.scene.mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
     smooth.filter.number_of_iterations = 400
@@ -315,10 +316,64 @@ def show_roi(image5d, vis, cube_len=100, offset=(0, 0, 0)):
     module_manager = curv.children[0]
     module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
     module_manager.scalar_lut_manager.lut_mode = 'RdBu'
-    '''
+    
+    
+    # based on Surface with contours enabled
+    #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
+    
+    # uses unique IsoSurface module but appears to have 
+    # similar output to contour_surface
+    #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
     
     #mlab.show()
     return roi
+
+def show_subplot(gs, subploti, offset):
+    #ax = plt.subplot2grid((2, 7), (1, subploti))
+    ax = plt.subplot(gs[1, subploti])
+    #ax.set_axis_off()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    size = image5d.shape
+    z = offset[2]
+    if z < 0 or z >= size[1]:
+        print("skipping z-plane {}".format(z))
+        plt.imshow(np.zeros((cube_len, cube_len)))
+    else:
+        #i = subploti - 1
+        #plt.imshow(image5d[0, i * nz//6, :, :, 0], cmap=cm.rainbow)
+        plt.imshow(image5d[0, offset[2], 
+                           slice(offset[1], offset[1] + cube_len), 
+                           slice(offset[0], offset[0] + cube_len), channel], 
+                   cmap=cm.rainbow)
+   
+def plot_2d_stack(offset):
+    fig = plt.figure()
+    gs = gridspec.GridSpec(2, 7, wspace=0.0, hspace=0.0)
+    ax = plt.subplot(gs[0, :3])
+    #ax = plt.subplot2grid((2, 7), (0, 0), colspan=4)
+    #ax.set_axis_off()
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    plt.imshow(image5d[0, offset[2], :, :, channel], 
+               cmap=cm.rainbow)
+    ax.add_patch(patches.Rectangle(offset[0:2], cube_len, cube_len, 
+                                   fill=False, edgecolor="yellow"))
+    z = offset[2]
+    for i in range(7):
+    	show_subplot(gs, i, (offset[0], offset[1], z - 3 + i))
+    img3d = mlab.screenshot()
+    ax = plt.subplot(gs[3:7])
+    ax.imshow(img3d)
+    _hide_axes(ax)
+    gs.tight_layout(fig, pad=0)
+    #plt.tight_layout()
+    plt.ion()
+    plt.show()
+
+def _hide_axes(ax):
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
 
 class VisHandler(Handler):
     """Simple handler for Visualization object events.
@@ -357,6 +412,7 @@ class Visualization(HasTraits):
     scene = Instance(MlabSceneModel, ())
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Segment")
+    btn_2d_trait = Button("2D Plots")
     roi = None
     
     def __init__(self):
@@ -367,24 +423,26 @@ class Visualization(HasTraits):
         self.z_high = size[1]
         self.y_high = size[2]
         self.x_high = size[3]
+        curr_offset = offset
         # apply user-defined offsets
-        if offset is not None:
-            self.x_offset = offset[0]
-            self.y_offset = offset[1]
-            self.z_offset = offset[2]
-            self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
+        if curr_offset is not None:
+            self.x_offset = curr_offset[0]
+            self.y_offset = curr_offset[1]
+            self.z_offset = curr_offset[2]
         else:
-            self.roi = show_roi(image5d, self, cube_len=cube_len)
+            print("No offset, using standard one")
+            curr_offset = self._curr_offset()
+            #self.roi = show_roi(image5d, self, cube_len=cube_len)
+        self.roi = show_roi(image5d, self, cube_len=cube_len, offset=curr_offset)
+        #plot_2d_stack(curr_offset)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
         print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, self.z_offset))
     
     def _btn_redraw_trait_fired(self):
-        # find offset using slider values as selected percentage
-        size = image5d.shape
-        
         # ensure that cube dimensions don't exceed array
+        size = image5d.shape
         if self.x_offset + cube_len > size[3]:
             self.x_offset = size[3] - cube_len
         if self.y_offset + cube_len > size[2]:
@@ -393,14 +451,21 @@ class Visualization(HasTraits):
             self.z_offset = size[1] - cube_len
         
         # show updated region of interest
-        offset=(self.x_offset, self.y_offset, self.z_offset)
+        offset = self._curr_offset()
         print(offset)
         self.roi = show_roi(image5d, self, cube_len=cube_len, offset=offset)
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
         segment_roi(self.roi, self)
-
+    
+    def _btn_2d_trait_fired(self):
+        curr_offset = self._curr_offset()
+        plot_2d_stack(curr_offset)
+    
+    def _curr_offset(self):
+        return (self.x_offset, self.y_offset, self.z_offset)
+    
     # the layout of the dialog created
     view = View(
         Item(
@@ -433,7 +498,8 @@ class Visualization(HasTraits):
         ),
         HGroup(
             Item("btn_redraw_trait", show_label=False), 
-            Item("btn_segment_trait", show_label=False)
+            Item("btn_segment_trait", show_label=False), 
+            Item("btn_2d_trait", show_label=False)
         ),
         handler=VisHandler(),
         title = "clrbrain",

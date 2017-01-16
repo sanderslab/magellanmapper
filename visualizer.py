@@ -42,6 +42,20 @@ ARG_CHANNEL = "channel"
 ARG_SUBSET = "subset"
 ARG_SIDES = "sides"
 
+# pixel type enumeration based on:
+# http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html
+# http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/PixelType_8h_source.html
+PIXEL_DTYPE = {
+    0: np.int8,
+    1: np.uint8,
+    2: np.int16,
+    3: np.uint16,
+    4: np.int32,
+    5: np.uint32,
+    6: np.float32,
+    7: np.double
+}
+
 for arg in sys.argv:
     arg_split = arg.split("=")
     if len(arg_split) == 1:
@@ -118,13 +132,17 @@ def find_sizes(filename):
         format_reader = rdr.rdr
         count = format_reader.getSeriesCount()
         for i in range(count):
+            format_reader.setSeries(i)
             size = ( format_reader.getSizeT(), format_reader.getSizeZ(), 
                      format_reader.getSizeY(), format_reader.getSizeX(), 
                      format_reader.getSizeC() )
             print(size)
             sizes.append(size)
+        pixel_type = format_reader.getPixelType()
+        dtype = PIXEL_DTYPE[pixel_type]
+        print("pixel type: {}, dtype: {}".format(pixel_type, dtype))
     print('time for finding sizes: %f' %(time() - time_start))
-    return sizes
+    return sizes, dtype
 
 def read_file(filename, save=True, load=True, z_max=-1, offset=None):
     """Reads in an imaging file.
@@ -148,7 +166,7 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         image5d: array of image data.
         size: tuple of dimensions given as (time, z, y, x, channels).
     """
-    filename_npz = filename + ".npz"
+    filename_npz = filename + str(subset).zfill(5) + ".npz"
     if load:
         try:
             time_start = time()
@@ -157,8 +175,9 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
             image5d = output["image5d"]
             return image5d
         except IOError as err:
-            print("Unable to load {}, will attempt to reload {}".format(filename_npz, filename))
-    sizes = find_sizes(filename)
+            print("Unable to load {}, will attempt to reload {}"
+                  .format(filename_npz, filename))
+    sizes, dtype = find_sizes(filename)
     rdr = bf.ImageReader(filename, perform_init=True)
     size = sizes[subset]
     nt, nz = size[:2]
@@ -166,13 +185,30 @@ def read_file(filename, save=True, load=True, z_max=-1, offset=None):
         nz = z_max
     if offset == None:
     	offset = (0, 0, 0) # (x, y, z)
-    channels = 3 if size[4] <= 3 else size[4]
-    image5d = np.empty((nt, nz, size[2], size[3], channels), np.uint8)
+    if size[4] <= 1:
+        image5d = np.empty((nt, nz, size[2], size[3]), dtype)
+        load_channel = channel
+        print("setting image5d array with shape: {}".format(image5d.shape))
+    else:
+        channels = 3 if size[4] <= 3 else size[4]
+        image5d = np.empty((nt, nz, size[2], size[3], channels), dtype)
+        load_channel = None
     time_start = time()
     for t in range(nt):
+        check_dtype = True
         for z in range(nz):
             print("loading planes from [{}, {}]".format(t, z))
-            image5d[t, z] = rdr.read(z=(z + offset[2]), t=t, series=subset, rescale=False)
+            img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
+                                     series=subset, rescale=False)
+            if check_dtype:
+                if img.dtype != image5d.dtype:
+                    raise TypeError("Storing as data type {} "
+                                    "when image is in type {}"
+                                    .format(img.dtype, image5d.dtype))
+                else:
+                    print("Storing as data type {}".format(img.dtype))
+                check_dtype = False
+            image5d[t, z] = img
     print('file import time: %f' %(time() - time_start))
     outfile = open(filename_npz, "wb")
     if save:
@@ -193,7 +229,7 @@ def denoise(roi):
         Denoised region of interest.
     """
     # saturating extreme values to maximize contrast
-    vmin, vmax = stats.scoreatpercentile(roi, (0.5, 99.5))
+    vmin, vmax = stats.scoreatpercentile(roi, (10.0, 99.5))
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
     
@@ -223,12 +259,11 @@ def denoise(roi):
     '''
     # non-local means denoising, which works but is slower
     # and doesn't seem to add much
-    t3 = time()
+    time_start = time()
     denoised = restoration.denoise_nl_means(denoised,
                         patch_size=5, patch_distance=7,
-                        h=0.1, multichannel=False)
-    t4 = time()
-    print('time for non-local means denoising: %f' %(t4 - t3))
+                        h=0.12, multichannel=False)
+    print('time for non-local means denoising: %f' %(time() - time_start))
     '''
     
     # total variation denoising
@@ -291,6 +326,44 @@ def plot_3d_surface(roi, vis):
 
 def plot_3d_points(roi, vis):
     print("plotting as 3D points")
+    """
+    scalars = vis.scene.mlab.pipeline.scalar_scatter(roi)
+    vis.scene.mlab.points3d(scalars)
+    """
+    vis.scene.mlab.clf()
+    shape = roi.shape
+    z = np.ones((shape[0], shape[1] * shape[2]))
+    for i in range(shape[0]):
+        z[i] = z[i] * i
+    y = np.ones((shape[0] * shape[1], shape[2]))
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            y[i * shape[1] + j] = y[i * shape[1] + j] * j
+    x = np.ones((shape[0] * shape[1], shape[2]))
+    for i in range(shape[0] * shape[1]):
+        x[i] = np.arange(shape[2])
+        #x[i] = np.multiply(x[i], np.arrange(shape[2]))
+    x = np.reshape(x, roi.size)
+    y = np.reshape(y, roi.size)
+    z = np.reshape(z, roi.size)
+    roi_1d = np.reshape(roi, roi.size)
+    remove = np.where(roi_1d < 0.4)
+    x = np.delete(x, remove)
+    y = np.delete(y, remove)
+    z = np.delete(z, remove)
+    roi_1d = np.delete(roi_1d, remove)
+    print(roi_1d.size)
+    vis.scene.mlab.points3d(z, y, x, roi_1d, 
+                            mode="sphere", colormap="inferno", scale_mode="none",
+                            line_width=1.0, vmax=1.0, vmin=0.2, transparent=True)
+    """
+    roi_1d[roi_1d < 0.2] = 0
+    vis.scene.mlab.points3d(x, y, z, roi_1d, 
+                            mode="cube", colormap="Blues", scale_mode="none",
+                            transparent=True)
+    for i in range(roi_1d.size):
+        print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
+    """
 
 def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
     """Finds and shows the region of interest.
@@ -315,7 +388,10 @@ def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
     print(cube_slices)
     
     # cube with corner at offset, side of cube_len
-    roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0], channel]
+    if image5d.ndim >= 5:
+        roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0], channel]
+    else:
+        roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0]]
     
     # thinner z
     #roi = image5d[0, slice(offset[2], offset[2] + 20), cube_slices[1], cube_slices[0], channel]
@@ -334,11 +410,12 @@ def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
     #roi = image5d[0, :, :, :, 1]
     
     roi = denoise(roi)
-    plot_3d_surface(roi, vis)
+    #plot_3d_surface(roi, vis)
+    plot_3d_points(roi, vis)
     
     return roi
 
-def show_subplot(gs, subploti, offset):
+def show_subplot(gs, subploti, offset, roi_size, show=False):
     #ax = plt.subplot2grid((2, 7), (1, subploti))
     ax = plt.subplot(gs[1, subploti])
     #ax.set_axis_off()
@@ -352,12 +429,26 @@ def show_subplot(gs, subploti, offset):
     else:
         #i = subploti - 1
         #plt.imshow(image5d[0, i * nz//6, :, :, 0], cmap=cm.rainbow)
-        plt.imshow(image5d[0, offset[2], 
-                           slice(offset[1], offset[1] + roi_size[1]), 
-                           slice(offset[0], offset[0] + roi_size[0]), channel], 
-                   cmap=cm.rainbow)
+        if image5d.ndim >= 5:
+            roi = image5d[0, offset[2], 
+                          slice(offset[1], offset[1] + roi_size[1]), 
+                          slice(offset[0], offset[0] + roi_size[0]), channel]
+        else:
+            roi = image5d[0, offset[2], 
+                          slice(offset[1], offset[1] + roi_size[1]), 
+                          slice(offset[0], offset[0] + roi_size[0])]
+        #print(roi.dtype)
+        #roi = denoise(roi)
+        """
+        if show:
+            for i in range(roi.shape[0]):
+                print("row {}: {}".format(i, " ".join(str(s) for s in roi[i])))
+        roi_rgb = np.zeros((roi.shape[0:2], 3))
+        roi_rgb[
+        """
+        plt.imshow(roi, cmap=cm.gray)
    
-def plot_2d_stack(offset):
+def plot_2d_stack(offset, roi_size=roi_size):
     fig = plt.figure()
     z_planes = roi_size[2]
     if z_planes % 2 == 0:
@@ -369,13 +460,19 @@ def plot_2d_stack(offset):
     #ax.set_axis_off()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    plt.imshow(image5d[0, offset[2], :, :, channel], 
-               cmap=cm.rainbow)
+    if image5d.ndim >= 5:
+        plt.imshow(image5d[0, offset[2], :, :, channel], 
+                   cmap=cm.gray)
+    else:
+        plt.imshow(image5d[0, offset[2], :, :], cmap=cm.gray)
     ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
                                    fill=False, edgecolor="black"))
     z = offset[2]
     for i in range(z_planes):
-    	show_subplot(gs, i, (offset[0], offset[1], z - half_z_planes + i))
+    	show = i == z_planes // 2
+    	show_subplot(gs, i, 
+    	             (offset[0], offset[1], z - half_z_planes + i), 
+    	             roi_size, show)
     img3d = mlab.screenshot()
     ax = plt.subplot(gs[half_z_planes:z_planes])
     ax.imshow(img3d)
@@ -384,6 +481,11 @@ def plot_2d_stack(offset):
     #plt.tight_layout()
     plt.ion()
     plt.show()
+    """
+    plt.figure()
+    plt.imshow(image5d[0, offset[2], :, :],# channel], 
+               cmap=cm.gray)
+    """
 
 def _hide_axes(ax):
     ax.get_xaxis().set_visible(False)
@@ -478,7 +580,9 @@ class Visualization(HasTraits):
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()
-        plot_2d_stack(curr_offset)
+        curr_roi_size = self.roi_array[0].astype(int)
+        print(curr_roi_size)
+        plot_2d_stack(curr_offset, roi_size=curr_roi_size)
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

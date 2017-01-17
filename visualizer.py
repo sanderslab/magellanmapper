@@ -11,6 +11,7 @@ from mayavi import mlab
 from matplotlib import pyplot as plt, cm
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
+import matplotlib.pylab as pylab
 from scipy import stats
 from skimage import restoration
 from skimage import exposure
@@ -20,7 +21,7 @@ from skimage import morphology
 from scipy import ndimage
 
 from traits.api import HasTraits, Range, Instance, \
-                    on_trait_change, Button, Int, Array
+                    on_trait_change, Button, Int, Array, push_exception_handler
 from traitsui.api import View, Item, HGroup, VGroup, Handler, RangeEditor
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import \
@@ -36,6 +37,12 @@ subset = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
 roi_size = [50, 50, 50]
 offset = None
+colormap_2d = cm.Reds
+params = {'legend.fontsize': 'small',
+         'axes.labelsize': 'small',
+         'axes.titlesize':'xx-small',
+         'xtick.labelsize':'small',
+         'ytick.labelsize':'small'}
 
 ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
@@ -229,7 +236,7 @@ def denoise(roi):
         Denoised region of interest.
     """
     # saturating extreme values to maximize contrast
-    vmin, vmax = stats.scoreatpercentile(roi, (10.0, 99.5))
+    vmin, vmax = stats.scoreatpercentile(roi, (0.5, 99.5))
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
     
@@ -415,14 +422,15 @@ def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
     
     return roi
 
-def show_subplot(gs, subploti, offset, roi_size, show=False):
+def show_subplot(gs, row, col, offset, roi_size, show=False):
     #ax = plt.subplot2grid((2, 7), (1, subploti))
-    ax = plt.subplot(gs[1, subploti])
+    ax = plt.subplot(gs[row, col])
     #ax.set_axis_off()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     size = image5d.shape
     z = offset[2]
+    ax.set_title("z={}".format(z))
     if z < 0 or z >= size[1]:
         print("skipping z-plane {}".format(z))
         plt.imshow(np.zeros(roi_size[0:2]))
@@ -446,35 +454,49 @@ def show_subplot(gs, subploti, offset, roi_size, show=False):
         roi_rgb = np.zeros((roi.shape[0:2], 3))
         roi_rgb[
         """
-        plt.imshow(roi, cmap=cm.gray)
+        plt.imshow(roi, cmap=colormap_2d)
    
 def plot_2d_stack(offset, roi_size=roi_size):
     fig = plt.figure()
     z_planes = roi_size[2]
     if z_planes % 2 == 0:
         z_planes = z_planes + 1
-    gs = gridspec.GridSpec(2, z_planes, wspace=0.0, hspace=0.0)
-    half_z_planes = z_planes // 2
-    ax = plt.subplot(gs[0, :half_z_planes])
+    max_cols = 15
+    zoom_plot_rows = math.ceil(z_planes / max_cols)
+    col_remainder = z_planes % max_cols
+    zoom_plot_cols = max(col_remainder, max_cols)
+    top_rows = 4
+    gs = gridspec.GridSpec(top_rows + zoom_plot_rows, 
+                           zoom_plot_cols, 
+                           wspace=0.0, hspace=0.0)
+    half_cols = zoom_plot_cols // 2
+    ax = plt.subplot(gs[0:top_rows, :half_cols])
     #ax = plt.subplot2grid((2, 7), (0, 0), colspan=4)
     #ax.set_axis_off()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     if image5d.ndim >= 5:
         plt.imshow(image5d[0, offset[2], :, :, channel], 
-                   cmap=cm.gray)
+                   cmap=colormap_2d)
     else:
-        plt.imshow(image5d[0, offset[2], :, :], cmap=cm.gray)
+        plt.imshow(image5d[0, offset[2], :, :], cmap=colormap_2d)
     ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
                                    fill=False, edgecolor="black"))
     z = offset[2]
-    for i in range(z_planes):
-    	show = i == z_planes // 2
-    	show_subplot(gs, i, 
-    	             (offset[0], offset[1], z - half_z_planes + i), 
-    	             roi_size, show)
+    half_z_planes = z_planes // 2
+    print("rows: {}, cols: {}, remainder: {}"
+          .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
+    for i in range(zoom_plot_rows):
+    	cols = max_cols
+    	if i == zoom_plot_rows - 1 and col_remainder > 0:
+    	    cols = col_remainder
+    	for j in range(cols):
+            show = i == z_planes // 2
+            zoom_offset = (offset[0], offset[1], 
+                           z - half_z_planes + i * max_cols + j)
+            show_subplot(gs, i + top_rows, j, zoom_offset, roi_size, show)
     img3d = mlab.screenshot()
-    ax = plt.subplot(gs[half_z_planes:z_planes])
+    ax = plt.subplot(gs[0:top_rows, half_cols:zoom_plot_cols])
     ax.imshow(img3d)
     _hide_axes(ax)
     gs.tight_layout(fig, pad=0)
@@ -552,7 +574,7 @@ class Visualization(HasTraits):
             #self.roi = show_roi(image5d, self, cube_len=cube_len)
         self.roi_array[0] = roi_size
         self.roi = show_roi(image5d, self, offset=curr_offset)
-        #plot_2d_stack(curr_offset)
+        #plot_2d_stack(curr_offset, self.roi_array[0])
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
@@ -633,5 +655,7 @@ start_jvm()
 #names, sizes = parse_ome(filename)
 #sizes = find_sizes(filename)
 image5d = read_file(filename) #, z_max=cube_len)
+pylab.rcParams.update(params)
+push_exception_handler(reraise_exceptions=True)
 visualization = Visualization()
 visualization.configure_traits()

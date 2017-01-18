@@ -290,7 +290,7 @@ def segment_rw(roi, vis):
         roi: Region of interest to segment.
         vis: Visualization object on which to draw the contour.
     """
-    print("segmenting...")
+    print("Random-Walker based segmentation...")
     # random-walker segmentation
     markers = np.zeros(roi.shape, dtype=np.uint8)
     markers[roi > 0.4] = 1
@@ -312,8 +312,13 @@ def segment_rw(roi, vis):
     #surf2 = vis.scene.mlab.points3d(labels)
 
 def segment_blob(roi, vis):
-    blobs_log = blob_dog(roi, max_sigma=30, num_sigma=10, threshold=0.1)
-    # awaiting 3D blob detection
+    print("blob detection based segmentation...")
+    # use 3D blob detection from skimage v.0.13pre
+    blobs_log = blob_log(roi, max_sigma=30, num_sigma=10, threshold=0.1)
+    blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
+    print(blobs_log)
+    vis.scene.mlab.points3d(blobs_log[:, 0], blobs_log[:, 1], blobs_log[:, 2], blobs_log[:, 3],
+                            scale_mode="none")
 
 def plot_3d_surface(roi, vis):
     # Plot in Mayavi
@@ -379,7 +384,7 @@ def plot_3d_points(roi, vis):
     print(roi_1d.size)
     vis.scene.mlab.points3d(z, y, x, roi_1d, 
                             mode="sphere", colormap="inferno", scale_mode="none",
-                            line_width=1.0, vmax=1.0, vmin=0.2, transparent=True)
+                            line_width=1.0, vmax=1.0, vmin=0.2, transparent=True, opacity=0.2)
     """
     roi_1d[roi_1d < 0.2] = 0
     vis.scene.mlab.points3d(x, y, z, roi_1d, 
@@ -584,6 +589,7 @@ class Visualization(HasTraits):
         self.roi = show_roi(image5d, self, offset=curr_offset)
         #plot_2d_stack(curr_offset, self.roi_array[0])
         #segment_rw(self.roi, self)
+        segment_blob(self.roi, self)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
@@ -607,7 +613,8 @@ class Visualization(HasTraits):
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
-        segment_rw(self.roi, self)
+        #segment_rw(self.roi, self)
+        segment_blob(self.roi, self)
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()

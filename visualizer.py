@@ -18,6 +18,8 @@ from skimage import exposure
 from skimage import segmentation
 from skimage import measure
 from skimage import morphology
+from skimage import filters
+from skimage.feature import blob_dog, blob_log, blob_doh
 from scipy import ndimage
 
 from traits.api import HasTraits, Range, Instance, \
@@ -27,6 +29,7 @@ from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import \
                     MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
+from tvtk.pyface.scene_model import SceneModelError
 
 
 filename = "../../Downloads/P21_L5_CONT_DENDRITE.czi"
@@ -35,9 +38,9 @@ filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
 #filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
 subset = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
-roi_size = [50, 50, 50]
+roi_size = [100, 100, 25]
 offset = None
-colormap_2d = cm.Reds
+colormap_2d = cm.inferno
 params = {'legend.fontsize': 'small',
          'axes.labelsize': 'small',
          'axes.titlesize':'xx-small',
@@ -280,7 +283,7 @@ def denoise(roi):
     
     return denoised
 
-def segment_roi(roi, vis):
+def segment_rw(roi, vis):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -293,9 +296,24 @@ def segment_roi(roi, vis):
     markers[roi > 0.4] = 1
     markers[roi < 0.33] = 2
     walker = segmentation.random_walker(roi, markers, beta=1000., mode='cg_mg')
+    
+    # label neighboring pixels to segmented regions
     walker = morphology.remove_small_objects(walker == 1, 200)
     labels = measure.label(walker, background=0)
+    
+    '''
+    # Drawing options:
+    # 1) draw iso-surface around segmented regions
+    scalars = vis.scene.mlab.pipeline.scalar_field(labels)
+    surf2 = vis.scene.mlab.pipeline.iso_surface(scalars)
+    '''
+    # 2) draw a contour or points directly from labels
     surf2 = vis.scene.mlab.contour3d(labels)
+    #surf2 = vis.scene.mlab.points3d(labels)
+
+def segment_blob(roi, vis):
+    blobs_log = blob_dog(roi, max_sigma=30, num_sigma=10, threshold=0.1)
+    # awaiting 3D blob detection
 
 def plot_3d_surface(roi, vis):
     # Plot in Mayavi
@@ -323,14 +341,13 @@ def plot_3d_surface(roi, vis):
     module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
     module_manager.scalar_lut_manager.lut_mode = 'RdBu'
     
-    
     # based on Surface with contours enabled
     #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
     
     # uses unique IsoSurface module but appears to have 
     # similar output to contour_surface
     #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
-
+    
 def plot_3d_points(roi, vis):
     print("plotting as 3D points")
     """
@@ -400,21 +417,7 @@ def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
     else:
         roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0]]
     
-    # thinner z
-    #roi = image5d[0, slice(offset[2], offset[2] + 20), cube_slices[1], cube_slices[0], channel]
-    
-    # thin z, entire x-y
-    #roi = image5d[0, slice(offset[2], offset[2] + 5), :, :, channel]
-    #roi = image5d[0, 0:5, :, :, channel]
-    
-    # thin segment along x-axis to verify x-y orientation
-    #roi = image5d[0, 0, cube_slices[1], :, channel]
-    
-    # thin segment along y-axis to verify x-y orientation
-    #roi = image5d[0, 0, :, cube_slices[0], channel]
-    
-    # entire stack
-    #roi = image5d[0, :, :, :, 1]
+    #roi = np.swapaxes(roi, 0, 2)
     
     roi = denoise(roi)
     #plot_3d_surface(roi, vis)
@@ -476,10 +479,10 @@ def plot_2d_stack(offset, roi_size=roi_size):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     if image5d.ndim >= 5:
-        plt.imshow(image5d[0, offset[2], :, :, channel], 
-                   cmap=colormap_2d)
+        img2d = image5d[0, offset[2], :, :, channel]
     else:
-        plt.imshow(image5d[0, offset[2], :, :], cmap=colormap_2d)
+        img2d = image5d[0, offset[2], :, :]
+    plt.imshow(img2d, cmap=colormap_2d)
     ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
                                    fill=False, edgecolor="black"))
     z = offset[2]
@@ -495,19 +498,24 @@ def plot_2d_stack(offset, roi_size=roi_size):
             zoom_offset = (offset[0], offset[1], 
                            z - half_z_planes + i * max_cols + j)
             show_subplot(gs, i + top_rows, j, zoom_offset, roi_size, show)
-    img3d = mlab.screenshot()
-    ax = plt.subplot(gs[0:top_rows, half_cols:zoom_plot_cols])
-    ax.imshow(img3d)
-    _hide_axes(ax)
+    try:
+        img3d = mlab.screenshot(antialiased=True)
+        ax = plt.subplot(gs[0:top_rows, half_cols:zoom_plot_cols])
+        ax.imshow(img3d)
+        _hide_axes(ax)
+    except SceneModelError as err:
+        print("No Mayavi image to screen capture")
     gs.tight_layout(fig, pad=0)
     #plt.tight_layout()
     plt.ion()
     plt.show()
-    """
+    
+    '''
+    # demo 2D segmentation methods
     plt.figure()
-    plt.imshow(image5d[0, offset[2], :, :],# channel], 
-               cmap=cm.gray)
-    """
+    plt.imshow(img2d <= filters.threshold_otsu(img2d))
+    #plt.imshow(image5d[0, offset[2], :, :], cmap=cm.gray)
+    '''
 
 def _hide_axes(ax):
     ax.get_xaxis().set_visible(False)
@@ -575,6 +583,7 @@ class Visualization(HasTraits):
         self.roi_array[0] = roi_size
         self.roi = show_roi(image5d, self, offset=curr_offset)
         #plot_2d_stack(curr_offset, self.roi_array[0])
+        #segment_rw(self.roi, self)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
@@ -598,7 +607,7 @@ class Visualization(HasTraits):
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
-        segment_roi(self.roi, self)
+        segment_rw(self.roi, self)
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()

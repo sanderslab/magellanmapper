@@ -15,10 +15,10 @@ from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 import matplotlib.pylab as pylab
 
-import importer
-import detector
-import plot_3d
-import plot_2d
+from clrbrain import importer
+from clrbrain import detector
+from clrbrain import plot_3d
+from clrbrain import plot_2d
 
 filename = "../../Downloads/P21_L5_CONT_DENDRITE.czi"
 filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"

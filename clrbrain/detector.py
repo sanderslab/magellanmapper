@@ -9,7 +9,7 @@ from skimage import measure
 from skimage import morphology
 from skimage.feature import blob_dog, blob_log, blob_doh
 
-import plot_3d
+from clrbrain import plot_3d
 
 def segment_rw(roi, vis):
     """Segments an image, drawing contours around segmented regions.

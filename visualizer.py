@@ -239,7 +239,7 @@ def denoise(roi):
         Denoised region of interest.
     """
     # saturating extreme values to maximize contrast
-    vmin, vmax = stats.scoreatpercentile(roi, (0.5, 99.5))
+    vmin, vmax = stats.scoreatpercentile(roi, (20.0, 99.5))
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
     
@@ -291,6 +291,10 @@ def segment_rw(roi, vis):
         vis: Visualization object on which to draw the contour.
     """
     print("Random-Walker based segmentation...")
+    
+    # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
+    roi = np.transpose(roi)
+    
     # random-walker segmentation
     markers = np.zeros(roi.shape, dtype=np.uint8)
     markers[roi > 0.4] = 1
@@ -314,16 +318,24 @@ def segment_rw(roi, vis):
 def segment_blob(roi, vis):
     print("blob detection based segmentation...")
     # use 3D blob detection from skimage v.0.13pre
-    blobs_log = blob_log(roi, max_sigma=30, num_sigma=10, threshold=0.1)
+    blobs_log = blob_log(roi, min_sigma=5, max_sigma=30, num_sigma=10, threshold=0.1)
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     print(blobs_log)
-    vis.scene.mlab.points3d(blobs_log[:, 0], blobs_log[:, 1], blobs_log[:, 2], blobs_log[:, 3],
-                            scale_mode="none")
+    vis.scene.mlab.points3d(blobs_log[:, 2], blobs_log[:, 1], 
+                            blobs_log[:, 0], blobs_log[:, 3],
+                            scale_mode="none", scale_factor=20, 
+                            opacity=0.5, color=(1, 0, 0))
 
 def plot_3d_surface(roi, vis):
     # Plot in Mayavi
     #mlab.figure()
     vis.scene.mlab.clf()
+    
+    # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
+    #roi = np.flipud(roi)
+    roi = np.transpose(roi)
+    #roi = np.swapaxes(roi, 0, 2)
+    #roi = np.fliplr(roi)
     
     # prepare the data source
     #np.transpose(roi, (0, 1, 3, 2, 4))
@@ -376,15 +388,17 @@ def plot_3d_points(roi, vis):
     y = np.reshape(y, roi.size)
     z = np.reshape(z, roi.size)
     roi_1d = np.reshape(roi, roi.size)
-    remove = np.where(roi_1d < 0.4)
+    intensity_threshold = 0.35
+    remove = np.where(roi_1d < intensity_threshold)
     x = np.delete(x, remove)
     y = np.delete(y, remove)
     z = np.delete(z, remove)
     roi_1d = np.delete(roi_1d, remove)
     print(roi_1d.size)
-    vis.scene.mlab.points3d(z, y, x, roi_1d, 
+    vis.scene.mlab.points3d(x, y, z, roi_1d, 
                             mode="sphere", colormap="inferno", scale_mode="none",
-                            line_width=1.0, vmax=1.0, vmin=0.2, transparent=True, opacity=0.2)
+                            line_width=1.0, vmax=1.0, 
+                            vmin=(intensity_threshold * 0.5), transparent=True)
     """
     roi_1d[roi_1d < 0.2] = 0
     vis.scene.mlab.points3d(x, y, z, roi_1d, 
@@ -422,15 +436,13 @@ def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
     else:
         roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0]]
     
-    #roi = np.swapaxes(roi, 0, 2)
-    
     roi = denoise(roi)
     #plot_3d_surface(roi, vis)
     plot_3d_points(roi, vis)
     
     return roi
 
-def show_subplot(gs, row, col, offset, roi_size, show=False):
+def show_subplot(gs, row, col, offset, roi_size, highlight=False):
     #ax = plt.subplot2grid((2, 7), (1, subploti))
     ax = plt.subplot(gs[row, col])
     #ax.set_axis_off()
@@ -453,10 +465,10 @@ def show_subplot(gs, row, col, offset, roi_size, show=False):
             roi = image5d[0, offset[2], 
                           slice(offset[1], offset[1] + roi_size[1]), 
                           slice(offset[0], offset[0] + roi_size[0])]
-        #print(roi.dtype)
-        #roi = denoise(roi)
+        if highlight:
+            for spine in ax.spines.values():
+                spine.set_edgecolor("yellow")
         """
-        if show:
             for i in range(roi.shape[0]):
                 print("row {}: {}".format(i, " ".join(str(s) for s in roi[i])))
         roi_rgb = np.zeros((roi.shape[0:2], 3))
@@ -466,43 +478,62 @@ def show_subplot(gs, row, col, offset, roi_size, show=False):
    
 def plot_2d_stack(offset, roi_size=roi_size):
     fig = plt.figure()
+    i = filename.rfind("/")
+    title = filename
+    if i == -1:
+        i = title.rfind("\\")
+    if i != -1 and len(title) > i + 1:
+        title = title[(i + 1):]
+    title = ("{}, series: {}\n"
+             "offset: {}, ROI size: {}").format(title, subset, 
+                                                offset, roi_size)
+    fig.suptitle(title, color="white")
+    
+    # total number of z-planes
     z_planes = roi_size[2]
     if z_planes % 2 == 0:
         z_planes = z_planes + 1
+    z_planes_padding = 3 # addition z's on either side
+    z_planes = z_planes + z_planes_padding * 2
+    
+    # plot layout depending on number of z-planes
     max_cols = 15
     zoom_plot_rows = math.ceil(z_planes / max_cols)
     col_remainder = z_planes % max_cols
     zoom_plot_cols = max(col_remainder, max_cols)
     top_rows = 4
-    gs = gridspec.GridSpec(top_rows + zoom_plot_rows, 
-                           zoom_plot_cols, 
-                           wspace=0.0, hspace=0.0)
+    gs = gridspec.GridSpec(top_rows + zoom_plot_rows, zoom_plot_cols, 
+                           wspace=0.5, hspace=0)
+    
+    # overview image, with bottom of offset shown as rectangle
     half_cols = zoom_plot_cols // 2
     ax = plt.subplot(gs[0:top_rows, :half_cols])
-    #ax = plt.subplot2grid((2, 7), (0, 0), colspan=4)
-    #ax.set_axis_off()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
+    z_start = offset[2]
     if image5d.ndim >= 5:
-        img2d = image5d[0, offset[2], :, :, channel]
+        img2d = image5d[0, z_start, :, :, channel]
     else:
-        img2d = image5d[0, offset[2], :, :]
+        img2d = image5d[0, z_start, :, :]
     plt.imshow(img2d, cmap=colormap_2d)
     ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
-                                   fill=False, edgecolor="black"))
-    z = offset[2]
-    half_z_planes = z_planes // 2
+                                   fill=False, edgecolor="yellow"))
+    
+    # zoomed-in views of z-planes spanning from just below to just above ROI
     print("rows: {}, cols: {}, remainder: {}"
           .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
     for i in range(zoom_plot_rows):
+    	# adjust columns for last row to number of plots remaining
     	cols = max_cols
     	if i == zoom_plot_rows - 1 and col_remainder > 0:
     	    cols = col_remainder
+    	# show zoomed in plots and highlight one at offset z
     	for j in range(cols):
-            show = i == z_planes // 2
-            zoom_offset = (offset[0], offset[1], 
-                           z - half_z_planes + i * max_cols + j)
-            show_subplot(gs, i + top_rows, j, zoom_offset, roi_size, show)
+            z = z_start - z_planes_padding + i * max_cols + j
+            zoom_offset = (offset[0], offset[1], z)
+            show_subplot(gs, i + top_rows, j, zoom_offset, roi_size, z == z_start)
+    
+    # show 3D screenshot if available
     try:
         img3d = mlab.screenshot(antialiased=True)
         ax = plt.subplot(gs[0:top_rows, half_cols:zoom_plot_cols])
@@ -511,7 +542,6 @@ def plot_2d_stack(offset, roi_size=roi_size):
     except SceneModelError as err:
         print("No Mayavi image to screen capture")
     gs.tight_layout(fig, pad=0)
-    #plt.tight_layout()
     plt.ion()
     plt.show()
     
@@ -589,7 +619,7 @@ class Visualization(HasTraits):
         self.roi = show_roi(image5d, self, offset=curr_offset)
         #plot_2d_stack(curr_offset, self.roi_array[0])
         #segment_rw(self.roi, self)
-        segment_blob(self.roi, self)
+        #segment_blob(self.roi, self)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):

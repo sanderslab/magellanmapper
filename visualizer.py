@@ -40,7 +40,10 @@ subset = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
 roi_size = [100, 100, 25]
 offset = None
+mlab_3d_types = ("surface", "point")
+mlab_3d = mlab_3d_types[1]
 colormap_2d = cm.inferno
+
 params = {'legend.fontsize': 'small',
          'axes.labelsize': 'small',
          'axes.titlesize':'xx-small',
@@ -51,6 +54,7 @@ ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
 ARG_SUBSET = "subset"
 ARG_SIDES = "sides"
+ARG_3D = "3d"
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html
@@ -90,6 +94,13 @@ for arg in sys.argv:
                 print("Set roi_size: {}".format(roi_size))
             else:
                 print("Sides ({}) should be given as 3 values (x, y, z)"
+                      .format(arg_split[1]))
+        elif arg_split[0] == ARG_3D:
+            if arg_split[1] in mlab_3d_types:
+                mlab_3d = arg_split[1]
+                print("3D rendering set to {}".format(mlab_3d))
+            else:
+                print("Did not recognize 3D rendering type: {}"
                       .format(arg_split[1]))
 
 def start_jvm(heap_size="8G"):
@@ -437,8 +448,10 @@ def show_roi(image5d, vis, offset=(0, 0, 0), roi_size=roi_size):
         roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0]]
     
     roi = denoise(roi)
-    #plot_3d_surface(roi, vis)
-    plot_3d_points(roi, vis)
+    if mlab_3d == mlab_3d_types[0]:
+        plot_3d_surface(roi, vis)
+    else:
+        plot_3d_points(roi, vis)
     
     return roi
 
@@ -487,7 +500,7 @@ def plot_2d_stack(offset, roi_size=roi_size):
     title = ("{}, series: {}\n"
              "offset: {}, ROI size: {}").format(title, subset, 
                                                 offset, roi_size)
-    fig.suptitle(title, color="white")
+    fig.suptitle(title, color="navajowhite")
     
     # total number of z-planes
     z_planes = roi_size[2]
@@ -643,8 +656,10 @@ class Visualization(HasTraits):
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
-        #segment_rw(self.roi, self)
-        segment_blob(self.roi, self)
+        if mlab_3d == mlab_3d_types[0]:
+            segment_rw(self.roi, self)
+        else:
+            segment_blob(self.roi, self)
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()

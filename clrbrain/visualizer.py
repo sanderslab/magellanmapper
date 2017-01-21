@@ -26,7 +26,7 @@ filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
 #filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
 series = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
-roi_size = [100, 100, 25]
+roi_size = [100, 100, 15]
 offset = None
 
 params = {'legend.fontsize': 'small',
@@ -41,39 +41,53 @@ ARG_SERIES = "series"
 ARG_SIDES = "sides"
 ARG_3D = "3d"
 
-for arg in sys.argv:
-    arg_split = arg.split("=")
-    if len(arg_split) == 1:
-        print("Skipped argument: {}".format(arg_split[0]))
-    elif len(arg_split) >= 2:
-        if arg_split[0] == ARG_OFFSET:
-            offset_split = arg_split[1].split(",")
-            if len(offset_split) >= 3:
-                offset = tuple(int(i) for i in offset_split)
-                print("Set offset: {}".format(offset))
-            else:
-                print("Offset ({}) should be given as 3 values (x, y, z)"
-                      .format(arg_split[1]))
-        elif arg_split[0] == ARG_CHANNEL:
-            channel = int(arg_split[1])
-        elif arg_split[0] == ARG_SERIES:
-            series = int(arg_split[1])
-        elif arg_split[0] == ARG_SIDES:
-            sides_split = arg_split[1].split(",")
-            if len(sides_split) >= 3:
-                roi_size = tuple(int(i) for i in sides_split)
-                print("Set roi_size: {}".format(roi_size))
-            else:
-                print("Sides ({}) should be given as 3 values (x, y, z)"
-                      .format(arg_split[1]))
-        elif arg_split[0] == ARG_3D:
-            if arg_split[1] in plot_3d.MLAB_3D_TYPES:
-                plot_3d.set_mlab_3d(arg_split[1])
-                print("3D rendering set to {}".format(arg_split[1]))
-            else:
-                print("Did not recognize 3D rendering type: {}"
-                      .format(arg_split[1]))
-
+def main():
+    # command-line arguments
+    global series, channel, roi_size, offset
+    for arg in sys.argv:
+        arg_split = arg.split("=")
+        if len(arg_split) == 1:
+            print("Skipped argument: {}".format(arg_split[0]))
+        elif len(arg_split) >= 2:
+            if arg_split[0] == ARG_OFFSET:
+                offset_split = arg_split[1].split(",")
+                if len(offset_split) >= 3:
+                    offset = tuple(int(i) for i in offset_split)
+                    print("Set offset: {}".format(offset))
+                else:
+                    print("Offset ({}) should be given as 3 values (x, y, z)"
+                          .format(arg_split[1]))
+            elif arg_split[0] == ARG_CHANNEL:
+                channel = int(arg_split[1])
+            elif arg_split[0] == ARG_SERIES:
+                series = int(arg_split[1])
+            elif arg_split[0] == ARG_SIDES:
+                sides_split = arg_split[1].split(",")
+                if len(sides_split) >= 3:
+                    roi_size = tuple(int(i) for i in sides_split)
+                    print("Set roi_size: {}".format(roi_size))
+                else:
+                    print("Sides ({}) should be given as 3 values (x, y, z)"
+                          .format(arg_split[1]))
+            elif arg_split[0] == ARG_3D:
+                if arg_split[1] in plot_3d.MLAB_3D_TYPES:
+                    plot_3d.set_mlab_3d(arg_split[1])
+                    print("3D rendering set to {}".format(arg_split[1]))
+                else:
+                    print("Did not recognize 3D rendering type: {}"
+                          .format(arg_split[1]))
+    
+    # loads the image and GUI
+    importer.start_jvm()
+    #names, sizes = parse_ome(filename)
+    #sizes = find_sizes(filename)
+    global image5d
+    image5d = importer.read_file(filename, series, channel) #, z_max=cube_len)
+    pylab.rcParams.update(params)
+    push_exception_handler(reraise_exceptions=True)
+    visualization = Visualization()
+    visualization.configure_traits()
+    
 def _fig_title():
     i = filename.rfind("/")
     title = filename
@@ -224,12 +238,7 @@ class Visualization(HasTraits):
         resizable = True
     )
 
-# loads the image and GUI
-importer.start_jvm()
-#names, sizes = parse_ome(filename)
-#sizes = find_sizes(filename)
-image5d = importer.read_file(filename, series, channel) #, z_max=cube_len)
-pylab.rcParams.update(params)
-push_exception_handler(reraise_exceptions=True)
-visualization = Visualization()
-visualization.configure_traits()
+if __name__ == "__main__":
+    print("Starting visualizer...")
+    main()
+    

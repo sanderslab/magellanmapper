@@ -146,7 +146,7 @@ def plot_3d_points(roi, vis):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
     """
 
-def show_roi(image5d, vis, roi_size, offset=(0, 0, 0)):
+def show_roi(image5d, channel, vis, roi_size, offset=(0, 0, 0)):
     """Finds and shows the region of interest.
     
     This region will be denoised and displayed in Mayavi.

@@ -1,5 +1,6 @@
 
 import math
+import numpy as np
 from mayavi import mlab
 from tvtk.pyface.scene_model import SceneModelError
 from matplotlib import pyplot as plt, cm
@@ -9,7 +10,7 @@ import matplotlib.pylab as pylab
 
 colormap_2d = cm.inferno
 
-def show_subplot(gs, row, col, image5d, offset, roi_size, highlight=False):
+def show_subplot(gs, row, col, image5d, channel, offset, roi_size, highlight=False):
     #ax = plt.subplot2grid((2, 7), (1, subploti))
     ax = plt.subplot(gs[row, col])
     #ax.set_axis_off()
@@ -43,7 +44,7 @@ def show_subplot(gs, row, col, image5d, offset, roi_size, highlight=False):
         """
         plt.imshow(roi, cmap=colormap_2d)
    
-def plot_2d_stack(title, image5d, roi_size, offset):
+def plot_2d_stack(title, image5d, channel, roi_size, offset):
     fig = plt.figure()
     fig.suptitle(title, color="navajowhite")
     
@@ -89,7 +90,7 @@ def plot_2d_stack(title, image5d, roi_size, offset):
     	for j in range(cols):
             z = z_start - z_planes_padding + i * max_cols + j
             zoom_offset = (offset[0], offset[1], z)
-            show_subplot(gs, i + top_rows, j, image5d, zoom_offset, 
+            show_subplot(gs, i + top_rows, j, image5d, channel, zoom_offset, 
                          roi_size, z == z_start)
     
     # show 3D screenshot if available

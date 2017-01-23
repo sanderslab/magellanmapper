@@ -22,7 +22,7 @@ from clrbrain import plot_2d
 
 filename = "../../Downloads/P21_L5_CONT_DENDRITE.czi"
 filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
-#filename = "../../Downloads/Rbp4cre_4-28-16_Subset3_2.sis"
+filename = "/Volumes/Seagate8TB/01-20-17-WT-20x/SYTO OPTIMIZATION 20x_single stack.czi"
 #filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
 series = 0 # arbitrary series for demonstration
 channel = 0 # channel of interest
@@ -38,7 +38,7 @@ params = {'legend.fontsize': 'small',
 ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
 ARG_SERIES = "series"
-ARG_SIDES = "sides"
+ARG_SIDES = "size"
 ARG_3D = "3d"
 
 def main():
@@ -67,7 +67,7 @@ def main():
                     roi_size = tuple(int(i) for i in sides_split)
                     print("Set roi_size: {}".format(roi_size))
                 else:
-                    print("Sides ({}) should be given as 3 values (x, y, z)"
+                    print("Size ({}) should be given as 3 values (x, y, z)"
                           .format(arg_split[1]))
             elif arg_split[0] == ARG_3D:
                 if arg_split[1] in plot_3d.MLAB_3D_TYPES:
@@ -160,8 +160,8 @@ class Visualization(HasTraits):
             curr_offset = self._curr_offset()
             #self.roi = show_roi(image5d, self, cube_len=cube_len)
         self.roi_array[0] = roi_size
-        self.roi = plot_3d.show_roi(image5d, self, self.roi_array[0], offset=curr_offset)
-        #plot_2d.plot_2d_stack(_fig_title(), image5d, self.roi_array[0], curr_offset)
+        self.roi = plot_3d.show_roi(image5d, channel, self, self.roi_array[0], offset=curr_offset)
+        #plot_2d.plot_2d_stack(_fig_title(), image5d, channel, self.roi_array[0], curr_offset)
         #detector.segment_roi(self.roi, self)
     
     @on_trait_change('x_offset,y_offset,z_offset')
@@ -182,7 +182,7 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0]
         print(offset)
-        self.roi = plot_3d.show_roi(image5d, self, curr_roi_size, offset=curr_offset)
+        self.roi = plot_3d.show_roi(image5d, channel, self, curr_roi_size, offset=curr_offset)
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
@@ -192,7 +192,7 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
-        plot_2d.plot_2d_stack(_fig_title(), image5d, curr_roi_size, curr_offset)
+        plot_2d.plot_2d_stack(_fig_title(), image5d, channel, curr_roi_size, curr_offset)
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

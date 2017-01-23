@@ -20,11 +20,7 @@ from clrbrain import detector
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 
-filename = "../../Downloads/P21_L5_CONT_DENDRITE.czi"
-filename = "../../Downloads/Rbp4cre_halfbrain_4-28-16_Subset3.czi"
-filename = "/Volumes/Seagate8TB/01-20-17-WT-20x/SYTO OPTIMIZATION 20x_single stack.czi"
-#filename = "/Volumes/Siavash/CLARITY/P3Ntsr1cre-tdTomato_11-10-16/Ntsr1cre-tdTomato.czi"
-series = 0 # arbitrary series for demonstration
+series = 0 # series for multi-stack files
 channel = 0 # channel of interest
 roi_size = [100, 100, 15]
 offset = None
@@ -35,6 +31,7 @@ params = {'legend.fontsize': 'small',
          'xtick.labelsize':'small',
          'ytick.labelsize':'small'}
 
+ARG_IMG="img"
 ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
 ARG_SERIES = "series"
@@ -43,7 +40,7 @@ ARG_3D = "3d"
 
 def main():
     # command-line arguments
-    global series, channel, roi_size, offset
+    global filename, series, channel, roi_size, offset
     for arg in sys.argv:
         arg_split = arg.split("=")
         if len(arg_split) == 1:
@@ -57,6 +54,9 @@ def main():
                 else:
                     print("Offset ({}) should be given as 3 values (x, y, z)"
                           .format(arg_split[1]))
+            elif arg_split[0] == ARG_IMG:
+                filename = arg_split[1]
+                print("Opening image file: {}".format(filename))
             elif arg_split[0] == ARG_CHANNEL:
                 channel = int(arg_split[1])
             elif arg_split[0] == ARG_SERIES:

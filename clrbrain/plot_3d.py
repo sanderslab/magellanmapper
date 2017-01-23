@@ -9,6 +9,7 @@ from mayavi import mlab
 
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
+intensity_min = 0.2
 
 def denoise(roi):
     """Denoises an image.
@@ -19,43 +20,14 @@ def denoise(roi):
     Returns:
         Denoised region of interest.
     """
-    # saturating extreme values to maximize contrast
-    vmin, vmax = stats.scoreatpercentile(roi, (20.0, 99.5))
+    # enhance contrast and normalize to 0-1 scale
+    vmin, vmax = np.percentile(roi, (20, 99.5))
+    #print("vmin: {}, vmax: {}".format(vmin, vmax))
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
     
-    '''
-    # denoise_bilateral apparently only works on 2D images
-    t1 = time()
-    bilateral = restoration.denoise_bilateral(denoised)
-    t2 = time()
-    print('time for bilateral filter: %f' %(t2 - t1))
-    hi_dat = exposure.histogram(denoised)
-    hi_bilateral = exposure.histogram(bilateral)
-    plt.plot(hi_dat[1], hi_dat[0], label='data')
-    plt.plot(hi_bilateral[1], hi_bilateral[0],
-             label='bilateral')
-    plt.xlim(0, 0.5)
-    plt.legend()
-    plt.title('Histogram of voxel values')
-    
-    sample = bilateral > 0.2
-    sample = ndimage.binary_fill_holes(sample)
-    open_object = morphology.opening(sample, morphology.ball(3))
-    close_object = morphology.closing(open_object, morphology.ball(3))
-    bbox = ndimage.find_objects(close_object)
-    mask = close_object[bbox[0]]
-    '''
-    
-    '''
-    # non-local means denoising, which works but is slower
-    # and doesn't seem to add much
-    time_start = time()
-    denoised = restoration.denoise_nl_means(denoised,
-                        patch_size=5, patch_distance=7,
-                        h=0.12, multichannel=False)
-    print('time for non-local means denoising: %f' %(time() - time_start))
-    '''
+    # additional simple thresholding
+    denoised = np.clip(denoised, intensity_min, 1)
     
     # total variation denoising
     time_start = time()
@@ -121,13 +93,15 @@ def plot_3d_points(roi, vis):
     x = np.ones((shape[0] * shape[1], shape[2]))
     for i in range(shape[0] * shape[1]):
         x[i] = np.arange(shape[2])
-        #x[i] = np.multiply(x[i], np.arrange(shape[2]))
     x = np.reshape(x, roi.size)
     y = np.reshape(y, roi.size)
     z = np.reshape(z, roi.size)
     roi_1d = np.reshape(roi, roi.size)
-    intensity_threshold = 0.35
-    remove = np.where(roi_1d < intensity_threshold)
+    
+    # clear background points to see remaining structures, starting with
+    # the denoising threshold to approximately visualize what the segmenter 
+    # will see and going slightly over for further clarity
+    remove = np.where(roi_1d < intensity_min * 2.5)
     x = np.delete(x, remove)
     y = np.delete(y, remove)
     z = np.delete(z, remove)
@@ -136,12 +110,8 @@ def plot_3d_points(roi, vis):
     vis.scene.mlab.points3d(x, y, z, roi_1d, 
                             mode="sphere", colormap="inferno", scale_mode="none",
                             line_width=1.0, vmax=1.0, 
-                            vmin=(intensity_threshold * 0.5), transparent=True)
+                            vmin=(intensity_min * 0.5), transparent=True)
     """
-    roi_1d[roi_1d < 0.2] = 0
-    vis.scene.mlab.points3d(x, y, z, roi_1d, 
-                            mode="cube", colormap="Blues", scale_mode="none",
-                            transparent=True)
     for i in range(roi_1d.size):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
     """

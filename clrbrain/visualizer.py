@@ -37,6 +37,7 @@ ARG_CHANNEL = "channel"
 ARG_SERIES = "series"
 ARG_SIDES = "size"
 ARG_3D = "3d"
+ARG_SCALING = "scaling"
 
 def main():
     # command-line arguments
@@ -59,8 +60,14 @@ def main():
                 print("Opening image file: {}".format(filename))
             elif arg_split[0] == ARG_CHANNEL:
                 channel = int(arg_split[1])
+                print("Set to channel: {}".format(channel))
             elif arg_split[0] == ARG_SERIES:
                 series = int(arg_split[1])
+                print("Set to series: {}".format(series))
+            elif arg_split[0] == ARG_SCALING:
+                scaling = float(arg_split[1])
+                detector.set_scaling_factor(scaling)
+                print("Set scaling factor to: {}".format(scaling))
             elif arg_split[0] == ARG_SIDES:
                 sides_split = arg_split[1].split(",")
                 if len(sides_split) >= 3:

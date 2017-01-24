@@ -101,7 +101,7 @@ def plot_3d_points(roi, vis):
     # clear background points to see remaining structures, starting with
     # the denoising threshold to approximately visualize what the segmenter 
     # will see and going slightly over for further clarity
-    remove = np.where(roi_1d < intensity_min * 2.5)
+    remove = np.where(roi_1d < intensity_min * 2)
     x = np.delete(x, remove)
     y = np.delete(y, remove)
     z = np.delete(z, remove)

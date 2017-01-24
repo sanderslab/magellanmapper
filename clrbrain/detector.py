@@ -1,6 +1,7 @@
 # Cell detection methods
 # Author: David Young, 2017
 
+from time import time
 import math
 import numpy as np
 from mayavi import mlab
@@ -10,6 +11,11 @@ from skimage import morphology
 from skimage.feature import blob_dog, blob_log, blob_doh
 
 from clrbrain import plot_3d
+
+# zoom scaling, where factor = 1 / (um/pixel), so 1um/pixel  
+# corresponds to factor of 1; eg 0.25um/pixel would require factor of
+# 1 / 0.25 = 4
+scaling_factor = 1
 
 def segment_rw(roi, vis):
     """Segments an image, drawing contours around segmented regions.
@@ -51,12 +57,16 @@ def segment_rw(roi, vis):
 def segment_blob(roi, vis):
     print("blob detection based segmentation...")
     # use 3D blob detection from skimage v.0.13pre
-    blobs_log = blob_log(roi, min_sigma=5, max_sigma=30, num_sigma=10, threshold=0.1)
+    time_start = time()
+    blobs_log = blob_log(roi, min_sigma=4 * scaling_factor, 
+                         max_sigma=30 * scaling_factor, num_sigma=10, 
+                         threshold=0.1)
+    print('time for 3D blob detection: %f' %(time() - time_start))
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     print(blobs_log)
     vis.scene.mlab.points3d(blobs_log[:, 2], blobs_log[:, 1], 
                             blobs_log[:, 0], blobs_log[:, 3],
-                            scale_mode="none", scale_factor=20, 
+                            scale_mode="none", scale_factor=20 * scaling_factor, 
                             opacity=0.5, color=(0, 1, 0))
     return blobs_log
 
@@ -67,4 +77,7 @@ def segment_roi(roi, vis):
         return None
     else:
         return segment_blob(roi, vis)
-    
+
+def set_scaling_factor(val):
+    global scaling_factor
+    scaling_factor = val

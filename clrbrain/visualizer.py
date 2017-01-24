@@ -140,6 +140,7 @@ class Visualization(HasTraits):
     btn_segment_trait = Button("Segment")
     btn_2d_trait = Button("2D Plots")
     roi = None
+    segments = None
     
     def __init__(self):
         # Do not forget to call the parent's __init__
@@ -160,13 +161,16 @@ class Visualization(HasTraits):
             curr_offset = self._curr_offset()
             #self.roi = show_roi(image5d, self, cube_len=cube_len)
         self.roi_array[0] = roi_size
-        self.roi = plot_3d.show_roi(image5d, channel, self, self.roi_array[0], offset=curr_offset)
-        #plot_2d.plot_2d_stack(_fig_title(), image5d, channel, self.roi_array[0], curr_offset)
-        #detector.segment_roi(self.roi, self)
+        self.roi = plot_3d.show_roi(image5d, channel, self, self.roi_array[0], 
+                                    offset=curr_offset)
+        #self.segments = detector.segment_roi(self.roi, self)
+        #plot_2d.plot_2d_stack(_fig_title(), image5d, channel, 
+        #                      self.roi_array[0], curr_offset, self.segments)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
-        print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, self.z_offset))
+        print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, 
+                                           self.z_offset))
     
     def _btn_redraw_trait_fired(self):
         # ensure that cube dimensions don't exceed array
@@ -181,18 +185,20 @@ class Visualization(HasTraits):
         # show updated region of interest
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0]
-        print(offset)
-        self.roi = plot_3d.show_roi(image5d, channel, self, curr_roi_size, offset=curr_offset)
+        self.roi = plot_3d.show_roi(image5d, channel, self, curr_roi_size, 
+                                    offset=curr_offset)
+        self.segments = None
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
-        detector.segment_roi(self.roi, self)
+        self.segments = detector.segment_roi(self.roi, self)
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
-        plot_2d.plot_2d_stack(_fig_title(), image5d, channel, curr_roi_size, curr_offset)
+        plot_2d.plot_2d_stack(_fig_title(), image5d, channel, curr_roi_size, 
+                              curr_offset, self.segments)
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

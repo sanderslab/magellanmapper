@@ -42,6 +42,11 @@ def segment_rw(roi, vis):
     # 2) draw a contour or points directly from labels
     surf2 = vis.scene.mlab.contour3d(labels)
     #surf2 = vis.scene.mlab.points3d(labels)
+    '''
+    np.set_printoptions(threshold=np.nan)
+    print(labels)
+    '''
+    return labels
 
 def segment_blob(roi, vis):
     print("blob detection based segmentation...")
@@ -52,12 +57,14 @@ def segment_blob(roi, vis):
     vis.scene.mlab.points3d(blobs_log[:, 2], blobs_log[:, 1], 
                             blobs_log[:, 0], blobs_log[:, 3],
                             scale_mode="none", scale_factor=20, 
-                            opacity=0.5, color=(1, 0, 0))
+                            opacity=0.5, color=(0, 1, 0))
+    return blobs_log
 
 def segment_roi(roi, vis):
     mlab_3d = plot_3d.get_mlab_3d()
     if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
         segment_rw(roi, vis)
+        return None
     else:
-        segment_blob(roi, vis)
+        return segment_blob(roi, vis)
     

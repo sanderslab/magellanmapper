@@ -1,11 +1,23 @@
 # 3D plots from stacks of imaging data
 # Author: David Young, 2017
+"""Plots the image stack in 3D.
+
+Provides options for drawing as surfaces or points.
+
+Attributes:
+    MLAB_3D_TYPES: Tuple of types of 3D visualizations.
+        * "surface": Renders surfaces in Mayavi contour and
+          surface.
+        * "point": Renders as raw points, minus points under
+          the intensity_min threshold.
+    mlab_3d: The chosen type.
+    intensity_min: The minimum intensity threshold for points
+        viewing. Raising this threshold will remove more points.
+"""
 
 from time import time
 import numpy as np
-from scipy import stats
 from skimage import restoration
-from mayavi import mlab
 
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
@@ -37,9 +49,17 @@ def denoise(roi):
     return denoised
 
 def plot_3d_surface(roi, vis):
+    """Plots areas with greater intensity as 3D surfaces.
+    
+    Args:
+        roi: Region of interest.
+        vis: The Visualization GUI object.
+    """
     # Plot in Mayavi
     #mlab.figure()
-    vis.scene.mlab.clf()
+    vis_mlab = vis.scene.mlab
+    pipeline = vis_mlab.pipeline
+    vis_mlab.clf()
     
     # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
     #roi = np.flipud(roi)
@@ -49,38 +69,50 @@ def plot_3d_surface(roi, vis):
     
     # prepare the data source
     #np.transpose(roi, (0, 1, 3, 2, 4))
-    scalars = vis.scene.mlab.pipeline.scalar_field(roi)
+    scalars = pipeline.scalar_field(roi)
     
     # create the surface
-    contour = vis.scene.mlab.pipeline.contour(scalars)
+    contour = pipeline.contour(scalars)
     # TESTING: use when excluding further processing
-    #surf = vis.scene.mlab.pipeline.surface(contour)
+    #surf = pipeline.surface(contour)
     
     # removes many more extraneous points
-    smooth = vis.scene.mlab.pipeline.user_defined(contour, filter='SmoothPolyDataFilter')
+    smooth = pipeline.user_defined(contour, 
+                                   filter="SmoothPolyDataFilter")
     smooth.filter.number_of_iterations = 400
     smooth.filter.relaxation_factor = 0.015
     # holes within cells?
-    curv = vis.scene.mlab.pipeline.user_defined(smooth, filter='Curvatures')
-    surf = vis.scene.mlab.pipeline.surface(curv)
+    curv = pipeline.user_defined(smooth, 
+                                 filter="Curvatures")
+    vis_mlab.pipeline.surface(curv)
     # colorizes
     module_manager = curv.children[0]
-    module_manager.scalar_lut_manager.data_range = np.array([-0.6,  0.5])
-    module_manager.scalar_lut_manager.lut_mode = 'RdBu'
+    module_manager.scalar_lut_manager.data_range = np.array([-0.6, 0.5])
+    module_manager.scalar_lut_manager.lut_mode = "RdBu"
     
     # based on Surface with contours enabled
-    #contour = vis.scene.mlab.pipeline.contour_surface(scalars)
+    #contour = pipeline.contour_surface(scalars)
     
     # uses unique IsoSurface module but appears to have 
     # similar output to contour_surface
-    #contour = vis.scene.mlab.pipeline.iso_surface(scalars)
+    #contour = pipeline.iso_surface(scalars)
     
 def plot_3d_points(roi, vis):
-    print("plotting as 3D points")
+    """Plots all pixels as points in 3D space.
+    
+    Points falling below the "intensity_min" attribute will be
+    removed, allowing the viewer to see through the presumed
+    background to masses within the region of interest.
+    
+    Args:
+        roi: Region of interest.
+        vis: The Visualization GUI object.
     """
+    print("plotting as 3D points")
+    '''
     scalars = vis.scene.mlab.pipeline.scalar_scatter(roi)
     vis.scene.mlab.points3d(scalars)
-    """
+    '''
     vis.scene.mlab.clf()
     shape = roi.shape
     z = np.ones((shape[0], shape[1] * shape[2]))
@@ -153,8 +185,18 @@ def show_roi(image5d, channel, vis, roi_size, offset=(0, 0, 0)):
     return roi
 
 def set_mlab_3d(val):
+    """Sets the mlab_3d attribute for the 3D rendering type.
+    
+    Args:
+        val: Rendering type.
+    """
     global mlab_3d
     mlab_3d = val
 
 def get_mlab_3d():
+    """Gets the mlab_3d attribute for the 3D rendering type.
+    
+    Returns:
+        The rendering type.
+    """
     return mlab_3d

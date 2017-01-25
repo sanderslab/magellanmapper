@@ -1,14 +1,43 @@
 #!/bin/bash
 # 3D image visualization
 # Author: David Young, 2017
+"""3D Visualization GUI.
+
+This module is the main GUI for visualizing 3D objects from imaging stacks. 
+The module can be run either as a script or loaded and initialized by 
+calling main().
+
+Examples:
+    Launch the GUI with the given file at a particular size and offset::
+        
+        $ ./run img=/path/to/file.czi offset=30,50,205 size=150,150,10
+    
+    Alternatively, this module can be run as a script::
+        
+        $ python -m clrbrain.visualizer img=/path/to/file.czi
+
+Command-line arguments in addition to those listed below:
+    * scaling_factor: Zoom scaling (see detector.py).
+    * 3d: 3D rendering type (see plot_3d.py).
+
+Attributes:
+    filename: The filename of the source images. A corresponding file with
+        the subset as a 5 digit number (eg 00003) with .npz appended to 
+        the end will be checked first based on this filename. Set with
+        "img=path/to/file" argument.
+    series: The series for multi-stack files, using 0-based indexing. Set
+        with "series=n" argument.
+    channel: The channel to view. Set with "channel=n" argument.
+    roi_size: The size in pixels of the region of interest. Set with
+        "size=x,y,z" argument, where x, y, and z are integers.
+    offset: The bottom corner in pixels of the region of interest. Set 
+        with "offset=x,y,z" argument, where x, y, and z are integers.
+"""
 
 import sys
-import numpy as np
-import math
-from time import time
 
-from traits.api import HasTraits, Range, Instance, \
-                    on_trait_change, Button, Int, Array, push_exception_handler
+from traits.api import (HasTraits, Instance, on_trait_change, Button, 
+                        Int, Array, push_exception_handler)
 from traitsui.api import View, Item, HGroup, VGroup, Handler, RangeEditor
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
@@ -20,18 +49,20 @@ from clrbrain import detector
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 
+filename = None
 series = 0 # series for multi-stack files
 channel = 0 # channel of interest
-roi_size = [100, 100, 15]
+roi_size = [100, 100, 15] # region of interest
 offset = None
 
+image5d = None
 params = {'legend.fontsize': 'small',
-         'axes.labelsize': 'small',
-         'axes.titlesize':'xx-small',
-         'xtick.labelsize':'small',
-         'ytick.labelsize':'small'}
+          'axes.labelsize': 'small',
+          'axes.titlesize': 'xx-small',
+          'xtick.labelsize': 'small',
+          'ytick.labelsize': 'small'}
 
-ARG_IMG="img"
+ARG_IMG = "img"
 ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
 ARG_SERIES = "series"
@@ -40,6 +71,10 @@ ARG_3D = "3d"
 ARG_SCALING = "scaling"
 
 def main():
+    """Starts the visualization GUI.
+    
+    Processes command-line arguments.
+    """
     # command-line arguments
     global filename, series, channel, roi_size, offset
     for arg in sys.argv:
@@ -113,6 +148,8 @@ class VisHandler(Handler):
     Closes the JVM when the window is closed.
     """
     def closed(self, info, is_ok):
+        """Closes the Java VM when the GUI is closed.
+        """
         importer.jb.kill_vm()
 
 class Visualization(HasTraits):
@@ -176,6 +213,8 @@ class Visualization(HasTraits):
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
+        """Shows the chosen offset when an offset slider is moved.
+        """
         print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, 
                                            self.z_offset))
     
@@ -247,8 +286,8 @@ class Visualization(HasTraits):
             Item("btn_2d_trait", show_label=False)
         ),
         handler=VisHandler(),
-        title = "clrbrain",
-        resizable = True
+        title="clrbrain",
+        resizable=True
     )
 
 if __name__ == "__main__":

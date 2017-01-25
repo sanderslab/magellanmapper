@@ -1,8 +1,12 @@
 #!/bin/bash
 # Image stack importer
 # Author: David Young, 2017
+"""Imports image stacks using Bioformats.
 
-import sys
+Bioformats is access through Python-Bioformats and Javabridge.
+Images will be imported into a 4/5D Numpy array.
+"""
+
 from time import time
 import numpy as np
 import javabridge as jb
@@ -73,9 +77,9 @@ def find_sizes(filename):
         count = format_reader.getSeriesCount()
         for i in range(count):
             format_reader.setSeries(i)
-            size = ( format_reader.getSizeT(), format_reader.getSizeZ(), 
-                     format_reader.getSizeY(), format_reader.getSizeX(), 
-                     format_reader.getSizeC() )
+            size = (format_reader.getSizeT(), format_reader.getSizeZ(), 
+                    format_reader.getSizeY(), format_reader.getSizeX(), 
+                    format_reader.getSizeC())
             print(size)
             sizes.append(size)
         pixel_type = format_reader.getPixelType()
@@ -115,7 +119,7 @@ def read_file(filename, series, channel, save=True, load=True, z_max=-1,
             print('file opening time: %f' %(time() - time_start))
             image5d = output["image5d"]
             return image5d
-        except IOError as err:
+        except IOError:
             print("Unable to load {}, will attempt to reload {}"
                   .format(filename_npz, filename))
     sizes, dtype = find_sizes(filename)
@@ -124,8 +128,8 @@ def read_file(filename, series, channel, save=True, load=True, z_max=-1,
     nt, nz = size[:2]
     if z_max != -1:
         nz = z_max
-    if offset == None:
-    	offset = (0, 0, 0) # (x, y, z)
+    if offset is None:
+        offset = (0, 0, 0) # (x, y, z)
     if size[4] <= 1:
         image5d = np.empty((nt, nz, size[2], size[3]), dtype)
         load_channel = channel
@@ -140,7 +144,7 @@ def read_file(filename, series, channel, save=True, load=True, z_max=-1,
         for z in range(nz):
             print("loading planes from [{}, {}]".format(t, z))
             img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
-                                     series=series, rescale=False)
+                           series=series, rescale=False)
             if check_dtype:
                 if img.dtype != image5d.dtype:
                     raise TypeError("Storing as data type {} "

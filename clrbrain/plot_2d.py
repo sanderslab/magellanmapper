@@ -113,8 +113,8 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments):
                                    fill=False, edgecolor="yellow"))
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
-    print("rows: {}, cols: {}, remainder: {}"
-          .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
+    #print("rows: {}, cols: {}, remainder: {}"
+    #      .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
         cols = max_cols

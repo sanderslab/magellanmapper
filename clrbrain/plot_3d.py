@@ -17,11 +17,13 @@ Attributes:
 
 from time import time
 import numpy as np
+import math
 from skimage import restoration
 
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 intensity_min = 0.2
+mask_dividend = 100000.0
 
 def denoise(roi):
     """Denoises an image.
@@ -138,11 +140,16 @@ def plot_3d_points(roi, vis):
     y = np.delete(y, remove)
     z = np.delete(z, remove)
     roi_1d = np.delete(roi_1d, remove)
-    print(roi_1d.size)
+    points_len = roi_1d.size
+    time_start = time()
+    mask = math.ceil(points_len / mask_dividend)
+    print("points: {}, mask: {}".format(points_len, mask))
     vis.scene.mlab.points3d(x, y, z, roi_1d, 
-                            mode="sphere", colormap="inferno", scale_mode="none",
+                            mode="sphere", colormap="inferno", 
+                            scale_mode="none", mask_points=mask, 
                             line_width=1.0, vmax=1.0, 
                             vmin=(intensity_min * 0.5), transparent=True)
+    print("time for 3D points display: {}".format(time() - time_start))
     """
     for i in range(roi_1d.size):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
@@ -168,7 +175,7 @@ def show_roi(image5d, channel, vis, roi_size, offset=(0, 0, 0)):
     cube_slices = []
     for i in range(len(offset)):
         cube_slices.append(slice(offset[i], offset[i] + roi_size[i]))
-    print(cube_slices)
+    print(offset, roi_size, cube_slices)
     
     # cube with corner at offset, side of cube_len
     if image5d.ndim >= 5:

@@ -54,10 +54,6 @@ def segment_rw(roi, vis):
     # 2) draw a contour or points directly from labels
     vis.scene.mlab.contour3d(labels)
     #surf2 = vis.scene.mlab.points3d(labels)
-    '''
-    np.set_printoptions(threshold=np.nan)
-    print(labels)
-    '''
     return labels
 
 def segment_blob(roi, vis):
@@ -80,6 +76,7 @@ def segment_blob(roi, vis):
                             blobs_log[:, 0], blobs_log[:, 3],
                             scale_mode="none", scale_factor=20 * scaling_factor, 
                             opacity=0.5, color=(0, 1, 0))
+    print("found {} blobs".format(blobs_log.size))
     return blobs_log
 
 def segment_roi(roi, vis):

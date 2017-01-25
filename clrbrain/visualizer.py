@@ -36,6 +36,7 @@ Attributes:
 
 import sys
 
+import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, 
                         Int, Array, push_exception_handler)
 from traitsui.api import View, Item, HGroup, VGroup, Handler, RangeEditor
@@ -126,11 +127,12 @@ def main():
     global image5d
     image5d = importer.read_file(filename, series, channel) #, z_max=cube_len)
     pylab.rcParams.update(params)
+    np.set_printoptions(threshold=np.nan)
     push_exception_handler(reraise_exceptions=True)
     visualization = Visualization()
     visualization.configure_traits()
     
-def _fig_title():
+def _fig_title(offset, roi_size):
     i = filename.rfind("/")
     title = filename
     if i == -1:
@@ -230,7 +232,7 @@ class Visualization(HasTraits):
         
         # show updated region of interest
         curr_offset = self._curr_offset()
-        curr_roi_size = self.roi_array[0]
+        curr_roi_size = self.roi_array[0].astype(int)
         self.roi = plot_3d.show_roi(image5d, channel, self, curr_roi_size, 
                                     offset=curr_offset)
         self.segments = None
@@ -243,7 +245,8 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
-        plot_2d.plot_2d_stack(_fig_title(), image5d, channel, curr_roi_size, 
+        plot_2d.plot_2d_stack(_fig_title(curr_offset, curr_roi_size), 
+                              image5d, channel, curr_roi_size, 
                               curr_offset, self.segments)
     
     def _curr_offset(self):

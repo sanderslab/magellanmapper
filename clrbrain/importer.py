@@ -114,9 +114,9 @@ def read_file(filename, series, channel, save=True, load=True, z_max=-1,
     filename_npz = filename + str(series).zfill(5) + ".npz"
     if load:
         try:
-            time_start = time()
+            #time_start = time()
             output = np.load(filename_npz)
-            print('file opening time: %f' %(time() - time_start))
+            #print('file opening time: %f' %(time() - time_start))
             image5d = output["image5d"]
             return image5d
         except IOError:

@@ -72,9 +72,11 @@ def segment_blob(roi, vis):
     print("time for 3D blob detection: %f" %(time() - time_start))
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     print(blobs_log)
+    scale = 2 * max(blobs_log[:, 3]) * scaling_factor
+    print("blob point scaling: {}".format(scale))
     vis.scene.mlab.points3d(blobs_log[:, 2], blobs_log[:, 1], 
                             blobs_log[:, 0], blobs_log[:, 3],
-                            scale_mode="none", scale_factor=20 * scaling_factor, 
+                            scale_mode="none", scale_factor=scale, 
                             opacity=0.5, color=(0, 1, 0))
     print("found {} blobs".format(blobs_log.size))
     return blobs_log

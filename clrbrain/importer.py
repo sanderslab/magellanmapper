@@ -135,7 +135,8 @@ def read_file(filename, series, channel, save=True, load=True, z_max=-1,
         load_channel = channel
         print("setting image5d array with shape: {}".format(image5d.shape))
     else:
-        channels = 3 if size[4] <= 3 else size[4]
+        #channels = 3 if size[4] <= 3 else size[4]
+        channels = size[4]
         image5d = np.empty((nt, nz, size[2], size[3], channels), dtype)
         load_channel = None
     time_start = time()

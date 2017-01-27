@@ -125,7 +125,7 @@ def main():
     #names, sizes = parse_ome(filename)
     #sizes = find_sizes(filename)
     global image5d
-    image5d = importer.read_file(filename, series, channel) #, z_max=cube_len)
+    image5d = importer.read_file(filename, series) #, z_max=cube_len)
     pylab.rcParams.update(params)
     np.set_printoptions(threshold=np.nan)
     push_exception_handler(reraise_exceptions=True)

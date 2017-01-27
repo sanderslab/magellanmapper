@@ -88,7 +88,7 @@ def find_sizes(filename):
     print('time for finding sizes: %f' %(time() - time_start))
     return sizes, dtype
 
-def read_file(filename, series, channel, save=True, load=True, z_max=-1, 
+def read_file(filename, series, save=True, load=True, z_max=-1, 
               offset=None):
     """Reads in an imaging file.
     
@@ -132,13 +132,11 @@ def read_file(filename, series, channel, save=True, load=True, z_max=-1,
         offset = (0, 0, 0) # (x, y, z)
     if size[4] <= 1:
         image5d = np.empty((nt, nz, size[2], size[3]), dtype)
-        load_channel = channel
-        print("setting image5d array with shape: {}".format(image5d.shape))
+        load_channel = 0
     else:
-        #channels = 3 if size[4] <= 3 else size[4]
-        channels = size[4]
-        image5d = np.empty((nt, nz, size[2], size[3], channels), dtype)
+        image5d = np.empty((nt, nz, size[2], size[3], size[4]), dtype)
         load_channel = None
+    print("setting image5d array with shape: {}".format(image5d.shape))
     time_start = time()
     for t in range(nt):
         check_dtype = True

@@ -70,6 +70,9 @@ def segment_blob(roi, vis):
                          max_sigma=30 * scaling_factor, num_sigma=10, 
                          threshold=0.1)
     print("time for 3D blob detection: %f" %(time() - time_start))
+    if blobs_log.size < 1:
+        print("no blobs detected")
+        return None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     print(blobs_log)
     scale = 2 * max(blobs_log[:, 3]) * scaling_factor

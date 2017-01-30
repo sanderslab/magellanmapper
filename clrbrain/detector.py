@@ -66,7 +66,7 @@ def segment_blob(roi, vis):
     print("blob detection...")
     # use 3D blob detection from skimage v.0.13pre
     time_start = time()
-    blobs_log = blob_log(roi, min_sigma=4 * scaling_factor, 
+    blobs_log = blob_log(roi, min_sigma=3 * scaling_factor, 
                          max_sigma=30 * scaling_factor, num_sigma=10, 
                          threshold=0.1)
     print("time for 3D blob detection: %f" %(time() - time_start))
@@ -81,7 +81,7 @@ def segment_blob(roi, vis):
                             blobs_log[:, 0], blobs_log[:, 3],
                             scale_mode="none", scale_factor=scale, 
                             opacity=0.5, color=(0, 1, 0))
-    print("found {} blobs".format(blobs_log.size))
+    print("found {} blobs".format(blobs_log.shape[0]))
     return blobs_log
 
 def segment_roi(roi, vis):

@@ -38,10 +38,10 @@ import sys
 
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, 
-                        Int, Array, push_exception_handler)
+                        Int, List, Array, push_exception_handler, Property)
 from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
-                          RangeEditor, HSplit)
-from traitsui.ui_editors.array_view_editor import ArrayViewEditor
+                          RangeEditor, HSplit, TabularEditor)
+from traitsui.tabular_adapter import TabularAdapter
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
@@ -156,6 +156,13 @@ class VisHandler(Handler):
         """
         importer.jb.kill_vm()
 
+class SegmentsArrayAdapter(TabularAdapter):
+    columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), ("radius", 3)]
+    index_text = Property
+    
+    def _get_index_text(self):
+        return str(self.row)
+
 class Visualization(HasTraits):
     """GUI for choosing a region of interest and segmenting it.
     
@@ -190,6 +197,8 @@ class Visualization(HasTraits):
     roi = None
     segments = None
     segs_array = Array
+    segs_selected = List
+    segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, selected_row="segs_selected")
     segs_cmap = None
     
     def __init__(self):
@@ -219,7 +228,7 @@ class Visualization(HasTraits):
         '''
         plot_2d.plot_2d_stack(_fig_title(curr_offset, self.roi_array[0]), image5d, channel, 
                               self.roi_array[0], curr_offset, 
-                              self.segments, self.segs_cmap)
+                              self.segments, self.segs_cmap, self.segs_selected)
         '''
         
     @on_trait_change('x_offset,y_offset,z_offset')
@@ -248,6 +257,7 @@ class Visualization(HasTraits):
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
+        print(self.segs_selected)
         self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
         self.segs_array = self.segments
     
@@ -257,7 +267,8 @@ class Visualization(HasTraits):
         print(curr_roi_size)
         plot_2d.plot_2d_stack(_fig_title(curr_offset, curr_roi_size), 
                               image5d, channel, curr_roi_size, 
-                              curr_offset, self.segments, self.segs_cmap)
+                              curr_offset, self.segments, self.segs_cmap, 
+                              self.segs_selected)
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
@@ -302,7 +313,7 @@ class Visualization(HasTraits):
                 ),
                 Item(
                     "segs_array",
-                    editor=ArrayViewEditor(),
+                    editor=segs_table,
                     show_label=False
                 )
             )

@@ -86,7 +86,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             ax.add_collection(collection_z)
     return collection_z
    
-def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap):
+def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap, segs_selected):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -160,10 +160,12 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap
     def on_pick(event):
         collection = event.artist
         collectioni = collection_z_list.index(collection)
-        #print("segments_z: {}".format(segments_z))
-        print(collectioni, event.ind)
         if collection != -1:
             seg = segments_z_list[collectioni][event.ind[0]]
+            print("picked segment: {}".format(seg))
+            segi = np.where((segments == seg).all(axis=1))
+            if len(segi) > 0:
+                segs_selected.append(segi[0])
             
     
     fig.canvas.mpl_connect("pick_event", on_pick)

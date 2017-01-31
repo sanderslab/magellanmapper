@@ -62,6 +62,12 @@ def segment_blob(roi, vis):
     Args:
         roi: Region of interest to segment.
         vis: Visualization object on which to draw the contour.
+    
+    Returns:
+        blobs_log: Array of detected blobs, each given as 
+            (z, row, column, radius).
+        cmap: Randomized colormap, where each blob will get a different
+            color.
     """
     print("blob detection...")
     # use 3D blob detection from skimage v.0.13pre

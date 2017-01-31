@@ -12,13 +12,24 @@ import numpy as np
 from mayavi import mlab
 from tvtk.pyface.scene_model import SceneModelError
 from matplotlib import pyplot as plt, cm
+from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 
 colormap_2d = cm.inferno
 
-def show_subplot(gs, row, col, image5d, channel, roi_size, offset, segments, alpha, 
-                 highlight=False):
+def _circle_collection(segments, edgecolor, facecolor, linewidth):
+    seg_patches = []
+    for seg in segments:
+        seg_patches.append(patches.Circle((seg[2], seg[1]), radius=seg[3]))
+    collection = PatchCollection(seg_patches)
+    collection.set_edgecolor(edgecolor)
+    collection.set_facecolor(facecolor)
+    collection.set_linewidth(linewidth)
+    return collection
+
+def show_subplot(gs, row, col, image5d, channel, roi_size, offset, segments, 
+                 segments_z, segs_cmap, alpha, highlight=False):
     """Shows subplots of the region of interest.
     
     Args:
@@ -63,12 +74,15 @@ def show_subplot(gs, row, col, image5d, channel, roi_size, offset, segments, alp
         '''
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
         if segments is not None:
-            for seg in segments:
-                ax.add_patch(patches.Circle((seg[2], seg[1]), radius=seg[3], 
-                                            fill=False, edgecolor="green", 
-                                            linewidth=2))
+            collection = _circle_collection(segments, segs_cmap.astype(float) / 255.0,
+                                            "none", 3.0)
+            ax.add_collection(collection)
+        if segments_z is not None:
+            collection_z = _circle_collection(segments_z, "w", "none", 1.0)
+            collection_z.set_linestyle(":")
+            ax.add_collection(collection_z)
    
-def plot_2d_stack(title, image5d, channel, roi_size, offset, segments):
+def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -90,13 +104,13 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments):
     z_planes = z_planes + z_planes_padding * 2
     
     # plot layout depending on number of z-planes
-    max_cols = 15
+    max_cols = 11
     zoom_plot_rows = math.ceil(z_planes / max_cols)
     col_remainder = z_planes % max_cols
     zoom_plot_cols = max(col_remainder, max_cols)
     top_rows = 4
     gs = gridspec.GridSpec(top_rows + zoom_plot_rows, zoom_plot_cols, 
-                           wspace=0.7, hspace=0)
+                           wspace=0.7, hspace=0.5)
     
     # overview image, with bottom of offset shown as rectangle
     half_cols = zoom_plot_cols // 2
@@ -128,11 +142,12 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments):
             # fade z-planes outside of ROI
             alpha = 0.5 if z < z_start or z >= z_start + roi_size[2] else 1
             #print("row: {}".format(i * max_cols + j))
-            segs = None
+            segments_z = None
             if segments is not None:
-                segs = segments[segments[:, 0] == z_relative]
+                segments_z = segments[segments[:, 0] == z_relative]
             show_subplot(gs, i + top_rows, j, image5d, channel, roi_size,
-                         zoom_offset, segs, alpha, z == z_start)
+                         zoom_offset, segments, segments_z, segs_cmap, alpha, 
+                         z == z_start)
     
     # show 3D screenshot if available
     try:
@@ -142,7 +157,7 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments):
         _hide_axes(ax)
     except SceneModelError:
         print("No Mayavi image to screen capture")
-    gs.tight_layout(fig, pad=0)
+    gs.tight_layout(fig, pad=0.5)
     plt.ion()
     plt.show()
     

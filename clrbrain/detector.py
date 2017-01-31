@@ -77,12 +77,16 @@ def segment_blob(roi, vis):
     print(blobs_log)
     scale = 2 * max(blobs_log[:, 3]) * scaling_factor
     print("blob point scaling: {}".format(scale))
-    vis.scene.mlab.points3d(blobs_log[:, 2], blobs_log[:, 1], 
-                            blobs_log[:, 0], blobs_log[:, 3],
-                            scale_mode="none", scale_factor=scale, 
-                            opacity=0.5, color=(0, 1, 0))
+    cmap = (np.random.random((blobs_log.shape[0], 4)) * 255).astype(np.uint8)
+    cmap[:, -1] = 170
+    cmap_indices = np.arange(blobs_log.shape[0])
+    print(cmap_indices.shape, blobs_log[:, 3].shape)
+    pts = vis.scene.mlab.points3d(blobs_log[:, 2], blobs_log[:, 1], 
+                            blobs_log[:, 0], cmap_indices, #blobs_log[:, 3],
+                            scale_mode="none", scale_factor=scale) 
+    pts.module_manager.scalar_lut_manager.lut.table = cmap
     print("found {} blobs".format(blobs_log.shape[0]))
-    return blobs_log
+    return blobs_log, cmap
 
 def segment_roi(roi, vis):
     """Segments a region of interest, using the rendering technique,
@@ -95,7 +99,7 @@ def segment_roi(roi, vis):
     mlab_3d = plot_3d.get_mlab_3d()
     if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
         segment_rw(roi, vis)
-        return None
+        return None, None
     else:
         return segment_blob(roi, vis)
 

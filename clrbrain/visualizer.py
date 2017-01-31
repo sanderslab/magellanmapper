@@ -187,6 +187,7 @@ class Visualization(HasTraits):
     btn_2d_trait = Button("2D Plots")
     roi = None
     segments = None
+    segs_cmap = None
     
     def __init__(self):
         # Do not forget to call the parent's __init__
@@ -209,9 +210,10 @@ class Visualization(HasTraits):
         self.roi_array[0] = roi_size
         self.roi = plot_3d.show_roi(image5d, channel, self, self.roi_array[0], 
                                     offset=curr_offset)
-        #self.segments = detector.segment_roi(self.roi, self)
-        #plot_2d.plot_2d_stack(_fig_title(), image5d, channel, 
-        #                      self.roi_array[0], curr_offset, self.segments)
+        self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
+        plot_2d.plot_2d_stack(_fig_title(curr_offset, self.roi_array[0]), image5d, channel, 
+                              self.roi_array[0], curr_offset, 
+                              self.segments, self.segs_cmap)
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
@@ -247,7 +249,7 @@ class Visualization(HasTraits):
         print(curr_roi_size)
         plot_2d.plot_2d_stack(_fig_title(curr_offset, curr_roi_size), 
                               image5d, channel, curr_roi_size, 
-                              curr_offset, self.segments)
+                              curr_offset, self.segments, self.segs_cmap)
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

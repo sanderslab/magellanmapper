@@ -28,7 +28,7 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     collection.set_linewidth(linewidth)
     return collection
 
-def show_subplot(gs, row, col, image5d, channel, roi_size, offset, segments, 
+def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False):
     """Shows subplots of the region of interest.
     
@@ -51,6 +51,7 @@ def show_subplot(gs, row, col, image5d, channel, roi_size, offset, segments,
     size = image5d.shape
     z = offset[2]
     ax.set_title("z={}".format(z))
+    collection_z = None
     if z < 0 or z >= size[1]:
         print("skipping z-plane {}".format(z))
         plt.imshow(np.zeros(roi_size[0:2]))
@@ -77,10 +78,13 @@ def show_subplot(gs, row, col, image5d, channel, roi_size, offset, segments,
             collection = _circle_collection(segments, segs_cmap.astype(float) / 255.0,
                                             "none", 3.0)
             ax.add_collection(collection)
+            
         if segments_z is not None:
             collection_z = _circle_collection(segments_z, "w", "none", 1.0)
             collection_z.set_linestyle(":")
+            collection_z.set_picker(5)
             ax.add_collection(collection_z)
+    return collection_z
    
 def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap):
     """Shows a figure of 2D plots to compare with the 3D plot.
@@ -129,6 +133,8 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap
     # zoomed-in views of z-planes spanning from just below to just above ROI
     #print("rows: {}, cols: {}, remainder: {}"
     #      .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
+    collection_z_list = []
+    segments_z_list = []
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
         cols = max_cols
@@ -145,9 +151,22 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap
             segments_z = None
             if segments is not None:
                 segments_z = segments[segments[:, 0] == z_relative]
-            show_subplot(gs, i + top_rows, j, image5d, channel, roi_size,
+            segments_z_list.append(segments_z)
+            collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, channel, roi_size,
                          zoom_offset, segments, segments_z, segs_cmap, alpha, 
                          z == z_start)
+            collection_z_list.append(collection_z)
+    
+    def on_pick(event):
+        collection = event.artist
+        collectioni = collection_z_list.index(collection)
+        #print("segments_z: {}".format(segments_z))
+        print(collectioni, event.ind)
+        if collection != -1:
+            seg = segments_z_list[collectioni][event.ind[0]]
+            
+    
+    fig.canvas.mpl_connect("pick_event", on_pick)
     
     # show 3D screenshot if available
     try:

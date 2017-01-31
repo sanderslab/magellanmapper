@@ -80,7 +80,6 @@ def segment_blob(roi, vis):
     cmap = (np.random.random((blobs_log.shape[0], 4)) * 255).astype(np.uint8)
     cmap[:, -1] = 170
     cmap_indices = np.arange(blobs_log.shape[0])
-    print(cmap_indices.shape, blobs_log[:, 3].shape)
     pts = vis.scene.mlab.points3d(blobs_log[:, 2], blobs_log[:, 1], 
                             blobs_log[:, 0], cmap_indices, #blobs_log[:, 3],
                             scale_mode="none", scale_factor=scale) 

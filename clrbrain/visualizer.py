@@ -39,7 +39,9 @@ import sys
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, 
                         Int, Array, push_exception_handler)
-from traitsui.api import View, Item, HGroup, VGroup, Handler, RangeEditor
+from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
+                          RangeEditor, HSplit)
+from traitsui.ui_editors.array_view_editor import ArrayViewEditor
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
@@ -187,6 +189,7 @@ class Visualization(HasTraits):
     btn_2d_trait = Button("2D Plots")
     roi = None
     segments = None
+    segs_array = Array
     segs_cmap = None
     
     def __init__(self):
@@ -210,11 +213,15 @@ class Visualization(HasTraits):
         self.roi_array[0] = roi_size
         self.roi = plot_3d.show_roi(image5d, channel, self, self.roi_array[0], 
                                     offset=curr_offset)
-        self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
+        #self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
+        # need to include at least one row or else will crash
+        self.segs_array = np.zeros((1, 4)) if self.segments is None else self.segments
+        '''
         plot_2d.plot_2d_stack(_fig_title(curr_offset, self.roi_array[0]), image5d, channel, 
                               self.roi_array[0], curr_offset, 
                               self.segments, self.segs_cmap)
-    
+        '''
+        
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
         """Shows the chosen offset when an offset slider is moved.
@@ -241,7 +248,8 @@ class Visualization(HasTraits):
     
     def _btn_segment_trait_fired(self):
         #print(Visualization.roi)
-        self.segments = detector.segment_roi(self.roi, self)
+        self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
+        self.segs_array = self.segments
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()
@@ -256,39 +264,48 @@ class Visualization(HasTraits):
     
     # the layout of the dialog created
     view = View(
-        Item(
-            'scene', 
-            editor=SceneEditor(scene_class=MayaviScene),
-            height=500, width=500, show_label=False
-        ),
-        VGroup(
-            Item("roi_array", label="ROI dimensions (x,y,z)"),
+        HSplit(
             Item(
-                "x_offset",
-                editor=RangeEditor(
-                    low_name="x_low",
-                    high_name="x_high",
-                    mode="slider")
+                'scene', 
+                editor=SceneEditor(scene_class=MayaviScene),
+                height=500, width=500, show_label=False
             ),
-            Item(
-                "y_offset",
-                editor=RangeEditor(
-                    low_name="y_low",
-                    high_name="y_high",
-                    mode="slider")
-            ),
-            Item(
-                "z_offset",
-                editor=RangeEditor(
-                    low_name="z_low",
-                    high_name="z_high",
-                    mode="slider")
+            VGroup(
+                VGroup(
+                    Item("roi_array", label="ROI dimensions (x,y,z)"),
+                    Item(
+                        "x_offset",
+                        editor=RangeEditor(
+                            low_name="x_low",
+                            high_name="x_high",
+                            mode="slider")
+                    ),
+                    Item(
+                        "y_offset",
+                        editor=RangeEditor(
+                            low_name="y_low",
+                            high_name="y_high",
+                            mode="slider")
+                    ),
+                    Item(
+                        "z_offset",
+                        editor=RangeEditor(
+                            low_name="z_low",
+                            high_name="z_high",
+                            mode="slider")
+                    )
+                ),
+                HGroup(
+                    Item("btn_redraw_trait", show_label=False), 
+                    Item("btn_segment_trait", show_label=False), 
+                    Item("btn_2d_trait", show_label=False)
+                ),
+                Item(
+                    "segs_array",
+                    editor=ArrayViewEditor(),
+                    show_label=False
+                )
             )
-        ),
-        HGroup(
-            Item("btn_redraw_trait", show_label=False), 
-            Item("btn_segment_trait", show_label=False), 
-            Item("btn_2d_trait", show_label=False)
         ),
         handler=VisHandler(),
         title="clrbrain",

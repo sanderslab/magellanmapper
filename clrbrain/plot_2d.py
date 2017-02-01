@@ -75,7 +75,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         '''
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
         if segments is not None:
-            collection = _circle_collection(segments, segs_cmap.astype(float) / 255.0,
+            collection = _circle_collection(segments, 
+                                            segs_cmap.astype(float) / 255.0,
                                             "none", 3.0)
             ax.add_collection(collection)
             
@@ -86,7 +87,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             ax.add_collection(collection_z)
     return collection_z
    
-def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap, segs_selected):
+def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
+                  segs_cmap):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -152,9 +154,10 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap
             if segments is not None:
                 segments_z = segments[segments[:, 0] == z_relative]
             segments_z_list.append(segments_z)
-            collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, channel, roi_size,
-                         zoom_offset, segments, segments_z, segs_cmap, alpha, 
-                         z == z_start)
+            collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, 
+                                        channel, roi_size,
+                                        zoom_offset, segments, segments_z, 
+                                        segs_cmap, alpha, z == z_start)
             collection_z_list.append(collection_z)
     
     def on_pick(event):
@@ -165,7 +168,9 @@ def plot_2d_stack(title, image5d, channel, roi_size, offset, segments, segs_cmap
             print("picked segment: {}".format(seg))
             segi = np.where((segments == seg).all(axis=1))
             if len(segi) > 0:
-                segs_selected.append(segi[0])
+                # must take from vis rather than saved copy in case user 
+                # manually updates the table
+                vis.segs_selected.append(segi[0][0])
             
     
     fig.canvas.mpl_connect("pick_event", on_pick)

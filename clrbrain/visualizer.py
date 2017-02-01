@@ -34,7 +34,9 @@ Attributes:
         with "offset=x,y,z" argument, where x, y, and z are integers.
 """
 
+import os
 import sys
+import datetime
 
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, 
@@ -51,6 +53,7 @@ from clrbrain import importer
 from clrbrain import detector
 from clrbrain import plot_3d
 from clrbrain import plot_2d
+from clrbrain import sqlite
 
 filename = None
 series = 0 # series for multi-stack files
@@ -59,6 +62,8 @@ roi_size = [100, 100, 15] # region of interest
 offset = None
 
 image5d = None
+conn = None
+cur = None
 params = {'legend.fontsize': 'small',
           'axes.labelsize': 'small',
           'axes.titlesize': 'xx-small',
@@ -126,23 +131,18 @@ def main():
     importer.start_jvm()
     #names, sizes = parse_ome(filename)
     #sizes = find_sizes(filename)
-    global image5d
+    global image5d, conn, cur
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
     pylab.rcParams.update(params)
     np.set_printoptions(threshold=np.nan)
+    conn, cur = sqlite.start_db()
     push_exception_handler(reraise_exceptions=True)
     visualization = Visualization()
     visualization.configure_traits()
     
 def _fig_title(offset, roi_size):
-    i = filename.rfind("/")
-    title = filename
-    if i == -1:
-        i = title.rfind("\\")
-    if i != -1 and len(title) > i + 1:
-        title = title[(i + 1):]
     title = ("{}, series: {}\n"
-             "offset: {}, ROI size: {}").format(title, series, 
+             "offset: {}, ROI size: {}").format(os.path.basename(filename), series, 
                                                 offset, roi_size)
     return title
 
@@ -155,6 +155,8 @@ class VisHandler(Handler):
         """Closes the Java VM when the GUI is closed.
         """
         importer.jb.kill_vm()
+        global conn
+        conn.close()
 
 class SegmentsArrayAdapter(TabularAdapter):
     columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), ("radius", 3)]
@@ -194,12 +196,31 @@ class Visualization(HasTraits):
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Segment")
     btn_2d_trait = Button("2D Plots")
+    btn_save_segments = Button("Save Segments")
     roi = None
     segments = None
-    segs_array = Array
-    segs_selected = List
-    segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, selected_row="segs_selected")
+    segs_array = Array # for populating table
+    segs_selected = List # indices
+    segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, 
+                               selected_row="segs_selected")
     segs_cmap = None
+    
+    def save_segs(self):
+        if self.segments is None:
+            print("no segments found")
+            return
+        elif self.segs_selected is None or len(self.segs_selected) < 1:
+            #print(segs_selected)
+            print("no segments selected")
+            return
+        segs = self.segments[self.segs_selected]
+        for seg in segs:
+            seg = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
+                   seg[0] + self.z_offset, seg[3])
+        exp_id = sqlite.select_or_insert_experiment(conn, cur, 
+                                                    os.path.basename(filename),
+                                                    datetime.datetime(1000, 1, 1))
+        sqlite.insert_blobs(conn, cur, exp_id, series, segs)
     
     def __init__(self):
         # Do not forget to call the parent's __init__
@@ -225,10 +246,12 @@ class Visualization(HasTraits):
         #self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
         # need to include at least one row or else will crash
         self.segs_array = np.zeros((1, 4)) if self.segments is None else self.segments
+        #self.segs_selected = [0, 3]
+        #self.save_segs()
         '''
-        plot_2d.plot_2d_stack(_fig_title(curr_offset, self.roi_array[0]), image5d, channel, 
-                              self.roi_array[0], curr_offset, 
-                              self.segments, self.segs_cmap, self.segs_selected)
+        plot_2d.plot_2d_stack(self, _fig_title(curr_offset, self.roi_array[0]), image5d, 
+                              channel, self.roi_array[0], curr_offset, 
+                              self.segments, self.segs_cmap)
         '''
         
     @on_trait_change('x_offset,y_offset,z_offset')
@@ -265,10 +288,12 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
-        plot_2d.plot_2d_stack(_fig_title(curr_offset, curr_roi_size), 
+        plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                               image5d, channel, curr_roi_size, 
-                              curr_offset, self.segments, self.segs_cmap, 
-                              self.segs_selected)
+                              curr_offset, self.segments, self.segs_cmap)
+    
+    def _btn_save_segments_fired(self):
+        self.save_segs()
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
@@ -315,7 +340,8 @@ class Visualization(HasTraits):
                     "segs_array",
                     editor=segs_table,
                     show_label=False
-                )
+                ),
+                Item("btn_save_segments", show_label=False)
             )
         ),
         handler=VisHandler(),

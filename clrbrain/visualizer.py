@@ -214,13 +214,15 @@ class Visualization(HasTraits):
             print("no segments selected")
             return
         segs = self.segments[self.segs_selected]
+        segs_transposed = []
         for seg in segs:
             seg = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
                    seg[0] + self.z_offset, seg[3])
+            segs_transposed.append(seg)
         exp_id = sqlite.select_or_insert_experiment(conn, cur, 
                                                     os.path.basename(filename),
                                                     datetime.datetime(1000, 1, 1))
-        sqlite.insert_blobs(conn, cur, exp_id, series, segs)
+        sqlite.insert_blobs(conn, cur, exp_id, series, segs_transposed)
     
     def __init__(self):
         # Do not forget to call the parent's __init__

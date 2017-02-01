@@ -186,11 +186,10 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                     print(seg)
                     # concatenate for in-place array update, though append and 
                     # re-assigning also probably works
-                    vis.segs_array = np.concatenate((vis.segs_array, seg))
-                    vis.segments = vis.segs_array
+                    vis.segments = np.concatenate((vis.segments, seg))
                     # create a new copy rather than appending to trigger a full
                     # update; otherwise, only last entry gets selected
-                    vis.segs_selected = vis.segs_selected + [vis.segs_array.shape[0] - 1]
+                    vis.segs_selected = vis.segs_selected + [vis.segments.shape[0] - 1]
             except ValueError:
                 print("not on a plot to select a point")
        

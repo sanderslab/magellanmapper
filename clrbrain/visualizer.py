@@ -109,7 +109,7 @@ def main():
                 print("Set to series: {}".format(series))
             elif arg_split[0] == ARG_SCALING:
                 scaling = float(arg_split[1])
-                detector.set_scaling_factor(scaling)
+                detector.scaling_factor = scaling
                 print("Set scaling factor to: {}".format(scaling))
             elif arg_split[0] == ARG_SIDES:
                 sides_split = arg_split[1].split(",")
@@ -121,7 +121,7 @@ def main():
                           .format(arg_split[1]))
             elif arg_split[0] == ARG_3D:
                 if arg_split[1] in plot_3d.MLAB_3D_TYPES:
-                    plot_3d.set_mlab_3d(arg_split[1])
+                    plot_3d.mlab_3d = arg_split[1]
                     print("3D rendering set to {}".format(arg_split[1]))
                 else:
                     print("Did not recognize 3D rendering type: {}"
@@ -198,8 +198,7 @@ class Visualization(HasTraits):
     btn_2d_trait = Button("2D Plots")
     btn_save_segments = Button("Save Segments")
     roi = None
-    segments = None
-    segs_array = Array # for populating table
+    _segments = Array
     segs_selected = List # indices
     segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, 
                                selected_row="segs_selected")
@@ -246,8 +245,7 @@ class Visualization(HasTraits):
         self.roi = plot_3d.show_roi(image5d, channel, self, self.roi_array[0], 
                                     offset=curr_offset)
         #self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
-        # need to include at least one row or else will crash
-        self.segs_array = np.zeros((1, 4)) if self.segments is None else self.segments
+        self.segments = None
         #self.segs_selected = [0, 3]
         #self.save_segs()
         '''
@@ -282,7 +280,6 @@ class Visualization(HasTraits):
     
     def _btn_segment_trait_fired(self):
         self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
-        self.segs_array = self.segments
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()
@@ -297,6 +294,18 @@ class Visualization(HasTraits):
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
+    
+    @property
+    def segments(self):
+        return self._segments
+    
+    @segments.setter
+    def segments(self, val):
+        if val is None:
+            # need to include at least one row or else will crash
+            self._segments = np.zeros((1, 4))
+        else:
+            self._segments = val
     
     # the layout of the dialog created
     view = View(
@@ -337,7 +346,7 @@ class Visualization(HasTraits):
                     Item("btn_2d_trait", show_label=False)
                 ),
                 Item(
-                    "segs_array",
+                    "_segments",
                     editor=segs_table,
                     show_label=False
                 ),

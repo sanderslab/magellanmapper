@@ -190,20 +190,3 @@ def show_roi(image5d, channel, vis, roi_size, offset=(0, 0, 0)):
         plot_3d_points(roi, vis)
     
     return roi
-
-def set_mlab_3d(val):
-    """Sets the mlab_3d attribute for the 3D rendering type.
-    
-    Args:
-        val: Rendering type.
-    """
-    global mlab_3d
-    mlab_3d = val
-
-def get_mlab_3d():
-    """Gets the mlab_3d attribute for the 3D rendering type.
-    
-    Returns:
-        The rendering type.
-    """
-    return mlab_3d

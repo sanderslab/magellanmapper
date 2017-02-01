@@ -81,7 +81,7 @@ def segment_blob(roi, vis):
         return None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     print(blobs_log)
-    scale = 2 * max(blobs_log[:, 3]) * scaling_factor
+    scale = 2 * max(blobs_log[:, 3])# * scaling_factor
     print("blob point scaling: {}".format(scale))
     cmap = (np.random.random((blobs_log.shape[0], 4)) * 255).astype(np.uint8)
     cmap[:, -1] = 170
@@ -101,18 +101,9 @@ def segment_roi(roi, vis):
         roi: Region of interest to segment.
         vis: Visualization object on which to draw the contour.
     """
-    mlab_3d = plot_3d.get_mlab_3d()
+    mlab_3d = plot_3d.mlab_3d
     if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
         segment_rw(roi, vis)
         return None, None
     else:
         return segment_blob(roi, vis)
-
-def set_scaling_factor(val):
-    """Sets the scaling factor to adjust for length per pixel.
-    
-    Args:
-        val: Scaling factor.
-    """
-    global scaling_factor
-    scaling_factor = val

@@ -85,7 +85,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             collection_z.set_linestyle(":")
             collection_z.set_picker(5)
             ax.add_collection(collection_z)
-    return collection_z
+    return ax, collection_z
    
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
                   segs_cmap):
@@ -137,6 +137,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     #      .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
     collection_z_list = []
     segments_z_list = []
+    ax_z_list = []
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
         cols = max_cols
@@ -154,11 +155,12 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             if segments is not None:
                 segments_z = segments[segments[:, 0] == z_relative]
             segments_z_list.append(segments_z)
-            collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, 
+            ax_z, collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, 
                                         channel, roi_size,
                                         zoom_offset, segments, segments_z, 
                                         segs_cmap, alpha, z == z_start)
             collection_z_list.append(collection_z)
+            ax_z_list.append(ax_z)
     
     def on_pick(event):
         collection = event.artist
@@ -171,9 +173,28 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                 # must take from vis rather than saved copy in case user 
                 # manually updates the table
                 vis.segs_selected.append(segi[0][0])
-            
-    
+       
     fig.canvas.mpl_connect("pick_event", on_pick)
+    
+    def on_btn_release(event):
+        ax = event.inaxes
+        if event.button == 3:
+            try:
+                axi = ax_z_list.index(ax)
+                if axi != -1 and axi >= z_planes_padding and axi < z_planes - z_planes_padding:
+                    seg = np.array([[axi - z_planes_padding, event.ydata, event.xdata, 0.0]])
+                    print(seg)
+                    # concatenate for in-place array update, though append and 
+                    # re-assigning also probably works
+                    vis.segs_array = np.concatenate((vis.segs_array, seg))
+                    vis.segments = vis.segs_array
+                    # create a new copy rather than appending to trigger a full
+                    # update; otherwise, only last entry gets selected
+                    vis.segs_selected = vis.segs_selected + [vis.segs_array.shape[0] - 1]
+            except ValueError:
+                print("not on a plot to select a point")
+       
+    fig.canvas.mpl_connect("button_release_event", on_btn_release)
     
     # show 3D screenshot if available
     try:

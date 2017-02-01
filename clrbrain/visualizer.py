@@ -281,8 +281,6 @@ class Visualization(HasTraits):
         self.segments = None
     
     def _btn_segment_trait_fired(self):
-        #print(Visualization.roi)
-        print(self.segs_selected)
         self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
         self.segs_array = self.segments
     

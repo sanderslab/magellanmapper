@@ -25,8 +25,9 @@ def _create_db():
     cur.execute("CREATE TABLE experiments (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                           "name TEXT, date DATE)")
     cur.execute("CREATE TABLE blobs (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                                    "experiment_id TEXT, series INTEGER, "
-                                    "x INTEGER, y INTEGER, z INTEGER, radius REAL)")
+                                    "experiment_id INTEGER, series INTEGER, "
+                                    "x INTEGER, y INTEGER, z INTEGER, radius REAL, "
+                                    "confirmed INTEGER)")
     
     conn.commit()
     return conn, cur
@@ -95,14 +96,21 @@ def insert_blobs(conn, cur, experiment_id, series, blobs):
         conn: The connection.
         cur: Connection's cursor.
         experiment_id: ID of the experiment.
-        blobs: Array of blobs arrays, assumes to be in (x, y, z, radius) format.
+        blobs: Array of blobs arrays, assumes to be in (x, y, z, radius, confirmed)
+            format. "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 
+            1 = correct.
     """
     blobs_list = []
+    confirmed = 0
     for blob in blobs:
-        blobs_list.append((experiment_id, series, blob[0], blob[1], blob[2], blob[3]))
-    cur.executemany("INSERT INTO blobs (experiment_id, series, x, y, z, radius) "
-                    "VALUES (?, ?, ?, ?, ?, ?)", blobs_list)
-    print("{} blobs inserted".format(cur.rowcount))
+        blob_entry = [experiment_id, series]
+        blob_entry.extend(blob)
+        blobs_list.append(blob_entry)
+        if blob[4] == 1:
+            confirmed = confirmed + 1
+    cur.executemany("INSERT INTO blobs (experiment_id, series, x, y, z, radius, confirmed) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)", blobs_list)
+    print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
     
 if __name__ == "__main__":

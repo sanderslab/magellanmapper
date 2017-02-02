@@ -228,12 +228,14 @@ class Visualization(HasTraits):
             #print(segs_selected)
             print("no segments selected")
             return
-        segs = self.segments[self.segs_selected]
         segs_transposed = []
-        for seg in segs:
-            seg = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
-                   seg[0] + self.z_offset, seg[3])
-            segs_transposed.append(seg)
+        for i in range(len(self.segments)):
+            seg = self.segments[i]
+            # for now, assumes incorrect if not in selected list
+            confirmed = 1 if self.segs_selected.count(i) > 0 else 0
+            seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
+                      seg[0] + self.z_offset, seg[3], confirmed)
+            segs_transposed.append(seg_db)
         exp_id = sqlite.select_or_insert_experiment(conn, cur, 
                                                     os.path.basename(filename),
                                                     datetime.datetime(1000, 1, 1))

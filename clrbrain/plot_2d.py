@@ -86,7 +86,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             for spine in ax.spines.values():
                 spine.set_edgecolor("yellow")
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
-        if segments is not None:
+        if segments is not None and segs_cmap is not None:
             collection = _circle_collection(segments, 
                                             segs_cmap.astype(float) / 255.0,
                                             "none", 3.0)

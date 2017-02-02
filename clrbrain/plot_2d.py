@@ -19,6 +19,18 @@ import matplotlib.patches as patches
 colormap_2d = cm.inferno
 
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
+    """Draws a patch collection of circles for segments.
+    
+    Args:
+        segments: Numpy array of segments, generally as an (n, 4)
+            dimension array, where each segment is in (z, y, x, radius).
+        edgecolor: Color of patch borders.
+        facecolor: Color of patch interior.
+        linewidth: Width of the border.
+    
+    Returns:
+        The patch collection.
+    """
     seg_patches = []
     for seg in segments:
         seg_patches.append(patches.Circle((seg[2], seg[1]), radius=seg[3]))
@@ -33,6 +45,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     """Shows subplots of the region of interest.
     
     Args:
+        fig: Matplotlib figure.
         gs: Gridspec layout.
         row: Row number of the subplot in the layout.
         col: Column number of the subplot in the layout.
@@ -40,7 +53,12 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         channel: Channel of the image to display.
         roi_size: List of x,y,z dimensions of the ROI.
         offset: Tuple of x,y,z coordinates of the ROI.
-        segments: Segments to display in the subplot, which can be None.
+        segments: Numpy array of segments to display in the subplot, which 
+            can be None. Segments are generally given as an (n, 4)
+            dimension array, where each segment is in (z, y, x, radius).
+        segments_z: Subset of segments to highlight in a separate patch
+            collection.
+        segs_cmap: Colormap for segments.
         alpha: Opacity level.
         highlight: If true, the plot will be highlighted; defaults 
             to False.
@@ -67,12 +85,6 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         if highlight:
             for spine in ax.spines.values():
                 spine.set_edgecolor("yellow")
-        '''
-            for i in range(roi.shape[0]):
-                print("row {}: {}".format(i, " ".join(str(s) for s in roi[i])))
-        roi_rgb = np.zeros((roi.shape[0:2], 3))
-        roi_rgb[
-        '''
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
         if segments is not None:
             collection = _circle_collection(segments, 
@@ -97,7 +109,10 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         channel: Channel of the image to display.
         roi_size: List of x,y,z dimensions of the ROI.
         offset: Tuple of x,y,z coordinates of the ROI.
-        segments: Segments to display in the subplot, which can be None.
+        segments: Numpy array of segments to display in the subplot, which 
+            can be None. Segments are generally given as an (n, 4)
+            dimension array, where each segment is in (z, y, x, radius).
+        segs_cmap: Colormap for segments.
     """
     fig = plt.figure()
     fig.suptitle(title, color="navajowhite")
@@ -162,10 +177,13 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             collection_z_list.append(collection_z)
             ax_z_list.append(ax_z)
     
+    # record selected segments in the Visualization segments table
     def on_pick(event):
+        # segments_z_list is linked to collection list
         collection = event.artist
         collectioni = collection_z_list.index(collection)
         if collection != -1:
+            # patch index is linked to segments_z_list
             seg = segments_z_list[collectioni][event.ind[0]]
             print("picked segment: {}".format(seg))
             segi = np.where((segments == seg).all(axis=1))
@@ -176,20 +194,25 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
        
     fig.canvas.mpl_connect("pick_event", on_pick)
     
+    # add points that were not segmented by right-clicking on zoom plots
     def on_btn_release(event):
         ax = event.inaxes
         if event.button == 3:
             try:
                 axi = ax_z_list.index(ax)
-                if axi != -1 and axi >= z_planes_padding and axi < z_planes - z_planes_padding:
-                    seg = np.array([[axi - z_planes_padding, event.ydata, event.xdata, 0.0]])
+                if (axi != -1 and axi >= z_planes_padding 
+                    and axi < z_planes - z_planes_padding):
+                    
+                    seg = np.array([[axi - z_planes_padding, 
+                                     event.ydata, event.xdata, 0.0]])
                     print(seg)
-                    # concatenate for in-place array update, though append and 
-                    # re-assigning also probably works
+                    # concatenate for in-place array update, though append
+                    # and re-assigning also probably works
                     vis.segments = np.concatenate((vis.segments, seg))
-                    # create a new copy rather than appending to trigger a full
-                    # update; otherwise, only last entry gets selected
-                    vis.segs_selected = vis.segs_selected + [vis.segments.shape[0] - 1]
+                    # create a new copy rather than appending to trigger a
+                    # full update; otherwise, only last entry gets selected
+                    vis.segs_selected = (vis.segs_selected 
+                                         + [vis.segments.shape[0] - 1])
             except ValueError:
                 print("not on a plot to select a point")
        
@@ -215,5 +238,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     '''
 
 def _hide_axes(ax):
+    """Hides x- and y-axes.
+    """
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)

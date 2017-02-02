@@ -162,10 +162,11 @@ def show_roi(image5d, channel, vis, roi_size, offset=(0, 0, 0)):
     
     Args:
         image5d: Image array.
+        channel: Channel to view; wil be ignored if image5d has no
+            channel dimension.
         vis: Visualization object on which to draw the contour. Any 
             current image will be cleared first.
-        cube_len: Length of each side of the region of interest as a 
-            cube. Defaults to 100.
+        roi_size: Size of the region of interest as (x, y, z).
         offset: Tuple of offset given as (x, y, z) for the region 
             of interest. Defaults to (0, 0, 0).
     

@@ -61,9 +61,9 @@ channel = 0 # channel of interest
 roi_size = [100, 100, 15] # region of interest
 offset = None
 
-image5d = None
-conn = None
-cur = None
+image5d = None # numpy image array
+conn = None # sqlite connection
+cur = None # sqlite cursor
 params = {'legend.fontsize': 'small',
           'axes.labelsize': 'small',
           'axes.titlesize': 'xx-small',
@@ -134,13 +134,22 @@ def main():
     global image5d, conn, cur
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
     pylab.rcParams.update(params)
-    np.set_printoptions(threshold=np.nan)
+    np.set_printoptions(threshold=np.nan) # print full arrays
     conn, cur = sqlite.start_db()
     push_exception_handler(reraise_exceptions=True)
     visualization = Visualization()
     visualization.configure_traits()
     
 def _fig_title(offset, roi_size):
+    """Figure title parser.
+    
+    Arguments:
+        offset: (x, y, z) image offset
+        roi_size: (x, y, z) region of interest size
+    
+    Returns:
+        Figure title string.
+    """
     title = ("{}, series: {}\n"
              "offset: {}, ROI size: {}").format(os.path.basename(filename), series, 
                                                 offset, roi_size)
@@ -181,6 +190,7 @@ class Visualization(HasTraits):
             interest.
         btn_segment_trait: Button editor for segmenting the ROI.
         roi: The ROI.
+        segs_selected: List of indices of selected segments.
     """
     x_low = 0
     x_high = 100
@@ -205,6 +215,12 @@ class Visualization(HasTraits):
     segs_cmap = None
     
     def save_segs(self):
+        """Saves segments to database.
+        
+        Segments are selected from a table, and positions are transposed
+        based on the current offset. Also inserts a new experiment based 
+        on the filename if not already added.
+        """
         if self.segments is None:
             print("no segments found")
             return

@@ -77,6 +77,7 @@ ARG_SERIES = "series"
 ARG_SIDES = "size"
 ARG_3D = "3d"
 ARG_SCALING = "scaling"
+ARG_SAVEFIG = "savefig"
 
 def main():
     """Starts the visualization GUI.
@@ -122,10 +123,13 @@ def main():
             elif arg_split[0] == ARG_3D:
                 if arg_split[1] in plot_3d.MLAB_3D_TYPES:
                     plot_3d.mlab_3d = arg_split[1]
-                    print("3D rendering set to {}".format(arg_split[1]))
+                    print("3D rendering set to {}".format(plot_3d.mlab_3d))
                 else:
                     print("Did not recognize 3D rendering type: {}"
                           .format(arg_split[1]))
+            elif arg_split[0] == ARG_SAVEFIG:
+                plot_2d.savefig = arg_split[1]
+                print("Set savefig extension to: {}".format(plot_2d.savefig))
     
     # loads the image and GUI
     importer.start_jvm()
@@ -150,9 +154,9 @@ def _fig_title(offset, roi_size):
     Returns:
         Figure title string.
     """
-    title = ("{}, series: {}\n"
-             "offset: {}, ROI size: {}").format(os.path.basename(filename), series, 
-                                                offset, roi_size)
+    title = ("{} (series {})\n"
+             "offset {}, ROI size {}").format(os.path.basename(filename), series, 
+                                                offset, tuple(roi_size))
     return title
 
 class VisHandler(Handler):

@@ -17,6 +17,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 
 colormap_2d = cm.inferno
+savefig = None
 
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """Draws a patch collection of circles for segments.
@@ -125,11 +126,11 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     z_planes = z_planes + z_planes_padding * 2
     
     # plot layout depending on number of z-planes
-    max_cols = 11
+    max_cols = 9
     zoom_plot_rows = math.ceil(z_planes / max_cols)
     col_remainder = z_planes % max_cols
     zoom_plot_cols = max(col_remainder, max_cols)
-    top_rows = 4
+    top_rows = 3
     gs = gridspec.GridSpec(top_rows + zoom_plot_rows, zoom_plot_cols, 
                            wspace=0.7, hspace=0.5)
     
@@ -232,6 +233,10 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     gs.tight_layout(fig, pad=0.5)
     plt.ion()
     plt.show()
+    if savefig is not None:
+        name = title.replace("\n", "-").replace(" ", "") + "." + savefig
+        print("saving figure as {}".format(name))
+        plt.savefig(name)
     
     '''
     # demo 2D segmentation methods

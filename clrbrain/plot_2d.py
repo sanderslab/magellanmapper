@@ -179,6 +179,9 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     
     # record selected segments in the Visualization segments table
     def on_pick(event):
+        # ignore right-clicks
+        if event.mouseevent.button == 3:
+            return
         # segments_z_list is linked to collection list
         collection = event.artist
         collectioni = collection_z_list.index(collection)
@@ -205,7 +208,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                     
                     seg = np.array([[axi - z_planes_padding, 
                                      event.ydata, event.xdata, 0.0]])
-                    print(seg)
+                    print("added segment: {}".format(seg))
                     # concatenate for in-place array update, though append
                     # and re-assigning also probably works
                     vis.segments = np.concatenate((vis.segments, seg))

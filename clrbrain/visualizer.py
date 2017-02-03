@@ -233,9 +233,12 @@ class Visualization(HasTraits):
             seg = self.segments[i]
             # for now, assumes incorrect if not in selected list
             confirmed = 1 if self.segs_selected.count(i) > 0 else 0
-            seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
-                      seg[0] + self.z_offset, seg[3], confirmed)
-            segs_transposed.append(seg_db)
+            # ignores user added segments, where radius assumed to be 0,
+            # that are no longer selected
+            if not (confirmed == 0 and np.allclose(seg[3], 0)):
+                seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
+                          seg[0] + self.z_offset, seg[3], confirmed)
+                segs_transposed.append(seg_db)
         exp_id = sqlite.select_or_insert_experiment(conn, cur, 
                                                     os.path.basename(filename),
                                                     datetime.datetime(1000, 1, 1))

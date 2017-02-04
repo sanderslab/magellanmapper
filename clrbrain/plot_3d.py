@@ -155,7 +155,7 @@ def plot_3d_points(roi, vis):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
     """
 
-def show_roi(image5d, channel, vis, roi_size, offset=(0, 0, 0)):
+def prepare_roi(image5d, channel, roi_size, offset=(0, 0, 0)):
     """Finds and shows the region of interest.
     
     This region will be denoised and displayed in Mayavi.
@@ -185,9 +185,28 @@ def show_roi(image5d, channel, vis, roi_size, offset=(0, 0, 0)):
         roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0]]
     
     roi = denoise(roi)
-    if mlab_3d == MLAB_3D_TYPES[0]:
-        plot_3d_surface(roi, vis)
-    else:
-        plot_3d_points(roi, vis)
-    
     return roi
+
+def show_surface_labels(segments, vis):
+    '''
+    # Drawing options:
+    # 1) draw iso-surface around segmented regions
+    scalars = vis.scene.mlab.pipeline.scalar_field(labels)
+    surf2 = vis.scene.mlab.pipeline.iso_surface(scalars)
+    '''
+    # 2) draw a contour or points directly from labels
+    vis.scene.mlab.contour3d(segments)
+    #surf2 = vis.scene.mlab.points3d(labels)
+    return None
+
+def show_blobs(segments, vis):
+    scale = 2 * np.mean(segments[:, 3])# * scaling_factor
+    print("blob point scaling: {}".format(scale))
+    cmap = (np.random.random((segments.shape[0], 4)) * 255).astype(np.uint8)
+    cmap[:, -1] = 170
+    cmap_indices = np.arange(segments.shape[0])
+    pts = vis.scene.mlab.points3d(segments[:, 2], segments[:, 1], 
+                            segments[:, 0], cmap_indices, #segments[:, 3],
+                            scale_mode="none", scale_factor=scale) 
+    pts.module_manager.scalar_lut_manager.lut.table = cmap
+    return cmap

@@ -245,6 +245,19 @@ class Visualization(HasTraits):
                                                     datetime.datetime(1000, 1, 1))
         sqlite.insert_blobs(conn, cur, exp_id, series, segs_transposed)
     
+    def show_3d(self):
+        # show updated region of interest
+        curr_offset = self._curr_offset()
+        curr_roi_size = self.roi_array[0].astype(int)
+        self.roi = plot_3d.prepare_roi(image5d, channel, curr_roi_size, 
+                                       offset=curr_offset)
+        mlab_3d = plot_3d.mlab_3d
+        if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
+            plot_3d.plot_3d_surface(self.roi, self)
+        else:
+            plot_3d.plot_3d_points(self.roi, self)
+        self.segments = None
+      
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
@@ -264,10 +277,7 @@ class Visualization(HasTraits):
             curr_offset = self._curr_offset()
             #self.roi = show_roi(image5d, self, cube_len=cube_len)
         self.roi_array[0] = roi_size
-        self.roi = plot_3d.show_roi(image5d, channel, self, self.roi_array[0], 
-                                    offset=curr_offset)
-        #self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
-        self.segments = None
+        self.show_3d()
         #self.segs_selected = [0, 3]
         #self.save_segs()
         '''
@@ -275,7 +285,7 @@ class Visualization(HasTraits):
                               channel, self.roi_array[0], curr_offset, 
                               self.segments, self.segs_cmap)
         '''
-        
+    
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
         """Shows the chosen offset when an offset slider is moved.
@@ -292,16 +302,16 @@ class Visualization(HasTraits):
             self.y_offset = size[2] - roi_size[1]
         if self.z_offset + roi_size[2] > size[1]:
             self.z_offset = size[1] - roi_size[2]
-        
-        # show updated region of interest
-        curr_offset = self._curr_offset()
-        curr_roi_size = self.roi_array[0].astype(int)
-        self.roi = plot_3d.show_roi(image5d, channel, self, curr_roi_size, 
-                                    offset=curr_offset)
-        self.segments = None
+        self.show_3d()
     
     def _btn_segment_trait_fired(self):
-        self.segments, self.segs_cmap = detector.segment_roi(self.roi, self)
+        mlab_3d = plot_3d.mlab_3d
+        if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
+            self.segments = detector.segment_rw(self.roi, self)
+            self.segs_cmap = plot_3d.show_surface_labels(self.segments, self)
+        else:
+            self.segments = detector.segment_blob(self.roi, self)
+            self.segs_cmap = plot_3d.show_blobs(self.segments, self)
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()

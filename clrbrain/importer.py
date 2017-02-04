@@ -122,6 +122,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         except IOError:
             print("Unable to load {}, will attempt to reload {}"
                   .format(filename_npz, filename))
+    start_jvm()
     sizes, dtype = find_sizes(filename)
     rdr = bf.ImageReader(filename, perform_init=True)
     size = sizes[series]

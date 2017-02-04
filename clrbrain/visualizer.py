@@ -132,9 +132,6 @@ def main():
                 print("Set savefig extension to: {}".format(plot_2d.savefig))
     
     # loads the image and GUI
-    importer.start_jvm()
-    #names, sizes = parse_ome(filename)
-    #sizes = find_sizes(filename)
     global image5d, conn, cur
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
     pylab.rcParams.update(params)

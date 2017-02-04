@@ -181,7 +181,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # record selected segments in the Visualization segments table
     def on_pick(event):
         # ignore right-clicks
-        if event.mouseevent.button == 3:
+        if event.mouseevent.key == "control":
             return
         # segments_z_list is linked to collection list
         collection = event.artist
@@ -190,25 +190,37 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             # patch index is linked to segments_z_list
             seg = segments_z_list[collectioni][event.ind[0]]
             print("picked segment: {}".format(seg))
-            segi = np.where((segments == seg).all(axis=1))
+            segi = np.where((vis.segments == seg).all(axis=1))
+            print(segi)
             if len(segi) > 0:
                 # must take from vis rather than saved copy in case user 
                 # manually updates the table
-                vis.segs_selected.append(segi[0][0])
+                i = segi[0][0]
+                seg[4] = 1 if event.mouseevent.button == 1 else 0
+                vis.segments[segi[0][0]] = seg
+                # change selection simply to trigger table update in 
+                # separate window
+                if event.mouseevent.button == 1:
+                    if not i in vis.segs_selected:
+                        vis.segs_selected.append(i)
+                else:
+                    if not i in vis.segs_selected:
+                        vis.segs_selected.append(i)
+                    vis.segs_selected.remove(i)
        
     fig.canvas.mpl_connect("pick_event", on_pick)
     
-    # add points that were not segmented by right-clicking on zoom plots
+    # add points that were not segmented by ctrl-clicking on zoom plots
     def on_btn_release(event):
         ax = event.inaxes
-        if event.button == 3:
+        if event.key == "control":
             try:
                 axi = ax_z_list.index(ax)
                 if (axi != -1 and axi >= z_planes_padding 
                     and axi < z_planes - z_planes_padding):
                     
                     seg = np.array([[axi - z_planes_padding, 
-                                     event.ydata, event.xdata, 0.0]])
+                                     event.ydata, event.xdata, 0.0, 1]])
                     print("added segment: {}".format(seg))
                     # concatenate for in-place array update, though append
                     # and re-assigning also probably works

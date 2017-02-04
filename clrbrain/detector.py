@@ -91,6 +91,8 @@ def segment_blob(roi, vis):
                             scale_mode="none", scale_factor=scale) 
     pts.module_manager.scalar_lut_manager.lut.table = cmap
     print("found {} blobs".format(blobs_log.shape[0]))
+    confirmed = np.ones((blobs_log.shape[0], 1)) * -1
+    blobs_log = np.concatenate((blobs_log, confirmed), axis=1)
     return blobs_log, cmap
 
 def segment_roi(roi, vis):

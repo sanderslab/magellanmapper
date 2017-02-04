@@ -172,7 +172,8 @@ class VisHandler(Handler):
         conn.close()
 
 class SegmentsArrayAdapter(TabularAdapter):
-    columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), ("radius", 3)]
+    columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
+               ("radius", 3), ("confirmed", 4)]
     index_text = Property
     
     def _get_index_text(self):
@@ -228,20 +229,16 @@ class Visualization(HasTraits):
         if self.segments is None:
             print("no segments found")
             return
-        elif self.segs_selected is None or len(self.segs_selected) < 1:
-            #print(segs_selected)
-            print("no segments selected")
-            return
         segs_transposed = []
         for i in range(len(self.segments)):
             seg = self.segments[i]
-            # for now, assumes incorrect if not in selected list
-            confirmed = 1 if self.segs_selected.count(i) > 0 else 0
             # ignores user added segments, where radius assumed to be 0,
             # that are no longer selected
-            if not (confirmed == 0 and np.allclose(seg[3], 0)):
+            if self.segs_selected.count(i) <= 0 and np.allclose(seg[3], 0):
+                print("ignoring unselected user added segment: {}".format(seg))
+            else:
                 seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
-                          seg[0] + self.z_offset, seg[3], confirmed)
+                          seg[0] + self.z_offset, seg[3], seg[4])
                 segs_transposed.append(seg_db)
         exp_id = sqlite.select_or_insert_experiment(conn, cur, 
                                                     os.path.basename(filename),
@@ -328,7 +325,7 @@ class Visualization(HasTraits):
     def segments(self, val):
         if val is None:
             # need to include at least one row or else will crash
-            self._segments = np.zeros((1, 4))
+            self._segments = np.zeros((1, 5))
         else:
             self._segments = val
     

@@ -36,6 +36,7 @@ Attributes:
 
 import os
 import sys
+from time import time
 import datetime
 
 import numpy as np
@@ -62,6 +63,9 @@ roi_size = [100, 100, 15] # region of interest
 offset = None
 
 image5d = None # numpy image array
+load_proc = False
+image5d_proc = None
+segments_proc = None
 conn = None # sqlite connection
 cur = None # sqlite cursor
 params = {'legend.fontsize': 'small',
@@ -71,6 +75,7 @@ params = {'legend.fontsize': 'small',
           'ytick.labelsize': 'small'}
 
 ARG_IMG = "img"
+ARG_PROC = "proc"
 ARG_OFFSET = "offset"
 ARG_CHANNEL = "channel"
 ARG_SERIES = "series"
@@ -85,7 +90,7 @@ def main():
     Processes command-line arguments.
     """
     # command-line arguments
-    global filename, series, channel, roi_size, offset
+    global filename, series, channel, roi_size, offset, load_proc
     for arg in sys.argv:
         arg_split = arg.split("=")
         if len(arg_split) == 1:
@@ -102,6 +107,9 @@ def main():
             elif arg_split[0] == ARG_IMG:
                 filename = arg_split[1]
                 print("Opening image file: {}".format(filename))
+            elif arg_split[0] == ARG_PROC:
+                load_proc = arg_split[1] == "1"
+                print("Set to load processed file: {}".format(load_proc))
             elif arg_split[0] == ARG_CHANNEL:
                 channel = int(arg_split[1])
                 print("Set to channel: {}".format(channel))
@@ -135,11 +143,32 @@ def main():
     global image5d, conn, cur
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
     pylab.rcParams.update(params)
-    np.set_printoptions(threshold=np.nan) # print full arrays
+    #np.set_printoptions(threshold=np.nan) # print full arrays
     conn, cur = sqlite.start_db()
     push_exception_handler(reraise_exceptions=True)
-    visualization = Visualization()
-    visualization.configure_traits()
+    filename_proc = filename + str(series).zfill(5) + "_proc.npz"
+    if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[2]:
+        shape = image5d.shape
+        roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
+        roi = plot_3d.denoise(roi)
+        segments = detector.segment_blob(roi)
+        outfile = open(filename_proc, "wb")
+        time_start = time()
+        np.savez(outfile, roi=roi, segments=segments)
+        outfile.close()
+        print('file save time: %f' %(time() - time_start))
+    else:
+        if load_proc:
+            try:
+                output = np.load(filename_proc)
+                global image5d_proc, segments_proc
+                image5d_proc = output["roi"]
+                segments_proc = output["segments"]
+            except IOError:
+                print("Unable to load {}".format(filename_proc))
+                load_proc = False
+        visualization = Visualization()
+        visualization.configure_traits()
     
 def _fig_title(offset, roi_size):
     """Figure title parser.
@@ -246,8 +275,14 @@ class Visualization(HasTraits):
         # show updated region of interest
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
-        self.roi = plot_3d.prepare_roi(image5d, channel, curr_roi_size, 
-                                       offset=curr_offset)
+        if image5d_proc is None:
+            self.roi = plot_3d.prepare_roi(image5d, channel, curr_roi_size, 
+                                           offset=curr_offset)
+            self.roi = plot_3d.denoise(self.roi)
+        else:
+            print("loading from previously processed image")
+            self.roi = plot_3d.prepare_roi(image5d_proc, channel, curr_roi_size, 
+                                           offset=curr_offset)
         mlab_3d = plot_3d.mlab_3d
         if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             plot_3d.plot_3d_surface(self.roi, self)
@@ -304,11 +339,23 @@ class Visualization(HasTraits):
     def _btn_segment_trait_fired(self):
         mlab_3d = plot_3d.mlab_3d
         if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
-            self.segments = detector.segment_rw(self.roi, self)
+            self.segments = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.segments, self)
         else:
-            self.segments = detector.segment_blob(self.roi, self)
-            self.segs_cmap = plot_3d.show_blobs(self.segments, self)
+            if segments_proc is None:
+                self.segments = detector.segment_blob(self.roi)
+                self.segs_cmap = plot_3d.show_blobs(self.segments, self)
+            else:
+                roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
+                x, y, z = self._curr_offset()
+                segs_roi = segments_proc[np.all([segments_proc[:, 0] >= z, 
+                                                 segments_proc[:, 0] < z + roi_z,
+                                                 segments_proc[:, 1] >= y, 
+                                                 segments_proc[:, 1] < y + roi_y,
+                                                 segments_proc[:, 2] >= x, 
+                                                 segments_proc[:, 0] < x + roi_x], 
+                                                axis=0)]
+                self.segs_cmap = plot_3d.show_blobs(segs_roi, self)
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()

@@ -23,7 +23,7 @@ from clrbrain import plot_3d
 
 scaling_factor = 1
 
-def segment_rw(roi, vis):
+def segment_rw(roi):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -47,7 +47,7 @@ def segment_rw(roi, vis):
     
     return labels
 
-def segment_blob(roi, vis):
+def segment_blob(roi):
     """Detects objects using 3D blob detection technique.
     
     Args:

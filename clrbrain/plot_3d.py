@@ -20,7 +20,7 @@ import numpy as np
 import math
 from skimage import restoration
 
-MLAB_3D_TYPES = ("surface", "point")
+MLAB_3D_TYPES = ("surface", "point", "headless")
 mlab_3d = MLAB_3D_TYPES[1]
 intensity_min = 0.2
 mask_dividend = 100000.0
@@ -48,6 +48,15 @@ def denoise(roi):
     denoised = restoration.denoise_tv_chambolle(denoised, weight=0.2)
     print('time for total variation: %f' %(time() - time_start))
     
+    '''
+    # downgrade to uint16, which requires adjusting intensity 
+    # thresholds (not quite complete here)
+    from skimage import img_as_uint
+    denoised = img_as_uint(denoised)
+    global intensity_min
+    intensity_min = img_as_uint(intensity_min)
+    print(denoised)
+    '''
     return denoised
 
 def plot_3d_surface(roi, vis):
@@ -181,10 +190,11 @@ def prepare_roi(image5d, channel, roi_size, offset=(0, 0, 0)):
     # cube with corner at offset, side of cube_len
     if image5d.ndim >= 5:
         roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0], channel]
-    else:
+    elif image5d.ndim == 4:
         roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0]]
+    else:
+        roi = image5d[cube_slices[2], cube_slices[1], cube_slices[0]]
     
-    roi = denoise(roi)
     return roi
 
 def show_surface_labels(segments, vis):
@@ -202,7 +212,9 @@ def show_surface_labels(segments, vis):
 def show_blobs(segments, vis):
     scale = 2 * np.mean(segments[:, 3])# * scaling_factor
     print("blob point scaling: {}".format(scale))
-    cmap = (np.random.random((segments.shape[0], 4)) * 255).astype(np.uint8)
+    # colormap has to be at least 2 colors
+    num_colors = segments.shape[0] if segments.shape[0] >= 2 else 2
+    cmap = (np.random.random((num_colors, 4)) * 255).astype(np.uint8)
     cmap[:, -1] = 170
     cmap_indices = np.arange(segments.shape[0])
     pts = vis.scene.mlab.points3d(segments[:, 2], segments[:, 1], 

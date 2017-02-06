@@ -228,7 +228,7 @@ def show_blobs(segments, vis):
     Returns:
         The random colormap generated with a color for each blob.
     """
-    scale = 2 * np.mean(segments[:, 3])# * scaling_factor
+    scale = 1.5 * max(segments[:, 3])# * scaling_factor
     print("blob point scaling: {}".format(scale))
     # colormap has to be at least 2 colors
     num_colors = segments.shape[0] if segments.shape[0] >= 2 else 2

@@ -356,14 +356,14 @@ class Visualization(HasTraits):
             else:
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 x, y, z = self._curr_offset()
-                segs_roi = segments_proc[np.all([segments_proc[:, 0] >= z, 
-                                                 segments_proc[:, 0] < z + roi_z,
-                                                 segments_proc[:, 1] >= y, 
-                                                 segments_proc[:, 1] < y + roi_y,
-                                                 segments_proc[:, 2] >= x, 
-                                                 segments_proc[:, 0] < x + roi_x], 
-                                                axis=0)]
-                self.segs_cmap = plot_3d.show_blobs(segs_roi, self)
+                self.segments = segments_proc[np.all([segments_proc[:, 0] >= z, 
+                                                      segments_proc[:, 0] < z + roi_z,
+                                                      segments_proc[:, 1] >= y, 
+                                                      segments_proc[:, 1] < y + roi_y,
+                                                      segments_proc[:, 2] >= x, 
+                                                      segments_proc[:, 0] < x + roi_x], 
+                                                     axis=0)]
+                self.segs_cmap = plot_3d.show_blobs(self.segments, self)
     
     def _btn_2d_trait_fired(self):
         curr_offset = self._curr_offset()

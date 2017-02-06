@@ -221,6 +221,8 @@ class Visualization(HasTraits):
             interest.
         btn_segment_trait: Button editor for segmenting the ROI.
         roi: The ROI.
+        segments: Array of segments; if None, defaults to a Numpy array
+            of zeros with one row.
         segs_selected: List of indices of selected segments.
     """
     x_low = 0
@@ -238,7 +240,7 @@ class Visualization(HasTraits):
     btn_segment_trait = Button("Segment")
     btn_2d_trait = Button("2D Plots")
     btn_save_segments = Button("Save Segments")
-    roi = None
+    roi = None # combine with roi_array?
     _segments = Array
     segs_selected = List # indices
     segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, 
@@ -272,6 +274,12 @@ class Visualization(HasTraits):
         sqlite.insert_blobs(conn, cur, exp_id, series, segs_transposed)
     
     def show_3d(self):
+        """Shows the 3D plot.
+        
+        If the processed image flag is true ("proc=1"), the region will be
+        taken from the saved processed array. Type of 3D display depends
+        on the "3d" flag.
+        """
         # show updated region of interest
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)

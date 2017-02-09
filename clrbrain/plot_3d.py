@@ -22,7 +22,7 @@ import numpy as np
 import math
 from skimage import restoration
 
-MLAB_3D_TYPES = ("surface", "point", "headless")
+MLAB_3D_TYPES = ("surface", "point", "headless", "importonly")
 mlab_3d = MLAB_3D_TYPES[1]
 intensity_min = 0.2
 mask_dividend = 100000.0

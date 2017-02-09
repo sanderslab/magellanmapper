@@ -8,9 +8,12 @@ Images will be imported into a 4/5D Numpy array.
 """
 
 from time import time
+from xml import etree as et
 import numpy as np
 import javabridge as jb
 import bioformats as bf
+
+from clrbrain import detector
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html
@@ -59,6 +62,44 @@ def parse_ome(filename):
     print("names: {}\nsizes: {}".format(names, sizes))
     print('time for parsing OME XML: %f' %(time() - time_start))
     return names, sizes
+
+def parse_ome_raw(filename):
+    array_order = "TZYXC" # desired dimension order
+    names, sizes, resolutions = [], [], []
+    # names for sizes in all dimensions
+    size_tags = ["Size" + c for c in array_order]
+    # names for resolutions only in XYZ dimensions
+    spatial_array_order = [c for c in array_order if c in "XYZ"]
+    res_tags = ["PhysicalSize" + c for c in spatial_array_order]
+    zoom = 1
+    magnification = 1
+    pixel_type = None
+    metadata = bf.get_omexml_metadata(filename)
+    metadata_root = et.ElementTree.fromstring(metadata)
+    for child in metadata_root:
+        print("tag: {}".format(child.tag))
+        if child.tag.endswith("Instrument"):
+            for grandchild in child:
+                if grandchild.tag.endswith("Detector"):
+                    zoom = float(grandchild.attrib["Zoom"])
+                elif grandchild.tag.endswith("Objective"):
+                    magnification = float(grandchild.attrib["NominalMagnification"])
+            print("zoom: {}, magnification: {}".format(zoom, magnification))
+        elif child.tag.endswith("Image"):
+            names.append(child.attrib["Name"])
+            for grandchild in child:
+                if grandchild.tag.endswith("Pixels"):
+                    att = grandchild.attrib
+                    sizes.append(tuple([int(att[t]) for t in size_tags]))
+                    resolutions.append(tuple([float(att[t]) for t in res_tags]))
+                    # assumes pixel type is same for all images
+                    if pixel_type is None:
+                        pixel_type = att["Type"]
+                        print("pixel_type: {}".format(pixel_type))
+    print("names: {}".format(names))
+    print("sizes: {}".format(sizes))
+    print("resolutions: {}".format(resolutions))
+    return names, sizes, resolutions, magnification, zoom, pixel_type
 
 def find_sizes(filename):
     """Finds image size information using the ImageReader.
@@ -118,12 +159,19 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             output = np.load(filename_npz)
             #print('file opening time: %f' %(time() - time_start))
             image5d = output["image5d"]
+            try:
+                detector.set_scaling_factor(output["magnification"], output["zoom"])
+                print("set scaling as: {}".format(detector.scaling_factor))
+            except KeyError:
+                print("could not find magnification/zoom, defaulting to {}"
+                      .format(detector.scaling_factor))
             return image5d
         except IOError:
             print("Unable to load {}, will attempt to reload {}"
                   .format(filename_npz, filename))
     start_jvm()
-    sizes, dtype = find_sizes(filename)
+    names, sizes, resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
+    #sizes, dtype = find_sizes(filename)
     rdr = bf.ImageReader(filename, perform_init=True)
     size = sizes[series]
     nt, nz = size[:2]
@@ -131,6 +179,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         nz = z_max
     if offset is None:
         offset = (0, 0, 0) # (x, y, z)
+    dtype = getattr(np, pixel_type)
     if size[4] <= 1:
         image5d = np.empty((nt, nz, size[2], size[3]), dtype)
         load_channel = 0
@@ -159,7 +208,9 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
     if save:
         time_start = time()
         # could use compression (savez_compressed), but much slower
-        np.savez(outfile, image5d=image5d)
+        np.savez(outfile, image5d=image5d, names=names, sizes=sizes, 
+                 resolutions=resolutions, magnification=magnification, 
+                 zoom=zoom, pixel_type=pixel_type)
         outfile.close()
         print('file save time: %f' %(time() - time_start))
     return image5d

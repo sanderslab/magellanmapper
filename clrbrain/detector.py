@@ -8,7 +8,9 @@ Attributes:
     scaling_factor: The zoom scaling, where 
         factor = 1 / (um/pixel), so 1um/pixel  
         corresponds to factor of 1; eg 0.25um/pixel would require 
-        a factor of 1 / 0.25 = 4
+        a factor of 1 / 0.25 = 4. Another way to think about it is that
+        factor = magnification * zoom / 4, so a 20x objective with
+        0.8x zoom would be factor = 20 * 0.8 / 4 = 4
 """
 
 from time import time
@@ -75,3 +77,7 @@ def segment_blob(roi):
     confirmed = np.ones((blobs_log.shape[0], 1)) * -1
     blobs_log = np.concatenate((blobs_log, confirmed), axis=1)
     return blobs_log
+
+def set_scaling_factor(magnification, zoom):
+    global scaling_factor
+    scaling_factor = magnification * zoom / 4

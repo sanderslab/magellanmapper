@@ -148,6 +148,8 @@ def main():
     push_exception_handler(reraise_exceptions=True)
     filename_proc = filename + str(series).zfill(5) + "_proc.npz"
     if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[2]:
+        # denoises and segments the entire stack, saving processed image
+        # and segments to file
         shape = image5d.shape
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
         roi = plot_3d.denoise(roi)
@@ -157,8 +159,15 @@ def main():
         np.savez(outfile, roi=roi, segments=segments)
         outfile.close()
         print('file save time: %f' %(time() - time_start))
+        # exit directly since otherwise appears to hang
+        os._exit(os.EX_OK)
+    elif plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[3]:
+        # already imported so now simply exits
+        print("imported {}, will exit".format(filename))
+        os._exit(os.EX_OK)
     else:
         if load_proc:
+            # loads from processed file
             try:
                 output = np.load(filename_proc)
                 global image5d_proc, segments_proc

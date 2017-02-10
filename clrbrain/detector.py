@@ -79,5 +79,11 @@ def segment_blob(roi):
     return blobs_log
 
 def set_scaling_factor(magnification, zoom):
+    """Sets the global scaling factor.
+    
+    Args:
+        magnification: Objective magnification.
+        zoom: Zoom value.
+    """
     global scaling_factor
     scaling_factor = magnification * zoom / 4

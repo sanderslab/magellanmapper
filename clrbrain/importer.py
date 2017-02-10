@@ -138,6 +138,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
     
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
+        series: Series index to load.
         save: True to save the resulting Numpy array (default).
         load: If True, attempts to load a Numpy array from the same 
             location and name except for ".npz" appended to the end 
@@ -171,6 +172,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                   .format(filename_npz, filename))
     start_jvm()
     names, sizes, resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
+    detector.set_scaling_factor(magnification, zoom)
     #sizes, dtype = find_sizes(filename)
     rdr = bf.ImageReader(filename, perform_init=True)
     size = sizes[series]

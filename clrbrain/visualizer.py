@@ -17,7 +17,10 @@ Examples:
         $ python -m clrbrain.visualizer img=/path/to/file.czi
 
 Command-line arguments in addition to those listed below:
-    * scaling_factor: Zoom scaling (see detector.py).
+    * scaling_factor: Zoom scaling (see detector.py). Only set if unable
+        to be detected from the image file or if the saved numpy array
+        does not have scaling information as it would otherwise
+        override this setting.
     * 3d: 3D rendering type (see plot_3d.py).
 
 Attributes:
@@ -25,6 +28,8 @@ Attributes:
         the subset as a 5 digit number (eg 00003) with .npz appended to 
         the end will be checked first based on this filename. Set with
         "img=path/to/file" argument.
+    proc: Flag for loading processed files. "0" not to load (default), or
+        "1" to load processed (ie denoised) image and segments.
     series: The series for multi-stack files, using 0-based indexing. Set
         with "series=n" argument.
     channel: The channel to view. Set with "channel=n" argument.
@@ -277,6 +282,7 @@ class Visualization(HasTraits):
                 seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
                           seg[0] + self.z_offset, seg[3], seg[4])
                 segs_transposed.append(seg_db)
+        # inserts experiment if not already added, then segments
         exp_id = sqlite.select_or_insert_experiment(conn, cur, 
                                                     os.path.basename(filename),
                                                     datetime.datetime(1000, 1, 1))
@@ -356,13 +362,17 @@ class Visualization(HasTraits):
     def _btn_segment_trait_fired(self):
         mlab_3d = plot_3d.mlab_3d
         if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
+            # segments using the Random-Walker algorithm
             self.segments = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.segments, self)
         else:
+            # segments using blob detection
             if segments_proc is None:
+                # blob detects the ROI
                 self.segments = detector.segment_blob(self.roi)
                 self.segs_cmap = plot_3d.show_blobs(self.segments, self)
             else:
+                # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 x, y, z = self._curr_offset()
                 self.segments = segments_proc[np.all([segments_proc[:, 0] >= z, 
@@ -375,6 +385,7 @@ class Visualization(HasTraits):
                 self.segs_cmap = plot_3d.show_blobs(self.segments, self)
     
     def _btn_2d_trait_fired(self):
+        # shows 2D plots
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
@@ -394,6 +405,12 @@ class Visualization(HasTraits):
     
     @segments.setter
     def segments(self, val):
+        """Sets segments.
+        
+        Args:
+            val: Numpy array of (n, 5) shape with segments. Defaults to one
+                row if None.
+        """
         if val is None:
             # need to include at least one row or else will crash
             self._segments = np.zeros((1, 5))

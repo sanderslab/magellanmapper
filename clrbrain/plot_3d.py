@@ -12,6 +12,8 @@ Attributes:
           the intensity_min threshold.
         * "headless": Processes and segments the entire image
           stack and exits non-interactively.
+        * "importonly": Imports an image stack and exists non-
+          interactively.
     mlab_3d: The chosen type.
     intensity_min: The minimum intensity threshold for points
         viewing. Raising this threshold will remove more points.

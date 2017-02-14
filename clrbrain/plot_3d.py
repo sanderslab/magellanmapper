@@ -5,16 +5,6 @@
 Provides options for drawing as surfaces or points.
 
 Attributes:
-    MLAB_3D_TYPES: Tuple of types of 3D visualizations.
-        * "surface": Renders surfaces in Mayavi contour and
-          surface.
-        * "point": Renders as raw points, minus points under
-          the intensity_min threshold.
-        * "headless": Processes and segments the entire image
-          stack and exits non-interactively.
-        * "importonly": Imports an image stack and exists non-
-          interactively.
-    mlab_3d: The chosen type.
     intensity_min: The minimum intensity threshold for points
         viewing. Raising this threshold will remove more points.
 """
@@ -24,8 +14,6 @@ import numpy as np
 import math
 from skimage import restoration
 
-MLAB_3D_TYPES = ("surface", "point", "headless", "importonly")
-mlab_3d = MLAB_3D_TYPES[1]
 intensity_min = 0.2
 mask_dividend = 100000.0
 

@@ -70,4 +70,4 @@ then
 		fi
 	fi
 fi
-./run img="$DEST"/"$IMG" 3d=importonly $EXTRA_ARGS
+python -m clrbrain.cli img="$DEST"/"$IMG" 3d=importonly $EXTRA_ARGS

@@ -55,134 +55,29 @@ from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 import matplotlib.pylab as pylab
 
+from clrbrain import cli
 from clrbrain import importer
 from clrbrain import detector
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 from clrbrain import sqlite
 
-filename = None
-series = 0 # series for multi-stack files
-channel = 0 # channel of interest
-roi_size = [100, 100, 15] # region of interest
-offset = None
-
-image5d = None # numpy image array
-load_proc = False
-image5d_proc = None
-segments_proc = None
-conn = None # sqlite connection
-cur = None # sqlite cursor
 params = {'legend.fontsize': 'small',
           'axes.labelsize': 'small',
           'axes.titlesize': 'xx-small',
           'xtick.labelsize': 'small',
           'ytick.labelsize': 'small'}
 
-ARG_IMG = "img"
-ARG_PROC = "proc"
-ARG_OFFSET = "offset"
-ARG_CHANNEL = "channel"
-ARG_SERIES = "series"
-ARG_SIDES = "size"
-ARG_3D = "3d"
-ARG_SCALING = "scaling"
-ARG_SAVEFIG = "savefig"
-
 def main():
     """Starts the visualization GUI.
     
     Processes command-line arguments.
     """
-    # command-line arguments
-    global filename, series, channel, roi_size, offset, load_proc
-    for arg in sys.argv:
-        arg_split = arg.split("=")
-        if len(arg_split) == 1:
-            print("Skipped argument: {}".format(arg_split[0]))
-        elif len(arg_split) >= 2:
-            if arg_split[0] == ARG_OFFSET:
-                offset_split = arg_split[1].split(",")
-                if len(offset_split) >= 3:
-                    offset = tuple(int(i) for i in offset_split)
-                    print("Set offset: {}".format(offset))
-                else:
-                    print("Offset ({}) should be given as 3 values (x, y, z)"
-                          .format(arg_split[1]))
-            elif arg_split[0] == ARG_IMG:
-                filename = arg_split[1]
-                print("Opening image file: {}".format(filename))
-            elif arg_split[0] == ARG_PROC:
-                load_proc = arg_split[1] == "1"
-                print("Set to load processed file: {}".format(load_proc))
-            elif arg_split[0] == ARG_CHANNEL:
-                channel = int(arg_split[1])
-                print("Set to channel: {}".format(channel))
-            elif arg_split[0] == ARG_SERIES:
-                series = int(arg_split[1])
-                print("Set to series: {}".format(series))
-            elif arg_split[0] == ARG_SCALING:
-                scaling = float(arg_split[1])
-                detector.scaling_factor = scaling
-                print("Set scaling factor to: {}".format(scaling))
-            elif arg_split[0] == ARG_SIDES:
-                sides_split = arg_split[1].split(",")
-                if len(sides_split) >= 3:
-                    roi_size = tuple(int(i) for i in sides_split)
-                    print("Set roi_size: {}".format(roi_size))
-                else:
-                    print("Size ({}) should be given as 3 values (x, y, z)"
-                          .format(arg_split[1]))
-            elif arg_split[0] == ARG_3D:
-                if arg_split[1] in plot_3d.MLAB_3D_TYPES:
-                    plot_3d.mlab_3d = arg_split[1]
-                    print("3D rendering set to {}".format(plot_3d.mlab_3d))
-                else:
-                    print("Did not recognize 3D rendering type: {}"
-                          .format(arg_split[1]))
-            elif arg_split[0] == ARG_SAVEFIG:
-                plot_2d.savefig = arg_split[1]
-                print("Set savefig extension to: {}".format(plot_2d.savefig))
-    
-    # loads the image and GUI
-    global image5d, conn, cur
-    image5d = importer.read_file(filename, series) #, z_max=cube_len)
+    cli.main()
     pylab.rcParams.update(params)
-    #np.set_printoptions(threshold=np.nan) # print full arrays
-    conn, cur = sqlite.start_db()
     push_exception_handler(reraise_exceptions=True)
-    filename_proc = filename + str(series).zfill(5) + "_proc.npz"
-    if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[2]:
-        # denoises and segments the entire stack, saving processed image
-        # and segments to file
-        shape = image5d.shape
-        roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
-        roi = plot_3d.denoise(roi)
-        segments = detector.segment_blob(roi)
-        outfile = open(filename_proc, "wb")
-        time_start = time()
-        np.savez(outfile, roi=roi, segments=segments)
-        outfile.close()
-        print('file save time: %f' %(time() - time_start))
-        # exit directly since otherwise appears to hang
-        os._exit(os.EX_OK)
-    elif plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[3]:
-        # already imported so now simply exits
-        print("imported {}, will exit".format(filename))
-        os._exit(os.EX_OK)
-    else:
-        if load_proc:
-            # loads from processed file
-            try:
-                output = np.load(filename_proc)
-                global image5d_proc, segments_proc
-                image5d_proc = output["roi"]
-                segments_proc = output["segments"]
-            except IOError:
-                print("Unable to load {}".format(filename_proc))
-                load_proc = False
-        visualization = Visualization()
-        visualization.configure_traits()
+    visualization = Visualization()
+    visualization.configure_traits()
     
 def _fig_title(offset, roi_size):
     """Figure title parser.
@@ -195,7 +90,7 @@ def _fig_title(offset, roi_size):
         Figure title string.
     """
     title = ("{} (series {})\n"
-             "offset {}, ROI size {}").format(os.path.basename(filename), series, 
+             "offset {}, ROI size {}").format(os.path.basename(cli.filename), cli.series, 
                                                 offset, tuple(roi_size))
     return title
 
@@ -208,8 +103,7 @@ class VisHandler(Handler):
         """Closes the Java VM when the GUI is closed.
         """
         importer.jb.kill_vm()
-        global conn
-        conn.close()
+        cli.conn.close()
 
 class SegmentsArrayAdapter(TabularAdapter):
     columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
@@ -283,10 +177,10 @@ class Visualization(HasTraits):
                           seg[0] + self.z_offset, seg[3], seg[4])
                 segs_transposed.append(seg_db)
         # inserts experiment if not already added, then segments
-        exp_id = sqlite.select_or_insert_experiment(conn, cur, 
-                                                    os.path.basename(filename),
+        exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
+                                                    os.path.basename(cli.filename),
                                                     datetime.datetime(1000, 1, 1))
-        sqlite.insert_blobs(conn, cur, exp_id, series, segs_transposed)
+        sqlite.insert_blobs(cli.conn, cli.cur, exp_id, cli.series, segs_transposed)
     
     def show_3d(self):
         """Shows the 3D plot.
@@ -298,16 +192,16 @@ class Visualization(HasTraits):
         # show updated region of interest
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
-        if image5d_proc is None:
-            self.roi = plot_3d.prepare_roi(image5d, channel, curr_roi_size, 
+        if cli.image5d_proc is None:
+            self.roi = plot_3d.prepare_roi(cli.image5d, cli.channel, curr_roi_size, 
                                            offset=curr_offset)
             self.roi = plot_3d.denoise(self.roi)
         else:
             print("loading from previously processed image")
-            self.roi = plot_3d.prepare_roi(image5d_proc, channel, curr_roi_size, 
+            self.roi = plot_3d.prepare_roi(cli.image5d_proc, cli.channel, curr_roi_size, 
                                            offset=curr_offset)
-        mlab_3d = plot_3d.mlab_3d
-        if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
+        mlab_3d = cli.mlab_3d
+        if mlab_3d == cli.MLAB_3D_TYPES[0]:
             plot_3d.plot_3d_surface(self.roi, self)
         else:
             plot_3d.plot_3d_points(self.roi, self)
@@ -317,11 +211,11 @@ class Visualization(HasTraits):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
         # dimension max values in pixels
-        size = image5d.shape
+        size = cli.image5d.shape
         self.z_high = size[1]
         self.y_high = size[2]
         self.x_high = size[3]
-        curr_offset = offset
+        curr_offset = cli.offset
         # apply user-defined offsets
         if curr_offset is not None:
             self.x_offset = curr_offset[0]
@@ -330,14 +224,14 @@ class Visualization(HasTraits):
         else:
             print("No offset, using standard one")
             curr_offset = self._curr_offset()
-            #self.roi = show_roi(image5d, self, cube_len=cube_len)
-        self.roi_array[0] = roi_size
+            #self.roi = show_roi(cli.image5d, self, cube_len=cube_len)
+        self.roi_array[0] = cli.roi_size
         self.show_3d()
         #self.segs_selected = [0, 3]
         #self.save_segs()
         '''
-        plot_2d.plot_2d_stack(self, _fig_title(curr_offset, self.roi_array[0]), image5d, 
-                              channel, self.roi_array[0], curr_offset, 
+        plot_2d.plot_2d_stack(self, _fig_title(curr_offset, self.roi_array[0]), cli.image5d, 
+                              cli.channel, self.roi_array[0], curr_offset, 
                               self.segments, self.segs_cmap)
         '''
     
@@ -350,24 +244,24 @@ class Visualization(HasTraits):
     
     def _btn_redraw_trait_fired(self):
         # ensure that cube dimensions don't exceed array
-        size = image5d.shape
-        if self.x_offset + roi_size[0] > size[3]:
-            self.x_offset = size[3] - roi_size[0]
-        if self.y_offset + roi_size[1] > size[2]:
-            self.y_offset = size[2] - roi_size[1]
-        if self.z_offset + roi_size[2] > size[1]:
-            self.z_offset = size[1] - roi_size[2]
+        size = cli.image5d.shape
+        if self.x_offset + cli.roi_size[0] > size[3]:
+            self.x_offset = size[3] - cli.roi_size[0]
+        if self.y_offset + cli.roi_size[1] > size[2]:
+            self.y_offset = size[2] - cli.roi_size[1]
+        if self.z_offset + cli.roi_size[2] > size[1]:
+            self.z_offset = size[1] - cli.roi_size[2]
         self.show_3d()
     
     def _btn_segment_trait_fired(self):
-        mlab_3d = plot_3d.mlab_3d
-        if mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
+        mlab_3d = cli.mlab_3d
+        if mlab_3d == cli.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
             self.segments = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.segments, self)
         else:
             # segments using blob detection
-            if segments_proc is None:
+            if cli.segments_proc is None:
                 # blob detects the ROI
                 self.segments = detector.segment_blob(self.roi)
                 self.segs_cmap = plot_3d.show_blobs(self.segments, self)
@@ -375,12 +269,12 @@ class Visualization(HasTraits):
                 # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 x, y, z = self._curr_offset()
-                self.segments = segments_proc[np.all([segments_proc[:, 0] >= z, 
-                                                      segments_proc[:, 0] < z + roi_z,
-                                                      segments_proc[:, 1] >= y, 
-                                                      segments_proc[:, 1] < y + roi_y,
-                                                      segments_proc[:, 2] >= x, 
-                                                      segments_proc[:, 0] < x + roi_x], 
+                self.segments = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z, 
+                                                      cli.segments_proc[:, 0] < z + roi_z,
+                                                      cli.segments_proc[:, 1] >= y, 
+                                                      cli.segments_proc[:, 1] < y + roi_y,
+                                                      cli.segments_proc[:, 2] >= x, 
+                                                      cli.segments_proc[:, 0] < x + roi_x], 
                                                      axis=0)]
                 self.segs_cmap = plot_3d.show_blobs(self.segments, self)
     
@@ -390,7 +284,7 @@ class Visualization(HasTraits):
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
         plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
-                              image5d, channel, curr_roi_size, 
+                              cli.image5d, cli.channel, curr_roi_size, 
                               curr_offset, self.segments, self.segs_cmap)
     
     def _btn_save_segments_fired(self):

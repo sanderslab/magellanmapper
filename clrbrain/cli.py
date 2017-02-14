@@ -46,10 +46,13 @@ Attributes:
 
 import os
 import sys
+from time import time
 import numpy as np
 
 from clrbrain import importer
 from clrbrain import sqlite
+from clrbrain import plot_3d
+from clrbrain import detector
 
 filename = None
 series = 0 # series for multi-stack files

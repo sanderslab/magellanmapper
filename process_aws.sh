@@ -52,22 +52,35 @@ then
 	done
 fi
 
-if [ ! -e "$DEST"/"$IMG" ]
+FOUND_NPZ=0
+NPZ="$IMG"$(printf %05d $SERIES).npz
+if [ -e "$DEST"/"$NPZ" ]
 then
-	echo "Could not find $DEST/$IMG, checking for .npz file..."
-	NPZ="$IMG"$(printf %05d $SERIES).npz
-	if [ ! -e "$DEST"/"$NPZ" ]
+	echo "Found $DEST/$NPZ"
+	FOUND_NPZ=1
+else
+	echo "Could not find $DEST/$NPZ, checking on s3..."
+	NPZ_LS=`aws s3 ls s3://"$S3_DIR"/"$NPZ"`
+	if [ "$NPZ_LS" != "" ]
 	then
-		echo "Could not find $DEST/$NPZ, checking on s3..."
-		NPZ_LS=`aws s3 ls s3://"$S3_DIR"/"$NPZ"`
-		if [ "$NPZ_LS" != "" ]
+		aws s3 cp s3://"$S3_DIR"/"$NPZ" "$DEST"/"$NPZ"
+		ls -lh "$DEST"/"$NPZ"
+		FOUND_NPZ=1
+	else
+		echo "Could not find $DEST/$NPZ on s3, checking original image..."
+		if [ -e "$DEST"/"$IMG" ]
 		then
-			aws s3 cp s3://"$S3_DIR"/"$NPZ" "$DEST"/"$NPZ"
-			ls -lh "$DEST"/"$NPZ"
+			echo "Found $DEST/$IMG"
 		else
 			aws s3 cp s3://"$S3_DIR"/"$IMG" "$DEST"/"$IMG"
 			ls -lh "$DEST"/"$IMG"
 		fi
 	fi
 fi
-python -m clrbrain.cli img="$DEST"/"$IMG" 3d=importonly $EXTRA_ARGS
+
+if (( $FOUND_NPZ == 0)); then
+	echo "Importing $DEST/$IMG..."
+	python -m clrbrain.cli img="$DEST"/"$IMG" 3d=importonly $EXTRA_ARGS
+fi
+python -m clrbrain.cli img="$DEST"/"$IMG" 3d=headless $EXTRA_ARGS
+

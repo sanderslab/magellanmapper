@@ -6,7 +6,7 @@ import numpy as np
 
 from clrbrain import detector
 
-max_pixels = 500
+max_pixels = 600
 overlap_base = 5
 
 def _num_units(size):
@@ -24,7 +24,7 @@ def _len_side(size, overlap, i):
 
 def stack_splitter(roi):
     size = roi.shape
-    overlap = overlap_base * detector.scaling_factor
+    overlap = int(overlap_base * detector.scaling_factor)
     num_x = _num_units(size[2])
     num_y = _num_units(size[1])
     sub_rois = np.zeros((num_x, num_y), dtype=object)
@@ -32,6 +32,7 @@ def stack_splitter(roi):
         for i in range(num_x):
             x_bounds = _len_side(size[2], overlap, i)
             y_bounds = _len_side(size[1], overlap, j)
+            print("x_bounds: {}, y_bounds: {}".format(x_bounds, y_bounds))
             sub_rois[i, j] = roi[:, slice(*y_bounds), slice(*x_bounds)]
     return sub_rois, overlap
 

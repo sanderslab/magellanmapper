@@ -53,6 +53,7 @@ from clrbrain import importer
 from clrbrain import sqlite
 from clrbrain import plot_3d
 from clrbrain import detector
+from clrbrain import chunking
 
 filename = None
 series = 0 # series for multi-stack files
@@ -144,13 +145,29 @@ def main():
     if mlab_3d == MLAB_3D_TYPES[2]:
         # denoises and segments the entire stack, saving processed image
         # and segments to file
+        time_start = time()
         shape = image5d.shape
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
-        roi = plot_3d.denoise(roi)
-        segments = detector.segment_blob(roi)
+        sub_rois, overlap = chunking.stack_splitter(roi)
+        segments_all = None
+        for j in range(sub_rois.shape[1]):
+            for i in range(sub_rois.shape[0]):
+                sub_roi = sub_rois[i, j]
+                print("processing sub_roi at {}, {}, with shape {}...".format(i, j, sub_roi.shape))
+                sub_roi = plot_3d.denoise(sub_roi)
+                segments = detector.segment_blob(sub_roi)
+                if segments_all is None:
+                    segments_all = segments
+                elif segments is not None:
+                    segments_all = np.concatenate((segments_all, segments))
+                sub_rois[i, j] = sub_roi
+        merged = chunking.merge_split_stack(sub_rois, overlap)
+        segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
+        print("total processing time (s): {}".format(time() - time_start))
+        print("all segments:\n{}".format(segments_all))
         outfile = open(filename_proc, "wb")
         time_start = time()
-        np.savez(outfile, roi=roi, segments=segments)
+        np.savez(outfile, roi=merged, segments=segments_all)
         outfile.close()
         print('file save time: %f' %(time() - time_start))
         # exit directly since otherwise appears to hang

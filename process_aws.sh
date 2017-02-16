@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 DEST=/data
 IMG=""
 S3_DIR=""
@@ -9,6 +10,11 @@ EXTRA_ARGS=""
 
 PAR_IMGNAME="imgname"
 PAR_S3="s3"
+
+# workaround for https://github.com/numpy/numpy/issues/5336,
+# fixed in https://github.com/numpy/numpy/pull/7133, 
+# released in Numpy 1.12.0
+export TMPDIR="$DEST"/tmp
 
 # run from parent directory
 BASE_DIR="`dirname $0`"

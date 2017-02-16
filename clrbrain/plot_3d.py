@@ -147,12 +147,13 @@ def plot_3d_points(roi, vis):
     time_start = time()
     mask = math.ceil(points_len / mask_dividend)
     print("points: {}, mask: {}".format(points_len, mask))
-    vis.scene.mlab.points3d(x, y, z, roi_1d, 
-                            mode="sphere", colormap="inferno", 
-                            scale_mode="none", mask_points=mask, 
-                            line_width=1.0, vmax=1.0, 
-                            vmin=(intensity_min * 0.5), transparent=True)
-    print("time for 3D points display: {}".format(time() - time_start))
+    if points_len > 0:
+        vis.scene.mlab.points3d(x, y, z, roi_1d, 
+                                mode="sphere", colormap="inferno", 
+                                scale_mode="none", mask_points=mask, 
+                                line_width=1.0, vmax=1.0, 
+                                vmin=(intensity_min * 0.5), transparent=True)
+        print("time for 3D points display: {}".format(time() - time_start))
     """
     for i in range(roi_1d.size):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))

@@ -95,5 +95,5 @@ python -u -m clrbrain.cli img="$DEST"/"$IMG" 3d=headless $EXTRA_ARGS
 
 # upload to S3
 PROC_NPZ="$IMG"$(printf %05d $SERIES)_proc.npz
-aws s3 cp "$DEST"/"$PROC_NPZ" s3://"$S3_DIR"
+aws s3 cp "$DEST"/"$PROC_NPZ" s3://"$S3_DIR"/"$PROC_NPZ"
 

@@ -245,12 +245,13 @@ class Visualization(HasTraits):
     def _btn_redraw_trait_fired(self):
         # ensure that cube dimensions don't exceed array
         size = cli.image5d.shape
-        if self.x_offset + cli.roi_size[0] > size[3]:
-            self.x_offset = size[3] - cli.roi_size[0]
-        if self.y_offset + cli.roi_size[1] > size[2]:
-            self.y_offset = size[2] - cli.roi_size[1]
-        if self.z_offset + cli.roi_size[2] > size[1]:
-            self.z_offset = size[1] - cli.roi_size[2]
+        curr_roi_size = self.roi_array[0].astype(int)
+        if self.x_offset + curr_roi_size[0] > size[3]:
+            self.x_offset = size[3] - curr_roi_size[0]
+        if self.y_offset + curr_roi_size[1] > size[2]:
+            self.y_offset = size[2] - curr_roi_size[1]
+        if self.z_offset + curr_roi_size[2] > size[1]:
+            self.z_offset = size[1] - curr_roi_size[2]
         self.show_3d()
     
     def _btn_segment_trait_fired(self):
@@ -269,13 +270,16 @@ class Visualization(HasTraits):
                 # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 x, y, z = self._curr_offset()
-                self.segments = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z, 
-                                                      cli.segments_proc[:, 0] < z + roi_z,
-                                                      cli.segments_proc[:, 1] >= y, 
-                                                      cli.segments_proc[:, 1] < y + roi_y,
-                                                      cli.segments_proc[:, 2] >= x, 
-                                                      cli.segments_proc[:, 0] < x + roi_x], 
-                                                     axis=0)]
+                segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z, 
+                                                 cli.segments_proc[:, 0] < z + roi_z,
+                                                 cli.segments_proc[:, 1] >= y, 
+                                                 cli.segments_proc[:, 1] < y + roi_y,
+                                                 cli.segments_proc[:, 2] >= x, 
+                                                 cli.segments_proc[:, 2] < x + roi_x], 
+                                                axis=0)]
+                # transpose to make coordinates relative to offset
+                segs = np.copy(segs)
+                self.segments = np.subtract(segs, (z, y, x, 0, 0))
                 self.segs_cmap = plot_3d.show_blobs(self.segments, self)
     
     def _btn_2d_trait_fired(self):

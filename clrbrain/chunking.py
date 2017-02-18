@@ -28,13 +28,15 @@ def stack_splitter(roi):
     num_x = _num_units(size[2])
     num_y = _num_units(size[1])
     sub_rois = np.zeros((num_x, num_y), dtype=object)
+    sub_rois_offsets = np.zeros((num_x, num_y, 2))
     for j in range(num_y):
         for i in range(num_x):
             x_bounds = _len_side(size[2], overlap, i)
             y_bounds = _len_side(size[1], overlap, j)
             print("x_bounds: {}, y_bounds: {}".format(x_bounds, y_bounds))
             sub_rois[i, j] = roi[:, slice(*y_bounds), slice(*x_bounds)]
-    return sub_rois, overlap
+            sub_rois_offsets[i, j] = (x_bounds[0], y_bounds[0])
+    return sub_rois, overlap, sub_rois_offsets
 
 def _get_sub_roi(sub_rois, overlap, i, j):
     sub_roi = sub_rois[i, j]

@@ -148,7 +148,7 @@ def main():
         time_start = time()
         shape = image5d.shape
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
-        sub_rois, overlap = chunking.stack_splitter(roi)
+        sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
         segments_all = None
         for j in range(sub_rois.shape[1]):
             for i in range(sub_rois.shape[0]):
@@ -156,15 +156,20 @@ def main():
                 print("processing sub_roi at {}, {}, with shape {}...".format(i, j, sub_roi.shape))
                 sub_roi = plot_3d.denoise(sub_roi)
                 segments = detector.segment_blob(sub_roi)
+                offset = sub_rois_offsets[i, j]
+                # transpose segments
+                if segments is not None:
+                    segments = np.add(segments, (0, offset[1], offset[0], 0, 0))
                 if segments_all is None:
                     segments_all = segments
                 elif segments is not None:
                     segments_all = np.concatenate((segments_all, segments))
                 sub_rois[i, j] = sub_roi
         merged = chunking.merge_split_stack(sub_rois, overlap)
-        segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
+        if segments_all is not None:
+            segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
+            print("all segments: {}\n{}".format(segments_all.shape[0], segments_all))
         print("total processing time (s): {}".format(time() - time_start))
-        print("all segments:\n{}".format(segments_all))
         outfile = open(filename_proc, "wb")
         time_start = time()
         np.savez(outfile, roi=merged, segments=segments_all)

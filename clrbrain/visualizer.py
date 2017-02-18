@@ -246,12 +246,16 @@ class Visualization(HasTraits):
         # ensure that cube dimensions don't exceed array
         size = cli.image5d.shape
         curr_roi_size = self.roi_array[0].astype(int)
-        if self.x_offset + curr_roi_size[0] > size[3]:
-            self.x_offset = size[3] - curr_roi_size[0]
-        if self.y_offset + curr_roi_size[1] > size[2]:
-            self.y_offset = size[2] - curr_roi_size[1]
-        if self.z_offset + curr_roi_size[2] > size[1]:
-            self.z_offset = size[1] - curr_roi_size[2]
+        if curr_roi_size[0] + self.x_offset > self.x_high:
+            curr_roi_size[0] = self.x_high - self.x_offset
+            self.roi_array = [curr_roi_size]
+        if curr_roi_size[1] + self.y_offset > self.y_high:
+            curr_roi_size[1] = self.y_high - self.y_offset
+            self.roi_array = [curr_roi_size]
+        if curr_roi_size[2] + self.z_offset > self.z_high:
+            curr_roi_size[2] = self.z_high - self.z_offset
+            self.roi_array = [curr_roi_size]
+        print("ROI size: {}".format(self.roi_array[0].astype(int)))
         self.show_3d()
     
     def _btn_segment_trait_fired(self):

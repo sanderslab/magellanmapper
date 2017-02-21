@@ -230,4 +230,4 @@ def show_blobs(segments, vis):
                             segments[:, 0], cmap_indices, #segments[:, 3],
                             scale_mode="none", scale_factor=scale) 
     pts.module_manager.scalar_lut_manager.lut.table = cmap
-    return cmap
+    return pts, cmap, scale

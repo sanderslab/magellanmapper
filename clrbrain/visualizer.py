@@ -45,7 +45,7 @@ from time import time
 import datetime
 
 import numpy as np
-from traits.api import (HasTraits, Instance, on_trait_change, Button, 
+from traits.api import (HasTraits, Instance, on_trait_change, Button, Float, 
                         Int, List, Array, push_exception_handler, Property)
 from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
                           RangeEditor, HSplit, TabularEditor)
@@ -150,6 +150,10 @@ class Visualization(HasTraits):
     btn_save_segments = Button("Save Segments")
     roi = None # combine with roi_array?
     _segments = Array
+    _segs_scale_low = 0.0
+    _segs_scale_high = Float # needs to be trait to dynamically update
+    segs_scale = Float
+    segs_pts = None
     segs_selected = List # indices
     segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, 
                                selected_row="segs_selected")
@@ -205,7 +209,10 @@ class Visualization(HasTraits):
             plot_3d.plot_3d_surface(self.roi, self)
         else:
             plot_3d.plot_3d_points(self.roi, self)
+        
+        # reset segments
         self.segments = None
+        self.segs_pts = None
       
     def __init__(self):
         # Do not forget to call the parent's __init__
@@ -269,7 +276,6 @@ class Visualization(HasTraits):
             if cli.segments_proc is None:
                 # blob detects the ROI
                 self.segments = detector.segment_blob(self.roi)
-                self.segs_cmap = plot_3d.show_blobs(self.segments, self)
             else:
                 # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
@@ -284,7 +290,16 @@ class Visualization(HasTraits):
                 # transpose to make coordinates relative to offset
                 segs = np.copy(segs)
                 self.segments = np.subtract(segs, (z, y, x, 0, 0))
-                self.segs_cmap = plot_3d.show_blobs(self.segments, self)
+            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(self.segments, self)
+            self._segs_scale_high = scale * 2
+            self.segs_scale = scale
+    
+    @on_trait_change('segs_scale')
+    def update_segs_scale(self):
+        """Updates the glyph scale factor.
+        """
+        if self.segs_pts is not None:
+            self.segs_pts.glyph.glyph.scale_factor = self.segs_scale
     
     def _btn_2d_trait_fired(self):
         # shows 2D plots
@@ -329,7 +344,7 @@ class Visualization(HasTraits):
             ),
             VGroup(
                 VGroup(
-                    Item("roi_array", label="ROI dimensions (x,y,z)"),
+                    Item("roi_array", label="Size (x,y,z)"),
                     Item(
                         "x_offset",
                         editor=RangeEditor(
@@ -358,11 +373,20 @@ class Visualization(HasTraits):
                     Item("btn_2d_trait", show_label=False)
                 ),
                 Item(
-                    "_segments",
-                    editor=segs_table,
-                    show_label=False
+                    "segs_scale",
+                    editor=RangeEditor(
+                        low_name="_segs_scale_low",
+                        high_name="_segs_scale_high",
+                        mode="slider"),
                 ),
-                Item("btn_save_segments", show_label=False)
+                VGroup(
+                    Item(
+                        "_segments",
+                        editor=segs_table,
+                        show_label=False
+                    ),
+                    Item("btn_save_segments", show_label=False)
+                )
             )
         ),
         handler=VisHandler(),

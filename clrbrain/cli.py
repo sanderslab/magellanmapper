@@ -148,23 +148,26 @@ def main():
         time_start = time()
         shape = image5d.shape
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
+        chunking.scale_max_pixels()
         sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
         segments_all = None
-        for j in range(sub_rois.shape[1]):
-            for i in range(sub_rois.shape[0]):
-                sub_roi = sub_rois[i, j]
-                print("processing sub_roi at {}, {}, with shape {}...".format(i, j, sub_roi.shape))
-                sub_roi = plot_3d.denoise(sub_roi)
-                segments = detector.segment_blob(sub_roi)
-                offset = sub_rois_offsets[i, j]
-                # transpose segments
-                if segments is not None:
-                    segments = np.add(segments, (0, offset[1], offset[0], 0, 0))
-                if segments_all is None:
-                    segments_all = segments
-                elif segments is not None:
-                    segments_all = np.concatenate((segments_all, segments))
-                sub_rois[i, j] = sub_roi
+        for z in range(sub_rois.shape[0]):
+            for y in range(sub_rois.shape[1]):
+                for x in range(sub_rois.shape[2]):
+                    sub_roi = sub_rois[z, y, x]
+                    print("processing sub_roi at {}, {}, {}, with shape {}...".format(z, y, x, sub_roi.shape))
+                    sub_roi = plot_3d.denoise(sub_roi)
+                    segments = detector.segment_blob(sub_roi)
+                    offset = sub_rois_offsets[z, y, x]
+                    # transpose segments
+                    if segments is not None:
+                        segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0))
+                    # join segments
+                    if segments_all is None:
+                        segments_all = segments
+                    elif segments is not None:
+                        segments_all = np.concatenate((segments_all, segments))
+                    sub_rois[z, y, x] = sub_roi
         merged = chunking.merge_split_stack(sub_rois, overlap)
         if segments_all is not None:
             segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))

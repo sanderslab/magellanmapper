@@ -1,76 +1,135 @@
 #!/bin/bash
 # Chunking image stacks
 # Author: David Young, 2017
+"""Divides a region into smaller chunks and reassembles it.
+
+Attributes:
+    max_pixels: Maximum number of pixels in (x, y, z) dimensions.
+    overlap_base: Base number of pixels for overlap, which will
+        be scaled up by detector.scaling_factor.
+"""
 
 import numpy as np
 
 from clrbrain import detector
 
-max_pixels = 600
+max_pixels = (50, 50, 0.5) # (x, y, z) order
 overlap_base = 5
 
 def _num_units(size):
-    num = size // max_pixels
-    if size % max_pixels > 0:
-        num += 1
+    """Calculates number of sub regions.
+    
+    Params:
+        size: Size of the entire region
+    
+    Returns:
+        The size of sub-ROIs array.
+    """
+    pixels = max_pixels[::-1]
+    num = np.floor_divide(size, pixels)
+    num[np.remainder(size, pixels) > 0] += 1
     return num
 
-def _len_side(size, overlap, i):
-    start = i * max_pixels
-    end = start + max_pixels + overlap
-    if end > size:
-        end = size
+def _bounds_side(size, overlap, coord, axis):
+    """Calculates the boundaries of a side based on where in the
+    ROI the current sub-ROI is.
+    
+    Attributes:
+        size: Size in (z, y, x) order.
+        overlap: Overlap size between sub-ROIs.
+        coord: Coordinates of the sub-ROI, in (z, y, x) order.
+        axis: The axis to calculate.
+    
+    Returns:
+        Boundary of sides in (z, y, x) order as a (start, end) tuple.
+    """
+    # max_pixels is in opposite (human) order (x, y, z)
+    pixels = max_pixels[len(coord) - axis - 1]
+    start = coord[axis] * pixels
+    end = start + pixels + overlap
+    if end > size[axis]:
+        end = size[axis]
     return (start, end)
 
 def stack_splitter(roi):
+    """Splits a stack into multiple sub regions.
+    
+    Params:
+        roi: The region of interest, a stack in (z, y, x) dimensions.
+    
+    Return:
+        sub_rois: Array of sub regions, in (z, y, x) dimensions.
+        overlap: The overlap size, in pixels.
+        sub_rois_offsets: Array of offsets for each sub_roi, in
+            (z, y, x) dimensions.
+    """
     size = roi.shape
     overlap = int(overlap_base * detector.scaling_factor)
-    num_x = _num_units(size[2])
-    num_y = _num_units(size[1])
-    sub_rois = np.zeros((num_x, num_y), dtype=object)
-    sub_rois_offsets = np.zeros((num_x, num_y, 2))
-    for j in range(num_y):
-        for i in range(num_x):
-            x_bounds = _len_side(size[2], overlap, i)
-            y_bounds = _len_side(size[1], overlap, j)
-            print("x_bounds: {}, y_bounds: {}".format(x_bounds, y_bounds))
-            sub_rois[i, j] = roi[:, slice(*y_bounds), slice(*x_bounds)]
-            sub_rois_offsets[i, j] = (x_bounds[0], y_bounds[0])
+    num_units = _num_units(size)
+    print("num_units: {}".format(num_units))
+    sub_rois = np.zeros(num_units, dtype=object)
+    sub_rois_offsets = np.zeros(np.append(num_units, 3))
+    print("sub_rois_offsets shape: {}".format(sub_rois_offsets.shape))
+    for z in range(num_units[0]):
+        for y in range(num_units[1]):
+            for x in range(num_units[2]):
+                coord = (z, y, x)
+                bounds = [_bounds_side(size, overlap, coord, axis) for axis in range(3)]
+                print("bounds: {}".format(bounds))
+                sub_rois[coord] = roi[slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
+                sub_rois_offsets[coord] = (bounds[0][0], bounds[1][0], bounds[2][0])
     return sub_rois, overlap, sub_rois_offsets
 
-def _get_sub_roi(sub_rois, overlap, i, j):
-    sub_roi = sub_rois[i, j]
-    size = sub_roi.shape
-    edge_x = size[2]
-    edge_y = size[1]
-    # remove overlap if not at last sub_roi or row or column
-    if i != sub_rois.shape[0] - 1:
-        edge_x -= overlap
-    if j != sub_rois.shape[1] - 1:
-        edge_y -= overlap
-    return sub_roi[:, :edge_y, :edge_x]
-
 def merge_split_stack(sub_rois, overlap):
+    """Merges sub regions back into a single stack.
+    
+    Params:
+        sub_rois: Array of sub regions, in (z, y, x) dimensions.
+    
+    Return:
+        The merged stack.
+    """
     size = sub_rois.shape
     merged = None
-    merged_x = None
-    for j in range(size[1]):
-        merged_x = None
-        for i in range(size[0]):
-            sub_roi = _get_sub_roi(sub_rois, overlap, i, j)
-            if merged_x is None:
-                merged_x = sub_roi
+    for z in range(size[0]):
+        merged_y = None
+        for y in range(size[1]):
+            merged_x = None
+            for x in range(size[2]):
+                #sub_roi = _get_sub_roi(sub_rois, overlap, (z, y, x))
+                coord = (z, y, x)
+                sub_roi = sub_rois[coord]
+                edges = list(sub_roi.shape)
+                # remove overlap if not at last sub_roi or row or column
+                for n in range(len(edges)):
+                    if coord[n] != size[n] - 1:
+                        edges[n] -= overlap
+                sub_roi = sub_roi[:edges[0], :edges[1], :edges[2]]
+                if merged_x is None:
+                    merged_x = sub_roi
+                else:
+                    merged_x = np.concatenate((merged_x, sub_roi), axis=2)
+            if merged_y is None:
+                merged_y = merged_x
             else:
-                merged_x = np.concatenate((merged_x, sub_roi), axis=2)
+                merged_y = np.concatenate((merged_y, merged_x), axis=1)
         if merged is None:
-            merged = merged_x
+            merged = merged_y
         else:
-            merged = np.concatenate((merged, merged_x), axis=1)
+            merged = np.concatenate((merged, merged_y), axis=0)
     return merged
 
 def remove_duplicate_blobs(blobs, region):
-    #blobs_tuple = [tuple(blob) for blob in blobs]
-    #blobs_unique = np.unique(blobs_tuple)
+    """Removes duplicate blobs.
+    
+    Params:
+        blobs: The blobs, given as 2D array of [n, [z, row, column, radius]].
+        region: Slice within each blob to check, such as slice(0, 2) to check
+           for (z, row, column).
+    
+    Return:
+        The blobs array with only unique elements.
+    """
     # workaround while awaiting https://github.com/numpy/numpy/pull/7742
     # to become a reality, presumably in Numpy 1.13
     blobs_region = blobs[:, region]
@@ -78,22 +137,31 @@ def remove_duplicate_blobs(blobs, region):
     blobs_type = np.dtype((np.void, blobs_region.dtype.itemsize * blobs_region.shape[1]))
     blobs_contig = blobs_contig.view(blobs_type)
     _, unique_indices = np.unique(blobs_contig, return_index=True)
+    print("removed {} duplicate blobs".format(blobs.shape[0] - unique_indices.size))
     return blobs[unique_indices]
+
+def scale_max_pixels():
+    """Scales the max pixels by detector.scaling_factor.
+    """
+    global max_pixels
+    max_pixels = [int(detector.scaling_factor * n) for n in max_pixels]
+    print("scaled max pixels: {}".format(max_pixels))
 
 if __name__ == "__main__":
     print("Starting chunking...")
     #roi = np.arange(1920 * 1920 * 500)
-    max_pixels = 2
+    max_pixels = (2, 2, 3)
     overlap_base = 1
-    roi = np.arange(2 * 4 * 4)
-    roi = roi.reshape((2, 4, 4))
-    print("roi: {}".format(roi))
-    sub_rois, overlap = stack_splitter(roi)
+    roi = np.arange(5 * 4 * 4)
+    roi = roi.reshape((5, 4, 4))
+    print("roi:\n{}".format(roi))
+    sub_rois, overlap, sub_rois_offsets = stack_splitter(roi)
     print("sub_rois shape: {}".format(sub_rois.shape))
-    print("sub_rois: {}".format(sub_rois))
+    print("sub_rois:\n{}".format(sub_rois))
     print("overlap: {}".format(overlap))
+    print("sub_rois_offsets:\n{}".format(sub_rois_offsets))
     merged = merge_split_stack(sub_rois, overlap)
-    print("merged: {}".format(merged))
+    print("merged:\n{}".format(merged))
     print("merged shape: {}".format(merged.shape))
     print("test roi == merged: {}".format(np.all(roi == merged)))
     #blobs = np.random.randint(0, high=1920, size=(10, 3))

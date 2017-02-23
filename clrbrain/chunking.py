@@ -140,12 +140,34 @@ def remove_duplicate_blobs(blobs, region):
     print("removed {} duplicate blobs".format(blobs.shape[0] - unique_indices.size))
     return blobs[unique_indices]
 
+def remove_close_blobs(blobs, blobs_master, region, tol):
+    """Removes duplicate blobs.
+    
+    Params:
+        blobs: The blobs, given as 2D array of [n, [z, row, column, radius]].
+        region: Slice within each blob to check, such as slice(0, 2) to check
+           for (z, row, column).
+    
+    Return:
+        The blobs array with only unique elements.
+    """
+    # workaround while awaiting https://github.com/numpy/numpy/pull/7742
+    # to become a reality, presumably in Numpy 1.13
+    blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
+    close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
+    pruned = np.delete(blobs, close, axis=0)
+    print("removed {} close blobs".format(blobs.shape[0] - pruned.shape[0]))
+    return pruned
+
 def scale_max_pixels():
     """Scales the max pixels by detector.scaling_factor.
     """
     global max_pixels
     max_pixels = [int(detector.scaling_factor * n) for n in max_pixels]
     print("scaled max pixels: {}".format(max_pixels))
+
+def calc_tolerance():
+    return [int(overlap_base * detector.scaling_factor) for n in max_pixels]
 
 if __name__ == "__main__":
     print("Starting chunking...")
@@ -166,8 +188,13 @@ if __name__ == "__main__":
     print("test roi == merged: {}".format(np.all(roi == merged)))
     #blobs = np.random.randint(0, high=1920, size=(10, 3))
     blobs = np.array([[1, 3, 4, 2.2342], [1, 8, 5, 3.13452], [1, 3, 4, 5.1234]])
-    print("sample blobs: {}".format(blobs))
+    print("sample blobs:\n{}".format(blobs))
     end = 3
     blobs_unique = remove_duplicate_blobs(blobs, slice(0, end))
-    print("blobs_unique through first {} elements: {}".format(end, blobs_unique))
+    print("blobs_unique through first {} elements:\n{}".format(end, blobs_unique))
+    tol = (1, 2, 2)
+    blobs_to_add = np.array([[1, 3, 5, 2.2342], [2, 10, 5, 3.13452], [2, 2, 4, 5.1234], [3, 3, 5, 2.2342]])
+    print("blobs to add with tolerance {}:\n{}".format(tol, blobs_to_add))
+    blobs_to_add = remove_close_blobs(blobs_to_add, blobs, slice(0, end), tol)
+    print("pruned blobs to add:\n{}".format(blobs_to_add))
     

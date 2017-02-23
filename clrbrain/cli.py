@@ -149,6 +149,8 @@ def main():
         shape = image5d.shape
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
         chunking.scale_max_pixels()
+        tol = chunking.calc_tolerance()
+        print("tol: {}".format(tol))
         sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
         segments_all = None
         for z in range(sub_rois.shape[0]):
@@ -166,12 +168,15 @@ def main():
                     if segments_all is None:
                         segments_all = segments
                     elif segments is not None:
+                        segments = chunking.remove_close_blobs(segments, segments_all, slice(0, 3), tol)
                         segments_all = np.concatenate((segments_all, segments))
                     sub_rois[z, y, x] = sub_roi
         merged = chunking.merge_split_stack(sub_rois, overlap)
+        """
         if segments_all is not None:
             segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
             print("all segments: {}\n{}".format(segments_all.shape[0], segments_all))
+        """
         print("total processing time (s): {}".format(time() - time_start))
         outfile = open(filename_proc, "wb")
         time_start = time()

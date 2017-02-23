@@ -13,7 +13,7 @@ import numpy as np
 
 from clrbrain import detector
 
-max_pixels = (50, 50, 0.5) # (x, y, z) order
+max_pixels = (50, 50, 50) # (x, y, z) order
 overlap_base = 5
 
 def _num_units(size):
@@ -141,15 +141,22 @@ def remove_duplicate_blobs(blobs, region):
     return blobs[unique_indices]
 
 def remove_close_blobs(blobs, blobs_master, region, tol):
-    """Removes duplicate blobs.
+    """Removes blobs that are close to one another.
     
     Params:
-        blobs: The blobs, given as 2D array of [n, [z, row, column, radius]].
+        blobs: The blobs to add, given as 2D array of [n, [z, row, column, 
+            radius]].
+        blobs_master: The list by which to check for close blobs, in the same
+            format as blobs.
         region: Slice within each blob to check, such as slice(0, 2) to check
-           for (z, row, column).
+            for (z, row, column).
+        tol: Tolerance to check for closeness, given in the same format
+            as region. Blobs that are equal to or less than the the absolute
+            difference for all corresponding parameters will be pruned in
+            the returned array.
     
     Return:
-        The blobs array with only unique elements.
+        The blobs array without blobs falling inside the tolerance range.
     """
     # workaround while awaiting https://github.com/numpy/numpy/pull/7742
     # to become a reality, presumably in Numpy 1.13
@@ -167,10 +174,15 @@ def scale_max_pixels():
     print("scaled max pixels: {}".format(max_pixels))
 
 def calc_tolerance():
+    """Calculates the tolerance based on the overlap and 
+    detector.scaling_factor.
+    """
     return [int(overlap_base * detector.scaling_factor) for n in max_pixels]
 
 if __name__ == "__main__":
     print("Starting chunking...")
+    
+    # tests splitting and remerging
     #roi = np.arange(1920 * 1920 * 500)
     max_pixels = (2, 2, 3)
     overlap_base = 1
@@ -186,12 +198,15 @@ if __name__ == "__main__":
     print("merged:\n{}".format(merged))
     print("merged shape: {}".format(merged.shape))
     print("test roi == merged: {}".format(np.all(roi == merged)))
-    #blobs = np.random.randint(0, high=1920, size=(10, 3))
+    
+    # tests blob duplication removal
     blobs = np.array([[1, 3, 4, 2.2342], [1, 8, 5, 3.13452], [1, 3, 4, 5.1234]])
     print("sample blobs:\n{}".format(blobs))
     end = 3
     blobs_unique = remove_duplicate_blobs(blobs, slice(0, end))
     print("blobs_unique through first {} elements:\n{}".format(end, blobs_unique))
+    
+    # tests removal of blobs within a given tolerance level
     tol = (1, 2, 2)
     blobs_to_add = np.array([[1, 3, 5, 2.2342], [2, 10, 5, 3.13452], [2, 2, 4, 5.1234], [3, 3, 5, 2.2342]])
     print("blobs to add with tolerance {}:\n{}".format(tol, blobs_to_add))

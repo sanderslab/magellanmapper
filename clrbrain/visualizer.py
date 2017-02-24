@@ -213,15 +213,16 @@ class Visualization(HasTraits):
         # reset segments
         self.segments = None
         self.segs_pts = None
-      
+    
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
         # dimension max values in pixels
-        size = cli.image5d.shape
-        self.z_high = size[1]
-        self.y_high = size[2]
-        self.x_high = size[3]
+        if cli.image5d_proc is not None:
+            size = cli.image5d_proc.shape[0:3]
+        else:
+            size = cli.image5d.shape[1:4]
+        self.z_high, self.y_high, self.x_high = size
         curr_offset = cli.offset
         # apply user-defined offsets
         if curr_offset is not None:
@@ -231,7 +232,6 @@ class Visualization(HasTraits):
         else:
             print("No offset, using standard one")
             curr_offset = self._curr_offset()
-            #self.roi = show_roi(cli.image5d, self, cube_len=cube_len)
         self.roi_array[0] = cli.roi_size
         self.show_3d()
         #self.segs_selected = [0, 3]
@@ -251,7 +251,6 @@ class Visualization(HasTraits):
     
     def _btn_redraw_trait_fired(self):
         # ensure that cube dimensions don't exceed array
-        size = cli.image5d.shape
         curr_roi_size = self.roi_array[0].astype(int)
         if curr_roi_size[0] + self.x_offset > self.x_high:
             curr_roi_size[0] = self.x_high - self.x_offset
@@ -306,6 +305,8 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
+        if cli.image5d is None:
+            cli.image5d = importer.read_file(cli.filename, cli.series)
         plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                               cli.image5d, cli.channel, curr_roi_size, 
                               curr_offset, self.segments, self.segs_cmap)

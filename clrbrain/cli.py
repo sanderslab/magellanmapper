@@ -138,10 +138,21 @@ def main():
     
     # loads the image and GUI
     global image5d, conn, cur
-    image5d = importer.read_file(filename, series) #, z_max=cube_len)
     #np.set_printoptions(threshold=np.nan) # print full arrays
     conn, cur = sqlite.start_db()
     filename_proc = filename + str(series).zfill(5) + "_proc.npz"
+    if load_proc:
+        # loads from processed file
+        try:
+            output = np.load(filename_proc)
+            global image5d_proc, segments_proc
+            image5d_proc = output["roi"]
+            segments_proc = output["segments"]
+            return
+        except IOError:
+            print("Unable to load {}".format(filename_proc))
+            load_proc = False
+    image5d = importer.read_file(filename, series) #, z_max=cube_len)
     if mlab_3d == MLAB_3D_TYPES[2]:
         # denoises and segments the entire stack, saving processed image
         # and segments to file
@@ -189,17 +200,6 @@ def main():
         # already imported so now simply exits
         print("imported {}, will exit".format(filename))
         os._exit(os.EX_OK)
-    else:
-        if load_proc:
-            # loads from processed file
-            try:
-                output = np.load(filename_proc)
-                global image5d_proc, segments_proc
-                image5d_proc = output["roi"]
-                segments_proc = output["segments"]
-            except IOError:
-                print("Unable to load {}".format(filename_proc))
-                load_proc = False
     
 if __name__ == "__main__":
     print("Starting clrbrain command-line interface...")

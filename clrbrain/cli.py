@@ -205,11 +205,13 @@ def main():
             coord, sub_roi, segments = result.get()
             sub_rois[coord] = sub_roi
             # join segments
+            region = slice(0, 3)
             if segments_all is None:
-                segments_all = segments
+                segments_all = chunking.remove_close_blobs_within_array(segments,
+                                                                        region, tol)
             elif segments is not None:
                 segments = chunking.remove_close_blobs(segments, segments_all, 
-                                                       slice(0, 3), tol)
+                                                       region, tol)
                 segments_all = np.concatenate((segments_all, segments))
         merged = chunking.merge_split_stack(sub_rois, overlap)
         """

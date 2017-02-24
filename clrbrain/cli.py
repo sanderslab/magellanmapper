@@ -32,15 +32,18 @@ Attributes:
         "size=x,y,z" argument, where x, y, and z are integers.
     offset: The bottom corner in pixels of the region of interest. Set 
         with "offset=x,y,z" argument, where x, y, and z are integers.
+    PROC_TYPES: Processing modes.
+        * "importonly": Imports an image stack and exists non-
+          interactively.
+        * "processing": Processes and segments the entire image
+          stack and exits non-interactively.
+        * "load": Loads already processed images and segments.
+    proc: The chosen processing mode
     MLAB_3D_TYPES: Tuple of types of 3D visualizations.
         * "surface": Renders surfaces in Mayavi contour and
           surface.
         * "point": Renders as raw points, minus points under
           the intensity_min threshold.
-        * "headless": Processes and segments the entire image
-          stack and exits non-interactively.
-        * "importonly": Imports an image stack and exists non-
-          interactively.
     mlab_3d: The chosen type.
 """
 
@@ -63,13 +66,14 @@ roi_size = [100, 100, 15] # region of interest
 offset = None
 
 image5d = None # numpy image array
-load_proc = False
 image5d_proc = None
 segments_proc = None
 conn = None # sqlite connection
 cur = None # sqlite cursor
 
-MLAB_3D_TYPES = ("surface", "point", "headless", "importonly")
+PROC_TYPES = ("importonly", "processing", "load")
+proc_type = None
+MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 
 ARG_IMG = "img"
@@ -118,8 +122,12 @@ def main():
                 filename = arg_split[1]
                 print("Opening image file: {}".format(filename))
             elif arg_split[0] == ARG_PROC:
-                load_proc = arg_split[1] == "1"
-                print("Set to load processed file: {}".format(load_proc))
+                if arg_split[1] in PROC_TYPES:
+                    proc_type = arg_split[1]
+                    print("processing type set to {}".format(proc_type))
+                else:
+                    print("Did not recognize processing type: {}"
+                          .format(arg_split[1]))
             elif arg_split[0] == ARG_CHANNEL:
                 channel = int(arg_split[1])
                 print("Set to channel: {}".format(channel))
@@ -154,7 +162,7 @@ def main():
     #np.set_printoptions(threshold=np.nan) # print full arrays
     conn, cur = sqlite.start_db()
     filename_proc = filename + str(series).zfill(5) + "_proc.npz"
-    if load_proc:
+    if proc_type == PROC_TYPES[2]:
         # loads from processed file
         try:
             output = np.load(filename_proc)
@@ -164,10 +172,14 @@ def main():
             segments_proc = output["segments"]
             return
         except IOError:
-            print("Unable to load {}".format(filename_proc))
-            load_proc = False
+            print("Unable to load {}, will attempt to read unprocessed file"
+                  .format(filename_proc))
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
-    if mlab_3d == MLAB_3D_TYPES[2]:
+    if proc_type == PROC_TYPES[0]:
+        # already imported so now simply exits
+        print("imported {}, will exit".format(filename))
+        os._exit(os.EX_OK)
+    elif proc_type == PROC_TYPES[1]:
         # denoises and segments the entire stack, saving processed image
         # and segments to file
         time_start = time()
@@ -212,10 +224,6 @@ def main():
         outfile.close()
         print('file save time: %f' %(time() - time_start))
         # exit directly since otherwise appears to hang
-        os._exit(os.EX_OK)
-    elif mlab_3d == MLAB_3D_TYPES[3]:
-        # already imported so now simply exits
-        print("imported {}, will exit".format(filename))
         os._exit(os.EX_OK)
     
 if __name__ == "__main__":

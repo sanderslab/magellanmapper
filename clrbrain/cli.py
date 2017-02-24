@@ -47,6 +47,7 @@ Attributes:
 import os
 import sys
 from time import time
+import multiprocessing as mp
 import numpy as np
 
 from clrbrain import importer
@@ -80,6 +81,18 @@ ARG_SIDES = "size"
 ARG_3D = "3d"
 ARG_SCALING = "scaling"
 ARG_SAVEFIG = "savefig"
+
+def process_sub_roi(sub_rois, sub_rois_offsets, coord):
+    sub_roi = sub_rois[coord]
+    print("processing sub_roi at {}, with shape {}..."
+          .format(coord, sub_roi.shape))
+    sub_roi = plot_3d.denoise(sub_roi)
+    segments = detector.segment_blob(sub_roi)
+    offset = sub_rois_offsets[coord]
+    # transpose segments
+    if segments is not None:
+        segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0))
+    return (coord, sub_roi, segments)
 
 def main():
     """Starts the visualization GUI.
@@ -147,6 +160,7 @@ def main():
             output = np.load(filename_proc)
             global image5d_proc, segments_proc
             image5d_proc = output["roi"]
+            #print("image5d_proc dtype: {}".format(image5d_proc.dtype))
             segments_proc = output["segments"]
             return
         except IOError:
@@ -164,24 +178,27 @@ def main():
         print("tol: {}".format(tol))
         sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
         segments_all = None
+        pool = mp.Pool()
+        pool_results = []
         for z in range(sub_rois.shape[0]):
             for y in range(sub_rois.shape[1]):
                 for x in range(sub_rois.shape[2]):
-                    sub_roi = sub_rois[z, y, x]
-                    print("processing sub_roi at {}, {}, {}, with shape {}...".format(z, y, x, sub_roi.shape))
-                    sub_roi = plot_3d.denoise(sub_roi)
-                    segments = detector.segment_blob(sub_roi)
-                    offset = sub_rois_offsets[z, y, x]
-                    # transpose segments
-                    if segments is not None:
-                        segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0))
-                    # join segments
-                    if segments_all is None:
-                        segments_all = segments
-                    elif segments is not None:
-                        segments = chunking.remove_close_blobs(segments, segments_all, slice(0, 3), tol)
-                        segments_all = np.concatenate((segments_all, segments))
-                    sub_rois[z, y, x] = sub_roi
+                    pool_results.append(pool.apply_async(process_sub_roi, 
+                                                         args=(sub_rois, 
+                                                               sub_rois_offsets, 
+                                                               (z, y, x))))
+        for result in pool_results:
+            # must defer updating sub_rois until after the Pool to prevent data
+            # downgrade to uint8 for some reason
+            coord, sub_roi, segments = result.get()
+            sub_rois[coord] = sub_roi
+            # join segments
+            if segments_all is None:
+                segments_all = segments
+            elif segments is not None:
+                segments = chunking.remove_close_blobs(segments, segments_all, 
+                                                       slice(0, 3), tol)
+                segments_all = np.concatenate((segments_all, segments))
         merged = chunking.merge_split_stack(sub_rois, overlap)
         """
         if segments_all is not None:

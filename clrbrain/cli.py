@@ -55,6 +55,7 @@ import numpy as np
 
 from clrbrain import importer
 from clrbrain import sqlite
+from clrbrain import plot_2d
 from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
@@ -85,6 +86,7 @@ ARG_SIDES = "size"
 ARG_3D = "3d"
 ARG_SCALING = "scaling"
 ARG_SAVEFIG = "savefig"
+ARG_VERIFY = "verify"
 
 def process_sub_roi(sub_rois, sub_rois_offsets, coord):
     sub_roi = sub_rois[coord]
@@ -104,7 +106,7 @@ def main():
     Processes command-line arguments.
     """
     # command-line arguments
-    global filename, series, channel, roi_size, offset, load_proc, mlab_3d
+    global filename, series, channel, roi_size, offset, proc_type, mlab_3d
     for arg in sys.argv:
         arg_split = arg.split("=")
         if len(arg_split) == 1:
@@ -156,6 +158,9 @@ def main():
             elif arg_split[0] == ARG_SAVEFIG:
                 plot_2d.savefig = arg_split[1]
                 print("Set savefig extension to: {}".format(plot_2d.savefig))
+            elif arg_split[0] == ARG_VERIFY:
+                plot_2d.verify = True
+                print("Set verification mode to: {}".format(plot_2d.verify))
     
     # loads the image and GUI
     global image5d, conn, cur

@@ -18,6 +18,7 @@ import matplotlib.patches as patches
 
 colormap_2d = cm.inferno
 savefig = None
+verify = False
 
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """Draws a patch collection of circles for segments.
@@ -42,7 +43,7 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     return collection
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
-                 segments_z, segs_cmap, alpha, highlight=False):
+                 segments_z, segs_cmap, alpha, highlight=False, border=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -98,10 +99,17 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             collection_z.set_linestyle(":")
             collection_z.set_picker(5)
             ax.add_collection(collection_z)
+        
+        if border is not None:
+            ax.add_patch(patches.Rectangle(border[0:2], 
+                                           roi_size[0] - 2 * border[0], 
+                                           roi_size[1] - 2 * border[1], 
+                                           fill=False, edgecolor="yellow",
+                                           linestyle="dashed"))
     return ax, collection_z
    
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
-                  segs_cmap):
+                  segs_cmap, border=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -171,10 +179,13 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             if segments is not None:
                 segments_z = segments[segments[:, 0] == z_relative]
             segments_z_list.append(segments_z)
+            show_border = (verify and z_relative >= border[2] 
+                           and z_relative < roi_size[2] - border[2])
             ax_z, collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, 
-                                        channel, roi_size,
-                                        zoom_offset, segments, segments_z, 
-                                        segs_cmap, alpha, z == z_start)
+                                              channel, roi_size,
+                                              zoom_offset, segments, segments_z, 
+                                              segs_cmap, alpha, z == z_start,
+                                              border if show_border else None)
             collection_z_list.append(collection_z)
             ax_z_list.append(ax_z)
     

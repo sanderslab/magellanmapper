@@ -61,6 +61,7 @@ from clrbrain import detector
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 from clrbrain import sqlite
+from clrbrain import chunking
 
 params = {'legend.fontsize': 'small',
           'axes.labelsize': 'small',
@@ -170,6 +171,16 @@ class Visualization(HasTraits):
             print("no segments found")
             return
         segs_transposed = []
+        curr_roi_size = self.roi_array[0].astype(int)
+        print("segments:\n{}".format(self.segments))
+        """
+        segs_inside = self.segments[np.logical_and(self.segments[:, 1] > self.border[1], 
+                                     np.logical_and(self.segments[:, 1] < (curr_roi_size[1] - self.border[1]),
+                                     np.logical_and(self.segments[:, 2] > self.border[0],
+                                     self.segments[:, 2] < (curr_roi_size[0] - self.border[0]))))]
+        print("segs within borders: {}".format(segs_copy))
+        """
+        print("inserting segments to database with border widths {}".format(self.border))
         for i in range(len(self.segments)):
             seg = self.segments[i]
             # ignores user added segments, where radius assumed to be 0,
@@ -177,14 +188,22 @@ class Visualization(HasTraits):
             if self.segs_selected.count(i) <= 0 and np.allclose(seg[3], 0):
                 print("ignoring unselected user added segment: {}".format(seg))
             else:
-                seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
-                          seg[0] + self.z_offset, seg[3], seg[4])
-                segs_transposed.append(seg_db)
+                if (seg[0] >= self.border[2] and seg[0] < (curr_roi_size[2] - self.border[2])
+                    and seg[1] >= self.border[1] and seg[1] < (curr_roi_size[1] - self.border[1])
+                    and seg[2] >= self.border[0] and seg[2] < (curr_roi_size[0] - self.border[0])):
+                    seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
+                              seg[0] + self.z_offset, seg[3], seg[4])
+                    segs_transposed.append(seg_db)
+                else:
+                    print("{} outside, ignored".format(seg))
         # inserts experiment if not already added, then segments
         exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
                                                     os.path.basename(cli.filename),
                                                     datetime.datetime(1000, 1, 1))
-        sqlite.insert_blobs(cli.conn, cli.cur, exp_id, cli.series, segs_transposed)
+        roi_id = sqlite.insert_roi(cli.conn, cli.cur, 
+                                   np.add(self._curr_offset(), self.border).tolist(), 
+                                   np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
+        sqlite.insert_blobs(cli.conn, cli.cur, exp_id, cli.series, roi_id, segs_transposed)
     
     def show_3d(self):
         """Shows the 3D plot.
@@ -217,6 +236,9 @@ class Visualization(HasTraits):
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
+        self.border = chunking.calc_tolerance()
+        # TODO: use microscope scaling for scaling in each dimension
+        self.border[2] = 1
         # dimension max values in pixels
         if cli.image5d_proc is not None:
             size = cli.image5d_proc.shape[0:3]
@@ -309,7 +331,7 @@ class Visualization(HasTraits):
             cli.image5d = importer.read_file(cli.filename, cli.series)
         plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                               cli.image5d, cli.channel, curr_roi_size, 
-                              curr_offset, self.segments, self.segs_cmap)
+                              curr_offset, self.segments, self.segs_cmap, self.border)
     
     def _btn_save_segments_fired(self):
         self.save_segs()

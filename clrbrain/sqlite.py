@@ -24,8 +24,11 @@ def _create_db():
     
     cur.execute("CREATE TABLE experiments (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                           "name TEXT, date DATE)")
+    cur.execute("CREATE TABLE rois (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                                   "offset_x INTEGER, offset_y INTEGER, offset_z INTEGER, "
+                                   "size_x INTEGER, size_y INTEGER, size_z INTEGER)")
     cur.execute("CREATE TABLE blobs (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                                    "experiment_id INTEGER, series INTEGER, "
+                                    "experiment_id INTEGER, series INTEGER, roi_id INTEGER, "
                                     "x INTEGER, y INTEGER, z INTEGER, radius REAL, "
                                     "confirmed INTEGER)")
     
@@ -89,7 +92,14 @@ def select_or_insert_experiment(conn, cur, exp_name, date):
         #raise LookupError("could not find experiment {}".format(exp_name))
     return exp_id
 
-def insert_blobs(conn, cur, experiment_id, series, blobs):
+def insert_roi(conn, cur, offset, size):
+    cur.execute("INSERT INTO rois (offset_x, offset_y, offset_z, size_x, size_y, size_z) "
+                "VALUES (?, ?, ?, ?, ?, ?)", (*offset, *size))
+    print("roi inserted with offset {} and size {}".format(offset, size))
+    conn.commit()
+    return cur.lastrowid
+
+def insert_blobs(conn, cur, experiment_id, series, roi_id, blobs):
     """Inserts blobs into the database.
     
     Args:
@@ -103,13 +113,13 @@ def insert_blobs(conn, cur, experiment_id, series, blobs):
     blobs_list = []
     confirmed = 0
     for blob in blobs:
-        blob_entry = [experiment_id, series]
+        blob_entry = [experiment_id, series, roi_id]
         blob_entry.extend(blob)
         blobs_list.append(blob_entry)
         if blob[4] == 1:
             confirmed = confirmed + 1
-    cur.executemany("INSERT INTO blobs (experiment_id, series, x, y, z, radius, confirmed) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)", blobs_list)
+    cur.executemany("INSERT INTO blobs (experiment_id, series, roi_id, x, y, z, radius, confirmed) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", blobs_list)
     print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
     

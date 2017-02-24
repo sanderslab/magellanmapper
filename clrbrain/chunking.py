@@ -205,6 +205,9 @@ def scale_max_pixels():
 def calc_tolerance():
     """Calculates the tolerance based on the overlap and 
     detector.scaling_factor.
+    
+    Return:
+        Array of tolerance values in same shape as max_pixels.
     """
     return [int(overlap_base * detector.scaling_factor) for n in max_pixels]
 

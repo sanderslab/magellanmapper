@@ -10,7 +10,8 @@ Attributes:
         corresponds to factor of 1; eg 0.25um/pixel would require 
         a factor of 1 / 0.25 = 4. Another way to think about it is that
         factor = magnification * zoom / 4, so a 20x objective with
-        0.8x zoom would be factor = 20 * 0.8 / 4 = 4
+        0.8x zoom would be factor = 20 * 0.8 / 4 = 4.
+    resolution: The image resolution in (z, y, x) order.
 """
 
 from time import time
@@ -24,6 +25,7 @@ from skimage.feature import blob_dog, blob_log, blob_doh
 from clrbrain import plot_3d
 
 scaling_factor = 1
+resolutions = None # (z, y, x) order
 
 def segment_rw(roi):
     """Segments an image, drawing contours around segmented regions.
@@ -87,3 +89,4 @@ def set_scaling_factor(magnification, zoom):
     """
     global scaling_factor
     scaling_factor = magnification * zoom / 4
+    print("set scaling as: {}".format(scaling_factor))

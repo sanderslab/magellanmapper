@@ -13,10 +13,10 @@ import numpy as np
 
 from clrbrain import detector
 
-max_pixels = (50, 50, 50) # (x, y, z) order
+max_pixels_factor = 10
 overlap_base = 5
 
-def _num_units(size):
+def _num_units(size, max_pixels):
     """Calculates number of sub regions.
     
     Params:
@@ -25,12 +25,11 @@ def _num_units(size):
     Returns:
         The size of sub-ROIs array.
     """
-    pixels = max_pixels[::-1]
-    num = np.floor_divide(size, pixels)
-    num[np.remainder(size, pixels) > 0] += 1
+    num = np.floor_divide(size, max_pixels)
+    num[np.remainder(size, max_pixels) > 0] += 1
     return num
 
-def _bounds_side(size, overlap, coord, axis):
+def _bounds_side(size, max_pixels, overlap, coord, axis):
     """Calculates the boundaries of a side based on where in the
     ROI the current sub-ROI is.
     
@@ -43,10 +42,9 @@ def _bounds_side(size, overlap, coord, axis):
     Returns:
         Boundary of sides in (z, y, x) order as a (start, end) tuple.
     """
-    # max_pixels is in opposite (human) order (x, y, z)
-    pixels = max_pixels[len(coord) - axis - 1]
+    pixels = max_pixels[axis]
     start = coord[axis] * pixels
-    end = start + pixels + overlap
+    end = start + pixels + overlap[axis]
     if end > size[axis]:
         end = size[axis]
     return (start, end)
@@ -64,8 +62,11 @@ def stack_splitter(roi):
             (z, y, x) dimensions.
     """
     size = roi.shape
-    overlap = int(overlap_base * detector.scaling_factor)
-    num_units = _num_units(size)
+    #max_pixels = scale_max_pixels()
+    #overlap = int(overlap_base * detector.scaling_factor)
+    overlap = calc_tolerance()
+    max_pixels = overlap * max_pixels_factor
+    num_units = _num_units(size, max_pixels)
     print("num_units: {}".format(num_units))
     sub_rois = np.zeros(num_units, dtype=object)
     sub_rois_offsets = np.zeros(np.append(num_units, 3))
@@ -74,7 +75,7 @@ def stack_splitter(roi):
         for y in range(num_units[1]):
             for x in range(num_units[2]):
                 coord = (z, y, x)
-                bounds = [_bounds_side(size, overlap, coord, axis) for axis in range(3)]
+                bounds = [_bounds_side(size, max_pixels, overlap, coord, axis) for axis in range(3)]
                 print("bounds: {}".format(bounds))
                 sub_rois[coord] = roi[slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
                 sub_rois_offsets[coord] = (bounds[0][0], bounds[1][0], bounds[2][0])
@@ -103,7 +104,7 @@ def merge_split_stack(sub_rois, overlap):
                 # remove overlap if not at last sub_roi or row or column
                 for n in range(len(edges)):
                     if coord[n] != size[n] - 1:
-                        edges[n] -= overlap
+                        edges[n] -= overlap[n]
                 sub_roi = sub_roi[:edges[0], :edges[1], :edges[2]]
                 if merged_x is None:
                     merged_x = sub_roi
@@ -195,12 +196,14 @@ def remove_close_blobs_within_array(blobs, region, tol):
             blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
+'''
 def scale_max_pixels():
     """Scales the max pixels by detector.scaling_factor.
     """
-    global max_pixels
-    max_pixels = [int(detector.scaling_factor * n) for n in max_pixels]
+    max_pixels = np.ceil(np.divide(detector.resolutions[0], max_pixels_factor)).astype(int)
     print("scaled max pixels: {}".format(max_pixels))
+    return max_pixels
+'''
 
 def calc_tolerance():
     """Calculates the tolerance based on the overlap and 
@@ -209,7 +212,10 @@ def calc_tolerance():
     Return:
         Array of tolerance values in same shape as max_pixels.
     """
-    return [int(overlap_base * detector.scaling_factor) for n in max_pixels]
+    if detector.resolutions is None:
+        raise AttributeError("Must load resolutions from file or set a resolution")
+    overlap = np.ceil(np.divide(overlap_base, detector.resolutions[0])).astype(int)
+    return overlap
 
 if __name__ == "__main__":
     print("Starting chunking...")
@@ -218,6 +224,7 @@ if __name__ == "__main__":
     #roi = np.arange(1920 * 1920 * 500)
     max_pixels = (2, 2, 3)
     overlap_base = 1
+    detector.resolutions = [[6.6, 1.1, 1.1]]
     roi = np.arange(5 * 4 * 4)
     roi = roi.reshape((5, 4, 4))
     print("roi:\n{}".format(roi))

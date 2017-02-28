@@ -38,7 +38,8 @@ def start_jvm(heap_size="8G"):
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
 
 def parse_ome(filename):
-    """Parses metadata for image name and size information.
+    """Parses metadata for image name and size information using Bioformats'
+    OME XML wrapper.
     
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
@@ -102,7 +103,8 @@ def parse_ome_raw(filename):
     return names, sizes, resolutions, magnification, zoom, pixel_type
 
 def find_sizes(filename):
-    """Finds image size information using the ImageReader.
+    """Finds image size information using the ImageReader using Bioformats'
+    wrapper to access a small subset of image properities.
     
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
@@ -162,10 +164,14 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             image5d = output["image5d"]
             try:
                 detector.set_scaling_factor(output["magnification"], output["zoom"])
-                print("set scaling as: {}".format(detector.scaling_factor))
             except KeyError:
                 print("could not find magnification/zoom, defaulting to {}"
                       .format(detector.scaling_factor))
+            try:
+                detector.resolutions = output["resolutions"]
+                print("set resolutions to {}".format(detector.resolutions))
+            except KeyError:
+                print("could not find resolutions")
             return image5d
         except IOError:
             print("Unable to load {}, will attempt to reload {}"

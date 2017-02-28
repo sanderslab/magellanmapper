@@ -87,6 +87,7 @@ ARG_3D = "3d"
 ARG_SCALING = "scaling"
 ARG_SAVEFIG = "savefig"
 ARG_VERIFY = "verify"
+ARG_RESOLUTION = "resolution"
 
 def process_sub_roi(sub_rois, sub_rois_offsets, coord):
     sub_roi = sub_rois[coord]
@@ -161,6 +162,14 @@ def main():
             elif arg_split[0] == ARG_VERIFY:
                 plot_2d.verify = True
                 print("Set verification mode to: {}".format(plot_2d.verify))
+            elif arg_split[0] == ARG_RESOLUTION:
+                res_split = arg_split[1].split(",")
+                if len(res_split) >= 3:
+                    detector.resolutions = [tuple(float(i) for i in res_split)[::-1]]
+                    print("Set resolutions: {}".format(detector.resolutions))
+                else:
+                    print("Resolution ({}) should be given as 3 values (x, y, z)"
+                          .format(arg_split[1]))
     
     # loads the image and GUI
     global image5d, conn, cur
@@ -175,6 +184,7 @@ def main():
             image5d_proc = output["roi"]
             #print("image5d_proc dtype: {}".format(image5d_proc.dtype))
             segments_proc = output["segments"]
+            detector.resolutions = output["resolutions"]
             return
         except IOError:
             print("Unable to load {}, will attempt to read unprocessed file"
@@ -190,7 +200,6 @@ def main():
         time_start = time()
         shape = image5d.shape
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
-        chunking.scale_max_pixels()
         tol = chunking.calc_tolerance()
         print("tol: {}".format(tol))
         sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
@@ -227,7 +236,7 @@ def main():
         print("total processing time (s): {}".format(time() - time_start))
         outfile = open(filename_proc, "wb")
         time_start = time()
-        np.savez(outfile, roi=merged, segments=segments_all)
+        np.savez(outfile, roi=merged, segments=segments_all, resolutions=detector.resolutions)
         outfile.close()
         print('file save time: %f' %(time() - time_start))
         # exit directly since otherwise appears to hang

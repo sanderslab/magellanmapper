@@ -21,7 +21,10 @@ Command-line arguments in addition to those listed below:
         to be detected from the image file or if the saved numpy array
         does not have scaling information as it would otherwise
         override this setting.
-    * 3d: 3D rendering type (see plot_3d.py).
+    * 3d: 3D rendering type (see cli.py).
+    * proc: Processing type (see cli.py).
+    * resolution: Resolution given as (x, y, z) in floating point (see
+        cli.py, though order is natural here as command-line argument).
 
 Attributes:
     filename: The filename of the source images. A corresponding file with
@@ -173,13 +176,6 @@ class Visualization(HasTraits):
         segs_transposed = []
         curr_roi_size = self.roi_array[0].astype(int)
         print("segments:\n{}".format(self.segments))
-        """
-        segs_inside = self.segments[np.logical_and(self.segments[:, 1] > self.border[1], 
-                                     np.logical_and(self.segments[:, 1] < (curr_roi_size[1] - self.border[1]),
-                                     np.logical_and(self.segments[:, 2] > self.border[0],
-                                     self.segments[:, 2] < (curr_roi_size[0] - self.border[0]))))]
-        print("segs within borders: {}".format(segs_copy))
-        """
         print("inserting segments to database with border widths {}".format(self.border))
         for i in range(len(self.segments)):
             seg = self.segments[i]

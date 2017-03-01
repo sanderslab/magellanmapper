@@ -12,12 +12,6 @@ Examples:
         $ python -m clrbrain.cli img=/path/to/file.czi offset=30,50,205 \
             size=150,150,10
 
-Command-line arguments in addition to those listed below:
-    * scaling_factor: Zoom scaling (see detector.py). Only set if unable
-        to be detected from the image file or if the saved numpy array
-        does not have scaling information as it would otherwise
-        override this setting.
-
 Attributes:
     filename: The filename of the source images. A corresponding file with
         the subset as a 5 digit number (eg 00003) with .npz appended to 
@@ -84,7 +78,6 @@ ARG_CHANNEL = "channel"
 ARG_SERIES = "series"
 ARG_SIDES = "size"
 ARG_3D = "3d"
-ARG_SCALING = "scaling"
 ARG_SAVEFIG = "savefig"
 ARG_VERIFY = "verify"
 ARG_RESOLUTION = "resolution"
@@ -137,10 +130,6 @@ def main():
             elif arg_split[0] == ARG_SERIES:
                 series = int(arg_split[1])
                 print("Set to series: {}".format(series))
-            elif arg_split[0] == ARG_SCALING:
-                scaling = float(arg_split[1])
-                detector.scaling_factor = scaling
-                print("Set scaling factor to: {}".format(scaling))
             elif arg_split[0] == ARG_SIDES:
                 sides_split = arg_split[1].split(",")
                 if len(sides_split) >= 3:
@@ -170,6 +159,8 @@ def main():
                 else:
                     print("Resolution ({}) should be given as 3 values (x, y, z)"
                           .format(arg_split[1]))
+            else:
+                print("Did not recognize \"{}\", skipping".format(arg_split[0]))
     
     # loads the image and GUI
     global image5d, conn, cur

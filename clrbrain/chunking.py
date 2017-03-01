@@ -6,7 +6,7 @@
 Attributes:
     max_pixels: Maximum number of pixels in (x, y, z) dimensions.
     overlap_base: Base number of pixels for overlap, which will
-        be scaled up by detector.scaling_factor.
+        be scaled by detector.resolutions.
 """
 
 import numpy as np
@@ -62,8 +62,6 @@ def stack_splitter(roi):
             (z, y, x) dimensions.
     """
     size = roi.shape
-    #max_pixels = scale_max_pixels()
-    #overlap = int(overlap_base * detector.scaling_factor)
     overlap = calc_tolerance()
     max_pixels = overlap * max_pixels_factor
     num_units = _num_units(size, max_pixels)
@@ -196,21 +194,12 @@ def remove_close_blobs_within_array(blobs, region, tol):
             blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
-'''
-def scale_max_pixels():
-    """Scales the max pixels by detector.scaling_factor.
-    """
-    max_pixels = np.ceil(np.divide(detector.resolutions[0], max_pixels_factor)).astype(int)
-    print("scaled max pixels: {}".format(max_pixels))
-    return max_pixels
-'''
-
 def calc_tolerance():
-    """Calculates the tolerance based on the overlap and 
-    detector.scaling_factor.
+    """Calculates the tolerance based on the overlap_base and 
+    detector.resolutions, using the first resolution.
     
     Return:
-        Array of tolerance values in same shape as max_pixels.
+        Array of tolerance values in same shape as resolution.
     """
     if detector.resolutions is None:
         raise AttributeError("Must load resolutions from file or set a resolution")

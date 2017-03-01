@@ -5,13 +5,9 @@
 Provides options for segmentation and blob detection techniques.
 
 Attributes:
-    scaling_factor: The zoom scaling, where 
-        factor = 1 / (um/pixel), so 1um/pixel  
-        corresponds to factor of 1; eg 0.25um/pixel would require 
-        a factor of 1 / 0.25 = 4. Another way to think about it is that
-        factor = magnification * zoom / 4, so a 20x objective with
-        0.8x zoom would be factor = 20 * 0.8 / 4 = 4.
-    resolution: The image resolution in (z, y, x) order.
+    scaling_factor: 
+    resolutions: The image resolutions as an array of dimensions (n, r),
+        where each resolution r is a tuple in (z, y, x) order.
 """
 
 from time import time
@@ -24,7 +20,6 @@ from skimage.feature import blob_dog, blob_log, blob_doh
 
 from clrbrain import plot_3d
 
-scaling_factor = 1
 resolutions = None # (z, y, x) order
 
 def segment_rw(roi):
@@ -66,6 +61,11 @@ def segment_blob(roi):
     print("blob detection...")
     # use 3D blob detection from skimage v.0.13pre
     time_start = time()
+    # scaling as a factor in pixel/um, where scaling of 1um/pixel  
+    # corresponds to factor of 1, and 0.25um/pixel corresponds to
+    # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
+    # x scaling alone
+    scaling_factor = 1 / resolutions[0][2]
     blobs_log = blob_log(roi, min_sigma=3 * scaling_factor, 
                          max_sigma=30 * scaling_factor, num_sigma=10, 
                          threshold=0.1)
@@ -79,14 +79,3 @@ def segment_blob(roi):
     confirmed = np.ones((blobs_log.shape[0], 1)) * -1
     blobs_log = np.concatenate((blobs_log, confirmed), axis=1)
     return blobs_log
-
-def set_scaling_factor(magnification, zoom):
-    """Sets the global scaling factor.
-    
-    Args:
-        magnification: Objective magnification.
-        zoom: Zoom value.
-    """
-    global scaling_factor
-    scaling_factor = magnification * zoom / 4
-    print("set scaling as: {}".format(scaling_factor))

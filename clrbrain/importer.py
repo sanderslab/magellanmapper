@@ -162,11 +162,13 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             output = np.load(filename_npz)
             #print('file opening time: %f' %(time() - time_start))
             image5d = output["image5d"]
+            '''
             try:
                 detector.set_scaling_factor(output["magnification"], output["zoom"])
             except KeyError:
                 print("could not find magnification/zoom, defaulting to {}"
                       .format(detector.scaling_factor))
+            '''
             try:
                 detector.resolutions = output["resolutions"]
                 print("set resolutions to {}".format(detector.resolutions))
@@ -177,8 +179,8 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             print("Unable to load {}, will attempt to reload {}"
                   .format(filename_npz, filename))
     start_jvm()
-    names, sizes, resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
-    detector.set_scaling_factor(magnification, zoom)
+    names, sizes, detector.resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
+    #detector.set_scaling_factor(magnification, zoom)
     #sizes, dtype = find_sizes(filename)
     rdr = bf.ImageReader(filename, perform_init=True)
     size = sizes[series]
@@ -217,7 +219,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         time_start = time()
         # could use compression (savez_compressed), but much slower
         np.savez(outfile, image5d=image5d, names=names, sizes=sizes, 
-                 resolutions=resolutions, magnification=magnification, 
+                 resolutions=detector.resolutions, magnification=magnification, 
                  zoom=zoom, pixel_type=pixel_type)
         outfile.close()
         print('file save time: %f' %(time() - time_start))

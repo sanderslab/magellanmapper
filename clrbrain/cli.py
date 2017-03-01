@@ -65,7 +65,7 @@ segments_proc = None
 conn = None # sqlite connection
 cur = None # sqlite cursor
 
-PROC_TYPES = ("importonly", "processing", "load")
+PROC_TYPES = ("importonly", "processing", "processing_mp", "load")
 proc_type = None
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
@@ -92,6 +92,16 @@ def process_sub_roi(sub_rois, sub_rois_offsets, coord):
     if segments is not None:
         segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0))
     return (coord, sub_roi, segments)
+
+def collect_segments(segments_all, segments, region, tol):
+    # join segments
+    if segments_all is None:
+        segments_all = chunking.remove_close_blobs_within_array(segments,
+                                                                region, tol)
+    elif segments is not None:
+        segments = chunking.remove_close_blobs(segments, segments_all, 
+                                               region, tol)
+        segments_all = np.concatenate((segments_all, segments))
 
 def main():
     """Starts the visualization GUI.
@@ -167,7 +177,7 @@ def main():
     #np.set_printoptions(threshold=np.nan) # print full arrays
     conn, cur = sqlite.start_db()
     filename_proc = filename + str(series).zfill(5) + "_proc.npz"
-    if proc_type == PROC_TYPES[2]:
+    if proc_type == PROC_TYPES[3]:
         # loads from processed file
         try:
             output = np.load(filename_proc)
@@ -185,7 +195,7 @@ def main():
         # already imported so now simply exits
         print("imported {}, will exit".format(filename))
         os._exit(os.EX_OK)
-    elif proc_type == PROC_TYPES[1]:
+    elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the entire stack, saving processed image
         # and segments to file
         time_start = time()
@@ -195,29 +205,30 @@ def main():
         print("tol: {}".format(tol))
         sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
         segments_all = None
-        pool = mp.Pool()
-        pool_results = []
+        if proc_type == PROC_TYPES[2]:
+            pool = mp.Pool()
+            pool_results = []
+        region = slice(0, 3)
         for z in range(sub_rois.shape[0]):
             for y in range(sub_rois.shape[1]):
                 for x in range(sub_rois.shape[2]):
-                    pool_results.append(pool.apply_async(process_sub_roi, 
-                                                         args=(sub_rois, 
-                                                               sub_rois_offsets, 
-                                                               (z, y, x))))
-        for result in pool_results:
-            # must defer updating sub_rois until after the Pool to prevent data
-            # downgrade to uint8 for some reason
-            coord, sub_roi, segments = result.get()
-            sub_rois[coord] = sub_roi
-            # join segments
-            region = slice(0, 3)
-            if segments_all is None:
-                segments_all = chunking.remove_close_blobs_within_array(segments,
-                                                                        region, tol)
-            elif segments is not None:
-                segments = chunking.remove_close_blobs(segments, segments_all, 
-                                                       region, tol)
-                segments_all = np.concatenate((segments_all, segments))
+                    coord = (z, y, x)
+                    if proc_type == PROC_TYPES[2]:
+                        pool_results.append(pool.apply_async(process_sub_roi, 
+                                                             args=(sub_rois, 
+                                                                   sub_rois_offsets, 
+                                                                   coord)))
+                    else:
+                        _, sub_roi, segments = process_sub_roi(sub_rois, sub_rois_offsets, coord)
+                        sub_rois[coord] = sub_roi
+                        collect_segments(segments_all, segments, region, tol)
+        if proc_type == PROC_TYPES[2]:
+            for result in pool_results:
+                # must defer updating sub_rois until after the Pool to prevent data
+                # downgrade to uint8 for some reason
+                coord, sub_roi, segments = result.get()
+                sub_rois[coord] = sub_roi
+                collect_segments(segments_all, segments, region, tol)
         merged = chunking.merge_split_stack(sub_rois, overlap)
         """
         if segments_all is not None:

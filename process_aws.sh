@@ -1,5 +1,6 @@
 #!/bin/bash
-
+# Process files on Amazon Web Services EC2 server
+# Author: David Young 2017
 
 DEST=/data
 IMG=""
@@ -91,7 +92,7 @@ if (( $FOUND_NPZ == 0)); then
 fi
 
 # process image and segments
-python -u -m clrbrain.cli img="$DEST"/"$IMG" proc=processing $EXTRA_ARGS
+python -u -m clrbrain.cli img="$DEST"/"$IMG" proc=processing_mp $EXTRA_ARGS
 
 # upload to S3
 PROC_NPZ="$IMG"$(printf %05d $SERIES)_proc.npz

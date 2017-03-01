@@ -211,6 +211,8 @@ def main():
         segments_all = None
         region = slice(0, 3)
         if proc_type == PROC_TYPES[2]:
+            # in multiprocessing, process sub ROIs asynchronously in parallel and
+            # results in series
             pool = mp.Pool()
             pool_results = []
             for z in range(sub_rois.shape[0]):
@@ -221,12 +223,13 @@ def main():
                                                              args=(sub_rois_offsets, 
                                                                    coord)))
             for result in pool_results:
-                # must defer updating sub_rois until after the Pool to prevent data
-                # downgrade to uint8 in multiprocessing for some reason
+                # appears to keep looping until all results are complete, which need
+                # to prevent downgrading processed file to uint8 for some reason
                 coord, sub_roi, segments = result.get()
                 sub_rois[coord] = sub_roi
                 segments_all = collect_segments(segments_all, segments, region, tol)
         else:
+            # non-multiprocessing
             for z in range(sub_rois.shape[0]):
                 for y in range(sub_rois.shape[1]):
                     for x in range(sub_rois.shape[2]):

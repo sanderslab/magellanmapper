@@ -87,11 +87,11 @@ fi
 # import raw image into Numpy array if not available
 if (( $FOUND_NPZ == 0)); then
 	echo "Importing $DEST/$IMG..."
-	python -m clrbrain.cli img="$DEST"/"$IMG" 3d=importonly $EXTRA_ARGS
+	python -m clrbrain.cli img="$DEST"/"$IMG" proc=importonly $EXTRA_ARGS
 fi
 
 # process image and segments
-python -u -m clrbrain.cli img="$DEST"/"$IMG" 3d=headless $EXTRA_ARGS
+python -u -m clrbrain.cli img="$DEST"/"$IMG" proc=processing $EXTRA_ARGS
 
 # upload to S3
 PROC_NPZ="$IMG"$(printf %05d $SERIES)_proc.npz

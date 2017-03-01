@@ -49,7 +49,6 @@ import numpy as np
 
 from clrbrain import importer
 from clrbrain import sqlite
-from clrbrain import plot_2d
 from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
@@ -146,6 +145,7 @@ def main():
                     print("Did not recognize 3D rendering type: {}"
                           .format(arg_split[1]))
             elif arg_split[0] == ARG_SAVEFIG:
+                from clrbrain import plot_2d
                 plot_2d.savefig = arg_split[1]
                 print("Set savefig extension to: {}".format(plot_2d.savefig))
             elif arg_split[0] == ARG_VERIFY:

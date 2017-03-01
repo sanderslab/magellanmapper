@@ -102,6 +102,7 @@ def collect_segments(segments_all, segments, region, tol):
         segments = chunking.remove_close_blobs(segments, segments_all, 
                                                region, tol)
         segments_all = np.concatenate((segments_all, segments))
+    return segments_all
 
 def main():
     """Starts the visualization GUI.
@@ -205,9 +206,9 @@ def main():
         print("tol: {}".format(tol))
         sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
         segments_all = None
+        pool_results = []
         if proc_type == PROC_TYPES[2]:
             pool = mp.Pool()
-            pool_results = []
         region = slice(0, 3)
         for z in range(sub_rois.shape[0]):
             for y in range(sub_rois.shape[1]):
@@ -221,14 +222,14 @@ def main():
                     else:
                         _, sub_roi, segments = process_sub_roi(sub_rois, sub_rois_offsets, coord)
                         sub_rois[coord] = sub_roi
-                        collect_segments(segments_all, segments, region, tol)
-        if proc_type == PROC_TYPES[2]:
-            for result in pool_results:
-                # must defer updating sub_rois until after the Pool to prevent data
-                # downgrade to uint8 for some reason
-                coord, sub_roi, segments = result.get()
-                sub_rois[coord] = sub_roi
-                collect_segments(segments_all, segments, region, tol)
+                        segments_all = collect_segments(segments_all, segments, region, tol)
+        # in multiprocessing, check for close segments once all segs collected
+        for result in pool_results:
+            # must defer updating sub_rois until after the Pool to prevent data
+            # downgrade to uint8 in multiprocessing for some reason
+            coord, sub_roi, segments = result.get()
+            sub_rois[coord] = sub_roi
+            segments_all = collect_segments(segments_all, segments, region, tol)
         merged = chunking.merge_split_stack(sub_rois, overlap)
         """
         if segments_all is not None:

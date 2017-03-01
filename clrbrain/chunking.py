@@ -184,6 +184,8 @@ def remove_close_blobs_within_array(blobs, region, tol):
     Return:
         The blobs array without blobs falling inside the tolerance range.
     """
+    if blobs is None:
+        return
     blobs_all = None
     for blob in blobs:
         #print("blob: {}".format(blob))

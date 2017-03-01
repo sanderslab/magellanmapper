@@ -64,6 +64,7 @@ image5d_proc = None
 segments_proc = None
 conn = None # sqlite connection
 cur = None # sqlite cursor
+sub_rois = None
 
 PROC_TYPES = ("importonly", "processing", "processing_mp", "load")
 proc_type = None
@@ -81,7 +82,7 @@ ARG_SAVEFIG = "savefig"
 ARG_VERIFY = "verify"
 ARG_RESOLUTION = "resolution"
 
-def process_sub_roi(sub_rois, sub_rois_offsets, coord):
+def process_sub_roi(sub_rois_offsets, coord):
     sub_roi = sub_rois[coord]
     print("processing sub_roi at {}, with shape {}..."
           .format(coord, sub_roi.shape))
@@ -204,32 +205,35 @@ def main():
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
         tol = chunking.calc_tolerance()
         print("tol: {}".format(tol))
+        # need to make module-level to allow shared memory of this large array
+        global sub_rois
         sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
         segments_all = None
-        pool_results = []
+        region = slice(0, 3)
         if proc_type == PROC_TYPES[2]:
             pool = mp.Pool()
-        region = slice(0, 3)
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    if proc_type == PROC_TYPES[2]:
+            pool_results = []
+            for z in range(sub_rois.shape[0]):
+                for y in range(sub_rois.shape[1]):
+                    for x in range(sub_rois.shape[2]):
+                        coord = (z, y, x)
                         pool_results.append(pool.apply_async(process_sub_roi, 
-                                                             args=(sub_rois, 
-                                                                   sub_rois_offsets, 
+                                                             args=(sub_rois_offsets, 
                                                                    coord)))
-                    else:
-                        _, sub_roi, segments = process_sub_roi(sub_rois, sub_rois_offsets, coord)
+            for result in pool_results:
+                # must defer updating sub_rois until after the Pool to prevent data
+                # downgrade to uint8 in multiprocessing for some reason
+                coord, sub_roi, segments = result.get()
+                sub_rois[coord] = sub_roi
+                segments_all = collect_segments(segments_all, segments, region, tol)
+        else:
+            for z in range(sub_rois.shape[0]):
+                for y in range(sub_rois.shape[1]):
+                    for x in range(sub_rois.shape[2]):
+                        coord = (z, y, x)
+                        _, sub_roi, segments = process_sub_roi(sub_rois_offsets, coord)
                         sub_rois[coord] = sub_roi
                         segments_all = collect_segments(segments_all, segments, region, tol)
-        # in multiprocessing, check for close segments once all segs collected
-        for result in pool_results:
-            # must defer updating sub_rois until after the Pool to prevent data
-            # downgrade to uint8 in multiprocessing for some reason
-            coord, sub_roi, segments = result.get()
-            sub_rois[coord] = sub_roi
-            segments_all = collect_segments(segments_all, segments, region, tol)
         merged = chunking.merge_split_stack(sub_rois, overlap)
         """
         if segments_all is not None:

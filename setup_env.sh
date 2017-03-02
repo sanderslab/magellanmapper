@@ -52,5 +52,8 @@ git pull origin pull/2114/head
 pip install -e .
 cd ..
 
+echo "Pip installing additional packages..."
+pip install matplotlib-scalebar
+
 echo "clrbrain environment setup complete!"
 

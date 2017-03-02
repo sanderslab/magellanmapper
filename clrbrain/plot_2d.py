@@ -15,6 +15,10 @@ from matplotlib import pyplot as plt, cm
 from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
+from matplotlib_scalebar.scalebar import ScaleBar
+from matplotlib_scalebar.scalebar import SI_LENGTH
+
+from clrbrain import detector
 
 colormap_2d = cm.inferno
 savefig = None
@@ -41,6 +45,11 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     collection.set_facecolor(facecolor)
     collection.set_linewidth(linewidth)
     return collection
+
+def add_scale_bar(ax):
+    scale_bar = ScaleBar(detector.resolutions[0][2], u'\u00b5m', SI_LENGTH, 
+                         box_alpha=0, color="w", location=3)
+    ax.add_artist(scale_bar)
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None):
@@ -107,7 +116,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                                            fill=False, edgecolor="yellow",
                                            linestyle="dashed"))
     return ax, collection_z
-   
+
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
@@ -155,6 +164,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     plt.imshow(img2d, cmap=colormap_2d)
     ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
                                    fill=False, edgecolor="yellow"))
+    add_scale_bar(ax)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     #print("rows: {}, cols: {}, remainder: {}"
@@ -186,6 +196,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                                               zoom_offset, segments, segments_z, 
                                               segs_cmap, alpha, z == z_start,
                                               border if show_border else None)
+            if i == 0 and j == 0:
+                add_scale_bar(ax_z)
             collection_z_list.append(collection_z)
             ax_z_list.append(ax_z)
     

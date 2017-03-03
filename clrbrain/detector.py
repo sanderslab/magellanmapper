@@ -22,6 +22,18 @@ from clrbrain import plot_3d
 
 resolutions = None # (z, y, x) order
 
+def calc_scaling_factor():
+    """Calculates the tolerance based on the  
+    resolutions, using the first resolution.
+    
+    Return:
+        Array of tolerance values in same shape as resolution.
+    """
+    if resolutions is None:
+        raise AttributeError("Must load resolutions from file or set a resolution")
+    factor = np.ceil(np.divide(1.0, resolutions[0])).astype(int)
+    return factor
+
 def segment_rw(roi):
     """Segments an image, drawing contours around segmented regions.
     
@@ -58,14 +70,13 @@ def segment_blob(roi):
         Array of detected blobs, each given as 
             (z, row, column, radius).
     """
-    print("blob detection...")
     # use 3D blob detection from skimage v.0.13pre
     time_start = time()
     # scaling as a factor in pixel/um, where scaling of 1um/pixel  
     # corresponds to factor of 1, and 0.25um/pixel corresponds to
     # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
     # x scaling alone
-    scaling_factor = 1 / resolutions[0][2]
+    scaling_factor = calc_scaling_factor()[2]
     blobs_log = blob_log(roi, min_sigma=3 * scaling_factor, 
                          max_sigma=30 * scaling_factor, num_sigma=10, 
                          threshold=0.1)

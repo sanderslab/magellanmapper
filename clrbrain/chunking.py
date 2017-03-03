@@ -13,8 +13,9 @@ import numpy as np
 
 from clrbrain import detector
 
-max_pixels_factor = 10
-overlap_base = 5
+max_pixels_factor_denoise = 25
+max_pixels_factor_segment = 100
+overlap_factor = 5
 
 def _num_units(size, max_pixels):
     """Calculates number of sub regions.
@@ -49,7 +50,7 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
         end = size[axis]
     return (start, end)
 
-def stack_splitter(roi):
+def stack_splitter(roi, max_pixels_factor, overlap_factor=overlap_factor):
     """Splits a stack into multiple sub regions.
     
     Params:
@@ -62,8 +63,10 @@ def stack_splitter(roi):
             (z, y, x) dimensions.
     """
     size = roi.shape
-    overlap = calc_tolerance()
-    max_pixels = overlap * max_pixels_factor
+    #overlap = calc_tolerance()
+    scaling_factor = detector.calc_scaling_factor()
+    overlap = np.multiply(scaling_factor, overlap_factor)
+    max_pixels = np.multiply(scaling_factor, max_pixels_factor)
     num_units = _num_units(size, max_pixels)
     print("num_units: {}".format(num_units))
     sub_rois = np.zeros(num_units, dtype=object)
@@ -196,17 +199,35 @@ def remove_close_blobs_within_array(blobs, region, tol):
             blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
-def calc_tolerance():
-    """Calculates the tolerance based on the overlap_base and 
-    detector.resolutions, using the first resolution.
-    
-    Return:
-        Array of tolerance values in same shape as resolution.
-    """
-    if detector.resolutions is None:
-        raise AttributeError("Must load resolutions from file or set a resolution")
-    overlap = np.ceil(np.divide(overlap_base, detector.resolutions[0])).astype(int)
-    return overlap
+def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol):
+    if coord[axis] > 0:
+        coord_last = list(coord)
+        coord_last[axis] = coord_last[axis] - 1
+        blobs_ref = blob_rois[tuple(coord_last)]
+        print("checking against blobs_ref at {}:\n{}".format(coord_last, blobs_ref))
+        if blobs_ref is not None:
+            return remove_close_blobs(blobs, blobs_ref, region, tol)
+    return blobs
+
+def prune_overlapping_blobs(blob_rois, region, tol):
+    blobs_all = None
+    print("pruning overlapping blobs with tolerance {}".format(tol))
+    for z in range(blob_rois.shape[0]):
+        for y in range(blob_rois.shape[1]):
+            for x in range(blob_rois.shape[2]):
+                coord = (z, y, x)
+                blobs = blob_rois[coord]
+                print("checking blobs in {}:\n{}".format(coord, blobs))
+                if blobs is None:
+                    print("no blobs to add, skipping")
+                elif blobs_all is None:
+                    print("initializing master blobs list")
+                    blobs_all = blobs
+                else:
+                    for axis in range(len(coord)):
+                        blobs = _compare_last_roi(blobs, coord, axis, blob_rois, region, tol)
+                    blobs_all = np.concatenate((blobs_all, blobs))
+    return blobs_all
 
 if __name__ == "__main__":
     print("Starting chunking...")

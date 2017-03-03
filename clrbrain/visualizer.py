@@ -232,7 +232,7 @@ class Visualization(HasTraits):
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
-        self.border = chunking.calc_tolerance()
+        self.border = detector.calc_scaling_factor()
         # TODO: use microscope scaling for scaling in each dimension
         self.border[2] = 1
         # dimension max values in pixels

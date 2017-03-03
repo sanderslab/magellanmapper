@@ -82,17 +82,23 @@ ARG_SAVEFIG = "savefig"
 ARG_VERIFY = "verify"
 ARG_RESOLUTION = "resolution"
 
-def process_sub_roi(sub_rois_offsets, coord):
+def denoise_sub_roi(coord):
     sub_roi = sub_rois[coord]
-    print("processing sub_roi at {}, with shape {}..."
+    print("denoising sub_roi at {}, with shape {}..."
           .format(coord, sub_roi.shape))
     sub_roi = plot_3d.denoise(sub_roi)
+    return (coord, sub_roi)
+
+def segment_sub_roi(sub_rois_offsets, coord):
+    sub_roi = sub_rois[coord]
+    print("segmenting sub_roi at {}, with shape {}..."
+          .format(coord, sub_roi.shape))
     segments = detector.segment_blob(sub_roi)
     offset = sub_rois_offsets[coord]
     # transpose segments
     if segments is not None:
         segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0))
-    return (coord, sub_roi, segments)
+    return (coord, segments)
 
 def collect_segments(segments_all, segments, region, tol):
     # join segments
@@ -203,11 +209,11 @@ def main():
         time_start = time()
         shape = image5d.shape
         roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
-        tol = chunking.calc_tolerance()
-        print("tol: {}".format(tol))
+        #tol = detector.calc_scaling_factor()
+        #print("tol: {}".format(tol))
         # need to make module-level to allow shared memory of this large array
         global sub_rois
-        sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(roi)
+        sub_rois, overlap, _ = chunking.stack_splitter(roi, chunking.max_pixels_factor_denoise, 0)
         segments_all = None
         region = slice(0, 3)
         if proc_type == PROC_TYPES[2]:
@@ -219,15 +225,40 @@ def main():
                 for y in range(sub_rois.shape[1]):
                     for x in range(sub_rois.shape[2]):
                         coord = (z, y, x)
-                        pool_results.append(pool.apply_async(process_sub_roi, 
-                                                             args=(sub_rois_offsets, 
-                                                                   coord)))
+                        pool_results.append(pool.apply_async(denoise_sub_roi, 
+                                         args=(coord, )))
             for result in pool_results:
-                # appears to keep looping until all results are complete, which need
-                # to prevent downgrading processed file to uint8 for some reason
-                coord, sub_roi, segments = result.get()
+                coord, sub_roi = result.get()
+                print("replacing sub_roi at {} of {}".format(coord, sub_rois.shape))
                 sub_rois[coord] = sub_roi
-                segments_all = collect_segments(segments_all, segments, region, tol)
+            
+            pool.close()
+            pool.join()
+            merged = chunking.merge_split_stack(sub_rois, overlap)
+            
+            max_factor = chunking.max_pixels_factor_segment
+            sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(merged, max_factor)
+            pool = mp.Pool()
+            pool_results = []
+            for z in range(sub_rois.shape[0]):
+                for y in range(sub_rois.shape[1]):
+                    for x in range(sub_rois.shape[2]):
+                        coord = (z, y, x)
+                        pool_results.append(pool.apply_async(segment_sub_roi, 
+                                         args=(sub_rois_offsets, coord)))
+            
+            seg_rois = np.zeros(sub_rois.shape, dtype=object)
+            for result in pool_results:
+                coord, segments = result.get()
+                print("adding segments from sub_roi at {} of {}".format(coord, sub_rois.shape))
+                seg_rois[coord] = segments
+                #segments_all = collect_segments(segments_all, segments, region, overlap)
+            
+            pool.close()
+            pool.join()
+            
+            segments_all = chunking.prune_overlapping_blobs(seg_rois, region, overlap)
+            
         else:
             # non-multiprocessing
             for z in range(sub_rois.shape[0]):
@@ -236,8 +267,7 @@ def main():
                         coord = (z, y, x)
                         _, sub_roi, segments = process_sub_roi(sub_rois_offsets, coord)
                         sub_rois[coord] = sub_roi
-                        segments_all = collect_segments(segments_all, segments, region, tol)
-        merged = chunking.merge_split_stack(sub_rois, overlap)
+                        segments_all = collect_segments(segments_all, segments, region, overlap)
         """
         if segments_all is not None:
             segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))

@@ -221,6 +221,7 @@ def main():
             # results in series
             pool = mp.Pool()
             pool_results = []
+            time_denoising_start = time()
             for z in range(sub_rois.shape[0]):
                 for y in range(sub_rois.shape[1]):
                     for x in range(sub_rois.shape[2]):
@@ -235,7 +236,9 @@ def main():
             pool.close()
             pool.join()
             merged = chunking.merge_split_stack(sub_rois, overlap)
+            time_denoising_end = time()
             
+            time_segmenting_start = time()
             max_factor = chunking.max_pixels_factor_segment
             sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(merged, max_factor)
             pool = mp.Pool()
@@ -256,8 +259,15 @@ def main():
             
             pool.close()
             pool.join()
+            time_segmenting_end = time()
             
+            time_pruning_start = time()
             segments_all = chunking.prune_overlapping_blobs(seg_rois, region, overlap)
+            time_pruning_end = time()
+            
+            print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))
+            print("total segmenting time (s): {}".format(time_segmenting_end - time_segmenting_start))
+            print("total pruning time (s): {}".format(time_pruning_end - time_pruning_start))
             
         else:
             # non-multiprocessing

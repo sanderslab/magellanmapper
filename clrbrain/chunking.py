@@ -161,8 +161,6 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     Return:
         The blobs array without blobs falling inside the tolerance range.
     """
-    # workaround while awaiting https://github.com/numpy/numpy/pull/7742
-    # to become a reality, presumably in Numpy 1.13
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
     pruned = np.delete(blobs, close, axis=0)
@@ -200,17 +198,34 @@ def remove_close_blobs_within_array(blobs, region, tol):
             blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
-def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol):
+def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_rois_offsets):
     if coord[axis] > 0:
         coord_last = list(coord)
         coord_last[axis] = coord_last[axis] - 1
-        blobs_ref = blob_rois[tuple(coord_last)]
-        print("checking against blobs_ref at {}:\n{}".format(coord_last, blobs_ref))
+        coord_last_tup = tuple(coord_last)
+        blobs_ref = blob_rois[coord_last_tup]
         if blobs_ref is not None:
-            return remove_close_blobs(blobs, blobs_ref, region, tol)
+            #overlap_slices = [slice(None)] * roi_size
+            print("blobs_ref:\n{}".format(blobs_ref))
+            size = sub_rois[coord_last_tup].shape[axis]
+            offset_axis = sub_rois_offsets[coord_last_tup][axis]
+            bound_start = offset_axis + size - tol[axis]
+            #bound_end = sub_rois_offsets[coord][axis]
+            bound_end = bound_start + tol[axis]
+            print("overlap is from {} to {} at coord_last_tup {} in axis {}"
+                  .format(bound_start, bound_end, coord_last_tup, axis))
+            print("offset last: {}, current: {}"
+                  .format(sub_rois_offsets[coord_last_tup], sub_rois_offsets[coord]))
+            blobs_ref_ol = blobs_ref[blobs_ref[:, axis] >= bound_start]
+            blobs_ol = blobs[blobs[:, axis] < bound_end]
+            print("checking overlapping blobs_ol:\n{}\nagaginst blobs_ref_ol from {}:\n{}"
+                  .format(blobs_ol, coord_last, blobs_ref_ol))
+            blobs_ol_pruned = remove_close_blobs(blobs_ol, blobs_ref_ol, region, tol)
+            blobs_pruned = np.concatenate((blobs_ol_pruned, blobs[blobs[:, axis] >= tol[axis]]))
+            #print("non-overlapping blobs to add:\n{}".format(blobs_pruned))
     return blobs
 
-def prune_overlapping_blobs(blob_rois, region, tol):
+def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
     blobs_all = None
     print("pruning overlapping blobs with tolerance {}".format(tol))
     for z in range(blob_rois.shape[0]):
@@ -226,7 +241,9 @@ def prune_overlapping_blobs(blob_rois, region, tol):
                     blobs_all = blobs
                 else:
                     for axis in range(len(coord)):
-                        blobs = _compare_last_roi(blobs, coord, axis, blob_rois, region, tol)
+                        blobs = _compare_last_roi(blobs, coord, axis, blob_rois, 
+                                                  region, tol, sub_rois, sub_rois_offsets)
+                        blob_rois[coord] = blobs
                     blobs_all = np.concatenate((blobs_all, blobs))
     return blobs_all
 

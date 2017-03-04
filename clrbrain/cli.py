@@ -262,7 +262,8 @@ def main():
             time_segmenting_end = time()
             
             time_pruning_start = time()
-            segments_all = chunking.prune_overlapping_blobs(seg_rois, region, overlap)
+            segments_all = chunking.prune_overlapping_blobs(seg_rois, region, overlap, sub_rois, sub_rois_offsets)
+            print("total segments found: {}".format(segments_all.shape[0]))
             time_pruning_end = time()
             
             print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))

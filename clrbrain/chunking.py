@@ -65,10 +65,11 @@ def stack_splitter(roi, max_pixels_factor, overlap_factor=overlap_factor):
     size = roi.shape
     #overlap = calc_tolerance()
     scaling_factor = detector.calc_scaling_factor()
-    overlap = np.multiply(scaling_factor, overlap_factor)
-    max_pixels = np.multiply(scaling_factor, max_pixels_factor)
+    overlap = np.ceil(np.multiply(scaling_factor, overlap_factor)).astype(int)
+    max_pixels = np.ceil(np.multiply(scaling_factor, max_pixels_factor)).astype(int)
+    print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
     num_units = _num_units(size, max_pixels)
-    print("num_units: {}".format(num_units))
+    #print("num_units: {}".format(num_units))
     sub_rois = np.zeros(num_units, dtype=object)
     sub_rois_offsets = np.zeros(np.append(num_units, 3))
     print("sub_rois_offsets shape: {}".format(sub_rois_offsets.shape))
@@ -77,7 +78,7 @@ def stack_splitter(roi, max_pixels_factor, overlap_factor=overlap_factor):
             for x in range(num_units[2]):
                 coord = (z, y, x)
                 bounds = [_bounds_side(size, max_pixels, overlap, coord, axis) for axis in range(3)]
-                print("bounds: {}".format(bounds))
+                #print("bounds: {}".format(bounds))
                 sub_rois[coord] = roi[slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
                 sub_rois_offsets[coord] = (bounds[0][0], bounds[1][0], bounds[2][0])
     return sub_rois, overlap, sub_rois_offsets

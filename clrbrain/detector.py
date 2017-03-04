@@ -31,7 +31,8 @@ def calc_scaling_factor():
     """
     if resolutions is None:
         raise AttributeError("Must load resolutions from file or set a resolution")
-    factor = np.ceil(np.divide(1.0, resolutions[0])).astype(int)
+    factor = np.divide(1.0, resolutions[0])
+    print("scaling_factor: {}".format(factor))
     return factor
 
 def segment_rw(roi):

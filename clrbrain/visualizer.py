@@ -27,19 +27,7 @@ Command-line arguments in addition to those listed below:
         cli.py, though order is natural here as command-line argument).
 
 Attributes:
-    filename: The filename of the source images. A corresponding file with
-        the subset as a 5 digit number (eg 00003) with .npz appended to 
-        the end will be checked first based on this filename. Set with
-        "img=path/to/file" argument.
-    proc: Flag for loading processed files. "0" not to load (default), or
-        "1" to load processed (ie denoised) image and segments.
-    series: The series for multi-stack files, using 0-based indexing. Set
-        with "series=n" argument.
-    channel: The channel to view. Set with "channel=n" argument.
-    roi_size: The size in pixels of the region of interest. Set with
-        "size=x,y,z" argument, where x, y, and z are integers.
-    offset: The bottom corner in pixels of the region of interest. Set 
-        with "offset=x,y,z" argument, where x, y, and z are integers.
+    params: Additional Matplotlib rc parameters.
 """
 
 import os
@@ -297,12 +285,14 @@ class Visualization(HasTraits):
                 # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 x, y, z = self._curr_offset()
-                segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z, 
-                                                 cli.segments_proc[:, 0] < z + roi_z,
-                                                 cli.segments_proc[:, 1] >= y, 
-                                                 cli.segments_proc[:, 1] < y + roi_y,
-                                                 cli.segments_proc[:, 2] >= x, 
-                                                 cli.segments_proc[:, 2] < x + roi_x], 
+                # adds additional padding to show surrounding segments
+                pad = plot_2d.padding # human (x, y, z) order
+                segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z - pad[2], 
+                                                 cli.segments_proc[:, 0] < z + roi_z + pad[2],
+                                                 cli.segments_proc[:, 1] >= y - pad[1], 
+                                                 cli.segments_proc[:, 1] < y + roi_y + pad[1],
+                                                 cli.segments_proc[:, 2] >= x - pad[0], 
+                                                 cli.segments_proc[:, 2] < x + roi_x + pad[0]],
                                                 axis=0)]
                 # transpose to make coordinates relative to offset
                 segs = np.copy(segs)

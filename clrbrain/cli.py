@@ -17,8 +17,6 @@ Attributes:
         the subset as a 5 digit number (eg 00003) with .npz appended to 
         the end will be checked first based on this filename. Set with
         "img=path/to/file" argument.
-    proc: Flag for loading processed files. "0" not to load (default), or
-        "1" to load processed (ie denoised) image and segments.
     series: The series for multi-stack files, using 0-based indexing. Set
         with "series=n" argument.
     channel: The channel to view. Set with "channel=n" argument.

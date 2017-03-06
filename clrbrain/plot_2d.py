@@ -23,6 +23,7 @@ from clrbrain import detector
 colormap_2d = cm.inferno
 savefig = None
 verify = False
+padding = (0, 0, 3) # human (x, y, z) order
 
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """Draws a patch collection of circles for segments.
@@ -52,7 +53,8 @@ def add_scale_bar(ax):
     ax.add_artist(scale_bar)
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
-                 segments_z, segs_cmap, alpha, highlight=False, border=None):
+                 segments_z, segs_cmap, alpha, highlight=False, border=None, 
+                 segments_adj=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -73,6 +75,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         alpha: Opacity level.
         highlight: If true, the plot will be highlighted; defaults 
             to False.
+        segments_adj: Subset of segments that are adjacent to rather than
+            inside the ROI, which will be drawn in a differen style.
+            Defaults to None.
     """
     ax = plt.subplot(gs[row, col])
     ax.get_xaxis().set_visible(False)
@@ -97,18 +102,28 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             for spine in ax.spines.values():
                 spine.set_edgecolor("yellow")
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
+        # draws all segments as patches
         if segments is not None and segs_cmap is not None:
             collection = _circle_collection(segments, 
                                             segs_cmap.astype(float) / 255.0,
                                             "none", 3.0)
             ax.add_collection(collection)
-            
+        
+        # overlays segments in current z with dotted line patch and makes
+        # pickable for verifying the segment
         if segments_z is not None:
             collection_z = _circle_collection(segments_z, "w", "none", 1.0)
             collection_z.set_linestyle(":")
             collection_z.set_picker(5)
             ax.add_collection(collection_z)
         
+        # overlays segments in adjacent regions with dashed line patch
+        if segments_adj is not None:
+            collection_adj = _circle_collection(segments_adj, "k", "none", 3.0)
+            collection_adj.set_linestyle("--")
+            ax.add_collection(collection_adj)
+        
+        # adds a simple border to highlight the bottom of the ROI
         if border is not None:
             ax.add_patch(patches.Rectangle(border[0:2], 
                                            roi_size[0] - 2 * border[0], 
@@ -130,6 +145,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         segments: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, 4)
             dimension array, where each segment is in (z, y, x, radius).
+            This array can include adjacent segments as well.
         segs_cmap: Colormap for segments.
     """
     fig = plt.figure()
@@ -137,9 +153,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     
     # total number of z-planes
     z_planes = roi_size[2]
-    if z_planes % 2 == 0:
-        z_planes = z_planes + 1
-    z_planes_padding = 3 # addition z's on either side
+    z_planes_padding = padding[2] # addition z's on either side
     z_planes = z_planes + z_planes_padding * 2
     
     # plot layout depending on number of z-planes
@@ -172,6 +186,15 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     collection_z_list = []
     segments_z_list = []
     ax_z_list = []
+    segs_out = None
+    # finds adjacent segments, outside of the ROI
+    if segments is not None:
+        mask_in = np.all([segments[:, 0] >= 0, segments[:, 0] < roi_size[2],
+                          segments[:, 1] >= 0, segments[:, 1] < roi_size[1],
+                          segments[:, 2] >= 0, segments[:, 2] < roi_size[0]], 
+                         axis=0)
+        segs_out = segments[np.invert(mask_in)]
+        print("segs_out:\n{}".format(segs_out))
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
         cols = max_cols
@@ -179,7 +202,9 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             cols = col_remainder
         # show zoomed in plots and highlight one at offset z
         for j in range(cols):
+            # z relative to the start of the ROI, since segs are relative to ROI
             z_relative = i * max_cols + j - z_planes_padding
+            # absolute z value, relative to start of image5d
             z = z_start + z_relative
             zoom_offset = (offset[0], offset[1], z)
             # fade z-planes outside of ROI
@@ -195,7 +220,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                                               channel, roi_size,
                                               zoom_offset, segments, segments_z, 
                                               segs_cmap, alpha, z == z_start,
-                                              border if show_border else None)
+                                              border if show_border else None,
+                                              segs_out)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)

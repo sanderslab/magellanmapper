@@ -206,20 +206,24 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
         blobs_ref = blob_rois[coord_last_tup]
         if blobs_ref is not None:
             #overlap_slices = [slice(None)] * roi_size
-            print("blobs_ref:\n{}".format(blobs_ref))
+            #print("blobs_ref:\n{}".format(blobs_ref))
             size = sub_rois[coord_last_tup].shape[axis]
             offset_axis = sub_rois_offsets[coord_last_tup][axis]
             bound_start = offset_axis + size - tol[axis]
             #bound_end = sub_rois_offsets[coord][axis]
             bound_end = bound_start + tol[axis]
+            '''
             print("overlap is from {} to {} at coord_last_tup {} in axis {}"
                   .format(bound_start, bound_end, coord_last_tup, axis))
             print("offset last: {}, current: {}"
                   .format(sub_rois_offsets[coord_last_tup], sub_rois_offsets[coord]))
+            '''
             blobs_ref_ol = blobs_ref[blobs_ref[:, axis] >= bound_start]
             blobs_ol = blobs[blobs[:, axis] < bound_end]
+            '''
             print("checking overlapping blobs_ol:\n{}\nagaginst blobs_ref_ol from {}:\n{}"
                   .format(blobs_ol, coord_last, blobs_ref_ol))
+            '''
             blobs_ol_pruned = remove_close_blobs(blobs_ol, blobs_ref_ol, region, tol)
             blobs_pruned = np.concatenate((blobs_ol_pruned, blobs[blobs[:, axis] >= tol[axis]]))
             #print("non-overlapping blobs to add:\n{}".format(blobs_pruned))
@@ -233,7 +237,8 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
             for x in range(blob_rois.shape[2]):
                 coord = (z, y, x)
                 blobs = blob_rois[coord]
-                print("checking blobs in {}:\n{}".format(coord, blobs))
+                #print("checking blobs in {}:\n{}".format(coord, blobs))
+                print("checking blobs in {}".format(coord))
                 if blobs is None:
                     print("no blobs to add, skipping")
                 elif blobs_all is None:

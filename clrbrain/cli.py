@@ -4,7 +4,12 @@
 """Command line parser and and environment setup for Clrbrain.
 
 This module can be run either as a script to work in headless mode or 
-loaded and initialized by calling main().
+loaded and initialized by calling main(). 
+
+Note on dimensions order: User-defined dimension 
+variables are generally given in (x, y, z) order as per normal
+convention, but otherwise dimensions are generally in (z, y, x) for
+consistency with microscopy order and ease of processing stacks by z.
 
 Examples:
     Launch the GUI with the given file at a particular size and offset::

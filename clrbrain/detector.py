@@ -5,7 +5,6 @@
 Provides options for segmentation and blob detection techniques.
 
 Attributes:
-    scaling_factor: 
     resolutions: The image resolutions as an array of dimensions (n, r),
         where each resolution r is a tuple in (z, y, x) order.
 """
@@ -20,7 +19,7 @@ from skimage.feature import blob_dog, blob_log, blob_doh
 
 from clrbrain import plot_3d
 
-resolutions = None # (z, y, x) order
+resolutions = None # (z, y, x) order since given from microscope
 
 def calc_scaling_factor():
     """Calculates the tolerance based on the  
@@ -131,6 +130,8 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     Return:
         The blobs array without blobs falling inside the tolerance range.
     """
+    # creates a separate array for each blob in blobs_master to allow
+    # comparison for each of its blobs with each blob to add
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
     pruned = np.delete(blobs, close, axis=0)

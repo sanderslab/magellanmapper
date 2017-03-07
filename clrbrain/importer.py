@@ -5,6 +5,11 @@
 
 Bioformats is access through Python-Bioformats and Javabridge.
 Images will be imported into a 4/5D Numpy array.
+
+Attributes:
+    PIXEL_DTYPE: Dictionary of corresponding data types for 
+        output given by Bioformats library. Alternatively, should detect
+        pixel data type directly using parse_ome_raw().
 """
 
 from time import time
@@ -65,6 +70,22 @@ def parse_ome(filename):
     return names, sizes
 
 def parse_ome_raw(filename):
+    """Parses the microscope's XML file directly, pulling out salient info
+    for further processing.
+    
+    Args:
+        filename: Image file, assumed to have metadata in OME XML format.
+    
+    Returns:
+        names: array of names of seriess within the file.
+        sizes: array of tuples with dimensions for each series. Dimensions
+            will be given as (time, z, y, x, channels).
+        resolution: array of resolutions, also known as scaling, in the same
+            dimensions as sizes.
+        magnification: Objective magnification.
+        zoom: Zoom level.
+        pixel_type: Pixel data type as a string.
+    """
     array_order = "TZYXC" # desired dimension order
     names, sizes, resolutions = [], [], []
     # names for sizes in all dimensions
@@ -78,8 +99,10 @@ def parse_ome_raw(filename):
     metadata = bf.get_omexml_metadata(filename)
     metadata_root = et.ElementTree.fromstring(metadata)
     for child in metadata_root:
+        # tag name is at end of a long string of other identifying info
         print("tag: {}".format(child.tag))
         if child.tag.endswith("Instrument"):
+            # microscope info
             for grandchild in child:
                 if grandchild.tag.endswith("Detector"):
                     zoom = float(grandchild.attrib["Zoom"])
@@ -87,6 +110,7 @@ def parse_ome_raw(filename):
                     magnification = float(grandchild.attrib["NominalMagnification"])
             print("zoom: {}, magnification: {}".format(zoom, magnification))
         elif child.tag.endswith("Image"):
+            # image file info
             names.append(child.attrib["Name"])
             for grandchild in child:
                 if grandchild.tag.endswith("Pixels"):
@@ -179,10 +203,11 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             print("Unable to load {}, will attempt to reload {}"
                   .format(filename_npz, filename))
     start_jvm()
+    # parses the XML tree directly
     names, sizes, detector.resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
-    #detector.set_scaling_factor(magnification, zoom)
     #sizes, dtype = find_sizes(filename)
     rdr = bf.ImageReader(filename, perform_init=True)
+    # only loads one series for now though could create a loop for multiple series
     size = sizes[series]
     nt, nz = size[:2]
     if z_max != -1:
@@ -190,6 +215,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
     if offset is None:
         offset = (0, 0, 0) # (x, y, z)
     dtype = getattr(np, pixel_type)
+    # create empty image stack array based on whether channel dimension exists
     if size[4] <= 1:
         image5d = np.empty((nt, nz, size[2], size[3]), dtype)
         load_channel = 0
@@ -204,6 +230,9 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             print("loading planes from [{}, {}]".format(t, z))
             img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
                            series=series, rescale=False)
+            # checks predicted data type with actual one to ensure consistency, 
+            # which was necessary in case the PIXEL_DTYPE dictionary became inaccurate
+            # but shoudln't be an issue when parsing date type directly from XML
             if check_dtype:
                 if img.dtype != image5d.dtype:
                     raise TypeError("Storing as data type {} "

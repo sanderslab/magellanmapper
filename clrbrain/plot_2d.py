@@ -5,6 +5,14 @@ comparison with 3D visualization.
 
 Attributes:
     colormap_2d: The Matplotlib colormap for 2D plots.
+    savefig: Extension of the file in which to automatically save the
+        window as a figure (eg "pdf"). If None, figures will not be
+        automatically saved.
+    verify: If true, verification mode is turned on, which for now
+        simply turns on interior borders as the picker remains on
+        by default.
+    padding: Padding in pixels (x, y), or planes (z) in which to show
+        extra segments.
 """
 
 import math
@@ -23,7 +31,8 @@ from clrbrain import detector
 colormap_2d = cm.inferno
 savefig = None
 verify = False
-padding = (0, 0, 3) # human (x, y, z) order
+# TODO: may want to base on scaling factor instead
+padding = (5, 5, 3) # human (x, y, z) order
 
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """Draws a patch collection of circles for segments.
@@ -48,6 +57,13 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     return collection
 
 def add_scale_bar(ax):
+    """Adds a scale bar to the plot.
+    
+    Uses the x resolution value and assumes that it is in microns per pixel.
+    
+    Params:
+        ax: The plot that will show the bar.
+    """
     scale_bar = ScaleBar(detector.resolutions[0][2], u'\u00b5m', SI_LENGTH, 
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
@@ -90,18 +106,20 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         print("skipping z-plane {}".format(z))
         plt.imshow(np.zeros(roi_size[0:2]))
     else:
+        # show the zoomed in 2D region
+        region = [0, offset[2], 
+                  slice(offset[1], offset[1] + roi_size[1]), 
+                  slice(offset[0], offset[0] + roi_size[0])]
         if image5d.ndim >= 5:
-            roi = image5d[0, offset[2], 
-                          slice(offset[1], offset[1] + roi_size[1]), 
-                          slice(offset[0], offset[0] + roi_size[0]), channel]
+            roi = image5d[tuple(region + [channel])]
         else:
-            roi = image5d[0, offset[2], 
-                          slice(offset[1], offset[1] + roi_size[1]), 
-                          slice(offset[0], offset[0] + roi_size[0])]
+            roi = image5d[tuple(region)]
+        # highlight borders of z plane at bottom of ROI
         if highlight:
             for spine in ax.spines.values():
                 spine.set_edgecolor("yellow")
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
+        
         # draws all segments as patches
         if segments is not None and segs_cmap is not None:
             collection = _circle_collection(segments, 

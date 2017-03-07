@@ -14,6 +14,7 @@ Attributes:
 """
 
 import numpy as np
+import math
 
 from clrbrain import detector
 
@@ -166,6 +167,9 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
         Array of blobs without blobs that are close in the overlapping region to blobs
             already in the immediately preceding region.
     """
+    #blobs = blob_rois[coord]
+    #print("num of blobs to add: {}".format(blobs.shape[0]))
+    #tol = np.ceil(np.multiply(overlap, 1.5)).astype(int)
     if coord[axis] > 0:
         # find the immediately preceding sub ROI
         coord_last = list(coord)
@@ -173,31 +177,36 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
         coord_last_tup = tuple(coord_last)
         blobs_ref = blob_rois[coord_last_tup]
         if blobs_ref is not None:
-            # find the boundaries for the overlapping region
+            # find the boundaries for the overlapping region, giving extra padding to 
+            # allow for slight differences in coordinates when the same blob was ID'ed
+            # in different regions
             #print("blobs_ref:\n{}".format(blobs_ref))
             size = sub_rois[coord_last_tup].shape[axis]
+            overlap = math.ceil(tol[axis] * 1.5)
             offset_axis = sub_rois_offsets[coord_last_tup][axis]
-            bound_start = offset_axis + size - tol[axis]
+            bound_start = offset_axis + size - math.ceil(tol[axis] * 1.5)
             #bound_end = sub_rois_offsets[coord][axis]
-            bound_end = bound_start + tol[axis]
-            '''
+            bound_end = bound_start + math.ceil(tol[axis] * 2) #tol[axis]
+            
             print("overlap is from {} to {} at coord_last_tup {} in axis {}"
                   .format(bound_start, bound_end, coord_last_tup, axis))
             print("offset last: {}, current: {}"
                   .format(sub_rois_offsets[coord_last_tup], sub_rois_offsets[coord]))
-            '''
+            
             blobs_ref_ol = blobs_ref[blobs_ref[:, axis] >= bound_start]
             blobs_ol = blobs[blobs[:, axis] < bound_end]
-            '''
+            
             print("checking overlapping blobs_ol:\n{}\nagaginst blobs_ref_ol from {}:\n{}"
                   .format(blobs_ol, coord_last, blobs_ref_ol))
-            '''
+            
             
             # prune close blobs within the overlapping regions and add the remaining
             # blobs to the non-overlapping region
             blobs_ol_pruned = detector.remove_close_blobs(blobs_ol, blobs_ref_ol, region, tol)
-            blobs_pruned = np.concatenate((blobs_ol_pruned, blobs[blobs[:, axis] >= tol[axis]]))
+            blobs_pruned = np.concatenate((blobs_ol_pruned, blobs[blobs[:, axis] >= bound_end]))
             #print("non-overlapping blobs to add:\n{}".format(blobs_pruned))
+            #print("num of pruned blobs to add: {}".format(blobs_pruned.shape[0]))
+            return blobs_pruned
             
     return blobs
 
@@ -241,11 +250,13 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
                     print("initializing master blobs list")
                     blobs_all = blobs
                 else:
-                    # checks immediately preceding sub ROI in each dimension
+                    # checks immediately preceding sub ROI in each dimension; should
+                    # not put back into blob_rois since other blob sets may need to
+                    # detect pruned blobs when the same blob occurs in >2 sets that
+                    # will not be diretly compared with one another
                     for axis in range(len(coord)):
                         blobs = _compare_last_roi(blobs, coord, axis, blob_rois, 
                                                   region, tol, sub_rois, sub_rois_offsets)
-                        blob_rois[coord] = blobs
                     blobs_all = np.concatenate((blobs_all, blobs))
     return blobs_all
 

@@ -130,7 +130,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         # overlays segments in current z with dotted line patch and makes
         # pickable for verifying the segment
         if segments_z is not None:
-            collection_z = _circle_collection(segments_z, "w", "none", 1.0)
+            collection_z = _circle_collection(segments_z, "w", "none", 2.0)
             collection_z.set_linestyle(":")
             collection_z.set_picker(5)
             ax.add_collection(collection_z)

@@ -163,7 +163,6 @@ class Visualization(HasTraits):
             return
         segs_transposed = []
         curr_roi_size = self.roi_array[0].astype(int)
-        print("segments:\n{}".format(self.segments))
         print("inserting segments to database with border widths {}".format(self.border))
         for i in range(len(self.segments)):
             seg = self.segments[i]
@@ -178,8 +177,11 @@ class Visualization(HasTraits):
                     seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
                               seg[0] + self.z_offset, seg[3], seg[4])
                     segs_transposed.append(seg_db)
+                    print("{} inserted".format(seg, seg_db))
                 else:
                     print("{} outside, ignored".format(seg))
+        for seg in segs_transposed:
+            print("inserted as {}".format(seg, seg_db))
         # inserts experiment if not already added, then segments
         exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
                                                     os.path.basename(cli.filename),

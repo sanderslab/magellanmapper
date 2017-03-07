@@ -187,18 +187,18 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
             bound_start = offset_axis + size - math.ceil(tol[axis] * 1.5)
             #bound_end = sub_rois_offsets[coord][axis]
             bound_end = bound_start + math.ceil(tol[axis] * 2) #tol[axis]
-            
+            '''
             print("overlap is from {} to {} at coord_last_tup {} in axis {}"
                   .format(bound_start, bound_end, coord_last_tup, axis))
             print("offset last: {}, current: {}"
                   .format(sub_rois_offsets[coord_last_tup], sub_rois_offsets[coord]))
-            
+            '''
             blobs_ref_ol = blobs_ref[blobs_ref[:, axis] >= bound_start]
             blobs_ol = blobs[blobs[:, axis] < bound_end]
-            
+            '''
             print("checking overlapping blobs_ol:\n{}\nagaginst blobs_ref_ol from {}:\n{}"
                   .format(blobs_ol, coord_last, blobs_ref_ol))
-            
+            '''
             
             # prune close blobs within the overlapping regions and add the remaining
             # blobs to the non-overlapping region

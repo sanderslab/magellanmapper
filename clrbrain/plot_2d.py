@@ -247,7 +247,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     
     # record selected segments in the Visualization segments table
     def on_pick(event):
-        # ignore right-clicks
+        # ignore ctrl-clicks since used elsewhere
         if event.mouseevent.key == "control":
             return
         # segments_z_list is linked to collection list
@@ -265,12 +265,13 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                 i = segi[0][0]
                 seg[4] = 1 if event.mouseevent.button == 1 else 0
                 vis.segments[segi[0][0]] = seg
-                # change selection simply to trigger table update in 
-                # separate window
                 if event.mouseevent.button == 1:
+                    # left-click to select
                     if not i in vis.segs_selected:
                         vis.segs_selected.append(i)
                 else:
+                    # right-click to unselect, which first selects simply 
+                    # to trigger table update
                     if not i in vis.segs_selected:
                         vis.segs_selected.append(i)
                     vis.segs_selected.remove(i)

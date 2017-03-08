@@ -212,6 +212,7 @@ def main():
                 plot_2d.savefig = arg_split[1]
                 print("Set savefig extension to: {}".format(plot_2d.savefig))
             elif arg_split[0] == ARG_VERIFY:
+                from clrbrain import plot_2d
                 plot_2d.verify = True
                 print("Set verification mode to: {}".format(plot_2d.verify))
             elif arg_split[0] == ARG_RESOLUTION:

@@ -222,9 +222,9 @@ class Visualization(HasTraits):
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
-        self.border = detector.calc_scaling_factor()
-        # TODO: use microscope scaling for scaling in each dimension
-        self.border[2] = 1
+        # TODO: change from (x, y, z) order?
+        self.border = np.ceil(np.multiply(detector.calc_scaling_factor(), 
+                                          chunking.overlap_factor))[::-1]
         # dimension max values in pixels
         if cli.image5d_proc is not None:
             size = cli.image5d_proc.shape[0:3]

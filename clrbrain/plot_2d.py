@@ -245,36 +245,63 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             collection_z_list.append(collection_z)
             ax_z_list.append(ax_z)
     
+    # selected or newly added patches since difficult to get patch from collection,
+    # and they don't appear to be individually editable
+    seg_patch_dict = {}
+    
     # record selected segments in the Visualization segments table
     def on_pick(event):
         # ignore ctrl-clicks since used elsewhere
         if event.mouseevent.key == "control":
             return
-        # segments_z_list is linked to collection list
-        collection = event.artist
-        collectioni = collection_z_list.index(collection)
-        if collection != -1:
-            # patch index is linked to segments_z_list
-            seg = segments_z_list[collectioni][event.ind[0]]
-            print("picked segment: {}".format(seg))
-            segi = np.where((vis.segments == seg).all(axis=1))
-            print(segi)
-            if len(segi) > 0:
-                # must take from vis rather than saved copy in case user 
-                # manually updates the table
-                i = segi[0][0]
-                seg[4] = 1 if event.mouseevent.button == 1 else 0
-                vis.segments[segi[0][0]] = seg
-                if event.mouseevent.button == 1:
-                    # left-click to select
-                    if not i in vis.segs_selected:
-                        vis.segs_selected.append(i)
-                else:
-                    # right-click to unselect, which first selects simply 
-                    # to trigger table update
-                    if not i in vis.segs_selected:
-                        vis.segs_selected.append(i)
-                    vis.segs_selected.remove(i)
+        if isinstance(event.artist, PatchCollection):
+            # segments_z_list is linked to collection list
+            collection = event.artist
+            collectioni = collection_z_list.index(collection)
+            if collection != -1:
+                # patch index is linked to segments_z_list
+                seg = segments_z_list[collectioni][event.ind[0]]
+                print("picked segment: {}".format(seg))
+                segi = np.where((vis.segments == seg).all(axis=1))
+                print(segi)
+                if len(segi) > 0:
+                    # must take from vis rather than saved copy in case user 
+                    # manually updates the table
+                    i = segi[0][0]
+                    seg[4] = 1 if event.mouseevent.button == 1 else 0
+                    vis.segments[segi[0][0]] = seg
+                    key = "{}-{}".format(collectioni, event.ind[0])
+                    print("key: {}".format(key))
+                    if event.mouseevent.button == 1:
+                        # left-click to select, which shows a filled circle and
+                        # adds to selected segments list
+                        if key not in seg_patch_dict:
+                            patch = patches.Circle((seg[2], seg[1]), radius=seg[3], 
+                                                   facecolor="y", alpha=0.5)
+                            collection.axes.add_patch(patch)
+                            seg_patch_dict[key] = patch
+                        if not i in vis.segs_selected:
+                            vis.segs_selected.append(i)
+                    else:
+                        # right-click to unselect, which first selects simply 
+                        # to trigger table update, removes from selected
+                        # list, and removes filled patch
+                        if not i in vis.segs_selected:
+                            vis.segs_selected.append(i)
+                        vis.segs_selected.remove(i)
+                        seg_patch_dict[key].remove()
+        elif isinstance(event.artist, patches.Circle):
+            if event.mouseevent.button == 3:
+                # right-click to remove newly added circles and unselect from table
+                print("removing {}".format(event.artist))
+                event.artist.remove()
+                i = list(seg_patch_dict.keys())[list(seg_patch_dict.values()).index(event.artist)]
+                vis.segs_selected.remove(i)
+                '''
+                for i, patch in seg_patch_dict.items():
+                    if patch == event.artist:
+                        vis.segs_selected.remove(i)
+                '''
        
     fig.canvas.mpl_connect("pick_event", on_pick)
     
@@ -295,8 +322,13 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                     vis.segments = np.concatenate((vis.segments, seg))
                     # create a new copy rather than appending to trigger a
                     # full update; otherwise, only last entry gets selected
-                    vis.segs_selected = (vis.segs_selected 
-                                         + [vis.segments.shape[0] - 1])
+                    segsi = vis.segments.shape[0] - 1
+                    vis.segs_selected = (vis.segs_selected + [segsi])
+                    # adds a circle to denote the new segment
+                    patch = patches.Circle((seg[0][2], seg[0][1]), radius=5, 
+                                           facecolor="y", alpha=0.5, picker=5)
+                    seg_patch_dict[segsi] = patch
+                    ax.add_patch(patch)
             except ValueError:
                 print("not on a plot to select a point")
        

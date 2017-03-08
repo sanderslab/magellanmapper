@@ -46,6 +46,7 @@ Attributes:
 
 import os
 import sys
+import argparse
 from time import time
 import multiprocessing as mp
 import numpy as np
@@ -162,69 +163,74 @@ def main():
     
     Processes command-line arguments.
     """
+    parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
     global filename, series, channel, roi_size, offset, proc_type, mlab_3d
-    for arg in sys.argv:
-        arg_split = arg.split("=")
-        if len(arg_split) == 1:
-            print("Skipped argument: {}".format(arg_split[0]))
-        elif len(arg_split) >= 2:
-            if arg_split[0] == ARG_OFFSET:
-                offset_split = arg_split[1].split(",")
-                if len(offset_split) >= 3:
-                    offset = tuple(int(i) for i in offset_split)
-                    print("Set offset: {}".format(offset))
-                else:
-                    print("Offset ({}) should be given as 3 values (x, y, z)"
-                          .format(arg_split[1]))
-            elif arg_split[0] == ARG_IMG:
-                filename = arg_split[1]
-                print("Opening image file: {}".format(filename))
-            elif arg_split[0] == ARG_PROC:
-                if arg_split[1] in PROC_TYPES:
-                    proc_type = arg_split[1]
-                    print("processing type set to {}".format(proc_type))
-                else:
-                    print("Did not recognize processing type: {}"
-                          .format(arg_split[1]))
-            elif arg_split[0] == ARG_CHANNEL:
-                channel = int(arg_split[1])
-                print("Set to channel: {}".format(channel))
-            elif arg_split[0] == ARG_SERIES:
-                series = int(arg_split[1])
-                print("Set to series: {}".format(series))
-            elif arg_split[0] == ARG_SIDES:
-                sides_split = arg_split[1].split(",")
-                if len(sides_split) >= 3:
-                    roi_size = tuple(int(i) for i in sides_split)
-                    print("Set roi_size: {}".format(roi_size))
-                else:
-                    print("Size ({}) should be given as 3 values (x, y, z)"
-                          .format(arg_split[1]))
-            elif arg_split[0] == ARG_3D:
-                if arg_split[1] in MLAB_3D_TYPES:
-                    mlab_3d = arg_split[1]
-                    print("3D rendering set to {}".format(mlab_3d))
-                else:
-                    print("Did not recognize 3D rendering type: {}"
-                          .format(arg_split[1]))
-            elif arg_split[0] == ARG_SAVEFIG:
-                from clrbrain import plot_2d
-                plot_2d.savefig = arg_split[1]
-                print("Set savefig extension to: {}".format(plot_2d.savefig))
-            elif arg_split[0] == ARG_VERIFY:
-                from clrbrain import plot_2d
-                plot_2d.verify = True
-                print("Set verification mode to: {}".format(plot_2d.verify))
-            elif arg_split[0] == ARG_RESOLUTION:
-                res_split = arg_split[1].split(",")
-                if len(res_split) >= 3:
-                    detector.resolutions = [tuple(float(i) for i in res_split)[::-1]]
-                    print("Set resolutions: {}".format(detector.resolutions))
-                else:
-                    print("Resolution ({}) should be given as 3 values (x, y, z)"
-                          .format(arg_split[1]))
-            else:
-                print("Did not recognize \"{}\", skipping".format(arg_split[0]))
+    parser.add_argument("--img")
+    parser.add_argument("--channel", type=int)
+    parser.add_argument("--series", type=int)
+    parser.add_argument("--savefig")
+    parser.add_argument("--verify", action="store_true")
+    parser.add_argument("--offset")
+    parser.add_argument("--size")
+    parser.add_argument("--proc")
+    parser.add_argument("--vis")
+    parser.add_argument("--res")
+    args = parser.parse_args()
+    if args.img is not None:
+        filename = args.img
+        print("Set filename to {}".format(filename))
+    if args.channel is not None:
+        channel = args.channel
+        print("Set channel to {}".format(channel))
+    if args.series is not None:
+        series = args.series
+        print("Set to series {}".format(series))
+    if args.savefig is not None:
+        from clrbrain import plot_2d
+        plot_2d.savefig = args.savefig
+        print("Set savefig extension to {}".format(plot_2d.savefig))
+    if args.verify:
+        from clrbrain import plot_2d
+        plot_2d.verify = args.verify
+        print("Set verify to {}".format(plot_2d.verify))
+    if args.offset is not None:
+        offset_split = args.offset.split(",")
+        if len(offset_split) >= 3:
+            offset = tuple(int(i) for i in offset_split)
+            print("Set offset to {}".format(offset))
+        else:
+            print("Offset ({}) should be given as 3 values (x, y, z)"
+                  .format(args.offset))
+    if args.size is not None:
+        size_split = args.size.split(",")
+        if len(size_split) >= 3:
+            roi_size = tuple(int(i) for i in size_split)
+            print("Set roi_size to {}".format(roi_size))
+        else:
+            print("Size ({}) should be given as 3 values (x, y, z)"
+                  .format(args.size))
+    if args.proc is not None:
+        if args.proc in PROC_TYPES:
+            proc_type = args.proc
+            print("processing type set to {}".format(proc_type))
+        else:
+            print("Did not recognize processing type: {}"
+                  .format(args.proc))
+    if args.vis is not None:
+        if args.vis in MLAB_3D_TYPES:
+            mlab_3d = args.vis
+            print("3D rendering set to {}".format(mlab_3d))
+        else:
+            print("Did not recognize 3D rendering type: {}"
+                  .format(args.vis))
+    if args.res is not None:
+        res_split = args.res.split(",")
+        if len(res_split) >= 3:
+            detector.resolutions = [tuple(float(i) for i in res_split)[::-1]]
+            print("Set resolutions to {}".format(detector.resolutions))
+        else:
+            print("Resolution ({}) should be given as 3 values (x, y, z)"
+                  .format(args.res))
     
     # loads the image and GUI
     global image5d, conn, cur

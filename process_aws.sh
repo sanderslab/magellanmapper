@@ -15,7 +15,12 @@ PAR_S3="s3"
 # workaround for https://github.com/numpy/numpy/issues/5336,
 # fixed in https://github.com/numpy/numpy/pull/7133, 
 # released in Numpy 1.12.0
-export TMPDIR="$DEST"/tmp
+TMPDIR="$DEST"/tmp
+if [ ! -e "$TMPDIR" ]
+then
+    mkdir "$TMPDIR"
+fi
+export TMPDIR="$TMPDIR"
 
 # run from parent directory
 BASE_DIR="`dirname $0`"

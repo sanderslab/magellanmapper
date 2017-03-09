@@ -51,6 +51,7 @@ from time import time
 import multiprocessing as mp
 import numpy as np
 
+from clrbrain import config
 from clrbrain import importer
 from clrbrain import sqlite
 from clrbrain import plot_3d
@@ -74,17 +75,6 @@ PROC_TYPES = ("importonly", "processing", "processing_mp", "load")
 proc_type = None
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
-
-ARG_IMG = "img"
-ARG_PROC = "proc"
-ARG_OFFSET = "offset"
-ARG_CHANNEL = "channel"
-ARG_SERIES = "series"
-ARG_SIDES = "size"
-ARG_3D = "3d"
-ARG_SAVEFIG = "savefig"
-ARG_VERIFY = "verify"
-ARG_RESOLUTION = "resolution"
 
 def denoise_sub_roi(coord):
     """Denoises the ROI within an array of ROIs.
@@ -175,6 +165,7 @@ def main():
     parser.add_argument("--proc")
     parser.add_argument("--vis")
     parser.add_argument("--res")
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     if args.img is not None:
         filename = args.img
@@ -193,6 +184,9 @@ def main():
         from clrbrain import plot_2d
         plot_2d.verify = args.verify
         print("Set verify to {}".format(plot_2d.verify))
+    if args.verbose:
+        config.verbose = args.verbose
+        print("Set verbose to {}".format(config.verbose))
     if args.offset is not None:
         offset_split = args.offset.split(",")
         if len(offset_split) >= 3:

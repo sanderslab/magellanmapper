@@ -263,7 +263,6 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                 seg = segments_z_list[collectioni][event.ind[0]]
                 print("picked segment: {}".format(seg))
                 segi = np.where((vis.segments == seg).all(axis=1))
-                print(segi)
                 if len(segi) > 0:
                     # must take from vis rather than saved copy in case user 
                     # manually updates the table
@@ -289,7 +288,9 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                         if not i in vis.segs_selected:
                             vis.segs_selected.append(i)
                         vis.segs_selected.remove(i)
-                        seg_patch_dict[key].remove()
+                        if key in seg_patch_dict:
+                            seg_patch_dict[key].remove()
+                            del seg_patch_dict[key]
         elif isinstance(event.artist, patches.Circle):
             if event.mouseevent.button == 3:
                 # right-click to remove newly added circles and unselect from table

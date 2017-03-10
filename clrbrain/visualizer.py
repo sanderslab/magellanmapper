@@ -351,7 +351,7 @@ class Visualization(HasTraits):
             Item(
                 'scene', 
                 editor=SceneEditor(scene_class=MayaviScene),
-                height=500, width=500, show_label=False
+                height=600, width=600, show_label=False
             ),
             VGroup(
                 VGroup(

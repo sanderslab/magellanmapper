@@ -249,6 +249,21 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # and they don't appear to be individually editable
     seg_patch_dict = {}
     
+    def _force_seg_refresh(i):
+       """Triggers table update by either selecting and reselected the segment
+       or vice versa.
+       
+       Params:
+           i: The element in vis.segs_selected, which is simply an index to
+              the segment in vis.segments.
+       """
+       if i in vis.segs_selected:
+           vis.segs_selected.remove(i)
+           vis.segs_selected.append(i)
+       else:
+           vis.segs_selected.append(i)
+           vis.segs_selected.remove(i)
+    
     # record selected segments in the Visualization segments table
     def on_pick(event):
         # ignore ctrl-clicks since used elsewhere
@@ -267,42 +282,59 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                     # must take from vis rather than saved copy in case user 
                     # manually updates the table
                     i = segi[0][0]
-                    seg[4] = 1 if event.mouseevent.button == 1 else 0
-                    vis.segments[segi[0][0]] = seg
+                    #seg[4] = 1 if event.mouseevent.button == 1 else 0
                     key = "{}-{}".format(collectioni, event.ind[0])
                     print("key: {}".format(key))
-                    if event.mouseevent.button == 1:
-                        # left-click to select, which shows a filled circle and
-                        # adds to selected segments list
+                    if seg[4] == -1:
+                        # 1st click selects, which shows a filled green circle
+                        # and adds to selected segments list
+                        seg[4] = 1
                         if key not in seg_patch_dict:
                             patch = patches.Circle((seg[2], seg[1]), radius=seg[3], 
-                                                   facecolor="y", alpha=0.5)
+                                                   facecolor="g", alpha=0.5)
                             collection.axes.add_patch(patch)
                             seg_patch_dict[key] = patch
                         if not i in vis.segs_selected:
                             vis.segs_selected.append(i)
-                    else:
-                        # right-click to unselect, which first selects simply 
-                        # to trigger table update, removes from selected
-                        # list, and removes filled patch
-                        if not i in vis.segs_selected:
-                            vis.segs_selected.append(i)
-                        vis.segs_selected.remove(i)
+                    elif seg[4] == 1:
+                        # 2nd click changes to yellow circle, setting seg as "maybe"
+                        seg[4] = 2
+                        seg_patch_dict[key].set_facecolor("y")
+                        _force_seg_refresh(i)
+                    elif seg[4] == 2:
+                        # 3rd click changes to red circle, verifying as not a seg
+                        seg[4] = 0
+                        seg_patch_dict[key].set_facecolor("r")
+                        _force_seg_refresh(i)
+                    elif seg[4] == 0:
+                        seg[4] = -1
+                        # 4th click unselects, which removes from selected
+                        # list and removes filled patch
+                        _force_seg_refresh(i)
                         if key in seg_patch_dict:
                             seg_patch_dict[key].remove()
                             del seg_patch_dict[key]
+                    vis.segments[segi[0][0]] = seg
         elif isinstance(event.artist, patches.Circle):
-            if event.mouseevent.button == 3:
-                # right-click to remove newly added circles and unselect from table
-                print("removing {}".format(event.artist))
+            i = list(seg_patch_dict.keys())[list(seg_patch_dict.values()).index(event.artist)]
+            seg = vis.segments[i]
+            if seg[4] == 1:
+                # 2nd click changes to yellos circle, setting seg as "maybe"
+                seg[4] = 2
+                event.artist.set_facecolor("y")
+            elif seg[4] == 2:
+                # 3rd click changes to red circle, verifying as not a seg
+                seg[4] = 0
+                event.artist.set_facecolor("r")
+            elif seg[4] == 0:
+                seg[4] = -1
+                # 4th click to unselect, which removes from selected
+                # list and removes filled patch
+                del seg_patch_dict[i]
                 event.artist.remove()
-                i = list(seg_patch_dict.keys())[list(seg_patch_dict.values()).index(event.artist)]
                 vis.segs_selected.remove(i)
-                '''
-                for i, patch in seg_patch_dict.items():
-                    if patch == event.artist:
-                        vis.segs_selected.remove(i)
-                '''
+            vis.segments[i] = seg
+            _force_seg_refresh(i)
        
     fig.canvas.mpl_connect("pick_event", on_pick)
     
@@ -327,7 +359,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                     vis.segs_selected = (vis.segs_selected + [segsi])
                     # adds a circle to denote the new segment
                     patch = patches.Circle((seg[0][2], seg[0][1]), radius=5, 
-                                           facecolor="y", alpha=0.5, picker=5)
+                                           facecolor="g", alpha=0.5, picker=5)
                     seg_patch_dict[segsi] = patch
                     ax.add_patch(patch)
             except ValueError:

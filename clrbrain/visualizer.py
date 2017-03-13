@@ -37,7 +37,8 @@ import datetime
 
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float, 
-                        Int, List, Array, push_exception_handler, Property)
+                        Int, List, Array, Str, push_exception_handler, 
+                        Property)
 from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
                           RangeEditor, HSplit, TabularEditor)
 from traitsui.tabular_adapter import TabularAdapter
@@ -150,6 +151,13 @@ class Visualization(HasTraits):
     segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, 
                                selected_row="segs_selected")
     segs_cmap = None
+    segs_feedback = Str("Segments output")
+    
+    def _format_seg(self, seg):
+        seg_str = seg[0:3].astype(int).astype(str).tolist()
+        seg_str.append(str(round(seg[3], 3)))
+        seg_str.append(str(int(seg[4])))
+        return ", ".join(seg_str)
     
     def save_segs(self):
         """Saves segments to database.
@@ -164,32 +172,40 @@ class Visualization(HasTraits):
         segs_transposed = []
         curr_roi_size = self.roi_array[0].astype(int)
         print("inserting segments to database with border widths {}".format(self.border))
+        feedback = [ "Preparing segments:" ]
         for i in range(len(self.segments)):
             seg = self.segments[i]
-            # ignores user added segments, where radius assumed to be 0,
-            # that are no longer selected
             if self.segs_selected.count(i) <= 0 and np.allclose(seg[3], 0):
-                print("ignoring unselected user added segment: {}".format(seg))
+                # ignores user added segments, where radius assumed to be 0,
+                # that are no longer selected
+                feedback.append("ignoring unselected user added segment: {}".format(seg))
             else:
                 if (seg[0] >= self.border[2] and seg[0] < (curr_roi_size[2] - self.border[2])
                     and seg[1] >= self.border[1] and seg[1] < (curr_roi_size[1] - self.border[1])
                     and seg[2] >= self.border[0] and seg[2] < (curr_roi_size[0] - self.border[0])):
-                    seg_db = (seg[2] + self.x_offset, seg[1] + self.y_offset, 
-                              seg[0] + self.z_offset, seg[3], seg[4])
+                    # transposes segments within inner ROI to absolute coordinates
+                    feedback.append("{} to insert".format(self._format_seg(seg)))
+                    seg_db = np.array([seg[2] + self.x_offset, seg[1] + self.y_offset, 
+                                       seg[0] + self.z_offset, seg[3], seg[4]])
                     segs_transposed.append(seg_db)
-                    print("{} inserted".format(seg, seg_db))
                 else:
-                    print("{} outside, ignored".format(seg))
-        for seg in segs_transposed:
-            print("inserted as {}".format(seg, seg_db))
+                    feedback.append("{} outside, ignored".format(self._format_seg(seg)))
+        
         # inserts experiment if not already added, then segments
+        feedback.append("\nInserting segments:")
+        for seg in segs_transposed:
+            feedback.append("{} inserted".format(self._format_seg(seg)))
         exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
                                                     os.path.basename(cli.filename),
                                                     datetime.datetime(1000, 1, 1))
-        roi_id = sqlite.insert_roi(cli.conn, cli.cur, 
+        roi_id, out = sqlite.insert_roi(cli.conn, cli.cur, 
                                    np.add(self._curr_offset(), self.border).tolist(), 
                                    np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
         sqlite.insert_blobs(cli.conn, cli.cur, exp_id, cli.series, roi_id, segs_transposed)
+        feedback.append(out)
+        feedback_str = "\n".join(feedback)
+        print(feedback_str)
+        self.segs_feedback = feedback_str
     
     def show_3d(self):
         """Shows the 3D plot.
@@ -396,6 +412,7 @@ class Visualization(HasTraits):
                         editor=segs_table,
                         show_label=False
                     ),
+                    Item("segs_feedback", style="custom", show_label=False),
                     Item("btn_save_segments", show_label=False)
                 )
             )

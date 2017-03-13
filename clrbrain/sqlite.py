@@ -95,9 +95,9 @@ def select_or_insert_experiment(conn, cur, exp_name, date):
 def insert_roi(conn, cur, offset, size):
     cur.execute("INSERT INTO rois (offset_x, offset_y, offset_z, size_x, size_y, size_z) "
                 "VALUES (?, ?, ?, ?, ?, ?)", (*offset, *size))
-    print("roi inserted with offset {} and size {}".format(offset, size))
+    feedback = "ROI inserted with offset {} and size {}".format(offset, size)
     conn.commit()
-    return cur.lastrowid
+    return cur.lastrowid, feedback
 
 def insert_blobs(conn, cur, experiment_id, series, roi_id, blobs):
     """Inserts blobs into the database.

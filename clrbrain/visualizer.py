@@ -10,21 +10,12 @@ calling main().
 Examples:
     Launch the GUI with the given file at a particular size and offset::
         
-        $ ./run img=/path/to/file.czi offset=30,50,205 size=150,150,10
+        $ ./run --img /path/to/file.czi --offset 30,50,205 \
+            --size 150,150,10
     
     Alternatively, this module can be run as a script::
         
-        $ python -m clrbrain.visualizer img=/path/to/file.czi
-
-Command-line arguments in addition to those listed below:
-    * scaling_factor: Zoom scaling (see detector.py). Only set if unable
-        to be detected from the image file or if the saved numpy array
-        does not have scaling information as it would otherwise
-        override this setting.
-    * 3d: 3D rendering type (see cli.py).
-    * proc: Processing type (see cli.py).
-    * resolution: Resolution given as (x, y, z) in floating point (see
-        cli.py, though order is natural here as command-line argument).
+        $ python -m clrbrain.visualizer --img /path/to/file.czi
 
 Attributes:
     params: Additional Matplotlib rc parameters.
@@ -198,10 +189,10 @@ class Visualization(HasTraits):
         exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
                                                     os.path.basename(cli.filename),
                                                     datetime.datetime(1000, 1, 1))
-        roi_id, out = sqlite.insert_roi(cli.conn, cli.cur, 
+        roi_id, out = sqlite.insert_roi(cli.conn, cli.cur, exp_id, cli.series, 
                                    np.add(self._curr_offset(), self.border).tolist(), 
                                    np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
-        sqlite.insert_blobs(cli.conn, cli.cur, exp_id, cli.series, roi_id, segs_transposed)
+        sqlite.insert_blobs(cli.conn, cli.cur, roi_id, segs_transposed)
         feedback.append(out)
         feedback_str = "\n".join(feedback)
         print(feedback_str)

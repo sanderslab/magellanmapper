@@ -12,10 +12,15 @@ convention, but otherwise dimensions are generally in (z, y, x) for
 consistency with microscopy order and ease of processing stacks by z.
 
 Examples:
-    Launch the GUI with the given file at a particular size and offset::
+    Launch in headless mode with the given file at a particular size and 
+    offset:
         
-        $ python -m clrbrain.cli img=/path/to/file.czi offset=30,50,205 \
-            size=150,150,10
+        $ python -m clrbrain.cli --img /path/to/file.czi --offset 30,50,205 \
+            --size 150,150,10
+
+Command-line arguments in addition to those from attributes listed below:
+    * resolution: Resolution given as (x, y, z) in floating point (see
+        cli.py, though order is natural here as command-line argument).
 
 Attributes:
     filename: The filename of the source images. A corresponding file with

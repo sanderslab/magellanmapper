@@ -28,10 +28,10 @@ import datetime
 
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float, 
-                        Int, List, Array, Str, push_exception_handler, 
+                        Int, List, Array, Str, Dict, push_exception_handler, 
                         Property)
 from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
-                          RangeEditor, HSplit, TabularEditor)
+                          RangeEditor, HSplit, TabularEditor, CheckListEditor)
 from traitsui.tabular_adapter import TabularAdapter
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
@@ -89,6 +89,9 @@ class VisHandler(Handler):
         importer.jb.kill_vm()
         cli.conn.close()
 
+class ListSelections(HasTraits):
+    selections = List(["test0", "test1"])
+
 class SegmentsArrayAdapter(TabularAdapter):
     columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
                ("radius", 3), ("confirmed", 4)]
@@ -133,6 +136,12 @@ class Visualization(HasTraits):
     btn_2d_trait = Button("2D Plots")
     btn_save_segments = Button("Save Segments")
     roi = None # combine with roi_array?
+    rois_selections_class = Instance(ListSelections)
+    #rois_selections = Property(Dict, depends_on="rois_selections_class.selections")
+    rois_check_list = Str
+    _rois_dict = None
+    _roi_default = "None selected"
+    _rois = None
     _segments = Array
     _segs_scale_low = 0.0
     _segs_scale_high = Float # needs to be trait to dynamically update
@@ -149,6 +158,12 @@ class Visualization(HasTraits):
         seg_str.append(str(round(seg[3], 3)))
         seg_str.append(str(int(seg[4])))
         return ", ".join(seg_str)
+    
+    def _append_roi(self, roi, rois_dict):
+        label = "offset ({},{},{}) of size ({},{},{})".format(roi["offset_x"], roi["offset_y"], 
+                                         roi["offset_z"], roi["size_x"], 
+                                         roi["size_y"], roi["size_z"])
+        rois_dict[label] = roi
     
     def save_segs(self):
         """Saves segments to database.
@@ -193,6 +208,9 @@ class Visualization(HasTraits):
                                    np.add(self._curr_offset(), self.border).tolist(), 
                                    np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
         sqlite.insert_blobs(cli.conn, cli.cur, roi_id, segs_transposed)
+        roi = sqlite.select_roi(cli.cur, roi_id)
+        self._append_roi(roi, self._rois_dict)
+        self.rois_selections_class.selections = list(self._rois_dict.keys())
         feedback.append(out)
         feedback_str = "\n".join(feedback)
         print(feedback_str)
@@ -248,14 +266,17 @@ class Visualization(HasTraits):
             print("No offset, using standard one")
             curr_offset = self._curr_offset()
         self.roi_array[0] = cli.roi_size
+        exps = sqlite.select_experiment(cli.cur, os.path.basename(cli.filename))
+        self.rois_selections_class = ListSelections()
+        if len(exps) > 0:
+            self._rois = sqlite.select_rois(cli.cur, exps[0]["id"])
+            if len(self._rois) > 0:
+                self._rois_dict = {self._roi_default: None}
+                for roi in self._rois:
+                    self._append_roi(roi, self._rois_dict)
+                self.rois_selections_class.selections = list(self._rois_dict.keys())
+                self.rois_check_list = self._roi_default
         self.show_3d()
-        #self.segs_selected = [0, 3]
-        #self.save_segs()
-        '''
-        plot_2d.plot_2d_stack(self, _fig_title(curr_offset, self.roi_array[0]), cli.image5d, 
-                              cli.channel, self.roi_array[0], curr_offset, 
-                              self.segments, self.segs_cmap)
-        '''
     
     @on_trait_change('x_offset,y_offset,z_offset')
     def update_plot(self):
@@ -279,7 +300,7 @@ class Visualization(HasTraits):
         print("ROI size: {}".format(self.roi_array[0].astype(int)))
         self.show_3d()
     
-    def _btn_segment_trait_fired(self):
+    def _btn_segment_trait_fired(self, segs=None):
         mlab_3d = cli.mlab_3d
         if mlab_3d == cli.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
@@ -291,20 +312,22 @@ class Visualization(HasTraits):
                 # blob detects the ROI
                 self.segments = detector.segment_blob(self.roi)
             else:
-                # uses blobs from loaded segments
-                roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 x, y, z = self._curr_offset()
-                # adds additional padding to show surrounding segments
-                pad = plot_2d.padding # human (x, y, z) order
-                segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z - pad[2], 
-                                                 cli.segments_proc[:, 0] < z + roi_z + pad[2],
-                                                 cli.segments_proc[:, 1] >= y - pad[1], 
-                                                 cli.segments_proc[:, 1] < y + roi_y + pad[1],
-                                                 cli.segments_proc[:, 2] >= x - pad[0], 
-                                                 cli.segments_proc[:, 2] < x + roi_x + pad[0]],
-                                                axis=0)]
-                # transpose to make coordinates relative to offset
-                segs = np.copy(segs)
+                # segs is 0 for some reason if none given
+                if segs is None or not isinstance(segs, np.ndarray):
+                    # uses blobs from loaded segments
+                    roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
+                    # adds additional padding to show surrounding segments
+                    pad = plot_2d.padding # human (x, y, z) order
+                    segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z - pad[2], 
+                                                     cli.segments_proc[:, 0] < z + roi_z + pad[2],
+                                                     cli.segments_proc[:, 1] >= y - pad[1], 
+                                                     cli.segments_proc[:, 1] < y + roi_y + pad[1],
+                                                     cli.segments_proc[:, 2] >= x - pad[0], 
+                                                     cli.segments_proc[:, 2] < x + roi_x + pad[0]],
+                                                    axis=0)]
+                    # transpose to make coordinates relative to offset
+                    segs = np.copy(segs)
                 self.segments = np.subtract(segs, (z, y, x, 0, 0))
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(self.segments, self)
             self._segs_scale_high = scale * 2
@@ -330,6 +353,25 @@ class Visualization(HasTraits):
     
     def _btn_save_segments_fired(self):
         self.save_segs()
+    
+    @on_trait_change('rois_check_list')
+    def update_roi(self):
+        print("got {}".format(self.rois_check_list))
+        if self.rois_check_list != self._roi_default:
+            try:
+                roi = self._rois_dict[self.rois_check_list]
+                print(roi)
+                cli.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
+                self.roi_array[0] = cli.roi_size
+                cli.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
+                self.x_offset, self.y_offset, self.z_offset = cli.offset
+                self._btn_redraw_trait_fired()
+                _, blobs = sqlite.select_blobs(cli.cur, roi["id"])
+                self._btn_segment_trait_fired(segs=blobs)
+                plot_2d.verify = True
+            except KeyError:
+                print("no roi found")
+                plot_2d.verify = False
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
@@ -362,6 +404,9 @@ class Visualization(HasTraits):
             ),
             VGroup(
                 VGroup(
+                    Item("rois_check_list", 
+                         editor=CheckListEditor(name="object.rois_selections_class.selections"),
+                         label="ROIs"),
                     Item("roi_array", label="Size (x,y,z)"),
                     Item(
                         "x_offset",

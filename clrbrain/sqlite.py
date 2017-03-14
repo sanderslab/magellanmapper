@@ -10,6 +10,7 @@ Attributes:
 import os
 import datetime
 import sqlite3
+import numpy as np
 
 db_path = "clrbrain.db"
 
@@ -20,6 +21,7 @@ def _create_db():
         raise FileExistsError("{} already exists; please rename"
                               " or remove it first".format(db_path))
     conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
     cur.execute("CREATE TABLE experiments (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -47,6 +49,7 @@ def start_db():
         conn, cur = _create_db()
     else:
         conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
         cur = conn.cursor()
     return conn, cur
 
@@ -122,10 +125,15 @@ def select_rois(cur, exp_id):
         cur: Connection's cursor.
         experiment_id: ID of the experiment.
     """
-    cur.execute("SELECT id, exp_id, series, offset_x, offset_y, offset_z, size_x, size_y, "
-                "size_z FROM rois WHERE exp_id = ?", (exp_id, ))
+    cur.execute("SELECT id, experiment_id, series, offset_x, offset_y, offset_z, size_x, size_y, "
+                "size_z FROM rois WHERE experiment_id = ?", (exp_id, ))
     rows = cur.fetchall()
     return rows
+
+def select_roi(cur, roi_id):
+    cur.execute("SELECT * FROM rois WHERE id = ?", (roi_id, ))
+    row = cur.fetchone()
+    return row
 
 def insert_blobs(conn, cur, roi_id, blobs):
     """Inserts blobs into the database.
@@ -150,6 +158,22 @@ def insert_blobs(conn, cur, roi_id, blobs):
     print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
     
+def select_blobs(cur, roi_id):
+    """Selects ROIs from the given experiment
+    
+    Args:
+        cur: Connection's cursor.
+        experiment_id: ID of the experiment.
+    """
+    cur.execute("SELECT * FROM blobs WHERE roi_id = ?", (roi_id, ))
+    rows = cur.fetchall()
+    blobs = np.empty((len(rows), 5))
+    rowi = 0
+    for blob in rows:
+        blobs[rowi] = [blob["z"], blob["y"], blob["x"], blob["radius"], blob["confirmed"]]
+        rowi += 1
+    return rows, blobs
+
 if __name__ == "__main__":
     print("Starting sqlite.py...")
     # simple database test

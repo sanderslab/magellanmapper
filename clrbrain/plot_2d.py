@@ -34,6 +34,11 @@ verify = False
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
 
+segs_color_dict = {-1: None,
+                   0: "r",
+                   1: "g",
+                   2: "y"}
+
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """Draws a patch collection of circles for segments.
     
@@ -213,6 +218,11 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                          axis=0)
         segs_out = segments[np.invert(mask_in)]
         print("segs_out:\n{}".format(segs_out))
+        
+    # selected or newly added patches since difficult to get patch from collection,
+    # and they don't appear to be individually editable
+    seg_patch_dict = {}
+    
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
         cols = max_cols
@@ -244,10 +254,16 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)
             ax_z_list.append(ax_z)
-    
-    # selected or newly added patches since difficult to get patch from collection,
-    # and they don't appear to be individually editable
-    seg_patch_dict = {}
+            segi = 0
+            for seg in segments_z:
+                if seg[4] != -1:
+                    key = "{}-{}".format(len(collection_z_list) - 1, segi)
+                    radius = 5 if np.allclose(seg[3], 0) else seg[3]
+                    patch = patches.Circle((seg[2], seg[1]), radius=radius, 
+                                           facecolor=segs_color_dict[seg[4]], 
+                                           alpha=0.5)
+                    ax_z.add_patch(patch)
+                segi += 1
     
     def _force_seg_refresh(i):
        """Triggers table update by either selecting and reselected the segment

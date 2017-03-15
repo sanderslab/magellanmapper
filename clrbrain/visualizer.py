@@ -358,20 +358,23 @@ class Visualization(HasTraits):
     def update_roi(self):
         print("got {}".format(self.rois_check_list))
         if self.rois_check_list != self._roi_default:
-            try:
-                roi = self._rois_dict[self.rois_check_list]
-                print(roi)
-                cli.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
-                self.roi_array[0] = cli.roi_size
-                cli.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
-                self.x_offset, self.y_offset, self.z_offset = cli.offset
-                self._btn_redraw_trait_fired()
-                _, blobs = sqlite.select_blobs(cli.cur, roi["id"])
-                self._btn_segment_trait_fired(segs=blobs)
-                plot_2d.verify = True
-            except KeyError:
-                print("no roi found")
-                plot_2d.verify = False
+            # get chosen ROI reconstruct original ROI size and offset including border
+            roi = self._rois_dict[self.rois_check_list]
+            cli.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
+            cli.roi_size = tuple(np.add(cli.roi_size, np.multiply(self.border, 2)).astype(int).tolist())
+            self.roi_array[0] = cli.roi_size
+            cli.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
+            cli.offset = tuple(np.subtract(cli.offset, self.border).astype(int).tolist())
+            self.x_offset, self.y_offset, self.z_offset = cli.offset
+            
+            # redraw the original ROI and prepare verify mode
+            self._btn_redraw_trait_fired()
+            _, blobs = sqlite.select_blobs(cli.cur, roi["id"])
+            self._btn_segment_trait_fired(segs=blobs)
+            plot_2d.verify = True
+        else:
+            print("no roi found")
+            plot_2d.verify = False
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

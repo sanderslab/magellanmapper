@@ -39,6 +39,19 @@ segs_color_dict = {-1: None,
                    1: "g",
                    2: "y"}
 
+def _get_radius(seg):
+    """Gets the radius for a segments, defaulting to 5 if the segment's
+    radius is close to 0.
+    
+    Params:
+        seg: The segments, where seg[3] is the radius.
+    
+    Returns:
+        The radius, defaulting to 0 if the given radius value is close 
+        to 0 by numpy.allclose.
+    """
+    return 5 if np.allclose(seg[3], 0) else seg[3]
+
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """Draws a patch collection of circles for segments.
     
@@ -54,7 +67,7 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """
     seg_patches = []
     for seg in segments:
-        seg_patches.append(patches.Circle((seg[2], seg[1]), radius=seg[3]))
+        seg_patches.append(patches.Circle((seg[2], seg[1]), radius=_get_radius(seg)))
     collection = PatchCollection(seg_patches)
     collection.set_edgecolor(edgecolor)
     collection.set_facecolor(facecolor)
@@ -170,6 +183,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             dimension array, where each segment is in (z, y, x, radius).
             This array can include adjacent segments as well.
         segs_cmap: Colormap for segments.
+        border: Border dimensions in pixels given as (x, y, z); defaults
+            to None.
     """
     fig = plt.figure()
     fig.suptitle(title, color="navajowhite")
@@ -237,13 +252,18 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             zoom_offset = (offset[0], offset[1], z)
             # fade z-planes outside of ROI
             alpha = 0.5 if z < z_start or z >= z_start + roi_size[2] else 1
-            #print("row: {}".format(i * max_cols + j))
+            
+            # collects the segments within the given z-plane
             segments_z = None
             if segments is not None:
                 segments_z = segments[segments[:, 0] == z_relative]
             segments_z_list.append(segments_z)
+            
+            # shows border outlining area that will be saved if in verify mode
             show_border = (verify and z_relative >= border[2] 
                            and z_relative < roi_size[2] - border[2])
+            
+            # shows the zoomed subplot with scale bar for the current z-plane
             ax_z, collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, 
                                               channel, roi_size,
                                               zoom_offset, segments, segments_z, 
@@ -254,15 +274,19 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)
             ax_z_list.append(ax_z)
+            
+            # restores saved segment markings as patches, which are pickable
+            # from their corresponding segments within their collection
             segi = 0
             for seg in segments_z:
                 if seg[4] != -1:
                     key = "{}-{}".format(len(collection_z_list) - 1, segi)
-                    radius = 5 if np.allclose(seg[3], 0) else seg[3]
-                    patch = patches.Circle((seg[2], seg[1]), radius=radius, 
+                    #print("key: {}".format(key))
+                    patch = patches.Circle((seg[2], seg[1]), radius=_get_radius(seg), 
                                            facecolor=segs_color_dict[seg[4]], 
                                            alpha=0.5)
                     ax_z.add_patch(patch)
+                    seg_patch_dict[key] = patch
                 segi += 1
     
     def _force_seg_refresh(i):
@@ -332,6 +356,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                             del seg_patch_dict[key]
                     vis.segments[segi[0][0]] = seg
         elif isinstance(event.artist, patches.Circle):
+            # new patches added outside of collections
             i = list(seg_patch_dict.keys())[list(seg_patch_dict.values()).index(event.artist)]
             seg = vis.segments[i]
             if seg[4] == 1:

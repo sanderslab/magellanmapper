@@ -173,7 +173,8 @@ def prepare_roi(image5d, channel, roi_size, offset=(0, 0, 0)):
             of interest. Defaults to (0, 0, 0).
     
     Returns:
-        The region of interest, including denoising.
+        The region of interest, including denoising, as a 3-dimensional
+           array, without separate time or channel dimensions.
     """
     cube_slices = []
     for i in range(len(offset)):

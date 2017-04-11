@@ -164,7 +164,7 @@ def main():
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series", type=int)
     parser.add_argument("--savefig")
-    parser.add_argument("--verify", action="store_true")
+    #parser.add_argument("--verify", action="store_true")
     parser.add_argument("--offset")
     parser.add_argument("--size")
     parser.add_argument("--proc")
@@ -185,10 +185,12 @@ def main():
         from clrbrain import plot_2d
         plot_2d.savefig = args.savefig
         print("Set savefig extension to {}".format(plot_2d.savefig))
+    '''
     if args.verify:
         from clrbrain import plot_2d
         plot_2d.verify = args.verify
         print("Set verify to {}".format(plot_2d.verify))
+    '''
     if args.verbose:
         config.verbose = args.verbose
         print("Set verbose to {}".format(config.verbose))

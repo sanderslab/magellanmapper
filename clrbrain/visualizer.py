@@ -152,6 +152,8 @@ class Visualization(HasTraits):
                                selected_row="segs_selected")
     segs_cmap = None
     segs_feedback = Str("Segments output")
+    _check_list_2d = List
+    _DEFAULTS_2D = ["Processed", "Verify"]
     
     def _format_seg(self, seg):
         seg_str = seg[0:3].astype(int).astype(str).tolist()
@@ -345,10 +347,18 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print(curr_roi_size)
-        if cli.image5d is None:
+        # update verify flag
+        plot_2d.verify = self._DEFAULTS_2D[1] in self._check_list_2d
+        img = cli.image5d
+        if self._DEFAULTS_2D[0] in self._check_list_2d and cli.image5d_proc is not None:
+            print("showing processed 2D images")
+            img = cli.image5d_proc
+        elif cli.image5d is None:
+            print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)
+            img = cli.image5d
         plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
-                              cli.image5d, cli.channel, curr_roi_size, 
+                              img, cli.channel, curr_roi_size, 
                               curr_offset, self.segments, self.segs_cmap, self.border)
     
     def _btn_save_segments_fired(self):
@@ -437,6 +447,12 @@ class Visualization(HasTraits):
                     Item("btn_redraw_trait", show_label=False), 
                     Item("btn_segment_trait", show_label=False), 
                     Item("btn_2d_trait", show_label=False)
+                ),
+                Item(
+                     "_check_list_2d", 
+                     editor=CheckListEditor(values=_DEFAULTS_2D, cols=2), 
+                     style="custom",
+                     label="2D options"
                 ),
                 Item(
                     "segs_scale",

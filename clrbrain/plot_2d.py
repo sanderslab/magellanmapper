@@ -130,8 +130,10 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                   slice(offset[0], offset[0] + roi_size[0])]
         if image5d.ndim >= 5:
             roi = image5d[tuple(region + [channel])]
-        else:
+        elif image5d.ndim == 4:
             roi = image5d[tuple(region)]
+        else:
+            roi = image5d[tuple(region[1:])]
         # highlight borders of z plane at bottom of ROI
         if highlight:
             for spine in ax.spines.values():
@@ -211,8 +213,10 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     z_start = offset[2]
     if image5d.ndim >= 5:
         img2d = image5d[0, z_start, :, :, channel]
-    else:
+    elif image5d.ndim == 4:
         img2d = image5d[0, z_start, :, :]
+    else:
+        img2d = image5d[z_start, :, :]
     plt.imshow(img2d, cmap=colormap_2d)
     ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
                                    fill=False, edgecolor="yellow"))

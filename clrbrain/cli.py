@@ -97,6 +97,7 @@ def denoise_sub_roi(coord):
     print("denoising sub_roi at {}, with shape {}..."
           .format(coord, sub_roi.shape))
     sub_roi = plot_3d.denoise(sub_roi)
+    #sub_roi = plot_3d.deconvolve(sub_roi)
     return (coord, sub_roi)
 
 def segment_sub_roi(sub_rois_offsets, coord):
@@ -351,7 +352,8 @@ def main():
         time_pruning_start = time()
         segments_all = chunking.prune_overlapping_blobs(seg_rois, region, overlap, 
                                                         sub_rois, sub_rois_offsets)
-        print("total segments found: {}".format(segments_all.shape[0]))
+        if segments_all is not None:
+            print("total segments found: {}".format(segments_all.shape[0]))
         time_pruning_end = time()
         '''
         if segments_all is not None:

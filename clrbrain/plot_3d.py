@@ -51,6 +51,13 @@ def denoise(roi):
     '''
     return denoised
 
+def deconvolve(roi):
+    #shape = roi.shape
+    psf = np.ones((5, 5, 5)) / 125
+    roi_deconvolved = restoration.richardson_lucy(roi, psf, iterations=30)
+    #roi_deconvolved = restoration.unsupervised_wiener(roi, psf)
+    return roi_deconvolved
+
 def plot_3d_surface(roi, vis):
     """Plots areas with greater intensity as 3D surfaces.
     

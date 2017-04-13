@@ -245,14 +245,25 @@ def main():
         # loads from processed file
         try:
             global image5d_proc, segments_proc
+            
             # loads stored processed arrays, using mem-mapped accessed for the image
             # file to minimize memory requirement, only loading on-the-fly
             output_info = np.load(filename_info_proc)
             image5d_proc = np.load(filename_image5d_proc, mmap_mode="r")
             '''
+            # converts old monolithic format to new format with separate files to
+            # allow loading file with only image file as memory-backed array;
+            # switch commented area from here to above to convert formats
+            print("converting proc file to new format...")
             filename_proc = filename + str(series).zfill(5) + "_proc.npz" # old format
             output = np.load(filename_proc)
-            image5d_proc = output["roi"]
+            outfile_image5d_proc = open(filename_image5d_proc, "wb")
+            outfile_info_proc = open(filename_info_proc, "wb")
+            np.save(outfile_image5d_proc, output["roi"])
+            np.savez(outfile_info_proc, segments=output["segments"], resolutions=output["resolutions"])
+            outfile_image5d_proc.close()
+            outfile_info_proc.close()
+            return
             '''
             segments_proc = output_info["segments"]
             detector.resolutions = output_info["resolutions"]

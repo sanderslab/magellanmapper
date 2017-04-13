@@ -440,3 +440,20 @@ def _hide_axes(ax):
     """
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
+
+def extract_plane(image5d, channel, offset, name):
+    z_start = offset[2]
+    if image5d.ndim >= 5:
+        img2d = image5d[0, z_start, :, :, channel]
+        print(img2d.shape)
+    elif image5d.ndim == 4:
+        img2d = image5d[0, z_start, :, :]
+    else:
+        img2d = image5d[z_start, :, :]
+    #fig = plt.figure()
+    #ax = plt.imshow(img2d, cmap=colormap_2d)
+    if savefig is not None:
+        filename = name + "." + savefig
+        print("extracting plane as {}".format(filename))
+        #plt.savefig(name)
+        plt.imsave(filename, img2d, cmap=colormap_2d)

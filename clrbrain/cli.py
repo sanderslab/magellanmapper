@@ -76,7 +76,7 @@ conn = None # sqlite connection
 cur = None # sqlite cursor
 sub_rois = None
 
-PROC_TYPES = ("importonly", "processing", "processing_mp", "load")
+PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
 proc_type = None
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
@@ -234,20 +234,28 @@ def main():
             print("Resolution ({}) should be given as 3 values (x, y, z)"
                   .format(args.res))
     
-    # loads the image and GUI
+    # loads the image, database, and GUI
     global image5d, conn, cur
     #np.set_printoptions(threshold=np.nan) # print full arrays
     conn, cur = sqlite.start_db()
-    filename_proc = filename + str(series).zfill(5) + "_proc.npz"
+    filename_base = importer.filename_to_base(filename, series)
+    filename_image5d_proc = filename_base + "_image5d_proc.npz"
+    filename_info_proc = filename_base + "_info_proc.npz"
     if proc_type == PROC_TYPES[3]:
         # loads from processed file
         try:
-            output = np.load(filename_proc)
             global image5d_proc, segments_proc
+            # loads stored processed arrays, using mem-mapped accessed for the image
+            # file to minimize memory requirement, only loading on-the-fly
+            output_info = np.load(filename_info_proc)
+            image5d_proc = np.load(filename_image5d_proc, mmap_mode="r")
+            '''
+            filename_proc = filename + str(series).zfill(5) + "_proc.npz" # old format
+            output = np.load(filename_proc)
             image5d_proc = output["roi"]
-            #print("image5d_proc dtype: {}".format(image5d_proc.dtype))
-            segments_proc = output["segments"]
-            detector.resolutions = output["resolutions"]
+            '''
+            segments_proc = output_info["segments"]
+            detector.resolutions = output_info["resolutions"]
             return
         except IOError:
             print("Unable to load {}, will attempt to read unprocessed file"
@@ -256,6 +264,13 @@ def main():
     if proc_type == PROC_TYPES[0]:
         # already imported so now simply exits
         print("imported {}, will exit".format(filename))
+        os._exit(os.EX_OK)
+    elif proc_type == PROC_TYPES[4]:
+        # extracts plane and exits
+        print("extracting plane at {} and exiting".format(offset[2]))
+        name = ("{}-(series{})-z{}").format(os.path.basename(filename).replace(".czi", ""), 
+                                            series, str(offset[2]).zfill(5))
+        plot_2d.extract_plane(image5d, channel, offset, name)
         os._exit(os.EX_OK)
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the entire stack, saving processed image
@@ -368,10 +383,13 @@ def main():
         print("total processing time (s): {}".format(time() - time_start))
         
         # save denoised stack, segments, and scaling info to file
-        outfile = open(filename_proc, "wb")
+        outfile_image5d_proc = open(filename_image5d_proc, "wb")
+        outfile_info_proc = open(filename_info_proc, "wb")
         time_start = time()
-        np.savez(outfile, roi=merged, segments=segments_all, resolutions=detector.resolutions)
-        outfile.close()
+        np.save(outfile_image5d_proc, merged)
+        np.savez(outfile_info_proc, segments=segments_all, resolutions=detector.resolutions)
+        outfile_image5d_proc.close()
+        outfile_info_proc.close()
         print('file save time: %f' %(time() - time_start))
         # exit directly since otherwise hangs in launched from module with GUI import
         os._exit(os.EX_OK)

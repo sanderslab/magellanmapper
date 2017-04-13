@@ -38,6 +38,7 @@ def denoise(roi):
     # total variation denoising
     time_start = time()
     denoised = restoration.denoise_tv_chambolle(denoised, weight=0.2)
+    #denoised = restoration.denoise_nl_means(denoised, patch_size=10, multichannel=False)
     print('time for total variation: %f' %(time() - time_start))
     
     '''

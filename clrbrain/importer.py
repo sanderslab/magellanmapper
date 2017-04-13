@@ -179,19 +179,30 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         image5d: array of image data.
         size: tuple of dimensions given as (time, z, y, x, channels).
     """
-    filename_npz = filename + str(series).zfill(5) + ".npz"
+    filename_base = filename_to_base(filename, series)
+    filename_image5d_npz = filename_base + "_image5d.npz"
+    filename_info_npz = filename_base + "_info.npz"
     if load:
         try:
-            #time_start = time()
-            output = np.load(filename_npz)
-            #print('file opening time: %f' %(time() - time_start))
-            image5d = output["image5d"]
+            time_start = time()
+            # loads stored Numpy arrays, using mem-mapped accessed for the image
+            # file to minimize memory requirement, only loading on-the-fly
+            output = np.load(filename_info_npz)
+            image5d = np.load(filename_image5d_npz, mmap_mode="r")
             '''
-            try:
-                detector.set_scaling_factor(output["magnification"], output["zoom"])
-            except KeyError:
-                print("could not find magnification/zoom, defaulting to {}"
-                      .format(detector.scaling_factor))
+            # convert old monolithic archive into 2 separate archives
+            filename_npz = filename + str(series).zfill(5) + ".npz" # old format
+            output = np.load(filename_npz)
+            outfile_image5d = open(filename_image5d_npz, "wb")
+            np.save(outfile_image5d, output["image5d"])
+            outfile_image5d.close()
+            outfile_info = open(filename_info_npz, "wb")
+            np.savez(outfile_info, names=output["names"], sizes=output["sizes"], 
+                     resolutions=output["resolutions"], magnification=output["magnification"], 
+                     zoom=output["zoom"], pixel_type=output["pixel_type"])
+            outfile_info.close()
+            print('file opening time: %f' %(time() - time_start))
+            return
             '''
             try:
                 detector.resolutions = output["resolutions"]
@@ -200,8 +211,8 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                 print("could not find resolutions")
             return image5d
         except IOError:
-            print("Unable to load {}, will attempt to reload {}"
-                  .format(filename_npz, filename))
+            print("Unable to load Numpy array, will attempt to reload {}"
+                  .format(filename))
     start_jvm()
     # parses the XML tree directly
     names, sizes, detector.resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
@@ -243,13 +254,22 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                 check_dtype = False
             image5d[t, z] = img
     print('file import time: %f' %(time() - time_start))
-    outfile = open(filename_npz, "wb")
+    outfile_image5d = open(filename_image5d_npz, "wb")
+    outfile_info = open(filename_info_npz, "wb")
+    #outfile = open(filename_npz, "wb")
     if save:
         time_start = time()
-        # could use compression (savez_compressed), but much slower
-        np.savez(outfile, image5d=image5d, names=names, sizes=sizes, 
+        # could use compression (savez_compressed), but much slower; also 
+        # separately saves image5d with plain "save" to allow for partial
+        # loading with mmap_mode
+        np.save(outfile_image5d, image5d)
+        np.savez(outfile_info, names=names, sizes=sizes, 
                  resolutions=detector.resolutions, magnification=magnification, 
                  zoom=zoom, pixel_type=pixel_type)
-        outfile.close()
+        outfile_image5d.close()
+        outfile_info.close()
         print('file save time: %f' %(time() - time_start))
     return image5d
+
+def filename_to_base(filename, series):
+    return filename.replace(".czi", "_") + str(series).zfill(5)

@@ -13,6 +13,8 @@ from time import time
 import numpy as np
 import math
 from skimage import restoration
+from skimage import img_as_float
+from skimage import filters
 
 intensity_min = 0.2
 mask_dividend = 100000.0
@@ -27,19 +29,28 @@ def denoise(roi):
         Denoised region of interest.
     """
     # enhance contrast and normalize to 0-1 scale
-    vmin, vmax = np.percentile(roi, (20, 99.5))
+    vmin, vmax = np.percentile(roi, (5, 99.5))
     #print("vmin: {}, vmax: {}".format(vmin, vmax))
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
     
     # additional simple thresholding
     denoised = np.clip(denoised, intensity_min, 1)
-    
+    '''
     # total variation denoising
     time_start = time()
     denoised = restoration.denoise_tv_chambolle(denoised, weight=0.2)
     #denoised = restoration.denoise_nl_means(denoised, patch_size=10, multichannel=False)
     print('time for total variation: %f' %(time() - time_start))
+    
+    # sharpening
+    '''
+    unsharp_strength = 0.3
+    blur_size = 8
+    denoised = img_as_float(denoised)
+    blurred = filters.gaussian(denoised, blur_size)
+    high_pass = denoised - unsharp_strength * blurred
+    denoised = denoised + high_pass
     
     '''
     # downgrade to uint16, which requires adjusting intensity 

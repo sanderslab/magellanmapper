@@ -5,8 +5,7 @@
 Provides options for drawing as surfaces or points.
 
 Attributes:
-    intensity_min: The minimum intensity threshold for points
-        viewing. Raising this threshold will remove more points.
+    mask_dividend: Maximum number of points to show.
 """
 
 from time import time
@@ -16,7 +15,7 @@ from skimage import restoration
 from skimage import img_as_float
 from skimage import filters
 
-intensity_min = 0.2
+INTENSITY_MIN = 0.2 # clip below this threshold
 mask_dividend = 100000.0
 
 def denoise(roi):
@@ -35,7 +34,7 @@ def denoise(roi):
     denoised = (denoised - vmin) / (vmax - vmin)
     
     # additional simple thresholding
-    denoised = np.clip(denoised, intensity_min, 1)
+    denoised = np.clip(denoised, INTENSITY_MIN, 1)
     '''
     # total variation denoising
     time_start = time()
@@ -154,14 +153,14 @@ def plot_3d_points(roi, vis):
     z = np.reshape(z, roi.size)
     roi_1d = np.reshape(roi, roi.size)
     
-    # clear background points to see remaining structures, starting with
-    # the denoising threshold to approximately visualize what the segmenter 
-    # will see and going slightly over for further clarity
-    remove = np.where(roi_1d < intensity_min * 2)
+    # clear background points to see remaining structures
+    remove = np.where(roi_1d < 1.3)
     x = np.delete(x, remove)
     y = np.delete(y, remove)
     z = np.delete(z, remove)
     roi_1d = np.delete(roi_1d, remove)
+    # adjust range from 0-1 to region of colormap to use
+    roi_1d = normalize(roi_1d, 0.4, 0.9)
     points_len = roi_1d.size
     time_start = time()
     mask = math.ceil(points_len / mask_dividend)
@@ -171,7 +170,7 @@ def plot_3d_points(roi, vis):
                                 mode="sphere", colormap="inferno", 
                                 scale_mode="none", mask_points=mask, 
                                 line_width=1.0, vmax=1.0, 
-                                vmin=(intensity_min * 0.5), transparent=True)
+                                vmin=0.0, transparent=True)
         print("time for 3D points display: {}".format(time() - time_start))
     """
     for i in range(roi_1d.size):
@@ -254,3 +253,9 @@ def show_blobs(segments, vis):
                             scale_mode="none", scale_factor=scale) 
     pts.module_manager.scalar_lut_manager.lut.table = cmap
     return pts, cmap, scale
+
+def normalize(array, minimum, maximum):
+    array += -(np.min(array))
+    array /= np.max(array)
+    array += minimum
+    return array

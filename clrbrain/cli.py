@@ -269,8 +269,7 @@ def main():
             detector.resolutions = output_info["resolutions"]
             return
         except IOError:
-            print("Unable to load {}, will attempt to read unprocessed file"
-                  .format(filename_proc))
+            print("Unable to load processed files, will attempt to read unprocessed ones")
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
     if proc_type == PROC_TYPES[0]:
         # already imported so now simply exits

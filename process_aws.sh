@@ -65,41 +65,50 @@ then
 fi
 
 FOUND_NPZ=0
-NPZ="$IMG"$(printf %05d $SERIES).npz
-if [ -e "$DEST"/"$NPZ" ]
-then
-	echo "Found $DEST/$NPZ"
-	FOUND_NPZ=1
-else
-	echo "Could not find $DEST/$NPZ, checking on s3..."
-	NPZ_LS=`aws s3 ls s3://"$S3_DIR"/"$NPZ"`
-	if [ "$NPZ_LS" != "" ]
+IMG_BASE=${IMG/.czi/_}$(printf %05d $SERIES)
+NPZ_IMG=$IMG_BASE"_image5d.npz"
+NPZ_INFO=$IMG_BASE"_info.npz"
+for NPZ in $NPZ_IMG $NPZ_INFO
+do
+	if [ -e "$DEST"/"$NPZ" ]
 	then
-		aws s3 cp s3://"$S3_DIR"/"$NPZ" "$DEST"/"$NPZ"
-		ls -lh "$DEST"/"$NPZ"
+		echo "Found $DEST/$NPZ"
 		FOUND_NPZ=1
 	else
-		echo "Could not find $DEST/$NPZ on s3, checking original image..."
-		if [ -e "$DEST"/"$IMG" ]
+		echo "Could not find $DEST/$NPZ, checking on s3..."
+		NPZ_LS=`aws s3 ls s3://"$S3_DIR"/"$NPZ"`
+		if [ "$NPZ_LS" != "" ]
 		then
-			echo "Found $DEST/$IMG"
+			aws s3 cp s3://"$S3_DIR"/"$NPZ" "$DEST"/"$NPZ"
+			ls -lh "$DEST"/"$NPZ"
+			FOUND_NPZ=1
 		else
-			aws s3 cp s3://"$S3_DIR"/"$IMG" "$DEST"/"$IMG"
-			ls -lh "$DEST"/"$IMG"
+			echo "Could not find $DEST/$NPZ on s3, checking original image..."
+			if [ -e "$DEST"/"$IMG" ]
+			then
+				echo "Found $DEST/$IMG"
+			else
+				aws s3 cp s3://"$S3_DIR"/"$IMG" "$DEST"/"$IMG"
+				ls -lh "$DEST"/"$IMG"
+			fi
 		fi
 	fi
-fi
+done
 
 # import raw image into Numpy array if not available
 if (( $FOUND_NPZ == 0)); then
 	echo "Importing $DEST/$IMG..."
-	python -m clrbrain.cli img="$DEST"/"$IMG" proc=importonly $EXTRA_ARGS
+	python -m clrbrain.cli --img "$DEST"/"$IMG" --proc importonly $EXTRA_ARGS
 fi
 
 # process image and segments
-python -u -m clrbrain.cli img="$DEST"/"$IMG" proc=processing_mp $EXTRA_ARGS
+python -u -m clrbrain.cli --img "$DEST"/"$IMG" --proc processing_mp -v $EXTRA_ARGS
 
 # upload to S3
-PROC_NPZ="$IMG"$(printf %05d $SERIES)_proc.npz
-aws s3 cp "$DEST"/"$PROC_NPZ" s3://"$S3_DIR"/"$PROC_NPZ"
+NPZ_IMG_PROC=$IMG_BASE"_image5d_proc.npz"
+NPZ_INFO_PROC=$IMG_BASE"_info_proc.npz"
+for NPZ in $NPZ_IMG_PROC $NPZ_INFO_PROC
+do
+	aws s3 cp "$DEST"/"$NPZ" s3://"$S3_DIR"/"$NPZ"
+done
 

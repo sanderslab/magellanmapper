@@ -34,6 +34,9 @@ verify = False
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
 
+SEG_LINEWIDTH = 2.0
+ZOOM_COLS = 8
+
 segs_color_dict = {-1: None,
                    0: "r",
                    1: "g",
@@ -144,22 +147,22 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         if segments is not None and segs_cmap is not None:
             collection = _circle_collection(segments, 
                                             segs_cmap.astype(float) / 255.0,
-                                            "none", 3.0)
+                                            "none", SEG_LINEWIDTH)
             ax.add_collection(collection)
+        
+        # overlays segments in adjacent regions with dashed line patch
+        if segments_adj is not None:
+            collection_adj = _circle_collection(segments_adj, "k", "none", SEG_LINEWIDTH)
+            collection_adj.set_linestyle("--")
+            ax.add_collection(collection_adj)
         
         # overlays segments in current z with dotted line patch and makes
         # pickable for verifying the segment
         if segments_z is not None:
-            collection_z = _circle_collection(segments_z, "w", "none", 2.0)
+            collection_z = _circle_collection(segments_z, "w", "none", SEG_LINEWIDTH)
             collection_z.set_linestyle(":")
             collection_z.set_picker(5)
             ax.add_collection(collection_z)
-        
-        # overlays segments in adjacent regions with dashed line patch
-        if segments_adj is not None:
-            collection_adj = _circle_collection(segments_adj, "k", "none", 3.0)
-            collection_adj.set_linestyle("--")
-            ax.add_collection(collection_adj)
         
         # adds a simple border to highlight the bottom of the ROI
         if border is not None:
@@ -197,10 +200,9 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     z_planes = z_planes + z_planes_padding * 2
     
     # plot layout depending on number of z-planes
-    max_cols = 9
-    zoom_plot_rows = math.ceil(z_planes / max_cols)
-    col_remainder = z_planes % max_cols
-    zoom_plot_cols = max(col_remainder, max_cols)
+    zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
+    col_remainder = z_planes % ZOOM_COLS
+    zoom_plot_cols = max(col_remainder, ZOOM_COLS)
     top_rows = 3
     gs = gridspec.GridSpec(top_rows + zoom_plot_rows, zoom_plot_cols, 
                            wspace=0.7, hspace=0.5)
@@ -244,13 +246,13 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
-        cols = max_cols
+        cols = ZOOM_COLS
         if i == zoom_plot_rows - 1 and col_remainder > 0:
             cols = col_remainder
         # show zoomed in plots and highlight one at offset z
         for j in range(cols):
             # z relative to the start of the ROI, since segs are relative to ROI
-            z_relative = i * max_cols + j - z_planes_padding
+            z_relative = i * ZOOM_COLS + j - z_planes_padding
             # absolute z value, relative to start of image5d
             z = z_start + z_relative
             zoom_offset = (offset[0], offset[1], z)

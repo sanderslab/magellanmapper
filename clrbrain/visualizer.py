@@ -156,12 +156,23 @@ class Visualization(HasTraits):
     _DEFAULTS_2D = ["Processed", "Verify"]
     
     def _format_seg(self, seg):
+        """Formats the segment as a strong for feedback.
+        
+        Params:
+            seg: The segment as an array of (z, row, column, radius).
+        """
         seg_str = seg[0:3].astype(int).astype(str).tolist()
         seg_str.append(str(round(seg[3], 3)))
         seg_str.append(str(int(seg[4])))
         return ", ".join(seg_str)
     
     def _append_roi(self, roi, rois_dict):
+        """Append an ROI to the ROI dictionary.
+        
+        Params:
+            roi: The ROI to save.
+            rois_dict: Dictionary of saved ROIs.
+        """
         label = "offset ({},{},{}) of size ({},{},{})".format(roi["offset_x"], roi["offset_y"], 
                                          roi["offset_z"], roi["size_x"], 
                                          roi["size_y"], roi["size_z"])
@@ -268,16 +279,20 @@ class Visualization(HasTraits):
             print("No offset, using standard one")
             curr_offset = self._curr_offset()
         self.roi_array[0] = cli.roi_size
+        
+        # set up selector for loading past saved ROIs
+        self._rois_dict = {self._roi_default: None}
         exps = sqlite.select_experiment(cli.cur, os.path.basename(cli.filename))
         self.rois_selections_class = ListSelections()
         if len(exps) > 0:
             self._rois = sqlite.select_rois(cli.cur, exps[0]["id"])
             if len(self._rois) > 0:
-                self._rois_dict = {self._roi_default: None}
                 for roi in self._rois:
                     self._append_roi(roi, self._rois_dict)
-                self.rois_selections_class.selections = list(self._rois_dict.keys())
-                self.rois_check_list = self._roi_default
+        self.rois_selections_class.selections = list(self._rois_dict.keys())
+        self.rois_check_list = self._roi_default
+        
+        # show the default ROI
         self.show_3d()
     
     @on_trait_change('x_offset,y_offset,z_offset')

@@ -89,9 +89,20 @@ def add_scale_bar(ax):
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
+def _swap_elements(arr, axis0, axis1, offset=0):
+    axis0 += offset
+    axis1 += offset
+    check_tuple = isinstance(arr, tuple)
+    if check_tuple:
+        arr = list(arr)
+    arr[axis0], arr[axis1] = arr[axis1], arr[axis0]
+    if check_tuple:
+        arr = tuple(arr)
+    return arr
+
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
-                 segments_adj=None):
+                 segments_adj=None, plane="xy"):
     """Shows subplots of the region of interest.
     
     Args:
@@ -115,11 +126,16 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         segments_adj: Subset of segments that are adjacent to rather than
             inside the ROI, which will be drawn in a differen style.
             Defaults to None.
+        plane: The plane to show in each 2D plot, with "xy" to show the 
+            XY plane (default) and "xz" to show XZ plane.
     """
     ax = plt.subplot(gs[row, col])
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
     size = image5d.shape
+    # swap columns if showing a different plane
+    if plane == "xz":
+        size = _swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
     z = offset[2]
     ax.set_title("z={}".format(z))
     collection_z = None
@@ -131,6 +147,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         region = [0, offset[2], 
                   slice(offset[1], offset[1] + roi_size[1]), 
                   slice(offset[0], offset[0] + roi_size[0])]
+        # swap columns if showing a different plane
+        if plane == "xz":
+            region = _swap_elements(region, 1, 2)
         if image5d.ndim >= 5:
             roi = image5d[tuple(region + [channel])]
         elif image5d.ndim == 4:
@@ -174,7 +193,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     return ax, collection_z
 
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
-                  segs_cmap, border=None):
+                  segs_cmap, border=None, plane="xy"):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -190,9 +209,38 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         segs_cmap: Colormap for segments.
         border: Border dimensions in pixels given as (x, y, z); defaults
             to None.
+        plane: The plane to show in each 2D plot, with "xy" to show the 
+            XY plane (default) and "xz" to show XZ plane.
     """
     fig = plt.figure()
     fig.suptitle(title, color="navajowhite")
+    
+    # adjust array order based on which plane to show
+    z_start = offset[2]
+    aspect = 1 # aspect ratio
+    if plane == "xz":
+        roi_size = _swap_elements(roi_size, 1, 2)
+        offset = _swap_elements(offset, 1, 2)
+        z_start = offset[2]
+        # TODO: base on scaling vs image shape vs nothing?
+        #aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
+        aspect = float(image5d.shape[3]) / image5d.shape[1]
+        print(aspect)
+        segments[:, [0, 1]] = segments[:, [1, 0]]
+        if image5d.ndim >= 5:
+            img2d = image5d[0, :, z_start, :, channel]
+        elif image5d.ndim == 4:
+            img2d = image5d[0, :, z_start, :]
+        else:
+            img2d = image5d[:, z_start, :]
+    else:
+        # defaults to "xy"
+        if image5d.ndim >= 5:
+            img2d = image5d[0, z_start, :, :, channel]
+        elif image5d.ndim == 4:
+            img2d = image5d[0, z_start, :, :]
+        else:
+            img2d = image5d[z_start, :, :]
     
     # total number of z-planes
     z_planes = roi_size[2]
@@ -212,14 +260,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     ax = plt.subplot(gs[0:top_rows, :half_cols])
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    z_start = offset[2]
-    if image5d.ndim >= 5:
-        img2d = image5d[0, z_start, :, :, channel]
-    elif image5d.ndim == 4:
-        img2d = image5d[0, z_start, :, :]
-    else:
-        img2d = image5d[z_start, :, :]
-    plt.imshow(img2d, cmap=colormap_2d)
+    plt.imshow(img2d, cmap=colormap_2d, aspect=aspect)
     ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
                                    fill=False, edgecolor="yellow"))
     add_scale_bar(ax)
@@ -275,7 +316,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                                               zoom_offset, segments, segments_z, 
                                               segs_cmap, alpha, z == z_start,
                                               border if show_border else None,
-                                              segs_out)
+                                              segs_out, plane)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)

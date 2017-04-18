@@ -154,6 +154,8 @@ class Visualization(HasTraits):
     segs_feedback = Str("Segments output")
     _check_list_2d = List
     _DEFAULTS_2D = ["Processed", "Verify"]
+    _planes_2d = List
+    _DEFAULTS_PLANES_2D = ["xy", "xz"]
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -292,6 +294,9 @@ class Visualization(HasTraits):
         self.rois_selections_class.selections = list(self._rois_dict.keys())
         self.rois_check_list = self._roi_default
         
+        # 2D plot options setup
+        self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
+        
         # show the default ROI
         self.show_3d()
     
@@ -374,7 +379,8 @@ class Visualization(HasTraits):
             img = cli.image5d
         plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                               img, cli.channel, curr_roi_size, 
-                              curr_offset, self.segments, self.segs_cmap, self.border)
+                              curr_offset, self.segments, self.segs_cmap, self.border,
+                              plane=self._planes_2d[0].lower())
     
     def _btn_save_segments_fired(self):
         self.save_segs()
@@ -463,11 +469,19 @@ class Visualization(HasTraits):
                     Item("btn_segment_trait", show_label=False), 
                     Item("btn_2d_trait", show_label=False)
                 ),
-                Item(
-                     "_check_list_2d", 
-                     editor=CheckListEditor(values=_DEFAULTS_2D, cols=2), 
-                     style="custom",
-                     label="2D options"
+                HGroup(
+                    Item(
+                         "_check_list_2d", 
+                         editor=CheckListEditor(values=_DEFAULTS_2D, cols=2), 
+                         style="custom",
+                         label="2D options"
+                    ),
+                    Item(
+                         "_planes_2d", 
+                         editor=CheckListEditor(values=_DEFAULTS_PLANES_2D), 
+                         style="simple",
+                         label="Plane"
+                    ),
                 ),
                 Item(
                     "segs_scale",

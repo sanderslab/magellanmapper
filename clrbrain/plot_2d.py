@@ -31,9 +31,9 @@ from clrbrain import detector
 colormap_2d = cm.inferno
 savefig = None
 verify = False
-# TODO: may want to base on scaling factor instead
-padding = (5, 5, 3) # human (x, y, z) order
 
+# TODO: may want to base on scaling factor instead
+PADDING = (5, 5, 3) # human (x, y, z) order
 SEG_LINEWIDTH = 2.0
 ZOOM_COLS = 8
 
@@ -193,7 +193,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     return ax, collection_z
 
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
-                  segs_cmap, border=None, plane="xy"):
+                  segs_cmap, border=None, plane="xy", padding=PADDING,
+                  zoom_levels=2, single_zoom_row=False):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -244,26 +245,40 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     
     # total number of z-planes
     z_planes = roi_size[2]
-    z_planes_padding = padding[2] # addition z's on either side
+    z_planes_padding = padding[2] # additional z's above/below
     z_planes = z_planes + z_planes_padding * 2
     
     # plot layout depending on number of z-planes
-    zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
-    col_remainder = z_planes % ZOOM_COLS
-    zoom_plot_cols = max(col_remainder, ZOOM_COLS)
+    if single_zoom_row:
+        zoom_plot_rows = 1
+        col_remainder = 0
+        zoom_plot_cols = z_planes
+    else:
+        zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
+        col_remainder = z_planes % ZOOM_COLS
+        zoom_plot_cols = ZOOM_COLS #max(col_remainder, ZOOM_COLS)
     top_rows = 3
     gs = gridspec.GridSpec(top_rows + zoom_plot_rows, zoom_plot_cols, 
                            wspace=0.7, hspace=0.5)
     
     # overview image, with bottom of offset shown as rectangle
-    half_cols = zoom_plot_cols // 2
-    ax = plt.subplot(gs[0:top_rows, :half_cols])
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    plt.imshow(img2d, cmap=colormap_2d, aspect=aspect)
-    ax.add_patch(patches.Rectangle(offset[0:2], roi_size[0], roi_size[1], 
-                                   fill=False, edgecolor="yellow"))
-    add_scale_bar(ax)
+    overview_cols = zoom_plot_cols // zoom_levels
+    for i in range(zoom_levels - 1):
+        ax = plt.subplot(gs[0:top_rows, i*overview_cols:overview_cols*(i+1)])
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        img2d_zoom = img2d
+        patch_offset = offset[0:2]
+        if i > 0:
+            origin = np.floor(np.divide(offset[0:2], zoom_levels - i))
+            size = np.floor(np.divide(np.flipud(img2d.shape)[0:2], zoom_levels - i))
+            print(img2d_zoom.shape, origin, size)
+            img2d_zoom = img2d_zoom[origin[1]:origin[1]+size[1], origin[0]:origin[0]+size[0]]
+            patch_offset = np.subtract(patch_offset, origin)
+        ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect)
+        ax.add_patch(patches.Rectangle(patch_offset, roi_size[0], roi_size[1], 
+                                       fill=False, edgecolor="yellow"))
+        add_scale_bar(ax)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     #print("rows: {}, cols: {}, remainder: {}"
@@ -287,13 +302,13 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
-        cols = ZOOM_COLS
+        cols = zoom_plot_cols
         if i == zoom_plot_rows - 1 and col_remainder > 0:
             cols = col_remainder
         # show zoomed in plots and highlight one at offset z
         for j in range(cols):
             # z relative to the start of the ROI, since segs are relative to ROI
-            z_relative = i * ZOOM_COLS + j - z_planes_padding
+            z_relative = i * zoom_plot_cols + j - z_planes_padding
             # absolute z value, relative to start of image5d
             z = z_start + z_relative
             zoom_offset = (offset[0], offset[1], z)
@@ -458,7 +473,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # show 3D screenshot if available
     try:
         img3d = mlab.screenshot(antialiased=True)
-        ax = plt.subplot(gs[0:top_rows, half_cols:zoom_plot_cols])
+        start_cols = overview_cols * (zoom_levels - 1)
+        ax = plt.subplot(gs[0:top_rows, start_cols:start_cols+overview_cols])
         ax.imshow(img3d)
         _hide_axes(ax)
     except SceneModelError:
@@ -471,13 +487,6 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         print("saving figure as {}".format(name))
         plt.savefig(name)
     
-    '''
-    # demo 2D segmentation methods
-    plt.figure()
-    plt.imshow(img2d <= filters.threshold_otsu(img2d))
-    #plt.imshow(image5d[0, offset[2], :, :], cmap=cm.gray)
-    '''
-
 def _hide_axes(ax):
     """Hides x- and y-axes.
     """

@@ -137,7 +137,6 @@ class Visualization(HasTraits):
     btn_save_segments = Button("Save Segments")
     roi = None # combine with roi_array?
     rois_selections_class = Instance(ListSelections)
-    #rois_selections = Property(Dict, depends_on="rois_selections_class.selections")
     rois_check_list = Str
     _rois_dict = None
     _roi_default = "None selected"
@@ -153,9 +152,11 @@ class Visualization(HasTraits):
     segs_cmap = None
     segs_feedback = Str("Segments output")
     _check_list_2d = List
-    _DEFAULTS_2D = ["Processed", "Verify"]
+    _DEFAULTS_2D = ["Filtered", "Verify"]
     _planes_2d = List
     _DEFAULTS_PLANES_2D = ["xy", "xz"]
+    _styles_2d = List
+    _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -296,6 +297,7 @@ class Visualization(HasTraits):
         
         # 2D plot options setup
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
+        self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
         
         # show the default ROI
         self.show_3d()
@@ -340,7 +342,7 @@ class Visualization(HasTraits):
                     # uses blobs from loaded segments
                     roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                     # adds additional padding to show surrounding segments
-                    pad = plot_2d.padding # human (x, y, z) order
+                    pad = plot_2d.PADDING # human (x, y, z) order
                     segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z - pad[2], 
                                                      cli.segments_proc[:, 0] < z + roi_z + pad[2],
                                                      cli.segments_proc[:, 1] >= y - pad[1], 
@@ -377,10 +379,18 @@ class Visualization(HasTraits):
             print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)
             img = cli.image5d
-        plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
-                              img, cli.channel, curr_roi_size, 
-                              curr_offset, self.segments, self.segs_cmap, self.border,
-                              plane=self._planes_2d[0].lower())
+        if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
+            # Multi-zoom style
+            plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
+                                  img, cli.channel, curr_roi_size, 
+                                  curr_offset, self.segments, self.segs_cmap, self.border,
+                                  self._planes_2d[0].lower(), (0, 0, 0), 3, True)
+        else:
+            # defaults to Square style
+            plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
+                                  img, cli.channel, curr_roi_size, 
+                                  curr_offset, self.segments, self.segs_cmap, self.border,
+                                  self._planes_2d[0].lower())
     
     def _btn_save_segments_fired(self):
         self.save_segs()
@@ -482,6 +492,12 @@ class Visualization(HasTraits):
                          style="simple",
                          label="Plane"
                     ),
+                ),
+                Item(
+                     "_styles_2d", 
+                     editor=CheckListEditor(values=_DEFAULTS_STYLES_2D), 
+                     style="simple",
+                     label="2D Styles"
                 ),
                 Item(
                     "segs_scale",

@@ -270,10 +270,16 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         img2d_zoom = img2d
         patch_offset = offset[0:2]
         if i > 0:
-            origin = np.floor(np.divide(offset[0:2], zoom_levels - i))
-            size = np.floor(np.divide(np.flipud(img2d.shape)[0:2], zoom_levels - i))
+            origin = np.floor(np.multiply(offset[0:2], zoom_levels + i - 1) 
+                              / (zoom_levels + i)).astype(int)
+            zoom_shape = np.flipud(img2d.shape)[0:2]
+            size = np.floor(zoom_shape / (i + 1)).astype(int)
+            end = np.add(origin, size)
+            for j in range(len(origin)):
+                if end[j] > zoom_shape[j]:
+                    origin[j] -= end[j] - zoom_shape[j]
+            img2d_zoom = img2d_zoom[origin[1]:end[1], origin[0]:end[0]]
             print(img2d_zoom.shape, origin, size)
-            img2d_zoom = img2d_zoom[origin[1]:origin[1]+size[1], origin[0]:origin[0]+size[0]]
             patch_offset = np.subtract(patch_offset, origin)
         ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect)
         ax.add_patch(patches.Rectangle(patch_offset, roi_size[0], roi_size[1], 

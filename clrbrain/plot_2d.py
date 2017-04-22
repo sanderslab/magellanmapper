@@ -31,11 +31,12 @@ from clrbrain import detector
 colormap_2d = cm.inferno
 savefig = None
 verify = False
-
 # TODO: may want to base on scaling factor instead
-PADDING = (5, 5, 3) # human (x, y, z) order
+padding = (5, 5, 3) # human (x, y, z) order
+
 SEG_LINEWIDTH = 2.0
 ZOOM_COLS = 8
+Z_LEVELS = ("bottom", "middle", "top")
 
 segs_color_dict = {-1: None,
                    0: "r",
@@ -193,8 +194,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     return ax, collection_z
 
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
-                  segs_cmap, border=None, plane="xy", padding=PADDING,
-                  zoom_levels=2, single_zoom_row=False):
+                  segs_cmap, border=None, plane="xy", padding=padding,
+                  zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0]):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -215,38 +216,46 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     """
     fig = plt.figure()
     fig.suptitle(title, color="navajowhite")
+    print(segs_cmap)
     
     # adjust array order based on which plane to show
-    z_start = offset[2]
     aspect = 1 # aspect ratio
     if plane == "xz":
         roi_size = _swap_elements(roi_size, 1, 2)
         offset = _swap_elements(offset, 1, 2)
-        z_start = offset[2]
+    
+    # total number of z-planes
+    z_start = offset[2]
+    z_planes = roi_size[2]
+    z_planes_padding = padding[2] # additional z's above/below
+    z_planes = z_planes + z_planes_padding * 2
+    z_overview = z_start
+    if z_level == Z_LEVELS[1]:
+        z_overview = (2 * z_start + z_planes) // 2
+    elif z_level == Z_LEVELS[2]:
+        z_overview = z_start + z_planes
+    print("z_overview: {}".format(z_overview))
+    
+    if plane == "xz":
         # TODO: base on scaling vs image shape vs nothing?
         #aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
         aspect = float(image5d.shape[3]) / image5d.shape[1]
         print(aspect)
         segments[:, [0, 1]] = segments[:, [1, 0]]
         if image5d.ndim >= 5:
-            img2d = image5d[0, :, z_start, :, channel]
+            img2d = image5d[0, :, z_overview, :, channel]
         elif image5d.ndim == 4:
-            img2d = image5d[0, :, z_start, :]
+            img2d = image5d[0, :, z_overview, :]
         else:
-            img2d = image5d[:, z_start, :]
+            img2d = image5d[:, z_overview, :]
     else:
         # defaults to "xy"
         if image5d.ndim >= 5:
-            img2d = image5d[0, z_start, :, :, channel]
+            img2d = image5d[0, z_overview, :, :, channel]
         elif image5d.ndim == 4:
-            img2d = image5d[0, z_start, :, :]
+            img2d = image5d[0, z_overview, :, :]
         else:
-            img2d = image5d[z_start, :, :]
-    
-    # total number of z-planes
-    z_planes = roi_size[2]
-    z_planes_padding = padding[2] # additional z's above/below
-    z_planes = z_planes + z_planes_padding * 2
+            img2d = image5d[z_overview, :, :]
     
     # plot layout depending on number of z-planes
     if single_zoom_row:
@@ -273,7 +282,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             origin = np.floor(np.multiply(offset[0:2], zoom_levels + i - 1) 
                               / (zoom_levels + i)).astype(int)
             zoom_shape = np.flipud(img2d.shape)[0:2]
-            size = np.floor(zoom_shape / (i + 1)).astype(int)
+            size = np.floor(zoom_shape / (i + 3)).astype(int)
             end = np.add(origin, size)
             for j in range(len(origin)):
                 if end[j] > zoom_shape[j]:
@@ -335,7 +344,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             ax_z, collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, 
                                               channel, roi_size,
                                               zoom_offset, segments, segments_z, 
-                                              segs_cmap, alpha, z == z_start,
+                                              segs_cmap, alpha, z == z_overview,
                                               border if show_border else None,
                                               segs_out, plane)
             if i == 0 and j == 0:

@@ -342,7 +342,7 @@ class Visualization(HasTraits):
                     # uses blobs from loaded segments
                     roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                     # adds additional padding to show surrounding segments
-                    pad = plot_2d.PADDING # human (x, y, z) order
+                    pad = plot_2d.padding # human (x, y, z) order
                     segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z - pad[2], 
                                                      cli.segments_proc[:, 0] < z + roi_z + pad[2],
                                                      cli.segments_proc[:, 1] >= y - pad[1], 
@@ -384,7 +384,8 @@ class Visualization(HasTraits):
             plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, self.border,
-                                  self._planes_2d[0].lower(), (0, 0, 0), 3, True)
+                                  self._planes_2d[0].lower(), (0, 0, 0), 3, True,
+                                  "middle")
         else:
             # defaults to Square style
             plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 

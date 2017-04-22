@@ -15,6 +15,8 @@ from skimage import restoration
 from skimage import img_as_float
 from skimage import filters
 
+from clrbrain import config
+
 INTENSITY_MIN = 0.2 # clip below this threshold
 mask_dividend = 100000.0
 
@@ -247,6 +249,13 @@ def show_blobs(segments, vis):
     num_colors = segments.shape[0] if segments.shape[0] >= 2 else 2
     cmap = (np.random.random((num_colors, 4)) * 255).astype(np.uint8)
     cmap[:, -1] = 170
+    if num_colors >= 4:
+        # initial default colors using 7-color palatte for color blindness
+        # (Wong, B. (2011) Nature Methods 8:441)
+        cmap[0, 0:3] = 213, 94, 0 # vermillion
+        cmap[1, 0:3] = 0, 114, 178 # blue
+        cmap[2, 0:3] = 204, 121, 167 # reddish purple
+        cmap[3, 0:3] = 0, 0, 0 # black
     cmap_indices = np.arange(segments.shape[0])
     pts = vis.scene.mlab.points3d(segments[:, 2], segments[:, 1], 
                             segments[:, 0], cmap_indices, #segments[:, 3],

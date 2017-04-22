@@ -21,6 +21,8 @@ Examples:
 Command-line arguments in addition to those from attributes listed below:
     * resolution: Resolution given as (x, y, z) in floating point (see
         cli.py, though order is natural here as command-line argument).
+    * padding_2d: Padding around the ROI given as (x, y, z) from which to 
+        include segments and and show further 2D planes.
 
 Attributes:
     filename: The filename of the source images. A corresponding file with
@@ -165,6 +167,7 @@ def main():
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series", type=int)
     parser.add_argument("--savefig")
+    parser.add_argument("--padding_2d")
     #parser.add_argument("--verify", action="store_true")
     parser.add_argument("--offset")
     parser.add_argument("--size")
@@ -203,6 +206,15 @@ def main():
         else:
             print("Offset ({}) should be given as 3 values (x, y, z)"
                   .format(args.offset))
+    if args.padding_2d is not None:
+        padding_split = args.padding_2d.split(",")
+        if len(padding_split) >= 3:
+            from clrbrain import plot_2d
+            plot_2d.padding = tuple(int(i) for i in padding_split)
+            print("Set plot_2d.padding to {}".format(plot_2d.padding))
+        else:
+            print("padding_2d ({}) should be given as 3 values (x, y, z)"
+                  .format(args.padding_2d))
     if args.size is not None:
         size_split = args.size.split(",")
         if len(size_split) >= 3:

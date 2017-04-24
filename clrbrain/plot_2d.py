@@ -131,8 +131,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             XY plane (default) and "xz" to show XZ plane.
     """
     ax = plt.subplot(gs[row, col])
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+    _hide_axes(ax)
     size = image5d.shape
     # swap columns if showing a different plane
     if plane == "xz":
@@ -215,7 +214,11 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             XY plane (default) and "xz" to show XZ plane.
     """
     fig = plt.figure()
-    fig.suptitle(title, color="navajowhite")
+    # black text with transluscent background the color of the figure
+    # background in case the title is a 2D plot
+    fig.suptitle(title, color="black", 
+                 bbox=dict(facecolor=fig.get_facecolor(), edgecolor="none", 
+                           alpha=0.5))
     print(segs_cmap)
     
     # adjust array order based on which plane to show
@@ -265,15 +268,15 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     else:
         zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
         col_remainder = z_planes % ZOOM_COLS
-        zoom_plot_cols = ZOOM_COLS #max(col_remainder, ZOOM_COLS)
-    top_rows = 3
-    gs = gridspec.GridSpec(top_rows + zoom_plot_rows, zoom_plot_cols, 
-                           wspace=0.7, hspace=0.5)
+        zoom_plot_cols = ZOOM_COLS
+    #top_rows = 3 if zoom_plot_rows > 1 else 3
+    gs = gridspec.GridSpec(2, zoom_levels, wspace=0.7, hspace=0.4,
+                           height_ratios=[3, zoom_plot_rows])
     
     # overview image, with bottom of offset shown as rectangle
     overview_cols = zoom_plot_cols // zoom_levels
     for i in range(zoom_levels - 1):
-        ax = plt.subplot(gs[0:top_rows, i*overview_cols:overview_cols*(i+1)])
+        ax = plt.subplot(gs[0, i])#i*overview_cols:overview_cols*(i+1)])
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         img2d_zoom = img2d
@@ -315,6 +318,10 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # and they don't appear to be individually editable
     seg_patch_dict = {}
     
+    gs_zoomed = gridspec.GridSpecFromSubplotSpec(zoom_plot_rows, zoom_plot_cols, 
+                                                 gs[1, :],
+                                                 wspace=0.1, hspace=0.1)
+    
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
         cols = zoom_plot_cols
@@ -341,7 +348,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                            and z_relative < roi_size[2] - border[2])
             
             # shows the zoomed subplot with scale bar for the current z-plane
-            ax_z, collection_z = show_subplot(fig, gs, i + top_rows, j, image5d, 
+            ax_z, collection_z = show_subplot(fig, gs_zoomed, i, j, image5d, 
                                               channel, roi_size,
                                               zoom_offset, segments, segments_z, 
                                               segs_cmap, alpha, z == z_overview,
@@ -488,13 +495,15 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # show 3D screenshot if available
     try:
         img3d = mlab.screenshot(antialiased=True)
-        start_cols = overview_cols * (zoom_levels - 1)
-        ax = plt.subplot(gs[0:top_rows, start_cols:start_cols+overview_cols])
+        ax = plt.subplot(gs[0, zoom_levels - 1])
+        # auto to adjust size with less overlap
         ax.imshow(img3d)
+        ax.set_aspect(img3d.shape[1] / img3d.shape[0])
         _hide_axes(ax)
     except SceneModelError:
         print("No Mayavi image to screen capture")
     gs.tight_layout(fig, pad=0.5)
+    #gs_zoomed.tight_layout(fig, pad=0.5)
     plt.ion()
     plt.show()
     if savefig is not None:

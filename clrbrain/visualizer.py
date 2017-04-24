@@ -48,7 +48,7 @@ from clrbrain import chunking
 
 params = {'legend.fontsize': 'small',
           'axes.labelsize': 'small',
-          'axes.titlesize': 'xx-small',
+          'axes.titlesize': 'small',
           'xtick.labelsize': 'small',
           'ytick.labelsize': 'small'}
 
@@ -73,9 +73,13 @@ def _fig_title(offset, roi_size):
     Returns:
         Figure title string.
     """
+    # cannot round to decimal places or else tuple will further round
+    roi_size_um = np.around(np.multiply(roi_size, detector.resolutions[0][::-1]))
     title = ("{} (series {})\n"
-             "offset {}, ROI size {}").format(os.path.basename(cli.filename), cli.series, 
-                                                offset, tuple(roi_size))
+             "offset {}, ROI size {}{}").format(os.path.basename(cli.filename), 
+                                                cli.series, offset, 
+                                                tuple(roi_size_um),
+                                                u'\u00b5m')
     return title
 
 class VisHandler(Handler):

@@ -254,8 +254,7 @@ class Visualization(HasTraits):
             print("loading from previously processed image")
             self.roi = plot_3d.prepare_roi(cli.image5d_proc, cli.channel, curr_roi_size, 
                                            offset=curr_offset)
-        mlab_3d = cli.mlab_3d
-        if mlab_3d == cli.MLAB_3D_TYPES[0]:
+        if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             plot_3d.plot_3d_surface(self.roi, self)
         else:
             plot_3d.plot_3d_points(self.roi, self)

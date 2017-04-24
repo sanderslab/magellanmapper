@@ -19,6 +19,8 @@ from clrbrain import config
 
 INTENSITY_MIN = 0.2 # clip below this threshold
 mask_dividend = 100000.0
+MLAB_3D_TYPES = ("surface", "point")
+mlab_3d = MLAB_3D_TYPES[1]
 
 def denoise(roi):
     """Denoises an image.

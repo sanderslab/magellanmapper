@@ -80,8 +80,6 @@ sub_rois = None
 
 PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
 proc_type = None
-MLAB_3D_TYPES = ("surface", "point")
-mlab_3d = MLAB_3D_TYPES[1]
 
 def denoise_sub_roi(coord):
     """Denoises the ROI within an array of ROIs.
@@ -172,7 +170,7 @@ def main():
     parser.add_argument("--offset")
     parser.add_argument("--size")
     parser.add_argument("--proc")
-    parser.add_argument("--vis")
+    parser.add_argument("--mlab_3d")
     parser.add_argument("--res")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
@@ -230,13 +228,13 @@ def main():
         else:
             print("Did not recognize processing type: {}"
                   .format(args.proc))
-    if args.vis is not None:
-        if args.vis in MLAB_3D_TYPES:
-            mlab_3d = args.vis
-            print("3D rendering set to {}".format(mlab_3d))
+    if args.mlab_3d is not None:
+        if args.mlab_3d in plot_3d.MLAB_3D_TYPES:
+            plot_3d.mlab_3d = args.mlab_3d
+            print("3D rendering set to {}".format(plot_3d.mlab_3d))
         else:
             print("Did not recognize 3D rendering type: {}"
-                  .format(args.vis))
+                  .format(args.mlab_3d))
     if args.res is not None:
         res_split = args.res.split(",")
         if len(res_split) >= 3:

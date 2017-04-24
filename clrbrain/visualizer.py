@@ -328,8 +328,7 @@ class Visualization(HasTraits):
         self.show_3d()
     
     def _btn_segment_trait_fired(self, segs=None):
-        mlab_3d = cli.mlab_3d
-        if mlab_3d == cli.MLAB_3D_TYPES[0]:
+        if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
             self.segments = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.segments, self)

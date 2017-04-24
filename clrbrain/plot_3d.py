@@ -123,6 +123,20 @@ def plot_3d_surface(roi, vis):
     # similar output to contour_surface
     #contour = pipeline.iso_surface(scalars)
     
+def _shadow_img2d(img2d, shape, axis, vis):
+    img2d = np.swapaxes(img2d, 0, 1)
+    img2d[img2d < 1] = 0
+    extra_z = (shape[axis] - shape[0]) // 2
+    if extra_z > 0:
+        img2d_full = np.zeros(shape[1] * shape[2])
+        img2d_full = np.reshape(img2d_full, [shape[1], shape[2]])
+        print(img2d_full.shape)
+        print(img2d.shape)
+        print(extra_z, extra_z+img2d.shape[1])
+        img2d_full[:, extra_z:extra_z+img2d.shape[1]] = img2d
+        img2d = img2d_full
+    return vis.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
+
 def plot_3d_points(roi, vis):
     """Plots all pixels as points in 3D space.
     
@@ -176,10 +190,35 @@ def plot_3d_points(roi, vis):
                                 line_width=1.0, vmax=1.0, 
                                 vmin=0.0, transparent=True)
         print("time for 3D points display: {}".format(time() - time_start))
-    """
+    '''
     for i in range(roi_1d.size):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
-    """
+    '''
+    
+    # 2D overlays on boders
+    
+    # xy-plane from bottom z
+    #roi_xy = np.swapaxes(roi, 1, 2)
+    img2d = np.copy(roi[shape[0] // 2, :, :])
+    img2d_mlab = _shadow_img2d(img2d, shape, 0, vis)
+    img2d_mlab.actor.position = [10, 10, -10]
+    
+    # yz-plane from top y
+    '''
+    img2d = np.add(img2d, roi_xy[:, shape[1] // 2, :])
+    img2d = np.add(img2d, roi_xy[:, shape[1] - 1, :])
+    img2d = np.divide(img2d, 2)
+    '''
+    img2d = np.copy(roi[:, shape[1] // 2, :])
+    img2d_mlab = _shadow_img2d(img2d, shape, 2, vis)
+    img2d_mlab.actor.position = [-10, 10, 5]
+    img2d_mlab.actor.orientation = [90, 90, 0]
+    
+    # xz-plane from top x
+    img2d = np.copy(roi[:, :, shape[2] // 2])
+    img2d_mlab = _shadow_img2d(img2d, shape, 1, vis)
+    img2d_mlab.actor.position = [10, -10, 5]
+    img2d_mlab.actor.orientation = [90, 0, 0]
 
 def prepare_roi(image5d, channel, roi_size, offset=(0, 0, 0)):
     """Finds and shows the region of interest.

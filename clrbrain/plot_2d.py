@@ -29,6 +29,7 @@ from matplotlib_scalebar.scalebar import SI_LENGTH
 from clrbrain import detector
 
 colormap_2d = cm.inferno
+#colormap_2d = cm.gray
 savefig = None
 verify = False
 # TODO: may want to base on scaling factor instead

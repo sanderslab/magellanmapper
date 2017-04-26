@@ -123,20 +123,6 @@ def plot_3d_surface(roi, vis):
     # similar output to contour_surface
     #contour = pipeline.iso_surface(scalars)
     
-def _shadow_img2d(img2d, shape, axis, vis):
-    img2d = np.swapaxes(img2d, 0, 1)
-    img2d[img2d < 1] = 0
-    extra_z = (shape[axis] - shape[0]) // 2
-    if extra_z > 0:
-        img2d_full = np.zeros(shape[1] * shape[2])
-        img2d_full = np.reshape(img2d_full, [shape[1], shape[2]])
-        print(img2d_full.shape)
-        print(img2d.shape)
-        print(extra_z, extra_z+img2d.shape[1])
-        img2d_full[:, extra_z:extra_z+img2d.shape[1]] = img2d
-        img2d = img2d_full
-    return vis.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
-
 def plot_3d_points(roi, vis):
     """Plots all pixels as points in 3D space.
     
@@ -194,27 +180,35 @@ def plot_3d_points(roi, vis):
     for i in range(roi_1d.size):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
     '''
-    
+
+def _shadow_img2d(img2d, shape, axis, vis):
+    img2d = np.swapaxes(img2d, 0, 1)
+    img2d[img2d < 1] = 0
+    extra_z = (shape[axis] - shape[0]) // 2
+    if extra_z > 0:
+        img2d_full = np.zeros(shape[1] * shape[2])
+        img2d_full = np.reshape(img2d_full, [shape[1], shape[2]])
+        img2d_full[:, extra_z:extra_z+img2d.shape[1]] = img2d
+        img2d = img2d_full
+    return vis.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
+
+def plot_2d_shadows(roi, vis, segments):
     # 2D overlays on boders
+    shape = roi.shape
     
-    # xy-plane from bottom z
+    # xy-plane
     #roi_xy = np.swapaxes(roi, 1, 2)
     img2d = np.copy(roi[shape[0] // 2, :, :])
     img2d_mlab = _shadow_img2d(img2d, shape, 0, vis)
     img2d_mlab.actor.position = [10, 10, -10]
     
-    # yz-plane from top y
-    '''
-    img2d = np.add(img2d, roi_xy[:, shape[1] // 2, :])
-    img2d = np.add(img2d, roi_xy[:, shape[1] - 1, :])
-    img2d = np.divide(img2d, 2)
-    '''
+    # xz-plane
     img2d = np.copy(roi[:, shape[1] // 2, :])
     img2d_mlab = _shadow_img2d(img2d, shape, 2, vis)
     img2d_mlab.actor.position = [-10, 10, 5]
     img2d_mlab.actor.orientation = [90, 90, 0]
     
-    # xz-plane from top x
+    # yz-plane
     img2d = np.copy(roi[:, :, shape[2] // 2])
     img2d_mlab = _shadow_img2d(img2d, shape, 1, vis)
     img2d_mlab.actor.position = [10, -10, 5]
@@ -271,7 +265,14 @@ def show_surface_labels(segments, vis):
     #surf2 = vis.scene.mlab.points3d(labels)
     return None
 
-def show_blobs(segments, vis):
+def _shadow_blob(x, y, z, cmap_indices, cmap, scale, vis):
+    pts_shadows = vis.scene.mlab.points3d(x, y, z, cmap_indices, 
+                                          mode="2dcircle", scale_mode="none", 
+                                          scale_factor=scale*0.8, resolution=20)
+    pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
+    return pts_shadows
+
+def show_blobs(segments, vis, show_shadows=False):
     """Shows 3D blob segments.
     
     Args:
@@ -298,10 +299,31 @@ def show_blobs(segments, vis):
         cmap[2, 0:3] = 204, 121, 167 # reddish purple
         cmap[3, 0:3] = 0, 0, 0 # black
     cmap_indices = np.arange(segments.shape[0])
+    
+    if show_shadows:
+        # show projections onto side planes
+        segs_ones = np.ones(segments.shape[0])
+        # xy
+        _shadow_blob(segments[:, 2], segments[:, 1], segs_ones * -10, cmap_indices,
+                     cmap, scale, vis)
+        # xz
+        shadows = _shadow_blob(segments[:, 2], segments[:, 0], segs_ones * -10, cmap_indices,
+                     cmap, scale, vis)
+        shadows.actor.actor.orientation = [90, 0, 0]
+        shadows.actor.actor.position = [0, -20, 0]
+        # yz
+        shadows = _shadow_blob(segments[:, 1], segments[:, 0], segs_ones * -10, cmap_indices,
+                     cmap, scale, vis)
+        shadows.actor.actor.orientation = [90, 90, 0]
+        shadows.actor.actor.position = [0, 0, 0]
+        
+    # show the blobs
     pts = vis.scene.mlab.points3d(segments[:, 2], segments[:, 1], 
                             segments[:, 0], cmap_indices, #segments[:, 3],
-                            scale_mode="none", scale_factor=scale) 
+                            scale_mode="none", scale_factor=scale, resolution=20) 
     pts.module_manager.scalar_lut_manager.lut.table = cmap
+    
+    
     return pts, cmap, scale
 
 def normalize(array, minimum, maximum):

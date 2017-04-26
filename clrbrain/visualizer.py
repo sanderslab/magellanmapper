@@ -155,6 +155,8 @@ class Visualization(HasTraits):
                                selected_row="segs_selected")
     segs_cmap = None
     segs_feedback = Str("Segments output")
+    _check_list_3d = List
+    _DEFAULTS_3D = ["Side panes", "Side circles", "No raw"]
     _check_list_2d = List
     _DEFAULTS_2D = ["Filtered", "Verify"]
     _planes_2d = List
@@ -254,10 +256,18 @@ class Visualization(HasTraits):
             print("loading from previously processed image")
             self.roi = plot_3d.prepare_roi(cli.image5d_proc, cli.channel, curr_roi_size, 
                                            offset=curr_offset)
-        if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
-            plot_3d.plot_3d_surface(self.roi, self)
+        # show raw points unless selected not to
+        if self._DEFAULTS_3D[2] not in self._check_list_3d:
+            if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
+                plot_3d.plot_3d_surface(self.roi, self)
+            else:
+                plot_3d.plot_3d_points(self.roi, self)
         else:
-            plot_3d.plot_3d_points(self.roi, self)
+            self.scene.mlab.clf()
+        
+        # show shadow images around the points if selected
+        if self._DEFAULTS_3D[0] in self._check_list_3d:
+            plot_3d.plot_2d_shadows(self.roi, self, self.segments)
         
         # reset segments
         self.segments = None
@@ -355,7 +365,9 @@ class Visualization(HasTraits):
                     # transpose to make coordinates relative to offset
                     segs = np.copy(segs)
                 self.segments = np.subtract(segs, (z, y, x, 0, 0))
-            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(self.segments, self)
+            show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
+            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(self.segments, self, 
+                                                                      show_shadows)
             self._segs_scale_high = scale * 2
             self.segs_scale = scale
     
@@ -477,10 +489,11 @@ class Visualization(HasTraits):
                             mode="slider")
                     )
                 ),
-                HGroup(
-                    Item("btn_redraw_trait", show_label=False), 
-                    Item("btn_segment_trait", show_label=False), 
-                    Item("btn_2d_trait", show_label=False)
+                Item(
+                     "_check_list_3d", 
+                     editor=CheckListEditor(values=_DEFAULTS_3D, cols=3), 
+                     style="custom",
+                     label="3D options"
                 ),
                 HGroup(
                     Item(
@@ -501,6 +514,11 @@ class Visualization(HasTraits):
                      editor=CheckListEditor(values=_DEFAULTS_STYLES_2D), 
                      style="simple",
                      label="2D Styles"
+                ),
+                HGroup(
+                    Item("btn_redraw_trait", show_label=False), 
+                    Item("btn_segment_trait", show_label=False), 
+                    Item("btn_2d_trait", show_label=False)
                 ),
                 Item(
                     "segs_scale",

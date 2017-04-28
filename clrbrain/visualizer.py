@@ -158,7 +158,7 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "No raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "Verify"]
+    _DEFAULTS_2D = ["Filtered", "Only save inside"]
     _planes_2d = List
     _DEFAULTS_PLANES_2D = ["xy", "xz"]
     _styles_2d = List
@@ -199,7 +199,8 @@ class Visualization(HasTraits):
             return
         segs_transposed = []
         curr_roi_size = self.roi_array[0].astype(int)
-        print("inserting segments to database with border widths {}".format(self.border))
+        print("Preparing to insert segments to database with border widths {}"
+              .format(self.border))
         feedback = [ "Preparing segments:" ]
         for i in range(len(self.segments)):
             seg = self.segments[i]
@@ -219,21 +220,25 @@ class Visualization(HasTraits):
                 else:
                     feedback.append("{} outside, ignored".format(self._format_seg(seg)))
         
-        # inserts experiment if not already added, then segments
-        feedback.append("\nInserting segments:")
-        for seg in segs_transposed:
-            feedback.append("{} inserted".format(self._format_seg(seg)))
-        exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
-                                                    os.path.basename(cli.filename),
-                                                    datetime.datetime(1000, 1, 1))
-        roi_id, out = sqlite.insert_roi(cli.conn, cli.cur, exp_id, cli.series, 
-                                   np.add(self._curr_offset(), self.border).tolist(), 
-                                   np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
-        sqlite.insert_blobs(cli.conn, cli.cur, roi_id, segs_transposed)
-        roi = sqlite.select_roi(cli.cur, roi_id)
-        self._append_roi(roi, self._rois_dict)
-        self.rois_selections_class.selections = list(self._rois_dict.keys())
-        feedback.append(out)
+        if np.any(np.array(segs_transposed)[:, 4] == -1):
+            feedback.insert(0, "Segments *NOT* added. Please ensure that all segments in the ROI"
+                               "have been verified.\n")
+        else:
+            # inserts experiment if not already added, then segments
+            feedback.append("\nInserting segments:")
+            for seg in segs_transposed:
+                feedback.append("{} inserted".format(self._format_seg(seg)))
+            exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
+                                                        os.path.basename(cli.filename),
+                                                        datetime.datetime(1000, 1, 1))
+            roi_id, out = sqlite.select_or_insert_roi(cli.conn, cli.cur, exp_id, cli.series, 
+                                       np.add(self._curr_offset(), self.border).tolist(), 
+                                       np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
+            sqlite.insert_blobs(cli.conn, cli.cur, roi_id, segs_transposed)
+            roi = sqlite.select_roi(cli.cur, roi_id)
+            self._append_roi(roi, self._rois_dict)
+            self.rois_selections_class.selections = list(self._rois_dict.keys())
+            feedback.append(out)
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str
@@ -276,9 +281,8 @@ class Visualization(HasTraits):
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
-        # TODO: change from (x, y, z) order?
-        self.border = np.ceil(np.multiply(detector.calc_scaling_factor(), 
-                                          chunking.overlap_factor))[::-1]
+        self._set_border(True)
+        
         # dimension max values in pixels
         if cli.image5d_proc is not None:
             size = cli.image5d_proc.shape[0:3]
@@ -432,9 +436,26 @@ class Visualization(HasTraits):
             print("no roi found")
             plot_2d.verify = False
     
+    @on_trait_change('_check_list_2d')
+    def update_2d_options(self):
+        if self._DEFAULTS_2D[1] in self._check_list_2d:
+            self._set_border()
+        else:
+            self._set_border(True)
+    
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
     
+    def _set_border(self, reset=False):
+        # TODO: change from (x, y, z) order?
+        if reset:
+            self.border = np.zeros(3)
+            print("set border to zeros")
+        else:
+            self.border = np.ceil(np.multiply(detector.calc_scaling_factor(), 
+                                              chunking.overlap_factor))[::-1]
+        print("set border to {}".format(self.border))
+        
     @property
     def segments(self):
         return self._segments

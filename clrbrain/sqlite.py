@@ -12,6 +12,8 @@ import datetime
 import sqlite3
 import numpy as np
 
+from clrbrain import cli
+
 db_path = "clrbrain.db"
 
 def _create_db():
@@ -29,11 +31,13 @@ def _create_db():
     cur.execute("CREATE TABLE rois (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                    "experiment_id INTEGER, series INTEGER, "
                                    "offset_x INTEGER, offset_y INTEGER, offset_z INTEGER, "
-                                   "size_x INTEGER, size_y INTEGER, size_z INTEGER)")
+                                   "size_x INTEGER, size_y INTEGER, size_z INTEGER,"
+                "UNIQUE (experiment_id, series, offset_x, offset_y, offset_z))")
     cur.execute("CREATE TABLE blobs (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                     "roi_id INTEGER, "
                                     "x INTEGER, y INTEGER, z INTEGER, radius REAL, "
-                                    "confirmed INTEGER)")
+                                    "confirmed INTEGER,"
+                "UNIQUE (roi_id, x, y, z))")
     
     conn.commit()
     return conn, cur
@@ -111,12 +115,23 @@ def insert_roi(conn, cur, exp_id, series, offset, size):
         cur.lastrowid: The number of rows inserted, or -1 if none.
         feedback: Feedback string.
     """
-    cur.execute("INSERT INTO rois (experiment_id, series, offset_x, offset_y, offset_z, "
-                "size_x, size_y, size_z) "
+    cur.execute("INSERT OR IGNORE INTO rois (experiment_id, series, offset_x, offset_y, "
+                                            "offset_z, size_x, size_y, size_z) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (exp_id, series, *offset, *size))
     feedback = "ROI inserted with offset {} and size {}".format(offset, size)
+    print(feedback)
     conn.commit()
     return cur.lastrowid, feedback
+
+def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
+    cur.execute("SELECT * FROM rois WHERE experiment_id = ? AND series = ? AND offset_x = ? AND "
+                "offset_y = ? AND offset_z = ?", (exp_id, series, *offset))
+    row = cur.fetchone()
+    if row is not None and len(row) > 0:
+        print("selected ROI {}".format(row[0]))
+        return row[0], "Found ROI {}".format(row[0])
+    else:
+        return insert_roi(conn, cur, exp_id, series, offset, size)
 
 def select_rois(cur, exp_id):
     """Selects ROIs from the given experiment
@@ -153,7 +168,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
         blobs_list.append(blob_entry)
         if blob[4] == 1:
             confirmed = confirmed + 1
-    cur.executemany("INSERT INTO blobs (roi_id, x, y, z, radius, confirmed) "
+    cur.executemany("INSERT OR REPLACE INTO blobs (roi_id, x, y, z, radius, confirmed) "
                     "VALUES (?, ?, ?, ?, ?, ?)", blobs_list)
     print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
@@ -174,8 +189,7 @@ def select_blobs(cur, roi_id):
         rowi += 1
     return rows, blobs
 
-if __name__ == "__main__":
-    print("Starting sqlite.py...")
+def _test_db():
     # simple database test
     conn, cur = start_db()
     exp_name = "TextExp"
@@ -183,4 +197,45 @@ if __name__ == "__main__":
     insert_blobs(conn, cur, exp_id, 12, [[3, 2, 5, 23.4], [2, 3, 7, 13.2]])
     conn.commit()
     conn.close()
+
+if __name__ == "__main__":
+    print("Starting sqlite.py...")
+    cli.main(True)
+    conn, cur = start_db()
+    exp = select_experiment(cur, os.path.basename(cli.filename))
+    rois = select_rois(cur, exp[0][0])
+    blobs = []
+    for roi in rois:
+        count, bb = select_blobs(cur, roi[0])
+        blobs.extend(bb)
+    blobs = np.array(blobs)
+    blobs_true = blobs[blobs[:, 4] == 1] # all pos
+    # radius = 0 indicates that the blob was manually added, not detected
+    blobs_true_detected = blobs_true[np.nonzero(blobs_true[:, 3])] # true pos
+    # not detected neg, so no "true neg" but only false pos
+    blobs_false = blobs[blobs[:, 4] == 0] # false pos
+    all_pos = blobs_true.shape[0]
+    true_pos = blobs_true_detected.shape[0]
+    false_pos = blobs_false.shape[0]
+    sens = float(true_pos) / all_pos
+    ppv = float(true_pos) / (true_pos + false_pos)
     
+    # most conservative, where blobs tested pos that are only maybes are treated
+    # as false pos, and missed blobs that are maybes are treated as pos
+    blobs_maybe = blobs[blobs[:, 4] == 2] # all unknown
+    # tested pos but only maybe in reality, so treated here as false pos
+    blobs_maybe_from_detected = blobs_maybe[np.nonzero(blobs_maybe[:, 3])]
+    false_pos_from_maybe = blobs_maybe_from_detected.shape[0]
+    # adds the maybes that were undetected
+    all_true_with_maybes = all_pos + blobs_maybe.shape[0] - false_pos_from_maybe
+    false_pos_with_maybes = false_pos + false_pos_from_maybe
+    sens_maybe_missed = float(true_pos) / all_true_with_maybes
+    ppv_maybe_missed = float(true_pos) / (true_pos + false_pos_with_maybes)
+    
+    print("Ignoring maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
+          "sensitivity = {}\nPPV = {}\n"
+          .format(all_pos, true_pos, false_pos, sens, ppv))
+    print("Including maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
+          "sensitivity = {}\nPPV = {}"
+          .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
+                  sens_maybe_missed, ppv_maybe_missed))

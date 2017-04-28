@@ -154,7 +154,7 @@ def collect_segments(segments_all, segments, region, tol):
         segments_all = np.concatenate((segments_all, segments))
     return segments_all
 
-def main():
+def main(process_args_only=False):
     """Starts the visualization GUI.
     
     Processes command-line arguments.
@@ -243,6 +243,9 @@ def main():
         else:
             print("Resolution ({}) should be given as 3 values (x, y, z)"
                   .format(args.res))
+    
+    if process_args_only:
+        return
     
     # loads the image, database, and GUI
     global image5d, conn, cur

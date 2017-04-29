@@ -23,6 +23,7 @@ Command-line arguments in addition to those from attributes listed below:
         cli.py, though order is natural here as command-line argument).
     * padding_2d: Padding around the ROI given as (x, y, z) from which to 
         include segments and and show further 2D planes.
+    * mlab_3d: 3D visualization mode (see plot_3d.py).
 
 Attributes:
     filename: The filename of the source images. A corresponding file with
@@ -43,12 +44,6 @@ Attributes:
           stack and exits non-interactively.
         * "load": Loads already processed images and segments.
     proc: The chosen processing mode
-    MLAB_3D_TYPES: Tuple of types of 3D visualizations.
-        * "surface": Renders surfaces in Mayavi contour and
-          surface.
-        * "point": Renders as raw points, minus points under
-          the intensity_min threshold.
-    mlab_3d: The chosen type.
 """
 
 import os

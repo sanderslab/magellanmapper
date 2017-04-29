@@ -18,7 +18,12 @@ db_path = "clrbrain.db"
 
 def _create_db():
     """Creates the database including initial schema insertion.
+    
+    Raises:
+        FileExistsError: If file with the same path already exists.
     """
+    # creates empty database in the current working directory if
+    # not already there.
     if os.path.exists(db_path):
         raise FileExistsError("{} already exists; please rename"
                               " or remove it first".format(db_path))
@@ -26,16 +31,22 @@ def _create_db():
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
+    # experiments table
     cur.execute("CREATE TABLE experiments (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                           "name TEXT, date DATE)")
+    
+    # ROIs table
     cur.execute("CREATE TABLE rois (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                    "experiment_id INTEGER, series INTEGER, "
-                                   "offset_x INTEGER, offset_y INTEGER, offset_z INTEGER, "
-                                   "size_x INTEGER, size_y INTEGER, size_z INTEGER,"
+                                   "offset_x INTEGER, offset_y INTEGER, "
+                                   "offset_z INTEGER, size_x INTEGER, "
+                                   "size_y INTEGER, size_z INTEGER,"
                 "UNIQUE (experiment_id, series, offset_x, offset_y, offset_z))")
+    
+    # blobs tabls
     cur.execute("CREATE TABLE blobs (id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                                    "roi_id INTEGER, "
-                                    "x INTEGER, y INTEGER, z INTEGER, radius REAL, "
+                                    "roi_id INTEGER, x INTEGER, y INTEGER, "
+                                    "z INTEGER, radius REAL, "
                                     "confirmed INTEGER,"
                 "UNIQUE (roi_id, x, y, z))")
     
@@ -66,7 +77,8 @@ def insert_experiment(conn, cur, name, date):
         name: Name of the experiment.
         date: The date as a SQLite date object.
     """
-    cur.execute("INSERT INTO experiments (name, date) VALUES (?, ?)", (name, date))
+    cur.execute("INSERT INTO experiments (name, date) VALUES (?, ?)", 
+                (name, date))
     print("{} experiment inserted".format(name))
     conn.commit()
 
@@ -76,8 +88,13 @@ def select_experiment(cur, name):
     Args:
         cur: Connection's cursor.
         name: Name of the experiment.
+    
+    Returns:
+        All of the experiments with the given name, or an empty list 
+            if none are found.
     """
-    cur.execute("SELECT id, name, date FROM experiments WHERE name = ?", (name, ))
+    cur.execute("SELECT id, name, date FROM experiments WHERE name = ?", 
+                (name, ))
     rows = cur.fetchall()
     return rows
 
@@ -90,6 +107,9 @@ def select_or_insert_experiment(conn, cur, exp_name, date):
         cur: Connection's cursor.
         exp_name: Name of the experiment, typically the filename.
         date: The date as a SQLite date object.
+    
+    Returns:
+        The ID fo the selected or inserted experiment.
     """
     exps = select_experiment(cur, exp_name)
     if len(exps) >= 1:
@@ -115,16 +135,35 @@ def insert_roi(conn, cur, exp_id, series, offset, size):
         cur.lastrowid: The number of rows inserted, or -1 if none.
         feedback: Feedback string.
     """
-    cur.execute("INSERT OR IGNORE INTO rois (experiment_id, series, offset_x, offset_y, "
-                                            "offset_z, size_x, size_y, size_z) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (exp_id, series, *offset, *size))
+    cur.execute("INSERT OR IGNORE INTO rois (experiment_id, series, "
+                                             "offset_x, offset_y, "
+                                             "offset_z, size_x, size_y, "
+                                             "size_z) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+                (exp_id, series, *offset, *size))
     feedback = "ROI inserted with offset {} and size {}".format(offset, size)
     print(feedback)
     conn.commit()
     return cur.lastrowid, feedback
 
 def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
-    cur.execute("SELECT * FROM rois WHERE experiment_id = ? AND series = ? AND offset_x = ? AND "
+    """Selects an ROI from the given parameters, or inserts the 
+    experiment if not found.
+    
+    Args:
+        conn: The connection.
+        cur: Connection's cursor.
+        exp_id: ID of the experiment.
+        series: Series within the experiment.
+        offset: ROI offset as (x, y, z).
+        size: ROI size as (x, y, z)
+    
+    Returns:
+        row_id: ID of the selected or inserted row.
+        feedback: User feedback on the result.
+    """
+    cur.execute("SELECT * FROM rois WHERE experiment_id = ? "
+                "AND series = ? AND offset_x = ? AND "
                 "offset_y = ? AND offset_z = ?", (exp_id, series, *offset))
     row = cur.fetchone()
     if row is not None and len(row) > 0:
@@ -146,12 +185,21 @@ def select_rois(cur, exp_id):
     return rows
 
 def select_roi(cur, roi_id):
+    """Selects an ROI from the ID.
+    
+    Params:
+        cur: Connection's cursor.
+        roi_id: The ID of the ROI.
+    
+    Returns:
+        The ROI.
+    """
     cur.execute("SELECT * FROM rois WHERE id = ?", (roi_id, ))
     row = cur.fetchone()
     return row
 
 def insert_blobs(conn, cur, roi_id, blobs):
-    """Inserts blobs into the database.
+    """Inserts blobs into the database, replacing any duplicate blobs.
     
     Args:
         conn: The connection.
@@ -179,6 +227,10 @@ def select_blobs(cur, roi_id):
     Args:
         cur: Connection's cursor.
         experiment_id: ID of the experiment.
+    
+    Returns:
+        rows: The number of rows selected.
+        blobs: Blobs in the given ROI.
     """
     cur.execute("SELECT * FROM blobs WHERE roi_id = ?", (roi_id, ))
     rows = cur.fetchall()
@@ -200,8 +252,12 @@ def _test_db():
 
 if __name__ == "__main__":
     print("Starting sqlite.py...")
+    # parses arguments and sets up the DB
     cli.main(True)
     conn, cur = start_db()
+    
+    # selects experiment based on command-line arg and gathers all ROIs
+    # and blobs within them
     exp = select_experiment(cur, os.path.basename(cli.filename))
     rois = select_rois(cur, exp[0][0])
     blobs = []
@@ -209,6 +265,8 @@ if __name__ == "__main__":
         count, bb = select_blobs(cur, roi[0])
         blobs.extend(bb)
     blobs = np.array(blobs)
+    
+    # basic stats based on confirmation status, ignoring maybes
     blobs_true = blobs[blobs[:, 4] == 1] # all pos
     # radius = 0 indicates that the blob was manually added, not detected
     blobs_true_detected = blobs_true[np.nonzero(blobs_true[:, 3])] # true pos
@@ -232,6 +290,7 @@ if __name__ == "__main__":
     sens_maybe_missed = float(true_pos) / all_true_with_maybes
     ppv_maybe_missed = float(true_pos) / (true_pos + false_pos_with_maybes)
     
+    # prints stats
     print("Ignoring maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
           "sensitivity = {}\nPPV = {}\n"
           .format(all_pos, true_pos, false_pos, sens, ppv))

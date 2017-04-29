@@ -273,7 +273,7 @@ class Visualization(HasTraits):
         
         # show shadow images around the points if selected
         if self._DEFAULTS_3D[0] in self._check_list_3d:
-            plot_3d.plot_2d_shadows(self.roi, self, self.segments)
+            plot_3d.plot_2d_shadows(self.roi, self)
         
         # reset segments
         self.segments = None

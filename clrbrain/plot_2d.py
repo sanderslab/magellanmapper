@@ -213,6 +213,16 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             to None.
         plane: The plane to show in each 2D plot, with "xy" to show the 
             XY plane (default) and "xz" to show XZ plane.
+        padding: The amount of padding in pixels, defaulting to the 
+            padding attribute.
+        zoom_levels: Number of zoom levels to include, with n - 1 levels
+            included at the overview level, and the last one viewed
+            as the series of ROI-sized plots; defaults to 2.
+        single_zoom_row: True if the ROI-sized zoomed plots should be
+            displayed on a single row; defaults to False.
+        z_level: Position of the z-plane shown in the overview plots,
+            based on the Z_LEVELS attribute constant; defaults to 
+            Z_LEVELS[0].
     """
     fig = plt.figure()
     # black text with transluscent background the color of the figure
@@ -240,6 +250,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         z_overview = z_start + z_planes
     print("z_overview: {}".format(z_overview))
     
+    # pick image based on chosen orientation 
     if plane == "xz":
         # TODO: base on scaling vs image shape vs nothing?
         #aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
@@ -283,17 +294,21 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         img2d_zoom = img2d
         patch_offset = offset[0:2]
         if i > 0:
+            # move origin progressively closer withe ach zoom level
             origin = np.floor(np.multiply(offset[0:2], zoom_levels + i - 1) 
                               / (zoom_levels + i)).astype(int)
             zoom_shape = np.flipud(img2d.shape)[0:2]
+            # progressively decrease size, zooming in for each level
             size = np.floor(zoom_shape / (i + 3)).astype(int)
             end = np.add(origin, size)
+            # keep the zoomed area within the full 2D image
             for j in range(len(origin)):
                 if end[j] > zoom_shape[j]:
                     origin[j] -= end[j] - zoom_shape[j]
             img2d_zoom = img2d_zoom[origin[1]:end[1], origin[0]:end[0]]
             print(img2d_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
+        # show the zoomed 2D image along with rectangle showing ROI
         ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect)
         ax.add_patch(patches.Rectangle(patch_offset, roi_size[0], roi_size[1], 
                                        fill=False, edgecolor="yellow"))
@@ -319,10 +334,11 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # and they don't appear to be individually editable
     seg_patch_dict = {}
     
+    # sub-gridspec for fully zoomed plots to allow flexible number of columns
     gs_zoomed = gridspec.GridSpecFromSubplotSpec(zoom_plot_rows, zoom_plot_cols, 
                                                  gs[1, :],
                                                  wspace=0.1, hspace=0.1)
-    
+    # plot the fully zoomed plots
     for i in range(zoom_plot_rows):
         # adjust columns for last row to number of plots remaining
         cols = zoom_plot_cols
@@ -519,6 +535,17 @@ def _hide_axes(ax):
     ax.get_yaxis().set_visible(False)
 
 def extract_plane(image5d, channel, offset, name):
+    """Extracts a single 2D plane and saves to file.
+    
+    Params:
+        image5d: The full image stack.
+        channel: Channel to view.
+        offset: Offset given as (x, y, z), which will determine the
+            z value of the plane to extract; x and y ignored for now.
+        name: Name of the resulting file, without the extension, which
+            will be chosen based on the savefig attribute.
+    """
+    # get the z-plane
     z_start = offset[2]
     if image5d.ndim >= 5:
         img2d = image5d[0, z_start, :, :, channel]
@@ -527,10 +554,7 @@ def extract_plane(image5d, channel, offset, name):
         img2d = image5d[0, z_start, :, :]
     else:
         img2d = image5d[z_start, :, :]
-    #fig = plt.figure()
-    #ax = plt.imshow(img2d, cmap=colormap_2d)
     if savefig is not None:
         filename = name + "." + savefig
         print("extracting plane as {}".format(filename))
-        #plt.savefig(name)
         plt.imsave(filename, img2d, cmap=colormap_2d)

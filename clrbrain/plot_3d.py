@@ -6,6 +6,12 @@ Provides options for drawing as surfaces or points.
 
 Attributes:
     mask_dividend: Maximum number of points to show.
+    MLAB_3D_TYPES: Tuple of types of 3D visualizations.
+        * "surface": Renders surfaces in Mayavi contour and
+          surface.
+        * "point": Renders as raw points, minus points under
+          the intensity_min threshold.
+    mlab_3d: The chosen type.
 """
 
 from time import time
@@ -17,7 +23,7 @@ from skimage import filters
 
 from clrbrain import config
 
-INTENSITY_MIN = 0.2 # clip below this threshold
+_INTENSITY_MIN = 0.2 # clip below this threshold
 mask_dividend = 100000.0
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
@@ -38,7 +44,7 @@ def denoise(roi):
     denoised = (denoised - vmin) / (vmax - vmin)
     
     # additional simple thresholding
-    denoised = np.clip(denoised, INTENSITY_MIN, 1)
+    denoised = np.clip(denoised, _INTENSITY_MIN, 1)
     '''
     # total variation denoising
     time_start = time()
@@ -67,7 +73,15 @@ def denoise(roi):
     return denoised
 
 def deconvolve(roi):
-    #shape = roi.shape
+    """Deconvolves the image.
+    
+    Params:
+        roi: ROI given as a (z, y, x) subset of image5d.
+    
+    Returns:
+        The ROI deconvolved.
+    """
+    # currently very simple with a generic point spread function
     psf = np.ones((5, 5, 5)) / 125
     roi_deconvolved = restoration.richardson_lucy(roi, psf, iterations=30)
     #roi_deconvolved = restoration.unsupervised_wiener(roi, psf)
@@ -126,7 +140,7 @@ def plot_3d_surface(roi, vis):
 def plot_3d_points(roi, vis):
     """Plots all pixels as points in 3D space.
     
-    Points falling below the "intensity_min" attribute will be
+    Points falling below a given threshold will be
     removed, allowing the viewer to see through the presumed
     background to masses within the region of interest.
     
@@ -182,8 +196,22 @@ def plot_3d_points(roi, vis):
     '''
 
 def _shadow_img2d(img2d, shape, axis, vis):
+    """Shows a plane along the given axis as a shadow parallel to
+    the 3D visualization.
+    
+    Params:
+        img2d: The plane to show.
+        shape: Shape of the ROI.
+        axis: Axis along which the plane lies.
+        vis: Visualization object.
+    
+    Returns:
+        The displayed plane.
+    """
     img2d = np.swapaxes(img2d, 0, 1)
     img2d[img2d < 1] = 0
+    # expands the plane to match the size of the xy plane, with this
+    # plane in the middle
     extra_z = (shape[axis] - shape[0]) // 2
     if extra_z > 0:
         img2d_full = np.zeros(shape[1] * shape[2])
@@ -192,7 +220,14 @@ def _shadow_img2d(img2d, shape, axis, vis):
         img2d = img2d_full
     return vis.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
 
-def plot_2d_shadows(roi, vis, segments):
+def plot_2d_shadows(roi, vis):
+    """Plots 2D shadows in each axis around the 3D visualization.
+    
+    Params:
+        roi: Region of interest.
+        vis: Visualization object on which to draw the contour. Any 
+            current image will be cleared first.
+    """ 
     # 2D overlays on boders
     shape = roi.shape
     
@@ -266,6 +301,18 @@ def show_surface_labels(segments, vis):
     return None
 
 def _shadow_blob(x, y, z, cmap_indices, cmap, scale, vis):
+    """Shows blobs as shadows projected parallel to the 3D visualization.
+    
+    Parmas:
+        x: Array of x-coordinates of blobs.
+        y: Array of y-coordinates of blobs.
+        z: Array of z-coordinates of blobs.
+        cmap_indices: Indices of blobs for the colormap, usually given as a
+            simple ascending sequence the same size as the number of blobs.
+        cmap: The colormap, usually the same as for the segments.
+        scale: Array of scaled size of each blob.
+        vis: The Visualization object.
+    """
     pts_shadows = vis.scene.mlab.points3d(x, y, z, cmap_indices, 
                                           mode="2dcircle", scale_mode="none", 
                                           scale_factor=scale*0.8, resolution=20)
@@ -327,6 +374,15 @@ def show_blobs(segments, vis, show_shadows=False):
     return pts, cmap, scale
 
 def normalize(array, minimum, maximum):
+    """Normalizes an array to fall within the given min and max.
+    
+    Params:
+        min: Minimum value for the array.
+        max: Maximum value for the array.
+    
+    Returns:
+        The normalized array.
+    """
     array += -(np.min(array))
     array /= np.max(array)
     array += minimum

@@ -26,8 +26,8 @@ then
 fi
 
 echo "Creating new conda environment..."
-conda create --name clr01 python=3 pyqt=4
-source activate clr01
+conda create --name clr python=3 pyqt=4
+source activate clr
 
 echo "Conda installing Mayavi and Scikit-image..."
 conda install -c menpo mayavi
@@ -44,12 +44,11 @@ cd ..
 
 echo "Exchanging Scikit-image for GitHub version with 3D blob pull request..."
 conda remove scikit-image
-git clone https://github.com/scikit-image/scikit-image.git
+git clone https://github.com/the4thchild/scikit-image
 cd scikit-image
-git branch blob3d
 git checkout blob3d
-git pull origin pull/2114/head
 pip install -e .
+python setup.py build_ext -i
 cd ..
 
 echo "Pip installing additional packages..."

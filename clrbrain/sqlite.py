@@ -275,6 +275,7 @@ if __name__ == "__main__":
     all_pos = blobs_true.shape[0]
     true_pos = blobs_true_detected.shape[0]
     false_pos = blobs_false.shape[0]
+    false_neg = all_pos - true_pos # not detected but should have been
     sens = float(true_pos) / all_pos
     ppv = float(true_pos) / (true_pos + false_pos)
     
@@ -287,14 +288,15 @@ if __name__ == "__main__":
     # adds the maybes that were undetected
     all_true_with_maybes = all_pos + blobs_maybe.shape[0] - false_pos_from_maybe
     false_pos_with_maybes = false_pos + false_pos_from_maybe
+    false_neg_with_maybes = all_true_with_maybes - true_pos
     sens_maybe_missed = float(true_pos) / all_true_with_maybes
     ppv_maybe_missed = float(true_pos) / (true_pos + false_pos_with_maybes)
     
     # prints stats
     print("Ignoring maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
-          "sensitivity = {}\nPPV = {}\n"
-          .format(all_pos, true_pos, false_pos, sens, ppv))
+          "false neg cells = {}\nsensitivity = {}\nPPV = {}\n"
+          .format(all_pos, true_pos, false_pos, false_neg, sens, ppv))
     print("Including maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
-          "sensitivity = {}\nPPV = {}"
+          "false neg cells = {}\nsensitivity = {}\nPPV = {}"
           .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
-                  sens_maybe_missed, ppv_maybe_missed))
+                  false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))

@@ -2,11 +2,25 @@
 # Process files on Amazon Web Services EC2 server
 # Author: David Young 2017
 
+################################################
+# Imports files from S3 for processing on EC2 and upload
+# back to S3.
+#
+# To run:
+# -Activate conda environment: "source activate clr"
+# -Update clrbrain: "cd src/clrbrain; git fetch; git pull"
+# -Update paths to files for processing, ensuring that the
+#  *_image5d.npz and *_info.npz files are on S3
+# -Run this script with those paths: 
+#  "nohup ./process.sh imgname="/path/to/img.czi" s3="root/path &"
+# -Track results: "tail -f nohup.out"
+# -If all goes well, pick up processed files from S3
+################################################
+
 DEST=/data
 IMG=""
 S3_DIR=""
-SERIES=0
-CHANNEL=1
+SERIES=0 # TODO: make settable
 EXTRA_ARGS=""
 
 PAR_IMGNAME="imgname"

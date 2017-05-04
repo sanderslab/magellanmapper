@@ -89,8 +89,8 @@ def denoise_sub_roi(coord):
             identify the sub-ROI, and the denoised sub-ROI.
     """
     sub_roi = sub_rois[coord]
-    print("denoising sub_roi at {}, with shape {}..."
-          .format(coord, sub_roi.shape))
+    print("denoising sub_roi at {} of {}, with shape {}..."
+          .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     sub_roi = plot_3d.denoise(sub_roi)
     #sub_roi = plot_3d.deconvolve(sub_roi)
     return (coord, sub_roi)
@@ -318,7 +318,8 @@ def main(process_args_only=False):
                                          args=(coord, )))
             for result in pool_results:
                 coord, sub_roi = result.get()
-                print("replacing sub_roi at {} of {}".format(coord, sub_rois.shape))
+                print("replacing sub_roi at {} of {}"
+                      .format(coord, np.add(sub_rois.shape, -1)))
                 sub_rois[coord] = sub_roi
             
             pool.close()
@@ -348,7 +349,8 @@ def main(process_args_only=False):
             seg_rois = np.zeros(sub_rois.shape, dtype=object)
             for result in pool_results:
                 coord, segments = result.get()
-                print("adding segments from sub_roi at {} of {}".format(coord, sub_rois.shape))
+                print("adding segments from sub_roi at {} of {}"
+                      .format(coord, np.add(sub_rois.shape, -1)))
                 seg_rois[coord] = segments
                 #segments_all = collect_segments(segments_all, segments, region, overlap)
             

@@ -7,8 +7,9 @@
 # back to S3.
 #
 # To run:
-# -Activate conda environment: "source activate clr"
 # -Update clrbrain: "cd src/clrbrain; git fetch; git pull"
+# -Activate conda environment: "source activate clr"
+# -Ensure that swap space and data drive are mounted
 # -Update paths to files for processing, ensuring that the
 #  *_image5d.npz and *_info.npz files are on S3
 # -Run this script with those paths: 

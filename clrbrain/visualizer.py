@@ -278,7 +278,7 @@ class Visualization(HasTraits):
         # reset segments
         self.segments = None
         self.segs_pts = None
-    
+        
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
@@ -341,6 +341,17 @@ class Visualization(HasTraits):
             self.roi_array = [curr_roi_size]
         print("ROI size: {}".format(self.roi_array[0].astype(int)))
         self.show_3d()
+        self.scene.mlab.orientation_axes()
+        print("view: {}\nroll: {}".format(self.scene.mlab.view(), self.scene.mlab.roll()))
+    
+    @on_trait_change("scene.activated")
+    def _orient_camera(self):
+        # default camera position after initiation
+        view = self.scene.mlab.view(75, 140, 170)
+        roll = self.scene.mlab.roll(-175)
+        self.scene.mlab.orientation_axes()
+        #self.scene.mlab.outline() # affects zoom after segmenting
+        #self.scene.mlab.axes() # need to adjust units to microns
     
     def _btn_segment_trait_fired(self, segs=None):
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
@@ -375,6 +386,7 @@ class Visualization(HasTraits):
                                                                       show_shadows)
             self._segs_scale_high = scale * 2
             self.segs_scale = scale
+        self.scene.mlab.outline()
     
     @on_trait_change('segs_scale')
     def update_segs_scale(self):

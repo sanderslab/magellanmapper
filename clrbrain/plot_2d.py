@@ -194,7 +194,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     return ax, collection_z
 
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
-                  segs_cmap, border=None, plane="xy", padding=padding,
+                  segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0]):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
@@ -230,7 +230,6 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     fig.suptitle(title, color="black", 
                  bbox=dict(facecolor=fig.get_facecolor(), edgecolor="none", 
                            alpha=0.5))
-    print(segs_cmap)
     
     # adjust array order based on which plane to show
     aspect = 1 # aspect ratio
@@ -241,7 +240,10 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # total number of z-planes
     z_start = offset[2]
     z_planes = roi_size[2]
-    z_planes_padding = padding[2] # additional z's above/below
+    if padding_stack is None:
+        padding_stack = padding
+    z_planes_padding = padding_stack[2] # additional z's above/below
+    print("padding: {}, savefig: {}".format(padding, savefig))
     z_planes = z_planes + z_planes_padding * 2
     z_overview = z_start
     if z_level == Z_LEVELS[1]:
@@ -288,7 +290,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     # overview image, with bottom of offset shown as rectangle
     overview_cols = zoom_plot_cols // zoom_levels
     for i in range(zoom_levels - 1):
-        ax = plt.subplot(gs[0, i])#i*overview_cols:overview_cols*(i+1)])
+        ax = plt.subplot(gs[0, i])
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
         img2d_zoom = img2d

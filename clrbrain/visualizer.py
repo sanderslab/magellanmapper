@@ -387,7 +387,6 @@ class Visualization(HasTraits):
         # shows 2D plots
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
-        print(curr_roi_size)
         # update verify flag
         plot_2d.verify = self._DEFAULTS_2D[1] in self._check_list_2d
         img = cli.image5d

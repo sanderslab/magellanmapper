@@ -172,7 +172,7 @@ def plot_3d_points(roi, vis):
     roi_1d = np.reshape(roi, roi.size)
     
     # clear background points to see remaining structures
-    remove = np.where(roi_1d < 1.3)
+    remove = np.where(roi_1d < 1.3) # smaller threhsold if total var denoising
     x = np.delete(x, remove)
     y = np.delete(y, remove)
     z = np.delete(z, remove)

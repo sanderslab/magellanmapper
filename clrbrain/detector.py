@@ -80,6 +80,11 @@ def segment_blob(roi):
     blobs_log = blob_log(roi, min_sigma=3 * scaling_factor, 
                          max_sigma=30 * scaling_factor, num_sigma=10, 
                          threshold=0.1)
+    '''
+    blobs_log = blob_dog(roi, min_sigma=0.5*scaling_factor, 
+                         max_sigma=30*scaling_factor, 
+                         threshold=0.2)
+    '''
     print("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")

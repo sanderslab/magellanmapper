@@ -104,7 +104,7 @@ def _swap_elements(arr, axis0, axis1, offset=0):
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
-                 segments_adj=None, plane="xy"):
+                 segments_adj=None, plane="xy", roi=None, z_relative=-1):
     """Shows subplots of the region of interest.
     
     Args:
@@ -130,6 +130,11 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             Defaults to None.
         plane: The plane to show in each 2D plot, with "xy" to show the 
             XY plane (default) and "xz" to show XZ plane.
+        roi: A denoised region of interest, to show in place of image5d for the
+            zoomed images. Defaults to None, in which case image5d will be
+            used instead.
+        z_relative: Index of the z-plane relative to the start of the ROI, used
+            when roi is given and ignored otherwise. Defaults to -1.
     """
     ax = plt.subplot(gs[row, col])
     _hide_axes(ax)
@@ -145,18 +150,27 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         plt.imshow(np.zeros(roi_size[0:2]))
     else:
         # show the zoomed in 2D region
-        region = [0, offset[2], 
-                  slice(offset[1], offset[1] + roi_size[1]), 
-                  slice(offset[0], offset[0] + roi_size[0])]
+        
+        # calculate the region depending on whether given ROI directly
+        if roi is None:
+            region = [0, offset[2], 
+                      slice(offset[1], offset[1] + roi_size[1]), 
+                      slice(offset[0], offset[0] + roi_size[0])]
+            roi = image5d
+        else:
+            region = [0, z_relative, slice(0, roi_size[1]), 
+                      slice(0, roi_size[0])]
         # swap columns if showing a different plane
         if plane == "xz":
             region = _swap_elements(region, 1, 2)
-        if image5d.ndim >= 5:
-            roi = image5d[tuple(region + [channel])]
-        elif image5d.ndim == 4:
-            roi = image5d[tuple(region)]
+        # get the zoomed region
+        if roi.ndim >= 5:
+            roi = roi[tuple(region + [channel])]
+        elif roi.ndim == 4:
+            roi = roi[tuple(region)]
         else:
-            roi = image5d[tuple(region[1:])]
+            roi = roi[tuple(region[1:])]
+        
         # highlight borders of z plane at bottom of ROI
         if highlight:
             for spine in ax.spines.values():
@@ -195,7 +209,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
 
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
-                  zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0]):
+                  zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0],
+                  roi=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -223,6 +238,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         z_level: Position of the z-plane shown in the overview plots,
             based on the Z_LEVELS attribute constant; defaults to 
             Z_LEVELS[0].
+        roi: A denoised region of interest for display in fully zoomed plots. 
+            Defaults to None, in which case image5d will be used instead.
     """
     fig = plt.figure()
     # black text with transluscent background the color of the figure
@@ -353,8 +370,14 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             # absolute z value, relative to start of image5d
             z = z_start + z_relative
             zoom_offset = (offset[0], offset[1], z)
-            # fade z-planes outside of ROI
-            alpha = 0.5 if z < z_start or z >= z_start + roi_size[2] else 1
+            
+            # fade z-planes outside of ROI and show only image5d
+            if z < z_start or z >= z_start + roi_size[2]:
+                alpha = 0.5
+                roi_show = None
+            else:
+                alpha = 1
+                roi_show = roi
             
             # collects the segments within the given z-plane
             segments_z = None
@@ -372,7 +395,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                                               zoom_offset, segments, segments_z, 
                                               segs_cmap, alpha, z == z_overview,
                                               border if show_border else None,
-                                              segs_out, plane)
+                                              segs_out, plane, roi_show, 
+                                              z_relative)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)

@@ -402,9 +402,15 @@ class Visualization(HasTraits):
         # update verify flag
         plot_2d.verify = self._DEFAULTS_2D[1] in self._check_list_2d
         img = cli.image5d
-        if self._DEFAULTS_2D[0] in self._check_list_2d and cli.image5d_proc is not None:
+        roi = None
+        if self._DEFAULTS_2D[0] in self._check_list_2d:
             print("showing processed 2D images")
-            img = cli.image5d_proc
+            if cli.image5d_proc is not None:
+                # used for both overview and ROI images
+                img = cli.image5d_proc
+            else:
+                # denoised ROI processed during 3D display
+                roi = self.roi
         elif cli.image5d is None:
             print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)
@@ -415,13 +421,13 @@ class Visualization(HasTraits):
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, self.border,
                                   self._planes_2d[0].lower(), (0, 0, 0), 3, True,
-                                  "middle")
+                                  "middle", roi)
         else:
             # defaults to Square style
             plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, self.border,
-                                  self._planes_2d[0].lower())
+                                  self._planes_2d[0].lower(), roi=roi)
     
     def _btn_save_segments_fired(self):
         self.save_segs()

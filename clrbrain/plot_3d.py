@@ -37,24 +37,26 @@ def denoise(roi):
     Returns:
         Denoised region of interest.
     """
+    settings = config.process_settings
     # enhance contrast and normalize to 0-1 scale
-    vmin, vmax = np.percentile(roi, (5, 99.5))
+    vmin, vmax = np.percentile(roi, (5, settings["clip_vmax"]))
     #print("vmin: {}, vmax: {}".format(vmin, vmax))
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
     
     # additional simple thresholding
     denoised = np.clip(denoised, _INTENSITY_MIN, 1)
-    '''
-    # total variation denoising
-    time_start = time()
-    denoised = restoration.denoise_tv_chambolle(denoised, weight=0.2)
-    #denoised = restoration.denoise_nl_means(denoised, patch_size=10, multichannel=False)
-    print('time for total variation: %f' %(time() - time_start))
+    
+    if settings["tot_var_denoise"]:
+        # total variation denoising
+        time_start = time()
+        denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
+        #denoised = restoration.denoise_nl_means(denoised, patch_size=10, 
+        #                                        multichannel=False)
+        print('time for total variation: %f' %(time() - time_start))
     
     # sharpening
-    '''
-    unsharp_strength = 0.3
+    unsharp_strength = settings["unsharp_strength"]
     blur_size = 8
     denoised = img_as_float(denoised)
     blurred = filters.gaussian(denoised, blur_size)
@@ -172,7 +174,7 @@ def plot_3d_points(roi, vis):
     roi_1d = np.reshape(roi, roi.size)
     
     # clear background points to see remaining structures
-    remove = np.where(roi_1d < 1.3) # smaller threhsold if total var denoising
+    remove = np.where(roi_1d < config.process_settings["points_3d_thresh"])
     x = np.delete(x, remove)
     y = np.delete(y, remove)
     z = np.delete(z, remove)
@@ -383,6 +385,8 @@ def normalize(array, minimum, maximum):
     Returns:
         The normalized array.
     """
+    if len(array) <= 0:
+        return array
     array += -(np.min(array))
     array /= np.max(array)
     array += minimum

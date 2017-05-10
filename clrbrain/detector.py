@@ -15,8 +15,9 @@ import numpy as np
 from skimage import segmentation
 from skimage import measure
 from skimage import morphology
-from skimage.feature import blob_dog, blob_log, blob_doh
+from skimage.feature import blob_log
 
+from clrbrain import config
 from clrbrain import plot_3d
 
 resolutions = None # (z, y, x) order since given from microscope
@@ -77,14 +78,12 @@ def segment_blob(roi):
     # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
     # x scaling alone
     scaling_factor = calc_scaling_factor()[2]
-    blobs_log = blob_log(roi, min_sigma=3 * scaling_factor, 
-                         max_sigma=30 * scaling_factor, num_sigma=10, 
-                         threshold=0.1)
-    '''
-    blobs_log = blob_dog(roi, min_sigma=0.5*scaling_factor, 
-                         max_sigma=30*scaling_factor, 
-                         threshold=0.2)
-    '''
+    settings = config.process_settings
+    blobs_log = blob_log(roi, min_sigma=3*scaling_factor, 
+                         max_sigma=settings["max_sigma_factor"]*scaling_factor, 
+                         num_sigma=settings["num_sigma"], 
+                         threshold=0.1,
+                         overlap=settings["overlap"])
     print("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")

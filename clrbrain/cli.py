@@ -168,6 +168,7 @@ def main(process_args_only=False):
     parser.add_argument("--mlab_3d")
     parser.add_argument("--res")
     parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument("--microscope")
     args = parser.parse_args()
     if args.img is not None:
         filename = args.img
@@ -238,6 +239,11 @@ def main(process_args_only=False):
         else:
             print("Resolution ({}) should be given as 3 values (x, y, z)"
                   .format(args.res))
+    # microscope settings default to lightsheet 5x but can be updated
+    if args.microscope is not None:
+        config.update_process_settings(config.process_settings, args.microscope)
+    print("Set microscope processing settings to {}"
+          .format(config.process_settings["microscope_type"]))
     
     if process_args_only:
         return

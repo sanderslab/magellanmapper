@@ -24,9 +24,6 @@ S3_DIR=""
 SERIES=0 # TODO: make settable
 EXTRA_ARGS=""
 
-PAR_IMGNAME="imgname"
-PAR_S3="s3"
-
 # workaround for https://github.com/numpy/numpy/issues/5336,
 # fixed in https://github.com/numpy/numpy/pull/7133, 
 # released in Numpy 1.12.0
@@ -51,8 +48,8 @@ while getopts hf:s: opt; do
         f)  IMG="$OPTARG"
             echo "Set image file to $IMG"
             ;;
-        s)  S3="$OPTARG"
-            echo "Set AWS S3 base path to $S3"
+        s)  S3_DIR="$OPTARG"
+            echo "Set AWS S3 base path to $S3_DIR"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1

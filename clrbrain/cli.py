@@ -63,7 +63,7 @@ from clrbrain import chunking
 filename = None
 series = 0 # series for multi-stack files
 channel = 0 # channel of interest
-roi_size = [100, 100, 15] # region of interest
+roi_size = None # region of interest
 offset = None
 
 image5d = None # numpy image array
@@ -148,6 +148,12 @@ def collect_segments(segments_all, segments, region, tol):
                                                region, tol)
         segments_all = np.concatenate((segments_all, segments))
     return segments_all
+
+def _splice_before(base, search, splice):
+    i = base.rfind(search)
+    if i == -1:
+        return base
+    return base[0:i] + splice + base[i:]
 
 def main(process_args_only=False):
     """Starts the visualization GUI.
@@ -255,6 +261,7 @@ def main(process_args_only=False):
     filename_base = importer.filename_to_base(filename, series)
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
     filename_info_proc = filename_base + "_info_proc.npz"
+    print(filename_image5d_proc)
     if proc_type == PROC_TYPES[3]:
         # loads from processed file
         try:
@@ -300,11 +307,23 @@ def main(process_args_only=False):
         # denoises and segments the entire stack, saving processed image
         # and segments to file
         time_start = time()
-        shape = image5d.shape
-        roi = plot_3d.prepare_roi(image5d, channel, (shape[3], shape[2], shape[1]))
+        if roi_size is None or offset is None:
+            shape = image5d.shape[3:0:-1]
+            roi_offset = (0, 0, 0)
+        else:
+            shape = roi_size
+            roi_offset = offset
+            splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
+            series_fill = str(series).zfill(5)
+            filename_image5d_proc = _splice_before(filename_image5d_proc, 
+                                                   series_fill, splice)
+            filename_info_proc = _splice_before(filename_info_proc, 
+                                                series_fill, splice)
+        roi = plot_3d.prepare_roi(image5d, channel, shape, roi_offset)
         # need to make module-level to allow shared memory of this large array
         global sub_rois
-        sub_rois, overlap, _ = chunking.stack_splitter(roi, chunking.max_pixels_factor_denoise, 0)
+        sub_rois, overlap, _ = (chunking.stack_splitter(
+                                roi, chunking.max_pixels_factor_denoise, 0))
         segments_all = None
         region = slice(0, 3)
         time_denoising_start = time()
@@ -340,7 +359,8 @@ def main(process_args_only=False):
             # overlaps to account for
             time_segmenting_start = time()
             max_factor = chunking.max_pixels_factor_segment
-            sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(merged, max_factor)
+            sub_rois, overlap, sub_rois_offsets = (chunking.stack_splitter(
+                                                   merged, max_factor))
             pool = mp.Pool()
             pool_results = []
             # denoising can also be done asynchronousely since independent from

@@ -251,7 +251,7 @@ def plot_2d_shadows(roi, vis):
     img2d_mlab.actor.position = [10, -10, 5]
     img2d_mlab.actor.orientation = [90, 0, 0]
 
-def prepare_roi(image5d, channel, roi_size, offset=(0, 0, 0)):
+def prepare_roi(image5d, channel, roi_size, offset):
     """Finds and shows the region of interest.
     
     This region will be denoised and displayed in Mayavi.

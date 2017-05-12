@@ -255,13 +255,13 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         if cli.image5d_proc is None:
-            self.roi = plot_3d.prepare_roi(cli.image5d, cli.channel, curr_roi_size, 
-                                           offset=curr_offset)
+            self.roi = plot_3d.prepare_roi(cli.image5d, cli.channel, 
+                                           curr_roi_size, curr_offset)
             self.roi = plot_3d.denoise(self.roi)
         else:
             print("loading from previously processed image")
-            self.roi = plot_3d.prepare_roi(cli.image5d_proc, cli.channel, curr_roi_size, 
-                                           offset=curr_offset)
+            self.roi = plot_3d.prepare_roi(cli.image5d_proc, cli.channel, 
+                                           curr_roi_size, curr_offset)
         # show raw points unless selected not to
         if self._DEFAULTS_3D[2] not in self._check_list_3d:
             if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
@@ -299,7 +299,8 @@ class Visualization(HasTraits):
         else:
             print("No offset, using standard one")
             curr_offset = self._curr_offset()
-        self.roi_array[0] = cli.roi_size
+        self.roi_array[0] = ([100, 100, 15] if cli.roi_size is None 
+                             else cli.roi_size)
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {self._roi_default: None}

@@ -61,6 +61,34 @@ def segment_rw(roi):
     
     return labels
 
+def _blob_surroundings(blob, roi, padding, plane=False):
+    rad = blob[3]
+    start = np.subtract(blob[0:3], rad + padding).astype(int)
+    start[start < 0] = 0
+    end = np.add(blob[0:3], rad + padding).astype(int)
+    shape = roi.shape
+    for i in range(3):
+        if end[i] >= shape[i]:
+            end[i] = shape[i] - 1
+    if plane:
+        z = blob[0]
+        if z < 0:
+            z = 0
+        elif z >= shape[0]:
+            z = end[0]
+        return roi[z, start[1]:end[1], start[2]:end[2]]
+    else:
+        return roi[start[0]:end[0], start[1]:end[1], start[2]:end[2]]
+
+def show_blob_surroundings(blobs, roi, padding=1):
+    print("showing blob surroundings")
+    np.set_printoptions(precision=2, linewidth=200)
+    for blob in blobs:
+        print("{} surroundings:".format(blob))
+        surroundings = _blob_surroundings(blob, roi, padding, True)
+        print("{}\n".format(surroundings))
+    np.set_printoptions()
+
 def segment_blob(roi):
     """Detects objects using 3D blob detection technique.
     

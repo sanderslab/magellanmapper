@@ -22,7 +22,7 @@ def update_process_settings(settings, settings_type):
         settings["tot_var_denoise"] = True
         settings["unsharp_strength"] = 1.0
         # smaller threhsold since total var denoising
-        settings["points_3d_thresh"] = 1.2
+        settings["points_3d_thresh"] = 1.1
         settings["max_sigma_factor"] = 8
         settings["num_sigma"] = 20
         settings["overlap"] = 0.7

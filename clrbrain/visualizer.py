@@ -387,6 +387,7 @@ class Visualization(HasTraits):
                                                                       show_shadows)
             self._segs_scale_high = scale * 2
             self.segs_scale = scale
+            #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     
     @on_trait_change('segs_scale')
@@ -409,6 +410,10 @@ class Visualization(HasTraits):
             if cli.image5d_proc is not None:
                 # used for both overview and ROI images
                 img = cli.image5d_proc
+                '''# TESTING: if need an ROI
+                roi = plot_3d.prepare_roi(img, cli.channel, curr_roi_size, 
+                                          curr_offset)
+                '''
             else:
                 # denoised ROI processed during 3D display
                 roi = self.roi

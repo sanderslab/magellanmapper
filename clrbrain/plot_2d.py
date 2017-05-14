@@ -209,7 +209,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
 
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
-                  zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0],
+                  zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
@@ -530,6 +530,10 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                                            facecolor="g", alpha=0.5, picker=5)
                     seg_patch_dict[segsi] = patch
                     ax.add_patch(patch)
+                    '''# shows surrounding area of adding blob; reqs ROI
+                    if roi is not None:
+                        detector.show_blob_surroundings(seg, roi, 6)
+                    '''
             except ValueError:
                 print("not on a plot to select a point")
        

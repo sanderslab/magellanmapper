@@ -204,7 +204,7 @@ class Visualization(HasTraits):
         feedback = [ "Preparing segments:" ]
         for i in range(len(self.segments)):
             seg = self.segments[i]
-            if self.segs_selected.count(i) <= 0 and np.allclose(seg[3], 0):
+            if seg[4] == -1 and np.isclose(seg[3], 0):
                 # ignores user added segments, where radius assumed to be 0,
                 # that are no longer selected
                 feedback.append("ignoring unselected user added segment: {}".format(seg))
@@ -221,9 +221,10 @@ class Visualization(HasTraits):
                     feedback.append("{} outside, ignored".format(self._format_seg(seg)))
         
         segs_transposed_np = np.array(segs_transposed)
-        if np.any(np.logical_and(segs_transposed_np[:, 4] == -1, np.nonzero(segs_transposed_np[:, 4]))):
-            feedback.insert(0, "Segments *NOT* added. Please ensure that all segments in the ROI"
-                               "have been verified.\n")
+        if np.any(np.logical_and(segs_transposed_np[:, 4] == -1, 
+                  np.logical_not(np.isclose(segs_transposed_np[:, 3], 0)))):
+            feedback.insert(0, "Segments *NOT* added. Please ensure that all "
+                               "segments in the ROI have been verified.\n")
         else:
             # inserts experiment if not already added, then segments
             feedback.append("\nInserting segments:")

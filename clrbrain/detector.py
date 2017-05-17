@@ -145,8 +145,8 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     """Removes blobs that are close to one another.
     
     Params:
-        blobs: The blobs to add, given as 2D array of [n, [z, row, column, 
-            radius]].
+        blobs: The blobs to be checked for closeness and pruning, given as 2D 
+            array of [n, [z, row, column, radius]].
         blobs_master: The list by which to check for close blobs, in the same
             format as blobs.
         region: Slice within each blob to check, such as slice(0, 2) to check

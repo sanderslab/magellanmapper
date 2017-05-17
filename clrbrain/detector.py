@@ -137,6 +137,7 @@ def remove_duplicate_blobs(blobs, region):
     blobs_type = np.dtype((np.void, blobs_region.dtype.itemsize * blobs_region.shape[1]))
     blobs_contig = blobs_contig.view(blobs_type)
     _, unique_indices = np.unique(blobs_contig, return_index=True)
+    # TODO: should probably only look within blobs_region
     print("removed {} duplicate blobs".format(blobs.shape[0] - unique_indices.size))
     return blobs[unique_indices]
 
@@ -163,7 +164,7 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
     pruned = np.delete(blobs, close, axis=0)
-    print("removed {} close blobs".format(blobs.shape[0] - pruned.shape[0]))
+    print("removed {} close blobs:\n{}".format(pruned.shape[0], pruned))
     return pruned
 
 def remove_close_blobs_within_array(blobs, region, tol):

@@ -360,7 +360,8 @@ def main(process_args_only=False):
             # to minimize the number of sub-ROIs and thus the number of edge 
             # overlaps to account for
             time_segmenting_start = time()
-            max_factor = chunking.max_pixels_factor_segment
+            max_factor = config.process_settings["segment_size"]
+            print("max_factor: {}".format(max_factor))
             sub_rois, overlap, sub_rois_offsets = (chunking.stack_splitter(
                                                    merged, max_factor))
             pool = mp.Pool()
@@ -399,7 +400,7 @@ def main(process_args_only=False):
             time_denoising_end = time()
             
             time_segmenting_start = time()
-            max_factor = chunking.max_pixels_factor_segment
+            max_factor = config.process_settings["segment_size"]
             sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(merged, max_factor)
             seg_rois = np.zeros(sub_rois.shape, dtype=object)
             for z in range(sub_rois.shape[0]):
@@ -413,7 +414,9 @@ def main(process_args_only=False):
         # prune close blobs within overlapping regions, which 
         # since 
         time_pruning_start = time()
-        segments_all = chunking.prune_overlapping_blobs(seg_rois, region, overlap, 
+        tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
+               .astype(int))
+        segments_all = chunking.prune_overlapping_blobs(seg_rois, region, tol, 
                                                         sub_rois, sub_rois_offsets)
         if segments_all is not None:
             print("total segments found: {}".format(segments_all.shape[0]))

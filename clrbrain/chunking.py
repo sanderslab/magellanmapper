@@ -20,7 +20,6 @@ from clrbrain import config
 from clrbrain import detector
 
 max_pixels_factor_denoise = 25
-max_pixels_factor_segment = config.process_settings["segment_size"]
 overlap_factor = 5
 
 def _num_units(size, max_pixels):
@@ -195,11 +194,17 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
             blobs_ol = blobs[blobs[:, axis] < bound_end]
             
             if config.verbose:
-                print("overlap is from {} to {} at coord_last_tup {} in axis {}"
-                      .format(bound_start, bound_end, coord_last_tup, axis))
-                print("offset last: {}, current: {}"
-                      .format(sub_rois_offsets[coord_last_tup], sub_rois_offsets[coord]))
-                print("checking overlapping blobs_ol:\n{}\nagainst blobs_ref_ol with tol {} from {}:\n{}"
+                print("Comparing blobs in axis {}, ROI {}"
+                      .format(axis, coord))
+                overlap_start = np.copy(sub_rois_offsets[coord])
+                overlap_end = np.add(overlap_start, sub_rois[coord].shape)
+                overlap_start[axis] = bound_start
+                overlap_end[axis] = bound_end
+                print("overlap from {} to {}".format(overlap_start, overlap_end))
+                #print("offset last: {}, current: {}"
+                #      .format(sub_rois_offsets[coord_last_tup], sub_rois_offsets[coord]))
+                print("checking overlapping blobs_ol:\n{}\n"
+                      "against blobs_ref_ol with tol {} from ROI {}:\n{}"
                       .format(blobs_ol, tol, coord_last, blobs_ref_ol))
             
             # prune close blobs within the overlapping regions and add the remaining
@@ -208,6 +213,7 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
             blobs_pruned = np.concatenate((blobs_ol_pruned, blobs[blobs[:, axis] >= bound_end]))
             #print("non-overlapping blobs to add:\n{}".format(blobs_pruned))
             #print("num of pruned blobs to add: {}".format(blobs_pruned.shape[0]))
+            
             return blobs_pruned
             
     return blobs
@@ -245,7 +251,7 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
                 coord = (z, y, x)
                 blobs = blob_rois[coord]
                 #print("checking blobs in {}:\n{}".format(coord, blobs))
-                print("** checking blobs in {}".format(coord))
+                print("** checking blobs in ROI {}".format(coord))
                 if blobs is None:
                     print("no blobs to add, skipping")
                 elif blobs_all is None:

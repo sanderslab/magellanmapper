@@ -104,7 +104,8 @@ def _swap_elements(arr, axis0, axis1, offset=0):
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
-                 segments_adj=None, plane="xy", roi=None, z_relative=-1):
+                 segments_adj=None, plane="xy", roi=None, z_relative=-1,
+                 labels=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -171,6 +172,13 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         else:
             roi = roi[tuple(region[1:])]
         
+        # show labels if provided and within ROI; for some reason if added
+        # after imshow, the main image gets squeezed to show full patches
+        if (labels is not None and z_relative >= 0 
+            and z_relative < labels.shape[0]):
+            ax.contour(labels[z_relative])
+            #ax.imshow(labels[z_relative])
+        
         # highlight borders of z plane at bottom of ROI
         if highlight:
             for spine in ax.spines.values():
@@ -205,12 +213,13 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                                            roi_size[1] - 2 * border[1], 
                                            fill=False, edgecolor="yellow",
                                            linestyle="dashed"))
+        
     return ax, collection_z
 
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
-                  roi=None):
+                  roi=None, labels=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -396,7 +405,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                                               segs_cmap, alpha, z == z_overview,
                                               border if show_border else None,
                                               segs_out, plane, roi_show, 
-                                              z_relative)
+                                              z_relative, labels)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)

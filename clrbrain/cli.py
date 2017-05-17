@@ -111,8 +111,10 @@ def segment_sub_roi(sub_rois_offsets, coord):
             identify the sub-ROI, and the denoised sub-ROI.
     """
     sub_roi = sub_rois[coord]
-    print("segmenting sub_roi at {}, with shape {}..."
-          .format(coord, sub_roi.shape))
+    print("segmenting sub_roi at {} of {}, with shape {}..."
+          .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
+    if config.process_settings["random_walker"]:
+        _, sub_roi = detector.segment_rw(sub_roi)
     segments = detector.segment_blob(sub_roi)
     offset = sub_rois_offsets[coord]
     # transpose segments

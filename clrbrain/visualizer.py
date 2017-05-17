@@ -39,6 +39,7 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 import matplotlib.pylab as pylab
 
 from clrbrain import cli
+from clrbrain import config
 from clrbrain import importer
 from clrbrain import detector
 from clrbrain import plot_3d
@@ -155,6 +156,7 @@ class Visualization(HasTraits):
                                selected_row="segs_selected")
     segs_cmap = None
     segs_feedback = Str("Segments output")
+    labels = None
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "No raw"]
     _check_list_2d = List
@@ -265,10 +267,13 @@ class Visualization(HasTraits):
                                            curr_roi_size, curr_offset)
         # show raw points unless selected not to
         if self._DEFAULTS_3D[2] not in self._check_list_3d:
+            '''# turned off sufrace visualization since so noisy
             if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
                 plot_3d.plot_3d_surface(self.roi, self)
             else:
                 plot_3d.plot_3d_points(self.roi, self)
+            '''
+            plot_3d.plot_3d_points(self.roi, self)
         else:
             self.scene.mlab.clf()
         
@@ -358,12 +363,14 @@ class Visualization(HasTraits):
     def _btn_segment_trait_fired(self, segs=None):
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
-            self.segments = detector.segment_rw(self.roi)
-            self.segs_cmap = plot_3d.show_surface_labels(self.segments, self)
+            self.labels, self.walker = detector.segment_rw(self.roi)
+            self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
         else:
             # segments using blob detection
             if cli.segments_proc is None:
                 # blob detects the ROI
+                if config.process_settings["random_walker"]:
+                    self.labels, self.roi = detector.segment_rw(self.roi)
                 self.segments = detector.segment_blob(self.roi)
             else:
                 x, y, z = self._curr_offset()
@@ -426,15 +433,17 @@ class Visualization(HasTraits):
             # Multi-zoom style
             plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                                   img, cli.channel, curr_roi_size, 
-                                  curr_offset, self.segments, self.segs_cmap, self.border,
-                                  self._planes_2d[0].lower(), (0, 0, 0), 3, True,
-                                  "middle", roi)
+                                  curr_offset, self.segments, self.segs_cmap, 
+                                  self.border, self._planes_2d[0].lower(), 
+                                  (0, 0, 0), 3, True, "middle", roi, 
+                                  labels=self.labels)
         else:
             # defaults to Square style
             plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
                                   img, cli.channel, curr_roi_size, 
-                                  curr_offset, self.segments, self.segs_cmap, self.border,
-                                  self._planes_2d[0].lower(), roi=roi)
+                                  curr_offset, self.segments, self.segs_cmap, 
+                                  self.border, self._planes_2d[0].lower(), 
+                                  roi=roi, labels=self.labels)
     
     def _btn_save_segments_fired(self):
         self.save_segs()

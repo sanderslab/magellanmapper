@@ -54,11 +54,12 @@ def denoise(roi):
         #denoised = restoration.denoise_nl_means(denoised, patch_size=10, 
         #                                        multichannel=False)
         print('time for total variation: %f' %(time() - time_start))
+    else:
+        denoised = img_as_float(denoised)
     
     # sharpening
     unsharp_strength = settings["unsharp_strength"]
     blur_size = 8
-    denoised = img_as_float(denoised)
     blurred = filters.gaussian(denoised, blur_size)
     high_pass = denoised - unsharp_strength * blurred
     denoised = denoised + high_pass
@@ -291,6 +292,9 @@ def show_surface_labels(segments, vis):
         segments: Labels from segmentation method.
         vis: Visualization GUI.
     """
+    # segments are in (z, y, x) order, so need to transpose or swap x,z axes
+    # since Mayavi in (x, y, z)
+    segments = np.transpose(segments)
     '''
     # Drawing options:
     # 1) draw iso-surface around segmented regions

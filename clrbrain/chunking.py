@@ -20,7 +20,7 @@ from clrbrain import config
 from clrbrain import detector
 
 max_pixels_factor_denoise = 25
-max_pixels_factor_segment = 500
+max_pixels_factor_segment = config.process_settings["segment_size"]
 overlap_factor = 5
 
 def _num_units(size, max_pixels):

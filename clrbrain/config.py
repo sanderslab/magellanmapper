@@ -14,18 +14,23 @@ class ProcessSettings(dict):
         self["max_sigma_factor"] = 30
         self["num_sigma"] = 10
         self["overlap"] = 0.5
+        self["random_walker"] = False
+        self["segment_size"] = 500
 
 def update_process_settings(settings, settings_type):
     if settings_type == "2p_20x":
         settings["microscope_type"] = settings_type
-        settings["clip_vmax"] = 70
-        settings["tot_var_denoise"] = True
-        settings["unsharp_strength"] = 1.0
+        #settings["clip_vmax"] = 70
+        #settings["tot_var_denoise"] = True
+        #settings["unsharp_strength"] = 1.0
         # smaller threhsold since total var denoising
         settings["points_3d_thresh"] = 1.1
         settings["max_sigma_factor"] = 8
         settings["num_sigma"] = 20
         settings["overlap"] = 0.7
+        settings["random_walker"] = True
+        settings["segment_size"] = 50
+
 
 # defaults to lightsheet 5x settings
 process_settings = ProcessSettings()

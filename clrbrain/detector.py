@@ -45,10 +45,6 @@ def segment_rw(roi):
         Labels for the segmented regions, which can be plotted as surfaces.
     """
     print("Random-Walker based segmentation...")
-    
-    # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
-    roi = np.transpose(roi)
-    
     # random-walker segmentation
     markers = np.zeros(roi.shape, dtype=np.uint8)
     markers[roi > 0.4] = 1
@@ -59,7 +55,7 @@ def segment_rw(roi):
     walker = morphology.remove_small_objects(walker == 1, 200)
     labels = measure.label(walker, background=0)
     
-    return labels
+    return labels, walker
 
 def _blob_surroundings(blob, roi, padding, plane=False):
     rad = blob[3]

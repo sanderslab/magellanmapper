@@ -20,6 +20,7 @@ import math
 from skimage import restoration
 from skimage import img_as_float
 from skimage import filters
+from skimage import morphology
 
 from clrbrain import config
 
@@ -76,8 +77,11 @@ def denoise(roi):
     return denoised
 
 def threshold(roi):
-    thresh = filters.threshold_otsu(roi)
-    thresholded = roi > thresh
+    #thresh = filters.threshold_otsu(roi)]
+    roi_thresh = np.copy(roi)
+    for i in range(roi.shape[0]):
+        roi_thresh[i] = filters.threshold_local(roi_thresh[i], 35)
+    thresholded = roi > roi_thresh
     return thresholded
 
 def deconvolve(roi):

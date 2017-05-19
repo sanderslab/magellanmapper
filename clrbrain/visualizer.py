@@ -160,7 +160,7 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "No raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "Only save inside"]
+    _DEFAULTS_2D = ["Filtered", "Only save inside", "Outline"]
     _planes_2d = List
     _DEFAULTS_PLANES_2D = ["xy", "xz"]
     _styles_2d = List
@@ -368,9 +368,13 @@ class Visualization(HasTraits):
         else:
             # segments using blob detection
             if cli.segments_proc is None:
-                # blob detects the ROI
-                if config.process_settings["random_walker"]:
-                    self.labels, self.roi = detector.segment_rw(self.roi)
+                # blob detection in the ROI
+                if self._DEFAULTS_2D[2] in self._check_list_2d:
+                    # shows labels around segments with Random-Walker
+                    self.labels, _ = detector.segment_rw(self.roi)
+                if config.process_settings["thresholding"]:
+                    # thresholds prior to blob detection
+                    self.roi = plot_3d.threshold(self.roi)
                 self.segments = detector.segment_blob(self.roi)
             else:
                 x, y, z = self._curr_offset()

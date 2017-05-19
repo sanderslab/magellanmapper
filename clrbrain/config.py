@@ -14,7 +14,7 @@ class ProcessSettings(dict):
         self["max_sigma_factor"] = 30
         self["num_sigma"] = 10
         self["overlap"] = 0.5
-        self["random_walker"] = False
+        self["thresholding"] = False
         self["segment_size"] = 500
         self["prune_tol_factor"] = (1, 1, 1)
 
@@ -25,11 +25,11 @@ def update_process_settings(settings, settings_type):
         #settings["tot_var_denoise"] = True
         #settings["unsharp_strength"] = 1.0
         # smaller threhsold since total var denoising
-        settings["points_3d_thresh"] = 1.1
+        #settings["points_3d_thresh"] = 1.1
         settings["max_sigma_factor"] = 8
         settings["num_sigma"] = 20
         settings["overlap"] = 0.7
-        settings["random_walker"] = True
+        settings["thresholding"] = True
         settings["segment_size"] = 50
         #settings["prune_tol_factor"] = (1, 1, 1)
 

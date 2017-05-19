@@ -75,6 +75,11 @@ def denoise(roi):
     '''
     return denoised
 
+def threshold(roi):
+    thresh = filters.threshold_otsu(roi)
+    thresholded = roi > thresh
+    return thresholded
+
 def deconvolve(roi):
     """Deconvolves the image.
     

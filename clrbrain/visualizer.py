@@ -200,27 +200,29 @@ class Visualization(HasTraits):
             print("no segments found")
             return
         segs_transposed = []
+        segs_to_delete = []
         curr_roi_size = self.roi_array[0].astype(int)
         print("Preparing to insert segments to database with border widths {}"
               .format(self.border))
         feedback = [ "Preparing segments:" ]
         for i in range(len(self.segments)):
             seg = self.segments[i]
+            seg_db = np.array([seg[2] + self.x_offset, seg[1] + self.y_offset, 
+                               seg[0] + self.z_offset, seg[3], seg[4]])
             if seg[4] == -1 and np.isclose(seg[3], 0):
-                # ignores user added segments, where radius assumed to be 0,
+                # attempts to delete user added segments, where radius assumed to be 0,
                 # that are no longer selected
-                feedback.append("ignoring unselected user added segment: {}".format(seg))
+                feedback.append("{} to delete (unselected user added)".format(seg_db))
+                segs_to_delete.append(seg_db)
             else:
                 if (seg[0] >= self.border[2] and seg[0] < (curr_roi_size[2] - self.border[2])
                     and seg[1] >= self.border[1] and seg[1] < (curr_roi_size[1] - self.border[1])
                     and seg[2] >= self.border[0] and seg[2] < (curr_roi_size[0] - self.border[0])):
                     # transposes segments within inner ROI to absolute coordinates
-                    feedback.append("{} to insert".format(self._format_seg(seg)))
-                    seg_db = np.array([seg[2] + self.x_offset, seg[1] + self.y_offset, 
-                                       seg[0] + self.z_offset, seg[3], seg[4]])
+                    feedback.append("{} to insert".format(self._format_seg(seg_db)))
                     segs_transposed.append(seg_db)
                 else:
-                    feedback.append("{} outside, ignored".format(self._format_seg(seg)))
+                    feedback.append("{} outside, ignored".format(self._format_seg(seg_db)))
         
         segs_transposed_np = np.array(segs_transposed)
         if np.any(np.logical_and(segs_transposed_np[:, 4] == -1, 
@@ -231,7 +233,11 @@ class Visualization(HasTraits):
             # inserts experiment if not already added, then segments
             feedback.append("\nInserting segments:")
             for seg in segs_transposed:
-                feedback.append("{} inserted".format(self._format_seg(seg)))
+                feedback.append(self._format_seg(seg))
+            if len(segs_to_delete) > 0:
+                feedback.append("\nDeleting segments:")
+                for seg in segs_to_delete:
+                    feedback.append(self._format_seg(seg))
             exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
                                                         os.path.basename(cli.filename),
                                                         datetime.datetime(1000, 1, 1))
@@ -239,6 +245,7 @@ class Visualization(HasTraits):
                                        np.add(self._curr_offset(), self.border).tolist(), 
                                        np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
             sqlite.insert_blobs(cli.conn, cli.cur, roi_id, segs_transposed)
+            sqlite.delete_blobs(cli.conn, cli.cur, roi_id, segs_to_delete)
             roi = sqlite.select_roi(cli.cur, roi_id)
             self._append_roi(roi, self._rois_dict)
             self.rois_selections_class.selections = list(self._rois_dict.keys())

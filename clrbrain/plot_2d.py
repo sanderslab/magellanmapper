@@ -525,7 +525,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                     and axi < z_planes - z_planes_padding):
                     
                     seg = np.array([[axi - z_planes_padding, 
-                                     event.ydata, event.xdata, 0.0, 1]])
+                                     event.ydata.astype(int), 
+                                     event.xdata.astype(int), 0.0, 1]])
                     print("added segment: {}".format(seg))
                     # concatenate for in-place array update, though append
                     # and re-assigning also probably works

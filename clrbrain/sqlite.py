@@ -221,6 +221,28 @@ def insert_blobs(conn, cur, roi_id, blobs):
     print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
     
+def delete_blobs(conn, cur, roi_id, blobs):
+    """Inserts blobs into the database, replacing any duplicate blobs.
+    
+    Args:
+        conn: The connection.
+        cur: Connection's cursor.
+        blobs: Array of blobs arrays, assumes to be in (x, y, z, radius, confirmed)
+            format. "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 
+            1 = correct.
+    """
+    deleted = 0
+    for blob in blobs:
+        blob_entry = [roi_id]
+        blob_entry.extend(blob[0:3])
+        cur.execute("DELETE FROM blobs WHERE roi_id = ? AND x = ? AND y = ? "
+                    "AND z = ?", blob_entry)
+        deleted += 1
+        print("deleted blob {}".format(blob))
+    print("{} blob(s) deleted".format(deleted))
+    conn.commit()
+    return deleted
+    
 def select_blobs(cur, roi_id):
     """Selects ROIs from the given experiment
     

@@ -491,6 +491,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                             seg_patch_dict[key].remove()
                             del seg_patch_dict[key]
                     vis.segments[segi[0][0]] = seg
+                    _force_seg_refresh(i)
         elif isinstance(event.artist, patches.Circle):
             # new patches added outside of collections
             i = list(seg_patch_dict.keys())[list(seg_patch_dict.values()).index(event.artist)]

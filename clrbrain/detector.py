@@ -163,8 +163,9 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     # comparison for each of its blobs with each blob to add
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
+    #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
     pruned = np.delete(blobs, close, axis=0)
-    print("removed {} close blobs:\n{}".format(pruned.shape[0], pruned))
+    print("removed {} close blobs:\n{}".format(len(close), blobs[close]))
     return pruned
 
 def remove_close_blobs_within_array(blobs, region, tol):

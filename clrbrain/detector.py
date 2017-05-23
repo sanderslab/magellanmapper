@@ -93,7 +93,7 @@ def segment_blob(roi):
     
     Returns:
         Array of detected blobs, each given as 
-            (z, row, column, radius).
+            (z, row, column, radius, confirmation).
     """
     # use 3D blob detection from skimage v.0.13pre
     time_start = time()
@@ -116,8 +116,8 @@ def segment_blob(roi):
     print(blobs_log)
     print("found {} blobs".format(blobs_log.shape[0]))
     confirmed = np.ones((blobs_log.shape[0], 1)) * -1
-    blobs_log = np.concatenate((blobs_log, confirmed), axis=1)
-    return blobs_log
+    blobs_conf = np.concatenate((blobs_log, confirmed), axis=1)
+    return blobs_conf
 
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.
@@ -163,10 +163,20 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     # comparison for each of its blobs with each blob to add
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
-    #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
+    print("close:\n{}\nclose_master:\n{}".format(close, close_master))
     pruned = np.delete(blobs, close, axis=0)
-    print("removed {} close blobs:\n{}".format(len(close), blobs[close]))
-    return pruned
+    print("removed {} close blobs:\n{}".format(len(close), blobs[close][:, 0:4]))
+    
+    # shift close blobs to their mean values, storing values in the duplicated
+    # coordinates and radius of the blob array after the confirmation value;
+    # use the duplicated coordinates to work from any prior shifting; 
+    # further duplicate testing will still be based on initial position to
+    # allow detection of duplicates that occur in multiple ROI pairs
+    blobs_master[close_master, 5:9] = np.around(
+        np.divide(np.add(blobs_master[close_master, 5:9], 
+                                      blobs[close, 5:9]), 2))
+    print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
+    return pruned, blobs_master
 
 def remove_close_blobs_within_array(blobs, region, tol):
     """Removes close blobs within a given array.

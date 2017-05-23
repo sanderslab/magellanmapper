@@ -140,9 +140,10 @@ def merge_split_stack(sub_rois, overlap):
             merged = np.concatenate((merged, merged_y), axis=0)
     return merged
 
-def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_rois_offsets):
-    """Compares blobs in a sub ROI with the blobs in the immediately preceding sub ROI along
-    the given axis
+def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, 
+                      sub_rois_offsets):
+    """Compares blobs in a sub ROI with the blobs in the immediately preceding 
+    sub ROI along the given axis
     
     Params:
         blobs: Numpy array of segments to display in the subplot, which 
@@ -151,8 +152,9 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
             elements.
         coord: Coordinate of the sub ROI, given as (z, y, x).
         axis: Axis along which to check.
-        blob_rois: An array of blob arrays, where each element contains the blobs that
-            were detected within the corresponding sub region within the image stack.
+        blob_rois: An array of blob arrays, where each element contains the 
+            blobs that were detected within the corresponding sub region within 
+            the image stack.
         region: Slice within each blob to check, such as slice(0, 2) to check
             for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
@@ -164,12 +166,17 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
             (z, y, x) dimensions.
     
     Returns:
-        Array of blobs without blobs that are close in the overlapping region to blobs
-            already in the immediately preceding region.
+        blobs_pruned: Array of blobs without blobs that are close in the 
+            overlapping region to blobs already in the immediately preceding 
+            region.
+        blobs_ref_shifted: A copy of the blobs array from the previous ROI in 
+            blob_rois with tail values shifted to the mean of any corresponding 
+            duplicate blob from blobs.
+        coord_next_tup: The coordinates of the next ROI, useful in case
+            blobs_ref_shifted needs to be replace the current array in 
+            blobs_roi.
     """
-    #blobs = blob_rois[coord]
-    #print("num of blobs to add: {}".format(blobs.shape[0]))
-    #tol = np.ceil(np.multiply(overlap, 1.5)).astype(int)
+    # only compare if a next ROI in the given axis exists
     if coord[axis] + 1 < sub_rois.shape[axis]:
         # find the immediately preceding sub ROI
         coord_next = list(coord)
@@ -177,9 +184,9 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
         coord_next_tup = tuple(coord_next)
         blobs_ref = blob_rois[coord_next_tup] # the next ROI
         if blobs_ref is not None:
-            # find the boundaries for the overlapping region, giving extra padding to 
-            # allow for slight differences in coordinates when the same blob was ID'ed
-            # in different regions
+            # find the boundaries for the overlapping region, giving extra 
+            # padding to allow for slight differences in coordinates when the 
+            # same blob was ID'ed in different regions
             #print("blobs_ref:\n{}".format(blobs_ref))
             size = sub_rois[coord].shape[axis]
             #tol_expand = math.ceil(tol[axis] * 1.5)
@@ -190,6 +197,7 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
             # 0.5*tol_expand longer than the end of the next sub ROI
             #bound_end = bound_start + math.ceil(tol_expand * 1.5)
             
+            # overlapping blobs from current and next ("ref") ROI
             blobs_ol = blobs[blobs[:, axis] >= bound_start]
             blobs_ref_ol = blobs_ref[blobs_ref[:, axis] < bound_end]
             
@@ -200,21 +208,25 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, sub_
                 overlap_end = np.add(overlap_start, sub_rois[coord].shape)
                 overlap_start[axis] = bound_start
                 overlap_end[axis] = bound_end
-                print("overlap from {} to {}".format(overlap_start, overlap_end))
-                #print("offset next: {}, current: {}"
-                #      .format(sub_rois_offsets[coord_next_tup], sub_rois_offsets[coord]))
+                print("overlap from {} to {}"
+                      .format(overlap_start, overlap_end))
                 print("checking overlapping blobs_ol:\n{}\n"
                       "against blobs_ref_ol with tol {} from ROI {}:\n{}"
-                      .format(blobs_ol, tol, coord_next, blobs_ref_ol))
+                      .format(blobs_ol[:, 0:4], tol, coord_next, 
+                              blobs_ref_ol[:, 0:4]))
             
-            # prune close blobs within the overlapping regions and add the remaining
-            # blobs to the non-overlapping region
-            blobs_ol_pruned = detector.remove_close_blobs(blobs_ol, blobs_ref_ol, region, tol)
-            blobs_pruned = np.concatenate((blobs_ol_pruned, blobs[blobs[:, axis] < bound_start]))
-            
-            return blobs_pruned
-            
-    return blobs
+            # prune close blobs within the overlapping regions and add the 
+            # remaining or shifted blobs to the non-overlapping region
+            blobs_ol_pruned, blobs_ref_ol_shifted = (
+                detector.remove_close_blobs(blobs_ol, blobs_ref_ol, 
+                                            region, tol))
+            blobs_pruned = np.concatenate(
+                (blobs_ol_pruned, blobs[blobs[:, axis] < bound_start]))
+            blobs_ref_shifted = np.concatenate(
+                (blobs_ref_ol_shifted, 
+                 blobs_ref[blobs_ref[:, axis] >= bound_end]))
+            return blobs_pruned, blobs_ref_shifted, coord_next_tup
+    return blobs, None, None
 
 def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
     """Removes overlapping blobs, which are blobs that are within a certain tolerance of
@@ -256,15 +268,24 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
                     print("initializing master blobs list")
                     blobs_all = blobs
                 else:
-                    # checks immediately preceding sub ROI in each dimension; should
-                    # not put back into blob_rois since other blob sets may need to
-                    # detect pruned blobs when the same blob occurs in >2 sets that
-                    # will not be diretly compared with one another
+                    # checks immediately preceding sub ROI in each dimension; 
+                    # puts the updated reference blobs from the next ROI into 
+                    # for the shifted components and adds pruned blob list from
+                    # current ROI into final list
                     for axis in range(len(coord)):
-                        blobs = _compare_last_roi(blobs, coord, axis, blob_rois, 
-                                                  region, tol, sub_rois, sub_rois_offsets)
+                        blobs, blobs_next, coord_next = _compare_last_roi(
+                            blobs, coord, axis, blob_rois, region, tol, 
+                            sub_rois, sub_rois_offsets)
+                        if blobs_next is not None:
+                            blob_rois[coord_next] = blobs_next
                     blobs_all = np.concatenate((blobs_all, blobs))
-    return blobs_all
+    # copy shifted coordinates to final coordinates
+    '''
+    np.set_printoptions(linewidth=200, threshold=10000)
+    print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
+    '''
+    blobs_all[:, 0:4] = blobs_all[:, 5:9]
+    return blobs_all[:, 0:5]
 
 if __name__ == "__main__":
     print("Starting chunking...")

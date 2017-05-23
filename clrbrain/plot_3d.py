@@ -190,14 +190,15 @@ def plot_3d_points(roi, vis):
     z = np.delete(z, remove)
     roi_1d = np.delete(roi_1d, remove)
     # adjust range from 0-1 to region of colormap to use
-    roi_1d = normalize(roi_1d, 0.4, 0.9)
+    roi_1d = normalize(roi_1d, 0.3, 0.6)
+    #print(roi_1d)
     points_len = roi_1d.size
     time_start = time()
     mask = math.ceil(points_len / mask_dividend)
     print("points: {}, mask: {}".format(points_len, mask))
     if points_len > 0:
         vis.scene.mlab.points3d(x, y, z, roi_1d, 
-                                mode="sphere", colormap="inferno", 
+                                mode="sphere", colormap="Greens", 
                                 scale_mode="none", mask_points=mask, 
                                 line_width=1.0, vmax=1.0, 
                                 vmin=0.0, transparent=True)
@@ -401,6 +402,6 @@ def normalize(array, minimum, maximum):
     if len(array) <= 0:
         return array
     array += -(np.min(array))
-    array /= np.max(array)
+    array /= np.max(array) / (maximum - minimum)
     array += minimum
     return array

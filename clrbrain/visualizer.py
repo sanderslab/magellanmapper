@@ -385,25 +385,37 @@ class Visualization(HasTraits):
                 self.segments = detector.segment_blob(self.roi)
             else:
                 x, y, z = self._curr_offset()
+                # uses blobs from loaded segments
+                roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
+                # adds additional padding to show surrounding segments
+                pad = plot_2d.padding # human (x, y, z) order
+                segs_all = cli.segments_proc[
+                    np.all([cli.segments_proc[:, 0] >= z - pad[2], 
+                            cli.segments_proc[:, 0] < z + roi_z + pad[2],
+                            cli.segments_proc[:, 1] >= y - pad[1], 
+                            cli.segments_proc[:, 1] < y + roi_y + pad[1],
+                            cli.segments_proc[:, 2] >= x - pad[0], 
+                            cli.segments_proc[:, 2] < x + roi_x + pad[0]],
+                           axis=0)]
                 # segs is 0 for some reason if none given
                 if segs is None or not isinstance(segs, np.ndarray):
-                    # uses blobs from loaded segments
-                    roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
-                    # adds additional padding to show surrounding segments
-                    pad = plot_2d.padding # human (x, y, z) order
-                    segs = cli.segments_proc[np.all([cli.segments_proc[:, 0] >= z - pad[2], 
-                                                     cli.segments_proc[:, 0] < z + roi_z + pad[2],
-                                                     cli.segments_proc[:, 1] >= y - pad[1], 
-                                                     cli.segments_proc[:, 1] < y + roi_y + pad[1],
-                                                     cli.segments_proc[:, 2] >= x - pad[0], 
-                                                     cli.segments_proc[:, 2] < x + roi_x + pad[0]],
-                                                    axis=0)]
                     # transpose to make coordinates relative to offset
-                    segs = np.copy(segs)
+                    segs = np.copy(segs_all)
+                elif segs is not None:
+                    # add segs from the padding area
+                    segs_outside = segs_all[
+                        np.any([np.logical_or(segs_all[:, 0] < z, 
+                                              segs_all[:, 0] >= z + roi_z),
+                                np.logical_or(segs_all[:, 1] < y, 
+                                              segs_all[:, 1] >= y + roi_y),
+                                np.logical_or(segs_all[:, 2] < x, 
+                                              segs_all[:, 2] >= x + roi_x)],
+                               axis=0)]
+                    segs = np.concatenate((segs, segs_outside), axis=0)
                 self.segments = np.subtract(segs, (z, y, x, 0, 0))
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
-            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(self.segments, self, 
-                                                                      show_shadows)
+            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
+                self.segments, self, show_shadows)
             self._segs_scale_high = scale * 2
             self.segs_scale = scale
             #detector.show_blob_surroundings(self.segments, self.roi)

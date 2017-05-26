@@ -421,8 +421,12 @@ def main(process_args_only=False):
         time_pruning_start = time()
         tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
                .astype(int))
+        '''
         segments_all = chunking.prune_overlapping_blobs(seg_rois, region, tol, 
                                                         sub_rois, sub_rois_offsets)
+        '''
+        segments_all = chunking.prune_overlapping_blobs2(seg_rois, region, overlap, tol, sub_rois,
+                                                        sub_rois_offsets)
         if segments_all is not None:
             print("total segments found: {}".format(segments_all.shape[0]))
         time_pruning_end = time()

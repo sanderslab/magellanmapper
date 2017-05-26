@@ -31,7 +31,7 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.7
         settings["thresholding"] = True
         settings["segment_size"] = 50
-        #settings["prune_tol_factor"] = (1, 1, 1)
+        settings["prune_tol_factor"] = (2, 1.5, 1.5)
 
 
 # defaults to lightsheet 5x settings

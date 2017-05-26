@@ -141,6 +141,14 @@ def remove_duplicate_blobs(blobs, region):
     print("removed {} duplicate blobs".format(blobs.shape[0] - unique_indices.size))
     return blobs[unique_indices]
 
+def _find_close_blobs(blobs, blobs_master, region, tol):
+    # creates a separate array for each blob in blobs_master to allow
+    # comparison for each of its blobs with each blob to add
+    blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
+    close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
+    #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
+    return close_master, close
+
 def remove_close_blobs(blobs, blobs_master, region, tol):
     """Removes blobs that are close to one another.
     
@@ -159,11 +167,7 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     Return:
         The blobs array without blobs falling inside the tolerance range.
     """
-    # creates a separate array for each blob in blobs_master to allow
-    # comparison for each of its blobs with each blob to add
-    blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
-    close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
-    print("close:\n{}\nclose_master:\n{}".format(close, close_master))
+    close_master, close = _find_close_blobs(blobs, blobs_master, region, tol)
     pruned = np.delete(blobs, close, axis=0)
     print("removed {} close blobs:\n{}".format(len(close), blobs[close][:, 0:4]))
     
@@ -174,8 +178,8 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     # allow detection of duplicates that occur in multiple ROI pairs
     blobs_master[close_master, 5:9] = np.around(
         np.divide(np.add(blobs_master[close_master, 5:9], 
-                                      blobs[close, 5:9]), 2))
-    print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
+                         blobs[close, 5:9]), 2))
+    #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
 
 def remove_close_blobs_within_array(blobs, region, tol):
@@ -198,15 +202,17 @@ def remove_close_blobs_within_array(blobs, region, tol):
         The blobs array without blobs falling inside the tolerance range.
     """
     if blobs is None:
-        return
+        return None
     blobs_all = None
     for blob in blobs:
         #print("blob: {}".format(blob))
         if blobs_all is None:
             blobs_all = np.array([blob])
         else:
-            blobs_to_add = remove_close_blobs(np.array([blob]), blobs_all, region, tol)
-            blobs_all = np.concatenate((blobs_all, blobs_to_add))
+            blobs_to_add, blobs_all = remove_close_blobs(
+                np.array([blob]), blobs_all, region, tol)
+            if blobs_to_add is not None:
+                blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
 if __name__ == "__main__":

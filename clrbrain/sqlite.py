@@ -53,19 +53,22 @@ def _create_db():
     conn.commit()
     return conn, cur
 
-def start_db():
+def start_db(path=None):
     """Starts the database.
     
     Returns:
         conn: The connection.
         cur: Connection's cursor.
     """
-    if not os.path.exists(db_path):
+    if path is None:
+        path = db_path
+    if not os.path.exists(path):
         conn, cur = _create_db()
     else:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
+        print("Loaded database from {}".format(path))
     return conn, cur
 
 def insert_experiment(conn, cur, name, date):
@@ -242,7 +245,15 @@ def delete_blobs(conn, cur, roi_id, blobs):
     print("{} blob(s) deleted".format(deleted))
     conn.commit()
     return deleted
-    
+
+def _parse_blobs(rows):
+    blobs = np.empty((len(rows), 5))
+    rowi = 0
+    for row in rows:
+        blobs[rowi] = [row["z"], row["y"], row["x"], row["radius"], row["confirmed"]]
+        rowi += 1
+    return blobs
+
 def select_blobs(cur, roi_id):
     """Selects ROIs from the given experiment
     
@@ -251,17 +262,23 @@ def select_blobs(cur, roi_id):
         experiment_id: ID of the experiment.
     
     Returns:
-        rows: The number of rows selected.
-        blobs: Blobs in the given ROI.
+        Blobs in the given ROI.
     """
     cur.execute("SELECT * FROM blobs WHERE roi_id = ?", (roi_id, ))
-    rows = cur.fetchall()
-    blobs = np.empty((len(rows), 5))
-    rowi = 0
-    for blob in rows:
-        blobs[rowi] = [blob["z"], blob["y"], blob["x"], blob["radius"], blob["confirmed"]]
-        rowi += 1
-    return rows, blobs
+    return _parse_blobs(cur.fetchall())
+
+def select_blobs_confirmed(cur, confirmed):
+    """Selects ROIs from the given experiment
+    
+    Args:
+        cur: Connection's cursor.
+        experiment_id: ID of the experiment.
+    
+    Returns:
+        Blobs in the given ROI.
+    """
+    cur.execute("SELECT * FROM blobs WHERE confirmed = ?", (confirmed, ))
+    return _parse_blobs(cur.fetchall())
 
 def _test_db():
     # simple database test
@@ -284,7 +301,7 @@ if __name__ == "__main__":
     rois = select_rois(cur, exp[0][0])
     blobs = []
     for roi in rois:
-        count, bb = select_blobs(cur, roi[0])
+        bb = select_blobs(cur, roi[0])
         blobs.extend(bb)
     blobs = np.array(blobs)
     

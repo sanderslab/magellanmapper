@@ -27,6 +27,7 @@ from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
 
 from clrbrain import detector
+from clrbrain import config
 
 colormap_2d = cm.inferno
 #colormap_2d = cm.gray
@@ -105,7 +106,7 @@ def _swap_elements(arr, axis0, axis1, offset=0):
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
                  segments_adj=None, plane="xy", roi=None, z_relative=-1,
-                 labels=None):
+                 labels=None, blobs_truth=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -206,6 +207,11 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             collection_z.set_picker(5)
             ax.add_collection(collection_z)
         
+        if blobs_truth is not None:
+            for blob in blobs_truth:
+                ax.add_patch(patches.Circle((blob[2], blob[1]), radius=3, 
+                                       facecolor="b", alpha=1))
+        
         # adds a simple border to highlight the bottom of the ROI
         if border is not None:
             ax.add_patch(patches.Rectangle(border[0:2], 
@@ -219,7 +225,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
 def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
-                  roi=None, labels=None):
+                  roi=None, labels=None, blobs_truth=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -394,6 +400,14 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                 segments_z = segments[segments[:, 0] == z_relative]
             segments_z_list.append(segments_z)
             
+            # collects truth blobs within the given z-plane
+            blobs_truth_z = None
+            if blobs_truth is not None:
+                blobs_truth_z = blobs_truth[np.all([
+                    blobs_truth[:, 0] == z_relative, 
+                    blobs_truth[:, 4] == 1], axis=0)]
+            #print("blobs_truth_z:\n{}".format(blobs_truth_z))
+            
             # shows border outlining area that will be saved if in verify mode
             show_border = (verify and z_relative >= border[2] 
                            and z_relative < roi_size[2] - border[2])
@@ -405,7 +419,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                                               segs_cmap, alpha, z == z_overview,
                                               border if show_border else None,
                                               segs_out, plane, roi_show, 
-                                              z_relative, labels)
+                                              z_relative, labels, blobs_truth_z)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)

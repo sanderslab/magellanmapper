@@ -182,10 +182,15 @@ def main(process_args_only=False):
     parser.add_argument("--res")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--microscope")
+    parser.add_argument("--truth_db", action="store_true")
     args = parser.parse_args()
+    
+    # set image file path and convert to basis for additional paths
     if args.img is not None:
         filename = args.img
         print("Set filename to {}".format(filename))
+    filename_base = importer.filename_to_base(filename, series)
+    
     if args.channel is not None:
         channel = args.channel
         print("Set channel to {}".format(channel))
@@ -258,6 +263,15 @@ def main(process_args_only=False):
     print("Set microscope processing settings to {}"
           .format(config.process_settings["microscope_type"]))
     
+    # load "truth blobs" from separate database
+    if args.truth_db:
+        path = os.path.basename(filename_base + "_truth.db")
+        print("Set to load truth DB from {}".format(path))
+        conn_truth, cur_truth = sqlite.start_db(path)
+        config.blobs_truth = sqlite.select_blobs_confirmed(cur_truth, 1)
+        conn_truth.close()
+        print("truth blobs:\n{}".format(config.blobs_truth))
+    
     if process_args_only:
         return
     
@@ -265,7 +279,6 @@ def main(process_args_only=False):
     global image5d, conn, cur
     #np.set_printoptions(threshold=np.nan) # print full arrays
     conn, cur = sqlite.start_db()
-    filename_base = importer.filename_to_base(filename, series)
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
     filename_info_proc = filename_base + "_info_proc.npz"
     print(filename_image5d_proc)

@@ -367,6 +367,16 @@ class Visualization(HasTraits):
         #self.scene.mlab.outline() # affects zoom after segmenting
         #self.scene.mlab.axes() # need to adjust units to microns
     
+    def _get_blobs_in_roi(self, blobs, offset, size, padding):
+        segs_all = blobs[np.all([
+            blobs[:, 0] >= offset[2] - padding[2], 
+            blobs[:, 0] < offset[2] + size[2] + padding[2],
+            blobs[:, 1] >= offset[1] - padding[1], 
+            blobs[:, 1] < offset[1] + size[1] + padding[1],
+            blobs[:, 2] >= offset[0] - padding[0], 
+            blobs[:, 2] < offset[0] + size[0] + padding[0]], axis=0)]
+        return segs_all
+    
     def _btn_segment_trait_fired(self, segs=None):
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
@@ -388,15 +398,9 @@ class Visualization(HasTraits):
                 # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 # adds additional padding to show surrounding segments
-                pad = plot_2d.padding # human (x, y, z) order
-                segs_all = cli.segments_proc[
-                    np.all([cli.segments_proc[:, 0] >= z - pad[2], 
-                            cli.segments_proc[:, 0] < z + roi_z + pad[2],
-                            cli.segments_proc[:, 1] >= y - pad[1], 
-                            cli.segments_proc[:, 1] < y + roi_y + pad[1],
-                            cli.segments_proc[:, 2] >= x - pad[0], 
-                            cli.segments_proc[:, 2] < x + roi_x + pad[0]],
-                           axis=0)]
+                segs_all = self._get_blobs_in_roi(
+                    cli.segments_proc, self._curr_offset(), 
+                    self.roi_array[0].astype(int), plot_2d.padding)
                 # segs is 0 for some reason if none given
                 if segs is None or not isinstance(segs, np.ndarray):
                     # transpose to make coordinates relative to offset
@@ -452,6 +456,13 @@ class Visualization(HasTraits):
             print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)
             img = cli.image5d
+        blobs_truth_roi = None
+        if config.blobs_truth is not None:
+            blobs_truth_roi = self._get_blobs_in_roi(
+                config.blobs_truth, curr_offset, curr_roi_size, plot_2d.padding)
+            blobs_truth_roi = np.subtract(
+                blobs_truth_roi, (*curr_offset[::-1], 0, 0))
+            #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # Multi-zoom style
             plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
@@ -466,7 +477,8 @@ class Visualization(HasTraits):
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
-                                  roi=roi, labels=self.labels)
+                                  roi=roi, labels=self.labels, 
+                                  blobs_truth=blobs_truth_roi)
     
     def _btn_save_segments_fired(self):
         self.save_segs()
@@ -486,7 +498,7 @@ class Visualization(HasTraits):
             
             # redraw the original ROI and prepare verify mode
             self._btn_redraw_trait_fired()
-            _, blobs = sqlite.select_blobs(cli.cur, roi["id"])
+            blobs = sqlite.select_blobs(cli.cur, roi["id"])
             self._btn_segment_trait_fired(segs=blobs)
             plot_2d.verify = True
         else:

@@ -37,5 +37,8 @@ def update_process_settings(settings, settings_type):
 # defaults to lightsheet 5x settings
 process_settings = ProcessSettings()
 
-# verified "truth blobs" from truth DB
-blobs_truth = None
+# main DB
+db = None
+
+# verified "truth blobs" DB
+truth_db = None

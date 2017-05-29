@@ -69,8 +69,6 @@ offset = None
 image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
-conn = None # sqlite connection
-cur = None # sqlite cursor
 sub_rois = None
 
 PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
@@ -161,6 +159,20 @@ def _splice_before(base, search, splice):
     if i == -1:
         return base
     return base[0:i] + splice + base[i:]
+
+def _load_db(path):
+    db = sqlite.ClrDB()
+    db.conn, db.cur = sqlite.start_db(path)
+    return db
+
+def _load_truth_db(filename_base):
+    path = os.path.basename(filename_base + "_truth.db")
+    if not os.path.exists(path):
+        raise FileNotFoundError("{} not found for truth DB".format(path))
+    print("Set to load truth DB from {}".format(path))
+    truth_db = _load_db(path)
+    config.truth_db = truth_db
+    return truth_db
 
 def main(process_args_only=False):
     """Starts the visualization GUI.
@@ -265,23 +277,27 @@ def main(process_args_only=False):
     
     # load "truth blobs" from separate database
     if args.truth_db:
-        path = os.path.basename(filename_base + "_truth.db")
-        print("Set to load truth DB from {}".format(path))
-        conn_truth, cur_truth = sqlite.start_db(path)
-        config.blobs_truth = sqlite.select_blobs_confirmed(cur_truth, 1)
-        conn_truth.close()
-        print("truth blobs:\n{}".format(config.blobs_truth))
+        try:
+            truth_db = _load_truth_db(filename_base)
+            truth_db.load_truth_blobs()
+        except FileNotFoundError as e:
+            print(e)
+            print("Could not load truth DB from current image path; "
+                  "will reattempt later if processing files.")
     
     if process_args_only:
         return
     
     # loads the image, database, and GUI
-    global image5d, conn, cur
+    global image5d
     #np.set_printoptions(threshold=np.nan) # print full arrays
-    conn, cur = sqlite.start_db()
+    config.db = _load_db(None)
+    #conn, cur = sqlite.start_db()
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
     filename_info_proc = filename_base + "_info_proc.npz"
+    filename_roi = None
     print(filename_image5d_proc)
+    
     if proc_type == PROC_TYPES[3]:
         # loads from processed file
         try:
@@ -311,11 +327,15 @@ def main(process_args_only=False):
             return
         except IOError:
             print("Unable to load processed files, will attempt to read unprocessed ones")
+    
+    # attempts to load the main image stack
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
+    
     if proc_type == PROC_TYPES[0]:
         # already imported so now simply exits
         print("imported {}, will exit".format(filename))
         os._exit(os.EX_OK)
+    
     elif proc_type == PROC_TYPES[4]:
         # extracts plane and exits
         print("extracting plane at {} and exiting".format(offset[2]))
@@ -323,6 +343,7 @@ def main(process_args_only=False):
                                             series, str(offset[2]).zfill(5))
         plot_2d.extract_plane(image5d, channel, offset, name)
         os._exit(os.EX_OK)
+    
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the entire stack, saving processed image
         # and segments to file
@@ -335,10 +356,12 @@ def main(process_args_only=False):
             roi_offset = offset
             splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
             series_fill = str(series).zfill(5)
+            filename_roi = filename + splice
             filename_image5d_proc = _splice_before(filename_image5d_proc, 
                                                    series_fill, splice)
             filename_info_proc = _splice_before(filename_info_proc, 
                                                 series_fill, splice)
+            
         roi = plot_3d.prepare_roi(image5d, channel, shape, roi_offset)
         # need to make module-level to allow shared memory of this large array
         global sub_rois
@@ -448,6 +471,16 @@ def main(process_args_only=False):
             segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
             print("all segments: {}\n{}".format(segments_all.shape[0], segments_all))
         '''
+        if args.truth_db and config.truth_db is None:
+            try:
+                truth_db = _load_truth_db(_splice_before(filename_base, series_fill, splice))
+                truth_db.load_truth_blobs()
+            except:
+                print("Could not load truth DB; will not verify ROIs")
+        if config.truth_db is not None:
+            rois = config.truth_db.get_rois(os.path.basename(filename_roi))
+            detector.verify_rois(rois, segments_all, config.truth_db.blobs_truth, region, tol)
+            print("seg 1:\n{}".format(segments_all[segments_all[:, 4] == 1]))
         
         # benchmarking time
         print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))

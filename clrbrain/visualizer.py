@@ -92,7 +92,7 @@ class VisHandler(Handler):
         """Closes the Java VM when the GUI is closed.
         """
         importer.jb.kill_vm()
-        cli.conn.close()
+        config.db.conn.close()
 
 class ListSelections(HasTraits):
     selections = List(["test0", "test1"])
@@ -238,15 +238,15 @@ class Visualization(HasTraits):
                 feedback.append("\nDeleting segments:")
                 for seg in segs_to_delete:
                     feedback.append(self._format_seg(seg))
-            exp_id = sqlite.select_or_insert_experiment(cli.conn, cli.cur, 
+            exp_id = sqlite.select_or_insert_experiment(config.db.conn, config.db.cur, 
                                                         os.path.basename(cli.filename),
                                                         datetime.datetime(1000, 1, 1))
-            roi_id, out = sqlite.select_or_insert_roi(cli.conn, cli.cur, exp_id, cli.series, 
+            roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, cli.series, 
                                        np.add(self._curr_offset(), self.border).tolist(), 
                                        np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
-            sqlite.insert_blobs(cli.conn, cli.cur, roi_id, segs_transposed)
-            sqlite.delete_blobs(cli.conn, cli.cur, roi_id, segs_to_delete)
-            roi = sqlite.select_roi(cli.cur, roi_id)
+            sqlite.insert_blobs(config.db.conn, config.db.cur, roi_id, segs_transposed)
+            sqlite.delete_blobs(config.db.conn, config.db.cur, roi_id, segs_to_delete)
+            roi = sqlite.select_roi(config.db.cur, roi_id)
             self._append_roi(roi, self._rois_dict)
             self.rois_selections_class.selections = list(self._rois_dict.keys())
             feedback.append(out)
@@ -317,13 +317,11 @@ class Visualization(HasTraits):
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {self._roi_default: None}
-        exps = sqlite.select_experiment(cli.cur, os.path.basename(cli.filename))
+        self._rois = config.db.get_rois(os.path.basename(cli.filename))
         self.rois_selections_class = ListSelections()
-        if len(exps) > 0:
-            self._rois = sqlite.select_rois(cli.cur, exps[0]["id"])
-            if len(self._rois) > 0:
-                for roi in self._rois:
-                    self._append_roi(roi, self._rois_dict)
+        if len(self._rois) > 0:
+            for roi in self._rois:
+                self._append_roi(roi, self._rois_dict)
         self.rois_selections_class.selections = list(self._rois_dict.keys())
         self.rois_check_list = self._roi_default
         
@@ -367,16 +365,6 @@ class Visualization(HasTraits):
         #self.scene.mlab.outline() # affects zoom after segmenting
         #self.scene.mlab.axes() # need to adjust units to microns
     
-    def _get_blobs_in_roi(self, blobs, offset, size, padding):
-        segs_all = blobs[np.all([
-            blobs[:, 0] >= offset[2] - padding[2], 
-            blobs[:, 0] < offset[2] + size[2] + padding[2],
-            blobs[:, 1] >= offset[1] - padding[1], 
-            blobs[:, 1] < offset[1] + size[1] + padding[1],
-            blobs[:, 2] >= offset[0] - padding[0], 
-            blobs[:, 2] < offset[0] + size[0] + padding[0]], axis=0)]
-        return segs_all
-    
     def _btn_segment_trait_fired(self, segs=None):
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
@@ -398,7 +386,7 @@ class Visualization(HasTraits):
                 # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
                 # adds additional padding to show surrounding segments
-                segs_all = self._get_blobs_in_roi(
+                segs_all, _ = detector.get_blobs_in_roi(
                     cli.segments_proc, self._curr_offset(), 
                     self.roi_array[0].astype(int), plot_2d.padding)
                 # segs is 0 for some reason if none given
@@ -457,9 +445,9 @@ class Visualization(HasTraits):
             cli.image5d = importer.read_file(cli.filename, cli.series)
             img = cli.image5d
         blobs_truth_roi = None
-        if config.blobs_truth is not None:
-            blobs_truth_roi = self._get_blobs_in_roi(
-                config.blobs_truth, curr_offset, curr_roi_size, plot_2d.padding)
+        if config.truth_db.blobs_truth is not None:
+            blobs_truth_roi, _ = detector.get_blobs_in_roi(
+                config.truth_db.blobs_truth, curr_offset, curr_roi_size, plot_2d.padding)
             blobs_truth_roi = np.subtract(
                 blobs_truth_roi, (*curr_offset[::-1], 0, 0))
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
@@ -498,7 +486,7 @@ class Visualization(HasTraits):
             
             # redraw the original ROI and prepare verify mode
             self._btn_redraw_trait_fired()
-            blobs = sqlite.select_blobs(cli.cur, roi["id"])
+            blobs = sqlite.select_blobs(config.db.cur, roi["id"])
             self._btn_segment_trait_fired(segs=blobs)
             plot_2d.verify = True
         else:

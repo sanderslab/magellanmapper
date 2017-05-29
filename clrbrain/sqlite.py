@@ -289,6 +289,22 @@ def _test_db():
     conn.commit()
     conn.close()
 
+class ClrDB():
+    conn = None
+    cur = None
+    blobs_truth = None
+    
+    def load_truth_blobs(self):
+        self.blobs_truth = select_blobs_confirmed(self.cur, 1)
+        print("truth blobs:\n{}".format(self.blobs_truth))
+    
+    def get_rois(self, filename):
+        exps = select_experiment(self.cur, os.path.basename(filename))
+        rois = None
+        if len(exps) > 0:
+            rois = select_rois(self.cur, exps[0]["id"])
+        return rois
+
 if __name__ == "__main__":
     print("Starting sqlite.py...")
     # parses arguments and sets up the DB

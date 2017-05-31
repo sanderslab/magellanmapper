@@ -186,24 +186,29 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
     close_master = []
     close = []
     far = np.max(tol) + 1
-    # compare each element for differences and sum to find smallest diff
+    # compare each element for differences
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
-    diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)
     
     # matches limited by length of smallest list
     num_matches = min(len(blobs_master), len(blobs))
     for i in range(num_matches):
+        #print("blobs_diffs:\n{}".format(blobs_diffs))
+        # sum to find smallest diff
+        diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)
         #print("diffs_sums:\n{}".format(diffs_sums))
         # get indices of minimum differences
         min_master, min_blob = np.where(diffs_sums == diffs_sums.min())
         #print("min_master: {}, min_blob: {}".format(min_master, min_blob))
         blob_master_closest = min_master[0]
         blob_closest = min_blob[0]
+        # only keep the match if within tolerance
         if (blobs_diffs[blob_master_closest, blob_closest] <= tol).all():
             close_master.append(blob_master_closest)
             close.append(blob_closest)
-        # replace with distant value to ensure beyond tol
-        diffs_sums[blob_master_closest, blob_closest] = far
+        # replace row/column corresponding to each picked blob with distant 
+        # values to ensure beyond tol
+        blobs_diffs[blob_master_closest, :, :] = far
+        blobs_diffs[:, blob_closest, :] = far
     #print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
@@ -311,6 +316,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
     blobs_truth_rois = None
     blobs_rois = None
     np.set_printoptions(linewidth=200, threshold=10000)
+    print("verifying blobs with tol {}".format(tol))
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
         size = (roi["size_x"], roi["size_y"], roi["size_z"])

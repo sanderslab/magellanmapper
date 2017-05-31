@@ -329,7 +329,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
         print("offset: {}, offset_inner: {}, size: {}, size_inner: {}"
               .format(offset, offset_inner, size, size_inner))
         blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
-        blobs_inner, _ = get_blobs_in_roi(blobs_roi, offset_inner, size_inner)
+        blobs_inner, blobs_inner_mask = get_blobs_in_roi(blobs_roi, offset_inner, size_inner)
         blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)
         blobs_truth_inner, blobs_truth_inner_mask = get_blobs_in_roi(
             blobs_truth_roi, offset_inner, size_inner)
@@ -352,16 +352,16 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
               .format(blobs_truth_roi[blobs_truth_roi[:, 5] == 1]))
         
         # add any truth blobs missed in the inner ROI by comparing with 
-        # full ROI of detected blobs, where any extra detections would only
-        # come from detected blobs outside of the already compared inner ROI
+        # outer ROI of detected blobs
         blobs_truth_inner_missed = blobs_truth_roi[blobs_truth_roi[:, 5] == 0]
+        blobs_outer = blobs_roi[np.invert(blobs_inner_mask)]
         found_truth_out, detected = _find_closest_blobs(
-            blobs_roi, blobs_truth_inner_missed, region, tol)
+            blobs_outer, blobs_truth_inner_missed, region, tol)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
         blobs_truth_inner_plus = np.concatenate(
             (blobs_truth_roi[blobs_truth_roi[:, 5] == 1], 
              blobs_truth_inner_missed))
-        blobs_roi_extra = blobs_roi[detected]
+        blobs_roi_extra = blobs_outer[detected]
         blobs_roi_extra[:, 4] = 1
         blobs_inner_plus = np.concatenate((blobs_inner, blobs_roi_extra))
         print("truth blobs detected by an outside blob:\n{}".format(

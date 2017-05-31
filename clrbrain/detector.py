@@ -160,23 +160,25 @@ def _find_close_blobs(blobs, blobs_master, region, tol):
 def _find_closest_blobs(blobs, blobs_master, region, tol):
     close_master = []
     close = []
-    far = np.ones(blobs.shape[1]) * np.max(tol)
-    #print(far)
-    blobs = np.copy(blobs)
-    blobs_master = np.copy(blobs_master)
+    far = np.max(tol) + 1
+    blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
+    diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)
     i = 0
     while i < len(blobs_master) and i < len(blobs):
-        blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
-        diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)
-        #print(blobs_diffs)
+        print("diffs_sums:\n{}".format(diffs_sums))
+        '''
         mins = np.min(diffs_sums, diffs_sums.ndim - 1)
         blob_master_closest = np.argmin(mins)
         blob_closest = np.argmin(diffs_sums[blob_master_closest])
+        '''
+        min_master, min_blob = np.where(diffs_sums == diffs_sums.min())
+        print("min_master: {}, min_blob: {}".format(min_master, min_blob))
+        blob_master_closest = min_master[0]
+        blob_closest = min_blob[0]
         if (blobs_diffs[blob_master_closest, blob_closest] < tol).all():
             close_master.append(blob_master_closest)
             close.append(blob_closest)
-        blobs_master[blob_master_closest] = far
-        blobs[blob_closest] = -1 * far
+        diffs_sums[blob_master_closest, blob_closest] = far
         i += 1
     print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
@@ -346,9 +348,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
           "PPV = {}\n"
           .format(pos, true_pos, false_pos, false_neg, sens, ppv))
 
-if __name__ == "__main__":
-    print("Detector tests...")
-    
+def _test_blob_duplicates():
     # tests blob duplication removal
     blobs = np.array([[1, 3, 4, 2.2342], [1, 8, 5, 3.13452], [1, 3, 4, 5.1234],
                       [1, 3, 5, 2.2342], [3, 8, 5, 3.13452]])
@@ -366,3 +366,16 @@ if __name__ == "__main__":
     print("blobs to add:\n{}".format(blobs_to_add))
     blobs_to_add = remove_close_blobs(blobs_to_add, blobs, slice(0, end), tol)
     print("pruned blobs to add:\n{}".format(blobs_to_add))
+
+def _test_blob_verification():
+    a = np.ones((3, 3))
+    a[:, 0] = [0, 1, 2]
+    b = np.copy(a)
+    b[:, 0] += 1
+    print("test (b):\n{}".format(b))
+    print("master (a):\n{}".format(a))
+    _find_closest_blobs(b, a, slice(0, 3), (1, 1, 1))
+
+if __name__ == "__main__":
+    print("Detector tests...")
+    _test_blob_verification()

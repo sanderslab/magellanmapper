@@ -418,8 +418,8 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
     np.set_printoptions(linewidth=200, threshold=10000)
     print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
     '''
-    blobs_all[:, 0:4] = blobs_all[:, 5:9]
-    return blobs_all[:, 0:5]
+    blobs_all[:, 0:4] = blobs_all[:, 6:]
+    return blobs_all[:, 0:6]
 
 if __name__ == "__main__":
     print("Starting chunking...")

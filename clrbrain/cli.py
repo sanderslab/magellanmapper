@@ -74,6 +74,8 @@ sub_rois = None
 PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
 proc_type = None
 
+TRUTH_DB_TYPES = ("view", "verified")
+
 def denoise_sub_roi(coord):
     """Denoises the ROI within an array of ROIs.
     
@@ -121,7 +123,7 @@ def segment_sub_roi(sub_rois_offsets, coord):
     offset = sub_rois_offsets[coord]
     # transpose segments
     if segments is not None:
-        segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0, 
+        segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0, 0,
                                      offset[0], offset[1], offset[2], 0))
     return (coord, segments)
 
@@ -160,17 +162,18 @@ def _splice_before(base, search, splice):
         return base
     return base[0:i] + splice + base[i:]
 
-def _load_db(path):
+def _load_db(filename_base, suffix):
+    path = os.path.basename(filename_base + suffix)
+    if not os.path.exists(path):
+        raise FileNotFoundError("{} not found for DB".format(path))
+    print("Set to load DB from {}".format(path))
     db = sqlite.ClrDB()
-    db.conn, db.cur = sqlite.start_db(path)
+    db.load_db(path, False)
     return db
 
 def _load_truth_db(filename_base):
-    path = os.path.basename(filename_base + "_truth.db")
-    if not os.path.exists(path):
-        raise FileNotFoundError("{} not found for truth DB".format(path))
-    print("Set to load truth DB from {}".format(path))
-    truth_db = _load_db(path)
+    truth_db = _load_db(filename_base, "_truth.db")
+    truth_db.load_truth_blobs()
     config.truth_db = truth_db
     return truth_db
 
@@ -194,7 +197,7 @@ def main(process_args_only=False):
     parser.add_argument("--res")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--microscope")
-    parser.add_argument("--truth_db", action="store_true")
+    parser.add_argument("--truth_db")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -275,15 +278,22 @@ def main(process_args_only=False):
     print("Set microscope processing settings to {}"
           .format(config.process_settings["microscope_type"]))
     
-    # load "truth blobs" from separate database
-    if args.truth_db:
+    # load "truth blobs" from separate database for viewing
+    if args.truth_db == TRUTH_DB_TYPES[0]:
         try:
-            truth_db = _load_truth_db(filename_base)
-            truth_db.load_truth_blobs()
+            _load_truth_db(filename_base)
         except FileNotFoundError as e:
             print(e)
-            print("Could not load truth DB from current image path; "
-                  "will reattempt later if processing files.")
+            print("Could not load truth DB from current image path")
+    elif args.truth_db == TRUTH_DB_TYPES[1]:
+        try:
+            config.db = _load_db(filename_base, "_verified.db")
+        except FileNotFoundError as e:
+            print(e)
+            print("Could not load verified DB from {}".format(filename_base))
+    if config.db is None:
+        config.db = sqlite.ClrDB()
+        config.db.load_db(None, False)
     
     if process_args_only:
         return
@@ -291,7 +301,6 @@ def main(process_args_only=False):
     # loads the image, database, and GUI
     global image5d
     #np.set_printoptions(threshold=np.nan) # print full arrays
-    config.db = _load_db(None)
     #conn, cur = sqlite.start_db()
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
     filename_info_proc = filename_base + "_info_proc.npz"
@@ -471,16 +480,20 @@ def main(process_args_only=False):
             segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
             print("all segments: {}\n{}".format(segments_all.shape[0], segments_all))
         '''
-        if args.truth_db and config.truth_db is None:
+        if args.truth_db == TRUTH_DB_TYPES[1]:
+            db_path_base = _splice_before(filename_base, series_fill, splice)
             try:
-                truth_db = _load_truth_db(_splice_before(filename_base, series_fill, splice))
-                truth_db.load_truth_blobs()
-            except:
+                _load_truth_db(db_path_base)
+            except FileNotFoundError as e:
                 print("Could not load truth DB; will not verify ROIs")
-        if config.truth_db is not None:
-            rois = config.truth_db.get_rois(os.path.basename(filename_roi))
-            detector.verify_rois(rois, segments_all, config.truth_db.blobs_truth, region, tol)
-            print("seg 1:\n{}".format(segments_all[segments_all[:, 4] == 1]))
+            if config.truth_db is not None:
+                verified_db = sqlite.ClrDB()
+                verified_db.load_db(os.path.basename(db_path_base) + "_verified.db", True)
+                exp_name = os.path.basename(filename_roi)
+                exp_id = sqlite.insert_experiment(verified_db.conn, verified_db.cur, exp_name, None)
+                rois = config.truth_db.get_rois(exp_name)
+                detector.verify_rois(rois, segments_all, config.truth_db.blobs_truth, region, tol, verified_db, exp_id)
+                #print("seg 1:\n{}".format(segments_all[segments_all[:, 4] == 1]))
         
         # benchmarking time
         print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))

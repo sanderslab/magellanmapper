@@ -19,8 +19,16 @@ from skimage.feature import blob_log
 
 from clrbrain import config
 from clrbrain import plot_3d
+from clrbrain import sqlite
 
 resolutions = None # (z, y, x) order since given from microscope
+# blob confirmation flags
+CONFIRMATION = {
+    -1: "unverified",
+    0: "no",
+    1: "yes",
+    2: "maybe"
+}
 
 def calc_scaling_factor():
     """Calculates the tolerance based on the  
@@ -115,9 +123,9 @@ def segment_blob(roi):
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     print(blobs_log)
     print("found {} blobs".format(blobs_log.shape[0]))
-    confirmed = np.ones((blobs_log.shape[0], 1)) * -1
-    blobs_conf = np.concatenate((blobs_log, confirmed), axis=1)
-    return blobs_conf
+    extras = np.ones((blobs_log.shape[0], 2)) * -1
+    blobs = np.concatenate((blobs_log, extras), axis=1)
+    return blobs
 
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.
@@ -146,8 +154,32 @@ def _find_close_blobs(blobs, blobs_master, region, tol):
     # comparison for each of its blobs with each blob to add
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
-    #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
+    print("close:\n{}\nclose_master:\n{}".format(close, close_master))
     return close_master, close
+
+def _find_closest_blobs(blobs, blobs_master, region, tol):
+    close_master = []
+    close = []
+    far = np.ones(blobs.shape[1]) * np.max(tol)
+    #print(far)
+    blobs = np.copy(blobs)
+    blobs_master = np.copy(blobs_master)
+    i = 0
+    while i < len(blobs_master) and i < len(blobs):
+        blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
+        diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)
+        #print(blobs_diffs)
+        mins = np.min(diffs_sums, diffs_sums.ndim - 1)
+        blob_master_closest = np.argmin(mins)
+        blob_closest = np.argmin(diffs_sums[blob_master_closest])
+        if (blobs_diffs[blob_master_closest, blob_closest] < tol).all():
+            close_master.append(blob_master_closest)
+            close.append(blob_closest)
+        blobs_master[blob_master_closest] = far
+        blobs[blob_closest] = -1 * far
+        i += 1
+    print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
+    return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
 def remove_close_blobs(blobs, blobs_master, region, tol):
     """Removes blobs that are close to one another.
@@ -176,9 +208,9 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     # use the duplicated coordinates to work from any prior shifting; 
     # further duplicate testing will still be based on initial position to
     # allow detection of duplicates that occur in multiple ROI pairs
-    blobs_master[close_master, 5:9] = np.around(
-        np.divide(np.add(blobs_master[close_master, 5:9], 
-                         blobs[close, 5:9]), 2))
+    blobs_master[close_master, 6:] = np.around(
+        np.divide(np.add(blobs_master[close_master, 6:], 
+                         blobs[close, 6:]), 2))
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
 
@@ -226,95 +258,93 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     segs_all = blobs[mask]
     return segs_all, mask
 
-def verify_rois(rois, blobs, blobs_truth, region, tol):
+def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
     blobs_truth_rois = None
     blobs_rois = None
+    np.set_printoptions(linewidth=200, threshold=10000)
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
         size = (roi["size_x"], roi["size_y"], roi["size_z"])
+        series = roi["series"]
         
-        # evaluate detected blobs from an inner portion of ROI
+        # get all detected and truth blobs for in or total ROI
         inner_padding = np.ceil(tol[::-1] * 0.5)
         offset_inner = np.add(offset, inner_padding)
         size_inner = np.subtract(size, inner_padding * 2)
         print("offset: {}, offset_inner: {}, size: {}, size_inner: {}".format(offset, offset_inner, size, size_inner))
+        blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
         blobs_inner, blobs_inner_mask = get_blobs_in_roi(blobs, offset_inner, size_inner)
         blobs_truth_inner, _ = get_blobs_in_roi(blobs_truth, offset_inner, size_inner)
         blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)
+        print("blobs_roi:\n{}".format(blobs_roi))
         print("blobs_inner:\n{}".format(blobs_inner))
         print("blobs_truth_inner:\n{}".format(blobs_truth_inner))
         print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
-        found_truth, detected = _find_close_blobs(blobs_inner, blobs_truth_inner, region, tol)
-        unique_detected, indices_detected = np.unique(detected, return_index=True)
+        
+        # compare inner regions for simplest overlap
+        found_truth, detected = _find_closest_blobs(blobs_inner, blobs_truth_inner, region, tol)
+        blobs_inner[: , 4] = 0
+        blobs_inner[detected, 4] = 1
+        blobs_truth_inner[:, 5] = 0
+        blobs_truth_inner[found_truth, 5] = 1
+        print("detected inner:\n{}".format(blobs_inner[blobs_inner[:, 4] == 1]))
         
         # for missed blobs, check against a slightly expanded area up to the 
         # full ROI in case a detected blob's corresponding true blob was 
         # actually just outside of it
-        #found_truth, detected = _find_close_blobs(blobs_inner, blobs_truth_roi, region, tol)
-        #blobs[blobs_inner_mask, :][detected, 4] == 1
-        #unique, indices = np.unique(detected, return_index=True)
-        missed_mask = np.ones(len(blobs_inner), dtype=bool)
-        missed_mask[detected] = False
-        blobs_inner_missed = blobs_inner[missed_mask]
+        blobs_inner_missed = blobs_inner[blobs_inner[: , 4] == 0]
         found_truth, detected_out = _find_close_blobs(blobs_inner_missed, blobs_truth_roi, region, tol)
-        unique_detected_out, indices_detected_out = np.unique(detected_out, return_index=True)
-        blobs_truth_inner_plus = np.concatenate((blobs_truth_inner, blobs_truth_roi[found_truth[indices_detected_out]]))
-        print("detected inner:\n{}".format(blobs_inner[unique_detected]))
-        print("detected outer:\n{}".format(blobs_inner_missed[unique_detected_out]))
-        print("truth outer that were found:\n{}".format(blobs_truth_roi[found_truth[indices_detected_out]]))
-        
-        # detected blobs that are close to a truth blob are true detections,
-        # while all others are considered false
-        blobs_inner[unique_detected, 4] = 1
-        blobs_inner_missed[:, 4] = 0
         blobs_inner_missed[detected_out, 4] = 1
-        #blobs_missed = blobs_inner_missed[blobs_inner_missed[:, 4] == 0]
-        #blobs_detected = np.concatenate((blobs_inner[unique_detected], blobs_inner_missed[unique_detected_out]))
-        '''
-        blobs_detected[:, 4] = 1
-        missed_mask = np.ones(len(blobs_inner_missed), dtype=bool)
-        missed_mask[detected_out] = False
-        blobs_missed = blobs_inner_missed[missed_mask]
-        blobs_missed[:, 4] = 0
-        '''
-        #blobs_inner = np.concatenate((blobs_detected, blobs_missed))
-        blobs_inner = np.concatenate((blobs_inner[unique_detected], blobs_inner_missed))
-        '''
-        blobs_inner[detected, 4] = 1
-        #blobs_inner[missed_mask][detected_out, 4] = 1
-        blobs_inner[blobs_inner[:, 4] != 1] = 0
-        '''
+        blobs_inner = np.concatenate((blobs_inner[blobs_inner[:, 4] == 1], blobs_inner_missed))
+        unique_detected_out, indices_detected_out = np.unique(detected_out, return_index=True)
+        blobs_truth_extra = blobs_truth_roi[found_truth[indices_detected_out]]
+        blobs_truth_extra[:, 5] = 1
+        print("detected an outer truth blob:\n{}".format(blobs_inner_missed[blobs_inner_missed[:, 4] == 1]))
+        print("all those outer truth blobs:\n{}".format(blobs_truth_extra))
+        
+        # do the same but for truth blobs missed in the inner ROI
+        blobs_truth_inner_missed = blobs_truth_inner[blobs_truth_inner[:, 5] == 0]
+        found_truth_out, detected = _find_closest_blobs(blobs_roi, blobs_truth_inner_missed, region, tol)
+        blobs_truth_inner_missed[found_truth_out, 5] = 1
+        blobs_truth_inner = np.concatenate((blobs_truth_inner[blobs_truth_inner[:, 5] == 1], blobs_truth_inner_missed))
+        unique_truth_out, indices_truth_out = np.unique(found_truth_out, return_index=True)
+        blobs_roi_extra = blobs_roi[detected[indices_truth_out]]
+        blobs_roi_extra[:, 4] = 1
+        print("truth blobs detected by an outside blob:\n{}".format(blobs_truth_inner_missed[blobs_truth_inner_missed[:, 5] == 1]))
+        print("all those outside detection blobs:\n{}".format(blobs_roi_extra))
+        
+        # combine inner blobs with detections from outside
+        blobs_inner_plus = np.concatenate((blobs_inner, blobs_roi_extra))
+        blobs_truth_inner_plus = np.concatenate((blobs_truth_inner, blobs_truth_extra))
+        print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
+        print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
+        
+        roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id, series, offset_inner, size_inner)
+        sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id, blobs_inner_plus)
+        sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id, blobs_truth_inner_plus)
         
         # saves all blobs from inner portion of ROI only to avoid missing
         # detections because of edge effects
-        '''
-        blobs_truth_roi_found_mask = np.zeros(len(blobs_truth_roi), dtype=bool)
-        blobs_truth_roi_found_mask[found_truth] = True
-        _, blobs_truth_inner_mask = get_blobs_in_roi(blobs_truth_roi, offset_inner, size_inner)
-        print(blobs_truth_inner_mask)
-        print(blobs_truth_roi_found_mask)
-        blobs_truth_inner = blobs_truth_roi[np.any([blobs_truth_inner_mask, blobs_truth_roi_found_mask], axis=0)]
-        '''
         if blobs_truth_rois is None:
-            blobs_truth_rois = blobs_truth_inner
+            blobs_truth_rois = blobs_truth_inner_plus
         else:
             blobs_truth_rois = np.concatenate((blobs_truth_inner_plus, blobs_truth_rois))
         if blobs_rois is None:
-            blobs_rois = blobs_inner
+            blobs_rois = blobs_inner_plus
         else:
-            blobs_rois = np.concatenate((blobs_inner, blobs_rois))
+            blobs_rois = np.concatenate((blobs_inner_plus, blobs_rois))
     #print("blobs 1:\n{}".format(blobs[blobs[:, 4] == 1]))
     
     true_pos = len(blobs_rois[blobs_rois[:, 4] == 1])
     false_pos = len(blobs_rois[blobs_rois[:, 4] == 0])
-    all_pos = len(blobs_truth_rois)
-    false_neg = all_pos - true_pos
-    sens = float(true_pos) / all_pos
+    pos = len(blobs_truth_rois)
+    false_neg = pos - true_pos
+    sens = float(true_pos) / pos
     ppv = float(true_pos) / (true_pos + false_pos)
     print("Automated verification:\ncells = {}\ndetected cells = {}\n"
           "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
           "PPV = {}\n"
-          .format(all_pos, true_pos, false_pos, false_neg, sens, ppv))
+          .format(pos, true_pos, false_pos, false_neg, sens, ppv))
 
 if __name__ == "__main__":
     print("Detector tests...")

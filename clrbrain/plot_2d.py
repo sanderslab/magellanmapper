@@ -40,10 +40,18 @@ SEG_LINEWIDTH = 2.0
 ZOOM_COLS = 8
 Z_LEVELS = ("bottom", "middle", "top")
 
-segs_color_dict = {-1: None,
-                   0: "r",
-                   1: "g",
-                   2: "y"}
+segs_color_dict = {
+    -1: None,
+    0: "r",
+    1: "g",
+    2: "y"
+}
+
+truth_color_dict = {
+    -1: None,
+    0: "m",
+    1: "b"
+}
 
 def _get_radius(seg):
     """Gets the radius for a segments, defaulting to 5 if the segment's
@@ -210,7 +218,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         if blobs_truth is not None:
             for blob in blobs_truth:
                 ax.add_patch(patches.Circle((blob[2], blob[1]), radius=3, 
-                                       facecolor="b", alpha=1))
+                                       facecolor=truth_color_dict[blob[5]], 
+                                       alpha=1))
         
         # adds a simple border to highlight the bottom of the ROI
         if border is not None:
@@ -355,6 +364,11 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     segments_z_list = []
     ax_z_list = []
     segs_out = None
+    # separate out truth blobs
+    if blobs_truth is None:
+        blobs_truth = segments[segments[:, 5] >= 0]
+    print("blobs_truth:\n{}".format(blobs_truth))
+    segments = segments[segments[:, 5] == -1]
     # finds adjacent segments, outside of the ROI
     if segments is not None:
         mask_in = np.all([segments[:, 0] >= 0, segments[:, 0] < roi_size[2],
@@ -405,7 +419,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             if blobs_truth is not None:
                 blobs_truth_z = blobs_truth[np.all([
                     blobs_truth[:, 0] == z_relative, 
-                    blobs_truth[:, 4] == 1], axis=0)]
+                    blobs_truth[:, 4] > 0], axis=0)]
             #print("blobs_truth_z:\n{}".format(blobs_truth_z))
             
             # shows border outlining area that will be saved if in verify mode

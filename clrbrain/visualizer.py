@@ -207,8 +207,8 @@ class Visualization(HasTraits):
         feedback = [ "Preparing segments:" ]
         for i in range(len(self.segments)):
             seg = self.segments[i]
-            seg_db = np.array([seg[2] + self.x_offset, seg[1] + self.y_offset, 
-                               seg[0] + self.z_offset, seg[3], seg[4]])
+            seg_db = np.array([seg[0] + self.z_offset, seg[1] + self.y_offset, 
+                               seg[2] + self.x_offset, *seg[3:]])
             if seg[4] == -1 and np.isclose(seg[3], 0):
                 # attempts to delete user added segments, where radius assumed to be 0,
                 # that are no longer selected
@@ -240,7 +240,7 @@ class Visualization(HasTraits):
                     feedback.append(self._format_seg(seg))
             exp_id = sqlite.select_or_insert_experiment(config.db.conn, config.db.cur, 
                                                         os.path.basename(cli.filename),
-                                                        datetime.datetime(1000, 1, 1))
+                                                        None)
             roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, cli.series, 
                                        np.add(self._curr_offset(), self.border).tolist(), 
                                        np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
@@ -319,7 +319,7 @@ class Visualization(HasTraits):
         self._rois_dict = {self._roi_default: None}
         self._rois = config.db.get_rois(os.path.basename(cli.filename))
         self.rois_selections_class = ListSelections()
-        if len(self._rois) > 0:
+        if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
                 self._append_roi(roi, self._rois_dict)
         self.rois_selections_class.selections = list(self._rois_dict.keys())
@@ -394,7 +394,8 @@ class Visualization(HasTraits):
                     # transpose to make coordinates relative to offset
                     segs = np.copy(segs_all)
                 elif segs is not None:
-                    # add segs from the padding area
+                    # segs provided such as from ROI; need to add segs from 
+                    # the padding area
                     segs_outside = segs_all[
                         np.any([np.logical_or(segs_all[:, 0] < z, 
                                               segs_all[:, 0] >= z + roi_z),
@@ -404,7 +405,7 @@ class Visualization(HasTraits):
                                               segs_all[:, 2] >= x + roi_x)],
                                axis=0)]
                     segs = np.concatenate((segs, segs_outside), axis=0)
-                self.segments = np.subtract(segs, (z, y, x, 0, 0))
+                self.segments = np.subtract(segs, (z, y, x, 0, 0, 0))
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self, show_shadows)
@@ -445,11 +446,14 @@ class Visualization(HasTraits):
             cli.image5d = importer.read_file(cli.filename, cli.series)
             img = cli.image5d
         blobs_truth_roi = None
-        if config.truth_db.blobs_truth is not None:
+        if config.truth_db is not None:
+            # collect truth blobs from the truth DB if available
             blobs_truth_roi, _ = detector.get_blobs_in_roi(
-                config.truth_db.blobs_truth, curr_offset, curr_roi_size, plot_2d.padding)
+                config.truth_db.blobs_truth, curr_offset, curr_roi_size, 
+                plot_2d.padding)
             blobs_truth_roi = np.subtract(
                 blobs_truth_roi, (*curr_offset[::-1], 0, 0))
+            blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # Multi-zoom style

@@ -8,15 +8,28 @@ Attributes:
 """
 
 import os
+import shutil
 import datetime
 import sqlite3
 import numpy as np
 
 from clrbrain import cli
 
-db_path = "clrbrain.db"
+DB_NAME = "clrbrain.db"
 
-def _create_db():
+def _backup_db(path):
+    i = 1
+    backup_path = None
+    while True:
+        suffix = "({}).db".format(i)
+        backup_path = path.replace(".db", suffix)
+        if not os.path.exists(backup_path):
+            shutil.move(path, backup_path)
+            print("Backed up database to {}".format(backup_path))
+            break
+        i += 1
+
+def _create_db(path):
     """Creates the database including initial schema insertion.
     
     Raises:
@@ -24,10 +37,13 @@ def _create_db():
     """
     # creates empty database in the current working directory if
     # not already there.
-    if os.path.exists(db_path):
+    if os.path.exists(path):
+        _backup_db(path)
+        '''
         raise FileExistsError("{} already exists; please rename"
                               " or remove it first".format(db_path))
-    conn = sqlite3.connect(db_path)
+        '''
+    conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
@@ -40,20 +56,20 @@ def _create_db():
                                    "experiment_id INTEGER, series INTEGER, "
                                    "offset_x INTEGER, offset_y INTEGER, "
                                    "offset_z INTEGER, size_x INTEGER, "
-                                   "size_y INTEGER, size_z INTEGER,"
+                                   "size_y INTEGER, size_z INTEGER, "
                 "UNIQUE (experiment_id, series, offset_x, offset_y, offset_z))")
     
     # blobs tabls
     cur.execute("CREATE TABLE blobs (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                     "roi_id INTEGER, x INTEGER, y INTEGER, "
                                     "z INTEGER, radius REAL, "
-                                    "confirmed INTEGER,"
-                "UNIQUE (roi_id, x, y, z))")
+                                    "confirmed INTEGER, truth INTEGER, "
+                "UNIQUE (roi_id, x, y, z, truth))")
     
     conn.commit()
     return conn, cur
 
-def start_db(path=None):
+def start_db(path=None, new_db=False):
     """Starts the database.
     
     Returns:
@@ -61,9 +77,9 @@ def start_db(path=None):
         cur: Connection's cursor.
     """
     if path is None:
-        path = db_path
-    if not os.path.exists(path):
-        conn, cur = _create_db()
+        path = DB_NAME
+    if new_db or not os.path.exists(path):
+        conn, cur = _create_db(path)
     else:
         conn = sqlite3.connect(path)
         conn.row_factory = sqlite3.Row
@@ -80,10 +96,13 @@ def insert_experiment(conn, cur, name, date):
         name: Name of the experiment.
         date: The date as a SQLite date object.
     """
+    if date is None:
+        date = datetime.datetime.now()
     cur.execute("INSERT INTO experiments (name, date) VALUES (?, ?)", 
                 (name, date))
     print("{} experiment inserted".format(name))
     conn.commit()
+    return cur.lastrowid
 
 def select_experiment(cur, name):
     """Selects an experiment from the given name.
@@ -118,8 +137,7 @@ def select_or_insert_experiment(conn, cur, exp_name, date):
     if len(exps) >= 1:
         exp_id = exps[0][0]
     else:
-        insert_experiment(conn, cur, exp_name, date)
-        exp_id = cur.lastrowid
+        exp_id = insert_experiment(conn, cur, exp_name, date)
         #raise LookupError("could not find experiment {}".format(exp_name))
     return exp_id
 
@@ -135,7 +153,7 @@ def insert_roi(conn, cur, exp_id, series, offset, size):
         size: ROI size as (x, y, z)
     
     Returns:
-        cur.lastrowid: The number of rows inserted, or -1 if none.
+        cur.lastrowid: ID of the selected or inserted row.
         feedback: Feedback string.
     """
     cur.execute("INSERT OR IGNORE INTO rois (experiment_id, series, "
@@ -207,7 +225,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
     Args:
         conn: The connection.
         cur: Connection's cursor.
-        blobs: Array of blobs arrays, assumes to be in (x, y, z, radius, confirmed)
+        blobs: Array of blobs arrays, assumes to be in (z, y, x, radius, confirmed)
             format. "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 
             1 = correct.
     """
@@ -219,8 +237,8 @@ def insert_blobs(conn, cur, roi_id, blobs):
         blobs_list.append(blob_entry)
         if blob[4] == 1:
             confirmed = confirmed + 1
-    cur.executemany("INSERT OR REPLACE INTO blobs (roi_id, x, y, z, radius, confirmed) "
-                    "VALUES (?, ?, ?, ?, ?, ?)", blobs_list)
+    cur.executemany("INSERT OR REPLACE INTO blobs (roi_id, z, y, x, radius, confirmed, truth) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)", blobs_list)
     print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
     
@@ -230,7 +248,7 @@ def delete_blobs(conn, cur, roi_id, blobs):
     Args:
         conn: The connection.
         cur: Connection's cursor.
-        blobs: Array of blobs arrays, assumes to be in (x, y, z, radius, confirmed)
+        blobs: Array of blobs arrays, assumes to be in (z, y, x, radius, confirmed)
             format. "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 
             1 = correct.
     """
@@ -238,8 +256,8 @@ def delete_blobs(conn, cur, roi_id, blobs):
     for blob in blobs:
         blob_entry = [roi_id]
         blob_entry.extend(blob[0:3])
-        cur.execute("DELETE FROM blobs WHERE roi_id = ? AND x = ? AND y = ? "
-                    "AND z = ?", blob_entry)
+        cur.execute("DELETE FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
+                    "AND x = ?", blob_entry)
         deleted += 1
         print("deleted blob {}".format(blob))
     print("{} blob(s) deleted".format(deleted))
@@ -247,10 +265,10 @@ def delete_blobs(conn, cur, roi_id, blobs):
     return deleted
 
 def _parse_blobs(rows):
-    blobs = np.empty((len(rows), 5))
+    blobs = np.empty((len(rows), 6))
     rowi = 0
     for row in rows:
-        blobs[rowi] = [row["z"], row["y"], row["x"], row["radius"], row["confirmed"]]
+        blobs[rowi] = [row["z"], row["y"], row["x"], row["radius"], row["confirmed"], row["truth"]]
         rowi += 1
     return blobs
 
@@ -294,12 +312,15 @@ class ClrDB():
     cur = None
     blobs_truth = None
     
+    def load_db(self, path, new_db):
+        self.conn, self.cur = start_db(path, new_db)
+    
     def load_truth_blobs(self):
         self.blobs_truth = select_blobs_confirmed(self.cur, 1)
         print("truth blobs:\n{}".format(self.blobs_truth))
     
     def get_rois(self, filename):
-        exps = select_experiment(self.cur, os.path.basename(filename))
+        exps = select_experiment(self.cur, filename)
         rois = None
         if len(exps) > 0:
             rois = select_rois(self.cur, exps[0]["id"])

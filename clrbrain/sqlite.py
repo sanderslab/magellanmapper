@@ -16,6 +16,7 @@ import numpy as np
 from clrbrain import cli
 
 DB_NAME = "clrbrain.db"
+DB_VERSION = 2
 
 def _backup_db(path):
     i = 1
@@ -47,27 +48,73 @@ def _create_db(path):
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     
-    # experiments table
+    # create tables
+    _create_table_about(cur)
+    _create_table_experiments(cur)
+    _create_table_rois(cur)
+    _create_table_blobs(cur)
+    
+    # store DB version information
+    insert_about(conn, cur, DB_VERSION, datetime.datetime.now())
+    
+    conn.commit()
+    return conn, cur
+
+def _create_table_about(cur):
+    cur.execute("CREATE TABLE about (version INTEGER PRIMARY KEY, date DATE)")
+
+def _create_table_experiments(cur):
     cur.execute("CREATE TABLE experiments (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                           "name TEXT, date DATE)")
-    
-    # ROIs table
+
+def _create_table_rois(cur):
     cur.execute("CREATE TABLE rois (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                    "experiment_id INTEGER, series INTEGER, "
                                    "offset_x INTEGER, offset_y INTEGER, "
                                    "offset_z INTEGER, size_x INTEGER, "
                                    "size_y INTEGER, size_z INTEGER, "
                 "UNIQUE (experiment_id, series, offset_x, offset_y, offset_z))")
-    
-    # blobs tabls
+
+def _create_table_blobs(cur):
     cur.execute("CREATE TABLE blobs (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                     "roi_id INTEGER, x INTEGER, y INTEGER, "
                                     "z INTEGER, radius REAL, "
                                     "confirmed INTEGER, truth INTEGER, "
                 "UNIQUE (roi_id, x, y, z, truth))")
+
+def upgrade_db(conn, cur):
+    db_ver = 0
+    # about table does not exist until DB ver 2
+    try:
+        abouts = select_about(conn, cur)
+        db_ver = abouts[len(abouts) - 1]["version"]
+    except sqlite3.OperationalError as e:
+        print(e)
+        print("defaulting to upgrade from DB version {}".format(db_ver))
     
+    # return if already at latest version
+    if db_ver >= DB_VERSION:
+        return
+    
+    # start upgrading DB for each version increment
+    print("Starting database upgrade...")
+    if db_ver < 2:
+        print("upgrading DB version from {}".format(db_ver))
+        
+        # about table to track DB version numbers
+        print("inserting new about table")
+        _create_table_about(cur)
+        insert_about(conn, cur, DB_VERSION, datetime.datetime.now())
+        
+        # new column with unique constraint on blobs table
+        print("upgrading blobs table")
+        cur.execute("ALTER TABLE blobs RENAME TO tmp_blobs")
+        _create_table_blobs(cur)
+        cols = "roi_id, z, y, x, radius, confirmed"
+        cur.execute("INSERT INTO blobs (" + cols + ", truth) SELECT " + cols + ", -1 FROM tmp_blobs")
+        cur.execute("DROP TABLE tmp_blobs")
+    print("...finished database upgrade.")
     conn.commit()
-    return conn, cur
 
 def start_db(path=None, new_db=False):
     """Starts the database.
@@ -85,7 +132,28 @@ def start_db(path=None, new_db=False):
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         print("Loaded database from {}".format(path))
+    upgrade_db(conn, cur)
     return conn, cur
+
+def insert_about(conn, cur, version, date):
+    """Inserts an experiment into the database.
+    
+    Args:
+        conn: The connection.
+        cur: Connection's cursor.
+        name: Name of the experiment.
+        date: The date as a SQLite date object.
+    """
+    cur.execute("INSERT INTO about (version, date) VALUES (?, ?)", 
+                (version, date))
+    print("about table entry entered with version {}".format(version))
+    conn.commit()
+    return cur.lastrowid
+
+def select_about(conn, cur):
+    cur.execute("SELECT * FROM about")
+    rows = cur.fetchall()
+    return rows
 
 def insert_experiment(conn, cur, name, date):
     """Inserts an experiment into the database.

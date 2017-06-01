@@ -244,8 +244,8 @@ class Visualization(HasTraits):
             roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, cli.series, 
                                        np.add(self._curr_offset(), self.border).tolist(), 
                                        np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
-            sqlite.insert_blobs(config.db.conn, config.db.cur, roi_id, segs_transposed)
             sqlite.delete_blobs(config.db.conn, config.db.cur, roi_id, segs_to_delete)
+            sqlite.insert_blobs(config.db.conn, config.db.cur, roi_id, segs_transposed)
             roi = sqlite.select_roi(config.db.cur, roi_id)
             self._append_roi(roi, self._rois_dict)
             self.rois_selections_class.selections = list(self._rois_dict.keys())

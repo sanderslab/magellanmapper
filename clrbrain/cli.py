@@ -75,6 +75,7 @@ PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
 proc_type = None
 
 TRUTH_DB_TYPES = ("view", "verified")
+truth_db_type = None
 
 def denoise_sub_roi(coord):
     """Denoises the ROI within an array of ROIs.
@@ -183,7 +184,7 @@ def main(process_args_only=False):
     Processes command-line arguments.
     """
     parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
-    global filename, series, channel, roi_size, offset, proc_type, mlab_3d
+    global filename, series, channel, roi_size, offset, proc_type, mlab_3d, truth_db_type
     parser.add_argument("--img")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series", type=int)
@@ -198,13 +199,13 @@ def main(process_args_only=False):
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--microscope")
     parser.add_argument("--truth_db")
+    parser.add_argument("--roc", action="store_true")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
     if args.img is not None:
         filename = args.img
         print("Set filename to {}".format(filename))
-    filename_base = importer.filename_to_base(filename, series)
     
     if args.channel is not None:
         channel = args.channel
@@ -225,6 +226,9 @@ def main(process_args_only=False):
     if args.verbose:
         config.verbose = args.verbose
         print("Set verbose to {}".format(config.verbose))
+    if args.roc:
+        config.roc = args.roc
+        print("Set ROC to {}".format(config.roc))
     if args.offset is not None:
         offset_split = args.offset.split(",")
         if len(offset_split) >= 3:
@@ -279,13 +283,20 @@ def main(process_args_only=False):
           .format(config.process_settings["microscope_type"]))
     
     # load "truth blobs" from separate database for viewing
+    filename_base = importer.filename_to_base(filename, series)
+    if args.truth_db is not None:
+        truth_db_type = args.truth_db
+        print("Set truth_db type to {}".format(truth_db_type))
     if args.truth_db == TRUTH_DB_TYPES[0]:
+        # loads truth DB
         try:
             _load_truth_db(filename_base)
         except FileNotFoundError as e:
             print(e)
             print("Could not load truth DB from current image path")
     elif args.truth_db == TRUTH_DB_TYPES[1]:
+        # loads verified DB, which includes copies of truth values with 
+        # flags for whether they were detected
         try:
             config.db = _load_db(filename_base, "_verified.db")
         except FileNotFoundError as e:
@@ -298,10 +309,35 @@ def main(process_args_only=False):
     if process_args_only:
         return
     
-    # loads the image, database, and GUI
+    # processing the image stack
+    if config.roc:
+        settings = config.process_settings
+        stats_dict = {}
+        for key, value in config.roc_dict.items():
+            stats = []
+            for n in value:
+                settings[key] = n
+                stats.append(process_file(filename_base))
+            stats_dict[key] = (stats, value)
+        for key, value in stats_dict.items():
+            print("{}:".format(key))
+            for i in range(len(value[0])):
+                stats, params = value
+                print("{}: ppv = {}, sens = {}".format(
+                    params[i], stats[i][0], stats[i][1]))
+        from clrbrain import plot_2d
+        plot_2d.plot_roc(stats_dict, filename)
+    else:
+        process_file(filename_base)
+    
+    # unless loading images for GUI, exit directly since otherwise application 
+    #hangs if launched from module with GUI
+    if proc_type != PROC_TYPES[3]:
+        os._exit(os.EX_OK)
+    
+def process_file(filename_base):
+    # prepares the filenames
     global image5d
-    #np.set_printoptions(threshold=np.nan) # print full arrays
-    #conn, cur = sqlite.start_db()
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
     filename_info_proc = filename_base + "_info_proc.npz"
     filename_roi = None
@@ -341,17 +377,15 @@ def main(process_args_only=False):
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
     
     if proc_type == PROC_TYPES[0]:
-        # already imported so now simply exits
+        # already imported so does nothing
         print("imported {}, will exit".format(filename))
-        os._exit(os.EX_OK)
     
     elif proc_type == PROC_TYPES[4]:
-        # extracts plane and exits
+        # extracts plane
         print("extracting plane at {} and exiting".format(offset[2]))
         name = ("{}-(series{})-z{}").format(os.path.basename(filename).replace(".czi", ""), 
                                             series, str(offset[2]).zfill(5))
         plot_2d.extract_plane(image5d, channel, offset, name)
-        os._exit(os.EX_OK)
     
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the entire stack, saving processed image
@@ -480,7 +514,8 @@ def main(process_args_only=False):
             segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
             print("all segments: {}\n{}".format(segments_all.shape[0], segments_all))
         '''
-        if args.truth_db == TRUTH_DB_TYPES[1]:
+        stats = None
+        if truth_db_type == TRUTH_DB_TYPES[1]:
             db_path_base = _splice_before(filename_base, series_fill, splice)
             try:
                 _load_truth_db(db_path_base)
@@ -492,7 +527,7 @@ def main(process_args_only=False):
                 exp_name = os.path.basename(filename_roi)
                 exp_id = sqlite.insert_experiment(verified_db.conn, verified_db.cur, exp_name, None)
                 rois = config.truth_db.get_rois(exp_name)
-                detector.verify_rois(rois, segments_all, config.truth_db.blobs_truth, region, tol, verified_db, exp_id)
+                stats = detector.verify_rois(rois, segments_all, config.truth_db.blobs_truth, region, tol, verified_db, exp_id)
                 #print("seg 1:\n{}".format(segments_all[segments_all[:, 4] == 1]))
         
         # benchmarking time
@@ -510,8 +545,7 @@ def main(process_args_only=False):
         outfile_image5d_proc.close()
         outfile_info_proc.close()
         print('file save time: %f' %(time() - time_start))
-        # exit directly since otherwise hangs in launched from module with GUI import
-        os._exit(os.EX_OK)
+        return stats
     
 if __name__ == "__main__":
     print("Starting clrbrain command-line interface...")

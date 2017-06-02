@@ -80,7 +80,8 @@ def threshold(roi):
     #thresh = filters.threshold_otsu(roi)]
     roi_thresh = np.copy(roi)
     for i in range(roi.shape[0]):
-        roi_thresh[i] = filters.threshold_local(roi_thresh[i], 35)
+        roi_thresh[i] = filters.threshold_local(
+            roi_thresh[i], config.process_settings["thresholding_block_size"])
     thresholded = roi > roi_thresh
     return thresholded
 

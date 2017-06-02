@@ -627,3 +627,25 @@ def extract_plane(image5d, channel, offset, name):
         filename = name + "." + savefig
         print("extracting plane as {}".format(filename))
         plt.imsave(filename, img2d, cmap=colormap_2d)
+
+def plot_roc(stats_dict, name):
+    fig = plt.figure()
+    for key, value in stats_dict.items():
+        stats = np.array(value[0])
+        params = value[1]
+        #print("stats:\n{}".format(stats))
+        # false discovery rate since don't have a true negs
+        fdr = np.subtract(1, stats[:, 0])
+        sens = stats[:, 1]
+        #print(fdr, sens)
+        plt.scatter(fdr, sens, label=key, lw=2, color="darkorange")
+        for i, n in enumerate(params):
+            plt.annotate(n, (fdr[i], sens[i]))
+        plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel("False Discovery Rate")
+        plt.ylabel("Sensitivity")
+        plt.title("ROC for {}".format(name))
+        plt.legend(loc="lower right")
+    plt.show()

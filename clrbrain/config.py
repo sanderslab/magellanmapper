@@ -2,6 +2,8 @@
 # Config file for shared settings
 # Author: David Young, 2017
 
+import numpy as np
+
 verbose = False
 
 class ProcessSettings(dict):
@@ -15,6 +17,7 @@ class ProcessSettings(dict):
         self["num_sigma"] = 10
         self["overlap"] = 0.5
         self["thresholding"] = False
+        self["thresholding_block_size"] = -1
         self["segment_size"] = 500
         self["prune_tol_factor"] = (1, 1, 1)
 
@@ -30,6 +33,7 @@ def update_process_settings(settings, settings_type):
         settings["num_sigma"] = 20
         settings["overlap"] = 0.7
         settings["thresholding"] = True
+        settings["thresholding_block_size"] = 35
         settings["segment_size"] = 50
         settings["prune_tol_factor"] = (2, 1.5, 1.5)
 
@@ -42,3 +46,9 @@ db = None
 
 # verified "truth blobs" DB
 truth_db = None
+
+# receiver operating characteristic
+roc = False
+roc_dict = {
+    "thresholding_block_size": np.arange(9, 75, 2)
+}

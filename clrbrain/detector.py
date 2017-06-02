@@ -232,8 +232,10 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     """
     close_master, close = _find_close_blobs(blobs, blobs_master, region, tol)
     pruned = np.delete(blobs, close, axis=0)
+    '''
     print("removed {} close blobs:\n{}"
           .format(len(close), blobs[close][:, 0:4]))
+    '''
     
     # shift close blobs to their mean values, storing values in the duplicated
     # coordinates and radius of the blob array after the confirmation value;
@@ -399,6 +401,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
           "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
           "PPV = {}\n"
           .format(pos, true_pos, false_pos, false_neg, sens, ppv))
+    return (ppv, sens)
 
 def _test_blob_duplicates():
     # tests blob duplication removal

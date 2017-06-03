@@ -44,7 +44,7 @@ def calc_scaling_factor():
     print("scaling_factor: {}".format(factor))
     return factor
 
-def segment_rw(roi):
+def segment_rw(roi, beta=50.0):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -58,7 +58,7 @@ def segment_rw(roi):
     markers = np.zeros(roi.shape, dtype=np.uint8)
     markers[roi > 0.4] = 1
     markers[roi < 0.33] = 2
-    walker = segmentation.random_walker(roi, markers, beta=1000., mode="bf")
+    walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
     
     # label neighboring pixels to segmented regions
     walker = morphology.remove_small_objects(walker == 1, 200)

@@ -115,7 +115,6 @@ def segment_sub_roi(sub_rois_offsets, coord):
     print("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     if config.process_settings["thresholding"]:
-        #_, sub_roi = detector.segment_rw(sub_roi)
         sub_roi = plot_3d.threshold(sub_roi)
     segments = detector.segment_blob(sub_roi)
     # duplicate positions and append to end of each blob for further

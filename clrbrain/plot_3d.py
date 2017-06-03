@@ -23,6 +23,7 @@ from skimage import filters
 from skimage import morphology
 
 from clrbrain import config
+from clrbrain import detector
 
 _INTENSITY_MIN = 0.2 # clip below this threshold
 mask_dividend = 100000.0
@@ -79,15 +80,19 @@ def denoise(roi):
 def threshold(roi):
     thresh_type = config.process_settings["thresholding"]
     size = config.process_settings["thresholding_size"]
+    thresholded = roi
     roi_thresh = 0
     if thresh_type == "otsu":
         roi_thresh = filters.threshold_otsu(roi, size)
+        thresholded = roi > roi_thresh
     elif thresh_type == "local":
         roi_thresh = np.copy(roi)
         for i in range(roi.shape[0]):
             roi_thresh[i] = filters.threshold_local(
                 roi_thresh[i], size)
-    thresholded = roi > roi_thresh
+        thresholded = roi > roi_thresh
+    elif thresh_type == "random_walker":
+        _, thresholded = detector.segment_rw(roi, size)
     return thresholded
 
 def deconvolve(roi):

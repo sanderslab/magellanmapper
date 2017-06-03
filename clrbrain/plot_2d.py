@@ -628,24 +628,49 @@ def extract_plane(image5d, channel, offset, name):
         print("extracting plane as {}".format(filename))
         plt.imsave(filename, img2d, cmap=colormap_2d)
 
+def cycle_colors(i):
+    num_colors = len(config.colors)
+    cycle = i // num_colors
+    colori = i % num_colors
+    color = config.colors[colori]
+    upper = 255
+    if cycle > 0:
+        color = np.copy(color)
+        color[0] = color[0] + cylce * 5
+        if color[0] > upper:
+            color[0] -= upper * (val // upper)
+    return np.divide(color, upper)
+
 def plot_roc(stats_dict, name):
     fig = plt.figure()
+    label = ""
+    colori = 0
     for key, value in stats_dict.items():
         stats = np.array(value[0])
         params = value[1]
-        #print("stats:\n{}".format(stats))
+        print("stats:\n{}".format(stats))
         # false discovery rate since don't have a true negs
         fdr = np.subtract(1, stats[:, 0])
         sens = stats[:, 1]
         #print(fdr, sens)
-        plt.scatter(fdr, sens, label=key, lw=2, color="darkorange")
+        plt.scatter(fdr, sens, label=key, lw=2, color=cycle_colors(colori))
+        colori += 1
         for i, n in enumerate(params):
             plt.annotate(n, (fdr[i], sens[i]))
-        plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel("False Discovery Rate")
-        plt.ylabel("Sensitivity")
-        plt.title("ROC for {}".format(name))
-        plt.legend(loc="lower right")
+    plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("False Discovery Rate")
+    plt.ylabel("Sensitivity")
+    plt.title("ROC for {}".format(name))
+    plt.legend(loc="lower right")
     plt.show()
+
+if __name__ == "__main__":
+    print("Testing plot_2d...")
+    stats_dict = { 
+        "test1": (np.array([[0.2, 0.3], [0.6, 0.7]]), [10, 20]),
+        "test2": (np.array([[0.4, 0.7], [0.5, 0.8]]), [25, 34])
+    }
+    plot_roc(stats_dict, "Testing ROC")
+    

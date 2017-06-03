@@ -16,8 +16,8 @@ class ProcessSettings(dict):
         self["max_sigma_factor"] = 30
         self["num_sigma"] = 10
         self["overlap"] = 0.5
-        self["thresholding"] = False
-        self["thresholding_block_size"] = -1
+        self["thresholding"] = None
+        self["thresholding_size"] = -1
         self["segment_size"] = 500
         self["prune_tol_factor"] = (1, 1, 1)
 
@@ -32,8 +32,8 @@ def update_process_settings(settings, settings_type):
         settings["max_sigma_factor"] = 8
         settings["num_sigma"] = 20
         settings["overlap"] = 0.7
-        settings["thresholding"] = True
-        settings["thresholding_block_size"] = 35
+        settings["thresholding"] = "otsu"
+        settings["thresholding_size"] = 35
         settings["segment_size"] = 50
         settings["prune_tol_factor"] = (2, 1.5, 1.5)
 
@@ -50,5 +50,25 @@ truth_db = None
 # receiver operating characteristic
 roc = False
 roc_dict = {
-    "thresholding_block_size": np.arange(9, 75, 2)
+    "threshold-local": {
+        "thresholding": "local",
+        "thresholding_size": np.arange(9, 75, 2)
+    },
+    "threshold-otsu": {
+        "thresholding": "otsu",
+        "thresholding_size": np.array([64, 256])
+    }
 }
+
+# default colors using 7-color palatte for color blindness
+# (Wong, B. (2011) Nature Methods 8:441)
+colors = np.array(
+    [[213, 94, 0], # vermillion
+     [0, 114, 178], # blue
+     [204, 121, 167], # reddish purple
+     [230, 159, 0], # orange
+     [86, 180, 233], # sky blue
+     [0, 158, 115], # blullish green
+     [240, 228, 66], # yellow
+     [0, 0, 0]] # black
+)

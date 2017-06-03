@@ -309,22 +309,31 @@ def main(process_args_only=False):
     if process_args_only:
         return
     
-    # processing the image stack
+    # process the image stack
     if config.roc:
         settings = config.process_settings
         stats_dict = {}
         for key, value in config.roc_dict.items():
-            stats = []
-            for n in value:
-                settings[key] = n
-                stats.append(process_file(filename_base))
-            stats_dict[key] = (stats, value)
+            # group of settings
+            for key2, value2 in value.items():
+                if np.isscalar(value2):
+                    # set scalar values rather than iterating and processing
+                    settings[key2] = value2
+                else:
+                    # process each value in parameter array
+                    stats = []
+                    for n in value2:
+                        settings[key2] = n
+                        stats.append(process_file(filename_base))
+                    stats_dict[key + "-" + key2] = (stats, value2)
+        # summarize output
         for key, value in stats_dict.items():
-            print("{}:".format(key))
-            for i in range(len(value[0])):
-                stats, params = value
+            print(key)
+            stats, params = value
+            for i in range(len(params)):
                 print("{}: ppv = {}, sens = {}".format(
                     params[i], stats[i][0], stats[i][1]))
+        # plot ROC curve
         from clrbrain import plot_2d
         plot_2d.plot_roc(stats_dict, filename)
     else:
@@ -332,7 +341,7 @@ def main(process_args_only=False):
     
     # unless loading images for GUI, exit directly since otherwise application 
     #hangs if launched from module with GUI
-    if proc_type != PROC_TYPES[3]:
+    if proc_type != None and proc_type != PROC_TYPES[3]:
         os._exit(os.EX_OK)
     
 def process_file(filename_base):

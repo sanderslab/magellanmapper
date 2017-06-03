@@ -77,11 +77,16 @@ def denoise(roi):
     return denoised
 
 def threshold(roi):
-    #thresh = filters.threshold_otsu(roi)]
-    roi_thresh = np.copy(roi)
-    for i in range(roi.shape[0]):
-        roi_thresh[i] = filters.threshold_local(
-            roi_thresh[i], config.process_settings["thresholding_block_size"])
+    thresh_type = config.process_settings["thresholding"]
+    size = config.process_settings["thresholding_size"]
+    roi_thresh = 0
+    if thresh_type == "otsu":
+        roi_thresh = filters.threshold_otsu(roi, size)
+    elif thresh_type == "local":
+        roi_thresh = np.copy(roi)
+        for i in range(roi.shape[0]):
+            roi_thresh[i] = filters.threshold_local(
+                roi_thresh[i], size)
     thresholded = roi > roi_thresh
     return thresholded
 
@@ -355,13 +360,11 @@ def show_blobs(segments, vis, show_shadows=False):
     num_colors = segments.shape[0] if segments.shape[0] >= 2 else 2
     cmap = (np.random.random((num_colors, 4)) * 255).astype(np.uint8)
     cmap[:, -1] = 170
-    if num_colors >= 4:
-        # initial default colors using 7-color palatte for color blindness
-        # (Wong, B. (2011) Nature Methods 8:441)
-        cmap[0, 0:3] = 213, 94, 0 # vermillion
-        cmap[1, 0:3] = 0, 114, 178 # blue
-        cmap[2, 0:3] = 204, 121, 167 # reddish purple
-        cmap[3, 0:3] = 0, 0, 0 # black
+    # prioritize default colors
+    for i in range(len(config.colors)):
+        if num_colors < i:
+            break
+        cmap[i, 0:3] = config.colors[i]
     cmap_indices = np.arange(segments.shape[0])
     
     if show_shadows:

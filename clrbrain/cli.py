@@ -314,15 +314,19 @@ def main(process_args_only=False):
         settings = config.process_settings
         stats_dict = {}
         for key, value in config.roc_dict.items():
-            # group of settings
+            # group of settings, where key is the name of the group, and 
+            # value is another dictionary with the group's settings
             for key2, value2 in value.items():
                 if np.isscalar(value2):
                     # set scalar values rather than iterating and processing
                     settings[key2] = value2
+                    print("changed {} to {}".format(key2, value2))
                 else:
                     # process each value in parameter array
                     stats = []
                     for n in value2:
+                        print("Processing with settings {}, {}, {}"
+                              .format(key, key2, n))
                         settings[key2] = n
                         stats.append(process_file(filename_base))
                     stats_dict[key + "-" + key2] = (stats, value2)
@@ -553,7 +557,7 @@ def process_file(filename_base):
         np.savez(outfile_info_proc, segments=segments_all, resolutions=detector.resolutions)
         outfile_image5d_proc.close()
         outfile_info_proc.close()
-        print('file save time: %f' %(time() - time_start))
+        print("file save time: %f" %(time() - time_start))
         return stats
     
 if __name__ == "__main__":

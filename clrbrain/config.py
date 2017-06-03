@@ -3,6 +3,7 @@
 # Author: David Young, 2017
 
 import numpy as np
+from collections import OrderedDict
 
 verbose = False
 
@@ -33,7 +34,7 @@ def update_process_settings(settings, settings_type):
         settings["num_sigma"] = 20
         settings["overlap"] = 0.7
         settings["thresholding"] = "otsu"
-        settings["thresholding_size"] = 35
+        settings["thresholding_size"] = 512
         settings["segment_size"] = 50
         settings["prune_tol_factor"] = (2, 1.5, 1.5)
 
@@ -49,16 +50,16 @@ truth_db = None
 
 # receiver operating characteristic
 roc = False
-roc_dict = {
-    "threshold-local": {
-        "thresholding": "local",
-        "thresholding_size": np.arange(9, 75, 2)
-    },
-    "threshold-otsu": {
-        "thresholding": "otsu",
-        "thresholding_size": np.array([64, 256])
-    }
-}
+roc_dict = OrderedDict([
+    ("threshold-local", OrderedDict([
+        ("thresholding", "local"),
+        ("thresholding_size", np.arange(9, 75, 2))])
+    ),
+    ("threshold-otsu", OrderedDict([
+        ("thresholding", "otsu"),
+        ("thresholding_size", np.array([64, 256, 512, 1024, 2048]))])
+    )
+])
 
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)

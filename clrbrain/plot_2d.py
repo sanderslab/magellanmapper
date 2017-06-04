@@ -648,15 +648,19 @@ def plot_roc(stats_dict, name):
     for key, value in stats_dict.items():
         stats = np.array(value[0])
         params = value[1]
-        print("stats:\n{}".format(stats))
-        # false discovery rate since don't have a true negs
-        fdr = np.subtract(1, stats[:, 0])
-        sens = stats[:, 1]
+        # false discovery rate, the inverse of PPV, since don't have a true negs
+        fdr = np.subtract(1, np.divide(stats[:, 1], 
+                                       np.add(stats[:, 1], stats[:, 2])))
+        sens = np.divide(stats[:, 1], stats[:, 0])
         #print(fdr, sens)
         plt.scatter(fdr, sens, label=key, lw=2, color=cycle_colors(colori))
         colori += 1
+        print("{}:".format(key))
         for i, n in enumerate(params):
             plt.annotate(n, (fdr[i], sens[i]))
+            print("{}: ppv = {}, sens = {}, pos = {}, true pos = {}, "
+                  "false pos = {}".format(
+                  params[i], 1 - fdr[i], sens[i], *stats[i].astype(int)))
     plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])

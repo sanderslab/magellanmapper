@@ -401,7 +401,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
           "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
           "PPV = {}\n"
           .format(pos, true_pos, false_pos, false_neg, sens, ppv))
-    return (ppv, sens)
+    return (pos, true_pos, false_pos)
 
 def _test_blob_duplicates():
     # tests blob duplication removal

@@ -52,6 +52,14 @@ truth_db = None
 
 # receiver operating characteristic
 roc = False
+'''
+roc_dict = OrderedDict([
+    ("threshold local", OrderedDict([
+        ("thresholding", "local"),
+        ("thresholding_size", np.arange(9, 75, 50))])
+    )
+])
+'''
 roc_dict = OrderedDict([
     ("threshold local", OrderedDict([
         ("thresholding", "local"),

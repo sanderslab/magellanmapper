@@ -60,11 +60,14 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 
-filename = None
+filename = None # current image file path
+filenames = None # list of multiple image paths
 series = 0 # series for multi-stack files
 channel = 0 # channel of interest
-roi_size = None # region of interest
-offset = None
+roi_size = None # current region of interest
+roi_sizes = None # list of regions of interest
+offset = None # current offset
+offsets = None # list of offsets
 
 image5d = None # numpy image array
 image5d_proc = None
@@ -203,8 +206,11 @@ def main(process_args_only=False):
     
     # set image file path and convert to basis for additional paths
     if args.img is not None:
-        filename = args.img
+        filenames = args.img.split(",")
+        filename = filenames[0]
         print("Set filename to {}".format(filename))
+        if (len(filenames) > 1):
+            print("Set filenames to {}".format(filenames))
     
     if args.channel is not None:
         channel = args.channel
@@ -229,13 +235,37 @@ def main(process_args_only=False):
         config.roc = args.roc
         print("Set ROC to {}".format(config.roc))
     if args.offset is not None:
-        offset_split = args.offset.split(",")
-        if len(offset_split) >= 3:
-            offset = tuple(int(i) for i in offset_split)
-            print("Set offset to {}".format(offset))
-        else:
-            print("Offset ({}) should be given as 3 values (x, y, z)"
-                  .format(args.offset))
+        offsets_split = args.offset.split("_")
+        offsets = []#np.zeros((len(offsets_split), 3), dtype=np.int16)
+        n = 0
+        for off in offsets_split:
+            offset_split = off.split(",")
+            if len(offset_split) >= 3:
+                off = tuple(int(i) for i in offset_split)
+                print("Set offset to {}".format(off))
+            else:
+                print("Offset ({}) should be given as 3 values (x, y, z)"
+                  .format(off))
+            offsets.append(off)
+            n += 1
+        offset = offsets[0]
+        print(offsets)
+    if args.size is not None:
+        sizes_split = args.size.split("_")
+        roi_sizes = []#np.zeros((len(sizes_split), 3), dtype=np.int16)
+        n = 0
+        for size in sizes_split:
+            size_split = size.split(",")
+            if len(size_split) >= 3:
+                size = tuple(int(i) for i in size_split)
+                print("Set roi_size to {}".format(size))
+            else:
+                print("Size ({}) should be given as 3 values (x, y, z)"
+                      .format(size))
+            roi_sizes.append(size)
+            n += 1
+        roi_size = roi_sizes[0]
+        print(roi_sizes)
     if args.padding_2d is not None:
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
@@ -245,14 +275,6 @@ def main(process_args_only=False):
         else:
             print("padding_2d ({}) should be given as 3 values (x, y, z)"
                   .format(args.padding_2d))
-    if args.size is not None:
-        size_split = args.size.split(",")
-        if len(size_split) >= 3:
-            roi_size = tuple(int(i) for i in size_split)
-            print("Set roi_size to {}".format(roi_size))
-        else:
-            print("Size ({}) should be given as 3 values (x, y, z)"
-                  .format(args.size))
     if args.proc is not None:
         if args.proc in PROC_TYPES:
             proc_type = args.proc
@@ -327,27 +349,30 @@ def main(process_args_only=False):
                         print("Processing with settings {}, {}, {}"
                               .format(key, key2, n))
                         settings[key2] = n
-                        stats.append(process_file(filename_base))
+                        stat = np.zeros(3)
+                        for i in range(len(offsets)):
+                            print(offsets[i], roi_sizes[i])
+                            stat = np.add(stat, process_file(
+                                filename_base, offsets[i], roi_sizes[i]))
+                        '''
+                        for path in filenames:
+                            path = importer.filename_to_base(path, series)
+                            stat = np.add(stat, process_file(path))
+                        '''
+                        stats.append(stat)
                     stats_dict[key + "-" + key2] = (stats, value2)
-        # summarize output
-        for key, value in stats_dict.items():
-            print(key)
-            stats, params = value
-            for i in range(len(params)):
-                print("{}: ppv = {}, sens = {}".format(
-                    params[i], stats[i][0], stats[i][1]))
         # plot ROC curve
         from clrbrain import plot_2d
         plot_2d.plot_roc(stats_dict, filename)
     else:
-        process_file(filename_base)
+        process_file(filename_base, offset, roi_size)
     
     # unless loading images for GUI, exit directly since otherwise application 
     #hangs if launched from module with GUI
     if proc_type != None and proc_type != PROC_TYPES[3]:
         os._exit(os.EX_OK)
     
-def process_file(filename_base):
+def process_file(filename_base, offset, roi_size):
     # prepares the filenames
     global image5d
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
@@ -410,6 +435,7 @@ def process_file(filename_base):
             shape = roi_size
             roi_offset = offset
             splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
+            print("using {}".format(splice))
             series_fill = str(series).zfill(5)
             filename_roi = filename + splice
             filename_image5d_proc = _splice_before(filename_image5d_proc, 
@@ -532,7 +558,8 @@ def process_file(filename_base):
             try:
                 _load_truth_db(db_path_base)
             except FileNotFoundError as e:
-                print("Could not load truth DB; will not verify ROIs")
+                print("Could not load truth DB from {}; will not verify ROIs"
+                      .format(db_path_base))
             if config.truth_db is not None:
                 verified_db = sqlite.ClrDB()
                 verified_db.load_db(os.path.basename(db_path_base) + "_verified.db", True)

@@ -97,6 +97,8 @@ def denoise_sub_roi(coord):
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     sub_roi = plot_3d.denoise(sub_roi)
     #sub_roi = plot_3d.deconvolve(sub_roi)
+    if config.process_settings["thresholding"]:
+        sub_roi = plot_3d.threshold(sub_roi)
     return (coord, sub_roi)
 
 def segment_sub_roi(sub_rois_offsets, coord):
@@ -117,8 +119,6 @@ def segment_sub_roi(sub_rois_offsets, coord):
     sub_roi = sub_rois[coord]
     print("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    if config.process_settings["thresholding"]:
-        sub_roi = plot_3d.threshold(sub_roi)
     segments = detector.segment_blob(sub_roi)
     # duplicate positions and append to end of each blob for further
     # adjustments such as shifting the blob based on close duplicates
@@ -180,6 +180,20 @@ def _load_truth_db(filename_base):
     config.truth_db = truth_db
     return truth_db
 
+def _parse_coords(arg):
+    coords = list(arg) # copy list to avoid altering the arg itself
+    n = 0
+    for coord in coords:
+        coord_split = coord.split(",")
+        if len(coord_split) >= 3:
+            coord = tuple(int(i) for i in coord_split)
+        else:
+            print("Coordinates ({}) should be given as 3 values (x, y, z)"
+              .format(coord))
+        coords[n] = coord
+        n += 1
+    return coords
+
 def main(process_args_only=False):
     """Starts the visualization GUI.
     
@@ -187,14 +201,14 @@ def main(process_args_only=False):
     """
     parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
     global filename, series, channel, roi_size, offset, proc_type, mlab_3d, truth_db_type
-    parser.add_argument("--img")
+    parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series", type=int)
     parser.add_argument("--savefig")
     parser.add_argument("--padding_2d")
     #parser.add_argument("--verify", action="store_true")
-    parser.add_argument("--offset")
-    parser.add_argument("--size")
+    parser.add_argument("--offset", nargs="*")
+    parser.add_argument("--size", nargs="*")
     parser.add_argument("--proc")
     parser.add_argument("--mlab_3d")
     parser.add_argument("--res")
@@ -206,11 +220,10 @@ def main(process_args_only=False):
     
     # set image file path and convert to basis for additional paths
     if args.img is not None:
-        filenames = args.img.split(",")
+        filenames = args.img
         filename = filenames[0]
-        print("Set filename to {}".format(filename))
-        if (len(filenames) > 1):
-            print("Set filenames to {}".format(filenames))
+        print("Set filenames to {}, current filename {}"
+              .format(filenames, filename))
     
     if args.channel is not None:
         channel = args.channel
@@ -235,37 +248,13 @@ def main(process_args_only=False):
         config.roc = args.roc
         print("Set ROC to {}".format(config.roc))
     if args.offset is not None:
-        offsets_split = args.offset.split("_")
-        offsets = []#np.zeros((len(offsets_split), 3), dtype=np.int16)
-        n = 0
-        for off in offsets_split:
-            offset_split = off.split(",")
-            if len(offset_split) >= 3:
-                off = tuple(int(i) for i in offset_split)
-                print("Set offset to {}".format(off))
-            else:
-                print("Offset ({}) should be given as 3 values (x, y, z)"
-                  .format(off))
-            offsets.append(off)
-            n += 1
+        offsets = _parse_coords(args.offset)
         offset = offsets[0]
-        print(offsets)
+        print("Set offsets to {}, current offset {}".format(offsets, offset))
     if args.size is not None:
-        sizes_split = args.size.split("_")
-        roi_sizes = []#np.zeros((len(sizes_split), 3), dtype=np.int16)
-        n = 0
-        for size in sizes_split:
-            size_split = size.split(",")
-            if len(size_split) >= 3:
-                size = tuple(int(i) for i in size_split)
-                print("Set roi_size to {}".format(size))
-            else:
-                print("Size ({}) should be given as 3 values (x, y, z)"
-                      .format(size))
-            roi_sizes.append(size)
-            n += 1
+        roi_sizes = _parse_coords(args.size)
         roi_size = roi_sizes[0]
-        print(roi_sizes)
+        print("Set ROI sizes to {}, current size {}".format(roi_sizes, roi_size))
     if args.padding_2d is not None:
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
@@ -385,30 +374,46 @@ def process_file(filename_base, offset, roi_size):
         try:
             global image5d_proc, segments_proc
             
-            # loads stored processed arrays, using mem-mapped accessed for the image
-            # file to minimize memory requirement, only loading on-the-fly
+            # loads stored processed arrays, using mem-mapped accessed for the 
+            # image file to minimize memory requirement, only loading on-the-fly
             output_info = np.load(filename_info_proc)
             image5d_proc = np.load(filename_image5d_proc, mmap_mode="r")
             '''
-            # converts old monolithic format to new format with separate files to
-            # allow loading file with only image file as memory-backed array;
+            # converts old monolithic format to new format with separate files
+            # to allow loading file with only image file as memory-backed array;
             # switch commented area from here to above to convert formats
             print("converting proc file to new format...")
-            filename_proc = filename + str(series).zfill(5) + "_proc.npz" # old format
+            filename_proc = filename + str(series).zfill(5) + "_proc.npz" # old
             output = np.load(filename_proc)
             outfile_image5d_proc = open(filename_image5d_proc, "wb")
             outfile_info_proc = open(filename_info_proc, "wb")
             np.save(outfile_image5d_proc, output["roi"])
-            np.savez(outfile_info_proc, segments=output["segments"], resolutions=output["resolutions"])
+            np.savez(outfile_info_proc, segments=output["segments"], 
+                     resolutions=output["resolutions"])
             outfile_image5d_proc.close()
             outfile_info_proc.close()
             return
             '''
             segments_proc = output_info["segments"]
             detector.resolutions = output_info["resolutions"]
+            roi_offset = None
+            shape = None
+            path = filename
+            try:
+                basename = output_info["basename"]
+                roi_offset = output_info["offset"]
+                shape = output_info["roi_size"]
+                # raw image file assumed to be in same dir as processed file
+                path = os.path.join(os.path.dirname(filename_base), str(basename))
+            except KeyError as e:
+                print(e)
+                print("No information on portion of stack to load")
+            image5d = importer.read_file(
+                path, series, offset=roi_offset, size=shape, channel=channel)
             return
         except IOError:
-            print("Unable to load processed files, will attempt to read unprocessed ones")
+            print("Unable to load processed files, will attempt to read "
+                  "unprocessed ones")
     
     # attempts to load the main image stack
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
@@ -425,13 +430,15 @@ def process_file(filename_base, offset, roi_size):
         plot_2d.extract_plane(image5d, channel, offset, name)
     
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
-        # denoises and segments the entire stack, saving processed image
+        # denoises and segments the region, saving processed image
         # and segments to file
         time_start = time()
         if roi_size is None or offset is None:
+            # uses the entire stack if no size or offset specified
             shape = image5d.shape[3:0:-1]
             roi_offset = (0, 0, 0)
         else:
+            # sets up processing for partial stack
             shape = roi_size
             roi_offset = offset
             splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
@@ -580,7 +587,10 @@ def process_file(filename_base, offset, roi_size):
         outfile_info_proc = open(filename_info_proc, "wb")
         time_start = time()
         np.save(outfile_image5d_proc, merged)
-        np.savez(outfile_info_proc, segments=segments_all, resolutions=detector.resolutions)
+        np.savez(outfile_info_proc, segments=segments_all, 
+                 resolutions=detector.resolutions, 
+                 basename=os.path.basename(filename), # only save filename
+                 offset=offset, roi_size=roi_size) # None unless explicitly set
         outfile_image5d_proc.close()
         outfile_info_proc.close()
         print("file save time: %f" %(time() - time_start))

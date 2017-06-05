@@ -19,6 +19,7 @@ import javabridge as jb
 import bioformats as bf
 
 from clrbrain import detector
+from clrbrain import plot_3d
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html
@@ -156,7 +157,7 @@ def find_sizes(filename):
     return sizes, dtype
 
 def read_file(filename, series, save=True, load=True, z_max=-1, 
-              offset=None):
+              offset=None, size=None, channel=-1):
     """Reads in an imaging file.
     
     Can load the file from a saved Numpy array and also for only a series
@@ -189,6 +190,10 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             # file to minimize memory requirement, only loading on-the-fly
             output = np.load(filename_info_npz)
             image5d = np.load(filename_image5d_npz, mmap_mode="r")
+            if offset is not None and size is not None:
+                # simplifies to reducing the image to a subset as an ROI if 
+                # offset and size given
+                image5d = plot_3d.prepare_roi(image5d, channel, size, offset)
             '''
             # convert old monolithic archive into 2 separate archives
             filename_npz = filename + str(series).zfill(5) + ".npz" # old format

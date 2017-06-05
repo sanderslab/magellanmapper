@@ -261,17 +261,14 @@ class Visualization(HasTraits):
         taken from the saved processed array. Type of 3D display depends
         on the "3d" flag.
         """
-        # show updated region of interest
+        # show region of interest based on raw image, using basic denoising 
+        # to normalize values but not fully processing
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
-        if cli.image5d_proc is None:
-            self.roi = plot_3d.prepare_roi(cli.image5d, cli.channel, 
-                                           curr_roi_size, curr_offset)
-            self.roi = plot_3d.denoise(self.roi)
-        else:
-            print("loading from previously processed image")
-            self.roi = plot_3d.prepare_roi(cli.image5d_proc, cli.channel, 
-                                           curr_roi_size, curr_offset)
+        self.roi = plot_3d.prepare_roi(
+            cli.image5d, cli.channel, curr_roi_size, curr_offset)
+        self.roi = plot_3d.denoise(self.roi)
+        
         # show raw points unless selected not to
         if self._DEFAULTS_3D[2] not in self._check_list_3d:
             '''# turned off sufrace visualization since so noisy
@@ -405,7 +402,9 @@ class Visualization(HasTraits):
                                               segs_all[:, 2] >= x + roi_x)],
                                axis=0)]
                     segs = np.concatenate((segs, segs_outside), axis=0)
-                self.segments = np.subtract(segs, (z, y, x, 0, 0, 0))
+                shift = np.zeros(segs.shape[1])
+                shift[0:3] = [z, y, x]
+                self.segments = np.subtract(segs, shift)
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self, show_shadows)
@@ -531,7 +530,7 @@ class Visualization(HasTraits):
         """
         if val is None:
             # need to include at least one row or else will crash
-            self._segments = np.zeros((1, 5))
+            self._segments = np.zeros((1, 6))
         else:
             self._segments = val
     

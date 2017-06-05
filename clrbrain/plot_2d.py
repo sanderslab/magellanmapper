@@ -365,10 +365,11 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     ax_z_list = []
     segs_out = None
     # separate out truth blobs
-    if blobs_truth is None:
-        blobs_truth = segments[segments[:, 5] >= 0]
-    print("blobs_truth:\n{}".format(blobs_truth))
-    segments = segments[segments[:, 5] == -1]
+    if segments.shape[1] >= 6:
+        if blobs_truth is None:
+            blobs_truth = segments[segments[:, 5] >= 0]
+        print("blobs_truth:\n{}".format(blobs_truth))
+        segments = segments[segments[:, 5] == -1]
     # finds adjacent segments, outside of the ROI
     if segments is not None:
         mask_in = np.all([segments[:, 0] >= 0, segments[:, 0] < roi_size[2],

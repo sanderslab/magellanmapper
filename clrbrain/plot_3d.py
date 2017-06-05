@@ -89,7 +89,19 @@ def threshold(roi):
         roi_thresh = np.copy(roi)
         for i in range(roi.shape[0]):
             roi_thresh[i] = filters.threshold_local(
-                roi_thresh[i], size)
+                roi_thresh[i], size, mode="wrap")
+        thresholded = roi > roi_thresh
+    elif thresh_type == "local-otsu":
+        # TODO: not working yet
+        selem = morphology.disk(15)
+        print(np.min(roi), np.max(roi))
+        roi_thresh = np.copy(roi)
+        roi_thresh = normalize(roi_thresh, -1.0, 1.0)
+        print(roi_thresh)
+        print(np.min(roi_thresh), np.max(roi_thresh))
+        for i in range(roi.shape[0]):
+            roi_thresh[i] = filters.rank.otsu(
+                roi_thresh[i], selem)
         thresholded = roi > roi_thresh
     elif thresh_type == "random_walker":
         _, thresholded = detector.segment_rw(roi, size)
@@ -367,7 +379,7 @@ def show_blobs(segments, vis, show_shadows=False):
     cmap[:, -1] = 170
     # prioritize default colors
     for i in range(len(config.colors)):
-        if num_colors < i:
+        if i >= num_colors:
             break
         cmap[i, 0:3] = config.colors[i]
     cmap_indices = np.arange(segments.shape[0])

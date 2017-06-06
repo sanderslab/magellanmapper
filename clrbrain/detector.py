@@ -292,7 +292,7 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     segs_all = blobs[mask]
     return segs_all, mask
 
-def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
+def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
     """Compares blobs from detections with truth blobs, prioritizing the inner 
     portion of ROIs to avoid missing detections because of edge effects
     while also adding matches between a blob in the inner ROI and another
@@ -325,13 +325,14 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, exp_id):
         series = roi["series"]
         
         # get all detected and truth blobs for inner and total ROI
-        inner_padding = np.ceil(tol[::-1] * 0.5)
+        inner_padding = np.ceil(pad[::-1])
         offset_inner = np.add(offset, inner_padding)
         size_inner = np.subtract(size, inner_padding * 2)
         print("offset: {}, offset_inner: {}, size: {}, size_inner: {}"
               .format(offset, offset_inner, size, size_inner))
         blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
-        blobs_inner, blobs_inner_mask = get_blobs_in_roi(blobs_roi, offset_inner, size_inner)
+        blobs_inner, blobs_inner_mask = get_blobs_in_roi(
+            blobs_roi, offset_inner, size_inner)
         blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)
         blobs_truth_inner, blobs_truth_inner_mask = get_blobs_in_roi(
             blobs_truth_roi, offset_inner, size_inner)

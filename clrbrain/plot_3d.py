@@ -85,9 +85,10 @@ def threshold(roi):
     if thresh_type == "otsu":
         roi_thresh = filters.threshold_otsu(roi, size)
         thresholded = roi > roi_thresh
+        thresholded = morphology.closing(thresholded, morphology.ball(1))
     elif thresh_type == "local":
         roi_thresh = np.copy(roi)
-        for i in range(roi.shape[0]):
+        for i in range(roi_thresh.shape[0]):
             roi_thresh[i] = filters.threshold_local(
                 roi_thresh[i], size, mode="wrap")
         thresholded = roi > roi_thresh

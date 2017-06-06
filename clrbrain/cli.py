@@ -339,10 +339,12 @@ def main(process_args_only=False):
                               .format(key, key2, n))
                         settings[key2] = n
                         stat = np.zeros(3)
+                        roi_sizes_len = len(roi_sizes)
                         for i in range(len(offsets)):
-                            print(offsets[i], roi_sizes[i])
+                            size = (roi_sizes[i] if roi_sizes_len > 1 
+                                    else roi_sizes[0])
                             stat = np.add(stat, process_file(
-                                filename_base, offsets[i], roi_sizes[i]))
+                                filename_base, offsets[i], size))
                         '''
                         for path in filenames:
                             path = importer.filename_to_base(path, series)
@@ -569,12 +571,15 @@ def process_file(filename_base, offset, roi_size):
                       .format(db_path_base))
             if config.truth_db is not None:
                 verified_db = sqlite.ClrDB()
-                verified_db.load_db(os.path.basename(db_path_base) + "_verified.db", True)
+                verified_db.load_db(
+                    os.path.basename(db_path_base) + "_verified.db", True)
                 exp_name = os.path.basename(filename_roi)
-                exp_id = sqlite.insert_experiment(verified_db.conn, verified_db.cur, exp_name, None)
+                exp_id = sqlite.insert_experiment(
+                    verified_db.conn, verified_db.cur, exp_name, None)
                 rois = config.truth_db.get_rois(exp_name)
-                stats = detector.verify_rois(rois, segments_all, config.truth_db.blobs_truth, region, tol, verified_db, exp_id)
-                #print("seg 1:\n{}".format(segments_all[segments_all[:, 4] == 1]))
+                stats = detector.verify_rois(
+                    rois, segments_all, config.truth_db.blobs_truth, region, 
+                    overlap, tol, verified_db, exp_id)
         
         # benchmarking time
         print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))

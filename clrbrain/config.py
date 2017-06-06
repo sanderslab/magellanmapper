@@ -33,12 +33,12 @@ def update_process_settings(settings, settings_type):
         settings["max_sigma_factor"] = 8
         settings["num_sigma"] = 20
         settings["overlap"] = 0.7
-        settings["thresholding"] = "local"
-        settings["thresholding_size"] = 41
-        #settings["thresholding_size"] = 512 # for otsu
+        settings["thresholding"] = "otsu"
+        #settings["thresholding_size"] = 41
+        settings["thresholding_size"] = 512 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["segment_size"] = 50
-        settings["prune_tol_factor"] = (2, 1.5, 1.5)
+        settings["prune_tol_factor"] = (2, 1.3, 1.3)
 
 
 # defaults to lightsheet 5x settings
@@ -55,8 +55,8 @@ roc = False
 '''
 roc_dict = OrderedDict([
     ("threshold local", OrderedDict([
-        ("thresholding", "local"),
-        ("thresholding_size", np.arange(9, 75, 50))])
+        ("thresholding", "otsu"),
+        ("thresholding_size", np.array([64, 256, 512, 1024, 2048]))])
     )
 ])
 '''
@@ -71,7 +71,7 @@ roc_dict = OrderedDict([
     ),
     ("random walker", OrderedDict([
         ("thresholding", "random_walker"),
-        ("thresholding_size", np.array([50.0, 130.0, 250.0, 500.0, 1000.0, 2000.0]))])
+        ("thresholding_size", np.array([50.0, 130.0, 250.0, 500.0]))])
     )
 ])
 

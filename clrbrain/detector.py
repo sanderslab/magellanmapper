@@ -112,7 +112,7 @@ def segment_blob(roi):
     # x scaling alone
     scaling_factor = calc_scaling_factor()[2]
     settings = config.process_settings
-    blobs_log = blob_log(roi, min_sigma=3*scaling_factor, 
+    blobs_log = blob_log(roi, min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                          max_sigma=settings["max_sigma_factor"]*scaling_factor, 
                          num_sigma=settings["num_sigma"], 
                          threshold=0.1,
@@ -317,6 +317,7 @@ def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
     """
     blobs_truth_rois = None
     blobs_rois = None
+    rois_falsehood = []
     np.set_printoptions(linewidth=200, threshold=10000)
     print("verifying blobs with tol {}".format(tol))
     for roi in rois:
@@ -380,6 +381,11 @@ def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
                             blobs_inner_plus)
         sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id, 
                             blobs_truth_inner_plus)
+        true_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 1])
+        false_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 0])
+        false_neg = len(blobs_truth_inner_plus) - true_pos
+        if false_neg > 0 or false_pos > 0:
+            rois_falsehood.append((offset_inner, false_pos, false_neg))
         
         # combine blobs into total lists for stats
         if blobs_truth_rois is None:
@@ -402,6 +408,7 @@ def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
           "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
           "PPV = {}\n"
           .format(pos, true_pos, false_pos, false_neg, sens, ppv))
+    print("ROIs with falsehood:\n{}".format(rois_falsehood))
     return (pos, true_pos, false_pos)
 
 def _test_blob_duplicates():

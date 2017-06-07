@@ -14,6 +14,7 @@ class ProcessSettings(dict):
         self["tot_var_denoise"] = False
         self["unsharp_strength"] = 0.3
         self["points_3d_thresh"] = 1.3
+        self["min_sigma_factor"] = 3
         self["max_sigma_factor"] = 30
         self["num_sigma"] = 10
         self["overlap"] = 0.5
@@ -30,12 +31,13 @@ def update_process_settings(settings, settings_type):
         #settings["unsharp_strength"] = 1.0
         # smaller threhsold since total var denoising
         #settings["points_3d_thresh"] = 1.1
+        settings["min_sigma_factor"] = 2.1
         settings["max_sigma_factor"] = 8
         settings["num_sigma"] = 20
-        settings["overlap"] = 0.7
+        settings["overlap"] = 0.3
         settings["thresholding"] = "otsu"
         #settings["thresholding_size"] = 41
-        settings["thresholding_size"] = 512 # for otsu
+        settings["thresholding_size"] = 64 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["segment_size"] = 50
         settings["prune_tol_factor"] = (2, 1.3, 1.3)
@@ -55,23 +57,23 @@ roc = False
 '''
 roc_dict = OrderedDict([
     ("threshold local", OrderedDict([
-        ("thresholding", "otsu"),
-        ("thresholding_size", np.array([64, 256, 512, 1024, 2048]))])
-    )
-])
-'''
-roc_dict = OrderedDict([
-    ("threshold local", OrderedDict([
         ("thresholding", "local"),
         ("thresholding_size", np.arange(9, 75, 2))])
     ),
-    ("threshold otsu", OrderedDict([
+    ("threshold local", OrderedDict([
         ("thresholding", "otsu"),
         ("thresholding_size", np.array([64, 256, 512, 1024, 2048]))])
     ),
     ("random walker", OrderedDict([
         ("thresholding", "random_walker"),
         ("thresholding_size", np.array([50.0, 130.0, 250.0, 500.0]))])
+    )
+])
+'''
+roc_dict = OrderedDict([
+    ("threshold otsu", OrderedDict([
+        ("thresholding", "otsu"),
+        ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )
 ])
 

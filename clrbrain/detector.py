@@ -319,6 +319,7 @@ def verify_rois(rois, blobs, blobs_truth, region, overlap, tol, output_db,
     blobs_truth_rois = None
     blobs_rois = None
     rois_falsehood = []
+    # average overlap and tolerance for padding
     inner_padding = np.flipud(np.ceil(np.add(overlap, tol) / 2))
     np.set_printoptions(linewidth=200, threshold=10000)
     print("verifying blobs with tol {}".format(tol))

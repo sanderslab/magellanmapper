@@ -87,9 +87,9 @@ def threshold(roi):
         thresholded = roi > roi_thresh
         '''
         thresholded = morphology.closing(thresholded, morphology.ball(1))
+        '''
         thresholded = morphology.dilation(thresholded, morphology.octahedron(2))
         thresholded = morphology.erosion(thresholded, morphology.octahedron(4))
-        '''
     elif thresh_type == "local":
         roi_thresh = np.copy(roi)
         for i in range(roi_thresh.shape[0]):

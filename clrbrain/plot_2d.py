@@ -646,6 +646,7 @@ def plot_roc(stats_dict, name):
     fig = plt.figure()
     label = ""
     colori = 0
+    align = ">"
     for key, value in stats_dict.items():
         stats = np.array(value[0])
         params = value[1]
@@ -657,11 +658,21 @@ def plot_roc(stats_dict, name):
         plt.scatter(fdr, sens, label=key, lw=2, color=cycle_colors(colori))
         colori += 1
         print("{}:".format(key))
+        headers = ("Param", "PPV", "Sens", "Pos", "TP", "FP")
+        for header in headers:
+            print("{:{align}{fill}}".format(header, fill=8, align=align), 
+                  end=" ")
+        print()
         for i, n in enumerate(params):
             plt.annotate(n, (fdr[i], sens[i]))
-            print("{}: ppv = {}, sens = {}, pos = {}, true pos = {}, "
-                  "false pos = {}".format(
-                  params[i], 1 - fdr[i], sens[i], *stats[i].astype(int)))
+            stat = (params[i], 1 - fdr[i], sens[i], *stats[i].astype(int))
+            for val in stat:
+                if isinstance(val, (int, np.integer)):
+                    print("{:{align}8}".format(val, align=align), end=" ")
+                else:
+                    print("{:{align}{fill}}".format(
+                        val, fill="8.3f", align=align), end=" ")
+            print()
     plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
@@ -674,8 +685,8 @@ def plot_roc(stats_dict, name):
 if __name__ == "__main__":
     print("Testing plot_2d...")
     stats_dict = { 
-        "test1": (np.array([[0.2, 0.3], [0.6, 0.7]]), [10, 20]),
-        "test2": (np.array([[0.4, 0.7], [0.5, 0.8]]), [25, 34])
+        "test1": (np.array([[5, 4, 3], [8, 3, 4]]), [10, 20]),
+        "test2": (np.array([[1225, 1200, 95], [235, 93, 230]]), [25, 34])
     }
     plot_roc(stats_dict, "Testing ROC")
     

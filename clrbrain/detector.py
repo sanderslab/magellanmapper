@@ -292,7 +292,8 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     segs_all = blobs[mask]
     return segs_all, mask
 
-def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
+def verify_rois(rois, blobs, blobs_truth, region, overlap, tol, output_db, 
+                exp_id):
     """Compares blobs from detections with truth blobs, prioritizing the inner 
     portion of ROIs to avoid missing detections because of edge effects
     while also adding matches between a blob in the inner ROI and another
@@ -318,6 +319,7 @@ def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
     blobs_truth_rois = None
     blobs_rois = None
     rois_falsehood = []
+    inner_padding = np.flipud(np.ceil(np.add(overlap, tol) / 2))
     np.set_printoptions(linewidth=200, threshold=10000)
     print("verifying blobs with tol {}".format(tol))
     for roi in rois:
@@ -326,7 +328,6 @@ def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
         series = roi["series"]
         
         # get all detected and truth blobs for inner and total ROI
-        inner_padding = np.ceil(pad[::-1])
         offset_inner = np.add(offset, inner_padding)
         size_inner = np.subtract(size, inner_padding * 2)
         print("offset: {}, offset_inner: {}, size: {}, size_inner: {}"
@@ -404,10 +405,12 @@ def verify_rois(rois, blobs, blobs_truth, region, pad, tol, output_db, exp_id):
     false_neg = pos - true_pos
     sens = float(true_pos) / pos
     ppv = float(true_pos) / (true_pos + false_pos)
-    print("Automated verification:\ncells = {}\ndetected cells = {}\n"
+    print("Automated verification using padding {}, tol {}:\n"
+          "cells = {}\ndetected cells = {}\n"
           "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
           "PPV = {}\n"
-          .format(pos, true_pos, false_pos, false_neg, sens, ppv))
+          .format(inner_padding, tol, pos, true_pos, false_pos, false_neg, sens, 
+                  ppv))
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
     return (pos, true_pos, false_pos)
 

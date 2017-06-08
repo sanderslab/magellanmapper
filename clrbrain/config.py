@@ -37,7 +37,7 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.3
         settings["thresholding"] = "otsu"
         #settings["thresholding_size"] = 41
-        settings["thresholding_size"] = 64 # for otsu
+        settings["thresholding_size"] = 512 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["segment_size"] = 50
         settings["prune_tol_factor"] = (2, 1.3, 1.3)

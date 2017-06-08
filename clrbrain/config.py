@@ -54,15 +54,14 @@ truth_db = None
 
 # receiver operating characteristic
 roc = False
-'''
 roc_dict = OrderedDict([
     ("threshold local", OrderedDict([
         ("thresholding", "local"),
         ("thresholding_size", np.arange(9, 75, 2))])
     ),
-    ("threshold local", OrderedDict([
+    ("threshold otsu", OrderedDict([
         ("thresholding", "otsu"),
-        ("thresholding_size", np.array([64, 256, 512, 1024, 2048]))])
+        ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     ),
     ("random walker", OrderedDict([
         ("thresholding", "random_walker"),
@@ -76,6 +75,7 @@ roc_dict = OrderedDict([
         ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )
 ])
+'''
 
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)

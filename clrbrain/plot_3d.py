@@ -83,13 +83,21 @@ def threshold(roi):
     thresholded = roi
     roi_thresh = 0
     if thresh_type == "otsu":
-        roi_thresh = filters.threshold_otsu(roi, size)
-        thresholded = roi > roi_thresh
-        '''
-        thresholded = morphology.closing(thresholded, morphology.ball(1))
-        '''
-        thresholded = morphology.dilation(thresholded, morphology.octahedron(2))
-        thresholded = morphology.erosion(thresholded, morphology.octahedron(4))
+        try:
+            roi_thresh = filters.threshold_otsu(roi, size)
+            thresholded = roi > roi_thresh
+            '''
+            thresholded = morphology.closing(thresholded, morphology.ball(1))
+            '''
+            thresholded = morphology.dilation(
+                thresholded, morphology.octahedron(2))
+            thresholded = morphology.erosion(
+                thresholded, morphology.octahedron(4))
+        except ValueError as e:
+            # np.histogram may give an error apparently if any NaN, so 
+            # workaround is set all elements in ROI to False
+            print(e)
+            roi_thresh = roi > np.max(roi)
     elif thresh_type == "local":
         roi_thresh = np.copy(roi)
         for i in range(roi_thresh.shape[0]):

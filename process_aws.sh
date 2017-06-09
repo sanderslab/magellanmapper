@@ -7,13 +7,13 @@
 # back to S3.
 #
 # To run:
-# -Update clrbrain: "cd src/clrbrain; git fetch; git pull"
 # -Activate conda environment: "source activate clr"
+# -Update clrbrain: "cd src/clrbrain; git fetch; git pull"
 # -Ensure that swap space and data drive are mounted
 # -Update paths to files for processing, ensuring that the
 #  *_image5d.npz and *_info.npz files are on S3
 # -Run this script with those paths: 
-#  "nohup ./process.sh imgname="/path/to/img.czi" s3="root/path &"
+#  "nohup ./process.sh -f "/path/to/img.czi" -s "root/path &"
 # -Track results: "tail -f nohup.out"
 # -If all goes well, pick up processed files from S3
 ################################################

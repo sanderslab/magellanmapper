@@ -120,12 +120,12 @@ def segment_sub_roi(sub_rois_offsets, coord):
     print("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     segments = detector.segment_blob(sub_roi)
-    # duplicate positions and append to end of each blob for further
-    # adjustments such as shifting the blob based on close duplicates
-    segments = np.concatenate((segments, segments[:, 0:4]), axis=1)
     offset = sub_rois_offsets[coord]
-    # transpose segments
     if segments is not None:
+        # duplicate positions, appending to end of each blob, for further
+        # adjustments such as shifting the blob based on close duplicates
+        segments = np.concatenate((segments, segments[:, 0:4]), axis=1)
+        # transpose segments
         segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0, 0,
                                      offset[0], offset[1], offset[2], 0))
     return (coord, segments)

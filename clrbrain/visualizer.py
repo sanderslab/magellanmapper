@@ -482,7 +482,7 @@ class Visualization(HasTraits):
             roi = self._rois_dict[self.rois_check_list]
             cli.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
             cli.roi_size = tuple(np.add(cli.roi_size, np.multiply(self.border, 2)).astype(int).tolist())
-            self.roi_array[0] = cli.roi_size
+            self.roi_array = [cli.roi_size]
             cli.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
             cli.offset = tuple(np.subtract(cli.offset, self.border).astype(int).tolist())
             self.x_offset, self.y_offset, self.z_offset = cli.offset

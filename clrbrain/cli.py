@@ -397,6 +397,7 @@ def process_file(filename_base, offset, roi_size):
             return
             '''
             segments_proc = output_info["segments"]
+            print("{} segments loaded".format(len(segments_proc)))
             detector.resolutions = output_info["resolutions"]
             roi_offset = None
             shape = None
@@ -406,7 +407,8 @@ def process_file(filename_base, offset, roi_size):
                 roi_offset = output_info["offset"]
                 shape = output_info["roi_size"]
                 # raw image file assumed to be in same dir as processed file
-                path = os.path.join(os.path.dirname(filename_base), str(basename))
+                path = os.path.join(os.path.dirname(filename_base), 
+                                    str(basename))
             except KeyError as e:
                 print(e)
                 print("No information on portion of stack to load")
@@ -427,8 +429,9 @@ def process_file(filename_base, offset, roi_size):
     elif proc_type == PROC_TYPES[4]:
         # extracts plane
         print("extracting plane at {} and exiting".format(offset[2]))
-        name = ("{}-(series{})-z{}").format(os.path.basename(filename).replace(".czi", ""), 
-                                            series, str(offset[2]).zfill(5))
+        name = ("{}-(series{})-z{}").format(
+            os.path.basename(filename).replace(".czi", ""), 
+            series, str(offset[2]).zfill(5))
         plot_2d.extract_plane(image5d, channel, offset, name)
     
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:

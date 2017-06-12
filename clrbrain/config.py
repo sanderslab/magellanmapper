@@ -56,22 +56,22 @@ truth_db = None
 roc = False
 '''
 roc_dict = OrderedDict([
-    ("threshold local", OrderedDict([
+    ("threshold_local", OrderedDict([
         ("thresholding", "local"),
         ("thresholding_size", np.arange(9, 75, 2))])
     ),
-    ("threshold otsu", OrderedDict([
+    ("threshold_otsu", OrderedDict([
         ("thresholding", "otsu"),
         ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     ),
-    ("random walker", OrderedDict([
+    ("random-walker", OrderedDict([
         ("thresholding", "random_walker"),
         ("thresholding_size", np.array([50.0, 130.0, 250.0, 500.0]))])
     )
 ])
 '''
 roc_dict = OrderedDict([
-    ("threshold otsu", OrderedDict([
+    ("threshold_otsu", OrderedDict([
         ("thresholding", "otsu"),
         ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )

@@ -89,10 +89,6 @@ def threshold(roi):
             '''
             thresholded = morphology.closing(thresholded, morphology.ball(1))
             '''
-            thresholded = morphology.dilation(
-                thresholded, morphology.octahedron(2))
-            thresholded = morphology.erosion(
-                thresholded, morphology.octahedron(4))
         except ValueError as e:
             # np.histogram may give an error apparently if any NaN, so 
             # workaround is set all elements in ROI to False
@@ -118,6 +114,10 @@ def threshold(roi):
         thresholded = roi > roi_thresh
     elif thresh_type == "random_walker":
         _, thresholded = detector.segment_rw(roi, size)
+    thresholded = morphology.dilation(
+        thresholded, morphology.octahedron(2))
+    thresholded = morphology.erosion(
+        thresholded, morphology.octahedron(4))
     return thresholded
 
 def deconvolve(roi):

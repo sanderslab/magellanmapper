@@ -78,10 +78,21 @@ def denoise(roi):
     return denoised
 
 def threshold(roi):
+    """Thresholds the ROI, with options for various techniques as well as
+    post-thresholding morphological filtering.
+    
+    Params:
+        roi: Region of interest, given as [z, y, x].
+    
+    Returns:
+        The thresholded region.
+    """
     thresh_type = config.process_settings["thresholding"]
     size = config.process_settings["thresholding_size"]
     thresholded = roi
     roi_thresh = 0
+    
+    # various thresholding model
     if thresh_type == "otsu":
         try:
             roi_thresh = filters.threshold_otsu(roi, size)
@@ -114,6 +125,8 @@ def threshold(roi):
         thresholded = roi > roi_thresh
     elif thresh_type == "random_walker":
         _, thresholded = detector.segment_rw(roi, size)
+    
+    # dilation/erosion
     thresholded = morphology.dilation(
         thresholded, morphology.octahedron(2))
     thresholded = morphology.erosion(

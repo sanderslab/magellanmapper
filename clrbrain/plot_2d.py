@@ -481,7 +481,6 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
             if collection != -1:
                 # patch index is linked to segments_z_list
                 seg = segments_z_list[collectioni][event.ind[0]]
-                print("picked segment: {}".format(seg))
                 segi = np.where((vis.segments == seg).all(axis=1))
                 if len(segi) > 0:
                     # must take from vis rather than saved copy in case user 
@@ -495,7 +494,8 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                         # and adds to selected segments list
                         seg[4] = 1
                         if key not in seg_patch_dict:
-                            patch = patches.Circle((seg[2], seg[1]), radius=seg[3], 
+                            patch = patches.Circle((seg[2], seg[1]), 
+                                                   radius=_get_radius(seg), 
                                                    facecolor="g", alpha=0.5)
                             collection.axes.add_patch(patch)
                             seg_patch_dict[key] = patch
@@ -521,6 +521,7 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
                             del seg_patch_dict[key]
                     vis.segments[segi[0][0]] = seg
                     _force_seg_refresh(i)
+                print("picked segment: {}".format(seg))
         elif isinstance(event.artist, patches.Circle):
             # new patches added outside of collections
             i = list(seg_patch_dict.keys())[list(seg_patch_dict.values()).index(event.artist)]

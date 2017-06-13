@@ -261,6 +261,19 @@ class Visualization(HasTraits):
         taken from the saved processed array. Type of 3D display depends
         on the "3d" flag.
         """
+        # ensure that cube dimensions don't exceed array
+        curr_roi_size = self.roi_array[0].astype(int)
+        if curr_roi_size[0] + self.x_offset > self.x_high:
+            curr_roi_size[0] = self.x_high - self.x_offset
+            self.roi_array = [curr_roi_size]
+        if curr_roi_size[1] + self.y_offset > self.y_high:
+            curr_roi_size[1] = self.y_high - self.y_offset
+            self.roi_array = [curr_roi_size]
+        if curr_roi_size[2] + self.z_offset > self.z_high:
+            curr_roi_size[2] = self.z_high - self.z_offset
+            self.roi_array = [curr_roi_size]
+        print("using ROI size of {}".format(self.roi_array[0].astype(int)))
+        
         # show region of interest based on raw image, using basic denoising 
         # to normalize values but not fully processing
         curr_offset = self._curr_offset()
@@ -336,22 +349,19 @@ class Visualization(HasTraits):
         print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, 
                                            self.z_offset))
     
+    '''
+    @on_trait_change("roi_array")
+    def _update_roi_array(self):
+    '''
+    
     def _btn_redraw_trait_fired(self):
-        # ensure that cube dimensions don't exceed array
-        curr_roi_size = self.roi_array[0].astype(int)
-        if curr_roi_size[0] + self.x_offset > self.x_high:
-            curr_roi_size[0] = self.x_high - self.x_offset
-            self.roi_array = [curr_roi_size]
-        if curr_roi_size[1] + self.y_offset > self.y_high:
-            curr_roi_size[1] = self.y_high - self.y_offset
-            self.roi_array = [curr_roi_size]
-        if curr_roi_size[2] + self.z_offset > self.z_high:
-            curr_roi_size[2] = self.z_high - self.z_offset
-            self.roi_array = [curr_roi_size]
-        print("ROI size: {}".format(self.roi_array[0].astype(int)))
         self.show_3d()
         self.scene.mlab.orientation_axes()
-        print("view: {}\nroll: {}".format(self.scene.mlab.view(), self.scene.mlab.roll()))
+        # updates the GUI here even though it doesn't elsewhere for some reason
+        self.rois_check_list = self._roi_default
+        #print("reset selected ROI to {}".format(self.rois_check_list))
+        #print("view: {}\nroll: {}".format(
+        #    self.scene.mlab.view(), self.scene.mlab.roll()))
     
     @on_trait_change("scene.activated")
     def _orient_camera(self):
@@ -488,7 +498,8 @@ class Visualization(HasTraits):
             self.x_offset, self.y_offset, self.z_offset = cli.offset
             
             # redraw the original ROI and prepare verify mode
-            self._btn_redraw_trait_fired()
+            self.show_3d()
+            self.scene.mlab.orientation_axes()
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
             self._btn_segment_trait_fired(segs=blobs)
             plot_2d.verify = True

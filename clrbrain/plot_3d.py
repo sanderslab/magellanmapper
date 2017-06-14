@@ -128,7 +128,7 @@ def threshold(roi):
     
     # dilation/erosion
     thresholded = morphology.dilation(
-        thresholded, morphology.octahedron(2))
+        thresholded, morphology.ball(2))
     thresholded = morphology.erosion(
         thresholded, morphology.cube(4))
     return thresholded

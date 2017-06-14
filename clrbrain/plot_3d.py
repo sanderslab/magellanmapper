@@ -130,7 +130,7 @@ def threshold(roi):
     thresholded = morphology.dilation(
         thresholded, morphology.octahedron(2))
     thresholded = morphology.erosion(
-        thresholded, morphology.octahedron(4))
+        thresholded, morphology.cube(4))
     return thresholded
 
 def deconvolve(roi):

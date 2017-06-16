@@ -380,7 +380,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                 print("** checking blobs in ROI {}".format(coord))
                 offset = sub_rois_offsets[tuple(coord)]
                 size = sub_rois[tuple(coord)].shape
-                print(offset, size, overlap)
+                print("offset: {}, size: {}, overlap: {}".format(offset, size, overlap))
                 for axis in range(3):
                     axes = np.arange(3)
                     if coord[axis] + 1 < sub_rois_offsets.shape[axis]:
@@ -404,7 +404,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                         blobs_ol = blobs_all[mask_blobs_ol]
                         #print("len before before: {}".format(len(blobs_all)))
                         blobs_ol_pruned = detector.remove_close_blobs_within_array(blobs_ol, region, tol)
-                        print(blobs_ol_pruned)
+                        print("blobs without close duplicates:\n{}".format(blobs_ol_pruned))
                         
                         if blobs_ol_pruned is not None:
                             #print("len before: {}, len blobs_ol: {}".format(len(blobs_all), len(blobs_ol)))
@@ -414,10 +414,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                             #print("len after after: {}".format(len(blobs_all)))
                         
     # copy shifted coordinates to final coordinates
-    '''
-    np.set_printoptions(linewidth=200, threshold=10000)
-    print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
-    '''
+    #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
     blobs_all[:, 0:4] = blobs_all[:, 6:]
     return blobs_all[:, 0:6]
 

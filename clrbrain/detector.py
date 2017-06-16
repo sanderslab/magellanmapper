@@ -232,10 +232,8 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     """
     close_master, close = _find_close_blobs(blobs, blobs_master, region, tol)
     pruned = np.delete(blobs, close, axis=0)
-    '''
-    print("removed {} close blobs:\n{}"
-          .format(len(close), blobs[close][:, 0:4]))
-    '''
+    if (len(close) > 0):
+        print("{} removed".format(blobs[close][:, 0:4]))
     
     # shift close blobs to their mean values, storing values in the duplicated
     # coordinates and radius of the blob array after the confirmation value;
@@ -269,12 +267,16 @@ def remove_close_blobs_within_array(blobs, region, tol):
     """
     if blobs is None:
         return None
+    print("checking blobs for close duplicates:\n{}".format(blobs))
     blobs_all = None
     for blob in blobs:
+        # check each blob against all blobs accepted thus far to ensure that
+        # no blob is close to another blob
         #print("blob: {}".format(blob))
         if blobs_all is None:
             blobs_all = np.array([blob])
         else:
+            # check an array of a single blob to add
             blobs_to_add, blobs_all = remove_close_blobs(
                 np.array([blob]), blobs_all, region, tol)
             if blobs_to_add is not None:
@@ -322,7 +324,6 @@ def verify_rois(rois, blobs, blobs_truth, region, overlap, tol, output_db,
     # average overlap and tolerance for padding
     inner_padding = np.flipud(np.ceil(np.add(overlap, tol) / 2))
     #tol = np.flipud(inner_padding)
-    np.set_printoptions(linewidth=200, threshold=10000)
     print("verifying blobs with tol {}".format(tol))
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])

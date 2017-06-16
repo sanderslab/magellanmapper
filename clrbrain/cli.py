@@ -364,6 +364,9 @@ def main(process_args_only=False):
         os._exit(os.EX_OK)
     
 def process_file(filename_base, offset, roi_size):
+    # print longer Numpy arrays to assist debugging
+    np.set_printoptions(linewidth=200, threshold=10000)
+    
     # prepares the filenames
     global image5d
     filename_image5d_proc = filename_base + "_image5d_proc.npz"

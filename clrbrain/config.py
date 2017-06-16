@@ -37,7 +37,7 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.3
         settings["thresholding"] = "otsu"
         #settings["thresholding_size"] = 41
-        settings["thresholding_size"] = 512 # for otsu
+        settings["thresholding_size"] = 64 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["segment_size"] = 50
         settings["prune_tol_factor"] = (2, 1.3, 1.3)
@@ -54,7 +54,6 @@ truth_db = None
 
 # receiver operating characteristic
 roc = False
-'''
 roc_dict = OrderedDict([
     ("threshold_local", OrderedDict([
         ("thresholding", "local"),
@@ -76,6 +75,7 @@ roc_dict = OrderedDict([
         ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )
 ])
+'''
 
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)

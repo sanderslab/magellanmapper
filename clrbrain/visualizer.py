@@ -460,8 +460,9 @@ class Visualization(HasTraits):
             blobs_truth_roi, _ = detector.get_blobs_in_roi(
                 config.truth_db.blobs_truth, curr_offset, curr_roi_size, 
                 plot_2d.padding)
-            blobs_truth_roi = np.subtract(
-                blobs_truth_roi, (*curr_offset[::-1], 0, 0))
+            transpose = np.zeros(blobs_truth_roi.shape[1])
+            transpose[0:3] = curr_offset[::-1]
+            blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:

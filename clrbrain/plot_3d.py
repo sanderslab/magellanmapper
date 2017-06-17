@@ -6,7 +6,8 @@ Provides options for drawing as surfaces or points.
 
 Attributes:
     mask_dividend: Maximum number of points to show.
-    MLAB_3D_TYPES: Tuple of types of 3D visualizations.
+    MLAB_3D_TYPES: Tuple of types of 3D visualizations for both the image
+        and segmentation.
         * "surface": Renders surfaces in Mayavi contour and
           surface.
         * "point": Renders as raw points, minus points under
@@ -163,40 +164,36 @@ def plot_3d_surface(roi, vis):
     vis_mlab.clf()
     
     # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
-    #roi = np.flipud(roi)
     roi = np.transpose(roi)
-    #roi = np.swapaxes(roi, 0, 2)
-    #roi = np.fliplr(roi)
     
     # prepare the data source
-    #np.transpose(roi, (0, 1, 3, 2, 4))
-    scalars = pipeline.scalar_field(roi)
+    roi = morphology.dilation(roi) # fill in holes to smooth surfaces
+    surface = pipeline.scalar_field(roi)
     
+    '''
     # create the surface
-    contour = pipeline.contour(scalars)
-    # TESTING: use when excluding further processing
-    #surf = pipeline.surface(contour)
+    surface = pipeline.contour(surface)
     
     # removes many more extraneous points
-    smooth = pipeline.user_defined(contour, 
-                                   filter="SmoothPolyDataFilter")
-    smooth.filter.number_of_iterations = 400
-    smooth.filter.relaxation_factor = 0.015
+    surface = pipeline.user_defined(surface, filter="SmoothPolyDataFilter")
+    surface.filter.number_of_iterations = 400
+    surface.filter.relaxation_factor = 0.015
     # holes within cells?
-    curv = pipeline.user_defined(smooth, 
-                                 filter="Curvatures")
-    vis_mlab.pipeline.surface(curv)
+    surface = pipeline.user_defined(surface, filter="Curvatures")
+    vis_mlab.pipeline.surface(surface)
+    
     # colorizes
-    module_manager = curv.children[0]
+    module_manager = surface.children[0]
     module_manager.scalar_lut_manager.data_range = np.array([-0.6, 0.5])
-    module_manager.scalar_lut_manager.lut_mode = "RdBu"
+    module_manager.scalar_lut_manager.lut_mode = "Greens"
+    '''
     
     # based on Surface with contours enabled
-    #contour = pipeline.contour_surface(scalars)
+    #surface = pipeline.contour_surface(surface)
     
     # uses unique IsoSurface module but appears to have 
     # similar output to contour_surface
-    #contour = pipeline.iso_surface(scalars)
+    surface = pipeline.iso_surface(surface, color=(0.7, 1, 0.7))
     
 def plot_3d_points(roi, vis):
     """Plots all pixels as points in 3D space.

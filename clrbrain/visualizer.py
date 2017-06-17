@@ -284,13 +284,15 @@ class Visualization(HasTraits):
         
         # show raw points unless selected not to
         if self._DEFAULTS_3D[2] not in self._check_list_3d:
-            '''# turned off sufrace visualization since so noisy
-            if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
+            vis = (plot_3d.mlab_3d, config.process_settings["vis_3d"])
+            if plot_3d.MLAB_3D_TYPES[0] in vis:
+                # surface rendering
+                #self.roi = plot_3d.threshold(self.roi)
+                #self.roi = self.roi.astype(int)
                 plot_3d.plot_3d_surface(self.roi, self)
             else:
+                # 3D point rendering
                 plot_3d.plot_3d_points(self.roi, self)
-            '''
-            plot_3d.plot_3d_points(self.roi, self)
         else:
             self.scene.mlab.clf()
         
@@ -375,6 +377,7 @@ class Visualization(HasTraits):
     def _btn_segment_trait_fired(self, segs=None):
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
+            # TODO: also check ProcessSettings and/or do away with mlab_3d flag
             self.labels, self.walker = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
         else:

@@ -10,6 +10,7 @@ verbose = False
 class ProcessSettings(dict):
     def __init__(self, *args, **kwargs):
         self["microscope_type"] = "lightsheet_5x"
+        self["vis_3d"] = "points"
         self["clip_vmax"] = 99.5
         self["tot_var_denoise"] = False
         self["unsharp_strength"] = 0.3
@@ -26,6 +27,7 @@ class ProcessSettings(dict):
 def update_process_settings(settings, settings_type):
     if settings_type == "2p_20x":
         settings["microscope_type"] = settings_type
+        settings["vis_3d"] = "surface"
         #settings["clip_vmax"] = 70
         #settings["tot_var_denoise"] = True
         #settings["unsharp_strength"] = 1.0

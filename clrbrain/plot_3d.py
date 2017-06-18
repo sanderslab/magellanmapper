@@ -27,7 +27,7 @@ from clrbrain import config
 from clrbrain import detector
 
 _INTENSITY_MIN = 0.2 # clip below this threshold
-mask_dividend = 100000.0
+_MASK_DIVIDEND = 100000.0 # 3D max points
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 
@@ -240,7 +240,7 @@ def plot_3d_points(roi, vis):
     #print(roi_1d)
     points_len = roi_1d.size
     time_start = time()
-    mask = math.ceil(points_len / mask_dividend)
+    mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
     if points_len > 0:
         vis.scene.mlab.points3d(x, y, z, roi_1d, 
@@ -425,8 +425,11 @@ def show_blobs(segments, vis, show_shadows=False):
         shadows.actor.actor.position = [0, 0, 0]
         
     # show the blobs
+    points_len = len(segments)
+    mask = math.ceil(points_len / _MASK_DIVIDEND)
+    print("points: {}, mask: {}".format(points_len, mask))
     pts = vis.scene.mlab.points3d(segments[:, 2], segments[:, 1], 
-                            segments[:, 0], cmap_indices, #segments[:, 3],
+                            segments[:, 0], cmap_indices, mask_points=mask, 
                             scale_mode="none", scale_factor=scale, resolution=20) 
     pts.module_manager.scalar_lut_manager.lut.table = cmap
     

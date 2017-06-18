@@ -194,6 +194,18 @@ def _parse_coords(arg):
         n += 1
     return coords
 
+def _check_np_none(val):
+    """Checks if a value is either NoneType or a Numpy None object such as
+    that returned from a Numpy archive that saved an undefined variable.
+    
+    Params:
+        val: Value to check.
+    
+    Returns:
+        The value if not a type of None, or a NoneType.
+    """
+    return None if val is None or np.equal(val, None) else val
+
 def main(process_args_only=False):
     """Starts the visualization GUI.
     
@@ -407,8 +419,8 @@ def process_file(filename_base, offset, roi_size):
             path = filename
             try:
                 basename = output_info["basename"]
-                roi_offset = output_info["offset"]
-                shape = output_info["roi_size"]
+                roi_offset = _check_np_none(output_info["offset"])
+                shape = _check_np_none(output_info["roi_size"])
                 # raw image file assumed to be in same dir as processed file
                 path = os.path.join(os.path.dirname(filename_base), 
                                     str(basename))

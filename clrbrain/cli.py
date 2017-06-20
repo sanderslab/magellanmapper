@@ -52,6 +52,7 @@ import argparse
 from time import time
 import multiprocessing as mp
 import numpy as np
+from sklearn.model_selection import GridSearchCV
 
 from clrbrain import config
 from clrbrain import importer
@@ -59,6 +60,7 @@ from clrbrain import sqlite
 from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
+from clrbrain import learn
 
 filename = None # current image file path
 filenames = None # list of multiple image paths
@@ -333,6 +335,15 @@ def main(process_args_only=False):
     
     # process the image stack
     if config.roc:
+        X = np.empty((len(offsets), 2), dtype=object)
+        for i in range(len(offsets)):
+            X[i] = [offsets[i], roi_sizes[0]]
+        tuned_params = {"thresholding_size": [64, 128, 256], "filename_base": [filename_base]}
+        gs = GridSearchCV(learn.BlobEstimator(), tuned_params)
+        gs.fit(X, y=np.zeros(X.shape))
+        print(gs.best_params_)
+        
+        '''
         settings = config.process_settings
         stats_dict = {}
         for key, value in config.roc_dict.items():
@@ -357,16 +368,12 @@ def main(process_args_only=False):
                                     else roi_sizes[0])
                             stat = np.add(stat, process_file(
                                 filename_base, offsets[i], size))
-                        '''
-                        for path in filenames:
-                            path = importer.filename_to_base(path, series)
-                            stat = np.add(stat, process_file(path))
-                        '''
                         stats.append(stat)
                     stats_dict[key + "-" + key2] = (stats, value2)
         # plot ROC curve
         from clrbrain import plot_2d
         plot_2d.plot_roc(stats_dict, filename)
+        '''
     else:
         process_file(filename_base, offset, roi_size)
     

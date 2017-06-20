@@ -34,12 +34,34 @@ then
 	exit 0
 fi
 
+# find platform for Anaconda
+echo -n "Detecting environment..."
+SYSTEM=`uname -s`
+ANACONDA_DOWNLOAD_PLATFORM=""
+if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
+then
+    ANACONDA_DOWNLOAD_PLATFORM="Windows"
+elif [[ "$SYSTEM" =~ "Darwin" ]]
+then
+    ANACONDA_DOWNLOAD_PLATFORM="MacOSX"
+elif [[ "$SYSTEM" =~ "Linux" ]]
+then
+    ANACONDA_DOWNLOAD_PLATFORM="Linux"
+fi
+BIT="x86"
+if [[ "$SYSTEM" =~ "x86_64" ]]
+then
+    BIT="x86_64"
+fi
+echo "will use $ANACONDA_DOWNLOAD_PLATFORM platform with $BIT bit for Anaconda"
+
 # check for Anaconda availability
-if [ "`command -v conda`" == '' ]
+if [ "`command -v conda`" != '' ]
 then
 	echo "Downloading and installing Miniconda..."
-	wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh 
-	sh Miniconda3-latest-Linux-x86_64.sh
+	PLATFORM=$ANACONDA_DOWNLOAD_PLATFORM-$BIT
+	wget https://repo.continuum.io/miniconda/Miniconda3-latest-$PLATFORM.sh 
+	sh Miniconda3-latest-$PLATFORM.sh
 	source ~/.bashrc
 fi
 

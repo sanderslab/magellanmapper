@@ -52,6 +52,7 @@ import argparse
 from time import time
 import multiprocessing as mp
 import numpy as np
+#from memory_profiler import profile
 
 from clrbrain import config
 from clrbrain import importer
@@ -384,7 +385,8 @@ def main(process_args_only=False):
     #hangs if launched from module with GUI
     if proc_type != None and proc_type != PROC_TYPES[3]:
         os._exit(os.EX_OK)
-    
+
+#@profile
 def process_file(filename_base, offset, roi_size):
     # print longer Numpy arrays to assist debugging
     np.set_printoptions(linewidth=200, threshold=10000)
@@ -491,7 +493,8 @@ def process_file(filename_base, offset, roi_size):
         # sub-ROIs for multi-processing
         overlap = np.ceil(np.multiply(detector.calc_scaling_factor(), 
                                       chunking.OVERLAP_FACTOR)).astype(int)
-        max_pixels = (roi.shape[0], 100, 100)
+        max_pixels_xy = 100
+        max_pixels = (roi.shape[0], max_pixels_xy, max_pixels_xy)
         print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
         super_rois, super_rois_offsets = chunking.stack_splitter(
             roi, max_pixels, overlap)
@@ -502,6 +505,7 @@ def process_file(filename_base, offset, roi_size):
                     coord = (z, y, x)
                     roi = super_rois[coord]
                     merged, segs = process_stack(roi, overlap)
+                    del merged # TODO: check if helps reduce memory buildup
                     # transpose seg coords since part of larger stack
                     offset = super_rois_offsets[coord]
                     segs = np.add(segs, (*offset, 0, 0, 0, *offset, 0))

@@ -386,6 +386,10 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                 else:
                     blobs_all = np.concatenate((blobs_all, blobs))
     #print("blobs_all:\n{}".format(blobs_all))
+    # sort blobs by z, y, x order
+    sort = np.lexsort((blobs_all[:, 2], blobs_all[:, 1], blobs_all[:, 0]))
+    blobs_all = blobs_all[sort]
+    #print("blobs_all sorted:\n{}".format(blobs_all))
     for z in range(sub_rois_offsets.shape[0]):
         for y in range(sub_rois_offsets.shape[1]):
             for x in range(sub_rois_offsets.shape[2]):
@@ -416,7 +420,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                             blobs_all[:, axes[1]] < bounds[5]], axis=0)
                         blobs_ol = blobs_all[mask_blobs_ol]
                         #print("len before before: {}".format(len(blobs_all)))
-                        blobs_ol_pruned = detector.remove_close_blobs_within_array(blobs_ol, region, tol)
+                        blobs_ol_pruned = detector.remove_close_blobs_within_sorted_array(blobs_ol, region, tol)
                         print("blobs without close duplicates:\n{}".format(blobs_ol_pruned))
                         
                         if blobs_ol_pruned is not None:

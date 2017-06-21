@@ -284,6 +284,49 @@ def remove_close_blobs_within_array(blobs, region, tol):
                 blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
+def remove_close_blobs_within_sorted_array(blobs, region, tol):
+    """Removes close blobs within a given array, assuming the array has been
+    sorted.
+    
+    Uses remove_close_blobs() to detect blobs close to one another inside
+    the master array.
+    
+    Params:
+        blobs: The blobs to add, given as 2D array of [n, [z, row, column, 
+            radius]].
+        region: Slice within each blob to check, such as slice(0, 2) to check
+            for (z, row, column).
+        tol: Tolerance to check for closeness, given in the same format
+            as region. Blobs that are equal to or less than the the absolute
+            difference for all corresponding parameters will be pruned in
+            the returned array.
+    
+    Return:
+        The blobs array without blobs falling inside the tolerance range.
+    """
+    if blobs is None:
+        return None
+    print("checking blobs for close duplicates:\n{}".format(blobs))
+    blobs_all = None
+    for blob in blobs:
+        # check each blob against all blobs accepted thus far to ensure that
+        # no blob is close to another blob
+        #print("blob: {}".format(blob))
+        if blobs_all is None:
+            # initialize array with first blob
+            blobs_all = np.array([blob])
+        else:
+            # check each blob to add against the last approved blob since
+            # assumes that blobs are sorted, so only need to check last blob
+            blobs_diff = np.abs(np.subtract(
+                blob[region], blobs_all[len(blobs_all) - 1, region]))
+            print(blobs_diff)
+            if (blobs_diff <= tol).all():
+                print("{} removed".format(blob))
+            else:
+                blobs_all = np.concatenate((blobs_all, [blob]))
+    return blobs_all
+
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     mask = np.all([
         blobs[:, 0] >= offset[2] - padding[2], 
@@ -447,6 +490,19 @@ def _test_blob_verification():
     print("master (a):\n{}".format(a))
     _find_closest_blobs(b, a, slice(0, 3), (1, 1, 1))
 
+def _test_blob_close_sorted():
+    a = np.ones((3, 3))
+    a[:, 0] = [0, 1, 2]
+    b = np.copy(a)
+    b[:, 0] += 1
+    print("test (b):\n{}".format(b))
+    print("master (a):\n{}".format(a))
+    blobs = np.concatenate((a, b))
+    sort = np.lexsort((blobs[:, 2], blobs[:, 1], blobs[:, 0]))
+    blobs = blobs[sort]
+    blobs = remove_close_blobs_within_sorted_array(blobs, slice(0, 3), (1, 2, 2))
+    print("pruned:\n{}".format(blobs))
+
 if __name__ == "__main__":
     print("Detector tests...")
-    _test_blob_verification()
+    _test_blob_close_sorted()

@@ -80,6 +80,8 @@ proc_type = None
 TRUTH_DB_TYPES = ("view", "verified")
 truth_db_type = None
 
+BLOB_COORD_SLICE = slice(0, 3)
+
 def denoise_sub_roi(coord):
     """Denoises the ROI within an array of ROIs.
     
@@ -204,7 +206,20 @@ def _check_np_none(val):
     Returns:
         The value if not a type of None, or a NoneType.
     """
-    return None if val is None or np.equal(val, None) else val
+    return None if val is None or np.all(np.equal(val, None)) else val
+
+def _prune_blobs(seg_rois, region, overlap, sub_rois, sub_rois_offsets):
+    # prune close blobs within overlapping regions
+    time_pruning_start = time()
+    tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
+           .astype(int))
+    segments_all = chunking.prune_overlapping_blobs2(
+        seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets)
+    if segments_all is not None:
+        print("total segments found: {}".format(segments_all.shape[0]))
+    time_pruning_end = time()
+    duration = time_pruning_end - time_pruning_start
+    return segments_all, duration
 
 def main(process_args_only=False):
     """Starts the visualization GUI.
@@ -357,11 +372,6 @@ def main(process_args_only=False):
                                     else roi_sizes[0])
                             stat = np.add(stat, process_file(
                                 filename_base, offsets[i], size))
-                        '''
-                        for path in filenames:
-                            path = importer.filename_to_base(path, series)
-                            stat = np.add(stat, process_file(path))
-                        '''
                         stats.append(stat)
                     stats_dict[key + "-" + key2] = (stats, value2)
         # plot ROC curve
@@ -387,14 +397,18 @@ def process_file(filename_base, offset, roi_size):
     print(filename_image5d_proc)
     
     if proc_type == PROC_TYPES[3]:
-        # loads from processed file
+        # loads from processed files
+        global image5d_proc, segments_proc
         try:
-            global image5d_proc, segments_proc
-            
-            # loads stored processed arrays, using mem-mapped accessed for the 
+            # processed image file, using mem-mapped accessed for the 
             # image file to minimize memory requirement, only loading on-the-fly
-            output_info = np.load(filename_info_proc)
             image5d_proc = np.load(filename_image5d_proc, mmap_mode="r")
+        except IOError:
+            print("Unable to load processed image file from {}, will ignore"
+                  .format(filename_image5d_proc))
+        try:
+            # processed segments and other image information
+            output_info = np.load(filename_info_proc)
             '''
             # converts old monolithic format to new format with separate files
             # to allow loading file with only image file as memory-backed array;
@@ -430,9 +444,10 @@ def process_file(filename_base, offset, roi_size):
             image5d = importer.read_file(
                 path, series, offset=roi_offset, size=shape, channel=channel)
             return
-        except IOError:
-            print("Unable to load processed files, will attempt to read "
-                  "unprocessed ones")
+        except IOError as e:
+            print("Unable to load processed info file at {}, will exit"
+                  .format(filename_info_proc))
+            raise e
     
     # attempts to load the main image stack
     image5d = importer.read_file(filename, series) #, z_max=cube_len)
@@ -471,114 +486,32 @@ def process_file(filename_base, offset, roi_size):
                                                 series_fill, splice)
             
         roi = plot_3d.prepare_roi(image5d, channel, shape, roi_offset)
-        # need to make module-level to allow shared memory of this large array
-        global sub_rois
-        sub_rois, overlap, _ = (chunking.stack_splitter(
-                                roi, chunking.max_pixels_factor_denoise, 0))
-        segments_all = None
-        region = slice(0, 3)
-        time_denoising_start = time()
-        if proc_type == PROC_TYPES[2]:
-            # Multiprocessing
-            
-            # denoise all sub-ROIs and re-merge
-            pool = mp.Pool()
-            pool_results = []
-            # asynchronously denoise since denoising is independent of adjacent
-            # sub-ROIs
-            for z in range(sub_rois.shape[0]):
-                for y in range(sub_rois.shape[1]):
-                    for x in range(sub_rois.shape[2]):
-                        coord = (z, y, x)
-                        pool_results.append(pool.apply_async(denoise_sub_roi, 
-                                         args=(coord, )))
-            for result in pool_results:
-                coord, sub_roi = result.get()
-                print("replacing sub_roi at {} of {}"
-                      .format(coord, np.add(sub_rois.shape, -1)))
-                sub_rois[coord] = sub_roi
-            
-            pool.close()
-            pool.join()
-            # re-merge into one large ROI (the image stack) in preparation for 
-            # segmenting with differently sized chunks
-            merged = chunking.merge_split_stack(sub_rois, overlap)
-            time_denoising_end = time()
-            
-            # segment objects through blob detection, using larger sub-ROI size
-            # to minimize the number of sub-ROIs and thus the number of edge 
-            # overlaps to account for
-            time_segmenting_start = time()
-            max_factor = config.process_settings["segment_size"]
-            print("max_factor: {}".format(max_factor))
-            sub_rois, overlap, sub_rois_offsets = (chunking.stack_splitter(
-                                                   merged, max_factor))
-            pool = mp.Pool()
-            pool_results = []
-            # denoising can also be done asynchronousely since independent from
-            # one another
-            for z in range(sub_rois.shape[0]):
-                for y in range(sub_rois.shape[1]):
-                    for x in range(sub_rois.shape[2]):
-                        coord = (z, y, x)
-                        pool_results.append(pool.apply_async(segment_sub_roi, 
-                                         args=(sub_rois_offsets, coord)))
-            
-            seg_rois = np.zeros(sub_rois.shape, dtype=object)
-            for result in pool_results:
-                coord, segments = result.get()
-                print("adding segments from sub_roi at {} of {}"
-                      .format(coord, np.add(sub_rois.shape, -1)))
-                seg_rois[coord] = segments
-                #segments_all = collect_segments(segments_all, segments, region, overlap)
-            
-            pool.close()
-            pool.join()
-            time_segmenting_end = time()
-            
-        else:
-            # Non-multiprocessing
-            
-            for z in range(sub_rois.shape[0]):
-                for y in range(sub_rois.shape[1]):
-                    for x in range(sub_rois.shape[2]):
-                        coord = (z, y, x)
-                        coord, sub_roi = denoise_sub_roi(coord)
-                        sub_rois[coord] = sub_roi
-            merged = chunking.merge_split_stack(sub_rois, overlap)
-            time_denoising_end = time()
-            
-            time_segmenting_start = time()
-            max_factor = config.process_settings["segment_size"]
-            sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(merged, max_factor)
-            seg_rois = np.zeros(sub_rois.shape, dtype=object)
-            for z in range(sub_rois.shape[0]):
-                for y in range(sub_rois.shape[1]):
-                    for x in range(sub_rois.shape[2]):
-                        coord = (z, y, x)
-                        coord, segments = segment_sub_roi(sub_rois_offsets, coord)
-                        seg_rois[coord] = segments
-            time_segmenting_end = time()
-            
-        # prune close blobs within overlapping regions, which 
-        # since 
-        time_pruning_start = time()
-        tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
-               .astype(int))
-        '''
-        segments_all = chunking.prune_overlapping_blobs(seg_rois, region, tol, 
-                                                        sub_rois, sub_rois_offsets)
-        '''
-        segments_all = chunking.prune_overlapping_blobs2(seg_rois, region, overlap, tol, sub_rois,
-                                                        sub_rois_offsets)
-        if segments_all is not None:
-            print("total segments found: {}".format(segments_all.shape[0]))
-        time_pruning_end = time()
-        '''
-        if segments_all is not None:
-            segments_all = chunking.remove_duplicate_blobs(segments_all, slice(0, 3))
-            print("all segments: {}\n{}".format(segments_all.shape[0], segments_all))
-        '''
+        
+        # chunk into super-ROIs, which will each be further chunked into 
+        # sub-ROIs for multi-processing
+        overlap = np.ceil(np.multiply(detector.calc_scaling_factor(), 
+                                      chunking.OVERLAP_FACTOR)).astype(int)
+        max_pixels = (roi.shape[0], 100, 100)
+        print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
+        super_rois, super_rois_offsets = chunking.stack_splitter(
+            roi, max_pixels, overlap)
+        seg_rois = np.zeros(super_rois.shape, dtype=object)
+        for z in range(super_rois.shape[0]):
+            for y in range(super_rois.shape[1]):
+                for x in range(super_rois.shape[2]):
+                    coord = (z, y, x)
+                    roi = super_rois[coord]
+                    merged, segs = process_stack(roi, overlap)
+                    # transpose seg coords since part of larger stack
+                    offset = super_rois_offsets[coord]
+                    segs = np.add(segs, (*offset, 0, 0, 0, *offset, 0))
+                    seg_rois[coord] = segs
+        segments_all, pruning_time = _prune_blobs(
+            seg_rois, BLOB_COORD_SLICE, overlap, super_rois, super_rois_offsets)
+        # remove the duplicated elements that were used for pruning
+        segments_all = segments_all[:, 0:6]
+        
+        # compared detected blobs with truth blobs
         stats = None
         if truth_db_type == TRUTH_DB_TYPES[1]:
             db_path_base = _splice_before(filename_base, series_fill, splice)
@@ -596,28 +529,133 @@ def process_file(filename_base, offset, roi_size):
                     verified_db.conn, verified_db.cur, exp_name, None)
                 rois = config.truth_db.get_rois(exp_name)
                 stats = detector.verify_rois(
-                    rois, segments_all, config.truth_db.blobs_truth, region, 
-                    overlap, tol, verified_db, exp_id)
-        
-        # benchmarking time
-        print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))
-        print("total segmenting time (s): {}".format(time_segmenting_end - time_segmenting_start))
-        print("total pruning time (s): {}".format(time_pruning_end - time_pruning_start))
-        print("total processing time (s): {}".format(time() - time_start))
+                    rois, segments_all, config.truth_db.blobs_truth, 
+                    BLOB_COORD_SLICE, overlap, tol, verified_db, exp_id)
         
         # save denoised stack, segments, and scaling info to file
         outfile_image5d_proc = open(filename_image5d_proc, "wb")
         outfile_info_proc = open(filename_info_proc, "wb")
         time_start = time()
-        np.save(outfile_image5d_proc, merged)
+        #np.save(outfile_image5d_proc, merged)
         np.savez(outfile_info_proc, segments=segments_all, 
                  resolutions=detector.resolutions, 
                  basename=os.path.basename(filename), # only save filename
                  offset=offset, roi_size=roi_size) # None unless explicitly set
         outfile_image5d_proc.close()
         outfile_info_proc.close()
-        print("file save time: %f" %(time() - time_start))
+        
+        print("total segments found: {}".format(len(segments_all)))
+        print("file save time: {}".format(time() - time_start))
+        print("total file processing time (s): {}".format(time() - time_start))
         return stats
+    return None
+    
+def process_stack(roi, overlap):
+    time_start = time()
+    # prepare ROI for processing;
+    # need to make module-level to allow shared memory of this large array
+    global sub_rois
+    scaling_factor = detector.calc_scaling_factor()
+    max_pixels = np.ceil(np.multiply(scaling_factor, 
+                                     chunking.MAX_PIXELS_FACTOR)).astype(int)
+    # no overlap for denoising
+    sub_rois, _ = chunking.stack_splitter(roi, max_pixels, np.zeros(3))
+    segments_all = None
+    
+    # process ROI
+    time_denoising_start = time()
+    if proc_type == PROC_TYPES[2]:
+        # Multiprocessing
+        
+        # denoise all sub-ROIs and re-merge
+        pool = mp.Pool()
+        pool_results = []
+        # asynchronously denoise since denoising is independent of adjacent
+        # sub-ROIs
+        for z in range(sub_rois.shape[0]):
+            for y in range(sub_rois.shape[1]):
+                for x in range(sub_rois.shape[2]):
+                    coord = (z, y, x)
+                    pool_results.append(pool.apply_async(denoise_sub_roi, 
+                                     args=(coord, )))
+        for result in pool_results:
+            coord, sub_roi = result.get()
+            print("replacing sub_roi at {} of {}"
+                  .format(coord, np.add(sub_rois.shape, -1)))
+            sub_rois[coord] = sub_roi
+        
+        pool.close()
+        pool.join()
+        # re-merge into one large ROI (the image stack) in preparation for 
+        # segmenting with differently sized chunks
+        merged = chunking.merge_split_stack(sub_rois, overlap)
+        time_denoising_end = time()
+        
+        # segment objects through blob detection, using larger sub-ROI size
+        # to minimize the number of sub-ROIs and thus the number of edge 
+        # overlaps to account for
+        time_segmenting_start = time()
+        max_pixels = np.ceil(np.multiply(
+            scaling_factor, 
+            config.process_settings["segment_size"])).astype(int)
+        #print("max_factor: {}".format(max_factor))
+        sub_rois, sub_rois_offsets = chunking.stack_splitter(
+            merged, max_pixels, overlap)
+        pool = mp.Pool()
+        pool_results = []
+        for z in range(sub_rois.shape[0]):
+            for y in range(sub_rois.shape[1]):
+                for x in range(sub_rois.shape[2]):
+                    coord = (z, y, x)
+                    pool_results.append(pool.apply_async(segment_sub_roi, 
+                                     args=(sub_rois_offsets, coord)))
+        
+        seg_rois = np.zeros(sub_rois.shape, dtype=object)
+        for result in pool_results:
+            coord, segments = result.get()
+            print("adding segments from sub_roi at {} of {}"
+                  .format(coord, np.add(sub_rois.shape, -1)))
+            seg_rois[coord] = segments
+        
+        pool.close()
+        pool.join()
+        time_segmenting_end = time()
+        
+    else:
+        # Non-multiprocessing
+        
+        for z in range(sub_rois.shape[0]):
+            for y in range(sub_rois.shape[1]):
+                for x in range(sub_rois.shape[2]):
+                    coord = (z, y, x)
+                    coord, sub_roi = denoise_sub_roi(coord)
+                    sub_rois[coord] = sub_roi
+        merged = chunking.merge_split_stack(sub_rois, overlap)
+        time_denoising_end = time()
+        
+        time_segmenting_start = time()
+        max_factor = config.process_settings["segment_size"]
+        sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(
+            merged, max_factor)
+        seg_rois = np.zeros(sub_rois.shape, dtype=object)
+        for z in range(sub_rois.shape[0]):
+            for y in range(sub_rois.shape[1]):
+                for x in range(sub_rois.shape[2]):
+                    coord = (z, y, x)
+                    coord, segments = segment_sub_roi(sub_rois_offsets, coord)
+                    seg_rois[coord] = segments
+        time_segmenting_end = time()
+    
+    segments_all, pruning_time = _prune_blobs(
+        seg_rois, BLOB_COORD_SLICE, overlap, sub_rois, sub_rois_offsets)
+    
+    # benchmarking time
+    print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))
+    print("total segmenting time (s): {}".format(time_segmenting_end - time_segmenting_start))
+    print("total pruning time (s): {}".format(pruning_time))
+    print("total stack processing time (s): {}".format(time() - time_start))
+    
+    return merged, segments_all
     
 if __name__ == "__main__":
     print("Starting clrbrain command-line interface...")

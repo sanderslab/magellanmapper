@@ -19,8 +19,8 @@ import math
 from clrbrain import config
 from clrbrain import detector
 
-max_pixels_factor_denoise = 25
-overlap_factor = 5
+MAX_PIXELS_FACTOR = 25
+OVERLAP_FACTOR = 5
 
 def _num_units(size, max_pixels):
     """Calculates number of sub regions.
@@ -55,7 +55,22 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
         end = size[axis]
     return (start, end)
 
-def stack_splitter(roi, max_pixels_factor, overlap_factor=overlap_factor):
+'''
+def super_stack_splitter(roi, max_pixels, overlap):
+    num_units = _num_units(roi.shape, max_pixels)
+    dims = []
+    for z in range(num_units[0]):
+        for y in range(num_units[1]):
+            for x in range(num_units[2]):
+                bounds = [_bounds_side(size, max_pixels, overlap, (z, y, x), axis) for axis in range(3)]
+                offset = (bounds[0][0], bounds[1][0], bounds[2][0])
+                size = (bounds[0][1] - bounds[0][0], bounds[1][1] - bounds[1][0], bounds[2][1] - bounds[2][0])
+                #print("bounds: {}".format(bounds))
+                dims.append((offset, size))
+    return dims
+''' 
+
+def stack_splitter(roi, max_pixels, overlap):
     """Splits a stack into multiple sub regions.
     
     Params:
@@ -68,11 +83,7 @@ def stack_splitter(roi, max_pixels_factor, overlap_factor=overlap_factor):
             (z, y, x) dimensions.
     """
     size = roi.shape
-    # overlap and max pixels per sub ROI are each dependent on scaling
-    scaling_factor = detector.calc_scaling_factor()
-    overlap = np.ceil(np.multiply(scaling_factor, overlap_factor)).astype(int)
-    max_pixels = np.ceil(np.multiply(scaling_factor, max_pixels_factor)).astype(int)
-    print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
+    print("total stack size: {}".format(size))
     
     # prepare the array containing sub ROI slices with type object so that it
     # can contain an arbitrary object of any size, as well as offset for 
@@ -93,7 +104,7 @@ def stack_splitter(roi, max_pixels_factor, overlap_factor=overlap_factor):
                 #print("bounds: {}".format(bounds))
                 sub_rois[coord] = roi[slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
                 sub_rois_offsets[coord] = (bounds[0][0], bounds[1][0], bounds[2][0])
-    return sub_rois, overlap, sub_rois_offsets
+    return sub_rois, sub_rois_offsets
 
 def merge_split_stack(sub_rois, overlap):
     """Merges sub regions back into a single stack.
@@ -274,8 +285,9 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois,
     return blobs_pruned, blobs_ref_shifted, coord_next_tup
 
 def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
-    """Removes overlapping blobs, which are blobs that are within a certain tolerance of
-    one another.
+    """Removes overlapping blobs, which are blobs that are within a certain 
+    tolerance of one another, by comparing a given sub-ROI with the 
+    immediately preceding sub-ROI.
     
     Params:
         blobs: Numpy array of segments to display in the subplot, which 
@@ -333,8 +345,9 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
     return blobs_all[:, 0:5]
 
 def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
-    """Removes overlapping blobs, which are blobs that are within a certain tolerance of
-    one another.
+    """Removes overlapping blobs, which are blobs that are within a certain 
+    tolerance of one another, by comparing a given sub-ROI with the 
+    immediately following sub-ROI.
     
     Params:
         blobs: Numpy array of segments to display in the subplot, which 
@@ -384,10 +397,10 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                 for axis in range(3):
                     axes = np.arange(3)
                     if coord[axis] + 1 < sub_rois_offsets.shape[axis]:
-                        axes = np.delete(axes, axis)
+                        axes = np.delete(axes, axis) # get remaining axes
                         bounds = [
-                            offset[axis] + size[axis] - tol[axis],
-                            offset[axis] + size[axis] + overlap[axis] + tol[axis],
+                            offset[axis] + size[axis] - overlap[axis] - tol[axis],
+                            offset[axis] + size[axis] + tol[axis],
                             offset[axes[0]] - tol[axes[0]],
                             offset[axes[0]] + size[axes[0]] + tol[axes[0]],
                             offset[axes[1]] - tol[axes[1]],
@@ -416,7 +429,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
     # copy shifted coordinates to final coordinates
     #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
     blobs_all[:, 0:4] = blobs_all[:, 6:]
-    return blobs_all[:, 0:6]
+    return blobs_all#[:, 0:6]
 
 if __name__ == "__main__":
     print("Starting chunking...")

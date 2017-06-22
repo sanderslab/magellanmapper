@@ -385,11 +385,6 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                     blobs_all = blobs
                 else:
                     blobs_all = np.concatenate((blobs_all, blobs))
-    #print("blobs_all:\n{}".format(blobs_all))
-    # sort blobs by z, y, x order
-    sort = np.lexsort((blobs_all[:, 2], blobs_all[:, 1], blobs_all[:, 0]))
-    blobs_all = blobs_all[sort]
-    #print("blobs_all sorted:\n{}".format(blobs_all))
     for z in range(sub_rois_offsets.shape[0]):
         for y in range(sub_rois_offsets.shape[1]):
             for x in range(sub_rois_offsets.shape[2]):
@@ -397,7 +392,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                 print("** checking blobs in ROI {}".format(coord))
                 offset = sub_rois_offsets[tuple(coord)]
                 size = sub_rois[tuple(coord)].shape
-                print("offset: {}, size: {}, overlap: {}".format(offset, size, overlap))
+                print("offset: {}, size: {}, overlap: {}, tol: {}".format(offset, size, overlap, tol))
                 for axis in range(3):
                     axes = np.arange(3)
                     if coord[axis] + 1 < sub_rois_offsets.shape[axis]:
@@ -410,7 +405,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                             offset[axes[1]] - tol[axes[1]],
                             offset[axes[1]] + size[axes[1]] + tol[axes[1]]
                         ]
-                        print("boundaries: {}".format(bounds))
+                        print("axis {}, boundaries: {}".format(axis, bounds))
                         mask_blobs_ol = np.all([
                             blobs_all[:, axis] >= bounds[0], 
                             blobs_all[:, axis] < bounds[1],

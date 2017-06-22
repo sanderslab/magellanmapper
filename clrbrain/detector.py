@@ -285,11 +285,8 @@ def remove_close_blobs_within_array(blobs, region, tol):
     return blobs_all
 
 def remove_close_blobs_within_sorted_array(blobs, region, tol):
-    """Removes close blobs within a given array, assuming the array has been
-    sorted.
-    
-    Uses remove_close_blobs() to detect blobs close to one another inside
-    the master array.
+    """Removes close blobs within a given array, first sorting the array by
+    z, y, x.
     
     Params:
         blobs: The blobs to add, given as 2D array of [n, [z, row, column, 
@@ -306,7 +303,9 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
     """
     if blobs is None:
         return None
-    print("checking blobs for close duplicates:\n{}".format(blobs))
+    sort = np.lexsort((blobs[:, 2], blobs[:, 1], blobs[:, 0]))
+    blobs = blobs[sort]
+    print("checking sorted blobs for close duplicates:\n{}".format(blobs))
     blobs_all = None
     for blob in blobs:
         # check each blob against all blobs accepted thus far to ensure that
@@ -318,13 +317,25 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
         else:
             # check each blob to add against the last approved blob since
             # assumes that blobs are sorted, so only need to check last blob
-            blobs_diff = np.abs(np.subtract(
-                blob[region], blobs_all[len(blobs_all) - 1, region]))
-            print(blobs_diff)
-            if (blobs_diff <= tol).all():
-                print("{} removed".format(blob))
-            else:
-                blobs_all = np.concatenate((blobs_all, [blob]))
+            i = len(blobs_all) - 1
+            while i >= 0:
+                blobs_diff = np.abs(np.subtract(
+                    blob[region], blobs_all[i, region]))
+                #print(blobs_diff)
+                if (blobs_diff <= tol).all():
+                    # duplicate blob to be removed;
+                    # shift close blobs to their mean values, storing values in 
+                    # the duplicated coordinates and radius of the blob array
+                    blobs_all[i, 6:] = np.around(
+                        np.divide(np.add(blobs_all[i, 6:], blob[6:]), 2))
+                    print("{} removed".format(blob))
+                    break
+                elif i == 0 or not (blobs_diff <= tol).any():
+                    # add blob since at start of non-duplicate blobs list
+                    # or no further chance for match within sorted list
+                    blobs_all = np.concatenate((blobs_all, [blob]))
+                    break
+                i -= 1
     return blobs_all
 
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):

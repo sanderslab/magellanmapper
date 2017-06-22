@@ -209,11 +209,9 @@ def _check_np_none(val):
     """
     return None if val is None or np.all(np.equal(val, None)) else val
 
-def _prune_blobs(seg_rois, region, overlap, sub_rois, sub_rois_offsets):
+def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     # prune close blobs within overlapping regions
     time_pruning_start = time()
-    tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
-           .astype(int))
     segments_all = chunking.prune_overlapping_blobs2(
         seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets)
     if segments_all is not None:
@@ -396,7 +394,7 @@ def process_file(filename_base, offset, roi_size):
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
     filename_info_proc = filename_base + "_info_proc.npz"
     filename_roi = None
-    print(filename_image5d_proc)
+    #print(filename_image5d_proc)
     
     if proc_type == PROC_TYPES[3]:
         # loads from processed files
@@ -437,6 +435,7 @@ def process_file(filename_base, offset, roi_size):
                 basename = output_info["basename"]
                 roi_offset = _check_np_none(output_info["offset"])
                 shape = _check_np_none(output_info["roi_size"])
+                print("loaded processed offset: {}, roi_size: {}".format(roi_offset, shape))
                 # raw image file assumed to be in same dir as processed file
                 path = os.path.join(os.path.dirname(filename_base), 
                                     str(basename))
@@ -493,7 +492,9 @@ def process_file(filename_base, offset, roi_size):
         # sub-ROIs for multi-processing
         overlap = np.ceil(np.multiply(detector.calc_scaling_factor(), 
                                       chunking.OVERLAP_FACTOR)).astype(int)
-        max_pixels_xy = 100
+        tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
+               .astype(int))
+        max_pixels_xy = 1000
         max_pixels = (roi.shape[0], max_pixels_xy, max_pixels_xy)
         print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
         super_rois, super_rois_offsets = chunking.stack_splitter(
@@ -504,15 +505,17 @@ def process_file(filename_base, offset, roi_size):
                 for x in range(super_rois.shape[2]):
                     coord = (z, y, x)
                     roi = super_rois[coord]
-                    merged, segs = process_stack(roi, overlap)
+                    merged, segs = process_stack(roi, overlap, tol)
                     del merged # TODO: check if helps reduce memory buildup
                     # transpose seg coords since part of larger stack
-                    offset = super_rois_offsets[coord]
-                    segs = np.add(segs, (*offset, 0, 0, 0, *offset, 0))
+                    off = super_rois_offsets[coord]
+                    segs = np.add(segs, (*off, 0, 0, 0, *off, 0))
                     seg_rois[coord] = segs
         segments_all, pruning_time = _prune_blobs(
-            seg_rois, BLOB_COORD_SLICE, overlap, super_rois, super_rois_offsets)
+            seg_rois, BLOB_COORD_SLICE, overlap, tol, super_rois, 
+            super_rois_offsets)
         # remove the duplicated elements that were used for pruning
+        #merged, segments_all = process_stack(roi, overlap, tol)
         segments_all = segments_all[:, 0:6]
         
         # compared detected blobs with truth blobs
@@ -540,7 +543,9 @@ def process_file(filename_base, offset, roi_size):
         outfile_image5d_proc = open(filename_image5d_proc, "wb")
         outfile_info_proc = open(filename_info_proc, "wb")
         time_start = time()
+        # TODO: write files to memmap array to release RAM?
         #np.save(outfile_image5d_proc, merged)
+        #print("merged shape: {}".format(merged.shape))
         np.savez(outfile_info_proc, segments=segments_all, 
                  resolutions=detector.resolutions, 
                  basename=os.path.basename(filename), # only save filename
@@ -554,7 +559,7 @@ def process_file(filename_base, offset, roi_size):
         return stats
     return None
     
-def process_stack(roi, overlap):
+def process_stack(roi, overlap, tol):
     time_start = time()
     # prepare ROI for processing;
     # need to make module-level to allow shared memory of this large array
@@ -565,6 +570,7 @@ def process_stack(roi, overlap):
     # no overlap for denoising
     sub_rois, _ = chunking.stack_splitter(roi, max_pixels, np.zeros(3))
     segments_all = None
+    merged = None
     
     # process ROI
     time_denoising_start = time()
@@ -592,7 +598,7 @@ def process_stack(roi, overlap):
         pool.join()
         # re-merge into one large ROI (the image stack) in preparation for 
         # segmenting with differently sized chunks
-        merged = chunking.merge_split_stack(sub_rois, overlap)
+        merged = chunking.merge_split_stack(sub_rois, np.zeros(3))
         time_denoising_end = time()
         
         # segment objects through blob detection, using larger sub-ROI size
@@ -651,7 +657,7 @@ def process_stack(roi, overlap):
         time_segmenting_end = time()
     
     segments_all, pruning_time = _prune_blobs(
-        seg_rois, BLOB_COORD_SLICE, overlap, sub_rois, sub_rois_offsets)
+        seg_rois, BLOB_COORD_SLICE, overlap, tol, sub_rois, sub_rois_offsets)
     
     # benchmarking time
     print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))

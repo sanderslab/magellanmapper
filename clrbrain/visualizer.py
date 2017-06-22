@@ -99,7 +99,7 @@ class ListSelections(HasTraits):
 
 class SegmentsArrayAdapter(TabularAdapter):
     columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
-               ("radius", 3), ("confirmed", 4)]
+               ("radius", 3), ("confirmed", 4), ("abs_z", 6), ("abs_y", 7), ("abs_x", 8), ]
     index_text = Property
     
     def _get_index_text(self):
@@ -313,7 +313,9 @@ class Visualization(HasTraits):
         if cli.image5d_proc is not None:
             size = cli.image5d_proc.shape[0:3]
         else:
-            size = cli.image5d.shape[1:4]
+            off = 1 if cli.image5d.ndim >= 5 else 0
+            print(cli.image5d.shape)
+            size = cli.image5d.shape[0+off:3+off]
         self.z_high, self.y_high, self.x_high = size
         curr_offset = cli.offset
         # apply user-defined offsets
@@ -390,7 +392,10 @@ class Visualization(HasTraits):
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     self.roi = plot_3d.threshold(self.roi)
-                self.segments = detector.segment_blob(self.roi)
+                segs = detector.segment_blob(self.roi)
+                shift = np.zeros(segs.shape[1])
+                shift[0:3] = [z, y, x]
+                self.segments = np.concatenate((segs, np.add(segs, shift)), axis=1)
             else:
                 x, y, z = self._curr_offset()
                 # uses blobs from loaded segments
@@ -417,7 +422,7 @@ class Visualization(HasTraits):
                     segs = np.concatenate((segs, segs_outside), axis=0)
                 shift = np.zeros(segs.shape[1])
                 shift[0:3] = [z, y, x]
-                self.segments = np.subtract(segs, shift)
+                self.segments = np.concatenate((np.subtract(segs, shift), segs), axis=1)
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self, show_shadows)
@@ -540,12 +545,12 @@ class Visualization(HasTraits):
         """Sets segments.
         
         Args:
-            val: Numpy array of (n, 5) shape with segments. Defaults to one
+            val: Numpy array of (n, 9) shape with segments. Defaults to one
                 row if None.
         """
         if val is None:
             # need to include at least one row or else will crash
-            self._segments = np.zeros((1, 6))
+            self._segments = np.zeros((1, 9))
         else:
             self._segments = val
     

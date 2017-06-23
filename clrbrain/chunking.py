@@ -385,6 +385,8 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                     blobs_all = blobs
                 else:
                     blobs_all = np.concatenate((blobs_all, blobs))
+    if blobs_all is None:
+        return None
     for z in range(sub_rois_offsets.shape[0]):
         for y in range(sub_rois_offsets.shape[1]):
             for x in range(sub_rois_offsets.shape[2]):

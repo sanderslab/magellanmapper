@@ -507,37 +507,40 @@ def process_file(filename_base, offset, roi_size):
                     roi = super_rois[coord]
                     merged, segs = process_stack(roi, overlap, tol)
                     del merged # TODO: check if helps reduce memory buildup
-                    # transpose seg coords since part of larger stack
-                    off = super_rois_offsets[coord]
-                    segs = np.add(segs, (*off, 0, 0, 0, *off, 0))
+                    if segs is not None:
+                        # transpose seg coords since part of larger stack
+                        off = super_rois_offsets[coord]
+                        segs = np.add(segs, (*off, 0, 0, 0, *off, 0))
                     seg_rois[coord] = segs
         segments_all, pruning_time = _prune_blobs(
             seg_rois, BLOB_COORD_SLICE, overlap, tol, super_rois, 
             super_rois_offsets)
-        # remove the duplicated elements that were used for pruning
         #merged, segments_all = process_stack(roi, overlap, tol)
-        segments_all = segments_all[:, 0:6]
         
-        # compared detected blobs with truth blobs
         stats = None
-        if truth_db_type == TRUTH_DB_TYPES[1]:
-            db_path_base = _splice_before(filename_base, series_fill, splice)
-            try:
-                _load_truth_db(db_path_base)
-            except FileNotFoundError as e:
-                print("Could not load truth DB from {}; will not verify ROIs"
-                      .format(db_path_base))
-            if config.truth_db is not None:
-                verified_db = sqlite.ClrDB()
-                verified_db.load_db(
-                    os.path.basename(db_path_base) + "_verified.db", True)
-                exp_name = os.path.basename(filename_roi)
-                exp_id = sqlite.insert_experiment(
-                    verified_db.conn, verified_db.cur, exp_name, None)
-                rois = config.truth_db.get_rois(exp_name)
-                stats = detector.verify_rois(
-                    rois, segments_all, config.truth_db.blobs_truth, 
-                    BLOB_COORD_SLICE, overlap, tol, verified_db, exp_id)
+        if segments_all is not None:
+            # remove the duplicated elements that were used for pruning
+            segments_all = segments_all[:, 0:6]
+            
+            # compared detected blobs with truth blobs
+            if truth_db_type == TRUTH_DB_TYPES[1]:
+                db_path_base = _splice_before(filename_base, series_fill, splice)
+                try:
+                    _load_truth_db(db_path_base)
+                except FileNotFoundError as e:
+                    print("Could not load truth DB from {}; will not verify ROIs"
+                          .format(db_path_base))
+                if config.truth_db is not None:
+                    verified_db = sqlite.ClrDB()
+                    verified_db.load_db(
+                        os.path.basename(db_path_base) + "_verified.db", True)
+                    exp_name = os.path.basename(filename_roi)
+                    exp_id = sqlite.insert_experiment(
+                        verified_db.conn, verified_db.cur, exp_name, None)
+                    rois = config.truth_db.get_rois(exp_name)
+                    stats = detector.verify_rois(
+                        rois, segments_all, config.truth_db.blobs_truth, 
+                        BLOB_COORD_SLICE, overlap, tol, verified_db, exp_id)
         
         # save denoised stack, segments, and scaling info to file
         outfile_image5d_proc = open(filename_image5d_proc, "wb")
@@ -553,7 +556,8 @@ def process_file(filename_base, offset, roi_size):
         outfile_image5d_proc.close()
         outfile_info_proc.close()
         
-        print("total segments found: {}".format(len(segments_all)))
+        segs_len = 0 if segments_all is None else len(segments_all)
+        print("total segments found: {}".format(segs_len))
         print("file save time: {}".format(time() - time_start))
         print("total file processing time (s): {}".format(time() - time_start))
         return stats

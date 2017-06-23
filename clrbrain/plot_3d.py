@@ -167,7 +167,8 @@ def plot_3d_surface(roi, vis):
     roi = np.transpose(roi)
     
     # prepare the data source
-    roi = morphology.dilation(roi) # fill in holes to smooth surfaces
+    #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
+    roi = restoration.denoise_tv_chambolle(roi, weight=0.3)
     surface = pipeline.scalar_field(roi)
     
     '''

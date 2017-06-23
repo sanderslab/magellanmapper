@@ -282,7 +282,7 @@ class Visualization(HasTraits):
             cli.image5d, cli.channel, curr_roi_size, curr_offset)
         self.roi = plot_3d.denoise(self.roi)
         
-        # show raw points unless selected not to
+        # show raw 3D image unless selected not to
         if self._DEFAULTS_3D[2] not in self._check_list_3d:
             vis = (plot_3d.mlab_3d, config.process_settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
@@ -347,7 +347,7 @@ class Visualization(HasTraits):
         # show the default ROI
         self.show_3d()
     
-    @on_trait_change('x_offset,y_offset,z_offset')
+    @on_trait_change("x_offset,y_offset,z_offset")
     def update_plot(self):
         """Shows the chosen offset when an offset slider is moved.
         """
@@ -396,7 +396,8 @@ class Visualization(HasTraits):
                 segs = detector.segment_blob(self.roi)
                 shift = np.zeros(segs.shape[1])
                 shift[0:3] = np.flipud(self._curr_offset())
-                self.segments = np.concatenate((segs, np.add(segs, shift)), axis=1)
+                self.segments = np.concatenate(
+                    (segs, np.add(segs, shift)), axis=1)
             else:
                 x, y, z = self._curr_offset()
                 # uses blobs from loaded segments
@@ -423,7 +424,8 @@ class Visualization(HasTraits):
                     segs = np.concatenate((segs, segs_outside), axis=0)
                 shift = np.zeros(segs.shape[1])
                 shift[0:3] = [z, y, x]
-                self.segments = np.concatenate((np.subtract(segs, shift), segs), axis=1)
+                self.segments = np.concatenate(
+                    (np.subtract(segs, shift), segs), axis=1)
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self, show_shadows)

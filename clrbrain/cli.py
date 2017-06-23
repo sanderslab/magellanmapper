@@ -494,8 +494,8 @@ def process_file(filename_base, offset, roi_size):
                                       chunking.OVERLAP_FACTOR)).astype(int)
         tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
                .astype(int))
-        max_pixels_xy = 1000
-        max_pixels = (roi.shape[0], max_pixels_xy, max_pixels_xy)
+        max_pixels = (roi.shape[0], config.sub_stack_max_pixels, 
+                      config.sub_stack_max_pixels)
         print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
         super_rois, super_rois_offsets = chunking.stack_splitter(
             roi, max_pixels, overlap)

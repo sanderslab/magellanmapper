@@ -91,3 +91,6 @@ colors = np.array(
      [240, 228, 66], # yellow
      [0, 0, 0]] # black
 )
+
+# max pixels for x- and y- dimensions of sub-stacks for stack processing
+sub_stack_max_pixels = 1000

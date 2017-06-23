@@ -399,6 +399,7 @@ def process_file(filename_base, offset, roi_size):
     if proc_type == PROC_TYPES[3]:
         # loads from processed files
         global image5d_proc, segments_proc
+        '''# deprecated processed image loading
         try:
             # processed image file, using mem-mapped accessed for the 
             # image file to minimize memory requirement, only loading on-the-fly
@@ -406,6 +407,7 @@ def process_file(filename_base, offset, roi_size):
         except IOError:
             print("Unable to load processed image file from {}, will ignore"
                   .format(filename_image5d_proc))
+        '''
         try:
             # processed segments and other image information
             output_info = np.load(filename_info_proc)
@@ -490,8 +492,7 @@ def process_file(filename_base, offset, roi_size):
         
         # chunk into super-ROIs, which will each be further chunked into 
         # sub-ROIs for multi-processing
-        overlap = np.ceil(np.multiply(detector.calc_scaling_factor(), 
-                                      chunking.OVERLAP_FACTOR)).astype(int)
+        overlap = chunking.calc_overlap()
         tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
                .astype(int))
         max_pixels = (roi.shape[0], config.sub_stack_max_pixels, 

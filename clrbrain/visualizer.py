@@ -160,7 +160,7 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "No raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "Only save inside", "Outline"]
+    _DEFAULTS_2D = ["Filtered", "No border zone", "Outline"]
     _planes_2d = List
     _DEFAULTS_PLANES_2D = ["xy", "xz"]
     _styles_2d = List
@@ -206,7 +206,7 @@ class Visualization(HasTraits):
               .format(self.border))
         feedback = [ "Preparing segments:" ]
         for i in range(len(self.segments)):
-            seg = self.segments[i]
+            seg = self.segments[i, 0:6]
             seg_db = np.array([seg[0] + self.z_offset, seg[1] + self.y_offset, 
                                seg[2] + self.x_offset, *seg[3:]])
             if seg[4] == -1 and np.isclose(seg[3], 0):
@@ -287,8 +287,6 @@ class Visualization(HasTraits):
             vis = (plot_3d.mlab_3d, config.process_settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering
-                #self.roi = plot_3d.threshold(self.roi)
-                #self.roi = self.roi.astype(int)
                 plot_3d.plot_3d_surface(self.roi, self)
             else:
                 # 3D point rendering
@@ -307,7 +305,7 @@ class Visualization(HasTraits):
     def __init__(self):
         # Do not forget to call the parent's __init__
         HasTraits.__init__(self)
-        self._set_border(True)
+        self._set_border()
         
         # dimension max values in pixels
         if cli.image5d_proc is not None:
@@ -387,13 +385,14 @@ class Visualization(HasTraits):
             # segments using blob detection
             if cli.segments_proc is None:
                 # blob detection in the ROI
+                roi = self.roi
                 if self._DEFAULTS_2D[2] in self._check_list_2d:
                     # shows labels around segments with Random-Walker
-                    self.labels, _ = detector.segment_rw(self.roi)
+                    self.labels, _ = detector.segment_rw(roi)
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
-                    self.roi = plot_3d.threshold(self.roi)
-                segs = detector.segment_blob(self.roi)
+                    roi = plot_3d.threshold(roi)
+                segs = detector.segment_blob(roi)
                 shift = np.zeros(segs.shape[1])
                 shift[0:3] = np.flipud(self._curr_offset())
                 self.segments = np.concatenate(
@@ -446,7 +445,7 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         # update verify flag
-        plot_2d.verify = self._DEFAULTS_2D[1] in self._check_list_2d
+        plot_2d.verify = self._DEFAULTS_2D[1] not in self._check_list_2d
         img = cli.image5d
         roi = None
         if self._DEFAULTS_2D[0] in self._check_list_2d:
@@ -461,6 +460,9 @@ class Visualization(HasTraits):
             else:
                 # denoised ROI processed during 3D display
                 roi = self.roi
+                if config.process_settings["thresholding"]:
+                    # thresholds prior to blob detection
+                    roi = plot_3d.threshold(roi)
         elif cli.image5d is None:
             print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)
@@ -522,9 +524,9 @@ class Visualization(HasTraits):
     @on_trait_change('_check_list_2d')
     def update_2d_options(self):
         if self._DEFAULTS_2D[1] in self._check_list_2d:
-            self._set_border()
-        else:
             self._set_border(True)
+        else:
+            self._set_border()
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
@@ -535,8 +537,8 @@ class Visualization(HasTraits):
             self.border = np.zeros(3)
             print("set border to zeros")
         else:
-            self.border = np.ceil(np.multiply(detector.calc_scaling_factor(), 
-                                              chunking.overlap_factor))[::-1]
+            self.border = chunking.calc_overlap()[::-1]
+            self.border[2] = 0 # ignore z
         print("set border to {}".format(self.border))
         
     @property

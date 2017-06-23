@@ -22,6 +22,10 @@ from clrbrain import detector
 MAX_PIXELS_FACTOR = 25
 OVERLAP_FACTOR = 5
 
+def calc_overlap():
+    return np.ceil(np.multiply(detector.calc_scaling_factor(), 
+                               OVERLAP_FACTOR)).astype(int)
+
 def _num_units(size, max_pixels):
     """Calculates number of sub regions.
     

@@ -372,9 +372,9 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
         segments = segments[segments[:, 5] == -1]
     # finds adjacent segments, outside of the ROI
     if segments is not None:
-        mask_in = np.all([segments[:, 0] >= 0, segments[:, 0] < roi_size[2],
-                          segments[:, 1] >= 0, segments[:, 1] < roi_size[1],
-                          segments[:, 2] >= 0, segments[:, 2] < roi_size[0]], 
+        mask_in = np.all([segments[:, 0] >= border[2], segments[:, 0] < roi_size[2] - border[2],
+                          segments[:, 1] >= border[1], segments[:, 1] < roi_size[1] - border[1],
+                          segments[:, 2] >= border[0], segments[:, 2] < roi_size[0] - border[0]], 
                          axis=0)
         segs_out = segments[np.invert(mask_in)]
         print("segs_out:\n{}".format(segs_out))

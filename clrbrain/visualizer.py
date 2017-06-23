@@ -313,7 +313,8 @@ class Visualization(HasTraits):
         if cli.image5d_proc is not None:
             size = cli.image5d_proc.shape[0:3]
         else:
-            off = 1 if cli.image5d.ndim >= 5 else 0
+            # adjust for possible time dimension in 1st axis
+            off = 1 if cli.image5d.ndim >= 4 else 0
             print(cli.image5d.shape)
             size = cli.image5d.shape[0+off:3+off]
         self.z_high, self.y_high, self.x_high = size
@@ -394,7 +395,7 @@ class Visualization(HasTraits):
                     self.roi = plot_3d.threshold(self.roi)
                 segs = detector.segment_blob(self.roi)
                 shift = np.zeros(segs.shape[1])
-                shift[0:3] = [z, y, x]
+                shift[0:3] = np.flipud(self._curr_offset())
                 self.segments = np.concatenate((segs, np.add(segs, shift)), axis=1)
             else:
                 x, y, z = self._curr_offset()

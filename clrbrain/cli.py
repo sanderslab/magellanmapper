@@ -451,7 +451,7 @@ def process_file(filename_base, offset, roi_size):
             raise e
     
     # attempts to load the main image stack
-    image5d = importer.read_file(filename, series) #, z_max=cube_len)
+    image5d = importer.read_file(filename, series)
     
     if proc_type == PROC_TYPES[0]:
         # already imported so does nothing

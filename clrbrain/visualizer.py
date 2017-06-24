@@ -478,9 +478,11 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
+        title = _fig_title(curr_offset, curr_roi_size)
+        filename_base = importer.filename_to_base(cli.filename, cli.series)
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # Multi-zoom style
-            plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
+            plot_2d.plot_2d_stack(self, title, filename_base,
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
@@ -488,7 +490,7 @@ class Visualization(HasTraits):
                                   labels=self.labels)
         else:
             # defaults to Square style
-            plot_2d.plot_2d_stack(self, _fig_title(curr_offset, curr_roi_size), 
+            plot_2d.plot_2d_stack(self, title, filename_base,
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 

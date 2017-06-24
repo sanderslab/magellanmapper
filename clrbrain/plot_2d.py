@@ -15,6 +15,7 @@ Attributes:
         extra segments.
 """
 
+import os
 import math
 import numpy as np
 from mayavi import mlab
@@ -231,7 +232,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         
     return ax, collection_z
 
-def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments, 
+def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None, labels=None, blobs_truth=None):
@@ -595,7 +596,15 @@ def plot_2d_stack(vis, title, image5d, channel, roi_size, offset, segments,
     plt.ion()
     plt.show()
     if savefig is not None:
-        name = title.replace("\n", "-").replace(" ", "") + "." + savefig
+        name = "{}_offset{}x{}.{}".format(
+            os.path.basename(filename), offset, tuple(roi_size), savefig).replace(" ", "")
+        '''
+        name = title.replace("\n", "-")
+        i = name.find(", ROI size")
+        if i != -1:
+            name = name[0:i] + "x" + str(tuple(roi_size))
+        name = name.replace(" ", "") + "." + savefig
+        '''
         print("saving figure as {}".format(name))
         plt.savefig(name)
     

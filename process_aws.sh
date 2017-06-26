@@ -105,7 +105,7 @@ python -u -m clrbrain.cli --img "$DEST"/"$IMG" --proc processing_mp -v $EXTRA_AR
 # upload to S3
 NPZ_IMG_PROC=$IMG_BASE"_image5d_proc.npz"
 NPZ_INFO_PROC=$IMG_BASE"_info_proc.npz"
-for NPZ in $NPZ_IMG_PROC $NPZ_INFO_PROC
+for NPZ in $NPZ_INFO_PROC #$NPZ_IMG_PROC 
 do
     aws s3 cp "$DEST"/"$NPZ" s3://"$S3_DIR"/"$NPZ"
 done

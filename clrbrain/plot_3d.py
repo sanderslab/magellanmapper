@@ -57,8 +57,6 @@ def denoise(roi):
         #denoised = restoration.denoise_nl_means(denoised, patch_size=10, 
         #                                        multichannel=False)
         print('time for total variation: %f' %(time() - time_start))
-    else:
-        denoised = img_as_float(denoised)
     
     # sharpening
     unsharp_strength = settings["unsharp_strength"]

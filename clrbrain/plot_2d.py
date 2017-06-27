@@ -595,16 +595,11 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     #gs_zoomed.tight_layout(fig, pad=0.5)
     plt.ion()
     plt.show()
+    fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
     if savefig is not None:
         name = "{}_offset{}x{}.{}".format(
-            os.path.basename(filename), offset, tuple(roi_size), savefig).replace(" ", "")
-        '''
-        name = title.replace("\n", "-")
-        i = name.find(", ROI size")
-        if i != -1:
-            name = name[0:i] + "x" + str(tuple(roi_size))
-        name = name.replace(" ", "") + "." + savefig
-        '''
+            os.path.basename(filename), offset, tuple(roi_size), 
+            savefig).replace(" ", "")
         print("saving figure as {}".format(name))
         plt.savefig(name)
     

@@ -197,19 +197,27 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
         # sum to find smallest diff
         diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)
         #print("diffs_sums:\n{}".format(diffs_sums))
-        # get indices of minimum differences
-        min_master, min_blob = np.where(diffs_sums == diffs_sums.min())
-        #print("min_master: {}, min_blob: {}".format(min_master, min_blob))
-        blob_master_closest = min_master[0]
-        blob_closest = min_blob[0]
-        # only keep the match if within tolerance
-        if (blobs_diffs[blob_master_closest, blob_closest] <= tol).all():
-            close_master.append(blob_master_closest)
-            close.append(blob_closest)
-        # replace row/column corresponding to each picked blob with distant 
-        # values to ensure beyond tol
-        blobs_diffs[blob_master_closest, :, :] = far
-        blobs_diffs[:, blob_closest, :] = far
+        for j in range(len(diffs_sums)):
+            # get indices of minimum differences
+            min_master, min_blob = np.where(diffs_sums == diffs_sums.min())
+            #print("min_master: {}, min_blob: {}".format(min_master, min_blob))
+            blob_master_closest = min_master[0]
+            blob_closest = min_blob[0]
+            diff = blobs_diffs[blob_master_closest, blob_closest]
+            if (diff <= tol).all():
+                # only keep the match if within tolerance
+                close_master.append(blob_master_closest)
+                close.append(blob_closest)
+                # replace row/column corresponding to each picked blob with  
+                # distant values to ensure beyond tol
+                blobs_diffs[blob_master_closest, :, :] = far
+                blobs_diffs[:, blob_closest, :] = far
+            elif (diff <= tol).any():
+                # set to distant value so can check next min diff
+                diffs_sums[blob_master_closest] = far
+            else:
+                # no match if none of array dims within tolerance of min diff
+                break
     #print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
@@ -499,7 +507,12 @@ def _test_blob_verification():
     b[:, 0] += 1
     print("test (b):\n{}".format(b))
     print("master (a):\n{}".format(a))
-    _find_closest_blobs(b, a, slice(0, 3), (1, 1, 1))
+    _find_closest_blobs(b, a, slice(0, 3), (1, 2, 2))
+    a = np.array([[24, 52, 346], [20, 55, 252]])
+    b = np.array([[24, 54, 351]])
+    print("test (b):\n{}".format(b))
+    print("master (a):\n{}".format(a))
+    _find_closest_blobs(b, a, slice(0, 3), (3, 9, 9))
 
 def _test_blob_close_sorted():
     a = np.ones((3, 3))
@@ -516,4 +529,5 @@ def _test_blob_close_sorted():
 
 if __name__ == "__main__":
     print("Detector tests...")
-    _test_blob_close_sorted()
+    #_test_blob_close_sorted()
+    _test_blob_verification()

@@ -54,8 +54,6 @@ def denoise(roi):
         # total variation denoising
         time_start = time()
         denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
-        #denoised = restoration.denoise_nl_means(denoised, patch_size=10, 
-        #                                        multichannel=False)
         print('time for total variation: %f' %(time() - time_start))
     
     # sharpening
@@ -86,8 +84,9 @@ def threshold(roi):
     Returns:
         The thresholded region.
     """
-    thresh_type = config.process_settings["thresholding"]
-    size = config.process_settings["thresholding_size"]
+    settings = config.process_settings
+    thresh_type = settings["thresholding"]
+    size = settings["thresholding_size"]
     thresholded = roi
     roi_thresh = 0
     
@@ -96,14 +95,11 @@ def threshold(roi):
         try:
             roi_thresh = filters.threshold_otsu(roi, size)
             thresholded = roi > roi_thresh
-            '''
-            thresholded = morphology.closing(thresholded, morphology.ball(1))
-            '''
         except ValueError as e:
             # np.histogram may give an error apparently if any NaN, so 
             # workaround is set all elements in ROI to False
             print(e)
-            roi_thresh = roi > np.max(roi)
+            thresholded = roi > np.max(roi)
     elif thresh_type == "local":
         roi_thresh = np.copy(roi)
         for i in range(roi_thresh.shape[0]):

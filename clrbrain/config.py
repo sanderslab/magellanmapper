@@ -33,7 +33,7 @@ def update_process_settings(settings, settings_type):
         #settings["unsharp_strength"] = 1.0
         # smaller threhsold since total var denoising
         #settings["points_3d_thresh"] = 1.1
-        settings["min_sigma_factor"] = 2.2
+        settings["min_sigma_factor"] = 2.1
         settings["max_sigma_factor"] = 8
         settings["num_sigma"] = 20
         settings["overlap"] = 0.3
@@ -42,7 +42,7 @@ def update_process_settings(settings, settings_type):
         settings["thresholding_size"] = 64 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["segment_size"] = 50
-        settings["prune_tol_factor"] = (2, 1, 1)
+        settings["prune_tol_factor"] = (2, 1.3, 1.3)
 
 
 # defaults to lightsheet 5x settings

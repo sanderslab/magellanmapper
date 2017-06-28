@@ -187,35 +187,39 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
     close_master = []
     close = []
     far = np.max(tol) + 1
-    # compare each element for differences
-    blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
+    # compare each element for differences, weighting based on tolerance
+    blobs_diffs_init = np.abs(
+        blobs_master[:, region][:, None] - blobs[:, region])
     normalize_factor = np.divide(np.max(tol), tol)
     tol = np.multiply(tol, normalize_factor)
-    print("weighted tol: {}".format(tol))
+    #print("weighted tol: {}".format(tol))
     
     # matches limited by length of smallest list
     num_matches = min(len(blobs_master), len(blobs))
     for i in range(num_matches):
-        blobs_diffs = np.multiply(blobs_diffs, normalize_factor)
-        #print("blobs_diffs:\n{}".format(blobs_diffs))
+        # normalize the diffs
+        blobs_diffs = np.multiply(blobs_diffs_init, normalize_factor)
         # sum to find smallest diff
         diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)
+        #print("blobs_diffs:\n{}".format(blobs_diffs))
         #print("diffs_sums:\n{}".format(diffs_sums))
         for j in range(len(diffs_sums)):
             # get indices of minimum differences
             min_master, min_blob = np.where(diffs_sums == diffs_sums.min())
-            #print("min_master: {}, min_blob: {}".format(min_master, min_blob))
             blob_master_closest = min_master[0]
             blob_closest = min_blob[0]
             diff = blobs_diffs[blob_master_closest, blob_closest]
+            #print("min_master: {}, min_blob: {}".format(min_master, min_blob))
+            #print("compare {} to {}".format(diff, tol))
             if (diff <= tol).all():
                 # only keep the match if within tolerance
                 close_master.append(blob_master_closest)
                 close.append(blob_closest)
                 # replace row/column corresponding to each picked blob with  
                 # distant values to ensure beyond tol
-                blobs_diffs[blob_master_closest, :, :] = far
-                blobs_diffs[:, blob_closest, :] = far
+                blobs_diffs_init[blob_master_closest, :, :] = far
+                blobs_diffs_init[:, blob_closest, :] = far
+                break
             elif (diff <= tol).any():
                 # set to distant value so can check next min diff
                 diffs_sums[blob_master_closest] = far
@@ -430,6 +434,8 @@ def verify_rois(rois, blobs, blobs_truth, region, overlap, tol, output_db,
         # outer ROI of detected blobs
         blobs_truth_inner_missed = blobs_truth_roi[blobs_truth_roi[:, 5] == 0]
         blobs_outer = blobs_roi[np.invert(blobs_inner_mask)]
+        print("blobs_outer:\n{}".format(blobs_outer))
+        print("blobs_truth_inner_missed:\n{}".format(blobs_truth_inner_missed))
         found_truth_out, detected = _find_closest_blobs(
             blobs_outer, blobs_truth_inner_missed, region, tol)
         blobs_truth_inner_missed[found_truth_out, 5] = 1

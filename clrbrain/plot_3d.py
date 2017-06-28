@@ -122,10 +122,18 @@ def threshold(roi):
         _, thresholded = detector.segment_rw(roi, size)
     
     # dilation/erosion
-    thresholded = morphology.dilation(
-        thresholded, morphology.ball(2))
-    thresholded = morphology.erosion(
-        thresholded, morphology.cube(4))
+    selem_dil = morphology.octahedron(2)
+    selem_eros = morphology.octahedron(3)
+    thresh_mean = np.mean(thresholded)
+    print("thresh_mean: {}".format(thresh_mean))
+    if thresh_mean > 0.3:
+        selem_dil = morphology.ball(1)
+        selem_eros = morphology.cube(5)
+    elif thresh_mean > 0.25:
+        selem_dil = morphology.ball(1)
+        selem_eros = morphology.cube(4)
+    thresholded = morphology.dilation(thresholded, selem_dil)
+    thresholded = morphology.erosion(thresholded, selem_eros)
     return thresholded
 
 def deconvolve(roi):

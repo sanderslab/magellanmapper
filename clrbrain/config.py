@@ -42,7 +42,7 @@ def update_process_settings(settings, settings_type):
         settings["thresholding_size"] = 64 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["segment_size"] = 50
-        settings["prune_tol_factor"] = (2, 1.3, 1.3)
+        settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
 
 
 # defaults to lightsheet 5x settings

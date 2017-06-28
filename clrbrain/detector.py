@@ -189,10 +189,14 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
     far = np.max(tol) + 1
     # compare each element for differences
     blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
+    normalize_factor = np.divide(np.max(tol), tol)
+    tol = np.multiply(tol, normalize_factor)
+    print("weighted tol: {}".format(tol))
     
     # matches limited by length of smallest list
     num_matches = min(len(blobs_master), len(blobs))
     for i in range(num_matches):
+        blobs_diffs = np.multiply(blobs_diffs, normalize_factor)
         #print("blobs_diffs:\n{}".format(blobs_diffs))
         # sum to find smallest diff
         diffs_sums = np.sum(blobs_diffs, blobs_diffs.ndim - 1)

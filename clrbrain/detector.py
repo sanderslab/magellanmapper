@@ -365,7 +365,7 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     segs_all = blobs[mask]
     return segs_all, mask
 
-def verify_rois(rois, blobs, blobs_truth, region, overlap, tol, output_db, 
+def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, 
                 exp_id):
     """Compares blobs from detections with truth blobs, prioritizing the inner 
     portion of ROIs to avoid missing detections because of edge effects
@@ -483,14 +483,14 @@ def verify_rois(rois, blobs, blobs_truth, region, overlap, tol, output_db,
     false_neg = pos - true_pos
     sens = float(true_pos) / pos
     ppv = float(true_pos) / (true_pos + false_pos)
-    print("Automated verification using padding {}, tol {}:\n"
-          "cells = {}\ndetected cells = {}\n"
-          "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
-          "PPV = {}\n"
-          .format(inner_padding, tol, pos, true_pos, false_pos, false_neg, sens, 
-                  ppv))
+    print("Automated verification using tol {}:\n".format(tol))
+    fdbk = ("cells = {}\ndetected cells = {}\n"
+            "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
+            "PPV = {}\n".format(pos, true_pos, false_pos, 
+            false_neg, sens, ppv))
+    print(fdbk)
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
-    return (pos, true_pos, false_pos)
+    return (pos, true_pos, false_pos), fdbk
 
 def _test_blob_duplicates():
     # tests blob duplication removal

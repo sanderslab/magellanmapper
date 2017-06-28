@@ -349,6 +349,7 @@ def main(process_args_only=False):
     if config.roc:
         settings = config.process_settings
         stats_dict = {}
+        file_summaries = []
         for key, value in config.roc_dict.items():
             # group of settings, where key is the name of the group, and 
             # value is another dictionary with the group's settings
@@ -369,10 +370,16 @@ def main(process_args_only=False):
                         for i in range(len(offsets)):
                             size = (roi_sizes[i] if roi_sizes_len > 1 
                                     else roi_sizes[0])
-                            stat = np.add(stat, process_file(
-                                filename_base, offsets[i], size))
+                            stat_roi, fdbk = process_file(
+                                filename_base, offsets[i], size)
+                            stat = np.add(stat, stat_roi)
+                            file_summaries.append(
+                                "Offset {}:\n{}".format(offsets[i], fdbk))
                         stats.append(stat)
                     stats_dict[key + "-" + key2] = (stats, value2)
+        # summary of each file collected together
+        for summary in file_summaries:
+            print(summary)
         # plot ROC curve
         from clrbrain import plot_2d
         plot_2d.plot_roc(stats_dict, filename)
@@ -519,6 +526,7 @@ def process_file(filename_base, offset, roi_size):
         #merged, segments_all = process_stack(roi, overlap, tol)
         
         stats = None
+        fdbk = None
         if segments_all is not None:
             # remove the duplicated elements that were used for pruning
             segments_all = segments_all[:, 0:6]
@@ -539,9 +547,9 @@ def process_file(filename_base, offset, roi_size):
                     exp_id = sqlite.insert_experiment(
                         verified_db.conn, verified_db.cur, exp_name, None)
                     rois = config.truth_db.get_rois(exp_name)
-                    stats = detector.verify_rois(
+                    stats, fdbk = detector.verify_rois(
                         rois, segments_all, config.truth_db.blobs_truth, 
-                        BLOB_COORD_SLICE, overlap, tol, verified_db, exp_id)
+                        BLOB_COORD_SLICE, tol, verified_db, exp_id)
         
         # save denoised stack, segments, and scaling info to file
         outfile_image5d_proc = open(filename_image5d_proc, "wb")
@@ -561,8 +569,8 @@ def process_file(filename_base, offset, roi_size):
         print("total segments found: {}".format(segs_len))
         print("file save time: {}".format(time() - time_start))
         print("total file processing time (s): {}".format(time() - time_start))
-        return stats
-    return None
+        return stats, fdbk
+    return None, None
     
 def process_stack(roi, overlap, tol):
     time_start = time()

@@ -129,7 +129,7 @@ def threshold(roi):
     if thresh_mean > 0.3:
         selem_dil = morphology.ball(1)
         selem_eros = morphology.cube(5)
-    elif thresh_mean > 0.25:
+    elif thresh_mean > 0.1:
         selem_dil = morphology.ball(1)
         selem_eros = morphology.cube(4)
     thresholded = morphology.dilation(thresholded, selem_dil)

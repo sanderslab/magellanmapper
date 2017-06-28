@@ -124,8 +124,8 @@ def threshold(roi):
     # dilation/erosion, adjusted based on overall intensity
     thresh_mean = np.mean(thresholded)
     print("thresh_mean: {}".format(thresh_mean))
-    selem_dil = morphology.octahedron(2)
-    selem_eros = morphology.octahedron(3)
+    selem_dil = None
+    selem_eros = None
     if thresh_mean > 0.35:
         selem_dil = morphology.ball(2)
         thresholded = morphology.erosion(thresholded, morphology.cube(2))
@@ -137,6 +137,9 @@ def threshold(roi):
     elif thresh_mean > 0.1:
         selem_dil = morphology.ball(1)
         selem_eros = morphology.cube(4)
+    else:
+        selem_dil = morphology.octahedron(2)
+        selem_eros = morphology.octahedron(2)
     thresholded = morphology.dilation(thresholded, selem_dil)
     thresholded = morphology.erosion(thresholded, selem_eros)
     return thresholded

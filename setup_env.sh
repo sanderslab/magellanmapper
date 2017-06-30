@@ -15,6 +15,8 @@
 #  removed if you want to start with a clean environment
 ################################################
 
+CONDA_ENV=clr
+
 # run from parent directory
 BASE_DIR="`dirname $0`"
 cd "$BASE_DIR/.."
@@ -64,7 +66,7 @@ then
 	CONDA_URL=https://repo.continuum.io/miniconda/$MINICONDA
 	if [[ "$ANACONDA_DOWNLOAD_PLATFORM" == "MacOSX" ]]
 	then
-		curl -o $MINICONDA "$CONDA_URL"
+		curl -O "$CONDA_URL"
 	else
 		wget "$CONDA_URL"
 	fi
@@ -73,9 +75,14 @@ then
 fi
 
 # creates "clr" conda environment
-echo "Creating new conda environment..."
-conda create --name clr python=3 pyqt=4
-source activate clr
+echo "Activating Anaconda environment..."
+check_env="`conda env list | grep $CONDA_ENV`"
+if [[ "$check_env" == "" ]]
+then
+	echo "Creating new conda environment..."
+	conda create --name $CONDA_ENV python=3 pyqt=4
+fi
+source activate $CONDA_ENV
 
 # install the Menpo version of Mayavi to work with Python 3:
 # https://github.com/enthought/mayavi/issues/84#issuecomment-266197984

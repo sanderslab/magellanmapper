@@ -21,9 +21,9 @@ cd "$BASE_DIR/.."
 echo $PWD
 
 # check for Java jar availability
-if [ "`command -v jar`" == '' ]
+if [ "`command -v javac`" == '' ]
 then
-	echo "Please add JAVA_HOME and update path environment variables. Exiting..."
+	echo "Please install JDK or add JAVA_HOME to your path environment variables. Exiting..."
 	exit 0
 fi
 
@@ -56,12 +56,19 @@ fi
 echo "will use $ANACONDA_DOWNLOAD_PLATFORM platform with $BIT bit for Anaconda"
 
 # check for Anaconda availability
-if [ "`command -v conda`" != '' ]
+if [ "`command -v conda`" == '' ]
 then
 	echo "Downloading and installing Miniconda..."
 	PLATFORM=$ANACONDA_DOWNLOAD_PLATFORM-$BIT
-	wget https://repo.continuum.io/miniconda/Miniconda3-latest-$PLATFORM.sh 
-	sh Miniconda3-latest-$PLATFORM.sh
+	MINICONDA=Miniconda3-latest-$PLATFORM.sh
+	CONDA_URL=https://repo.continuum.io/miniconda/$MINICONDA
+	if [[ "$ANACONDA_DOWNLOAD_PLATFORM" == "MacOSX" ]]
+	then
+		curl -o $MINICONDA "$CONDA_URL"
+	else
+		wget "$CONDA_URL"
+	fi
+	sh $MINICONDA
 	source ~/.bashrc
 fi
 

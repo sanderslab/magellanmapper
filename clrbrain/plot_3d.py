@@ -200,11 +200,17 @@ def plot_3d_surface(roi, vis):
     '''
     
     # based on Surface with contours enabled
-    #surface = pipeline.contour_surface(surface)
+    surface = pipeline.contour_surface(
+        surface, color=(0.7, 1, 0.7), line_width=6.0)
+    surface.actor.property.representation = 'wireframe'
+    #surface.actor.property.line_width = 6.0
+    surface.actor.mapper.scalar_visibility = False
     
     # uses unique IsoSurface module but appears to have 
     # similar output to contour_surface
-    surface = pipeline.iso_surface(surface, color=(0.7, 1, 0.7))
+    #surface = pipeline.iso_surface(surface, color=(0.7, 1, 0.7))
+    surface.contour.minimum_contour = 0.5
+    surface.contour.maximum_contour = 1.0
     
 def plot_3d_points(roi, vis):
     """Plots all pixels as points in 3D space.

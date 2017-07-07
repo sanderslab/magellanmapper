@@ -206,9 +206,9 @@ class Visualization(HasTraits):
               .format(self.border))
         feedback = [ "Preparing segments:" ]
         for i in range(len(self.segments)):
-            seg = self.segments[i, 0:6]
-            seg_db = np.array([seg[0] + self.z_offset, seg[1] + self.y_offset, 
-                               seg[2] + self.x_offset, *seg[3:]])
+            seg = self.segments[i]
+            # uses absolute coordinates from end of seg
+            seg_db = np.array([*seg[6:9], *seg[3:6]])
             if seg[4] == -1 and np.isclose(seg[3], 0):
                 # attempts to delete user added segments, where radius assumed to be 0,
                 # that are no longer selected

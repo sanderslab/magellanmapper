@@ -384,7 +384,8 @@ class Visualization(HasTraits):
         else:
             # segments using blob detection
             if cli.segments_proc is None:
-                # blob detection in the ROI
+                # blob detection in the ROI;
+                # TODO: incorporate given segs?
                 roi = self.roi
                 if self._DEFAULTS_2D[2] in self._check_list_2d:
                     # shows labels around segments with Random-Walker
@@ -407,7 +408,6 @@ class Visualization(HasTraits):
                     self.roi_array[0].astype(int), plot_2d.padding)
                 # segs is 0 for some reason if none given
                 if segs is None or not isinstance(segs, np.ndarray):
-                    # transpose to make coordinates relative to offset
                     segs = np.copy(segs_all)
                 elif segs is not None:
                     # segs provided such as from ROI; need to add segs from 
@@ -421,6 +421,7 @@ class Visualization(HasTraits):
                                               segs_all[:, 2] >= x + roi_x)],
                                axis=0)]
                     segs = np.concatenate((segs, segs_outside), axis=0)
+                # transpose to make coordinates relative to offset
                 shift = np.zeros(segs.shape[1])
                 shift[0:3] = [z, y, x]
                 self.segments = np.concatenate(

@@ -224,7 +224,7 @@ def insert_roi(conn, cur, exp_id, series, offset, size):
         cur.lastrowid: ID of the selected or inserted row.
         feedback: Feedback string.
     """
-    cur.execute("INSERT OR IGNORE INTO rois (experiment_id, series, "
+    cur.execute("INSERT OR REPLACE INTO rois (experiment_id, series, "
                                              "offset_x, offset_y, "
                                              "offset_z, size_x, size_y, "
                                              "size_z) "
@@ -253,7 +253,9 @@ def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
     """
     cur.execute("SELECT * FROM rois WHERE experiment_id = ? "
                 "AND series = ? AND offset_x = ? AND "
-                "offset_y = ? AND offset_z = ?", (exp_id, series, *offset))
+                "offset_y = ? AND offset_z = ? AND size_x = ? "
+                "AND size_y = ? AND size_z = ?", 
+                (exp_id, series, *offset, *size))
     row = cur.fetchone()
     if row is not None and len(row) > 0:
         print("selected ROI {}".format(row[0]))

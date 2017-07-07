@@ -394,10 +394,9 @@ class Visualization(HasTraits):
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
                 segs = detector.segment_blob(roi)
-                shift = np.zeros(segs.shape[1])
-                shift[0:3] = np.flipud(self._curr_offset())
                 self.segments = np.concatenate(
-                    (segs, np.add(segs, shift)), axis=1)
+                    (segs, np.add(segs[:, :3], np.flipud(self._curr_offset()))), 
+                    axis=1)
             else:
                 x, y, z = self._curr_offset()
                 # uses blobs from loaded segments
@@ -422,10 +421,10 @@ class Visualization(HasTraits):
                                axis=0)]
                     segs = np.concatenate((segs, segs_outside), axis=0)
                 # transpose to make coordinates relative to offset
-                shift = np.zeros(segs.shape[1])
+                self.segments = np.concatenate((segs, segs[:, :3]), axis=1)
+                shift = np.zeros(self.segments.shape[1])
                 shift[0:3] = [z, y, x]
-                self.segments = np.concatenate(
-                    (np.subtract(segs, shift), segs), axis=1)
+                self.segments = np.subtract(self.segments, shift)
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self, show_shadows)
@@ -553,8 +552,10 @@ class Visualization(HasTraits):
         """Sets segments.
         
         Args:
-            val: Numpy array of (n, 9) shape with segments. Defaults to one
-                row if None.
+            val: Numpy array of (n, 9) shape with segments. The columns
+                correspond to (z, y, x, radius, confirmed, truth, abs_z,
+                abs_y, abs_x). Note that the "abs" values are different from 
+                those used for duplicate shifting. Defaults to one row if None.
         """
         if val is None:
             # need to include at least one row or else will crash

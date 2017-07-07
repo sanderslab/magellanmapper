@@ -559,6 +559,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                     seg = np.array([[axi - z_planes_padding, 
                                      event.ydata.astype(int), 
                                      event.xdata.astype(int), 0.0, 1, -1]])
+                    seg = np.concatenate((seg, seg[:6]), axis=1)
                     print("added segment: {}".format(seg))
                     # concatenate for in-place array update, though append
                     # and re-assigning also probably works
@@ -576,7 +577,8 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                     if roi is not None:
                         detector.show_blob_surroundings(seg, roi, 6)
                     '''
-            except ValueError:
+            except ValueError as e:
+                print(e)
                 print("not on a plot to select a point")
        
     fig.canvas.mpl_connect("button_release_event", on_btn_release)

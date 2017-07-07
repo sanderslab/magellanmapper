@@ -38,7 +38,7 @@ verify = False
 padding = (5, 5, 3) # human (x, y, z) order
 
 SEG_LINEWIDTH = 2.0
-ZOOM_COLS = 8
+ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
 
 segs_color_dict = {

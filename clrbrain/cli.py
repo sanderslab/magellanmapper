@@ -552,17 +552,19 @@ def process_file(filename_base, offset, roi_size):
                         BLOB_COORD_SLICE, tol, verified_db, exp_id)
         
         # save denoised stack, segments, and scaling info to file
-        outfile_image5d_proc = open(filename_image5d_proc, "wb")
-        outfile_info_proc = open(filename_info_proc, "wb")
         time_start = time()
+        '''
         # TODO: write files to memmap array to release RAM?
-        #np.save(outfile_image5d_proc, merged)
+        outfile_image5d_proc = open(filename_image5d_proc, "wb")
+        np.save(outfile_image5d_proc, merged)
+        outfile_image5d_proc.close()
+        '''
+        outfile_info_proc = open(filename_info_proc, "wb")
         #print("merged shape: {}".format(merged.shape))
         np.savez(outfile_info_proc, segments=segments_all, 
                  resolutions=detector.resolutions, 
                  basename=os.path.basename(filename), # only save filename
                  offset=offset, roi_size=roi_size) # None unless explicitly set
-        outfile_image5d_proc.close()
         outfile_info_proc.close()
         
         segs_len = 0 if segments_all is None else len(segments_all)

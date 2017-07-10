@@ -368,12 +368,15 @@ class Visualization(HasTraits):
     
     @on_trait_change("scene.activated")
     def _orient_camera(self):
-        # default camera position after initiation
-        view = self.scene.mlab.view(75, 140, 170)
+        # default camera position after initiation, with distance based on 
+        # ROI size
+        view = self.scene.mlab.view(75, 140, np.max(self.roi_array[0]) * 3)
         roll = self.scene.mlab.roll(-175)
         self.scene.mlab.orientation_axes()
         #self.scene.mlab.outline() # affects zoom after segmenting
         #self.scene.mlab.axes() # need to adjust units to microns
+        print("view: {}\nroll: {}".format(
+            self.scene.mlab.view(), self.scene.mlab.roll()))
     
     def _btn_segment_trait_fired(self, segs=None):
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:

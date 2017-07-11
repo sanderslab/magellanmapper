@@ -137,11 +137,16 @@ def threshold(roi):
     elif thresh_mean > 0.1:
         selem_dil = morphology.ball(1)
         selem_eros = morphology.cube(4)
-    else:
+    elif thresh_mean > 0.05:
         selem_dil = morphology.octahedron(2)
         selem_eros = morphology.octahedron(2)
-    thresholded = morphology.dilation(thresholded, selem_dil)
-    thresholded = morphology.erosion(thresholded, selem_eros)
+    else:
+        selem_dil = morphology.octahedron(1)
+        selem_eros = morphology.octahedron(2)
+    if selem_dil is not None:
+        thresholded = morphology.dilation(thresholded, selem_dil)
+    if selem_eros is not None:
+        thresholded = morphology.erosion(thresholded, selem_eros)
     return thresholded
 
 def deconvolve(roi):
@@ -211,8 +216,12 @@ def plot_3d_surface(roi, vis):
     # uses unique IsoSurface module but appears to have 
     # similar output to contour_surface
     surface = pipeline.iso_surface(surface, color=(0.7, 1, 0.7))
-    surface.contour.minimum_contour = 0.5
-    surface.contour.maximum_contour = 1.0
+    try:
+        surface.contour.minimum_contour = 0.5
+        surface.contour.maximum_contour = 1.0
+    except Exception as e:
+        print(e)
+        print("ignoring min/max contour for now")
     
 def plot_3d_points(roi, vis):
     """Plots all pixels as points in 3D space.

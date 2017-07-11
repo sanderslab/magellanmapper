@@ -274,16 +274,16 @@ class Visualization(HasTraits):
             self.roi_array = [curr_roi_size]
         print("using ROI size of {}".format(self.roi_array[0].astype(int)))
         
-        # show region of interest based on raw image, using basic denoising 
-        # to normalize values but not fully processing
-        curr_offset = self._curr_offset()
-        curr_roi_size = self.roi_array[0].astype(int)
-        self.roi = plot_3d.prepare_roi(
-            cli.image5d, cli.channel, curr_roi_size, curr_offset)
-        self.roi = plot_3d.denoise(self.roi)
-        
         # show raw 3D image unless selected not to
         if self._DEFAULTS_3D[2] not in self._check_list_3d:
+            # show region of interest based on raw image, using basic denoising 
+            # to normalize values but not fully processing
+            curr_offset = self._curr_offset()
+            curr_roi_size = self.roi_array[0].astype(int)
+            self.roi = plot_3d.prepare_roi(
+                cli.image5d, cli.channel, curr_roi_size, curr_offset)
+            self.roi = plot_3d.denoise(self.roi)
+            
             vis = (plot_3d.mlab_3d, config.process_settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering

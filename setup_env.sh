@@ -26,19 +26,19 @@ echo $PWD
 if [ "`command -v javac`" == '' ]
 then
 	echo "Please install JDK or add JAVA_HOME to your path environment variables. Exiting..."
-	exit 0
+	exit 1
 fi
 
 # check for gcc availability for compiling Scikit-image
 if [ "`command -v gcc`" == '' ]
 then
 	echo "Please install gcc. Exiting..."
-	exit 0
+	exit 1
 fi
 
 # find platform for Anaconda
 echo -n "Detecting environment..."
-SYSTEM=`uname -s`
+SYSTEM=`uname -a`
 ANACONDA_DOWNLOAD_PLATFORM=""
 if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
 then
@@ -71,7 +71,19 @@ then
 		wget "$CONDA_URL"
 	fi
 	sh $MINICONDA
-	source ~/.bashrc
+	# reload the bash environment, or exit if unable
+	bash_profile=~/.bash_profile
+	if [ ! -f $bash_profile ]
+	then
+		bash_profile=~/.bashrc
+	fi
+	if [ -f $bash_profile ]
+	then
+		source $bash_profile
+	else
+		echo "Please close and reopen your terminal, then rerun this script"
+		exit 1
+	fi
 fi
 
 # creates "clr" conda environment

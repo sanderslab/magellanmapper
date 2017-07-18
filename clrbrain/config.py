@@ -77,8 +77,8 @@ roc_dict = OrderedDict([
 roc_dict = OrderedDict([
     ("threshold_otsu", OrderedDict([
         ("thresholding", "otsu"),
-        #("thresholding_size", np.array([64]))])
-        ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
+        ("thresholding_size", np.array([32]))])
+        #("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )
 ])
 

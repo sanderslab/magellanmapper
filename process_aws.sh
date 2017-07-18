@@ -12,8 +12,9 @@
 # -Ensure that swap space and data drive are mounted
 # -Update paths to files for processing, ensuring that the
 #  *_image5d.npz and *_info.npz files are on S3
-# -Run this script with those paths: 
-#  "nohup ./process.sh -f "/path/to/img.czi" -s "root/path &"
+# -Sample run command: 
+#  nohup ./process_aws.sh -f "/path/to/img.czi" -s "root/path" \
+#    -- --microscope "type" &
 # -Track results: "tail -f nohup.out"
 # -If all goes well, pick up processed files from S3
 ################################################

@@ -55,14 +55,14 @@ def denoise(roi):
         time_start = time()
         denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
         print('time for total variation: %f' %(time() - time_start))
-    
+    '''
     # sharpening
     unsharp_strength = settings["unsharp_strength"]
     blur_size = 8
     blurred = filters.gaussian(denoised, blur_size)
     high_pass = denoised - unsharp_strength * blurred
     denoised = denoised + high_pass
-    
+    '''
     '''
     # downgrade to uint16, which requires adjusting intensity 
     # thresholds (not quite complete here)

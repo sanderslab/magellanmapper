@@ -580,8 +580,8 @@ def process_stack(roi, overlap, tol):
     # need to make module-level to allow shared memory of this large array
     global sub_rois
     scaling_factor = detector.calc_scaling_factor()
-    max_pixels = np.ceil(np.multiply(scaling_factor, 
-                                     chunking.MAX_PIXELS_FACTOR)).astype(int)
+    max_pixels = np.ceil(np.multiply(
+        scaling_factor, config.process_settings["denoise_size"])).astype(int)
     # no overlap for denoising
     sub_rois, _ = chunking.stack_splitter(roi, max_pixels, np.zeros(3))
     segments_all = None

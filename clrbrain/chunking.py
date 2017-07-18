@@ -19,7 +19,6 @@ import math
 from clrbrain import config
 from clrbrain import detector
 
-MAX_PIXELS_FACTOR = 25
 OVERLAP_FACTOR = 5
 
 def calc_overlap():

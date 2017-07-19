@@ -126,11 +126,14 @@ def threshold(roi):
     print("thresh_mean: {}".format(thresh_mean))
     selem_dil = None
     selem_eros = None
-    if thresh_mean > 0.35:
-        selem_dil = morphology.ball(2)
-        thresholded = morphology.erosion(thresholded, morphology.cube(2))
+    if thresh_mean > 0.45:
+        thresholded = morphology.erosion(thresholded, morphology.cube(1))
+        selem_dil = morphology.ball(1)
         selem_eros = morphology.octahedron(1)
-        #selem_eros = morphology.cube(8)
+    elif thresh_mean > 0.35:
+        thresholded = morphology.erosion(thresholded, morphology.cube(2))
+        selem_dil = morphology.ball(2)
+        selem_eros = morphology.octahedron(1)
     elif thresh_mean > 0.3:
         selem_dil = morphology.ball(1)
         selem_eros = morphology.cube(5)

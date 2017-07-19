@@ -35,12 +35,12 @@ def update_process_settings(settings, settings_type):
         # smaller threhsold since total var denoising
         #settings["points_3d_thresh"] = 1.1
         settings["min_sigma_factor"] = 2.1
-        settings["max_sigma_factor"] = 8
+        settings["max_sigma_factor"] = 5
         settings["num_sigma"] = 20
         settings["overlap"] = 0.3
         settings["thresholding"] = "otsu"
         #settings["thresholding_size"] = 41
-        settings["thresholding_size"] = 64 # for otsu
+        settings["thresholding_size"] = 60 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["denoise_size"] = 15
         settings["segment_size"] = 50
@@ -77,8 +77,8 @@ roc_dict = OrderedDict([
 roc_dict = OrderedDict([
     ("threshold_otsu", OrderedDict([
         ("thresholding", "otsu"),
-        #("thresholding_size", np.array([32]))])
-        ("thresholding_size", np.arange(32, 128, 4))])
+        ("thresholding_size", np.array([60]))])
+        #("thresholding_size", np.arange(32, 128, 4))])
         #("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )
 ])

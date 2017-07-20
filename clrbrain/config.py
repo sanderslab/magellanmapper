@@ -73,13 +73,19 @@ roc_dict = OrderedDict([
         ("thresholding_size", np.array([50.0, 130.0, 250.0, 500.0]))])
     )
 ])
-'''
 roc_dict = OrderedDict([
     ("threshold_otsu", OrderedDict([
         ("thresholding", "otsu"),
         ("thresholding_size", np.array([60]))])
         #("thresholding_size", np.arange(32, 128, 4))])
         #("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
+    )
+])
+'''
+
+roc_dict = OrderedDict([
+    ("denoise_size", OrderedDict([
+        ("denoise_size", np.arange(5, 25, 2))])
     )
 ])
 

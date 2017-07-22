@@ -40,9 +40,9 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.3
         settings["thresholding"] = "otsu"
         #settings["thresholding_size"] = 41
-        settings["thresholding_size"] = 60 # for otsu
+        settings["thresholding_size"] = 64 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
-        settings["denoise_size"] = 15
+        settings["denoise_size"] = 25
         settings["segment_size"] = 50
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
 
@@ -74,18 +74,18 @@ roc_dict = OrderedDict([
     )
 ])
 roc_dict = OrderedDict([
-    ("threshold_otsu", OrderedDict([
-        ("thresholding", "otsu"),
-        ("thresholding_size", np.array([60]))])
-        #("thresholding_size", np.arange(32, 128, 4))])
-        #("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
+    ("denoise_size", OrderedDict([
+        ("denoise_size", np.arange(5, 25, 2))])
     )
 ])
 '''
 
 roc_dict = OrderedDict([
-    ("denoise_size", OrderedDict([
-        ("denoise_size", np.arange(5, 25, 2))])
+    ("threshold_otsu", OrderedDict([
+        ("thresholding", "otsu"),
+        ("thresholding_size", np.array([64]))])
+        #("thresholding_size", np.arange(32, 128, 4))])
+        #("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )
 ])
 

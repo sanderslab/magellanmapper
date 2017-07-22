@@ -162,6 +162,7 @@ class Visualization(HasTraits):
     _check_list_2d = List
     _DEFAULTS_2D = ["Filtered", "No border zone", "Outline"]
     _planes_2d = List
+    _no_border = False # remembers last no-border selection
     _DEFAULTS_PLANES_2D = ["xy", "xz"]
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
@@ -254,6 +255,12 @@ class Visualization(HasTraits):
         print(feedback_str)
         self.segs_feedback = feedback_str
     
+    def _reset_segments(self):
+        """Resets the saved segments.
+        """
+        self.segments = None
+        self.segs_pts = None
+    
     def show_3d(self):
         """Shows the 3D plot.
         
@@ -298,9 +305,7 @@ class Visualization(HasTraits):
         if self._DEFAULTS_3D[0] in self._check_list_3d:
             plot_3d.plot_2d_shadows(self.roi, self)
         
-        # reset segments
-        self.segments = None
-        self.segs_pts = None
+        self._reset_segments()
         
     def __init__(self):
         # Do not forget to call the parent's __init__
@@ -442,6 +447,17 @@ class Visualization(HasTraits):
         """
         if self.segs_pts is not None:
             self.segs_pts.glyph.glyph.scale_factor = self.segs_scale
+    
+    @on_trait_change('_check_list_2d')
+    def update_check_list_2d(self):
+        """Responds to updates to the 2D check list.
+        """
+        if self._DEFAULTS_2D[1] in self._check_list_2d != self._no_border:
+            # any change to no border flag resets ROI selection and segments
+            print("changed No Border flag")
+            self._no_border = self._DEFAULTS_2D[1] in self._check_list_2d
+            self.rois_check_list = self._roi_default
+            self._reset_segments()
     
     def _btn_2d_trait_fired(self):
         # shows 2D plots

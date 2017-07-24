@@ -78,7 +78,7 @@ sub_rois = None
 PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
 proc_type = None
 
-TRUTH_DB_TYPES = ("view", "verified")
+TRUTH_DB_TYPES = ("view", "verify", "verified")
 truth_db_type = None
 
 BLOB_COORD_SLICE = slice(0, 3)
@@ -331,6 +331,10 @@ def main(process_args_only=False):
             print(e)
             print("Could not load truth DB from current image path")
     elif args.truth_db == TRUTH_DB_TYPES[1]:
+        # creates a new verified DB to store all ROC results
+        config.verified_db = sqlite.ClrDB()
+        config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
+    elif args.truth_db == TRUTH_DB_TYPES[2]:
         # loads verified DB as the main DB, which includes copies of truth 
         # values with flags for whether they were detected
         try:
@@ -350,10 +354,6 @@ def main(process_args_only=False):
     if config.roc:
         # processes the file using multiple settings defined in config,
         # building an ROC curve based on comparisons with truth sets
-        
-        # creates a new verified DB to store all ROC results
-        config.verified_db = sqlite.ClrDB()
-        config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
         
         # gets the ROC settings
         settings = config.process_settings

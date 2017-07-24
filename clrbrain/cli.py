@@ -331,13 +331,14 @@ def main(process_args_only=False):
             print(e)
             print("Could not load truth DB from current image path")
     elif args.truth_db == TRUTH_DB_TYPES[1]:
-        # loads verified DB, which includes copies of truth values with 
-        # flags for whether they were detected
+        # loads verified DB as the main DB, which includes copies of truth 
+        # values with flags for whether they were detected
         try:
-            config.db = _load_db(filename_base, "_verified.db")
+            config.db = _load_db(sqlite.DB_NAME_VERIFIED, "")
         except FileNotFoundError as e:
             print(e)
-            print("Could not load verified DB from {}".format(filename_base))
+            print("Could not load verified DB from {}"
+                  .format(sqlite.DB_NAME_VERIFIED))
     if config.db is None:
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
@@ -347,6 +348,14 @@ def main(process_args_only=False):
     
     # process the image stack
     if config.roc:
+        # processes the file using multiple settings defined in config,
+        # building an ROC curve based on comparisons with truth sets
+        
+        # creates a new verified DB to store all ROC results
+        config.verified_db = sqlite.ClrDB()
+        config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
+        
+        # gets the ROC settings
         settings = config.process_settings
         stats_dict = {}
         file_summaries = []
@@ -383,7 +392,9 @@ def main(process_args_only=False):
         # plot ROC curve
         from clrbrain import plot_2d
         plot_2d.plot_roc(stats_dict, filename)
+    
     else:
+        # processes file with default settings
         process_file(filename_base, offset, roi_size)
     
     # unless loading images for GUI, exit directly since otherwise application 
@@ -540,16 +551,19 @@ def process_file(filename_base, offset, roi_size):
                     print("Could not load truth DB from {}; will not verify ROIs"
                           .format(db_path_base))
                 if config.truth_db is not None:
+                    '''
                     verified_db = sqlite.ClrDB()
                     verified_db.load_db(
                         os.path.basename(db_path_base) + "_verified.db", True)
+                    '''
                     exp_name = os.path.basename(filename_roi)
                     exp_id = sqlite.insert_experiment(
-                        verified_db.conn, verified_db.cur, exp_name, None)
+                        config.verified_db.conn, config.verified_db.cur, 
+                        exp_name, None)
                     rois = config.truth_db.get_rois(exp_name)
                     stats, fdbk = detector.verify_rois(
                         rois, segments_all, config.truth_db.blobs_truth, 
-                        BLOB_COORD_SLICE, tol, verified_db, exp_id)
+                        BLOB_COORD_SLICE, tol, config.verified_db, exp_id)
         
         # save denoised stack, segments, and scaling info to file
         time_start = time()

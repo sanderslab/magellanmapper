@@ -16,6 +16,7 @@ import numpy as np
 from clrbrain import cli
 
 DB_NAME = "clrbrain.db"
+DB_NAME_VERIFIED = "clrbrain_verified.db"
 DB_VERSION = 2
 
 def _backup_db(path):

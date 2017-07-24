@@ -53,8 +53,11 @@ process_settings = ProcessSettings()
 # main DB
 db = None
 
-# verified "truth blobs" DB
+# truth blobs DB
 truth_db = None
+
+# automated verifications DB
+verified_db = None
 
 # receiver operating characteristic
 roc = False

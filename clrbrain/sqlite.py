@@ -401,7 +401,9 @@ if __name__ == "__main__":
     print("Starting sqlite.py...")
     # parses arguments and sets up the DB
     cli.main(True)
-    conn, cur = start_db()
+    from clrbrain import config
+    conn = config.db.conn
+    cur = config.db.cur
     
     # selects experiment based on command-line arg and gathers all ROIs
     # and blobs within them
@@ -412,6 +414,7 @@ if __name__ == "__main__":
         bb = select_blobs(cur, roi[0])
         blobs.extend(bb)
     blobs = np.array(blobs)
+    blobs = blobs[blobs[:, 5] == -1] # all non-truth blobs
     
     # basic stats based on confirmation status, ignoring maybes
     blobs_true = blobs[blobs[:, 4] == 1] # all pos

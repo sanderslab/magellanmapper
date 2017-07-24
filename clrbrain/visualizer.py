@@ -448,17 +448,6 @@ class Visualization(HasTraits):
         if self.segs_pts is not None:
             self.segs_pts.glyph.glyph.scale_factor = self.segs_scale
     
-    @on_trait_change('_check_list_2d')
-    def update_check_list_2d(self):
-        """Responds to updates to the 2D check list.
-        """
-        if self._DEFAULTS_2D[1] in self._check_list_2d != self._no_border:
-            # any change to no border flag resets ROI selection and segments
-            print("changed No Border flag")
-            self._no_border = self._DEFAULTS_2D[1] in self._check_list_2d
-            self.rois_check_list = self._roi_default
-            self._reset_segments()
-    
     def _btn_2d_trait_fired(self):
         # shows 2D plots
         curr_offset = self._curr_offset()
@@ -544,10 +533,17 @@ class Visualization(HasTraits):
     
     @on_trait_change('_check_list_2d')
     def update_2d_options(self):
-        if self._DEFAULTS_2D[1] in self._check_list_2d:
+        no_border_checked = self._DEFAULTS_2D[1] in self._check_list_2d
+        if no_border_checked:
             self._set_border(True)
         else:
             self._set_border()
+        if no_border_checked != self._no_border:
+            # any change to no border flag resets ROI selection and segments
+            print("changed No Border flag")
+            self._no_border = no_border_checked
+            self.rois_check_list = self._roi_default
+            self._reset_segments()
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

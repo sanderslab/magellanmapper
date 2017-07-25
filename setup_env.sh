@@ -131,4 +131,5 @@ echo "Pip installing additional packages..."
 pip install matplotlib-scalebar
 
 echo "clrbrain environment setup complete!"
+echo "** Please restart your terminal and run \"source activate clr\" **"
 

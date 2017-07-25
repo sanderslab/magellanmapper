@@ -339,6 +339,7 @@ def main(process_args_only=False):
         # values with flags for whether they were detected
         try:
             config.db = _load_db(sqlite.DB_NAME_VERIFIED, "")
+            config.verified_db = config.db
         except FileNotFoundError as e:
             print(e)
             print("Could not load verified DB from {}"

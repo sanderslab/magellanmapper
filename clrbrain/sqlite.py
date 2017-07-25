@@ -404,6 +404,9 @@ if __name__ == "__main__":
     from clrbrain import config
     conn = config.db.conn
     cur = config.db.cur
+    if config.verified_db is not None:
+        conn = config.verified_db.conn
+        cur = config.verified_db.cur
     
     # selects experiment based on command-line arg and gathers all ROIs
     # and blobs within them
@@ -411,42 +414,52 @@ if __name__ == "__main__":
     rois = select_rois(cur, exp[0][0])
     blobs = []
     for roi in rois:
+        #print("got roi_id: {}".format(roi[0]))
         bb = select_blobs(cur, roi[0])
         blobs.extend(bb)
     blobs = np.array(blobs)
-    blobs = blobs[blobs[:, 5] == -1] # all non-truth blobs
     
-    # basic stats based on confirmation status, ignoring maybes
-    blobs_true = blobs[blobs[:, 4] == 1] # all pos
-    # radius = 0 indicates that the blob was manually added, not detected
-    blobs_true_detected = blobs_true[np.nonzero(blobs_true[:, 3])] # true pos
-    # not detected neg, so no "true neg" but only false pos
-    blobs_false = blobs[blobs[:, 4] == 0] # false pos
+    if config.verified_db is None:
+        # basic stats based on confirmation status, ignoring maybes
+        blobs_true = blobs[blobs[:, 4] == 1] # all pos
+        # radius = 0 indicates that the blob was manually added, not detected
+        blobs_true_detected = blobs_true[np.nonzero(blobs_true[:, 3])] # true pos
+        # not detected neg, so no "true neg" but only false pos
+        blobs_false = blobs[blobs[:, 4] == 0] # false pos
+    else:
+        # basic stats based on confirmation status, ignoring maybes
+        blobs_true = blobs[blobs[:, 5] >= 0] # all truth blobs
+        blobs_detected = blobs[blobs[:, 5] == -1] # all non-truth blobs
+        # radius = 0 indicates that the blob was manually added, not detected
+        blobs_true_detected = blobs_detected[blobs_detected[:, 4] == 1] # true pos
+        # not detected neg, so no "true neg" but only false pos
+        blobs_false = blobs[blobs[:, 4] == 0] # false pos
     all_pos = blobs_true.shape[0]
     true_pos = blobs_true_detected.shape[0]
     false_pos = blobs_false.shape[0]
     false_neg = all_pos - true_pos # not detected but should have been
     sens = float(true_pos) / all_pos
     ppv = float(true_pos) / (true_pos + false_pos)
-    
-    # most conservative, where blobs tested pos that are only maybes are treated
-    # as false pos, and missed blobs that are maybes are treated as pos
-    blobs_maybe = blobs[blobs[:, 4] == 2] # all unknown
-    # tested pos but only maybe in reality, so treated here as false pos
-    blobs_maybe_from_detected = blobs_maybe[np.nonzero(blobs_maybe[:, 3])]
-    false_pos_from_maybe = blobs_maybe_from_detected.shape[0]
-    # adds the maybes that were undetected
-    all_true_with_maybes = all_pos + blobs_maybe.shape[0] - false_pos_from_maybe
-    false_pos_with_maybes = false_pos + false_pos_from_maybe
-    false_neg_with_maybes = all_true_with_maybes - true_pos
-    sens_maybe_missed = float(true_pos) / all_true_with_maybes
-    ppv_maybe_missed = float(true_pos) / (true_pos + false_pos_with_maybes)
-    
-    # prints stats
-    print("Ignoring maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
+    print("Stats:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
           "false neg cells = {}\nsensitivity = {}\nPPV = {}\n"
           .format(all_pos, true_pos, false_pos, false_neg, sens, ppv))
-    print("Including maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
-          "false neg cells = {}\nsensitivity = {}\nPPV = {}"
-          .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
-                  false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))
+    
+    if config.verified_db is None:
+        # most conservative, where blobs tested pos that are only maybes are treated
+        # as false pos, and missed blobs that are maybes are treated as pos
+        blobs_maybe = blobs[blobs[:, 4] == 2] # all unknown
+        # tested pos but only maybe in reality, so treated here as false pos
+        blobs_maybe_from_detected = blobs_maybe[np.nonzero(blobs_maybe[:, 3])]
+        false_pos_from_maybe = blobs_maybe_from_detected.shape[0]
+        # adds the maybes that were undetected
+        all_true_with_maybes = all_pos + blobs_maybe.shape[0] - false_pos_from_maybe
+        false_pos_with_maybes = false_pos + false_pos_from_maybe
+        false_neg_with_maybes = all_true_with_maybes - true_pos
+        sens_maybe_missed = float(true_pos) / all_true_with_maybes
+        ppv_maybe_missed = float(true_pos) / (true_pos + false_pos_with_maybes)
+        
+        # prints stats
+        print("Including maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
+              "false neg cells = {}\nsensitivity = {}\nPPV = {}"
+              .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
+                      false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))

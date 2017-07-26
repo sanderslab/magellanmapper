@@ -48,14 +48,18 @@ def denoise(roi):
     denoised = (denoised - vmin) / (vmax - vmin)
     
     # additional simple thresholding
+    denoised_mean = np.mean(denoised)
+    print("denoised_mean: {}".format(denoised_mean))
+    #upper = 0.7 if denoised_mean < 0.25 else 0.5
     #denoised = np.clip(denoised, _INTENSITY_MIN, 1)
     denoised = np.clip(denoised, 0, 0.7)
     
     if settings["tot_var_denoise"]:
         # total variation denoising
-        time_start = time()
+        #time_start = time()
         denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
-        print('time for total variation: %f' %(time() - time_start))
+        #denoised = restoration.denoise_tv_bregman(denoised, weight=0.1)
+        #print('time for total variation: %f' %(time() - time_start))
     
     # sharpening
     unsharp_strength = settings["unsharp_strength"]
@@ -63,7 +67,7 @@ def denoise(roi):
     blurred = filters.gaussian(denoised, blur_size)
     high_pass = denoised - unsharp_strength * blurred
     denoised = denoised + high_pass
-    
+    denoised = morphology.erosion(denoised, morphology.octahedron(1))
     '''
     # downgrade to uint16, which requires adjusting intensity 
     # thresholds (not quite complete here)
@@ -187,6 +191,8 @@ def plot_3d_surface(roi, vis):
     
     # prepare the data source
     #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
+    #if not config.process_settings["tot_var_denoise"]:
+    # denoise only if haven't previously denoised
     roi = restoration.denoise_tv_chambolle(roi, weight=0.3)
     surface = pipeline.scalar_field(roi)
     

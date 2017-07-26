@@ -31,7 +31,7 @@ def update_process_settings(settings, settings_type):
         settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 97
         settings["tot_var_denoise"] = True
-        settings["unsharp_strength"] = 1.0
+        settings["unsharp_strength"] = 2.5
         # smaller threhsold since total var denoising
         #settings["points_3d_thresh"] = 1.1
         settings["min_sigma_factor"] = 2.8

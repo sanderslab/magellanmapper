@@ -29,21 +29,21 @@ def update_process_settings(settings, settings_type):
     if settings_type == "2p_20x":
         settings["microscope_type"] = settings_type
         settings["vis_3d"] = "surface"
-        #settings["clip_vmax"] = 70
-        #settings["tot_var_denoise"] = True
-        #settings["unsharp_strength"] = 1.0
+        settings["clip_vmax"] = 97
+        settings["tot_var_denoise"] = True
+        settings["unsharp_strength"] = 1.0
         # smaller threhsold since total var denoising
         #settings["points_3d_thresh"] = 1.1
-        settings["min_sigma_factor"] = 2.1
+        settings["min_sigma_factor"] = 2.8
         settings["max_sigma_factor"] = 5
         settings["num_sigma"] = 20
         settings["overlap"] = 0.3
-        settings["thresholding"] = "otsu"
+        settings["thresholding"] = None#"otsu"
         #settings["thresholding_size"] = 41
         settings["thresholding_size"] = 64 # for otsu
         #settings["thresholding_size"] = 50.0 # for random_walker
         settings["denoise_size"] = 25
-        settings["segment_size"] = 50
+        settings["segment_size"] = 100
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
 
 
@@ -76,12 +76,6 @@ roc_dict = OrderedDict([
         ("thresholding_size", np.array([50.0, 130.0, 250.0, 500.0]))])
     )
 ])
-roc_dict = OrderedDict([
-    ("denoise_size", OrderedDict([
-        ("denoise_size", np.arange(5, 25, 2))])
-    )
-])
-'''
 
 roc_dict = OrderedDict([
     ("threshold_otsu", OrderedDict([
@@ -91,6 +85,15 @@ roc_dict = OrderedDict([
         #("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
     )
 ])
+'''
+roc_dict = OrderedDict([
+    ("denoise_size", OrderedDict([
+        ("denoise_size", np.array([25]))])
+        #("denoise_size", np.arange(5, 25, 2))])
+    )
+])
+
+
 
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)

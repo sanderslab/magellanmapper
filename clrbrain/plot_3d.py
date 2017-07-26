@@ -48,7 +48,8 @@ def denoise(roi):
     denoised = (denoised - vmin) / (vmax - vmin)
     
     # additional simple thresholding
-    denoised = np.clip(denoised, _INTENSITY_MIN, 1)
+    #denoised = np.clip(denoised, _INTENSITY_MIN, 1)
+    denoised = np.clip(denoised, 0, 0.7)
     
     if settings["tot_var_denoise"]:
         # total variation denoising

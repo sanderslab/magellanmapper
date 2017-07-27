@@ -67,7 +67,8 @@ def denoise(roi):
     blurred = filters.gaussian(denoised, blur_size)
     high_pass = denoised - unsharp_strength * blurred
     denoised = denoised + high_pass
-    denoised = morphology.erosion(denoised, morphology.octahedron(1))
+    if denoised_mean > 0.2:
+        denoised = morphology.erosion(denoised, morphology.octahedron(1))
     '''
     # downgrade to uint16, which requires adjusting intensity 
     # thresholds (not quite complete here)

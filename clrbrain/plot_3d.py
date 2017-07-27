@@ -26,7 +26,6 @@ from skimage import morphology
 from clrbrain import config
 from clrbrain import detector
 
-_INTENSITY_MIN = 0.2 # clip below this threshold
 _MASK_DIVIDEND = 100000.0 # 3D max points
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
@@ -47,12 +46,12 @@ def denoise(roi):
     denoised = np.clip(roi, vmin, vmax)
     denoised = (denoised - vmin) / (vmax - vmin)
     
-    # additional simple thresholding
+    # find gross density
     denoised_mean = np.mean(denoised)
     print("denoised_mean: {}".format(denoised_mean))
-    #upper = 0.7 if denoised_mean < 0.25 else 0.5
-    #denoised = np.clip(denoised, _INTENSITY_MIN, 1)
-    denoised = np.clip(denoised, 0, 0.7)
+    
+    # additional simple thresholding
+    denoised = np.clip(denoised, settings["clip_min"], settings["clip_max"])
     
     if settings["tot_var_denoise"]:
         # total variation denoising
@@ -67,17 +66,11 @@ def denoise(roi):
     blurred = filters.gaussian(denoised, blur_size)
     high_pass = denoised - unsharp_strength * blurred
     denoised = denoised + high_pass
+    
+    # further erode denser regions to decrease overlap among blobs
     if denoised_mean > 0.2:
         denoised = morphology.erosion(denoised, morphology.octahedron(1))
-    '''
-    # downgrade to uint16, which requires adjusting intensity 
-    # thresholds (not quite complete here)
-    from skimage import img_as_uint
-    denoised = img_as_uint(denoised)
-    global intensity_min
-    intensity_min = img_as_uint(intensity_min)
-    print(denoised)
-    '''
+    
     return denoised
 
 def threshold(roi):

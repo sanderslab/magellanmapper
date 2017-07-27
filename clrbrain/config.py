@@ -12,6 +12,8 @@ class ProcessSettings(dict):
         self["microscope_type"] = "lightsheet_5x"
         self["vis_3d"] = "points"
         self["clip_vmax"] = 99.5
+        self["clip_min"] = 0.2
+        self["clip_max"] = 1.0
         self["tot_var_denoise"] = False
         self["unsharp_strength"] = 0.3
         self["points_3d_thresh"] = 1.3
@@ -30,6 +32,8 @@ def update_process_settings(settings, settings_type):
         settings["microscope_type"] = settings_type
         settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 97
+        settings["clip_min"] = 0
+        settings["clip_max"] = 0.7
         settings["tot_var_denoise"] = True
         settings["unsharp_strength"] = 2.5
         # smaller threhsold since total var denoising

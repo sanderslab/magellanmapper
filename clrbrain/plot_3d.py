@@ -30,7 +30,7 @@ _MASK_DIVIDEND = 100000.0 # 3D max points
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 
-def denoise(roi):
+def saturate_roi(roi, clip_vmax=-1):
     """Denoises an image.
     
     Args:
@@ -39,19 +39,23 @@ def denoise(roi):
     Returns:
         Denoised region of interest.
     """
-    settings = config.process_settings
+    if clip_vmax == -1:
+        clip_vmax = config.process_settings["clip_vmax"]
     # enhance contrast and normalize to 0-1 scale
-    vmin, vmax = np.percentile(roi, (5, settings["clip_vmax"]))
+    vmin, vmax = np.percentile(roi, (5, clip_vmax))
     #print("vmin: {}, vmax: {}".format(vmin, vmax))
-    denoised = np.clip(roi, vmin, vmax)
-    denoised = (denoised - vmin) / (vmax - vmin)
+    saturated = np.clip(roi, vmin, vmax)
+    saturated = (saturated - vmin) / (vmax - vmin)
+    return saturated
     
+def denoise_roi(roi):
+    settings = config.process_settings
     # find gross density
-    denoised_mean = np.mean(denoised)
-    print("denoised_mean: {}".format(denoised_mean))
+    saturated_mean = np.mean(roi)
+    print("saturated_mean: {}".format(saturated_mean))
     
     # additional simple thresholding
-    denoised = np.clip(denoised, settings["clip_min"], settings["clip_max"])
+    denoised = np.clip(roi, settings["clip_min"], settings["clip_max"])
     
     if settings["tot_var_denoise"]:
         # total variation denoising
@@ -68,7 +72,7 @@ def denoise(roi):
     denoised = denoised + high_pass
     
     # further erode denser regions to decrease overlap among blobs
-    if denoised_mean > 0.2:
+    if saturated_mean > 0.2:
         denoised = morphology.erosion(denoised, morphology.octahedron(1))
     
     return denoised
@@ -183,10 +187,10 @@ def plot_3d_surface(roi, vis):
     # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
     roi = np.transpose(roi)
     
-    # prepare the data source
+    # prepare the data source with gentle saturation and stronger denoising
+    # to minimize extraneous contours from background noise
     #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
-    #if not config.process_settings["tot_var_denoise"]:
-    # denoise only if haven't previously denoised
+    roi = saturate_roi(roi, 99.5)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.3)
     surface = pipeline.scalar_field(roi)
     

@@ -289,7 +289,6 @@ class Visualization(HasTraits):
             curr_roi_size = self.roi_array[0].astype(int)
             self.roi = plot_3d.prepare_roi(
                 cli.image5d, cli.channel, curr_roi_size, curr_offset)
-            self.roi = plot_3d.denoise(self.roi)
             
             vis = (plot_3d.mlab_3d, config.process_settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
@@ -298,6 +297,11 @@ class Visualization(HasTraits):
             else:
                 # 3D point rendering
                 plot_3d.plot_3d_points(self.roi, self)
+            
+            # process ROI in prep for showing filtered 2D view and segmenting
+            self.roi = plot_3d.saturate_roi(self.roi)
+            self.roi = plot_3d.denoise_roi(self.roi)
+        
         else:
             self.scene.mlab.clf()
         
@@ -390,14 +394,14 @@ class Visualization(HasTraits):
             self.labels, self.walker = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
         else:
+            if self._DEFAULTS_2D[2] in self._check_list_2d:
+                # shows labels around segments with Random-Walker
+                self.labels, _ = detector.segment_rw(self.roi)
             # segments using blob detection
             if cli.segments_proc is None:
                 # blob detection in the ROI;
                 # TODO: incorporate given segs?
                 roi = self.roi
-                if self._DEFAULTS_2D[2] in self._check_list_2d:
-                    # shows labels around segments with Random-Walker
-                    self.labels, _ = detector.segment_rw(roi)
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)

@@ -186,7 +186,11 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         # after imshow, the main image gets squeezed to show full patches
         if (labels is not None and z_relative >= 0 
             and z_relative < labels.shape[0]):
-            ax.contour(labels[z_relative])
+            try:
+                ax.contour(labels[z_relative])
+            except ValueError as e:
+                print(e)
+                print("could not show label:\n{}".format(labels[z_relative]))
             #ax.imshow(labels[z_relative])
         
         # highlight borders of z plane at bottom of ROI

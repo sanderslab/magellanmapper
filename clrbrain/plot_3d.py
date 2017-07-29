@@ -74,7 +74,6 @@ def denoise_roi(roi):
     # further erode denser regions to decrease overlap among blobs
     if saturated_mean > 0.2:
         denoised = morphology.erosion(denoised, morphology.octahedron(1))
-    
     return denoised
 
 def threshold(roi):
@@ -190,8 +189,9 @@ def plot_3d_surface(roi, vis):
     # prepare the data source with gentle saturation and stronger denoising
     # to minimize extraneous contours from background noise
     #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
-    roi = saturate_roi(roi, 99.5)
-    roi = restoration.denoise_tv_chambolle(roi, weight=0.3)
+    roi = saturate_roi(roi, 97)
+    roi = np.clip(roi, 0.2, 1.0)
+    roi = restoration.denoise_tv_chambolle(roi, weight=0.2)
     surface = pipeline.scalar_field(roi)
     
     '''

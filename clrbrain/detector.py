@@ -110,13 +110,15 @@ def segment_blob(roi):
     # corresponds to factor of 1, and 0.25um/pixel corresponds to
     # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
     # x scaling alone
-    scaling_factor = calc_scaling_factor()[2]
+    scale = calc_scaling_factor()
+    scaling_factor = scale[2]
+    scale_norm = np.divide(np.max(scale), scale)
     settings = config.process_settings
     blobs_log = blob_log(roi, min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                          max_sigma=settings["max_sigma_factor"]*scaling_factor, 
                          num_sigma=settings["num_sigma"], 
                          threshold=0.1,
-                         overlap=settings["overlap"])
+                         overlap=settings["overlap"], scale=scale_norm)
     print("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")

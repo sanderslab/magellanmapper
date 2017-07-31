@@ -39,9 +39,9 @@ def update_process_settings(settings, settings_type):
         # smaller threhsold since total var denoising
         #settings["points_3d_thresh"] = 1.1
         settings["min_sigma_factor"] = 2.8
-        settings["max_sigma_factor"] = 5
+        settings["max_sigma_factor"] = 4
         settings["num_sigma"] = 20
-        settings["overlap"] = 0.3
+        settings["overlap"] = 0.2
         settings["thresholding"] = None#"otsu"
         #settings["thresholding_size"] = 41
         settings["thresholding_size"] = 64 # for otsu

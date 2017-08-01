@@ -113,12 +113,18 @@ def segment_blob(roi):
     scale = calc_scaling_factor()
     scaling_factor = scale[2]
     scale_norm = np.divide(np.max(scale), scale)
+    segmenting_mean = np.mean(roi)
+    print("segmenting_mean: {}".format(segmenting_mean))
     settings = config.process_settings
+    overlap = settings["overlap"]
+    if segmenting_mean > -0.25:
+        scale_norm = None
+        overlap += 0.05
     blobs_log = blob_log(roi, min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                          max_sigma=settings["max_sigma_factor"]*scaling_factor, 
                          num_sigma=settings["num_sigma"], 
                          threshold=0.1,
-                         overlap=settings["overlap"], scale=scale_norm)
+                         overlap=overlap, scale=scale_norm)
     print("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")

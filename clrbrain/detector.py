@@ -114,13 +114,16 @@ def segment_blob(roi):
     scaling_factor = scale[2]
     scale_norm = np.divide(np.max(scale), scale)
     segmenting_mean = np.mean(roi)
+    #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
     print("segmenting_mean: {}".format(segmenting_mean))
     settings = config.process_settings
     overlap = settings["overlap"]
     if segmenting_mean > -0.25:
+        # turn off scaling for higher density region
         scale_norm = None
         overlap += 0.05
-    blobs_log = blob_log(roi, min_sigma=settings["min_sigma_factor"]*scaling_factor, 
+    blobs_log = blob_log(roi, 
+                         min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                          max_sigma=settings["max_sigma_factor"]*scaling_factor, 
                          num_sigma=settings["num_sigma"], 
                          threshold=0.1,

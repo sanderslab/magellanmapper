@@ -276,6 +276,28 @@ def select_rois(cur, exp_id):
     rows = cur.fetchall()
     return rows
 
+def update_rois(cur, offset, size):
+    """Updates ROI positions and size.
+    
+    Args:
+        cur: Connection's cursor.
+        offset: Amount to subtract from the offset.
+        size: Amount to add to the size.
+    """
+    cur.execute("SELECT * FROM rois")
+    rows = cur.fetchall()
+    for row in rows:
+        # TODO: subtracts from offset but adds to size for now because of 
+        # limitation in argparse accepting comma-delimited neg numbers
+        cur.execute("UPDATE rois SET offset_x = ?, offset_y = ?, offset_z = ?, "
+                                    "size_x = ?, size_y = ?, size_z = ? "
+                                "WHERE id = ?", 
+                    (row["offset_x"] - offset[0], row["offset_y"] - offset[1], 
+                     row["offset_z"] - offset[2], row["size_x"] + size[0], 
+                     row["size_y"] + size[1], row["size_z"] + size[2], 
+                     row["id"]))
+    conn.commit()
+
 def select_roi(cur, roi_id):
     """Selects an ROI from the ID.
     
@@ -369,45 +391,7 @@ def select_blobs_confirmed(cur, confirmed):
     cur.execute("SELECT * FROM blobs WHERE confirmed = ?", (confirmed, ))
     return _parse_blobs(cur.fetchall())
 
-def _test_db():
-    # simple database test
-    conn, cur = start_db()
-    exp_name = "TextExp"
-    exp_id = select_or_insert_experiment(conn, cur, exp_name, datetime.datetime(1000, 1, 1))
-    insert_blobs(conn, cur, exp_id, 12, [[3, 2, 5, 23.4], [2, 3, 7, 13.2]])
-    conn.commit()
-    conn.close()
-
-class ClrDB():
-    conn = None
-    cur = None
-    blobs_truth = None
-    
-    def load_db(self, path, new_db):
-        self.conn, self.cur = start_db(path, new_db)
-    
-    def load_truth_blobs(self):
-        self.blobs_truth = select_blobs_confirmed(self.cur, 1)
-        print("truth blobs:\n{}".format(self.blobs_truth))
-    
-    def get_rois(self, filename):
-        exps = select_experiment(self.cur, filename)
-        rois = None
-        if len(exps) > 0:
-            rois = select_rois(self.cur, exps[0]["id"])
-        return rois
-
-if __name__ == "__main__":
-    print("Starting sqlite.py...")
-    # parses arguments and sets up the DB
-    cli.main(True)
-    from clrbrain import config
-    conn = config.db.conn
-    cur = config.db.cur
-    if config.verified_db is not None:
-        conn = config.verified_db.conn
-        cur = config.verified_db.cur
-    
+def verification_stats(conn, cur):
     # selects experiment based on command-line arg and gathers all ROIs
     # and blobs within them
     exp = select_experiment(cur, os.path.basename(cli.filename))
@@ -463,3 +447,46 @@ if __name__ == "__main__":
               "false neg cells = {}\nsensitivity = {}\nPPV = {}"
               .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
                       false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))
+
+
+def _test_db():
+    # simple database test
+    conn, cur = start_db()
+    exp_name = "TextExp"
+    exp_id = select_or_insert_experiment(conn, cur, exp_name, datetime.datetime(1000, 1, 1))
+    insert_blobs(conn, cur, exp_id, 12, [[3, 2, 5, 23.4], [2, 3, 7, 13.2]])
+    conn.commit()
+    conn.close()
+
+class ClrDB():
+    conn = None
+    cur = None
+    blobs_truth = None
+    
+    def load_db(self, path, new_db):
+        self.conn, self.cur = start_db(path, new_db)
+    
+    def load_truth_blobs(self):
+        self.blobs_truth = select_blobs_confirmed(self.cur, 1)
+        print("truth blobs:\n{}".format(self.blobs_truth))
+    
+    def get_rois(self, filename):
+        exps = select_experiment(self.cur, filename)
+        rois = None
+        if len(exps) > 0:
+            rois = select_rois(self.cur, exps[0]["id"])
+        return rois
+
+if __name__ == "__main__":
+    print("Starting sqlite.py...")
+    # parses arguments and sets up the DB
+    cli.main(True)
+    from clrbrain import config
+    conn = config.db.conn
+    cur = config.db.cur
+    if config.verified_db is not None:
+        conn = config.verified_db.conn
+        cur = config.verified_db.cur
+    verification_stats(conn, cur)
+    #update_rois(cur, cli.offset, cli.roi_size)
+    

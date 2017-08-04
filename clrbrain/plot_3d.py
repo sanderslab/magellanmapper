@@ -249,9 +249,13 @@ def plot_3d_points(roi, vis):
     vis.scene.mlab.points3d(scalars)
     '''
     vis.scene.mlab.clf()
+    
+    # streamline the image
     roi = saturate_roi(roi, 99.5)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
-    print(roi)
+    
+    # separate parallel arrays for each dimension of all coordinates for
+    # Mayavi input format, with the ROI itself given as a 1D scalar array 
     shape = roi.shape
     z = np.ones((shape[0], shape[1] * shape[2]))
     for i in range(shape[0]):

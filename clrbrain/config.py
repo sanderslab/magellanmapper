@@ -16,7 +16,7 @@ class ProcessSettings(dict):
         self["clip_max"] = 1.0
         self["tot_var_denoise"] = False
         self["unsharp_strength"] = 0.3
-        self["points_3d_thresh"] = 1.3
+        self["points_3d_thresh"] = 0.7
         self["min_sigma_factor"] = 3
         self["max_sigma_factor"] = 30
         self["num_sigma"] = 10

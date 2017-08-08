@@ -160,7 +160,7 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "Border zone", "Outline"]
+    _DEFAULTS_2D = ["Filtered", "Border zone", "Outline", "Circles"]
     _planes_2d = List
     _border_on = False # remembers last border selection
     _DEFAULTS_PLANES_2D = ["xy", "xz"]
@@ -347,10 +347,10 @@ class Visualization(HasTraits):
         self.rois_selections_class.selections = list(self._rois_dict.keys())
         self.rois_check_list = self._roi_default
         
-        # 2D plot options setup
+        # default options setup
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
-        self._check_list_2d = [self._DEFAULTS_2D[1]]
+        self._check_list_2d = [self._DEFAULTS_2D[1], self._DEFAULTS_2D[3]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
         
         # show the default ROI
@@ -494,6 +494,7 @@ class Visualization(HasTraits):
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         title = _fig_title(curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(cli.filename, cli.series)
+        circles = self._DEFAULTS_2D[3] in self._check_list_2d
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # Multi-zoom style
             plot_2d.plot_2d_stack(self, title, filename_base,
@@ -501,7 +502,7 @@ class Visualization(HasTraits):
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
                                   (0, 0, 0), 3, True, "middle", roi, 
-                                  labels=self.labels)
+                                  labels=self.labels, circles=circles)
         else:
             # defaults to Square style
             plot_2d.plot_2d_stack(self, title, filename_base,
@@ -509,7 +510,7 @@ class Visualization(HasTraits):
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
                                   roi=roi, labels=self.labels, 
-                                  blobs_truth=blobs_truth_roi)
+                                  blobs_truth=blobs_truth_roi, circles=circles)
     
     def _btn_save_segments_fired(self):
         self.save_segs()
@@ -540,11 +541,12 @@ class Visualization(HasTraits):
     @on_trait_change('_check_list_2d')
     def update_2d_options(self):
         border_checked = self._DEFAULTS_2D[1] in self._check_list_2d
-        if border_checked:
-            self._set_border()
-        else:
-            self._set_border(reset=True)
         if border_checked != self._border_on:
+            # change the border dimensions
+            if border_checked:
+                self._set_border()
+            else:
+                self._set_border(reset=True)
             # any change to border flag resets ROI selection and segments
             print("changed Border flag")
             self._border_on = border_checked

@@ -115,7 +115,7 @@ def _swap_elements(arr, axis0, axis1, offset=0):
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
                  segments_adj=None, plane="xy", roi=None, z_relative=-1,
-                 labels=None, blobs_truth=None):
+                 labels=None, blobs_truth=None, circles=True):
     """Shows subplots of the region of interest.
     
     Args:
@@ -199,32 +199,35 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                 spine.set_edgecolor("yellow")
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
         
-        # draws all segments as patches
-        if segments is not None and segs_cmap is not None:
-            collection = _circle_collection(segments, 
-                                            segs_cmap.astype(float) / 255.0,
-                                            "none", SEG_LINEWIDTH)
-            ax.add_collection(collection)
-        
-        # overlays segments in adjacent regions with dashed line patch
-        if segments_adj is not None:
-            collection_adj = _circle_collection(segments_adj, "k", "none", SEG_LINEWIDTH)
-            collection_adj.set_linestyle("--")
-            ax.add_collection(collection_adj)
-        
-        # overlays segments in current z with dotted line patch and makes
-        # pickable for verifying the segment
-        if segments_z is not None:
-            collection_z = _circle_collection(segments_z, "w", "none", SEG_LINEWIDTH)
-            collection_z.set_linestyle(":")
-            collection_z.set_picker(5)
-            ax.add_collection(collection_z)
-        
-        if blobs_truth is not None:
-            for blob in blobs_truth:
-                ax.add_patch(patches.Circle((blob[2], blob[1]), radius=3, 
-                                       facecolor=truth_color_dict[blob[5]], 
-                                       alpha=1))
+        if circles:
+            # draws all segments as patches
+            if segments is not None and segs_cmap is not None:
+                collection = _circle_collection(segments, 
+                                                segs_cmap.astype(float) / 255.0,
+                                                "none", SEG_LINEWIDTH)
+                ax.add_collection(collection)
+            
+            # overlays segments in adjacent regions with dashed line patch
+            if segments_adj is not None:
+                collection_adj = _circle_collection(segments_adj, "k", "none", 
+                                                    SEG_LINEWIDTH)
+                collection_adj.set_linestyle("--")
+                ax.add_collection(collection_adj)
+            
+            # overlays segments in current z with dotted line patch and makes
+            # pickable for verifying the segment
+            if segments_z is not None:
+                collection_z = _circle_collection(segments_z, "w", "none", 
+                                                  SEG_LINEWIDTH)
+                collection_z.set_linestyle(":")
+                collection_z.set_picker(5)
+                ax.add_collection(collection_z)
+            
+            if blobs_truth is not None:
+                for blob in blobs_truth:
+                    ax.add_patch(patches.Circle((blob[2], blob[1]), radius=3, 
+                                           facecolor=truth_color_dict[blob[5]], 
+                                           alpha=1))
         
         # adds a simple border to highlight the bottom of the ROI
         if border is not None:
@@ -239,7 +242,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
 def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
-                  roi=None, labels=None, blobs_truth=None):
+                  roi=None, labels=None, blobs_truth=None, circles=True):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -439,7 +442,8 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                                               segs_cmap, alpha, z == z_overview,
                                               border if show_border else None,
                                               segs_out, plane, roi_show, 
-                                              z_relative, labels, blobs_truth_z)
+                                              z_relative, labels, blobs_truth_z,
+                                              circles=circles)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)
@@ -447,17 +451,18 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
             
             # restores saved segment markings as patches, which are pickable
             # from their corresponding segments within their collection
-            segi = 0
-            for seg in segments_z:
-                if seg[4] != -1:
-                    key = "{}-{}".format(len(collection_z_list) - 1, segi)
-                    #print("key: {}".format(key))
-                    patch = patches.Circle((seg[2], seg[1]), radius=_get_radius(seg), 
-                                           facecolor=segs_color_dict[seg[4]], 
-                                           alpha=0.5)
-                    ax_z.add_patch(patch)
-                    seg_patch_dict[key] = patch
-                segi += 1
+            if circles:
+                segi = 0
+                for seg in segments_z:
+                    if seg[4] != -1:
+                        key = "{}-{}".format(len(collection_z_list) - 1, segi)
+                        #print("key: {}".format(key))
+                        patch = patches.Circle(
+                            (seg[2], seg[1]), radius=_get_radius(seg), 
+                            facecolor=segs_color_dict[seg[4]], alpha=0.5)
+                        ax_z.add_patch(patch)
+                        seg_patch_dict[key] = patch
+                    segi += 1
     
     def _force_seg_refresh(i):
        """Triggers table update by either selecting and reselected the segment

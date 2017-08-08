@@ -160,9 +160,9 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "No raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "No border zone", "Outline"]
+    _DEFAULTS_2D = ["Filtered", "Border zone", "Outline"]
     _planes_2d = List
-    _no_border = False # remembers last no-border selection
+    _border_on = False # remembers last border selection
     _DEFAULTS_PLANES_2D = ["xy", "xz"]
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
@@ -350,6 +350,7 @@ class Visualization(HasTraits):
         # 2D plot options setup
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
+        self._check_list_2d = [self._DEFAULTS_2D[1]]
         
         # show the default ROI
         self.show_3d()
@@ -457,7 +458,7 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         # update verify flag
-        plot_2d.verify = self._DEFAULTS_2D[1] not in self._check_list_2d
+        plot_2d.verify = self._DEFAULTS_2D[1] in self._check_list_2d
         img = cli.image5d
         roi = None
         if self._DEFAULTS_2D[0] in self._check_list_2d:
@@ -537,15 +538,15 @@ class Visualization(HasTraits):
     
     @on_trait_change('_check_list_2d')
     def update_2d_options(self):
-        no_border_checked = self._DEFAULTS_2D[1] in self._check_list_2d
-        if no_border_checked:
-            self._set_border(True)
-        else:
+        border_checked = self._DEFAULTS_2D[1] in self._check_list_2d
+        if border_checked:
             self._set_border()
-        if no_border_checked != self._no_border:
-            # any change to no border flag resets ROI selection and segments
-            print("changed No Border flag")
-            self._no_border = no_border_checked
+        else:
+            self._set_border(reset=True)
+        if border_checked != self._border_on:
+            # any change to border flag resets ROI selection and segments
+            print("changed Border flag")
+            self._border_on = border_checked
             self.rois_check_list = self._roi_default
             self._reset_segments()
     

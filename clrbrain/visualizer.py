@@ -158,7 +158,7 @@ class Visualization(HasTraits):
     segs_feedback = Str("Segments output")
     labels = None
     _check_list_3d = List
-    _DEFAULTS_3D = ["Side panes", "Side circles", "No raw"]
+    _DEFAULTS_3D = ["Side panes", "Side circles", "Raw"]
     _check_list_2d = List
     _DEFAULTS_2D = ["Filtered", "Border zone", "Outline"]
     _planes_2d = List
@@ -282,7 +282,7 @@ class Visualization(HasTraits):
         print("using ROI size of {}".format(self.roi_array[0].astype(int)))
         
         # show raw 3D image unless selected not to
-        if self._DEFAULTS_3D[2] not in self._check_list_3d:
+        if self._DEFAULTS_3D[2] in self._check_list_3d:
             # show region of interest based on raw image, using basic denoising 
             # to normalize values but not fully processing
             curr_offset = self._curr_offset()
@@ -351,6 +351,7 @@ class Visualization(HasTraits):
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
         self._check_list_2d = [self._DEFAULTS_2D[1]]
+        self._check_list_3d = [self._DEFAULTS_3D[2]]
         
         # show the default ROI
         self.show_3d()

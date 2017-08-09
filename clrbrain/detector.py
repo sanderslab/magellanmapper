@@ -122,7 +122,7 @@ def segment_blob(roi):
         # turn off scaling for higher density region
         res_norm = None
         overlap += 0.05
-    print("res_norm: {}".format(res_norm))
+    #print("res_norm: {}".format(res_norm))
     blobs_log = blob_log(roi, 
                          min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                          max_sigma=settings["max_sigma_factor"]*scaling_factor, 

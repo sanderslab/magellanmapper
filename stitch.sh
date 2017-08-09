@@ -53,7 +53,7 @@ platform=""
 if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
 then
     platform="Windows"
-    IJ=ImageJ-win$bit
+    IJ=Fiji.app/ImageJ-win$bit
 elif [[ "$SYSTEM" =~ "Darwin" ]]
 then
     platform="MacOSX"
@@ -61,10 +61,11 @@ then
 elif [[ "$SYSTEM" =~ "Linux" ]]
 then
     platform="Linux"
-    IJ=ImageJ-linux$bit
+    IJ=Fiji.app/ImageJ-linux$bit
 fi
 echo "will use $platform platform with $bit bit for ImageJ"
+echo "Assumes Fiji executable is located at $IJ"
 
 # evaluates the options directly from command-line;
 # does not appear to work when fed a separate script in "-macro" mode
-$IJ --headless -eval 'run("Grid/Collection stitching", "type=[Positions from file] order=[Defined by image metadata] multi_series_file='"$IMG"' browse='"$OUT_DIR"' fusion_method=[Linear Blending] regression_threshold=0.30 max/avg_displacement_threshold=2.50 absolute_displacement_threshold=3.50 increase_overlap=0 compute_overlap use_virtual_input_images computation_parameters=[Save memory (but be slower)] image_output=[Write to disk] output_directory=/path/to/output/"); -batch'
+$IJ --mem 100000m --headless -eval 'run("Grid/Collection stitching", "type=[Positions from file] order=[Defined by image metadata] multi_series_file='"$IMG"' output_directory='"$OUT_DIR"' fusion_method=[Linear Blending] regression_threshold=0.30 max/avg_displacement_threshold=2.50 absolute_displacement_threshold=3.50 increase_overlap=0 compute_overlap use_virtual_input_images computation_parameters=[Save memory (but be slower)] image_output=[Write to disk]"); -batch'

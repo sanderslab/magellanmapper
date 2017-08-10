@@ -8,8 +8,7 @@
 # To run:
 # -Sample run command, using nohup in case of long server
 #  operation: 
-#  nohup ./stitch.sh -f "/path/to/img.czi" -s "root/path" \
-#    -o "/output/dir" &
+#  nohup ./stitch.sh -f "/path/to/img.czi" &
 # -Track results: "tail -f nohup.out"
 ################################################
 
@@ -29,6 +28,8 @@ while getopts hf:o: opt; do
             ;;
         o)  OUT_DIR="$OPTARG"
             echo "Set output directory to $OUT_DIR"
+            echo "NOTE: This path will be ignored for now"
+            echo "and based on image directory instead"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -68,4 +69,4 @@ echo "Assumes Fiji executable is located at $IJ"
 
 # evaluates the options directly from command-line;
 # does not appear to work when fed a separate script in "-macro" mode
-$IJ --mem 100000m --headless -eval 'run("Grid/Collection stitching", "type=[Positions from file] order=[Defined by image metadata] multi_series_file='"$IMG"' output_directory='"$OUT_DIR"' fusion_method=[Linear Blending] regression_threshold=0.30 max/avg_displacement_threshold=2.50 absolute_displacement_threshold=3.50 increase_overlap=0 compute_overlap use_virtual_input_images computation_parameters=[Save memory (but be slower)] image_output=[Write to disk]"); -batch'
+$IJ --mem 100000m --headless --run ij_stitch.py 'in_file="'"$IMG"'"'

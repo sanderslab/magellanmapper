@@ -69,4 +69,4 @@ echo "Assumes Fiji executable is located at $IJ"
 
 # evaluates the options directly from command-line;
 # does not appear to work when fed a separate script in "-macro" mode
-$IJ --mem 100000m --headless --run ij_stitch.py 'in_file="'"$IMG"'"'
+$IJ --mem 100000m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'"'

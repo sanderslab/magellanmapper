@@ -373,6 +373,9 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
         Array of all the blobs, minus any blobs that are close to one another in the
             overlapping regions.
     """
+    # combine all blobs into a master list so that each overlapping region
+    # will contain all blobs from all sub-ROIs that had blobs in those regions,
+    # obviating the need to pair sub-ROIs with one another
     blobs_all = None
     print("pruning overlapping blobs with tolerance {}".format(tol))
     for z in range(blob_rois.shape[0]):
@@ -390,6 +393,8 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                     blobs_all = np.concatenate((blobs_all, blobs))
     if blobs_all is None:
         return None
+    
+    # find the overlapping regions and compare blobs within them
     for z in range(sub_rois_offsets.shape[0]):
         for y in range(sub_rois_offsets.shape[1]):
             for x in range(sub_rois_offsets.shape[2]):

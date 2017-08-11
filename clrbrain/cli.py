@@ -64,6 +64,7 @@ from clrbrain import chunking
 filename = None # current image file path
 filenames = None # list of multiple image paths
 series = 0 # series for multi-stack files
+series_list = None # list of series
 channel = 0 # channel of interest
 roi_size = None # current region of interest
 roi_sizes = None # list of regions of interest
@@ -227,10 +228,11 @@ def main(process_args_only=False):
     Processes command-line arguments.
     """
     parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
-    global filename, series, channel, roi_size, offset, proc_type, mlab_3d, truth_db_type
+    global filename, series, series_list, channel, roi_size, rois_sizes, \
+            offset, offsets, proc_type, mlab_3d, truth_db_type
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
-    parser.add_argument("--series", type=int)
+    parser.add_argument("--series")
     parser.add_argument("--savefig")
     parser.add_argument("--padding_2d")
     #parser.add_argument("--verify", action="store_true")
@@ -256,8 +258,18 @@ def main(process_args_only=False):
         channel = args.channel
         print("Set channel to {}".format(channel))
     if args.series is not None:
-        series = args.series
-        print("Set to series {}".format(series))
+        series_split = args.series.split(",")
+        series_list = []
+        for ser in series_split:
+            ser_split = ser.split("-")
+            if len(ser_split) > 1:
+                ser_range = np.arange(int(ser_split[0]), int(ser_split[1]) + 1)
+                series_list.extend(ser_range.tolist())
+            else:
+                series_list.append(int(ser_split[0]))
+        series = series_list[0]
+        print("Set to series_list to {}, current series {}".format(
+              series_list, series))
     if args.savefig is not None:
         from clrbrain import plot_2d
         plot_2d.savefig = args.savefig
@@ -473,7 +485,7 @@ def process_file(filename_base, offset, roi_size):
             raise e
     
     # attempts to load the main image stack
-    image5d = importer.read_file(filename, series)
+    image5d = importer.read_file(filename, series, series_list=series_list)
     
     if proc_type == PROC_TYPES[0]:
         # already imported so does nothing

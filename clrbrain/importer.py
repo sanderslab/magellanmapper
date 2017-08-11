@@ -156,8 +156,14 @@ def find_sizes(filename):
     print('time for finding sizes: %f' %(time() - time_start))
     return sizes, dtype
 
+def _make_filenames(filename, series):
+    filename_base = filename_to_base(filename, series)
+    filename_image5d_npz = filename_base + "_image5d.npz"
+    filename_info_npz = filename_base + "_info.npz"
+    return filename_image5d_npz, filename_info_npz
+
 def read_file(filename, series, save=True, load=True, z_max=-1, 
-              offset=None, size=None, channel=-1):
+              offset=None, size=None, channel=-1, series_list=None):
     """Reads in an imaging file.
     
     Can load the file from a saved Numpy array and also for only a series
@@ -180,9 +186,12 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         image5d: array of image data.
         size: tuple of dimensions given as (time, z, y, x, channels).
     """
+    filename_image5d_npz, filename_info_npz = _make_filenames(filename, series)
+    '''
     filename_base = filename_to_base(filename, series)
     filename_image5d_npz = filename_base + "_image5d.npz"
     filename_info_npz = filename_base + "_info.npz"
+    '''
     if load:
         try:
             time_start = time()
@@ -221,60 +230,66 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
     start_jvm()
     # parses the XML tree directly
     names, sizes, detector.resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
-    #sizes, dtype = find_sizes(filename)
-    rdr = bf.ImageReader(filename, perform_init=True)
-    # only loads one series for now though could create a loop for multiple series
-    size = sizes[series]
-    nt, nz = size[:2]
-    if z_max != -1:
-        nz = z_max
-    if offset is None:
-        offset = (0, 0, 0) # (x, y, z)
-    dtype = getattr(np, pixel_type)
-    # create empty image stack array based on whether channel dimension exists
-    if size[4] <= 1:
-        image5d = np.empty((nt, nz, size[2], size[3]), dtype)
-        load_channel = 0
-    else:
-        image5d = np.empty((nt, nz, size[2], size[3], size[4]), dtype)
-        load_channel = None
-    print("setting image5d array with shape: {}".format(image5d.shape))
     time_start = time()
-    for t in range(nt):
-        check_dtype = True
-        for z in range(nz):
-            print("loading planes from [{}, {}]".format(t, z))
-            img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
-                           series=series, rescale=False)
-            # checks predicted data type with actual one to ensure consistency, 
-            # which was necessary in case the PIXEL_DTYPE dictionary became inaccurate
-            # but shoudln't be an issue when parsing date type directly from XML
-            if check_dtype:
-                if img.dtype != image5d.dtype:
-                    raise TypeError("Storing as data type {} "
-                                    "when image is in type {}"
-                                    .format(img.dtype, image5d.dtype))
-                else:
-                    print("Storing as data type {}".format(img.dtype))
-                check_dtype = False
-            image5d[t, z] = img
-    print('file import time: %f' %(time() - time_start))
-    outfile_image5d = open(filename_image5d_npz, "wb")
-    outfile_info = open(filename_info_npz, "wb")
-    #outfile = open(filename_npz, "wb")
-    if save:
-        time_start = time()
-        # could use compression (savez_compressed), but much slower; also 
-        # separately saves image5d with plain "save" to allow for partial
-        # loading with mmap_mode
-        np.save(outfile_image5d, image5d)
-        np.savez(outfile_info, names=names, sizes=sizes, 
-                 resolutions=detector.resolutions, magnification=magnification, 
-                 zoom=zoom, pixel_type=pixel_type)
-        outfile_image5d.close()
-        outfile_info.close()
-        print('file save time: %f' %(time() - time_start))
-    return image5d
+    if series_list is None:
+        series_list = [series]
+        print("series_list: {}".format(series_list))
+    for series in series_list:
+        filename_image5d_npz, filename_info_npz = _make_filenames(filename, series)
+        #sizes, dtype = find_sizes(filename)
+        rdr = bf.ImageReader(filename, perform_init=True)
+        # only loads one series for now though could create a loop for multiple series
+        size = sizes[series]
+        nt, nz = size[:2]
+        if z_max != -1:
+            nz = z_max
+        if offset is None:
+            offset = (0, 0, 0) # (x, y, z)
+        dtype = getattr(np, pixel_type)
+        # create empty image stack array based on whether channel dimension exists
+        if size[4] <= 1:
+            image5d = np.empty((nt, nz, size[2], size[3]), dtype)
+            load_channel = 0
+        else:
+            image5d = np.empty((nt, nz, size[2], size[3], size[4]), dtype)
+            load_channel = None
+        print("setting image5d array for series {} with shape: {}".format(
+              series, image5d.shape))
+        for t in range(nt):
+            check_dtype = True
+            for z in range(nz):
+                print("loading planes from [{}, {}]".format(t, z))
+                img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
+                               series=series, rescale=False)
+                # checks predicted data type with actual one to ensure consistency, 
+                # which was necessary in case the PIXEL_DTYPE dictionary became inaccurate
+                # but shoudln't be an issue when parsing date type directly from XML
+                if check_dtype:
+                    if img.dtype != image5d.dtype:
+                        raise TypeError("Storing as data type {} "
+                                        "when image is in type {}"
+                                        .format(img.dtype, image5d.dtype))
+                    else:
+                        print("Storing as data type {}".format(img.dtype))
+                    check_dtype = False
+                image5d[t, z] = img
+        print('file import time: %f' %(time() - time_start))
+        outfile_image5d = open(filename_image5d_npz, "wb")
+        outfile_info = open(filename_info_npz, "wb")
+        #outfile = open(filename_npz, "wb")
+        if save:
+            time_start = time()
+            # could use compression (savez_compressed), but much slower; also 
+            # separately saves image5d with plain "save" to allow for partial
+            # loading with mmap_mode
+            np.save(outfile_image5d, image5d)
+            np.savez(outfile_info, names=names, sizes=sizes, 
+                     resolutions=detector.resolutions, magnification=magnification, 
+                     zoom=zoom, pixel_type=pixel_type)
+            outfile_image5d.close()
+            outfile_info.close()
+            print('file save time: %f' %(time() - time_start))
+    return None
 
 def filename_to_base(filename, series):
     return filename.replace(".czi", "_") + str(series).zfill(5)

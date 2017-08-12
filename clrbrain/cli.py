@@ -364,52 +364,54 @@ def main(process_args_only=False):
     if process_args_only:
         return
     
-    # process the image stack
-    if config.roc:
-        # processes the file using multiple settings defined in config,
-        # building an ROC curve based on comparisons with truth sets
+    # process the image stack for each series
+    for series in series_list:
+        filename_base = importer.filename_to_base(filename, series)
+        if config.roc:
+            # processes the file using multiple settings defined in config,
+            # building an ROC curve based on comparisons with truth sets
+            
+            # gets the ROC settings
+            settings = config.process_settings
+            stats_dict = {}
+            file_summaries = []
+            for key, value in config.roc_dict.items():
+                # group of settings, where key is the name of the group, and 
+                # value is another dictionary with the group's settings
+                for key2, value2 in value.items():
+                    if np.isscalar(value2):
+                        # set scalar values rather than iterating and processing
+                        settings[key2] = value2
+                        print("changed {} to {}".format(key2, value2))
+                    else:
+                        # process each value in parameter array
+                        stats = []
+                        for n in value2:
+                            print("Processing with settings {}, {}, {}"
+                                  .format(key, key2, n))
+                            settings[key2] = n
+                            stat = np.zeros(3)
+                            roi_sizes_len = len(roi_sizes)
+                            for i in range(len(offsets)):
+                                size = (roi_sizes[i] if roi_sizes_len > 1 
+                                        else roi_sizes[0])
+                                stat_roi, fdbk = process_file(
+                                    filename_base, offsets[i], size)
+                                stat = np.add(stat, stat_roi)
+                                file_summaries.append(
+                                    "Offset {}:\n{}".format(offsets[i], fdbk))
+                            stats.append(stat)
+                        stats_dict[key + "-" + key2] = (stats, value2)
+            # summary of each file collected together
+            for summary in file_summaries:
+                print(summary)
+            # plot ROC curve
+            from clrbrain import plot_2d
+            plot_2d.plot_roc(stats_dict, filename)
         
-        # gets the ROC settings
-        settings = config.process_settings
-        stats_dict = {}
-        file_summaries = []
-        for key, value in config.roc_dict.items():
-            # group of settings, where key is the name of the group, and 
-            # value is another dictionary with the group's settings
-            for key2, value2 in value.items():
-                if np.isscalar(value2):
-                    # set scalar values rather than iterating and processing
-                    settings[key2] = value2
-                    print("changed {} to {}".format(key2, value2))
-                else:
-                    # process each value in parameter array
-                    stats = []
-                    for n in value2:
-                        print("Processing with settings {}, {}, {}"
-                              .format(key, key2, n))
-                        settings[key2] = n
-                        stat = np.zeros(3)
-                        roi_sizes_len = len(roi_sizes)
-                        for i in range(len(offsets)):
-                            size = (roi_sizes[i] if roi_sizes_len > 1 
-                                    else roi_sizes[0])
-                            stat_roi, fdbk = process_file(
-                                filename_base, offsets[i], size)
-                            stat = np.add(stat, stat_roi)
-                            file_summaries.append(
-                                "Offset {}:\n{}".format(offsets[i], fdbk))
-                        stats.append(stat)
-                    stats_dict[key + "-" + key2] = (stats, value2)
-        # summary of each file collected together
-        for summary in file_summaries:
-            print(summary)
-        # plot ROC curve
-        from clrbrain import plot_2d
-        plot_2d.plot_roc(stats_dict, filename)
-    
-    else:
-        # processes file with default settings
-        process_file(filename_base, offset, roi_size)
+        else:
+            # processes file with default settings
+            process_file(filename_base, offset, roi_size)
     
     # unless loading images for GUI, exit directly since otherwise application 
     #hangs if launched from module with GUI

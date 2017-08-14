@@ -49,6 +49,24 @@ def update_process_settings(settings, settings_type):
         settings["denoise_size"] = 25
         settings["segment_size"] = 100
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
+    elif settings_type == "lightsheet_5x_02":
+        settings["microscope_type"] = settings_type
+        settings["vis_3d"] = "surface"
+        settings["clip_vmax"] = 99.5
+        settings["clip_min"] = 0.2
+        settings["clip_max"] = 1.0
+        settings["tot_var_denoise"] = False
+        settings["unsharp_strength"] = 0.3
+        settings["points_3d_thresh"] = 0.7
+        settings["min_sigma_factor"] = 3
+        settings["max_sigma_factor"] = 5
+        settings["num_sigma"] = 10
+        settings["overlap"] = 0.5
+        settings["thresholding"] = None
+        settings["thresholding_size"] = -1
+        settings["denoise_size"] = 25
+        settings["segment_size"] = 500
+        settings["prune_tol_factor"] = (1, 1, 1)
 
 
 # defaults to lightsheet 5x settings

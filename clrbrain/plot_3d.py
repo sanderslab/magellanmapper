@@ -29,8 +29,34 @@ from clrbrain import detector
 _MASK_DIVIDEND = 100000.0 # 3D max points
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
+near_max = -1.0
 
 def saturate_roi(roi, clip_vmax=-1):
+    """Saturates an image, clipping extreme values and stretching remaining
+    values to fit the full range.
+    
+    Args:
+        roi: Region of interest.
+    
+    Returns:
+        Saturated region of interest.
+    """
+    print("near_max: {}".format(near_max))
+    if clip_vmax == -1:
+        clip_vmax = config.process_settings["clip_vmax"]
+    # enhance contrast and normalize to 0-1 scale
+    vmin, vmax = np.percentile(roi, (5, clip_vmax))
+    print("vmin: {}, vmax: {}".format(vmin, vmax))
+    # ensures that vmax is at least 50% of near max value of image5d
+    max_thresh = near_max * 0.5
+    if vmax < max_thresh:
+        vmax = max_thresh
+        print("adjusted vmax to {}".format(vmax))
+    saturated = np.clip(roi, vmin, vmax)
+    saturated = (saturated - vmin) / (vmax - vmin)
+    return saturated
+    
+def denoise_roi(roi):
     """Denoises an image.
     
     Args:
@@ -39,16 +65,6 @@ def saturate_roi(roi, clip_vmax=-1):
     Returns:
         Denoised region of interest.
     """
-    if clip_vmax == -1:
-        clip_vmax = config.process_settings["clip_vmax"]
-    # enhance contrast and normalize to 0-1 scale
-    vmin, vmax = np.percentile(roi, (5, clip_vmax))
-    #print("vmin: {}, vmax: {}".format(vmin, vmax))
-    saturated = np.clip(roi, vmin, vmax)
-    saturated = (saturated - vmin) / (vmax - vmin)
-    return saturated
-    
-def denoise_roi(roi):
     settings = config.process_settings
     # find gross density
     saturated_mean = np.mean(roi)
@@ -179,6 +195,7 @@ def plot_3d_surface(roi, vis):
     """
     # Plot in Mayavi
     #mlab.figure()
+    print("viewing 3D surface")
     vis_mlab = vis.scene.mlab
     pipeline = vis_mlab.pipeline
     vis_mlab.clf()

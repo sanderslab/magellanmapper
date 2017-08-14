@@ -408,9 +408,11 @@ class Visualization(HasTraits):
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
                 segs = detector.segment_blob(roi)
-                self.segments = np.concatenate(
-                    (segs, np.add(segs[:, :3], np.flipud(self._curr_offset()))), 
-                    axis=1)
+                if segs is not None:
+                    self.segments = np.concatenate(
+                        (segs, np.add(segs[:, :3], 
+                                      np.flipud(self._curr_offset()))), 
+                        axis=1)
             else:
                 x, y, z = self._curr_offset()
                 # uses blobs from loaded segments

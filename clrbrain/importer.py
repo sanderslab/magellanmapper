@@ -187,11 +187,6 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         size: tuple of dimensions given as (time, z, y, x, channels).
     """
     filename_image5d_npz, filename_info_npz = _make_filenames(filename, series)
-    '''
-    filename_base = filename_to_base(filename, series)
-    filename_image5d_npz = filename_base + "_image5d.npz"
-    filename_info_npz = filename_base + "_info.npz"
-    '''
     if load:
         try:
             time_start = time()
@@ -223,6 +218,11 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                 print("set resolutions to {}".format(detector.resolutions))
             except KeyError:
                 print("could not find resolutions")
+            try:
+                plot_3d.near_max = output["near_max"]
+                print("set near_max to {}".format(plot_3d.near_max))
+            except KeyError:
+                print("could not find near_max")
             return image5d
         except IOError:
             print("Unable to load Numpy array, will attempt to reload {}"
@@ -283,12 +283,19 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             # separately saves image5d with plain "save" to allow for partial
             # loading with mmap_mode
             np.save(outfile_image5d, image5d)
+            # save the lower 0.5 and upper 99.5th percentiles, which is 
+            # helpful for finding the full dynamic range for empty areas
+            near_min, near_max = np.percentile(image5d, (0.5, 99.5))
+            print("near_min: {}, near_max: {}, min: {}, max: {}"
+                  .format(near_min, near_max, np.min(image5d), np.max(image5d)))
             np.savez(outfile_info, names=names, sizes=sizes, 
-                     resolutions=detector.resolutions, magnification=magnification, 
-                     zoom=zoom, pixel_type=pixel_type)
+                     resolutions=detector.resolutions, 
+                     magnification=magnification, zoom=zoom, 
+                     pixel_type=pixel_type, near_min=near_min, 
+                     near_max=near_max)
             outfile_image5d.close()
             outfile_info.close()
-            print('file save time: %f' %(time() - time_start))
+            print("file save time: {}".format(time() - time_start))
     return None
 
 def filename_to_base(filename, series):

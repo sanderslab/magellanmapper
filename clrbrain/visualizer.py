@@ -226,8 +226,10 @@ class Visualization(HasTraits):
                     feedback.append("{} outside, ignored".format(self._format_seg(seg_db)))
         
         segs_transposed_np = np.array(segs_transposed)
-        if np.any(np.logical_and(segs_transposed_np[:, 4] == -1, 
-                  np.logical_not(np.isclose(segs_transposed_np[:, 3], 0)))):
+        if (len(segs_transposed_np) > 0 
+            and np.any(
+                np.logical_and(segs_transposed_np[:, 4] == -1, 
+                np.logical_not(np.isclose(segs_transposed_np[:, 3], 0))))):
             feedback.insert(0, "Segments *NOT* added. Please ensure that all "
                                "segments in the ROI have been verified.\n")
         else:

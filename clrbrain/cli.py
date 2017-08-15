@@ -64,7 +64,7 @@ from clrbrain import chunking
 filename = None # current image file path
 filenames = None # list of multiple image paths
 series = 0 # series for multi-stack files
-series_list = None # list of series
+series_list = [series] # list of series
 channel = 0 # channel of interest
 roi_size = None # current region of interest
 roi_sizes = None # list of regions of interest

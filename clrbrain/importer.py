@@ -174,7 +174,10 @@ def _save_image(filename_image5d_npz, filename_info_npz, image5d, names, sizes,
     # separately saves image5d with plain "save" to allow for partial
     # loading with mmap_mode
     print("starting to save {}...".format(outfile_image5d), end="")
-    np.save(outfile_image5d, image5d)
+    npy = np.lib.format.open_memmap(
+        filename_image5d_npz, mode="w+", dtype=pixel_type, shape=image5d.shape)
+    npy[:] = image5d[:]
+    #np.save(outfile_image5d, image5d)
     print("done")
     # save the lower 0.5 and upper 99.5th percentiles, which is 
     # helpful for finding the full dynamic range for empty areas
@@ -266,6 +269,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
     if series_list is None:
         series_list = [series]
         print("series_list: {}".format(series_list))
+    image5d = None
     for series in series_list:
         filename_image5d_npz, filename_info_npz = _make_filenames(filename, series)
         #sizes, dtype = find_sizes(filename)
@@ -279,12 +283,15 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             offset = (0, 0, 0) # (x, y, z)
         dtype = getattr(np, pixel_type)
         # create empty image stack array based on whether channel dimension exists
+        memmap_filename = filename_image5d_npz + ".memmap"
         if size[4] <= 1:
-            image5d = np.empty((nt, nz, size[2], size[3]), dtype)
+            shape = (nt, nz, size[2], size[3])
             load_channel = 0
         else:
-            image5d = np.empty((nt, nz, size[2], size[3], size[4]), dtype)
+            shape = (nt, nz, size[2], size[3], size[4])
             load_channel = None
+        image5d = np.memmap(memmap_filename, dtype=dtype, mode="w+", 
+                            shape=shape)
         print("setting image5d array for series {} with shape: {}".format(
               series, image5d.shape))
         for t in range(nt):
@@ -310,7 +317,8 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             _save_image(filename_image5d_npz, filename_info_npz, image5d, names, 
                         sizes, detector.resolutions, magnification, zoom, 
                         pixel_type)
-    return None
+            os.remove(memmap_filename)
+    return image5d
 
 def import_dir(path):
     files = sorted(glob.glob(path))

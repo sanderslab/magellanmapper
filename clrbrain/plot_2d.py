@@ -325,13 +325,20 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     
     # plot layout depending on number of z-planes
     if single_zoom_row:
+        # show all plots in single row
         zoom_plot_rows = 1
         col_remainder = 0
         zoom_plot_cols = z_planes
     else:
+        # wrap plots after reaching max, but tolerates additional column
+        # if it will fit all the remainder plots from the last row
         zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
         col_remainder = z_planes % ZOOM_COLS
         zoom_plot_cols = ZOOM_COLS
+        if col_remainder > 0 and col_remainder < zoom_plot_rows:
+            zoom_plot_cols += 1
+            zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
+            col_remainder = z_planes % zoom_plot_cols
     #top_rows = 3 if zoom_plot_rows > 1 else 3
     gs = gridspec.GridSpec(2, zoom_levels, wspace=0.7, hspace=0.4,
                            height_ratios=[3, zoom_plot_rows])

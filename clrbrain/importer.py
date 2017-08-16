@@ -173,7 +173,9 @@ def _save_image(filename_image5d_npz, filename_info_npz, image5d, names, sizes,
     # could use compression (savez_compressed), but much slower; also 
     # separately saves image5d with plain "save" to allow for partial
     # loading with mmap_mode
+    print("starting to save {}...".format(outfile_image5d), end="")
     np.save(outfile_image5d, image5d)
+    print("done")
     # save the lower 0.5 and upper 99.5th percentiles, which is 
     # helpful for finding the full dynamic range for empty areas
     near_min, near_max = np.percentile(image5d, (0.5, 99.5))

@@ -19,7 +19,7 @@ Examples:
             --size 150,150,10
 
 Command-line arguments in addition to those from attributes listed below:
-    * resolution: Resolution given as (x, y, z) in floating point (see
+    * res: Resolution given as (x, y, z) in floating point (see
         cli.py, though order is natural here as command-line argument).
     * padding_2d: Padding around the ROI given as (x, y, z) from which to 
         include segments and and show further 2D planes.
@@ -241,6 +241,8 @@ def main(process_args_only=False):
     parser.add_argument("--proc")
     parser.add_argument("--mlab_3d")
     parser.add_argument("--res")
+    parser.add_argument("--mag")
+    parser.add_argument("--zoom")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--microscope")
     parser.add_argument("--truth_db")
@@ -325,6 +327,12 @@ def main(process_args_only=False):
         else:
             print("Resolution ({}) should be given as 3 values (x, y, z)"
                   .format(args.res))
+    if args.mag:
+        detector.magnification = args.mag
+        print("Set magnification to {}".format(detector.magnification))
+    if args.zoom:
+        detector.zoom = args.zoom
+        print("Set zoom to {}".format(detector.zoom))
     # microscope settings default to lightsheet 5x but can be updated
     if args.microscope is not None:
         config.update_process_settings(config.process_settings, args.microscope)
@@ -487,7 +495,10 @@ def process_file(filename_base, offset, roi_size):
             raise e
     
     # attempts to load the main image stack
-    image5d = importer.read_file(filename, series, series_list=series_list)
+    if os.path.isdir(filename):
+        image5d = importer.import_dir(os.path.join(filename, "*"))
+    else:
+        image5d = importer.read_file(filename, series, series_list=series_list)
     
     if proc_type == PROC_TYPES[0]:
         # already imported so does nothing

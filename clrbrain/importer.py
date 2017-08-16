@@ -12,11 +12,14 @@ Attributes:
         pixel data type directly using parse_ome_raw().
 """
 
+import os
 from time import time
+import glob
 from xml import etree as et
 import numpy as np
 import javabridge as jb
 import bioformats as bf
+from skimage import io
 
 from clrbrain import detector
 from clrbrain import plot_3d
@@ -162,6 +165,31 @@ def _make_filenames(filename, series):
     filename_info_npz = filename_base + "_info.npz"
     return filename_image5d_npz, filename_info_npz
 
+def _save_image(filename_image5d_npz, filename_info_npz, image5d, names, sizes, 
+                resolutions, magnification, zoom, pixel_type):
+    outfile_image5d = open(filename_image5d_npz, "wb")
+    outfile_info = open(filename_info_npz, "wb")
+    time_start = time()
+    # could use compression (savez_compressed), but much slower; also 
+    # separately saves image5d with plain "save" to allow for partial
+    # loading with mmap_mode
+    np.save(outfile_image5d, image5d)
+    # save the lower 0.5 and upper 99.5th percentiles, which is 
+    # helpful for finding the full dynamic range for empty areas
+    near_min, near_max = np.percentile(image5d, (0.5, 99.5))
+    print("near_min: {}, near_max: {}, min: {}, max: {}"
+          .format(near_min, near_max, np.min(image5d), np.max(image5d)))
+    np.savez(outfile_info, names=names, sizes=sizes, 
+             resolutions=detector.resolutions, 
+             magnification=magnification, zoom=zoom, 
+             pixel_type=pixel_type, near_min=near_min, 
+             near_max=near_max)
+    outfile_image5d.close()
+    outfile_info.close()
+    print("files saved to {}, {}"
+          .format(filename_image5d_npz, filename_info_npz))
+    print("file save time: {}".format(time() - time_start))
+
 def read_file(filename, series, save=True, load=True, z_max=-1, 
               offset=None, size=None, channel=-1, series_list=None):
     """Reads in an imaging file.
@@ -216,6 +244,8 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             try:
                 detector.resolutions = output["resolutions"]
                 print("set resolutions to {}".format(detector.resolutions))
+                detector.magnification = output["magnification"]
+                print("magnification: {}".format(detector.magnification))
             except KeyError:
                 print("could not find resolutions")
             try:
@@ -273,30 +303,34 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                         print("Storing as data type {}".format(img.dtype))
                     check_dtype = False
                 image5d[t, z] = img
-        print('file import time: %f' %(time() - time_start))
-        outfile_image5d = open(filename_image5d_npz, "wb")
-        outfile_info = open(filename_info_npz, "wb")
-        #outfile = open(filename_npz, "wb")
+        print("file import time: {}".format(time() - time_start))
         if save:
-            time_start = time()
-            # could use compression (savez_compressed), but much slower; also 
-            # separately saves image5d with plain "save" to allow for partial
-            # loading with mmap_mode
-            np.save(outfile_image5d, image5d)
-            # save the lower 0.5 and upper 99.5th percentiles, which is 
-            # helpful for finding the full dynamic range for empty areas
-            near_min, near_max = np.percentile(image5d, (0.5, 99.5))
-            print("near_min: {}, near_max: {}, min: {}, max: {}"
-                  .format(near_min, near_max, np.min(image5d), np.max(image5d)))
-            np.savez(outfile_info, names=names, sizes=sizes, 
-                     resolutions=detector.resolutions, 
-                     magnification=magnification, zoom=zoom, 
-                     pixel_type=pixel_type, near_min=near_min, 
-                     near_max=near_max)
-            outfile_image5d.close()
-            outfile_info.close()
-            print("file save time: {}".format(time() - time_start))
+            _save_image(filename_image5d_npz, filename_info_npz, image5d, names, 
+                        sizes, detector.resolutions, magnification, zoom, 
+                        pixel_type)
     return None
+
+def import_dir(path):
+    files = sorted(glob.glob(path))
+    #files.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
+    num_files = len(files)
+    if num_files < 1:
+        return None
+    name = os.path.dirname(files[0])
+    filename_image5d_npz, filename_info_npz = _make_filenames(name + ".czi", 0)
+    image5d = None
+    i = 0
+    for f in files:
+        print("importing {}".format(f))
+        img = io.imread(f)
+        if image5d is None:
+            image5d = np.empty((1, len(files), *img.shape))
+        image5d[0, i] = img
+        i += 1
+    _save_image(filename_image5d_npz, filename_info_npz, image5d, [name], 
+                [image5d.shape], detector.resolutions, detector.magnification, 
+                detector.zoom, image5d.dtype)
+    return image5d
 
 def filename_to_base(filename, series):
     return filename.replace(".czi", "_") + str(series).zfill(5)

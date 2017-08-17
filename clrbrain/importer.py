@@ -165,20 +165,10 @@ def _make_filenames(filename, series):
     filename_info_npz = filename_base + "_info.npz"
     return filename_image5d_npz, filename_info_npz
 
-def _save_image(filename_image5d_npz, filename_info_npz, image5d, names, sizes, 
+def _save_image_info(filename_info_npz, image5d, names, sizes, 
                 resolutions, magnification, zoom, pixel_type):
-    outfile_image5d = open(filename_image5d_npz, "wb")
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
-    # could use compression (savez_compressed), but much slower; also 
-    # separately saves image5d with plain "save" to allow for partial
-    # loading with mmap_mode
-    print("starting to save {}...".format(outfile_image5d), end="")
-    npy = np.lib.format.open_memmap(
-        filename_image5d_npz, mode="w+", dtype=pixel_type, shape=image5d.shape)
-    npy[:] = image5d[:]
-    #np.save(outfile_image5d, image5d)
-    print("done")
     # save the lower 0.5 and upper 99.5th percentiles, which is 
     # helpful for finding the full dynamic range for empty areas
     near_min, near_max = np.percentile(image5d, (0.5, 99.5))
@@ -189,10 +179,8 @@ def _save_image(filename_image5d_npz, filename_info_npz, image5d, names, sizes,
              magnification=magnification, zoom=zoom, 
              pixel_type=pixel_type, near_min=near_min, 
              near_max=near_max)
-    outfile_image5d.close()
     outfile_info.close()
-    print("files saved to {}, {}"
-          .format(filename_image5d_npz, filename_info_npz))
+    print("info file saved to {}".format(filename_info_npz))
     print("file save time: {}".format(time() - time_start))
 
 def read_file(filename, series, save=True, load=True, z_max=-1, 
@@ -282,16 +270,17 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         if offset is None:
             offset = (0, 0, 0) # (x, y, z)
         dtype = getattr(np, pixel_type)
-        # create empty image stack array based on whether channel dimension exists
-        memmap_filename = filename_image5d_npz + ".memmap"
+        # generate image stack dimensions based on whether channel dim exists
         if size[4] <= 1:
             shape = (nt, nz, size[2], size[3])
             load_channel = 0
         else:
             shape = (nt, nz, size[2], size[3], size[4])
             load_channel = None
-        image5d = np.memmap(memmap_filename, dtype=dtype, mode="w+", 
-                            shape=shape)
+        # open file as memmap to directly output to disk, which is much faster
+        # than outputting to RAM and saving to disk
+        image5d = np.lib.format.open_memmap(
+            filename_image5d_npz, mode="w+", dtype=dtype, shape=shape)
         print("setting image5d array for series {} with shape: {}".format(
               series, image5d.shape))
         for t in range(nt):
@@ -313,11 +302,12 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                     check_dtype = False
                 image5d[t, z] = img
         print("file import time: {}".format(time() - time_start))
+        # TODO: consider removing option since generally always want to save
         if save:
-            _save_image(filename_image5d_npz, filename_info_npz, image5d, names, 
-                        sizes, detector.resolutions, magnification, zoom, 
-                        pixel_type)
-            os.remove(memmap_filename)
+            image5d.flush() # may not be necessary but ensure contents to disk
+            _save_image_info(filename_info_npz, image5d, names, 
+                             sizes, detector.resolutions, magnification, zoom, 
+                             pixel_type)
     return image5d
 
 def import_dir(path):
@@ -334,12 +324,15 @@ def import_dir(path):
         print("importing {}".format(f))
         img = io.imread(f)
         if image5d is None:
-            image5d = np.empty((1, len(files), *img.shape))
+            #image5d = np.empty((1, len(files), *img.shape))
+            image5d = np.lib.format.open_memmap(
+                filename_image5d_npz, mode="w+", dtype=img.dtype, 
+                shape=(1, len(files), *img.shape))
         image5d[0, i] = img
         i += 1
-    _save_image(filename_image5d_npz, filename_info_npz, image5d, [name], 
-                [image5d.shape], detector.resolutions, detector.magnification, 
-                detector.zoom, image5d.dtype)
+    _save_image_info(filename_info_npz, image5d, [name], 
+                     [image5d.shape], detector.resolutions, 
+                     detector.magnification, detector.zoom, image5d.dtype)
     return image5d
 
 def filename_to_base(filename, series):

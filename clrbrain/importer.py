@@ -165,15 +165,10 @@ def _make_filenames(filename, series):
     filename_info_npz = filename_base + "_info.npz"
     return filename_image5d_npz, filename_info_npz
 
-def _save_image_info(filename_info_npz, image5d, names, sizes, 
-                resolutions, magnification, zoom, pixel_type):
+def _save_image_info(filename_info_npz, image5d, names, sizes, resolutions, 
+                     magnification, zoom, pixel_type, near_min, near_max):
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
-    # save the lower 0.5 and upper 99.5th percentiles, which is 
-    # helpful for finding the full dynamic range for empty areas
-    near_min, near_max = np.percentile(image5d, (0.5, 99.5))
-    print("near_min: {}, near_max: {}, min: {}, max: {}"
-          .format(near_min, near_max, np.min(image5d), np.max(image5d)))
     np.savez(outfile_info, names=names, sizes=sizes, 
              resolutions=detector.resolutions, 
              magnification=magnification, zoom=zoom, 
@@ -283,12 +278,19 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             filename_image5d_npz, mode="w+", dtype=dtype, shape=shape)
         print("setting image5d array for series {} with shape: {}".format(
               series, image5d.shape))
+        lows = []
+        highs = []
         for t in range(nt):
             check_dtype = True
             for z in range(nz):
                 print("loading planes from [{}, {}]".format(t, z))
                 img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
                                series=series, rescale=False)
+                low, high = np.percentile(img, (0.5, 99.5))
+                lows.append(low)
+                highs.append(high)
+                #print("near_min: {}, near_max: {}, min: {}, max: {}"
+                #      .format(low, high, np.min(img), np.max(img)))
                 # checks predicted data type with actual one to ensure consistency, 
                 # which was necessary in case the PIXEL_DTYPE dictionary became inaccurate
                 # but shoudln't be an issue when parsing date type directly from XML
@@ -304,10 +306,13 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         print("file import time: {}".format(time() - time_start))
         # TODO: consider removing option since generally always want to save
         if save:
+            time_start = time()
             image5d.flush() # may not be necessary but ensure contents to disk
+            print("flush time: {}".format(time() - time_start))
+            #print("lows: {}, highs: {}".format(lows, highs))
             _save_image_info(filename_info_npz, image5d, names, 
                              sizes, detector.resolutions, magnification, zoom, 
-                             pixel_type)
+                             pixel_type, min(lows), max(highs))
     return image5d
 
 def import_dir(path):
@@ -319,6 +324,8 @@ def import_dir(path):
     name = os.path.dirname(files[0])
     filename_image5d_npz, filename_info_npz = _make_filenames(name + ".czi", 0)
     image5d = None
+    lows = []
+    highs = []
     i = 0
     for f in files:
         print("importing {}".format(f))
@@ -329,10 +336,14 @@ def import_dir(path):
                 filename_image5d_npz, mode="w+", dtype=img.dtype, 
                 shape=(1, len(files), *img.shape))
         image5d[0, i] = img
+        low, high = np.percentile(img, (0.5, 99.5))
+        lows.append(low)
+        highs.append(high)
         i += 1
     _save_image_info(filename_info_npz, image5d, [name], 
                      [image5d.shape], detector.resolutions, 
-                     detector.magnification, detector.zoom, image5d.dtype)
+                     detector.magnification, detector.zoom, image5d.dtype,
+                     min(lows), max(highs))
     return image5d
 
 def filename_to_base(filename, series):

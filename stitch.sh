@@ -67,6 +67,12 @@ fi
 echo "will use $platform platform with $bit bit for ImageJ"
 echo "Assumes Fiji executable is located at $IJ"
 
+# calculates memory to reserve based on image file size with generous
+# extra padding room (TODO: check if too much for large files)
+mem=`du "$IMG" | awk '{print $1}'`
+mem=$((mem/100))
+echo "Reserving $mem MB of memory"
+
 # evaluates the options directly from command-line;
 # does not appear to work when fed a separate script in "-macro" mode
-$IJ --mem 100000m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'"'
+$IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'"'

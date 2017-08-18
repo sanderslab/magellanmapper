@@ -38,6 +38,9 @@ PIXEL_DTYPE = {
     7: np.double
 }
 
+# image5d Numpy saved array version number
+IMAGE5D_NP_VER = 10
+
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
     
@@ -169,7 +172,7 @@ def _save_image_info(filename_info_npz, image5d, names, sizes, resolutions,
                      magnification, zoom, pixel_type, near_min, near_max):
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
-    np.savez(outfile_info, names=names, sizes=sizes, 
+    np.savez(outfile_info, ver=IMAGE5D_NP_VER, names=names, sizes=sizes, 
              resolutions=detector.resolutions, 
              magnification=magnification, zoom=zoom, 
              pixel_type=pixel_type, near_min=near_min, 
@@ -241,6 +244,11 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                 print("set near_max to {}".format(plot_3d.near_max))
             except KeyError:
                 print("could not find near_max")
+            try:
+                image5d_ver_num = output["ver"]
+                print("loaded image5d version number {}".format(image5d_ver_num))
+            except KeyError:
+                print("could not find image5d version number")
             return image5d
         except IOError:
             print("Unable to load Numpy array, will attempt to reload {}"
@@ -310,8 +318,11 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             image5d.flush() # may not be necessary but ensure contents to disk
             print("flush time: {}".format(time() - time_start))
             #print("lows: {}, highs: {}".format(lows, highs))
+            # TODO: consider saving resolutions as 1D rather than 2D array
+            # with single resolution tuple
             _save_image_info(filename_info_npz, image5d, names, 
-                             sizes, detector.resolutions, magnification, zoom, 
+                             sizes, [detector.resolutions[series]], 
+                             magnification, zoom, 
                              pixel_type, min(lows), max(highs))
     return image5d
 

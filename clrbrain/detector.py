@@ -121,7 +121,7 @@ def segment_blob(roi):
     print("segmenting_mean: {}".format(segmenting_mean))
     settings = config.process_settings
     overlap = settings["overlap"]
-    if segmenting_mean > -0.25:
+    if segmenting_mean > settings["segmenting_mean_thresh"]:
         # turn off scaling for higher density region
         res_norm = None
         overlap += 0.05

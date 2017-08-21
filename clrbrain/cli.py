@@ -498,7 +498,7 @@ def process_file(filename_base, offset, roi_size):
     if os.path.isdir(filename):
         image5d = importer.import_dir(os.path.join(filename, "*"))
     else:
-        image5d = importer.read_file(filename, series, series_list=series_list)
+        image5d = importer.read_file(filename, series)
     
     if proc_type == PROC_TYPES[0]:
         # already imported so does nothing

@@ -75,6 +75,7 @@ image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
 sub_rois = None
+_blobs_all = None # share blobs among multiple processes
 
 PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
 proc_type = None
@@ -221,6 +222,52 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     time_pruning_end = time()
     duration = time_pruning_end - time_pruning_start
     return segments_all, duration
+
+def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
+    _blobs_all = chunking.merge_blobs(seg_rois)
+    for axis in range(3):
+        pool = mp.Pool()
+        pool_results = []
+        _blobs_all_non_ol = None
+        for i in range(sub_rois_offsets.shape[axis]):
+            coord = np.zeros(3)
+            coord[axis] = i
+            print("** checking blobs in ROI {}".format(coord))
+            offset = sub_rois_offsets[tuple(coord)]
+            size = sub_rois[tuple(coord)].shape
+            print("offset: {}, size: {}, overlap: {}, tol: {}".format(offset, size, overlap, tol))
+            bounds = [
+                offset[axis] + size[axis] - overlap[axis] - tol[axis],
+                offset[axis] + size[axis] + tol[axis]
+            ]
+            print("axis {}, boundaries: {}".format(axis, bounds))
+            blobs_ol = _blobs_all[np.all([
+                _blobs_all[:, axis] >= bounds[0], 
+                _blobs_all[:, axis] < bounds[1]], axis=0)]
+            start = offset[axis]
+            if i > 0:
+                start += overlap[axis] + tol[axis]
+            blobs_non_ol = _blobs_all[np.all([
+                _blobs_all[:, axis] >= start, 
+                _blobs_all[:, axis] < bounds[0]], axis=0)]
+            if _blobs_all_non_ol is None:
+                _blobs_all_non_ol = blobs_non_ol
+            else:
+                _blobs_all_non_ol = np.concatenate((_blobs_all_non_ol, blobs_non_ol))
+            #print("len before before: {}".format(len(_blobs_all)))
+            pool_results.append(pool.apply_async(detector.remove_close_blobs_within_sorted_array, 
+                             args=(blobs_ol, BLOB_COORD_SLICE, tol)))
+        _blobs_all_ol = None
+        for result in pool_results:
+            blobs_ol_pruned = result.get()
+            if _blobs_all_ol is None:
+                _blobs_all_ol = blobs_ol_pruned
+            else:
+                _blobs_all_ol = np.concatenate((_blobs_all_ol, blobs_ol_pruned))
+        _blobs_all = np.concatenate((_blobs_all_non_ol, _blobs_all_ol))
+        pool.close()
+        pool.join()
+    return _blobs_all
 
 def main(process_args_only=False):
     """Starts the visualization GUI.
@@ -558,9 +605,23 @@ def process_file(filename_base, offset, roi_size):
                         off = super_rois_offsets[coord]
                         segs = np.add(segs, (*off, 0, 0, 0, *off, 0))
                     seg_rois[coord] = segs
+        time_pruning_start = time()
+        segments_all = _prune_blobs_mp(seg_rois, overlap, tol, super_rois, super_rois_offsets)
+        segments_all[:, 0:4] = segments_all[:, 6:]
+        pruning_time = time() - time_pruning_start
+        '''
         segments_all, pruning_time = _prune_blobs(
             seg_rois, BLOB_COORD_SLICE, overlap, tol, super_rois, 
             super_rois_offsets)
+        '''
+        np.set_printoptions(linewidth=500, threshold=10000000)
+        print("all blobs (len {}):".format(len(segments_all)))
+        sort = np.lexsort((segments_all[:, 2], segments_all[:, 1], segments_all[:, 0]))
+        blobs = segments_all[sort]
+        print(blobs)
+        print("checking for duplicates in all:")
+        print(detector.remove_duplicate_blobs(blobs, BLOB_COORD_SLICE))
+        
         #merged, segments_all = process_stack(roi, overlap, tol)
         
         stats = None
@@ -609,6 +670,7 @@ def process_file(filename_base, offset, roi_size):
         outfile_info_proc.close()
         
         segs_len = 0 if segments_all is None else len(segments_all)
+        print("super ROI pruning time (s): {}".format(pruning_time))
         print("total segments found: {}".format(segs_len))
         print("file save time: {}".format(time() - time_start))
         print("total file processing time (s): {}".format(time() - time_start))
@@ -689,60 +751,11 @@ def process_stack(roi, overlap, tol):
         
         # prune segments
         time_pruning_start = time()
-        blobs_all = chunking.merge_blobs(seg_rois)
-        for axis in range(3):
-            pool = mp.Pool()
-            pool_results = []
-            blobs_all_non_ol = None
-            for i in range(sub_rois_offsets.shape[axis]):
-                coord = np.zeros(3)
-                coord[axis] = i
-                print("** checking blobs in ROI {}".format(coord))
-                offset = sub_rois_offsets[tuple(coord)]
-                size = sub_rois[tuple(coord)].shape
-                print("offset: {}, size: {}, overlap: {}, tol: {}".format(offset, size, overlap, tol))
-                bounds = [
-                    offset[axis] + size[axis] - overlap[axis] - tol[axis],
-                    offset[axis] + size[axis] + tol[axis]
-                ]
-                print("axis {}, boundaries: {}".format(axis, bounds))
-                blobs_ol = blobs_all[np.all([
-                    blobs_all[:, axis] >= bounds[0], 
-                    blobs_all[:, axis] < bounds[1]], axis=0)]
-                start = offset[axis]
-                if i > 0:
-                    start += overlap[axis] + tol[axis]
-                blobs_non_ol = blobs_all[np.all([
-                    blobs_all[:, axis] >= start, 
-                    blobs_all[:, axis] < bounds[0]], axis=0)]
-                if blobs_all_non_ol is None:
-                    blobs_all_non_ol = blobs_non_ol
-                else:
-                    blobs_all_non_ol = np.concatenate((blobs_all_non_ol, blobs_non_ol))
-                #print("len before before: {}".format(len(blobs_all)))
-                pool_results.append(pool.apply_async(detector.remove_close_blobs_within_sorted_array, 
-                                 args=(blobs_ol, BLOB_COORD_SLICE, tol)))
-            blobs_all_ol = None
-            for result in pool_results:
-                blobs_ol_pruned = result.get()
-                if blobs_all_ol is None:
-                    blobs_all_ol = blobs_ol_pruned
-                else:
-                    blobs_all_ol = np.concatenate((blobs_all_ol, blobs_ol_pruned))
-            blobs_all = np.concatenate((blobs_all_non_ol, blobs_all_ol))
-                            
+        segments_all = _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
-        blobs_all[:, 0:4] = blobs_all[:, 6:]
-        segments_all = blobs_all
+        segments_all[:, 0:4] = segments_all[:, 6:]
         pruning_time = time() - time_pruning_start
-        np.set_printoptions(linewidth=500, threshold=10000000)
-        print("all blobs (len {}):".format(len(segments_all)))
-        sort = np.lexsort((segments_all[:, 2], segments_all[:, 1], segments_all[:, 0]))
-        blobs = segments_all[sort]
-        print(blobs)
-        print("checking for duplicates in all:")
-        print(detector.remove_duplicate_blobs(blobs, BLOB_COORD_SLICE))
         
     else:
         # Non-multiprocessing

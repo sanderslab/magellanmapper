@@ -168,12 +168,12 @@ def _make_filenames(filename, series):
     filename_info_npz = filename_base + "_info.npz"
     return filename_image5d_npz, filename_info_npz
 
-def _save_image_info(filename_info_npz, image5d, names, sizes, resolutions, 
+def _save_image_info(filename_info_npz, names, sizes, resolutions, 
                      magnification, zoom, pixel_type, near_min, near_max):
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
     np.savez(outfile_info, ver=IMAGE5D_NP_VER, names=names, sizes=sizes, 
-             resolutions=detector.resolutions, 
+             resolutions=resolutions, 
              magnification=magnification, zoom=zoom, 
              pixel_type=pixel_type, near_min=near_min, 
              near_max=near_max)
@@ -232,23 +232,42 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             print('file opening time: %f' %(time() - time_start))
             return
             '''
-            try:
-                detector.resolutions = output["resolutions"]
-                print("set resolutions to {}".format(detector.resolutions))
-                detector.magnification = output["magnification"]
-                print("magnification: {}".format(detector.magnification))
-            except KeyError:
-                print("could not find resolutions")
-            try:
-                plot_3d.near_max = output["near_max"]
-                print("set near_max to {}".format(plot_3d.near_max))
-            except KeyError:
-                print("could not find near_max")
+            # find the info version number
             try:
                 image5d_ver_num = output["ver"]
                 print("loaded image5d version number {}".format(image5d_ver_num))
             except KeyError:
                 print("could not find image5d version number")
+            try:
+                names = output["names"]
+                print("names: {}".format(names))
+            except KeyError:
+                print("could not find names")
+            try:
+                sizes = output["sizes"]
+                print("sizes {}".format(sizes))
+            except KeyError:
+                print("could not find sizes")
+            try:
+                detector.resolutions = output["resolutions"]
+                print("set resolutions to {}".format(detector.resolutions))
+            except KeyError:
+                print("could not find resolutions")
+            try:
+                detector.magnification = output["magnification"]
+                print("magnification: {}".format(detector.magnification))
+            except KeyError:
+                print("could not find magnification")
+            try:
+                detector.zoom = output["zoom"]
+                print("zoom: {}".format(detector.zoom))
+            except KeyError:
+                print("could not find zoom")
+            try:
+                plot_3d.near_max = output["near_max"]
+                print("set near_max to {}".format(plot_3d.near_max))
+            except KeyError:
+                print("could not find near_max")
             return image5d
         except IOError:
             print("Unable to load Numpy array, will attempt to reload {}"
@@ -320,8 +339,8 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             #print("lows: {}, highs: {}".format(lows, highs))
             # TODO: consider saving resolutions as 1D rather than 2D array
             # with single resolution tuple
-            _save_image_info(filename_info_npz, image5d, names, 
-                             sizes, [detector.resolutions[series]], 
+            _save_image_info(filename_info_npz, [names[series]], 
+                             [sizes[series]], [detector.resolutions[series]], 
                              magnification, zoom, 
                              pixel_type, min(lows), max(highs))
     return image5d
@@ -351,7 +370,7 @@ def import_dir(path):
         lows.append(low)
         highs.append(high)
         i += 1
-    _save_image_info(filename_info_npz, image5d, [name], 
+    _save_image_info(filename_info_npz, [name], 
                      [image5d.shape], detector.resolutions, 
                      detector.magnification, detector.zoom, image5d.dtype,
                      min(lows), max(highs))

@@ -347,6 +347,26 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
     blobs_all[:, 0:4] = blobs_all[:, 5:9]
     return blobs_all[:, 0:5]
 
+def merge_blobs(blob_rois):
+    # combine all blobs into a master list so that each overlapping region
+    # will contain all blobs from all sub-ROIs that had blobs in those regions,
+    # obviating the need to pair sub-ROIs with one another
+    blobs_all = None
+    for z in range(blob_rois.shape[0]):
+        for y in range(blob_rois.shape[1]):
+            for x in range(blob_rois.shape[2]):
+                coord = (z, y, x)
+                blobs = blob_rois[coord]
+                #print("checking blobs in {}:\n{}".format(coord, blobs))
+                if blobs is None:
+                    print("no blobs to add, skipping")
+                elif blobs_all is None:
+                    print("initializing master blobs list")
+                    blobs_all = blobs
+                else:
+                    blobs_all = np.concatenate((blobs_all, blobs))
+    return blobs_all
+
 def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     """Removes overlapping blobs, which are blobs that are within a certain 
     tolerance of one another, by comparing a given sub-ROI with the 
@@ -373,26 +393,10 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
         Array of all the blobs, minus any blobs that are close to one another in the
             overlapping regions.
     """
-    # combine all blobs into a master list so that each overlapping region
-    # will contain all blobs from all sub-ROIs that had blobs in those regions,
-    # obviating the need to pair sub-ROIs with one another
-    blobs_all = None
     print("pruning overlapping blobs with tolerance {}".format(tol))
-    for z in range(blob_rois.shape[0]):
-        for y in range(blob_rois.shape[1]):
-            for x in range(blob_rois.shape[2]):
-                coord = (z, y, x)
-                blobs = blob_rois[coord]
-                #print("checking blobs in {}:\n{}".format(coord, blobs))
-                if blobs is None:
-                    print("no blobs to add, skipping")
-                elif blobs_all is None:
-                    print("initializing master blobs list")
-                    blobs_all = blobs
-                else:
-                    blobs_all = np.concatenate((blobs_all, blobs))
+    blobs_all = merge_blobs(blob_rois)
     if blobs_all is None:
-        return None
+        return blobs_all
     
     # find the overlapping regions and compare blobs within them
     for z in range(sub_rois_offsets.shape[0]):

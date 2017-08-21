@@ -373,6 +373,7 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
                     blobs_all = np.concatenate((blobs_all, [blob]))
                     break
                 i -= 1
+    print("blobs without close duplicates:\n{}".format(blobs_all))
     return blobs_all
 
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):

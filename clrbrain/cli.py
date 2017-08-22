@@ -226,10 +226,13 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
     _blobs_all = chunking.merge_blobs(seg_rois)
     for axis in range(3):
+        num_sections = sub_rois_offsets.shape[axis]
+        if num_sections <= 1:
+            continue
         pool = mp.Pool()
         pool_results = []
         _blobs_all_non_ol = None
-        for i in range(sub_rois_offsets.shape[axis]):
+        for i in range(num_sections):
             coord = np.zeros(3)
             coord[axis] = i
             print("** checking blobs in ROI {}".format(coord))

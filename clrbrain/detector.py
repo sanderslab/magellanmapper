@@ -404,7 +404,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
             array of [n, [z, row, column, radius, ...]].
         blobs_truth: The list by which to check for accuracy, in the same
             format as blobs.
-        region: Slice within each blob to check, such as slice(0, 2) to check
+        region: Slice within each blob to check, such as slice(0, 3) to check
             for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
             as region. Blobs that are equal to or less than the the absolute

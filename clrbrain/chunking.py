@@ -367,7 +367,8 @@ def merge_blobs(blob_rois):
                     blobs_all = np.concatenate((blobs_all, blobs))
     return blobs_all
 
-def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
+def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, 
+                             sub_rois_offsets):
     """Removes overlapping blobs, which are blobs that are within a certain 
     tolerance of one another, by comparing a given sub-ROI with the 
     immediately following sub-ROI.
@@ -377,8 +378,9 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
             can be None. Segments are generally given as an (n, p)
             dimension array, where each segment is at least of (z, y, x, radius)
             elements.
-        blob_rois: An array of blob arrays, where each element contains the blobs that
-            were detected within the corresponding sub region within the image stack.
+        blob_rois: An array of blob arrays, where each element contains the 
+            blobs that were detected within the corresponding sub region within 
+            the image stack.
         region: Slice within each blob to check, such as slice(0, 2) to check
             for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
@@ -390,8 +392,8 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
             (z, y, x) dimensions.
     
     Returns:
-        Array of all the blobs, minus any blobs that are close to one another in the
-            overlapping regions.
+        Array of all the blobs, minus any blobs that are close to one another 
+            in the overlapping regions.
     """
     print("pruning overlapping blobs with tolerance {}".format(tol))
     blobs_all = merge_blobs(blob_rois)
@@ -406,7 +408,8 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                 print("** checking blobs in ROI {}".format(coord))
                 offset = sub_rois_offsets[tuple(coord)]
                 size = sub_rois[tuple(coord)].shape
-                print("offset: {}, size: {}, overlap: {}, tol: {}".format(offset, size, overlap, tol))
+                print("offset: {}, size: {}, overlap: {}, tol: {}"
+                      .format(offset, size, overlap, tol))
                 for axis in range(3):
                     axes = np.arange(3)
                     if coord[axis] + 1 < sub_rois_offsets.shape[axis]:
@@ -430,13 +433,16 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, sub_rois
                         blobs_ol = blobs_all[mask_blobs_ol]
                         #print("len before before: {}".format(len(blobs_all)))
                         blobs_ol_pruned = detector.remove_close_blobs_within_sorted_array(blobs_ol, region, tol)
-                        print("blobs without close duplicates:\n{}".format(blobs_ol_pruned))
+                        print("blobs without close duplicates:\n{}"
+                              .format(blobs_ol_pruned))
                         
                         if blobs_ol_pruned is not None:
-                            #print("len before: {}, len blobs_ol: {}".format(len(blobs_all), len(blobs_ol)))
+                            #print("len before: {}, len blobs_ol: {}"
+                            #      .format(len(blobs_all), len(blobs_ol)))
                             blobs_all = blobs_all[np.invert(mask_blobs_ol)]
                             #print("len after: {}".format(len(blobs_all)))
-                            blobs_all = np.concatenate((blobs_all, blobs_ol_pruned))
+                            blobs_all = np.concatenate(
+                                (blobs_all, blobs_ol_pruned))
                             #print("len after after: {}".format(len(blobs_all)))
                         
     # copy shifted coordinates to final coordinates

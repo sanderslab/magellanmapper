@@ -213,7 +213,22 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
-    # prune close blobs within overlapping regions
+    """Prune close blobs within overlapping regions.
+    
+    Params:
+        segs_roi: Segments from each sub-region.
+        region: The region of each segment array to compare for closeness,
+            given as a slice.
+        tol: Tolerance as (z, y, x), within which a segment will be 
+            considered a duplicate of a segment in the master array and
+            removed.
+        sub_rois: Sub-regions, used to check size.
+        sub_rois_offset: Offsets of each sub-region.
+    
+    Returns:
+        segments_all: All segments as a Numpy array.
+        duration: Time to prune, in seconds.
+    """
     time_pruning_start = time()
     segments_all = chunking.prune_overlapping_blobs2(
         seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets)
@@ -224,50 +239,87 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     return segments_all, duration
 
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
+    """Prune close blobs within overlapping regions by checking within
+    entire planes across the ROI in parallel with multiprocessing.
+    
+    Params:
+        segs_roi: Segments from each sub-region.
+        tol: Tolerance as (z, y, x), within which a segment will be 
+            considered a duplicate of a segment in the master array and
+            removed.
+        sub_rois: Sub-regions, used to check size.
+        sub_rois_offset: Offsets of each sub-region.
+    
+    Returns:
+        All segments as a Numpy array.
+    """
+    # collects all blobs in master array to group all overlapping regions
     _blobs_all = chunking.merge_blobs(seg_rois)
+    
     for axis in range(3):
+        # prune planes with all the overlapping regions within a given axis,
+        # skipping if this axis has no overlapping sub-regions
         num_sections = sub_rois_offsets.shape[axis]
         if num_sections <= 1:
             continue
+        
+        # multiprocess pruning by overlapping planes
         pool = mp.Pool()
         pool_results = []
-        _blobs_all_non_ol = None
+        blobs_all_non_ol = None # all blobs from non-overlapping regions
         for i in range(num_sections):
+            # build overlapping region dimensions based on size of sub-region
+            # in the given axis
             coord = np.zeros(3)
             coord[axis] = i
             print("** checking blobs in ROI {}".format(coord))
             offset = sub_rois_offsets[tuple(coord)]
             size = sub_rois[tuple(coord)].shape
-            print("offset: {}, size: {}, overlap: {}, tol: {}".format(offset, size, overlap, tol))
-            bounds = [
-                offset[axis] + size[axis] - overlap[axis] - tol[axis],
-                offset[axis] + size[axis] + tol[axis]
-            ]
+            print("offset: {}, size: {}, overlap: {}, tol: {}"
+                  .format(offset, size, overlap, tol))
+            # each region extends into the next region, so the overlap is
+            # the end of the region minus its overlap and a tolerance space,
+            # extending back out to the end plus the tolerance
+            shift = overlap[axis] + tol[axis]
+            bounds = [offset[axis] + size[axis] - shift,
+                      offset[axis] + size[axis] + tol[axis]]
             print("axis {}, boundaries: {}".format(axis, bounds))
             blobs_ol = _blobs_all[np.all([
                 _blobs_all[:, axis] >= bounds[0], 
                 _blobs_all[:, axis] < bounds[1]], axis=0)]
+            
+            # non-overlapping area is the rest of the region, subtracting the
+            # tolerance unless the region is first and not overlapped
             start = offset[axis]
             if i > 0:
-                start += overlap[axis] + tol[axis]
+                start += shift
             blobs_non_ol = _blobs_all[np.all([
                 _blobs_all[:, axis] >= start, 
                 _blobs_all[:, axis] < bounds[0]], axis=0)]
-            if _blobs_all_non_ol is None:
-                _blobs_all_non_ol = blobs_non_ol
-            else:
-                _blobs_all_non_ol = np.concatenate((_blobs_all_non_ol, blobs_non_ol))
-            #print("len before before: {}".format(len(_blobs_all)))
-            pool_results.append(pool.apply_async(detector.remove_close_blobs_within_sorted_array, 
-                             args=(blobs_ol, BLOB_COORD_SLICE, tol)))
-        _blobs_all_ol = None
+            # collect all these non-overlapping region blobs
+            if blobs_all_non_ol is None:
+                blobs_all_non_ol = blobs_non_ol
+            elif blobs_non_ol is not None:
+                blobs_all_non_ol = np.concatenate(
+                    (blobs_all_non_ol, blobs_non_ol))
+            
+            # prune blobs from overlapping regions vis multiprocessing
+            pool_results.append(pool.apply_async(
+                detector.remove_close_blobs_within_sorted_array, 
+                args=(blobs_ol, BLOB_COORD_SLICE, tol)))
+        
+        # collect all the pruned blob lists
+        blobs_all_ol = None
         for result in pool_results:
             blobs_ol_pruned = result.get()
-            if _blobs_all_ol is None:
-                _blobs_all_ol = blobs_ol_pruned
-            else:
-                _blobs_all_ol = np.concatenate((_blobs_all_ol, blobs_ol_pruned))
-        _blobs_all = np.concatenate((_blobs_all_non_ol, _blobs_all_ol))
+            if blobs_all_ol is None:
+                blobs_all_ol = blobs_ol_pruned
+            elif blobs_ol_pruned is not None:
+                blobs_all_ol = np.concatenate((blobs_all_ol, blobs_ol_pruned))
+        
+        # re-combine blobs from the non-overlapping with the pruned overlapping 
+        # regions
+        _blobs_all = np.concatenate((blobs_all_non_ol, blobs_all_ol))
         pool.close()
         pool.join()
     return _blobs_all
@@ -608,15 +660,14 @@ def process_file(filename_base, offset, roi_size):
                         off = super_rois_offsets[coord]
                         segs = np.add(segs, (*off, 0, 0, 0, *off, 0))
                     seg_rois[coord] = segs
+        
+        # prune segments in overlapping region between super-ROIs
         time_pruning_start = time()
-        segments_all = _prune_blobs_mp(seg_rois, overlap, tol, super_rois, super_rois_offsets)
+        segments_all = _prune_blobs_mp(
+            seg_rois, overlap, tol, super_rois, super_rois_offsets)
         segments_all[:, 0:4] = segments_all[:, 6:]
         pruning_time = time() - time_pruning_start
-        '''
-        segments_all, pruning_time = _prune_blobs(
-            seg_rois, BLOB_COORD_SLICE, overlap, tol, super_rois, 
-            super_rois_offsets)
-        '''
+        '''# report any remaining duplicates
         np.set_printoptions(linewidth=500, threshold=10000000)
         print("all blobs (len {}):".format(len(segments_all)))
         sort = np.lexsort((segments_all[:, 2], segments_all[:, 1], segments_all[:, 0]))
@@ -624,8 +675,7 @@ def process_file(filename_base, offset, roi_size):
         print(blobs)
         print("checking for duplicates in all:")
         print(detector.remove_duplicate_blobs(blobs, BLOB_COORD_SLICE))
-        
-        #merged, segments_all = process_stack(roi, overlap, tol)
+        '''
         
         stats = None
         fdbk = None
@@ -754,7 +804,8 @@ def process_stack(roi, overlap, tol):
         
         # prune segments
         time_pruning_start = time()
-        segments_all = _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
+        segments_all = _prune_blobs_mp(
+            seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
         segments_all[:, 0:4] = segments_all[:, 6:]
@@ -784,13 +835,16 @@ def process_stack(roi, overlap, tol):
                     coord, segments = segment_sub_roi(sub_rois_offsets, coord)
                     seg_rois[coord] = segments
         time_segmenting_end = time()
-    
+        
+        # older pruning method than multiprocessing version
         segments_all, pruning_time = _prune_blobs(
             seg_rois, BLOB_COORD_SLICE, overlap, tol, sub_rois, sub_rois_offsets)
     
     # benchmarking time
-    print("total denoising time (s): {}".format(time_denoising_end - time_denoising_start))
-    print("total segmenting time (s): {}".format(time_segmenting_end - time_segmenting_start))
+    print("total denoising time (s): {}"
+          .format(time_denoising_end - time_denoising_start))
+    print("total segmenting time (s): {}"
+          .format(time_segmenting_end - time_segmenting_start))
     print("total pruning time (s): {}".format(pruning_time))
     print("total stack processing time (s): {}".format(time() - time_start))
     

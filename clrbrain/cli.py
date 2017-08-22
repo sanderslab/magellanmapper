@@ -319,15 +319,18 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
         
         # re-combine blobs from the non-overlapping with the pruned overlapping 
         # regions
-        _blobs_all = np.concatenate((blobs_all_non_ol, blobs_all_ol))
         pool.close()
         pool.join()
+        _blobs_all = np.concatenate((blobs_all_non_ol, blobs_all_ol))
     return _blobs_all
 
 def main(process_args_only=False):
     """Starts the visualization GUI.
     
     Processes command-line arguments.
+    
+    Params:
+        process_args_only: If True, processes command-line arguments and exits.
     """
     parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
     global filename, series, series_list, channel, roi_size, rois_sizes, \
@@ -707,7 +710,7 @@ def process_file(filename_base, offset, roi_size):
                         BLOB_COORD_SLICE, tol, config.verified_db, exp_id)
         
         # save denoised stack, segments, and scaling info to file
-        time_start = time()
+        file_time_start = time()
         '''
         # TODO: write files to memmap array to release RAM?
         outfile_image5d_proc = open(filename_image5d_proc, "wb")
@@ -725,7 +728,7 @@ def process_file(filename_base, offset, roi_size):
         segs_len = 0 if segments_all is None else len(segments_all)
         print("super ROI pruning time (s): {}".format(pruning_time))
         print("total segments found: {}".format(segs_len))
-        print("file save time: {}".format(time() - time_start))
+        print("file save time: {}".format(time() - file_time_start))
         print("total file processing time (s): {}".format(time() - time_start))
         return stats, fdbk
     return None, None

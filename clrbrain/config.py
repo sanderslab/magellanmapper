@@ -136,8 +136,9 @@ roc_dict = OrderedDict([
 ])
 '''
 roc_dict = OrderedDict([
-    ("denoise_size", OrderedDict([
-        ("denoise_size", np.array([25]))])
+    ("denoising_size", OrderedDict([
+        ("denoise_size", np.array([25, 30])),
+        ("segmenting_mean_thresh", np.array([0.3, 0.5]))])
         #("denoise_size", np.arange(5, 25, 2))])
     )
 ])

@@ -54,9 +54,47 @@ def grid_search(fnc, *fnc_args):
     # summary of each file collected together
     for summary in file_summaries:
         print(summary)
-    # plot ROC curve
-    from clrbrain import plot_2d
-    plot_2d.plot_roc(stats_dict, "roc")
+    return stats_dict
+
+def parse_grid_stats(stats_dict):
+    """Parses stats from a grid search.
+    
+    Params:
+        stats_dict: Dictionary where key is a string with the parameters
+            up to the last parameter group, and each value is a tuple of 
+            the raw stats as (pos, true_pos, false_pos) and the array of
+            parameter values.
+    """
+    label = ""
+    colori = 0
+    align = ">"
+    parsed_stats = {}
+    for key, value in stats_dict.items():
+        stats = np.array(value[0])
+        params = value[1]
+        # false discovery rate, the inverse of PPV, since don't have a true negs
+        fdr = np.subtract(1, np.divide(stats[:, 1], 
+                                       np.add(stats[:, 1], stats[:, 2])))
+        sens = np.divide(stats[:, 1], stats[:, 0])
+        #print(fdr, sens)
+        colori += 1
+        print("{}:".format(key))
+        headers = ("Param", "PPV", "Sens", "Pos", "TP", "FP")
+        for header in headers:
+            print("{:{align}{fill}}".format(header, fill=8, align=align), 
+                  end=" ")
+        print()
+        for i, n in enumerate(params):
+            stat = (params[i], 1 - fdr[i], sens[i], *stats[i].astype(int))
+            for val in stat:
+                if isinstance(val, (int, np.integer)):
+                    print("{:{align}8}".format(val, align=align), end=" ")
+                else:
+                    print("{:{align}{fill}}".format(
+                        val, fill="8.3f", align=align), end=" ")
+            print()
+        parsed_stats[key] = (fdr, sens, params)
+    return parsed_stats
 
     
 if __name__ == "__main__":

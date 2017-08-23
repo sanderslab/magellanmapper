@@ -483,8 +483,12 @@ def main(process_args_only=False):
         filename_base = importer.filename_to_base(filename, series)
         if config.roc:
             # grid search with ROC curve
-            mlearn.grid_search(
+            stats_dict = mlearn.grid_search(
                 _iterate_file_processing, filename_base, offsets, roi_sizes)
+            parsed_dict = mlearn.parse_grid_stats(stats_dict)
+            # plot ROC curve
+            from clrbrain import plot_2d
+            plot_2d.plot_roc(parsed_dict, filename)
         else:
             # processes file with default settings
             process_file(filename_base, offset, roi_size)

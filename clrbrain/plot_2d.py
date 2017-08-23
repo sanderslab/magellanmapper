@@ -672,31 +672,13 @@ def plot_roc(stats_dict, name):
     colori = 0
     align = ">"
     for key, value in stats_dict.items():
-        stats = np.array(value[0])
-        params = value[1]
-        # false discovery rate, the inverse of PPV, since don't have a true negs
-        fdr = np.subtract(1, np.divide(stats[:, 1], 
-                                       np.add(stats[:, 1], stats[:, 2])))
-        sens = np.divide(stats[:, 1], stats[:, 0])
-        #print(fdr, sens)
+        fdr = value[0]
+        sens = value[1]
+        params = value[2]
         plt.scatter(fdr, sens, label=key, lw=2, color=cycle_colors(colori))
         colori += 1
-        print("{}:".format(key))
-        headers = ("Param", "PPV", "Sens", "Pos", "TP", "FP")
-        for header in headers:
-            print("{:{align}{fill}}".format(header, fill=8, align=align), 
-                  end=" ")
-        print()
         for i, n in enumerate(params):
             plt.annotate(n, (fdr[i], sens[i]))
-            stat = (params[i], 1 - fdr[i], sens[i], *stats[i].astype(int))
-            for val in stat:
-                if isinstance(val, (int, np.integer)):
-                    print("{:{align}8}".format(val, align=align), end=" ")
-                else:
-                    print("{:{align}{fill}}".format(
-                        val, fill="8.3f", align=align), end=" ")
-            print()
     plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])

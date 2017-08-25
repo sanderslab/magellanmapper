@@ -499,6 +499,7 @@ class Visualization(HasTraits):
         title = _fig_title(curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(cli.filename, cli.series)
         circles = self._DEFAULTS_2D[3] in self._check_list_2d
+        screenshot = self.scene.mlab.screenshot(antialiased=True)
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # Multi-zoom style
             plot_2d.plot_2d_stack(self, title, filename_base,
@@ -506,7 +507,8 @@ class Visualization(HasTraits):
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
                                   (0, 0, 0), 3, True, "middle", roi, 
-                                  labels=self.labels, circles=circles)
+                                  labels=self.labels, circles=circles, 
+                                  mlab_screenshot=screenshot)
         else:
             # defaults to Square style
             plot_2d.plot_2d_stack(self, title, filename_base,
@@ -514,7 +516,8 @@ class Visualization(HasTraits):
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
                                   roi=roi, labels=self.labels, 
-                                  blobs_truth=blobs_truth_roi, circles=circles)
+                                  blobs_truth=blobs_truth_roi, circles=circles, 
+                                  mlab_screenshot=screenshot)
     
     def _btn_save_segments_fired(self):
         self.save_segs()

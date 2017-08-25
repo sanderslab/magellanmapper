@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 
 from clrbrain import cli
+from clrbrain import plot_2d
 
 def _import_img(i, path):
     print("importing {}".format(path))
@@ -31,7 +32,7 @@ def animated_gif(path):
             will be imported in Python sorted order.
     """
     # ascending order of all files in the directory
-    files = sorted(glob.glob(os.path.join(path, "*")))
+    files = sorted(glob.glob(os.path.join(path, "*")))#[::10]
     print(files)
     num_files = len(files)
     if num_files < 1:
@@ -59,7 +60,8 @@ def animated_gif(path):
         i += 1
     for result in pool_results:
         i, img, img_size = result.get()
-        plotted_imgs[i] = [ax.imshow(img)]
+        plotted_imgs[i] = [ax.imshow(
+            img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=0.1)]
     pool.close()
     pool.join()
     
@@ -71,7 +73,8 @@ def animated_gif(path):
     
     # export to animated GIF
     out_path = os.path.join(path, name + "_animation.gif")
-    anim = animation.ArtistAnimation(fig, plotted_imgs, interval=100, repeat_delay=0, blit=False)
+    anim = animation.ArtistAnimation(
+        fig, plotted_imgs, interval=100, repeat_delay=0, blit=False)
     try:
         anim.save(out_path, writer="imagemagick")
     except ValueError as e:

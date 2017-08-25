@@ -18,12 +18,11 @@ Attributes:
 import os
 import math
 import numpy as np
-from mayavi import mlab
-from tvtk.pyface.scene_model import SceneModelError
 from matplotlib import pyplot as plt, cm
 from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
+from matplotlib.colors import LinearSegmentedColormap
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
 
@@ -31,6 +30,7 @@ from clrbrain import detector
 from clrbrain import config
 
 colormap_2d = cm.inferno
+CMAP_GRBK = LinearSegmentedColormap.from_list("Green_black", ['black', 'green'])
 #colormap_2d = cm.gray
 savefig = None
 verify = False
@@ -242,7 +242,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
 def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
-                  roi=None, labels=None, blobs_truth=None, circles=True):
+                  roi=None, labels=None, blobs_truth=None, circles=True, 
+                  mlab_screenshot=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -601,15 +602,13 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     fig.canvas.mpl_connect("button_release_event", on_btn_release)
     
     # show 3D screenshot if available
-    try:
-        img3d = mlab.screenshot(antialiased=True)
+    if mlab_screenshot is not None:
+        img3d = mlab_screenshot
         ax = plt.subplot(gs[0, zoom_levels - 1])
         # auto to adjust size with less overlap
         ax.imshow(img3d)
         ax.set_aspect(img3d.shape[1] / img3d.shape[0])
         _hide_axes(ax)
-    except SceneModelError:
-        print("No Mayavi image to screen capture")
     gs.tight_layout(fig, pad=0.5)
     #gs_zoomed.tight_layout(fig, pad=0.5)
     plt.ion()

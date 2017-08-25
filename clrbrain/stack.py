@@ -17,25 +17,26 @@ from clrbrain import cli
 from clrbrain import plot_2d
 from clrbrain import importer
 
-def _import_img(i, path):
+def _import_img(i, path, rescale):
     print("importing {}".format(path))
     img = io.imread(path)
-    img = transform.rescale(img, 0.1, mode="reflect", multichannel=False)
-    return i, img, img.shape
+    img = transform.rescale(img, rescale, mode="reflect", multichannel=False)
+    return i, img
 
-def _process_plane(i, plane):
+def _process_plane(i, plane, rescale):
     print("processing plane {}".format(i))
-    img = transform.rescale(plane, 0.1, mode="reflect", multichannel=False)
-    return i, img, img.shape
+    img = transform.rescale(plane, rescale, mode="reflect", multichannel=False)
+    return i, img
 
-def _build_animated_gif(images, out_path, process_fnc):
-    """Builds an animated GIF from a stack of images in a directory.
-    
-    Writes the animated file to the parent directory of path.
+def _build_animated_gif(images, out_path, process_fnc, rescale):
+    """Builds an animated GIF from a stack of images.
     
     Params:
-        path: Path to the image directory. All images from this directory
-            will be imported in Python sorted order.
+        images: Array of images, either as files or Numpy array planes.
+        out_path: Output path.
+        process_fnc: Function to process each image through multiprocessing, 
+            where the function should take an index and image and return the 
+            index and processed plane.
     """
     # ascending order of all files in the directory
     num_images = len(images)
@@ -50,15 +51,18 @@ def _build_animated_gif(images, out_path, process_fnc):
 
     # import the images as Matplotlib artists via multiprocessing
     plotted_imgs = [None for i in range(num_images)]
-    img_size = [] # will keep last image's size
+    img_size = None
     i = 0
     pool = mp.Pool()
     pool_results = []
     for image in images:
-        pool_results.append(pool.apply_async(process_fnc, args=(i, image)))
+        pool_results.append(pool.apply_async(
+            process_fnc, args=(i, image, rescale)))
         i += 1
     for result in pool_results:
-        i, img, img_size = result.get()
+        i, img = result.get()
+        if img_size is None:
+            img_size = img.shape
         plotted_imgs[i] = [ax.imshow(
             img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=0.1)]
     pool.close()
@@ -81,50 +85,36 @@ def _build_animated_gif(images, out_path, process_fnc):
     print("saved animation file to {}".format(out_path))
     #plt.show()
 
-def _animated_gif_dir(path):
-    """Builds an animated GIF from a stack of images in a directory.
+def animated_gif(path, series=0, interval=1, rescale=0.1):
+    """Builds an animated GIF from a stack of images in a directory or a
+    .npy file.
     
     Writes the animated file to the parent directory of path.
     
     Params:
         path: Path to the image directory. All images from this directory
             will be imported in Python sorted order.
+        series: Stack to build for multiseries files; defaults to 0.
     """
-    # ascending order of all files in the directory
-    files = sorted(glob.glob(os.path.join(path, "*")))[::500]
-    print(files)
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
-    out_path = os.path.join(parent_path, name + "_animation.gif")
-    _build_animated_gif(files, out_path, _import_img)
-
-def _animated_gif_npy(path, series):
-    """Builds an animated GIF from a stack of images in a directory.
-    
-    Writes the animated file to the parent directory of path.
-    
-    Params:
-        path: Path to the image directory. All images from this directory
-            will be imported in Python sorted order.
-    """
-    # ascending order of all files in the directory
-    image5d = importer.read_file(path, series)
-    planes = image5d[0, ::500]
-    parent_path = os.path.dirname(path)
-    name = os.path.basename(path)
-    i = name.rfind(".")
-    if i != -1:
-        name = name[:i]
-    out_path = os.path.join(parent_path, name + "_animation.gif")
-    _build_animated_gif(planes, out_path, _process_plane)
-
-def animated_gif(path, series=0):
+    planes = None
+    fnc = None
     if os.path.isdir(path):
-        _animated_gif_dir(path)
+        planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
+        print(planes)
+        fnc = _import_img
     else:
-        _animated_gif_npy(path, series)
+        image5d = importer.read_file(path, series)
+        planes = image5d[0, ::interval]
+        i = name.rfind(".")
+        if i != -1:
+            name = name[:i]
+        fnc = _process_plane
+    out_path = os.path.join(parent_path, name + "_animation.gif")
+    _build_animated_gif(planes, out_path, fnc, rescale)
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
     cli.main(True)
-    animated_gif(cli.filename)
+    animated_gif(cli.filename, 0, 100, 0.05)

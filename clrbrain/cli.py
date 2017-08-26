@@ -322,7 +322,12 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
         # regions
         pool.close()
         pool.join()
-        _blobs_all = np.concatenate((blobs_all_non_ol, blobs_all_ol))
+        if blobs_all_ol is None:
+            _blobs_all = blobs_all_non_ol
+        elif blobs_all_non_ol is None:
+            _blobs_all = blobs_all_ol
+        else:
+            _blobs_all = np.concatenate((blobs_all_non_ol, blobs_all_ol))
     return _blobs_all
 
 def main(process_args_only=False):
@@ -673,23 +678,23 @@ def process_file(filename_base, offset, roi_size):
                 db_path_base = _splice_before(filename_base, series_fill, splice)
                 try:
                     _load_truth_db(db_path_base)
+                    if config.truth_db is not None:
+                        '''
+                        verified_db = sqlite.ClrDB()
+                        verified_db.load_db(
+                            os.path.basename(db_path_base) + "_verified.db", True)
+                        '''
+                        exp_name = os.path.basename(filename_roi)
+                        exp_id = sqlite.insert_experiment(
+                            config.verified_db.conn, config.verified_db.cur, 
+                            exp_name, None)
+                        rois = config.truth_db.get_rois(exp_name)
+                        stats, fdbk = detector.verify_rois(
+                            rois, segments_all, config.truth_db.blobs_truth, 
+                            BLOB_COORD_SLICE, tol, config.verified_db, exp_id)
                 except FileNotFoundError as e:
                     print("Could not load truth DB from {}; will not verify ROIs"
                           .format(db_path_base))
-                if config.truth_db is not None:
-                    '''
-                    verified_db = sqlite.ClrDB()
-                    verified_db.load_db(
-                        os.path.basename(db_path_base) + "_verified.db", True)
-                    '''
-                    exp_name = os.path.basename(filename_roi)
-                    exp_id = sqlite.insert_experiment(
-                        config.verified_db.conn, config.verified_db.cur, 
-                        exp_name, None)
-                    rois = config.truth_db.get_rois(exp_name)
-                    stats, fdbk = detector.verify_rois(
-                        rois, segments_all, config.truth_db.blobs_truth, 
-                        BLOB_COORD_SLICE, tol, config.verified_db, exp_id)
         
         # save denoised stack, segments, and scaling info to file
         file_time_start = time()

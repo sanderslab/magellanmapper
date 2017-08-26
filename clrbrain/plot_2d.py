@@ -667,24 +667,30 @@ def cycle_colors(i):
 
 def plot_roc(stats_dict, name):
     fig = plt.figure()
-    label = ""
-    colori = 0
-    align = ">"
-    for key, value in stats_dict.items():
-        fdr = value[0]
-        sens = value[1]
-        params = value[2]
-        plt.scatter(fdr, sens, label=key, lw=2, color=cycle_colors(colori))
-        colori += 1
-        for i, n in enumerate(params):
-            plt.annotate(n, (fdr[i], sens[i]))
+    posi = 1
+    for group, iterable_dicts in stats_dict.items():
+        lines = []
+        colori = 0
+        for key, value in iterable_dicts.items():
+            fdr = value[0]
+            sens = value[1]
+            params = value[2]
+            line, = plt.plot(
+                fdr, sens, label=key, lw=2, color=cycle_colors(colori), 
+                linestyle="", marker=".")
+            lines.append(line)
+            colori += 1
+            for i, n in enumerate(params):
+                plt.annotate(n, (fdr[i], sens[i]))
+        legend = plt.legend(handles=lines, loc=posi, title=group)
+        plt.gca().add_artist(legend)
+        posi += 1
     plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
+    plt.xlim([0.0, 1.2])
+    plt.ylim([0.0, 1.2])
     plt.xlabel("False Discovery Rate")
     plt.ylabel("Sensitivity")
     plt.title("ROC for {}".format(name))
-    plt.legend(loc="lower right")
     plt.show()
 
 if __name__ == "__main__":

@@ -17,6 +17,8 @@ def grid_search(fnc, *fnc_args):
         # group of settings, where key is the name of the group, and 
         # value is another dictionary with the group's settings
         iterable_keys = []
+        iterable_dict = {}
+        stats_dict[key] = iterable_dict
         for key2, value2 in value.items():
             if np.isscalar(value2):
                 # set scalar values rather than iterating and processing
@@ -27,7 +29,7 @@ def grid_search(fnc, *fnc_args):
                 
         def grid_iterate(i, iterable_keys, grid_dict, name):
             key = iterable_keys[i]
-            name = "-".join((name, key))
+            name = key if name is None else  "-".join((name, key))
             stats = []
             if i < len(iterable_keys) - 1:
                 for j in grid_dict[key]:
@@ -48,9 +50,9 @@ def grid_search(fnc, *fnc_args):
                     stat, summaries = fnc(*fnc_args)
                     stats.append(stat)
                     file_summaries.extend(summaries)
-                stats_dict[name] = (stats, params)
+                iterable_dict[name] = (stats, params)
         
-        grid_iterate(0, iterable_keys, value, key)
+        grid_iterate(0, iterable_keys, value, None)
     # summary of each file collected together
     for summary in file_summaries:
         print(summary)
@@ -69,31 +71,36 @@ def parse_grid_stats(stats_dict):
     colori = 0
     align = ">"
     parsed_stats = {}
-    for key, value in stats_dict.items():
-        stats = np.array(value[0])
-        params = value[1]
-        # false discovery rate, the inverse of PPV, since don't have a true negs
-        fdr = np.subtract(1, np.divide(stats[:, 1], 
-                                       np.add(stats[:, 1], stats[:, 2])))
-        sens = np.divide(stats[:, 1], stats[:, 0])
-        #print(fdr, sens)
-        colori += 1
-        print("{}:".format(key))
-        headers = ("Param", "PPV", "Sens", "Pos", "TP", "FP")
-        for header in headers:
-            print("{:{align}{fill}}".format(header, fill=8, align=align), 
-                  end=" ")
-        print()
-        for i, n in enumerate(params):
-            stat = (params[i], 1 - fdr[i], sens[i], *stats[i].astype(int))
-            for val in stat:
-                if isinstance(val, (int, np.integer)):
-                    print("{:{align}8}".format(val, align=align), end=" ")
-                else:
-                    print("{:{align}{fill}}".format(
-                        val, fill="8.3f", align=align), end=" ")
+    for group, iterable_dicts in stats_dict.items():
+        print("{}:".format(group))
+        group_dict = {}
+        parsed_stats[group] = group_dict
+        for key, value in iterable_dicts.items():
+            stats = np.array(value[0])
+            params = value[1]
+            # false discovery rate, the inverse of PPV, since don't have a true negs
+            fdr = np.subtract(1, np.divide(stats[:, 1], 
+                                           np.add(stats[:, 1], stats[:, 2])))
+            sens = np.divide(stats[:, 1], stats[:, 0])
+            #print(fdr, sens)
+            colori += 1
+            print("{}:".format(key))
+            headers = ("Param", "PPV", "Sens", "Pos", "TP", "FP")
+            for header in headers:
+                print("{:{align}{fill}}".format(header, fill=8, align=align), 
+                      end=" ")
             print()
-        parsed_stats[key] = (fdr, sens, params)
+            for i, n in enumerate(params):
+                stat = (params[i], 1 - fdr[i], sens[i], *stats[i].astype(int))
+                for val in stat:
+                    if isinstance(val, (int, np.integer)):
+                        print("{:{align}8}".format(val, align=align), end=" ")
+                    else:
+                        print("{:{align}{fill}}".format(
+                            val, fill="8.3f", align=align), end=" ")
+                print()
+            group_dict[key] = (fdr, sens, params)
+        print()
     return parsed_stats
 
     

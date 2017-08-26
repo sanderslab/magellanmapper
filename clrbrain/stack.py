@@ -117,4 +117,4 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
     cli.main(True)
-    animated_gif(cli.filename, 0, 100, 0.05)
+    animated_gif(cli.filename, 0, 10, 0.05)

@@ -5,19 +5,20 @@
 """
 
 import numpy as np
+from collections import OrderedDict
 
 from clrbrain import config
 
 def grid_search(fnc, *fnc_args):
     # gets the ROC settings
     settings = config.process_settings
-    stats_dict = {}
+    stats_dict = OrderedDict()
     file_summaries = []
     for key, value in config.roc_dict.items():
         # group of settings, where key is the name of the group, and 
         # value is another dictionary with the group's settings
         iterable_keys = []
-        iterable_dict = {}
+        iterable_dict = OrderedDict()
         stats_dict[key] = iterable_dict
         for key2, value2 in value.items():
             if np.isscalar(value2):
@@ -25,13 +26,16 @@ def grid_search(fnc, *fnc_args):
                 settings[key2] = value2
                 print("changed {} to {}".format(key2, value2))
             else:
+                print("adding iterable setting {}".format(key2))
                 iterable_keys.append(key2)
                 
         def grid_iterate(i, iterable_keys, grid_dict, name):
             key = iterable_keys[i]
-            name = key if name is None else  "-".join((name, key))
+            name = key if name is None else name + "-" + key
+            print("name: {}".format(name))
             stats = []
             if i < len(iterable_keys) - 1:
+                name += "("
                 for j in grid_dict[key]:
                     settings[key] = j
                     paren_i = name.rfind("(")

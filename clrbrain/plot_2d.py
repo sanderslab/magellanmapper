@@ -657,12 +657,16 @@ def cycle_colors(i):
     cycle = i // num_colors
     colori = i % num_colors
     color = config.colors[colori]
+    '''
+    print("num_colors: {}, cycle: {}, colori: {}, color: {}"
+          .format(num_colors, cycle, colori, color))
+    '''
     upper = 255
     if cycle > 0:
         color = np.copy(color)
-        color[0] = color[0] + cylce * 5
+        color[0] = color[0] + cycle * 5
         if color[0] > upper:
-            color[0] -= upper * (val // upper)
+            color[0] -= upper * (color[0] // upper)
     return np.divide(color, upper)
 
 def plot_roc(stats_dict, name):

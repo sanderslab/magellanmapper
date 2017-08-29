@@ -252,10 +252,12 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
         sub_rois_offset: Offsets of each sub-region.
     
     Returns:
-        All segments as a Numpy array.
+        All segments as a Numpy array, or None if no segments.
     """
     # collects all blobs in master array to group all overlapping regions
     _blobs_all = chunking.merge_blobs(seg_rois)
+    if _blobs_all is None:
+        return None
     
     for axis in range(3):
         # prune planes with all the overlapping regions within a given axis,
@@ -655,7 +657,6 @@ def process_file(filename_base, offset, roi_size):
         time_pruning_start = time()
         segments_all = _prune_blobs_mp(
             seg_rois, overlap, tol, super_rois, super_rois_offsets)
-        segments_all[:, 0:4] = segments_all[:, 6:]
         pruning_time = time() - time_pruning_start
         '''# report any remaining duplicates
         np.set_printoptions(linewidth=500, threshold=10000000)
@@ -671,6 +672,7 @@ def process_file(filename_base, offset, roi_size):
         fdbk = None
         if segments_all is not None:
             # remove the duplicated elements that were used for pruning
+            segments_all[:, 0:4] = segments_all[:, 6:]
             segments_all = segments_all[:, 0:6]
             
             # compared detected blobs with truth blobs
@@ -798,7 +800,8 @@ def process_stack(roi, overlap, tol):
             seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
-        segments_all[:, 0:4] = segments_all[:, 6:]
+        if segments_all is not None:
+            segments_all[:, 0:4] = segments_all[:, 6:]
         pruning_time = time() - time_pruning_start
         
     else:

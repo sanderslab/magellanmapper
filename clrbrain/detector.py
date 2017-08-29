@@ -137,8 +137,8 @@ def segment_blob(roi):
         print("no blobs detected")
         return None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
-    print(blobs_log)
-    print("found {} blobs".format(blobs_log.shape[0]))
+    #print(blobs_log)
+    #print("found {} blobs".format(blobs_log.shape[0]))
     # adding fields for confirmation and truth flags
     extras = np.ones((blobs_log.shape[0], 2)) * -1
     blobs = np.concatenate((blobs_log, extras), axis=1)

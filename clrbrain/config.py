@@ -80,14 +80,14 @@ def update_process_settings(settings, settings_type):
         settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 99.5
         settings["clip_min"] = 0
-        settings["clip_max"] = 0.7
+        settings["clip_max"] = 0.4
         settings["tot_var_denoise"] = False
         settings["unsharp_strength"] = 0.3
         settings["points_3d_thresh"] = 0.7
         settings["min_sigma_factor"] = 3
         settings["max_sigma_factor"] = 4
         settings["num_sigma"] = 10
-        settings["overlap"] = 0.2
+        settings["overlap"] = 0.5
         settings["thresholding"] = None
         settings["thresholding_size"] = -1
         settings["denoise_size"] = 25
@@ -137,9 +137,10 @@ roc_dict = OrderedDict([
 '''
 roc_dict = OrderedDict([
     ("overlap_thresh", OrderedDict([
-        ("overlap", np.arange(0.0, 1.1, 0.1)),
-        ("clip_min", np.arange(0.0, 0.5, 0.1)),
-        ("clip_max", np.arange(0.4, 0.9, 0.1)),
+        ("overlap", np.arange(0.5, 0.6, 0.1)),
+        #("clip_min", np.arange(0.0, 0.1, 0.1)),
+        ("clip_vmax", np.arange(95, 100.5, 0.5)),
+        ("clip_max", np.arange(0.3, 0.8, 0.1)),
         #"segmenting_mean_thresh", np.arange(0.2, 0.8, 0.1),
         #"denoise_size", np.arange(5, 25, 2)
     ]))

@@ -27,6 +27,7 @@ class ProcessSettings(dict):
         self["segment_size"] = 500
         self["prune_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
+        self["scale_factor"] = (1, 1, 1)
 
 def update_process_settings(settings, settings_type):
     if settings_type == "2p_20x":
@@ -51,6 +52,7 @@ def update_process_settings(settings, settings_type):
         settings["segment_size"] = 100
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -0.25
+        settings["scale_factor"] = (1, 1, 1)
         
     elif settings_type == "2p_20x_zebrafish":
         settings["microscope_type"] = settings_type
@@ -74,6 +76,7 @@ def update_process_settings(settings, settings_type):
         settings["segment_size"] = 100
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -0.25
+        settings["scale_factor"] = (1, 1, 1)
         
     elif settings_type == "lightsheet_5x_02":
         settings["microscope_type"] = settings_type
@@ -94,6 +97,7 @@ def update_process_settings(settings, settings_type):
         settings["segment_size"] = 200
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = 0.5
+        settings["scale_factor"] = (0.63, 1, 1)
 
 
 # defaults to lightsheet 5x settings

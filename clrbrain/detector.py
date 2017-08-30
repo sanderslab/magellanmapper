@@ -109,25 +109,29 @@ def segment_blob(roi):
     """
     # use 3D blob detection from skimage v.0.13pre
     time_start = time()
+    settings = config.process_settings
     # scaling as a factor in pixel/um, where scaling of 1um/pixel  
     # corresponds to factor of 1, and 0.25um/pixel corresponds to
     # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
     # x scaling alone
     scale = calc_scaling_factor()
     scaling_factor = scale[2]
+    
     # adjust scaling for blob pruning
     res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
-    res_norm[0] /= 1.6 # manually dial down z-scaling
+    # further tweak, typically scaling down
+    res_norm = np.multiply(res_norm, settings["scale_factor"])
     segmenting_mean = np.mean(roi)
     #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
     print("segmenting_mean: {}".format(segmenting_mean))
-    settings = config.process_settings
     overlap = settings["overlap"]
     if segmenting_mean > settings["segmenting_mean_thresh"]:
         # turn off scaling for higher density region
         res_norm = None
         overlap += 0.05
     #print("res_norm: {}".format(res_norm))
+    
+    # find blobs
     blobs_log = blob_log(roi, 
                          min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                          max_sigma=settings["max_sigma_factor"]*scaling_factor, 

@@ -115,8 +115,9 @@ def segment_blob(roi):
     # x scaling alone
     scale = calc_scaling_factor()
     scaling_factor = scale[2]
+    # adjust scaling for blob pruning
     res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
-    res_norm[0] /= 1.4
+    res_norm[0] /= 1.6 # manually dial down z-scaling
     segmenting_mean = np.mean(roi)
     #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
     print("segmenting_mean: {}".format(segmenting_mean))

@@ -66,12 +66,13 @@ def segment_rw(roi, beta=50.0):
     #print("labels_ws:\n{}".format(labels_ws))
     #segs = ndimage.find_objects(labels_ws)
     labels_segs = ndimage.label(labels_ws)
-    #print(labels_segs[0])
-    print(labels_segs[0].shape)
+    #print(labels_segs)
+    #print(labels_segs[0].shape)
     segs = ndimage.center_of_mass(labels_ws, labels_segs[0], np.arange(1, len(labels_segs[0])))
     print("watershed labels:\n{}".format(segs))
-    #walker = labels_ws
-    labels = labels_ws
+    walker = labels_ws
+    #labels = labels_ws
+    labels = segs
     
     print("Random-Walker based segmentation...")
     # random-walker segmentation
@@ -80,13 +81,14 @@ def segment_rw(roi, beta=50.0):
     markers[roi > 0.4] = 1
     markers[roi < 0.39] = 2
     '''
+    '''
     #markers[~roi] = -1
     walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
     
     # label neighboring pixels to segmented regions
     walker = morphology.remove_small_objects(walker, 64)
     labels = measure.label(walker, background=0)
-    
+    '''
     return labels, walker
 
 def _blob_surroundings(blob, roi, padding, plane=False):
@@ -163,6 +165,32 @@ def segment_blob(roi):
         print("no blobs detected")
         return None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
+    
+    big_blobs = blobs_log[blobs_log[:, 3] > 5]
+    scaling = calc_scaling_factor()
+    for big_blob in big_blobs:
+        radius = big_blob[3]
+        padding = np.multiply(radius, scaling)
+        print("big_blob: {}, padding: {}".format(big_blob, padding))
+        labels, walker = segment_rw(_blob_surroundings(big_blob, roi, padding))
+        ws_blobs = []
+        #ws_radius = radius / labels.shape[0]
+        for label in labels:
+            if not np.any(np.isnan(label)):
+                #label.append(ws_radius)
+                label = np.add(label, big_blob[:3])
+                ws_blobs.append(label)
+        #labels = labels[labels[:, 0] != np.nan]
+        if len(ws_blobs) > 0:
+            ws_blobs = np.array(ws_blobs)
+            #print(ws_blobs)
+            num_ws_blobs = ws_blobs.shape[0]
+            print(num_ws_blobs)
+            radii = np.multiply(np.ones((num_ws_blobs, 1)), radius / num_ws_blobs)
+            print(radii)
+            ws_blobs = np.concatenate((ws_blobs, radii), axis=1)
+            blobs_log = np.concatenate((blobs_log, ws_blobs))
+    
     #print(blobs_log)
     #print("found {} blobs".format(blobs_log.shape[0]))
     # adding fields for confirmation and truth flags

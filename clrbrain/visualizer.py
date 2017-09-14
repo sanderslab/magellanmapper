@@ -371,6 +371,8 @@ class Visualization(HasTraits):
     '''
     
     def _btn_redraw_trait_fired(self):
+        self.labels = None
+        self.walker = None
         self.show_3d()
         self.scene.mlab.orientation_axes()
         # updates the GUI here even though it doesn't elsewhere for some reason
@@ -400,7 +402,8 @@ class Visualization(HasTraits):
         else:
             if self._DEFAULTS_2D[2] in self._check_list_2d:
                 # shows labels around segments with Random-Walker
-                self.labels, _ = detector.segment_rw(self.roi)
+                #self.labels, _ = detector.segment_rw(self.roi)
+                _, self.labels = detector.segment_rw(self.roi)
             # segments using blob detection
             if cli.segments_proc is None:
                 # blob detection in the ROI;

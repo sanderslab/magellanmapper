@@ -12,10 +12,12 @@ Attributes:
 from time import time
 import math
 import numpy as np
+from scipy import ndimage
 from skimage import segmentation
 from skimage import measure
 from skimage import morphology
 from skimage.feature import blob_log
+from skimage.feature import peak_local_max
 
 from clrbrain import config
 from clrbrain import plot_3d
@@ -56,15 +58,33 @@ def segment_rw(roi, beta=50.0):
     Returns:
         Labels for the segmented regions, which can be plotted as surfaces.
     """
+    #np.set_printoptions(linewidth=200, threshold=1000)
+    distance = ndimage.distance_transform_edt(roi)
+    local_max = peak_local_max(distance, indices=False, footprint=np.ones((3, 3, 3)), labels=roi)
+    markers = morphology.label(local_max)
+    labels_ws = morphology.watershed(-distance, markers, mask=roi)
+    #print("labels_ws:\n{}".format(labels_ws))
+    #segs = ndimage.find_objects(labels_ws)
+    labels_segs = ndimage.label(labels_ws)
+    #print(labels_segs[0])
+    print(labels_segs[0].shape)
+    segs = ndimage.center_of_mass(labels_ws, labels_segs[0], np.arange(1, len(labels_segs[0])))
+    print("watershed labels:\n{}".format(segs))
+    #walker = labels_ws
+    labels = labels_ws
+    
     print("Random-Walker based segmentation...")
     # random-walker segmentation
+    '''
     markers = np.zeros(roi.shape, dtype=np.uint8)
     markers[roi > 0.4] = 1
-    markers[roi < 0.33] = 2
+    markers[roi < 0.39] = 2
+    '''
+    #markers[~roi] = -1
     walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
     
     # label neighboring pixels to segmented regions
-    walker = morphology.remove_small_objects(walker == 1, 200)
+    walker = morphology.remove_small_objects(walker, 64)
     labels = measure.label(walker, background=0)
     
     return labels, walker

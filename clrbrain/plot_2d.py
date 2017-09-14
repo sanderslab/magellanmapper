@@ -37,7 +37,7 @@ verify = False
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
 
-SEG_LINEWIDTH = 2.0
+SEG_LINEWIDTH = 1.0
 ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
 
@@ -184,10 +184,12 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         
         # show labels if provided and within ROI; for some reason if added
         # after imshow, the main image gets squeezed to show full patches
+        plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
         if (labels is not None and z_relative >= 0 
             and z_relative < labels.shape[0]):
             try:
-                ax.contour(labels[z_relative])
+                #ax.contour(labels[z_relative], cmap=colormap_2d)
+                ax.imshow(labels[z_relative], cmap="spectral")
             except ValueError as e:
                 print(e)
                 print("could not show label:\n{}".format(labels[z_relative]))
@@ -197,7 +199,6 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         if highlight:
             for spine in ax.spines.values():
                 spine.set_edgecolor("yellow")
-        plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
         
         if circles:
             # draws all segments as patches

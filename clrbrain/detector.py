@@ -63,7 +63,7 @@ def segment_rw(roi, beta=50.0):
     #histo = np.histogram(roi, bins=np.arange(0, 2, 0.1))
     histo = exposure.histogram(roi)
     from clrbrain import plot_2d
-    plot_2d.plot_histogram_exposure(histo)
+    #plot_2d.plot_histogram_exposure(histo)
 
     '''
     distance = ndimage.distance_transform_edt(roi)
@@ -85,14 +85,14 @@ def segment_rw(roi, beta=50.0):
     # random-walker segmentation
     '''
     markers = np.zeros(roi.shape, dtype=np.uint8)
-    markers[roi > 1.1] = 1
-    markers[roi < 0.7] = 2
+    markers[roi > 1.0] = 1
+    markers[roi < 0.0] = 2
     
     #markers[~roi] = -1
     walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
     
     # label neighboring pixels to segmented regions
-    walker = morphology.remove_small_objects(walker, 64)
+    walker = morphology.remove_small_objects(walker, 3000)
     labels = measure.label(walker, background=0)
     centroids = []
     for prop in measure.regionprops(labels):
@@ -183,9 +183,9 @@ def segment_blob(roi):
         return None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     
+    '''
     labels, walker = segment_rw(roi)
     labels = np.rint(labels)
-    '''
     blobs_log = np.concatenate((labels, np.multiply(np.ones((labels.shape[0], 1)), 5)), axis=1)
     '''
     mask_big_blobs = blobs_log[:, 3] > 5
@@ -196,16 +196,18 @@ def segment_blob(roi):
         radius = big_blob[3]
         padding = np.multiply(radius, scaling)
         print("big_blob: {}, padding: {}".format(big_blob, padding))
-        nearby_blobs = labels[blobs_within(labels, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
+        labels, walker = segment_rw(_blob_surroundings(big_blob, roi, padding))
+        labels = np.rint(labels)
+        #nearby_blobs = labels[blobs_within(labels, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
         ws_blobs = []
         #ws_radius = radius / labels.shape[0]
-        for label in nearby_blobs:
+        for label in labels:
             if not np.any(np.isnan(label)):
                 #label.append(ws_radius)
-                #label = np.add(label, big_blob[:3])
+                label = np.add(label, big_blob[:3])
                 ws_blobs.append(label)
         #labels = labels[labels[:, 0] != np.nan]
-        if len(ws_blobs) > 0:
+        if len(ws_blobs) > 1:
             ws_blobs = np.array(ws_blobs)
             #print(ws_blobs)
             num_ws_blobs = ws_blobs.shape[0]

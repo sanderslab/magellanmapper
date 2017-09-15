@@ -104,9 +104,9 @@ def segment_rw(roi, beta=50.0):
 
 def _blob_surroundings(blob, roi, padding, plane=False):
     rad = blob[3]
-    start = np.subtract(blob[0:3], rad + padding).astype(int)
+    start = np.subtract(blob[0:3], padding).astype(int)
     start[start < 0] = 0
-    end = np.add(blob[0:3], rad + padding).astype(int)
+    end = np.add(blob[0:3], padding).astype(int)
     shape = roi.shape
     for i in range(3):
         if end[i] >= shape[i]:
@@ -194,7 +194,7 @@ def segment_blob(roi):
     scaling = calc_scaling_factor()
     for big_blob in big_blobs:
         radius = big_blob[3]
-        padding = np.multiply(radius, scaling)
+        padding = np.multiply(3 * radius, scaling)
         print("big_blob: {}, padding: {}".format(big_blob, padding))
         labels, walker = segment_rw(_blob_surroundings(big_blob, roi, padding))
         labels = np.rint(labels)
@@ -219,6 +219,7 @@ def segment_blob(roi):
             blobs_log = np.concatenate((blobs_log, ws_blobs))
         else:
             blobs_log = np.concatenate((blobs_log, [big_blob]))
+    
     print(blobs_log)
     print("found {} blobs".format(blobs_log.shape[0]))
     # adding fields for confirmation and truth flags

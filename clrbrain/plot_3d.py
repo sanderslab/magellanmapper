@@ -71,7 +71,8 @@ def denoise_roi(roi):
     print("saturated_mean: {}".format(saturated_mean))
     
     # additional simple thresholding
-    denoised = np.clip(roi, settings["clip_min"], settings["clip_max"])
+    #denoised = np.clip(roi, settings["clip_min"], settings["clip_max"])
+    denoised = roi
     
     if settings["tot_var_denoise"]:
         # total variation denoising

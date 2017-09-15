@@ -13,6 +13,7 @@ from time import time
 import math
 import numpy as np
 from scipy import ndimage
+from skimage import exposure
 from skimage import segmentation
 from skimage import measure
 from skimage import morphology
@@ -59,6 +60,12 @@ def segment_rw(roi, beta=50.0):
         Labels for the segmented regions, which can be plotted as surfaces.
     """
     #np.set_printoptions(linewidth=200, threshold=1000)
+    #histo = np.histogram(roi, bins=np.arange(0, 2, 0.1))
+    histo = exposure.histogram(roi)
+    from clrbrain import plot_2d
+    plot_2d.plot_histogram_exposure(histo)
+
+    '''
     distance = ndimage.distance_transform_edt(roi)
     local_max = peak_local_max(distance, indices=False, footprint=np.ones((3, 3, 3)), labels=roi)
     markers = morphology.label(local_max)
@@ -78,17 +85,21 @@ def segment_rw(roi, beta=50.0):
     # random-walker segmentation
     '''
     markers = np.zeros(roi.shape, dtype=np.uint8)
-    markers[roi > 0.4] = 1
-    markers[roi < 0.39] = 2
-    '''
-    '''
+    markers[roi > 1.1] = 1
+    markers[roi < 0.7] = 2
+    
     #markers[~roi] = -1
     walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
     
     # label neighboring pixels to segmented regions
     walker = morphology.remove_small_objects(walker, 64)
     labels = measure.label(walker, background=0)
-    '''
+    centroids = []
+    for prop in measure.regionprops(labels):
+        print(prop.centroid)
+        centroids.append(prop.centroid)
+    labels = centroids
+    
     return labels, walker
 
 def _blob_surroundings(blob, roi, padding, plane=False):

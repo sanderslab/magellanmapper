@@ -698,6 +698,16 @@ def plot_roc(stats_dict, name):
     plt.title("ROC for {}".format(name))
     plt.show()
 
+def plot_histogram_np(hist):
+    fig, axes = plt.subplots(1, 1, figsize=(8, 3))
+    plt.plot(hist[1][:-1], hist[0], lw=2)
+    plt.show()
+
+def plot_histogram_exposure(hist):
+    fig, axes = plt.subplots(1, 1, figsize=(8, 3))
+    plt.plot(hist[1], hist[0], lw=2)
+    plt.show()
+
 if __name__ == "__main__":
     print("Testing plot_2d...")
     stats_dict = { 

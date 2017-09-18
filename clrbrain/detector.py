@@ -50,7 +50,7 @@ def calc_scaling_factor():
     print("scaling_factor: {}".format(factor))
     return factor
 
-def segment_rw(roi, beta=50.0):
+def segment_ws(roi):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -65,7 +65,6 @@ def segment_rw(roi, beta=50.0):
     from clrbrain import plot_2d
     #plot_2d.plot_histogram_exposure(histo)
 
-    '''
     distance = ndimage.distance_transform_edt(roi)
     local_max = peak_local_max(distance, indices=False, footprint=np.ones((3, 3, 3)), labels=roi)
     markers = morphology.label(local_max)
@@ -77,13 +76,14 @@ def segment_rw(roi, beta=50.0):
     #print(labels_segs[0].shape)
     segs = ndimage.center_of_mass(labels_ws, labels_segs[0], np.arange(1, len(labels_segs[0])))
     print("watershed labels:\n{}".format(segs))
-    walker = labels_ws
+    #walker = labels_ws
     #labels = labels_ws
-    labels = segs
+    #labels = segs
+    return labels_ws, segs
     
+def segment_rw(roi, beta=50.0):
     print("Random-Walker based segmentation...")
     # random-walker segmentation
-    '''
     markers = np.zeros(roi.shape, dtype=np.uint8)
     markers[roi > 1.0] = 1
     markers[roi < 0.0] = 2
@@ -183,10 +183,9 @@ def segment_blob(roi):
         return None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     
-    '''
-    labels, walker = segment_rw(roi)
-    labels = np.rint(labels)
-    blobs_log = np.concatenate((labels, np.multiply(np.ones((labels.shape[0], 1)), 5)), axis=1)
+    labels, segs = segment_ws(roi)
+    segs = np.rint(segs)
+    blobs_log = np.concatenate((segs, np.multiply(np.ones((segs.shape[0], 1)), 5)), axis=1)
     '''
     mask_big_blobs = blobs_log[:, 3] > 5
     big_blobs = blobs_log[mask_big_blobs]
@@ -196,17 +195,17 @@ def segment_blob(roi):
         radius = big_blob[3]
         padding = np.multiply(3 * radius, scaling)
         print("big_blob: {}, padding: {}".format(big_blob, padding))
-        labels, walker = segment_rw(_blob_surroundings(big_blob, roi, padding))
-        labels = np.rint(labels)
-        #nearby_blobs = labels[blobs_within(labels, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
+        segs, walker = segment_rw(_blob_surroundings(big_blob, roi, padding))
+        segs = np.rint(segs)
+        #nearby_blobs = segs[blobs_within(segs, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
         ws_blobs = []
-        #ws_radius = radius / labels.shape[0]
-        for label in labels:
-            if not np.any(np.isnan(label)):
-                #label.append(ws_radius)
-                label = np.add(label, big_blob[:3])
-                ws_blobs.append(label)
-        #labels = labels[labels[:, 0] != np.nan]
+        #ws_radius = radius / segs.shape[0]
+        for seg in segs:
+            if not np.any(np.isnan(seg)):
+                #seg.append(ws_radius)
+                seg = np.add(seg, big_blob[:3])
+                ws_blobs.append(seg)
+        #segs = segs[segs[:, 0] != np.nan]
         if len(ws_blobs) > 1:
             ws_blobs = np.array(ws_blobs)
             #print(ws_blobs)
@@ -219,13 +218,14 @@ def segment_blob(roi):
             blobs_log = np.concatenate((blobs_log, ws_blobs))
         else:
             blobs_log = np.concatenate((blobs_log, [big_blob]))
+    '''
     
     print(blobs_log)
     print("found {} blobs".format(blobs_log.shape[0]))
     # adding fields for confirmation and truth flags
     extras = np.ones((blobs_log.shape[0], 2)) * -1
     blobs = np.concatenate((blobs_log, extras), axis=1)
-    return blobs
+    return blobs, labels
 
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.

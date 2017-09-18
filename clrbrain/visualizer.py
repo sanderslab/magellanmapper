@@ -400,10 +400,12 @@ class Visualization(HasTraits):
             self.labels, self.walker = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
         else:
+            '''
             if self._DEFAULTS_2D[2] in self._check_list_2d:
                 # shows labels around segments with Random-Walker
                 #self.labels, _ = detector.segment_rw(self.roi)
-                _, self.labels = detector.segment_rw(self.roi)
+                self.labels, self.walker = detector.segment_ws(self.roi)
+            '''
             # segments using blob detection
             if cli.segments_proc is None:
                 # blob detection in the ROI;
@@ -412,7 +414,7 @@ class Visualization(HasTraits):
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
-                segs = detector.segment_blob(roi)
+                segs, self.labels = detector.segment_blob(roi)
                 if segs is not None:
                     self.segments = np.concatenate(
                         (segs, np.add(segs[:, :3], 
@@ -488,6 +490,9 @@ class Visualization(HasTraits):
             print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)
             img = cli.image5d
+        labels = self.labels
+        if self._DEFAULTS_2D[2] not in self._check_list_2d:
+            labels = None
         blobs_truth_roi = None
         if config.truth_db is not None:
             # collect truth blobs from the truth DB if available
@@ -510,7 +515,7 @@ class Visualization(HasTraits):
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
                                   (0, 0, 0), 3, True, "middle", roi, 
-                                  labels=self.labels, circles=circles, 
+                                  labels=labels, circles=circles, 
                                   mlab_screenshot=screenshot)
         else:
             # defaults to Square style
@@ -518,7 +523,7 @@ class Visualization(HasTraits):
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self.border, self._planes_2d[0].lower(), 
-                                  roi=roi, labels=self.labels, 
+                                  roi=roi, labels=labels, 
                                   blobs_truth=blobs_truth_roi, circles=circles, 
                                   mlab_screenshot=screenshot)
     

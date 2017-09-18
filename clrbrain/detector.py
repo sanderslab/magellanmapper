@@ -66,19 +66,30 @@ def segment_ws(roi):
     #plot_2d.plot_histogram_exposure(histo)
 
     distance = ndimage.distance_transform_edt(roi)
-    local_max = peak_local_max(distance, indices=False, footprint=np.ones((3, 3, 3)), labels=roi)
+    local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=roi)
     markers = morphology.label(local_max)
     labels_ws = morphology.watershed(-distance, markers, mask=roi)
-    #print("labels_ws:\n{}".format(labels_ws))
+    labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
+    #labels_ws = markers
+    '''
+    print("labels_ws max: {}".format(np.max(labels_ws)))
+    print("labels_ws:\n{}".format(labels_ws))
+    print("markers:\n{}".format(markers))
     #segs = ndimage.find_objects(labels_ws)
     labels_segs = ndimage.label(labels_ws)
-    #print(labels_segs)
+    print("labels_segs:\n{}".format(labels_segs))
     #print(labels_segs[0].shape)
-    segs = ndimage.center_of_mass(labels_ws, labels_segs[0], np.arange(1, len(labels_segs[0])))
+    segs = ndimage.center_of_mass(labels_ws, labels_segs[0], np.arange(1, np.max(labels_segs[0])))
     print("watershed labels:\n{}".format(segs))
     #walker = labels_ws
     #labels = labels_ws
     #labels = segs
+    '''
+    centroids = []
+    for prop in measure.regionprops(labels_ws):
+        print(prop.centroid)
+        centroids.append(prop.centroid)
+    segs = centroids
     return labels_ws, segs
     
 def segment_rw(roi, beta=50.0):
@@ -98,9 +109,9 @@ def segment_rw(roi, beta=50.0):
     for prop in measure.regionprops(labels):
         print(prop.centroid)
         centroids.append(prop.centroid)
-    labels = centroids
+    #labels = centroids
     
-    return labels, walker
+    return labels, centroids
 
 def _blob_surroundings(blob, roi, padding, plane=False):
     rad = blob[3]

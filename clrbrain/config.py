@@ -81,10 +81,10 @@ def update_process_settings(settings, settings_type):
     elif settings_type == "lightsheet_5x_02":
         settings["microscope_type"] = settings_type
         settings["vis_3d"] = "surface"
-        settings["clip_vmax"] = 98.5
+        settings["clip_vmax"] = 99.5
         settings["clip_min"] = 0
         settings["clip_max"] = 0.6
-        settings["tot_var_denoise"] = False
+        settings["tot_var_denoise"] = True
         settings["unsharp_strength"] = 0.3
         settings["points_3d_thresh"] = 0.7
         settings["min_sigma_factor"] = 3

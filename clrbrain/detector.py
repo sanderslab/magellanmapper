@@ -50,6 +50,12 @@ def calc_scaling_factor():
     print("scaling_factor: {}".format(factor))
     return factor
 
+def _histogram_roi(roi):
+    #histo = np.histogram(roi, bins=np.arange(0, 2, 0.1))
+    histo = exposure.histogram(roi)
+    from clrbrain import plot_2d
+    plot_2d.plot_histogram_exposure(histo)
+
 def _measure_coords(labels):
     segs = []
     for prop in measure.regionprops(labels):
@@ -69,10 +75,6 @@ def segment_ws(roi):
         Labels for the segmented regions, which can be plotted as surfaces.
     """
     #np.set_printoptions(linewidth=200, threshold=1000)
-    #histo = np.histogram(roi, bins=np.arange(0, 2, 0.1))
-    histo = exposure.histogram(roi)
-    from clrbrain import plot_2d
-    #plot_2d.plot_histogram_exposure(histo)
 
     distance = ndimage.distance_transform_edt(roi)
     local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=roi)
@@ -99,16 +101,17 @@ def segment_ws(roi):
     
 def segment_rw(roi, beta=50.0):
     print("Random-Walker based segmentation...")
+    _histogram_roi(roi)
     # random-walker segmentation
     markers = np.zeros(roi.shape, dtype=np.uint8)
-    markers[roi > 1.0] = 1
-    markers[roi < 0.0] = 2
+    markers[roi > 1.3] = 1
+    markers[roi < 1.0] = 2
     
     #markers[~roi] = -1
     walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
     
     # label neighboring pixels to segmented regions
-    walker = morphology.remove_small_objects(walker, 3000)
+    #walker = morphology.remove_small_objects(walker, 3000)
     labels = measure.label(walker, background=0)
     segs = _measure_coords(labels)
     

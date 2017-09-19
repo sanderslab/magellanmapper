@@ -50,6 +50,15 @@ def calc_scaling_factor():
     print("scaling_factor: {}".format(factor))
     return factor
 
+def _measure_coords(labels):
+    segs = []
+    for prop in measure.regionprops(labels):
+        seg = list(prop.centroid)
+        seg.append(prop.equivalent_diameter / 2)
+        print(seg)
+        segs.append(seg)
+    return segs
+
 def segment_ws(roi):
     """Segments an image, drawing contours around segmented regions.
     
@@ -85,11 +94,7 @@ def segment_ws(roi):
     #labels = labels_ws
     #labels = segs
     '''
-    centroids = []
-    for prop in measure.regionprops(labels_ws):
-        print(prop.centroid)
-        centroids.append(prop.centroid)
-    segs = centroids
+    segs = _measure_coords(labels_ws)
     return labels_ws, segs
     
 def segment_rw(roi, beta=50.0):
@@ -105,13 +110,9 @@ def segment_rw(roi, beta=50.0):
     # label neighboring pixels to segmented regions
     walker = morphology.remove_small_objects(walker, 3000)
     labels = measure.label(walker, background=0)
-    centroids = []
-    for prop in measure.regionprops(labels):
-        print(prop.centroid)
-        centroids.append(prop.centroid)
-    #labels = centroids
+    segs = _measure_coords(labels)
     
-    return labels, centroids
+    return labels, segs
 
 def _blob_surroundings(blob, roi, padding, plane=False):
     rad = blob[3]
@@ -196,7 +197,9 @@ def segment_blob(roi):
     
     labels, segs = segment_ws(roi)
     segs = np.rint(segs)
-    blobs_log = np.concatenate((segs, np.multiply(np.ones((segs.shape[0], 1)), 5)), axis=1)
+    '''
+    if len(segs) > 0:
+        blobs_log = np.concatenate((segs, np.multiply(np.ones((segs.shape[0], 1)), 5)), axis=1)
     '''
     mask_big_blobs = blobs_log[:, 3] > 5
     big_blobs = blobs_log[mask_big_blobs]
@@ -204,32 +207,22 @@ def segment_blob(roi):
     scaling = calc_scaling_factor()
     for big_blob in big_blobs:
         radius = big_blob[3]
-        padding = np.multiply(3 * radius, scaling)
+        padding = np.multiply(radius, scaling)
         print("big_blob: {}, padding: {}".format(big_blob, padding))
-        segs, walker = segment_rw(_blob_surroundings(big_blob, roi, padding))
-        segs = np.rint(segs)
-        #nearby_blobs = segs[blobs_within(segs, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
+        #labels, segs = segment_ws(_blob_surroundings(big_blob, roi, padding))
+        #segs = np.rint(segs)
+        nearby_blobs = segs[blobs_within(segs, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
         ws_blobs = []
         #ws_radius = radius / segs.shape[0]
-        for seg in segs:
-            if not np.any(np.isnan(seg)):
-                #seg.append(ws_radius)
-                seg = np.add(seg, big_blob[:3])
+        for seg in nearby_blobs:
+            if not np.any(np.isnan(seg)) and np.any((a == x).all() for x in ws_blobs):
                 ws_blobs.append(seg)
-        #segs = segs[segs[:, 0] != np.nan]
         if len(ws_blobs) > 1:
             ws_blobs = np.array(ws_blobs)
-            #print(ws_blobs)
-            num_ws_blobs = ws_blobs.shape[0]
-            #print(num_ws_blobs)
-            radii = np.multiply(np.ones((num_ws_blobs, 1)), radius / num_ws_blobs)
-            #print(radii)
-            ws_blobs = np.concatenate((ws_blobs, radii), axis=1)
             print("adding from watershed:\n{}".format(ws_blobs))
             blobs_log = np.concatenate((blobs_log, ws_blobs))
         else:
             blobs_log = np.concatenate((blobs_log, [big_blob]))
-    '''
     
     print(blobs_log)
     print("found {} blobs".format(blobs_log.shape[0]))

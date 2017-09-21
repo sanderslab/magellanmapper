@@ -126,7 +126,7 @@ def segment_sub_roi(sub_rois_offsets, coord):
     sub_roi = sub_rois[coord]
     print("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    segments = detector.segment_blob(sub_roi)
+    segments, _ = detector.segment_blob(sub_roi)
     offset = sub_rois_offsets[coord]
     if segments is not None:
         # duplicate positions, appending to end of each blob, for further

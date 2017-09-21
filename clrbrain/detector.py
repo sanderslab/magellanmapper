@@ -75,9 +75,12 @@ def segment_ws(roi):
         Labels for the segmented regions, which can be plotted as surfaces.
     """
     #np.set_printoptions(linewidth=200, threshold=1000)
-
     distance = ndimage.distance_transform_edt(roi)
-    local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=roi)
+    try:
+        local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=roi)
+    except IndexError as e:
+        print(e)
+        raise e
     markers = morphology.label(local_max)
     labels_ws = morphology.watershed(-distance, markers, mask=roi)
     labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
@@ -195,37 +198,41 @@ def segment_blob(roi):
     print("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")
-        return None
+        return None, None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     
-    labels, segs = segment_ws(roi)
-    segs = np.rint(segs)
-    '''
-    if len(segs) > 0:
-        blobs_log = np.concatenate((segs, np.multiply(np.ones((segs.shape[0], 1)), 5)), axis=1)
-    '''
-    mask_big_blobs = blobs_log[:, 3] > 5
-    big_blobs = blobs_log[mask_big_blobs]
-    blobs_log = blobs_log[np.invert(mask_big_blobs)]
-    scaling = calc_scaling_factor()
-    for big_blob in big_blobs:
-        radius = big_blob[3]
-        padding = np.multiply(radius, scaling)
-        print("big_blob: {}, padding: {}".format(big_blob, padding))
-        #labels, segs = segment_ws(_blob_surroundings(big_blob, roi, padding))
-        #segs = np.rint(segs)
-        nearby_blobs = segs[blobs_within(segs, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
-        ws_blobs = []
-        #ws_radius = radius / segs.shape[0]
-        for seg in nearby_blobs:
-            if not np.any(np.isnan(seg)) and np.any((a == x).all() for x in ws_blobs):
-                ws_blobs.append(seg)
-        if len(ws_blobs) > 1:
-            ws_blobs = np.array(ws_blobs)
-            print("adding from watershed:\n{}".format(ws_blobs))
-            blobs_log = np.concatenate((blobs_log, ws_blobs))
-        else:
-            blobs_log = np.concatenate((blobs_log, [big_blob]))
+    labels = None
+    try:
+        labels, segs = segment_ws(roi)
+        segs = np.rint(segs)
+        '''
+        if len(segs) > 0:
+            blobs_log = np.concatenate((segs, np.multiply(np.ones((segs.shape[0], 1)), 5)), axis=1)
+        '''
+        mask_big_blobs = blobs_log[:, 3] > 5
+        big_blobs = blobs_log[mask_big_blobs]
+        blobs_log = blobs_log[np.invert(mask_big_blobs)]
+        scaling = calc_scaling_factor()
+        for big_blob in big_blobs:
+            radius = big_blob[3]
+            padding = np.multiply(radius, scaling)
+            print("big_blob: {}, padding: {}".format(big_blob, padding))
+            #labels, segs = segment_ws(_blob_surroundings(big_blob, roi, padding))
+            #segs = np.rint(segs)
+            nearby_blobs = segs[blobs_within(segs, np.subtract(big_blob[:3], padding)[::-1], np.multiply(padding, 2)[::-1])]
+            ws_blobs = []
+            #ws_radius = radius / segs.shape[0]
+            for seg in nearby_blobs:
+                if not np.any(np.isnan(seg)) and np.any((a == x).all() for x in ws_blobs):
+                    ws_blobs.append(seg)
+            if len(ws_blobs) > 1:
+                ws_blobs = np.array(ws_blobs)
+                print("adding from watershed:\n{}".format(ws_blobs))
+                blobs_log = np.concatenate((blobs_log, ws_blobs))
+            else:
+                blobs_log = np.concatenate((blobs_log, [big_blob]))
+    except IndexError:
+        print("Unable to watershed segment, skipping")
     
     print(blobs_log)
     print("found {} blobs".format(blobs_log.shape[0]))

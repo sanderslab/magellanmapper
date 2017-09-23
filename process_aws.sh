@@ -14,8 +14,8 @@
 #  *_image5d.npz and *_info.npz files are on S3
 # -Sample run command: 
 #  nohup ./process_aws.sh -f "/path/to/img.czi" -s "root/path" \
-#    -- --microscope "type" &
-# -Track results: "tail -f nohup.out"
+#    -- --microscope "type" > /path/to/output 2>&1 &
+# -Track results: "tail -f /path/to/output"
 # -If all goes well, pick up processed files from S3
 ################################################
 

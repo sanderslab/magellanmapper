@@ -6,10 +6,24 @@
 # Stitch files using ImageJ/Fiji plugin.
 #
 # To run:
+# -Run the stitch/tile_config.py utility to build a positions
+#  configuration file since the .czi file may not contain
+#  position information, such as for Lightsheet files
 # -Sample run command, using nohup in case of long server
 #  operation: 
-#  nohup ./stitch.sh -f "/path/to/img.czi" &
-# -Track results: "tail -f nohup.out"
+#  nohup ./stitch.sh -f "/path/to/img.czi" > /path/to/output 2>&1 &
+# -Track results: "tail -f /path/to/output"
+# -Note: The resulting TileConfiguration.registered.txt file 
+#  places unregistered tiles at (0, 0, 0), which will reduce the
+#  intensity of the 1st tile. Please check this file to manually
+#  reposition tiles if necessary:
+#   -Edit TileConfiguration.registered.txt with positions from
+#    surrounding tiles
+#   -Copy TileConfiguration.registered.txt to TileConfiguration.txt
+#    (TODO: check if necessary)
+#   -Kill the current ImageJ process
+#   -Edit stitch/ij_stitch.py to remove "compute_overlap" option
+#   -Re-run this script
 ################################################
 
 # run from parent directory

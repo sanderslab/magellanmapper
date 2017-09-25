@@ -105,6 +105,7 @@ def threshold(roi):
     Returns:
         The thresholded region.
     """
+    print("thresholding...")
     settings = config.process_settings
     thresh_type = settings["thresholding"]
     size = settings["thresholding_size"]
@@ -146,6 +147,8 @@ def threshold(roi):
     thresh_mean = np.mean(thresholded)
     print("thresh_mean: {}".format(thresh_mean))
     selem_dil = None
+    selem_eros = morphology.cube(1)
+    '''
     selem_eros = None
     if thresh_mean > 0.45:
         thresholded = morphology.erosion(thresholded, morphology.cube(1))
@@ -171,6 +174,7 @@ def threshold(roi):
         thresholded = morphology.dilation(thresholded, selem_dil)
     if selem_eros is not None:
         thresholded = morphology.erosion(thresholded, selem_eros)
+    '''
     return thresholded
 
 def deconvolve(roi):

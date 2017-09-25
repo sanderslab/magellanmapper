@@ -189,6 +189,11 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             and z_relative < labels.shape[0]):
             try:
                 #ax.contour(labels[z_relative], cmap=colormap_2d)
+                '''
+                from skimage.color import label2rgb
+                img = label2rgb(labels[z_relative], roi)
+                ax.imshow(img)
+                '''
                 ax.imshow(labels[z_relative], cmap="spectral")
             except ValueError as e:
                 print(e)

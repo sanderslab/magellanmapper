@@ -75,15 +75,18 @@ def segment_ws(roi):
         Labels for the segmented regions, which can be plotted as surfaces.
     """
     #np.set_printoptions(linewidth=200, threshold=1000)
-    distance = ndimage.distance_transform_edt(roi)
+    #thresh = plot_3d.threshold(roi)
+    thresh = roi
+    distance = ndimage.distance_transform_edt(thresh)
     try:
-        local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=roi)
+        local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=thresh)
     except IndexError as e:
         print(e)
         raise e
-    markers = morphology.label(local_max)
-    labels_ws = morphology.watershed(-distance, markers, mask=roi)
+    markers = measure.label(local_max)
+    labels_ws = morphology.watershed(-distance, markers, mask=thresh)
     labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
+    print("num ws blobs: {}".format(len(np.unique(labels_ws)) - 1))
     #labels_ws = markers
     '''
     print("labels_ws max: {}".format(np.max(labels_ws)))

@@ -45,7 +45,7 @@ def saturate_roi(roi, clip_vmax=-1):
     if clip_vmax == -1:
         clip_vmax = config.process_settings["clip_vmax"]
     # enhance contrast and normalize to 0-1 scale
-    vmin, vmax = np.percentile(roi, (0.5, clip_vmax))
+    vmin, vmax = np.percentile(roi, (5, clip_vmax))
     print("vmin: {}, vmax: {}".format(vmin, vmax))
     # ensures that vmax is at least 50% of near max value of image5d
     max_thresh = near_max * 0.5
@@ -71,8 +71,8 @@ def denoise_roi(roi):
     print("saturated_mean: {}".format(saturated_mean))
     
     # additional simple thresholding
-    #denoised = np.clip(roi, settings["clip_min"], settings["clip_max"])
-    denoised = roi
+    denoised = np.clip(roi, settings["clip_min"], settings["clip_max"])
+    #denoised = roi
     
     if settings["tot_var_denoise"]:
         # total variation denoising
@@ -88,11 +88,9 @@ def denoise_roi(roi):
     high_pass = denoised - unsharp_strength * blurred
     denoised = denoised + high_pass
     
-    '''
     # further erode denser regions to decrease overlap among blobs
     if saturated_mean > 0.2:
         denoised = morphology.erosion(denoised, morphology.octahedron(1))
-    '''
     return denoised
 
 def threshold(roi):

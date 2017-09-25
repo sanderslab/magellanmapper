@@ -85,7 +85,7 @@ def update_process_settings(settings, settings_type):
         settings["clip_min"] = 0
         settings["clip_max"] = 0.6
         settings["tot_var_denoise"] = False
-        settings["unsharp_strength"] = 1.5
+        settings["unsharp_strength"] = 1.0
         settings["points_3d_thresh"] = 0.7
         settings["min_sigma_factor"] = 3
         settings["max_sigma_factor"] = 4

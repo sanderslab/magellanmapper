@@ -215,7 +215,7 @@ def segment_blob(roi):
         if len(segs) > 0:
             blobs_log = np.concatenate((segs, np.multiply(np.ones((segs.shape[0], 1)), 5)), axis=1)
         '''
-        mask_big_blobs = blobs_log[:, 3] > 5
+        mask_big_blobs = blobs_log[:, 3] > 10
         big_blobs = blobs_log[mask_big_blobs]
         blobs_log = blobs_log[np.invert(mask_big_blobs)]
         scaling = calc_scaling_factor()

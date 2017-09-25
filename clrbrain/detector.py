@@ -14,6 +14,7 @@ import math
 import numpy as np
 from scipy import ndimage
 from skimage import exposure
+from skimage import filters
 from skimage import segmentation
 from skimage import measure
 from skimage import morphology
@@ -76,7 +77,9 @@ def segment_ws(roi):
     """
     #np.set_printoptions(linewidth=200, threshold=1000)
     #thresh = plot_3d.threshold(roi)
-    thresh = roi
+    roi_thresh = filters.threshold_otsu(roi, 64)
+    thresh = roi > roi_thresh
+    #thresh = roi
     distance = ndimage.distance_transform_edt(thresh)
     try:
         local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=thresh)

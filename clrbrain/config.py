@@ -91,7 +91,7 @@ def update_process_settings(settings, settings_type):
         settings["max_sigma_factor"] = 4
         settings["num_sigma"] = 10
         settings["overlap"] = 0.5
-        settings["thresholding"] = "otsu"
+        settings["thresholding"] = None
         settings["thresholding_size"] = 64
         settings["denoise_size"] = 25
         settings["segment_size"] = 200

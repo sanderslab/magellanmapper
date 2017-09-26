@@ -303,11 +303,13 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     print("z_overview: {}".format(z_overview))
     
     # pick image based on chosen orientation 
+    origin = None
     if plane == "xz":
         # TODO: base on scaling vs image shape vs nothing?
-        #aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
-        aspect = float(image5d.shape[3]) / image5d.shape[1]
+        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
+        #aspect = float(image5d.shape[3]) / image5d.shape[1]
         print(aspect)
+        origin = "lower"
         segments[:, [0, 1]] = segments[:, [1, 0]]
         if image5d.ndim >= 5:
             img2d = image5d[0, :, z_overview, :, channel]
@@ -368,7 +370,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
             print(img2d_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
         # show the zoomed 2D image along with rectangle showing ROI
-        ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect)
+        ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect, origin=origin)
         ax.add_patch(patches.Rectangle(patch_offset, roi_size[0], roi_size[1], 
                                        fill=False, edgecolor="yellow"))
         add_scale_bar(ax)

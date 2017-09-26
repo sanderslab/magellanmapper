@@ -300,11 +300,11 @@ class Visualization(HasTraits):
             else:
                 # 3D point rendering
                 plot_3d.plot_3d_points(self.roi, self)
-            '''
+            
             # process ROI in prep for showing filtered 2D view and segmenting
             self._roi_proc = plot_3d.saturate_roi(self.roi)
             self._roi_proc = plot_3d.denoise_roi(self._roi_proc)
-            '''
+            
         else:
             self.scene.mlab.clf()
         
@@ -415,7 +415,7 @@ class Visualization(HasTraits):
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
-                segs, self.labels, self._roi_proc = detector.segment_blob(roi)
+                segs, self.labels = detector.segment_blob(roi, self._roi_proc)
                 if segs is not None:
                     self.segments = np.concatenate(
                         (segs, np.add(segs[:, :3], 

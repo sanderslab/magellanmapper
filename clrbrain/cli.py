@@ -76,6 +76,7 @@ image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
 sub_rois = None
+sub_rois_raw = None
 _blobs_all = None # share blobs among multiple processes
 
 PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
@@ -101,10 +102,10 @@ def denoise_sub_roi(coord):
     sub_roi = sub_rois[coord]
     print("denoising sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    '''
+    
     sub_roi = plot_3d.saturate_roi(sub_roi)
     sub_roi = plot_3d.denoise_roi(sub_roi)
-    '''
+    
     #sub_roi = plot_3d.deconvolve(sub_roi)
     if config.process_settings["thresholding"]:
         sub_roi = plot_3d.threshold(sub_roi)
@@ -126,9 +127,10 @@ def segment_sub_roi(sub_rois_offsets, coord):
             identify the sub-ROI, and the denoised sub-ROI.
     """
     sub_roi = sub_rois[coord]
+    sub_roi_raw = sub_rois_raw[coord]
     print("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    segments, _, _ = detector.segment_blob(sub_roi)
+    segments, _ = detector.segment_blob(sub_roi_raw, sub_roi)
     offset = sub_rois_offsets[coord]
     if segments is not None:
         # duplicate positions, appending to end of each blob, for further
@@ -728,7 +730,7 @@ def process_stack(roi, overlap, tol):
     time_start = time()
     # prepare ROI for processing;
     # need to make module-level to allow shared memory of this large array
-    global sub_rois
+    global sub_rois, sub_rois_raw
     scaling_factor = detector.calc_scaling_factor()
     max_pixels = np.ceil(np.multiply(
         scaling_factor, config.process_settings["denoise_size"])).astype(int)
@@ -776,6 +778,8 @@ def process_stack(roi, overlap, tol):
         #print("max_factor: {}".format(max_factor))
         sub_rois, sub_rois_offsets = chunking.stack_splitter(
             merged, max_pixels, overlap)
+        sub_rois_raw, _ = chunking.stack_splitter(
+            roi, max_pixels, overlap)
         pool = mp.Pool()
         pool_results = []
         for z in range(sub_rois.shape[0]):

@@ -162,7 +162,7 @@ def show_blob_surroundings(blobs, roi, padding=1):
         print("{}\n".format(surroundings))
     np.set_printoptions()
 
-def segment_blob(roi):
+def segment_blob(roi, roi_log):
     """Detects objects using 3D blob detection technique.
     
     Args:
@@ -181,10 +181,10 @@ def segment_blob(roi):
     # x scaling alone
     scale = calc_scaling_factor()
     scaling_factor = scale[2]
-    
+    '''
     roi_log = plot_3d.saturate_roi(roi)
     roi_log = plot_3d.denoise_roi(roi_log)
-    
+    '''
     # adjust scaling for blob pruning
     res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
     # further tweak, typically scaling down
@@ -209,7 +209,7 @@ def segment_blob(roi):
     print("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")
-        return None, None, None
+        return None, None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     
     labels = None
@@ -250,7 +250,7 @@ def segment_blob(roi):
     # adding fields for confirmation and truth flags
     extras = np.ones((blobs_log.shape[0], 2)) * -1
     blobs = np.concatenate((blobs_log, extras), axis=1)
-    return blobs, labels, roi_log
+    return blobs, labels
 
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.

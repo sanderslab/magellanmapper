@@ -77,8 +77,10 @@ def segment_ws(roi):
     """
     #np.set_printoptions(linewidth=200, threshold=1000)
     #thresh = plot_3d.threshold(roi)
-    roi_thresh = filters.threshold_otsu(roi, 64)
-    thresh = roi > roi_thresh
+    roi_ws = plot_3d.saturate_roi(roi, 0.5, 99.5)
+    roi_ws = plot_3d.denoise_roi(roi_ws, False, 1.0, False)
+    roi_thresh = filters.threshold_otsu(roi_ws, 64)
+    thresh = roi_ws > roi_thresh
     #thresh = roi
     distance = ndimage.distance_transform_edt(thresh)
     try:
@@ -180,11 +182,14 @@ def segment_blob(roi):
     scale = calc_scaling_factor()
     scaling_factor = scale[2]
     
+    roi_log = plot_3d.saturate_roi(roi)
+    roi_log = plot_3d.denoise_roi(roi_log)
+    
     # adjust scaling for blob pruning
     res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
     # further tweak, typically scaling down
     res_norm = np.multiply(res_norm, settings["scale_factor"])
-    segmenting_mean = np.mean(roi)
+    segmenting_mean = np.mean(roi_log)
     #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
     print("segmenting_mean: {}".format(segmenting_mean))
     overlap = settings["overlap"]
@@ -195,7 +200,7 @@ def segment_blob(roi):
     #print("res_norm: {}".format(res_norm))
     
     # find blobs
-    blobs_log = blob_log(roi, 
+    blobs_log = blob_log(roi_log, 
                          min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                          max_sigma=settings["max_sigma_factor"]*scaling_factor, 
                          num_sigma=settings["num_sigma"], 
@@ -204,7 +209,7 @@ def segment_blob(roi):
     print("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")
-        return None, None
+        return None, None, None
     blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
     
     labels = None
@@ -215,7 +220,7 @@ def segment_blob(roi):
         if len(segs) > 0:
             blobs_log = np.concatenate((segs, np.multiply(np.ones((segs.shape[0], 1)), 5)), axis=1)
         '''
-        mask_big_blobs = blobs_log[:, 3] > 10
+        mask_big_blobs = blobs_log[:, 3] > 5
         big_blobs = blobs_log[mask_big_blobs]
         blobs_log = blobs_log[np.invert(mask_big_blobs)]
         scaling = calc_scaling_factor()
@@ -245,7 +250,7 @@ def segment_blob(roi):
     # adding fields for confirmation and truth flags
     extras = np.ones((blobs_log.shape[0], 2)) * -1
     blobs = np.concatenate((blobs_log, extras), axis=1)
-    return blobs, labels
+    return blobs, labels, roi_log
 
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.

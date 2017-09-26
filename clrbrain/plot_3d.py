@@ -31,7 +31,7 @@ MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 near_max = -1.0
 
-def saturate_roi(roi, clip_vmax=-1):
+def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1):
     """Saturates an image, clipping extreme values and stretching remaining
     values to fit the full range.
     
@@ -42,10 +42,12 @@ def saturate_roi(roi, clip_vmax=-1):
         Saturated region of interest.
     """
     print("near_max: {}".format(near_max))
+    if clip_vmin == -1:
+        clip_vmin = 5
     if clip_vmax == -1:
         clip_vmax = config.process_settings["clip_vmax"]
     # enhance contrast and normalize to 0-1 scale
-    vmin, vmax = np.percentile(roi, (5, clip_vmax))
+    vmin, vmax = np.percentile(roi, (clip_vmin, clip_vmax))
     print("vmin: {}, vmax: {}".format(vmin, vmax))
     # ensures that vmax is at least 50% of near max value of image5d
     max_thresh = near_max * 0.5
@@ -55,8 +57,8 @@ def saturate_roi(roi, clip_vmax=-1):
     saturated = np.clip(roi, vmin, vmax)
     saturated = (saturated - vmin) / (vmax - vmin)
     return saturated
-    
-def denoise_roi(roi):
+
+def denoise_roi(roi, clip=True, unsharp_strength=-1, erode=True):
     """Denoises an image.
     
     Args:
@@ -71,27 +73,28 @@ def denoise_roi(roi):
     print("saturated_mean: {}".format(saturated_mean))
     
     # additional simple thresholding
-    denoised = np.clip(roi, settings["clip_min"], settings["clip_max"])
-    #denoised = roi
+    if clip:
+        roi = np.clip(roi, settings["clip_min"], settings["clip_max"])
     
     if settings["tot_var_denoise"]:
         # total variation denoising
         #time_start = time()
-        denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
-        #denoised = restoration.denoise_tv_bregman(denoised, weight=0.1)
+        roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
+        #roi = restoration.denoise_tv_bregman(roi, weight=0.1)
         #print('time for total variation: %f' %(time() - time_start))
     
     # sharpening
-    unsharp_strength = settings["unsharp_strength"]
+    if unsharp_strength == -1:
+        unsharp_strength = settings["unsharp_strength"]
     blur_size = 8
-    blurred = filters.gaussian(denoised, blur_size)
-    high_pass = denoised - unsharp_strength * blurred
-    denoised = denoised + high_pass
+    blurred = filters.gaussian(roi, blur_size)
+    high_pass = roi - unsharp_strength * blurred
+    roi += high_pass
     
     # further erode denser regions to decrease overlap among blobs
-    if saturated_mean > 0.2:
-        denoised = morphology.erosion(denoised, morphology.octahedron(1))
-    return denoised
+    if erode and saturated_mean > 0.2:
+        roi = morphology.erosion(roi, morphology.octahedron(1))
+    return roi
 
 def threshold(roi):
     """Thresholds the ROI, with options for various techniques as well as
@@ -209,7 +212,7 @@ def plot_3d_surface(roi, vis):
     # prepare the data source with gentle saturation and stronger denoising
     # to minimize extraneous contours from background noise
     #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
-    roi = saturate_roi(roi, 97)
+    roi = saturate_roi(roi, clip_vmax=97)
     roi = np.clip(roi, 0.2, 1.0)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.2)
     surface = pipeline.scalar_field(roi)

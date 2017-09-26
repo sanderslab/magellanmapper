@@ -141,6 +141,7 @@ class Visualization(HasTraits):
     btn_2d_trait = Button("2D Plots")
     btn_save_segments = Button("Save Segments")
     roi = None # combine with roi_array?
+    _roi_proc = None # processed ROI
     rois_selections_class = Instance(ListSelections)
     rois_check_list = Str
     _rois_dict = None
@@ -299,11 +300,11 @@ class Visualization(HasTraits):
             else:
                 # 3D point rendering
                 plot_3d.plot_3d_points(self.roi, self)
-            
+            '''
             # process ROI in prep for showing filtered 2D view and segmenting
-            self.roi = plot_3d.saturate_roi(self.roi)
-            self.roi = plot_3d.denoise_roi(self.roi)
-        
+            self._roi_proc = plot_3d.saturate_roi(self.roi)
+            self._roi_proc = plot_3d.denoise_roi(self._roi_proc)
+            '''
         else:
             self.scene.mlab.clf()
         
@@ -414,7 +415,7 @@ class Visualization(HasTraits):
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
-                segs, self.labels = detector.segment_blob(roi)
+                segs, self.labels, self._roi_proc = detector.segment_blob(roi)
                 if segs is not None:
                     self.segments = np.concatenate(
                         (segs, np.add(segs[:, :3], 
@@ -480,12 +481,14 @@ class Visualization(HasTraits):
                 roi = plot_3d.prepare_roi(img, cli.channel, curr_roi_size, 
                                           curr_offset)
                 '''
-            else:
+            elif self._roi_proc is not None:
                 # denoised ROI processed during 3D display
-                roi = self.roi
+                roi = self._roi_proc
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
+            else:
+                print("No processed image to display")
         elif cli.image5d is None:
             print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)

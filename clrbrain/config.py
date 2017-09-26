@@ -94,7 +94,7 @@ def update_process_settings(settings, settings_type):
         settings["thresholding"] = None
         settings["thresholding_size"] = 64
         settings["denoise_size"] = 25
-        settings["segment_size"] = 200
+        settings["segment_size"] = 20
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)

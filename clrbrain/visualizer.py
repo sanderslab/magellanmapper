@@ -163,7 +163,7 @@ class Visualization(HasTraits):
     _DEFAULTS_2D = ["Filtered", "Border zone", "Outline", "Circles"]
     _planes_2d = List
     _border_on = False # remembers last border selection
-    _DEFAULTS_PLANES_2D = ["xy", "xz"]
+    _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
     

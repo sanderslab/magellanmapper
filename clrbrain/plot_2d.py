@@ -162,6 +162,12 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     z = offset[2]
     ax.set_title("{}={}".format(plane_axis, z))
     collection_z = None
+    if border is not None:
+        # boundaries of border region, with xy point of corner in first 
+        # elements and [width, height] in 2nd, allowing flipping for yz plane
+        border_bounds = np.array(
+            [border[0:2], 
+            [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
     if z < 0 or z >= size[1]:
         print("skipping z-plane {}".format(z))
         plt.imshow(np.zeros(roi_size[0:2]))
@@ -181,7 +187,10 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         if plane == "xz":
             region = _swap_elements(region, 1, 2)
         elif plane == "yz":
-            region = _swap_elements(region, 0, 2)
+            region = _swap_elements(region, 1, 3)
+            if border is not None:
+                # need y instead of z values to correspond to width
+                border_bounds = np.fliplr(border_bounds)
         # get the zoomed region
         if roi.ndim >= 5:
             roi = roi[tuple(region + [channel])]
@@ -231,17 +240,19 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                 collection_z.set_picker(5)
                 ax.add_collection(collection_z)
             
+            # shows truth blobs as small, solid circles
             if blobs_truth is not None:
                 for blob in blobs_truth:
                     ax.add_patch(patches.Circle((blob[2], blob[1]), radius=3, 
                                            facecolor=truth_color_dict[blob[5]], 
                                            alpha=1))
         
-        # adds a simple border to highlight the bottom of the ROI
+        # adds a simple border to highlight the border of the ROI
         if border is not None:
-            ax.add_patch(patches.Rectangle(border[0:2], 
-                                           roi_size[0] - 2 * border[0], 
-                                           roi_size[1] - 2 * border[1], 
+            #print("border: {}, roi_size: {}".format(border, roi_size))
+            ax.add_patch(patches.Rectangle(border_bounds[0], 
+                                           border_bounds[1, 0], 
+                                           border_bounds[1, 1], 
                                            fill=False, edgecolor="yellow",
                                            linestyle="dashed"))
         
@@ -291,14 +302,21 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                            alpha=0.5))
     
     # adjust array order based on which plane to show
+    border_full = np.copy(border)
+    border[2] = 0
     if plane == "xz":
         # flip y-z for planes by y instead of z
         roi_size = _swap_elements(roi_size, 1, 2)
         offset = _swap_elements(offset, 1, 2)
+        border = _swap_elements(border, 1, 2)
+        border_full = _swap_elements(border_full, 1, 2)
     elif plane == "yz":
         # flip x-z for planes by x instead of z
         roi_size = _swap_elements(roi_size, 0, 2)
         offset = _swap_elements(offset, 0, 2)
+        border = _swap_elements(border, 0, 2)
+        border_full = _swap_elements(border_full, 0, 2)
+    print("2D border: {}".format(border))
     
     # total number of z-planes
     z_start = offset[2]
@@ -464,7 +482,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
             ax_z, collection_z = show_subplot(
                 fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset, 
                 segments, segments_z, segs_cmap, alpha, z == z_overview, 
-                border if show_border else None, segs_out, plane, roi_show, 
+                border_full if show_border else None, segs_out, plane, roi_show, 
                 z_relative, labels, blobs_truth_z, circles=circles, 
                 aspect=aspect)
             if i == 0 and j == 0:

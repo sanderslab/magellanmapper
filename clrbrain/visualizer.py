@@ -163,6 +163,7 @@ class Visualization(HasTraits):
     _DEFAULTS_2D = ["Filtered", "Border zone", "Outline", "Circles"]
     _planes_2d = List
     _border_on = False # remembers last border selection
+    _DEFAULT_BORDER = np.zeros(3)
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
@@ -505,7 +506,8 @@ class Visualization(HasTraits):
             plot_2d.plot_2d_stack(self, title, filename_base,
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
-                                  self.border, self._planes_2d[0].lower(), 
+                                  self._full_border(self.border), 
+                                  self._planes_2d[0].lower(), 
                                   (0, 0, 0), 3, True, "middle", roi, 
                                   labels=self.labels, circles=circles, 
                                   mlab_screenshot=screenshot)
@@ -514,7 +516,8 @@ class Visualization(HasTraits):
             plot_2d.plot_2d_stack(self, title, filename_base,
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
-                                  self.border, self._planes_2d[0].lower(), 
+                                  self._full_border(self.border), 
+                                  self._planes_2d[0].lower(), 
                                   roi=roi, labels=self.labels, 
                                   blobs_truth=blobs_truth_roi, circles=circles, 
                                   mlab_screenshot=screenshot)
@@ -563,16 +566,29 @@ class Visualization(HasTraits):
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
     
+    def _full_border(self, border=None):
+        """Gets the full border resion.
+        
+        Params:
+            border: If equal to _DEFAULT_BORDER, returns the border. Defaults
+                to None.
+        Returns:
+            The full boundary in (x, y, z) order
+        """
+        if border is not None and np.array_equal(border, self._DEFAULT_BORDER):
+            return border
+        return chunking.calc_overlap()[::-1]
+    
     def _set_border(self, reset=False):
         # TODO: change from (x, y, z) order?
         if reset:
-            self.border = np.zeros(3)
+            self.border = np.copy(self._DEFAULT_BORDER)
             print("set border to zeros")
         else:
-            self.border = chunking.calc_overlap()[::-1]
+            self.border = self._full_border()
             self.border[2] = 0 # ignore z
         print("set border to {}".format(self.border))
-        
+    
     @property
     def segments(self):
         return self._segments

@@ -115,7 +115,7 @@ def _swap_elements(arr, axis0, axis1, offset=0):
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
                  segments_adj=None, plane="xy", roi=None, z_relative=-1,
-                 labels=None, blobs_truth=None, circles=True):
+                 labels=None, blobs_truth=None, circles=True, aspect=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -197,7 +197,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         if highlight:
             for spine in ax.spines.values():
                 spine.set_edgecolor("yellow")
-        plt.imshow(roi, cmap=colormap_2d, alpha=alpha)
+        plt.imshow(roi, cmap=colormap_2d, alpha=alpha, aspect=aspect)
         
         if circles:
             # draws all segments as patches
@@ -282,7 +282,6 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                            alpha=0.5))
     
     # adjust array order based on which plane to show
-    aspect = 1 # aspect ratio
     if plane == "xz":
         roi_size = _swap_elements(roi_size, 1, 2)
         offset = _swap_elements(offset, 1, 2)
@@ -304,11 +303,11 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     
     # pick image based on chosen orientation 
     origin = None
+    aspect = None # aspect ratio
     if plane == "xz":
-        # TODO: base on scaling vs image shape vs nothing?
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
         #aspect = float(image5d.shape[3]) / image5d.shape[1]
-        print(aspect)
+        print("aspect: {}".format(aspect))
         origin = "lower"
         segments[:, [0, 1]] = segments[:, [1, 0]]
         if image5d.ndim >= 5:
@@ -446,14 +445,12 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                            and z_relative < roi_size[2] - border[2])
             
             # shows the zoomed subplot with scale bar for the current z-plane
-            ax_z, collection_z = show_subplot(fig, gs_zoomed, i, j, image5d, 
-                                              channel, roi_size,
-                                              zoom_offset, segments, segments_z, 
-                                              segs_cmap, alpha, z == z_overview,
-                                              border if show_border else None,
-                                              segs_out, plane, roi_show, 
-                                              z_relative, labels, blobs_truth_z,
-                                              circles=circles)
+            ax_z, collection_z = show_subplot(
+                fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset, 
+                segments, segments_z, segs_cmap, alpha, z == z_overview, 
+                border if show_border else None, segs_out, plane, roi_show, 
+                z_relative, labels, blobs_truth_z, circles=circles, 
+                aspect=aspect)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)

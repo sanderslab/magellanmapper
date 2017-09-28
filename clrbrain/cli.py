@@ -24,6 +24,7 @@ Command-line arguments in addition to those from attributes listed below:
     * padding_2d: Padding around the ROI given as (x, y, z) from which to 
         include segments and and show further 2D planes.
     * mlab_3d: 3D visualization mode (see plot_3d.py).
+    * plane: Plane type (see plot_2d.py PLANE).
 
 Attributes:
     filename: The filename of the source images. A corresponding file with
@@ -360,6 +361,7 @@ def main(process_args_only=False):
     parser.add_argument("--microscope")
     parser.add_argument("--truth_db")
     parser.add_argument("--roc", action="store_true")
+    parser.add_argument("--plane")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -451,6 +453,9 @@ def main(process_args_only=False):
         config.update_process_settings(config.process_settings, args.microscope)
     print("Set microscope processing settings to {}"
           .format(config.process_settings["microscope_type"]))
+    if args.plane is not None:
+        from clrbrain import plot_2d
+        plot_2d.plane = args.plane
     
     # load "truth blobs" from separate database for viewing
     filename_base = importer.filename_to_base(filename, series)
@@ -604,7 +609,9 @@ def process_file(filename_base, offset, roi_size):
         name = ("{}-(series{})-z{}").format(
             os.path.basename(filename).replace(".czi", ""), 
             series, str(offset[2]).zfill(5))
-        plot_2d.extract_plane(image5d, channel, offset, name)
+        from clrbrain import plot_2d
+        plot_2d.extract_plane(
+            image5d, offset[2], plot_2d.plane, channel, plot_2d.savefig, name)
     
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the region, saving processed image

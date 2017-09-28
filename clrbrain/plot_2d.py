@@ -41,6 +41,8 @@ padding = (5, 5, 3) # human (x, y, z) order
 SEG_LINEWIDTH = 2.0
 ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
+PLANE = ("xy", "xz", "yz")
+plane = None
 
 segs_color_dict = {
     -1: None,
@@ -153,10 +155,10 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     size = image5d.shape
     # swap columns if showing a different plane
     plane_axis = "z"
-    if plane == "xz":
+    if plane == PLANE[1]:
         size = _swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "y"
-    elif plane == "yz":
+    elif plane == PLANE[2]:
         size = _swap_elements(size, 0, 2, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "x"
     z = offset[2]
@@ -184,9 +186,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             region = [0, z_relative, slice(0, roi_size[1]), 
                       slice(0, roi_size[0])]
         # swap columns if showing a different plane
-        if plane == "xz":
+        if plane == PLANE[1]:
             region = _swap_elements(region, 1, 2)
-        elif plane == "yz":
+        elif plane == PLANE[2]:
             region = _swap_elements(region, 1, 3)
             if border is not None:
                 # need y instead of z values to correspond to width
@@ -304,18 +306,20 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     # adjust array order based on which plane to show
     border_full = np.copy(border)
     border[2] = 0
-    if plane == "xz":
+    if plane == PLANE[1]:
         # flip y-z for planes by y instead of z
         roi_size = _swap_elements(roi_size, 1, 2)
         offset = _swap_elements(offset, 1, 2)
         border = _swap_elements(border, 1, 2)
         border_full = _swap_elements(border_full, 1, 2)
-    elif plane == "yz":
+        segments[:, [0, 1]] = segments[:, [1, 0]]
+    elif plane == PLANE[2]:
         # flip x-z for planes by x instead of z
         roi_size = _swap_elements(roi_size, 0, 2)
         offset = _swap_elements(offset, 0, 2)
         border = _swap_elements(border, 0, 2)
         border_full = _swap_elements(border_full, 0, 2)
+        segments[:, [0, 2]] = segments[:, [2, 0]]
     print("2D border: {}".format(border))
     
     # total number of z-planes
@@ -333,30 +337,8 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
         z_overview = z_start + z_planes
     print("z_overview: {}".format(z_overview))
     
-    # pick image based on chosen orientation 
-    origin = None
-    aspect = None # aspect ratio
-    img3d = None
-    if image5d.ndim >= 5:
-        img3d = image5d[0, :, :, :, channel]
-    elif image5d.ndim == 4:
-        img3d = image5d[0, :, :, :]
-    else:
-        img3d = image5d[:, :, :]
-    if plane == "xz":
-        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
-        origin = "lower"
-        segments[:, [0, 1]] = segments[:, [1, 0]]
-        img2d = img3d[:, z_overview, :]
-    elif plane == "yz":
-        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
-        origin = "lower"
-        segments[:, [0, 2]] = segments[:, [2, 0]]
-        img2d = img3d[:, :, z_overview]
-    else:
-        # defaults to "xy"
-        img2d = img3d[z_overview, :, :]
-    print("aspect: {}".format(aspect))
+    # pick image based on chosen orientation
+    img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
     
     # plot layout depending on number of z-planes
     if single_zoom_row:
@@ -661,7 +643,8 @@ def _hide_axes(ax):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-def extract_plane(image5d, channel, offset, name):
+def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None, 
+                  name=None):
     """Extracts a single 2D plane and saves to file.
     
     Params:
@@ -672,19 +655,37 @@ def extract_plane(image5d, channel, offset, name):
         name: Name of the resulting file, without the extension, which
             will be chosen based on the savefig attribute.
     """
-    # get the z-plane
-    z_start = offset[2]
+    origin = None
+    aspect = None # aspect ratio
+    img3d = None
     if image5d.ndim >= 5:
-        img2d = image5d[0, z_start, :, :, channel]
-        print(img2d.shape)
+        img3d = image5d[0, :, :, :, channel]
     elif image5d.ndim == 4:
-        img2d = image5d[0, z_start, :, :]
+        img3d = image5d[0, :, :, :]
     else:
-        img2d = image5d[z_start, :, :]
+        img3d = image5d[:, :, :]
+    if plane == PLANE[1]:
+        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
+        origin = "lower"
+        img2d = img3d[:, plane_n, :]
+    elif plane == PLANE[2]:
+        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
+        origin = "lower"
+        img2d = img3d[:, :, plane_n]
+    else:
+        # defaults to "xy"
+        img2d = img3d[plane_n, :, :]
+    print("aspect: {}, origin: {}".format(aspect, origin))
     if savefig is not None:
         filename = name + "." + savefig
         print("extracting plane as {}".format(filename))
-        plt.imsave(filename, img2d, cmap=colormap_2d)
+        fig = plt.figure(frameon=False)
+        ax = fig.add_subplot(111)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax.imshow(img2d, cmap=CMAP_GRBK, aspect=aspect, origin=origin)
+        fig.savefig(filename)
+    return img2d, aspect, origin
 
 def cycle_colors(i):
     num_colors = len(config.colors)

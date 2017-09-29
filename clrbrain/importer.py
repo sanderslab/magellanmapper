@@ -23,6 +23,7 @@ from skimage import io
 
 from clrbrain import detector
 from clrbrain import plot_3d
+from clrbrain import lib_clrbrain
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html
@@ -383,10 +384,8 @@ def transpose_npy(filename, series, axis1, axis2):
         filename, series, "transposed")
     offset = 0 if image5d.ndim <= 4 else 1
     image5d_swapped = np.swapaxes(image5d, axis1 + offset, axis2 + offset)
-    #image5d_swapped = np.moveaxis(image5d, -1, 0)
-    #detector.resolutions = np.roll(detector.resolutions, 1)
-    res = detector.resolutions
-    res[0, axis1], res[0, axis2] = res[0, axis2], res[0, axis1]
+    detector.resolutions[0] = lib_clrbrain.swap_elements(
+        detector.resolutions[0], axis1, axis2)
     print("detector.resolutions: {}".format(detector.resolutions))
     image5d_transposed = np.lib.format.open_memmap(
         filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
@@ -395,6 +394,10 @@ def transpose_npy(filename, series, axis1, axis2):
     image5d.flush()
     info = dict(image5d_info)
     info["resolutions"] = detector.resolutions
+    sizes = info["sizes"]
+    sizes[0] = lib_clrbrain.swap_elements(sizes[0], axis1, axis2, offset)
+    print("sizes: {}".format(sizes))
+    info["sizes"] = sizes
     outfile_info = open(filename_info_npz, "wb")
     np.savez(outfile_info, **info)
     outfile_info.close()

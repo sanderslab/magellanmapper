@@ -456,6 +456,7 @@ def main(process_args_only=False):
     if args.plane is not None:
         from clrbrain import plot_2d
         plot_2d.plane = args.plane
+        print("Set plane to {}".format(plot_2d.plane))
     
     # load "truth blobs" from separate database for viewing
     filename_base = importer.filename_to_base(filename, series)

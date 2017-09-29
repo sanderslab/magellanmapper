@@ -665,15 +665,28 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
     else:
         img3d = image5d[:, :, :]
     if plane == PLANE[1]:
+        # xz plane
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
         origin = "lower"
         img2d = img3d[:, plane_n, :]
+        if img2d.shape[1] > 1:
+            # stack of 2D plots such as for animation; make z the last axis
+            img2d = np.moveaxis(img2d, 0, -1)
+            #img2d = np.swapaxes(img2d, 0, 1)
+            aspect = 1 / aspect
     elif plane == PLANE[2]:
+        # yz plane
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
         origin = "lower"
         img2d = img3d[:, :, plane_n]
+        if img2d.shape[2] > 1:
+            # stack of 2D plots such as for animation; make z the last axis
+            #img2d = np.moveaxis(img2d, -1, 0)
+            img2d = np.swapaxes(img2d, 0, 2)
+            aspect = 1 / aspect
     else:
         # defaults to "xy"
+        aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
         img2d = img3d[plane_n, :, :]
     print("aspect: {}, origin: {}".format(aspect, origin))
     if savefig is not None:

@@ -162,8 +162,8 @@ def find_sizes(filename):
     print('time for finding sizes: %f' %(time() - time_start))
     return sizes, dtype
 
-def _make_filenames(filename, series):
-    filename_base = filename_to_base(filename, series)
+def _make_filenames(filename, series, modifier=""):
+    filename_base = filename_to_base(filename, series, modifier)
     filename_image5d_npz = filename_base + "_image5d.npz"
     filename_info_npz = filename_base + "_info.npz"
     return filename_image5d_npz, filename_info_npz
@@ -182,7 +182,7 @@ def _save_image_info(filename_info_npz, names, sizes, resolutions,
     print("file save time: {}".format(time() - time_start))
 
 def read_file(filename, series, save=True, load=True, z_max=-1, 
-              offset=None, size=None, channel=-1):
+              offset=None, size=None, channel=-1, return_info=False):
     """Reads in an imaging file.
     
     Can load the file from a saved Numpy array and also for only a series
@@ -268,10 +268,12 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                 print("set near_max to {}".format(plot_3d.near_max))
             except KeyError:
                 print("could not find near_max")
+            if return_info:
+                return image5d, output
             return image5d
         except IOError:
-            print("Unable to load Numpy array, will attempt to reload {}"
-                  .format(filename))
+            print("Unable to load Numpy array files {} or {}, will attempt to reload {}"
+                  .format(filename_image5d_npz, filename_info_npz, filename))
     start_jvm()
     # parses the XML tree directly
     names, sizes, detector.resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
@@ -372,5 +374,41 @@ def import_dir(path):
                      min(lows), max(highs))
     return image5d
 
-def filename_to_base(filename, series):
-    return filename.replace(".czi", "_") + str(series).zfill(5)
+def filename_to_base(filename, series, modifier=""):
+    return filename.replace(".czi", "_") + modifier + str(series).zfill(5)
+
+def transpose_npy(filename, series, axis1, axis2):
+    image5d, image5d_info = read_file(filename, series, return_info=True)
+    filename_image5d_npz, filename_info_npz = _make_filenames(
+        filename, series, "transposed_")
+    offset = 0 if image5d.ndim <= 4 else 1
+    image5d_swapped = np.swapaxes(image5d, axis1 + offset, axis2 + offset)
+    #image5d_swapped = np.moveaxis(image5d, -1, 0)
+    #detector.resolutions = np.roll(detector.resolutions, 1)
+    res = detector.resolutions
+    res[0, axis1], res[0, axis2] = res[0, axis2], res[0, axis1]
+    print("detector.resolutions: {}".format(detector.resolutions))
+    image5d_transposed = np.lib.format.open_memmap(
+        filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
+        shape=image5d_swapped.shape)
+    image5d_transposed[:] = image5d_swapped[:]
+    image5d.flush()
+    info = dict(image5d_info)
+    info["resolutions"] = detector.resolutions
+    outfile_info = open(filename_info_npz, "wb")
+    np.savez(outfile_info, **info)
+    outfile_info.close()
+    '''
+    _save_image_info(filename_info_npz, None, 
+                     None, detector.resolutions, 
+                     None, None, 
+                     None, None, None)
+    '''
+    print("saved transposed file to {} with shape {}".format(
+        filename_image5d_npz, image5d_transposed.shape))
+
+if __name__ == "__main__":
+    print("Clrbrain importer manipulations")
+    from clrbrain import cli
+    cli.main(True)
+    transpose_npy(cli.filename, cli.series, 0, 2)

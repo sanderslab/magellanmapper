@@ -28,7 +28,8 @@ def _process_plane(i, plane, rescale):
     img = transform.rescale(plane, rescale, mode="reflect", multichannel=False)
     return i, img
 
-def _build_animated_gif(images, out_path, process_fnc, rescale):
+def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 
+                        origin=None):
     """Builds an animated GIF from a stack of images.
     
     Params:
@@ -40,6 +41,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale):
     """
     # ascending order of all files in the directory
     num_images = len(images)
+    print("images.shape: {}".format(images.shape))
     if num_images < 1:
         return None
     
@@ -64,7 +66,8 @@ def _build_animated_gif(images, out_path, process_fnc, rescale):
         if img_size is None:
             img_size = img.shape
         plotted_imgs[i] = [ax.imshow(
-            img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=0.1)]
+            img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=0.1, aspect=aspect, 
+            origin=origin)]
     pool.close()
     pool.join()
     
@@ -72,7 +75,9 @@ def _build_animated_gif(images, out_path, process_fnc, rescale):
     #print(len(plotted_imgs))
     plt.tight_layout(pad=0.0) # leaves some space for some reason
     fig_size = fig.get_size_inches()
-    fig.set_size_inches(img_size[1] / fig.dpi, img_size[0] / fig.dpi)
+    if aspect is None:
+        aspect = 1
+    fig.set_size_inches(img_size[1] / fig.dpi / aspect, img_size[0] / fig.dpi)
     
     # export to animated GIF
     anim = animation.ArtistAnimation(
@@ -99,6 +104,8 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
     planes = None
+    aspect = None
+    origin = None
     fnc = None
     if os.path.isdir(path):
         planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
@@ -106,15 +113,19 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
         fnc = _import_img
     else:
         image5d = importer.read_file(path, series)
-        planes = image5d[0, ::interval]
+        planes, aspect, origin = plot_2d.extract_plane(
+            image5d, slice(None, None, interval), plane=plot_2d.plane, 
+            channel=cli.channel)
         i = name.rfind(".")
         if i != -1:
             name = name[:i]
         fnc = _process_plane
     out_path = os.path.join(parent_path, name + "_animation.gif")
-    _build_animated_gif(planes, out_path, fnc, rescale)
+    _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
+                        origin=origin)
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
     cli.main(True)
     animated_gif(cli.filename, 0, 10, 0.05)
+    #animated_gif(cli.filename, 0, 1, 1)

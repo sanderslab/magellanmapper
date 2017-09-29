@@ -116,16 +116,14 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
         planes, aspect, origin = plot_2d.extract_plane(
             image5d, slice(None, None, interval), plane=plot_2d.plane, 
             channel=cli.channel)
-        i = name.rfind(".")
-        if i != -1:
-            name = name[:i]
+        out_name = name.replace(".czi", "_")
         fnc = _process_plane
-    out_path = os.path.join(parent_path, name + "_animation.gif")
+    out_path = os.path.join(parent_path, out_name + "_animation.gif")
     _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
                         origin=origin)
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
     cli.main(True)
-    animated_gif(cli.filename, 0, 10, 0.05)
-    #animated_gif(cli.filename, 0, 1, 1)
+    #animated_gif(cli.filename, 0, 10, 0.05)
+    animated_gif(cli.filename, 0, 1, 1)

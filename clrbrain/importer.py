@@ -380,7 +380,7 @@ def filename_to_base(filename, series, modifier=""):
 def transpose_npy(filename, series, axis1, axis2):
     image5d, image5d_info = read_file(filename, series, return_info=True)
     filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename, series, "transposed_")
+        filename, series, "transposed")
     offset = 0 if image5d.ndim <= 4 else 1
     image5d_swapped = np.swapaxes(image5d, axis1 + offset, axis2 + offset)
     #image5d_swapped = np.moveaxis(image5d, -1, 0)

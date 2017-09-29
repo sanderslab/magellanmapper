@@ -77,7 +77,12 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
     fig_size = fig.get_size_inches()
     if aspect is None:
         aspect = 1
-    fig.set_size_inches(img_size[1] / fig.dpi / aspect, img_size[0] / fig.dpi)
+    #print("img_size: {}".format(img_size))
+    img_size_dpi = np.divide(img_size, fig.dpi) # convert to inches
+    if img_size[0] < img_size[1]:
+        fig.set_size_inches(img_size_dpi[1], img_size_dpi[0] * aspect)
+    else:
+        fig.set_size_inches(img_size_dpi[1] / aspect, img_size_dpi[0])
     
     # export to animated GIF
     anim = animation.ArtistAnimation(
@@ -125,5 +130,5 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
     cli.main(True)
-    #animated_gif(cli.filename, 0, 10, 0.05)
-    animated_gif(cli.filename, 0, 1, 1)
+    animated_gif(cli.filename, 0, 1000, 0.05)
+    #animated_gif(cli.filename, 0, 5, 1)

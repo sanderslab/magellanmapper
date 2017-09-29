@@ -29,6 +29,7 @@ from matplotlib_scalebar.scalebar import SI_LENGTH
 
 from clrbrain import detector
 from clrbrain import config
+from clrbrain import lib_clrbrain
 
 colormap_2d = cm.inferno
 CMAP_GRBK = LinearSegmentedColormap.from_list("Green_black", ['black', 'green'])
@@ -104,17 +105,6 @@ def add_scale_bar(ax):
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
-def _swap_elements(arr, axis0, axis1, offset=0):
-    axis0 += offset
-    axis1 += offset
-    check_tuple = isinstance(arr, tuple)
-    if check_tuple:
-        arr = list(arr)
-    arr[axis0], arr[axis1] = arr[axis1], arr[axis0]
-    if check_tuple:
-        arr = tuple(arr)
-    return arr
-
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
                  segments_adj=None, plane="xy", roi=None, z_relative=-1,
@@ -156,10 +146,10 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     # swap columns if showing a different plane
     plane_axis = "z"
     if plane == PLANE[1]:
-        size = _swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
+        size = lib_clrbrain.swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "y"
     elif plane == PLANE[2]:
-        size = _swap_elements(size, 0, 2, 1 if image5d.ndim >= 4 else 0)
+        size = lib_clrbrain.swap_elements(size, 0, 2, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "x"
     z = offset[2]
     ax.set_title("{}={}".format(plane_axis, z))
@@ -187,9 +177,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                       slice(0, roi_size[0])]
         # swap columns if showing a different plane
         if plane == PLANE[1]:
-            region = _swap_elements(region, 1, 2)
+            region = lib_clrbrain.swap_elements(region, 1, 2)
         elif plane == PLANE[2]:
-            region = _swap_elements(region, 1, 3)
+            region = lib_clrbrain.swap_elements(region, 1, 3)
             if border is not None:
                 # need y instead of z values to correspond to width
                 border_bounds = np.fliplr(border_bounds)
@@ -308,17 +298,17 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     border[2] = 0
     if plane == PLANE[1]:
         # flip y-z for planes by y instead of z
-        roi_size = _swap_elements(roi_size, 1, 2)
-        offset = _swap_elements(offset, 1, 2)
-        border = _swap_elements(border, 1, 2)
-        border_full = _swap_elements(border_full, 1, 2)
+        roi_size = lib_clrbrain.swap_elements(roi_size, 1, 2)
+        offset = lib_clrbrain.swap_elements(offset, 1, 2)
+        border = lib_clrbrain.swap_elements(border, 1, 2)
+        border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
         segments[:, [0, 1]] = segments[:, [1, 0]]
     elif plane == PLANE[2]:
         # flip x-z for planes by x instead of z
-        roi_size = _swap_elements(roi_size, 0, 2)
-        offset = _swap_elements(offset, 0, 2)
-        border = _swap_elements(border, 0, 2)
-        border_full = _swap_elements(border_full, 0, 2)
+        roi_size = lib_clrbrain.swap_elements(roi_size, 0, 2)
+        offset = lib_clrbrain.swap_elements(offset, 0, 2)
+        border = lib_clrbrain.swap_elements(border, 0, 2)
+        border_full = lib_clrbrain.swap_elements(border_full, 0, 2)
         segments[:, [0, 2]] = segments[:, [2, 0]]
     print("2D border: {}".format(border))
     
@@ -679,7 +669,7 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
         origin = "lower"
         img2d = img3d[:, :, plane_n]
-        if img2d.shape[2] > 1:
+        if img2d.ndim > 2 and img2d.shape[2] > 1:
             # stack of 2D plots such as for animation; make z the last axis
             #img2d = np.moveaxis(img2d, -1, 0)
             img2d = np.swapaxes(img2d, 0, 2)

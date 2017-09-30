@@ -79,9 +79,10 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         aspect = 1
     #print("img_size: {}".format(img_size))
     img_size_dpi = np.divide(img_size, fig.dpi) # convert to inches
-    if img_size[0] < img_size[1]:
+    if aspect > 1:#img_size[0] < img_size[1]:
         fig.set_size_inches(img_size_dpi[1], img_size_dpi[0] * aspect)
     else:
+        # multiply both sides by 1 / aspect => number > 1 to enlarge
         fig.set_size_inches(img_size_dpi[1] / aspect, img_size_dpi[0])
     
     # export to animated GIF
@@ -121,7 +122,7 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
         planes, aspect, origin = plot_2d.extract_plane(
             image5d, slice(None, None, interval), plane=plot_2d.plane, 
             channel=cli.channel)
-        out_name = name.replace(".czi", "_")
+        out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
     out_path = os.path.join(parent_path, out_name + "_animation.gif")
     _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
@@ -130,5 +131,5 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
     cli.main(True)
-    animated_gif(cli.filename, 0, 1000, 0.05)
-    #animated_gif(cli.filename, 0, 5, 1)
+    #animated_gif(cli.filename, 0, 100, 0.05)
+    animated_gif(cli.filename, 0, 5, 1)

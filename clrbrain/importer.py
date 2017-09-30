@@ -22,6 +22,7 @@ import bioformats as bf
 from skimage import io
 
 from clrbrain import detector
+from clrbrain import plot_2d
 from clrbrain import plot_3d
 from clrbrain import lib_clrbrain
 
@@ -378,25 +379,33 @@ def import_dir(path):
 def filename_to_base(filename, series, modifier=""):
     return filename.replace(".czi", "_") + modifier + str(series).zfill(5)
 
-def transpose_npy(filename, series, axis1, axis2):
+def transpose_npy(filename, series, plane):
     image5d, image5d_info = read_file(filename, series, return_info=True)
+    info = dict(image5d_info)
+    sizes = info["sizes"]
     filename_image5d_npz, filename_info_npz = _make_filenames(
         filename, series, "transposed")
-    offset = 0 if image5d.ndim <= 4 else 1
-    image5d_swapped = np.swapaxes(image5d, axis1 + offset, axis2 + offset)
+    offset = 0 if image5d.ndim <= 3 else 1
+    # swap z-y to get (y, z, x) order for xz orientation
+    image5d_swapped = np.swapaxes(image5d, offset, offset + 1)
     detector.resolutions[0] = lib_clrbrain.swap_elements(
-        detector.resolutions[0], axis1, axis2)
+        detector.resolutions[0], 0, 1)
+    sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 1, offset)
+    if plane == plot_2d.PLANE[2]:
+        # swap new y-x to get (x, z, y) order for yz orientation
+        image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
+        detector.resolutions[0] = lib_clrbrain.swap_elements(
+            detector.resolutions[0], 0, 2)
+        sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 2, offset)
+    print("new shape: {}".format(image5d_swapped.shape))
     print("detector.resolutions: {}".format(detector.resolutions))
+    print("sizes: {}".format(sizes))
     image5d_transposed = np.lib.format.open_memmap(
         filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
         shape=image5d_swapped.shape)
     image5d_transposed[:] = image5d_swapped[:]
     image5d.flush()
-    info = dict(image5d_info)
     info["resolutions"] = detector.resolutions
-    sizes = info["sizes"]
-    sizes[0] = lib_clrbrain.swap_elements(sizes[0], axis1, axis2, offset)
-    print("sizes: {}".format(sizes))
     info["sizes"] = sizes
     outfile_info = open(filename_info_npz, "wb")
     np.savez(outfile_info, **info)
@@ -414,4 +423,4 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    transpose_npy(cli.filename, cli.series, 0, 2)
+    transpose_npy(cli.filename, cli.series, plot_2d.PLANE[2])

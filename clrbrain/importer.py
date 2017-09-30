@@ -20,6 +20,7 @@ import numpy as np
 import javabridge as jb
 import bioformats as bf
 from skimage import io
+from skimage import transform
 
 from clrbrain import detector
 from clrbrain import plot_2d
@@ -379,24 +380,39 @@ def import_dir(path):
 def filename_to_base(filename, series, modifier=""):
     return filename.replace(".czi", "_") + modifier + str(series).zfill(5)
 
-def transpose_npy(filename, series, plane):
+def transpose_npy(filename, series, plane=None, rescale=None):
     image5d, image5d_info = read_file(filename, series, return_info=True)
     info = dict(image5d_info)
     sizes = info["sizes"]
     filename_image5d_npz, filename_info_npz = _make_filenames(
         filename, series, "transposed")
     offset = 0 if image5d.ndim <= 3 else 1
-    # swap z-y to get (y, z, x) order for xz orientation
-    image5d_swapped = np.swapaxes(image5d, offset, offset + 1)
-    detector.resolutions[0] = lib_clrbrain.swap_elements(
-        detector.resolutions[0], 0, 1)
-    sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 1, offset)
-    if plane == plot_2d.PLANE[2]:
-        # swap new y-x to get (x, z, y) order for yz orientation
-        image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
+    image5d_swapped = image5d
+    if plane is not None and plane != plot_2d.PLANE[0]:
+        # swap z-y to get (y, z, x) order for xz orientation
+        image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 1)
         detector.resolutions[0] = lib_clrbrain.swap_elements(
-            detector.resolutions[0], 0, 2)
-        sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 2, offset)
+            detector.resolutions[0], 0, 1)
+        #sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 1, offset)
+        if plane == plot_2d.PLANE[2]:
+            # swap new y-x to get (x, z, y) order for yz orientation
+            image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
+            detector.resolutions[0] = lib_clrbrain.swap_elements(
+                detector.resolutions[0], 0, 2)
+            #sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 2, offset)
+    if rescale is not None:
+        rescaled = image5d_swapped
+        if offset > 0:
+            rescaled = rescaled[0]
+        multichannel = rescaled.shape[-1] > 1
+        rescaled = transform.rescale(
+            rescaled, rescale, mode="reflect", multichannel=multichannel)
+        if offset > 0:
+            image5d_swapped = np.array([rescaled])
+        else:
+            image5d_swapped = rescaled
+        detector.resolutions = np.multiply(detector.resolutions, 1 / rescale)
+    sizes[0] = image5d_swapped.shape
     print("new shape: {}".format(image5d_swapped.shape))
     print("detector.resolutions: {}".format(detector.resolutions))
     print("sizes: {}".format(sizes))
@@ -423,4 +439,5 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    transpose_npy(cli.filename, cli.series, plot_2d.PLANE[2])
+    #transpose_npy(cli.filename, cli.series, plot_2d.PLANE[2], 0.5)
+    transpose_npy(cli.filename, cli.series, rescale=0.05)

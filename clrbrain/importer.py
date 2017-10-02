@@ -439,5 +439,5 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    #transpose_npy(cli.filename, cli.series, plot_2d.PLANE[2], 0.5)
-    transpose_npy(cli.filename, cli.series, rescale=0.05)
+    transpose_npy(cli.filename, cli.series, plot_2d.plane)
+    #transpose_npy(cli.filename, cli.series, rescale=0.05)

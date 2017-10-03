@@ -163,7 +163,7 @@ class Visualization(HasTraits):
     _DEFAULTS_2D = ["Filtered", "Border zone", "Outline", "Circles"]
     _planes_2d = List
     _border_on = False # remembers last border selection
-    _DEFAULT_BORDER = np.zeros(3)
+    _DEFAULT_BORDER = np.zeros(3) # default ROI border size
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
@@ -567,19 +567,27 @@ class Visualization(HasTraits):
         return (self.x_offset, self.y_offset, self.z_offset)
     
     def _full_border(self, border=None):
-        """Gets the full border resion.
+        """Gets the full border array, typically based on 
+            :meth:`chunking.cal_overlap`.
         
         Params:
-            border: If equal to _DEFAULT_BORDER, returns the border. Defaults
-                to None.
+            border: If equal to :const:`_DEFAULT_BORDER`, returns the border. 
+                Defaults to None.
         Returns:
-            The full boundary in (x, y, z) order
+            The full boundary in (x, y, z) order.
         """
         if border is not None and np.array_equal(border, self._DEFAULT_BORDER):
             return border
         return chunking.calc_overlap()[::-1]
     
     def _set_border(self, reset=False):
+        """Sets the border as an (x, y, z) Numpy array, changing the final
+            (z) dimension to be 0 since additional border planes will be shown 
+            separately.
+        
+        Params:
+            reset: If true, resets the border to :const:`_DEFAULT_BORDER`.
+        """
         # TODO: change from (x, y, z) order?
         if reset:
             self.border = np.copy(self._DEFAULT_BORDER)

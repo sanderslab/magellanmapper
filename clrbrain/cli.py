@@ -512,6 +512,17 @@ def main(process_args_only=False):
         os._exit(os.EX_OK)
 
 def _iterate_file_processing(filename_base, offsets, roi_sizes):
+    """Processes files iteratively based on offsets.
+    
+    Params:
+        filename_base: Base filename.
+        offsets: 2D array of multiple offsets.
+        roi_sizes: 2D array of multiple ROI sizes corresponding to offsets.
+    
+    Returns:
+        stats: Summed stats.
+        summaries: Concatenated summaries.
+    """
     stat = np.zeros(3)
     roi_sizes_len = len(roi_sizes)
     summaries = []
@@ -528,6 +539,17 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
 
 #@profile
 def process_file(filename_base, offset, roi_size):
+    """Processes a single image file non-interactively.
+    
+    Params:
+        filename: Base filename.
+        offset: Offset as (x, y, z) to start processing.
+        roi_size: Size of region to process, given as (x, y, z).
+    
+    Returns:
+        stats: Stats from processing, or None if no stats.
+        fdbk: Text feedback from the processing, or None if no feedback.
+    """
     # print longer Numpy arrays to assist debugging
     np.set_printoptions(linewidth=200, threshold=10000)
     
@@ -731,6 +753,21 @@ def process_file(filename_base, offset, roi_size):
     return None, None
     
 def process_stack(roi, overlap, tol):
+    """Processes a stack, whcih can be a sub-region within an ROI.
+    
+    Params:
+        roi: The ROI to process.
+        overlap: The amount of overlap to use between chunks within the stack.
+        tol: Tolerance as (z, y, x), within which a segment will be 
+            considered a duplicate of a segment in the master array and
+            removed.
+    
+    Returns:
+        merged: The merged, processed image stack.
+        segments_all: All the segments found within the stack, given as a
+            [n, [z, row, column, radius, ...]], including additional elements 
+            as given in :meth:`segment_sub_roi`.
+    """
     time_start = time()
     # prepare ROI for processing;
     # need to make module-level to allow shared memory of this large array

@@ -97,15 +97,22 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
     #plt.show()
 
 def animated_gif(path, series=0, interval=1, rescale=0.1):
-    """Builds an animated GIF from a stack of images in a directory or a
+    """Builds an animated GIF from a stack of images in a directory or an
     .npy file.
     
     Writes the animated file to the parent directory of path.
     
     Params:
-        path: Path to the image directory. All images from this directory
-            will be imported in Python sorted order.
+        path: Path to the image directory or saved Numpy array. If the path is 
+            a directory, all images from this directory will be imported in 
+            Python sorted order. If the path is a saved Numpy array (eg .npy 
+            file), animations will be built by plane, using the plane 
+            orientation set in :const:`plot_2d.plane`.
         series: Stack to build for multiseries files; defaults to 0.
+        interval: Every nth image will be incorporated into the animation; 
+            defaults to 1.
+        rescale: Rescaling factor for each image, performed on a plane-by-plane 
+            basis; defaults to 0.1.
     """
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
@@ -114,6 +121,7 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
     origin = None
     fnc = None
     if os.path.isdir(path):
+        # builds animations from all files in a directory
         planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
         print(planes)
         fnc = _import_img

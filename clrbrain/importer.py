@@ -381,6 +381,23 @@ def filename_to_base(filename, series, modifier=""):
     return filename.replace(".czi", "_") + modifier + str(series).zfill(5)
 
 def transpose_npy(filename, series, plane=None, rescale=None):
+    """Transpose an NPY file to different orientation and scaling.
+    
+    Params:
+        filename: Image filename, which will be passed to :meth:`read_file` 
+            and converted to the NPY filename.
+        series: Series number to pass along with the filename.
+        plane: The orientation, which should fit one of the 
+            :const:`plot_2d.PLANES` elements; defaults to None, in which case 
+            no re-orientation will occur. Note that "yz" orientation can 
+            take significantly longer to transpose since memmap loading 
+            will need to access the entire file many times.
+        rescale: Factor by which to rescale the entire file; defaults to 
+            None, in which case no rescaling will occur. Note that rescaling 
+            large files can require a large amount of RAM since the entire 
+            file will be loaded into memory rather than only using memmap 
+            reading.
+    """
     image5d, image5d_info = read_file(filename, series, return_info=True)
     info = dict(image5d_info)
     sizes = info["sizes"]
@@ -426,12 +443,6 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     outfile_info = open(filename_info_npz, "wb")
     np.savez(outfile_info, **info)
     outfile_info.close()
-    '''
-    _save_image_info(filename_info_npz, None, 
-                     None, detector.resolutions, 
-                     None, None, 
-                     None, None, None)
-    '''
     print("saved transposed file to {} with shape {}".format(
         filename_image5d_npz, image5d_transposed.shape))
 

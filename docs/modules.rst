@@ -6,3 +6,4 @@ clrbrain
 
    clrbrain
    setup
+   stitch

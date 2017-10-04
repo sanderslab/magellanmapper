@@ -23,16 +23,17 @@ cd "$BASE_DIR/.."
 echo $PWD
 
 # check for Java jar availability
-if [ "`command -v javac`" == '' ]
+if ! command -v "javac" &> /dev/null
 then
-	echo "Please install JDK or add JAVA_HOME to your path environment variables. Exiting..."
+	echo "Please install JDK or add JAVA_HOME to your path environment variables. Exiting."
 	exit 1
 fi
 
-# check for gcc availability for compiling Scikit-image
-if [ "`command -v gcc`" == '' ]
+# check for gcc availability for compiling Scikit-image;
+# TODO: does not handle case where xcode tools needs to be installed
+if ! command -v "gcc" &> /dev/null
 then
-	echo "Please install gcc. Exiting..."
+	echo "Please install gcc. Exiting."
 	exit 1
 fi
 

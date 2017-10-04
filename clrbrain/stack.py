@@ -32,7 +32,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
                         origin=None):
     """Builds an animated GIF from a stack of images.
     
-    Params:
+    Args:
         images: Array of images, either as files or Numpy array planes.
         out_path: Output path.
         process_fnc: Function to process each image through multiprocessing, 
@@ -102,7 +102,7 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
     
     Writes the animated file to the parent directory of path.
     
-    Params:
+    Args:
         path: Path to the image directory or saved Numpy array. If the path is 
             a directory, all images from this directory will be imported in 
             Python sorted order. If the path is a saved Numpy array (eg .npy 

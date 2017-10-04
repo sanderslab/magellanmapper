@@ -153,7 +153,7 @@ def segment_blob(roi):
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.
     
-    Params:
+    Args:
         blobs: The blobs, given as 2D array of [n, [z, row, column, radius]].
         region: Slice within each blob to check, such as slice(0, 2) to check
            for (z, row, column).
@@ -187,7 +187,7 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
     have no more than one match, and the total number of matches will be 
     the size of the shortest list.
     
-    Params:
+    Args:
         blobs: The blobs to be checked for closeness, given as 2D 
             array of at least [n, [z, row, column, ...]].
         blobs_master: The list by which to check for close blobs, in the same
@@ -259,7 +259,7 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
 def remove_close_blobs(blobs, blobs_master, region, tol):
     """Removes blobs that are close to one another.
     
-    Params:
+    Args:
         blobs: The blobs to be checked for closeness and pruning, given as 2D 
             array of [n, [z, row, column, radius]].
         blobs_master: The list by which to check for close blobs, in the same
@@ -296,7 +296,7 @@ def remove_close_blobs_within_array(blobs, region, tol):
     Uses remove_close_blobs() to detect blobs close to one another inside
     the master array.
     
-    Params:
+    Args:
         blobs: The blobs to add, given as 2D array of [n, [z, row, column, 
             radius]].
         region: Slice within each blob to check, such as slice(0, 2) to check
@@ -331,7 +331,7 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
     """Removes close blobs within a given array, first sorting the array by
     z, y, x.
     
-    Params:
+    Args:
         blobs: The blobs to add, given as 2D array of [n, [z, row, column, 
             radius]].
         region: Slice within each blob to check, such as slice(0, 2) to check
@@ -404,7 +404,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
     format as saved processed files but with "_verified.db" at the end.
     Prints basic statistics on the verification.
     
-    Params:
+    Args:
         rois: Rows of ROIs from sqlite database.
         blobs: The blobs to be checked for accuracy, given as 2D 
             array of [n, [z, row, column, radius, ...]].

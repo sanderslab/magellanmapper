@@ -301,7 +301,7 @@ def update_rois(cur, offset, size):
 def select_roi(cur, roi_id):
     """Selects an ROI from the ID.
     
-    Params:
+    Args:
         cur: Connection's cursor.
         roi_id: The ID of the ROI.
     

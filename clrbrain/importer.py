@@ -383,7 +383,7 @@ def filename_to_base(filename, series, modifier=""):
 def transpose_npy(filename, series, plane=None, rescale=None):
     """Transpose an NPY file to different orientation and scaling.
     
-    Params:
+    Args:
         filename: Image filename, which will be passed to :meth:`read_file` 
             and converted to the NPY filename.
         series: Series number to pass along with the filename.

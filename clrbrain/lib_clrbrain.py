@@ -7,7 +7,7 @@
 def swap_elements(arr, axis0, axis1, offset=0):
     """Swap elements within an array.
     
-    Params:
+    Args:
         arr: Array in which to swap elements.
         axis0: Index of first element to swap.
         axis1: Index of second element to swap.

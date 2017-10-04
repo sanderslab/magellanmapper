@@ -28,7 +28,7 @@ def calc_overlap():
 def _num_units(size, max_pixels):
     """Calculates number of sub regions.
     
-    Params:
+    Args:
         size: Size of the entire region
     
     Returns:
@@ -44,6 +44,7 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
     
     Attributes:
         size: Size in (z, y, x) order.
+        max_pixels: Max pixels for each side in (z, y, x) order.
         overlap: Overlap size between sub-ROIs.
         coord: Coordinates of the sub-ROI, in (z, y, x) order.
         axis: The axis to calculate.
@@ -58,32 +59,20 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
         end = size[axis]
     return (start, end)
 
-'''
-def super_stack_splitter(roi, max_pixels, overlap):
-    num_units = _num_units(roi.shape, max_pixels)
-    dims = []
-    for z in range(num_units[0]):
-        for y in range(num_units[1]):
-            for x in range(num_units[2]):
-                bounds = [_bounds_side(size, max_pixels, overlap, (z, y, x), axis) for axis in range(3)]
-                offset = (bounds[0][0], bounds[1][0], bounds[2][0])
-                size = (bounds[0][1] - bounds[0][0], bounds[1][1] - bounds[1][0], bounds[2][1] - bounds[2][0])
-                #print("bounds: {}".format(bounds))
-                dims.append((offset, size))
-    return dims
-''' 
-
 def stack_splitter(roi, max_pixels, overlap):
     """Splits a stack into multiple sub regions.
     
-    Params:
+    Args:
         roi: The region of interest, a stack in (z, y, x) dimensions.
+        max_pixels: Max pixels for each side in (z, y, x) order.
+        overlap: Overlap size between sub-ROIs.
     
     Return:
-        sub_rois: Array of sub regions, in (z, y, x) dimensions.
-        overlap: The overlap size, in pixels.
-        sub_rois_offsets: Array of offsets for each sub_roi, in
-            (z, y, x) dimensions.
+        Tuple of (sub_rois, sub_rois_offsets), where ``sub_rois`` is a Numpy  
+        array of sub regions, in (z, y, x) dimensions, and 
+        ``sub_rois_offsets`` is a Numpy array of offsets for each sub_roi, 
+        in (z, y, x) dimensions.
+        
     """
     size = roi.shape
     print("total stack size: {}".format(size))
@@ -112,7 +101,7 @@ def stack_splitter(roi, max_pixels, overlap):
 def merge_split_stack(sub_rois, overlap):
     """Merges sub regions back into a single stack.
     
-    Params:
+    Args:
         sub_rois: Array of sub regions, in (z, y, x) dimensions.
     
     Return:
@@ -159,7 +148,7 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois,
     """Compares blobs in a sub ROI with the blobs in the immediately preceding 
     sub ROI along the given axis
     
-    Params:
+    Args:
         blobs: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, p)
             dimension array, where each segment is at least of (z, y, x, radius)
@@ -292,7 +281,7 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
     tolerance of one another, by comparing a given sub-ROI with the 
     immediately preceding sub-ROI.
     
-    Params:
+    Args:
         blobs: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, p)
             dimension array, where each segment is at least of (z, y, x, radius)
@@ -312,6 +301,7 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
     Returns:
         Array of all the blobs, minus any blobs that are close to one another in the
             overlapping regions.
+    
     """
     blobs_all = None
     print("pruning overlapping blobs with tolerance {}".format(tol))
@@ -373,7 +363,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
     tolerance of one another, by comparing a given sub-ROI with the 
     immediately following sub-ROI.
     
-    Params:
+    Args:
         blobs: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, p)
             dimension array, where each segment is at least of (z, y, x, radius)

@@ -62,7 +62,7 @@ def _get_radius(seg):
     """Gets the radius for a segments, defaulting to 5 if the segment's
     radius is close to 0.
     
-    Params:
+    Args:
         seg: The segments, where seg[3] is the radius.
     
     Returns:
@@ -98,7 +98,7 @@ def add_scale_bar(ax):
     
     Uses the x resolution value and assumes that it is in microns per pixel.
     
-    Params:
+    Args:
         ax: The plot that will show the bar.
     """
     scale_bar = ScaleBar(detector.resolutions[0][2], u'\u00b5m', SI_LENGTH, 
@@ -481,7 +481,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
        """Triggers table update by either selecting and reselected the segment
        or vice versa.
        
-       Params:
+       Args:
            i: The element in vis.segs_selected, which is simply an index to
               the segment in vis.segments.
        """
@@ -637,7 +637,7 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
                   name=None):
     """Extracts a single 2D plane and saves to file.
     
-    Params:
+    Args:
         image5d: The full image stack.
         channel: Channel to view.
         offset: Offset given as (x, y, z), which will determine the

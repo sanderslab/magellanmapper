@@ -59,7 +59,7 @@ def main():
     Processes command-line arguments.
     """
     cli.main()
-    pylab.rcParams.update(params)
+    pylab.rcArgs.update(params)
     push_exception_handler(reraise_exceptions=True)
     visualization = Visualization()
     visualization.configure_traits()
@@ -171,7 +171,7 @@ class Visualization(HasTraits):
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
         
-        Params:
+        Args:
             seg: The segment as an array of (z, row, column, radius).
         """
         seg_str = seg[0:3].astype(int).astype(str).tolist()
@@ -182,7 +182,7 @@ class Visualization(HasTraits):
     def _append_roi(self, roi, rois_dict):
         """Append an ROI to the ROI dictionary.
         
-        Params:
+        Args:
             roi: The ROI to save.
             rois_dict: Dictionary of saved ROIs.
         """
@@ -570,7 +570,7 @@ class Visualization(HasTraits):
         """Gets the full border array, typically based on 
             :meth:`chunking.cal_overlap`.
         
-        Params:
+        Args:
             border: If equal to :const:`_DEFAULT_BORDER`, returns the border. 
                 Defaults to None.
         Returns:
@@ -585,7 +585,7 @@ class Visualization(HasTraits):
             (z) dimension to be 0 since additional border planes will be shown 
             separately.
         
-        Params:
+        Args:
             reset: If true, resets the border to :const:`_DEFAULT_BORDER`.
         """
         # TODO: change from (x, y, z) order?

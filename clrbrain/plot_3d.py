@@ -96,7 +96,7 @@ def threshold(roi):
     """Thresholds the ROI, with options for various techniques as well as
     post-thresholding morphological filtering.
     
-    Params:
+    Args:
         roi: Region of interest, given as [z, y, x].
     
     Returns:
@@ -173,7 +173,7 @@ def threshold(roi):
 def deconvolve(roi):
     """Deconvolves the image.
     
-    Params:
+    Args:
         roi: ROI given as a (z, y, x) subset of image5d.
     
     Returns:
@@ -318,7 +318,7 @@ def _shadow_img2d(img2d, shape, axis, vis):
     """Shows a plane along the given axis as a shadow parallel to
     the 3D visualization.
     
-    Params:
+    Args:
         img2d: The plane to show.
         shape: Shape of the ROI.
         axis: Axis along which the plane lies.
@@ -342,7 +342,7 @@ def _shadow_img2d(img2d, shape, axis, vis):
 def plot_2d_shadows(roi, vis):
     """Plots 2D shadows in each axis around the 3D visualization.
     
-    Params:
+    Args:
         roi: Region of interest.
         vis: Visualization object on which to draw the contour. Any 
             current image will be cleared first.
@@ -499,7 +499,7 @@ def show_blobs(segments, vis, show_shadows=False):
 def normalize(array, minimum, maximum):
     """Normalizes an array to fall within the given min and max.
     
-    Params:
+    Args:
         min: Minimum value for the array.
         max: Maximum value for the array.
     

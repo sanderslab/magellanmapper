@@ -65,7 +65,7 @@ def grid_search(fnc, *fnc_args):
 def parse_grid_stats(stats_dict):
     """Parses stats from a grid search.
     
-    Params:
+    Args:
         stats_dict: Dictionary where key is a string with the parameters
             up to the last parameter group, and each value is a tuple of 
             the raw stats as (pos, true_pos, false_pos) and the array of

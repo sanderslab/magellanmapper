@@ -92,7 +92,7 @@ def denoise_sub_roi(coord):
     
     The array of ROIs is assumed to be cli.sub_rois.
     
-    Params:
+    Args:
         coord: Coordinate of the sub-ROI in the order (z, y, x).
     
     Returns:
@@ -114,7 +114,7 @@ def segment_sub_roi(sub_rois_offsets, coord):
     
     The array of ROIs is assumed to be cli.sub_rois.
     
-    Params:
+    Args:
         sub_rois_offsets: Array of offsets for each sub_roi in
             the larger array, used to give transpose the segments
             into absolute coordinates.
@@ -142,7 +142,7 @@ def collect_segments(segments_all, segments, region, tol):
     """Adds an array of segments into a master array, removing any close
     segments before adding them.
     
-    Params:
+    Args:
         segments_all: Master array of segments against which the array to
             add will be compared for close segments.
         segments: Array of segments to add.
@@ -206,7 +206,7 @@ def _check_np_none(val):
     """Checks if a value is either NoneType or a Numpy None object such as
     that returned from a Numpy archive that saved an undefined variable.
     
-    Params:
+    Args:
         val: Value to check.
     
     Returns:
@@ -217,7 +217,7 @@ def _check_np_none(val):
 def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     """Prune close blobs within overlapping regions.
     
-    Params:
+    Args:
         segs_roi: Segments from each sub-region.
         region: The region of each segment array to compare for closeness,
             given as a slice.
@@ -244,7 +244,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
     """Prune close blobs within overlapping regions by checking within
     entire planes across the ROI in parallel with multiprocessing.
     
-    Params:
+    Args:
         segs_roi: Segments from each sub-region.
         tol: Tolerance as (z, y, x), within which a segment will be 
             considered a duplicate of a segment in the master array and
@@ -338,7 +338,7 @@ def main(process_args_only=False):
     
     Processes command-line arguments.
     
-    Params:
+    Args:
         process_args_only: If True, processes command-line arguments and exits.
     """
     parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
@@ -514,7 +514,7 @@ def main(process_args_only=False):
 def _iterate_file_processing(filename_base, offsets, roi_sizes):
     """Processes files iteratively based on offsets.
     
-    Params:
+    Args:
         filename_base: Base filename.
         offsets: 2D array of multiple offsets.
         roi_sizes: 2D array of multiple ROI sizes corresponding to offsets.
@@ -541,7 +541,7 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
 def process_file(filename_base, offset, roi_size):
     """Processes a single image file non-interactively.
     
-    Params:
+    Args:
         filename: Base filename.
         offset: Offset as (x, y, z) to start processing.
         roi_size: Size of region to process, given as (x, y, z).
@@ -755,7 +755,7 @@ def process_file(filename_base, offset, roi_size):
 def process_stack(roi, overlap, tol):
     """Processes a stack, whcih can be a sub-region within an ROI.
     
-    Params:
+    Args:
         roi: The ROI to process.
         overlap: The amount of overlap to use between chunks within the stack.
         tol: Tolerance as (z, y, x), within which a segment will be 

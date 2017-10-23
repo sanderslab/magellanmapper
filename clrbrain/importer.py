@@ -15,13 +15,16 @@ Attributes:
 import os
 from time import time
 import glob
+import multiprocessing as mp
 from xml import etree as et
+
 import numpy as np
 import javabridge as jb
 import bioformats as bf
 from skimage import io
 from skimage import transform
 
+from clrbrain import chunking
 from clrbrain import detector
 from clrbrain import plot_2d
 from clrbrain import plot_3d
@@ -380,6 +383,11 @@ def import_dir(path):
 def filename_to_base(filename, series, modifier=""):
     return filename.replace(".czi", "_") + modifier + str(series).zfill(5)
 
+def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):
+    rescaled = transform.rescale(
+        sub_roi, rescale, mode="reflect", multichannel=multichannel)
+    return coord, rescaled
+
 def transpose_npy(filename, series, plane=None, rescale=None):
     """Transpose an NPY file to different orientation and scaling.
     
@@ -422,8 +430,32 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         if offset > 0:
             rescaled = rescaled[0]
         multichannel = rescaled.shape[-1] > 1
-        rescaled = transform.rescale(
-            rescaled, rescale, mode="reflect", multichannel=multichannel)
+        max_pixels = np.multiply(np.ones(3), 100)
+        
+        # rescale in chunks with multiprocessing
+        overlap = np.zeros(3)
+        sub_rois, _ = chunking.stack_splitter(rescaled, max_pixels, overlap)
+        pool = mp.Pool()
+        pool_results = []
+        for z in range(sub_rois.shape[0]):
+            for y in range(sub_rois.shape[1]):
+                for x in range(sub_rois.shape[2]):
+                    coord = (z, y, x)
+                    pool_results.append(
+                        pool.apply_async(
+                            _rescale_sub_roi, 
+                            args=(coord, sub_rois[coord], rescale, 
+                                  multichannel)))
+        for result in pool_results:
+            coord, sub_roi = result.get()
+            print("replacing sub_roi at {} of {}"
+                  .format(coord, np.add(sub_rois.shape, -1)))
+            sub_rois[coord] = sub_roi
+        
+        pool.close()
+        pool.join()
+        rescaled = chunking.merge_split_stack(sub_rois, overlap)
+        
         if offset > 0:
             image5d_swapped = np.array([rescaled])
         else:
@@ -450,5 +482,5 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    transpose_npy(cli.filename, cli.series, plot_2d.plane)
-    #transpose_npy(cli.filename, cli.series, rescale=0.05)
+    #transpose_npy(cli.filename, cli.series, plot_2d.plane)
+    transpose_npy(cli.filename, cli.series, rescale=0.05)

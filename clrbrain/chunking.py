@@ -138,6 +138,70 @@ def merge_split_stack(sub_rois, overlap):
             merged = np.concatenate((merged, merged_y), axis=0)
     return merged
 
+def get_split_stack_total_shape(sub_rois, overlap):
+    size = sub_rois.shape
+    merged_shape = np.zeros(3).astype(np.int)
+    final_shape = np.zeros(3).astype(np.int)
+    edges = None
+    for z in range(size[0]):
+        for y in range(size[1]):
+            for x in range(size[2]):
+                coord = (z, y, x)
+                sub_roi = sub_rois[coord]
+                edges = list(sub_roi.shape[0:3])
+                
+                # remove overlap if not at last sub_roi or row or column
+                for n in range(len(edges)):
+                    if coord[n] != size[n] - 1:
+                        edges[n] -= overlap[n]
+                print("edges: {}".format(edges))
+                merged_shape[2] += edges[2]
+            if final_shape[2] <= 0:
+                final_shape[2] = merged_shape[2]
+            merged_shape[1] += edges[1]
+        if final_shape[1] <= 0:
+            final_shape[1] = merged_shape[1]
+        final_shape[0] += edges[0]
+    return final_shape
+
+def merge_split_stack2(sub_rois, overlap, offset, output):
+    """Merges sub regions back into a single stack.
+    
+    Params:
+        sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
+    
+    Return:
+        The merged stack.
+    """
+    size = sub_rois.shape
+    merged_coord = np.zeros(3).astype(np.int)
+    sub_roi_shape = sub_rois[0, 0, 0].shape
+    if offset > 0:
+        output = output[0]
+    for z in range(size[0]):
+        merged_coord[1] = 0
+        for y in range(size[1]):
+            merged_coord[2] = 0
+            for x in range(size[2]):
+                coord = (z, y, x)
+                sub_roi = sub_rois[coord]
+                edges = list(sub_roi.shape[0:3])
+                
+                # remove overlap if not at last sub_roi or row or column
+                for n in range(len(edges)):
+                    if coord[n] != size[n] - 1:
+                        edges[n] -= overlap[n]
+                sub_roi = sub_roi[:edges[0], :edges[1], :edges[2]]
+                output[merged_coord[0]:merged_coord[0]+edges[0], 
+                       merged_coord[1]:merged_coord[1]+edges[1], 
+                       merged_coord[2]:merged_coord[2]+edges[2]] = sub_roi
+                merged_coord[2] += sub_roi_shape[2]
+            merged_coord[2] = 0
+            merged_coord[1] += sub_roi_shape[1]
+        merged_coord[1] = 0
+        merged_coord[0] += sub_roi_shape[0]
+
+
 def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois, 
                       sub_rois_offsets):
     """Compares blobs in a sub ROI with the blobs in the immediately preceding 

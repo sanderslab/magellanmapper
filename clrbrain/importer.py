@@ -429,11 +429,13 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         rescaled = image5d_swapped
         if offset > 0:
             rescaled = rescaled[0]
-        multichannel = rescaled.shape[-1] > 1
-        max_pixels = np.multiply(np.ones(3), 100)
+        #multichannel = rescaled.shape[-1] > 1
+        multichannel = rescaled.ndim > 3
+        #max_pixels = np.multiply(np.ones(3), 100)
+        max_pixels = [100, 500, 500]
         
         # rescale in chunks with multiprocessing
-        overlap = np.zeros(3)
+        overlap = np.zeros(3).astype(np.int)
         sub_rois, _ = chunking.stack_splitter(rescaled, max_pixels, overlap)
         pool = mp.Pool()
         pool_results = []
@@ -454,21 +456,28 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         
         pool.close()
         pool.join()
-        rescaled = chunking.merge_split_stack(sub_rois, overlap)
-        
+        rescaled_shape = chunking.get_split_stack_total_shape(sub_rois, overlap)
         if offset > 0:
-            image5d_swapped = np.array([rescaled])
-        else:
-            image5d_swapped = rescaled
+            rescaled_shape = np.concatenate(([1], rescaled_shape))
+        if multichannel:
+            rescaled_shape = np.concatenate((rescaled_shape, [rescaled.shape[-1]]))
+        print("rescaled_shape: {}".format(rescaled_shape))
+        image5d_transposed = np.lib.format.open_memmap(
+            filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype, 
+            shape=tuple(rescaled_shape))
+        chunking.merge_split_stack2(sub_rois, overlap, offset, image5d_transposed)
+        #rescaled = chunking.merge_split_stack(sub_rois, overlap)
+        
         detector.resolutions = np.multiply(detector.resolutions, 1 / rescale)
-    sizes[0] = image5d_swapped.shape
-    print("new shape: {}".format(image5d_swapped.shape))
+    else:
+        image5d_transposed = np.lib.format.open_memmap(
+            filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
+            shape=image5d_swapped.shape)
+        image5d_transposed[:] = image5d_swapped[:]
+        sizes[0] = image5d_swapped.shape
+    #print("new shape: {}".format(sizes[0]))
     print("detector.resolutions: {}".format(detector.resolutions))
     print("sizes: {}".format(sizes))
-    image5d_transposed = np.lib.format.open_memmap(
-        filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
-        shape=image5d_swapped.shape)
-    image5d_transposed[:] = image5d_swapped[:]
     image5d.flush()
     info["resolutions"] = detector.resolutions
     info["sizes"] = sizes

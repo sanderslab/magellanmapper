@@ -506,7 +506,7 @@ def normalize(array, minimum, maximum):
     Returns:
         The normalized array.
     """
-    print(array)
+    #print(array)
     if len(array) <= 0:
         return array
     array += -(np.min(array))

@@ -146,10 +146,13 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
     # swap columns if showing a different plane
     plane_axis = "z"
     if plane == PLANE[1]:
+        # "xz" planes
         size = lib_clrbrain.swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "y"
     elif plane == PLANE[2]:
+        # "yz" planes
         size = lib_clrbrain.swap_elements(size, 0, 2, 1 if image5d.ndim >= 4 else 0)
+        size = lib_clrbrain.swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "x"
     z = offset[2]
     ax.set_title("{}={}".format(plane_axis, z))
@@ -180,9 +183,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             region = lib_clrbrain.swap_elements(region, 1, 2)
         elif plane == PLANE[2]:
             region = lib_clrbrain.swap_elements(region, 1, 3)
-            if border is not None:
-                # need y instead of z values to correspond to width
-                border_bounds = np.fliplr(border_bounds)
+            region = lib_clrbrain.swap_elements(region, 1, 2)
         # get the zoomed region
         if roi.ndim >= 5:
             roi = roi[tuple(region + [channel])]
@@ -297,19 +298,23 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     border_full = np.copy(border)
     border[2] = 0
     if plane == PLANE[1]:
-        # flip y-z for planes by y instead of z
+        # "xz" planes; flip y-z to give y-planes instead of z
         roi_size = lib_clrbrain.swap_elements(roi_size, 1, 2)
         offset = lib_clrbrain.swap_elements(offset, 1, 2)
         border = lib_clrbrain.swap_elements(border, 1, 2)
         border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
         segments[:, [0, 1]] = segments[:, [1, 0]]
     elif plane == PLANE[2]:
-        # flip x-z for planes by x instead of z
-        roi_size = lib_clrbrain.swap_elements(roi_size, 0, 2)
-        offset = lib_clrbrain.swap_elements(offset, 0, 2)
-        border = lib_clrbrain.swap_elements(border, 0, 2)
-        border_full = lib_clrbrain.swap_elements(border_full, 0, 2)
+        # "yz" planes; roll backward to flip x-z and x-y
+        roi_size = lib_clrbrain.roll_elements(roi_size, -1)
+        offset = lib_clrbrain.roll_elements(offset, -1)
+        border = lib_clrbrain.roll_elements(border, -1)
+        border_full = lib_clrbrain.roll_elements(border_full, -1)
+        print("orig segments:\n{}".format(segments))
+        # roll forward since segments in zyx order
         segments[:, [0, 2]] = segments[:, [2, 0]]
+        segments[:, [1, 2]] = segments[:, [2, 1]]
+        print("rolled segments:\n{}".format(segments))
     print("2D border: {}".format(border))
     
     # total number of z-planes
@@ -359,6 +364,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
         ax.get_yaxis().set_visible(False)
         img2d_zoom = img2d
         patch_offset = offset[0:2]
+        print("patch_offset: {}".format(patch_offset))
         if i > 0:
             # move origin progressively closer withe ach zoom level
             origin = np.floor(np.multiply(offset[0:2], zoom_levels + i - 1) 

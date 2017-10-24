@@ -350,7 +350,8 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     gs = gridspec.GridSpec(2, zoom_levels, wspace=0.7, hspace=0.4,
                            height_ratios=[3, zoom_plot_rows])
     
-    # overview image, with bottom of offset shown as rectangle
+    # overview images taken from the bottom plane of the offset, with
+    # progressively zoomed overview images if set for additional zoom levels
     overview_cols = zoom_plot_cols // zoom_levels
     for i in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, i])
@@ -639,11 +640,14 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
     
     Args:
         image5d: The full image stack.
+        plane_n: Slice of planes to extract, which can be a single index 
+            or multiple indices such as would be used for an animation.
         channel: Channel to view.
-        offset: Offset given as (x, y, z), which will determine the
-            z value of the plane to extract; x and y ignored for now.
-        name: Name of the resulting file, without the extension, which
-            will be chosen based on the savefig attribute.
+        plane: Type of plane to extract, which should be one of 
+            :attribute:`PLANES`.
+        name: Name of the resulting file, without the extension.
+        savefig: Name of extension to use, which also specifies the file 
+            type in which to save.
     """
     origin = None
     aspect = None # aspect ratio
@@ -654,26 +658,25 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
         img3d = image5d[0, :, :, :]
     else:
         img3d = image5d[:, :, :]
+    # extract a single 2D plane or a stack of planes if plane_n is a slice, 
+    # which would be used for animations
     if plane == PLANE[1]:
         # xz plane
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
         origin = "lower"
         img2d = img3d[:, plane_n, :]
-        if img2d.shape[1] > 1:
-            # stack of 2D plots such as for animation; make z the "y" axis
-            #img2d = np.moveaxis(img2d, 0, -1)
+        print("img2d.shape: {}".format(img2d.shape))
+        if img2d.ndim > 2 and img2d.shape[1] > 1:
+            # make y the "z" axis for stack of 2D plots, such as animations
             img2d = np.swapaxes(img2d, 0, 1)
-            #aspect = 1 / aspect
     elif plane == PLANE[2]:
         # yz plane
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
         origin = "lower"
         img2d = img3d[:, :, plane_n]
         if img2d.ndim > 2 and img2d.shape[2] > 1:
-            # stack of 2D plots such as for animation; make z the "y" axis
+            # make x the "z" axis for stack of 2D plots, such as animations
             img2d = np.moveaxis(img2d, -1, 0)
-            #img2d = np.swapaxes(img2d, 0, 2)
-            #aspect = 1 / aspect
     else:
         # defaults to "xy"
         aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]

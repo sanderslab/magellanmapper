@@ -389,22 +389,21 @@ def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):
     return coord, rescaled
 
 def transpose_npy(filename, series, plane=None, rescale=None):
-    """Transpose an NPY file to different orientation and scaling.
+    """Transpose Numpy NPY saved arrays into new planar orientations and/or 
+    rescaled sizes.
+    
+    Saves file to a new NPY archive with "transposed" inserted just prior
+    to the series name so that "transposed" can be appended to the original
+    filename for future loading within Clrbrain. Files are saved through 
+    memmap-based arrays to minimize RAM usage.
     
     Args:
-        filename: Image filename, which will be passed to :meth:`read_file` 
-            and converted to the NPY filename.
-        series: Series number to pass along with the filename.
-        plane: The orientation, which should fit one of the 
-            :const:`plot_2d.PLANES` elements; defaults to None, in which case 
-            no re-orientation will occur. Note that "yz" orientation can 
-            take significantly longer to transpose since memmap loading 
-            will need to access the entire file many times.
-        rescale: Factor by which to rescale the entire file; defaults to 
-            None, in which case no rescaling will occur. Note that rescaling 
-            large files can require a large amount of RAM since the entire 
-            file will be loaded into memory rather than only using memmap 
-            reading.
+        filename: Full file path in :attribute:cli:`filename` format.
+        series: Series within multi-series file.
+        plane: Planar orientation (see :attribute:plot_2d:`PLANES`). Defaults 
+            to None, in which case no planar transformation will occur.
+        rescale: Rescaling factor. Defaults to None, in which case no 
+            rescaling will occur. Rescaling takes place in multiplrocessing.
     """
     image5d, image5d_info = read_file(filename, series, return_info=True)
     info = dict(image5d_info)
@@ -418,18 +417,16 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 1)
         detector.resolutions[0] = lib_clrbrain.swap_elements(
             detector.resolutions[0], 0, 1)
-        #sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 1, offset)
         if plane == plot_2d.PLANE[2]:
             # swap new y-x to get (x, z, y) order for yz orientation
             image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
             detector.resolutions[0] = lib_clrbrain.swap_elements(
                 detector.resolutions[0], 0, 2)
-            #sizes[0] = lib_clrbrain.swap_elements(sizes[0], 0, 2, offset)
     if rescale is not None:
         rescaled = image5d_swapped
+        # TODO: generalize for more than 1 preceding dimension?
         if offset > 0:
             rescaled = rescaled[0]
-        #multichannel = rescaled.shape[-1] > 1
         multichannel = rescaled.ndim > 3
         #max_pixels = np.multiply(np.ones(3), 100)
         max_pixels = [100, 500, 500]
@@ -466,14 +463,22 @@ def transpose_npy(filename, series, plane=None, rescale=None):
             filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype, 
             shape=tuple(rescaled_shape))
         chunking.merge_split_stack2(sub_rois, overlap, offset, image5d_transposed)
-        #rescaled = chunking.merge_split_stack(sub_rois, overlap)
         
         detector.resolutions = np.multiply(detector.resolutions, 1 / rescale)
+        sizes[0] = rescaled_shape
     else:
+        # transfer directly to memmap-backed array to minimize RAM usage
         image5d_transposed = np.lib.format.open_memmap(
             filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
             shape=image5d_swapped.shape)
-        image5d_transposed[:] = image5d_swapped[:]
+        if plane == plot_2d.PLANE[1] or plane == plot_2d.PLANE[2]:
+            # flip upside-down if re-orienting planes
+            if offset:
+                image5d_transposed[0, :] = np.fliplr(image5d_swapped[0, :])
+            else:
+                image5d_transposed[:] = np.fliplr(image5d_swapped[:])
+        else:
+            image5d_transposed[:] = image5d_swapped[:]
         sizes[0] = image5d_swapped.shape
     #print("new shape: {}".format(sizes[0]))
     print("detector.resolutions: {}".format(detector.resolutions))
@@ -491,5 +496,5 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    #transpose_npy(cli.filename, cli.series, plot_2d.plane)
-    transpose_npy(cli.filename, cli.series, rescale=0.05)
+    transpose_npy(cli.filename, cli.series, plot_2d.plane)
+    #transpose_npy(cli.filename, cli.series, rescale=0.05)

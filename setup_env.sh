@@ -89,12 +89,13 @@ fi
 
 # creates "clr" conda environment
 echo "Activating Anaconda environment..."
-check_env="`conda env list | grep $CONDA_ENV`"
+check_env="`conda env list | grep -w $CONDA_ENV`"
 if [[ "$check_env" == "" ]]
 then
 	echo "Creating new conda environment..."
 	conda create --name $CONDA_ENV python=3 pyqt=4
 fi
+echo "Activating conda environment..."
 source activate $CONDA_ENV
 
 # install the Menpo version of Mayavi to work with Python 3:

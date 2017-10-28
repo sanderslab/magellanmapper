@@ -10,6 +10,11 @@ Attributes:
     PIXEL_DTYPE: Dictionary of corresponding data types for 
         output given by Bioformats library. Alternatively, should detect
         pixel data type directly using parse_ome_raw().
+    IMAGE5D_NP_VER: image5d Numpy saved array version number, which should
+        be incremented with any change to the image5d or its support "info"
+        save array format.
+    SUFFIX_IMAGE5D: Suffix for the image5d Numpy array archive.
+    SUFFIX_INFO: Suffix for the image5d Numpy array "info" support archive.
 """
 
 import os
@@ -44,8 +49,10 @@ PIXEL_DTYPE = {
     7: np.double
 }
 
-# image5d Numpy saved array version number
-IMAGE5D_NP_VER = 10
+# image5d archive
+IMAGE5D_NP_VER = 10 # image5d Numpy saved array version number
+SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
+SUFFIX_INFO = "_info.npz"
 
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
@@ -170,8 +177,8 @@ def find_sizes(filename):
 
 def _make_filenames(filename, series, modifier=""):
     filename_base = filename_to_base(filename, series, modifier)
-    filename_image5d_npz = filename_base + "_image5d.npz"
-    filename_info_npz = filename_base + "_info.npz"
+    filename_image5d_npz = filename_base + SUFFIX_IMAGE5D
+    filename_info_npz = filename_base + SUFFIX_INFO
     return filename_image5d_npz, filename_info_npz
 
 def _save_image_info(filename_info_npz, names, sizes, resolutions, 

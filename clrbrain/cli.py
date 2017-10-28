@@ -342,8 +342,8 @@ def main(process_args_only=False):
         process_args_only: If True, processes command-line arguments and exits.
     """
     parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
-    global filename, series, series_list, channel, roi_size, rois_sizes, \
-            offset, offsets, proc_type, mlab_3d, truth_db_type
+    global filename, filenames, series, series_list, channel, roi_size, \
+            rois_sizes, offset, offsets, proc_type, mlab_3d, truth_db_type
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series")

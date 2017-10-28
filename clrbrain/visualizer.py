@@ -59,7 +59,7 @@ def main():
     Processes command-line arguments.
     """
     cli.main()
-    pylab.rcArgs.update(params)
+    pylab.rcParams.update(params)
     push_exception_handler(reraise_exceptions=True)
     visualization = Visualization()
     visualization.configure_traits()

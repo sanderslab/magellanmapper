@@ -8,18 +8,21 @@ import SimpleITK as sitk
 import numpy as np
 
 from clrbrain import cli
+from clrbrain import detector
 from clrbrain import importer
 
 def register(fixed_file, moving_file):
     """Registers two images to one another using the SimpleElastix library.
     
     Args:
-        fixed_file: The image to register
+        fixed_file: The image to register, given as a Numpy archive file to 
+            be read by :importer:`read_file`.
         moving_file: The reference image.
     """
-    #fixed_img = sitk.ReadImage(fixed_file)
-    image5d = np.load(fixed_file)
+    image5d = importer.read_file(fixed_file, cli.series)
     fixed_img = sitk.GetImageFromArray(image5d[0, :, :, :])
+    fixed_img.SetSpacing(detector.resolutions[0])
+    print("spacing: {}".format(fixed_img.GetSpacing()))
     print(fixed_img)
     moving_img = sitk.ReadImage(moving_file)
     print(moving_img)
@@ -41,6 +44,4 @@ def register(fixed_file, moving_file):
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    fixed_img = (importer.filename_to_base(cli.filenames[0], cli.series) 
-                 + importer.SUFFIX_IMAGE5D)
-    register(fixed_img, cli.filenames[1])
+    register(cli.filenames[0], cli.filenames[1])

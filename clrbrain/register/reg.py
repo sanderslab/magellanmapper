@@ -11,7 +11,7 @@ from clrbrain import cli
 from clrbrain import detector
 from clrbrain import importer
 
-def register(fixed_file, moving_file):
+def register(fixed_file, moving_file, flip_horiz=False):
     """Registers two images to one another using the SimpleElastix library.
     
     Args:
@@ -20,9 +20,14 @@ def register(fixed_file, moving_file):
         moving_file: The reference image.
     """
     image5d = importer.read_file(fixed_file, cli.series)
-    fixed_img = sitk.GetImageFromArray(image5d[0, :, :, :])
+    roi = image5d[0, ...] # not using time dimension
+    if flip_horiz:
+        roi = image5d[..., ::-1]
+    fixed_img = sitk.GetImageFromArray(roi)
     fixed_img.SetSpacing(detector.resolutions[0])
-    print("spacing: {}".format(fixed_img.GetSpacing()))
+    #print("roi.shape: {}".format(roi.shape))
+    fixed_img.SetOrigin([0, 0, -roi.shape[0] // 2])
+    #print("spacing: {}".format(fixed_img.GetSpacing()))
     print(fixed_img)
     moving_img = sitk.ReadImage(moving_file)
     print(moving_img)
@@ -44,4 +49,4 @@ def register(fixed_file, moving_file):
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    register(cli.filenames[0], cli.filenames[1])
+    register(cli.filenames[0], cli.filenames[1], flip_horiz=False)

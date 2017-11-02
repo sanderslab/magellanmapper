@@ -53,3 +53,9 @@ def roll_elements(arr, shift, axis=None):
         arr = tuple(arr)
     #print("after moving: {}".format(arr))
     return arr
+
+def insert_before_ext(name, insert):
+    return "{0}{2}.{1}".format(*name.rsplit(".", 1) + [insert])
+
+if __name__ == "__main__":
+    print(insert_before_ext("test.name01.jpg", "_modifier"))

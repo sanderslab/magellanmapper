@@ -360,8 +360,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     overview_cols = zoom_plot_cols // zoom_levels
     for i in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, i])
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
+        _hide_axes(ax)
         img2d_zoom = img2d
         patch_offset = offset[0:2]
         print("patch_offset: {}".format(patch_offset))
@@ -693,8 +692,7 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
         print("extracting plane as {}".format(filename))
         fig = plt.figure(frameon=False)
         ax = fig.add_subplot(111)
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
+        _hide_axes(ax)
         ax.imshow(img2d, cmap=CMAP_GRBK, aspect=aspect, origin=origin)
         fig.savefig(filename)
     return img2d, aspect, origin
@@ -745,13 +743,36 @@ def plot_roc(stats_dict, name):
     plt.show()
 
 def _show_overlay(ax, img, z, cmap, aspect=1.0, alpha=1.0, title=None):
+    """Shows an image for overlays.
+    
+    Args:
+        ax: Subplot axes.
+        img: 3D image.
+        z: Plane of `img` to show.
+        cmap: Name of colormap.
+        aspect: Aspect ratio; defaults to 1.0.
+        alpha: Alpha level; defaults to 1.0.
+        title: Subplot title; defaults to None, in which case no title will 
+            be shown.
+    """
     ax.imshow(img[z], cmap=cmap, aspect=aspect, alpha=alpha)
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
+    _hide_axes(ax)
     if title is not None:
         ax.set_title(title)
 
 def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
+    """Plot images in a single row, with the final subplot showing an 
+    overlay of all images.
+    
+    Args:
+        imgs: List of 3D images to show.
+        z: Z-plane to view for all images.
+        cmaps: List of colormap names, which should be be the same length as 
+            `imgs`, with the colormap applied to the corresponding image.
+        title: Figure title; if None, will be given default title.
+        aspect: Aspect ratio, which will be applied to all images; 
+           defaults to 1.0.
+    """
     fig = plt.figure()
     fig.suptitle(title)
     imgs_len = len(imgs)
@@ -767,15 +788,37 @@ def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
     gs.tight_layout(fig)
     plt.show()
 
-def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, z, cmap_exp, cmap_atlas, cmap_labels, 
-                      title=None, aspect=1.0):
+def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, z, cmap_exp, 
+                      cmap_atlas, cmap_labels, title=None, aspect=1.0):
+    """Plot overlays of registered 3D images, showing overlap of atlas and 
+    experimental image planes.
+    
+    Shows the figure on screen. If :attribute:plot_2d:`savefig` is set, 
+    the figure will be saved to file with the extensive given by savefig.
+    
+    Args:
+        exp: Experimental image.
+        atlas: Atlas image, unregistered.
+        atlas_reg: Atlas image, after registration.
+        labels_reg: Atlas labels image, also registered.
+        z: Z-plane to view for all images.
+        cmap_exp: Colormap for the experimental image.
+        cmap_atlas: Colormap for the atlas.
+        cmap_labels: Colormap for the labels.
+        title: Figure title; if None, will be given default title.
+        aspect: Aspect ratio, which will be applied to all images except 
+            for the original, unregisterd atlas; defaults to 1.0.
+    """
     fig = plt.figure()
     fig.suptitle(title)
-    gs = gridspec.GridSpec(2, 3)
+    # give extra space to the first row since the atlas is often larger
+    gs = gridspec.GridSpec(2, 3, height_ratios=[3, 2])
     
     # experimental image and atlas
-    _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, aspect, title="Experiment")
-    _show_overlay(plt.subplot(gs[0, 1]), atlas, z, cmap_atlas, alpha=0.5, title="Atlas")
+    _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, aspect, 
+                              title="Experiment")
+    _show_overlay(plt.subplot(gs[0, 1]), atlas, z, cmap_atlas, alpha=0.5, 
+                              title="Atlas")
     
     # atlas overlaid onto experiment
     ax = plt.subplot(gs[0, 2])

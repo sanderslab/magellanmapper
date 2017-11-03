@@ -55,6 +55,15 @@ def roll_elements(arr, shift, axis=None):
     return arr
 
 def insert_before_ext(name, insert):
+    """Inserts a string before an extension.
+    
+    Args:
+        name: Path.
+        insert: String to insert before the extension in the name.
+    
+    Returns:
+        Modified path.
+    """
     return "{0}{2}.{1}".format(*name.rsplit(".", 1) + [insert])
 
 if __name__ == "__main__":

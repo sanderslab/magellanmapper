@@ -744,6 +744,67 @@ def plot_roc(stats_dict, name):
     plt.title("ROC for {}".format(name))
     plt.show()
 
+def _show_overlay(ax, img, z, cmap, aspect=1.0, alpha=1.0, title=None):
+    ax.imshow(img[z], cmap=cmap, aspect=aspect, alpha=alpha)
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    if title is not None:
+        ax.set_title(title)
+
+def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
+    fig = plt.figure()
+    fig.suptitle(title)
+    imgs_len = len(imgs)
+    gs = gridspec.GridSpec(1, imgs_len + 1)
+    for i in range(imgs_len):
+        print("showing img {}".format(i))
+        _show_overlay(plt.subplot(gs[0, i]), imgs[i], z, cmaps[i], aspect)
+    ax = plt.subplot(gs[0, imgs_len])
+    for i in range(imgs_len):
+        _show_overlay(ax, imgs[i], z, cmaps[i], aspect, alpha=0.5)
+    if title is None:
+        title = "Image overlays"
+    gs.tight_layout(fig)
+    plt.show()
+
+def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, z, cmap_exp, cmap_atlas, cmap_labels, 
+                      title=None, aspect=1.0):
+    fig = plt.figure()
+    fig.suptitle(title)
+    gs = gridspec.GridSpec(2, 3)
+    
+    # experimental image and atlas
+    _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, aspect, title="Experiment")
+    _show_overlay(plt.subplot(gs[0, 1]), atlas, z, cmap_atlas, alpha=0.5, title="Atlas")
+    
+    # atlas overlaid onto experiment
+    ax = plt.subplot(gs[0, 2])
+    _show_overlay(ax, exp, z, cmap_exp, aspect, title="Registered")
+    _show_overlay(ax, atlas_reg, z, cmap_atlas, aspect, 0.5)
+    
+    # labels overlaid onto atlas
+    ax = plt.subplot(gs[1, 0])
+    _show_overlay(ax, atlas_reg, z, cmap_atlas, aspect, title="Labeled atlas")
+    _show_overlay(ax, labels_reg, z, cmap_labels, aspect, 0.5)
+    
+    # labels overlaid onto exp
+    ax = plt.subplot(gs[1, 1])
+    _show_overlay(ax, exp, z, cmap_exp, aspect, title="Labeled experiment")
+    _show_overlay(ax, labels_reg, z, cmap_labels, aspect, 0.5)
+    
+    # all overlaid
+    ax = plt.subplot(gs[1, 2])
+    _show_overlay(ax, exp, z, cmap_exp, aspect, title="All overlaid")
+    _show_overlay(ax, atlas_reg, z, cmap_atlas, aspect, 0.5)
+    _show_overlay(ax, labels_reg, z, cmap_labels, aspect, 0.3)
+    
+    if title is None:
+        title = "Image Overlays"
+    gs.tight_layout(fig)
+    if savefig is not None:
+        plt.savefig(title + "." + savefig)
+    plt.show()
+
 if __name__ == "__main__":
     print("Testing plot_2d...")
     stats_dict = { 

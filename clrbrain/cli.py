@@ -25,6 +25,7 @@ Command-line arguments in addition to those from attributes listed below:
         include segments and and show further 2D planes.
     * mlab_3d: 3D visualization mode (see plot_3d.py).
     * plane: Plane type (see plot_2d.py PLANE).
+    * saveroi: Save ROI from original image to file during stack processing.
 
 Attributes:
     filename: The filename of the source images. A corresponding file with
@@ -362,6 +363,7 @@ def main(process_args_only=False):
     parser.add_argument("--truth_db")
     parser.add_argument("--roc", action="store_true")
     parser.add_argument("--plane")
+    parser.add_argument("--saveroi", action="store_true")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -457,6 +459,9 @@ def main(process_args_only=False):
         from clrbrain import plot_2d
         plot_2d.plane = args.plane
         print("Set plane to {}".format(plot_2d.plane))
+    if args.saveroi:
+        config.saveroi = args.saveroi
+        print("Set save ROI to file to ".format(config.saveroi))
     
     # load "truth blobs" from separate database for viewing
     filename_base = importer.filename_to_base(filename, series)
@@ -563,15 +568,13 @@ def process_file(filename_base, offset, roi_size):
     if proc_type == PROC_TYPES[3]:
         # loads from processed files
         global image5d_proc, segments_proc
-        '''# deprecated processed image loading
         try:
-            # processed image file, using mem-mapped accessed for the 
-            # image file to minimize memory requirement, only loading on-the-fly
+            # processed image file, which < v.0.4.3 was the saved 
+            # filtered image, but >= v.0.4.3 is the ROI chunk of the orig image
             image5d_proc = np.load(filename_image5d_proc, mmap_mode="r")
         except IOError:
             print("Unable to load processed image file from {}, will ignore"
                   .format(filename_image5d_proc))
-        '''
         try:
             # processed segments and other image information
             output_info = np.load(filename_info_proc)
@@ -601,7 +604,8 @@ def process_file(filename_base, offset, roi_size):
                 basename = output_info["basename"]
                 roi_offset = _check_np_none(output_info["offset"])
                 shape = _check_np_none(output_info["roi_size"])
-                print("loaded processed offset: {}, roi_size: {}".format(roi_offset, shape))
+                print("loaded processed offset: {}, roi_size: {}"
+                      .format(roi_offset, shape))
                 # raw image file assumed to be in same dir as processed file
                 path = os.path.join(os.path.dirname(filename_base), 
                                     str(basename))
@@ -609,7 +613,13 @@ def process_file(filename_base, offset, roi_size):
                 print(e)
                 print("No information on portion of stack to load")
             image5d = importer.read_file(
-                path, series, offset=roi_offset, size=shape, channel=channel)
+                path, series, offset=roi_offset, size=shape, channel=channel,
+                import_if_absent=False)
+            if image5d is None:
+                # if unable to load original image, attempts to use ROI file
+                image5d = image5d_proc
+                if image5d is None:
+                    raise IOError("Neither original nor ROI image file found")
             return
         except IOError as e:
             print("Unable to load processed info file at {}, will exit"
@@ -730,12 +740,19 @@ def process_file(filename_base, offset, roi_size):
         
         # save denoised stack, segments, and scaling info to file
         file_time_start = time()
-        '''
-        # TODO: write files to memmap array to release RAM?
-        outfile_image5d_proc = open(filename_image5d_proc, "wb")
-        np.save(outfile_image5d_proc, merged)
-        outfile_image5d_proc.close()
-        '''
+        if config.saveroi:
+            '''
+            # write the merged file
+            # TODO: write files to memmap array to release RAM?
+            outfile_image5d_proc = open(filename_image5d_proc, "wb")
+            np.save(outfile_image5d_proc, merged)
+            outfile_image5d_proc.close()
+            '''
+            # write the ROI
+            outfile_image5d_proc = open(filename_image5d_proc, "wb")
+            np.save(outfile_image5d_proc, roi)
+            outfile_image5d_proc.close()
+        
         outfile_info_proc = open(filename_info_proc, "wb")
         #print("merged shape: {}".format(merged.shape))
         np.savez(outfile_info_proc, segments=segments_all, 

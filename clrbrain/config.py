@@ -172,3 +172,6 @@ colors = np.array(
 
 # max pixels for x- and y- dimensions of sub-stacks for stack processing
 sub_stack_max_pixels = 1000
+
+# flag to save ROI to file
+saveroi = False

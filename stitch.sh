@@ -8,7 +8,7 @@
 # Arguments:
 #   -h: Show help and exit.
 #   -f: Path to image file.
-#   -o: Output directory (DEPRECATED, not used).
+#   -o: Output directory.
 #   -c: Compute overlap and write registered tile configuration. 
 #     Defaults to use coordinates from TileConfiguration.txt 
 #     directly.
@@ -41,6 +41,7 @@ echo $PWD
 
 compute_overlap=0
 write_fused=0
+out_dir=""
 
 OPTIND=1
 while getopts hf:o:cw opt; do
@@ -51,10 +52,8 @@ while getopts hf:o:cw opt; do
         f)  IMG="$OPTARG"
             echo "Set image file to $IMG"
             ;;
-        o)  OUT_DIR="$OPTARG"
-            echo "Set output directory to $OUT_DIR"
-            echo "NOTE: This path will be ignored for now"
-            echo "and based on image directory instead"
+        o)  out_dir="$OPTARG"
+            echo "Set output directory to $out_dir"
             ;;
         c)  compute_overlap=1
             echo "Set to compute overlap between tiles"
@@ -113,3 +112,21 @@ echo "Reserving $mem MB of memory"
 # evaluates the options directly from command-line;
 # does not appear to work when fed a separate script in "-macro" mode
 $IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",compute_overlap="'"$compute_overlap"'",write_fused="'"$write_fused"'"'
+
+
+# manually move files to output directory since specifying this directory
+# within the Stitching plugin requires the tile configuration file to be
+# there as well
+if [ $write_fused -eq 0 ] || [ "$out_dir" == "" ]
+then
+    # exit if not writing fused files or no dir to move into
+    exit 0
+fi
+# move into out_dir, assuming output files are in format "img_t..."
+in_dir="`dirname $IMG`"
+echo "Moving files from $in_dir to $out_dir..."
+if [ ! -e "$out_dir" ]
+then
+    mkdir "$out_dir"
+fi
+mv "$in_dir"/img_t* "$out_dir"

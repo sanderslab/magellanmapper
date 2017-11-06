@@ -160,11 +160,12 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "Border zone", "Outline", "Circles"]
+    _DEFAULTS_2D = ["Filtered", "Border zone", "Outline", "Grid"]
     _planes_2d = List
     _border_on = False # remembers last border selection
     _DEFAULT_BORDER = np.zeros(3) # default ROI border size
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
+    _circles_2d = List
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
     
@@ -351,9 +352,10 @@ class Visualization(HasTraits):
         self.rois_check_list = self._roi_default
         
         # default options setup
+        self._circles_2d = [plot_2d.CIRCLES[0]]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
-        self._check_list_2d = [self._DEFAULTS_2D[1], self._DEFAULTS_2D[3]]
+        self._check_list_2d = [self._DEFAULTS_2D[1]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
         
         # show the default ROI
@@ -491,7 +493,8 @@ class Visualization(HasTraits):
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         title = _fig_title(curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(cli.filename, cli.series)
-        circles = self._DEFAULTS_2D[3] in self._check_list_2d
+        circles = self._circles_2d[0].lower()
+        grid = self._DEFAULTS_2D[3] in self._check_list_2d
         screenshot = self.scene.mlab.screenshot(antialiased=True)
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # Multi-zoom style
@@ -502,7 +505,7 @@ class Visualization(HasTraits):
                                   self._planes_2d[0].lower(), 
                                   (0, 0, 0), 3, True, "middle", roi, 
                                   labels=self.labels, circles=circles, 
-                                  mlab_screenshot=screenshot)
+                                  mlab_screenshot=screenshot, grid=grid)
         else:
             # defaults to Square style
             plot_2d.plot_2d_stack(self, title, filename_base,
@@ -512,7 +515,7 @@ class Visualization(HasTraits):
                                   self._planes_2d[0].lower(), 
                                   roi=roi, labels=self.labels, 
                                   blobs_truth=blobs_truth_roi, circles=circles, 
-                                  mlab_screenshot=screenshot)
+                                  mlab_screenshot=screenshot, grid=grid)
     
     def _btn_save_segments_fired(self):
         self.save_segs()
@@ -654,22 +657,30 @@ class Visualization(HasTraits):
                 HGroup(
                     Item(
                          "_check_list_2d", 
-                         editor=CheckListEditor(values=_DEFAULTS_2D, cols=2), 
+                         editor=CheckListEditor(values=_DEFAULTS_2D, cols=1), 
                          style="custom",
                          label="2D options"
                     ),
-                    Item(
-                         "_planes_2d", 
-                         editor=CheckListEditor(values=_DEFAULTS_PLANES_2D), 
-                         style="simple",
-                         label="Plane"
+                    VGroup(
+                        Item(
+                             "_circles_2d", 
+                             editor=CheckListEditor(values=plot_2d.CIRCLES), 
+                             style="simple",
+                             label="Circles"
+                        ),
+                        Item(
+                             "_planes_2d", 
+                             editor=CheckListEditor(values=_DEFAULTS_PLANES_2D), 
+                             style="simple",
+                             label="Plane"
+                        ),
+                        Item(
+                             "_styles_2d", 
+                             editor=CheckListEditor(values=_DEFAULTS_STYLES_2D), 
+                             style="simple",
+                             label="2D styles"
+                        ),
                     ),
-                ),
-                Item(
-                     "_styles_2d", 
-                     editor=CheckListEditor(values=_DEFAULTS_STYLES_2D), 
-                     style="simple",
-                     label="2D Styles"
                 ),
                 HGroup(
                     Item("btn_redraw_trait", show_label=False), 

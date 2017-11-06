@@ -44,6 +44,7 @@ ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
 PLANE = ("xy", "xz", "yz")
 plane = None
+CIRCLES = ("Circles", "Repeat circles", "No circles")
 
 segs_color_dict = {
     -1: None,
@@ -108,7 +109,8 @@ def add_scale_bar(ax):
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
                  segments_adj=None, plane="xy", roi=None, z_relative=-1,
-                 labels=None, blobs_truth=None, circles=True, aspect=None):
+                 labels=None, blobs_truth=None, circles=None, aspect=None, 
+                 grid=False):
     """Shows subplots of the region of interest.
     
     Args:
@@ -203,32 +205,47 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                 print("could not show label:\n{}".format(labels[z_relative]))
             #ax.imshow(labels[z_relative])
         
-        # highlight borders of z plane at bottom of ROI
         if highlight:
+            # highlight borders of z plane at bottom of ROI
             for spine in ax.spines.values():
                 spine.set_edgecolor("yellow")
+        if grid:
+            # draw grid lines by directly editing copy of image
+            grid_intervals = (roi_size[0] // 4, roi_size[1] // 4)
+            roi = np.copy(roi)
+            roi[::grid_intervals[0], :] = roi[::grid_intervals[0], :] / 2
+            roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha, aspect=aspect)
         
-        if circles:
-            # draws all segments as patches
-            if segments is not None and segs_cmap is not None:
-                collection = _circle_collection(segments, 
-                                                segs_cmap.astype(float) / 255.0,
-                                                "none", SEG_LINEWIDTH)
-                ax.add_collection(collection)
+        if not circles == CIRCLES[2].lower():
+            segs = segments
+            if circles is None or circles == CIRCLES[0].lower():
+                # zero radius of all segments outside of current z to preserve 
+                # the order of segments for the corresponding colormap order 
+                # while hiding outside segments
+                segs = np.copy(segs)
+                segs[segs[:, 0] != z_relative] = 0
             
-            # overlays segments in adjacent regions with dashed line patch
-            if segments_adj is not None:
-                collection_adj = _circle_collection(segments_adj, "k", "none", 
-                                                    SEG_LINEWIDTH)
-                collection_adj.set_linestyle("--")
-                ax.add_collection(collection_adj)
+            if circles == CIRCLES[1].lower():
+                # overlays segments in adjacent regions with dashed line patch
+                if segments_adj is not None:
+                    collection_adj = _circle_collection(
+                        segments_adj, "k", "none", SEG_LINEWIDTH)
+                    collection_adj.set_linestyle("--")
+                    ax.add_collection(collection_adj)
+                
+            # show segments as patches
+            if segments is not None and segs_cmap is not None:
+                collection = _circle_collection(
+                    segs, segs_cmap.astype(float) / 255.0, "none", 
+                    SEG_LINEWIDTH)
+                ax.add_collection(collection)
             
             # overlays segments in current z with dotted line patch and makes
             # pickable for verifying the segment
             if segments_z is not None:
-                collection_z = _circle_collection(segments_z, "w", "none", 
-                                                  SEG_LINEWIDTH)
+                collection_z = _circle_collection(
+                    segments_z, "w", "none", SEG_LINEWIDTH)
                 collection_z.set_linestyle(":")
                 collection_z.set_picker(5)
                 ax.add_collection(collection_z)
@@ -254,8 +271,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
 def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
-                  roi=None, labels=None, blobs_truth=None, circles=True, 
-                  mlab_screenshot=None):
+                  roi=None, labels=None, blobs_truth=None, circles=None, 
+                  mlab_screenshot=None, grid=False):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -462,7 +479,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                 segments, segments_z, segs_cmap, alpha, z == z_overview, 
                 border_full if show_border else None, segs_out, plane, roi_show, 
                 z_relative, labels, blobs_truth_z, circles=circles, 
-                aspect=aspect)
+                aspect=aspect, grid=grid)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             collection_z_list.append(collection_z)
@@ -470,7 +487,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
             
             # restores saved segment markings as patches, which are pickable
             # from their corresponding segments within their collection
-            if circles:
+            if circles is None or circles == CIRCLES[0].lower():
                 segi = 0
                 for seg in segments_z:
                     if seg[4] != -1:

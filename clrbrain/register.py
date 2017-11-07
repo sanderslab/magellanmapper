@@ -67,7 +67,7 @@ def _show_overlays(imgs, translation, fixed_file):
     """
     cmaps = ["Blues", "Oranges", "prism"]
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
-    translation = None # TODO: not using translation parameters for now
+    #translation = None # TODO: not using translation parameters for now
     plot_2d.plot_overlays_reg(*imgs, *cmaps, translation, os.path.basename(fixed_file))
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
@@ -85,6 +85,48 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     print("transform: {}, spacing: {}, translation: {}"
           .format(transform, spacing, translation))
     return param_map, translation
+
+def _mirror_labels(img):
+    """Mirror labels across the z plane.
+    
+    Assumes that the image is empty from the far z planes toward the middle 
+    but not necessarily the exact middle. Finds the first plane that doesn't 
+    have any intensity values and sets this position as the mirror plane.
+    
+    Args:
+        img: Image in SimpleITK format.
+    
+    Returns:
+        The mirrored image in the same dimensions, origin, and spacing as the 
+        original image.
+    """
+    img_np = sitk.GetArrayFromImage(img)
+    tot_planes = len(img_np)
+    i = tot_planes
+    # need to work backward since the starting z-planes may also be empty
+    for plane in img_np[::-1]:
+        if not np.allclose(plane, 0):
+            break
+        i -= 1
+    if i <= tot_planes and i >= 0:
+        # if a empty planes at end, fill the empty space with the preceding 
+        # planes in mirrored fashion
+        remaining_planes = tot_planes - i
+        end = i - remaining_planes
+        if end < 0:
+            end = 0
+            remaining_planes = i
+        print("i: {}, end: {}, remaining_planes: {}, tot_planes: {}"
+              .format(i, end, remaining_planes, tot_planes))
+        img_np[i:i+remaining_planes] = img_np[i-1:end-1:-1]
+    else:
+        # skip mirroring if no planes are empty or only first plane is empty
+        print("nothing to mirror")
+        return img
+    img_reflected = sitk.GetImageFromArray(img_np)
+    img_reflected.SetSpacing(img.GetSpacing())
+    img_reflected.SetOrigin(img.GetOrigin())
+    return img_reflected
 
 def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True, 
              write_imgs=False):
@@ -122,6 +164,9 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     param_map = sitk.GetDefaultParameterMap("affine")
     #param_map["MaximumNumberOfIterations"] = ["512"]
     param_map_vector.append(param_map)
+    # TODO: bspline crashes on JacobianTerms computation
+    #param_map = sitk.GetDefaultParameterMap("bspline")
+    #param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)
     elastix_img_filter.PrintParameterMap()
     transform = elastix_img_filter.Execute()
@@ -136,13 +181,15 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     _, translation = _handle_transform_file(fixed_file, transform_param_map)
     translation = _translation_adjust(moving_img, transformed_img, translation)
     
+    # apply transformation to label files
     transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     img_files = (IMG_LABELS, )
     imgs_transformed = []
     for img_file in img_files:
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
-        #sitk.Show(img)
+        # ABA only gives half of atlas so need to mirro one side to other
+        img = _mirror_labels(img)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
@@ -150,6 +197,10 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         if write_imgs:
             out_path = _reg_out_path(fixed_dir, img_file)
             sitk.WriteImage(result_img, out_path, False)
+            '''
+            out_path = _reg_out_path(fixed_dir, "label.mhd")
+            sitk.WriteImage(img, out_path, False)
+            '''
     
     if show_imgs:
         sitk.Show(fixed_img)
@@ -187,8 +238,8 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False):
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, write_imgs=True)
+    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, write_imgs=True)
     #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane
-        overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)
+        #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)

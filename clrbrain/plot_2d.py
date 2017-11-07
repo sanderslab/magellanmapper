@@ -759,20 +759,32 @@ def plot_roc(stats_dict, name):
     plt.title("ROC for {}".format(name))
     plt.show()
 
-def _show_overlay(ax, img, z, cmap, aspect=1.0, alpha=1.0, title=None):
-    """Shows an image for overlays.
+def _show_overlay(ax, img, plane_i, cmap, aspect=1.0, alpha=1.0, title=None):
+    """Shows an image for overlays in the orthogonal plane specified by 
+    :attribute:`plane`.
     
     Args:
         ax: Subplot axes.
         img: 3D image.
-        z: Plane of `img` to show.
+        plane_i: Plane index of `img` to show.
         cmap: Name of colormap.
         aspect: Aspect ratio; defaults to 1.0.
         alpha: Alpha level; defaults to 1.0.
         title: Subplot title; defaults to None, in which case no title will 
             be shown.
     """
-    ax.imshow(img[z], cmap=cmap, aspect=aspect, alpha=alpha)
+    if plane == PLANE[1]:
+        # xz plane
+        img_2d = img[:, plane_i]
+    elif plane == PLANE[2]:
+        # yz plane, which requires a rotation
+        img_2d = img[:, :, plane_i]
+        img_2d = np.swapaxes(img_2d, 0, 1)
+        aspect = 1 / aspect
+    else:
+        # xy plane (default)
+        img_2d = img[plane_i]
+    ax.imshow(img_2d, cmap=cmap, aspect=aspect, alpha=alpha)
     _hide_axes(ax)
     if title is not None:
         ax.set_title(title)
@@ -805,7 +817,7 @@ def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
     gs.tight_layout(fig)
     plt.show()
 
-def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, z, cmap_exp, 
+def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp, 
                       cmap_atlas, cmap_labels, title=None, aspect=1.0):
     """Plot overlays of registered 3D images, showing overlap of atlas and 
     experimental image planes.
@@ -818,7 +830,6 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, z, cmap_exp,
         atlas: Atlas image, unregistered.
         atlas_reg: Atlas image, after registration.
         labels_reg: Atlas labels image, also registered.
-        z: Z-plane to view for all images.
         cmap_exp: Colormap for the experimental image.
         cmap_atlas: Colormap for the atlas.
         cmap_labels: Colormap for the labels.
@@ -830,6 +841,22 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, z, cmap_exp,
     fig.suptitle(title)
     # give extra space to the first row since the atlas is often larger
     gs = gridspec.GridSpec(2, 3, height_ratios=[3, 2])
+    resolution = detector.resolutions[0]
+    aspect = 1.0
+    z = 0
+    if plane == PLANE[1]:
+        # xz plane
+        aspect = resolution[0] / resolution[2]
+        z = exp.shape[1] // 3
+    elif plane == PLANE[2]:
+        # yz plane
+        aspect = resolution[0] / resolution[1]
+        z = exp.shape[2] // 3
+    else:
+        # xy plane (default)
+        aspect = resolution[1] / resolution[2]
+        z = exp.shape[0] // 3
+    print("aspect: {}".format(aspect))
     
     # experimental image and atlas
     _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, aspect, 

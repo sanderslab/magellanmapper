@@ -22,12 +22,10 @@ def _reg_out_path(base_path, base_name):
     return os.path.join(
         base_path, lib_clrbrain.insert_before_ext(base_name, _REG_MOD))
 
-def _show_overlays(imgs, z, fixed_file):
+def _show_overlays(imgs, fixed_file):
     cmaps = ["Blues", "Oranges", "prism"]
-    aspect = detector.resolutions[0, 1] / detector.resolutions[0, 0]
-    print("aspect: {}".format(aspect))
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
-    plot_2d.plot_overlays_reg(*imgs, z, *cmaps, os.path.basename(fixed_file), aspect)
+    plot_2d.plot_overlays_reg(*imgs, *cmaps, os.path.basename(fixed_file))
 
 def register(fixed_file, moving_file_dir, flip_horiz=False, write_imgs=False):
     """Registers two images to one another using the SimpleElastix library.
@@ -130,7 +128,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False):
     out_path = _reg_out_path(fixed_dir, IMG_LABELS)
     labels_img = sitk.GetArrayFromImage(sitk.ReadImage(out_path))
     imgs = [roi, moving_img_orig, moving_img, labels_img]
-    _show_overlays(imgs, roi.shape[0] // 3, fixed_file)
+    _show_overlays(imgs, fixed_file)
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

@@ -818,7 +818,7 @@ def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
     plt.show()
 
 def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp, 
-                      cmap_atlas, cmap_labels, title=None, aspect=1.0):
+                      cmap_atlas, cmap_labels, translation=None, title=None):
     """Plot overlays of registered 3D images, showing overlap of atlas and 
     experimental image planes.
     
@@ -833,35 +833,53 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         cmap_exp: Colormap for the experimental image.
         cmap_atlas: Colormap for the atlas.
         cmap_labels: Colormap for the labels.
+        translation: Translation in (z, y, x) order for consistency with 
+            operations on Numpy rather than SimpleITK images here; defaults 
+            to None, in which case the chosen plane index for the 
+            unregistered atlast will be the same fraction of its size as for 
+            the registered image.
         title: Figure title; if None, will be given default title.
-        aspect: Aspect ratio, which will be applied to all images except 
-            for the original, unregisterd atlas; defaults to 1.0.
     """
     fig = plt.figure()
     fig.suptitle(title)
     # give extra space to the first row since the atlas is often larger
     gs = gridspec.GridSpec(2, 3, height_ratios=[3, 2])
     resolution = detector.resolutions[0]
+    #size_ratio = np.divide(atlas_reg.shape, exp.shape)
     aspect = 1.0
     z = 0
+    atlas_z = 0
     if plane == PLANE[1]:
         # xz plane
         aspect = resolution[0] / resolution[2]
         z = exp.shape[1] // 3
+        if translation is None:
+            atlas_z = atlas.shape[1] // 3
+        else:
+            atlas_z = int(z - translation[1])
     elif plane == PLANE[2]:
         # yz plane
         aspect = resolution[0] / resolution[1]
         z = exp.shape[2] // 3
+        if translation is None:
+            atlas_z = atlas.shape[2] // 3
+        else:
+            # TODO: not sure why needs to be addition here
+            atlas_z = int(z + translation[2])
     else:
         # xy plane (default)
         aspect = resolution[1] / resolution[2]
         z = exp.shape[0] // 3
-    print("aspect: {}".format(aspect))
+        if translation is None:
+            atlas_z = atlas.shape[0] // 3
+        else:
+            atlas_z = int(z - translation[0])
+    print("z: {}, atlas_z: {}, aspect: {}".format(z, atlas_z, aspect))
     
     # experimental image and atlas
     _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, aspect, 
                               title="Experiment")
-    _show_overlay(plt.subplot(gs[0, 1]), atlas, z, cmap_atlas, alpha=0.5, 
+    _show_overlay(plt.subplot(gs[0, 1]), atlas, atlas_z, cmap_atlas, alpha=0.5, 
                               title="Atlas")
     
     # atlas overlaid onto experiment

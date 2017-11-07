@@ -22,12 +22,72 @@ def _reg_out_path(base_path, base_name):
     return os.path.join(
         base_path, lib_clrbrain.insert_before_ext(base_name, _REG_MOD))
 
-def _show_overlays(imgs, fixed_file):
+def _translation_adjust(orig, transformed, translation):
+    """Adjust translation based on differences in scaling between original 
+    and transformed images to allow the translation to be applied to the 
+    original image.
+    
+    Assumes (x, y, z) order for consistency with SimpleITK since this method 
+    operates on SimpleITK format images.
+    
+    Args:
+        orig: Original image in SimpleITK format.
+        transformed: Transformed image in SimpleITK format.
+        translation: Translation in (x, y, z) order, taken from transform 
+            parameters and scaled to the transformed images's spacing.
+    
+    Returns:
+        The adjusted translation in (x, y, z) order.
+    """
+    # TODO: need to check which space the TransformParameter is referring to 
+    # and how to scale it since the adjusted translation does not appear to 
+    # be working yet
+    orig_origin = orig.GetOrigin()
+    transformed_origin = transformed.GetOrigin()
+    origin_diff = np.subtract(transformed_origin, orig_origin)
+    print("orig_origin: {}, transformed_origin: {}, origin_diff: {}"
+          .format(orig_origin, transformed_origin, origin_diff))
+    orig_size = orig.GetSize()
+    transformed_size = transformed.GetSize()
+    size_ratio = np.divide(orig_size, transformed_size)
+    print("orig_size: {}, transformed_size: {}, size_ratio: {}"
+          .format(orig_size, transformed_size, size_ratio))
+    translation_adj = np.multiply(translation, size_ratio)
+    #translation_adj = np.add(translation_adj, origin_diff)
+    print("translation_adj: {}".format(translation_adj))
+    return translation_adj
+
+def _show_overlays(imgs, translation, fixed_file):
+    """Shows overlays via :func:plot_2d:`plot_overlays_reg`.
+    
+    Args:
+        imgs: List of images in Numpy format
+        translation: Translation in (z, y, x) format for Numpy consistency.
+        fixed_file: Path to fixed file to get title.
+    """
     cmaps = ["Blues", "Oranges", "prism"]
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
-    plot_2d.plot_overlays_reg(*imgs, *cmaps, os.path.basename(fixed_file))
+    translation = None # TODO: not using translation parameters for now
+    plot_2d.plot_overlays_reg(*imgs, *cmaps, translation, os.path.basename(fixed_file))
 
-def register(fixed_file, moving_file_dir, flip_horiz=False, write_imgs=False):
+def _handle_transform_file(fixed_file, transform_param_map=None):
+    filename = fixed_file.rsplit(".", 1)[0] + "_transform.txt"
+    param_map = None
+    if transform_param_map is None:
+        param_map = sitk.ReadParameterFile(filename)
+    else:
+        sitk.WriteParameterFile(transform_param_map[0], filename)
+        param_map = transform_param_map[0]
+    transform = np.array(param_map["TransformParameters"]).astype(np.float)
+    spacing = np.array(param_map["Spacing"]).astype(np.float)
+    #spacing = [16, 16, 20]
+    translation = np.divide(transform, spacing)
+    print("transform: {}, spacing: {}, translation: {}"
+          .format(transform, spacing, translation))
+    return param_map, translation
+
+def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True, 
+             write_imgs=False):
     """Registers two images to one another using the SimpleElastix library.
     
     Args:
@@ -42,21 +102,13 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, write_imgs=False):
     if flip_horiz:
         roi = roi[..., ::-1]
     fixed_img = sitk.GetImageFromArray(roi)
-    fixed_img.SetSpacing(detector.resolutions[0])
-    #print("roi.shape: {}".format(roi.shape))
+    spacing = detector.resolutions[0]
+    fixed_img.SetSpacing(spacing)
     fixed_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     fixed_img = sitk.RescaleIntensity(fixed_img)
-    #print("spacing: {}".format(fixed_img.GetSpacing()))
     
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
-    
-    '''
-    print(fixed_img)
-    print(moving_img)
-    '''
-    sitk.Show(fixed_img)
-    sitk.Show(moving_img)
     
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(fixed_img)
@@ -72,10 +124,8 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, write_imgs=False):
     param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)
     elastix_img_filter.PrintParameterMap()
-    elastix_img_filter.Execute()
-    
+    transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
-    sitk.Show(transformed_img)
     
     fixed_dir = os.path.dirname(fixed_file)
     if write_imgs:
@@ -83,55 +133,62 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, write_imgs=False):
         sitk.WriteImage(transformed_img, out_path, False)
     
     transform_param_map = elastix_img_filter.GetTransformParameterMap()
+    _, translation = _handle_transform_file(fixed_file, transform_param_map)
+    translation = _translation_adjust(moving_img, transformed_img, translation)
+    
     transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     img_files = (IMG_LABELS, )
     imgs_transformed = []
-    result_img = None
     for img_file in img_files:
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
         #sitk.Show(img)
-        #print(min(img), max(img))
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
-        #result_img = sitk.RescaleIntensity(result_img, 0, 1.769e+04)
         imgs_transformed.append(result_img)
-        sitk.Show(result_img)
         if write_imgs:
             out_path = _reg_out_path(fixed_dir, img_file)
             sitk.WriteImage(result_img, out_path, False)
-        '''
-        result_img = sitk.RescaleIntensity(result_img)
-        result_img = sitk.Cast(result_img, sitk.sitkUInt32)
-        #sitk.Show(sitk.LabelOverlay(transformed_img, result_img))
-        sitk.Show(sitk.LabelToRGB(result_img))
-        '''
     
+    if show_imgs:
+        sitk.Show(fixed_img)
+        sitk.Show(moving_img)
+        sitk.Show(transformed_img)
+        for img in imgs_transformed:
+            sitk.Show(img)
+    
+    # show 2D overlay for registered images
     imgs = [
         roi, 
         sitk.GetArrayFromImage(moving_img), 
         sitk.GetArrayFromImage(transformed_img), 
         sitk.GetArrayFromImage(imgs_transformed[0])]
-    _show_overlays(imgs, roi.shape[0] // 3, fixed_file)
+    _show_overlays(imgs, translation[::-1], fixed_file)
 
 def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False):
     image5d = importer.read_file(fixed_file, cli.series)
     roi = image5d[0, ...] # not using time dimension
     if flip_horiz:
         roi = roi[..., ::-1]
-    moving_img_orig = sitk.GetArrayFromImage(
-        sitk.ReadImage(os.path.join(moving_file_dir, IMG_ATLAS)))
+    moving_sitk = sitk.ReadImage(os.path.join(moving_file_dir, IMG_ATLAS))
+    moving_img = sitk.GetArrayFromImage(moving_sitk)
     fixed_dir = os.path.dirname(fixed_file)
     out_path = _reg_out_path(fixed_dir, IMG_ATLAS)
-    moving_img = sitk.GetArrayFromImage(sitk.ReadImage(out_path))
+    transformed_sitk = sitk.ReadImage(out_path)
+    transformed_img = sitk.GetArrayFromImage(transformed_sitk)
     out_path = _reg_out_path(fixed_dir, IMG_LABELS)
     labels_img = sitk.GetArrayFromImage(sitk.ReadImage(out_path))
-    imgs = [roi, moving_img_orig, moving_img, labels_img]
-    _show_overlays(imgs, fixed_file)
+    imgs = [roi, moving_img, transformed_img, labels_img]
+    _, translation = _handle_transform_file(fixed_file)
+    translation = _translation_adjust(moving_sitk, transformed_sitk, translation)
+    _show_overlays(imgs, translation[::-1], fixed_file)
 
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
     #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, write_imgs=True)
-    overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
+    for plane in plot_2d.PLANE:
+        plot_2d.plane = plane
+        overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)

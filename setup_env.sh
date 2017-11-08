@@ -4,26 +4,33 @@
 
 ################################################
 # Sets up the initial Clrbrain environment with Anaconda and all
-# git repositories.
+# packages including git repositories.
 # 
 # Arguments:
 #   -h: Show help and exit.
+#   -n: Set the Conda environment name; defaults to CONDA_ENV.
 #   -s: Build and install SimpleElastix.
 #
 # Assumptions:
 # -Assumes that the Clrbrain git repo has already been cloned
-# -Creates the Anaconda environment, "clr2", which should be first
+# -Creates the Anaconda environment, which should be first
 #  removed if you want to start with a clean environment
 ################################################
 
-CONDA_ENV=clr2
+CONDA_ENV="clr2"
+env_name="$CONDA_ENV"
 build_simple_elastix=0
 
+ENV_CONFIG="environment.yml"
+
 OPTIND=1
-while getopts hs opt; do
+while getopts hn:s opt; do
     case $opt in
         h)  echo $HELP
             exit 0
+            ;;
+        n)  env_name="$OPTARG"
+            echo "Set to create the Conda environment $env_name"
             ;;
         s)  build_simple_elastix=1
             echo "Set to build and install SimpleElastix"
@@ -39,9 +46,9 @@ done
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-# run from parent directory
+# run from script directory
 BASE_DIR="`dirname $0`"
-cd "$BASE_DIR/.."
+cd "$BASE_DIR"
 echo $PWD
 
 # check for Java jar availability
@@ -105,30 +112,37 @@ then
 		source $bash_profile
 	else
 		echo "Please close and reopen your terminal, then rerun this script"
-		exit 1
+		exit 0
 	fi
 fi
 
 # creates "clr" conda environment
-echo "Checking for $CONDA_ENV Anaconda environment..."
-check_env="`conda env list | grep -w $CONDA_ENV`"
+echo "Checking for $env_name Anaconda environment..."
+check_env="`conda env list | grep -w $env_name`"
 if [[ "$check_env" == "" ]]
 then
 	echo "Creating new conda environment..."
-	conda env create -f clrbrain/environment.yml
+	config="$ENV_CONFIG"
+	if [[ "$env_name" != "$CONDA_ENV" ]]
+	then
+	    # change name in environment file with user-defined name
+	    config="env_${env_name}.yml"
+	    sed -e "s/$CONDA_ENV/$env_name/g" "$ENV_CONFIG" > "$config"
+	fi
+	conda env create -f "$config"
 else
-	echo "$CONDA_ENV already exists. Exiting."
-	exit 0
+	echo "$env_name already exists. Exiting."
+	exit 1
 fi
 echo "Activating conda environment..."
-source activate $CONDA_ENV
+source activate $env_name
 
 if [ $build_simple_elastix -eq 1 ]
 then
     # build and install SimpleElastix
-    clrbrain/build_se.sh -i
+    ./build_se.sh -i
 fi
 
 echo "clrbrain environment setup complete!"
-echo "** Please restart your terminal and run \"source activate $CONDA_ENV\" **"
+echo "** Please restart your terminal and run \"source activate $env_name\" **"
 

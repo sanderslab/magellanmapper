@@ -272,9 +272,17 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                 print("zoom: {}".format(detector.zoom))
             except KeyError:
                 print("could not find zoom")
+            # TODO: remove since stored in image5d?
+            try:
+                pixel_type = output["pixel_type"]
+                print("pixel type is {}".format(pixel_type))
+            except KeyError:
+                print("could not find near_max")
             try:
                 plot_3d.near_max = output["near_max"]
                 print("set near_max to {}".format(plot_3d.near_max))
+                plot_2d.vmax_overview = plot_3d.near_max * 1.1
+                print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
             except KeyError:
                 print("could not find near_max")
             
@@ -284,6 +292,17 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                 # simplifies to reducing the image to a subset as an ROI if 
                 # offset and size given
                 image5d = plot_3d.prepare_roi(image5d, channel, size, offset)
+            '''
+            max_range = 0
+            if plot_3d.near_max is not None:
+                #print("dtype: {}".format(image5d.dtype))
+                if np.issubdtype(image5d.dtype, np.integer):
+                    max_range = np.iinfo(image5d.dtype).max
+                elif np.issubdtype(image5d.dtype, np.float):
+                    max_range = np.ninfo(image5d.dtype).max
+                if max_range != 0:
+                    plot_2d.vmax_overview = plot_3d.near_max / max_range
+            '''
             if return_info:
                 return image5d, output
             return image5d
@@ -512,5 +531,5 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    transpose_npy(cli.filename, cli.series, plot_2d.plane)
-    #transpose_npy(cli.filename, cli.series, rescale=0.05)
+    #transpose_npy(cli.filename, cli.series, plot_2d.plane)
+    transpose_npy(cli.filename, cli.series, rescale=0.05)

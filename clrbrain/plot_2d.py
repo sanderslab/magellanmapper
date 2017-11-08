@@ -45,6 +45,7 @@ Z_LEVELS = ("bottom", "middle", "top")
 PLANE = ("xy", "xz", "yz")
 plane = None
 CIRCLES = ("Circles", "Repeat circles", "No circles")
+vmax_overview = 1.0
 
 segs_color_dict = {
     -1: None,
@@ -397,7 +398,8 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
             print(img2d_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
         # show the zoomed 2D image along with rectangle showing ROI
-        ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect, origin=origin)
+        ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect, origin=origin, 
+                  vmin=0.0, vmax=vmax_overview)
         ax.add_patch(patches.Rectangle(patch_offset, roi_size[0], roi_size[1], 
                                        fill=False, edgecolor="yellow"))
         add_scale_bar(ax)

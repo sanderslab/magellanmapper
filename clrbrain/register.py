@@ -209,10 +209,19 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     param_map = sitk.GetDefaultParameterMap("affine")
     #param_map["MaximumNumberOfIterations"] = ["512"]
     param_map_vector.append(param_map)
+    
     # TODO: bspline crashes on JacobianTerms computation
-    #param_map = sitk.GetDefaultParameterMap("bspline")
+    elastix_img_filter.LogToConsoleOn()
+    param_map = sitk.GetDefaultParameterMap("bspline")
+    param_map["MaximumNumberOfIterations"] = ["1"]
+    param_map["MaximumNumberOfSamplingAttempts"] = ["1"]
+    param_map["MaximumNumberOfIterations"] = ["1"]
+    param_map["NumberOfSamplesForExactGradient"] = ["1"]
+    param_map["NumberOfSpatialSamples"] = ["1"]
     #param_map_vector.append(param_map)
-    elastix_img_filter.SetParameterMap(param_map_vector)
+    elastix_img_filter.SetParameterMap(param_map)
+    
+    #elastix_img_filter.SetParameterMap(param_map_vector)
     elastix_img_filter.PrintParameterMap()
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
@@ -261,7 +270,7 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         sitk.GetArrayFromImage(moving_img), 
         sitk.GetArrayFromImage(transformed_img), 
         sitk.GetArrayFromImage(imgs_transformed[0])]
-    _show_overlays(imgs, translation[::-1], fixed_file)
+    #_show_overlays(imgs, translation[::-1], fixed_file)
     
 def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False):
     image5d = importer.read_file(fixed_file, cli.series)

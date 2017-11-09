@@ -63,6 +63,7 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 from clrbrain import mlearn
+from clrbrain import register
 
 filename = None # current image file path
 filenames = None # list of multiple image paths
@@ -364,6 +365,7 @@ def main(process_args_only=False):
     parser.add_argument("--roc", action="store_true")
     parser.add_argument("--plane")
     parser.add_argument("--saveroi", action="store_true")
+    parser.add_argument("--labels", action="store_true")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -462,6 +464,9 @@ def main(process_args_only=False):
     if args.saveroi:
         config.saveroi = args.saveroi
         print("Set save ROI to file to ".format(config.saveroi))
+    if args.labels:
+        config.load_labels = args.labels
+        print("Set load labels to {}".format(config.load_labels))
     
     # load "truth blobs" from separate database for viewing
     filename_base = importer.filename_to_base(filename, series)
@@ -631,6 +636,11 @@ def process_file(filename_base, offset, roi_size):
         image5d = importer.import_dir(os.path.join(filename, "*"))
     else:
         image5d = importer.read_file(filename, series)
+    
+    if config.load_labels:
+        # load labels image and set up scaling
+        config.labels = register.load_labels(filename)
+        config.scaling = register.reg_scaling(image5d, config.labels)
     
     if proc_type == PROC_TYPES[0]:
         # already imported so does nothing

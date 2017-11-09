@@ -18,9 +18,18 @@ IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
 _REG_MOD = "_reg"
 
-def _reg_out_path(base_path, base_name):
-    return os.path.join(
-        base_path, lib_clrbrain.insert_before_ext(base_name, _REG_MOD))
+def _reg_out_path(file_path, reg_name):
+    """Generate a path for a file registered to another file.
+    
+    Args:
+        file_name: Full path of file registered to.
+        reg_name: Filename alone of registered file.
+    
+    Returns:
+        Full path with the registered filename including extension at the end.
+    """
+    file_path_base = importer.filename_to_base(file_path, cli.series)
+    return file_path_base + "_" + reg_name
 
 def _translation_adjust(orig, transformed, translation):
     """Adjust translation based on differences in scaling between original 
@@ -128,8 +137,43 @@ def _mirror_labels(img):
     img_reflected.SetOrigin(img.GetOrigin())
     return img_reflected
 
+def transpose_img(img_sitk, plane, flip_horiz):
+    img = sitk.GetArrayFromImage(img_sitk)
+    spacing = img_sitk.GetSpacing()
+    origin = img_sitk.GetOrigin()
+    transposed = img
+    if plane is not None and plane != plot_2d.PLANE[0]:
+        # swap z-y to get (y, z, x) order for xz orientation
+        transposed = np.swapaxes(transposed, 0, 1)
+        # sitk convension is opposite of numpy with (x, y, z) order
+        spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
+        origin = lib_clrbrain.swap_elements(origin, 1, 2)
+        if plane == plot_2d.PLANE[1]:
+            # rotate
+            transposed = transposed[..., ::-1]
+            transposed = np.swapaxes(transposed, 1, 2)
+        elif plane == plot_2d.PLANE[2]:
+            # swap new y-x to get (x, z, y) order for yz orientation
+            transposed = np.swapaxes(transposed, 0, 2)
+            spacing = lib_clrbrain.swap_elements(spacing, 0, 2)
+            origin = lib_clrbrain.swap_elements(origin, 0, 2)
+            # rotate
+            transposed = np.swapaxes(transposed, 1, 2)
+            spacing = lib_clrbrain.swap_elements(spacing, 0, 1)
+        if plane == plot_2d.PLANE[1] or plane == plot_2d.PLANE[2]:
+            # flip upside-down
+            transposed[:] = np.flipud(transposed[:])
+            if flip_horiz:
+                transposed = transposed[..., ::-1]
+        else:
+            transposed[:] = transposed[:]
+    transposed = sitk.GetImageFromArray(transposed)
+    transposed.SetSpacing(spacing)
+    transposed.SetOrigin(origin)
+    return transposed
+
 def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True, 
-             write_imgs=False):
+             write_imgs=False, name_prefix=None):
     """Registers two images to one another using the SimpleElastix library.
     
     Args:
@@ -145,9 +189,10 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         roi = roi[..., ::-1]
     fixed_img = sitk.GetImageFromArray(roi)
     spacing = detector.resolutions[0]
-    fixed_img.SetSpacing(spacing)
+    fixed_img.SetSpacing(spacing[::-1])
     fixed_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     fixed_img = sitk.RescaleIntensity(fixed_img)
+    #sitk.Show(transpose_img(fixed_img, plot_2d.plane, flip_horiz))
     
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
@@ -172,11 +217,6 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
-    fixed_dir = os.path.dirname(fixed_file)
-    if write_imgs:
-        out_path = _reg_out_path(fixed_dir, IMG_ATLAS)
-        sitk.WriteImage(transformed_img, out_path, False)
-    
     transform_param_map = elastix_img_filter.GetTransformParameterMap()
     _, translation = _handle_transform_file(fixed_file, transform_param_map)
     translation = _translation_adjust(moving_img, transformed_img, translation)
@@ -188,27 +228,33 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     imgs_transformed = []
     for img_file in img_files:
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
-        # ABA only gives half of atlas so need to mirro one side to other
+        # ABA only gives half of atlas so need to mirror one side to other
         img = _mirror_labels(img)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
         imgs_transformed.append(result_img)
-        if write_imgs:
-            out_path = _reg_out_path(fixed_dir, img_file)
-            sitk.WriteImage(result_img, out_path, False)
-            '''
-            out_path = _reg_out_path(fixed_dir, "label.mhd")
-            sitk.WriteImage(img, out_path, False)
-            '''
     
     if show_imgs:
+        # show individual SimpleITK images in default viewer
         sitk.Show(fixed_img)
         sitk.Show(moving_img)
         sitk.Show(transformed_img)
         for img in imgs_transformed:
             sitk.Show(img)
     
+    if write_imgs:
+        # write atlas and labels files, transposed according to plane setting
+        imgs_names = (IMG_ATLAS, IMG_LABELS)
+        imgs_write = [transformed_img, imgs_transformed[0]]
+        if name_prefix is None:
+            name_prefix = fixed_file
+        for i in range(len(imgs_write)):
+            out_path = _reg_out_path(name_prefix, imgs_names[i])
+            img = transpose_img(imgs_write[i], plot_2d.plane, flip_horiz)
+            print("writing {}".format(out_path))
+            sitk.WriteImage(img, out_path, False)
+
     # show 2D overlay for registered images
     imgs = [
         roi, 
@@ -216,7 +262,7 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         sitk.GetArrayFromImage(transformed_img), 
         sitk.GetArrayFromImage(imgs_transformed[0])]
     _show_overlays(imgs, translation[::-1], fixed_file)
-
+    
 def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False):
     image5d = importer.read_file(fixed_file, cli.series)
     roi = image5d[0, ...] # not using time dimension
@@ -235,10 +281,24 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False):
     translation = _translation_adjust(moving_sitk, transformed_sitk, translation)
     _show_overlays(imgs, translation[::-1], fixed_file)
 
+def load_labels(fixed_file):
+    labels_path = _reg_out_path(fixed_file, IMG_ATLAS)
+    labels_img = sitk.ReadImage(labels_path)
+    print("loaded labels image from {}".format(labels_path))
+    return sitk.GetArrayFromImage(labels_img)
+
+def reg_scaling(image5d, reg):
+    shape = image5d.shape
+    if image5d.ndim >=4:
+        shape = shape[1:4]
+    scaling = np.divide(reg.shape[0:3], shape[0:3])
+    print("registered image scaling compared to image5d: {}".format(scaling))
+    return scaling
+
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, write_imgs=True)
+    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
     #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane

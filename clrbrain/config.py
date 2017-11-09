@@ -175,3 +175,7 @@ sub_stack_max_pixels = 1000
 
 # flag to save ROI to file
 saveroi = False
+
+load_labels = False
+labels_img = None
+labels_scaling = None

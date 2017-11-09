@@ -26,6 +26,8 @@ import matplotlib.patches as patches
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
+from skimage import exposure
+from skimage import img_as_float
 
 from clrbrain import detector
 from clrbrain import config
@@ -877,6 +879,16 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         else:
             atlas_z = int(z - translation[0])
     print("z: {}, atlas_z: {}, aspect: {}".format(z, atlas_z, aspect))
+    
+    vmin, vmax = np.percentile(labels_reg, (5, 95))
+    print("vmin: {}, vmax: {}".format(vmin, vmax))
+    labels_reg = exposure.rescale_intensity(labels_reg, in_range=(vmin, vmax))
+    '''
+    labels_reg = labels_reg.astype(np.float)
+    lib_clrbrain.normalize(labels_reg, 1, 100, background=15000)
+    labels_reg = labels_reg.astype(np.int)
+    print(labels_reg[290:300, 20, 190:200])
+    '''
     
     # experimental image and atlas
     _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, aspect, 

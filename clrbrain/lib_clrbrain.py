@@ -66,5 +66,39 @@ def insert_before_ext(name, insert):
     """
     return "{0}{2}.{1}".format(*name.rsplit(".", 1) + [insert])
 
+def normalize(array, minimum, maximum, background=None):
+    """Normalizes an array to fall within the given min and max.
+    
+    Args:
+        min: Minimum value for the array.
+        max: Maximum value for the array.
+    
+    Returns:
+        The normalized array, operated on in-place.
+    """
+    #print(array)
+    if len(array) <= 0:
+        return array
+    foreground = array
+    if background is not None:
+        foreground = foreground[foreground > background]
+    array -= np.min(foreground)
+    print("min: {}".format(np.min(foreground)))
+    array /= np.max(array) / (maximum - minimum)
+    array += minimum
+    if background is not None:
+        array[array < minimum] = minimum
+    return array
+
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))
+    a = np.arange(2 * 3).reshape(2, 3).astype(np.float)
+    a = np.ones(3 * 4).reshape(3, 4).astype(np.float)
+    a *= 100
+    a[0, 0] = 0
+    a[1, 1] = 50
+    print("a:\n{}".format(a))
+    a_norm = normalize(np.copy(a), 1, 2)
+    print("a_norm without background:\n{}".format(a_norm))
+    a_norm = normalize(np.copy(a), 1, 2, background=0)
+    print("a_norm with background:\n{}".format(a_norm))

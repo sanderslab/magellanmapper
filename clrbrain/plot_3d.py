@@ -25,6 +25,7 @@ from skimage import morphology
 
 from clrbrain import config
 from clrbrain import detector
+from clrbrain import lib_clrbrain
 
 _MASK_DIVIDEND = 100000.0 # 3D max points
 MLAB_3D_TYPES = ("surface", "point")
@@ -129,7 +130,7 @@ def threshold(roi):
         selem = morphology.disk(15)
         print(np.min(roi), np.max(roi))
         roi_thresh = np.copy(roi)
-        roi_thresh = normalize(roi_thresh, -1.0, 1.0)
+        roi_thresh = lib_clrbrain.normalize(roi_thresh, -1.0, 1.0)
         print(roi_thresh)
         print(np.min(roi_thresh), np.max(roi_thresh))
         for i in range(roi.shape[0]):
@@ -296,7 +297,7 @@ def plot_3d_points(roi, vis):
     z = np.delete(z, remove)
     roi_1d = np.delete(roi_1d, remove)
     # adjust range from 0-1 to region of colormap to use
-    roi_1d = normalize(roi_1d, 0.3, 0.6)
+    roi_1d = lib_clrbrain.normalize(roi_1d, 0.3, 0.6)
     #print(roi_1d)
     points_len = roi_1d.size
     time_start = time()
@@ -495,21 +496,3 @@ def show_blobs(segments, vis, show_shadows=False):
     
     
     return pts, cmap, scale
-
-def normalize(array, minimum, maximum):
-    """Normalizes an array to fall within the given min and max.
-    
-    Args:
-        min: Minimum value for the array.
-        max: Maximum value for the array.
-    
-    Returns:
-        The normalized array.
-    """
-    #print(array)
-    if len(array) <= 0:
-        return array
-    array += -(np.min(array))
-    array /= np.max(array) / (maximum - minimum)
-    array += minimum
-    return array

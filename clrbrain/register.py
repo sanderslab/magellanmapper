@@ -213,15 +213,20 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     # TODO: bspline crashes on JacobianTerms computation
     elastix_img_filter.LogToConsoleOn()
     param_map = sitk.GetDefaultParameterMap("bspline")
+    '''
     param_map["MaximumNumberOfIterations"] = ["1"]
-    param_map["MaximumNumberOfSamplingAttempts"] = ["1"]
     param_map["MaximumNumberOfIterations"] = ["1"]
     param_map["NumberOfSamplesForExactGradient"] = ["1"]
     param_map["NumberOfSpatialSamples"] = ["1"]
-    #param_map_vector.append(param_map)
-    elastix_img_filter.SetParameterMap(param_map)
+    '''
+    param_map["NumberOfResolutions"] = ["3"]
+    param_map["GridSpacingSchedule"] = ["2.80322", "1.9881", "1.41"]
+    param_map["MaximumNumberOfSamplingAttempts"] = ["1"]
+    param_map["FinalGridSpacingInPhysicalUnits"] = ["20"] # prevents segfault
+    param_map_vector.append(param_map)
+    #elastix_img_filter.SetParameterMap(param_map)
     
-    #elastix_img_filter.SetParameterMap(param_map_vector)
+    elastix_img_filter.SetParameterMap(param_map_vector)
     elastix_img_filter.PrintParameterMap()
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()

@@ -5,12 +5,15 @@
 """
 
 import os
+import collections
 import json
 from pprint import pprint
+from time import time
 import SimpleITK as sitk
 import numpy as np
 
 from clrbrain import cli
+from clrbrain import config
 from clrbrain import detector
 from clrbrain import importer
 from clrbrain import lib_clrbrain
@@ -18,6 +21,9 @@ from clrbrain import plot_2d
 
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
+
+_NODE = "node"
+_PARENT_IDS = "parent_ids"
 
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
@@ -78,7 +84,8 @@ def _show_overlays(imgs, translation, fixed_file):
     cmaps = ["Blues", "Oranges", "prism"]
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
     #translation = None # TODO: not using translation parameters for now
-    plot_2d.plot_overlays_reg(*imgs, *cmaps, translation, os.path.basename(fixed_file))
+    plot_2d.plot_overlays_reg(
+        *imgs, *cmaps, translation, os.path.basename(fixed_file))
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
     base_name = _reg_out_path(fixed_file, "")
@@ -272,7 +279,8 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         sitk.GetArrayFromImage(imgs_transformed[0])]
     _show_overlays(imgs, translation[::-1], fixed_file)
     
-def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False, name_prefix=None):
+def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False, 
+                            name_prefix=None):
     """Shows overlays of previously saved registered images.
     
     Should be run after :func:`register` has written out images in default
@@ -306,7 +314,8 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False, name_
     labels_img = sitk.GetArrayFromImage(sitk.ReadImage(out_path))
     imgs = [roi, moving_img, transformed_img, labels_img]
     _, translation = _handle_transform_file(name_prefix)
-    translation = _translation_adjust(moving_sitk, transformed_sitk, translation)
+    translation = _translation_adjust(
+        moving_sitk, transformed_sitk, translation)
     _show_overlays(imgs, translation[::-1], fixed_file)
 
 def load_labels(fixed_file):
@@ -330,6 +339,84 @@ def load_labels_ref(path):
         #pprint(labels_ref)
     return labels_ref
 
+def create_reverse_lookup(nested_dict, key, key_children, id_dict={}, 
+                          parent_list=None):
+    """Create a reveres lookup dictionary with the values of the original 
+    dictionary as the keys of the new dictionary.
+    
+    Each value of the new dictionary is another dictionary that contains 
+    "node", the dictionary with the given key-value pair, and "parent_ids", 
+    a list of all the parents of the given node. This entry can be used to 
+    track all superceding dictionaries, and the node can be used to find 
+    all its children.
+    
+    Args:
+        nested_dict: A dictionary that contains a list of dictionaries in
+            the key_children entry.
+        key: Key that contains the values to use as keys in the new dictionary. 
+            The values of this key should be unique throughout the entire 
+            nested_dict and thus serve as IDs.
+        key_children: Name of the children key, which contains a list of 
+            further dictionaries but can be empty.
+        id_dict: The output dictionary; if none given, an empty dictionary 
+            will be created.
+        parent_list: List of values for the given key in all parent 
+            dictionaries.
+    
+    Returns:
+        A dictionary with the original values as the keys, which each map 
+        to another dictionary containing an entry with the dictionary 
+        holding the given value and another entry with a list of all parent 
+        dictionary values for the given key.
+    """
+    value = nested_dict[key]
+    sub_dict = {_NODE: nested_dict}
+    if parent_list is not None:
+        sub_dict[_PARENT_IDS] = parent_list
+    id_dict[value] = sub_dict
+    try:
+        children = nested_dict[key_children]
+        parent_list = [] if parent_list is None else list(parent_list)
+        parent_list.append(value)
+        for child in children:
+            #print("parents: {}".format(parent_list))
+            create_reverse_lookup(
+                child, key, key_children, id_dict, parent_list)
+    except KeyError as e:
+        print(e)
+    return id_dict
+
+def get_node(nested_dict, key, value, key_children):
+    """Get a node from a nested dictionary by iterating through all 
+    dictionaries until the specified value is found.
+    
+    Args:
+        nested_dict: A dictionary that contains a list of dictionaries in
+            the key_children entry.
+        key: Key to check for the value.
+        value: Value to find, assumed to be unique for the given key.
+        key_children: Name of the children key, which contains a list of 
+            further dictionaries but can be empty.
+    
+    Returns:
+        The node matching the key-value pair, or None if not found.
+    """
+    try:
+        #print("checking for key {}...".format(key), end="")
+        found_val = nested_dict[key]
+        #print("found {}".format(found_val))
+        if found_val == value:
+            return nested_dict
+        children = nested_dict[key_children]
+        for child in children:
+            result = get_node(child, key, value, key_children)
+            if result is not None:
+                return result
+    except KeyError as e:
+        print(e)
+    return None
+            
+
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
@@ -341,4 +428,31 @@ if __name__ == "__main__":
     #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane
-        overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
+        #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
+    
+    
+    # TESTING: labels lookup
+    
+    # create reverse lookup dictionary
+    ref = load_labels_ref(config.load_labels)
+    #pprint(ref)
+    lookup_id = 15565 # short search path
+    #lookup_id = 126652058 # last item
+    time_dict_start = time()
+    id_dict = create_reverse_lookup(ref["msg"][0], "id", "children")
+    #pprint(id_dict)
+    time_dict_end = time()
+    time_node_start = time()
+    found = id_dict[lookup_id]
+    time_node_end = time()
+    print("found {}: {} with parents {}".format(lookup_id, found[_NODE]["name"], found[_PARENT_IDS]))
+    
+    # brute-force query
+    time_direct_start = time()
+    node = get_node(ref["msg"][0], "id", lookup_id, "children")
+    time_direct_end = time()
+    #print(node)
+    
+    print("time to create id_dict (s): {}".format(time_dict_end - time_dict_start))
+    print("time to find node (s): {}".format(time_node_end - time_node_start))
+    print("time to find node directly (s): {}".format(time_direct_end - time_direct_start))

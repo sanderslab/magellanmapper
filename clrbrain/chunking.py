@@ -28,7 +28,7 @@ def calc_overlap():
 def _num_units(size, max_pixels):
     """Calculates number of sub regions.
     
-    Params:
+    Args:
         size: Size of the entire region
     
     Returns:
@@ -61,13 +61,17 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
 def stack_splitter(roi, max_pixels, overlap):
     """Splits a stack into multiple sub regions.
     
-    Params:
+    Args:
         roi: The region of interest, a stack in (z, y, x, ...) dimensions.
+        max_pixels: Max pixels for each side in (z, y, x) order.
+        overlap: Overlap size between sub-ROIs.
     
     Return:
-        sub_rois: Array of sub regions, in (z, y, x) dimensions.
-        sub_rois_offsets: Array of offsets for each sub_roi, in
-            (z, y, x) dimensions.
+        Tuple of (sub_rois, sub_rois_offsets), where 
+        ``sub_rois`` is a Numpy object array of smaller, potentially 
+        overlapping sub regions split in (z, y, x) order, and 
+        ``sub_rois_offsets`` is a Numpy array of offsets for each sub_roi 
+        from the master ``roi`` array in (z, y, x) order coordinates.
     """
     size = roi.shape
     print("total stack size: {}".format(size))
@@ -97,7 +101,7 @@ def stack_splitter(roi, max_pixels, overlap):
 def merge_split_stack(sub_rois, overlap):
     """Merges sub regions back into a single stack.
     
-    Params:
+    Args:
         sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
     
     Return:
@@ -167,7 +171,7 @@ def get_split_stack_total_shape(sub_rois, overlap):
 def merge_split_stack2(sub_rois, overlap, offset, output):
     """Merges sub regions back into a single stack.
     
-    Params:
+    Args:
         sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
     
     Return:
@@ -207,7 +211,7 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois,
     """Compares blobs in a sub ROI with the blobs in the immediately preceding 
     sub ROI along the given axis
     
-    Params:
+    Args:
         blobs: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, p)
             dimension array, where each segment is at least of (z, y, x, radius)
@@ -228,15 +232,15 @@ def _compare_last_roi(blobs, coord, axis, blob_rois, region, tol, sub_rois,
             (z, y, x) dimensions.
     
     Returns:
-        blobs_pruned: Array of blobs without blobs that are close in the 
-            overlapping region to blobs already in the immediately preceding 
-            region.
-        blobs_ref_shifted: A copy of the blobs array from the previous ROI in 
-            blob_rois with tail values shifted to the mean of any corresponding 
-            duplicate blob from blobs.
-        coord_next_tup: The coordinates of the next ROI, useful in case
-            blobs_ref_shifted needs to be replace the current array in 
-            blobs_roi.
+        Tuple of (blobs_pruned, blobs_ref_shifted, coord_next_tup), where 
+        ``blobs_pruned`` is Array of blobs without blobs that are close in the 
+        overlapping region to blobs already in the immediately preceding 
+        region; 
+        ``blobs_ref_shifted`` is a copy of the blobs array from the 
+        previous ROI in blob_rois with tail values shifted to the mean of any 
+        corresponding duplicate blob from blobs; and 
+        ``coord_next_tup`` is the coordinates of the next ROI, useful in case
+        blobs_ref_shifted needs to be replace the current array in blobs_roi.
     """
     # only compare if a next ROI in the given axis exists
     blobs_pruned = blobs
@@ -340,13 +344,14 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
     tolerance of one another, by comparing a given sub-ROI with the 
     immediately preceding sub-ROI.
     
-    Params:
+    Args:
         blobs: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, p)
             dimension array, where each segment is at least of (z, y, x, radius)
             elements.
-        blob_rois: An array of blob arrays, where each element contains the blobs that
-            were detected within the corresponding sub region within the image stack.
+        blob_rois: An array of blob arrays, where each element contains the 
+            blobs that were detected within the corresponding sub region within 
+            the image stack.
         region: Slice within each blob to check, such as slice(0, 2) to check
             for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
@@ -354,12 +359,13 @@ def prune_overlapping_blobs(blob_rois, region, tol, sub_rois, sub_rois_offsets):
             difference for all corresponding parameters will be pruned in
             the returned array.
         sub_rois: Array of sub regions, in (z, y, x) dimensions.
-        sub_rois_offsets: Array of offsets for each sub_roi, in
-            (z, y, x) dimensions.
+        sub_rois_offsets: Array of offsets for each sub_roi, in (z, y, x) 
+            dimensions.
     
     Returns:
-        Array of all the blobs, minus any blobs that are close to one another in the
-            overlapping regions.
+        Array of all the blobs, minus any blobs that are close to one another 
+        in the overlapping regions.
+    
     """
     blobs_all = None
     print("pruning overlapping blobs with tolerance {}".format(tol))
@@ -421,7 +427,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
     tolerance of one another, by comparing a given sub-ROI with the 
     immediately following sub-ROI.
     
-    Params:
+    Args:
         blobs: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, p)
             dimension array, where each segment is at least of (z, y, x, radius)
@@ -441,7 +447,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
     
     Returns:
         Array of all the blobs, minus any blobs that are close to one another 
-            in the overlapping regions.
+        in the overlapping regions.
     """
     print("pruning overlapping blobs with tolerance {}".format(tol))
     blobs_all = merge_blobs(blob_rois)

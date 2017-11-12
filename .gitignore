@@ -2,3 +2,4 @@ __pycache__
 *.pyc
 *.db
 *.pdf
+docs/_build

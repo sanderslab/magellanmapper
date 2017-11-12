@@ -76,6 +76,14 @@ clrbrain\.plot\_3d module
     :undoc-members:
     :show-inheritance:
 
+clrbrain\.register module
+-------------------------
+
+.. automodule:: clrbrain.register
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 clrbrain\.sqlite module
 -----------------------
 

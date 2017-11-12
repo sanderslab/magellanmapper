@@ -38,14 +38,15 @@ from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 import matplotlib.pylab as pylab
 
+from clrbrain import chunking
 from clrbrain import cli
 from clrbrain import config
-from clrbrain import importer
 from clrbrain import detector
+from clrbrain import importer
 from clrbrain import plot_3d
 from clrbrain import plot_2d
+from clrbrain import register
 from clrbrain import sqlite
-from clrbrain import chunking
 
 params = {'legend.fontsize': 'small',
           'axes.labelsize': 'small',
@@ -64,24 +65,26 @@ def main():
     visualization = Visualization()
     visualization.configure_traits()
     
-def _fig_title(offset, roi_size):
+def _fig_title(atlas_region, offset, roi_size):
     """Figure title parser.
     
     Arguments:
+        atlas_region: Name of the region in the atlas; if None, the region
+            will be ignored.
         offset: (x, y, z) image offset
         roi_size: (x, y, z) region of interest size
     
     Returns:
         Figure title string.
     """
+    region = ""
+    if atlas_region is not None:
+        region = "{} from ".format(atlas_region)
     # cannot round to decimal places or else tuple will further round
     roi_size_um = np.around(np.multiply(roi_size, detector.resolutions[0][::-1]))
-    title = ("{} (series {})\n"
-             "offset {}, ROI size {}{}").format(os.path.basename(cli.filename), 
-                                                cli.series, offset, 
-                                                tuple(roi_size_um),
-                                                u'\u00b5m')
-    return title
+    return "{}{} (series {})\noffset {}, ROI size {}{}".format(
+        region, os.path.basename(cli.filename), cli.series, offset, 
+        tuple(roi_size_um), u'\u00b5m')
 
 class VisHandler(Handler):
     """Simple handler for Visualization object events.
@@ -168,6 +171,7 @@ class Visualization(HasTraits):
     _circles_2d = List
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
+    _atlas_label = None
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -284,13 +288,13 @@ class Visualization(HasTraits):
             curr_roi_size[2] = self.z_high - self.z_offset
             self.roi_array = [curr_roi_size]
         print("using ROI size of {}".format(self.roi_array[0].astype(int)))
+        curr_offset = self._curr_offset()
+        curr_roi_size = self.roi_array[0].astype(int)
         
         # show raw 3D image unless selected not to
         if self._DEFAULTS_3D[2] in self._check_list_3d:
             # show region of interest based on raw image, using basic denoising 
             # to normalize values but not fully processing
-            curr_offset = self._curr_offset()
-            curr_roi_size = self.roi_array[0].astype(int)
             self.roi = plot_3d.prepare_roi(
                 cli.image5d, cli.channel, curr_roi_size, curr_offset)
             
@@ -312,6 +316,19 @@ class Visualization(HasTraits):
         # show shadow images around the points if selected
         if self._DEFAULTS_3D[0] in self._check_list_3d:
             plot_3d.plot_2d_shadows(self.roi, self)
+        
+        # show title from labels reference if available
+        if config.labels_ref_lookup is not None:
+            center = np.add(
+                curr_offset, 
+                np.around(np.divide(curr_roi_size, 2)).astype(np.int))
+            self.atlas_label = register.get_label(
+                center[::-1], config.labels_img, config.labels_ref_lookup, 
+                config.labels_scaling)
+            if self.atlas_label is not None:
+                title = register.get_label_name(self.atlas_label)
+                if title is not None:
+                    self.scene.mlab.title(title)
         
         self._reset_segments()
         
@@ -491,7 +508,8 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
-        title = _fig_title(curr_offset, curr_roi_size)
+        title = _fig_title(register.get_label_name(self.atlas_label), 
+                           curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(cli.filename, cli.series)
         circles = self._circles_2d[0].lower()
         grid = self._DEFAULTS_2D[3] in self._check_list_2d

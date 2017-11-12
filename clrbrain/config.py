@@ -180,3 +180,4 @@ load_labels = None
 labels_img = None
 labels_scaling = None
 labels_ref = None
+labels_ref_lookup = None

@@ -639,9 +639,11 @@ def process_file(filename_base, offset, roi_size):
     
     if config.load_labels is not None:
         # load labels image and set up scaling
-        config.labels = register.load_labels(filename)
-        config.scaling = register.reg_scaling(image5d, config.labels)
+        config.labels_img = register.load_labels(filename)
+        config.labels_scaling = register.reg_scaling(image5d, config.labels_img)
         config.labels_ref = register.load_labels_ref(config.load_labels)
+        config.labels_ref_lookup = register.create_aba_reverse_lookup(
+            config.labels_ref)
     
     if proc_type == PROC_TYPES[0]:
         # already imported so does nothing

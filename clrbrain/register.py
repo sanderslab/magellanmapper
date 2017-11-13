@@ -7,6 +7,7 @@
 import os
 import SimpleITK as sitk
 import numpy as np
+from memory_profiler import profile
 
 from clrbrain import cli
 from clrbrain import detector
@@ -172,6 +173,7 @@ def transpose_img(img_sitk, plane, flip_horiz):
     transposed.SetOrigin(origin)
     return transposed
 
+@profile
 def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True, 
              write_imgs=False, name_prefix=None):
     """Registers two images to one another using the SimpleElastix library.

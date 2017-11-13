@@ -1,6 +1,26 @@
 #!/bin/bash
 # Config file for shared settings
 # Author: David Young, 2017
+"""Configuration storage module.
+
+This module allows customization of settings for various imaging systems, 
+such as grouped settings for particular microscopes. Additional parameters 
+such as command-line flag settings and databases can also be stored here 
+for program access.
+
+Attributes:
+    load_labels: Path to the labels reference file, which also serves as a 
+        flag to references label/annotation images.
+    labels_img: Numpy array of a registered labels image, which should 
+        correspond to the main ``image5d`` image.
+    labels_scaling: Array of ``labels_img`` compared to ``image5d`` 
+        for each corresponding dimension.
+    labels_ref: Raw reference dictionary imported from the JSON file 
+        corresponding to the labels image.
+    labels_ref_lookup: Reference dictionary with keys corresponding to the IDs 
+        in the labels image.
+"""
+
 
 import numpy as np
 from collections import OrderedDict

@@ -19,12 +19,15 @@ Examples:
             --size 150,150,10
 
 Command-line arguments in addition to those from attributes listed below:
-    * res: Resolution given as (x, y, z) in floating point (see
-        cli.py, though order is natural here as command-line argument).
+    * load_labels: Path to labels reference file, which also serves as a flag 
+        to load the labels image as well 
+        (see :attr:`config.load_labels`).
+    * mlab_3d: 3D visualization mode (see plot_3d.py).
     * padding_2d: Padding around the ROI given as (x, y, z) from which to 
         include segments and and show further 2D planes.
-    * mlab_3d: 3D visualization mode (see plot_3d.py).
     * plane: Plane type (see plot_2d.py PLANE).
+    * res: Resolution given as (x, y, z) in floating point (see
+        cli.py, though order is natural here as command-line argument).
     * saveroi: Save ROI from original image to file during stack processing.
 
 Attributes:
@@ -39,12 +42,10 @@ Attributes:
         "size=x,y,z" argument, where x, y, and z are integers.
     offset: The bottom corner in pixels of the region of interest. Set 
         with "offset=x,y,z" argument, where x, y, and z are integers.
-    PROC_TYPES: Processing modes.
-        * "importonly": Imports an image stack and exists non-
-          interactively.
-        * "processing": Processes and segments the entire image
-          stack and exits non-interactively.
-        * "load": Loads already processed images and segments.
+    PROC_TYPES: Processing modes. ``importonly`` imports an image stack and 
+        exits non-interactively. ``processing`` processes and segments the 
+        entire image stack and exits non-interactively. ``load`` loads already 
+        processed images and segments.
     proc: The chosen processing mode
 """
 

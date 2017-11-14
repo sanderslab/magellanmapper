@@ -220,11 +220,12 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     param_map["MaximumNumberOfIterations"] = ["1"]
     param_map["NumberOfSamplesForExactGradient"] = ["1"]
     param_map["NumberOfSpatialSamples"] = ["1"]
-    '''
     param_map["NumberOfResolutions"] = ["3"]
     param_map["GridSpacingSchedule"] = ["2.80322", "1.9881", "1.41"]
+    '''
     param_map["MaximumNumberOfSamplingAttempts"] = ["1"]
-    param_map["FinalGridSpacingInPhysicalUnits"] = ["20"] # prevents segfault
+    param_map["FinalGridSpacingInPhysicalUnits"] = [] # turn off
+    param_map["FinalGridSpacingInVoxels"] = ["64"] # prevents segfault
     param_map_vector.append(param_map)
     #elastix_img_filter.SetParameterMap(param_map)
     
@@ -314,8 +315,8 @@ def reg_scaling(image5d, reg):
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
+    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True)
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane
         #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)

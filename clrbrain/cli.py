@@ -65,7 +65,6 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 from clrbrain import mlearn
-from clrbrain import register
 
 filename = None # current image file path
 filenames = None # list of multiple image paths
@@ -641,6 +640,7 @@ def process_file(filename_base, offset, roi_size):
     
     if config.load_labels is not None:
         # load labels image and set up scaling
+        from clrbrain import register
         config.labels_img = register.load_labels(filename)
         config.labels_scaling = register.reg_scaling(image5d, config.labels_img)
         config.labels_ref = register.load_labels_ref(config.load_labels)

@@ -18,6 +18,7 @@ from skimage import morphology
 from skimage.feature import blob_log
 
 from clrbrain import config
+from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import sqlite
 
@@ -44,7 +45,7 @@ def calc_scaling_factor():
         raise AttributeError(
             "Must load resolutions from file or set a resolution")
     factor = np.divide(1.0, resolutions[0])
-    print("scaling_factor: {}".format(factor))
+    lib_clrbrain.printv("scaling_factor: {}".format(factor))
     return factor
 
 def segment_rw(roi, beta=50.0):
@@ -123,7 +124,7 @@ def segment_blob(roi):
     res_norm = np.multiply(res_norm, settings["scale_factor"])
     segmenting_mean = np.mean(roi)
     #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
-    print("segmenting_mean: {}".format(segmenting_mean))
+    lib_clrbrain.printv("segmenting_mean: {}".format(segmenting_mean))
     overlap = settings["overlap"]
     if segmenting_mean > settings["segmenting_mean_thresh"]:
         # turn off scaling for higher density region
@@ -138,7 +139,7 @@ def segment_blob(roi):
                          num_sigma=settings["num_sigma"], 
                          threshold=0.1,
                          overlap=overlap, scale=res_norm)
-    print("time for 3D blob detection: %f" %(time() - time_start))
+    lib_clrbrain.printv("time for 3D blob detection: %f" %(time() - time_start))
     if blobs_log.size < 1:
         print("no blobs detected")
         return None

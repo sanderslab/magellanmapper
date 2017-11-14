@@ -459,11 +459,11 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
         for y in range(sub_rois_offsets.shape[1]):
             for x in range(sub_rois_offsets.shape[2]):
                 coord = [z, y, x]
-                print("** checking blobs in ROI {}".format(coord))
+                lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
                 offset = sub_rois_offsets[tuple(coord)]
                 size = sub_rois[tuple(coord)].shape
-                print("offset: {}, size: {}, overlap: {}, tol: {}"
-                      .format(offset, size, overlap, tol))
+                lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"
+                                    .format(offset, size, overlap, tol))
                 for axis in range(3):
                     axes = np.arange(3)
                     if coord[axis] + 1 < sub_rois_offsets.shape[axis]:
@@ -476,7 +476,8 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
                             offset[axes[1]] - tol[axes[1]],
                             offset[axes[1]] + size[axes[1]] + tol[axes[1]]
                         ]
-                        print("axis {}, boundaries: {}".format(axis, bounds))
+                        lib_clrbrain.printv("axis {}, boundaries: {}".format(
+                            axis, bounds))
                         mask_blobs_ol = np.all([
                             blobs_all[:, axis] >= bounds[0], 
                             blobs_all[:, axis] < bounds[1],
@@ -486,9 +487,11 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
                             blobs_all[:, axes[1]] < bounds[5]], axis=0)
                         blobs_ol = blobs_all[mask_blobs_ol]
                         #print("len before before: {}".format(len(blobs_all)))
-                        blobs_ol_pruned = detector.remove_close_blobs_within_sorted_array(blobs_ol, region, tol)
-                        print("blobs without close duplicates:\n{}"
-                              .format(blobs_ol_pruned))
+                        blobs_ol_pruned = detector.remove_close_blobs_within_sorted_array(
+                            blobs_ol, region, tol)
+                        lib_clrbrain.printv(
+                            "blobs without close duplicates:\n{}"
+                            .format(blobs_ol_pruned))
                         
                         if blobs_ol_pruned is not None:
                             #print("len before: {}, len blobs_ol: {}"

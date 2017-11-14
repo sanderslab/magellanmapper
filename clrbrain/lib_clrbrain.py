@@ -6,6 +6,8 @@
 
 import numpy as np
 
+from clrbrain import config
+
 def swap_elements(arr, axis0, axis1, offset=0):
     """Swap elements within an list or tuple.
     
@@ -89,6 +91,10 @@ def normalize(array, minimum, maximum, background=None):
     if background is not None:
         array[array < minimum] = minimum
     return array
+
+def printv(s):
+    if config.verbose:
+        print(s)
 
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))

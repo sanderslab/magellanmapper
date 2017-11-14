@@ -59,6 +59,7 @@ import numpy as np
 
 from clrbrain import config
 from clrbrain import importer
+from clrbrain import lib_clrbrain
 from clrbrain import sqlite
 from clrbrain import plot_3d
 from clrbrain import detector
@@ -279,18 +280,18 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
             # in the given axis
             coord = np.zeros(3)
             coord[axis] = i
-            print("** checking blobs in ROI {}".format(coord))
+            lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
             offset = sub_rois_offsets[tuple(coord)]
             size = sub_rois[tuple(coord)].shape
-            print("offset: {}, size: {}, overlap: {}, tol: {}"
-                  .format(offset, size, overlap, tol))
+            lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"
+                                .format(offset, size, overlap, tol))
             # each region extends into the next region, so the overlap is
             # the end of the region minus its overlap and a tolerance space,
             # extending back out to the end plus the tolerance
             shift = overlap[axis] + tol[axis]
             bounds = [offset[axis] + size[axis] - shift,
                       offset[axis] + size[axis] + tol[axis]]
-            print("axis {}, boundaries: {}".format(axis, bounds))
+            lib_clrbrain.printv("axis {}, boundaries: {}".format(axis, bounds))
             blobs_ol = _blobs_all[np.all([
                 _blobs_all[:, axis] >= bounds[0], 
                 _blobs_all[:, axis] < bounds[1]], axis=0)]
@@ -699,6 +700,9 @@ def process_file(filename_base, offset, roi_size):
                 for x in range(super_rois.shape[2]):
                     coord = (z, y, x)
                     roi = super_rois[coord]
+                    print("===============================================\n"
+                          "Processing stack {} of {}"
+                          .format(coord, np.add(super_rois.shape, -1)))
                     merged, segs = process_stack(roi, overlap, tol)
                     del merged # TODO: check if helps reduce memory buildup
                     if segs is not None:

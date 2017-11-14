@@ -101,7 +101,7 @@ if (( $FOUND_NPZ == 0)); then
 fi
 
 # process image and segments
-python -u -m clrbrain.cli --img "$DEST"/"$IMG" --proc processing_mp -v $EXTRA_ARGS
+python -u -m clrbrain.cli --img "$DEST"/"$IMG" --proc processing_mp $EXTRA_ARGS
 
 # upload to S3
 NPZ_IMG_PROC=$IMG_BASE"_image5d_proc.npz"

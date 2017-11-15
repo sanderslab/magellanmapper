@@ -5,7 +5,7 @@
 """
 
 import os
-import collections
+import copy
 import json
 from pprint import pprint
 from time import time
@@ -24,7 +24,9 @@ IMG_LABELS = "annotation.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
+ABA_ID = "id"
 ABA_NAME = "name"
+ABA_PARENT = "parent_structure_id"
 
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
@@ -119,7 +121,9 @@ def _mirror_labels(img):
         The mirrored image in the same dimensions, origin, and spacing as the 
         original image.
     """
-    img_np = sitk.GetArrayFromImage(img)
+    # TODO: check to make sure values don't get wrapped around if np.int32
+    # max value is less than data max val
+    img_np = sitk.GetArrayFromImage(img).astype(np.int32)
     tot_planes = len(img_np)
     i = tot_planes
     # need to work backward since the starting z-planes may also be empty
@@ -127,6 +131,8 @@ def _mirror_labels(img):
         if not np.allclose(plane, 0):
             break
         i -= 1
+    print("type: {}, max: {}, max avail: {}".format(
+        img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     if i <= tot_planes and i >= 0:
         # if a empty planes at end, fill the empty space with the preceding 
         # planes in mirrored fashion
@@ -137,7 +143,7 @@ def _mirror_labels(img):
             remaining_planes = i
         print("i: {}, end: {}, remaining_planes: {}, tot_planes: {}"
               .format(i, end, remaining_planes, tot_planes))
-        img_np[i:i+remaining_planes] = img_np[i-1:end-1:-1]
+        img_np[i:i+remaining_planes] = np.multiply(img_np[i-1:end-1:-1], -1)
     else:
         # skip mirroring if no planes are empty or only first plane is empty
         print("nothing to mirror")
@@ -387,6 +393,25 @@ def create_reverse_lookup(nested_dict, key, key_children, id_dict={},
         print(e)
     return id_dict
 
+def mirror_reverse_lookup(labels_ref, offset, name_modifier):
+    # NOT CURRENTLY USED: replaced with neg values for mirrored side
+    keys = list(labels_ref.keys())
+    for key in keys:
+        mirrored_key = key + offset
+        mirrored_val = copy.deepcopy(labels_ref[key])
+        node = mirrored_val[NODE]
+        node[ABA_ID] = mirrored_key
+        node[ABA_NAME] += name_modifier
+        parent = node[ABA_PARENT]
+        if parent is not None:
+            node[ABA_PARENT] += offset
+        try:
+            parent_ids = mirrored_val[PARENT_IDS]
+            parent_ids = np.add(parent_ids, offset).tolist()
+        except KeyError as e:
+            pass
+        labels_ref[mirrored_key] = mirrored_val
+
 def get_node(nested_dict, key, value, key_children):
     """Get a node from a nested dictionary by iterating through all 
     dictionaries until the specified value is found.
@@ -427,7 +452,7 @@ def create_aba_reverse_lookup(labels_ref):
     Returns:
         Reverse lookup dictionary as output by :func:`create_reverse_lookup`.
     """
-    return create_reverse_lookup(labels_ref["msg"][0], "id", "children")
+    return create_reverse_lookup(labels_ref["msg"][0], ABA_ID, "children")
 
 def get_label_ids_from_position(coord, labels_img, scaling):
     """Get the atlas label IDs for the given coordinates.
@@ -494,6 +519,10 @@ def get_label_name(label):
             return node[ABA_NAME]
     return None
 
+def _add_vol(labels_img, key, volumes_dict, scaling_vol):
+    region = labels_img[labels_img == key]
+    volumes_dict[key] = len(region) * scaling_vol
+
 def volumes_by_id(labels_img, labels_ref, scaling, resolution):
     """Get volumes by labels IDs.
     
@@ -509,15 +538,21 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution):
         Dictionary of {ID: volume}, where volume is in the cubed units of 
         :attr:`detector.resolutions`.
     """
-    ids = labels_ref.keys()
+    ids = list(labels_ref.keys())
+    '''
+    mirrored_ids = np.multiply(np.array(ids), -1)
+    ids = np.concatenate((ids, mirrored_ids[mirrored_ids < 0]))
+    print(ids)
+    '''
     volumes_dict = {}
     scaling_res = np.multiply(scaling, resolution)
     scaling_vol = scaling_res[0] * scaling_res[1] * scaling_res[2]
     for key in ids:
-        region = labels_img[labels_img == key]
-        volumes_dict[key] = len(region) * scaling_vol
-        print("id: {}, volume: {}, name: {}".format(
-            key, volumes_dict[key], labels_ref[key][NODE][ABA_NAME]))
+        _add_vol(labels_img, key, volumes_dict, scaling_vol)
+        _add_vol(labels_img, -1 * key, volumes_dict, scaling_vol)
+        print("{} (id {}), volume (R): {}, volume (L): {}, ".format(
+            labels_ref[key][NODE][ABA_NAME], key, volumes_dict[key], 
+            volumes_dict[-1 * key]))
     return volumes_dict
 
 if __name__ == "__main__":
@@ -528,11 +563,13 @@ if __name__ == "__main__":
     # orthogonal views in overlay_registered_imgs, then run with --plane xz
     # to re-transpose to original orientation for mapping locations
     register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True)
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True)
     #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane
         #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
+        #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)
     '''
     
     # TESTING: labels lookup
@@ -544,6 +581,10 @@ if __name__ == "__main__":
     #lookup_id = 126652058 # last item
     time_dict_start = time()
     id_dict = create_aba_reverse_lookup(ref)
+    labels_img = load_labels(cli.filename)
+    max_labels = np.max(labels_img)
+    print("max_labels: {}".format(max_labels))
+    #mirror_reverse_lookup(id_dict, max_labels, " (R)")
     #pprint(id_dict)
     time_dict_end = time()
     time_node_start = time()
@@ -562,12 +603,11 @@ if __name__ == "__main__":
     print("time to find node directly (s): {}".format(time_direct_end - time_direct_start))
     
     # get volumes for each ID
-    labels_img = load_labels(cli.filename)
     print("labels_img shape: {}".format(labels_img.shape))
     scaling = np.ones(3) * 0.05
     #volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913])
     
     # get a list of IDs corresponding to each blob
-    blobs = np.array([[300, 5000, 4000], [350, 5500, 4500], [400, 6000, 5000]])
+    blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])
     ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
     print("blob IDs:\n{}".format(ids))

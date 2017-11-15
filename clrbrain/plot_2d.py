@@ -880,6 +880,9 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
             atlas_z = int(z - translation[0])
     print("z: {}, atlas_z: {}, aspect: {}".format(z, atlas_z, aspect))
     
+    # invert any neg values (one hemisphere) to minimize range and match other
+    # hemisphere
+    labels_reg[labels_reg < 0] = np.multiply(labels_reg[labels_reg < 0], -1)
     vmin, vmax = np.percentile(labels_reg, (5, 95))
     print("vmin: {}, vmax: {}".format(vmin, vmax))
     labels_reg = exposure.rescale_intensity(labels_reg, in_range=(vmin, vmax))

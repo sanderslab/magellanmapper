@@ -853,7 +853,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     aspect = 1.0
     z = 0
     atlas_z = 0
-    plane_frac = 4
+    plane_frac = 5 / 2
     if plane == PLANE[1]:
         # xz plane
         aspect = resolution[0] / resolution[2]

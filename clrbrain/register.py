@@ -93,7 +93,6 @@ def _show_overlays(imgs, translation, fixed_file):
     """
     cmaps = ["Blues", "Oranges", "prism"]
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
-    #translation = None # TODO: not using translation parameters for now
     plot_2d.plot_overlays_reg(
         *imgs, *cmaps, translation, os.path.basename(fixed_file))
 
@@ -106,6 +105,7 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     else:
         sitk.WriteParameterFile(transform_param_map[0], filename)
         param_map = transform_param_map[0]
+    return param_map, None # TODO: not using translation parameters
     transform = np.array(param_map["TransformParameters"]).astype(np.float)
     spacing = np.array(param_map["Spacing"]).astype(np.float)
     len_spacing = len(spacing)
@@ -594,18 +594,17 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution):
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    '''
     # run with --plane xy to generate non-transposed images before comparing 
     # orthogonal views in overlay_registered_imgs, then run with --plane xz
     # to re-transpose to original orientation for mapping locations
-    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
     #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False, write_imgs=True)
     #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
     #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane
         #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
-        #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)
+        overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)
     '''
     
     # TESTING: labels lookup
@@ -647,3 +646,4 @@ if __name__ == "__main__":
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])
     ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
     print("blob IDs:\n{}".format(ids))
+    '''

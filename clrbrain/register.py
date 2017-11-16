@@ -24,6 +24,9 @@ IMG_LABELS = "annotation.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
+MIRRORED = "mirrored"
+RIGHT = " (R)"
+LEFT = " (L)"
 ABA_ID = "id"
 ABA_NAME = "name"
 ABA_PARENT = "parent_structure_id"
@@ -41,7 +44,7 @@ def _reg_out_path(file_path, reg_name):
     file_path_base = importer.filename_to_base(file_path, cli.series)
     return file_path_base + "_" + reg_name
 
-def _translation_adjust(orig, transformed, translation):
+def _translation_adjust(orig, transformed, translation, flip=False):
     """Adjust translation based on differences in scaling between original 
     and transformed images to allow the translation to be applied to the 
     original image.
@@ -58,6 +61,8 @@ def _translation_adjust(orig, transformed, translation):
     Returns:
         The adjusted translation in (x, y, z) order.
     """
+    if translation is None:
+        return translation
     # TODO: need to check which space the TransformParameter is referring to 
     # and how to scale it since the adjusted translation does not appear to 
     # be working yet
@@ -74,6 +79,8 @@ def _translation_adjust(orig, transformed, translation):
     translation_adj = np.multiply(translation, size_ratio)
     #translation_adj = np.add(translation_adj, origin_diff)
     print("translation_adj: {}".format(translation_adj))
+    if flip:
+        translation_adj = translation_adj[::-1]
     return translation_adj
 
 def _show_overlays(imgs, translation, fixed_file):
@@ -92,7 +99,7 @@ def _show_overlays(imgs, translation, fixed_file):
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
     base_name = _reg_out_path(fixed_file, "")
-    filename = base_name.rsplit(".", 1)[0] + "transform.txt"
+    filename = base_name + "transform.txt"
     param_map = None
     if transform_param_map is None:
         param_map = sitk.ReadParameterFile(filename)
@@ -101,10 +108,16 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
         param_map = transform_param_map[0]
     transform = np.array(param_map["TransformParameters"]).astype(np.float)
     spacing = np.array(param_map["Spacing"]).astype(np.float)
+    len_spacing = len(spacing)
     #spacing = [16, 16, 20]
-    translation = np.divide(transform, spacing)
-    print("transform: {}, spacing: {}, translation: {}"
-          .format(transform, spacing, translation))
+    translation = None
+    # TODO: should parse the transforms into multiple dimensions
+    if len(transform) == len_spacing:
+        translation = np.divide(transform[0:len_spacing], spacing)
+        print("transform: {}, spacing: {}, translation: {}"
+              .format(transform, spacing, translation))
+    else:
+        print("Transform parameters do not match scaling dimensions")
     return param_map, translation
 
 def _mirror_labels(img):
@@ -224,15 +237,21 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     elastix_img_filter.SetFixedImage(fixed_img)
     elastix_img_filter.SetMovingImage(moving_img)
     param_map_vector = sitk.VectorOfParameterMap()
+    # translation to shift and rotate
     param_map = sitk.GetDefaultParameterMap("translation")
-    
     param_map["MaximumNumberOfIterations"] = ["2048"]
-    param_map_vector.append(param_map)
-    param_map = sitk.GetDefaultParameterMap("affine")
     '''
     # TESTING: minimal registration
-    param_map["MaximumNumberOfIterations"] = ["2"]
+    param_map["MaximumNumberOfIterations"] = ["0"]
     '''
+    param_map_vector.append(param_map)
+    # affine to sheer and scale
+    param_map = sitk.GetDefaultParameterMap("affine")
+    param_map_vector.append(param_map)
+    # bspline for non-rigid deformation
+    param_map = sitk.GetDefaultParameterMap("bspline")
+    param_map["FinalGridSpacingInVoxels"] = ["64"]
+    del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     
     param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)
@@ -240,11 +259,8 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
-    transform_param_map = elastix_img_filter.GetTransformParameterMap()
-    _, translation = _handle_transform_file(name_prefix, transform_param_map)
-    translation = _translation_adjust(moving_img, transformed_img, translation)
-    
     # apply transformation to label files
+    transform_param_map = elastix_img_filter.GetTransformParameterMap()
     transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     img_files = (IMG_LABELS, )
@@ -284,7 +300,12 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         sitk.GetArrayFromImage(moving_img), 
         sitk.GetArrayFromImage(transformed_img), 
         sitk.GetArrayFromImage(imgs_transformed[0])]
-    _show_overlays(imgs, translation[::-1], fixed_file)
+    # save transform parameters and attempt to find the original position 
+    # that corresponds to the final position that will be displayed
+    _, translation = _handle_transform_file(name_prefix, transform_param_map)
+    translation = _translation_adjust(
+        moving_img, transformed_img, translation, flip=True)
+    _show_overlays(imgs, translation, fixed_file)
     
 def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False, 
                             name_prefix=None):
@@ -322,8 +343,8 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False,
     imgs = [roi, moving_img, transformed_img, labels_img]
     _, translation = _handle_transform_file(name_prefix)
     translation = _translation_adjust(
-        moving_sitk, transformed_sitk, translation)
-    _show_overlays(imgs, translation[::-1], fixed_file)
+        moving_sitk, transformed_sitk, translation, flip=True)
+    _show_overlays(imgs, translation, fixed_file)
 
 def load_labels(fixed_file):
     labels_path = _reg_out_path(fixed_file, IMG_LABELS)
@@ -470,7 +491,6 @@ def get_label_ids_from_position(coord, labels_img, scaling):
         one ID if only one coordinate is given.
     """
     coord_scaled = np.around(np.multiply(coord, scaling)).astype(np.int)
-    #print(coord_scaled)
     #print(labels_img[tuple(coord_scaled[0])])
     #coord_scaled = coord_scaled[:, 1]#range(coord_scaled.shape[1])]
     coord_scaled = np.split(np.transpose(coord_scaled), coord_scaled.shape[0])
@@ -478,7 +498,7 @@ def get_label_ids_from_position(coord, labels_img, scaling):
     if len(coord_scaled) > 1:
         coord_scaled = [row for row in np.transpose(coord_scaled)]
     '''
-    print(coord_scaled)
+    print("coord_scaled: {}".format(coord_scaled))
     return labels_img[coord_scaled][0]
 
 def get_label(coord, labels_img, labels_ref, scaling):
@@ -498,11 +518,18 @@ def get_label(coord, labels_img, labels_ref, scaling):
         found.
     """
     label_id = get_label_ids_from_position(coord, labels_img, scaling)
+    print("label_id: {}".format(label_id))
+    mirrored = label_id < 0
+    if mirrored:
+        label_id = -1 * label_id
+    label = None
     try:
-        return labels_ref[label_id]
+        label = labels_ref[label_id]
+        label[MIRRORED] = mirrored
+        print("label: {}".format(label[MIRRORED]))
     except KeyError as e:
-        print(e)
-    return None
+        print("could not find label id: {}".format(e))
+    return label
 
 def get_label_name(label):
     """Get the atlas region name from the label.
@@ -513,11 +540,20 @@ def get_label_name(label):
     Returns:
         The atlas region name, or None if not found.
     """
-    if label is not None:
-        node = label[NODE]
-        if node is not None:
-            return node[ABA_NAME]
-    return None
+    name = None
+    try:
+        if label is not None:
+            node = label[NODE]
+            if node is not None:
+                name = node[ABA_NAME]
+                print("name: {}".format(name))
+                if label[MIRRORED]:
+                    name += LEFT
+                else:
+                    name += RIGHT
+    except KeyError as e:
+        print(e, name)
+    return name
 
 def _add_vol(labels_img, key, volumes_dict, scaling_vol):
     region = labels_img[labels_img == key]
@@ -550,9 +586,9 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution):
     for key in ids:
         _add_vol(labels_img, key, volumes_dict, scaling_vol)
         _add_vol(labels_img, -1 * key, volumes_dict, scaling_vol)
-        print("{} (id {}), volume (R): {}, volume (L): {}, ".format(
-            labels_ref[key][NODE][ABA_NAME], key, volumes_dict[key], 
-            volumes_dict[-1 * key]))
+        print("{} (id {}), volume{}: {}, volume{}: {}, ".format(
+            labels_ref[key][NODE][ABA_NAME], key, LEFT, volumes_dict[key], 
+            RIGHT, volumes_dict[-1 * key]))
     return volumes_dict
 
 if __name__ == "__main__":
@@ -563,8 +599,8 @@ if __name__ == "__main__":
     # orthogonal views in overlay_registered_imgs, then run with --plane xz
     # to re-transpose to original orientation for mapping locations
     register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True)
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True)
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False, write_imgs=True)
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
     #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane
@@ -605,7 +641,7 @@ if __name__ == "__main__":
     # get volumes for each ID
     print("labels_img shape: {}".format(labels_img.shape))
     scaling = np.ones(3) * 0.05
-    #volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913])
+    volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913])
     
     # get a list of IDs corresponding to each blob
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])

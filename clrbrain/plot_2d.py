@@ -853,29 +853,30 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     aspect = 1.0
     z = 0
     atlas_z = 0
+    plane_frac = 4
     if plane == PLANE[1]:
         # xz plane
         aspect = resolution[0] / resolution[2]
-        z = exp.shape[1] // 3
+        z = exp.shape[1] // plane_frac
         if translation is None:
-            atlas_z = atlas.shape[1] // 3
+            atlas_z = atlas.shape[1] // plane_frac
         else:
             atlas_z = int(z - translation[1])
     elif plane == PLANE[2]:
         # yz plane
         aspect = resolution[0] / resolution[1]
-        z = exp.shape[2] // 3
+        z = exp.shape[2] // plane_frac
         if translation is None:
-            atlas_z = atlas.shape[2] // 3
+            atlas_z = atlas.shape[2] // plane_frac
         else:
             # TODO: not sure why needs to be addition here
             atlas_z = int(z + translation[2])
     else:
         # xy plane (default)
         aspect = resolution[1] / resolution[2]
-        z = exp.shape[0] // 3
+        z = exp.shape[0] // plane_frac
         if translation is None:
-            atlas_z = atlas.shape[0] // 3
+            atlas_z = atlas.shape[0] // plane_frac
         else:
             atlas_z = int(z - translation[0])
     print("z: {}, atlas_z: {}, aspect: {}".format(z, atlas_z, aspect))

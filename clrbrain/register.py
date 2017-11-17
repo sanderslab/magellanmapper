@@ -25,11 +25,12 @@ IMG_LABELS = "annotation.mhd"
 NODE = "node"
 PARENT_IDS = "parent_ids"
 MIRRORED = "mirrored"
-RIGHT = " (R)"
-LEFT = " (L)"
+RIGHT_SUFFIX = " (R)"
+LEFT_SUFFIX = " (L)"
 ABA_ID = "id"
 ABA_NAME = "name"
 ABA_PARENT = "parent_structure_id"
+VOL_KEY = "volume"
 
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
@@ -548,16 +549,12 @@ def get_label_name(label):
                 name = node[ABA_NAME]
                 print("name: {}".format(name))
                 if label[MIRRORED]:
-                    name += LEFT
+                    name += LEFT_SUFFIX
                 else:
-                    name += RIGHT
+                    name += RIGHT_SUFFIX
     except KeyError as e:
         print(e, name)
     return name
-
-def _add_vol(labels_img, key, volumes_dict, scaling_vol):
-    region = labels_img[labels_img == key]
-    volumes_dict[key] = len(region) * scaling_vol
 
 def volumes_by_id(labels_img, labels_ref, scaling, resolution):
     """Get volumes by labels IDs.
@@ -575,25 +572,28 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution):
         :attr:`detector.resolutions`.
     """
     ids = list(labels_ref.keys())
-    '''
-    mirrored_ids = np.multiply(np.array(ids), -1)
-    ids = np.concatenate((ids, mirrored_ids[mirrored_ids < 0]))
-    print(ids)
-    '''
     volumes_dict = {}
     scaling_res = np.multiply(scaling, resolution)
     scaling_vol = scaling_res[0] * scaling_res[1] * scaling_res[2]
     for key in ids:
-        _add_vol(labels_img, key, volumes_dict, scaling_vol)
-        _add_vol(labels_img, -1 * key, volumes_dict, scaling_vol)
+        label_ids = [key, -1 * key]
+        for label_id in label_ids:
+            region = labels_img[labels_img == label_id]
+            region_dict = {
+                ABA_NAME: labels_ref[key][NODE][ABA_NAME],
+                VOL_KEY: len(region) * scaling_vol
+            }
+            volumes_dict[label_id] = region_dict
         print("{} (id {}), volume{}: {}, volume{}: {}, ".format(
-            labels_ref[key][NODE][ABA_NAME], key, LEFT, volumes_dict[key], 
-            RIGHT, volumes_dict[-1 * key]))
+            volumes_dict[key][ABA_NAME], key, 
+            RIGHT_SUFFIX, volumes_dict[key][VOL_KEY], 
+            LEFT_SUFFIX, volumes_dict[-1 * key][VOL_KEY]))
     return volumes_dict
 
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
+    '''
     # run with --plane xy to generate non-transposed images before comparing 
     # orthogonal views in overlay_registered_imgs, then run with --plane xz
     # to re-transpose to original orientation for mapping locations
@@ -640,10 +640,10 @@ if __name__ == "__main__":
     # get volumes for each ID
     print("labels_img shape: {}".format(labels_img.shape))
     scaling = np.ones(3) * 0.05
-    volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913])
+    volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913])
+    plot_2d.plot_volumes(volumes_dict)
     
     # get a list of IDs corresponding to each blob
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])
     ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
     print("blob IDs:\n{}".format(ids))
-    '''

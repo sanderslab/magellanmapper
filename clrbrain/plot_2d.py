@@ -32,6 +32,7 @@ from skimage import img_as_float
 from clrbrain import detector
 from clrbrain import config
 from clrbrain import lib_clrbrain
+from clrbrain import register
 
 colormap_2d = cm.inferno
 CMAP_GRBK = LinearSegmentedColormap.from_list("Green_black", ['black', 'green'])
@@ -926,6 +927,27 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     gs.tight_layout(fig)
     if savefig is not None:
         plt.savefig(title + "." + savefig)
+    plt.show()
+
+def plot_volumes(volumes_dict):
+    fig, ax = plt.subplots()
+    width = 0.1
+    volumes_side = []
+    volumes_mirrored = []
+    names = []
+    for key in volumes_dict.keys():
+        names.append(volumes_dict[key][register.ABA_NAME])
+        vol = volumes_side if key > 0 else volumes_mirrored
+        vol.append(volumes_dict[key][register.VOL_KEY])
+    indices = np.arange(len(volumes_side))
+    #print(volumes_side, volumes_mirrored)
+    bar_mirrored = ax.bar(indices, volumes_mirrored, width=width, color="b")
+    bar_side = ax.bar(indices + width, volumes_side, width=width, color="r")
+    
+    ax.set_ylabel("Volume (cubic microns)")
+    ax.set_xticks(indices + width)
+    ax.set_xticklabels(names)
+    ax.legend((bar_mirrored[0], bar_side[0]), ("Left", "Right"))
     plt.show()
 
 if __name__ == "__main__":

@@ -19,21 +19,11 @@
 # -If all goes well, pick up processed files from S3
 ################################################
 
-DEST=/data
+DEST=""
 IMG=""
 S3_DIR=""
 SERIES=0 # TODO: make settable
 EXTRA_ARGS=""
-
-# workaround for https://github.com/numpy/numpy/issues/5336,
-# fixed in https://github.com/numpy/numpy/pull/7133, 
-# released in Numpy 1.12.0
-TMPDIR="$DEST"/tmp
-if [ ! -e "$TMPDIR" ]
-then
-    mkdir "$TMPDIR"
-fi
-export TMPDIR="$TMPDIR"
 
 # run from parent directory
 BASE_DIR="`dirname $0`"
@@ -41,7 +31,7 @@ cd "$BASE_DIR"
 echo $PWD
 
 OPTIND=1
-while getopts hf:s: opt; do
+while getopts hf:s:d: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -51,6 +41,9 @@ while getopts hf:s: opt; do
             ;;
         s)  S3_DIR="$OPTARG"
             echo "Set AWS S3 base path to $S3_DIR"
+            ;;
+        d)  DEST="$OPTARG"
+            echo "Set destination path to $DEST"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -63,8 +56,27 @@ done
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
+# set destination to image directory unless DEST already set
+if [ "$DEST" == "" ]
+then
+    DEST="`dirname $IMG`"
+fi
+
+# workaround for https://github.com/numpy/numpy/issues/5336,
+# fixed in https://github.com/numpy/numpy/pull/7133, 
+# released in Numpy 1.12.0
+TMPDIR="$DEST"/tmp
+if [ ! -e "$TMPDIR" ]
+then
+    mkdir "$TMPDIR"
+fi
+export TMPDIR="$TMPDIR"
+
 FOUND_NPZ=0
+# image base and NPZ filenames don't include parents in case 
+# destination points to a different parent path
 IMG_BASE=${IMG/.czi/_}$(printf %05d $SERIES)
+IMG_BASE="`basename $IMG_BASE`"
 NPZ_IMG=$IMG_BASE"_image5d.npz"
 NPZ_INFO=$IMG_BASE"_info.npz"
 for NPZ in $NPZ_IMG $NPZ_INFO
@@ -96,12 +108,12 @@ done
 
 # import raw image into Numpy array if not available
 if (( $FOUND_NPZ == 0)); then
-    echo "Importing $DEST/$IMG..."
-    python -m clrbrain.cli --img "$DEST"/"$IMG" --proc importonly $EXTRA_ARGS
+    echo "Importing $IMG..."
+    python -m clrbrain.cli --img "$IMG" --proc importonly $EXTRA_ARGS
 fi
 
 # process image and segments
-python -u -m clrbrain.cli --img "$DEST"/"$IMG" --proc processing_mp $EXTRA_ARGS
+python -u -m clrbrain.cli --img "$IMG" --proc processing_mp $EXTRA_ARGS
 
 # upload to S3
 NPZ_IMG_PROC=$IMG_BASE"_image5d_proc.npz"

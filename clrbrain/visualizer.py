@@ -322,11 +322,11 @@ class Visualization(HasTraits):
             center = np.add(
                 curr_offset, 
                 np.around(np.divide(curr_roi_size, 2)).astype(np.int))
-            self.atlas_label = register.get_label(
+            self._atlas_label = register.get_label(
                 center[::-1], config.labels_img, config.labels_ref_lookup, 
                 config.labels_scaling)
-            if self.atlas_label is not None:
-                title = register.get_label_name(self.atlas_label)
+            if self._atlas_label is not None:
+                title = register.get_label_name(self._atlas_label)
                 if title is not None:
                     self.scene.mlab.title(title)
         
@@ -508,7 +508,7 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
-        title = _fig_title(register.get_label_name(self.atlas_label), 
+        title = _fig_title(register.get_label_name(self._atlas_label), 
                            curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(cli.filename, cli.series)
         circles = self._circles_2d[0].lower()

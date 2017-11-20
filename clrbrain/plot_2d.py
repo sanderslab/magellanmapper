@@ -32,7 +32,7 @@ from skimage import img_as_float
 from clrbrain import detector
 from clrbrain import config
 from clrbrain import lib_clrbrain
-from clrbrain import register
+from clrbrain.register import ABA_NAME, VOL_KEY
 
 colormap_2d = cm.inferno
 CMAP_GRBK = LinearSegmentedColormap.from_list("Green_black", ['black', 'green'])
@@ -936,9 +936,9 @@ def plot_volumes(volumes_dict):
     volumes_mirrored = []
     names = []
     for key in volumes_dict.keys():
-        names.append(volumes_dict[key][register.ABA_NAME])
+        names.append(volumes_dict[key][ABA_NAME])
         vol = volumes_side if key > 0 else volumes_mirrored
-        vol.append(volumes_dict[key][register.VOL_KEY])
+        vol.append(volumes_dict[key][VOL_KEY])
     indices = np.arange(len(volumes_side))
     #print(volumes_side, volumes_mirrored)
     bar_mirrored = ax.bar(indices, volumes_mirrored, width=width, color="b")
@@ -947,7 +947,8 @@ def plot_volumes(volumes_dict):
     ax.set_ylabel("Volume (cubic microns)")
     ax.set_xticks(indices + width)
     ax.set_xticklabels(names)
-    ax.legend((bar_mirrored[0], bar_side[0]), ("Left", "Right"))
+    if len(bar_mirrored) > 0 and len(bar_side) > 0:
+        ax.legend((bar_mirrored[0], bar_side[0]), ("Left", "Right"))
     plt.show()
 
 if __name__ == "__main__":

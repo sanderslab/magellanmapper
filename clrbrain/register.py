@@ -578,7 +578,7 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
         :attr:`detector.resolutions`.
     """
     ids = list(labels_ref.keys())
-    print("ids: {}".format(ids))
+    #print("ids: {}".format(ids))
     volumes_dict = {}
     scaling_res = np.multiply(scaling, resolution)
     scaling_vol = scaling_res[0] * scaling_res[1] * scaling_res[2]
@@ -665,8 +665,8 @@ if __name__ == "__main__":
     # get volumes for each ID
     print("labels_img shape: {}".format(labels_img.shape))
     scaling = np.ones(3) * 0.05
-    volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913], level=5)
-    plot_2d.plot_volumes(volumes_dict)
+    volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913], level=1)
+    plot_2d.plot_volumes(volumes_dict, ignore_empty=True)
     
     # get a list of IDs corresponding to each blob
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])

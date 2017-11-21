@@ -929,16 +929,26 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         plt.savefig(title + "." + savefig)
     plt.show()
 
-def plot_volumes(volumes_dict):
+def plot_volumes(volumes_dict, ignore_empty=False):
     fig, ax = plt.subplots()
     width = 0.1
     volumes_side = []
     volumes_mirrored = []
     names = []
     for key in volumes_dict.keys():
-        names.append(volumes_dict[key][ABA_NAME])
-        vol = volumes_side if key > 0 else volumes_mirrored
-        vol.append(volumes_dict[key][VOL_KEY])
+        if key >= 0:
+            name = volumes_dict[key][ABA_NAME]
+            vol_side = volumes_dict[key][VOL_KEY]
+            vol_mirrored = volumes_dict[-1 * key].get(VOL_KEY)
+            if (ignore_empty and vol_mirrored is not None 
+                and np.allclose([vol_side, vol_mirrored], np.zeros(2))):
+                print("skipping {} as both sides are empty".format(name))
+            else:
+                names.append(name)
+                volumes_side.append(vol_side)
+                if vol_mirrored is None:
+                    volume_mirrored = 0
+                volumes_mirrored.append(vol_mirrored)
     indices = np.arange(len(volumes_side))
     #print(volumes_side, volumes_mirrored)
     bar_mirrored = ax.bar(indices, volumes_mirrored, width=width, color="b")
@@ -946,7 +956,7 @@ def plot_volumes(volumes_dict):
     
     ax.set_ylabel("Volume (cubic microns)")
     ax.set_xticks(indices + width)
-    ax.set_xticklabels(names)
+    ax.set_xticklabels(names, rotation=45)
     if len(bar_mirrored) > 0 and len(bar_side) > 0:
         ax.legend((bar_mirrored[0], bar_side[0]), ("Left", "Right"))
     plt.show()

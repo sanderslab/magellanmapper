@@ -48,11 +48,14 @@ from clrbrain import plot_2d
 from clrbrain import register
 from clrbrain import sqlite
 
-params = {'legend.fontsize': 'small',
-          'axes.labelsize': 'small',
-          'axes.titlesize': 'small',
-          'xtick.labelsize': 'small',
-          'ytick.labelsize': 'small'}
+params = {"legend.fontsize": "small",
+          "axes.labelsize": "small",
+          "axes.titlesize": "small",
+          "xtick.labelsize": "small",
+          "ytick.labelsize": "small",
+          "lines.linewidth": 1,
+          "image.interpolation": "bilinear",
+          "image.resample": False}
 
 def main():
     """Starts the visualization GUI.

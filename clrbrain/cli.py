@@ -571,6 +571,8 @@ def process_file(filename_base, offset, roi_size):
     filename_roi = None
     #print(filename_image5d_proc)
     
+    # LOAD MAIN IMAGE
+    
     if proc_type == PROC_TYPES[3]:
         # loads from processed files
         global image5d_proc, segments_proc
@@ -626,17 +628,17 @@ def process_file(filename_base, offset, roi_size):
                 image5d = image5d_proc
                 if image5d is None:
                     raise IOError("Neither original nor ROI image file found")
-            return
         except IOError as e:
             print("Unable to load processed info file at {}, will exit"
                   .format(filename_info_proc))
             raise e
     
     # attempts to load the main image stack
-    if os.path.isdir(filename):
-        image5d = importer.import_dir(os.path.join(filename, "*"))
-    else:
-        image5d = importer.read_file(filename, series)
+    if image5d is None:
+        if os.path.isdir(filename):
+            image5d = importer.import_dir(os.path.join(filename, "*"))
+        else:
+            image5d = importer.read_file(filename, series)
     
     if config.load_labels is not None:
         # load labels image and set up scaling
@@ -647,7 +649,14 @@ def process_file(filename_base, offset, roi_size):
         config.labels_ref_lookup = register.create_aba_reverse_lookup(
             config.labels_ref)
     
-    if proc_type == PROC_TYPES[0]:
+    
+    # PROCESS BY TYPE
+    
+    if proc_type == PROC_TYPES[3]:
+        # loading completed
+        return None, None
+        
+    elif proc_type == PROC_TYPES[0]:
         # already imported so does nothing
         print("imported {}, will exit".format(filename))
     

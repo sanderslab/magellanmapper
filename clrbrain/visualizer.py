@@ -162,7 +162,7 @@ class Visualization(HasTraits):
                                selected_row="segs_selected")
     segs_cmap = None
     segs_feedback = Str("Segments output")
-    labels = None
+    labels = None # segmentation labels
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw"]
     _check_list_2d = List
@@ -175,6 +175,10 @@ class Visualization(HasTraits):
     _styles_2d = List
     _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
     _atlas_label = None
+    _structure_scale = Int # ontology structure levels
+    _structure_scale_low = -1
+    _structure_scale_high = 20
+    _mlab_title = None
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -272,6 +276,27 @@ class Visualization(HasTraits):
         self.segments = None
         self.segs_pts = None
     
+    def _update_structure_level(self, curr_offset, curr_roi_size):
+        self._atlas_label = None
+        if self._mlab_title is not None:
+            self._mlab_title.remove()
+            self._mlab_title = None
+        if (config.labels_ref_lookup is not None and curr_offset is not None 
+            and curr_roi_size is not None):
+            center = np.add(
+                curr_offset, 
+                np.around(np.divide(curr_roi_size, 2)).astype(np.int))
+            level = self._structure_scale
+            if level == self._structure_scale_high:
+                level = None
+            self._atlas_label = register.get_label(
+                center[::-1], config.labels_img, config.labels_ref_lookup, 
+                config.labels_scaling, level)
+            if self._atlas_label is not None:
+                title = register.get_label_name(self._atlas_label)
+                if title is not None:
+                    self._mlab_title = self.scene.mlab.title(title)
+    
     def show_3d(self):
         """Shows the 3D plot.
         
@@ -321,17 +346,7 @@ class Visualization(HasTraits):
             plot_3d.plot_2d_shadows(self.roi, self)
         
         # show title from labels reference if available
-        if config.labels_ref_lookup is not None:
-            center = np.add(
-                curr_offset, 
-                np.around(np.divide(curr_roi_size, 2)).astype(np.int))
-            self._atlas_label = register.get_label(
-                center[::-1], config.labels_img, config.labels_ref_lookup, 
-                config.labels_scaling)
-            if self._atlas_label is not None:
-                title = register.get_label_name(self._atlas_label)
-                if title is not None:
-                    self.scene.mlab.title(title)
+        self._update_structure_level(curr_offset, curr_roi_size)
         
         self._reset_segments()
         
@@ -377,6 +392,7 @@ class Visualization(HasTraits):
         self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
         self._check_list_2d = [self._DEFAULTS_2D[1]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
+        #self._structure_scale = self._structure_scale_high
         
         # show the default ROI
         self.show_3d()
@@ -392,6 +408,12 @@ class Visualization(HasTraits):
     @on_trait_change("roi_array")
     def _update_roi_array(self):
     '''
+    
+    @on_trait_change("_structure_scale")
+    def _update_structure_scale(self):
+        curr_offset = self._curr_offset()
+        curr_roi_size = self.roi_array[0].astype(int)
+        self._update_structure_level(curr_offset, curr_roi_size)
     
     def _btn_redraw_trait_fired(self):
         self.show_3d()
@@ -644,7 +666,8 @@ class Visualization(HasTraits):
             VGroup(
                 VGroup(
                     Item("rois_check_list", 
-                         editor=CheckListEditor(name="object.rois_selections_class.selections"),
+                         editor=CheckListEditor(
+                             name="object.rois_selections_class.selections"),
                          label="ROIs"),
                     Item("roi_array", label="Size (x,y,z)"),
                     Item(
@@ -713,6 +736,13 @@ class Visualization(HasTraits):
                     editor=RangeEditor(
                         low_name="_segs_scale_low",
                         high_name="_segs_scale_high",
+                        mode="slider"),
+                ),
+                Item(
+                    "_structure_scale",
+                    editor=RangeEditor(
+                        low_name="_structure_scale_low",
+                        high_name="_structure_scale_high",
                         mode="slider"),
                 ),
                 VGroup(

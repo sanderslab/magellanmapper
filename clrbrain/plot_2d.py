@@ -952,7 +952,7 @@ def plot_volumes(volumes_dict, ignore_empty=False):
     indices = np.arange(len(volumes_side))
     #print(volumes_side, volumes_mirrored)
     bar_mirrored = ax.bar(indices, volumes_mirrored, width=width, color="b")
-    bar_side = ax.bar(indices + width, volumes_side, width=width, color="r")
+    bar_side = ax.bar(indices + width, volumes_side, width=width, color="g")
     
     ax.set_ylabel("Volume (cubic microns)")
     ax.set_xticks(indices + width)

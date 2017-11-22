@@ -506,7 +506,7 @@ def get_label_ids_from_position(coord, labels_img, scaling):
     print("coord_scaled: {}".format(coord_scaled))
     return labels_img[coord_scaled][0]
 
-def get_label(coord, labels_img, labels_ref, scaling):
+def get_label(coord, labels_img, labels_ref, scaling, level=None):
     """Get the atlas label for the given coordinates.
     
     Args:
@@ -530,10 +530,22 @@ def get_label(coord, labels_img, labels_ref, scaling):
     label = None
     try:
         label = labels_ref[label_id]
-        label[MIRRORED] = mirrored
-        print("label: {}".format(label[MIRRORED]))
+        if level is not None and label[NODE][ABA_LEVEL] > level:
+            parents = label[PARENT_IDS]
+            label = None
+            if label_id < 0:
+                parents = np.multiply(parents, -1)
+            for parent in parents:
+                parent_label = labels_ref[parent]
+                if parent_label[NODE][ABA_LEVEL] == level:
+                    label = parent_label
+                    break
+        if label is not None:
+            label[MIRRORED] = mirrored
+            print("label: {}".format(label_id))
     except KeyError as e:
-        print("could not find label id: {}".format(e))
+        print("could not find label id {} or it parent (error {})"
+              .format(label_id, e))
     return label
 
 def get_label_name(label):
@@ -572,9 +584,17 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
             will be reached prior to the child.
         scaling: Scaling factor for the labels image size compared with the 
             experiment image.
+        resolutions: The image resolutions as an array in (z, y, x) order, 
+            typically an element from :attr:`detector.resolutions`.
+        level: The ontology level as an integer; defaults to None. If None, 
+            volumes for all ontology levels will be returned. If a level is 
+            given, only regions from that level will be returned, while 
+            children will be collapsed into the parent at that level, and 
+            regions above this level will be ignored.
     
     Returns:
-        Dictionary of {ID: volume}, where volume is in the cubed units of 
+        Nested dictionary of {ID: {:attr:`ABA_NAME`: name, 
+        :attr:`VOL_KEY`: volume}}, where volume is in the cubed units of 
         :attr:`detector.resolutions`.
     """
     ids = list(labels_ref.keys())
@@ -665,8 +685,8 @@ if __name__ == "__main__":
     # get volumes for each ID
     print("labels_img shape: {}".format(labels_img.shape))
     scaling = np.ones(3) * 0.05
-    volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913], level=1)
-    plot_2d.plot_volumes(volumes_dict, ignore_empty=True)
+    #volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913], level=12)
+    #plot_2d.plot_volumes(volumes_dict, ignore_empty=True)
     
     # get a list of IDs corresponding to each blob
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])

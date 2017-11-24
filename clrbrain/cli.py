@@ -567,7 +567,8 @@ def process_file(filename_base, offset, roi_size):
     # prepares the filenames
     global image5d
     filename_image5d_proc = filename_base + "_image5d_proc.npz"
-    filename_info_proc = filename_base + "_info_proc.npz"
+    filename_segs = filename_base + "_segs.npy"
+    filename_proc_info = filename_base + "_proc_info.npz"
     filename_roi = None
     #print(filename_image5d_proc)
     
@@ -585,7 +586,6 @@ def process_file(filename_base, offset, roi_size):
                   .format(filename_image5d_proc))
         try:
             # processed segments and other image information
-            output_info = np.load(filename_info_proc)
             '''
             # converts old monolithic format to new format with separate files
             # to allow loading file with only image file as memory-backed array;
@@ -601,8 +601,27 @@ def process_file(filename_base, offset, roi_size):
             outfile_image5d_proc.close()
             outfile_info_proc.close()
             return
+            
+            # converts old monolithic format to new format with separate files
+            # to allow loading file with only image file as memory-backed array;
+            # switch commented area from here to above to convert formats
+            print("converting info proc file to new format...")
+            filename_info_proc = filename_base + "_info_proc.npz"
+            output_info = np.load(filename_info_proc)
+            outfile_segs = open(filename_segs, "wb")
+            np.save(outfile_segs, output_info["segments"])
+            outfile_segs.close()
+            np.savez(filename_proc_info, 
+                     resolutions=output_info["resolutions"], 
+                     basename=output_info["basename"], # only save filename
+                     offset=output_info["offset"], roi_size=output_info["roi_size"]) # None unless explicitly set
+            output_info.close()
+            return
             '''
-            segments_proc = output_info["segments"]
+            
+            segments_proc = np.load(filename_segs, mmap_mode="r")
+            output_info = np.load(filename_proc_info)
+            #segments_proc = output_info["segments"]
             print("{} segments loaded".format(len(segments_proc)))
             detector.resolutions = output_info["resolutions"]
             roi_offset = None
@@ -780,13 +799,16 @@ def process_file(filename_base, offset, roi_size):
             np.save(outfile_image5d_proc, roi)
             outfile_image5d_proc.close()
         
-        outfile_info_proc = open(filename_info_proc, "wb")
+        outfile_segs = open(filename_segs, "wb")
+        np.save(outfile_segs, segments_all)
+        outfile_segs.close()
+        outfile_proc_info = open(filename_proc_info, "wb")
         #print("merged shape: {}".format(merged.shape))
-        np.savez(outfile_info_proc, segments=segments_all, 
+        np.savez(outfile_proc_info, #segments=segments_all, 
                  resolutions=detector.resolutions, 
                  basename=os.path.basename(filename), # only save filename
                  offset=offset, roi_size=roi_size) # None unless explicitly set
-        outfile_info_proc.close()
+        outfile_proc_info.close()
         
         segs_len = 0 if segments_all is None else len(segments_all)
         print("super ROI pruning time (s): {}".format(pruning_time))

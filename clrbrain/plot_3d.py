@@ -27,7 +27,7 @@ from clrbrain import config
 from clrbrain import detector
 from clrbrain import lib_clrbrain
 
-_MASK_DIVIDEND = 100000.0 # 3D max points
+_MASK_DIVIDEND = 10000.0 # 3D max points
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 near_max = -1.0
@@ -303,10 +303,11 @@ def plot_3d_points(roi, vis):
     time_start = time()
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
+    roi_1d = roi_1d[::mask]
     if points_len > 0:
         vis.scene.mlab.points3d(x, y, z, roi_1d, 
                                 mode="sphere", colormap="Greens", 
-                                scale_mode="none", mask_points=mask, 
+                                scale_mode="none", #mask_points=mask, 
                                 line_width=1.0, vmax=1.0, 
                                 vmin=0.0, transparent=True)
         print("time for 3D points display: {}".format(time() - time_start))

@@ -250,11 +250,13 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     param_map_vector.append(param_map)
     # affine to sheer and scale
     param_map = sitk.GetDefaultParameterMap("affine")
+    #param_map["MaximumNumberOfIterations"] = ["1024"]
     param_map_vector.append(param_map)
     # bspline for non-rigid deformation
     param_map = sitk.GetDefaultParameterMap("bspline")
-    param_map["FinalGridSpacingInVoxels"] = ["64"]
+    param_map["FinalGridSpacingInVoxels"] = ["32"]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
+    param_map["MaximumNumberOfIterations"] = ["1024"]
     
     param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)
@@ -278,6 +280,14 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         result_img = sitk.Cast(result_img, img.GetPixelID())
         imgs_transformed.append(result_img)
         print(result_img)
+        '''
+        LabelStatistics = sitk.LabelStatisticsImageFilter()
+        LabelStatistics.Execute(fixed_img, result_img)
+        count = LabelStatistics.GetCount(1)
+        mean = LabelStatistics.GetMean(1)
+        variance = LabelStatistics.GetVariance(1)
+        print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
+        '''
     
     if show_imgs:
         # show individual SimpleITK images in default viewer
@@ -308,6 +318,28 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     _, translation = _handle_transform_file(name_prefix, transform_param_map)
     translation = _translation_adjust(
         moving_img, transformed_img, translation, flip=True)
+    
+    # overlap stats
+    overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
+    '''
+    # mean Dice Similarity Coefficient (DSC) of labeled regions;
+    # not really applicable here since don't have moving labels;
+    # fixed_img is 64-bit float (double), while transformed_img is 32-bit
+    overlap_filter.Execute(sitk.Cast(fixed_img, sitk.sitkFloat32), transformed_img)
+    mean_region_dsc = overlap_filter.GetDiceCoefficient()
+    '''
+    # Dice Similarity Coefficient (DSC) of total brain volume by applying 
+    # simple binary mask for estimate of background vs foreground
+    fixed_binary_img = sitk.BinaryThreshold(fixed_img, 0.01)
+    transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
+    overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
+    #sitk.Show(fixed_binary_img)
+    #sitk.Show(transformed_binary_img)
+    total_dsc = overlap_filter.GetDiceCoefficient()
+    #print("Mean regional DSC: {}".format(mean_region_dsc))
+    print("Total DSC: {}".format(total_dsc))
+    
+    # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file)
     
 def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False, 
@@ -638,12 +670,11 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    '''
     # run with --plane xy to generate non-transposed images before comparing 
     # orthogonal views in overlay_registered_imgs, then run with --plane xz
     # to re-transpose to original orientation for mapping locations
-    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False, write_imgs=True)
+    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
+    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True)
     #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
     #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
     for plane in plot_2d.PLANE:
@@ -692,3 +723,4 @@ if __name__ == "__main__":
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])
     ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
     print("blob IDs:\n{}".format(ids))
+    '''

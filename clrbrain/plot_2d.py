@@ -41,7 +41,7 @@ verify = False
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
 
-SEG_LINEWIDTH = 2.0
+SEG_LINEWIDTH = 0.5
 ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
 PLANE = ("xy", "xz", "yz")
@@ -434,7 +434,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                                            border_bounds[1, 0], 
                                            border_bounds[1, 1], 
                                            fill=False, edgecolor="yellow",
-                                           linestyle="dashed"))
+                                           linestyle="dashed", 
+                                           linewidth=SEG_LINEWIDTH))
         
     return ax
 

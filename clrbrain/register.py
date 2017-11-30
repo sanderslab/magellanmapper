@@ -250,13 +250,13 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     param_map_vector.append(param_map)
     # affine to sheer and scale
     param_map = sitk.GetDefaultParameterMap("affine")
-    #param_map["MaximumNumberOfIterations"] = ["1024"]
+    param_map["MaximumNumberOfIterations"] = ["1024"]
     param_map_vector.append(param_map)
     # bspline for non-rigid deformation
     param_map = sitk.GetDefaultParameterMap("bspline")
-    param_map["FinalGridSpacingInVoxels"] = ["32"]
+    param_map["FinalGridSpacingInVoxels"] = ["50"]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
-    param_map["MaximumNumberOfIterations"] = ["1024"]
+    #param_map["MaximumNumberOfIterations"] = ["512"]
     
     param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)

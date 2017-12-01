@@ -667,23 +667,9 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
                 LEFT_SUFFIX, volumes_dict[-1 * key][VOL_KEY]))
     return volumes_dict
 
-if __name__ == "__main__":
-    print("Clrbrain image registration")
-    cli.main(True)
-    # run with --plane xy to generate non-transposed images before comparing 
-    # orthogonal views in overlay_registered_imgs, then run with --plane xz
-    # to re-transpose to original orientation for mapping locations
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True, name_prefix=cli.filenames[2])
-    register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=True, write_imgs=True)
-    #register(cli.filenames[0], cli.filenames[1], flip_horiz=True, show_imgs=False)
-    #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
-    for plane in plot_2d.PLANE:
-        plot_2d.plane = plane
-        #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True, name_prefix=cli.filenames[2])
-        #overlay_registered_imgs(cli.filenames[0], cli.filenames[1], flip_horiz=True)
-    '''
-    
-    # TESTING: labels lookup
+def _test_labels_lookup():
+    """Test labels reverse dictionary creation and lookup.
+    """
     
     # create reverse lookup dictionary
     ref = load_labels_ref(config.load_labels)
@@ -723,4 +709,20 @@ if __name__ == "__main__":
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])
     ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
     print("blob IDs:\n{}".format(ids))
-    '''
+
+if __name__ == "__main__":
+    print("Clrbrain image registration")
+    cli.main(True)
+    # run with --plane xy to generate non-transposed images before comparing 
+    # orthogonal views in overlay_registered_imgs, then run with --plane xz
+    # to re-transpose to original orientation for mapping locations
+    prefix = None
+    if len(cli.filenames) >= 3:
+        prefix = cli.filenames[2]
+    flip = config.flip_horiz
+    register(*cli.filenames[0:2], flip_horiz=flip, write_imgs=True, name_prefix=prefix)
+    #register(*cli.filenames[0:2], flip_horiz=flip, show_imgs=False)
+    for plane in plot_2d.PLANE:
+        plot_2d.plane = plane
+        #overlay_registered_imgs(*cli.filenames[0:2], flip_horiz=flip, name_prefix=prefix)
+    #_test_labels_lookup()

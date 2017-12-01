@@ -367,6 +367,7 @@ def main(process_args_only=False):
     parser.add_argument("--plane")
     parser.add_argument("--saveroi", action="store_true")
     parser.add_argument("--labels")
+    parser.add_argument("--flip_horiz", action="store_true")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -468,6 +469,9 @@ def main(process_args_only=False):
     if args.labels:
         config.load_labels = args.labels
         print("Set load labels path to {}".format(config.load_labels))
+    if args.flip_horiz:
+        config.flip_horiz = args.flip_horiz
+        print("Set flip horizontal to {}".format(config.flip_horiz))
     
     # load "truth blobs" from separate database for viewing
     filename_base = importer.filename_to_base(filename, series)

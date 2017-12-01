@@ -196,8 +196,14 @@ sub_stack_max_pixels = 1000
 # flag to save ROI to file
 saveroi = False
 
+# IMAGE REGISTRATION
+
+# reference atlas labels
 load_labels = None
 labels_img = None
 labels_scaling = None
 labels_ref = None
 labels_ref_lookup = None
+
+# flip the experimental image horizontally
+flip_horiz = False

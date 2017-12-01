@@ -32,7 +32,6 @@ from skimage import img_as_float
 from clrbrain import detector
 from clrbrain import config
 from clrbrain import lib_clrbrain
-from clrbrain.register import ABA_NAME, VOL_KEY
 
 colormap_2d = cm.inferno
 CMAP_GRBK = LinearSegmentedColormap.from_list("Green_black", ['black', 'green'])
@@ -937,9 +936,9 @@ def plot_volumes(volumes_dict, ignore_empty=False):
     names = []
     for key in volumes_dict.keys():
         if key >= 0:
-            name = volumes_dict[key][ABA_NAME]
-            vol_side = volumes_dict[key][VOL_KEY]
-            vol_mirrored = volumes_dict[-1 * key].get(VOL_KEY)
+            name = volumes_dict[key][config.ABA_NAME]
+            vol_side = volumes_dict[key][config.VOL_KEY]
+            vol_mirrored = volumes_dict[-1 * key].get(config.VOL_KEY)
             if (ignore_empty and vol_mirrored is not None 
                 and np.allclose([vol_side, vol_mirrored], np.zeros(2))):
                 print("skipping {} as both sides are empty".format(name))

@@ -29,10 +29,8 @@ MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
 ABA_ID = "id"
-ABA_NAME = "name"
 ABA_PARENT = "parent_structure_id"
 ABA_LEVEL = "st_level"
-VOL_KEY = "volume"
 
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
@@ -459,7 +457,7 @@ def mirror_reverse_lookup(labels_ref, offset, name_modifier):
         mirrored_val = copy.deepcopy(labels_ref[key])
         node = mirrored_val[NODE]
         node[ABA_ID] = mirrored_key
-        node[ABA_NAME] += name_modifier
+        node[config.ABA_NAME] += name_modifier
         parent = node[ABA_PARENT]
         if parent is not None:
             node[ABA_PARENT] += offset
@@ -594,7 +592,7 @@ def get_label_name(label):
         if label is not None:
             node = label[NODE]
             if node is not None:
-                name = node[ABA_NAME]
+                name = node[config.ABA_NAME]
                 print("name: {}".format(name))
                 if label[MIRRORED]:
                     name += LEFT_SUFFIX
@@ -625,8 +623,8 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
             regions above this level will be ignored.
     
     Returns:
-        Nested dictionary of {ID: {:attr:`ABA_NAME`: name, 
-        :attr:`VOL_KEY`: volume}}, where volume is in the cubed units of 
+        Nested dictionary of {ID: {:attr:`config.ABA_NAME`: name, 
+        :attr:`config.VOL_KEY`: volume}}, where volume is in the cubed units of 
         :attr:`detector.resolutions`.
     """
     ids = list(labels_ref.keys())
@@ -643,8 +641,8 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
             #print("checking id {} with vol {}".format(label_id, vol))
             if level is None or label[NODE][ABA_LEVEL] == level:
                 region_dict = {
-                    ABA_NAME: label[NODE][ABA_NAME],
-                    VOL_KEY: vol
+                    config.ABA_NAME: label[NODE][config.ABA_NAME],
+                    config.VOL_KEY: vol
                 }
                 volumes_dict[label_id] = region_dict
             else:
@@ -655,16 +653,16 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
                     for parent in parents:
                         region_dict = volumes_dict.get(parent)
                         if region_dict is not None:
-                            region_dict[VOL_KEY] += vol
+                            region_dict[config.VOL_KEY] += vol
                             print("added vol {} from {} (id {}) to {}".format(
-                                  vol, label[NODE][ABA_NAME], label_id, 
-                                  region_dict[ABA_NAME]))
+                                  vol, label[NODE][config.ABA_NAME], label_id, 
+                                  region_dict[config.ABA_NAME]))
     for key in volumes_dict.keys():
         if key >= 0:
             print("{} (id {}), volume{}: {}, volume{}: {}, ".format(
-                volumes_dict[key][ABA_NAME], key, 
-                RIGHT_SUFFIX, volumes_dict[key][VOL_KEY], 
-                LEFT_SUFFIX, volumes_dict[-1 * key][VOL_KEY]))
+                volumes_dict[key][config.ABA_NAME], key, 
+                RIGHT_SUFFIX, volumes_dict[key][config.VOL_KEY], 
+                LEFT_SUFFIX, volumes_dict[-1 * key][config.VOL_KEY]))
     return volumes_dict
 
 def _test_labels_lookup():
@@ -702,8 +700,8 @@ def _test_labels_lookup():
     # get volumes for each ID
     print("labels_img shape: {}".format(labels_img.shape))
     scaling = np.ones(3) * 0.05
-    #volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913], level=12)
-    #plot_2d.plot_volumes(volumes_dict, ignore_empty=True)
+    volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913], level=2)
+    plot_2d.plot_volumes(volumes_dict, ignore_empty=True)
     
     # get a list of IDs corresponding to each blob
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])

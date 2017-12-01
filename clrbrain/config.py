@@ -204,6 +204,8 @@ labels_img = None
 labels_scaling = None
 labels_ref = None
 labels_ref_lookup = None
+ABA_NAME = "name"
+VOL_KEY = "volume"
 
 # flip the experimental image horizontally
 flip_horiz = False

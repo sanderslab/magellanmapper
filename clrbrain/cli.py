@@ -186,7 +186,7 @@ def _load_db(filename_base, suffix):
     return db
 
 def _load_truth_db(filename_base):
-    truth_db = _load_db(filename_base, "_truth.db")
+    truth_db = _load_db(filename_base, sqlite.DB_SUFFIX_TRUTH)
     truth_db.load_truth_blobs()
     config.truth_db = truth_db
     return truth_db

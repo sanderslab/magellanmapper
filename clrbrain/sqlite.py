@@ -8,15 +8,19 @@ Attributes:
 """
 
 import os
+import glob
 import shutil
 import datetime
 import sqlite3
 import numpy as np
 
 from clrbrain import cli
+from clrbrain import config
 
 DB_NAME = "clrbrain.db"
 DB_NAME_VERIFIED = "clrbrain_verified.db"
+DB_NAME_MERGED = "clrbrain_merged.db"
+DB_SUFFIX_TRUTH = "_truth.db"
 DB_VERSION = 2
 
 def _backup_db(path):
@@ -120,6 +124,12 @@ def upgrade_db(conn, cur):
 def start_db(path=None, new_db=False):
     """Starts the database.
     
+    Args:
+        path: Path where the new database resides; if None, defaults to 
+            :attr:``DB_NAME``.
+        new_db: If True or if ``path`` does not exist, a new database will 
+            be created; defaults to False.
+    
     Returns:
         conn: The connection.
         cur: Connection's cursor.
@@ -184,8 +194,12 @@ def select_experiment(cur, name):
         All of the experiments with the given name, or an empty list 
             if none are found.
     """
-    cur.execute("SELECT id, name, date FROM experiments WHERE name = ?", 
-                (name, ))
+    cols = "id, name, date"
+    if name is None:
+        cur.execute("SELECT {} FROM experiments".format(cols))
+    else:
+        cur.execute("SELECT {} FROM experiments WHERE name = ?".format(cols), 
+                    (name, ))
     rows = cur.fetchall()
     return rows
 
@@ -361,7 +375,10 @@ def _parse_blobs(rows):
     blobs = np.empty((len(rows), 6))
     rowi = 0
     for row in rows:
-        blobs[rowi] = [row["z"], row["y"], row["x"], row["radius"], row["confirmed"], row["truth"]]
+        blobs[rowi] = [
+            row["z"], row["y"], row["x"], row["radius"], row["confirmed"], 
+            row["truth"]
+        ]
         rowi += 1
     return blobs
 
@@ -449,6 +466,38 @@ def verification_stats(conn, cur):
                       false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))
 
 
+def _merge_dbs(db_paths, db_merged=None):
+    if db_merged is None:
+        db_merged = ClrDB()
+        db_merged.load_db(DB_NAME_MERGED, True)
+    for db_path in db_paths:
+        print("merging in database from {}".format(db_path))
+        db = ClrDB()
+        db.load_db(db_path, False)
+        exps = select_experiment(db.cur, None)
+        for exp in exps:
+            exp_id = select_or_insert_experiment(
+                db_merged.conn, db_merged.cur, exp["name"], exp["date"])
+            rois = select_rois(db.cur, exp["id"])
+            for roi in rois:
+                roi_id, _ = insert_roi(
+                    db_merged.conn, db_merged.cur, exp_id, roi["series"], 
+                    (roi["offset_x"], roi["offset_y"], roi["offset_z"]), 
+                    (roi["size_x"], roi["size_y"], roi["size_z"]))
+                blobs = select_blobs(db.cur, roi["id"])
+                insert_blobs(db_merged.conn, db_merged.cur, roi_id, blobs)
+        exps_len = 0 if exps is None else len(exps)
+        print("imported {} experiments from {}".format(exps_len, db_path))
+    return db_merged
+
+def merge_truth_dbs(img_paths):
+    db_merged = None
+    for img_path in img_paths:
+        print(os.path.basename(img_path.rsplit(".", 1)[0]))
+        db_paths = glob.glob("./{}*{}".format(
+            os.path.basename(img_path.rsplit(".", 1)[0]), DB_SUFFIX_TRUTH))
+        db_merged = _merge_dbs(db_paths, db_merged)
+
 def _test_db():
     # simple database test
     conn, cur = start_db()
@@ -481,12 +530,12 @@ if __name__ == "__main__":
     print("Starting sqlite.py...")
     # parses arguments and sets up the DB
     cli.main(True)
-    from clrbrain import config
     conn = config.db.conn
     cur = config.db.cur
     if config.verified_db is not None:
         conn = config.verified_db.conn
         cur = config.verified_db.cur
-    verification_stats(conn, cur)
+    #verification_stats(conn, cur)
     #update_rois(cur, cli.offset, cli.roi_size)
+    merge_truth_dbs(cli.filenames)
     

@@ -12,6 +12,7 @@ from pprint import pprint
 from time import time
 import SimpleITK as sitk
 import numpy as np
+from skimage import transform
 
 from clrbrain import cli
 from clrbrain import config
@@ -202,6 +203,20 @@ def transpose_img(img_sitk, plane, flip_horiz):
     transposed.SetOrigin(origin)
     return transposed
 
+def _load_numpy_to_sitk(numpy_file, flip_horiz=False, size=None):
+    image5d = importer.read_file(numpy_file, cli.series)
+    roi = image5d[0, ...] # not using time dimension
+    if flip_horiz:
+        roi = roi[..., ::-1]
+    if size is not None:
+        roi = transform.resize(roi, size)#, anti_aliasing=True)
+    sitk_img = sitk.GetImageFromArray(roi)
+    spacing = detector.resolutions[0]
+    #print("spacing: {}".format(spacing))
+    sitk_img.SetSpacing(spacing[::-1])
+    sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
+    return sitk_img
+
 def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True, 
              write_imgs=False, name_prefix=None):
     """Registers two images to one another using the SimpleElastix library.
@@ -215,18 +230,7 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     """
     if name_prefix is None:
         name_prefix = fixed_file
-    image5d = importer.read_file(fixed_file, cli.series)
-    roi = image5d[0, ...] # not using time dimension
-    if flip_horiz:
-        roi = roi[..., ::-1]
-    fixed_img = sitk.GetImageFromArray(roi)
-    spacing = detector.resolutions[0]
-    #print("spacing: {}".format(spacing))
-    fixed_img.SetSpacing(spacing[::-1])
-    fixed_img.SetOrigin([0, 0, -roi.shape[0] // 2])
-    #fixed_img = sitk.RescaleIntensity(fixed_img)
-    #fixed_img = sitk.Cast(fixed_img, sitk.sitkUInt32)
-    #sitk.Show(transpose_img(fixed_img, plot_2d.plane, flip_horiz))
+    fixed_img = _load_numpy_to_sitk(fixed_file, flip_horiz)
     
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
@@ -307,7 +311,7 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
 
     # show 2D overlay for registered images
     imgs = [
-        roi, 
+        sitk.GetArrayFromImage(fixed_img),
         sitk.GetArrayFromImage(moving_img), 
         sitk.GetArrayFromImage(transformed_img), 
         sitk.GetArrayFromImage(imgs_transformed[0])]
@@ -340,6 +344,44 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file)
     
+def register_group(img_files, flip_horiz=None, show_imgs=True, 
+             write_imgs=False, name_prefix=None):
+    img_vector = sitk.VectorOfImage()
+    flip = False
+    origin = None
+    size = None
+    for i in range(len(img_files)):#, flip in zip(img_files, flip_horiz):
+        img_file = img_files[i]
+        if flip_horiz is not None:
+            flip = flip_horiz[i]
+        # force all images into same size and origin as first image 
+        # to avoid groupwise registration error on physical space mismatch
+        img = _load_numpy_to_sitk(img_file, flip, size)
+        if origin is None:
+            origin = img.GetOrigin()
+            size = img.GetSize()[::-1]
+        else:
+            img.SetOrigin(origin)
+        print("img_file:\n{}".format(img))
+        img_vector.push_back(img)
+        #sitk.Show(img)
+    #sitk.ProcessObject.SetGlobalDefaultDirectionTolerance(1)
+    #sitk.ProcessObject.SetGlobalDefaultCoordinateTolerance(100)
+    img_combined = sitk.JoinSeries(img_vector)
+    
+    elastix_img_filter = sitk.ElastixImageFilter()
+    elastix_img_filter.SetFixedImage(img_combined)
+    elastix_img_filter.SetMovingImage(img_combined)
+    param_map = sitk.GetDefaultParameterMap("groupwise")
+    param_map["FinalGridSpacingInVoxels"] = ["50"]
+    del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
+    elastix_img_filter.SetParameterMap(param_map)
+    elastix_img_filter.PrintParameterMap()
+    transform = elastix_img_filter.Execute()
+    transformed_img = elastix_img_filter.GetResultImage()
+    sitk.Show(transformed_img)
+    
+
 def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False, 
                             name_prefix=None):
     """Shows overlays of previously saved registered images.
@@ -718,8 +760,9 @@ if __name__ == "__main__":
     if len(cli.filenames) >= 3:
         prefix = cli.filenames[2]
     flip = config.flip_horiz
-    register(*cli.filenames[0:2], flip_horiz=flip, write_imgs=True, name_prefix=prefix)
+    #register(*cli.filenames[0:2], flip_horiz=flip, write_imgs=True, name_prefix=prefix)
     #register(*cli.filenames[0:2], flip_horiz=flip, show_imgs=False)
+    register_group(cli.filenames, flip_horiz=(True, False, False, False), write_imgs=True)
     for plane in plot_2d.PLANE:
         plot_2d.plane = plane
         #overlay_registered_imgs(*cli.filenames[0:2], flip_horiz=flip, name_prefix=prefix)

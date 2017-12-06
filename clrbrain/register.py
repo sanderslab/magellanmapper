@@ -218,7 +218,7 @@ def _load_numpy_to_sitk(numpy_file, flip_horiz=False, size=None):
     return sitk_img
 
 def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True, 
-             write_imgs=False, name_prefix=None):
+             write_imgs=True, name_prefix=None):
     """Registers two images to one another using the SimpleElastix library.
     
     Args:
@@ -707,6 +707,18 @@ def volumes_by_id(labels_img, labels_ref, scaling, resolution, level=None):
                 LEFT_SUFFIX, volumes_dict[-1 * key][config.VOL_KEY]))
     return volumes_dict
 
+def register_volumes(img_path, labels_path, scaling, level):
+    # load image just to get resolutions
+    image5d = importer.read_file(img_path, cli.series)
+    labels_img = load_labels(img_path)
+    print("labels_img shape: {}".format(labels_img.shape))
+    ref = load_labels_ref(labels_path)
+    id_dict = create_aba_reverse_lookup(ref)
+    scaling = np.ones(3) * scaling
+    volumes_dict = volumes_by_id(
+        labels_img, id_dict, scaling, detector.resolutions[0], level=level)
+    plot_2d.plot_volumes(volumes_dict, ignore_empty=True)
+
 def _test_labels_lookup():
     """Test labels reverse dictionary creation and lookup.
     """
@@ -739,31 +751,44 @@ def _test_labels_lookup():
     print("time to find node (s): {}".format(time_node_end - time_node_start))
     print("time to find node directly (s): {}".format(time_direct_end - time_direct_start))
     
-    # get volumes for each ID
-    print("labels_img shape: {}".format(labels_img.shape))
-    scaling = np.ones(3) * 0.05
-    volumes_dict = volumes_by_id(labels_img, id_dict, scaling, [4.935,  0.913, 0.913], level=2)
-    plot_2d.plot_volumes(volumes_dict, ignore_empty=True)
-    
     # get a list of IDs corresponding to each blob
     blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])
-    ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
+    ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, np.ones(3) * config.labels_scaling)
     print("blob IDs:\n{}".format(ids))
 
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
-    # run with --plane xy to generate non-transposed images before comparing 
-    # orthogonal views in overlay_registered_imgs, then run with --plane xz
-    # to re-transpose to original orientation for mapping locations
+    # name prefix to use a different name from the input files, such as when 
+    # registering transposed/scaled images but outputting paths corresponding 
+    # to the original image
     prefix = None
     if len(cli.filenames) >= 3:
         prefix = cli.filenames[2]
-    flip = config.flip_horiz
-    #register(*cli.filenames[0:2], flip_horiz=flip, write_imgs=True, name_prefix=prefix)
-    #register(*cli.filenames[0:2], flip_horiz=flip, show_imgs=False)
-    register_group(cli.filenames, flip_horiz=(True, False, False, False), write_imgs=True)
-    for plane in plot_2d.PLANE:
-        plot_2d.plane = plane
-        #overlay_registered_imgs(*cli.filenames[0:2], flip_horiz=flip, name_prefix=prefix)
+    if config.register_type is None:
+        # explicitly require a registration type
+        print("Please choose a registration type")
+    elif config.register_type == config.REGISTER_TYPES[0]:
+        # run with --plane xy to generate non-transposed images before comparing 
+        # orthogonal views in overlay_registered_imgs, then run with --plane xz
+        # to re-transpose to original orientation for mapping locations
+        register(*cli.filenames[0:2], flip_horiz=config.flip_horiz, 
+                 name_prefix=prefix)
+        #register(*cli.filenames[0:2], flip_horiz=config.flip_horiz, 
+        #         show_imgs=False, write_imgs=False)
+    elif config.register_type == config.REGISTER_TYPES[1]:
+        # groupwise registration
+        register_group(cli.filenames, flip_horiz=config.flip_horiz)
+    elif config.register_type == config.REGISTER_TYPES[2]:
+        # overlay registered images in each orthogonal plane
+        for plane in plot_2d.PLANE:
+            plot_2d.plane = plane
+            overlay_registered_imgs(
+                *cli.filenames[0:2], flip_horiz=config.flip_horiz, 
+                name_prefix=prefix)
+    elif config.register_type == config.REGISTER_TYPES[3]:
+        # compute grouped volumes by ontology level
+        register_volumes(
+            *cli.filenames[0:2], config.load_labels, 
+            config.labels_scaling, config.labels_level)
     #_test_labels_lookup()

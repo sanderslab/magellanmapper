@@ -29,6 +29,19 @@ Command-line arguments in addition to those from attributes listed below:
     * res: Resolution given as (x, y, z) in floating point (see
         cli.py, though order is natural here as command-line argument).
     * saveroi: Save ROI from original image to file during stack processing.
+    * register: Registration type. See :attr:``config.REGISTER_TYPES`` for 
+        types of registration.
+    * labels: Load annotation JSON file. The first argument is the path 
+        to the JSON file. Additional arguments can be given for calculating 
+        volume informationIf a 2nd arguments is given, it is taken as 
+        the float value of the corresponding label image's scaling. 
+        If a 3rd argument is given, it is taken as an int of the ontology 
+        level at which to group volumes.
+    * flip_horiz: Flags for flipping images horizontally for registration. 
+        "0" or "false" (case-insensivite) are taken as False, and 
+        "1" or "true" are taken as True. The number of flags should 
+        correspond to the number of images to register, such as several for 
+        groupwise registration.
 
 Attributes:
     filename: The filename of the source images. A corresponding file with
@@ -366,8 +379,9 @@ def main(process_args_only=False):
     parser.add_argument("--roc", action="store_true")
     parser.add_argument("--plane")
     parser.add_argument("--saveroi", action="store_true")
-    parser.add_argument("--labels")
-    parser.add_argument("--flip_horiz", action="store_true")
+    parser.add_argument("--labels", nargs="*")
+    parser.add_argument("--flip_horiz", nargs="*")
+    parser.add_argument("--register")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -467,11 +481,25 @@ def main(process_args_only=False):
         config.saveroi = args.saveroi
         print("Set save ROI to file to ".format(config.saveroi))
     if args.labels:
-        config.load_labels = args.labels
-        print("Set load labels path to {}".format(config.load_labels))
+        labels_len = len(args.labels)
+        if labels_len > 0:
+            config.load_labels = args.labels[0]
+            print("Set load labels path to {}".format(config.load_labels))
+        if labels_len > 1:
+            config.labels_scaling = float(args.labels[1])
+            print("Set labels scaling to {}".format(config.labels_scaling))
+        if labels_len > 2:
+            config.labels_level = int(args.labels[2])
+            print("Set labels level to {}".format(config.labels_level))
     if args.flip_horiz:
-        config.flip_horiz = args.flip_horiz
+        config.flip_horiz = []
+        for flip in args.flip_horiz:
+            flip = flip.lower()
+            config.flip_horiz.append(flip.lower() == "true" or flip == "1")
         print("Set flip horizontal to {}".format(config.flip_horiz))
+    if args.register:
+        config.register_type = args.register
+        print("Set register type to {}".format(config.register_type))
     
     # load "truth blobs" from separate database for viewing
     filename_base = importer.filename_to_base(filename, series)

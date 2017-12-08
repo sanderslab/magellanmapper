@@ -205,7 +205,6 @@ labels_scaling = None
 labels_ref = None
 labels_ref_lookup = None
 labels_level = None
-labels_scaling = None
 REGISTER_TYPES = ("single", "group", "overlays", "volumes")
 register_type = None
 ABA_NAME = "name"

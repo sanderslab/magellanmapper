@@ -32,11 +32,8 @@ Command-line arguments in addition to those from attributes listed below:
     * register: Registration type. See :attr:``config.REGISTER_TYPES`` for 
         types of registration.
     * labels: Load annotation JSON file. The first argument is the path 
-        to the JSON file. Additional arguments can be given for calculating 
-        volume informationIf a 2nd arguments is given, it is taken as 
-        the float value of the corresponding label image's scaling. 
-        If a 3rd argument is given, it is taken as an int of the ontology 
-        level at which to group volumes.
+        to the JSON file. If a 2nd arguments is given, it is taken as an int of 
+        the ontology level for grouping volumes.
     * flip_horiz: Flags for flipping images horizontally for registration. 
         "0" or "false" (case-insensivite) are taken as False, and 
         "1" or "true" are taken as True. The number of flags should 
@@ -486,10 +483,7 @@ def main(process_args_only=False):
             config.load_labels = args.labels[0]
             print("Set load labels path to {}".format(config.load_labels))
         if labels_len > 1:
-            config.labels_scaling = float(args.labels[1])
-            print("Set labels scaling to {}".format(config.labels_scaling))
-        if labels_len > 2:
-            config.labels_level = int(args.labels[2])
+            config.labels_level = int(args.labels[1])
             print("Set labels level to {}".format(config.labels_level))
     if args.flip_horiz:
         config.flip_horiz = []

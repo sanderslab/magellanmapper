@@ -845,7 +845,6 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         title: Figure title; if None, will be given default title.
     """
     fig = plt.figure()
-    fig.suptitle(title)
     # give extra space to the first row since the atlas is often larger
     gs = gridspec.GridSpec(2, 3, height_ratios=[3, 2])
     resolution = detector.resolutions[0]
@@ -923,12 +922,13 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     
     if title is None:
         title = "Image Overlays"
+    fig.suptitle(title)
     gs.tight_layout(fig)
     if savefig is not None:
         plt.savefig(title + "." + savefig)
     plt.show()
 
-def plot_volumes(volumes_dict, ignore_empty=False):
+def plot_volumes(volumes_dict, ignore_empty=False, title=None):
     fig, ax = plt.subplots()
     width = 0.1
     volumes_side = []
@@ -955,9 +955,15 @@ def plot_volumes(volumes_dict, ignore_empty=False):
     
     ax.set_ylabel("Volume (cubic microns)")
     ax.set_xticks(indices + width)
-    ax.set_xticklabels(names, rotation=45)
+    ax.set_xticklabels(names, rotation=80)
     if len(bar_mirrored) > 0 and len(bar_side) > 0:
         ax.legend((bar_mirrored[0], bar_side[0]), ("Left", "Right"))
+    if title is None:
+        title = "Regional Volumes"
+    fig.suptitle(title)
+    plt.tight_layout()
+    if savefig is not None:
+        plt.savefig(title + "." + savefig)
     plt.show()
 
 if __name__ == "__main__":

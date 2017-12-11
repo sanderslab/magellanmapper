@@ -575,10 +575,13 @@ def get_label_ids_from_position(coord, labels_img, scaling):
         An array of label IDs corresponding to ``coords``, or a scalar of 
         one ID if only one coordinate is given.
     """
+    # scale coordinates to atlas image size
     coord_scaled = np.multiply(coord, scaling).astype(np.int)
+    # split coordinates into lists by dimension to index the labels image
+    # at once
     coord_scaled = np.transpose(coord_scaled)
     coord_scaled = np.split(coord_scaled, coord_scaled.shape[0])
-    print("coord_scaled: {}".format(coord_scaled))
+    #print("coord_scaled: {}".format(coord_scaled))
     return labels_img[coord_scaled][0]
 
 def get_label(coord, labels_img, labels_ref, scaling, level=None):
@@ -750,6 +753,15 @@ def volumes_by_id(labels_img, labels_ref, resolution, level=None,
     return volumes_dict
 
 def register_volumes(img_path, labels_path, level, densities=False):    
+    """Register volumes and densities.
+    
+    Args:
+        img_path: Path to the original image file.
+        labels_path: Path to the registered labels image file.
+        level: Ontology level at which to show volumes and densities.
+        densities: True if densities should be displayed; defaults to False.
+    """
+    # load labels image and setup labels dictionary
     labels_img_sitk = load_labels(img_path, get_sitk=True)
     scaling = labels_img_sitk.GetSpacing()
     labels_img = sitk.GetArrayFromImage(labels_img_sitk)
@@ -757,23 +769,28 @@ def register_volumes(img_path, labels_path, level, densities=False):
     ref = load_labels_ref(labels_path)
     id_dict = create_aba_reverse_lookup(ref)
     
+    # load blob densities by region if flagged
     blobs_ids = None
     if densities:
+        # load blobs
         filename_base = importer.filename_to_base(img_path, cli.series)
         info = np.load(filename_base + cli.SUFFIX_INFO_PROC)
         blobs = info["segments"]
         print("loading {} blobs".format(len(blobs)))
         # load image just to get resolutions
         image5d = importer.read_file(img_path, cli.series)
+        # annotate blobs based on position
         blobs_ids = get_label_ids_from_position(
             blobs[:, 0:3], labels_img, 
             np.divide(detector.resolutions[0], scaling[::-1]))
         print(blobs_ids)
     
+    # calculate and plot volumes and densities
     volumes_dict = volumes_by_id(
         labels_img, id_dict, scaling, level=level, blobs_ids=blobs_ids)
     title = "{}_volumes_level{}".format(os.path.basename(img_path), level)
-    plot_2d.plot_volumes(volumes_dict, ignore_empty=True, title=title, densities=densities)
+    plot_2d.plot_volumes(
+        volumes_dict, ignore_empty=True, title=title, densities=densities)
 
 def _test_labels_lookup():
     """Test labels reverse dictionary creation and lookup.

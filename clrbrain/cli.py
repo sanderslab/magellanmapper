@@ -65,6 +65,7 @@ import argparse
 from time import time
 import multiprocessing as mp
 import numpy as np
+import matplotlib.pylab as pylab
 #from memory_profiler import profile
 
 from clrbrain import config
@@ -86,6 +87,8 @@ roi_sizes = None # list of regions of interest
 offset = None # current offset
 offsets = None # list of offsets
 
+SUFFIX_IMG_PROC = "_image5d_proc.npz"
+SUFFIX_INFO_PROC = "_info_proc.npz"
 image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
@@ -525,6 +528,8 @@ def main(process_args_only=False):
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
     
+    pylab.rcParams.update(config.params)
+    
     if process_args_only:
         return
     
@@ -592,8 +597,8 @@ def process_file(filename_base, offset, roi_size):
     
     # prepares the filenames
     global image5d
-    filename_image5d_proc = filename_base + "_image5d_proc.npz"
-    filename_info_proc = filename_base + "_info_proc.npz"
+    filename_image5d_proc = filename_base + SUFFIX_IMG_PROC
+    filename_info_proc = filename_base + SUFFIX_INFO_PROC
     filename_roi = None
     #print(filename_image5d_proc)
     

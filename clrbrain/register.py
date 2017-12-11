@@ -174,6 +174,8 @@ def transpose_img(img_sitk, plane, flip_horiz):
     origin = img_sitk.GetOrigin()
     transposed = img
     if plane is not None and plane != plot_2d.PLANE[0]:
+        if not flip_horiz:
+            transposed = transposed[..., ::-1]
         # swap z-y to get (y, z, x) order for xz orientation
         transposed = np.swapaxes(transposed, 0, 1)
         # sitk convension is opposite of numpy with (x, y, z) order
@@ -194,8 +196,6 @@ def transpose_img(img_sitk, plane, flip_horiz):
         if plane == plot_2d.PLANE[1] or plane == plot_2d.PLANE[2]:
             # flip upside-down
             transposed[:] = np.flipud(transposed[:])
-            if flip_horiz:
-                transposed = transposed[..., ::-1]
         else:
             transposed[:] = transposed[:]
     transposed = sitk.GetImageFromArray(transposed)
@@ -303,6 +303,12 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         # write atlas and labels files, transposed according to plane setting
         imgs_names = (IMG_ATLAS, IMG_LABELS)
         imgs_write = [transformed_img, imgs_transformed[0]]
+        '''
+        # TESTING: transpose saved images to new orientation
+        img = sitk.ReadImage(_reg_out_path(name_prefix, IMG_LABELS))
+        imgs_names = ("test.mhd", )
+        imgs_write = [img]
+        '''
         for i in range(len(imgs_write)):
             out_path = _reg_out_path(name_prefix, imgs_names[i])
             img = transpose_img(imgs_write[i], plot_2d.plane, flip_horiz)
@@ -569,14 +575,9 @@ def get_label_ids_from_position(coord, labels_img, scaling):
         An array of label IDs corresponding to ``coords``, or a scalar of 
         one ID if only one coordinate is given.
     """
-    coord_scaled = np.around(np.multiply(coord, scaling)).astype(np.int)
-    #print(labels_img[tuple(coord_scaled[0])])
-    #coord_scaled = coord_scaled[:, 1]#range(coord_scaled.shape[1])]
-    coord_scaled = np.split(np.transpose(coord_scaled), coord_scaled.shape[0])
-    '''
-    if len(coord_scaled) > 1:
-        coord_scaled = [row for row in np.transpose(coord_scaled)]
-    '''
+    coord_scaled = np.multiply(coord, scaling).astype(np.int)
+    coord_scaled = np.transpose(coord_scaled)
+    coord_scaled = np.split(coord_scaled, coord_scaled.shape[0])
     print("coord_scaled: {}".format(coord_scaled))
     return labels_img[coord_scaled][0]
 
@@ -646,7 +647,8 @@ def get_label_name(label):
         print(e, name)
     return name
 
-def volumes_by_id(labels_img, labels_ref, resolution, level=None):
+def volumes_by_id(labels_img, labels_ref, resolution, level=None, 
+                  blobs_ids=None):
     """Get volumes by labels IDs.
     
     Args:
@@ -664,11 +666,14 @@ def volumes_by_id(labels_img, labels_ref, resolution, level=None):
             given, only regions from that level will be returned, while 
             children will be collapsed into the parent at that level, and 
             regions above this level will be ignored.
+        blobs_ids: List of label IDs for blobs. If None, blob densities will 
+            not be calculated.
     
     Returns:
         Nested dictionary of {ID: {:attr:`config.ABA_NAME`: name, 
-        :attr:`config.VOL_KEY`: volume}}, where volume is in the cubed units of 
-        :attr:`detector.resolutions`.
+        :attr:`config.VOL_KEY`: volume, 
+        :attr:`config.BLOBS_KEY`: number of blobs}}, where volume is in the 
+        cubed units of :attr:`detector.resolutions`.
     """
     ids = list(labels_ref.keys())
     #print("ids: {}".format(ids))
@@ -680,44 +685,95 @@ def volumes_by_id(labels_img, labels_ref, resolution, level=None):
             label = labels_ref[key] # always use pos val
             region = labels_img[labels_img == label_id]
             vol = len(region) * scaling_vol
+            blobs = None
+            blobs_len = 0
+            if blobs_ids is not None:
+                blobs = blobs_ids[blobs_ids == label_id]
+                blobs_len = len(blobs)
             #print("checking id {} with vol {}".format(label_id, vol))
-            if level is None or label[NODE][ABA_LEVEL] == level:
+            label_level = label[NODE][ABA_LEVEL]
+            name = label[NODE][config.ABA_NAME]
+            # include region in volumes dict if at the given level, no level 
+            # specified, or at the default (organism) level, which is used 
+            # to catch all children without a parent at the given level
+            if level is None or label_level == level or label_level == -1:
                 region_dict = {
                     config.ABA_NAME: label[NODE][config.ABA_NAME],
-                    config.VOL_KEY: vol
+                    config.VOL_KEY: vol,
+                    config.BLOBS_KEY: blobs_len
                 }
                 volumes_dict[label_id] = region_dict
+                print("inserting region {} (id {}) with {} vol and {} blobs "
+                      .format(name, label_id, vol, blobs_len))
             else:
                 parents = label.get(PARENT_IDS)
                 if parents is not None:
                     if label_id < 0:
                         parents = np.multiply(parents, -1)
-                    for parent in parents:
+                    # start from last parent to avoid level -1 unless no 
+                    # parent found and stop checking as soon as parent found
+                    found_parent = False
+                    for parent in parents[::-1]:
                         region_dict = volumes_dict.get(parent)
                         if region_dict is not None:
                             region_dict[config.VOL_KEY] += vol
-                            print("added vol {} from {} (id {}) to {}".format(
-                                  vol, label[NODE][config.ABA_NAME], label_id, 
-                                  region_dict[config.ABA_NAME]))
+                            region_dict[config.BLOBS_KEY] += blobs_len
+                            print("added {} vol and {} blobs from {} (id {}) "
+                                  "to {}".format(vol, blobs_len, name, 
+                                  label_id, region_dict[config.ABA_NAME]))
+                            found_parent = True
+                            break
+                    if not found_parent:
+                        print("could not find parent for {} with blobs {}"
+                              .format(label_id, blobs_len))
+    # blobs summary
+    blobs_tot = 0
     for key in volumes_dict.keys():
+        # all blobs matched to a region at the given level; 
+        # TODO: find blobs that had a label (ie not 0) but did not match any 
+        # parent, including -1
         if key >= 0:
-            print("{} (id {}), volume{}: {}, volume{}: {}, ".format(
-                volumes_dict[key][config.ABA_NAME], key, 
-                RIGHT_SUFFIX, volumes_dict[key][config.VOL_KEY], 
-                LEFT_SUFFIX, volumes_dict[-1 * key][config.VOL_KEY]))
+            blobs_side = volumes_dict[key][config.BLOBS_KEY]
+            blobs_mirrored = volumes_dict[-1 * key][config.BLOBS_KEY]
+            print("{} (id {}), {}: volume {}, blobs {}; {}: volume {}, blobs {}"
+                .format(volumes_dict[key][config.ABA_NAME], key, 
+                RIGHT_SUFFIX, volumes_dict[key][config.VOL_KEY], blobs_side, 
+                LEFT_SUFFIX, volumes_dict[-1 * key][config.VOL_KEY], 
+                blobs_mirrored))
+            blobs_tot += blobs_side + blobs_mirrored
+    # all unlabeled blobs
+    blobs_unlabeled = blobs_ids[blobs_ids == 0]
+    blobs_unlabeled_len = len(blobs_unlabeled)
+    print("unlabeled blobs (id 0): {}".format(blobs_unlabeled_len))
+    blobs_tot += blobs_unlabeled_len
+    print("total blobs accounted for: {}".format(blobs_tot))
     return volumes_dict
 
-def register_volumes(img_path, labels_path, level):
+def register_volumes(img_path, labels_path, level, densities=False):    
     labels_img_sitk = load_labels(img_path, get_sitk=True)
     scaling = labels_img_sitk.GetSpacing()
     labels_img = sitk.GetArrayFromImage(labels_img_sitk)
     print("labels_img shape: {}".format(labels_img.shape))
     ref = load_labels_ref(labels_path)
     id_dict = create_aba_reverse_lookup(ref)
+    
+    blobs_ids = None
+    if densities:
+        filename_base = importer.filename_to_base(img_path, cli.series)
+        info = np.load(filename_base + cli.SUFFIX_INFO_PROC)
+        blobs = info["segments"]
+        print("loading {} blobs".format(len(blobs)))
+        # load image just to get resolutions
+        image5d = importer.read_file(img_path, cli.series)
+        blobs_ids = get_label_ids_from_position(
+            blobs[:, 0:3], labels_img, 
+            np.divide(detector.resolutions[0], scaling[::-1]))
+        print(blobs_ids)
+    
     volumes_dict = volumes_by_id(
-        labels_img, id_dict, scaling, level=level)
+        labels_img, id_dict, scaling, level=level, blobs_ids=blobs_ids)
     title = "{}_volumes_level{}".format(os.path.basename(img_path), level)
-    plot_2d.plot_volumes(volumes_dict, ignore_empty=True, title=title)
+    plot_2d.plot_volumes(volumes_dict, ignore_empty=True, title=title, densities=densities)
 
 def _test_labels_lookup():
     """Test labels reverse dictionary creation and lookup.
@@ -772,7 +828,7 @@ if __name__ == "__main__":
         # run with --plane xy to generate non-transposed images before comparing 
         # orthogonal views in overlay_registered_imgs, then run with --plane xz
         # to re-transpose to original orientation for mapping locations
-        register(*cli.filenames[0:2], flip_horiz=config.flip_horiz, 
+        register(*cli.filenames[0:2], flip_horiz=config.flip_horiz[0], 
                  name_prefix=prefix)
         #register(*cli.filenames[0:2], flip_horiz=config.flip_horiz, 
         #         show_imgs=False, write_imgs=False)
@@ -784,10 +840,14 @@ if __name__ == "__main__":
         for plane in plot_2d.PLANE:
             plot_2d.plane = plane
             overlay_registered_imgs(
-                *cli.filenames[0:2], flip_horiz=config.flip_horiz, 
+                *cli.filenames[0:2], flip_horiz=config.flip_horiz[0], 
                 name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[3]:
         # compute grouped volumes by ontology level
         register_volumes(
             *cli.filenames[0:2], config.load_labels, config.labels_level)
+    elif config.register_type == config.REGISTER_TYPES[4]:
+        # compute blob densities by ontology level
+        register_volumes(
+            *cli.filenames[0:2], config.load_labels, config.labels_level, True)
     #_test_labels_lookup()

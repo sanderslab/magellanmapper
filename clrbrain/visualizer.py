@@ -36,7 +36,6 @@ from traitsui.tabular_adapter import TabularAdapter
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
-import matplotlib.pylab as pylab
 
 from clrbrain import chunking
 from clrbrain import cli
@@ -48,22 +47,12 @@ from clrbrain import plot_2d
 from clrbrain import register
 from clrbrain import sqlite
 
-params = {"legend.fontsize": "small",
-          "axes.labelsize": "small",
-          "axes.titlesize": "small",
-          "xtick.labelsize": "small",
-          "ytick.labelsize": "small",
-          "lines.linewidth": 1,
-          "image.interpolation": "bilinear",
-          "image.resample": False}
-
 def main():
     """Starts the visualization GUI.
     
     Processes command-line arguments.
     """
     cli.main()
-    pylab.rcParams.update(params)
     push_exception_handler(reraise_exceptions=True)
     visualization = Visualization()
     visualization.configure_traits()

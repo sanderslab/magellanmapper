@@ -190,6 +190,18 @@ colors = np.array(
      [0, 0, 0]] # black
 )
 
+# RC parameters for Matplotlib
+params = {
+    "legend.fontsize": "small",
+    "axes.labelsize": "small",
+    "axes.titlesize": "small",
+    "xtick.labelsize": "small",
+    "ytick.labelsize": "small",
+    "lines.linewidth": 1,
+    "image.interpolation": "bilinear",
+    "image.resample": False
+}
+
 # max pixels for x- and y- dimensions of sub-stacks for stack processing
 sub_stack_max_pixels = 1000
 
@@ -205,10 +217,11 @@ labels_scaling = None
 labels_ref = None
 labels_ref_lookup = None
 labels_level = None
-REGISTER_TYPES = ("single", "group", "overlays", "volumes")
+REGISTER_TYPES = ("single", "group", "overlays", "volumes", "densities")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"
+BLOBS_KEY = "blobs"
 
 # flip the experimental image horizontally
 flip_horiz = False

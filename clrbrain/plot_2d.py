@@ -928,17 +928,42 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         plt.savefig(title + "." + savefig)
     plt.show()
 
-def plot_volumes(volumes_dict, ignore_empty=False, title=None):
-    fig, ax = plt.subplots()
+def _bar_plots(ax, lists, list_names, x_labels, colors, indices, width, title):
+    bars = []
+    for i in range(len(lists)):
+        bars.append(ax.bar(
+            indices + width * i, lists[i], width=width, color=colors[i], 
+            linewidth=0))
+    ax.set_ylabel(title)
+    ax.set_xticks(indices + width)
+    ax.set_xticklabels(x_labels, rotation=80)
+    ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
+
+def plot_volumes(volumes_dict, ignore_empty=False, title=None, densities=False):
+    # setup figure layout with single subplot for volumes only or 
+    # side-by-side subplots if including densities
+    fig = plt.figure()
+    subplots_width = 2 if densities else 1
+    gs = gridspec.GridSpec(1, subplots_width)
+    ax_vols = plt.subplot(gs[0, 0])
+    ax_densities = plt.subplot(gs[0, 1]) if densities else None
+    
+    # default bar width and measurement units, assuming a base unit of microns
     width = 0.1
+    unit_factor = np.power(1 * 1000.0, 3)
+    unit = "mm"
+    
     volumes_side = []
     volumes_mirrored = []
+    densities_side = []
+    densities_mirrored = []
     names = []
     for key in volumes_dict.keys():
         if key >= 0:
             name = volumes_dict[key][config.ABA_NAME]
-            vol_side = volumes_dict[key][config.VOL_KEY]
-            vol_mirrored = volumes_dict[-1 * key].get(config.VOL_KEY)
+            vol_side = volumes_dict[key][config.VOL_KEY] / unit_factor
+            vol_mirrored = volumes_dict[-1 * key].get(
+                config.VOL_KEY) / unit_factor
             if (ignore_empty and vol_mirrored is not None 
                 and np.allclose([vol_side, vol_mirrored], np.zeros(2))):
                 print("skipping {} as both sides are empty".format(name))
@@ -948,20 +973,33 @@ def plot_volumes(volumes_dict, ignore_empty=False, title=None):
                 if vol_mirrored is None:
                     volume_mirrored = 0
                 volumes_mirrored.append(vol_mirrored)
-    indices = np.arange(len(volumes_side))
-    #print(volumes_side, volumes_mirrored)
-    bar_mirrored = ax.bar(indices, volumes_mirrored, width=width, color="b")
-    bar_side = ax.bar(indices + width, volumes_side, width=width, color="g")
+                if densities:
+                    blobs_side = volumes_dict[key][config.BLOBS_KEY]
+                    blobs_mirrored = volumes_dict[-1 * key].get(
+                        config.BLOBS_KEY)
+                    print("id {}: blobs R {}, L {}".format(
+                        key, blobs_side, blobs_mirrored))
+                    densities_side.append(blobs_side / vol_side)
+                    densities_mirrored.append(blobs_mirrored / vol_mirrored)
     
-    ax.set_ylabel("Volume (cubic microns)")
-    ax.set_xticks(indices + width)
-    ax.set_xticklabels(names, rotation=80)
-    if len(bar_mirrored) > 0 and len(bar_side) > 0:
-        ax.legend((bar_mirrored[0], bar_side[0]), ("Left", "Right"))
+    # generate bar plots
+    indices = np.arange(len(volumes_side))
+    legend_names = ("Left", "Right")
+    bar_colors = ("b", "g")
+    _bar_plots(
+        ax_vols, (volumes_mirrored, volumes_side), legend_names, names, 
+        bar_colors, indices, width, "Volume (cubic {})".format(unit))
+    if densities:
+        _bar_plots(
+            ax_densities, (densities_mirrored, densities_side), legend_names, 
+            names, bar_colors, indices, width, 
+            "Cell density (cells / cubic {})".format(unit))
+    
+    # finalize the image with title and tight layout
     if title is None:
         title = "Regional Volumes"
     fig.suptitle(title)
-    plt.tight_layout()
+    gs.tight_layout(fig)
     if savefig is not None:
         plt.savefig(title + "." + savefig)
     plt.show()

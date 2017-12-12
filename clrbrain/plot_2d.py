@@ -48,6 +48,7 @@ PLANE = ("xy", "xz", "yz")
 plane = None
 CIRCLES = ("Circles", "Repeat circles", "No circles")
 vmax_overview = 1.0
+_DOWNSAMPLE_THRESH = 1000
 
 segs_color_dict = {
     -1: None,
@@ -399,11 +400,18 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
             img2d_zoom = img2d_zoom[origin[1]:end[1], origin[0]:end[0]]
             print(img2d_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
-        # show the zoomed 2D image along with rectangle showing ROI
-        ax.imshow(img2d_zoom, cmap=colormap_2d, aspect=aspect, origin=origin, 
-                  vmin=0.0, vmax=vmax_overview)
-        ax.add_patch(patches.Rectangle(patch_offset, roi_size[0], roi_size[1], 
-                                       fill=False, edgecolor="yellow"))
+        # show the zoomed 2D image along with rectangle showing ROI, 
+        # downsampling by using threshold as mask
+        downsample = np.max(np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH))
+        if downsample < 1: 
+            downsample = 1
+        ax.imshow(
+            img2d_zoom[::downsample, ::downsample], cmap=colormap_2d, 
+            aspect=aspect, origin=origin, vmin=0.0, vmax=vmax_overview)
+        ax.add_patch(patches.Rectangle(
+            np.divide(patch_offset, downsample), 
+            *np.divide(roi_size[0:2], downsample), 
+            fill=False, edgecolor="yellow"))
         add_scale_bar(ax)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI

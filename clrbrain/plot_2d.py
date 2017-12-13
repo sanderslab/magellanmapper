@@ -67,8 +67,7 @@ truth_color_dict = {
 }
 
 class DraggableCircle:
-    def __init__(self, circle, segment, vis_segments, vis_segs_selected, 
-                 color="none"):
+    def __init__(self, circle, segment, fn_update_seg, color="none"):
         self.circle = circle
         self.circle.set_picker(5)
         self.facecolori = -1
@@ -77,8 +76,7 @@ class DraggableCircle:
                 self.facecolori = key
         self.press = None
         self.segment = segment
-        self.vis_segments = vis_segments
-        self.vis_segs_selected = vis_segs_selected
+        self.fn_update_seg = fn_update_seg
     
     def connect(self):
         """Connect events to functions.
@@ -132,11 +130,11 @@ class DraggableCircle:
         if not contains: return
         print("released on {}".format(self.circle.center))
         print("segment moving from {}...".format(self.segment))
-        segi = _get_vis_segments_index(self.vis_segments, self.segment)
+        seg_old = np.copy(self.segment)
         self.segment[1:3] += np.subtract(
             self.circle.center, self.press[0:2]).astype(np.int)[::-1]
         print("...to {}".format(self.segment))
-        _update_vis_segments(self.vis_segments, segi, self.segment, self.vis_segs_selected)
+        self.fn_update_seg(self.segment, seg_old)
         self.press = None
         self.circle.figure.canvas.draw()
     
@@ -161,9 +159,9 @@ class DraggableCircle:
                 i = -1
             self.circle.set_facecolor(segs_color_dict[i])
             self.facecolori = i
-            segi = _get_vis_segments_index(self.vis_segments, self.segment)
+            seg_old = np.copy(self.segment)
             self.segment[4] = i
-            _update_vis_segments(self.vis_segments, segi, self.segment, self.vis_segs_selected)
+            self.fn_update_seg(self.segment, seg_old)
             print("picked segment: {}".format(self.segment))
 
     def disconnect(self):
@@ -172,34 +170,6 @@ class DraggableCircle:
         self.circle.figure.canvas.mpl_disconnect(self.cidpress)
         self.circle.figure.canvas.mpl_disconnect(self.cidrelease)
         self.circle.figure.canvas.mpl_disconnect(self.cidmotion)
-
-def _get_vis_segments_index(vis_segments, segment):
-    # must take from vis rather than saved copy in case user 
-    # manually updates the table
-    segi = np.where((vis_segments == segment).all(axis=1))
-    if len(segi) > 0:
-        return segi[0][0]
-    return -1
-
-def _update_vis_segments(vis_segments, segi, segment, vis_segs_selected):
-    if segi != -1:
-        vis_segments[segi] = segment
-        _force_seg_refresh(segi, vis_segs_selected)
-
-def _force_seg_refresh(i, vis_segs_selected):
-   """Triggers table update by either selecting and reselected the segment
-   or vice versa.
-   
-   Args:
-       i: The element in vis.segs_selected, which is simply an index to
-          the segment in vis.segments.
-   """
-   if i in vis_segs_selected:
-       vis_segs_selected.remove(i)
-       vis_segs_selected.append(i)
-   else:
-       vis_segs_selected.append(i)
-       vis_segs_selected.remove(i)
 
 def _get_radius(seg):
     """Gets the radius for a segments, defaulting to 5 if the segment's
@@ -236,8 +206,7 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     collection.set_linewidth(linewidth)
     return collection
 
-def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, 
-                 vis_segments, vis_segs_selected):
+def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg):
     """Draws a patch collection of circles for segments.
     
     Args:
@@ -257,7 +226,7 @@ def _plot_circle(ax, segment, edgecolor, linewidth, linestyle,
         linestyle=linestyle)
     ax.add_patch(circle)
     draggable_circle = DraggableCircle(
-        circle, segment, vis_segments, vis_segs_selected, facecolor)
+        circle, segment, fn_update_seg, facecolor)
     draggable_circle.connect()
     _draggable_circles.append(draggable_circle)
 
@@ -274,7 +243,7 @@ def add_scale_bar(ax):
     ax.add_artist(scale_bar)
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
-                 vis_segments, vis_segs_selected, segments, 
+                 fn_update_seg, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
                  segments_adj=None, plane="xy", roi=None, z_relative=-1,
                  labels=None, blobs_truth=None, circles=None, aspect=None, 
@@ -413,8 +382,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             if segments_z is not None:
                 for seg in segments_z:
                     _plot_circle(
-                        ax, seg, "w", SEG_LINEWIDTH, ":", vis_segments, 
-                        vis_segs_selected)
+                        ax, seg, "w", SEG_LINEWIDTH, ":", fn_update_seg)
             
             # shows truth blobs as small, solid circles
             if blobs_truth is not None:
@@ -434,7 +402,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         
     return ax
 
-def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segments, 
+def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None, labels=None, blobs_truth=None, circles=None, 
@@ -651,7 +619,7 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
             # shows the zoomed subplot with scale bar for the current z-plane
             ax_z = show_subplot(
                 fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset, 
-                vis.segments, vis.segs_selected,
+                fn_update_seg,
                 segments, segments_z, segs_cmap, alpha, z == z_overview, 
                 border_full if show_border else None, segs_out, plane, roi_show, 
                 z_relative, labels, blobs_truth_z, circles=circles, 
@@ -672,23 +640,16 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                     seg = np.array([[axi - z_planes_padding, 
                                      event.ydata.astype(int), 
                                      event.xdata.astype(int), 0.0, 1, -1]])
-                    vis.add_segment(seg, offset)
-                    '''
-                    seg = np.concatenate(
-                        (seg, np.add(seg[:, :3], offset[::-1])), axis=1)
-                    print("added segment: {}".format(seg))
-                    # concatenate for in-place array update, though append
-                    # and re-assigning also probably works
-                    vis.segments = np.concatenate((vis.segments, seg))
+                    fn_update_seg(seg, offset=offset)
                     '''
                     # create a new copy rather than appending to trigger a
                     # full update; otherwise, only last entry gets selected
                     segsi = vis.segments.shape[0] - 1
                     vis.segs_selected = (vis.segs_selected + [segsi])
+                    '''
                     # adds a circle to denote the new segment
                     patch = _plot_circle(
-                        ax, seg[0], "none", SEG_LINEWIDTH, "-", vis.segments, 
-                        vis.segs_selected)
+                        ax, seg[0], "none", SEG_LINEWIDTH, "-", fn_update_seg)
             except ValueError as e:
                 print(e)
                 print("not on a plot to select a point")
@@ -698,17 +659,15 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                 print("No previously picked circle to paste")
                 return
             circle = _circle_last_picked[_circle_last_picked_len - 1]
-            segi = _get_vis_segments_index(vis.segments, circle.segment)
             axi = ax_z_list.index(ax)
             dz = axi - z_planes_padding - circle.segment[0]
+            seg_old = np.copy(circle.segment)
             circle.segment[[0, 6]] += dz
             _plot_circle(
-                ax, circle.segment, "w", SEG_LINEWIDTH, ":", vis.segments, 
-                vis.segs_selected)
+                ax, circle.segment, "w", SEG_LINEWIDTH, ":", fn_update_seg)
             _circle_last_picked.remove(circle)
             _draggable_circles.remove(circle)
-            _update_vis_segments(vis.segments, segi, circle.segment, vis.segs_selected)
-            #vis.add_segment(np.array([circle.segment]), offset)
+            fn_update_seg(circle.segment, seg_old)
        
     fig.canvas.mpl_connect("button_release_event", on_btn_release)
     

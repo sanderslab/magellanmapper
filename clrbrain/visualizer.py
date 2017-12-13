@@ -530,7 +530,7 @@ class Visualization(HasTraits):
         screenshot = self.scene.mlab.screenshot(antialiased=True)
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # Multi-zoom style
-            plot_2d.plot_2d_stack(self, title, filename_base,
+            plot_2d.plot_2d_stack(self.update_segment, title, filename_base,
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self._full_border(self.border), 
@@ -540,7 +540,7 @@ class Visualization(HasTraits):
                                   mlab_screenshot=screenshot, grid=grid)
         else:
             # defaults to Square style
-            plot_2d.plot_2d_stack(self, title, filename_base,
+            plot_2d.plot_2d_stack(self.update_segment, title, filename_base,
                                   img, cli.channel, curr_roi_size, 
                                   curr_offset, self.segments, self.segs_cmap, 
                                   self._full_border(self.border), 
@@ -624,13 +624,48 @@ class Visualization(HasTraits):
             self.border[2] = 0 # ignore z
         print("set border to {}".format(self.border))
     
-    def add_segment(self, seg, offset):
+    def _add_segment(self, seg, offset):
         print(seg)
         seg = np.concatenate((seg[:, :6], np.add(seg[:, :3], offset[::-1])), axis=1)
         print("added segment: {}".format(seg))
         # concatenate for in-place array update, though append
         # and re-assigning also probably works
         self.segments = np.concatenate((self.segments, seg))
+    
+    def _get_vis_segments_index(self, segment):
+        # must take from vis rather than saved copy in case user 
+        # manually updates the table
+        segi = np.where((self.segments == segment).all(axis=1))
+        if len(segi) > 0:
+            return segi[0][0]
+        return -1
+    
+    def _force_seg_refresh(self, i):
+       """Triggers table update by either selecting and reselected the segment
+       or vice versa.
+       
+       Args:
+           i: The element in vis.segs_selected, which is simply an index to
+              the segment in vis.segments.
+       """
+       if i in self.segs_selected:
+           self.segs_selected.remove(i)
+           self.segs_selected.append(i)
+       else:
+           self.segs_selected.append(i)
+           self.segs_selected.remove(i)
+    
+    def _update_vis_segments(self, segi, segment):
+        if segi != -1:
+            self.segments[segi] = segment
+            self._force_seg_refresh(segi)
+    
+    def update_segment(self, segment_new, segment_old=None, offset=None):
+        if segment_old is not None:
+            segi = self._get_vis_segments_index(segment_old)
+            self._update_vis_segments(segi, segment_new)
+        elif offset is not None:
+            self._add_segment(segment_new, offset)
     
     @property
     def segments(self):

@@ -49,9 +49,11 @@ plane = None
 CIRCLES = ("Circles", "Repeat circles", "No circles")
 vmax_overview = 1.0
 _DOWNSAMPLE_THRESH = 1000
+# need to store DraggableCircles objects to prevent premature garbage collection
+draggable_circles = []
 
 segs_color_dict = {
-    -1: None,
+    -1: "none",
     0: "r",
     1: "g",
     2: "y"
@@ -62,6 +64,132 @@ truth_color_dict = {
     0: "m",
     1: "b"
 }
+
+class DraggableCircle:
+    def __init__(self, circle, segment, vis_segments, vis_segs_selected, 
+                 color="none"):
+        self.circle = circle
+        self.circle.set_picker(5)
+        self.facecolori = -1
+        for key, val in segs_color_dict.items():
+            if val == color:
+                self.facecolori = key
+        self.press = None
+        self.segment = segment
+        self.vis_segments = vis_segments
+        self.vis_segs_selected = vis_segs_selected
+    
+    def connect(self):
+        """Connect events to functions.
+        """
+        self.cidpress = self.circle.figure.canvas.mpl_connect(
+            "button_press_event", self.on_press)
+        self.cidrelease = self.circle.figure.canvas.mpl_connect(
+            "button_release_event", self.on_release)
+        self.cidmotion = self.circle.figure.canvas.mpl_connect(
+            "motion_notify_event", self.on_motion)
+        self.cidpick = self.circle.figure.canvas.mpl_connect(
+            "pick_event", self.on_pick)
+        #print("connected circle at {}".format(self.circle.center))
+    
+    def get_vis_segments_index(self, segment):
+        # must take from vis rather than saved copy in case user 
+        # manually updates the table
+        segi = np.where((self.vis_segments == self.segment).all(axis=1))
+        if len(segi) > 0:
+            return segi[0][0]
+        return -1
+    
+    def update_vis_segments(self, segi, segment):
+        if segi != -1:
+            self.vis_segments[segi] = self.segment
+            _force_seg_refresh(segi, self.vis_segs_selected)
+    
+    def on_press(self, event):
+        """Initiate drag events with Shift-click inside a circle.
+        """
+        if event.key != "shift" or event.inaxes != self.circle.axes: return
+        contains, attrd = self.circle.contains(event)
+        if not contains: return
+        print("pressed on {}".format(self.circle.center))
+        x0, y0 = self.circle.center
+        self.press = x0, y0, event.xdata, event.ydata
+    
+    def on_motion(self, event):
+        """Move the circle if the drag event has been initiated.
+        """
+        if self.press is None: return
+        if event.inaxes != self.circle.axes: return
+        x0, y0, xpress, ypress = self.press
+        dx = event.xdata - xpress
+        dy = event.ydata - ypress
+        print("initial position: {}, {}; change thus far: {}, {}"
+              .format(x0, y0, dx, dy))
+        self.circle.center = x0 + dx, y0 + dy
+
+        self.circle.figure.canvas.draw()
+    
+    def on_release(self, event):
+        """Finalize the circle and segment's position after a drag event
+        is completed with a button release.
+        """
+        if self.press is None or event.inaxes != self.circle.axes: return
+        contains, attrd = self.circle.contains(event)
+        if not contains: return
+        print("released on {}".format(self.circle.center))
+        print("segment moving from {}...".format(self.segment))
+        segi = self.get_vis_segments_index(self.segment)
+        self.segment[1:3] += np.subtract(
+            self.circle.center, self.press[0:2]).astype(np.int)[::-1]
+        print("...to {}".format(self.segment))
+        self.update_vis_segments(segi, self.segment)
+        self.press = None
+        self.circle.figure.canvas.draw()
+    
+    def on_pick(self, event):
+        """Select the verification flag with unmodified (no Ctrl of Shift)
+        button press on a circle.
+        """
+        if (event.mouseevent.key == "control" 
+            or event.mouseevent.key == "shift" 
+            or event.artist != self.circle):
+            return
+        #print("color: {}".format(self.facecolori))
+        i = self.facecolori + 1
+        if i > max(segs_color_dict.keys()):
+            if np.allclose(self.segment[3], 0):
+                self.disconnect()
+                self.circle.remove()
+                return
+            i = -1
+        self.circle.set_facecolor(segs_color_dict[i])
+        self.facecolori = i
+        segi = self.get_vis_segments_index(self.segment)
+        self.segment[4] = i
+        self.update_vis_segments(segi, self.segment)
+        print("picked segment: {}".format(self.segment))
+
+    def disconnect(self):
+        """Disconnect event listeners.
+        """
+        self.circle.figure.canvas.mpl_disconnect(self.cidpress)
+        self.circle.figure.canvas.mpl_disconnect(self.cidrelease)
+        self.circle.figure.canvas.mpl_disconnect(self.cidmotion)
+
+def _force_seg_refresh(i, vis_segs_selected):
+   """Triggers table update by either selecting and reselected the segment
+   or vice versa.
+   
+   Args:
+       i: The element in vis.segs_selected, which is simply an index to
+          the segment in vis.segments.
+   """
+   if i in vis_segs_selected:
+       vis_segs_selected.remove(i)
+       vis_segs_selected.append(i)
+   else:
+       vis_segs_selected.append(i)
+       vis_segs_selected.remove(i)
 
 def _get_radius(seg):
     """Gets the radius for a segments, defaulting to 5 if the segment's
@@ -98,6 +226,31 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     collection.set_linewidth(linewidth)
     return collection
 
+def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, 
+                 vis_segments, vis_segs_selected):
+    """Draws a patch collection of circles for segments.
+    
+    Args:
+        segments: Numpy array of segments, generally as an (n, 4)
+            dimension array, where each segment is in (z, y, x, radius).
+        edgecolor: Color of patch borders.
+        facecolor: Color of patch interior.
+        linewidth: Width of the border.
+    
+    Returns:
+        The patch collection.
+    """
+    facecolor = segs_color_dict[segment[4]]
+    circle = patches.Circle(
+        (segment[2], segment[1]), radius=_get_radius(segment), 
+        edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth, 
+        linestyle=linestyle)
+    ax.add_patch(circle)
+    draggable_circle = DraggableCircle(
+        circle, segment, vis_segments, vis_segs_selected, facecolor)
+    draggable_circle.connect()
+    draggable_circles.append(draggable_circle)
+
 def add_scale_bar(ax):
     """Adds a scale bar to the plot.
     
@@ -110,7 +263,8 @@ def add_scale_bar(ax):
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
-def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments, 
+def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
+                 vis_segments, vis_segs_selected, segments, 
                  segments_z, segs_cmap, alpha, highlight=False, border=None, 
                  segments_adj=None, plane="xy", roi=None, z_relative=-1,
                  labels=None, blobs_truth=None, circles=None, aspect=None, 
@@ -162,7 +316,6 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
         plane_axis = "x"
     z = offset[2]
     ax.set_title("{}={}".format(plane_axis, z))
-    collection_z = None
     if border is not None:
         # boundaries of border region, with xy point of corner in first 
         # elements and [width, height] in 2nd, allowing flipping for yz plane
@@ -248,18 +401,17 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
             # overlays segments in current z with dotted line patch and makes
             # pickable for verifying the segment
             if segments_z is not None:
-                collection_z = _circle_collection(
-                    segments_z, "w", "none", SEG_LINEWIDTH)
-                collection_z.set_linestyle(":")
-                collection_z.set_picker(5)
-                ax.add_collection(collection_z)
+                for seg in segments_z:
+                    _plot_circle(
+                        ax, seg, "w", SEG_LINEWIDTH, ":", vis_segments, 
+                        vis_segs_selected)
             
             # shows truth blobs as small, solid circles
             if blobs_truth is not None:
                 for blob in blobs_truth:
-                    ax.add_patch(patches.Circle((blob[2], blob[1]), radius=3, 
-                                           facecolor=truth_color_dict[blob[5]], 
-                                           alpha=1))
+                    ax.add_patch(patches.Circle(
+                        (blob[2], blob[1]), radius=3, 
+                        facecolor=truth_color_dict[blob[5]], alpha=1))
         
         # adds a simple border to highlight the border of the ROI
         if border is not None:
@@ -270,7 +422,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, segments
                                            fill=False, edgecolor="yellow",
                                            linestyle="dashed"))
         
-    return ax, collection_z
+    return ax
 
 def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
@@ -376,6 +528,8 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     gs = gridspec.GridSpec(2, zoom_levels, wspace=0.7, hspace=0.4,
                            height_ratios=[3, zoom_plot_rows])
     
+    
+    
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels
     overview_cols = zoom_plot_cols // zoom_levels
@@ -417,7 +571,6 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
     # zoomed-in views of z-planes spanning from just below to just above ROI
     #print("rows: {}, cols: {}, remainder: {}"
     #      .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
-    collection_z_list = []
     segments_z_list = []
     ax_z_list = []
     segs_out = None
@@ -486,158 +639,47 @@ def plot_2d_stack(vis, title, filename, image5d, channel, roi_size, offset, segm
                            and z_relative < roi_size[2] - border[2])
             
             # shows the zoomed subplot with scale bar for the current z-plane
-            ax_z, collection_z = show_subplot(
+            ax_z = show_subplot(
                 fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset, 
+                vis.segments, vis.segs_selected,
                 segments, segments_z, segs_cmap, alpha, z == z_overview, 
                 border_full if show_border else None, segs_out, plane, roi_show, 
                 z_relative, labels, blobs_truth_z, circles=circles, 
                 aspect=aspect, grid=grid)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
-            collection_z_list.append(collection_z)
             ax_z_list.append(ax_z)
             
-            # restores saved segment markings as patches, which are pickable
-            # from their corresponding segments within their collection
-            if circles is None or circles == CIRCLES[0].lower():
-                segi = 0
-                for seg in segments_z:
-                    if seg[4] != -1:
-                        key = "{}-{}".format(len(collection_z_list) - 1, segi)
-                        #print("key: {}".format(key))
-                        patch = patches.Circle(
-                            (seg[2], seg[1]), radius=_get_radius(seg), 
-                            facecolor=segs_color_dict[seg[4]], alpha=0.5)
-                        ax_z.add_patch(patch)
-                        seg_patch_dict[key] = patch
-                    segi += 1
-    
-    def _force_seg_refresh(i):
-       """Triggers table update by either selecting and reselected the segment
-       or vice versa.
-       
-       Args:
-           i: The element in vis.segs_selected, which is simply an index to
-              the segment in vis.segments.
-       """
-       if i in vis.segs_selected:
-           vis.segs_selected.remove(i)
-           vis.segs_selected.append(i)
-       else:
-           vis.segs_selected.append(i)
-           vis.segs_selected.remove(i)
-    
-    # record selected segments in the Visualization segments table
-    def on_pick(event):
-        # ignore ctrl-clicks since used elsewhere
-        if event.mouseevent.key == "control":
-            return
-        if isinstance(event.artist, PatchCollection):
-            # segments_z_list is linked to collection list
-            collection = event.artist
-            collectioni = collection_z_list.index(collection)
-            if collection != -1:
-                # patch index is linked to segments_z_list
-                seg = segments_z_list[collectioni][event.ind[0]]
-                segi = np.where((vis.segments == seg).all(axis=1))
-                if len(segi) > 0:
-                    # must take from vis rather than saved copy in case user 
-                    # manually updates the table
-                    i = segi[0][0]
-                    #seg[4] = 1 if event.mouseevent.button == 1 else 0
-                    key = "{}-{}".format(collectioni, event.ind[0])
-                    print("key: {}".format(key))
-                    if seg[4] == -1:
-                        # 1st click selects, which shows a filled green circle
-                        # and adds to selected segments list
-                        seg[4] = 1
-                        if key not in seg_patch_dict:
-                            patch = patches.Circle((seg[2], seg[1]), 
-                                                   radius=_get_radius(seg), 
-                                                   facecolor="g", alpha=0.5)
-                            collection.axes.add_patch(patch)
-                            seg_patch_dict[key] = patch
-                        if not i in vis.segs_selected:
-                            vis.segs_selected.append(i)
-                    elif seg[4] == 1:
-                        # 2nd click changes to yellow circle, setting seg as "maybe"
-                        seg[4] = 2
-                        seg_patch_dict[key].set_facecolor("y")
-                        _force_seg_refresh(i)
-                    elif seg[4] == 2:
-                        # 3rd click changes to red circle, verifying as not a seg
-                        seg[4] = 0
-                        seg_patch_dict[key].set_facecolor("r")
-                        _force_seg_refresh(i)
-                    elif seg[4] == 0:
-                        seg[4] = -1
-                        # 4th click unselects, which removes from selected
-                        # list and removes filled patch
-                        _force_seg_refresh(i)
-                        if key in seg_patch_dict:
-                            seg_patch_dict[key].remove()
-                            del seg_patch_dict[key]
-                    vis.segments[segi[0][0]] = seg
-                    _force_seg_refresh(i)
-                print("picked segment: {}".format(seg))
-        elif isinstance(event.artist, patches.Circle):
-            # new patches added outside of collections
-            i = list(seg_patch_dict.keys())[list(seg_patch_dict.values()).index(event.artist)]
-            seg = vis.segments[i]
-            if seg[4] == 1:
-                # 2nd click changes to yellos circle, setting seg as "maybe"
-                seg[4] = 2
-                event.artist.set_facecolor("y")
-            elif seg[4] == 2:
-                # 3rd click changes to red circle, verifying as not a seg
-                seg[4] = 0
-                event.artist.set_facecolor("r")
-            elif seg[4] == 0:
-                seg[4] = -1
-                # 4th click to unselect, which removes from selected
-                # list and removes filled patch
-                del seg_patch_dict[i]
-                event.artist.remove()
-                vis.segs_selected.remove(i)
-            vis.segments[i] = seg
-            _force_seg_refresh(i)
-       
-    fig.canvas.mpl_connect("pick_event", on_pick)
     
     # add points that were not segmented by ctrl-clicking on zoom plots
     def on_btn_release(event):
         ax = event.inaxes
-        if event.key == "control":
-            try:
-                axi = ax_z_list.index(ax)
-                if (axi != -1 and axi >= z_planes_padding 
-                    and axi < z_planes - z_planes_padding):
-                    
-                    seg = np.array([[axi - z_planes_padding, 
-                                     event.ydata.astype(int), 
-                                     event.xdata.astype(int), 0.0, 1, -1]])
-                    seg = np.concatenate(
-                        (seg, np.add(seg[:, :3], offset[::-1])), axis=1)
-                    print("added segment: {}".format(seg))
-                    # concatenate for in-place array update, though append
-                    # and re-assigning also probably works
-                    vis.segments = np.concatenate((vis.segments, seg))
-                    # create a new copy rather than appending to trigger a
-                    # full update; otherwise, only last entry gets selected
-                    segsi = vis.segments.shape[0] - 1
-                    vis.segs_selected = (vis.segs_selected + [segsi])
-                    # adds a circle to denote the new segment
-                    patch = patches.Circle((seg[0][2], seg[0][1]), radius=5, 
-                                           facecolor="g", alpha=0.5, picker=5)
-                    seg_patch_dict[segsi] = patch
-                    ax.add_patch(patch)
-                    '''# shows surrounding area of adding blob; reqs ROI
-                    if roi is not None:
-                        detector.show_blob_surroundings(seg, roi, 6)
-                    '''
-            except ValueError as e:
-                print(e)
-                print("not on a plot to select a point")
+        if event.key != "control": return
+        try:
+            axi = ax_z_list.index(ax)
+            if (axi != -1 and axi >= z_planes_padding 
+                and axi < z_planes - z_planes_padding):
+                
+                seg = np.array([[axi - z_planes_padding, 
+                                 event.ydata.astype(int), 
+                                 event.xdata.astype(int), 0.0, 1, -1]])
+                seg = np.concatenate(
+                    (seg, np.add(seg[:, :3], offset[::-1])), axis=1)
+                print("added segment: {}".format(seg))
+                # concatenate for in-place array update, though append
+                # and re-assigning also probably works
+                vis.segments = np.concatenate((vis.segments, seg))
+                # create a new copy rather than appending to trigger a
+                # full update; otherwise, only last entry gets selected
+                segsi = vis.segments.shape[0] - 1
+                vis.segs_selected = (vis.segs_selected + [segsi])
+                # adds a circle to denote the new segment
+                patch = _plot_circle(
+                    ax, seg[0], "none", SEG_LINEWIDTH, "-", vis.segments, 
+                    vis.segs_selected)
+        except ValueError as e:
+            print(e)
+            print("not on a plot to select a point")
        
     fig.canvas.mpl_connect("button_release_event", on_btn_release)
     

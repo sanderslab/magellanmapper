@@ -624,6 +624,14 @@ class Visualization(HasTraits):
             self.border[2] = 0 # ignore z
         print("set border to {}".format(self.border))
     
+    def add_segment(self, seg, offset):
+        print(seg)
+        seg = np.concatenate((seg[:, :6], np.add(seg[:, :3], offset[::-1])), axis=1)
+        print("added segment: {}".format(seg))
+        # concatenate for in-place array update, though append
+        # and re-assigning also probably works
+        self.segments = np.concatenate((self.segments, seg))
+    
     @property
     def segments(self):
         return self._segments

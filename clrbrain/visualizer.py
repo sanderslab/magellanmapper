@@ -147,8 +147,11 @@ class Visualization(HasTraits):
     segs_scale = Float
     segs_pts = None
     segs_selected = List # indices
-    segs_table = TabularEditor(adapter=SegmentsArrayAdapter(), multi_select=True, 
-                               selected_row="segs_selected")
+    # multi-select to allow updating with a list, but segment updater keeps
+    # selections to single when updating them
+    segs_table = TabularEditor(
+        adapter=SegmentsArrayAdapter(), multi_select=True, 
+        selected_row="segs_selected")
     segs_cmap = None
     segs_feedback = Str("Segments output")
     labels = None # segmentation labels
@@ -626,21 +629,26 @@ class Visualization(HasTraits):
     
     def _add_segment(self, seg, offset):
         print(seg)
-        seg = np.concatenate((seg[:, :6], np.add(seg[:, :3], offset[::-1])), axis=1)
+        seg = np.concatenate(
+            (seg[:, :6], np.add(seg[:, :3], offset[::-1])), axis=1)
         print("added segment: {}".format(seg))
         # concatenate for in-place array update, though append
         # and re-assigning also probably works
         self.segments = np.concatenate((self.segments, seg))
+        return seg
     
     def _get_vis_segments_index(self, segment):
         # must take from vis rather than saved copy in case user 
         # manually updates the table
+        #print("segs:\n{}".format(self.segments))
+        #print("seg: {}".format(segment))
+        #print(self.segments == segment)
         segi = np.where((self.segments == segment).all(axis=1))
         if len(segi) > 0:
             return segi[0][0]
         return -1
     
-    def _force_seg_refresh(self, i):
+    def _force_seg_refresh(self, i, show=False):
        """Triggers table update by either selecting and reselected the segment
        or vice versa.
        
@@ -653,19 +661,29 @@ class Visualization(HasTraits):
            self.segs_selected.append(i)
        else:
            self.segs_selected.append(i)
-           self.segs_selected.remove(i)
+           if not show:
+               self.segs_selected.remove(i)
     
     def _update_vis_segments(self, segi, segment):
         if segi != -1:
             self.segments[segi] = segment
-            self._force_seg_refresh(segi)
+            self._force_seg_refresh(segi, show=True)
     
     def update_segment(self, segment_new, segment_old=None, offset=None):
+        seg = None
+        # remove all row selections to ensure that no more than one 
+        # row is selected by the end
+        while len(self.segs_selected) > 0:
+            self.segs_selected.pop()
         if segment_old is not None:
+            # updates an existing segment
             segi = self._get_vis_segments_index(segment_old)
             self._update_vis_segments(segi, segment_new)
         elif offset is not None:
-            self._add_segment(segment_new, offset)
+            # adds a new segment with the given offset
+            seg = self._add_segment(segment_new, offset)
+            self.segs_selected.append(len(self.segments) - 1)
+        return seg
     
     @property
     def segments(self):

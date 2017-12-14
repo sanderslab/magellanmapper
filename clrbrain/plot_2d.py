@@ -640,13 +640,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
                     seg = np.array([[axi - z_planes_padding, 
                                      event.ydata.astype(int), 
                                      event.xdata.astype(int), 0.0, 1, -1]])
-                    fn_update_seg(seg, offset=offset)
-                    '''
-                    # create a new copy rather than appending to trigger a
-                    # full update; otherwise, only last entry gets selected
-                    segsi = vis.segments.shape[0] - 1
-                    vis.segs_selected = (vis.segs_selected + [segsi])
-                    '''
+                    seg = fn_update_seg(seg, offset=offset)
                     # adds a circle to denote the new segment
                     patch = _plot_circle(
                         ax, seg[0], "none", SEG_LINEWIDTH, "-", fn_update_seg)

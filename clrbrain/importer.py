@@ -175,8 +175,8 @@ def find_sizes(filename):
     print('time for finding sizes: %f' %(time() - time_start))
     return sizes, dtype
 
-def _make_filenames(filename, series, modifier=""):
-    filename_base = filename_to_base(filename, series, modifier)
+def _make_filenames(filename, series, modifier="", ext="czi"):
+    filename_base = filename_to_base(filename, series, modifier, ext)
     filename_image5d_npz = filename_base + SUFFIX_IMAGE5D
     filename_info_npz = filename_base + SUFFIX_INFO
     return filename_image5d_npz, filename_info_npz
@@ -359,7 +359,7 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
             #      .format(low, high, np.min(img), np.max(img)))
             # checks predicted data type with actual one to ensure consistency, 
             # which was necessary in case the PIXEL_DTYPE dictionary became inaccurate
-            # but shoudln't be an issue when parsing date type directly from XML
+            # but shouldn't be an issue when parsing date type directly from XML
             if check_dtype:
                 if img.dtype != image5d.dtype:
                     raise TypeError("Storing as data type {} "
@@ -415,8 +415,76 @@ def import_dir(path):
                      min(lows), max(highs))
     return image5d
 
-def filename_to_base(filename, series, modifier=""):
-    return filename.replace(".czi", "_") + modifier + str(series).zfill(5)
+def import_tiff_multipage(path):
+    '''
+    # works but loads entire image into RAM during initial tiff import
+    filename_image5d_npz, filename_info_npz = _make_filenames(path, 0, ext="tiff")
+    image5d = None
+    from skimage.external import tifffile
+    with tifffile.TiffFile(path) as tiff:
+        data = tiff.asarray(memmap=True, series=0)
+        print("moving data of shape {} to image5d".format(data.shape))
+        image5d = np.lib.format.open_memmap(
+            filename_image5d_npz, mode="w+", dtype=data.dtype, 
+            shape=(1, *data.shape))
+        image5d[:] = data[:]
+        image5d.flush()
+    lows = []
+    highs = []
+    for plane in image5d:
+        low, high = np.percentile(plane, (0.5, 99.5))
+        lows.append(low)
+        highs.append(high)
+    _save_image_info(filename_info_npz, [os.path.basename(path)], 
+                     [image5d.shape], detector.resolutions, 
+                     detector.magnification, detector.zoom, image5d.dtype,
+                     min(lows), max(highs))
+    '''
+    start_jvm()
+    # parses the XML tree directly
+    time_start = time()
+    series = 0
+    filename_image5d_npz, filename_info_npz = _make_filenames(path, series, ext="tiff")
+    sizes, dtype = find_sizes(path)
+    shape = sizes[0]
+    if shape[-1] == 1:
+        shape = shape[:-1]
+    rdr = bf.ImageReader(path, perform_init=True)
+    #shape = (nt, nz, size[1], size[2])
+    load_channel = 0
+    lows = []
+    highs = []
+    # open file as memmap to directly output to disk, which is much faster
+    # than outputting to RAM and saving to disk
+    image5d = np.lib.format.open_memmap(
+        filename_image5d_npz, mode="w+", dtype=dtype, shape=shape)
+    print("setting image5d array for series {} with shape: {}".format(
+          series, image5d.shape))
+    for t in range(shape[0]):
+        for z in range(shape[1]):
+            print("loading planes from [{}, {}]".format(t, z))
+            img = rdr.read(z=z, t=t, c=load_channel,
+                           series=series, rescale=False)
+            low, high = np.percentile(img, (0.5, 99.5))
+            lows.append(low)
+            highs.append(high)
+            image5d[t, z] = img
+    print("file import time: {}".format(time() - time_start))
+    time_start = time()
+    image5d.flush() # may not be necessary but ensure contents to disk
+    print("flush time: {}".format(time() - time_start))
+    _save_image_info(filename_info_npz, [os.path.basename(path)], 
+                     [shape], [detector.resolutions[series]], 
+                     detector.magnification, detector.zoom, 
+                     image5d.dtype, min(lows), max(highs))
+    return image5d
+
+def filename_to_base(filename, series, modifier="", ext="czi"):
+    return filename.replace("." + ext, "_") + modifier + str(series).zfill(5)
+    '''
+    name_split = filename.rsplit(".", 1)
+    return "{}_{}{}".format(name_split[0], modifier, str(series).zfill(5))
+    '''
 
 def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):
     rescaled = transform.rescale(
@@ -531,5 +599,5 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    #transpose_npy(cli.filename, cli.series, plot_2d.plane)
-    transpose_npy(cli.filename, cli.series, rescale=0.05)
+    transpose_npy(cli.filename, cli.series, plot_2d.plane)
+    #transpose_npy(cli.filename, cli.series, rescale=0.05)

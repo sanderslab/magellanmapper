@@ -668,6 +668,8 @@ def process_file(filename_base, offset, roi_size):
     if image5d is None:
         if os.path.isdir(filename):
             image5d = importer.import_dir(os.path.join(filename, "*"))
+        elif filename.endswith(".tiff"):
+            image5d = importer.import_tiff_multipage(filename)
         else:
             image5d = importer.read_file(filename, series)
     

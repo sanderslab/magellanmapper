@@ -49,8 +49,11 @@ PIXEL_DTYPE = {
     7: np.double
 }
 
-# image5d archive
-IMAGE5D_NP_VER = 10 # image5d Numpy saved array version number
+# image5d archive versions:
+# 10: started at 10 because of previous versions prior to numbering; 
+#     fixed saved resolutions to contain only the given series
+# 11: sizes uses the image5d shape rather than the original image's size
+IMAGE5D_NP_VER = 11 # image5d Numpy saved array version number
 SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
 
@@ -177,9 +180,13 @@ def find_sizes(filename):
 
 def _make_filenames(filename, series, modifier="", ext="czi"):
     filename_base = filename_to_base(filename, series, modifier, ext)
+    print("filename_base: {}".format(filename_base))
     filename_image5d_npz = filename_base + SUFFIX_IMAGE5D
     filename_info_npz = filename_base + SUFFIX_INFO
     return filename_image5d_npz, filename_info_npz
+
+def filename_to_base(filename, series, modifier="", ext="czi"):
+    return filename.replace("." + ext, "_") + modifier + str(series).zfill(5)
 
 def _save_image_info(filename_info_npz, names, sizes, resolutions, 
                      magnification, zoom, pixel_type, near_min, near_max):
@@ -194,7 +201,7 @@ def _save_image_info(filename_info_npz, names, sizes, resolutions,
     print("info file saved to {}".format(filename_info_npz))
     print("file save time: {}".format(time() - time_start))
 
-def read_file(filename, series, save=True, load=True, z_max=-1, 
+def read_file(filename, series, load=True, z_max=-1, 
               offset=None, size=None, channel=-1, return_info=False, 
               import_if_absent=True):
     """Reads in an imaging file.
@@ -219,7 +226,12 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
         image5d: array of image data.
         size: tuple of dimensions given as (time, z, y, x, channels).
     """
-    filename_image5d_npz, filename_info_npz = _make_filenames(filename, series)
+    ext = ""
+    filename_split = filename.rsplit(".", 1)
+    if len(filename_split) > 1:
+        ext = filename_split[1]
+    filename_image5d_npz, filename_info_npz = _make_filenames(
+        filename, series, ext=ext)
     if load:
         try:
             time_start = time()
@@ -316,72 +328,75 @@ def read_file(filename, series, save=True, load=True, z_max=-1,
                     return None, output
                 return None
     start_jvm()
-    # parses the XML tree directly
-    names, sizes, detector.resolutions, magnification, zoom, pixel_type = parse_ome_raw(filename)
     time_start = time()
     image5d = None
-    filename_image5d_npz, filename_info_npz = _make_filenames(filename, series)
-    #sizes, dtype = find_sizes(filename)
-    rdr = bf.ImageReader(filename, perform_init=True)
-    # only loads one series for now though could create a loop for multiple series
-    size = sizes[series]
-    nt, nz = size[:2]
-    if z_max != -1:
-        nz = z_max
+    shape = None
+    load_channel = 0
     if offset is None:
         offset = (0, 0, 0) # (x, y, z)
-    dtype = getattr(np, pixel_type)
-    # generate image stack dimensions based on whether channel dim exists
-    if size[4] <= 1:
-        shape = (nt, nz, size[2], size[3])
-        load_channel = 0
+    name = os.path.basename(filename)
+    if ext == "tiff" or ext == "tif":
+        # import multipage TIFFs
+        print("Loading multipage TIFF...")
+        
+        if detector.resolutions is None:
+            raise IOError("Could not import {}. Please specify resolutions, "
+                          "magnification, and zoom.".format(filename))
+        sizes, dtype = find_sizes(filename)
+        shape = sizes[0]
+        if shape[-1] == 1:
+            shape = shape[:-1]
     else:
-        shape = (nt, nz, size[2], size[3], size[4])
-        load_channel = None
-    # open file as memmap to directly output to disk, which is much faster
-    # than outputting to RAM and saving to disk
-    image5d = np.lib.format.open_memmap(
-        filename_image5d_npz, mode="w+", dtype=dtype, shape=shape)
-    print("setting image5d array for series {} with shape: {}".format(
-          series, image5d.shape))
+        # default import mode, which assumes parseable OME header, tested 
+        # on CZI files
+        print("Loading {} file...".format(ext))
+        
+        # parses the XML tree directly
+        names, sizes, detector.resolutions, detector.magnification, \
+            detector.zoom, pixel_type = parse_ome_raw(filename)
+        shape = sizes[series]
+        if z_max != -1:
+            shape[1] = z_max
+        #dtype = getattr(np, pixel_type)
+        # generate image stack dimensions based on whether channel dim exists
+        if shape[4] <= 1:
+            shape = shape[:-1]#(nt, nz, size[2], size[3])
+            load_channel = 0
+        else:
+            #shape = (nt, nz, size[2], size[3], size[4])
+            load_channel = None
+        name = names[series]
+    rdr = bf.ImageReader(filename, perform_init=True)
     lows = []
     highs = []
-    for t in range(nt):
-        check_dtype = True
-        for z in range(nz):
+    for t in range(shape[0]):
+        for z in range(shape[1]):
             print("loading planes from [{}, {}]".format(t, z))
             img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
                            series=series, rescale=False)
+            if image5d is None:
+                # open file as memmap to directly output to disk, which is much 
+                # faster than outputting to RAM and saving to disk
+                image5d = np.lib.format.open_memmap(
+                    filename_image5d_npz, mode="w+", dtype=img.dtype, 
+                    shape=shape)
+                print("setting image5d array for series {} with shape: {}"
+                      .format(series, image5d.shape))
             low, high = np.percentile(img, (0.5, 99.5))
             lows.append(low)
             highs.append(high)
-            #print("near_min: {}, near_max: {}, min: {}, max: {}"
-            #      .format(low, high, np.min(img), np.max(img)))
-            # checks predicted data type with actual one to ensure consistency, 
-            # which was necessary in case the PIXEL_DTYPE dictionary became inaccurate
-            # but shouldn't be an issue when parsing date type directly from XML
-            if check_dtype:
-                if img.dtype != image5d.dtype:
-                    raise TypeError("Storing as data type {} "
-                                    "when image is in type {}"
-                                    .format(img.dtype, image5d.dtype))
-                else:
-                    print("Storing as data type {}".format(img.dtype))
-                check_dtype = False
             image5d[t, z] = img
     print("file import time: {}".format(time() - time_start))
-    # TODO: consider removing option since generally always want to save
-    if save:
-        time_start = time()
-        image5d.flush() # may not be necessary but ensure contents to disk
-        print("flush time: {}".format(time() - time_start))
-        #print("lows: {}, highs: {}".format(lows, highs))
-        # TODO: consider saving resolutions as 1D rather than 2D array
-        # with single resolution tuple
-        _save_image_info(filename_info_npz, [names[series]], 
-                         [sizes[series]], [detector.resolutions[series]], 
-                         magnification, zoom, 
-                         pixel_type, min(lows), max(highs))
+    time_start = time()
+    image5d.flush() # may not be necessary but ensure contents to disk
+    print("flush time: {}".format(time() - time_start))
+    #print("lows: {}, highs: {}".format(lows, highs))
+    # TODO: consider saving resolutions as 1D rather than 2D array
+    # with single resolution tuple
+    _save_image_info(filename_info_npz, [name], 
+                     [shape], [detector.resolutions[series]], 
+                     detector.magnification, detector.zoom, 
+                     image5d.dtype, min(lows), max(highs))
     return image5d
 
 def import_dir(path):
@@ -414,77 +429,6 @@ def import_dir(path):
                      detector.magnification, detector.zoom, image5d.dtype,
                      min(lows), max(highs))
     return image5d
-
-def import_tiff_multipage(path):
-    '''
-    # works but loads entire image into RAM during initial tiff import
-    filename_image5d_npz, filename_info_npz = _make_filenames(path, 0, ext="tiff")
-    image5d = None
-    from skimage.external import tifffile
-    with tifffile.TiffFile(path) as tiff:
-        data = tiff.asarray(memmap=True, series=0)
-        print("moving data of shape {} to image5d".format(data.shape))
-        image5d = np.lib.format.open_memmap(
-            filename_image5d_npz, mode="w+", dtype=data.dtype, 
-            shape=(1, *data.shape))
-        image5d[:] = data[:]
-        image5d.flush()
-    lows = []
-    highs = []
-    for plane in image5d:
-        low, high = np.percentile(plane, (0.5, 99.5))
-        lows.append(low)
-        highs.append(high)
-    _save_image_info(filename_info_npz, [os.path.basename(path)], 
-                     [image5d.shape], detector.resolutions, 
-                     detector.magnification, detector.zoom, image5d.dtype,
-                     min(lows), max(highs))
-    '''
-    start_jvm()
-    # parses the XML tree directly
-    time_start = time()
-    series = 0
-    filename_image5d_npz, filename_info_npz = _make_filenames(path, series, ext="tiff")
-    sizes, dtype = find_sizes(path)
-    shape = sizes[0]
-    if shape[-1] == 1:
-        shape = shape[:-1]
-    rdr = bf.ImageReader(path, perform_init=True)
-    #shape = (nt, nz, size[1], size[2])
-    load_channel = 0
-    lows = []
-    highs = []
-    # open file as memmap to directly output to disk, which is much faster
-    # than outputting to RAM and saving to disk
-    image5d = np.lib.format.open_memmap(
-        filename_image5d_npz, mode="w+", dtype=dtype, shape=shape)
-    print("setting image5d array for series {} with shape: {}".format(
-          series, image5d.shape))
-    for t in range(shape[0]):
-        for z in range(shape[1]):
-            print("loading planes from [{}, {}]".format(t, z))
-            img = rdr.read(z=z, t=t, c=load_channel,
-                           series=series, rescale=False)
-            low, high = np.percentile(img, (0.5, 99.5))
-            lows.append(low)
-            highs.append(high)
-            image5d[t, z] = img
-    print("file import time: {}".format(time() - time_start))
-    time_start = time()
-    image5d.flush() # may not be necessary but ensure contents to disk
-    print("flush time: {}".format(time() - time_start))
-    _save_image_info(filename_info_npz, [os.path.basename(path)], 
-                     [shape], [detector.resolutions[series]], 
-                     detector.magnification, detector.zoom, 
-                     image5d.dtype, min(lows), max(highs))
-    return image5d
-
-def filename_to_base(filename, series, modifier="", ext="czi"):
-    return filename.replace("." + ext, "_") + modifier + str(series).zfill(5)
-    '''
-    name_split = filename.rsplit(".", 1)
-    return "{}_{}{}".format(name_split[0], modifier, str(series).zfill(5))
-    '''
 
 def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):
     rescaled = transform.rescale(

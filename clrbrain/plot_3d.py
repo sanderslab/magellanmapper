@@ -390,7 +390,8 @@ def prepare_roi(image5d, channel, roi_size, offset):
     cube_slices = []
     for i in range(len(offset)):
         cube_slices.append(slice(offset[i], offset[i] + roi_size[i]))
-    print(offset, roi_size, cube_slices)
+    lib_clrbrain.printv("preparing ROI at offset: {}, size: {}, slices: {}"
+                        .format(offset, roi_size, cube_slices))
     
     # cube with corner at offset, side of cube_len
     if image5d.ndim >= 5:

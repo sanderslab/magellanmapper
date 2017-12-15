@@ -465,6 +465,11 @@ def verification_stats(conn, cur):
               .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
                       false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))
 
+def get_roi_offset(roi):
+    return (roi["offset_x"], roi["offset_y"], roi["offset_z"])
+
+def get_roi_size(roi):
+    return (roi["size_x"], roi["size_y"], roi["size_z"])
 
 def _merge_dbs(db_paths, db_merged=None):
     if db_merged is None:
@@ -482,8 +487,7 @@ def _merge_dbs(db_paths, db_merged=None):
             for roi in rois:
                 roi_id, _ = insert_roi(
                     db_merged.conn, db_merged.cur, exp_id, roi["series"], 
-                    (roi["offset_x"], roi["offset_y"], roi["offset_z"]), 
-                    (roi["size_x"], roi["size_y"], roi["size_z"]))
+                    get_roi_offset(roi), get_roi_size(roi))
                 blobs = select_blobs(db.cur, roi["id"])
                 insert_blobs(db_merged.conn, db_merged.cur, roi_id, blobs)
         exps_len = 0 if exps is None else len(exps)

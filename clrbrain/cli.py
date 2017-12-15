@@ -76,6 +76,7 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 from clrbrain import mlearn
+from clrbrain import exporter
 
 filename = None # current image file path
 filenames = None # list of multiple image paths
@@ -95,7 +96,10 @@ segments_proc = None
 sub_rois = None
 _blobs_all = None # share blobs among multiple processes
 
-PROC_TYPES = ("importonly", "processing", "processing_mp", "load", "extract")
+PROC_TYPES = (
+    "importonly", "processing", "processing_mp", "load", "extract", 
+    "export_rois"
+)
 proc_type = None
 
 TRUTH_DB_TYPES = ("view", "verify", "verified")
@@ -701,6 +705,10 @@ def process_file(filename_base, offset, roi_size):
         plot_2d.extract_plane(
             image5d, offset[2], plot_2d.plane, channel, plot_2d.savefig, name)
     
+    elif proc_type == PROC_TYPES[5]:
+        # export ROIs
+        exporter.export_rois(config.db, image5d, channel, filename_base)
+        
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the region, saving processed image
         # and segments to file

@@ -370,7 +370,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     collection_adj.set_linestyle("--")
                     ax.add_collection(collection_adj)
                 
-            # show segments as patches
+            # show segments from all z's as circles with colored outlines
             if segments is not None and segs_cmap is not None:
                 collection = _circle_collection(
                     segs, segs_cmap.astype(float) / 255.0, "none", 
@@ -401,6 +401,55 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                                            linestyle="dashed"))
         
     return ax
+
+def plot_roi(img, segments, channel, show=True, title=""):
+    fig = plt.figure()
+    #fig.suptitle(title)
+    # total number of z-planes
+    z_planes = img.shape[0]
+    # wrap plots after reaching max, but tolerates additional column
+    # if it will fit all the remainder plots from the last row
+    zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
+    col_remainder = z_planes % ZOOM_COLS
+    zoom_plot_cols = ZOOM_COLS
+    if col_remainder > 0 and col_remainder < zoom_plot_rows:
+        zoom_plot_cols += 1
+        zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
+        col_remainder = z_planes % zoom_plot_cols
+    roi_size = img.shape[::-1]
+    zoom_offset = [0, 0, 0]
+    gs = gridspec.GridSpec(
+        zoom_plot_rows, zoom_plot_cols, wspace=0.1, hspace=0.1)
+    
+    # plot the fully zoomed plots
+    for i in range(zoom_plot_rows):
+        # adjust columns for last row to number of plots remaining
+        cols = zoom_plot_cols
+        if i == zoom_plot_rows - 1 and col_remainder > 0:
+            cols = col_remainder
+        # show zoomed in plots and highlight one at offset z
+        for j in range(cols):
+            # z relative to the start of the ROI, since segs are relative to ROI
+            z = i * zoom_plot_cols + j
+            zoom_offset[2] = z
+            
+            # collects the segments within the given z-plane
+            segments_z = None
+            if segments is not None:
+                segments_z = segments[segments[:, 0] == z]
+            
+            # shows the zoomed subplot with scale bar for the current z-plane
+            ax_z = show_subplot(
+                fig, gs, i, j, img, channel, roi_size, zoom_offset, None,
+                segments, segments_z, None, 1.0, circles=CIRCLES[0])
+            if i == 0 and j == 0:
+                add_scale_bar(ax_z)
+    gs.tight_layout(fig, pad=0.5)
+    if show:
+        plt.show()
+    if savefig is not None:
+        plt.savefig(title + "." + savefig)
+    
 
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, offset, segments, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,

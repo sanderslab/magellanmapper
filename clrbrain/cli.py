@@ -608,7 +608,7 @@ def process_file(filename_base, offset, roi_size):
     
     # LOAD MAIN IMAGE
     
-    if proc_type == PROC_TYPES[3]:
+    if proc_type == PROC_TYPES[3] or proc_type == PROC_TYPES[5]:
         # loads from processed files
         global image5d_proc, segments_proc
         try:
@@ -706,8 +706,10 @@ def process_file(filename_base, offset, roi_size):
             image5d, offset[2], plot_2d.plane, channel, plot_2d.savefig, name)
     
     elif proc_type == PROC_TYPES[5]:
-        # export ROIs
-        exporter.export_rois(config.db, image5d, channel, filename_base)
+        # export ROIs; assumes that info_proc was already loaded to 
+        # give smaller region from which smaller ROIs from the truth DB 
+        # will be extracted
+        exporter.export_rois(config.truth_db, image5d, channel, filename_base)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the region, saving processed image

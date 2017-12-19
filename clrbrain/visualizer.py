@@ -455,55 +455,43 @@ class Visualization(HasTraits):
             if self._DEFAULTS_2D[2] in self._check_list_2d:
                 # shows labels around segments with Random-Walker
                 self.labels, _ = detector.segment_rw(self.roi)
-            # segments using blob detection
-            print("segs: {}".format(segs))
-            if cli.segments_proc is None and self._is_segs_none(segs):
-                # blob detection in the ROI if none given by processed 
-                # segments or from parameter
-                
+            
+            # covert to relative coordinates for consistency and since 
+            # absolute coordinates will be used later
+            segs_all = None
+            offset = self._curr_offset()
+            roi_size = self.roi_array[0].astype(int)
+            if cli.segments_proc is None:
+                # on-the-fly blob detection, which includes border but not 
+                # padding region
                 roi = self.roi
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
-                segs = detector.segment_blob(roi)
-                if segs is not None:
-                    self.segments = np.concatenate(
-                        (segs, np.add(segs[:, :3], 
-                                      np.flipud(self._curr_offset()))), 
-                        axis=1)
+                segs_all = detector.segment_blob(roi)
             else:
-                # shows blobs from processed segments or given by parameter
-                
-                x, y, z = self._curr_offset()
-                # uses blobs from loaded segments
-                roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
-                segs_all = None
-                if cli.segments_proc is not None:
-                    # get all blobs in ROI plus additional padding region if  
-                    # available from processed blobs to show surrounding blobs
-                    segs_all, _ = detector.get_blobs_in_roi(
-                        cli.segments_proc, self._curr_offset(), 
-                        self.roi_array[0].astype(int), plot_2d.padding)
-                    if self._is_segs_none(segs):
-                        segs = np.copy(segs_all)
-                    elif segs is not None:
-                        # segs provided such as from ROI; need to add segs from 
-                        # the padding area
-                        segs_outside = segs_all[
-                            np.any([np.logical_or(segs_all[:, 0] < z, 
-                                                  segs_all[:, 0] >= z + roi_z),
-                                    np.logical_or(segs_all[:, 1] < y, 
-                                                  segs_all[:, 1] >= y + roi_y),
-                                    np.logical_or(segs_all[:, 2] < x, 
-                                                  segs_all[:, 2] >= x + roi_x)],
-                                   axis=0)]
-                        segs = np.concatenate((segs, segs_outside), axis=0)
-                # transpose to make coordinates relative to offset
-                self.segments = np.concatenate((segs, segs[:, :3]), axis=1)
-                shift = np.zeros(self.segments.shape[1])
-                shift[0:3] = [z, y, x]
-                self.segments = np.subtract(self.segments, shift)
+                # get all previously processed blobs in ROI plus additional 
+                # padding region to show surrounding blobs
+                segs_all, _ = detector.get_blobs_in_roi(
+                    cli.segments_proc, offset, 
+                    roi_size, plot_2d.padding)
+                # shift coordinates to be relative to offset
+                segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
+            print("segs_all:\n{}".format(segs_all))
             
+            if not self._is_segs_none(segs):
+                # if segs provided (eg from ROI), use only these segs within 
+                # the ROI and add segs from the padding area outside the ROI
+                _, segs_in_mask = detector.get_blobs_in_roi(
+                    segs_all, np.zeros(3), 
+                    roi_size, np.multiply(self.border, -1))
+                segs_outside = segs_all[np.logical_not(segs_in_mask)]
+                print("segs_outside: {}".format(segs_outside))
+                segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
+                segs_all = np.concatenate((segs, segs_outside), axis=0)
+                
+            # convert segments to visualizer table format and plot
+            self.segments = self._create_vis_segments(segs_all, offset)
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self, show_shadows)
@@ -651,6 +639,10 @@ class Visualization(HasTraits):
             self.border[2] = 0 # ignore z
         print("set border to {}".format(self.border))
     
+    def _create_vis_segments(self, segs, offset):
+        return np.concatenate(
+            (segs[:, :6], np.add(segs[:, :3], offset[::-1])), axis=1)
+    
     def _add_segment(self, seg, offset):
         """Formats a segment to the specification used within this module and 
         adds the segment to this class object's segments list.
@@ -665,8 +657,7 @@ class Visualization(HasTraits):
             format.
         """
         print(seg)
-        seg = np.concatenate(
-            (seg[:, :6], np.add(seg[:, :3], offset[::-1])), axis=1)
+        seg = self._create_vis_segments(seg, offset)
         print("added segment: {}".format(seg))
         # concatenate for in-place array update, though append
         # and re-assigning also probably works

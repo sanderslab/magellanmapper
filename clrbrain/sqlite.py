@@ -507,6 +507,32 @@ def merge_truth_dbs(img_paths):
             os.path.basename(img_path.rsplit(".", 1)[0]), DB_SUFFIX_TRUTH))
         db_merged = _merge_dbs(db_paths, db_merged)
 
+def clean_up_blobs(db):
+    """Clean up blobs from pre-v.0.5.0, where user-added radii have neg 
+    values rather than 0.0, and remove all unconfirmed blobs since 
+    dragging/dropping decreases the number of delete/adds required for 
+    proper blob placement.
+    
+    Args:
+        db: Database to clean up, typically a truth database.
+    """
+    exps = select_experiment(db.cur, None)
+    for exp in exps:
+        exp_id = select_or_insert_experiment(
+            db.conn, db.cur, exp["name"], exp["date"])
+        rois = select_rois(db.cur, exp["id"])
+        for roi in rois:
+            roi_id = roi["id"]
+            print("cleaning ROI {}".format(roi_id))
+            blobs = select_blobs(db.cur, roi_id)
+            #print("blobs:\n{}".format(blobs))
+            del_mask = blobs[:, 4] != 1
+            delete_blobs(db.conn, db.cur, roi_id, blobs[del_mask])
+            blobs_confirmed = blobs[np.logical_not(del_mask)]
+            blobs_confirmed[np.isclose(blobs_confirmed[:, 3], 0), 3] = -5
+            insert_blobs(db.conn, db.cur, roi_id, blobs_confirmed)
+        print("updated experiment {}".format(exp["name"]))
+
 def _test_db():
     # simple database test
     conn, cur = start_db()
@@ -546,5 +572,6 @@ if __name__ == "__main__":
         cur = config.verified_db.cur
     #verification_stats(conn, cur)
     #update_rois(cur, cli.offset, cli.roi_size)
-    merge_truth_dbs(cli.filenames)
+    #merge_truth_dbs(cli.filenames)
+    clean_up_blobs(config.truth_db)
     

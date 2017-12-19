@@ -115,14 +115,16 @@ class DraggableCircle:
         if self.press is None: return
         if event.inaxes != self.circle.axes: return
         x0, y0, xpress, ypress = self.press
-        dx = event.xdata - xpress
-        dy = event.ydata - ypress
-        print("initial position: {}, {}; change thus far: {}, {}"
-              .format(x0, y0, dx, dy))
         if event.key == "shift":
+            dx = event.xdata - xpress
+            dy = event.ydata - ypress
             self.circle.center = x0 + dx, y0 + dy
         elif event.key == "alt":
+            dx = abs(event.xdata - x0)
+            dy = abs(event.ydata - y0)
             self.circle.radius = max([dx, dy])
+        print("initial position: {}, {}; change thus far: {}, {}"
+              .format(x0, y0, dx, dy))
 
         self.circle.figure.canvas.draw()
     

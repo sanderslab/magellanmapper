@@ -26,6 +26,7 @@ import numpy as np
 from collections import OrderedDict
 
 verbose = False
+POS_THRESH = 0.001 # threshold for positive values for float comparison
 
 class ProcessSettings(dict):
     def __init__(self, *args, **kwargs):

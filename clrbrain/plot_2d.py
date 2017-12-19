@@ -100,7 +100,9 @@ class DraggableCircle:
     def on_press(self, event):
         """Initiate drag events with Shift-click inside a circle.
         """
-        if event.key != "shift" or event.inaxes != self.circle.axes: return
+        if (event.key != "shift" and event.key != "alt" 
+            or event.inaxes != self.circle.axes):
+            return
         contains, attrd = self.circle.contains(event)
         if not contains: return
         print("pressed on {}".format(self.circle.center))
@@ -117,7 +119,10 @@ class DraggableCircle:
         dy = event.ydata - ypress
         print("initial position: {}, {}; change thus far: {}, {}"
               .format(x0, y0, dx, dy))
-        self.circle.center = x0 + dx, y0 + dy
+        if event.key == "shift":
+            self.circle.center = x0 + dx, y0 + dy
+        elif event.key == "alt":
+            self.circle.radius = max([dx, dy])
 
         self.circle.figure.canvas.draw()
     
@@ -125,14 +130,14 @@ class DraggableCircle:
         """Finalize the circle and segment's position after a drag event
         is completed with a button release.
         """
-        if self.press is None or event.inaxes != self.circle.axes: return
-        contains, attrd = self.circle.contains(event)
-        if not contains: return
+        if self.press is None: return
         print("released on {}".format(self.circle.center))
         print("segment moving from {}...".format(self.segment))
         seg_old = np.copy(self.segment)
         self.segment[1:3] += np.subtract(
             self.circle.center, self.press[0:2]).astype(np.int)[::-1]
+        rad_sign = -1 if self.segment[3] < config.POS_THRESH else 1
+        self.segment[3] = rad_sign * self.circle.radius
         print("...to {}".format(self.segment))
         self.fn_update_seg(self.segment, seg_old)
         self.press = None
@@ -144,6 +149,7 @@ class DraggableCircle:
         """
         if (event.mouseevent.key == "control" 
             or event.mouseevent.key == "shift" 
+            or event.mouseevent.key == "alt" 
             or event.artist != self.circle):
             return
         #print("color: {}".format(self.facecolori))
@@ -151,15 +157,14 @@ class DraggableCircle:
             _circle_last_picked.append(self)
             self.remove_self()
         else:
+            seg_old = np.copy(self.segment)
             i = self.facecolori + 1
             if i > max(segs_color_dict.keys()):
-                if np.allclose(self.segment[3], 0):
+                if self.segment[3] < config.POS_THRESH:
                     self.remove_self()
-                    return
                 i = -1
             self.circle.set_facecolor(segs_color_dict[i])
             self.facecolori = i
-            seg_old = np.copy(self.segment)
             self.segment[4] = i
             self.fn_update_seg(self.segment, seg_old)
             print("picked segment: {}".format(self.segment))
@@ -182,7 +187,10 @@ def _get_radius(seg):
         The radius, defaulting to 0 if the given radius value is close 
         to 0 by numpy.allclose.
     """
-    return 5 if np.allclose(seg[3], 0) else seg[3]
+    radius = seg[3]
+    if radius < config.POS_THRESH:
+        radius *= -1
+    return radius
 
 def _circle_collection(segments, edgecolor, facecolor, linewidth):
     """Draws a patch collection of circles for segments.
@@ -609,12 +617,13 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
         segments = segments[segments[:, 5] == -1]
     # finds adjacent segments, outside of the ROI
     if segments is not None:
+        #print("segments:\n{}".format(segments))
         mask_in = np.all([segments[:, 0] >= border[2], segments[:, 0] < roi_size[2] - border[2],
                           segments[:, 1] >= border[1], segments[:, 1] < roi_size[1] - border[1],
                           segments[:, 2] >= border[0], segments[:, 2] < roi_size[0] - border[0]], 
                          axis=0)
         segs_out = segments[np.invert(mask_in)]
-        print("segs_out:\n{}".format(segs_out))
+        #print("segs_out:\n{}".format(segs_out))
         
     # selected or newly added patches since difficult to get patch from collection,
     # and they don't appear to be individually editable
@@ -688,7 +697,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
                     
                     seg = np.array([[axi - z_planes_padding, 
                                      event.ydata.astype(int), 
-                                     event.xdata.astype(int), 0.0, 1, -1]])
+                                     event.xdata.astype(int), -5, 1, -1]])
                     seg = fn_update_seg(seg, offset=offset)
                     # adds a circle to denote the new segment
                     patch = _plot_circle(
@@ -705,7 +714,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
             axi = ax_z_list.index(ax)
             dz = axi - z_planes_padding - circle.segment[0]
             seg_old = np.copy(circle.segment)
-            circle.segment[[0, 6]] += dz
+            circle.segment[0] += dz
             _plot_circle(
                 ax, circle.segment, "w", SEG_LINEWIDTH, ":", fn_update_seg)
             _circle_last_picked.remove(circle)

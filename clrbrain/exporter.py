@@ -41,10 +41,14 @@ def export_rois(db, image5d, channel, path):
             plot_2d.plot_roi(img3d, blobs, channel, show=False, title=path_base)
             
             # export image and blobs, stripping blob flags and adjusting 
-            # user-added segments (radius is 0) to default of 5
+            # user-added segments' radii
             np.save(path_img, img3d)
             blobs = blobs[:, 0:4]
+            # prior to v.0.5.0, user-added segments had a radius of 0.0
             blobs[np.isclose(blobs[:, 3], 0), 3] = 5.0
+            # as of v.0.5.0, user-added segments have neg radii whose abs
+            # value corresponds to the displayed radius
+            blobs[:, 3] = np.abs(blobs[:, 3])
             lib_clrbrain.printv("blobs:\n{}".format(blobs))
             np.save(path_blobs, blobs)
             print("exported {}".format(path_base))

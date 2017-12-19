@@ -350,14 +350,16 @@ def insert_blobs(conn, cur, roi_id, blobs):
     conn.commit()
     
 def delete_blobs(conn, cur, roi_id, blobs):
-    """Inserts blobs into the database, replacing any duplicate blobs.
+    """Deletes blobs matching the given blobs' ROI ID and coordinates.
     
     Args:
         conn: The connection.
         cur: Connection's cursor.
-        blobs: Array of blobs arrays, assumes to be in (z, y, x, radius, confirmed)
-            format. "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 
-            1 = correct.
+        blobs: Array of blobs arrays, assumes to be in (z, y, x...)
+            format.
+    
+    Returns:
+        The number of rows deleted.
     """
     deleted = 0
     for blob in blobs:
@@ -365,8 +367,10 @@ def delete_blobs(conn, cur, roi_id, blobs):
         blob_entry.extend(blob[0:3])
         cur.execute("DELETE FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
                     "AND x = ?", blob_entry)
-        deleted += 1
-        print("deleted blob {}".format(blob))
+        count =  cur.rowcount
+        if count > 0:
+            deleted += count
+            print("deleted blob {}".format(blob))
     print("{} blob(s) deleted".format(deleted))
     conn.commit()
     return deleted
@@ -423,8 +427,9 @@ def verification_stats(conn, cur):
     if config.verified_db is None:
         # basic stats based on confirmation status, ignoring maybes
         blobs_true = blobs[blobs[:, 4] == 1] # all pos
-        # radius = 0 indicates that the blob was manually added, not detected
-        blobs_true_detected = blobs_true[np.nonzero(blobs_true[:, 3])] # true pos
+        # true pos, where radius <= 0 indicates that the blob was manually 
+        # added, not detected
+        blobs_true_detected = blobs_true[blobs_true[:, 3] < config.POS_THRESH]
         # not detected neg, so no "true neg" but only false pos
         blobs_false = blobs[blobs[:, 4] == 0] # false pos
     else:

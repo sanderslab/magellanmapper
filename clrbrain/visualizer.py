@@ -142,6 +142,7 @@ class Visualization(HasTraits):
     _roi_default = "None selected"
     _rois = None
     _segments = Array
+    _segs_moved = [] # orig seg of moved blobs to track for deletion
     _segs_scale_low = 0.0
     _segs_scale_high = Float # needs to be trait to dynamically update
     segs_scale = Float
@@ -214,8 +215,8 @@ class Visualization(HasTraits):
         for i in range(len(self.segments)):
             seg = self.segments[i]
             # uses absolute coordinates from end of seg
-            seg_db = np.array([*seg[6:9], *seg[3:6]])
-            if seg[4] == -1 and np.isclose(seg[3], 0):
+            seg_db = self._seg_for_db(seg)
+            if seg[4] == -1 and seg[3] < config.POS_THRESH:
                 # attempts to delete user added segments, where radius assumed to be 0,
                 # that are no longer selected
                 feedback.append("{} to delete (unselected user added)".format(seg_db))
@@ -234,7 +235,7 @@ class Visualization(HasTraits):
         if (len(segs_transposed_np) > 0 
             and np.any(
                 np.logical_and(segs_transposed_np[:, 4] == -1, 
-                np.logical_not(np.isclose(segs_transposed_np[:, 3], 0))))):
+                np.logical_not(segs_transposed_np[:, 3] < config.POS_THRESH)))):
             feedback.insert(0, "Segments *NOT* added. Please ensure that all "
                                "segments in the ROI have been verified.\n")
         else:
@@ -253,6 +254,16 @@ class Visualization(HasTraits):
                                        np.add(self._curr_offset(), self.border).tolist(), 
                                        np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
             sqlite.delete_blobs(config.db.conn, config.db.cur, roi_id, segs_to_delete)
+            
+            # delete the original entry of blobs that moved since replacement
+            # is based on coordinates, so moved blobs wouldn't be replaced
+            for i in range(len(self._segs_moved)):
+                self._segs_moved[i] = self._seg_for_db(self._segs_moved[i])
+            sqlite.delete_blobs(
+                config.db.conn, config.db.cur, roi_id, self._segs_moved)
+            self._segs_moved = []
+            
+            # insert blobs into DB and save ROI in GUI
             sqlite.insert_blobs(config.db.conn, config.db.cur, roi_id, segs_transposed)
             roi = sqlite.select_roi(config.db.cur, roi_id)
             self._append_roi(roi, self._rois_dict)
@@ -428,6 +439,12 @@ class Visualization(HasTraits):
         print("view: {}\nroll: {}".format(
             self.scene.mlab.view(), self.scene.mlab.roll()))
     
+    def _is_segs_none(self, segs):
+        """Checks if segs is equivalent to None.
+        """
+        # segs is 0 for some reason if no parameter given in fired trait
+        return segs is None or not isinstance(segs, np.ndarray)
+    
     def _btn_segment_trait_fired(self, segs=None):
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
@@ -439,9 +456,11 @@ class Visualization(HasTraits):
                 # shows labels around segments with Random-Walker
                 self.labels, _ = detector.segment_rw(self.roi)
             # segments using blob detection
-            if cli.segments_proc is None:
-                # blob detection in the ROI;
-                # TODO: incorporate given segs?
+            print("segs: {}".format(segs))
+            if cli.segments_proc is None and self._is_segs_none(segs):
+                # blob detection in the ROI if none given by processed 
+                # segments or from parameter
+                
                 roi = self.roi
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
@@ -453,33 +472,38 @@ class Visualization(HasTraits):
                                       np.flipud(self._curr_offset()))), 
                         axis=1)
             else:
+                # shows blobs from processed segments or given by parameter
+                
                 x, y, z = self._curr_offset()
                 # uses blobs from loaded segments
                 roi_x, roi_y, roi_z = self.roi_array[0].astype(int)
-                # adds additional padding to show surrounding segments
-                segs_all, _ = detector.get_blobs_in_roi(
-                    cli.segments_proc, self._curr_offset(), 
-                    self.roi_array[0].astype(int), plot_2d.padding)
-                # segs is 0 for some reason if none given
-                if segs is None or not isinstance(segs, np.ndarray):
-                    segs = np.copy(segs_all)
-                elif segs is not None:
-                    # segs provided such as from ROI; need to add segs from 
-                    # the padding area
-                    segs_outside = segs_all[
-                        np.any([np.logical_or(segs_all[:, 0] < z, 
-                                              segs_all[:, 0] >= z + roi_z),
-                                np.logical_or(segs_all[:, 1] < y, 
-                                              segs_all[:, 1] >= y + roi_y),
-                                np.logical_or(segs_all[:, 2] < x, 
-                                              segs_all[:, 2] >= x + roi_x)],
-                               axis=0)]
-                    segs = np.concatenate((segs, segs_outside), axis=0)
+                segs_all = None
+                if cli.segments_proc is not None:
+                    # get all blobs in ROI plus additional padding region if  
+                    # available from processed blobs to show surrounding blobs
+                    segs_all, _ = detector.get_blobs_in_roi(
+                        cli.segments_proc, self._curr_offset(), 
+                        self.roi_array[0].astype(int), plot_2d.padding)
+                    if self._is_segs_none(segs):
+                        segs = np.copy(segs_all)
+                    elif segs is not None:
+                        # segs provided such as from ROI; need to add segs from 
+                        # the padding area
+                        segs_outside = segs_all[
+                            np.any([np.logical_or(segs_all[:, 0] < z, 
+                                                  segs_all[:, 0] >= z + roi_z),
+                                    np.logical_or(segs_all[:, 1] < y, 
+                                                  segs_all[:, 1] >= y + roi_y),
+                                    np.logical_or(segs_all[:, 2] < x, 
+                                                  segs_all[:, 2] >= x + roi_x)],
+                                   axis=0)]
+                        segs = np.concatenate((segs, segs_outside), axis=0)
                 # transpose to make coordinates relative to offset
                 self.segments = np.concatenate((segs, segs[:, :3]), axis=1)
                 shift = np.zeros(self.segments.shape[1])
                 shift[0:3] = [z, y, x]
                 self.segments = np.subtract(self.segments, shift)
+            
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self, show_shadows)
@@ -628,6 +652,18 @@ class Visualization(HasTraits):
         print("set border to {}".format(self.border))
     
     def _add_segment(self, seg, offset):
+        """Formats a segment to the specification used within this module and 
+        adds the segment to this class object's segments list.
+        
+        Args:
+            seg: Segment in (z, y, x, rad, confirmed, truth) format.
+            offset: Offset in (x, y, z) format for consistency with 
+                offset values given as user input.
+        
+        Returns:
+            Segment in (z, y, x, rad, confirmed, truth, abs_z, abs_y, abs_x) 
+            format.
+        """
         print(seg)
         seg = np.concatenate(
             (seg[:, :6], np.add(seg[:, :3], offset[::-1])), axis=1)
@@ -636,6 +672,20 @@ class Visualization(HasTraits):
         # and re-assigning also probably works
         self.segments = np.concatenate((self.segments, seg))
         return seg
+    
+    def _seg_for_db(self, seg):
+        """Convert segment output from the format used within this module 
+        to that used in :module:`sqlite`, where coordinates are absolute 
+        rather than relative to the offset.
+        
+        Args:
+            seg: Segment in 
+                (z, y, x, rad, confirmed, truth, abs_z, abs_y, abs_x) format.
+        
+        Returns:
+            Segment in (abs_z, abs_y, abs_x, rad, confirmed, truth) format.
+        """
+        return np.array([*seg[6:9], *seg[3:6]])
     
     def _get_vis_segments_index(self, segment):
         # must take from vis rather than saved copy in case user 
@@ -649,7 +699,7 @@ class Visualization(HasTraits):
         return -1
     
     def _force_seg_refresh(self, i, show=False):
-       """Triggers table update by either selecting and reselected the segment
+       """Trigger table update by either selecting and reselected the segment
        or vice versa.
        
        Args:
@@ -664,12 +714,26 @@ class Visualization(HasTraits):
            if not show:
                self.segs_selected.remove(i)
     
-    def _update_vis_segments(self, segi, segment):
-        if segi != -1:
-            self.segments[segi] = segment
-            self._force_seg_refresh(segi, show=True)
-    
     def update_segment(self, segment_new, segment_old=None, offset=None):
+        """Update this class object's segments list with a new or updated 
+        segment.
+        
+        Args:
+            segment_new: Segment that was either added or updated, including 
+                changes to coordinates or radius.
+            segment_old: Previous version of the segment; defaults to None, 
+                in which case ``segment_new`` will only be added rather than 
+                any previously segment updated.
+            offset: Offset for ``segment_new``'s coordinates, used only 
+                when adding a completely new segment. This segment's 
+                coordinates are given in relative coordinates, and extra 
+                fields will be appended to the segment to store its 
+                absolute coordinates.
+        
+        Returns:
+            The updated segment in 
+            (z, y, x, rad, confirmed, truth, abs_z, abs_y, abs_x) format.
+        """
         seg = None
         # remove all row selections to ensure that no more than one 
         # row is selected by the end
@@ -677,8 +741,14 @@ class Visualization(HasTraits):
             self.segs_selected.pop()
         if segment_old is not None:
             # updates an existing segment
+            self._segs_moved.append(segment_old)
+            diff = np.subtract(segment_new[0:3], segment_old[0:3])
+            segment_new[6:9] += diff
             segi = self._get_vis_segments_index(segment_old)
-            self._update_vis_segments(segi, segment_new)
+            if segi != -1:
+                self.segments[segi] = segment_new
+                print("updated seg: {}".format(segment_new))
+                self._force_seg_refresh(segi, show=True)
         elif offset is not None:
             # adds a new segment with the given offset
             seg = self._add_segment(segment_new, offset)

@@ -10,7 +10,12 @@ import json
 from collections import OrderedDict
 from pprint import pprint
 from time import time
-import SimpleITK as sitk
+try:
+    import SimpleITK as sitk
+except ImportError as e:
+    print(e)
+    print("WARNING: SimpleElastix could not be found, so there will be error "
+          "when attempting to register images or load registered images")
 import numpy as np
 from skimage import transform
 

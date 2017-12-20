@@ -486,7 +486,7 @@ class Visualization(HasTraits):
                     segs_all, np.zeros(3), 
                     roi_size, np.multiply(self.border, -1))
                 segs_outside = segs_all[np.logical_not(segs_in_mask)]
-                print("segs_outside: {}".format(segs_outside))
+                print("segs_outside:\n{}".format(segs_outside))
                 segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
                 segs_all = np.concatenate((segs, segs_outside), axis=0)
                 

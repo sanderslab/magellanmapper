@@ -163,6 +163,7 @@ class DraggableCircle:
             i = self.facecolori + 1
             if i > max(segs_color_dict.keys()):
                 if self.segment[3] < config.POS_THRESH:
+                    _circle_last_picked.append(self)
                     self.remove_self()
                 i = -1
             self.circle.set_facecolor(segs_color_dict[i])

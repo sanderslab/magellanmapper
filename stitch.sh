@@ -42,9 +42,10 @@ echo $PWD
 compute_overlap=0
 write_fused=0
 out_dir=""
+big_stitch=0
 
 OPTIND=1
-while getopts hf:o:cw opt; do
+while getopts hf:o:cwb opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -60,6 +61,9 @@ while getopts hf:o:cw opt; do
             ;;
         w)  write_fused=1
             echo "Set to fuse and write"
+            ;;
+        b)  big_stitch=1
+            echo "Set to use BigStitcher"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -99,8 +103,15 @@ echo "Assumes Fiji executable is located at $IJ"
 
 # calculates memory to reserve based on image file size with generous
 # extra padding room (TODO: check if too much for large files)
-mem=`du "$IMG" | awk '{print $1}'`
-mem=$((mem/100))
+img_file_for_size="$IMG"
+mem_denom=100
+if [ $big_stitch -eq 1 ]
+then
+    img_file_for_size="`dirname $IMG`"/dataset.h5
+    mem_denom=1000
+fi
+mem=`du "$img_file_for_size" | awk '{print $1}'`
+mem=$((mem/$mem_denom))
 MIN_MEM=1000
 if ((mem < MIN_MEM))
 then
@@ -109,24 +120,30 @@ then
 fi
 echo "Reserving $mem MB of memory"
 
-# evaluates the options directly from command-line;
-# does not appear to work when fed a separate script in "-macro" mode
-$IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",compute_overlap="'"$compute_overlap"'",write_fused="'"$write_fused"'"'
-
-
-# manually move files to output directory since specifying this directory
-# within the Stitching plugin requires the tile configuration file to be
-# there as well
-if [ $write_fused -eq 0 ] || [ "$out_dir" == "" ]
+# evaluates the options directly from command-line
+if [ $big_stitch -eq 1 ]
 then
-    # exit if not writing fused files or no dir to move into
-    exit 0
+    # BigStitcher; not working in headless mode so will require GUI availability
+    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",compute_overlap="'"$compute_overlap"'",write_fused="'"$write_fused"'"'
+else
+    # Fiji Stitching plugin; does not appear to work when fed a separate script in "-macro" mode
+    $IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",compute_overlap="'"$compute_overlap"'",write_fused="'"$write_fused"'"'
+    
+    # manually move files to output directory since specifying this directory
+    # within the Stitching plugin requires the tile configuration file to be
+    # there as well
+    if [ $write_fused -eq 0 ] || [ "$out_dir" == "" ]
+    then
+        # exit if not writing fused files or no dir to move into
+        exit 0
+    fi
+    # move into out_dir, assuming output files are in format "img_t..."
+    in_dir="`dirname $IMG`"
+    echo "Moving files from $in_dir to $out_dir..."
+    if [ ! -e "$out_dir" ]
+    then
+        mkdir "$out_dir"
+    fi
+    mv "$in_dir"/img_t* "$out_dir"
 fi
-# move into out_dir, assuming output files are in format "img_t..."
-in_dir="`dirname $IMG`"
-echo "Moving files from $in_dir to $out_dir..."
-if [ ! -e "$out_dir" ]
-then
-    mkdir "$out_dir"
-fi
-mv "$in_dir"/img_t* "$out_dir"
+

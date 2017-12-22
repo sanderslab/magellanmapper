@@ -105,15 +105,14 @@ echo "Assumes Fiji executable is located at $IJ"
 
 # calculates memory to reserve based on image file size with generous
 # extra padding room (TODO: check if too much for large files)
-img_file_for_size="$IMG"
-mem_denom=100
 if [ $big_stitch -eq 1 ]
 then
-    img_file_for_size="`dirname $IMG`"/dataset.h5
-    mem_denom=1000
+    mem=`free|awk '/Mem\:/ { print $2 }'`
+    mem=$((mem/1000-2000))
+else
+    mem=`du "$IMG" | awk '{print $1}'`
+    mem=$((mem/100))
 fi
-mem=`du "$img_file_for_size" | awk '{print $1}'`
-mem=$((mem/$mem_denom))
 MIN_MEM=1000
 if ((mem < MIN_MEM))
 then

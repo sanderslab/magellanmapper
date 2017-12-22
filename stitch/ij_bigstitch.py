@@ -22,6 +22,8 @@ def perform_task(task, options):
 out_dir = os.path.dirname(in_file)
 print("in_file: {}".format(in_file))
 print("out_dir: {}".format(out_dir))
+dataset_name = "dataset.xml"
+
 print("compute_overlap: {}".format(type(compute_overlap)))
 if write_fused == 1:
     fusion_method = "Linear Blending"
@@ -30,13 +32,27 @@ else:
 print("fusion method: {}".format(fusion_method))
 
 options = (
+    "type_of_dataset=[Automatic Loader (Bioformats based)] "
+    "xml_filename=" + dataset_name + " "
+    "path=" + in_file + " "
+    "exclude=10 "
+    "bioformats_series_are?=Tiles "
+    "move_tiles_to_grid_(per_angle)?=[Do not move Tiles to Grid (use Metadata if available)] "
+    "use_virtual_images_(cached) "
+    "dataset_save_path=" + out_dir + " "
+    "check_stack_sizes "
+    "resave_as_hdf5"
+)
+perform_task("Define dataset ...", options);
+
+options = (
     "select=" + in_file + " "
     "selection=[Pick brightest]"
 )
 #perform_task("Select Illuminations", options);
 
 options = (
-    "select=" + in_file + " "
+    "select=" + dataset_name + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "
@@ -50,7 +66,7 @@ options = (
 #perform_task("Calculate pairwise shifts ...", options)
 
 options = (
-    "select=" + in_file + " "
+    "select=" + dataset_name + " "
     "min_r=0 "
     "max_r=1 "
     "max_shift_in_x=0 "
@@ -61,7 +77,7 @@ options = (
 #perform_task("Filter pairwise shifts ...", options);
 
 options = (
-    "select=" + in_file + " "
+    "select=" + dataset_name + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "
@@ -82,7 +98,7 @@ options = (
 perform_task("Optimize globally and apply shifts ...", options);
 
 options = (
-    "select=" + in_file + " "
+    "select=" + dataset_name + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "

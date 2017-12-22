@@ -13,6 +13,7 @@
 ################################################
 
 FIJI="http://downloads.imagej.net/fiji/latest/fiji-nojre.zip"
+update=0
 
 # run from parent directory
 base_dir="`dirname $0`"
@@ -20,7 +21,7 @@ cd "$base_dir"
 echo $PWD
 
 OPTIND=1
-while getopts hi:p: opt; do
+while getopts hi:p:u opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -30,6 +31,9 @@ while getopts hi:p: opt; do
             ;;
         p)  pem="$OPTARG"
             echo "Set pem key file to $pem"
+            ;;
+        u)  update=1
+            echo "Set to update Clrbrain only"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -48,4 +52,13 @@ archive="clrbrain_${git_hash}.zip"
 git archive -o "$archive" HEAD
 
 scp -i "$pem" "$archive" ec2-user@"$ip":~
-ssh -t -i "$pem" ec2-user@"$ip" "unzip $archive -d clrbrain && wget $FIJI && unzip fiji-nojre.zip -d clrbrain"
+server_cmd="unzip -o $archive -d clrbrain"
+if [ $update -eq 0 ]
+then
+    server_cmd="${server_cmd} "
+    server_cmd+="&& wget $FIJI "
+    server_cmd+="&& unzip fiji-nojre.zip "
+    server_cmd+="&& Fiji.app/ImageJ-linux64 --update add-update-site BigStitcher http://sites.imagej.net/BigStitcher/ "
+    server_cmd+="&& Fiji.app/ImageJ-linux64 --update update"
+fi
+ssh -t -i "$pem" ec2-user@"$ip" "$server_cmd"

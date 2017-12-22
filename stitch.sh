@@ -76,7 +76,9 @@ done
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-# find ImageJ binary name; assumes binary is in the PATH
+# find ImageJ binary name; assumes Fiji.app folder is either in 
+# the standard Mac Applications directory or in the Clrbrain 
+# parent directory
 echo -n "Detecting environment..."
 SYSTEM=`uname -a`
 bit="32"
@@ -88,7 +90,7 @@ platform=""
 if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
 then
     platform="Windows"
-    IJ=Fiji.app/ImageJ-win$bit
+    IJ=../Fiji.app/ImageJ-win$bit
 elif [[ "$SYSTEM" =~ "Darwin" ]]
 then
     platform="MacOSX"
@@ -96,7 +98,7 @@ then
 elif [[ "$SYSTEM" =~ "Linux" ]]
 then
     platform="Linux"
-    IJ=Fiji.app/ImageJ-linux$bit
+    IJ=../Fiji.app/ImageJ-linux$bit
 fi
 echo "will use $platform platform with $bit bit for ImageJ"
 echo "Assumes Fiji executable is located at $IJ"

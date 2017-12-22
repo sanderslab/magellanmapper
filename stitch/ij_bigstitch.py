@@ -9,6 +9,7 @@ Attributes:
 
 from ij import IJ
 import os
+from time import time
 
 #@String in_file
 #@int compute_overlap
@@ -17,20 +18,17 @@ import os
 def perform_task(task, options):
     print("Running {}".format(task))
     print(options)
+    time_start = time()
     IJ.run(task, options)
+    print("\n{} elapsed time: {}".format(task, time() - time_start))
 
 out_dir = os.path.dirname(in_file)
 print("in_file: {}".format(in_file))
 print("out_dir: {}".format(out_dir))
 dataset_name = "dataset.xml"
+dataset_path = os.path.join(out_dir, dataset_name)
 
-print("compute_overlap: {}".format(type(compute_overlap)))
-if write_fused == 1:
-    fusion_method = "Linear Blending"
-else:
-    fusion_method = "Do not fuse images (only write TileConfiguration)"
-print("fusion method: {}".format(fusion_method))
-
+time_start = time()
 options = (
     "type_of_dataset=[Automatic Loader (Bioformats based)] "
     "xml_filename=" + dataset_name + " "
@@ -46,27 +44,29 @@ options = (
 perform_task("Define dataset ...", options);
 
 options = (
-    "select=" + in_file + " "
+    "select=" + dataset_name + " "
     "selection=[Pick brightest]"
 )
-#perform_task("Select Illuminations", options);
+perform_task("Select Illuminations", options);
 
 options = (
-    "select=" + dataset_name + " "
+    "select=" + dataset_path + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "
-    "process_tile=[Multiple tiles (Select from List)] "
+    #"process_tile=[Multiple tiles (Select from List)] "
+    "process_tile=[All tiles] "
     "process_timepoint=[All Timepoints] "
-    "tile_0 tile_1 method=[Phase Correlation] "
+    #"tile_0 tile_1 "
+    "method=[Phase Correlation] "
     "downsample_in_x=4 "
     "downsample_in_y=4 "
     "downsample_in_z=1"
 )
-#perform_task("Calculate pairwise shifts ...", options)
+perform_task("Calculate pairwise shifts ...", options)
 
 options = (
-    "select=" + dataset_name + " "
+    "select=" + dataset_path + " "
     "min_r=0 "
     "max_r=1 "
     "max_shift_in_x=0 "
@@ -74,17 +74,17 @@ options = (
     "max_shift_in_z=0 "
     "max_displacement=0"
 )
-#perform_task("Filter pairwise shifts ...", options);
+perform_task("Filter pairwise shifts ...", options);
 
 options = (
-    "select=" + dataset_name + " "
+    "select=" + dataset_path + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "
-    "process_tile=[Multiple tiles (Select from List)] "
-    #"process_tile=[All tiles] "
+    #"process_tile=[Multiple tiles (Select from List)] "
+    "process_tile=[All tiles] "
     "process_timepoint=[All Timepoints] "
-    "tile_0 tile_1 "
+    #"tile_0 tile_1 "
     "how_to_treat_timepoints=[treat individually] "
     "how_to_treat_channels=group "
     "how_to_treat_illuminations=group "
@@ -93,24 +93,30 @@ options = (
     "relative=2.500 "
     "absolute=3.500 "
     "global_optimization_strategy=[Two-Round using Metadata to align unconnected Tiles] "
-    "fix_group_0-0 fix_group_0-1"
+    "fix_group_0-0"
 )
 perform_task("Optimize globally and apply shifts ...", options);
 
+# assume that Multiview-Reconstruction plugin has been patched to avoid 
+# inserting the bounding box dimensions in the dropdown box choices
 options = (
-    "select=" + dataset_name + " "
+    "select=" + dataset_path + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "
-    "process_tile=[Multiple tiles (Select from List)] "
+    #"process_tile=[Multiple tiles (Select from List)] "
+    "process_tile=[All tiles] "
     "process_timepoint=[All Timepoints] "
-    "tile_0 tile_1 "
-    "bounding_box=[Currently Selected Views (3648x1921x4385px)] "
-    "downsampling=5 pixel_type=[16-bit unsigned integer] "
+    #"tile_0 tile_1 "
+    "bounding_box=[All Views] "
+    "downsampling=1 "
+    "pixel_type=[16-bit unsigned integer] "
     "interpolation=[Linear Interpolation] "
     "image=Virtual blend preserve_original "
     "produce=[All views together] "
     "fused_image=[Save as (compressed) TIFF stacks] "
     "output_file_directory=" + out_dir
 )
-#perform_task("Fuse dataset ...", options);
+perform_task("Fuse dataset ...", options);
+
+print("\nTotal elapsed time: {}".format(task, time() - time_start))

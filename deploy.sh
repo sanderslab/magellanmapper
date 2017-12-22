@@ -9,6 +9,7 @@
 #   -h: Show help and exit.
 #   -i: IP address of the AWS EC2 instance.
 #   -p: Path to the .pem file for accessing EC2.
+#   -u: Upload and update Clrbrain files only.
 #
 ################################################
 
@@ -46,19 +47,22 @@ done
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-#today=`date +'%Y-%m-%d-%Hh%M'`
 git_hash=`git rev-parse --short HEAD`
 archive="clrbrain_${git_hash}.zip"
 git archive -o "$archive" HEAD
 
-scp -i "$pem" "$archive" ec2-user@"$ip":~
+deploy_files="$archive"
+mv_recon="multiview-reconstruction-*-SNAPSHOT.jar"
 server_cmd="unzip -o $archive -d clrbrain"
+#server_cmd="echo hello"
 if [ $update -eq 0 ]
 then
-    server_cmd="${server_cmd} "
-    server_cmd+="&& wget $FIJI "
-    server_cmd+="&& unzip fiji-nojre.zip "
-    server_cmd+="&& Fiji.app/ImageJ-linux64 --update add-update-site BigStitcher http://sites.imagej.net/BigStitcher/ "
-    server_cmd+="&& Fiji.app/ImageJ-linux64 --update update"
+    deploy_files+=" ../multiview-reconstruction/target/$mv_recon"
+    server_cmd+=" && wget $FIJI"
+    server_cmd+=" && unzip fiji-nojre.zip"
+    server_cmd+=" && Fiji.app/ImageJ-linux64 --update add-update-site BigStitcher http://sites.imagej.net/BigStitcher/"
+    server_cmd+=" && Fiji.app/ImageJ-linux64 --update update"
+    server_cmd+=" ; rm Fiji.app/plugins/multiview?reconstruction-*.jar ; mv $mv_recon Fiji.app/plugins"
 fi
+scp -i "$pem" $deploy_files ec2-user@"$ip":~
 ssh -t -i "$pem" ec2-user@"$ip" "$server_cmd"

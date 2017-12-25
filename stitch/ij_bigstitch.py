@@ -12,8 +12,6 @@ import os
 from time import time
 
 #@String in_file
-#@int compute_overlap
-#@int write_fused
 
 def perform_task(task, options):
     print("Running {}".format(task))
@@ -29,6 +27,7 @@ dataset_name = "dataset.xml"
 dataset_path = os.path.join(out_dir, dataset_name)
 
 time_start = time()
+# import into HDF5 format (.h5 file)
 options = (
     "type_of_dataset=[Automatic Loader (Bioformats based)] "
     "xml_filename=" + dataset_name + " "
@@ -43,12 +42,14 @@ options = (
 )
 perform_task("Define dataset ...", options);
 
+# choose the illumination for each tile
 options = (
-    "select=" + dataset_name + " "
+    "select=" + dataset_path + " "
     "selection=[Pick brightest]"
 )
 perform_task("Select Illuminations", options);
 
+# calculate tile shifts
 options = (
     "select=" + dataset_path + " "
     "process_angle=[All angles] "
@@ -65,6 +66,7 @@ options = (
 )
 perform_task("Calculate pairwise shifts ...", options)
 
+# filter out poor alignments (currently set to filter none)
 options = (
     "select=" + dataset_path + " "
     "min_r=0 "
@@ -76,6 +78,7 @@ options = (
 )
 perform_task("Filter pairwise shifts ...", options);
 
+# apply the shifts in an iterative manner
 options = (
     "select=" + dataset_path + " "
     "process_angle=[All angles] "
@@ -97,6 +100,7 @@ options = (
 )
 perform_task("Optimize globally and apply shifts ...", options);
 
+# fuse the image and export to .tiff;
 # assume that Multiview-Reconstruction plugin has been patched to avoid 
 # inserting the bounding box dimensions in the dropdown box choices
 options = (
@@ -119,4 +123,4 @@ options = (
 )
 perform_task("Fuse dataset ...", options);
 
-print("\nTotal elapsed time: {}".format(task, time() - time_start))
+print("\nTotal elapsed time: {}".format(time() - time_start))

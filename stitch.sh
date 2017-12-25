@@ -13,8 +13,9 @@
 #     Defaults to use coordinates from TileConfiguration.txt 
 #     directly.
 #   -w: Write fused file. Defaults not to write.
+#   -b: Use BigStitcher. -o, -w, and -c flags will be ignored.
 #
-# To run:
+# To run in normal (not BigStitcher) mode:
 # -Run the stitch/tile_config.py utility to build a positions
 #  configuration file since the .czi file may not contain
 #  position information, such as for Lightsheet files
@@ -32,6 +33,9 @@
 #   -Kill the current ImageJ process
 #   -Edit stitch/ij_stitch.py to remove "compute_overlap" option
 #   -Re-run this script
+#
+# To run in BigStitcher mode:
+# -Run ./stitch.sh -f "/path/to/img.czi" -b
 ################################################
 
 # run from parent directory
@@ -125,7 +129,7 @@ echo "Reserving $mem MB of memory"
 if [ $big_stitch -eq 1 ]
 then
     # BigStitcher; not working in headless mode so will require GUI availability
-    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",compute_overlap="'"$compute_overlap"'",write_fused="'"$write_fused"'"'
+    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'"'
 else
     # Fiji Stitching plugin; does not appear to work when fed a separate script in "-macro" mode
     $IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",compute_overlap="'"$compute_overlap"'",write_fused="'"$write_fused"'"'

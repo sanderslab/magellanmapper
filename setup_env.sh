@@ -66,6 +66,13 @@ then
 	exit 1
 fi
 
+# check for git availability for downloading repos for some pip installs
+if ! command -v "git" &> /dev/null
+then
+	echo "Please install git. Exiting."
+	exit 1
+fi
+
 # find platform for Anaconda
 echo -n "Detecting environment..."
 SYSTEM=`uname -a`

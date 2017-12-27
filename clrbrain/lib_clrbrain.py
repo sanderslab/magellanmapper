@@ -68,6 +68,13 @@ def insert_before_ext(name, insert):
     """
     return "{0}{2}.{1}".format(*name.rsplit(".", 1) + [insert])
 
+def get_filename_ext(filename):
+    ext = ""
+    filename_split = filename.rsplit(".", 1)
+    if len(filename_split) > 1:
+        ext = filename_split[1]
+    return ext
+
 def normalize(array, minimum, maximum, background=None):
     """Normalizes an array to fall within the given min and max.
     

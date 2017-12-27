@@ -226,10 +226,7 @@ def read_file(filename, series, load=True, z_max=-1,
         image5d: array of image data.
         size: tuple of dimensions given as (time, z, y, x, channels).
     """
-    ext = ""
-    filename_split = filename.rsplit(".", 1)
-    if len(filename_split) > 1:
-        ext = filename_split[1]
+    ext = lib_clrbrain.get_filename_ext(filename)
     filename_image5d_npz, filename_info_npz = _make_filenames(
         filename, series, ext=ext)
     if load:
@@ -455,8 +452,9 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     image5d, image5d_info = read_file(filename, series, return_info=True)
     info = dict(image5d_info)
     sizes = info["sizes"]
+    ext = lib_clrbrain.get_filename_ext(filename)
     filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename, series, "transposed")
+        filename, series, modifier="transposed", ext=ext)
     offset = 0 if image5d.ndim <= 3 else 1
     image5d_swapped = image5d
     if plane is not None and plane != plot_2d.PLANE[0]:
@@ -543,5 +541,5 @@ if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli
     cli.main(True)
-    transpose_npy(cli.filename, cli.series, plot_2d.plane)
-    #transpose_npy(cli.filename, cli.series, rescale=0.05)
+    #transpose_npy(cli.filename, cli.series, plot_2d.plane)
+    transpose_npy(cli.filename, cli.series, rescale=0.05)

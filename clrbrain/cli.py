@@ -294,7 +294,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
         for i in range(num_sections):
             # build overlapping region dimensions based on size of sub-region
             # in the given axis
-            coord = np.zeros(3)
+            coord = np.zeros(3).astype(np.int)
             coord[axis] = i
             lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
             offset = sub_rois_offsets[tuple(coord)]

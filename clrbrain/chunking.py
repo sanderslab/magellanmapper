@@ -103,12 +103,15 @@ def merge_split_stack(sub_rois, overlap):
     
     Args:
         sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
+        overlap: Overlap size between sub-ROIs.
     
     Return:
         The merged stack.
     """
     size = sub_rois.shape
     merged = None
+    if overlap.dtype != np.int:
+        overlap = overlap.astype(np.int)
     for z in range(size[0]):
         merged_y = None
         for y in range(size[1]):
@@ -169,18 +172,26 @@ def get_split_stack_total_shape(sub_rois, overlap):
     return final_shape
 
 def merge_split_stack2(sub_rois, overlap, offset, output):
-    """Merges sub regions back into a single stack.
+    """Merges sub regions back into a single stack, saving directly to 
+    an output variable such as a memmapped array.
     
     Args:
         sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
+        overlap: Overlap size between sub-ROIs.
+        offset: Axis offset for output array.
+        output: Output array, such as a memmapped array to bypass 
+            storing the merged array in RAM.
     
     Return:
         The merged stack.
     """
     size = sub_rois.shape
+    if overlap.dtype != np.int:
+        overlap = overlap.astype(np.int)
     merged_coord = np.zeros(3).astype(np.int)
     sub_roi_shape = sub_rois[0, 0, 0].shape
     if offset > 0:
+        # axis offset, such as skipping the time axis
         output = output[0]
     for z in range(size[0]):
         merged_coord[1] = 0

@@ -481,7 +481,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None, labels=None, blobs_truth=None, circles=None, 
-                  mlab_screenshot=None, grid=False):
+                  mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -499,7 +499,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
             to None.
         plane: The plane to show in each 2D plot, with "xy" to show the 
             XY plane (default) and "xz" to show XZ plane.
-        padding: The amount of padding in pixels, defaulting to the 
+        padding_stack: The amount of padding in pixels, defaulting to the 
             padding attribute.
         zoom_levels: Number of zoom levels to include, with n - 1 levels
             included at the overview level, and the last one viewed
@@ -511,6 +511,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
             Z_LEVELS[0].
         roi: A denoised region of interest for display in fully zoomed plots. 
             Defaults to None, in which case image5d will be used instead.
+        zoom_cols: Number of columns per row to reserve for zoomed plots; 
+            defaults to :attr:``ZOOM_COLS``.
     """
     time_start = time()
     fig = plt.figure()
@@ -570,16 +572,25 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
     else:
         # wrap plots after reaching max, but tolerates additional column
         # if it will fit all the remainder plots from the last row
-        zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
-        col_remainder = z_planes % ZOOM_COLS
-        zoom_plot_cols = ZOOM_COLS
+        zoom_plot_rows = math.ceil(z_planes / zoom_cols)
+        col_remainder = z_planes % zoom_cols
+        zoom_plot_cols = zoom_cols
         if col_remainder > 0 and col_remainder < zoom_plot_rows:
             zoom_plot_cols += 1
             zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
             col_remainder = z_planes % zoom_plot_cols
-    #top_rows = 3 if zoom_plot_rows > 1 else 3
-    gs = gridspec.GridSpec(2, zoom_levels, wspace=0.7, hspace=0.4,
-                           height_ratios=[3, zoom_plot_rows])
+    # overview plots is 1 > levels, but last spot is taken by screenshot
+    top_cols = zoom_levels
+    height_ratios = (3, zoom_plot_rows)
+    if mlab_screenshot is None:
+        # remove column for screenshot
+        top_cols -= 1
+        if img2d.shape[1] > 2 * img2d.shape[0]:
+            # for wide ROIs, prioritize the fully zoomed plots, especially 
+            # if only one overview column
+            height_ratios = (1, 1) if top_cols >= 2 else (1, 2)
+    gs = gridspec.GridSpec(2, top_cols, wspace=0.7, hspace=0.4,
+                           height_ratios=height_ratios)
     
     
     
@@ -609,7 +620,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
             patch_offset = np.subtract(patch_offset, origin)
         # show the zoomed 2D image along with rectangle showing ROI, 
         # downsampling by using threshold as mask
-        downsample = np.max(np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH))
+        downsample = np.max(np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
         if downsample < 1: 
             downsample = 1
         ax.imshow(

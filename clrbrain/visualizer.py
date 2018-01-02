@@ -166,7 +166,7 @@ class Visualization(HasTraits):
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List
     _styles_2d = List
-    _DEFAULTS_STYLES_2D = ["Square", "Multi-zoom"]
+    _DEFAULTS_STYLES_2D = ["Square no oblique", "Square with oblique", "Multi-zoom", "Wide ROI"]
     _atlas_label = None
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
@@ -546,26 +546,28 @@ class Visualization(HasTraits):
         circles = self._circles_2d[0].lower()
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         screenshot = self.scene.mlab.screenshot(antialiased=True)
+        stack_args = (
+            self.update_segment, title, filename_base, img, cli.channel, curr_roi_size, 
+            curr_offset, self.segments, self.segs_cmap, self._full_border(self.border), 
+            self._planes_2d[0].lower())
+        stack_args_named = {
+            "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
+            "circles": circles, "grid": grid}
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
+            # Square style with oblique view
+            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, mlab_screenshot=screenshot)
+        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[2]:
             # Multi-zoom style
-            plot_2d.plot_2d_stack(self.update_segment, title, filename_base,
-                                  img, cli.channel, curr_roi_size, 
-                                  curr_offset, self.segments, self.segs_cmap, 
-                                  self._full_border(self.border), 
-                                  self._planes_2d[0].lower(), 
-                                  (0, 0, 0), 3, True, "middle", roi, 
-                                  labels=self.labels, circles=circles, 
-                                  mlab_screenshot=screenshot, grid=grid)
+            plot_2d.plot_2d_stack(
+                *stack_args, **stack_args_named, zoom_levels=3, single_zoom_row=True, 
+                z_level=plot_2d.Z_LEVELS[1], mlab_screenshot=screenshot)
+        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[3]:
+            # wide ROI
+            plot_2d.plot_2d_stack(
+                *stack_args, **stack_args_named, zoom_levels=2, mlab_screenshot=None, zoom_cols=7)
         else:
-            # defaults to Square style
-            plot_2d.plot_2d_stack(self.update_segment, title, filename_base,
-                                  img, cli.channel, curr_roi_size, 
-                                  curr_offset, self.segments, self.segs_cmap, 
-                                  self._full_border(self.border), 
-                                  self._planes_2d[0].lower(), 
-                                  roi=roi, labels=self.labels, 
-                                  blobs_truth=blobs_truth_roi, circles=circles, 
-                                  mlab_screenshot=screenshot, grid=grid)
+            # defaults to Square style without oblique view
+            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=3, mlab_screenshot=None)
     
     def _btn_save_segments_fired(self):
         self.save_segs()

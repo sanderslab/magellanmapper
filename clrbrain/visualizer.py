@@ -493,8 +493,11 @@ class Visualization(HasTraits):
             # convert segments to visualizer table format and plot
             self.segments = self._create_vis_segments(segs_all, offset)
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
+            _, segs_in_mask = detector.get_blobs_in_roi(
+                self.segments, np.zeros(3), 
+                roi_size, np.multiply(self.border, -1))
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
-                self.segments, self, show_shadows)
+                self.segments, self.scene.mlab, segs_in_mask, show_shadows)
             self._segs_scale_high = scale * 2
             self.segs_scale = scale
             #detector.show_blob_surroundings(self.segments, self.roi)

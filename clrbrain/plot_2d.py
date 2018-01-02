@@ -414,6 +414,21 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
     return ax
 
 def plot_roi(img, segments, channel, show=True, title=""):
+    """Plot ROI as sequence of z-planes containing only the ROI itself.
+    
+    Args:
+        img: The ROI image as a 3D array in (z, y, x) order.
+        segments: Numpy array of segments to display in the subplot, which 
+            can be None. Segments are generally given as an (n, 4)
+            dimension array, where each segment is in (z, y, x, radius).
+            This array can include adjacent segments as well.
+        channel: Channel of the image to display.
+        show: True if the plot should be displayed to screen; defaults 
+            to True.
+        title: String used as basename of output file. Defaults to "" 
+            and only used if :attr:``savefig`` is set to a file 
+            extension.
+    """
     fig = plt.figure()
     #fig.suptitle(title)
     # total number of z-planes

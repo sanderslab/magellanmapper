@@ -425,7 +425,7 @@ def show_surface_labels(segments, vis):
     #surf2 = vis.scene.mlab.points3d(labels)
     return None
 
-def _shadow_blob(x, y, z, cmap_indices, cmap, scale, vis):
+def _shadow_blob(x, y, z, cmap_indices, cmap, scale, mlab):
     """Shows blobs as shadows projected parallel to the 3D visualization.
     
     Parmas:
@@ -436,20 +436,23 @@ def _shadow_blob(x, y, z, cmap_indices, cmap, scale, vis):
             simple ascending sequence the same size as the number of blobs.
         cmap: The colormap, usually the same as for the segments.
         scale: Array of scaled size of each blob.
-        vis: The Visualization object.
+        mlab: Mayavi object.
     """
-    pts_shadows = vis.scene.mlab.points3d(x, y, z, cmap_indices, 
+    pts_shadows = mlab.points3d(x, y, z, cmap_indices, 
                                           mode="2dcircle", scale_mode="none", 
                                           scale_factor=scale*0.8, resolution=20)
     pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
     return pts_shadows
 
-def show_blobs(segments, vis, show_shadows=False):
+def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     """Shows 3D blob segments.
     
     Args:
         segments: Labels from 3D blob detection method.
-        vis: Visualization GUI.
+        mlab: Mayavi object.
+        segs_in_mask: Boolean mask for segments within the ROI; all other 
+            segments are assumed to be from padding and border regions 
+            surrounding the ROI.
     
     Returns:
         The random colormap generated with a color for each blob.
@@ -457,7 +460,7 @@ def show_blobs(segments, vis, show_shadows=False):
     if segments.shape[0] <= 0:
         return None, None, 0
     radii = segments[:, 3]
-    scale = 5 if radii is None else 1.3 * np.mean(np.mean(radii) + np.amax(radii))
+    scale = 5 if radii is None else np.mean(np.mean(radii) + np.amax(radii))
     print("blob point scaling: {}".format(scale))
     # colormap has to be at least 2 colors
     num_colors = segments.shape[0] if segments.shape[0] >= 2 else 2
@@ -475,15 +478,15 @@ def show_blobs(segments, vis, show_shadows=False):
         segs_ones = np.ones(segments.shape[0])
         # xy
         _shadow_blob(segments[:, 2], segments[:, 1], segs_ones * -10, cmap_indices,
-                     cmap, scale, vis)
+                     cmap, scale, mlab)
         # xz
         shadows = _shadow_blob(segments[:, 2], segments[:, 0], segs_ones * -10, cmap_indices,
-                     cmap, scale, vis)
+                     cmap, scale, mlab)
         shadows.actor.actor.orientation = [90, 0, 0]
         shadows.actor.actor.position = [0, -20, 0]
         # yz
         shadows = _shadow_blob(segments[:, 1], segments[:, 0], segs_ones * -10, cmap_indices,
-                     cmap, scale, vis)
+                     cmap, scale, mlab)
         shadows.actor.actor.orientation = [90, 90, 0]
         shadows.actor.actor.position = [0, 0, 0]
         
@@ -491,9 +494,17 @@ def show_blobs(segments, vis, show_shadows=False):
     points_len = len(segments)
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
-    pts = vis.scene.mlab.points3d(segments[:, 2], segments[:, 1], 
-                            segments[:, 0], cmap_indices, mask_points=mask, 
-                            scale_mode="none", scale_factor=scale, resolution=20) 
+    # show segments within the ROI
+    pts = mlab.points3d(
+        segments[segs_in_mask, 2], segments[segs_in_mask, 1], segments[segs_in_mask, 0], 
+        cmap_indices[segs_in_mask], mask_points=mask, scale_mode="none", 
+        scale_factor=scale, resolution=50) 
+    # show segments within padding or boder region
+    segs_out_mask = np.logical_not(segs_in_mask)
+    pts = mlab.points3d(
+        segments[segs_out_mask, 2], segments[segs_out_mask, 1], 
+        segments[segs_out_mask, 0], cmap_indices[segs_out_mask], mask_points=mask, 
+        scale_mode="none", scale_factor=scale, resolution=50, opacity=0.5) 
     pts.module_manager.scalar_lut_manager.lut.table = cmap
     
     

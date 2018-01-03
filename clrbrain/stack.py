@@ -96,7 +96,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
     print("saved animation file to {}".format(out_path))
     #plt.show()
 
-def animated_gif(path, series=0, interval=1, rescale=0.1):
+def animated_gif(path, series=0, interval=None, rescale=None):
     """Builds an animated GIF from a stack of images in a directory or an
     .npy file.
     
@@ -110,12 +110,16 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
             orientation set in :const:`plot_2d.plane`.
         series: Stack to build for multiseries files; defaults to 0.
         interval: Every nth image will be incorporated into the animation; 
-            defaults to 1.
+            defaults to None, in which case 1 will be used.
         rescale: Rescaling factor for each image, performed on a plane-by-plane 
-            basis; defaults to 0.1.
+            basis; defaults to None, in which case 1.0 will be used.
     """
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
+    if interval is None:
+        interval = 1
+    if rescale is None:
+        rescale = 1.0
     planes = None
     aspect = None
     origin = None
@@ -142,5 +146,3 @@ def animated_gif(path, series=0, interval=1, rescale=0.1):
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
     cli.main(True)
-    #animated_gif(cli.filename, 0, 100, 0.05)
-    animated_gif(cli.filename, 0, 1, 1)

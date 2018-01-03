@@ -39,6 +39,8 @@ Command-line arguments in addition to those from attributes listed below:
         "1" or "true" are taken as True. The number of flags should 
         correspond to the number of images to register, such as several for 
         groupwise registration.
+    * rescale: Rescaling factor as a float value.
+    * interval: Interval as an int, such as for animated GIF stack planes.
 
 Attributes:
     filename: The filename of the source images. A corresponding file with
@@ -55,7 +57,10 @@ Attributes:
     PROC_TYPES: Processing modes. ``importonly`` imports an image stack and 
         exits non-interactively. ``processing`` processes and segments the 
         entire image stack and exits non-interactively. ``load`` loads already 
-        processed images and segments.
+        processed images and segments. ``transpose`` transposes the 
+        Numpy image file associated with ``filename`` with the ``--rescale`` 
+        option. ``animated`` generates an animated GIF with the 
+        ``--interval`` and ``--rescale`` options.
     proc: The chosen processing mode
 """
 
@@ -99,7 +104,7 @@ _blobs_all = None # share blobs among multiple processes
 
 PROC_TYPES = (
     "importonly", "processing", "processing_mp", "load", "extract", 
-    "export_rois"
+    "export_rois", "transpose", "animated"
 )
 proc_type = None
 
@@ -387,6 +392,8 @@ def main(process_args_only=False):
     parser.add_argument("--labels", nargs="*")
     parser.add_argument("--flip_horiz", nargs="*")
     parser.add_argument("--register")
+    parser.add_argument("--rescale")
+    parser.add_argument("--interval")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -502,6 +509,12 @@ def main(process_args_only=False):
     if args.register:
         config.register_type = args.register
         print("Set register type to {}".format(config.register_type))
+    if args.rescale:
+        config.rescale = float(args.rescale)
+        print("Set rescale to {}".format(config.rescale))
+    if args.interval:
+        config.interval = int(args.interval)
+        print("Set interval to {}".format(config.interval))
     
     # load "truth blobs" from separate database for viewing
     filename_base = importer.filename_to_base(filename, series)
@@ -711,6 +724,19 @@ def process_file(filename_base, offset, roi_size):
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
         exporter.export_rois(config.truth_db, image5d, channel, filename_base)
+        
+    elif proc_type == PROC_TYPES[6]:
+        # transpose Numpy array
+        from clrbrain import plot_2d
+        importer.transpose_npy(
+            filename, series, plane=plot_2d.plane, rescale=config.rescale)
+        
+    elif proc_type == PROC_TYPES[7]:
+        # generate animated GIF
+        from clrbrain import stack
+        stack.animated_gif(
+            filename, series=series, interval=config.interval, 
+            rescale=config.rescale)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the region, saving processed image

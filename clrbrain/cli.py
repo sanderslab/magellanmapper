@@ -68,6 +68,7 @@ import numpy as np
 import matplotlib.pylab as pylab
 #from memory_profiler import profile
 
+from clrbrain import chunking
 from clrbrain import config
 from clrbrain import importer
 from clrbrain import lib_clrbrain
@@ -861,7 +862,8 @@ def process_stack(roi, overlap, tol):
     max_pixels = np.ceil(np.multiply(
         scaling_factor, config.process_settings["denoise_size"])).astype(int)
     # no overlap for denoising
-    sub_rois, _ = chunking.stack_splitter(roi, max_pixels, np.zeros(3))
+    overlap_denoise = np.zeros(3).astype(np.int)
+    sub_rois, _ = chunking.stack_splitter(roi, max_pixels, overlap_denoise)
     segments_all = None
     merged = None
     
@@ -889,9 +891,15 @@ def process_stack(roi, overlap, tol):
         
         pool.close()
         pool.join()
+        
         # re-merge into one large ROI (the image stack) in preparation for 
         # segmenting with differently sized chunks
-        merged = chunking.merge_split_stack(sub_rois, np.zeros(3))
+        '''
+        merged = chunking.merge_split_stack(sub_rois, overlap_denoise)
+        '''
+        merged_shape = chunking.get_split_stack_total_shape(sub_rois, overlap_denoise)
+        merged = np.zeros(tuple(merged_shape), dtype=sub_rois[0, 0, 0].dtype)
+        chunking.merge_split_stack2(sub_rois, overlap_denoise, 0, merged)
         time_denoising_end = time()
         
         # segment objects through blob detection, using larger sub-ROI size

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Template for running Clrbrain
-# Author: David Young 2017
+# Author: David Young 2017, 2018
 
 ################################################
 # Sample scenarios and workflows for Clrbrain
@@ -19,7 +19,10 @@ echo $PWD
 # Basic usage
 
 # Replace with your paths
-IMG="/path/to/your/image"
+NAME_BASE="image_name_without_extension"
+NAME_EXT="czi"
+IMG_DIR="/parent/path/to/your/image"
+IMG="${IMG_DIR}/${NAME_BASE}.${NAME_EXT}"
 S3_DIR="path/to/your/bucket/artifact"
 
 # Replace microscope type with available profiles, such as "lightsheet_5x", 
@@ -49,6 +52,10 @@ OFFSET=50,580,230
 #python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v --offset $OFFSET --size $SIZE --microscope "$MICROSCOPE"
 #./run --img "$IMG($OFFSET)x($SIZE)" -v --channel 0 -v --proc load --offset $OFFSET --size $SIZE --savefig pdf --microscope "$MICROSCOPE"
 
+# Transpose an image and generate an animated GIF
+#python -u -m clrbrain.cli --img "$IMG" --proc transpose --rescale 0.05 --plane yz
+IMG_TRANSPOSED="${IMG_DIR}/${NAME_BASE}_tranposed.${NAME_EXT}"
+#python -u -m clrbrain.cli --img "$IMG_TRANSPOSED" --proc animated --interval 5 --rescale 1.0
 
 ####################################
 # Stitching Workflow

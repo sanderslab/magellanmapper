@@ -19,10 +19,8 @@ echo $PWD
 # Basic usage
 
 # Replace with your paths
-NAME_BASE="image_name_without_extension"
-NAME_EXT="czi"
-IMG_DIR="/parent/path/to/your/image"
-IMG="${IMG_DIR}/${NAME_BASE}.${NAME_EXT}"
+IMG="/path/to/your/image"
+EXT="${IMG##*.}"
 S3_DIR="path/to/your/bucket/artifact"
 
 # Replace microscope type with available profiles, such as "lightsheet_5x", 
@@ -54,7 +52,7 @@ OFFSET=50,580,230
 
 # Transpose an image and generate an animated GIF
 #python -u -m clrbrain.cli --img "$IMG" --proc transpose --rescale 0.05 --plane yz
-IMG_TRANSPOSED="${IMG_DIR}/${NAME_BASE}_tranposed.${NAME_EXT}"
+IMG_TRANSPOSED="${IMG%.*}_tranposed.${EXT}"
 #python -u -m clrbrain.cli --img "$IMG_TRANSPOSED" --proc animated --interval 5 --rescale 1.0
 
 ####################################

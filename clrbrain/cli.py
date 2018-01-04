@@ -193,11 +193,11 @@ def collect_segments(segments_all, segments, region, tol):
         segments_all = np.concatenate((segments_all, segments))
     return segments_all
 
-def _splice_before(base, search, splice):
+def _splice_before(base, search, splice, post_splice="_"):
     i = base.rfind(search)
     if i == -1:
         return base
-    return base[0:i] + splice + base[i:]
+    return base[0:i] + splice + post_splice + base[i:]
 
 def _load_db(filename_base, suffix):
     path = os.path.basename(filename_base + suffix)
@@ -517,7 +517,8 @@ def main(process_args_only=False):
         print("Set interval to {}".format(config.interval))
     
     # load "truth blobs" from separate database for viewing
-    filename_base = importer.filename_to_base(filename, series)
+    ext = lib_clrbrain.get_filename_ext(filename)
+    filename_base = importer.filename_to_base(filename, series, ext=ext)
     if args.truth_db is not None:
         truth_db_type = args.truth_db
         print("Set truth_db type to {}".format(truth_db_type))
@@ -553,7 +554,7 @@ def main(process_args_only=False):
     
     # process the image stack for each series
     for series in series_list:
-        filename_base = importer.filename_to_base(filename, series)
+        filename_base = importer.filename_to_base(filename, series, ext=ext)
         if config.roc:
             # grid search with ROC curve
             stats_dict = mlearn.grid_search(
@@ -630,27 +631,11 @@ def process_file(filename_base, offset, roi_size):
             # filtered image, but >= v.0.4.3 is the ROI chunk of the orig image
             image5d_proc = np.load(filename_image5d_proc, mmap_mode="r")
         except IOError:
-            print("Unable to load processed image file from {}, will ignore"
+            print("Ignoring processed/ROI image file from {} as unable to load"
                   .format(filename_image5d_proc))
         try:
             # processed segments and other image information
             output_info = np.load(filename_info_proc)
-            '''
-            # converts old monolithic format to new format with separate files
-            # to allow loading file with only image file as memory-backed array;
-            # switch commented area from here to above to convert formats
-            print("converting proc file to new format...")
-            filename_proc = filename + str(series).zfill(5) + "_proc.npz" # old
-            output = np.load(filename_proc)
-            outfile_image5d_proc = open(filename_image5d_proc, "wb")
-            outfile_info_proc = open(filename_info_proc, "wb")
-            np.save(outfile_image5d_proc, output["roi"])
-            np.savez(outfile_info_proc, segments=output["segments"], 
-                     resolutions=output["resolutions"])
-            outfile_image5d_proc.close()
-            outfile_info_proc.close()
-            return
-            '''
             segments_proc = output_info["segments"]
             print("{} segments loaded".format(len(segments_proc)))
             detector.resolutions = output_info["resolutions"]

@@ -300,6 +300,9 @@ def plot_3d_points(roi, vis):
     roi_1d = lib_clrbrain.normalize(roi_1d, 0.3, 0.6)
     #print(roi_1d)
     points_len = roi_1d.size
+    if points_len == 0:
+        print("no 3D points to display")
+        return
     time_start = time()
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))

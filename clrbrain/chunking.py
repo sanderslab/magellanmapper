@@ -101,6 +101,9 @@ def stack_splitter(roi, max_pixels, overlap):
 def merge_split_stack(sub_rois, overlap):
     """Merges sub regions back into a single stack.
     
+    See :func:``merge_split_stack2`` for a much faster implementation 
+    if the final output array size is known beforehand.
+    
     Args:
         sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
         overlap: Overlap size between sub-ROIs.
@@ -146,6 +149,19 @@ def merge_split_stack(sub_rois, overlap):
     return merged
 
 def get_split_stack_total_shape(sub_rois, overlap):
+    """Get the shape of a chunked stack.
+    
+    Useful for determining the final shape of a stack that has been 
+    chunked and potentially scaled before merging the stack into 
+    an output array of this shape.
+    
+    Attributes:
+        sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
+        overlap: Overlap size between sub-ROIs.
+    
+    Returns:
+        The shape of the chunked stack after it would be merged.
+    """
     size = sub_rois.shape
     merged_shape = np.zeros(3).astype(np.int)
     final_shape = np.zeros(3).astype(np.int)
@@ -161,7 +177,7 @@ def get_split_stack_total_shape(sub_rois, overlap):
                 for n in range(len(edges)):
                     if coord[n] != size[n] - 1:
                         edges[n] -= overlap[n]
-                print("edges: {}".format(edges))
+                #print("edges: {}".format(edges))
                 merged_shape[2] += edges[2]
             if final_shape[2] <= 0:
                 final_shape[2] = merged_shape[2]

@@ -10,24 +10,28 @@
 # "#" symbol) to apply the given scenario for your files.
 ################################################
 
-# run from script directory
-BASE_DIR="`dirname $0`"
-cd "$BASE_DIR"
-echo $PWD
 
 ####################################
-# Basic usage
-
 # Replace with your paths
 IMG="/path/to/your/image"
 S3_DIR="path/to/your/bucket/artifact"
 
+
+####################################
+# Basic usage
+
 # Parsing names from your image path
 OUT_DIR="`dirname $IMG`"
+EXP="`basename $OUT_DIR`"
 NAME="`basename $IMG`"
-NAME_BASE="${IMG%.*}"
+NAME_BASE="${NAME%.*}"
 IMG_PATH_BASE="${OUT_DIR}/${NAME_BASE}"
 EXT="${IMG##*.}"
+
+# run from script directory
+BASE_DIR="`dirname $0`"
+cd "$BASE_DIR"
+echo $PWD
 
 # Replace microscope type with available profiles, such as "lightsheet_5x", 
 # "2p_20x", or "lightsheet_5x_02"
@@ -38,19 +42,19 @@ SIZE=700,90,50
 OFFSET=50,580,230
 
 # Import raw image stack into Numpy array
-#python -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
+#python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
 
 # Load ROI, starting at the given offset and ROI size
 #./run --img "$IMG" --channel 0 --offset $OFFSET --size $SIZE --savefig pdf --microscope "$MICROSCOPE"
 
 # Process an entire stack locally
-#python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v
+#python -u -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v
 
 # Process an entire stack on AWS (run from within EC2 instance)
 #./process_aws.sh -f "$IMG" -s $S3_DIR --  --microscope "$MICROSCOPE"
 
 # Extract a single z-plane
-#python -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"
+#python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"
 
 # Process a sub-region of the stack and load it
 #python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v --offset $OFFSET --size $SIZE --microscope "$MICROSCOPE"
@@ -62,12 +66,9 @@ IMG_ROI="${IMG_PATH_BASE}_(${OFFSET})x(${SIZE}).${EXT}"
 IMG_TRANSPOSED="${IMG_PATH_BASE}_transposed.${EXT}"
 #python -u -m clrbrain.cli --img "$IMG_TRANSPOSED" --proc animated --interval 5 --rescale 1.0
 
+
 ####################################
 # Stitching Workflow
-
-# Replace with your paths
-EXP="experiment_folder_name"
-OUT_DIR="/path/to/output/parent/$EXP"
 
 # Replace with your lens objective settings
 RESOLUTIONS="0.913,0.913,4.935"

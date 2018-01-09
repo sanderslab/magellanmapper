@@ -4,7 +4,9 @@
 BigStitcher plugin.
 
 Attributes:
-    in_file: Path to the image input file.
+    in_file: Path to the image input file. The dataset filename will be 
+        based on this input name, using the part of the name before the 
+        first dash (eg "M05" from "M05-WT-P0...").
 """
 
 from ij import IJ
@@ -23,8 +25,14 @@ def perform_task(task, options):
 out_dir = os.path.dirname(in_file)
 print("in_file: {}".format(in_file))
 print("out_dir: {}".format(out_dir))
-dataset_name = "dataset.xml"
+
+# dataset name based on experiment code, assumed to be the 
+# section before the first dash in the input filename
+basename = os.path.basename(in_file)
+exp_code = basename.split("-")[0]
+dataset_name = "dataset_{}.xml".format(exp_code)
 dataset_path = os.path.join(out_dir, dataset_name)
+print("dataset path: {}".format(dataset_path))
 
 time_start = time()
 # import into HDF5 format (.h5 file)

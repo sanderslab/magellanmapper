@@ -195,6 +195,7 @@ def select_experiment(cur, name):
             if none are found.
     """
     cols = "id, name, date"
+    #print("looking for exp: {}".format(name))
     if name is None:
         cur.execute("SELECT {} FROM experiments".format(cols))
     else:
@@ -223,6 +224,31 @@ def select_or_insert_experiment(conn, cur, exp_name, date):
         exp_id = insert_experiment(conn, cur, exp_name, date)
         #raise LookupError("could not find experiment {}".format(exp_name))
     return exp_id
+
+def _update_experiments(db_dir):
+    """Updates experiment names by shifting the old .czi extension name 
+    from midway through the name to its end
+    
+    Args:
+        cur: Connection's cursor.
+        db_dir: Directory that contains databases to update
+    """
+    ext = ".czi"
+    db_paths = sorted(glob.glob(os.path.join(db_dir, "*.db")))
+    for db_path in db_paths:
+        db = ClrDB()
+        db.load_db(db_path, False)
+        rows = select_experiment(db.cur, None)
+        for row in rows:
+            name = row["name"]
+            if not name.endswith(ext):
+                name_updated = name.replace(ext, "_") + ext
+                print("...replaced experiment {} with {}".format(name, name_updated))
+                db.cur.execute("UPDATE experiments SET name = ? WHERE name = ?", 
+                            (name_updated, name))
+            else:
+                print("...no update")
+        db.conn.commit()
 
 def insert_roi(conn, cur, exp_id, series, offset, size):
     """Inserts an ROI into the database.
@@ -573,5 +599,6 @@ if __name__ == "__main__":
     #verification_stats(conn, cur)
     #update_rois(cur, cli.offset, cli.roi_size)
     #merge_truth_dbs(cli.filenames)
-    clean_up_blobs(config.truth_db)
+    #clean_up_blobs(config.truth_db)
+    _update_experiments(cli.filename)
     

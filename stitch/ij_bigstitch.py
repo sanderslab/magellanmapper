@@ -77,7 +77,8 @@ perform_task("Calculate pairwise shifts ...", options)
 # filter out poor alignments (currently set to filter none)
 options = (
     "select=" + dataset_path + " "
-    "min_r=0 "
+    "filter_by_link_quality "
+    "min_r=0.50 "
     "max_r=1 "
     "max_shift_in_x=0 "
     "max_shift_in_y=0 "

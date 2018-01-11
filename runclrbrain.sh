@@ -48,7 +48,7 @@ OFFSET=50,580,230
 #./run --img "$IMG" --channel 0 --offset $OFFSET --size $SIZE --savefig pdf --microscope "$MICROSCOPE"
 
 # Process an entire stack locally
-#python -u -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v
+#python -u -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
 
 # Process an entire stack on AWS (run from within EC2 instance)
 #./process_aws.sh -f "$IMG" -s $S3_DIR --  --microscope "$MICROSCOPE"

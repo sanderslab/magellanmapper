@@ -2,6 +2,9 @@
 # File exporter for Clrbrain
 # Author: David Young, 2017
 """Image exporter for Clrbrain.
+
+Convert images and corresponding database entries into formats for 
+machine learning algorithms or other applications.
 """
 
 import glob
@@ -13,10 +16,11 @@ from clrbrain import plot_2d
 from clrbrain import plot_3d
 
 def make_roi_paths(path, roi_id):
-    output_path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
-    output_path_img = "{}_img.npy".format(output_path_base)
-    output_path_blobs = "{}_blobs.npy".format(output_path_base)
-    return output_path_base, output_path_img, output_path_blobs
+    path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
+    path_img = "{}_img.npy".format(path_base)
+    path_blobs = "{}_blobs.npy".format(path_base)
+    path_img_annot = "{}_img_annot.npy".format(path_base)
+    return path_base, path_img, path_blobs, path_img_annot
 
 def export_rois(db, image5d, channel, path):
     exps = sqlite.select_experiment(db.cur, None)
@@ -37,7 +41,8 @@ def export_rois(db, image5d, channel, path):
             blobs[:, 4] = -1
             
             # export ROI plots
-            path_base, path_img, path_blobs = make_roi_paths(path, roi_id)
+            path_base, path_img, path_blobs, path_img_annot = make_roi_paths(
+                path, roi_id)
             plot_2d.plot_roi(img3d, blobs, channel, show=False, title=path_base)
             
             # export image and blobs, stripping blob flags and adjusting 
@@ -51,6 +56,13 @@ def export_rois(db, image5d, channel, path):
             blobs[:, 3] = np.abs(blobs[:, 3])
             lib_clrbrain.printv("blobs:\n{}".format(blobs))
             np.save(path_blobs, blobs)
+            
+            # convert blobs to ground truth
+            img3d_truth = plot_3d.build_ground_truth(size, blobs)
+            plot_2d.plot_roi(
+                img3d_truth, None, channel, show=False, title=path_img_annot)
+            np.save(path_img_annot, img3d_truth)
+            
             print("exported {}".format(path_base))
     '''
     _test_loading_rois(db, channel, path)

@@ -18,6 +18,7 @@ Attributes:
 from time import time
 import numpy as np
 import math
+from skimage import draw
 from skimage import restoration
 from skimage import img_as_float
 from skimage import filters
@@ -456,9 +457,13 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
         segs_in_mask: Boolean mask for segments within the ROI; all other 
             segments are assumed to be from padding and border regions 
             surrounding the ROI.
+        show_shadows: True if shadows of blobs should be depicted on planes 
+            behind the blobs; defaults to False.
     
     Returns:
-        The random colormap generated with a color for each blob.
+        A 3-element tuple containing ``pts_in``, the 3D points within the 
+        ROI; ``cmap'', the random colormap generated with a color for each 
+        blob, and ``scale``, the current size of the points.
     """
     if segments.shape[0] <= 0:
         return None, None, 0
@@ -515,5 +520,26 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
         opacity=0.2) 
     pts_in.module_manager.scalar_lut_manager.lut.table = cmap
     
-    
     return pts_in, cmap, scale
+
+def build_ground_truth(size, blobs):
+    """Build ground truth volumetric image from blobs.
+    
+    Attributes:
+        size: Size given with user-defined dimensions, (x, y, z).
+        blobs: Numpy array of segments to display, given as an 
+            (n, 4) dimension array, where each segment is in (z, y, x, radius).
+    
+    Returns:
+        3D image binary image array, where 0 is background, and 1 is 
+        foreground.
+    """
+    #print("generating ground truth image of size {}".format(size))
+    img3d = np.zeros(size[::-1], dtype=np.uint8)
+    for i in range(size[2]):
+        blobs_in = blobs[blobs[:, 0] == i]
+        for blob in blobs_in:
+            rr, cc = draw.circle(*blob[1:4], img3d[i].shape)
+            #print("drawing circle of {} x {}".format(rr, cc))
+            img3d[i, rr, cc] = 1
+    return img3d

@@ -302,7 +302,6 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         size = lib_clrbrain.swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "x"
     z = offset[2]
-    segments_z =  segs_in[segs_in[:, 0] == z_relative]
     ax.set_title("{}={}".format(plane_axis, z))
     if border is not None:
         # boundaries of border region, with xy point of corner in first 
@@ -362,7 +361,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha, aspect=aspect)
         
-        if not circles == CIRCLES[2].lower():
+        if ((segs_in is not None or segs_out is not None) 
+            and not circles == CIRCLES[2].lower()):
             segs_in = np.copy(segs_in)
             if circles is None or circles == CIRCLES[0].lower():
                 # zero radius of all segments outside of current z to preserve 
@@ -393,6 +393,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             
             # overlays segments in current z with dotted line patch and makes
             # pickable for verifying the segment
+            segments_z = segs_in[segs_in[:, 0] == z_relative]
             if segments_z is not None:
                 for seg in segments_z:
                     _plot_circle(

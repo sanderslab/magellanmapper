@@ -516,7 +516,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     pts_out = mlab.points3d(
         segments[segs_out_mask, 2], segments[segs_out_mask, 1], 
         segments[segs_out_mask, 0], color=(0, 0, 0), 
-        mask_points=mask, scale_mode="none", scale_factor=scale, resolution=50, 
+        mask_points=mask, scale_mode="none", scale_factor=scale/2, resolution=50, 
         opacity=0.2) 
     pts_in.module_manager.scalar_lut_manager.lut.table = cmap
     

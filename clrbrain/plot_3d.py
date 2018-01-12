@@ -466,7 +466,8 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     scale = 5 if radii is None else np.mean(np.mean(radii) + np.amax(radii))
     print("blob point scaling: {}".format(scale))
     # colormap has to be at least 2 colors
-    num_colors = segments.shape[0] if segments.shape[0] >= 2 else 2
+    segs_in = segments[segs_in_mask]
+    num_colors = segs_in.shape[0] if segs_in.shape[0] >= 2 else 2
     cmap = (np.random.random((num_colors, 4)) * 255).astype(np.uint8)
     cmap[:, -1] = 170
     # prioritize default colors
@@ -474,22 +475,25 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
         if i >= num_colors:
             break
         cmap[i, 0:3] = config.colors[i]
-    cmap_indices = np.arange(segments.shape[0])
+    cmap_indices = np.arange(segs_in.shape[0])
     
     if show_shadows:
         # show projections onto side planes
         segs_ones = np.ones(segments.shape[0])
         # xy
-        _shadow_blob(segments[:, 2], segments[:, 1], segs_ones * -10, cmap_indices,
-                     cmap, scale, mlab)
+        _shadow_blob(
+            segs_in[:, 2], segs_in[:, 1], segs_ones * -10, cmap_indices,
+            cmap, scale, mlab)
         # xz
-        shadows = _shadow_blob(segments[:, 2], segments[:, 0], segs_ones * -10, cmap_indices,
-                     cmap, scale, mlab)
+        shadows = _shadow_blob(
+            segs_in[:, 2], segs_in[:, 0], segs_ones * -10, cmap_indices,
+            cmap, scale, mlab)
         shadows.actor.actor.orientation = [90, 0, 0]
         shadows.actor.actor.position = [0, -20, 0]
         # yz
-        shadows = _shadow_blob(segments[:, 1], segments[:, 0], segs_ones * -10, cmap_indices,
-                     cmap, scale, mlab)
+        shadows = _shadow_blob(
+            segs_in[:, 1], segs_in[:, 0], segs_ones * -10, cmap_indices,
+            cmap, scale, mlab)
         shadows.actor.actor.orientation = [90, 90, 0]
         shadows.actor.actor.position = [0, 0, 0]
         
@@ -498,17 +502,18 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
     # show segments within the ROI
-    pts = mlab.points3d(
-        segments[segs_in_mask, 2], segments[segs_in_mask, 1], segments[segs_in_mask, 0], 
-        cmap_indices[segs_in_mask], mask_points=mask, scale_mode="none", 
-        scale_factor=scale, resolution=50) 
-    # show segments within padding or boder region
+    pts_in = mlab.points3d(
+        segs_in[:, 2], segs_in[:, 1], 
+        segs_in[:, 0], cmap_indices, 
+        mask_points=mask, scale_mode="none", scale_factor=scale, resolution=50) 
+    # show segments within padding or boder region as more transparent
     segs_out_mask = np.logical_not(segs_in_mask)
-    pts = mlab.points3d(
+    pts_out = mlab.points3d(
         segments[segs_out_mask, 2], segments[segs_out_mask, 1], 
-        segments[segs_out_mask, 0], cmap_indices[segs_out_mask], mask_points=mask, 
-        scale_mode="none", scale_factor=scale, resolution=50, opacity=0.5) 
-    pts.module_manager.scalar_lut_manager.lut.table = cmap
+        segments[segs_out_mask, 0], color=(0, 0, 0), 
+        mask_points=mask, scale_mode="none", scale_factor=scale, resolution=50, 
+        opacity=0.2) 
+    pts_in.module_manager.scalar_lut_manager.lut.table = cmap
     
     
-    return pts, cmap, scale
+    return pts_in, cmap, scale

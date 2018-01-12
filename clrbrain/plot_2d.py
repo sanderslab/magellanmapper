@@ -254,11 +254,10 @@ def add_scale_bar(ax):
     ax.add_artist(scale_bar)
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
-                 fn_update_seg, segments, 
-                 segments_z, segs_cmap, alpha, highlight=False, border=None, 
-                 segments_adj=None, plane="xy", roi=None, z_relative=-1,
-                 labels=None, blobs_truth=None, circles=None, aspect=None, 
-                 grid=False):
+                 fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
+                 highlight=False, border=None, plane="xy", roi=None, 
+                 z_relative=-1, labels=None, blobs_truth=None, circles=None, 
+                 aspect=None, grid=False):
     """Shows subplots of the region of interest.
     
     Args:
@@ -270,25 +269,23 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         channel: Channel of the image to display.
         roi_size: List of x,y,z dimensions of the ROI.
         offset: Tuple of x,y,z coordinates of the ROI.
-        segments: Numpy array of segments to display in the subplot, which 
-            can be None. Segments are generally given as an (n, 4)
-            dimension array, where each segment is in (z, y, x, radius).
-        segments_z: Subset of segments to highlight in a separate patch
-            collection.
+        segs_in: Numpy array of segments within the ROI to display in the 
+            subplot, which can be None. Segments are generally given as an 
+            (n, 4) dimension array, where each segment is in (z, y, x, radius).
+        segs_out: Subset of segments that are adjacent to rather than
+            inside the ROI, which will be drawn in a different style.
         segs_cmap: Colormap for segments.
         alpha: Opacity level.
         highlight: If true, the plot will be highlighted; defaults 
             to False.
-        segments_adj: Subset of segments that are adjacent to rather than
-            inside the ROI, which will be drawn in a differen style.
             Defaults to None.
         plane: The plane to show in each 2D plot, with "xy" to show the 
             XY plane (default) and "xz" to show XZ plane.
         roi: A denoised region of interest, to show in place of image5d for the
             zoomed images. Defaults to None, in which case image5d will be
             used instead.
-        z_relative: Index of the z-plane relative to the start of the ROI, used
-            when roi is given and ignored otherwise. Defaults to -1.
+        z_relative: Index of the z-plane relative to the start of the ROI; 
+            defaults to -1.
     """
     ax = plt.subplot(gs[row, col])
     _hide_axes(ax)
@@ -305,6 +302,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         size = lib_clrbrain.swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
         plane_axis = "x"
     z = offset[2]
+    segments_z =  segs_in[segs_in[:, 0] == z_relative]
     ax.set_title("{}={}".format(plane_axis, z))
     if border is not None:
         # boundaries of border region, with xy point of corner in first 
@@ -365,28 +363,33 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         plt.imshow(roi, cmap=colormap_2d, alpha=alpha, aspect=aspect)
         
         if not circles == CIRCLES[2].lower():
-            segs = segments
+            segs_in = np.copy(segs_in)
             if circles is None or circles == CIRCLES[0].lower():
                 # zero radius of all segments outside of current z to preserve 
                 # the order of segments for the corresponding colormap order 
                 # while hiding outside segments
-                segs = np.copy(segs)
-                segs[segs[:, 0] != z_relative] = 0
+                segs_in[segs_in[:, 0] != z_relative, 3] = 0
             
-            if circles == CIRCLES[1].lower():
-                # overlays segments in adjacent regions with dashed line patch
-                if segments_adj is not None:
-                    collection_adj = _circle_collection(
-                        segments_adj, "k", "none", SEG_LINEWIDTH)
-                    collection_adj.set_linestyle("--")
-                    ax.add_collection(collection_adj)
-                
             # show segments from all z's as circles with colored outlines
-            if segments is not None and segs_cmap is not None:
+            if segs_in is not None and segs_cmap is not None:
+                if circles == CIRCLES[1].lower():
+                    z_diff = np.abs(np.subtract(segs_in[:, 0], z_relative))
+                    segs_in[:, 3] = np.subtract(
+                        segs_in[:, 3], np.divide(z_diff, 3))
+                    segs_in[segs_in[:, 3] < 3.5] = 0
                 collection = _circle_collection(
-                    segs, segs_cmap.astype(float) / 255.0, "none", 
+                    segs_in, segs_cmap.astype(float) / 255.0, "none", 
                     SEG_LINEWIDTH)
                 ax.add_collection(collection)
+            
+            # segments outside the ROI shown in black dotted line only for 
+            # their corresponding z
+            if segs_out is not None:
+                collection_adj = _circle_collection(
+                    segs_out[segs_out[:, 0] == z_relative], "k", "none", 
+                    SEG_LINEWIDTH)
+                collection_adj.set_linestyle("--")
+                ax.add_collection(collection_adj)
             
             # overlays segments in current z with dotted line patch and makes
             # pickable for verifying the segment
@@ -421,7 +424,7 @@ def plot_roi(img, segments, channel, show=True, title=""):
         segments: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, 4)
             dimension array, where each segment is in (z, y, x, radius).
-            This array can include adjacent segments as well.
+            All segments are assumed to be within the ROI for display.
         channel: Channel of the image to display.
         show: True if the plot should be displayed to screen; defaults 
             to True.
@@ -459,15 +462,11 @@ def plot_roi(img, segments, channel, show=True, title=""):
             z = i * zoom_plot_cols + j
             zoom_offset[2] = z
             
-            # collects the segments within the given z-plane
-            segments_z = None
-            if segments is not None:
-                segments_z = segments[segments[:, 0] == z]
-            
-            # shows the zoomed subplot with scale bar for the current z-plane
+            # shows the zoomed subplot with scale bar for the current z-plane 
+            # with all segments
             ax_z = show_subplot(
                 fig, gs, i, j, img, channel, roi_size, zoom_offset, None,
-                segments, segments_z, None, 1.0, circles=CIRCLES[0])
+                segments, None, None, 1.0, circles=CIRCLES[0], z_relative=z)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
     gs.tight_layout(fig, pad=0.5)
@@ -477,7 +476,8 @@ def plot_roi(img, segments, channel, show=True, title=""):
         plt.savefig(title + "." + savefig)
     
 
-def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, offset, segments, 
+def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
+                  offset, segments, mask_in, 
                   segs_cmap, border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None, labels=None, blobs_truth=None, circles=None, 
@@ -492,9 +492,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
         offset: Tuple of x,y,z coordinates of the ROI.
         segments: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, 4)
-            dimension array, where each segment is in (z, y, x, radius).
+            dimension array, where each segment is in (z, y, x, radius), and 
+            coordinates are relative to ``offset``.
             This array can include adjacent segments as well.
-        segs_cmap: Colormap for segments.
+        mask_in: Boolean mask of ``segments`` within the ROI.
+        segs_cmap: Colormap for segments inside the ROI.
         border: Border dimensions in pixels given as (x, y, z); defaults
             to None.
         plane: The plane to show in each 2D plot, with "xy" to show the 
@@ -633,9 +635,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
         add_scale_bar(ax)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
-    #print("rows: {}, cols: {}, remainder: {}"
-    #      .format(zoom_plot_rows, zoom_plot_cols, col_remainder))
-    segments_z_list = []
     ax_z_list = []
     segs_out = None
     # separate out truth blobs
@@ -644,15 +643,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
             blobs_truth = segments[segments[:, 5] >= 0]
         print("blobs_truth:\n{}".format(blobs_truth))
         segments = segments[segments[:, 5] == -1]
-    # finds adjacent segments, outside of the ROI
-    if segments is not None:
-        #print("segments:\n{}".format(segments))
-        mask_in = np.all([segments[:, 0] >= border[2], segments[:, 0] < roi_size[2] - border[2],
-                          segments[:, 1] >= border[1], segments[:, 1] < roi_size[1] - border[1],
-                          segments[:, 2] >= border[0], segments[:, 2] < roi_size[0] - border[0]], 
-                         axis=0)
-        segs_out = segments[np.invert(mask_in)]
-        #print("segs_out:\n{}".format(segs_out))
+    # separate segments inside from outside the ROI
+    segs_in = segments[mask_in]
+    segs_out = segments[np.invert(mask_in)]
         
     # selected or newly added patches since difficult to get patch from collection,
     # and they don't appear to be individually editable
@@ -685,12 +678,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
                 alpha = 1
                 roi_show = roi
             
-            # collects the segments within the given z-plane
-            segments_z = None
-            if segments is not None:
-                segments_z = segments[segments[:, 0] == z_relative]
-            segments_z_list.append(segments_z)
-            
             # collects truth blobs within the given z-plane
             blobs_truth_z = None
             if blobs_truth is not None:
@@ -707,8 +694,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, of
             ax_z = show_subplot(
                 fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset, 
                 fn_update_seg,
-                segments, segments_z, segs_cmap, alpha, z == z_overview, 
-                border_full if show_border else None, segs_out, plane, roi_show, 
+                segs_in, segs_out, segs_cmap, alpha, z == z_overview, 
+                border_full if show_border else None, plane, roi_show, 
                 z_relative, labels, blobs_truth_z, circles=circles, 
                 aspect=aspect, grid=grid)
             if i == 0 and j == 0:

@@ -153,6 +153,7 @@ class Visualization(HasTraits):
     segs_table = TabularEditor(
         adapter=SegmentsArrayAdapter(), multi_select=True, 
         selected_row="segs_selected")
+    segs_in_mask = None # boolean mask for segments in the ROI
     segs_cmap = None
     segs_feedback = Str("Segments output")
     labels = None # segmentation labels
@@ -456,14 +457,14 @@ class Visualization(HasTraits):
                 # shows labels around segments with Random-Walker
                 self.labels, _ = detector.segment_rw(self.roi)
             
-            # covert to relative coordinates for consistency and since 
-            # absolute coordinates will be used later
+            # collect segments in ROI and padding region, ensureing coordinates 
+            # are relative to offset
             segs_all = None
             offset = self._curr_offset()
             roi_size = self.roi_array[0].astype(int)
             if cli.segments_proc is None:
                 # on-the-fly blob detection, which includes border but not 
-                # padding region
+                # padding region; already in relative coordinates
                 roi = self.roi
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
@@ -493,11 +494,11 @@ class Visualization(HasTraits):
             # convert segments to visualizer table format and plot
             self.segments = self._create_vis_segments(segs_all, offset)
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
-            _, segs_in_mask = detector.get_blobs_in_roi(
+            _, self.segs_in_mask = detector.get_blobs_in_roi(
                 self.segments, np.zeros(3), 
                 roi_size, np.multiply(self.border, -1))
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
-                self.segments, self.scene.mlab, segs_in_mask, show_shadows)
+                self.segments, self.scene.mlab, self.segs_in_mask, show_shadows)
             self._segs_scale_high = scale * 2
             self.segs_scale = scale
             #detector.show_blob_surroundings(self.segments, self.roi)
@@ -548,7 +549,7 @@ class Visualization(HasTraits):
         screenshot = self.scene.mlab.screenshot(antialiased=True)
         stack_args = (
             self.update_segment, title, filename_base, img, cli.channel, curr_roi_size, 
-            curr_offset, self.segments, self.segs_cmap, self._full_border(self.border), 
+            curr_offset, self.segments, self.segs_in_mask, self.segs_cmap, self._full_border(self.border), 
             self._planes_2d[0].lower())
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 

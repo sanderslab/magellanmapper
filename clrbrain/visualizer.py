@@ -73,10 +73,11 @@ def _fig_title(atlas_region, offset, roi_size):
     if atlas_region is not None:
         region = "{} from ".format(atlas_region)
     # cannot round to decimal places or else tuple will further round
-    roi_size_um = np.around(np.multiply(roi_size, detector.resolutions[0][::-1]))
-    return "{}{} (series {})\noffset {}, ROI size {}{}".format(
+    roi_size_um = np.around(
+        np.multiply(roi_size, detector.resolutions[0][::-1]))
+    return "{}{} (series {})\noffset {}, ROI size {} [{}{}]".format(
         region, os.path.basename(cli.filename), cli.series, offset, 
-        tuple(roi_size_um), u'\u00b5m')
+        tuple(roi_size), tuple(roi_size_um), u'\u00b5m')
 
 class VisHandler(Handler):
     """Simple handler for Visualization object events.
@@ -310,6 +311,7 @@ class Visualization(HasTraits):
         """
         # ensure that cube dimensions don't exceed array
         curr_roi_size = self.roi_array[0].astype(int)
+        roi_size_orig = np.copy(curr_roi_size)
         if curr_roi_size[0] + self.x_offset > self.x_high:
             curr_roi_size[0] = self.x_high - self.x_offset
             self.roi_array = [curr_roi_size]
@@ -322,6 +324,13 @@ class Visualization(HasTraits):
         print("using ROI size of {}".format(self.roi_array[0].astype(int)))
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
+        if np.any(np.not_equal(curr_roi_size, roi_size_orig)):
+            feedback_str = (
+                "Unable to fit ROI of size {} at offset {} into "
+                "image of size ({}, {}, {}) (x, y, z) so resized ROI to {}"
+                .format(roi_size_orig, curr_offset, self.x_high, 
+                        self.y_high, self.z_high, curr_roi_size))
+            self.segs_feedback = feedback_str
         
         # show raw 3D image unless selected not to
         if self._DEFAULTS_3D[2] in self._check_list_3d:
@@ -367,6 +376,9 @@ class Visualization(HasTraits):
             off = 1 if cli.image5d.ndim >= 4 else 0
             print(cli.image5d.shape)
             size = cli.image5d.shape[0+off:3+off]
+        # TODO: consider subtracting 1 to avoid max offset being 1 above
+        # true max, but currently convenient to display size and checked 
+        # elsewhere
         self.z_high, self.y_high, self.x_high = size
         curr_offset = cli.offset
         # apply user-defined offsets
@@ -530,6 +542,7 @@ class Visualization(HasTraits):
             print("loading original image stack from file")
             cli.image5d = importer.read_file(cli.filename, cli.series)
             img = cli.image5d
+        
         blobs_truth_roi = None
         if config.truth_db is not None:
             # collect truth blobs from the truth DB if available

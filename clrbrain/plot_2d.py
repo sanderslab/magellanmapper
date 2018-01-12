@@ -292,14 +292,15 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
     size = image5d.shape
     # swap columns if showing a different plane
     plane_axis = "z"
+    image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
     if plane == PLANE[1]:
         # "xz" planes
-        size = lib_clrbrain.swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
+        size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
         plane_axis = "y"
     elif plane == PLANE[2]:
         # "yz" planes
-        size = lib_clrbrain.swap_elements(size, 0, 2, 1 if image5d.ndim >= 4 else 0)
-        size = lib_clrbrain.swap_elements(size, 0, 1, 1 if image5d.ndim >= 4 else 0)
+        size = lib_clrbrain.swap_elements(size, 0, 2, image5d_shape_offset)
+        size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
         plane_axis = "x"
     z = offset[2]
     ax.set_title("{}={}".format(plane_axis, z))
@@ -309,7 +310,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         border_bounds = np.array(
             [border[0:2], 
             [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
-    if z < 0 or z >= size[1]:
+    if z < 0 or z >= size[image5d_shape_offset]:
         print("skipping z-plane {}".format(z))
         plt.imshow(np.zeros(roi_size[0:2]))
     else:
@@ -321,6 +322,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                       slice(offset[1], offset[1] + roi_size[1]), 
                       slice(offset[0], offset[0] + roi_size[0])]
             roi = image5d
+            #print("roi shape: {}".format(roi.shape))
+            #print("region: {}".format(region))
         else:
             region = [0, z_relative, slice(0, roi_size[1]), 
                       slice(0, roi_size[0])]
@@ -637,7 +640,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     ax_z_list = []
-    segs_out = None
     # separate out truth blobs
     if segments.shape[1] >= 6:
         if blobs_truth is None:
@@ -645,8 +647,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         print("blobs_truth:\n{}".format(blobs_truth))
         segments = segments[segments[:, 5] == -1]
     # separate segments inside from outside the ROI
-    segs_in = segments[mask_in]
-    segs_out = segments[np.invert(mask_in)]
+    segs_in = None
+    segs_out = None
+    if mask_in is not None:
+        segs_in = segments[mask_in]
+        segs_out = segments[np.invert(mask_in)]
         
     # selected or newly added patches since difficult to get patch from collection,
     # and they don't appear to be individually editable

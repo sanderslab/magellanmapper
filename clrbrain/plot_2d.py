@@ -380,6 +380,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     r_orig = np.copy(segs_in[:, 3])
                     segs_in[:, 3] = np.subtract(
                         segs_in[:, 3], np.divide(z_diff, 3))
+                    # make circles below 3/4 of their original radius 
+                    # invisible but not removed to preserve their corresponding 
+                    # colormap index
                     segs_in[np.less(
                         segs_in[:, 3], np.multiply(r_orig, 3/4)), 3] = 0
                 collection = _circle_collection(
@@ -397,10 +400,22 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                 ax.add_collection(collection_adj)
             
             # overlay segments with dotted line patch and make pickable for 
-            # verifying the segment, defaulting to apply only to segments 
-            # in the current z
-            segments_z = segs_in # full annotation
-            if not circles == CIRCLES[3].lower():
+            # verifying the segment
+            print("segs_in: {}".format(segs_in))
+            segments_z = segs_in[segs_in[:, 3] > 0] # full annotation
+            print("segs z: {}".format(segments_z))
+            if circles == CIRCLES[3].lower():
+                # when showing full annotation, include all segments in the ROI
+                for i in range(len(segments_z)):
+                    seg = segments_z[i]
+                    if seg[0] != z_relative and seg[3] > 0:
+                        # add segments to Visualizer table
+                        seg = np.copy(seg)
+                        seg[0] = z_relative
+                        segments_z[i] = fn_update_seg(
+                            np.array([seg]), offset=offset)
+            else:
+                # apply only to segments in their current z
                 segments_z = segs_in[segs_in[:, 0] == z_relative]
             if segments_z is not None:
                 for seg in segments_z:

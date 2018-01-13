@@ -168,7 +168,8 @@ class Visualization(HasTraits):
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List
     _styles_2d = List
-    _DEFAULTS_STYLES_2D = ["Square no oblique", "Square with oblique", "Multi-zoom", "Wide ROI"]
+    _DEFAULTS_STYLES_2D = [
+        "Square no oblique", "Square with oblique", "Multi-zoom", "Wide ROI"]
     _atlas_label = None
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
@@ -193,9 +194,9 @@ class Visualization(HasTraits):
             roi: The ROI to save.
             rois_dict: Dictionary of saved ROIs.
         """
-        label = "offset ({},{},{}) of size ({},{},{})".format(roi["offset_x"], roi["offset_y"], 
-                                         roi["offset_z"], roi["size_x"], 
-                                         roi["size_y"], roi["size_z"])
+        label = "offset ({},{},{}) of size ({},{},{})".format(
+           roi["offset_x"], roi["offset_y"], roi["offset_z"], roi["size_x"], 
+           roi["size_y"], roi["size_z"])
         rois_dict[label] = roi
     
     def save_segs(self):
@@ -280,6 +281,7 @@ class Visualization(HasTraits):
         """
         self.segments = None
         self.segs_pts = None
+        self.segs_in_mask = None
     
     def _update_structure_level(self, curr_offset, curr_roi_size):
         self._atlas_label = None

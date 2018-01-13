@@ -46,7 +46,7 @@ ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
 PLANE = ("xy", "xz", "yz")
 plane = None
-CIRCLES = ("Circles", "Repeat circles", "No circles")
+CIRCLES = ("Circles", "Repeat circles", "No circles", "Full annotation")
 vmax_overview = 1.0
 _DOWNSAMPLE_THRESH = 1000
 # need to store DraggableCircles objects to prevent premature garbage collection
@@ -375,11 +375,13 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             
             # show segments from all z's as circles with colored outlines
             if segs_in is not None and segs_cmap is not None:
-                if circles == CIRCLES[1].lower():
+                if circles in (CIRCLES[1].lower(), CIRCLES[3].lower()):
                     z_diff = np.abs(np.subtract(segs_in[:, 0], z_relative))
+                    r_orig = np.copy(segs_in[:, 3])
                     segs_in[:, 3] = np.subtract(
                         segs_in[:, 3], np.divide(z_diff, 3))
-                    segs_in[segs_in[:, 3] < 3.5] = 0
+                    segs_in[np.less(
+                        segs_in[:, 3], np.multiply(r_orig, 3/4)), 3] = 0
                 collection = _circle_collection(
                     segs_in, segs_cmap.astype(float) / 255.0, "none", 
                     SEG_LINEWIDTH)
@@ -394,9 +396,12 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                 collection_adj.set_linestyle("--")
                 ax.add_collection(collection_adj)
             
-            # overlays segments in current z with dotted line patch and makes
-            # pickable for verifying the segment
-            segments_z = segs_in[segs_in[:, 0] == z_relative]
+            # overlay segments with dotted line patch and make pickable for 
+            # verifying the segment, defaulting to apply only to segments 
+            # in the current z
+            segments_z = segs_in # full annotation
+            if not circles == CIRCLES[3].lower():
+                segments_z = segs_in[segs_in[:, 0] == z_relative]
             if segments_z is not None:
                 for seg in segments_z:
                     _plot_circle(

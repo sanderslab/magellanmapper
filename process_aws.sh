@@ -2,22 +2,34 @@
 # Process files on Amazon Web Services EC2 server
 # Author: David Young 2017
 
-################################################
-# Imports files from S3 for processing on EC2 and upload
-# back to S3.
-#
-# To run:
-# -Activate conda environment: "source activate clr"
-# -Update clrbrain: "cd src/clrbrain; git fetch; git pull"
-# -Ensure that swap space and data drive are mounted
-# -Update paths to files for processing, ensuring that the
-#  *_image5d.npz and *_info.npz files are on S3
-# -Sample run command: 
-#  nohup ./process_aws.sh -f "/path/to/img.czi" -s "root/path" \
-#    -- --microscope "type" > /path/to/output 2>&1 &
-# -Track results: "tail -f /path/to/output"
-# -If all goes well, pick up processed files from S3
-################################################
+HELP="
+Imports files from S3 for processing on EC2 and upload
+back to S3.
+
+Arguments:
+    -h: Show help and exit.
+    -f: Full path to image file on local drive. The parent  
+        directory is assumed to be the experiment directory 
+        containing the image on S3.
+    -s: S3 parent path, where the associated image files will be 
+        assumed to be located in 
+        \"s3://[your/s3/path]/[exp]/[name]\"
+    -d: Path to destination directory; if not set, the 
+        parent path to the image will be used instead.
+
+Usage:
+    - Ensure that Anaconda environment is activated: 
+        \"source activate clr\"
+    - Ensure that swap space and data drive are mounted
+    - If running via an SSH session, consider running in nohup 
+        or similar environment where the process will not 
+        terminate if the session breaks, eg:
+        \"nohup ./process_aws.sh -f /path/to/img.czi \\
+        -s parent/S3/path -- --microscope type \\
+        > /path/to/output 2>&1 &
+    - Then track results with \"tail -f /path/to/output\"
+    - If all goes well, pick up processed files from S3
+"
 
 DEST=""
 IMG=""
@@ -33,7 +45,7 @@ echo $PWD
 OPTIND=1
 while getopts hf:s:d: opt; do
     case $opt in
-        h)  echo $HELP
+        h)  echo "$HELP"
             exit 0
             ;;
         f)  IMG="$OPTARG"
@@ -68,7 +80,7 @@ fi
 TMPDIR="$DEST"/tmp
 if [ ! -e "$TMPDIR" ]
 then
-    mkdir "$TMPDIR"
+    mkdir -p "$TMPDIR"
 fi
 export TMPDIR="$TMPDIR"
 
@@ -77,30 +89,34 @@ FOUND_NPZ=0
 # destination points to a different parent path
 IMG_BASE=${IMG/.czi/_}$(printf %05d $SERIES)
 IMG_BASE="`basename $IMG_BASE`"
+EXP_PATH="`dirname $IMG`"
+EXP="`basenmae $EXP_PATH`"
 NPZ_IMG=$IMG_BASE"_image5d.npz"
 NPZ_INFO=$IMG_BASE"_info.npz"
 for NPZ in $NPZ_IMG $NPZ_INFO
 do
-    if [ -e "$DEST"/"$NPZ" ]
+    NPZ_PATH="${DEST}/${NPZ}"
+    if [ -e "$NPZ_PATH" ]
     then
-        echo "Found $DEST/$NPZ"
+        echo "Found $NPZ_PATH"
         FOUND_NPZ=1
     else
-        echo "Could not find $DEST/$NPZ, checking on s3..."
-        NPZ_LS=`aws s3 ls s3://"$S3_DIR"/"$NPZ"`
+        echo "Could not find ${NPZ_PATH}, checking on s3..."
+        IMG_S3="${S3_DIR}/${EXP}/${NPZ}"
+        NPZ_LS=`aws s3 ls s3://"$IMG_S3"`
         if [ "$NPZ_LS" != "" ]
         then
-            aws s3 cp s3://"$S3_DIR"/"$NPZ" "$DEST"/"$NPZ"
-            ls -lh "$DEST"/"$NPZ"
+            aws s3 cp s3://"$IMG_S3" "$NPZ_PATH"
+            ls -lh "$NPZ_PATH"
             FOUND_NPZ=1
         else
-            echo "Could not find $DEST/$NPZ on s3, checking original image..."
-            if [ -e "$DEST"/"$IMG" ]
+            echo "Could not find $IMG_S3 on s3, checking original image..."
+            if [ -e "$IMG" ]
             then
-                echo "Found $DEST/$IMG"
+                echo "Found $IMG"
             else
-                aws s3 cp s3://"$S3_DIR"/"$IMG" "$DEST"/"$IMG"
-                ls -lh "$DEST"/"$IMG"
+                aws s3 cp s3://"${S3_DIR}/${EXP}/`basename $IMG`" "$IMG"
+                ls -lh "$IMG"
             fi
         fi
     fi
@@ -109,7 +125,7 @@ done
 # import raw image into Numpy array if not available
 if (( $FOUND_NPZ == 0)); then
     echo "Importing $IMG..."
-    python -m clrbrain.cli --img "$IMG" --proc importonly $EXTRA_ARGS
+    python -u -m clrbrain.cli --img "$IMG" --proc importonly $EXTRA_ARGS
 fi
 
 # process image and segments
@@ -120,6 +136,6 @@ NPZ_IMG_PROC=$IMG_BASE"_image5d_proc.npz"
 NPZ_INFO_PROC=$IMG_BASE"_info_proc.npz"
 for NPZ in $NPZ_INFO_PROC #$NPZ_IMG_PROC 
 do
-    aws s3 cp "$DEST"/"$NPZ" s3://"$S3_DIR"/"$NPZ"
+    aws s3 cp "$${DEST}/${NPZ}" s3://"${S3_DIR}/${EXP}/${NPZ}"
 done
 

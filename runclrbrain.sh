@@ -6,19 +6,27 @@
 # Sample scenarios and workflows for Clrbrain
 #
 # Use this file as a template for your own scenarioes. Edit path 
-# variables with your own file paths. Uncomment (remove the 
+# variables with your own file paths. Uncomment (ie remove the 
 # "#" symbol) to apply the given scenario for your files.
 ################################################
 
 
 ####################################
-# Replace with your paths
+# REPLACE WITH YOUR PATHS
+
+# full path to original image, assumed to be within a directory 
+# that names the experiment and also used for S3; eg 
+# "/data/exp_yyyy-mm-dd/WT-cortex.czi"
 IMG="/path/to/your/image"
+
+# parent path of image file in cloud such as AWS S3; eg
+# "MyName/ClearingExps", where the image would be found in 
+# $S3_DIR/exp_yyyy-mm-dd
 S3_DIR="path/to/your/bucket/artifact"
 
 
 ####################################
-# Basic usage
+# Basic Usage
 
 # Parsing names from your image path
 OUT_DIR="`dirname $IMG`"

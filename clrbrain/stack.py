@@ -29,7 +29,7 @@ def _process_plane(i, plane, rescale):
     return i, img
 
 def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 
-                        origin=None):
+                        origin=None, delay=None):
     """Builds an animated GIF from a stack of images.
     
     Args:
@@ -38,6 +38,8 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         process_fnc: Function to process each image through multiprocessing, 
             where the function should take an index and image and return the 
             index and processed plane.
+        delay: Delay between image display in ms. If None, the delay will 
+            defaul to 100ms.
     """
     # ascending order of all files in the directory
     num_images = len(images)
@@ -86,8 +88,10 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         fig.set_size_inches(img_size_dpi[1] / aspect, img_size_dpi[0])
     
     # export to animated GIF
+    if delay is None:
+        delay = 100
     anim = animation.ArtistAnimation(
-        fig, plotted_imgs, interval=100, repeat_delay=0, blit=False)
+        fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
     try:
         anim.save(out_path, writer="imagemagick")
     except ValueError as e:
@@ -96,7 +100,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
     print("saved animation file to {}".format(out_path))
     #plt.show()
 
-def animated_gif(path, series=0, interval=None, rescale=None):
+def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     """Builds an animated GIF from a stack of images in a directory or an
     .npy file.
     
@@ -113,6 +117,7 @@ def animated_gif(path, series=0, interval=None, rescale=None):
             defaults to None, in which case 1 will be used.
         rescale: Rescaling factor for each image, performed on a plane-by-plane 
             basis; defaults to None, in which case 1.0 will be used.
+        delay: Delay between image display in ms.
     """
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
@@ -141,7 +146,7 @@ def animated_gif(path, series=0, interval=None, rescale=None):
         ext = "gif"
     out_path = os.path.join(parent_path, out_name + "_animation." + ext)
     _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
-                        origin=origin)
+                        origin=origin, delay=delay)
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")

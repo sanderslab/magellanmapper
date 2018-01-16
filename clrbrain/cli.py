@@ -394,6 +394,7 @@ def main(process_args_only=False):
     parser.add_argument("--register")
     parser.add_argument("--rescale")
     parser.add_argument("--interval")
+    parser.add_argument("--delay")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -515,6 +516,9 @@ def main(process_args_only=False):
     if args.interval:
         config.interval = int(args.interval)
         print("Set interval to {}".format(config.interval))
+    if args.delay:
+        config.delay = int(args.delay)
+        print("Set delay to {}".format(config.delay))
     
     # load "truth blobs" from separate database for viewing
     ext = lib_clrbrain.get_filename_ext(filename)
@@ -721,7 +725,7 @@ def process_file(filename_base, offset, roi_size):
         from clrbrain import stack
         stack.animated_gif(
             filename, series=series, interval=config.interval, 
-            rescale=config.rescale)
+            rescale=config.rescale, delay=config.delay)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the region, saving processed image

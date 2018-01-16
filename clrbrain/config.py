@@ -227,8 +227,9 @@ BLOBS_KEY = "blobs"
 # flip the experimental image horizontally
 flip_horiz = False
 
-# rescale image
-rescale = None
 
-# interval
-interval = None
+# STACK PROCESSING
+
+rescale = None # rescale image
+interval = None # interval
+delay = None # delay time between images

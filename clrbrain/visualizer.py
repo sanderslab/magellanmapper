@@ -661,6 +661,18 @@ class Visualization(HasTraits):
         print("set border to {}".format(self.border))
     
     def _create_vis_segments(self, segs, offset):
+        """Create segments in the format used in this class.
+        
+        Args:
+            segs: Numpy array of segments, generally given as an (n, 4)
+                dimension array, where each segment is in 
+                (z, y, x, radius, confirmed, truth, ...) format. Any values 
+                after the truth flag will be ignored.
+        
+        Returns:
+            Array of segments with the absolute coordinates appended to the 
+            end of each segment based on ``offset``.
+        """
         return np.concatenate(
             (segs[:, :6], np.add(segs[:, :3], offset[::-1])), axis=1)
     
@@ -678,7 +690,7 @@ class Visualization(HasTraits):
             format.
         """
         print(seg)
-        seg = self._create_vis_segments(seg, offset)
+        seg = self._create_vis_segments(np.array([seg]), offset)
         print("added segment: {}".format(seg))
         # concatenate for in-place array update, though append
         # and re-assigning also probably works
@@ -732,7 +744,9 @@ class Visualization(HasTraits):
         
         Args:
             segment_new: Segment that was either added or updated, including 
-                changes to coordinates or radius.
+                changes to coordinates or radius. Segments are generally 
+                given as an (z, y, x, radius, confirmed, truth, ...) array, 
+                where any elements after these ones are ignored.
             segment_old: Previous version of the segment; defaults to None, 
                 in which case ``segment_new`` will only be added rather than 
                 any previously segment updated.
@@ -751,6 +765,7 @@ class Visualization(HasTraits):
         # row is selected by the end
         while len(self.segs_selected) > 0:
             self.segs_selected.pop()
+        #print("updating: ", segment_new, offset)
         if segment_old is not None:
             # updates an existing segment
             self._segs_moved.append(segment_old)

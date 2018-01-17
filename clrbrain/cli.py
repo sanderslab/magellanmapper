@@ -71,6 +71,7 @@ from time import time
 import multiprocessing as mp
 import numpy as np
 import matplotlib.pylab as pylab
+import matplotlib.pyplot as plt
 #from memory_profiler import profile
 
 from clrbrain import chunking
@@ -551,7 +552,10 @@ def main(process_args_only=False):
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
     
+    # setup Matplotlib parameters/styles
     pylab.rcParams.update(config.params)
+    #print(plt.style.available)
+    plt.style.use("seaborn")
     
     if process_args_only:
         return

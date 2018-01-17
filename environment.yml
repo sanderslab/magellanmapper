@@ -12,10 +12,10 @@ dependencies:
 - cython
 - pygments
 - pip:
-  - "git+https://github.com/enthought/traits.git@a7a83182048c08923953e302658b51b68c802132"
-  - "git+https://github.com/enthought/pyface.git@13a064de48adda3c880350545717d8cf8929afad"
+  - "git+https://github.com/enthought/traits.git@080b722f72299acb63d539037107bd630f07ae35"
+  - "git+https://github.com/enthought/pyface.git@d58d3467c4cc0de925489004e75e900487a12abd"
   - "git+https://github.com/enthought/traitsui.git@512d24196e43f374dd5f7de5f127585eed6e0a85"
-  - "git+https://github.com/enthought/mayavi.git@9730c320a8f52764a03210e9f3f376e547944077"
+  - "git+https://github.com/enthought/mayavi.git@e5a60a4e09cf7770cb361a90b398abb16f76429d"
   - "git+https://github.com/CellProfiler/python-bioformats.git@07c6c3cac46ed0b5eabe3c12f14a9069ed5852ba"
   - "git+https://github.com/the4thchild/scikit-image.git@b88bf88dc1caa133e914e589fd094185dc61e9b1"
   - matplotlib-scalebar

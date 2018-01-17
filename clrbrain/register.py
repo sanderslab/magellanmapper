@@ -90,18 +90,19 @@ def _translation_adjust(orig, transformed, translation, flip=False):
         translation_adj = translation_adj[::-1]
     return translation_adj
 
-def _show_overlays(imgs, translation, fixed_file):
+def _show_overlays(imgs, translation, fixed_file, plane):
     """Shows overlays via :func:plot_2d:`plot_overlays_reg`.
     
     Args:
         imgs: List of images in Numpy format
         translation: Translation in (z, y, x) format for Numpy consistency.
         fixed_file: Path to fixed file to get title.
+        plane: Planar transposition.
     """
     cmaps = ["Blues", "Oranges", "prism"]
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
     plot_2d.plot_overlays_reg(
-        *imgs, *cmaps, translation, os.path.basename(fixed_file))
+        *imgs, *cmaps, translation, os.path.basename(fixed_file), plane)
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
     base_name = _reg_out_path(fixed_file, "")
@@ -173,23 +174,35 @@ def _mirror_labels(img):
     img_reflected.SetOrigin(img.GetOrigin())
     return img_reflected
 
-def transpose_img(img_sitk, plane, flip_horiz):
+def transpose_img(img_sitk, plane, rotate=False):
+    """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
+    
+    Args:
+        img_sitk: Image in SimpleITK format.
+        plane: One of :attr:``plot_2d.PLANES`` elements, specifying the 
+            planar orientation in which to transpose the image. The current 
+            orientation is taken to be "xy".
+        rotate: Rotate the final output image by 180 degrees; defaults to False.
+    
+    Returns:
+        Transposed image in SimpleITK format.
+    """
     img = sitk.GetArrayFromImage(img_sitk)
     spacing = img_sitk.GetSpacing()
     origin = img_sitk.GetOrigin()
     transposed = img
     if plane is not None and plane != plot_2d.PLANE[0]:
-        if not flip_horiz:
-            transposed = transposed[..., ::-1]
         # swap z-y to get (y, z, x) order for xz orientation
         transposed = np.swapaxes(transposed, 0, 1)
-        # sitk convension is opposite of numpy with (x, y, z) order
+        # sitk convention is opposite of numpy with (x, y, z) order
         spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
         origin = lib_clrbrain.swap_elements(origin, 1, 2)
         if plane == plot_2d.PLANE[1]:
             # rotate
             transposed = transposed[..., ::-1]
             transposed = np.swapaxes(transposed, 1, 2)
+            spacing = lib_clrbrain.swap_elements(spacing, 0, 1)
+            origin = lib_clrbrain.swap_elements(origin, 0, 1)
         elif plane == plot_2d.PLANE[2]:
             # swap new y-x to get (x, z, y) order for yz orientation
             transposed = np.swapaxes(transposed, 0, 2)
@@ -203,18 +216,23 @@ def transpose_img(img_sitk, plane, flip_horiz):
             transposed[:] = np.flipud(transposed[:])
         else:
             transposed[:] = transposed[:]
+    if rotate:
+        # rotate the final output image by 180 deg
+        # TODO: need to change origin? make axes accessible (eg (0, 2) for 
+        # horizontal rotation)
+        transposed = np.rot90(transposed, 2, (1, 2))
     transposed = sitk.GetImageFromArray(transposed)
     transposed.SetSpacing(spacing)
     transposed.SetOrigin(origin)
     return transposed
 
-def _load_numpy_to_sitk(numpy_file, flip_horiz=False, size=None):
+def _load_numpy_to_sitk(numpy_file, rotate=False, size=None):
     image5d = importer.read_file(numpy_file, cli.series)
     roi = image5d[0, ...] # not using time dimension
-    if flip_horiz:
-        roi = roi[..., ::-1]
     if size is not None:
         roi = transform.resize(roi, size)#, anti_aliasing=True)
+    if rotate:
+        roi = np.rot90(roi, 2, (1, 2))
     sitk_img = sitk.GetImageFromArray(roi)
     spacing = detector.resolutions[0]
     #print("spacing: {}".format(spacing))
@@ -222,8 +240,8 @@ def _load_numpy_to_sitk(numpy_file, flip_horiz=False, size=None):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     return sitk_img
 
-def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True, 
-             write_imgs=True, name_prefix=None):
+def register(fixed_file, moving_file_dir, plane=None, flip=False, 
+             show_imgs=True, write_imgs=True, name_prefix=None):
     """Registers two images to one another using the SimpleElastix library.
     
     Args:
@@ -232,13 +250,23 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         moving_file_dir: Directory of the atlas images, including the 
             main image and labels. The atlas was chosen as the moving file
             since it is likely to be lower resolution than the Numpy file.
+        plane: Planar orientation to which the atlas will be transposed, 
+            considering the atlas' original plane as "xy".
+        flip: True if the atlas should be flipped/rotated; defaults to False.
+        show_imgs: True if the output images should be displayed; defaults to 
+            True.
+        write_imgs: True if the images should be written to file; defaults to 
+            False.
+        name_prefix: Path with base name where registered files are located; 
+            defaults to None, in which case the fixed_file path will be used.
     """
     if name_prefix is None:
         name_prefix = fixed_file
-    fixed_img = _load_numpy_to_sitk(fixed_file, flip_horiz)
+    fixed_img = _load_numpy_to_sitk(fixed_file)
     
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
+    moving_img = transpose_img(moving_img, plane, flip)
     
     print(fixed_img)
     print(moving_img)
@@ -281,6 +309,7 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
         # ABA only gives half of atlas so need to mirror one side to other
         img = _mirror_labels(img)
+        img = transpose_img(img, plot_2d.plane, flip)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
@@ -316,9 +345,8 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
         '''
         for i in range(len(imgs_write)):
             out_path = _reg_out_path(name_prefix, imgs_names[i])
-            img = transpose_img(imgs_write[i], plot_2d.plane, flip_horiz)
             print("writing {}".format(out_path))
-            sitk.WriteImage(img, out_path, False)
+            sitk.WriteImage(imgs_write[i], out_path, False)
 
     # show 2D overlay for registered images
     imgs = [
@@ -353,21 +381,35 @@ def register(fixed_file, moving_file_dir, flip_horiz=False, show_imgs=True,
     print("Total DSC: {}".format(total_dsc))
     
     # show overlays last since blocks until fig is closed
-    _show_overlays(imgs, translation, fixed_file)
+    _show_overlays(imgs, translation, fixed_file, None)
     
-def register_group(img_files, flip_horiz=None, show_imgs=True, 
+def register_group(img_files, flip=None, show_imgs=True, 
              write_imgs=False, name_prefix=None):
+    """Group registers several images to one another.
+    
+    Args:
+        img_files: Paths to image files to register.
+        flip: Boolean list corresponding to ``img_files`` flagging 
+            whether to flip the image or not; defaults to None, in which 
+            case no images will be flipped.
+        show_imgs: True if the output images should be displayed; defaults to 
+            True.
+        write_imgs: True if the images should be written to file; defaults to 
+            False.
+        name_prefix: Path with base name where registered files are located; 
+            defaults to None, in which case the fixed_file path will be used.
+    """
     img_vector = sitk.VectorOfImage()
-    flip = False
+    flip_img = False
     origin = None
     size = None
-    for i in range(len(img_files)):#, flip in zip(img_files, flip_horiz):
+    for i in range(len(img_files)):
         img_file = img_files[i]
-        if flip_horiz is not None:
-            flip = flip_horiz[i]
+        if flip is not None:
+            flip_img = flip[i]
         # force all images into same size and origin as first image 
         # to avoid groupwise registration error on physical space mismatch
-        img = _load_numpy_to_sitk(img_file, flip, size)
+        img = _load_numpy_to_sitk(img_file, flip_img, size)
         if origin is None:
             origin = img.GetOrigin()
             size = img.GetSize()[::-1]
@@ -393,8 +435,8 @@ def register_group(img_files, flip_horiz=None, show_imgs=True,
     sitk.Show(transformed_img)
     
 
-def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False, 
-                            name_prefix=None):
+def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
+                            flip=False, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.
     
     Should be run after :func:`register` has written out images in default
@@ -404,33 +446,41 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, flip_horiz=False,
         fixed_file: Path to the fixed file.
         moving_file_dir: Moving files directory, from which the original
             atlas will be retrieved.
-        flip_horiz: If true, will flip the fixed file horizontally first; 
-            defaults to False.
+        flip: If true, will flip the fixed file first; defaults to False.
         name_prefix: Path with base name where registered files are located; 
             defaults to None, in which case the fixed_file path will be used.
     """
+    # get the experiment file
     if name_prefix is None:
         name_prefix = fixed_file
     image5d = importer.read_file(fixed_file, cli.series)
     roi = image5d[0, ...] # not using time dimension
-    if flip_horiz:
-        roi = roi[..., ::-1]
+    
+    # get the atlas file and transpose it to match the orientation of the 
+    # experiment image
     out_path = os.path.join(moving_file_dir, IMG_ATLAS)
     print("Reading in {}".format(out_path))
     moving_sitk = sitk.ReadImage(out_path)
+    moving_sitk = transpose_img(moving_sitk, plane, flip)
     moving_img = sitk.GetArrayFromImage(moving_sitk)
+    
+    # get the registered atlas file, which should already be transposed
     out_path = _reg_out_path(name_prefix, IMG_ATLAS)
     print("Reading in {}".format(out_path))
     transformed_sitk = sitk.ReadImage(out_path)
     transformed_img = sitk.GetArrayFromImage(transformed_sitk)
+    
+    # get the registered labels file, which should also already be transposed
     out_path = _reg_out_path(name_prefix, IMG_LABELS)
     print("Reading in {}".format(out_path))
     labels_img = sitk.GetArrayFromImage(sitk.ReadImage(out_path))
+    
+    # overlay the images
     imgs = [roi, moving_img, transformed_img, labels_img]
     _, translation = _handle_transform_file(name_prefix)
     translation = _translation_adjust(
         moving_sitk, transformed_sitk, translation, flip=True)
-    _show_overlays(imgs, translation, fixed_file)
+    _show_overlays(imgs, translation, fixed_file, out_plane)
 
 def load_labels(fixed_file, get_sitk=False):
     labels_path = _reg_out_path(fixed_file, IMG_LABELS)
@@ -843,27 +893,27 @@ if __name__ == "__main__":
     prefix = None
     if len(cli.filenames) >= 3:
         prefix = cli.filenames[2]
+    flip = False
+    if config.flip is not None:
+        flip = config.flip[0]
     if config.register_type is None:
         # explicitly require a registration type
         print("Please choose a registration type")
     elif config.register_type == config.REGISTER_TYPES[0]:
-        # run with --plane xy to generate non-transposed images before comparing 
-        # orthogonal views in overlay_registered_imgs, then run with --plane xz
-        # to re-transpose to original orientation for mapping locations
-        register(*cli.filenames[0:2], flip_horiz=config.flip_horiz[0], 
-                 name_prefix=prefix)
-        #register(*cli.filenames[0:2], flip_horiz=config.flip_horiz, 
-        #         show_imgs=False, write_imgs=False)
+        # "single", basic registration of 1st to 2nd image, transposing the 
+        # second image according to plot_2d.plane and config.flip_horiz
+        register(*cli.filenames[0:2], plane=plot_2d.plane, 
+                 flip=flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[1]:
         # groupwise registration
-        register_group(cli.filenames, flip_horiz=config.flip_horiz)
+        register_group(cli.filenames, flip=config.flip)
     elif config.register_type == config.REGISTER_TYPES[2]:
         # overlay registered images in each orthogonal plane
-        for plane in plot_2d.PLANE:
-            plot_2d.plane = plane
+        for out_plane in plot_2d.PLANE:
             overlay_registered_imgs(
-                *cli.filenames[0:2], flip_horiz=config.flip_horiz[0], 
-                name_prefix=prefix)
+                *cli.filenames[0:2], plane=plot_2d.plane, 
+                flip=flip, name_prefix=prefix, 
+                out_plane=out_plane)
     elif config.register_type == config.REGISTER_TYPES[3]:
         # compute grouped volumes by ontology level
         register_volumes(

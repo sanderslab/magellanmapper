@@ -893,7 +893,8 @@ def plot_roc(stats_dict, name):
     plt.title("ROC for {}".format(name))
     plt.show()
 
-def _show_overlay(ax, img, plane_i, cmap, aspect=1.0, alpha=1.0, title=None):
+def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0, 
+                  title=None):
     """Shows an image for overlays in the orthogonal plane specified by 
     :attribute:`plane`.
     
@@ -907,14 +908,18 @@ def _show_overlay(ax, img, plane_i, cmap, aspect=1.0, alpha=1.0, title=None):
         title: Subplot title; defaults to None, in which case no title will 
             be shown.
     """
-    if plane == PLANE[1]:
+    if out_plane == PLANE[1]:
         # xz plane
         img_2d = img[:, plane_i]
-    elif plane == PLANE[2]:
-        # yz plane, which requires a rotation
+        img_2d = np.flipud(img_2d)
+    elif out_plane == PLANE[2]:
+        # yz plane, which requires a flip when original orientation is 
+        # horizontal section
+        # TODO: generalize to other original orientations
         img_2d = img[:, :, plane_i]
-        img_2d = np.swapaxes(img_2d, 0, 1)
-        aspect = 1 / aspect
+        #img_2d = np.swapaxes(img_2d, 1, 0)
+        #aspect = 1 / aspect
+        img_2d = np.flipud(img_2d)
     else:
         # xy plane (default)
         img_2d = img[plane_i]
@@ -936,6 +941,7 @@ def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
         aspect: Aspect ratio, which will be applied to all images; 
            defaults to 1.0.
     """
+    # TODO: deprecated
     fig = plt.figure()
     fig.suptitle(title)
     imgs_len = len(imgs)
@@ -952,7 +958,8 @@ def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
     plt.show()
 
 def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp, 
-                      cmap_atlas, cmap_labels, translation=None, title=None):
+                      cmap_atlas, cmap_labels, translation=None, title=None, 
+                      out_plane=None):
     """Plot overlays of registered 3D images, showing overlap of atlas and 
     experimental image planes.
     
@@ -973,6 +980,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
             unregistered atlast will be the same fraction of its size as for 
             the registered image.
         title: Figure title; if None, will be given default title.
+        out_plane: Output planar orientation.
     """
     fig = plt.figure()
     # give extra space to the first row since the atlas is often larger
@@ -982,8 +990,10 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     aspect = 1.0
     z = 0
     atlas_z = 0
-    plane_frac = 5 / 2
-    if plane == PLANE[1]:
+    plane_frac = 2#5 / 2
+    if out_plane is None:
+        out_plane = plane
+    if out_plane == PLANE[1]:
         # xz plane
         aspect = resolution[0] / resolution[2]
         z = exp.shape[1] // plane_frac
@@ -991,7 +1001,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
             atlas_z = atlas.shape[1] // plane_frac
         else:
             atlas_z = int(z - translation[1])
-    elif plane == PLANE[2]:
+    elif out_plane == PLANE[2]:
         # yz plane
         aspect = resolution[0] / resolution[1]
         z = exp.shape[2] // plane_frac
@@ -1024,31 +1034,31 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     '''
     
     # experimental image and atlas
-    _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, aspect, 
+    _show_overlay(plt.subplot(gs[0, 0]), exp, z, cmap_exp, out_plane, aspect, 
                               title="Experiment")
-    _show_overlay(plt.subplot(gs[0, 1]), atlas, atlas_z, cmap_atlas, alpha=0.5, 
-                              title="Atlas")
+    _show_overlay(plt.subplot(gs[0, 1]), atlas, atlas_z, cmap_atlas, out_plane, 
+                  alpha=0.5, title="Atlas")
     
     # atlas overlaid onto experiment
     ax = plt.subplot(gs[0, 2])
-    _show_overlay(ax, exp, z, cmap_exp, aspect, title="Registered")
-    _show_overlay(ax, atlas_reg, z, cmap_atlas, aspect, 0.5)
+    _show_overlay(ax, exp, z, cmap_exp, out_plane, aspect, title="Registered")
+    _show_overlay(ax, atlas_reg, z, cmap_atlas, out_plane, aspect, 0.5)
     
     # labels overlaid onto atlas
     ax = plt.subplot(gs[1, 0])
-    _show_overlay(ax, atlas_reg, z, cmap_atlas, aspect, title="Labeled atlas")
-    _show_overlay(ax, labels_reg, z, cmap_labels, aspect, 0.5)
+    _show_overlay(ax, atlas_reg, z, cmap_atlas, out_plane, aspect, title="Labeled atlas")
+    _show_overlay(ax, labels_reg, z, cmap_labels, out_plane, aspect, 0.5)
     
     # labels overlaid onto exp
     ax = plt.subplot(gs[1, 1])
-    _show_overlay(ax, exp, z, cmap_exp, aspect, title="Labeled experiment")
-    _show_overlay(ax, labels_reg, z, cmap_labels, aspect, 0.5)
+    _show_overlay(ax, exp, z, cmap_exp, out_plane, aspect, title="Labeled experiment")
+    _show_overlay(ax, labels_reg, z, cmap_labels, out_plane, aspect, 0.5)
     
     # all overlaid
     ax = plt.subplot(gs[1, 2])
-    _show_overlay(ax, exp, z, cmap_exp, aspect, title="All overlaid")
-    _show_overlay(ax, atlas_reg, z, cmap_atlas, aspect, 0.5)
-    _show_overlay(ax, labels_reg, z, cmap_labels, aspect, 0.3)
+    _show_overlay(ax, exp, z, cmap_exp, out_plane, aspect, title="All overlaid")
+    _show_overlay(ax, atlas_reg, z, cmap_atlas, out_plane, aspect, 0.5)
+    _show_overlay(ax, labels_reg, z, cmap_labels, out_plane, aspect, 0.3)
     
     if title is None:
         title = "Image Overlays"

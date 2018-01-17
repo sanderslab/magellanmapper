@@ -224,8 +224,8 @@ ABA_NAME = "name"
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
 
-# flip the experimental image horizontally
-flip_horiz = False
+# flip/rotate the image; the direction of change can be variable
+flip = None
 
 
 # STACK PROCESSING

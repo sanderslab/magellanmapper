@@ -390,7 +390,7 @@ def main(process_args_only=False):
     parser.add_argument("--plane")
     parser.add_argument("--saveroi", action="store_true")
     parser.add_argument("--labels", nargs="*")
-    parser.add_argument("--flip_horiz", nargs="*")
+    parser.add_argument("--flip", nargs="*")
     parser.add_argument("--register")
     parser.add_argument("--rescale")
     parser.add_argument("--interval")
@@ -501,12 +501,12 @@ def main(process_args_only=False):
         if labels_len > 1:
             config.labels_level = int(args.labels[1])
             print("Set labels level to {}".format(config.labels_level))
-    if args.flip_horiz:
-        config.flip_horiz = []
-        for flip in args.flip_horiz:
+    if args.flip:
+        config.flip = []
+        for flip in args.flip:
             flip = flip.lower()
-            config.flip_horiz.append(flip.lower() == "true" or flip == "1")
-        print("Set flip horizontal to {}".format(config.flip_horiz))
+            config.flip.append(flip.lower() == "true" or flip == "1")
+        print("Set flip to {}".format(config.flip))
     if args.register:
         config.register_type = args.register
         print("Set register type to {}".format(config.register_type))

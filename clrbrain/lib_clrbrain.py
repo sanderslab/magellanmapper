@@ -1,6 +1,6 @@
 #!/bin/bash
 # Library functions shared within Clrbrain
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Shared functions with the Clrbrain package.
 """
 
@@ -102,6 +102,36 @@ def normalize(array, minimum, maximum, background=None):
 def printv(s):
     if config.verbose:
         print(s)
+
+def get_int(val):
+    """Cast a value as an integer, returning the value instead if any error.
+    
+    Args:
+        val: Value to cast.
+    
+    Returns:
+        Value casted to int, or the value if any error occurs during casting.
+    """
+    try:
+        return int(val)
+    except:
+        return val
+
+def convert_indices_to_int(dict_to_convert):
+    """Convert indices of a dictionary to int if possible, including nested 
+    indices.
+    
+    Args:
+        dict_to_convert: Dictionary whose indices will be converted.
+    
+    Returns:
+        The converted dictionary.
+    """
+    dict_converted = {
+        get_int(k): [get_int(i) for i in v] if isinstance(v, list) else v 
+        for k, v in dict_to_convert.items()
+    }
+    return dict_converted
 
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))

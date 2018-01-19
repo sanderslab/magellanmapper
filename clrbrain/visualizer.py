@@ -222,7 +222,9 @@ class Visualization(HasTraits):
             if seg[4] == -1 and seg[3] < config.POS_THRESH:
                 # attempts to delete user added segments, where radius assumed to be 0,
                 # that are no longer selected
-                feedback.append("{} to delete (unselected user added)".format(seg_db))
+                feedback.append(
+                    "{} to delete (unselected user added or explicitly deleted)"
+                    .format(seg_db))
                 segs_to_delete.append(seg_db)
             else:
                 if (seg[0] >= self.border[2] and seg[0] < (curr_roi_size[2] - self.border[2])
@@ -739,7 +741,8 @@ class Visualization(HasTraits):
            if not show:
                self.segs_selected.remove(i)
     
-    def update_segment(self, segment_new, segment_old=None, offset=None):
+    def update_segment(self, segment_new, segment_old=None, offset=None, 
+                       remove=False):
         """Update this class object's segments list with a new or updated 
         segment.
         
@@ -756,6 +759,9 @@ class Visualization(HasTraits):
                 coordinates are given in relative coordinates, and extra 
                 fields will be appended to the segment to store its 
                 absolute coordinates.
+            remove: True if the segment should be removed, in which case 
+                ``segment_old`` and ``offset`` will be ignored. Defaults to 
+                False.
         
         Returns:
             The updated segment in 
@@ -767,7 +773,17 @@ class Visualization(HasTraits):
         while len(self.segs_selected) > 0:
             self.segs_selected.pop()
         #print("updating: ", segment_new, offset)
-        if segment_old is not None:
+        if remove:
+            # remove segments, changing radius and confirmation values to 
+            # flag for deletion from database while saving the ROI
+            segi = self._get_vis_segments_index(segment_new)
+            seg = self.segments[segi]
+            seg[3] = -1 * abs(seg[3])
+            seg[4] = -1
+            self._force_seg_refresh(segi, show=True)
+            #self.segments = np.delete(self.segments, segi, 0)
+            #seg = None
+        elif segment_old is not None:
             # updates an existing segment
             self._segs_moved.append(segment_old)
             diff = np.subtract(segment_new[0:3], segment_old[0:3])

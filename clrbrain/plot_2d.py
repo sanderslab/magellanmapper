@@ -167,6 +167,11 @@ class DraggableCircle:
             # "copy" segment
             _circle_last_picked.append((self, _COPY))
             print("copied seg: {}".format(self.segment))
+        elif event.mouseevent.key == "d":
+            # delete segment
+            self.remove_self()
+            self.fn_update_seg(self.segment, remove=True)
+            print("deleted seg: {}".format(self.segment))
         else:
             seg_old = np.copy(self.segment)
             i = self.facecolori + 1

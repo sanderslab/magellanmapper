@@ -49,9 +49,12 @@ plane = None
 CIRCLES = ("Circles", "Repeat circles", "No circles", "Full annotation")
 vmax_overview = 1.0
 _DOWNSAMPLE_THRESH = 1000
+
 # need to store DraggableCircles objects to prevent premature garbage collection
 _draggable_circles = []
 _circle_last_picked = []
+_CUT = "cut"
+_COPY = "copy"
 
 segs_color_dict = {
     -1: "none",
@@ -156,14 +159,20 @@ class DraggableCircle:
             return
         #print("color: {}".format(self.facecolori))
         if event.mouseevent.key == "x":
-            _circle_last_picked.append(self)
+            # "cut" segment
+            _circle_last_picked.append((self, _CUT))
             self.remove_self()
+            print("cut seg: {}".format(self.segment))
+        elif event.mouseevent.key == "c":
+            # "copy" segment
+            _circle_last_picked.append((self, _COPY))
+            print("copied seg: {}".format(self.segment))
         else:
             seg_old = np.copy(self.segment)
             i = self.facecolori + 1
             if i > max(segs_color_dict.keys()):
                 if self.segment[3] < config.POS_THRESH:
-                    _circle_last_picked.append(self)
+                    _circle_last_picked.append((self, _CUT))
                     self.remove_self()
                 i = -1
             self.circle.set_facecolor(segs_color_dict[i])
@@ -218,17 +227,17 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     return collection
 
 def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg):
-    """Draws a patch collection of circles for segments.
+    """Draw a DraggableCircle from the given segment.
     
     Args:
-        segments: Numpy array of segments, generally as an (n, 4)
+        segment: Numpy array of segments, generally as an (n, 4)
             dimension array, where each segment is in (z, y, x, radius).
         edgecolor: Color of patch borders.
         facecolor: Color of patch interior.
-        linewidth: Width of the border.
+        fn_update_seg: Function to call from DraggableCircle.
     
     Returns:
-        The patch collection.
+        The DraggableCircle object.
     """
     facecolor = segs_color_dict[segment[4]]
     circle = patches.Circle(
@@ -240,6 +249,7 @@ def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg):
         circle, segment, fn_update_seg, facecolor)
     draggable_circle.connect()
     _draggable_circles.append(draggable_circle)
+    return draggable_circle
 
 def add_scale_bar(ax):
     """Adds a scale bar to the plot.
@@ -751,16 +761,23 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             if _circle_last_picked_len < 1:
                 print("No previously picked circle to paste")
                 return
-            circle = _circle_last_picked[_circle_last_picked_len - 1]
+            moved_item = _circle_last_picked[_circle_last_picked_len - 1]
+            circle, move_type = moved_item
             axi = ax_z_list.index(ax)
             dz = axi - z_planes_padding - circle.segment[0]
             seg_old = np.copy(circle.segment)
-            circle.segment[0] += dz
+            seg_new = np.copy(circle.segment)
+            seg_new[0] += dz
+            if move_type == _CUT:
+                print("Pasting a cut segment")
+                _draggable_circles.remove(circle)
+                _circle_last_picked.remove(moved_item)
+                seg_new = fn_update_seg(seg_new, seg_old)
+            else:
+                print("Pasting a copied in segment")
+                seg_new = fn_update_seg(seg_new, offset=offset)
             _plot_circle(
-                ax, circle.segment, "w", SEG_LINEWIDTH, ":", fn_update_seg)
-            _circle_last_picked.remove(circle)
-            _draggable_circles.remove(circle)
-            fn_update_seg(circle.segment, seg_old)
+                ax, seg_new, "w", SEG_LINEWIDTH, ":", fn_update_seg)
        
     fig.canvas.mpl_connect("button_release_event", on_btn_release)
     

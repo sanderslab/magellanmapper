@@ -695,6 +695,7 @@ class Visualization(HasTraits):
         # concatenate for in-place array update, though append
         # and re-assigning also probably works
         self.segments = np.concatenate((self.segments, seg))
+        #print("segs:\n{}".format(self.segments))
         return seg
     
     def _seg_for_db(self, seg):
@@ -760,7 +761,7 @@ class Visualization(HasTraits):
             The updated segment in 
             (z, y, x, rad, confirmed, truth, abs_z, abs_y, abs_x) format.
         """
-        seg = None
+        seg = segment_new
         # remove all row selections to ensure that no more than one 
         # row is selected by the end
         while len(self.segs_selected) > 0:
@@ -778,7 +779,7 @@ class Visualization(HasTraits):
                 self._force_seg_refresh(segi, show=True)
         elif offset is not None:
             # adds a new segment with the given offset
-            seg = self._add_segment(segment_new, offset)
+            seg = self._add_segment(segment_new, offset)[0]
             self.segs_selected.append(len(self.segments) - 1)
         return seg
     

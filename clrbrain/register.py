@@ -1017,18 +1017,19 @@ if __name__ == "__main__":
             config.labels_level, densities)
         # experiment identifiers, assumed to be at the start of the image 
         # filename, separated by a "-"; if no dash, will use the whole name
+        show = not config.no_show
         exps = []
         for vol, path in zip(vol_dicts, json_paths):
             exp_name = os.path.basename(path)
             plot_2d.plot_volumes(
                 vol, ignore_empty=True, 
                 title=os.path.splitext(exp_name)[0], 
-                densities=densities, show=False)
+                densities=densities, show=show)
             exps.append(exp_name.split("-")[0])
         group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
         plot_2d.plot_volumes(
             group_vol_dict, ignore_empty=True, 
             title="Volume Means from {} at Level {}".format(
                 ", ".join(exps), config.labels_level), 
-            densities=densities, show=True, multiple=True)
+            densities=densities, show=show, multiple=True)
     #_test_labels_lookup()

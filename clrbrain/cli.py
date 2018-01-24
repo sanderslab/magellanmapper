@@ -396,6 +396,7 @@ def main(process_args_only=False):
     parser.add_argument("--rescale")
     parser.add_argument("--interval")
     parser.add_argument("--delay")
+    parser.add_argument("--no_show", action="store_true")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -520,6 +521,9 @@ def main(process_args_only=False):
     if args.delay:
         config.delay = int(args.delay)
         print("Set delay to {}".format(config.delay))
+    if args.no_show:
+        config.no_show = args.no_show
+        print("Set no show to {}".format(config.no_show))
     
     # load "truth blobs" from separate database for viewing
     ext = lib_clrbrain.get_filename_ext(filename)

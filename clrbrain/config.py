@@ -26,6 +26,7 @@ import numpy as np
 from collections import OrderedDict
 
 verbose = False
+no_show = False
 POS_THRESH = 0.001 # threshold for positive values for float comparison
 
 class ProcessSettings(dict):
@@ -124,14 +125,11 @@ def update_process_settings(settings, settings_type):
 # defaults to lightsheet 5x settings
 process_settings = ProcessSettings()
 
-# main DB
-db = None
+# DATABASE
 
-# truth blobs DB
-truth_db = None
-
-# automated verifications DB
-verified_db = None
+db = None # main DB
+truth_db = None # truth blobs DB
+verified_db = None # automated verifications DB
 
 # receiver operating characteristic
 roc = False

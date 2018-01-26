@@ -53,7 +53,8 @@ PIXEL_DTYPE = {
 # 10: started at 10 because of previous versions prior to numbering; 
 #     fixed saved resolutions to contain only the given series
 # 11: sizes uses the image5d shape rather than the original image's size
-IMAGE5D_NP_VER = 11 # image5d Numpy saved array version number
+# 12: fixed replacing dtype, near_min/max when saving image in transpose_npy
+IMAGE5D_NP_VER = 12 # image5d Numpy saved array version number
 SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
 
@@ -201,6 +202,28 @@ def _save_image_info(filename_info_npz, names, sizes, resolutions,
     print("info file saved to {}".format(filename_info_npz))
     print("file save time: {}".format(time() - time_start))
 
+def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
+    reload_info = False
+    if curr_ver >= IMAGE5D_NP_VER:
+        return reload_info
+    if curr_ver <= 10:
+        # ver 10 -> 11
+        # no change since most likely won't encounter any difference
+        pass
+    if curr_ver <= 11:
+        if info["pixel_type"] != image5d.dtype:
+            info = dict(info)
+            info["pixel_type"] = image5d.dtype
+            info["near_min"], info["near_max"] = np.percentile(image5d, (0.5, 99.5))
+            outfile_info = open(filename_info_npz, "wb")
+            np.savez(outfile_info, **info)
+            outfile_info.close()
+            print("updated pixel type to {}, near_min to {}, near_max to {}"
+                  .format(info["pixel_type"], info["near_min"], 
+                          info["near_max"]))
+            reload_info = True
+    return reload_info
+
 def read_file(filename, series, load=True, z_max=-1, 
               offset=None, size=None, channel=-1, return_info=False, 
               import_if_absent=True):
@@ -232,86 +255,91 @@ def read_file(filename, series, load=True, z_max=-1,
     if load:
         try:
             time_start = time()
-            # loads stored Numpy arrays, using mem-mapped accessed for the image
-            # file to minimize memory requirement, only loading on-the-fly
-            output = np.load(filename_info_npz)
-            '''
-            # convert old monolithic archive into 2 separate archives
-            filename_npz = filename + str(series).zfill(5) + ".npz" # old format
-            output = np.load(filename_npz)
-            outfile_image5d = open(filename_image5d_npz, "wb")
-            np.save(outfile_image5d, output["image5d"])
-            outfile_image5d.close()
-            outfile_info = open(filename_info_npz, "wb")
-            np.savez(outfile_info, names=output["names"], sizes=output["sizes"], 
-                     resolutions=output["resolutions"], magnification=output["magnification"], 
-                     zoom=output["zoom"], pixel_type=output["pixel_type"])
-            outfile_info.close()
-            print('file opening time: %f' %(time() - time_start))
-            return
-            '''
-            # find the info version number
-            try:
-                image5d_ver_num = output["ver"]
-                print("loaded image5d version number {}".format(image5d_ver_num))
-            except KeyError:
-                print("could not find image5d version number")
-            try:
-                names = output["names"]
-                print("names: {}".format(names))
-            except KeyError:
-                print("could not find names")
-            try:
-                sizes = output["sizes"]
-                print("sizes {}".format(sizes))
-            except KeyError:
-                print("could not find sizes")
-            try:
-                detector.resolutions = output["resolutions"]
-                print("set resolutions to {}".format(detector.resolutions))
-            except KeyError:
-                print("could not find resolutions")
-            try:
-                detector.magnification = output["magnification"]
-                print("magnification: {}".format(detector.magnification))
-            except KeyError:
-                print("could not find magnification")
-            try:
-                detector.zoom = output["zoom"]
-                print("zoom: {}".format(detector.zoom))
-            except KeyError:
-                print("could not find zoom")
-            # TODO: remove since stored in image5d?
-            try:
-                pixel_type = output["pixel_type"]
-                print("pixel type is {}".format(pixel_type))
-            except KeyError:
-                print("could not find near_max")
-            try:
-                plot_3d.near_max = output["near_max"]
-                print("set near_max to {}".format(plot_3d.near_max))
-                plot_2d.vmax_overview = plot_3d.near_max * 1.1
-                print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
-            except KeyError:
-                print("could not find near_max")
-            
-            # load original image
-            image5d = np.load(filename_image5d_npz, mmap_mode="r")
-            if offset is not None and size is not None:
-                # simplifies to reducing the image to a subset as an ROI if 
-                # offset and size given
-                image5d = plot_3d.prepare_roi(image5d, channel, size, offset)
-            '''
-            max_range = 0
-            if plot_3d.near_max is not None:
-                #print("dtype: {}".format(image5d.dtype))
-                if np.issubdtype(image5d.dtype, np.integer):
-                    max_range = np.iinfo(image5d.dtype).max
-                elif np.issubdtype(image5d.dtype, np.float):
-                    max_range = np.ninfo(image5d.dtype).max
-                if max_range != 0:
-                    plot_2d.vmax_overview = plot_3d.near_max / max_range
-            '''
+            load_info = True
+            while load_info:
+                # image info, such as microscopy data
+                output = np.load(filename_info_npz)
+                '''
+                # convert old monolithic archive into 2 separate archives
+                filename_npz = filename + str(series).zfill(5) + ".npz" # old format
+                output = np.load(filename_npz)
+                outfile_image5d = open(filename_image5d_npz, "wb")
+                np.save(outfile_image5d, output["image5d"])
+                outfile_image5d.close()
+                outfile_info = open(filename_info_npz, "wb")
+                np.savez(outfile_info, names=output["names"], sizes=output["sizes"], 
+                         resolutions=output["resolutions"], magnification=output["magnification"], 
+                         zoom=output["zoom"], pixel_type=output["pixel_type"])
+                outfile_info.close()
+                print('file opening time: %f' %(time() - time_start))
+                return
+                '''
+                try:
+                    # find the info version number
+                    image5d_ver_num = output["ver"]
+                    print("loaded image5d version number {}"
+                          .format(image5d_ver_num))
+                except KeyError:
+                    print("could not find image5d version number")
+                try:
+                    names = output["names"]
+                    print("names: {}".format(names))
+                except KeyError:
+                    print("could not find names")
+                try:
+                    sizes = output["sizes"]
+                    print("sizes {}".format(sizes))
+                except KeyError:
+                    print("could not find sizes")
+                try:
+                    detector.resolutions = output["resolutions"]
+                    print("set resolutions to {}".format(detector.resolutions))
+                except KeyError:
+                    print("could not find resolutions")
+                try:
+                    detector.magnification = output["magnification"]
+                    print("magnification: {}".format(detector.magnification))
+                except KeyError:
+                    print("could not find magnification")
+                try:
+                    detector.zoom = output["zoom"]
+                    print("zoom: {}".format(detector.zoom))
+                except KeyError:
+                    print("could not find zoom")
+                # TODO: remove since stored in image5d?
+                try:
+                    pixel_type = output["pixel_type"]
+                    print("pixel type is {}".format(pixel_type))
+                except KeyError:
+                    print("could not find near_max")
+                try:
+                    plot_3d.near_max = output["near_max"]
+                    print("set near_max to {}".format(plot_3d.near_max))
+                    plot_2d.vmax_overview = plot_3d.near_max * 1.1
+                    print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
+                except KeyError:
+                    print("could not find near_max")
+                
+                # load original image, using mem-mapped accessed for the image
+                # file to minimize memory requirement, only loading on-the-fly
+                image5d = np.load(filename_image5d_npz, mmap_mode="r")
+                if offset is not None and size is not None:
+                    # simplifies to reducing the image to a subset as an ROI if 
+                    # offset and size given
+                    image5d = plot_3d.prepare_roi(image5d, channel, size, offset)
+                '''
+                max_range = 0
+                if plot_3d.near_max is not None:
+                    #print("dtype: {}".format(image5d.dtype))
+                    if np.issubdtype(image5d.dtype, np.integer):
+                        max_range = np.iinfo(image5d.dtype).max
+                    elif np.issubdtype(image5d.dtype, np.float):
+                        max_range = np.ninfo(image5d.dtype).max
+                    if max_range != 0:
+                        plot_2d.vmax_overview = plot_3d.near_max / max_range
+                '''
+                load_info = _update_image5d_np_ver(
+                    image5d_ver_num, image5d, output, filename_info_npz)
             if return_info:
                 return image5d, output
             return image5d
@@ -531,6 +559,11 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     image5d.flush()
     info["resolutions"] = detector.resolutions
     info["sizes"] = sizes
+    info["pixel_type"] = image5d_transposed.dtype
+    # simply to using whole image since generally small enough after
+    # tranposition
+    info["near_min"], info["near_max"] = np.percentile(
+        image5d_transposed, (0.5, 99.5))
     outfile_info = open(filename_info_npz, "wb")
     np.savez(outfile_info, **info)
     outfile_info.close()

@@ -29,6 +29,7 @@ from clrbrain import plot_2d
 
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
+IMG_GROUPED = "grouped.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -264,13 +265,24 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     if name_prefix is None:
         name_prefix = fixed_file
     fixed_img = _load_numpy_to_sitk(fixed_file)
-    
+    '''
+    # for some reason cannot load the .mhd file directly for the fixed file 
+    # or else get "MovingImage is not present" error, whereas loading the 
+    # fixed file from a Numpy array avoids the error
+    if isinstance(fixed_file, str):
+        if fixed_file.endswith(".mhd"):
+            fixed_img = sitk.ReadImage(fixed_file)
+        else:
+            fixed_img = _load_numpy_to_sitk(fixed_file)
+    else:
+        fixed_img = fixed_file
+    '''
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
     moving_img = transpose_img(moving_img, plane, flip)
     
-    print(fixed_img)
-    print(moving_img)
+    print("fixed image from {}:\n{}".format(fixed_file, fixed_img))
+    print("moving image from {}:\n{}".format(moving_file, moving_img))
     
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(fixed_img)
@@ -301,10 +313,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     transformed_img = elastix_img_filter.GetResultImage()
     
     # apply transformation to label files
+    img_files = (IMG_LABELS, )
     transform_param_map = elastix_img_filter.GetTransformParameterMap()
     transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
-    img_files = (IMG_LABELS, )
     imgs_transformed = []
     for img_file in img_files:
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
@@ -385,7 +397,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     _show_overlays(imgs, translation, fixed_file, None)
     
 def register_group(img_files, flip=None, show_imgs=True, 
-             write_imgs=False, name_prefix=None):
+             write_imgs=True, name_prefix=None):
     """Group registers several images to one another.
     
     Args:
@@ -396,10 +408,12 @@ def register_group(img_files, flip=None, show_imgs=True,
         show_imgs: True if the output images should be displayed; defaults to 
             True.
         write_imgs: True if the images should be written to file; defaults to 
-            False.
+            True.
         name_prefix: Path with base name where registered files are located; 
             defaults to None, in which case the fixed_file path will be used.
     """
+    if name_prefix is None:
+        name_prefix = img_files[0]
     img_vector = sitk.VectorOfImage()
     flip_img = False
     origin = None
@@ -429,13 +443,24 @@ def register_group(img_files, flip=None, show_imgs=True,
     param_map = sitk.GetDefaultParameterMap("groupwise")
     param_map["FinalGridSpacingInVoxels"] = ["50"]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
+    # TESTING:
+    #param_map["MaximumNumberOfIterations"] = ["0"]
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
-    sitk.Show(transformed_img)
     
-
+    if show_imgs:
+        sitk.Show(transformed_img)
+    
+    if write_imgs:
+        # write both the .mhd and Numpy array files
+        out_path = name_prefix + IMG_GROUPED
+        print("writing {}".format(out_path))
+        sitk.WriteImage(transformed_img, out_path, False)
+        img_np = sitk.GetArrayFromImage(transformed_img)
+        importer.save_np_image(img_np, out_path, cli.series)
+    
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.
@@ -997,8 +1022,10 @@ if __name__ == "__main__":
         register(*cli.filenames[0:2], plane=plot_2d.plane, 
                  flip=flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[1]:
-        # groupwise registration
-        register_group(cli.filenames, flip=config.flip)
+        # groupwise registration, which assumes that the last image 
+        # filename given is the prefix and uses the full flip array
+        prefix = cli.filenames[-1]
+        register_group(cli.filenames[:-1], flip=config.flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[2]:
         # overlay registered images in each orthogonal plane
         for out_plane in plot_2d.PLANE:

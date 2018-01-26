@@ -570,6 +570,30 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     print("saved transposed file to {} with shape {}".format(
         filename_image5d_npz, image5d_transposed.shape))
 
+def save_np_image(image, filename, series):
+    """Save Numpy image to file.
+    
+    Assumes that the image or another image with similar parameters 
+    has already been loaded so that the info file 
+    can be constructed from the currently set parameters. Near min/max values 
+    are generated from the entire image.
+    
+    Args:
+        image: Numpy array.
+        filename: Filename of original file, which will be passed to 
+            :func:``_make_filenames`` to create output filenames.
+        series: Image series.
+    """
+    filename_image5d_npz, filename_info_npz = _make_filenames(
+        filename, series, ext=lib_clrbrain.get_filename_ext(filename))
+    out_file = open(filename_image5d_npz, "wb")
+    np.save(out_file, image)
+    out_file.close()
+    _save_image_info(
+        filename_info_npz, [os.path.basename(filename)], [image.shape], 
+        detector.resolutions, detector.magnification, detector.zoom, 
+        image.dtype, *np.percentile(image, (0.5, 99.5)))
+
 if __name__ == "__main__":
     print("Clrbrain importer manipulations")
     from clrbrain import cli

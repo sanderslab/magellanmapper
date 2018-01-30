@@ -19,6 +19,7 @@ except ImportError as e:
           "when attempting to register images or load registered images")
 import numpy as np
 from skimage import measure
+from skimage import morphology
 from skimage import transform
 
 from clrbrain import cli
@@ -184,24 +185,29 @@ def _mirror_labels(img, img_ref):
     
     # find the bounds of the reference image in the given plane and resize 
     # the corresponding section of the labels image to the bounds of the 
-    # reference image in the next plane closer to the edge; essentially 
-    # extends the last edge labels plane, but 
-    # TODO: remove ventricular from this last edge before extending
-    bbox_last = _get_bbox(img_ref_np[i])
-    while i > 0 and len(img_ref_np[i - 1] >= 10) > 0 and bbox_last is not None:
-        shape_last, slices_last = _get_bbox_region(bbox_last)
-        plane_region = img_np[i, slices_last[0], slices_last[1]]
+    # reference image in the next plane closer to the edge, essentially 
+    # extending the last edge plane of the labels image
+    plane_region = None
+    while i >= 0:
         #print("plane_region max: {}".format(np.max(plane_region)))
-        bbox = _get_bbox(img_ref_np[i - 1])
-        if bbox is not None:
-            shape, slices = _get_bbox_region(bbox)
+        bbox = _get_bbox(img_ref_np[i])
+        if bbox is None:
+            break
+        shape, slices = _get_bbox_region(bbox)
+        if plane_region is None:
+            plane_region = img_np[i, slices[0], slices[1]]
+            # remove ventricular space using empirically determined selem, 
+            # which appears to be very sensitive to radius since values above 
+            # or below lead to square shaped artifact along outer sample edges
+            plane_region = morphology.closing(
+                plane_region, morphology.square(12))
+        else:
             # assume that the reference image background is about < 10, the 
             # default threshold
             plane_region = transform.resize(
                 plane_region, shape, preserve_range=True)
             #print("plane_region max: {}".format(np.max(plane_region)))
-            img_np[i - 1, slices[0], slices[1]] = plane_region
-        bbox_last = bbox
+            img_np[i, slices[0], slices[1]] = plane_region
         i -= 1
     
     # find the last non-zero plane
@@ -1077,8 +1083,8 @@ if __name__ == "__main__":
         flip = config.flip[0]
     
     #_test_labels_lookup()
-    #_test_mirror_labels(cli.filenames[1])
-    #os._exit(os.EX_OK)
+    _test_mirror_labels(cli.filenames[1])
+    os._exit(os.EX_OK)
     
     if config.register_type is None:
         # explicitly require a registration type

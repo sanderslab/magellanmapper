@@ -48,7 +48,7 @@ def calc_scaling_factor():
     lib_clrbrain.printv("scaling_factor: {}".format(factor))
     return factor
 
-def segment_rw(roi, beta=50.0):
+def segment_rw(roi, beta=50.0, vmin=0.33, vmax=0.4):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -60,8 +60,8 @@ def segment_rw(roi, beta=50.0):
     print("Random-Walker based segmentation...")
     # random-walker segmentation
     markers = np.zeros(roi.shape, dtype=np.uint8)
-    markers[roi > 0.4] = 1
-    markers[roi < 0.33] = 2
+    markers[roi >= vmax] = 1
+    markers[roi < vmin] = 2
     walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
     
     # label neighboring pixels to segmented regions

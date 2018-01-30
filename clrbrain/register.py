@@ -18,6 +18,7 @@ except ImportError as e:
     print("WARNING: SimpleElastix could not be found, so there will be error "
           "when attempting to register images or load registered images")
 import numpy as np
+from skimage import measure
 from skimage import transform
 
 from clrbrain import cli
@@ -130,15 +131,38 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
         print("Transform parameters do not match scaling dimensions")
     return param_map, translation
 
-def _mirror_labels(img):
-    """Mirror labels across the z plane.
+def _get_bbox(img_np, threshold=10):
+    labels, walker = detector.segment_rw(img_np, vmin=threshold, vmax=threshold)
+    labels_props = measure.regionprops(labels, walker)
+    if len(labels_props) < 1:
+        return None
+    labels_bbox = labels_props[0].bbox
+    #print("bbox: {}".format(labels_bbox))
+    return labels_bbox
+
+def _get_bbox_region(bbox):
+    shape = (bbox[2] - bbox[0], bbox[3] - bbox[1])
+    slices = (slice(bbox[0], bbox[0] + shape[0]),
+              slice(bbox[1], bbox[1] + shape[1]))
+    #print("shape: {}, slices: {}".format(shape, slices))
+    return shape, slices
+
+def _mirror_labels(img, img_ref):
+    """Mirror labels across sagittal midline and add lateral edges.
     
-    Assumes that the image is empty from the far z planes toward the middle 
-    but not necessarily the exact middle. Finds the first plane that doesn't 
-    have any intensity values and sets this position as the mirror plane.
+    Assume that the image is in sagittal sections and consists of only one 
+    hemisphere, empty from the far z planes toward the middle but not 
+    necessarily the exact middle of the image. Find the first plane that 
+    doesn't have any intensity values and set this position as the mirror 
+    plane.
+    
+    Also assume that the later edges of the image are also missing. Build 
+    edges that match the size of the reference image on one side and mirror 
+    over to the other side.
     
     Args:
-        img: Image in SimpleITK format.
+        img: Labels image in SimpleITK format.
+        img: Reference atlas image in SimpleITK format.
     
     Returns:
         The mirrored image in the same dimensions, origin, and spacing as the 
@@ -147,9 +171,41 @@ def _mirror_labels(img):
     # TODO: check to make sure values don't get wrapped around if np.int32
     # max value is less than data max val
     img_np = sitk.GetArrayFromImage(img).astype(np.int32)
+    img_ref_np = sitk.GetArrayFromImage(img_ref).astype(np.int32)
     tot_planes = len(img_np)
+    
+    # find the first non-zero plane
+    i = 0
+    for plane in img_np:
+        if not np.allclose(plane, 0):
+            print("found first non-zero plane at i of {}".format(i))
+            break
+        i += 1
+    
+    # find the bounds of the reference image in the given plane and resize 
+    # the corresponding section of the labels image to the bounds of the 
+    # reference image in the next plane closer to the edge; essentially 
+    # extends the last edge labels plane, but 
+    # TODO: remove ventricular from this last edge before extending
+    bbox_last = _get_bbox(img_ref_np[i])
+    while i > 0 and len(img_ref_np[i - 1] >= 10) > 0 and bbox_last is not None:
+        shape_last, slices_last = _get_bbox_region(bbox_last)
+        plane_region = img_np[i, slices_last[0], slices_last[1]]
+        #print("plane_region max: {}".format(np.max(plane_region)))
+        bbox = _get_bbox(img_ref_np[i - 1])
+        if bbox is not None:
+            shape, slices = _get_bbox_region(bbox)
+            # assume that the reference image background is about < 10, the 
+            # default threshold
+            plane_region = transform.resize(
+                plane_region, shape, preserve_range=True)
+            #print("plane_region max: {}".format(np.max(plane_region)))
+            img_np[i - 1, slices[0], slices[1]] = plane_region
+        bbox_last = bbox
+        i -= 1
+    
+    # find the last non-zero plane
     i = tot_planes
-    # need to work backward since the starting z-planes may also be empty
     for plane in img_np[::-1]:
         if not np.allclose(plane, 0):
             break
@@ -1000,6 +1056,12 @@ def _test_labels_lookup():
     ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, np.ones(3) * config.labels_scaling)
     print("blob IDs:\n{}".format(ids))
 
+def _test_mirror_labels(moving_file_dir):
+    img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
+    img_ref = sitk.ReadImage(os.path.join(moving_file_dir, IMG_ATLAS))
+    img = _mirror_labels(img, img_ref)
+    sitk.Show(img)
+
 if __name__ == "__main__":
     print("Clrbrain image registration")
     cli.main(True)
@@ -1013,6 +1075,11 @@ if __name__ == "__main__":
     flip = False
     if config.flip is not None:
         flip = config.flip[0]
+    
+    #_test_labels_lookup()
+    #_test_mirror_labels(cli.filenames[1])
+    #os._exit(os.EX_OK)
+    
     if config.register_type is None:
         # explicitly require a registration type
         print("Please choose a registration type")
@@ -1059,4 +1126,3 @@ if __name__ == "__main__":
             title="Volume Means from {} at Level {}".format(
                 ", ".join(exps), config.labels_level), 
             densities=densities, show=show, multiple=True)
-    #_test_labels_lookup()

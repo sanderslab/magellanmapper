@@ -1083,8 +1083,8 @@ if __name__ == "__main__":
         flip = config.flip[0]
     
     #_test_labels_lookup()
-    _test_mirror_labels(cli.filenames[1])
-    os._exit(os.EX_OK)
+    #_test_mirror_labels(cli.filenames[1])
+    #os._exit(os.EX_OK)
     
     if config.register_type is None:
         # explicitly require a registration type

@@ -760,7 +760,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                     seg = fn_update_seg(seg, offset=offset)
                     # adds a circle to denote the new segment
                     patch = _plot_circle(
-                        ax, seg[0], "none", SEG_LINEWIDTH, "-", fn_update_seg)
+                        ax, seg, "none", SEG_LINEWIDTH, "-", fn_update_seg)
             except ValueError as e:
                 print(e)
                 print("not on a plot to select a point")

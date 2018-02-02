@@ -62,7 +62,7 @@ then
     server_cmd+=" && unzip fiji-nojre.zip"
     server_cmd+=" && Fiji.app/ImageJ-linux64 --update add-update-site BigStitcher http://sites.imagej.net/BigStitcher/"
     server_cmd+=" && Fiji.app/ImageJ-linux64 --update update"
-    server_cmd+=" ; rm Fiji.app/plugins/multiview?reconstruction-*.jar ; mv $mv_recon Fiji.app/plugins"
+    #server_cmd+=" ; rm Fiji.app/plugins/multiview?reconstruction-*.jar ; mv $mv_recon Fiji.app/plugins"
 fi
 scp -i "$pem" $deploy_files ec2-user@"$ip":~
 ssh -t -i "$pem" ec2-user@"$ip" "$server_cmd"

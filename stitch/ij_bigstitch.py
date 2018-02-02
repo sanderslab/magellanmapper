@@ -32,8 +32,9 @@ basename = os.path.basename(in_file)
 exp_code = basename.split("-")[0]
 dataset_name_base = "dataset_{}".format(exp_code)
 dataset_name_xml = "{}.xml".format(dataset_name_base)
-dataset_path = os.path.join(out_dir, dataset_name)
-print("dataset path: {}".format(dataset_path))
+dataset_path = os.path.join(out_dir, dataset_name_base)
+dataset_path_xml = os.path.join(out_dir, dataset_name_xml)
+print("dataset path: {}".format(dataset_path_xml))
 
 time_start = time()
 # import into HDF5 format (.h5 file)
@@ -49,20 +50,20 @@ options = (
     "check_stack_sizes "
     "resave_as_hdf5 "
     "use_deflate_compression "
-    "export_path=" + dataset_name_base
+    "export_path=" + dataset_path
 )
 perform_task("Define dataset ...", options);
 
 # choose the illumination for each tile
 options = (
-    "select=" + dataset_path + " "
+    "select=" + dataset_path_xml + " "
     "selection=[Pick brightest]"
 )
 perform_task("Select Illuminations", options);
 
 # calculate tile shifts
 options = (
-    "select=" + dataset_path + " "
+    "select=" + dataset_path_xml + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "
@@ -79,7 +80,7 @@ perform_task("Calculate pairwise shifts ...", options)
 
 # filter out poor alignments (currently set to filter none)
 options = (
-    "select=" + dataset_path + " "
+    "select=" + dataset_path_xml + " "
     "filter_by_link_quality "
     "min_r=0.50 "
     "max_r=1 "
@@ -92,7 +93,7 @@ perform_task("Filter pairwise shifts ...", options);
 
 # apply the shifts in an iterative manner
 options = (
-    "select=" + dataset_path + " "
+    "select=" + dataset_path_xml + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "
@@ -116,7 +117,7 @@ perform_task("Optimize globally and apply shifts ...", options);
 # assume that Multiview-Reconstruction plugin has been patched to avoid 
 # inserting the bounding box dimensions in the dropdown box choices
 options = (
-    "select=" + dataset_path + " "
+    "select=" + dataset_path_xml + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
     "process_illumination=[All illuminations] "

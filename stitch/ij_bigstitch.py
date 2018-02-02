@@ -30,7 +30,8 @@ print("out_dir: {}".format(out_dir))
 # section before the first dash in the input filename
 basename = os.path.basename(in_file)
 exp_code = basename.split("-")[0]
-dataset_name = "dataset_{}.xml".format(exp_code)
+dataset_name_base = "dataset_{}".format(exp_code)
+dataset_name_xml = "{}.xml".format(dataset_name_base)
 dataset_path = os.path.join(out_dir, dataset_name)
 print("dataset path: {}".format(dataset_path))
 
@@ -38,7 +39,7 @@ time_start = time()
 # import into HDF5 format (.h5 file)
 options = (
     "type_of_dataset=[Automatic Loader (Bioformats based)] "
-    "xml_filename=" + dataset_name + " "
+    "xml_filename=" + dataset_name_xml + " "
     "path=" + in_file + " "
     "exclude=10 "
     "bioformats_series_are?=Tiles "
@@ -46,7 +47,9 @@ options = (
     "use_virtual_images_(cached) "
     "dataset_save_path=" + out_dir + " "
     "check_stack_sizes "
-    "resave_as_hdf5"
+    "resave_as_hdf5 "
+    "use_deflate_compression "
+    "export_path=" + dataset_name_base
 )
 perform_task("Define dataset ...", options);
 

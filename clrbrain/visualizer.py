@@ -811,12 +811,11 @@ class Visualization(HasTraits):
             val: Numpy array of (n, 9) shape with segments. The columns
                 correspond to (z, y, x, radius, confirmed, truth, abs_z,
                 abs_y, abs_x). Note that the "abs" values are different from 
-                those used for duplicate shifting. Defaults to one row if None.
+                those used for duplicate shifting.
         """
-        if val is None:
-            # need to include at least one row or else will crash
-            self._segments = np.zeros((1, 9))
-        else:
+        # no longer need to give default value if None, presumably from 
+        # update of TraitsUI from 5.1.0 to 5.2.0pre
+        if val is not None:
             self._segments = val
     
     # the layout of the dialog created

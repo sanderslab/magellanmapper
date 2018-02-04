@@ -125,7 +125,7 @@ options = (
     "process_tile=[All tiles] "
     "process_timepoint=[All Timepoints] "
     #"tile_0 tile_1 "
-    "bounding_box=[All Views] "
+    #"bounding_box=[All Views] "
     "downsampling=1 "
     "pixel_type=[16-bit unsigned integer] "
     "interpolation=[Linear Interpolation] "

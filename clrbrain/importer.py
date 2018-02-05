@@ -477,6 +477,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         rescale: Rescaling factor. Defaults to None, in which case no 
             rescaling will occur. Rescaling takes place in multiplrocessing.
     """
+    time_start = time()
     image5d, image5d_info = read_file(filename, series, return_info=True)
     info = dict(image5d_info)
     sizes = info["sizes"]
@@ -569,6 +570,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     outfile_info.close()
     print("saved transposed file to {} with shape {}".format(
         filename_image5d_npz, image5d_transposed.shape))
+    print("time elapsed (s): {}".format(time() - time_start))
 
 def save_np_image(image, filename, series):
     """Save Numpy image to file.

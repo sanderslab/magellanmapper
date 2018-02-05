@@ -52,12 +52,12 @@ archive="clrbrain_${git_hash}.zip"
 git archive -o "$archive" HEAD
 
 deploy_files="$archive"
-mv_recon="multiview-reconstruction-*-SNAPSHOT.jar"
+#mv_recon="multiview-reconstruction-*-SNAPSHOT.jar"
 server_cmd="unzip -o $archive -d clrbrain"
 #server_cmd="echo hello"
 if [ $update -eq 0 ]
 then
-    deploy_files+=" ../multiview-reconstruction/target/$mv_recon"
+    #deploy_files+=" ../multiview-reconstruction/target/$mv_recon"
     server_cmd+=" && wget $FIJI"
     server_cmd+=" && unzip fiji-nojre.zip"
     server_cmd+=" && Fiji.app/ImageJ-linux64 --update add-update-site BigStitcher http://sites.imagej.net/BigStitcher/"

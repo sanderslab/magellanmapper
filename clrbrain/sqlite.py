@@ -188,11 +188,12 @@ def select_experiment(cur, name):
     
     Args:
         cur: Connection's cursor.
-        name: Name of the experiment.
+        name: Name of the experiment. If None, all experiments will be 
+            returned.
     
     Returns:
-        All of the experiments with the given name, or an empty list 
-            if none are found.
+        All of the experiments with the given name, an empty list 
+            if none are found, or all experiments if ``name`` is None.
     """
     cols = "id, name, date"
     #print("looking for exp: {}".format(name))

@@ -729,7 +729,8 @@ def process_file(filename_base, offset, roi_size):
         # export ROIs; assumes that info_proc was already loaded to 
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
-        exporter.export_rois(config.truth_db, image5d, channel, filename_base)
+        db = config.db if config.truth_db is None else config.truth_db
+        exporter.export_rois(db, image5d, channel, filename_base)
         
     elif proc_type == PROC_TYPES[6]:
         # transpose Numpy array

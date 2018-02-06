@@ -1,12 +1,13 @@
 #!/bin/bash
 # File exporter for Clrbrain
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Image exporter for Clrbrain.
 
 Convert images and corresponding database entries into formats for 
 machine learning algorithms or other applications.
 """
 
+import os
 import glob
 import numpy as np
 
@@ -60,7 +61,8 @@ def export_rois(db, image5d, channel, path):
             # convert blobs to ground truth
             img3d_truth = plot_3d.build_ground_truth(size, blobs)
             plot_2d.plot_roi(
-                img3d_truth, None, channel, show=False, title=path_img_annot)
+                img3d_truth, None, channel, show=False, 
+                title=os.path.splitext(path_img_annot)[0])
             np.save(path_img_annot, img3d_truth)
             
             print("exported {}".format(path_base))

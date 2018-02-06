@@ -1,6 +1,6 @@
 #!/bin/bash
 # Command line parsing and setup
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Command line parser and and environment setup for Clrbrain.
 
 This module can be run either as a script to work in headless mode or 
@@ -57,11 +57,20 @@ Attributes:
     PROC_TYPES: Processing modes. ``importonly`` imports an image stack and 
         exits non-interactively. ``processing`` processes and segments the 
         entire image stack and exits non-interactively. ``load`` loads already 
-        processed images and segments. ``transpose`` transposes the 
+        processed images and segments. ``extract`` extracts a single plane 
+        using the z-value from the offset and exits. ``export_rois`` 
+        exports ROIs from the current database to serial 2D plots. 
+        ``transpose`` transposes the 
         Numpy image file associated with ``filename`` with the ``--rescale`` 
         option. ``animated`` generates an animated GIF with the 
         ``--interval`` and ``--rescale`` options.
-    proc: The chosen processing mode
+    proc: The chosen processing mode; defaults to None.
+    TRUTH_DB_TYPES: Truth database modes. ``view`` loads the truth 
+        database corresponding to the filename and any offset/size to show 
+        alongside the current database. ``verify`` creates a new database 
+        to store results from ROC curve building. ``verified`` loads the  
+        verified database generated from the prior mode.
+    truth_db_type: The chosen truth database type; defaults to None.
 """
 
 import os

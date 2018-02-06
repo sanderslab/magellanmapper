@@ -397,9 +397,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             if segs_in is not None and segs_cmap is not None:
                 if circles in (CIRCLES[1].lower(), CIRCLES[3].lower()):
                     z_diff = np.abs(np.subtract(segs_in[:, 0], z_relative))
-                    r_orig = np.copy(segs_in[:, 3])
+                    r_orig = np.abs(np.copy(segs_in[:, 3]))
                     segs_in[:, 3] = np.subtract(
-                        segs_in[:, 3], np.divide(z_diff, 3))
+                        r_orig, np.divide(z_diff, 3))
                     # make circles below 3/4 of their original radius 
                     # invisible but not removed to preserve their corresponding 
                     # colormap index
@@ -682,16 +682,18 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     segs_in = None
     segs_out = None
     if segments is not None and len(segments) > 0:
+        # separate segments inside from outside the ROI
+        if mask_in is not None:
+            segs_in = segments[mask_in]
+            segs_out = segments[np.invert(mask_in)]
         # separate out truth blobs
         if segments.shape[1] >= 6:
             if blobs_truth is None:
                 blobs_truth = segments[segments[:, 5] >= 0]
             print("blobs_truth:\n{}".format(blobs_truth))
-            segments = segments[segments[:, 5] == -1]
-        # separate segments inside from outside the ROI
-        if mask_in is not None:
-            segs_in = segments[mask_in]
-            segs_out = segments[np.invert(mask_in)]
+            segs_in = segs_in[segs_in[:, 5] != 0]
+            segs_out = segs_out[segs_out[:, 5] != 0]
+            print("segs_in:\n{}".format(segs_in))
         
     # selected or newly added patches since difficult to get patch from collection,
     # and they don't appear to be individually editable

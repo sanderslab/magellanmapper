@@ -121,6 +121,8 @@ class DraggableCircle:
         if self.press is None: return
         if event.inaxes != self.circle.axes: return
         x0, y0, xpress, ypress = self.press
+        dx = None
+        dy = None
         if event.key == "shift":
             dx = event.xdata - xpress
             dy = event.ydata - ypress
@@ -677,18 +679,19 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     ax_z_list = []
-    # separate out truth blobs
-    if segments.shape[1] >= 6:
-        if blobs_truth is None:
-            blobs_truth = segments[segments[:, 5] >= 0]
-        print("blobs_truth:\n{}".format(blobs_truth))
-        segments = segments[segments[:, 5] == -1]
-    # separate segments inside from outside the ROI
     segs_in = None
     segs_out = None
-    if mask_in is not None:
-        segs_in = segments[mask_in]
-        segs_out = segments[np.invert(mask_in)]
+    if segments is not None and len(segments) > 0:
+        # separate out truth blobs
+        if segments.shape[1] >= 6:
+            if blobs_truth is None:
+                blobs_truth = segments[segments[:, 5] >= 0]
+            print("blobs_truth:\n{}".format(blobs_truth))
+            segments = segments[segments[:, 5] == -1]
+        # separate segments inside from outside the ROI
+        if mask_in is not None:
+            segs_in = segments[mask_in]
+            segs_out = segments[np.invert(mask_in)]
         
     # selected or newly added patches since difficult to get patch from collection,
     # and they don't appear to be individually editable

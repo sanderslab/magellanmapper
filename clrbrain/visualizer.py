@@ -696,7 +696,14 @@ class Visualization(HasTraits):
         print("added segment: {}".format(seg))
         # concatenate for in-place array update, though append
         # and re-assigning also probably works
-        self.segments = np.concatenate((self.segments, seg))
+        #print(self.segments)
+        if self.segments is None or len(self.segments) == 0:
+            # copy since the object may be changed elsewhere; cast to float64 
+            # since original type causes an incorrect database insertion 
+            # for some reason
+            self.segments = np.copy(seg).astype(np.float64)
+        else:
+            self.segments = np.concatenate((self.segments, seg))
         #print("segs:\n{}".format(self.segments))
         return seg
     

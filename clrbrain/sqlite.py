@@ -367,6 +367,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
     for blob in blobs:
         blob_entry = [roi_id]
         blob_entry.extend(blob)
+        #print("blob type:\n{}".format(blob.dtype))
         blobs_list.append(blob_entry)
         if blob[4] == 1:
             confirmed = confirmed + 1

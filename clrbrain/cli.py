@@ -750,7 +750,8 @@ def process_file(filename_base, offset, roi_size):
             splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
             print("using {}".format(splice))
             series_fill = str(series).zfill(5)
-            filename_roi = filename + splice
+            filename_roi = lib_clrbrain.insert_before_ext(
+                filename, "_" + splice)
             filename_image5d_proc = _splice_before(filename_image5d_proc, 
                                                    series_fill, splice)
             filename_info_proc = _splice_before(filename_info_proc, 
@@ -818,6 +819,7 @@ def process_file(filename_base, offset, roi_size):
                         verified_db.load_db(
                             os.path.basename(db_path_base) + "_verified.db", True)
                         '''
+                        # series not included in exp name since in ROI
                         exp_name = os.path.basename(filename_roi)
                         exp_id = sqlite.insert_experiment(
                             config.verified_db.conn, config.verified_db.cur, 

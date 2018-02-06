@@ -203,26 +203,33 @@ def _save_image_info(filename_info_npz, names, sizes, resolutions,
     print("file save time: {}".format(time() - time_start))
 
 def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
-    reload_info = False
     if curr_ver >= IMAGE5D_NP_VER:
-        return reload_info
+        # no updates necessary
+        return False
+    
+    # update info
+    info_up = dict(info)
     if curr_ver <= 10:
         # ver 10 -> 11
-        # no change since most likely won't encounter any difference
+        # no change except ver since most likely won't encounter any difference
         pass
     if curr_ver <= 11:
+        # ver 11 -> 12
         if info["pixel_type"] != image5d.dtype:
-            info = dict(info)
-            info["pixel_type"] = image5d.dtype
-            info["near_min"], info["near_max"] = np.percentile(image5d, (0.5, 99.5))
-            outfile_info = open(filename_info_npz, "wb")
-            np.savez(outfile_info, **info)
-            outfile_info.close()
+            # Numpy tranpositions did not update pixel type and min/max
+            info_up["pixel_type"] = image5d.dtype
+            info_up["near_min"], info["near_max"] = np.percentile(
+                image5d, (0.5, 99.5))
             print("updated pixel type to {}, near_min to {}, near_max to {}"
-                  .format(info["pixel_type"], info["near_min"], 
-                          info["near_max"]))
-            reload_info = True
-    return reload_info
+                  .format(info_up["pixel_type"], info_up["near_min"], 
+                          info_up["near_max"]))
+    
+    # save updated info
+    info_up["ver"] = IMAGE5D_NP_VER
+    outfile_info = open(filename_info_npz, "wb")
+    np.savez(outfile_info, **info_up)
+    outfile_info.close()
+    return True
 
 def read_file(filename, series, load=True, z_max=-1, 
               offset=None, size=None, channel=-1, return_info=False, 
@@ -274,6 +281,7 @@ def read_file(filename, series, load=True, z_max=-1,
                 print('file opening time: %f' %(time() - time_start))
                 return
                 '''
+                image5d_ver_num = -1
                 try:
                     # find the info version number
                     image5d_ver_num = output["ver"]

@@ -892,8 +892,15 @@ def cycle_colors(i):
     return np.divide(color, upper)
 
 def plot_roc(stats_dict, name):
+    """Plot ROC curve.
+    
+    Args:
+        stats_dict: Dictionary of statistics to plot as given by 
+            :func:``mlearn.parse_grid_stats``.
+        name: String to display as title.
+    """
     fig = plt.figure()
-    posi = 1
+    posi = 1 # position of legend
     for group, iterable_dicts in stats_dict.items():
         lines = []
         colori = 0
@@ -908,12 +915,15 @@ def plot_roc(stats_dict, name):
             colori += 1
             for i, n in enumerate(params):
                 plt.annotate(n, (fdr[i], sens[i]))
-        legend = plt.legend(handles=lines, loc=posi, title=group)
+        # iterated legend position to avoid overlap from multiple legends
+        legend = plt.legend(
+            handles=lines, loc=posi, title=group, fancybox=True, 
+            framealpha=0.5)
         plt.gca().add_artist(legend)
         posi += 1
     plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
     plt.xlim([0.0, 1.2])
-    plt.ylim([0.0, 1.2])
+    plt.ylim([0.0, 1.0])
     plt.xlabel("False Discovery Rate")
     plt.ylabel("Sensitivity")
     plt.title("ROC for {}".format(name))

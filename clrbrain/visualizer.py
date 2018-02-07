@@ -169,7 +169,7 @@ class Visualization(HasTraits):
     _circles_2d = List
     _styles_2d = List
     _DEFAULTS_STYLES_2D = [
-        "Square no oblique", "Square with oblique", "Multi-zoom", "Wide ROI"]
+        "Square no oblique", "Square with oblique", "Single row", "Wide ROI", "Multi-zoom"]
     _atlas_label = None
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
@@ -575,7 +575,7 @@ class Visualization(HasTraits):
             # Square style with oblique view
             plot_2d.plot_2d_stack(*stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[2]:
-            # Multi-zoom style
+            # single row
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, single_zoom_row=True, 
                 z_level=plot_2d.Z_LEVELS[1], mlab_screenshot=screenshot)
@@ -583,6 +583,9 @@ class Visualization(HasTraits):
             # wide ROI
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2, mlab_screenshot=None, zoom_cols=7)
+        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[4]:
+            # rulti-zoom style
+            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=5, mlab_screenshot=None)
         else:
             # defaults to Square style without oblique view
             plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=3, mlab_screenshot=None)

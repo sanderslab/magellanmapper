@@ -647,22 +647,25 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         _hide_axes(ax)
         img2d_zoom = img2d
         patch_offset = offset[0:2]
-        print("patch_offset: {}".format(patch_offset))
         if i > 0:
-            # move origin progressively closer withe ach zoom level
-            origin = np.floor(np.multiply(offset[0:2], zoom_levels + i - 1) 
-                              / (zoom_levels + i)).astype(int)
+            # move origin progressively closer with each zoom level
+            zoom_mult = math.pow(i, 3)
+            origin = np.floor(np.multiply(
+                offset[0:2], zoom_levels + zoom_mult - 1) 
+                / (zoom_levels + zoom_mult)).astype(int)
             zoom_shape = np.flipud(img2d.shape)[0:2]
             # progressively decrease size, zooming in for each level
-            size = np.floor(zoom_shape / (i + 3)).astype(int)
+            size = np.floor(zoom_shape / (zoom_mult + 3)).astype(int)
             end = np.add(origin, size)
             # keep the zoomed area within the full 2D image
             for j in range(len(origin)):
                 if end[j] > zoom_shape[j]:
                     origin[j] -= end[j] - zoom_shape[j]
+            # zoom and position ROI patch position
             img2d_zoom = img2d_zoom[origin[1]:end[1], origin[0]:end[0]]
             print(img2d_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
+        print("patch_offset: {}".format(patch_offset))
         # show the zoomed 2D image along with rectangle showing ROI, 
         # downsampling by using threshold as mask
         downsample = np.max(np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
@@ -670,7 +673,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             downsample = 1
         ax.imshow(
             img2d_zoom[::downsample, ::downsample], cmap=colormap_2d, 
-            aspect=aspect, origin=origin, vmin=0.0, vmax=vmax_overview)
+            aspect=aspect, vmin=0.0, vmax=vmax_overview)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 

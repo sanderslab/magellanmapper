@@ -52,7 +52,16 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
     ax = fig.add_subplot(111)
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-
+    
+    # rescaled images will be converted from integer to float, so 
+    # vmax will need to be rescaled to 0-1 range
+    vmax = plot_2d.vmax_overview
+    max_range = 0
+    if rescale and np.issubdtype(images.dtype, np.integer):
+        max_range = np.iinfo(images.dtype).max
+    if max_range != 0:
+        vmax = vmax / max_range
+    
     # import the images as Matplotlib artists via multiprocessing
     plotted_imgs = [None for i in range(num_images)]
     img_size = None
@@ -68,7 +77,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         if img_size is None:
             img_size = img.shape
         plotted_imgs[i] = [ax.imshow(
-            img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=0.1, aspect=aspect, 
+            img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=vmax, aspect=aspect, 
             origin=origin)]
     pool.close()
     pool.join()

@@ -102,7 +102,7 @@ def update_process_settings(settings, settings_type):
         
     elif settings_type == "lightsheet_5x_02":
         settings["microscope_type"] = settings_type
-        settings["vis_3d"] = "surface"
+        settings["vis_3d"] = "points"
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
         settings["clip_max"] = 0.6

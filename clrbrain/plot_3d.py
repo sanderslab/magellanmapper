@@ -307,11 +307,13 @@ def plot_3d_points(roi, vis):
     time_start = time()
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
-    roi_1d = roi_1d[::mask]
+    # TODO: better performance if manually interval the points rather than 
+    # through mask flag?
+    #roi_1d = roi_1d[::mask]
     if points_len > 0:
         vis.scene.mlab.points3d(x, y, z, roi_1d, 
                                 mode="sphere", colormap="Greens", 
-                                scale_mode="none", #mask_points=mask, 
+                                scale_mode="none", mask_points=mask, 
                                 line_width=1.0, vmax=1.0, 
                                 vmin=0.0, transparent=True)
         print("time for 3D points display: {}".format(time() - time_start))

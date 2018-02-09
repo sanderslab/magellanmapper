@@ -11,6 +11,7 @@ import os
 import glob
 import numpy as np
 
+from clrbrain import chunking
 from clrbrain import lib_clrbrain
 from clrbrain import sqlite
 from clrbrain import plot_2d
@@ -23,7 +24,22 @@ def make_roi_paths(path, roi_id):
     path_img_annot = "{}_img_annot.npy".format(path_base)
     return path_base, path_img, path_blobs, path_img_annot
 
-def export_rois(db, image5d, channel, path):
+def export_rois(db, image5d, channel, path, border):
+    """Export all ROIs from database.
+    
+    Args:
+        db: Database from which to export.
+        image5d: The image with the ROIs.
+        channel: Channel to export.
+        path: Path with filename base from which to save the exported files.
+        border: True if the ROI should be clipped to a border, which is 
+            based on the :func:``chunking.calc_overlap``.
+    """
+    border_size = None
+    if border:
+        border_size = chunking.calc_overlap()[::-1]
+        border_size[2] = 0
+        print("Using border size of {} (x,y,z)".format(border_size))
     exps = sqlite.select_experiment(db.cur, None)
     for exp in exps:
         rois = sqlite.select_rois(db.cur, exp["id"])
@@ -32,12 +48,17 @@ def export_rois(db, image5d, channel, path):
             size = sqlite.get_roi_size(roi)
             offset = sqlite.get_roi_offset(roi)
             img3d = plot_3d.prepare_roi(image5d, channel, size, offset)
+            if border:
+                img3d = plot_3d.prepare_roi(
+                    img3d, channel, 
+                    np.subtract(img3d.shape[::-1], border_size), border_size)
             
             # get blobs, keep only confirmed ones, and change confirmation 
             # flag to avoid confirmation color in 2D plots
             roi_id = roi["id"]
             blobs = sqlite.select_blobs(db.cur, roi_id)
-            blobs[:, 0:3] = np.subtract(blobs[:, 0:3], offset[::-1])
+            blobs[:, 0:3] = np.subtract(
+                blobs[:, 0:3], np.add(offset, border_size)[::-1])
             blobs = blobs[blobs[:, 4] == 1]
             blobs[:, 4] = -1
             

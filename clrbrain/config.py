@@ -231,3 +231,7 @@ flip = None
 rescale = None # rescale image
 interval = None # interval
 delay = None # delay time between images
+
+# EXPORT IMAGES
+
+border = False # clip ROI to border

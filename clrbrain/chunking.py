@@ -22,6 +22,11 @@ from clrbrain import detector
 OVERLAP_FACTOR = 5
 
 def calc_overlap():
+    """Calculate overlap based on scaling factor and overlap.
+    
+    Returns:
+        Overlap in same order as :attr:``detector.resolutions``.
+    """
     return np.ceil(np.multiply(detector.calc_scaling_factor(), 
                                OVERLAP_FACTOR)).astype(int)
 

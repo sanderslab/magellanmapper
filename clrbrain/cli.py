@@ -406,6 +406,7 @@ def main(process_args_only=False):
     parser.add_argument("--interval")
     parser.add_argument("--delay")
     parser.add_argument("--no_show", action="store_true")
+    parser.add_argument("--border", action="store_true")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -533,6 +534,9 @@ def main(process_args_only=False):
     if args.no_show:
         config.no_show = args.no_show
         print("Set no show to {}".format(config.no_show))
+    if args.border:
+        config.border = args.border
+        print("Set ROI export to clip to border: {}".format(config.border))
     
     # load "truth blobs" from separate database for viewing
     ext = lib_clrbrain.get_filename_ext(filename)
@@ -730,7 +734,7 @@ def process_file(filename_base, offset, roi_size):
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
         db = config.db if config.truth_db is None else config.truth_db
-        exporter.export_rois(db, image5d, channel, filename_base)
+        exporter.export_rois(db, image5d, channel, filename_base, config.border)
         
     elif proc_type == PROC_TYPES[6]:
         # transpose Numpy array

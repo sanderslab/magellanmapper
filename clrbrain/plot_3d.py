@@ -261,6 +261,9 @@ def plot_3d_points(roi, vis):
         roi: Region of interest.
         vis: Visualization object on which to draw the contour. Any 
             current image will be cleared first.
+    
+    Returns:
+        True if points were rendered, False if no points to render.
     """
     print("plotting as 3D points")
     '''
@@ -303,24 +306,24 @@ def plot_3d_points(roi, vis):
     points_len = roi_1d.size
     if points_len == 0:
         print("no 3D points to display")
-        return
+        return False
     time_start = time()
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
     # TODO: better performance if manually interval the points rather than 
     # through mask flag?
     #roi_1d = roi_1d[::mask]
-    if points_len > 0:
-        vis.scene.mlab.points3d(x, y, z, roi_1d, 
-                                mode="sphere", colormap="Greens", 
-                                scale_mode="none", mask_points=mask, 
-                                line_width=1.0, vmax=1.0, 
-                                vmin=0.0, transparent=True)
-        print("time for 3D points display: {}".format(time() - time_start))
+    vis.scene.mlab.points3d(x, y, z, roi_1d, 
+                            mode="sphere", colormap="Greens", 
+                            scale_mode="none", mask_points=mask, 
+                            line_width=1.0, vmax=1.0, 
+                            vmin=0.0, transparent=True)
+    print("time for 3D points display: {}".format(time() - time_start))
     '''
     for i in range(roi_1d.size):
         print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
     '''
+    return True
 
 def _shadow_img2d(img2d, shape, axis, vis):
     """Shows a plane along the given axis as a shadow parallel to

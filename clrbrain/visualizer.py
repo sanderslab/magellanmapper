@@ -175,6 +175,7 @@ class Visualization(HasTraits):
     _structure_scale_low = -1
     _structure_scale_high = 20
     _mlab_title = None
+    _scene_3d_shown = False # 3D Mayavi display shown
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -347,9 +348,10 @@ class Visualization(HasTraits):
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering
                 plot_3d.plot_3d_surface(self.roi, self)
+                _scene_3d_shown = True
             else:
                 # 3D point rendering
-                plot_3d.plot_3d_points(self.roi, self)
+                _scene_3d_shown = plot_3d.plot_3d_points(self.roi, self)
             
             # process ROI in prep for showing filtered 2D view and segmenting
             self.roi = plot_3d.saturate_roi(self.roi)
@@ -437,7 +439,8 @@ class Visualization(HasTraits):
     
     def _btn_redraw_trait_fired(self):
         self.show_3d()
-        self.scene.mlab.orientation_axes()
+        if self._scene_3d_shown:
+            self.scene.mlab.orientation_axes()
         # updates the GUI here even though it doesn't elsewhere for some reason
         self.rois_check_list = self._roi_default
         #print("reset selected ROI to {}".format(self.rois_check_list))
@@ -450,7 +453,8 @@ class Visualization(HasTraits):
         # ROI size
         view = self.scene.mlab.view(75, 140, np.max(self.roi_array[0]) * 3)
         roll = self.scene.mlab.roll(-175)
-        self.scene.mlab.orientation_axes()
+        if self._scene_3d_shown:
+            self.scene.mlab.orientation_axes()
         #self.scene.mlab.outline() # affects zoom after segmenting
         #self.scene.mlab.axes() # need to adjust units to microns
         print("view: {}\nroll: {}".format(
@@ -608,7 +612,8 @@ class Visualization(HasTraits):
             
             # redraw the original ROI and prepare verify mode
             self.show_3d()
-            self.scene.mlab.orientation_axes()
+            if self._scene_3d_shown:
+                self.scene.mlab.orientation_axes()
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
             self._btn_segment_trait_fired(segs=blobs)
             plot_2d.verify = True

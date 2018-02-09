@@ -18,7 +18,6 @@ Attributes:
 """
 
 import os
-import math
 from time import time
 import glob
 import multiprocessing as mp
@@ -403,42 +402,26 @@ def read_file(filename, series, load=True, z_max=-1,
     rdr = bf.ImageReader(filename, perform_init=True)
     lows = []
     highs = []
-    # option to split loading into several chunks as a workaround to 
-    # Java __memmove_ssse3_back error when loading large file
-    SPLIT = 1
-    start = 0
-    z_interval = math.ceil(shape[1] / SPLIT)
-    try:
-        image5d = np.load(filename_image5d_npz, mmap_mode="w+")
-    except IOError as e:
-        print(e)
-        print("{} not found, creating new file".format(filename_image5d_npz))
-    for i in range(SPLIT):
-        print("loading split {}".format(i))
-        end = (i + 1) * z_interval
-        if end > shape[1]:
-            end = shape[1]
-        for t in range(shape[0]):
-            for z in range(start, end):
-                print("loading planes from [{}, {}]".format(t, z))
-                img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
-                               series=series, rescale=False)
-                if image5d is None:
-                    # open file as memmap to directly output to disk, which is much 
-                    # faster than outputting to RAM and saving to disk
-                    image5d = np.lib.format.open_memmap(
-                        filename_image5d_npz, mode="w+", dtype=img.dtype, 
-                        shape=shape)
-                    print("setting image5d array for series {} with shape: {}"
-                          .format(series, image5d.shape))
-                low, high = np.percentile(img, (0.5, 99.5))
-                lows.append(low)
-                highs.append(high)
-                image5d[t, z] = img
-        image5d.flush() # may not be necessary but ensure contents to disk
-        start = end
+    for t in range(shape[0]):
+        for z in range(shape[1]):
+            print("loading planes from [{}, {}]".format(t, z))
+            img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
+                           series=series, rescale=False)
+            if image5d is None:
+                # open file as memmap to directly output to disk, which is much 
+                # faster than outputting to RAM and saving to disk
+                image5d = np.lib.format.open_memmap(
+                    filename_image5d_npz, mode="w+", dtype=img.dtype, 
+                    shape=shape)
+                print("setting image5d array for series {} with shape: {}"
+                      .format(series, image5d.shape))
+            low, high = np.percentile(img, (0.5, 99.5))
+            lows.append(low)
+            highs.append(high)
+            image5d[t, z] = img
     print("file import time: {}".format(time() - time_start))
     time_start = time()
+    image5d.flush() # may not be necessary but ensure contents to disk
     print("flush time: {}".format(time() - time_start))
     #print("lows: {}, highs: {}".format(lows, highs))
     # TODO: consider saving resolutions as 1D rather than 2D array

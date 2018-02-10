@@ -114,6 +114,17 @@ class DraggableCircle:
         print("pressed on {}".format(self.circle.center))
         x0, y0 = self.circle.center
         self.press = x0, y0, event.xdata, event.ydata
+        DraggableCircle.lock = self
+        
+        # draw everywhere except the circle itself, store the pixel buffer 
+        # in background, and draw the circle
+        canvas = self.circle.figure.canvas
+        ax = self.circle.axes
+        self.circle.set_animated(True)
+        canvas.draw()
+        self.background = canvas.copy_from_bbox(self.circle.axes.bbox)
+        ax.draw_artist(self.circle)
+        canvas.blit(ax.bbox)
     
     def on_motion(self, event):
         """Move the circle if the drag event has been initiated.
@@ -134,7 +145,12 @@ class DraggableCircle:
         print("initial position: {}, {}; change thus far: {}, {}"
               .format(x0, y0, dx, dy))
 
-        self.circle.figure.canvas.draw()
+        # restore the saved background and redraw the circle at its new position
+        canvas = self.circle.figure.canvas
+        ax = self.circle.axes
+        canvas.restore_region(self.background)
+        ax.draw_artist(self.circle)
+        canvas.blit(ax.bbox)
     
     def on_release(self, event):
         """Finalize the circle and segment's position after a drag event
@@ -151,6 +167,11 @@ class DraggableCircle:
         print("...to {}".format(self.segment))
         self.fn_update_seg(self.segment, seg_old)
         self.press = None
+        
+        # turn off animation property, reset background
+        DraggableCircle.lock = None
+        self.circle.set_animated(False)
+        self.background = None
         self.circle.figure.canvas.draw()
     
     def on_pick(self, event):

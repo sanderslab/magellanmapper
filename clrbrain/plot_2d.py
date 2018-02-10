@@ -257,7 +257,8 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     collection.set_linewidth(linewidth)
     return collection
 
-def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg):
+def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg, 
+                 alpha=0.5):
     """Draw a DraggableCircle from the given segment.
     
     Args:
@@ -274,7 +275,7 @@ def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg):
     circle = patches.Circle(
         (segment[2], segment[1]), radius=_get_radius(segment), 
         edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth, 
-        linestyle=linestyle)
+        linestyle=linestyle, alpha=alpha)
     ax.add_patch(circle)
     draggable_circle = DraggableCircle(
         circle, segment, fn_update_seg, facecolor)

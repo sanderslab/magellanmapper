@@ -234,4 +234,4 @@ delay = None # delay time between images
 
 # EXPORT IMAGES
 
-border = False # clip ROI to border
+border = None # clip ROI to border (x,y,z order)

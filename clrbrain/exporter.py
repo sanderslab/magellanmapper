@@ -32,14 +32,11 @@ def export_rois(db, image5d, channel, path, border):
         image5d: The image with the ROIs.
         channel: Channel to export.
         path: Path with filename base from which to save the exported files.
-        border: True if the ROI should be clipped to a border, which is 
-            based on the :func:``chunking.calc_overlap``.
+        border: Border dimensions in (x,y,z) order to not include in the ROI; 
+            can be None.
     """
-    border_size = None
-    if border:
-        border_size = chunking.calc_overlap()[::-1]
-        border_size[2] = 0
-        print("Using border size of {} (x,y,z)".format(border_size))
+    if border is not None:
+        border = np.array(border)
     exps = sqlite.select_experiment(db.cur, None)
     for exp in exps:
         rois = sqlite.select_rois(db.cur, exp["id"])
@@ -48,19 +45,22 @@ def export_rois(db, image5d, channel, path, border):
             size = sqlite.get_roi_size(roi)
             offset = sqlite.get_roi_offset(roi)
             img3d = plot_3d.prepare_roi(image5d, channel, size, offset)
-            if border:
-                img3d = plot_3d.prepare_roi(
-                    img3d, channel, 
-                    np.subtract(img3d.shape[::-1], border_size), border_size)
             
             # get blobs, keep only confirmed ones, and change confirmation 
             # flag to avoid confirmation color in 2D plots
             roi_id = roi["id"]
             blobs = sqlite.select_blobs(db.cur, roi_id)
-            blobs[:, 0:3] = np.subtract(
-                blobs[:, 0:3], np.add(offset, border_size)[::-1])
             blobs = blobs[blobs[:, 4] == 1]
             blobs[:, 4] = -1
+            
+            # adjust ROI size and offset if border set
+            if border is not None:
+                size = np.subtract(img3d.shape[::-1], 2 * border)
+                img3d = plot_3d.prepare_roi(
+                    img3d, channel, size, border)
+                blobs[:, 0:3] = np.subtract(
+                    blobs[:, 0:3], np.add(offset, border)[::-1])
+            print("exporting ROI of shape {}".format(img3d.shape))
             
             # export ROI plots
             path_base, path_img, path_blobs, path_img_annot = make_roi_paths(
@@ -81,6 +81,7 @@ def export_rois(db, image5d, channel, path, border):
             
             # convert blobs to ground truth
             img3d_truth = plot_3d.build_ground_truth(size, blobs)
+            print("exporting truth ROI of shape {}".format(img3d_truth.shape))
             plot_2d.plot_roi(
                 img3d_truth, None, channel, show=False, 
                 title=os.path.splitext(path_img_annot)[0])

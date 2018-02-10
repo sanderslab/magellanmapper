@@ -588,6 +588,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     fig.suptitle(title, color="black", 
                  bbox=dict(facecolor=fig.get_facecolor(), edgecolor="none", 
                            alpha=0.5))
+    if circles is not None:
+        circles = circles.lower()
     
     # adjust array order based on which plane to show
     border_full = np.copy(border)
@@ -706,8 +708,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     ax_z_list = []
     segs_in = None
     segs_out = None
-    print(circles)
-    if (circles.lower() != CIRCLES[2].lower() and segments is not None 
+    if (circles != CIRCLES[2].lower() and segments is not None 
         and len(segments) > 0):
         # separate segments inside from outside the ROI
         if mask_in is not None:

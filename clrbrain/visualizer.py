@@ -176,6 +176,7 @@ class Visualization(HasTraits):
     _structure_scale_high = 20
     _mlab_title = None
     _scene_3d_shown = False # 3D Mayavi display shown
+    _circles_window_opened = True # 2D plots with circles window opened
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -285,6 +286,8 @@ class Visualization(HasTraits):
         self.segments = None
         self.segs_pts = None
         self.segs_in_mask = None
+        self._circles_window_opened = False
+        self.segs_feedback = ""
     
     def _update_structure_level(self, curr_offset, curr_roi_size):
         self._atlas_label = None
@@ -532,6 +535,18 @@ class Visualization(HasTraits):
             self.segs_pts.glyph.glyph.scale_factor = self.segs_scale
     
     def _btn_2d_trait_fired(self):
+        # prevent showing duplicate windows with selectable circles
+        circles = self._circles_2d[0].lower()
+        if circles != plot_2d.CIRCLES[2].lower():
+            if self._circles_window_opened:
+                self.segs_feedback = (
+                    "Cannot show 2D plots while another plot "
+                    "with circles in showing. Please redraw.")
+                return
+            else:
+                self._circles_window_opened = True
+        self.segs_feedback = ""
+        
         # shows 2D plots
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
@@ -565,7 +580,6 @@ class Visualization(HasTraits):
         title = _fig_title(register.get_label_name(self._atlas_label), 
                            curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(cli.filename, cli.series)
-        circles = self._circles_2d[0].lower()
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         screenshot = self.scene.mlab.screenshot(antialiased=True)
         stack_args = (

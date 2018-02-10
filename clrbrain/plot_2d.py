@@ -706,7 +706,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     ax_z_list = []
     segs_in = None
     segs_out = None
-    if segments is not None and len(segments) > 0:
+    print(circles)
+    if (circles.lower() != CIRCLES[2].lower() and segments is not None 
+        and len(segments) > 0):
         # separate segments inside from outside the ROI
         if mask_in is not None:
             segs_in = segments[mask_in]

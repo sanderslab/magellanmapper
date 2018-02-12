@@ -163,7 +163,7 @@ def _mirror_labels(img, img_ref):
     
     Args:
         img: Labels image in SimpleITK format.
-        img: Reference atlas image in SimpleITK format.
+        img_ref: Reference atlas image in SimpleITK format.
     
     Returns:
         The mirrored image in the same dimensions, origin, and spacing as the 
@@ -383,7 +383,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     for img_file in img_files:
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
         # ABA only gives half of atlas so need to mirror one side to other
-        img = _mirror_labels(img)
+        img = _mirror_labels(img, sitk.ReadImage(moving_file))
         img = transpose_img(img, plot_2d.plane, flip)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()

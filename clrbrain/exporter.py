@@ -79,6 +79,11 @@ def export_rois(db, image5d, channel, path, border):
             # as of v.0.5.0, user-added segments have neg radii whose abs
             # value corresponds to the displayed radius
             blobs[:, 3] = np.abs(blobs[:, 3])
+            # make more rounded since near-integer values appear to give 
+            # edges of 5 straight pixels
+            # https://github.com/scikit-image/scikit-image/issues/2112
+            #blobs[:, 3] += 1E-1
+            blobs[:, 3] -= 0.5
             lib_clrbrain.printv("blobs:\n{}".format(blobs))
             np.save(path_blobs, blobs)
             
@@ -88,7 +93,7 @@ def export_rois(db, image5d, channel, path, border):
             # avoid smoothing interpolation, using "nearest" instead
             with plt.style.context(config.rc_params_mpl2_img_interp):
                 plot_2d.plot_roi(
-                    img3d_truth, None, channel, show=True, 
+                    img3d_truth, None, channel, show=False, 
                     title=os.path.splitext(path_img_annot)[0])
             np.save(path_img_annot, img3d_truth)
             

@@ -547,4 +547,6 @@ def build_ground_truth(size, blobs):
             rr, cc = draw.circle(*blob[1:4], img3d[i].shape)
             #print("drawing circle of {} x {}".format(rr, cc))
             img3d[i, rr, cc] = 1
+    #lib_clrbrain.show_full_arrays()
+    #print(img3d)
     return img3d

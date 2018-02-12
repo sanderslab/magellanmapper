@@ -133,6 +133,18 @@ def convert_indices_to_int(dict_to_convert):
     }
     return dict_converted
 
+def show_full_arrays(on=True):
+    """Show full Numpy arrays, except for particularly large arrays.
+    
+    Args:
+        on: True if full printing should be turned on; False to reset
+            all settings.
+    """
+    if on:
+        np.set_printoptions(linewidth=500, threshold=10000000)
+    else:
+        np.set_printoptions()
+
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))
     a = np.arange(2 * 3).reshape(2, 3).astype(np.float)

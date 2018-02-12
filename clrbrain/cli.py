@@ -571,9 +571,9 @@ def main(process_args_only=False):
         config.db.load_db(None, False)
     
     # setup Matplotlib parameters/styles
-    pylab.rcParams.update(config.params)
     #print(plt.style.available)
     plt.style.use("seaborn")
+    pylab.rcParams.update(config.params)
     
     if process_args_only:
         return
@@ -1020,7 +1020,7 @@ def process_stack(roi, overlap, tol):
     print("total stack processing time (s): {}".format(time() - time_start))
     
     return merged, segments_all
-    
+
 if __name__ == "__main__":
     print("Starting clrbrain command-line interface...")
     main()

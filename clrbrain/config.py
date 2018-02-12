@@ -191,12 +191,6 @@ colors = np.array(
 
 # RC parameters for Matplotlib
 params = {
-    "legend.fontsize": "small",
-    "axes.labelsize": "small",
-    "axes.titlesize": "small",
-    "xtick.labelsize": "small",
-    "ytick.labelsize": "small",
-    "lines.linewidth": 1,
     "image.interpolation": "bilinear",
     "image.resample": False
 }

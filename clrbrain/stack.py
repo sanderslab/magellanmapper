@@ -41,73 +41,75 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         delay: Delay between image display in ms. If None, the delay will 
             defaul to 100ms.
     """
-    # ascending order of all files in the directory
-    num_images = len(images)
-    print("images.shape: {}".format(images.shape))
-    if num_images < 1:
-        return None
-    
-    # Matplotlib figure for building the animation
-    fig = plt.figure(frameon=False)
-    ax = fig.add_subplot(111)
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    
-    # rescaled images will be converted from integer to float, so 
-    # vmax will need to be rescaled to 0-1 range
-    vmax = plot_2d.vmax_overview
-    max_range = 0
-    if rescale and np.issubdtype(images.dtype, np.integer):
-        max_range = np.iinfo(images.dtype).max
-    if max_range != 0:
-        vmax = vmax / max_range
-    
-    # import the images as Matplotlib artists via multiprocessing
-    plotted_imgs = [None for i in range(num_images)]
-    img_size = None
-    i = 0
-    pool = mp.Pool()
-    pool_results = []
-    for image in images:
-        pool_results.append(pool.apply_async(
-            process_fnc, args=(i, image, rescale)))
-        i += 1
-    for result in pool_results:
-        i, img = result.get()
-        if img_size is None:
-            img_size = img.shape
-        plotted_imgs[i] = [ax.imshow(
-            img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=vmax, aspect=aspect, 
-            origin=origin)]
-    pool.close()
-    pool.join()
-    
-    # need to compress layout to fit image only
-    #print(len(plotted_imgs))
-    plt.tight_layout(pad=0.0) # leaves some space for some reason
-    fig_size = fig.get_size_inches()
-    if aspect is None:
-        aspect = 1
-    #print("img_size: {}".format(img_size))
-    img_size_dpi = np.divide(img_size, fig.dpi) # convert to inches
-    if aspect > 1:#img_size[0] < img_size[1]:
-        fig.set_size_inches(img_size_dpi[1], img_size_dpi[0] * aspect)
-    else:
-        # multiply both sides by 1 / aspect => number > 1 to enlarge
-        fig.set_size_inches(img_size_dpi[1] / aspect, img_size_dpi[0])
-    
-    # export to animated GIF
-    if delay is None:
-        delay = 100
-    anim = animation.ArtistAnimation(
-        fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
-    try:
-        anim.save(out_path, writer="imagemagick")
-    except ValueError as e:
-        print(e)
-        print("No animation writer available for Matplotlib")
-    print("saved animation file to {}".format(out_path))
-    #plt.show()
+    # small border appears around images on occasion with Matplotlib 2 settings
+    with plt.style.context("classic"):
+        
+        # ascending order of all files in the directory
+        num_images = len(images)
+        print("images.shape: {}".format(images.shape))
+        if num_images < 1:
+            return None
+        
+        # Matplotlib figure for building the animation
+        fig = plt.figure(frameon=False)
+        ax = fig.add_subplot(111)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        
+        # rescaled images will be converted from integer to float, so 
+        # vmax will need to be rescaled to 0-1 range
+        vmax = plot_2d.vmax_overview
+        max_range = 0
+        if rescale and np.issubdtype(images.dtype, np.integer):
+            max_range = np.iinfo(images.dtype).max
+        if max_range != 0:
+            vmax = vmax / max_range
+        
+        # import the images as Matplotlib artists via multiprocessing
+        plotted_imgs = [None for i in range(num_images)]
+        img_size = None
+        i = 0
+        pool = mp.Pool()
+        pool_results = []
+        for image in images:
+            pool_results.append(pool.apply_async(
+                process_fnc, args=(i, image, rescale)))
+            i += 1
+        for result in pool_results:
+            i, img = result.get()
+            if img_size is None:
+                img_size = img.shape
+            plotted_imgs[i] = [ax.imshow(
+                img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=vmax, aspect=aspect, 
+                origin=origin)]
+        pool.close()
+        pool.join()
+        
+        # need to compress layout to fit image only
+        fig.tight_layout(pad=0.0) # leaves some space for some reason
+        if aspect is None:
+            aspect = 1
+        img_size_inches = np.divide(img_size, fig.dpi) # convert to inches
+        print("img_size: {}, img_size_inches: {}"
+              .format(img_size, img_size_inches))
+        if aspect > 1:
+            fig.set_size_inches(img_size_inches[1], img_size_inches[0] * aspect)
+        else:
+            # multiply both sides by 1 / aspect => number > 1 to enlarge
+            fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
+        print("fig size: {}".format(fig.get_size_inches()))
+        
+        # export to animated GIF
+        if delay is None:
+            delay = 100
+        anim = animation.ArtistAnimation(
+            fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
+        try:
+            anim.save(out_path, writer="imagemagick")
+        except ValueError as e:
+            print(e)
+            print("No animation writer available for Matplotlib")
+        print("saved animation file to {}".format(out_path))
 
 def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     """Builds an animated GIF from a stack of images in a directory or an

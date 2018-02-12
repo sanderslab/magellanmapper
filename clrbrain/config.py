@@ -121,6 +121,27 @@ def update_process_settings(settings, settings_type):
         settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)
 
+    elif settings_type == "lightsheet_5x_cytoplasm":
+        settings["microscope_type"] = settings_type
+        #settings["vis_3d"] = "surface"
+        settings["clip_vmax"] = 98.5
+        settings["clip_min"] = 0.3
+        settings["clip_max"] = 0.8
+        settings["tot_var_denoise"] = False
+        settings["unsharp_strength"] = 0.3
+        settings["points_3d_thresh"] = 0.7
+        settings["min_sigma_factor"] = 8
+        settings["max_sigma_factor"] = 20
+        settings["num_sigma"] = 10
+        settings["overlap"] = 0.2
+        settings["thresholding"] = None
+        settings["thresholding_size"] = -1
+        settings["denoise_size"] = 25
+        settings["segment_size"] = 200
+        settings["prune_tol_factor"] = (3, 1.3, 1.3)
+        settings["segmenting_mean_thresh"] = 0.5
+        settings["scale_factor"] = (0.63, 1, 1)
+
 
 # defaults to lightsheet 5x settings
 process_settings = ProcessSettings()

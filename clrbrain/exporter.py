@@ -9,8 +9,11 @@ machine learning algorithms or other applications.
 
 import os
 import glob
-import numpy as np
 
+import numpy as np
+from matplotlib import pyplot as plt
+
+from clrbrain import config
 from clrbrain import chunking
 from clrbrain import lib_clrbrain
 from clrbrain import sqlite
@@ -82,9 +85,11 @@ def export_rois(db, image5d, channel, path, border):
             # convert blobs to ground truth
             img3d_truth = plot_3d.build_ground_truth(size, blobs)
             print("exporting truth ROI of shape {}".format(img3d_truth.shape))
-            plot_2d.plot_roi(
-                img3d_truth, None, channel, show=False, 
-                title=os.path.splitext(path_img_annot)[0])
+            # avoid smoothing interpolation, using "nearest" instead
+            with plt.style.context(config.rc_params_mpl2_img_interp):
+                plot_2d.plot_roi(
+                    img3d_truth, None, channel, show=True, 
+                    title=os.path.splitext(path_img_annot)[0])
             np.save(path_img_annot, img3d_truth)
             
             print("exported {}".format(path_base))

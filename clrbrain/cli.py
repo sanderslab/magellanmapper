@@ -573,7 +573,7 @@ def main(process_args_only=False):
     # setup Matplotlib parameters/styles
     #print(plt.style.available)
     plt.style.use("seaborn")
-    pylab.rcParams.update(config.params)
+    pylab.rcParams.update(config.rc_params)
     
     if process_args_only:
         return

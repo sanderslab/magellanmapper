@@ -238,7 +238,7 @@ def _mirror_labels(img, img_ref):
     img_reflected.SetOrigin(img.GetOrigin())
     return img_reflected
 
-def transpose_img(img_sitk, plane, rotate=False):
+def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
     
     Args:
@@ -247,6 +247,8 @@ def transpose_img(img_sitk, plane, rotate=False):
             planar orientation in which to transpose the image. The current 
             orientation is taken to be "xy".
         rotate: Rotate the final output image by 180 degrees; defaults to False.
+        target_size: Size of target image, typically one to which ``img_sitk`` 
+            will be registered, in (x,y,z, SimpleITK standard) ordering.
     
     Returns:
         Transposed image in SimpleITK format.
@@ -285,6 +287,16 @@ def transpose_img(img_sitk, plane, rotate=False):
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 
         # horizontal rotation)
         transposed = np.rot90(transposed, 2, (1, 2))
+    if target_size is not None:
+        # rescale based on xy dimensions of given and target image so that
+        # they are not so far off from one another that scaling does not occur; 
+        # assume that size discrepancies in z don't affect registration and 
+        # for some reason may even prevent registration
+        size_diff = np.divide(target_size[::-1][1:3], transposed.shape[1:3])
+        rescale = np.mean(size_diff)
+        print("rescaling image by {}x".format(rescale))
+        transposed = transform.rescale(transposed, rescale, mode="reflect", 
+            preserve_range=True, multichannel=False)
     transposed = sitk.GetImageFromArray(transposed)
     transposed.SetSpacing(spacing)
     transposed.SetOrigin(origin)
@@ -297,12 +309,27 @@ def _load_numpy_to_sitk(numpy_file, rotate=False, size=None):
         roi = transform.resize(roi, size)#, anti_aliasing=True)
     if rotate:
         roi = np.rot90(roi, 2, (1, 2))
+    '''
+    rescale = 0.7
+    roi = transform.rescale(roi, rescale, mode="reflect")
+    roi = roi[:, :int(roi.shape[1]*0.9), :]
+    from clrbrain import plot_3d
+    roi = plot_3d.saturate_roi(roi, 50.0)
+    '''
     sitk_img = sitk.GetImageFromArray(roi)
+    #spacing = np.multiply(detector.resolutions[0], 1 / rescale)
     spacing = detector.resolutions[0]
     #print("spacing: {}".format(spacing))
     sitk_img.SetSpacing(spacing[::-1])
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     return sitk_img
+
+'''
+def _rescale_img_sitk(img_sitk, rescale):
+    img = sitk.GetArrayFromImage(img_sitk)
+    img = transform.rescale(img, rescale, mode="reflect")
+    return sitk.GetImageFromArray(img)
+'''
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None):
@@ -341,7 +368,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     '''
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
-    moving_img = transpose_img(moving_img, plane, flip)
+    fixed_img_size = fixed_img.GetSize()
+    moving_img = transpose_img(moving_img, plane, flip, target_size=fixed_img_size)
     
     print("fixed image from {}:\n{}".format(fixed_file, fixed_img))
     print("moving image from {}:\n{}".format(moving_file, moving_img))
@@ -349,10 +377,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(fixed_img)
     elastix_img_filter.SetMovingImage(moving_img)
+    
+    settings = config.register_settings
     param_map_vector = sitk.VectorOfParameterMap()
     # translation to shift and rotate
     param_map = sitk.GetDefaultParameterMap("translation")
-    param_map["MaximumNumberOfIterations"] = ["2048"]
+    param_map["MaximumNumberOfIterations"] = [settings["translation_iter_max"]]
     '''
     # TESTING: minimal registration
     param_map["MaximumNumberOfIterations"] = ["0"]
@@ -360,13 +390,16 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     param_map_vector.append(param_map)
     # affine to sheer and scale
     param_map = sitk.GetDefaultParameterMap("affine")
-    param_map["MaximumNumberOfIterations"] = ["1024"]
+    param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
     param_map_vector.append(param_map)
     # bspline for non-rigid deformation
     param_map = sitk.GetDefaultParameterMap("bspline")
-    param_map["FinalGridSpacingInVoxels"] = ["50"]
+    param_map["FinalGridSpacingInVoxels"] = [
+        settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
-    #param_map["MaximumNumberOfIterations"] = ["512"]
+    param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
+    '''
+    '''
     
     param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)
@@ -381,10 +414,11 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     imgs_transformed = []
     for img_file in img_files:
+        # currently assumes only one labels file, where ABA only gives half of 
+        # atlas so need to mirror one side to other
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
-        # ABA only gives half of atlas so need to mirror one side to other
         img = _mirror_labels(img, sitk.ReadImage(moving_file))
-        img = transpose_img(img, plot_2d.plane, flip)
+        img = transpose_img(img, plane, flip, target_size=fixed_img_size)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
@@ -446,7 +480,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     '''
     # Dice Similarity Coefficient (DSC) of total brain volume by applying 
     # simple binary mask for estimate of background vs foreground
-    fixed_binary_img = sitk.BinaryThreshold(fixed_img, 0.01)
+    fixed_binary_img = sitk.BinaryThreshold(fixed_img, 0.004)
     transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)

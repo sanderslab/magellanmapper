@@ -29,6 +29,8 @@ verbose = False
 no_show = False
 POS_THRESH = 0.001 # threshold for positive values for float comparison
 
+# PROCESSING SETTINGS
+
 class ProcessSettings(dict):
     def __init__(self, *args, **kwargs):
         self["microscope_type"] = "lightsheet_5x"
@@ -145,6 +147,27 @@ def update_process_settings(settings, settings_type):
 
 # defaults to lightsheet 5x settings
 process_settings = ProcessSettings()
+
+
+# REGISTRATION SETTINGS
+
+class RegisterSettings(dict):
+    def __init__(self, *args, **kwargs):
+        self["register_type"] = "default"
+        self["translation_iter_max"] = "2048"
+        self["affine_iter_max"] = "1024"
+        self["bspline_iter_max"] = "256"
+        self["bspline_grid_space_voxels"] = "50"
+
+def update_register_settings(settings, settings_type):
+    if settings_type == "finer":
+        settings["register_type"] = settings_type
+        settings["translation_iter_max"] = "2048"
+        settings["affine_iter_max"] = "1024"
+        settings["bspline_iter_max"] = "512"
+        settings["bspline_grid_space_voxels"] = "50"
+
+register_settings = RegisterSettings()
 
 # DATABASE
 

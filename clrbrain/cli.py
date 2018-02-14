@@ -402,6 +402,7 @@ def main(process_args_only=False):
     parser.add_argument("--labels", nargs="*")
     parser.add_argument("--flip", nargs="*")
     parser.add_argument("--register")
+    parser.add_argument("--reg_profile")
     parser.add_argument("--rescale")
     parser.add_argument("--interval")
     parser.add_argument("--delay")
@@ -498,6 +499,12 @@ def main(process_args_only=False):
         config.update_process_settings(config.process_settings, args.microscope)
     print("Set microscope processing settings to {}"
           .format(config.process_settings["microscope_type"]))
+    # registration profile settings
+    if args.reg_profile is not None:
+        config.update_register_settings(
+            config.register_settings, args.reg_profile)
+    print("Set register settings to {}"
+          .format(config.register_settings["register_type"]))
     if args.plane is not None:
         from clrbrain import plot_2d
         plot_2d.plane = args.plane

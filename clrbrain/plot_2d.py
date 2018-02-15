@@ -1029,7 +1029,7 @@ def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
 
 def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp, 
                       cmap_atlas, cmap_labels, translation=None, title=None, 
-                      out_plane=None):
+                      out_plane=None, show=True):
     """Plot overlays of registered 3D images, showing overlap of atlas and 
     experimental image planes.
     
@@ -1051,6 +1051,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
             the registered image.
         title: Figure title; if None, will be given default title.
         out_plane: Output planar orientation.
+        show: True if the plot should be displayed on screen; defaults to True.
     """
     fig = plt.figure()
     # give extra space to the first row since the atlas is often larger
@@ -1136,7 +1137,8 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     gs.tight_layout(fig)
     if savefig is not None:
         plt.savefig(title + "." + savefig)
-    plt.show()
+    if show:
+        plt.show()
 
 def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label, title):
     """Generate grouped bar plots from lists, where corresponding elements 

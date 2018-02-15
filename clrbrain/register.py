@@ -105,8 +105,9 @@ def _show_overlays(imgs, translation, fixed_file, plane):
     """
     cmaps = ["Blues", "Oranges", "prism"]
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
+    show = not config.no_show
     plot_2d.plot_overlays_reg(
-        *imgs, *cmaps, translation, os.path.basename(fixed_file), plane)
+        *imgs, *cmaps, translation, os.path.basename(fixed_file), plane, show)
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
     base_name = _reg_out_path(fixed_file, "")

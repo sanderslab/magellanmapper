@@ -254,6 +254,7 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
         Transposed image in SimpleITK format.
     """
     img = sitk.GetArrayFromImage(img_sitk)
+    img_dtype = img.dtype
     spacing = img_sitk.GetSpacing()
     origin = img_sitk.GetOrigin()
     transposed = img
@@ -291,12 +292,17 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
         # rescale based on xy dimensions of given and target image so that
         # they are not so far off from one another that scaling does not occur; 
         # assume that size discrepancies in z don't affect registration and 
-        # for some reason may even prevent registration
+        # for some reason may even prevent registration;
+        # TODO: consider only resizing of rescale is > 1 since downsampling 
+        # can apparently cause artifacts
         size_diff = np.divide(target_size[::-1][1:3], transposed.shape[1:3])
         rescale = np.mean(size_diff)
         print("rescaling image by {}x".format(rescale))
         transposed = transform.rescale(transposed, rescale, mode="reflect", 
-            preserve_range=True, multichannel=False)
+            preserve_range=True, multichannel=False).astype(img_dtype)
+        # casted back since transpose changes data type even when 
+        # preserving range
+        print(transposed.dtype, np.min(transposed), np.max(transposed))
     transposed = sitk.GetImageFromArray(transposed)
     transposed.SetSpacing(spacing)
     transposed.SetOrigin(origin)
@@ -398,8 +404,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
-    '''
-    '''
     
     param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)
@@ -752,6 +756,7 @@ def get_label_ids_from_position(coord, labels_img, scaling):
         An array of label IDs corresponding to ``coords``, or a scalar of 
         one ID if only one coordinate is given.
     """
+    print("getting label IDs from coordinates")
     # scale coordinates to atlas image size
     coord_scaled = np.multiply(coord, scaling).astype(np.int)
     
@@ -966,6 +971,7 @@ def register_volumes(img_path, labels_ref_lookup, level, densities=False):
         scaling = labels_img_sitk.GetSpacing()
         labels_img = sitk.GetArrayFromImage(labels_img_sitk)
         print("labels_img shape: {}".format(labels_img.shape))
+        print(labels_img.dtype)
         
         # load blob densities by region if flagged
         blobs_ids = None
@@ -980,7 +986,7 @@ def register_volumes(img_path, labels_ref_lookup, level, densities=False):
             # annotate blobs based on position
             blobs_ids = get_label_ids_from_position(
                 blobs[:, 0:3], labels_img, reg_scaling(image5d, labels_img))
-            print(blobs_ids)
+            print("blobs_ids: {}".format(blobs_ids))
         
         # calculate and plot volumes and densities
         volumes_dict = volumes_by_id(

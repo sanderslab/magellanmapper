@@ -42,6 +42,8 @@ ABA_ID = "id"
 ABA_PARENT = "parent_structure_id"
 ABA_LEVEL = "st_level"
 
+_SIGNAL_THRESHOLD = 0.004
+
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
     
@@ -485,7 +487,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     '''
     # Dice Similarity Coefficient (DSC) of total brain volume by applying 
     # simple binary mask for estimate of background vs foreground
-    fixed_binary_img = sitk.BinaryThreshold(fixed_img, 0.004)
+    fixed_binary_img = sitk.BinaryThreshold(fixed_img, _SIGNAL_THRESHOLD)
     transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)
@@ -835,7 +837,7 @@ def get_label_name(label):
     return name
 
 def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None, 
-                  blobs_ids=None):
+                  blobs_ids=None, image5d=None, scaling=None):
     """Get volumes by labels IDs.
     
     Args:
@@ -855,6 +857,12 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             regions above this level will be ignored.
         blobs_ids: List of label IDs for blobs. If None, blob densities will 
             not be calculated.
+        image5d: Image to which ``labels_img`` is registered, used to 
+            verify the actual volume present corresponding to each label. 
+            Defaults to None, in which case volume will be based solely on 
+            the labels themselves.
+        scaling: Scaling from ``image5d`` to ``labels_img`` as given by 
+            :func:``reg_scaling``.
     
     Returns:
         Nested dictionary of {ID: {:attr:`config.ABA_NAME`: name, 
@@ -866,12 +874,43 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
     #print("ids: {}".format(ids))
     volumes_dict = {}
     scaling_vol = np.prod(resolution)
+    scaling_vol_image5d = np.prod(detector.resolutions[0])
+    scaling_inv = None
+    if scaling is not None:
+        scaling_inv = np.divide(1, scaling)
     for key in ids:
         label_ids = [key, -1 * key]
         for label_id in label_ids:
             label = labels_ref_lookup[key] # always use pos val
             region = labels_img[labels_img == label_id]
             vol = len(region) * scaling_vol
+            
+            if image5d is not None and scaling_inv is not None:
+                # find volume of corresponding region in experiment image
+                # where significant signal (eg actual tissue) is present
+                coords = list(np.where(labels_img == label_id))
+                vol_image5d = 0
+                vol_theor = 0 # to verify
+                coords = np.transpose(coords)
+                coords = np.around(
+                    np.multiply(coords, scaling_inv)).astype(np.int32)
+                coords_end = np.around(
+                    np.add(coords, scaling_inv)).astype(np.int32)
+                for i in range(len(coords)):
+                    #print("slicing from {} to {}".format(coords[i], coords_end[i]))
+                    region_image5d = image5d[
+                        0, coords[i][0]:coords_end[i][0],
+                        coords[i][1]:coords_end[i][1],
+                        coords[i][2]:coords_end[i][2]]
+                    region_present = region_image5d[
+                        region_image5d > _SIGNAL_THRESHOLD]
+                    #print("len of region with tissue: {}".format(len(region_present)))
+                    vol_image5d += len(region_present) * scaling_vol_image5d
+                    vol_theor += region_image5d.size * scaling_vol_image5d
+                print("Changing labels vol of {} to image5d vol of {} "
+                      "(theor max of {})".format(vol, vol_image5d, vol_theor))
+                vol = vol_image5d
+            
             blobs = None
             blobs_len = 0
             if blobs_ids is not None:
@@ -969,7 +1008,7 @@ def register_volumes(img_path, labels_ref_lookup, level, densities=False):
     else:
         # load labels image and setup labels dictionary
         labels_img_sitk = load_labels(img_path, get_sitk=True)
-        scaling = labels_img_sitk.GetSpacing()
+        spacing = labels_img_sitk.GetSpacing()
         labels_img = sitk.GetArrayFromImage(labels_img_sitk)
         print("labels_img shape: {}".format(labels_img.shape))
         print(labels_img.dtype)
@@ -985,14 +1024,15 @@ def register_volumes(img_path, labels_ref_lookup, level, densities=False):
             # load image just to get resolutions
             image5d = importer.read_file(img_path, cli.series)
             # annotate blobs based on position
+            scaling = reg_scaling(image5d, labels_img)
             blobs_ids = get_label_ids_from_position(
-                blobs[:, 0:3], labels_img, reg_scaling(image5d, labels_img))
+                blobs[:, 0:3], labels_img, scaling)
             print("blobs_ids: {}".format(blobs_ids))
         
         # calculate and plot volumes and densities
         volumes_dict = volumes_by_id(
-            labels_img, labels_ref_lookup, scaling, level=level, 
-            blobs_ids=blobs_ids)
+            labels_img, labels_ref_lookup, spacing, level=level, 
+            blobs_ids=blobs_ids)#, image5d=image5d, scaling=scaling)
         print(volumes_dict)
         with open(json_path, "w") as fp:
             json.dump(volumes_dict, fp)

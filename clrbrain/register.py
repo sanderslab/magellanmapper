@@ -837,7 +837,7 @@ def get_label_name(label):
     return name
 
 def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None, 
-                  blobs_ids=None, image5d=None, scaling=None):
+                  blobs_ids=None, image5d=None):
     """Get volumes by labels IDs.
     
     Args:
@@ -861,8 +861,6 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             verify the actual volume present corresponding to each label. 
             Defaults to None, in which case volume will be based solely on 
             the labels themselves.
-        scaling: Scaling from ``image5d`` to ``labels_img`` as given by 
-            :func:``reg_scaling``.
     
     Returns:
         Nested dictionary of {ID: {:attr:`config.ABA_NAME`: name, 
@@ -874,39 +872,55 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
     #print("ids: {}".format(ids))
     volumes_dict = {}
     scaling_vol = np.prod(resolution)
-    scaling_vol_image5d = np.prod(detector.resolutions[0])
+    scaling_vol_image5d = scaling_vol
     scaling_inv = None
-    if scaling is not None:
+    if image5d is not None and image5d.shape[1:4] != labels_img.shape:
+        scaling = reg_scaling(image5d, labels_img)
         scaling_inv = np.divide(1, scaling)
+        #scaling_vol_image5d = np.prod(detector.resolutions[0])
+        scaling_vol_image5d = scaling_vol * np.prod(scaling)
+        print("images have different shapes so will scale to compare "
+              "with scaling of {}".format(scaling_inv))
     for key in ids:
         label_ids = [key, -1 * key]
         for label_id in label_ids:
             label = labels_ref_lookup[key] # always use pos val
-            region = labels_img[labels_img == label_id]
+            mask_id = labels_img == label_id
+            region = labels_img[mask_id]
             vol = len(region) * scaling_vol
             
-            if image5d is not None and scaling_inv is not None:
+            if image5d is not None:
                 # find volume of corresponding region in experiment image
                 # where significant signal (eg actual tissue) is present
-                coords = list(np.where(labels_img == label_id))
                 vol_image5d = 0
                 vol_theor = 0 # to verify
-                coords = np.transpose(coords)
-                coords = np.around(
-                    np.multiply(coords, scaling_inv)).astype(np.int32)
-                coords_end = np.around(
-                    np.add(coords, scaling_inv)).astype(np.int32)
-                for i in range(len(coords)):
-                    #print("slicing from {} to {}".format(coords[i], coords_end[i]))
-                    region_image5d = image5d[
-                        0, coords[i][0]:coords_end[i][0],
-                        coords[i][1]:coords_end[i][1],
-                        coords[i][2]:coords_end[i][2]]
-                    region_present = region_image5d[
-                        region_image5d > _SIGNAL_THRESHOLD]
-                    #print("len of region with tissue: {}".format(len(region_present)))
-                    vol_image5d += len(region_present) * scaling_vol_image5d
-                    vol_theor += region_image5d.size * scaling_vol_image5d
+                if scaling_inv is not None:
+                    # scale back to full-sized image
+                    coords = list(np.where(mask_id))
+                    coords = np.transpose(coords)
+                    coords = np.around(
+                        np.multiply(coords, scaling_inv)).astype(np.int32)
+                    coords_end = np.around(
+                        np.add(coords, scaling_inv)).astype(np.int32)
+                    for i in range(len(coords)):
+                        #print("slicing from {} to {}".format(coords[i], coords_end[i]))
+                        region_image5d = image5d[
+                            0, coords[i][0]:coords_end[i][0],
+                            coords[i][1]:coords_end[i][1],
+                            coords[i][2]:coords_end[i][2]]
+                        present = region_image5d[
+                            region_image5d > _SIGNAL_THRESHOLD]
+                        #print("len of region with tissue: {}".format(len(region_present)))
+                        vol_image5d += len(present) * scaling_vol_image5d
+                        vol_theor += region_image5d.size * scaling_vol_image5d
+                else:
+                    # use scaled image, whose size should match the labels image
+                    image5d_in_region = image5d[0, mask_id]
+                    present = image5d_in_region[image5d_in_region >= _SIGNAL_THRESHOLD]
+                    vol_image5d = len(present) * scaling_vol_image5d
+                    vol_theor = len(image5d_in_region) * scaling_vol_image5d
+                    pixels = len(image5d_in_region)
+                    print("{} of {} pixels under threshold".format(pixels - len(present), pixels))
                 print("Changing labels vol of {} to image5d vol of {} "
                       "(theor max of {})".format(vol, vol_image5d, vol_theor))
                 vol = vol_image5d
@@ -978,7 +992,8 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
 def get_volumes_dict_path(img_path, level):
     return "{}_volumes_level{}.json".format(os.path.splitext(img_path)[0], level)
 
-def register_volumes(img_path, labels_ref_lookup, level, densities=False):
+def register_volumes(img_path, labels_ref_lookup, level, scale=None, 
+                     densities=False):
     """Register volumes and densities.
     
     If a volumes dictionary from the path generated by 
@@ -989,6 +1004,9 @@ def register_volumes(img_path, labels_ref_lookup, level, densities=False):
         img_path: Path to the original image file.
         labels_path: Path to the registered labels image file.
         level: Ontology level at which to show volumes and densities.
+        scale: Rescaling factor as a scalar value. If set, the corresponding 
+            image for this factor will be opened. If None, the full size 
+            image will be used. Defaults to None.
         densities: True if densities should be displayed; defaults to False.
     
     Returns:
@@ -1022,9 +1040,15 @@ def register_volumes(img_path, labels_ref_lookup, level, densities=False):
             blobs = info["segments"]
             print("loading {} blobs".format(len(blobs)))
             # load image just to get resolutions
+            scaling = None
+            if scale is not None:
+                img_path = lib_clrbrain.insert_before_ext(
+                    img_path, "_" + importer.make_modifier_scale(scale))
+                scaling = np.ones(3) * scale
             image5d = importer.read_file(img_path, cli.series)
+            if scaling is None:
+                scaling = reg_scaling(image5d, labels_img)
             # annotate blobs based on position
-            scaling = reg_scaling(image5d, labels_img)
             blobs_ids = get_label_ids_from_position(
                 blobs[:, 0:3], labels_img, scaling)
             print("blobs_ids: {}".format(blobs_ids))
@@ -1032,13 +1056,14 @@ def register_volumes(img_path, labels_ref_lookup, level, densities=False):
         # calculate and plot volumes and densities
         volumes_dict = volumes_by_id(
             labels_img, labels_ref_lookup, spacing, level=level, 
-            blobs_ids=blobs_ids)#, image5d=image5d, scaling=scaling)
+            blobs_ids=blobs_ids, image5d=image5d)
         print(volumes_dict)
         with open(json_path, "w") as fp:
             json.dump(volumes_dict, fp)
     return volumes_dict, json_path
 
-def register_volumes_mp(img_paths, labels_ref_lookup, level, densities=False):
+def register_volumes_mp(img_paths, labels_ref_lookup, level, scale=None, 
+                        densities=False):
     start_time = time()
     '''
     for img_path in img_paths:
@@ -1049,7 +1074,7 @@ def register_volumes_mp(img_paths, labels_ref_lookup, level, densities=False):
     for img_path in img_paths:
         pool_results.append(pool.apply_async(
             register_volumes, 
-            args=(img_path, labels_ref_lookup, level, densities)))
+            args=(img_path, labels_ref_lookup, level, scale, densities)))
     vols = []
     paths = []
     for result in pool_results:
@@ -1195,7 +1220,7 @@ if __name__ == "__main__":
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         vol_dicts, json_paths = register_volumes_mp(
             cli.filenames, labels_ref_lookup, 
-            config.labels_level, densities)
+            config.labels_level, config.rescale, densities)
         # experiment identifiers, assumed to be at the start of the image 
         # filename, separated by a "-"; if no dash, will use the whole name
         show = not config.no_show

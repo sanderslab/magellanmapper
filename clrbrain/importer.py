@@ -468,6 +468,12 @@ def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):
         sub_roi, rescale, mode="reflect", multichannel=multichannel)
     return coord, rescaled
 
+def make_modifier_plane(plane):
+    return "plane{}".format(plane.upper())
+
+def make_modifier_scale(scale):
+    return "scale{}".format(scale)
+
 def transpose_npy(filename, series, plane=None, rescale=None):
     """Transpose Numpy NPY saved arrays into new planar orientations and/or 
     rescaled sizes.
@@ -490,10 +496,16 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     info = dict(image5d_info)
     sizes = info["sizes"]
     ext = lib_clrbrain.get_filename_ext(filename)
+    modifier = ""
+    if plane is not None:
+        modifier = make_modifier_plane(plane) + "_"
+    if rescale is not None:
+        modifier += make_modifier_scale(rescale) + "_"
     filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename, series, modifier="transposed_", ext=ext)
+        filename, series, modifier=modifier, ext=ext)
     offset = 0 if image5d.ndim <= 3 else 1
     image5d_swapped = image5d
+    
     if plane is not None and plane != plot_2d.PLANE[0]:
         # swap z-y to get (y, z, x) order for xz orientation
         image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 1)
@@ -504,6 +516,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
             image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
             detector.resolutions[0] = lib_clrbrain.swap_elements(
                 detector.resolutions[0], 0, 2)
+    
     if rescale is not None:
         rescaled = image5d_swapped
         # TODO: generalize for more than 1 preceding dimension?
@@ -541,6 +554,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         if multichannel:
             rescaled_shape = np.concatenate((rescaled_shape, [rescaled.shape[-1]]))
         print("rescaled_shape: {}".format(rescaled_shape))
+        # rescale chunks directly into memmap-backed array to minimize RAM usage
         image5d_transposed = np.lib.format.open_memmap(
             filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype, 
             shape=tuple(rescaled_shape))
@@ -549,7 +563,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         detector.resolutions = np.multiply(detector.resolutions, 1 / rescale)
         sizes[0] = rescaled_shape
     else:
-        # transfer directly to memmap-backed array to minimize RAM usage
+        # transfer directly to memmap-backed array
         image5d_transposed = np.lib.format.open_memmap(
             filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
             shape=image5d_swapped.shape)

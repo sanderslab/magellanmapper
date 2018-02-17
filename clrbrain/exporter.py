@@ -12,6 +12,12 @@ import glob
 
 import numpy as np
 from matplotlib import pyplot as plt
+try:
+    import SimpleITK as sitk
+except ImportError as e:
+    print(e)
+    print("WARNING: SimpleElastix could not be found, so there will be error "
+          "when attempting to export images to non-Numpy formats")
 
 from clrbrain import config
 from clrbrain import chunking
@@ -23,9 +29,12 @@ from clrbrain import plot_3d
 def make_roi_paths(path, roi_id):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
     path_img = "{}_img.npy".format(path_base)
+    path_img_nifti = "{}_img.nii.gz".format(path_base)
     path_blobs = "{}_blobs.npy".format(path_base)
     path_img_annot = "{}_img_annot.npy".format(path_base)
-    return path_base, path_img, path_blobs, path_img_annot
+    path_img_annot_nifti = "{}_img_annot.nii.gz".format(path_base)
+    return path_base, path_img, path_img_nifti, path_blobs, path_img_annot, \
+        path_img_annot_nifti
 
 def export_rois(db, image5d, channel, path, border):
     """Export all ROIs from database.
@@ -65,14 +74,27 @@ def export_rois(db, image5d, channel, path, border):
                     blobs[:, 0:3], np.add(offset, border)[::-1])
             print("exporting ROI of shape {}".format(img3d.shape))
             
-            # export ROI plots
-            path_base, path_img, path_blobs, path_img_annot = make_roi_paths(
-                path, roi_id)
+            # export ROI and 2D plots
+            path_base, path_img, path_img_nifti, path_blobs, path_img_annot, \
+                path_img_annot_nifti = make_roi_paths(path, roi_id)
+            np.save(path_img, img3d)
+            # WORKAROUND: for some reason SimpleITK gives a conversion error 
+            # when converting from uint16 (>u2) Numpy array
+            img3d = img3d.astype(np.float64)
+            img3d_sitk = sitk.GetImageFromArray(img3d)
+            '''
+            print(img3d_sitk)
+            print("orig img:\n{}".format(img3d[0]))
+            img3d_back = sitk.GetArrayFromImage(img3d_sitk)
+            print(img3d.shape, img3d.dtype, img3d_back.shape, img3d_back.dtype)
+            print("sitk img:\n{}".format(img3d_back[0]))
+            '''
+            sitk.WriteImage(img3d_sitk, path_img_nifti, False)
             plot_2d.plot_roi(img3d, blobs, channel, show=False, title=path_base)
+            lib_clrbrain.show_full_arrays()
             
             # export image and blobs, stripping blob flags and adjusting 
             # user-added segments' radii
-            np.save(path_img, img3d)
             blobs = blobs[:, 0:4]
             # prior to v.0.5.0, user-added segments had a radius of 0.0
             blobs[np.isclose(blobs[:, 3], 0), 3] = 5.0
@@ -90,12 +112,16 @@ def export_rois(db, image5d, channel, path, border):
             # convert blobs to ground truth
             img3d_truth = plot_3d.build_ground_truth(size, blobs)
             print("exporting truth ROI of shape {}".format(img3d_truth.shape))
+            np.save(path_img_annot, img3d_truth)
+            #print(img3d_truth)
+            sitk.WriteImage(
+                sitk.GetImageFromArray(img3d_truth), path_img_annot_nifti, 
+                False)
             # avoid smoothing interpolation, using "nearest" instead
             with plt.style.context(config.rc_params_mpl2_img_interp):
                 plot_2d.plot_roi(
                     img3d_truth, None, channel, show=False, 
                     title=os.path.splitext(path_img_annot)[0])
-            np.save(path_img_annot, img3d_truth)
             
             print("exported {}".format(path_base))
     '''

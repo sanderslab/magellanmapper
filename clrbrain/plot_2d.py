@@ -720,8 +720,10 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 blobs_truth = segments[segments[:, 5] >= 0]
             print("blobs_truth:\n{}".format(blobs_truth))
             # non-truth blobs have truth flag unset (-1)
-            segs_in = segs_in[segs_in[:, 5] == -1]
-            segs_out = segs_out[segs_out[:, 5] == -1]
+            if segs_in is not None:
+                segs_in = segs_in[segs_in[:, 5] == -1]
+            if segs_out is not None:
+                segs_out = segs_out[segs_out[:, 5] == -1]
             #print("segs_in:\n{}".format(segs_in))
         
     # selected or newly added patches since difficult to get patch from collection,

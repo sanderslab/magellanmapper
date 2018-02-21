@@ -1131,15 +1131,15 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 info = np.load(filename_base + cli.SUFFIX_INFO_PROC)
                 blobs = info["segments"]
                 print("loading {} blobs".format(len(blobs)))
-                # load image just to get resolutions
-                scaling = None
+                # load large image just to get resolutions; 
+                # TODO: consider saving scaling info in scaled image
+                image5d = importer.read_file(img_path, cli.series)
+                scaling = reg_scaling(image5d, labels_img)
                 if scale is not None:
+                    # use scaled image for pixel comparison
                     img_path = lib_clrbrain.insert_before_ext(
                         img_path, "_" + importer.make_modifier_scale(scale))
-                    scaling = np.ones(3) * scale
-                image5d = importer.read_file(img_path, cli.series)
-                if scaling is None:
-                    scaling = reg_scaling(image5d, labels_img)
+                    image5d = importer.read_file(img_path, cli.series)
                 # annotate blobs based on position
                 blobs_ids = get_label_ids_from_position(
                     blobs[:, 0:3], labels_img, scaling)

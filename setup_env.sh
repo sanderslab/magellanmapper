@@ -151,5 +151,5 @@ then
 fi
 
 echo "clrbrain environment setup complete!"
-echo "** Please restart your terminal and run \"source activate $env_name\" **"
+echo "** Please run \"source activate $env_name\" to enter the environment for Clrbrain **"
 

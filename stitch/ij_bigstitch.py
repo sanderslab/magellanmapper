@@ -138,7 +138,8 @@ options = (
     "pixel_type=[16-bit unsigned integer] "
     "interpolation=[Linear Interpolation] "
     "image=Virtual blend preserve_original "
-    "produce=[All views together] "
+    #"produce=[All views together] "
+    "produce=[Each timepoint & channel] "
     "fused_image=[Save as (compressed) TIFF stacks] "
     "output_file_directory=" + out_dir
 )

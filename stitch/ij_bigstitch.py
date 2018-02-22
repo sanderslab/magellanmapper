@@ -38,9 +38,17 @@ print("dataset path: {}".format(dataset_path_xml))
 
 time_start = time()
 # import into HDF5 format (.h5 file)
+'''
+# these settings don't appear to change the output but appear
+# during macro recording
+    "subsampling_factors=[{ {1,1,1} }] "
+    "hdf5_chunk_sizes=[{ {32,32,4} }] "
+    "timepoints_per_partition=1 "
+    "setups_per_partition=0 "
+'''
 options = (
-    "type_of_dataset=[Automatic Loader (Bioformats based)] "
-    "xml_filename=" + dataset_name_xml + " "
+    "define_dataset=[Automatic Loader (Bioformats based)] "
+    "project_filename=" + dataset_name_xml + " "
     "path=" + in_file + " "
     "exclude=10 "
     "bioformats_series_are?=Tiles "

@@ -116,6 +116,8 @@ then
 	fi
 	if [ -f $bash_profile ]
 	then
+		# TODO: check if base environment gets activated as not yet 
+		# by default as of Conda 4.4.10
 		source $bash_profile
 	else
 		echo "Please close and reopen your terminal, then rerun this script"
@@ -141,8 +143,24 @@ else
 	echo "$env_name already exists. Exiting."
 	exit 1
 fi
-echo "Activating conda environment..."
-source activate $env_name
+
+# check that the environment was created and activate it
+echo "Checking and activating conda environment..."
+check_env="`conda env list | grep -w $env_name`"
+if [[ "$check_env" == "" ]]
+then
+	echo "$env_name could not be found, exiting."
+	exit 1
+fi
+# need to reload conda script for unclear reasons; assume that 
+# CONDA_PREFIX has already been set by base environment
+. "$CONDA_PREFIX/etc/profile.d/conda.sh"
+conda activate $env_name
+
+# install additional dependencies could not be installed in the 
+# same session as the initial install for some reason
+pip install "git+https://github.com/LeeKamentsky/python-javabridge.git@2b6e7b067aeeac27fc5359ebba56f316a85527cc"
+pip install python-bioformats==1.1.0
 
 if [ $build_simple_elastix -eq 1 ]
 then

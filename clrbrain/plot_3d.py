@@ -387,7 +387,7 @@ def prepare_roi(image5d, channel, roi_size, offset):
     Args:
         image5d: Image array.
         channel: Channel to view; wil be ignored if image5d has no
-            channel dimension.
+            channel dimension. If None, defaults to all channels.
         roi_size: Size of the region of interest as (x, y, z).
         offset: Tuple of offset given as (x, y, z) for the region 
             of interest. Defaults to (0, 0, 0).
@@ -396,6 +396,8 @@ def prepare_roi(image5d, channel, roi_size, offset):
         The region of interest, including denoising, as a 3-dimensional
            array, without separate time or channel dimensions.
     """
+    if channel is None:
+        channel = slice(None)
     cube_slices = []
     for i in range(len(offset)):
         cube_slices.append(slice(offset[i], offset[i] + roi_size[i]))

@@ -58,6 +58,8 @@ IMAGE5D_NP_VER = 12 # image5d Numpy saved array version number
 SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
 
+CHANNEL_SEPARATOR = "_ch_"
+
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
     
@@ -232,29 +234,45 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     return True
 
 def read_file(filename, series, load=True, z_max=-1, 
-              offset=None, size=None, channel=-1, return_info=False, 
+              offset=None, size=None, channel=None, return_info=False, 
               import_if_absent=True):
     """Reads in an imaging file.
     
-    Can load the file from a saved Numpy array and also for only a series
-    of z-planes if asked.
+    Loads a Numpy image if available as determined by 
+    :func:``_make_filenames``. An offset and size can be given to load an 
+    only an ROI of the image. If the corresponding Numpy image cannot be 
+    found, one will be generated from the given source image. For TIFF images, 
+    multiple channels will assume to be stored in separate files with 
+    :const:``CHANNEL_SEPARATOR`` followed by an integer corresponding to the 
+    channel number (0-based indexing).
     
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
         series: Series index to load.
-        save: True to save the resulting Numpy array (default).
         load: If True, attempts to load a Numpy array from the same 
             location and name except for ".npz" appended to the end 
             (default). The array can be accessed as "output['image5d']".
         z_max: Number of z-planes to load, or -1 if all should be loaded
             (default).
         offset: Tuple of offset given as (x, y, z) from which to start
-            loading z-plane (x, y ignored for now). Defaults to 
-            (0, 0, 0).
+            loading z-plane (x, y ignored for now). If Numpy image info already 
+            exists, this tuple will be used to load only an ROI of the image. 
+            If importing a new Numpy image, offset[2] will be used an a 
+            z-offset from which to start importing. Defaults to None.
+        size: Tuple of ROI size given as (x, y, z). If Numpy image info already 
+            exists, this tuple will be used to load only an ROI of the image. 
+            Defaults to None.
+        channel: Channel number, currently used only to load a channel when 
+            a Numpy ROI image exists. Otherwise, all channels available will 
+            be imported into a new Numpy image. Defaults to None.
+        return_info: True if the Numpy info file should be returned for a 
+            dictionary of image properties; defaults to False.
+        import_if_absent: True if the image should be imported into a Numpy 
+            image if it does not exist; defaults to True.
     
     Returns:
-        image5d: array of image data.
-        size: tuple of dimensions given as (time, z, y, x, channels).
+        image5d, the array of image data. If ``return_info`` is True, a 
+        second value a dictionary of image properties will be returned.
     """
     ext = lib_clrbrain.get_filename_ext(filename)
     filename_image5d_npz, filename_info_npz = _make_filenames(
@@ -368,17 +386,27 @@ def read_file(filename, series, load=True, z_max=-1,
     if offset is None:
         offset = (0, 0, 0) # (x, y, z)
     name = os.path.basename(filename)
+    filenames = sorted(glob.glob(
+        os.path.splitext(filename)[0] + CHANNEL_SEPARATOR + "*"))
+    if len(filenames) == 0:
+        filenames.append(filename)
+    print(filenames)
+    num_channels = len(filenames)
     if ext == "tiff" or ext == "tif":
         # import multipage TIFFs
         print("Loading multipage TIFF...")
         
         if detector.resolutions is None:
             raise IOError("Could not import {}. Please specify resolutions, "
-                          "magnification, and zoom.".format(filename))
-        sizes, dtype = find_sizes(filename)
-        shape = sizes[0]
+                          "magnification, and zoom.".format(filenames[0]))
+        sizes, dtype = find_sizes(filenames[0])
+        shape = list(sizes[0])
+        if num_channels > 1:
+            shape[-1] = num_channels
         if shape[-1] == 1:
             shape = shape[:-1]
+        shape = tuple(shape)
+        print(shape)
     else:
         # default import mode, which assumes parseable OME header, tested 
         # on CZI files
@@ -386,7 +414,7 @@ def read_file(filename, series, load=True, z_max=-1,
         
         # parses the XML tree directly
         names, sizes, detector.resolutions, detector.magnification, \
-            detector.zoom, pixel_type = parse_ome_raw(filename)
+            detector.zoom, pixel_type = parse_ome_raw(filenames[0])
         shape = sizes[series]
         if z_max != -1:
             shape[1] = z_max
@@ -399,26 +427,34 @@ def read_file(filename, series, load=True, z_max=-1,
             #shape = (nt, nz, size[2], size[3], size[4])
             load_channel = None
         name = names[series]
-    rdr = bf.ImageReader(filename, perform_init=True)
-    lows = []
-    highs = []
-    for t in range(shape[0]):
-        for z in range(shape[1]):
-            print("loading planes from [{}, {}]".format(t, z))
-            img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
-                           series=series, rescale=False)
-            if image5d is None:
-                # open file as memmap to directly output to disk, which is much 
-                # faster than outputting to RAM and saving to disk
-                image5d = np.lib.format.open_memmap(
-                    filename_image5d_npz, mode="w+", dtype=img.dtype, 
-                    shape=shape)
-                print("setting image5d array for series {} with shape: {}"
-                      .format(series, image5d.shape))
-            low, high = np.percentile(img, (0.5, 99.5))
-            lows.append(low)
-            highs.append(high)
-            image5d[t, z] = img
+    for img_path in filenames:
+        rdr = bf.ImageReader(img_path, perform_init=True)
+        lows = []
+        highs = []
+        if num_channels > 1:
+            channel_num = int(
+                os.path.splitext(img_path)[0].split(CHANNEL_SEPARATOR)[1])
+            print("adding {} to channel {}".format(img_path, channel_num))
+        for t in range(shape[0]):
+            for z in range(shape[1]):
+                print("loading planes from [{}, {}]".format(t, z))
+                img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
+                               series=series, rescale=False)
+                if image5d is None:
+                    # open file as memmap to directly output to disk, which is much 
+                    # faster than outputting to RAM and saving to disk
+                    image5d = np.lib.format.open_memmap(
+                        filename_image5d_npz, mode="w+", dtype=img.dtype, 
+                        shape=shape)
+                    print("setting image5d array for series {} with shape: {}"
+                          .format(series, image5d.shape))
+                low, high = np.percentile(img, (0.5, 99.5))
+                lows.append(low)
+                highs.append(high)
+                if num_channels > 1:
+                    image5d[t, z, :, :, channel_num] = img
+                else:
+                    image5d[t, z] = img
     print("file import time: {}".format(time() - time_start))
     time_start = time()
     image5d.flush() # may not be necessary but ensure contents to disk

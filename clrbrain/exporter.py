@@ -26,13 +26,13 @@ from clrbrain import sqlite
 from clrbrain import plot_2d
 from clrbrain import plot_3d
 
-def make_roi_paths(path, roi_id):
+def make_roi_paths(path, roi_id, channel):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
-    path_img = "{}_img.npy".format(path_base)
-    path_img_nifti = "{}_img.nii.gz".format(path_base)
+    path_img = "{}_ch{}.npy".format(path_base, channel)
+    path_img_nifti = "{}_ch{}.nii.gz".format(path_base, channel)
     path_blobs = "{}_blobs.npy".format(path_base)
-    path_img_annot = "{}_img_annot.npy".format(path_base)
-    path_img_annot_nifti = "{}_img_annot.nii.gz".format(path_base)
+    path_img_annot = "{}_ch{}_annot.npy".format(path_base, channel)
+    path_img_annot_nifti = "{}_ch{}_annot.nii.gz".format(path_base, channel)
     return path_base, path_img, path_img_nifti, path_blobs, path_img_annot, \
         path_img_annot_nifti
 
@@ -76,7 +76,7 @@ def export_rois(db, image5d, channel, path, border):
             
             # export ROI and 2D plots
             path_base, path_img, path_img_nifti, path_blobs, path_img_annot, \
-                path_img_annot_nifti = make_roi_paths(path, roi_id)
+                path_img_annot_nifti = make_roi_paths(path, roi_id, channel)
             np.save(path_img, img3d)
             # WORKAROUND: for some reason SimpleITK gives a conversion error 
             # when converting from uint16 (>u2) Numpy array

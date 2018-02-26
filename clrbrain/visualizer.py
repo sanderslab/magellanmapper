@@ -179,6 +179,9 @@ class Visualization(HasTraits):
     _scene_3d_shown = False # 3D Mayavi display shown
     _circles_window_opened = True # 2D plots with circles window opened
     _filename = File # file browser
+    _channel = Int # channel number, 0-based
+    _channel_low = -1 # -1 used for None, which translates to "all"
+    _channel_high = 0
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -379,6 +382,12 @@ class Visualization(HasTraits):
         HasTraits.__init__(self)
         self._set_border()
         
+        # set up file parameters
+        self._filename = cli.filename
+        if cli.image5d.ndim >= 5:
+            self._channel_high = cli.image5d.shape[4] - 1
+        self._channel = cli.channel
+        
         # dimension max values in pixels
         if cli.image5d_proc is not None:
             size = cli.image5d_proc.shape[0:3]
@@ -423,6 +432,22 @@ class Visualization(HasTraits):
         
         # show the default ROI
         self.show_3d()
+    
+    @on_trait_change("_filename")
+    def update_filename(self):
+        """Update the selected filename.
+        """
+        cli.filename = self._filename
+        print("Changed filename to {}".format(cli.filename))
+    
+    @on_trait_change("_channel")
+    def update_channel(self):
+        """Update the selected channel.
+        """
+        cli.channel = self._channel
+        if cli.channel == -1:
+            cli.channel = None
+        print("Changed channel to {}".format(cli.channel))
     
     @on_trait_change("x_offset,y_offset,z_offset")
     def update_plot(self):
@@ -849,13 +874,6 @@ class Visualization(HasTraits):
         if val is not None:
             self._segments = val
     
-    @on_trait_change("_filename")
-    def update_filename(self):
-        """Update the selected filename.
-        """
-        cli.filename = self._filename
-        print(cli.filename)
-    
     # the layout of the dialog created
     view = View(
         HSplit(
@@ -866,9 +884,18 @@ class Visualization(HasTraits):
             ),
             VGroup(
                 VGroup(
-                    Item("_filename", 
-                         editor=FileEditor(entries=10, allow_dir=False), 
-                         label="File", style="simple"),
+                    HGroup(
+                        Item("_filename", 
+                             editor=FileEditor(entries=10, allow_dir=False), 
+                             label="File", style="simple"),
+                        Item(
+                            "_channel",
+                            editor=RangeEditor(
+                                low_name="_channel_low",
+                                high_name="_channel_high",
+                                mode="spinner")
+                        ),
+                    ),
                     Item("rois_check_list", 
                          editor=CheckListEditor(
                              name="object.rois_selections_class.selections"),

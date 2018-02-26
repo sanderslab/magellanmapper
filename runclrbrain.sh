@@ -122,7 +122,7 @@ FUSED="fused_tp_0"
 #mv "${OUT_DIR}/fused.tif" "$TIFF_IMG"
 
 # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
-#python -u -m clrbrain.cli --img "$TIFF_IMG" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
+#python -u -m clrbrain.cli --img "$TIFF_IMG" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --proc importonly
 
 
 # Upload stitched image to cloud

@@ -29,9 +29,10 @@ import datetime
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float, 
                         Int, List, Array, Str, Dict, push_exception_handler, 
-                        Property)
+                        Property, File)
 from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
-                          RangeEditor, HSplit, TabularEditor, CheckListEditor)
+                          RangeEditor, HSplit, TabularEditor, CheckListEditor, 
+                          FileEditor)
 from traitsui.tabular_adapter import TabularAdapter
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
@@ -177,6 +178,7 @@ class Visualization(HasTraits):
     _mlab_title = None
     _scene_3d_shown = False # 3D Mayavi display shown
     _circles_window_opened = True # 2D plots with circles window opened
+    _filename = File # file browser
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -847,6 +849,13 @@ class Visualization(HasTraits):
         if val is not None:
             self._segments = val
     
+    @on_trait_change("_filename")
+    def update_filename(self):
+        """Update the selected filename.
+        """
+        cli.filename = self._filename
+        print(cli.filename)
+    
     # the layout of the dialog created
     view = View(
         HSplit(
@@ -857,6 +866,9 @@ class Visualization(HasTraits):
             ),
             VGroup(
                 VGroup(
+                    Item("_filename", 
+                         editor=FileEditor(entries=10, allow_dir=False), 
+                         label="File", style="simple"),
                     Item("rois_check_list", 
                          editor=CheckListEditor(
                              name="object.rois_selections_class.selections"),

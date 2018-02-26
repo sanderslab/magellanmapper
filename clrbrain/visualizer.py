@@ -133,7 +133,7 @@ class Visualization(HasTraits):
     roi_array = Array(Int, shape=(1, 3))
     scene = Instance(MlabSceneModel, ())
     btn_redraw_trait = Button("Redraw")
-    btn_segment_trait = Button("Segment")
+    btn_segment_trait = Button("Detect")
     btn_2d_trait = Button("2D Plots")
     btn_save_segments = Button("Save Segments")
     roi = None # combine with roi_array?

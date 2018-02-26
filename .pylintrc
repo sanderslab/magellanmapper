@@ -1,0 +1,16 @@
+# PyLint configuration for Clrbrain
+# Author: David Young, 2018
+
+[MASTER]
+# Pylint config
+
+[MESSAGES CONTROL]
+disable = 
+    trailing-whitespace,
+    import-error,
+    invalid-name,
+    pointless-string-statement,
+    global-statement,
+    no-member,
+    too-many-arguments,
+    too-many-locals

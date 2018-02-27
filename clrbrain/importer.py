@@ -341,7 +341,7 @@ def read_file(filename, series, load=True, z_max=-1,
                 try:
                     plot_3d.near_max = output["near_max"]
                     print("set near_max to {}".format(plot_3d.near_max))
-                    plot_2d.vmax_overview = plot_3d.near_max * 1.1
+                    plot_2d.vmax_overview = plot_3d.near_max
                     print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
                 except KeyError:
                     print("could not find near_max")

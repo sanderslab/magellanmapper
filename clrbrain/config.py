@@ -29,6 +29,10 @@ verbose = False
 no_show = False
 POS_THRESH = 0.001 # threshold for positive values for float comparison
 
+# custom colormaps in plot_2d
+CMAP_GRBK_NAME = "Green_black"
+CMAP_RDBK_NAME = "Red_black"
+
 # PROCESSING SETTINGS
 
 class ProcessSettings(dict):
@@ -52,7 +56,7 @@ class ProcessSettings(dict):
         self["prune_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
         self["scale_factor"] = (1, 1, 1)
-        self["channel_colors"] = ("Greens_r", "Reds_r")
+        self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
 
 def update_process_settings(settings, settings_type):
     if settings_type == "2p_20x":

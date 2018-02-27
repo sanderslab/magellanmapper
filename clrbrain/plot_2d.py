@@ -37,7 +37,10 @@ from clrbrain import config
 from clrbrain import lib_clrbrain
 
 colormap_2d = cm.inferno
-CMAP_GRBK = LinearSegmentedColormap.from_list("Green_black", ['black', 'green'])
+CMAP_GRBK = LinearSegmentedColormap.from_list(
+    config.CMAP_GRBK_NAME, ["black", "green"])
+CMAP_RDBK = LinearSegmentedColormap.from_list(
+    config.CMAP_RDBK_NAME, ["black", "red"])
 #colormap_2d = cm.gray
 savefig = None
 verify = False
@@ -295,6 +298,35 @@ def add_scale_bar(ax):
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
+def imshow_multichannel(ax, img2d, colormaps, aspect, alpha, vmin, vmax):
+    """Show multichannel 2D image with channels overlaid over one another.
+    
+    Args:
+        ax: Axes plot.
+        img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
+        aspect: Aspect ratio.
+        alpha: Default alpha transparency level.
+        vim: Imshow vmin level.
+        vmax: Imshow vmax level.
+    """
+    # assume that 3D array has a channel dimension
+    multichannel = img2d.ndim >= 3
+    channels = img2d.shape[2] if multichannel else 1
+    for i in range(channels):
+        img2d_show = img2d[..., i] if multichannel else img2d
+        if i == 1:
+            # after the 1st channel, all subsequent channels are transluscent
+            alpha *= 0.5
+        cmap = colormaps[i]
+        # check for custom colormaps
+        if cmap == config.CMAP_GRBK_NAME:
+            cmap = CMAP_GRBK
+        elif cmap == config.CMAP_RDBK_NAME:
+            cmap = CMAP_RDBK
+        ax.imshow(
+            img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin, 
+            vmax=vmax)
+
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
                  highlight=False, border=None, plane="xy", roi=None, 
@@ -406,18 +438,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         
         # show the ROI, which is now a 2D zoomed image
         colormaps = config.process_settings["channel_colors"]
-        if roi.ndim >= 3:
-            # overlay each channel
-            for i in range(roi.shape[2]):
-                if i == 0:
-                    plt.imshow(
-                        roi[..., i], cmap=colormaps[i], alpha=1, aspect=aspect)
-                else:
-                    plt.imshow(
-                        roi[..., i], cmap=colormaps[i], alpha=0.3, 
-                        aspect=aspect)
-        else:
-            plt.imshow(roi, cmap=colormaps[0], alpha=alpha, aspect=aspect)
+        imshow_multichannel(
+            ax, roi, colormaps, aspect, alpha, 0.0, vmax_overview)
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):
@@ -683,7 +705,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # progressively zoomed overview images if set for additional zoom levels
     overview_cols = zoom_plot_cols // zoom_levels
     colormaps = config.process_settings["channel_colors"]
-    channels = 1 if img2d.ndim <= 2 else img2d.shape[2]
     for i in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, i])
         _hide_axes(ax)
@@ -713,14 +734,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         downsample = np.max(np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
         if downsample < 1: 
             downsample = 1
-        for i in range(channels):
-            img2d_zoom_chl = img2d_zoom
-            if img2d.ndim >= 3:
-                img2d_zoom_chl = img2d_zoom_chl[..., i]
-            alpha = 1 if i == 0 else 0.3
-            ax.imshow(
-                img2d_zoom_chl[::downsample, ::downsample], cmap=colormaps[i], 
-                aspect=aspect, alpha=alpha, vmin=0.0, vmax=vmax_overview)
+        imshow_multichannel(
+            ax, img2d_zoom[::downsample, ::downsample], colormaps, aspect, 
+            1, 0.0, vmax_overview)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 

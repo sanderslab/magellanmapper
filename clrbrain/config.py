@@ -52,6 +52,7 @@ class ProcessSettings(dict):
         self["prune_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
         self["scale_factor"] = (1, 1, 1)
+        self["channel_colors"] = ("Greens_r", "Reds_r")
 
 def update_process_settings(settings, settings_type):
     if settings_type == "2p_20x":

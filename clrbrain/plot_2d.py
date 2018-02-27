@@ -358,30 +358,29 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
     else:
         # show the zoomed in 2D region
         
-        # calculate the region depending on whether given ROI directly
+        # calculate the region depending on whether given ROI directly and 
+        # remove time dimension since roi argument does not have it
         if roi is None:
-            region = [0, offset[2], 
+            region = [offset[2], 
                       slice(offset[1], offset[1] + roi_size[1]), 
                       slice(offset[0], offset[0] + roi_size[0])]
-            roi = image5d
-            #print("roi shape: {}".format(roi.shape))
+            roi = image5d[0]
             #print("region: {}".format(region))
         else:
-            region = [0, z_relative, slice(0, roi_size[1]), 
+            region = [z_relative, slice(0, roi_size[1]), 
                       slice(0, roi_size[0])]
         # swap columns if showing a different plane
         if plane == PLANE[1]:
-            region = lib_clrbrain.swap_elements(region, 1, 2)
+            region = lib_clrbrain.swap_elements(region, 0, 1)
         elif plane == PLANE[2]:
-            region = lib_clrbrain.swap_elements(region, 1, 3)
-            region = lib_clrbrain.swap_elements(region, 1, 2)
+            region = lib_clrbrain.swap_elements(region, 0, 2)
+            region = lib_clrbrain.swap_elements(region, 0, 1)
         # get the zoomed region
-        if roi.ndim >= 5:
+        if roi.ndim >= 4:
             roi = roi[tuple(region + [channel])]
-        elif roi.ndim == 4:
-            roi = roi[tuple(region)]
         else:
-            roi = roi[tuple(region[1:])]
+            roi = roi[tuple(region)]
+        #print("roi shape: {}".format(roi.shape))
         
         # show labels if provided and within ROI; for some reason if added
         # after imshow, the main image gets squeezed to show full patches
@@ -404,7 +403,21 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             roi = np.copy(roi)
             roi[::grid_intervals[0], :] = roi[::grid_intervals[0], :] / 2
             roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
-        plt.imshow(roi, cmap=colormap_2d, alpha=alpha, aspect=aspect)
+        
+        # show the ROI, which is now a 2D zoomed image
+        colormaps = config.process_settings["channel_colors"]
+        if roi.ndim >= 3:
+            # overlay each channel
+            for i in range(roi.shape[2]):
+                if i == 0:
+                    plt.imshow(
+                        roi[..., i], cmap=colormaps[i], alpha=1, aspect=aspect)
+                else:
+                    plt.imshow(
+                        roi[..., i], cmap=colormaps[i], alpha=0.3, 
+                        aspect=aspect)
+        else:
+            plt.imshow(roi, cmap=colormaps[0], alpha=alpha, aspect=aspect)
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):
@@ -582,6 +595,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             defaults to :attr:``ZOOM_COLS``.
     """
     time_start = time()
+    if channel is None:
+        channel = slice(None)
+    
     fig = plt.figure()
     # black text with transluscent background the color of the figure
     # background in case the title is a 2D plot
@@ -630,7 +646,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     print("z_overview: {}".format(z_overview))
     
     # pick image based on chosen orientation
-    img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
+    img2d, aspect, origin = extract_plane(image5d, z_overview, plane, channel)
     
     # plot layout depending on number of z-planes
     if single_zoom_row:
@@ -666,6 +682,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels
     overview_cols = zoom_plot_cols // zoom_levels
+    colormaps = config.process_settings["channel_colors"]
+    channels = 1 if img2d.ndim <= 2 else img2d.shape[2]
     for i in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, i])
         _hide_axes(ax)
@@ -695,9 +713,14 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         downsample = np.max(np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
         if downsample < 1: 
             downsample = 1
-        ax.imshow(
-            img2d_zoom[::downsample, ::downsample], cmap=colormap_2d, 
-            aspect=aspect, vmin=0.0, vmax=vmax_overview)
+        for i in range(channels):
+            img2d_zoom_chl = img2d_zoom
+            if img2d.ndim >= 3:
+                img2d_zoom_chl = img2d_zoom_chl[..., i]
+            alpha = 1 if i == 0 else 0.3
+            ax.imshow(
+                img2d_zoom_chl[::downsample, ::downsample], cmap=colormaps[i], 
+                aspect=aspect, alpha=alpha, vmin=0.0, vmax=vmax_overview)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 

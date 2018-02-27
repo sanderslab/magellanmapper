@@ -393,8 +393,9 @@ def prepare_roi(image5d, channel, roi_size, offset):
             of interest. Defaults to (0, 0, 0).
     
     Returns:
-        The region of interest, including denoising, as a 3-dimensional
-           array, without separate time or channel dimensions.
+        The region of interest as a 3- or 4-D array, without separate time 
+        dimension. The 4th dimension will only be included if ``channel`` 
+        is None, in which case all channels will be included.
     """
     if channel is None:
         channel = slice(None)

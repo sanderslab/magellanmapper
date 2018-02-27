@@ -62,7 +62,9 @@ def denoise_roi(roi):
     """Denoises an image.
     
     Args:
-        roi: Region of interest.
+        roi: Region of interest as a 3D (z, y, x) array. Note that 4D arrays 
+            with channels are not allowed as the Scikit-Image gaussian filter 
+            only accepts specifically 3 channels, presumably for RGB.
     
     Returns:
         Denoised region of interest.
@@ -258,7 +260,8 @@ def plot_3d_points(roi, vis):
     background to masses within the region of interest.
     
     Args:
-        roi: Region of interest.
+        roi: Region of interest either as a 3D (z, y, x) or 
+            4D (z, y, x, channel) ndarray.
         vis: Visualization object on which to draw the contour. Any 
             current image will be cleared first.
     
@@ -278,6 +281,7 @@ def plot_3d_points(roi, vis):
     
     # separate parallel arrays for each dimension of all coordinates for
     # Mayavi input format, with the ROI itself given as a 1D scalar array 
+    time_start = time()
     shape = roi.shape
     z = np.ones((shape[0], shape[1] * shape[2]))
     for i in range(shape[0]):
@@ -289,35 +293,38 @@ def plot_3d_points(roi, vis):
     x = np.ones((shape[0] * shape[1], shape[2]))
     for i in range(shape[0] * shape[1]):
         x[i] = np.arange(shape[2])
-    x = np.reshape(x, roi.size)
-    y = np.reshape(y, roi.size)
-    z = np.reshape(z, roi.size)
-    roi_1d = np.reshape(roi, roi.size)
-    
-    # clear background points to see remaining structures
-    remove = np.where(roi_1d < config.process_settings["points_3d_thresh"])
-    x = np.delete(x, remove)
-    y = np.delete(y, remove)
-    z = np.delete(z, remove)
-    roi_1d = np.delete(roi_1d, remove)
-    # adjust range from 0-1 to region of colormap to use
-    roi_1d = lib_clrbrain.normalize(roi_1d, 0.3, 0.6)
-    #print(roi_1d)
-    points_len = roi_1d.size
-    if points_len == 0:
-        print("no 3D points to display")
-        return False
-    time_start = time()
-    mask = math.ceil(points_len / _MASK_DIVIDEND)
-    print("points: {}, mask: {}".format(points_len, mask))
-    # TODO: better performance if manually interval the points rather than 
-    # through mask flag?
-    #roi_1d = roi_1d[::mask]
-    vis.scene.mlab.points3d(x, y, z, roi_1d, 
-                            mode="sphere", colormap="Greens", 
-                            scale_mode="none", mask_points=mask, 
-                            line_width=1.0, vmax=1.0, 
-                            vmin=0.0, transparent=True)
+    multichannel = roi.ndim >= 4
+    channels = roi.shape[3] if multichannel else 1
+    colormaps = ("Greens", "Reds")
+    for i in range(channels):
+        roi_show = roi[..., i] if multichannel else roi
+        roi_show_1d = roi_show.reshape(roi_show.size)
+        if i == 0:
+            x = np.reshape(x, roi_show.size)
+            y = np.reshape(y, roi_show.size)
+            z = np.reshape(z, roi_show.size)
+        #print(shape, roi_show.shape, x.shape)
+        
+        # adjust range from 0-1 to region of colormap to use
+        roi_show_1d = lib_clrbrain.normalize(roi_show_1d, 0.2, 1.0)
+        # clear background points to see remaining structures
+        remove = np.where(roi_show_1d < config.process_settings["points_3d_thresh"])
+        roi_show_1d = np.delete(roi_show_1d, remove)
+        #print(roi_show_1d)
+        points_len = roi_show_1d.size
+        if points_len == 0:
+            print("no 3D points to display")
+            return False
+        mask = math.ceil(points_len / _MASK_DIVIDEND)
+        print("points: {}, mask: {}".format(points_len, mask))
+        # TODO: better performance if manually interval the points rather than 
+        # through mask flag?
+        #roi_show_1d = roi_show_1d[::mask]
+        vis.scene.mlab.points3d(
+            np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
+            roi_show_1d, mode="sphere", colormap=colormaps[i], 
+            scale_mode="none", mask_points=mask, line_width=1.0, vmax=1.0, 
+            vmin=0.0, transparent=True)
     print("time for 3D points display: {}".format(time() - time_start))
     '''
     for i in range(roi_1d.size):

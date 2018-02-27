@@ -350,7 +350,7 @@ class Visualization(HasTraits):
             # show region of interest based on raw image, using basic denoising 
             # to normalize values but not fully processing
             self.roi = plot_3d.prepare_roi(
-                cli.image5d, cli.channel, curr_roi_size, curr_offset)
+                cli.image5d, curr_roi_size, curr_offset)
             
             vis = (plot_3d.mlab_3d, config.process_settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
@@ -359,7 +359,7 @@ class Visualization(HasTraits):
                 _scene_3d_shown = True
             else:
                 # 3D point rendering
-                _scene_3d_shown = plot_3d.plot_3d_points(self.roi, self)
+                _scene_3d_shown = plot_3d.plot_3d_points(self.roi, self, cli.channel)
             
             # process ROI in prep for showing filtered 2D view and segmenting
             self.roi = plot_3d.saturate_roi(self.roi)

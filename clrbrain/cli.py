@@ -779,7 +779,7 @@ def process_file(filename_base, offset, roi_size):
             filename_info_proc = _splice_before(filename_info_proc, 
                                                 series_fill, splice)
             
-        roi = plot_3d.prepare_roi(image5d, channel, shape, roi_offset)
+        roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
         
         # chunk into super-ROIs, which will each be further chunked into 
         # sub-ROIs for multi-processing

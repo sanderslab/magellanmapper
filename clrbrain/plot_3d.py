@@ -33,7 +33,15 @@ MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 near_max = -1.0
 
-def saturate_roi(roi, clip_vmax=-1):
+def setup_channels(roi, channel, dim_channel):
+    multichannel = roi.ndim > dim_channel
+    channels = [0]
+    if multichannel:
+        channels = range(roi.shape[dim_channel]) if channel is None else [channel]
+    print("multichannel: {}, channels: {}".format(multichannel, channels))
+    return multichannel, channels
+
+def saturate_roi(roi, clip_vmax=-1, channel=None):
     """Saturates an image, clipping extreme values and stretching remaining
     values to fit the full range.
     
@@ -43,20 +51,30 @@ def saturate_roi(roi, clip_vmax=-1):
     Returns:
         Saturated region of interest.
     """
-    lib_clrbrain.printv("near_max: {}".format(near_max))
-    if clip_vmax == -1:
-        clip_vmax = config.process_settings["clip_vmax"]
-    # enhance contrast and normalize to 0-1 scale
-    vmin, vmax = np.percentile(roi, (5, clip_vmax))
-    lib_clrbrain.printv("vmin: {}, vmax: {}".format(vmin, vmax))
-    # ensures that vmax is at least 50% of near max value of image5d
-    max_thresh = near_max * 0.5
-    if vmax < max_thresh:
-        vmax = max_thresh
-        lib_clrbrain.printv("adjusted vmax to {}".format(vmax))
-    saturated = np.clip(roi, vmin, vmax)
-    saturated = (saturated - vmin) / (vmax - vmin)
-    return saturated
+    multichannel, channels = setup_channels(roi, channel, 3)
+    roi_out = None
+    for i in channels:
+        roi_show = roi[..., i] if multichannel else roi
+        if clip_vmax == -1:
+            clip_vmax = config.process_settings["clip_vmax"]
+        # enhance contrast and normalize to 0-1 scale
+        vmin, vmax = np.percentile(roi_show, (5, clip_vmax))
+        lib_clrbrain.printv("vmin: {}, vmax: {}".format(vmin, vmax))
+        # ensures that vmax is at least 50% of near max value of image5d
+        lib_clrbrain.printv("near_max: {}".format(near_max[i]))
+        max_thresh = near_max[i] * 0.5
+        if vmax < max_thresh:
+            vmax = max_thresh
+            lib_clrbrain.printv("adjusted vmax to {}".format(vmax))
+        saturated = np.clip(roi_show, vmin, vmax)
+        saturated = (saturated - vmin) / (vmax - vmin)
+        if multichannel:
+            if roi_out is None:
+                roi_out = np.zeros(roi.shape, dtype=saturated.dtype)
+            roi_out[..., i] = saturated
+        else:
+            roi_out = saturated
+    return roi_out
     
 def denoise_roi(roi):
     """Denoises an image.
@@ -252,7 +270,7 @@ def plot_3d_surface(roi, vis):
         print(e)
         print("ignoring min/max contour for now")
     
-def plot_3d_points(roi, vis):
+def plot_3d_points(roi, vis, channel):
     """Plots all pixels as points in 3D space.
     
     Points falling below a given threshold will be
@@ -276,7 +294,7 @@ def plot_3d_points(roi, vis):
     vis.scene.mlab.clf()
     
     # streamline the image
-    roi = saturate_roi(roi, 99.5)
+    roi = saturate_roi(roi, 99.5, channel)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
     
     # separate parallel arrays for each dimension of all coordinates for
@@ -386,26 +404,22 @@ def plot_2d_shadows(roi, vis):
     img2d_mlab.actor.position = [10, -10, 5]
     img2d_mlab.actor.orientation = [90, 0, 0]
 
-def prepare_roi(image5d, channel, roi_size, offset):
-    """Finds and shows the region of interest.
-    
-    This region will be denoised and displayed in Mayavi.
+def prepare_roi(image5d, roi_size, offset):
+    """Extracts a region of interest from a larger image.
     
     Args:
-        image5d: Image array.
-        channel: Channel to view; wil be ignored if image5d has no
-            channel dimension. If None, defaults to all channels.
+        image5d: Image array as a 5D array (t, z, y, x, c), or 4D if  
+            no separate channel dimension exists as with most one channel 
+            images.
         roi_size: Size of the region of interest as (x, y, z).
         offset: Tuple of offset given as (x, y, z) for the region 
             of interest. Defaults to (0, 0, 0).
     
     Returns:
-        The region of interest as a 3- or 4-D array, without separate time 
-        dimension. The 4th dimension will only be included if ``channel`` 
-        is None, in which case all channels will be included.
+        The region of interest without separate time dimension as a 3D 
+        if ``image5d`` is 4D, without a separate channel dimension, or 4-D 
+        array if channel dimension exists.
     """
-    if channel is None:
-        channel = slice(None)
     cube_slices = []
     for i in range(len(offset)):
         cube_slices.append(slice(offset[i], offset[i] + roi_size[i]))
@@ -414,7 +428,7 @@ def prepare_roi(image5d, channel, roi_size, offset):
     
     # cube with corner at offset, side of cube_len
     if image5d.ndim >= 5:
-        roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0], channel]
+        roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0], :]
     elif image5d.ndim == 4:
         roi = image5d[0, cube_slices[2], cube_slices[1], cube_slices[0]]
     else:

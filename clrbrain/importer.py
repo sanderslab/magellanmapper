@@ -54,7 +54,8 @@ PIXEL_DTYPE = {
 #     fixed saved resolutions to contain only the given series
 # 11: sizes uses the image5d shape rather than the original image's size
 # 12: fixed replacing dtype, near_min/max when saving image in transpose_npy
-IMAGE5D_NP_VER = 12 # image5d Numpy saved array version number
+# 13: change near_min/max to array with element for each channel
+IMAGE5D_NP_VER = 13 # image5d Numpy saved array version number
 SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
 
@@ -203,6 +204,12 @@ def _save_image_info(filename_info_npz, names, sizes, resolutions,
     outfile_info.close()
     print("info file saved to {}".format(filename_info_npz))
     print("file save time: {}".format(time() - time_start))
+    
+    # show info file contents
+    output = np.load(filename_info_npz)
+    for key, value in output.items():
+        print("{}: {}".format(key, value))
+    output.close()
 
 def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     if curr_ver >= IMAGE5D_NP_VER:
@@ -231,6 +238,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     outfile_info = open(filename_info_npz, "wb")
     np.savez(outfile_info, **info_up)
     outfile_info.close()
+    
     return True
 
 def read_file(filename, series, load=True, z_max=-1, 
@@ -352,7 +360,7 @@ def read_file(filename, series, load=True, z_max=-1,
                 if offset is not None and size is not None:
                     # simplifies to reducing the image to a subset as an ROI if 
                     # offset and size given
-                    image5d = plot_3d.prepare_roi(image5d, channel, size, offset)
+                    image5d = plot_3d.prepare_roi(image5d, size, offset)
                 '''
                 max_range = 0
                 if plot_3d.near_max is not None:
@@ -420,6 +428,7 @@ def read_file(filename, series, load=True, z_max=-1,
             shape[1] = z_max
         #dtype = getattr(np, pixel_type)
         # generate image stack dimensions based on whether channel dim exists
+        # TDOO: multichannel import for CZI files
         if shape[4] <= 1:
             shape = shape[:-1]#(nt, nz, size[2], size[3])
             load_channel = 0
@@ -427,6 +436,8 @@ def read_file(filename, series, load=True, z_max=-1,
             #shape = (nt, nz, size[2], size[3], size[4])
             load_channel = None
         name = names[series]
+    near_mins = []
+    near_maxs = []
     for img_path in filenames:
         rdr = bf.ImageReader(img_path, perform_init=True)
         lows = []
@@ -455,6 +466,8 @@ def read_file(filename, series, load=True, z_max=-1,
                     image5d[t, z, :, :, channel_num] = img
                 else:
                     image5d[t, z] = img
+        near_mins.append(min(lows))
+        near_maxs.append(max(highs))
     print("file import time: {}".format(time() - time_start))
     time_start = time()
     image5d.flush() # may not be necessary but ensure contents to disk
@@ -465,7 +478,7 @@ def read_file(filename, series, load=True, z_max=-1,
     _save_image_info(filename_info_npz, [name], 
                      [shape], [detector.resolutions[series]], 
                      detector.magnification, detector.zoom, 
-                     image5d.dtype, min(lows), max(highs))
+                     image5d.dtype, near_mins, near_maxs)
     return image5d
 
 def import_dir(path):
@@ -496,7 +509,7 @@ def import_dir(path):
     _save_image_info(filename_info_npz, [name], 
                      [image5d.shape], detector.resolutions, 
                      detector.magnification, detector.zoom, image5d.dtype,
-                     min(lows), max(highs))
+                     [min(lows)], [max(highs)])
     return image5d
 
 def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):

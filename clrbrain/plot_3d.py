@@ -76,7 +76,7 @@ def saturate_roi(roi, clip_vmax=-1, channel=None):
             roi_out = saturated
     return roi_out
     
-def denoise_roi(roi):
+def denoise_roi(roi, channel=None):
     """Denoises an image.
     
     Args:
@@ -87,32 +87,42 @@ def denoise_roi(roi):
     Returns:
         Denoised region of interest.
     """
-    settings = config.process_settings
-    # find gross density
-    saturated_mean = np.mean(roi)
-    lib_clrbrain.printv("saturated_mean: {}".format(saturated_mean))
-    
-    # additional simple thresholding
-    denoised = np.clip(roi, settings["clip_min"], settings["clip_max"])
-    
-    if settings["tot_var_denoise"]:
-        # total variation denoising
-        #time_start = time()
-        denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
-        #denoised = restoration.denoise_tv_bregman(denoised, weight=0.1)
-        #print('time for total variation: %f' %(time() - time_start))
-    
-    # sharpening
-    unsharp_strength = settings["unsharp_strength"]
-    blur_size = 8
-    blurred = filters.gaussian(denoised, blur_size)
-    high_pass = denoised - unsharp_strength * blurred
-    denoised = denoised + high_pass
-    
-    # further erode denser regions to decrease overlap among blobs
-    if saturated_mean > 0.2:
-        denoised = morphology.erosion(denoised, morphology.octahedron(1))
-    return denoised
+    multichannel, channels = setup_channels(roi, channel, 3)
+    roi_out = None
+    for i in channels:
+        roi_show = roi[..., i] if multichannel else roi
+        settings = config.process_settings
+        # find gross density
+        saturated_mean = np.mean(roi_show)
+        lib_clrbrain.printv("saturated_mean: {}".format(saturated_mean))
+        
+        # additional simple thresholding
+        denoised = np.clip(roi_show, settings["clip_min"], settings["clip_max"])
+        
+        if settings["tot_var_denoise"]:
+            # total variation denoising
+            #time_start = time()
+            denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
+            #denoised = restoration.denoise_tv_bregman(denoised, weight=0.1)
+            #print('time for total variation: %f' %(time() - time_start))
+        
+        # sharpening
+        unsharp_strength = settings["unsharp_strength"]
+        blur_size = 8
+        blurred = filters.gaussian(denoised, blur_size)
+        high_pass = denoised - unsharp_strength * blurred
+        denoised = denoised + high_pass
+        
+        # further erode denser regions to decrease overlap among blobs
+        if saturated_mean > 0.2:
+            denoised = morphology.erosion(denoised, morphology.octahedron(1))
+        if multichannel:
+            if roi_out is None:
+                roi_out = np.zeros(roi.shape, dtype=denoised.dtype)
+            roi_out[..., i] = denoised
+        else:
+            roi_out = denoised
+    return roi_out
 
 def threshold(roi):
     """Thresholds the ROI, with options for various techniques as well as
@@ -311,10 +321,9 @@ def plot_3d_points(roi, vis, channel):
     x = np.ones((shape[0] * shape[1], shape[2]))
     for i in range(shape[0] * shape[1]):
         x[i] = np.arange(shape[2])
-    multichannel = roi.ndim >= 4
-    channels = roi.shape[3] if multichannel else 1
+    multichannel, channels = setup_channels(roi, channel, 3)
     colormaps = ("Greens", "Reds")
-    for i in range(channels):
+    for i in channels:
         roi_show = roi[..., i] if multichannel else roi
         roi_show_1d = roi_show.reshape(roi_show.size)
         if i == 0:

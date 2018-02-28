@@ -362,12 +362,8 @@ class Visualization(HasTraits):
                 _scene_3d_shown = plot_3d.plot_3d_points(self.roi, self, cli.channel)
             
             # process ROI in prep for showing filtered 2D view and segmenting
-            self.roi = plot_3d.saturate_roi(self.roi)
-            if self.roi.ndim >= 4:
-                for i in range(self.roi.shape[3]):
-                    self.roi[..., i] = plot_3d.denoise_roi(self.roi[..., i])
-            else:
-                self.roi = plot_3d.denoise_roi(self.roi)
+            self.roi = plot_3d.saturate_roi(self.roi, channel=cli.channel)
+            self.roi = plot_3d.denoise_roi(self.roi, cli.channel)
         
         else:
             self.scene.mlab.clf()

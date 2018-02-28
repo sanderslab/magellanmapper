@@ -781,8 +781,11 @@ def process_file(filename_base, offset, roi_size):
                                                    series_fill, splice)
             filename_info_proc = _splice_before(filename_info_proc, 
                                                 series_fill, splice)
-            
+        
+        # perform detection on given area in single channel
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
+        if roi.ndim >=4:
+            roi = roi[..., channel]
         
         # chunk into super-ROIs, which will each be further chunked into 
         # sub-ROIs for multi-processing

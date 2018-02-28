@@ -29,6 +29,7 @@ import bioformats as bf
 from skimage import io
 from skimage import transform
 
+from clrbrain import cli
 from clrbrain import chunking
 from clrbrain import detector
 from clrbrain import plot_2d
@@ -49,12 +50,13 @@ PIXEL_DTYPE = {
     7: np.double
 }
 
-# image5d archive versions:
+# image5d info archive versions:
 # 10: started at 10 because of previous versions prior to numbering; 
 #     fixed saved resolutions to contain only the given series
 # 11: sizes uses the image5d shape rather than the original image's size
 # 12: fixed replacing dtype, near_min/max when saving image in transpose_npy
-# 13: change near_min/max to array with element for each channel
+# 13: change near_min/max to array with element for each channel; add 
+#     "scaling" and "plane" fields for transposed images
 IMAGE5D_NP_VER = 13 # image5d Numpy saved array version number
 SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
@@ -193,19 +195,20 @@ def filename_to_base(filename, series, modifier="", ext="czi"):
     return filename.replace("." + ext, "_") + modifier + str(series).zfill(5)
 
 def _save_image_info(filename_info_npz, names, sizes, resolutions, 
-                     magnification, zoom, pixel_type, near_min, near_max):
+                     magnification, zoom, pixel_type, near_min, near_max, 
+                     scaling=None, plane=None):
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
     np.savez(outfile_info, ver=IMAGE5D_NP_VER, names=names, sizes=sizes, 
              resolutions=resolutions, 
              magnification=magnification, zoom=zoom, 
              pixel_type=pixel_type, near_min=near_min, 
-             near_max=near_max)
+             near_max=near_max, scaling=scaling, plane=plane)
     outfile_info.close()
     print("info file saved to {}".format(filename_info_npz))
     print("file save time: {}".format(time() - time_start))
     
-    # show info file contents
+    # reload and show info file contents
     output = np.load(filename_info_npz)
     for key, value in output.items():
         print("{}: {}".format(key, value))
@@ -222,6 +225,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         # ver 10 -> 11
         # no change except ver since most likely won't encounter any difference
         pass
+    
     if curr_ver <= 11:
         # ver 11 -> 12
         if info["pixel_type"] != image5d.dtype:
@@ -233,6 +237,35 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
                   .format(info_up["pixel_type"], info_up["near_min"], 
                           info_up["near_max"]))
     
+    if curr_ver <= 12:
+        # ver 12 -> 13
+        
+        lows = [info_up["near_min"]]
+        highs = [info_up["near_max"]]
+        scaling = None
+        
+        # assumed that 2nd filename given is the original file from which to 
+        # calculate exact scaling
+        if len(cli.filenames) > 1:
+            image5d_orig = read_file(
+                cli.filenames[1], cli.series, update_info=False)
+            scaling = calc_scaling(image5d_orig, image5d)
+            # image5d is a scaled, smaller image, so bounds will be 
+            # calculated since the calculation requires loading full image 
+            # into memory; otherwise, defer to re-importing the image
+            lows, highs = _calc_intensity_bounds(image5d)
+        elif image5d.ndim >= 5:
+            # default to simply converting the existing scalar to a list 
+            # of repeated scalars
+            channels = image5d.shape[4]
+            print("channels: {}".format(channels))
+            lows = [lows[0] for i in range(channels)]
+            highs = [highs[0] for i in range(channels)]
+        info_up["near_min"] = lows
+        info_up["near_max"] = highs
+        info_up["scaling"] = scaling
+        info_up["plane"] = plot_2d.plane
+    
     # save updated info
     info_up["ver"] = IMAGE5D_NP_VER
     outfile_info = open(filename_info_npz, "wb")
@@ -243,7 +276,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
 
 def read_file(filename, series, load=True, z_max=-1, 
               offset=None, size=None, channel=None, return_info=False, 
-              import_if_absent=True):
+              import_if_absent=True, update_info=True):
     """Reads in an imaging file.
     
     Loads a Numpy image if available as determined by 
@@ -277,6 +310,8 @@ def read_file(filename, series, load=True, z_max=-1,
             dictionary of image properties; defaults to False.
         import_if_absent: True if the image should be imported into a Numpy 
             image if it does not exist; defaults to True.
+        update_info: True if the associated image5d info file should be 
+            updated; defaults to True.
     
     Returns:
         image5d, the array of image data. If ``return_info`` is True, a 
@@ -372,8 +407,11 @@ def read_file(filename, series, load=True, z_max=-1,
                     if max_range != 0:
                         plot_2d.vmax_overview = plot_3d.near_max / max_range
                 '''
-                load_info = _update_image5d_np_ver(
-                    image5d_ver_num, image5d, output, filename_info_npz)
+                if update_info:
+                    load_info = _update_image5d_np_ver(
+                        image5d_ver_num, image5d, output, filename_info_npz)
+                else:
+                    load_info = False
             if return_info:
                 return image5d, output
             return image5d
@@ -523,6 +561,34 @@ def make_modifier_plane(plane):
 def make_modifier_scale(scale):
     return "scale{}".format(scale)
 
+def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5):
+    """Calculate image intensity boundaries for the given percentiles, 
+    including boundaries for each channel in multichannel images.
+    
+    Assume that the image will be small enough to load entirely into 
+    memory rather than calculating bounds plane-by-plane. Also assume that 
+    bounds for all channels will be calculated.
+    
+    Args:
+        image5d: Image as a 5D (t, z, y, x, c) array, or a 4D array if only 
+            1 channel is present.
+        lower: Lower bound as a percentile.
+        upper: Upper bound as a percentile.
+    
+    Returns:
+        Tuple of ``lows`` and ``highs``, each of which is a list of the 
+        low and high values at the given percentile cutoffs for each channel.
+    """
+    multichannel, channels = plot_3d.setup_channels(image5d, None, 4)
+    lows = []
+    highs = []
+    for i in channels:
+        image5d_show = image5d[..., i] if multichannel else image5d
+        low, high = np.percentile(image5d_show, (lower, upper))
+        lows.append(low)
+        highs.append(high)
+    return lows, highs
+
 def transpose_npy(filename, series, plane=None, rescale=None):
     """Transpose Numpy NPY saved arrays into new planar orientations and/or 
     rescaled sizes.
@@ -541,8 +607,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
             rescaling will occur. Rescaling takes place in multiplrocessing.
     """
     time_start = time()
-    image5d, image5d_info = read_file(filename, series, return_info=True)
-    info = dict(image5d_info)
+    image5d, info = read_file(filename, series, return_info=True)
     sizes = info["sizes"]
     ext = lib_clrbrain.get_filename_ext(filename)
     modifier = ""
@@ -553,6 +618,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     filename_image5d_npz, filename_info_npz = _make_filenames(
         filename, series, modifier=modifier, ext=ext)
     offset = 0 if image5d.ndim <= 3 else 1
+    multichannel = image5d.ndim >=5
     image5d_swapped = image5d
     
     if plane is not None and plane != plot_2d.PLANE[0]:
@@ -566,12 +632,12 @@ def transpose_npy(filename, series, plane=None, rescale=None):
             detector.resolutions[0] = lib_clrbrain.swap_elements(
                 detector.resolutions[0], 0, 2)
     
+    scaling = None
     if rescale is not None:
         rescaled = image5d_swapped
         # TODO: generalize for more than 1 preceding dimension?
         if offset > 0:
             rescaled = rescaled[0]
-        multichannel = rescaled.ndim > 3
         #max_pixels = np.multiply(np.ones(3), 100)
         max_pixels = [100, 500, 500]
         
@@ -611,6 +677,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         
         detector.resolutions = np.multiply(detector.resolutions, 1 / rescale)
         sizes[0] = rescaled_shape
+        scaling = calc_scaling(image5d_swapped, image5d_transposed)
     else:
         # transfer directly to memmap-backed array
         image5d_transposed = np.lib.format.open_memmap(
@@ -629,16 +696,10 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     print("detector.resolutions: {}".format(detector.resolutions))
     print("sizes: {}".format(sizes))
     image5d.flush()
-    info["resolutions"] = detector.resolutions
-    info["sizes"] = sizes
-    info["pixel_type"] = image5d_transposed.dtype
-    # simply to using whole image since generally small enough after
-    # tranposition
-    info["near_min"], info["near_max"] = np.percentile(
-        image5d_transposed, (0.5, 99.5))
-    outfile_info = open(filename_info_npz, "wb")
-    np.savez(outfile_info, **info)
-    outfile_info.close()
+    _save_image_info(
+        filename_info_npz, info["names"], sizes, detector.resolutions, 
+        info["magnification"], info["zoom"], image5d_transposed.dtype, 
+        *_calc_intensity_bounds(image5d_transposed), scaling, plane)
     print("saved transposed file to {} with shape {}".format(
         filename_image5d_npz, image5d_transposed.shape))
     print("time elapsed (s): {}".format(time() - time_start))
@@ -662,10 +723,23 @@ def save_np_image(image, filename, series):
     out_file = open(filename_image5d_npz, "wb")
     np.save(out_file, image)
     out_file.close()
+    lows, highs = _calc_intensity_bounds(image5d)
     _save_image_info(
         filename_info_npz, [os.path.basename(filename)], [image.shape], 
         detector.resolutions, detector.magnification, detector.zoom, 
-        image.dtype, *np.percentile(image, (0.5, 99.5)))
+        image.dtype, lows, highs)
+
+def calc_scaling(image5d, scaled):
+    shape = image5d.shape
+    scaled_shape = scaled.shape
+    # remove time dimension
+    if image5d.ndim >=4:
+        shape = shape[1:4]
+    if scaled.ndim >=4:
+        scaled_shape = scaled_shape[1:4]
+    scaling = np.divide(scaled_shape[0:3], shape[0:3])
+    print("image scaling compared to image5d: {}".format(scaling))
+    return scaling
 
 if __name__ == "__main__":
     print("Clrbrain importer manipulations")

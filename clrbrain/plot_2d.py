@@ -307,6 +307,7 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, vmin,
     Args:
         ax: Axes plot.
         img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
+        channel: Channel to display; if None, all channels will be shown.
         aspect: Aspect ratio.
         alpha: Default alpha transparency level.
         vim: Imshow vmin level.

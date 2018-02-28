@@ -619,14 +619,6 @@ def load_labels(fixed_file, get_sitk=False):
         return labels_img
     return sitk.GetArrayFromImage(labels_img)
 
-def reg_scaling(image5d, reg):
-    shape = image5d.shape
-    if image5d.ndim >=4:
-        shape = shape[1:4]
-    scaling = np.divide(reg.shape[0:3], shape[0:3])
-    print("registered image scaling compared to image5d: {}".format(scaling))
-    return scaling
-
 def load_labels_ref(path):
     labels_ref = None
     with open(path, "r") as f:
@@ -875,7 +867,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
     scaling_vol_image5d = scaling_vol
     scaling_inv = None
     if image5d is not None and image5d.shape[1:4] != labels_img.shape:
-        scaling = reg_scaling(image5d, labels_img)
+        scaling = importer.calc_scaling(image5d, labels_img)
         scaling_inv = np.divide(1, scaling)
         #scaling_vol_image5d = np.prod(detector.resolutions[0])
         scaling_vol_image5d = scaling_vol * np.prod(scaling)
@@ -1134,7 +1126,7 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 # load large image just to get resolutions; 
                 # TODO: consider saving scaling info in scaled image
                 image5d = importer.read_file(img_path, cli.series)
-                scaling = reg_scaling(image5d, labels_img)
+                scaling = importer.calc_scaling(image5d, labels_img)
                 if scale is not None:
                     # use scaled image for pixel comparison
                     img_path = lib_clrbrain.insert_before_ext(

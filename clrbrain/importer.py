@@ -437,7 +437,7 @@ def read_file(filename, series, load=True, z_max=-1,
     if len(filenames) == 0:
         filenames.append(filename)
     print(filenames)
-    num_channels = len(filenames)
+    num_files = len(filenames)
     if ext == "tiff" or ext == "tif":
         # import multipage TIFFs
         print("Loading multipage TIFF...")
@@ -447,8 +447,8 @@ def read_file(filename, series, load=True, z_max=-1,
                           "magnification, and zoom.".format(filenames[0]))
         sizes, dtype = find_sizes(filenames[0])
         shape = list(sizes[0])
-        if num_channels > 1:
-            shape[-1] = num_channels
+        if num_files > 1:
+            shape[-1] = num_files
         if shape[-1] == 1:
             shape = shape[:-1]
         shape = tuple(shape)
@@ -466,21 +466,23 @@ def read_file(filename, series, load=True, z_max=-1,
             shape[1] = z_max
         #dtype = getattr(np, pixel_type)
         # generate image stack dimensions based on whether channel dim exists
-        # TDOO: multichannel import for CZI files
         if shape[4] <= 1:
-            shape = shape[:-1]#(nt, nz, size[2], size[3])
+            # for 1 channel images, remove channel dimension since redundant
+            shape = shape[:-1]
             load_channel = 0
         else:
-            #shape = (nt, nz, size[2], size[3], size[4])
+            # load all channels
             load_channel = None
         name = names[series]
     near_mins = []
     near_maxs = []
     for img_path in filenames:
+        # multiple images for multichannel TIFF files, but only single 
+        # image if integrated CZI
         rdr = bf.ImageReader(img_path, perform_init=True)
         lows = []
         highs = []
-        if num_channels > 1:
+        if num_files > 1:
             channel_num = int(
                 os.path.splitext(img_path)[0].split(CHANNEL_SEPARATOR)[1])
             print("adding {} to channel {}".format(img_path, channel_num))
@@ -497,15 +499,23 @@ def read_file(filename, series, load=True, z_max=-1,
                         shape=shape)
                     print("setting image5d array for series {} with shape: {}"
                           .format(series, image5d.shape))
-                low, high = np.percentile(img, (0.5, 99.5))
+                # near max/min bounds per channel for the given plane
+                low, high = _calc_intensity_bounds(img, dim_channel=2)
                 lows.append(low)
                 highs.append(high)
-                if num_channels > 1:
+                if num_files > 1:
+                    # squeeze plane inside if separate file per channel
                     image5d[t, z, :, :, channel_num] = img
                 else:
                     image5d[t, z] = img
-        near_mins.append(min(lows))
-        near_maxs.append(max(highs))
+        if num_files > 1:
+            # get min/max from list of 1-element arrays
+            near_mins.append(min(lows)[0])
+            near_maxs.append(max(highs)[0])
+        else:
+            # get min/max from columns of 2D array
+            near_mins = np.amin(np.array(lows), 0)
+            near_maxs = np.amax(np.array(highs), 0)
     print("file import time: {}".format(time() - time_start))
     time_start = time()
     image5d.flush() # may not be necessary but ensure contents to disk
@@ -561,7 +571,7 @@ def make_modifier_plane(plane):
 def make_modifier_scale(scale):
     return "scale{}".format(scale)
 
-def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5):
+def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     """Calculate image intensity boundaries for the given percentiles, 
     including boundaries for each channel in multichannel images.
     
@@ -579,7 +589,7 @@ def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5):
         Tuple of ``lows`` and ``highs``, each of which is a list of the 
         low and high values at the given percentile cutoffs for each channel.
     """
-    multichannel, channels = plot_3d.setup_channels(image5d, None, 4)
+    multichannel, channels = plot_3d.setup_channels(image5d, None, dim_channel)
     lows = []
     highs = []
     for i in channels:

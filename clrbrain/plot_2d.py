@@ -315,7 +315,7 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, vmin,
     """
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
-    img = None
+    img = []
     i = 0
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d
@@ -328,9 +328,10 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, vmin,
             cmap = CMAP_GRBK
         elif cmap == config.CMAP_RDBK_NAME:
             cmap = CMAP_RDBK
-        img = ax.imshow(
+        img_chl = ax.imshow(
             img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin, 
             vmax=vmax[chl], origin=origin)
+        img.append(img_chl)
         i += 1
     return img
 

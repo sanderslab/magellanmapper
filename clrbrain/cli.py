@@ -419,6 +419,8 @@ def main(process_args_only=False):
     
     if args.channel is not None:
         channel = args.channel
+        if channel == -1:
+            channel = None
         print("Set channel to {}".format(channel))
     if args.series is not None:
         series_split = args.series.split(",")
@@ -711,7 +713,8 @@ def process_file(filename_base, offset, roi_size):
         # load labels image and set up scaling
         from clrbrain import register
         config.labels_img = register.load_labels(filename)
-        config.labels_scaling = register.reg_scaling(image5d, config.labels_img)
+        config.labels_scaling = importer.calc_scaling(
+            image5d, config.labels_img)
         config.labels_ref = register.load_labels_ref(config.load_labels)
         config.labels_ref_lookup = register.create_aba_reverse_lookup(
             config.labels_ref)

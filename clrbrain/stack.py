@@ -18,15 +18,17 @@ from clrbrain import config
 from clrbrain import plot_2d
 from clrbrain import importer
 
-def _import_img(i, path, rescale):
+def _import_img(i, path, rescale, multichannel):
     print("importing {}".format(path))
     img = io.imread(path)
-    img = transform.rescale(img, rescale, mode="reflect", multichannel=False)
+    img = transform.rescale(
+        img, rescale, mode="reflect", multichannel=multichannel)
     return i, img
 
-def _process_plane(i, plane, rescale):
+def _process_plane(i, plane, rescale, multichannel):
     print("processing plane {}".format(i))
-    img = transform.rescale(plane, rescale, mode="reflect", multichannel=False)
+    img = transform.rescale(
+        plane, rescale, mode="reflect", multichannel=multichannel)
     return i, img
 
 def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 
@@ -69,20 +71,22 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         # import the images as Matplotlib artists via multiprocessing
         plotted_imgs = [None for i in range(num_images)]
         img_size = None
+        multichannel = images[0].ndim >= 3
+        print("channel: {}".format(cli.channel))
         i = 0
         pool = mp.Pool()
         pool_results = []
         for image in images:
             pool_results.append(pool.apply_async(
-                process_fnc, args=(i, image, rescale)))
+                process_fnc, args=(i, image, rescale, multichannel)))
             i += 1
         colormaps = config.process_settings["channel_colors"]
         for result in pool_results:
             i, img = result.get()
             if img_size is None:
                 img_size = img.shape
-            plotted_imgs[i] = [plot_2d.imshow_multichannel(
-                ax, img, cli.channel, colormaps, aspect, 1, 0, vmax)]
+            plotted_imgs[i] = plot_2d.imshow_multichannel(
+                ax, img, cli.channel, colormaps, aspect, 1, 0, vmax)
         pool.close()
         pool.join()
         

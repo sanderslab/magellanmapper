@@ -38,7 +38,9 @@ def setup_channels(roi, channel, dim_channel):
     channels = [0]
     if multichannel:
         channels = range(roi.shape[dim_channel]) if channel is None else [channel]
-    print("multichannel: {}, channels: {}".format(multichannel, channels))
+    lib_clrbrain.printv(
+        "multichannel: {}, channels: {}, roi shape: {}, channel: {}"
+        .format(multichannel, channels, roi.shape, channel))
     return multichannel, channels
 
 def saturate_roi(roi, clip_vmax=-1, channel=None):

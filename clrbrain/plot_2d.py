@@ -721,7 +721,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             origin = np.floor(np.multiply(
                 offset[0:2], zoom_levels + zoom_mult - 1) 
                 / (zoom_levels + zoom_mult)).astype(int)
-            zoom_shape = np.flipud(img2d.shape)[0:2]
+            zoom_shape = np.flipud(img2d.shape[:2])
+            #zoom_shape = np.array(img2d.shape[1::-1])
+            #print("zoom_shape: {}".format(zoom_shape))
             # progressively decrease size, zooming in for each level
             size = np.floor(zoom_shape / (zoom_mult + 3)).astype(int)
             end = np.add(origin, size)

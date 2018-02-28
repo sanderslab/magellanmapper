@@ -32,9 +32,11 @@ from skimage import exposure
 from skimage import img_as_float
 from scipy import stats
 
+from clrbrain import cli
 from clrbrain import detector
 from clrbrain import config
 from clrbrain import lib_clrbrain
+from clrbrain import plot_3d
 
 colormap_2d = cm.inferno
 CMAP_GRBK = LinearSegmentedColormap.from_list(
@@ -298,7 +300,8 @@ def add_scale_bar(ax):
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
-def imshow_multichannel(ax, img2d, colormaps, aspect, alpha, vmin, vmax):
+def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, vmin, 
+                        vmax, origin=None):
     """Show multichannel 2D image with channels overlaid over one another.
     
     Args:
@@ -310,22 +313,25 @@ def imshow_multichannel(ax, img2d, colormaps, aspect, alpha, vmin, vmax):
         vmax: Imshow vmax level.
     """
     # assume that 3D array has a channel dimension
-    multichannel = img2d.ndim >= 3
-    channels = img2d.shape[2] if multichannel else 1
-    for i in range(channels):
-        img2d_show = img2d[..., i] if multichannel else img2d
+    multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
+    img = None
+    i = 0
+    for chl in channels:
+        img2d_show = img2d[..., chl] if multichannel else img2d
         if i == 1:
             # after the 1st channel, all subsequent channels are transluscent
-            alpha *= 0.5
-        cmap = colormaps[i]
+            alpha *= 0.3
+        cmap = colormaps[chl]
         # check for custom colormaps
         if cmap == config.CMAP_GRBK_NAME:
             cmap = CMAP_GRBK
         elif cmap == config.CMAP_RDBK_NAME:
             cmap = CMAP_RDBK
-        ax.imshow(
+        img = ax.imshow(
             img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin, 
-            vmax=vmax)
+            vmax=vmax[chl], origin=origin)
+        i += 1
+    return img
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
@@ -409,7 +415,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             region = lib_clrbrain.swap_elements(region, 0, 1)
         # get the zoomed region
         if roi.ndim >= 4:
-            roi = roi[tuple(region + [channel])]
+            roi = roi[tuple(region + [slice(None)])]
         else:
             roi = roi[tuple(region)]
         #print("roi shape: {}".format(roi.shape))
@@ -439,7 +445,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         # show the ROI, which is now a 2D zoomed image
         colormaps = config.process_settings["channel_colors"]
         imshow_multichannel(
-            ax, roi, colormaps, aspect, alpha, 0.0, vmax_overview)
+            ax, roi, channel, colormaps, aspect, alpha, 0.0, vmax_overview)
+        #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):
@@ -617,8 +624,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             defaults to :attr:``ZOOM_COLS``.
     """
     time_start = time()
-    if channel is None:
-        channel = slice(None)
     
     fig = plt.figure()
     # black text with transluscent background the color of the figure
@@ -668,7 +673,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     print("z_overview: {}".format(z_overview))
     
     # pick image based on chosen orientation
-    img2d, aspect, origin = extract_plane(image5d, z_overview, plane, channel)
+    img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
     
     # plot layout depending on number of z-planes
     if single_zoom_row:
@@ -735,8 +740,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         if downsample < 1: 
             downsample = 1
         imshow_multichannel(
-            ax, img2d_zoom[::downsample, ::downsample], colormaps, aspect, 
-            1, 0.0, vmax_overview)
+            ax, img2d_zoom[::downsample, ::downsample], channel, colormaps, 
+            aspect, 1, 0.0, vmax_overview)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
@@ -891,15 +896,13 @@ def _hide_axes(ax):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None, 
-                  name=None):
+def extract_plane(image5d, plane_n, plane=None, savefig=None, name=None):
     """Extracts a single 2D plane and saves to file.
     
     Args:
         image5d: The full image stack.
         plane_n: Slice of planes to extract, which can be a single index 
             or multiple indices such as would be used for an animation.
-        channel: Channel to view.
         plane: Type of plane to extract, which should be one of 
             :attribute:`PLANES`.
         name: Name of the resulting file, without the extension.
@@ -909,12 +912,10 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
     origin = None
     aspect = None # aspect ratio
     img3d = None
-    if image5d.ndim >= 5:
-        img3d = image5d[0, :, :, :, channel]
-    elif image5d.ndim == 4:
-        img3d = image5d[0, :, :, :]
+    if image5d.ndim >= 4:
+        img3d = image5d[0]
     else:
-        img3d = image5d[:, :, :]
+        img3d = image5d[:]
     # extract a single 2D plane or a stack of planes if plane_n is a slice, 
     # which would be used for animations
     if plane == PLANE[1]:
@@ -945,7 +946,11 @@ def extract_plane(image5d, plane_n, plane=None, channel=0, savefig=None,
         fig = plt.figure(frameon=False)
         ax = fig.add_subplot(111)
         _hide_axes(ax)
-        ax.imshow(img2d, cmap=CMAP_GRBK, aspect=aspect, origin=origin)
+        colormaps = config.process_settings["channel_colors"]
+        imshow_multichannel(
+            ax, img2d, cli.channel, colormaps, aspect, 1, 0, vmax_overview, 
+            origin=origin)
+        #ax.imshow(img2d, cmap=CMAP_GRBK, aspect=aspect, origin=origin)
         fig.savefig(filename)
     return img2d, aspect, origin
 

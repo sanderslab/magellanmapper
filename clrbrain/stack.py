@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 
 from clrbrain import cli
+from clrbrain import config
 from clrbrain import plot_2d
 from clrbrain import importer
 
@@ -75,13 +76,13 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             pool_results.append(pool.apply_async(
                 process_fnc, args=(i, image, rescale)))
             i += 1
+        colormaps = config.process_settings["channel_colors"]
         for result in pool_results:
             i, img = result.get()
             if img_size is None:
                 img_size = img.shape
-            plotted_imgs[i] = [ax.imshow(
-                img, cmap=plot_2d.CMAP_GRBK, vmin=0, vmax=vmax, aspect=aspect, 
-                origin=origin)]
+            plotted_imgs[i] = [plot_2d.imshow_multichannel(
+                ax, img, cli.channel, colormaps, aspect, 1, 0, vmax)]
         pool.close()
         pool.join()
         
@@ -148,8 +149,7 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     else:
         image5d = importer.read_file(path, series)
         planes, aspect, origin = plot_2d.extract_plane(
-            image5d, slice(None, None, interval), plane=plot_2d.plane, 
-            channel=cli.channel)
+            image5d, slice(None, None, interval), plane=plot_2d.plane)
         out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
     ext = plot_2d.savefig

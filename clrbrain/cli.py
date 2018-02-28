@@ -735,7 +735,7 @@ def process_file(filename_base, offset, roi_size):
             series, str(offset[2]).zfill(5))
         from clrbrain import plot_2d
         plot_2d.extract_plane(
-            image5d, offset[2], plot_2d.plane, channel, plot_2d.savefig, name)
+            image5d, offset[2], plot_2d.plane, plot_2d.savefig, name)
     
     elif proc_type == PROC_TYPES[5]:
         # export ROIs; assumes that info_proc was already loaded to 

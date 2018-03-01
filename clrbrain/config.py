@@ -1,6 +1,6 @@
 #!/bin/bash
 # Config file for shared settings
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Configuration storage module.
 
 This module allows customization of settings for various imaging systems, 
@@ -37,7 +37,7 @@ CMAP_RDBK_NAME = "Red_black"
 
 class ProcessSettings(dict):
     def __init__(self, *args, **kwargs):
-        self["microscope_type"] = "lightsheet_5x"
+        self["microscope_type"] = "default"
         self["vis_3d"] = "points"
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2
@@ -59,7 +59,20 @@ class ProcessSettings(dict):
         self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
 
 def update_process_settings(settings, settings_type):
-    if settings_type == "2p_20x":
+    """Update processing profiles, including layering modifications upon 
+    existing base layers.
+    
+    For example, "lightsheet_5x" will give one profile, while 
+    "lightsheet_5x_contrast" will layer additional settings on top of the 
+    original lightsheet profile.
+    
+    Args:
+        settings: A :class:``ProcessSettings`` profile object.
+        settings_type: The name of the settings profile to apply. Profiles 
+            will be matched by the start of the settings name, with 
+            additional modifications made by matching ends of names.
+    """
+    if settings_type.startswith("2p_20x"):
         settings["microscope_type"] = settings_type
         settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 97
@@ -81,74 +94,43 @@ def update_process_settings(settings, settings_type):
         settings["segment_size"] = 100
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -0.25
-        settings["scale_factor"] = (1, 1, 1)
         
-    elif settings_type == "2p_20x_zebrafish":
-        settings["microscope_type"] = settings_type
-        settings["vis_3d"] = "surface"
-        settings["clip_vmax"] = 97
-        settings["clip_min"] = 0
-        settings["clip_max"] = 0.7
-        settings["tot_var_denoise"] = True
-        settings["unsharp_strength"] = 2.5
-        # smaller threhsold since total var denoising
-        #settings["points_3d_thresh"] = 1.1
-        settings["min_sigma_factor"] = 2.5
-        settings["max_sigma_factor"] = 3
-        settings["num_sigma"] = 20
-        settings["overlap"] = 0.1
-        settings["thresholding"] = None#"otsu"
-        #settings["thresholding_size"] = 41
-        settings["thresholding_size"] = 64 # for otsu
-        #settings["thresholding_size"] = 50.0 # for random_walker
-        settings["denoise_size"] = 25
-        settings["segment_size"] = 100
-        settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = -0.25
-        settings["scale_factor"] = (1, 1, 1)
-        
-    elif settings_type == "lightsheet_5x_02":
+        if settings_type.endswith("_zebrafish"):
+            settings["microscope_type"] = settings_type
+            settings["min_sigma_factor"] = 2.5
+            settings["max_sigma_factor"] = 3
+    
+    elif settings_type.startswith("lightsheet_5x"):
         settings["microscope_type"] = settings_type
         #settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
         settings["clip_max"] = 0.6
-        settings["tot_var_denoise"] = False
         settings["unsharp_strength"] = 0.3
         settings["points_3d_thresh"] = 0.7
         settings["min_sigma_factor"] = 3
         settings["max_sigma_factor"] = 4
         settings["num_sigma"] = 10
         settings["overlap"] = 0.5
-        settings["thresholding"] = None
-        settings["thresholding_size"] = -1
-        settings["denoise_size"] = 25
         settings["segment_size"] = 200
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)
-
-    elif settings_type == "lightsheet_5x_cytoplasm":
-        settings["microscope_type"] = settings_type
-        #settings["vis_3d"] = "surface"
-        settings["clip_vmax"] = 98.5
-        settings["clip_min"] = 0.3
-        settings["clip_max"] = 0.8
-        settings["tot_var_denoise"] = False
-        settings["unsharp_strength"] = 0.3
-        settings["points_3d_thresh"] = 0.7
-        settings["min_sigma_factor"] = 8
-        settings["max_sigma_factor"] = 20
-        settings["num_sigma"] = 10
-        settings["overlap"] = 0.2
-        settings["thresholding"] = None
-        settings["thresholding_size"] = -1
-        settings["denoise_size"] = 25
-        settings["segment_size"] = 200
-        settings["prune_tol_factor"] = (3, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = 0.5
-        settings["scale_factor"] = (0.63, 1, 1)
-
+        
+        if settings_type.endswith("_contrast"):
+            settings["microscope_type"] = settings_type
+            settings["channel_colors"] = ("inferno", "summer")
+      
+        elif settings_type.endswith("_cytoplasm"):
+            settings["microscope_type"] = settings_type
+            settings["clip_min"] = 0.3
+            settings["clip_max"] = 0.8
+            settings["points_3d_thresh"] = 0.7
+            settings["min_sigma_factor"] = 8
+            settings["max_sigma_factor"] = 20
+            settings["num_sigma"] = 10
+            settings["overlap"] = 0.2
+      
 
 # defaults to lightsheet 5x settings
 process_settings = ProcessSettings()

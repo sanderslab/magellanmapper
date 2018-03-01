@@ -42,8 +42,8 @@ cd "$BASE_DIR"
 echo $PWD
 
 # Replace microscope type with available profiles, such as "lightsheet_5x", 
-# "2p_20x", or "lightsheet_5x_02"
-MICROSCOPE="lightsheet_5x_02"
+# "2p_20x", or "lightsheet_5x", or "lightsheet_5x_contrast"
+MICROSCOPE="lightsheet_5x"
 
 # Replace region of interest (ROI) size and offset
 SIZE=700,90,50

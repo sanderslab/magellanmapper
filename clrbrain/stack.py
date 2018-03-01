@@ -16,6 +16,7 @@ from matplotlib import animation
 from clrbrain import cli
 from clrbrain import config
 from clrbrain import plot_2d
+from clrbrain import plot_3d
 from clrbrain import importer
 
 def _import_img(i, path, rescale, multichannel):
@@ -61,6 +62,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         
         # rescaled images will be converted from integer to float, so 
         # vmax will need to be rescaled to 0-1 range
+        vmin = plot_3d.near_min
         vmax = plot_2d.vmax_overview
         max_range = 0
         if rescale and np.issubdtype(images.dtype, np.integer):
@@ -86,7 +88,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             if img_size is None:
                 img_size = img.shape
             plotted_imgs[i] = plot_2d.imshow_multichannel(
-                ax, img, cli.channel, colormaps, aspect, 1, 0, vmax)
+                ax, img, cli.channel, colormaps, aspect, 1, vmin, vmax)
         pool.close()
         pool.join()
         

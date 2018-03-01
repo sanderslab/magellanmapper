@@ -34,6 +34,7 @@ from scipy import stats
 
 from clrbrain import cli
 from clrbrain import detector
+from clrbrain import importer
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
@@ -300,8 +301,8 @@ def add_scale_bar(ax):
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
-def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, vmin, 
-                        vmax, origin=None):
+def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, 
+                        vmin=None, vmax=None, origin=None):
     """Show multichannel 2D image with channels overlaid over one another.
     
     Args:
@@ -317,6 +318,8 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, vmin,
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
     img = []
     i = 0
+    vmin_plane = None
+    vmax_plane = None
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d
         if i == 1:
@@ -328,9 +331,13 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, vmin,
             cmap = CMAP_GRBK
         elif cmap == config.CMAP_RDBK_NAME:
             cmap = CMAP_RDBK
+        if vmin is not None:
+            vmin_plane = vmin[chl]
+        if vmax is not None:
+            vmax_plane = vmax[chl]
         img_chl = ax.imshow(
-            img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin, 
-            vmax=vmax[chl], origin=origin)
+            img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin_plane, 
+            vmax=vmax_plane, origin=origin)
         img.append(img_chl)
         i += 1
     return img
@@ -447,7 +454,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         # show the ROI, which is now a 2D zoomed image
         colormaps = config.process_settings["channel_colors"]
         imshow_multichannel(
-            ax, roi, channel, colormaps, aspect, alpha, 0.0, vmax_overview)
+            ax, roi, channel, colormaps, aspect, alpha)#, 0.0, vmax_overview)
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         if ((segs_in is not None or segs_out is not None) 
@@ -525,11 +532,11 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         
     return ax
 
-def plot_roi(img, segments, channel, show=True, title=""):
+def plot_roi(roi, segments, channel, show=True, title=""):
     """Plot ROI as sequence of z-planes containing only the ROI itself.
     
     Args:
-        img: The ROI image as a 3D array in (z, y, x) order.
+        roi: The ROI image as a 3D array in (z, y, x) order.
         segments: Numpy array of segments to display in the subplot, which 
             can be None. Segments are generally given as an (n, 4)
             dimension array, where each segment is in (z, y, x, radius).
@@ -544,7 +551,7 @@ def plot_roi(img, segments, channel, show=True, title=""):
     fig = plt.figure()
     #fig.suptitle(title)
     # total number of z-planes
-    z_planes = img.shape[0]
+    z_planes = roi.shape[0]
     # wrap plots after reaching max, but tolerates additional column
     # if it will fit all the remainder plots from the last row
     zoom_plot_rows = math.ceil(z_planes / ZOOM_COLS)
@@ -554,10 +561,11 @@ def plot_roi(img, segments, channel, show=True, title=""):
         zoom_plot_cols += 1
         zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
         col_remainder = z_planes % zoom_plot_cols
-    roi_size = img.shape[::-1]
+    roi_size = roi.shape[::-1]
     zoom_offset = [0, 0, 0]
     gs = gridspec.GridSpec(
         zoom_plot_rows, zoom_plot_cols, wspace=0.1, hspace=0.1)
+    image5d = importer.roi_to_image5d(roi)
     
     # plot the fully zoomed plots
     for i in range(zoom_plot_rows):
@@ -574,8 +582,9 @@ def plot_roi(img, segments, channel, show=True, title=""):
             # shows the zoomed subplot with scale bar for the current z-plane 
             # with all segments
             ax_z = show_subplot(
-                fig, gs, i, j, img, channel, roi_size, zoom_offset, None,
-                segments, None, None, 1.0, circles=CIRCLES[0], z_relative=z)
+                fig, gs, i, j, image5d, channel, roi_size, zoom_offset, None,
+                segments, None, None, 1.0, circles=CIRCLES[0], z_relative=z, 
+                roi=roi)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
     gs.tight_layout(fig, pad=0.5)
@@ -745,7 +754,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             downsample = 1
         imshow_multichannel(
             ax, img2d_zoom[::downsample, ::downsample], channel, colormaps, 
-            aspect, 1, 0.0, vmax_overview)
+            aspect, 1, plot_3d.near_min, vmax_overview)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
@@ -952,8 +961,8 @@ def extract_plane(image5d, plane_n, plane=None, savefig=None, name=None):
         _hide_axes(ax)
         colormaps = config.process_settings["channel_colors"]
         imshow_multichannel(
-            ax, img2d, cli.channel, colormaps, aspect, 1, 0, vmax_overview, 
-            origin=origin)
+            ax, img2d, cli.channel, colormaps, aspect, 1, plot_3d.near_min, 
+            vmax_overview, origin=origin)
         #ax.imshow(img2d, cmap=CMAP_GRBK, aspect=aspect, origin=origin)
         fig.savefig(filename)
     return img2d, aspect, origin

@@ -380,11 +380,16 @@ def read_file(filename, series, load=True, z_max=-1,
                     pixel_type = output["pixel_type"]
                     print("pixel type is {}".format(pixel_type))
                 except KeyError:
+                    print("could not find pixel_type")
+                try:
+                    plot_3d.near_min = output["near_min"]
+                    print("set near_min to {}".format(plot_3d.near_min))
+                except KeyError:
                     print("could not find near_max")
                 try:
                     plot_3d.near_max = output["near_max"]
                     print("set near_max to {}".format(plot_3d.near_max))
-                    plot_2d.vmax_overview = plot_3d.near_max
+                    plot_2d.vmax_overview = plot_3d.near_max * 1.1
                     print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
                 except KeyError:
                     print("could not find near_max")

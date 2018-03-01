@@ -31,7 +31,8 @@ from clrbrain import lib_clrbrain
 _MASK_DIVIDEND = 10000.0 # 3D max points
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
-near_max = -1.0
+near_max = [-1.0]
+near_min = [0.0]
 
 def setup_channels(roi, channel, dim_channel):
     multichannel = roi.ndim > dim_channel

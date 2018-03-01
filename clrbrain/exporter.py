@@ -56,7 +56,7 @@ def export_rois(db, image5d, channel, path, border):
             # get ROI as a small image
             size = sqlite.get_roi_size(roi)
             offset = sqlite.get_roi_offset(roi)
-            img3d = plot_3d.prepare_roi(image5d, channel, size, offset)
+            img3d = plot_3d.prepare_roi(image5d, size, offset)
             
             # get blobs, keep only confirmed ones, and change confirmation 
             # flag to avoid confirmation color in 2D plots
@@ -68,8 +68,7 @@ def export_rois(db, image5d, channel, path, border):
             # adjust ROI size and offset if border set
             if border is not None:
                 size = np.subtract(img3d.shape[::-1], 2 * border)
-                img3d = plot_3d.prepare_roi(
-                    img3d, channel, size, border)
+                img3d = plot_3d.prepare_roi(img3d, size, border)
                 blobs[:, 0:3] = np.subtract(
                     blobs[:, 0:3], np.add(offset, border)[::-1])
             print("exporting ROI of shape {}".format(img3d.shape))

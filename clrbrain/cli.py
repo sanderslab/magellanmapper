@@ -665,6 +665,9 @@ def process_file(filename_base, offset, roi_size):
             # processed image file, which < v.0.4.3 was the saved 
             # filtered image, but >= v.0.4.3 is the ROI chunk of the orig image
             image5d_proc = np.load(filename_image5d_proc, mmap_mode="r")
+            image5d_proc = importer.roi_to_image5d(image5d_proc)
+            print("Loading processed/ROI image from {} with shape {}"
+                  .format(filename_image5d_proc, image5d_proc.shape))
         except IOError:
             print("Ignoring processed/ROI image file from {} as unable to load"
                   .format(filename_image5d_proc))

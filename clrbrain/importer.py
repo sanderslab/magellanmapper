@@ -396,6 +396,7 @@ def read_file(filename, series, load=True, z_max=-1,
                     # simplifies to reducing the image to a subset as an ROI if 
                     # offset and size given
                     image5d = plot_3d.prepare_roi(image5d, size, offset)
+                    image5d = importer.roi_to_image5d(image5d)
                 '''
                 max_range = 0
                 if plot_3d.near_max is not None:
@@ -415,9 +416,8 @@ def read_file(filename, series, load=True, z_max=-1,
             if return_info:
                 return image5d, output
             return image5d
-        except IOError:
-            print("Unable to load Numpy array files {} or {}"
-                  .format(filename_image5d_npz, filename_info_npz))
+        except IOError as e:
+            print(e)
             if import_if_absent:
                 print("will attempt to reload {}".format(filename))
             else:
@@ -750,6 +750,9 @@ def calc_scaling(image5d, scaled):
     scaling = np.divide(scaled_shape[0:3], shape[0:3])
     print("image scaling compared to image5d: {}".format(scaling))
     return scaling
+
+def roi_to_image5d(roi):
+    return np.array([roi])
 
 if __name__ == "__main__":
     print("Clrbrain importer manipulations")

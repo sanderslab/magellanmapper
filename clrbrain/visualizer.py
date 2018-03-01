@@ -389,13 +389,7 @@ class Visualization(HasTraits):
         self._channel = cli.channel
         
         # dimension max values in pixels
-        if cli.image5d_proc is not None:
-            size = cli.image5d_proc.shape[0:3]
-        else:
-            # adjust for possible time dimension in 1st axis
-            off = 1 if cli.image5d.ndim >= 4 else 0
-            print(cli.image5d.shape)
-            size = cli.image5d.shape[0+off:3+off]
+        size = cli.image5d.shape[1:4]
         # TODO: consider subtracting 1 to avoid max offset being 1 above
         # true max, but currently convenient to display size and checked 
         # elsewhere

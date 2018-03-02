@@ -1,5 +1,5 @@
 # SQLite database connection
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Connects with a SQLite database for experiment and image
 analysis storage.
 
@@ -14,7 +14,6 @@ import datetime
 import sqlite3
 import numpy as np
 
-from clrbrain import cli
 from clrbrain import config
 
 DB_NAME = "clrbrain.db"
@@ -443,7 +442,7 @@ def select_blobs_confirmed(cur, confirmed):
 def verification_stats(conn, cur):
     # selects experiment based on command-line arg and gathers all ROIs
     # and blobs within them
-    exp = select_experiment(cur, os.path.basename(cli.filename))
+    exp = select_experiment(cur, os.path.basename(config.filename))
     rois = select_rois(cur, exp[0][0])
     blobs = []
     for roi in rois:
@@ -592,6 +591,7 @@ class ClrDB():
 if __name__ == "__main__":
     print("Starting sqlite.py...")
     # parses arguments and sets up the DB
+    from clrbrain import cli
     cli.main(True)
     conn = config.db.conn
     cur = config.db.cur
@@ -600,7 +600,7 @@ if __name__ == "__main__":
         cur = config.verified_db.cur
     #verification_stats(conn, cur)
     #update_rois(cur, cli.offset, cli.roi_size)
-    #merge_truth_dbs(cli.filenames)
+    #merge_truth_dbs(config.filenames)
     #clean_up_blobs(config.truth_db)
-    _update_experiments(cli.filename)
+    _update_experiments(config.filename)
     

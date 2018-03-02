@@ -1,5 +1,5 @@
 # 2D plots from stacks of imaging data
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Plots 2D views through multiple levels of a 3D stack for
 comparison with 3D visualization.
 
@@ -32,7 +32,6 @@ from skimage import exposure
 from skimage import img_as_float
 from scipy import stats
 
-from clrbrain import cli
 from clrbrain import detector
 from clrbrain import importer
 from clrbrain import config
@@ -961,7 +960,7 @@ def extract_plane(image5d, plane_n, plane=None, savefig=None, name=None):
         _hide_axes(ax)
         colormaps = config.process_settings["channel_colors"]
         imshow_multichannel(
-            ax, img2d, cli.channel, colormaps, aspect, 1, plot_3d.near_min, 
+            ax, img2d, config.channel, colormaps, aspect, 1, plot_3d.near_min, 
             vmax_overview, origin=origin)
         #ax.imshow(img2d, cmap=CMAP_GRBK, aspect=aspect, origin=origin)
         fig.savefig(filename)

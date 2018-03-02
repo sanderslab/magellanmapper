@@ -1,5 +1,5 @@
 # Stack manipulations
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Imports and exports stacks in various formats
 """
 
@@ -13,7 +13,6 @@ from skimage import io
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
-from clrbrain import cli
 from clrbrain import config
 from clrbrain import plot_2d
 from clrbrain import plot_3d
@@ -74,7 +73,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         plotted_imgs = [None for i in range(num_images)]
         img_size = None
         multichannel = images[0].ndim >= 3
-        print("channel: {}".format(cli.channel))
+        print("channel: {}".format(config.channel))
         i = 0
         pool = mp.Pool()
         pool_results = []
@@ -88,7 +87,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             if img_size is None:
                 img_size = img.shape
             plotted_imgs[i] = plot_2d.imshow_multichannel(
-                ax, img, cli.channel, colormaps, aspect, 1, vmin, vmax)
+                ax, img, config.channel, colormaps, aspect, 1, vmin, vmax)
         pool.close()
         pool.join()
         
@@ -167,4 +166,3 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")
-    cli.main(True)

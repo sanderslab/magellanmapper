@@ -9,6 +9,13 @@ such as command-line flag settings and databases can also be stored here
 for program access.
 
 Attributes:
+    filename: The filename of the source images. A corresponding file with
+        the subset as a 5 digit number (eg 00003) with .npz appended to 
+        the end will be checked first based on this filename. Set with
+        "img=path/to/file" argument.
+    series: The series for multi-stack files, using 0-based indexing. Set
+        with "series=n" argument.
+    channel: The channel to view. Set with "channel=n" argument.
     load_labels: Path to the labels reference file, which also serves as a 
         flag to references label/annotation images.
     labels_img: Numpy array of a registered labels image, which should 
@@ -155,6 +162,18 @@ def update_register_settings(settings, settings_type):
         settings["bspline_grid_space_voxels"] = "50"
 
 register_settings = RegisterSettings()
+
+
+# IMAGE FILES
+
+SUFFIX_IMG_PROC = "_image5d_proc.npz"
+SUFFIX_INFO_PROC = "_info_proc.npz"
+
+filename = None # current image file path
+filenames = None # list of multiple image paths
+series = 0 # series for multi-stack files
+channel = 0 # channel of interest
+
 
 # DATABASE
 

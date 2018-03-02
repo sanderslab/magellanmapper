@@ -43,13 +43,6 @@ Command-line arguments in addition to those from attributes listed below:
     * interval: Interval as an int, such as for animated GIF stack planes.
 
 Attributes:
-    filename: The filename of the source images. A corresponding file with
-        the subset as a 5 digit number (eg 00003) with .npz appended to 
-        the end will be checked first based on this filename. Set with
-        "img=path/to/file" argument.
-    series: The series for multi-stack files, using 0-based indexing. Set
-        with "series=n" argument.
-    channel: The channel to view. Set with "channel=n" argument.
     roi_size: The size in pixels of the region of interest. Set with
         "size=x,y,z" argument, where x, y, and z are integers.
     offset: The bottom corner in pixels of the region of interest. Set 
@@ -94,18 +87,11 @@ from clrbrain import chunking
 from clrbrain import mlearn
 from clrbrain import exporter
 
-filename = None # current image file path
-filenames = None # list of multiple image paths
-series = 0 # series for multi-stack files
-series_list = [series] # list of series
-channel = 0 # channel of interest
 roi_size = None # current region of interest
 roi_sizes = None # list of regions of interest
 offset = None # current offset
 offsets = None # list of offsets
 
-SUFFIX_IMG_PROC = "_image5d_proc.npz"
-SUFFIX_INFO_PROC = "_info_proc.npz"
 image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
@@ -378,7 +364,7 @@ def main(process_args_only=False):
         process_args_only: If True, processes command-line arguments and exits.
     """
     parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
-    global filename, filenames, series, series_list, channel, roi_size, \
+    global roi_size, \
             rois_sizes, offset, offsets, proc_type, mlab_3d, truth_db_type
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
@@ -412,16 +398,17 @@ def main(process_args_only=False):
     
     # set image file path and convert to basis for additional paths
     if args.img is not None:
-        filenames = args.img
-        filename = filenames[0]
+        config.filenames = args.img
+        config.filename = config.filenames[0]
         print("Set filenames to {}, current filename {}"
-              .format(filenames, filename))
+              .format(config.filenames, config.filename))
     
     if args.channel is not None:
-        channel = args.channel
-        if channel == -1:
-            channel = None
-        print("Set channel to {}".format(channel))
+        config.channel = args.channel
+        if config.channel == -1:
+            config.channel = None
+        print("Set channel to {}".format(config.channel))
+    series_list = [config.series] # list of series
     if args.series is not None:
         series_split = args.series.split(",")
         series_list = []
@@ -432,9 +419,9 @@ def main(process_args_only=False):
                 series_list.extend(ser_range.tolist())
             else:
                 series_list.append(int(ser_split[0]))
-        series = series_list[0]
+        config.series = series_list[0]
         print("Set to series_list to {}, current series {}".format(
-              series_list, series))
+              series_list, config.series))
     if args.savefig is not None:
         from clrbrain import plot_2d
         plot_2d.savefig = args.savefig
@@ -549,8 +536,8 @@ def main(process_args_only=False):
         print("Set ROI export to clip to border: {}".format(config.border))
     
     # load "truth blobs" from separate database for viewing
-    ext = lib_clrbrain.get_filename_ext(filename)
-    filename_base = importer.filename_to_base(filename, series, ext=ext)
+    ext = lib_clrbrain.get_filename_ext(config.filename)
+    filename_base = importer.filename_to_base(config.filename, config.series, ext=ext)
     if args.truth_db is not None:
         truth_db_type = args.truth_db
         print("Set truth_db type to {}".format(truth_db_type))
@@ -589,7 +576,7 @@ def main(process_args_only=False):
     
     # process the image stack for each series
     for series in series_list:
-        filename_base = importer.filename_to_base(filename, series, ext=ext)
+        filename_base = importer.filename_to_base(config.filename, series, ext=ext)
         if config.roc:
             # grid search with ROC curve
             stats_dict = mlearn.grid_search(
@@ -597,7 +584,7 @@ def main(process_args_only=False):
             parsed_dict = mlearn.parse_grid_stats(stats_dict)
             # plot ROC curve
             from clrbrain import plot_2d
-            plot_2d.plot_roc(parsed_dict, filename)
+            plot_2d.plot_roc(parsed_dict, config.filename)
         else:
             # processes file with default settings
             process_file(filename_base, offset, roi_size)
@@ -638,7 +625,7 @@ def process_file(filename_base, offset, roi_size):
     """Processes a single image file non-interactively.
     
     Args:
-        filename: Base filename.
+        filename_base: Base filename.
         offset: Offset as (x, y, z) to start processing.
         roi_size: Size of region to process, given as (x, y, z).
     
@@ -651,8 +638,8 @@ def process_file(filename_base, offset, roi_size):
     
     # prepares the filenames
     global image5d
-    filename_image5d_proc = filename_base + SUFFIX_IMG_PROC
-    filename_info_proc = filename_base + SUFFIX_INFO_PROC
+    filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
+    filename_info_proc = filename_base + config.SUFFIX_INFO_PROC
     filename_roi = None
     #print(filename_image5d_proc)
     
@@ -679,7 +666,7 @@ def process_file(filename_base, offset, roi_size):
             detector.resolutions = output_info["resolutions"]
             roi_offset = None
             shape = None
-            path = filename
+            path = config.filename
             try:
                 basename = output_info["basename"]
                 roi_offset = _check_np_none(output_info["offset"])
@@ -693,7 +680,7 @@ def process_file(filename_base, offset, roi_size):
                 print(e)
                 print("No information on portion of stack to load")
             image5d = importer.read_file(
-                path, series, offset=roi_offset, size=shape, channel=channel,
+                path, config.series, offset=roi_offset, size=shape, channel=config.channel,
                 import_if_absent=False)
             if image5d is None:
                 # if unable to load original image, attempts to use ROI file
@@ -707,15 +694,15 @@ def process_file(filename_base, offset, roi_size):
     
     # attempts to load the main image stack
     if image5d is None:
-        if os.path.isdir(filename):
-            image5d = importer.import_dir(os.path.join(filename, "*"))
+        if os.path.isdir(config.filename):
+            image5d = importer.import_dir(os.path.join(config.filename, "*"))
         else:
-            image5d = importer.read_file(filename, series)
+            image5d = importer.read_file(config.filename, config.series)
     
     if config.load_labels is not None:
         # load labels image and set up scaling
         from clrbrain import register
-        config.labels_img = register.load_labels(filename)
+        config.labels_img = register.load_labels(config.filename)
         config.labels_scaling = importer.calc_scaling(
             image5d, config.labels_img)
         config.labels_ref = register.load_labels_ref(config.load_labels)
@@ -731,14 +718,14 @@ def process_file(filename_base, offset, roi_size):
         
     elif proc_type == PROC_TYPES[0]:
         # already imported so does nothing
-        print("imported {}, will exit".format(filename))
+        print("imported {}, will exit".format(config.filename))
     
     elif proc_type == PROC_TYPES[4]:
         # extracts plane
         print("extracting plane at {} and exiting".format(offset[2]))
         name = ("{}-(series{})-z{}").format(
-            os.path.basename(filename).replace(".czi", ""), 
-            series, str(offset[2]).zfill(5))
+            os.path.basename(config.filename).replace(".czi", ""), 
+            config.series, str(offset[2]).zfill(5))
         from clrbrain import plot_2d
         plot_2d.extract_plane(
             image5d, offset[2], plot_2d.plane, plot_2d.savefig, name)
@@ -748,19 +735,19 @@ def process_file(filename_base, offset, roi_size):
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
         db = config.db if config.truth_db is None else config.truth_db
-        exporter.export_rois(db, image5d, channel, filename_base, config.border)
+        exporter.export_rois(db, image5d, config.channel, filename_base, config.border)
         
     elif proc_type == PROC_TYPES[6]:
         # transpose Numpy array
         from clrbrain import plot_2d
         importer.transpose_npy(
-            filename, series, plane=plot_2d.plane, rescale=config.rescale)
+            config.filename, config.series, plane=plot_2d.plane, rescale=config.rescale)
         
     elif proc_type == PROC_TYPES[7]:
         # generate animated GIF
         from clrbrain import stack
         stack.animated_gif(
-            filename, series=series, interval=config.interval, 
+            config.filename, series=config.series, interval=config.interval, 
             rescale=config.rescale, delay=config.delay)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
@@ -777,9 +764,9 @@ def process_file(filename_base, offset, roi_size):
             roi_offset = offset
             splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
             print("using {}".format(splice))
-            series_fill = str(series).zfill(5)
+            series_fill = str(config.series).zfill(5)
             filename_roi = lib_clrbrain.insert_before_ext(
-                filename, "_" + splice)
+                config.filename, "_" + splice)
             filename_image5d_proc = _splice_before(filename_image5d_proc, 
                                                    series_fill, splice)
             filename_info_proc = _splice_before(filename_info_proc, 
@@ -788,7 +775,7 @@ def process_file(filename_base, offset, roi_size):
         # perform detection on given area in single channel
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
         if roi.ndim >=4:
-            roi = roi[..., channel]
+            roi = roi[..., config.channel]
         
         # chunk into super-ROIs, which will each be further chunked into 
         # sub-ROIs for multi-processing
@@ -882,7 +869,7 @@ def process_file(filename_base, offset, roi_size):
         #print("merged shape: {}".format(merged.shape))
         np.savez(outfile_info_proc, segments=segments_all, 
                  resolutions=detector.resolutions, 
-                 basename=os.path.basename(filename), # only save filename
+                 basename=os.path.basename(config.filename), # only save filename
                  offset=offset, roi_size=roi_size) # None unless explicitly set
         outfile_info_proc.close()
         

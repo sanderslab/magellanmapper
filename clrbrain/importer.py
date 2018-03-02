@@ -1,6 +1,6 @@
 #!/bin/bash
 # Image stack importer
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Imports image stacks using Bioformats.
 
 Bioformats is access through Python-Bioformats and Javabridge.
@@ -29,7 +29,6 @@ import bioformats as bf
 from skimage import io
 from skimage import transform
 
-from clrbrain import cli
 from clrbrain import chunking
 from clrbrain import detector
 from clrbrain import plot_2d
@@ -246,9 +245,9 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         
         # assumed that 2nd filename given is the original file from which to 
         # calculate exact scaling
-        if len(cli.filenames) > 1:
+        if len(config.filenames) > 1:
             image5d_orig = read_file(
-                cli.filenames[1], cli.series, update_info=False)
+                config.filenames[1], config.series, update_info=False)
             scaling = calc_scaling(image5d_orig, image5d)
             # image5d is a scaled, smaller image, so bounds will be 
             # calculated since the calculation requires loading full image 

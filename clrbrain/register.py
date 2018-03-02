@@ -22,7 +22,6 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
-from clrbrain import cli
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import importer
@@ -54,7 +53,7 @@ def _reg_out_path(file_path, reg_name):
     Returns:
         Full path with the registered filename including extension at the end.
     """
-    file_path_base = importer.filename_to_base(file_path, cli.series)
+    file_path_base = importer.filename_to_base(file_path, config.series)
     return file_path_base + "_" + reg_name
 
 def _translation_adjust(orig, transformed, translation, flip=False):
@@ -312,7 +311,7 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     return transposed
 
 def _load_numpy_to_sitk(numpy_file, rotate=False, size=None):
-    image5d = importer.read_file(numpy_file, cli.series)
+    image5d = importer.read_file(numpy_file, config.series)
     roi = image5d[0, ...] # not using time dimension
     if size is not None:
         roi = transform.resize(roi, size)#, anti_aliasing=True)
@@ -562,7 +561,7 @@ def register_group(img_files, flip=None, show_imgs=True,
         print("writing {}".format(out_path))
         sitk.WriteImage(transformed_img, out_path, False)
         img_np = sitk.GetArrayFromImage(transformed_img)
-        importer.save_np_image(img_np, out_path, cli.series)
+        importer.save_np_image(img_np, out_path, config.series)
     
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
@@ -582,7 +581,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     # get the experiment file
     if name_prefix is None:
         name_prefix = fixed_file
-    image5d = importer.read_file(fixed_file, cli.series)
+    image5d = importer.read_file(fixed_file, config.series)
     roi = image5d[0, ...] # not using time dimension
     
     # get the atlas file and transpose it to match the orientation of the 
@@ -1119,19 +1118,19 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             blobs_ids = None
             if densities:
                 # load blobs
-                filename_base = importer.filename_to_base(img_path, cli.series)
-                info = np.load(filename_base + cli.SUFFIX_INFO_PROC)
+                filename_base = importer.filename_to_base(img_path, config.series)
+                info = np.load(filename_base + config.SUFFIX_INFO_PROC)
                 blobs = info["segments"]
                 print("loading {} blobs".format(len(blobs)))
                 # load large image just to get resolutions; 
                 # TODO: consider saving scaling info in scaled image
-                image5d = importer.read_file(img_path, cli.series)
+                image5d = importer.read_file(img_path, config.series)
                 scaling = importer.calc_scaling(image5d, labels_img)
                 if scale is not None:
                     # use scaled image for pixel comparison
                     img_path = lib_clrbrain.insert_before_ext(
                         img_path, "_" + importer.make_modifier_scale(scale))
-                    image5d = importer.read_file(img_path, cli.series)
+                    image5d = importer.read_file(img_path, config.series)
                 # annotate blobs based on position
                 blobs_ids = get_label_ids_from_position(
                     blobs[:, 0:3], labels_img, scaling)
@@ -1237,7 +1236,7 @@ def _test_labels_lookup():
     #lookup_id = 126652058 # last item
     time_dict_start = time()
     id_dict = create_aba_reverse_lookup(ref)
-    labels_img = load_labels(cli.filename)
+    labels_img = load_labels(config.filename)
     max_labels = np.max(labels_img)
     print("max_labels: {}".format(max_labels))
     #mirror_reverse_lookup(id_dict, max_labels, " (R)")
@@ -1271,20 +1270,21 @@ def _test_mirror_labels(moving_file_dir):
 
 if __name__ == "__main__":
     print("Clrbrain image registration")
+    from clrbrain import cli
     cli.main(True)
     # name prefix to use a different name from the input files, such as when 
     # registering transposed/scaled images but outputting paths corresponding 
     # to the original image
     prefix = None
-    if len(cli.filenames) >= 3:
-        prefix = cli.filenames[2]
+    if len(config.filenames) >= 3:
+        prefix = config.filenames[2]
         print("Formatting registered filenames to match {}".format(prefix))
     flip = False
     if config.flip is not None:
         flip = config.flip[0]
     
     #_test_labels_lookup()
-    #_test_mirror_labels(cli.filenames[1])
+    #_test_mirror_labels(config.filenames[1])
     #os._exit(os.EX_OK)
     
     if config.register_type is None:
@@ -1293,18 +1293,18 @@ if __name__ == "__main__":
     elif config.register_type == config.REGISTER_TYPES[0]:
         # "single", basic registration of 1st to 2nd image, transposing the 
         # second image according to plot_2d.plane and config.flip_horiz
-        register(*cli.filenames[0:2], plane=plot_2d.plane, 
+        register(*config.filenames[0:2], plane=plot_2d.plane, 
                  flip=flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[1]:
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
-        prefix = cli.filenames[-1]
-        register_group(cli.filenames[:-1], flip=config.flip, name_prefix=prefix)
+        prefix = config.filenames[-1]
+        register_group(config.filenames[:-1], flip=config.flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[2]:
         # overlay registered images in each orthogonal plane
         for out_plane in plot_2d.PLANE:
             overlay_registered_imgs(
-                *cli.filenames[0:2], plane=plot_2d.plane, 
+                *config.filenames[0:2], plane=plot_2d.plane, 
                 flip=flip, name_prefix=prefix, 
                 out_plane=out_plane)
     elif config.register_type in (
@@ -1314,7 +1314,7 @@ if __name__ == "__main__":
         ref = load_labels_ref(config.load_labels)
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         vol_dicts, json_paths = register_volumes_mp(
-            cli.filenames, labels_ref_lookup, 
+            config.filenames, labels_ref_lookup, 
             config.labels_level, config.rescale, densities)
         # experiment identifiers, assumed to be at the start of the image 
         # filename, separated by a "-"; if no dash, will use the whole name

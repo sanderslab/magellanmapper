@@ -1,6 +1,6 @@
 #!/bin/bash
 # 3D image visualization
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """3D Visualization GUI.
 
 This module is the main GUI for visualizing 3D objects from imaging stacks. 
@@ -77,7 +77,7 @@ def _fig_title(atlas_region, offset, roi_size):
     roi_size_um = np.around(
         np.multiply(roi_size, detector.resolutions[0][::-1]))
     return "{}{} (series {})\noffset {}, ROI size {} [{}{}]".format(
-        region, os.path.basename(cli.filename), cli.series, offset, 
+        region, os.path.basename(config.filename), config.series, offset, 
         tuple(roi_size), tuple(roi_size_um), u'\u00b5m')
 
 class VisHandler(Handler):
@@ -260,9 +260,9 @@ class Visualization(HasTraits):
                 for seg in segs_to_delete:
                     feedback.append(self._format_seg(seg))
             exp_id = sqlite.select_or_insert_experiment(config.db.conn, config.db.cur, 
-                                                        os.path.basename(cli.filename),
+                                                        os.path.basename(config.filename),
                                                         None)
-            roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, cli.series, 
+            roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, config.series, 
                                        np.add(self._curr_offset(), self.border).tolist(), 
                                        np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
             sqlite.delete_blobs(config.db.conn, config.db.cur, roi_id, segs_to_delete)
@@ -359,11 +359,11 @@ class Visualization(HasTraits):
                 _scene_3d_shown = True
             else:
                 # 3D point rendering
-                _scene_3d_shown = plot_3d.plot_3d_points(self.roi, self, cli.channel)
+                _scene_3d_shown = plot_3d.plot_3d_points(self.roi, self, config.channel)
             
             # process ROI in prep for showing filtered 2D view and segmenting
-            self.roi = plot_3d.saturate_roi(self.roi, channel=cli.channel)
-            self.roi = plot_3d.denoise_roi(self.roi, cli.channel)
+            self.roi = plot_3d.saturate_roi(self.roi, channel=config.channel)
+            self.roi = plot_3d.denoise_roi(self.roi, config.channel)
         
         else:
             self.scene.mlab.clf()
@@ -383,10 +383,10 @@ class Visualization(HasTraits):
         self._set_border()
         
         # set up file parameters
-        self._filename = cli.filename
+        self._filename = config.filename
         if cli.image5d.ndim >= 5:
             self._channel_high = cli.image5d.shape[4] - 1
-        self._channel = cli.channel
+        self._channel = config.channel
         
         # dimension max values in pixels
         size = cli.image5d.shape[1:4]
@@ -408,7 +408,7 @@ class Visualization(HasTraits):
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {self._roi_default: None}
-        self._rois = config.db.get_rois(os.path.basename(cli.filename))
+        self._rois = config.db.get_rois(os.path.basename(config.filename))
         self.rois_selections_class = ListSelections()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
@@ -431,17 +431,17 @@ class Visualization(HasTraits):
     def update_filename(self):
         """Update the selected filename.
         """
-        cli.filename = self._filename
-        print("Changed filename to {}".format(cli.filename))
+        config.filename = self._filename
+        print("Changed filename to {}".format(config.filename))
     
     @on_trait_change("_channel")
     def update_channel(self):
         """Update the selected channel.
         """
-        cli.channel = self._channel
-        if cli.channel == -1:
-            cli.channel = None
-        print("Changed channel to {}".format(cli.channel))
+        config.channel = self._channel
+        if config.channel == -1:
+            config.channel = None
+        print("Changed channel to {}".format(config.channel))
     
     @on_trait_change("x_offset,y_offset,z_offset")
     def update_plot(self):
@@ -584,7 +584,7 @@ class Visualization(HasTraits):
                 roi = plot_3d.threshold(roi)
         elif cli.image5d is None:
             print("loading original image stack from file")
-            cli.image5d = importer.read_file(cli.filename, cli.series)
+            cli.image5d = importer.read_file(config.filename, config.series)
             img = cli.image5d
         
         blobs_truth_roi = None
@@ -600,11 +600,11 @@ class Visualization(HasTraits):
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         title = _fig_title(register.get_label_name(self._atlas_label), 
                            curr_offset, curr_roi_size)
-        filename_base = importer.filename_to_base(cli.filename, cli.series)
+        filename_base = importer.filename_to_base(config.filename, config.series)
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         screenshot = self.scene.mlab.screenshot(antialiased=True)
         stack_args = (
-            self.update_segment, title, filename_base, img, cli.channel, curr_roi_size, 
+            self.update_segment, title, filename_base, img, config.channel, curr_roi_size, 
             curr_offset, self.segments, self.segs_in_mask, self.segs_cmap, self._full_border(self.border), 
             self._planes_2d[0].lower())
         stack_args_named = {

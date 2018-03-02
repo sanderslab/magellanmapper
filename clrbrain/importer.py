@@ -401,7 +401,7 @@ def read_file(filename, series, load=True, z_max=-1,
                     # simplifies to reducing the image to a subset as an ROI if 
                     # offset and size given
                     image5d = plot_3d.prepare_roi(image5d, size, offset)
-                    image5d = importer.roi_to_image5d(image5d)
+                    image5d = roi_to_image5d(image5d)
                 '''
                 max_range = 0
                 if plot_3d.near_max is not None:
@@ -566,14 +566,43 @@ def import_dir(path):
     return image5d
 
 def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):
+    """Rescale a sub-ROI.
+    
+    Args:
+        coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
+            chunked ROI.
+        sub_roi: The sub-ROI as an image array in (z, y, x).
+        rescale: Rescaling factor.
+        multichannel: True if the final dimension is for channels.
+    
+    Return:
+        Tuple of ``coord``, the same as ``coord`` to identify where the 
+        ``rescaled`` sub-ROI is located in multiprocessing.
+    """
     rescaled = transform.rescale(
         sub_roi, rescale, mode="reflect", multichannel=multichannel)
     return coord, rescaled
 
 def make_modifier_plane(plane):
+    """Make a string designating a plane orthogonal transformation.
+    
+    Args:
+        plane: Plane to which the image was transposed.
+    
+    Returns:
+        String designating the orthogonal plane transformation.
+    """
     return "plane{}".format(plane.upper())
 
 def make_modifier_scale(scale):
+    """Make a string designating a scaling transformation.
+    
+    Args:
+        scale: Scale to which the image was rescaled.
+    
+    Returns:
+        String designating the scaling transformation.
+    """
     return "scale{}".format(scale)
 
 def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
@@ -745,6 +774,17 @@ def save_np_image(image, filename, series):
         image.dtype, lows, highs)
 
 def calc_scaling(image5d, scaled):
+    """Calculate the exact scaling between two images where one image had 
+    been scaled from the other.
+    
+    Args:
+        image5d: Original image in 5D (time included, channel optional) format.
+        scaled: Scaled image.
+    
+    Returns:
+        Array of (z, y, x) scaling factors from the original to the scaled
+        image.
+    """
     shape = image5d.shape
     scaled_shape = scaled.shape
     # remove time dimension
@@ -757,6 +797,15 @@ def calc_scaling(image5d, scaled):
     return scaling
 
 def roi_to_image5d(roi):
+    """Convert from ROI image to image5d format, which simply adds a time 
+    dimension as the first dimension.
+    
+    Args:
+        roi: ROI as a 3D (or 4D if channel dimension) array.
+    
+    Returns:
+        ROI with additional time dimension prepended.
+    """
     return np.array([roi])
 
 if __name__ == "__main__":

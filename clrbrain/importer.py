@@ -30,6 +30,7 @@ from skimage import io
 from skimage import transform
 
 from clrbrain import chunking
+from clrbrain import config
 from clrbrain import detector
 from clrbrain import plot_2d
 from clrbrain import plot_3d

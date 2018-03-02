@@ -944,9 +944,11 @@ def extract_plane(image5d, plane_n, plane=None, savefig=None, name=None):
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
         origin = "lower"
         img2d = img3d[:, :, plane_n]
+        print("img2d.shape: {}".format(img2d.shape))
         if img2d.ndim > 2 and img2d.shape[2] > 1:
             # make x the "z" axis for stack of 2D plots, such as animations
-            img2d = np.moveaxis(img2d, -1, 0)
+            img2d = np.swapaxes(img2d, 0, 2)
+            img2d = np.swapaxes(img2d, 1, 2)
     else:
         # defaults to "xy"
         aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]

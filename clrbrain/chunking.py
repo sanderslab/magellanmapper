@@ -168,8 +168,9 @@ def get_split_stack_total_shape(sub_rois, overlap):
         The shape of the chunked stack after it would be merged.
     """
     size = sub_rois.shape
-    merged_shape = np.zeros(3).astype(np.int)
-    final_shape = np.zeros(3).astype(np.int)
+    shape_sub_roi = sub_rois[0, 0, 0].shape # for number of dimensions
+    merged_shape = np.zeros(len(shape_sub_roi)).astype(np.int)
+    final_shape = np.zeros(len(shape_sub_roi)).astype(np.int)
     edges = None
     for z in range(size[0]):
         for y in range(size[1]):
@@ -190,6 +191,10 @@ def get_split_stack_total_shape(sub_rois, overlap):
         if final_shape[1] <= 0:
             final_shape[1] = merged_shape[1]
         final_shape[0] += edges[0]
+    channel_dim = 3
+    if len(shape_sub_roi) > channel_dim:
+        final_shape[channel_dim] = shape_sub_roi[channel_dim]
+    print("final_shape: {}".format(final_shape))
     return final_shape
 
 def merge_split_stack2(sub_rois, overlap, offset, output):

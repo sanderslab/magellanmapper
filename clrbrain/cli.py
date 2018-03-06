@@ -124,8 +124,8 @@ def denoise_sub_roi(coord):
     sub_roi = sub_rois[coord]
     print("denoising sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    sub_roi = plot_3d.saturate_roi(sub_roi)
-    sub_roi = plot_3d.denoise_roi(sub_roi)
+    sub_roi = plot_3d.saturate_roi(sub_roi, channel=config.channel)
+    sub_roi = plot_3d.denoise_roi(sub_roi, channel=config.channel)
     #sub_roi = plot_3d.deconvolve(sub_roi)
     if config.process_settings["thresholding"]:
         sub_roi = plot_3d.threshold(sub_roi)
@@ -263,7 +263,7 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     duration = time_pruning_end - time_pruning_start
     return segments_all, duration
 
-def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
+def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels):
     """Prune close blobs within overlapping regions by checking within
     entire planes across the ROI in parallel with multiprocessing.
     
@@ -279,82 +279,90 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
         All segments as a Numpy array, or None if no segments.
     """
     # collects all blobs in master array to group all overlapping regions
-    _blobs_all = chunking.merge_blobs(seg_rois)
-    if _blobs_all is None:
+    blobs_merged = chunking.merge_blobs(seg_rois)
+    if blobs_merged is None:
         return None
     
-    for axis in range(3):
-        # prune planes with all the overlapping regions within a given axis,
-        # skipping if this axis has no overlapping sub-regions
-        num_sections = sub_rois_offsets.shape[axis]
-        if num_sections <= 1:
-            continue
-        
-        # multiprocess pruning by overlapping planes
-        pool = mp.Pool()
-        pool_results = []
-        blobs_all_non_ol = None # all blobs from non-overlapping regions
-        for i in range(num_sections):
-            # build overlapping region dimensions based on size of sub-region
-            # in the given axis
-            coord = np.zeros(3).astype(np.int)
-            coord[axis] = i
-            lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
-            offset = sub_rois_offsets[tuple(coord)]
-            size = sub_rois[tuple(coord)].shape
-            lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"
-                                .format(offset, size, overlap, tol))
-            # each region extends into the next region, so the overlap is
-            # the end of the region minus its overlap and a tolerance space,
-            # extending back out to the end plus the tolerance
-            shift = overlap[axis] + tol[axis]
-            bounds = [offset[axis] + size[axis] - shift,
-                      offset[axis] + size[axis] + tol[axis]]
-            lib_clrbrain.printv("axis {}, boundaries: {}".format(axis, bounds))
-            blobs_ol = _blobs_all[np.all([
-                _blobs_all[:, axis] >= bounds[0], 
-                _blobs_all[:, axis] < bounds[1]], axis=0)]
+    blobs_all = []
+    for i in channels:
+        # prune blobs from each channel separately to avoid pruning based on 
+        # co-localized channel signals
+        blobs = detector.blobs_in_channel(blobs_merged, i)
+        for axis in range(3):
+            # prune planes with all the overlapping regions within a given axis,
+            # skipping if this axis has no overlapping sub-regions
+            num_sections = sub_rois_offsets.shape[axis]
+            if num_sections <= 1:
+                continue
             
-            # non-overlapping area is the rest of the region, subtracting the
-            # tolerance unless the region is first and not overlapped
-            start = offset[axis]
-            if i > 0:
-                start += shift
-            blobs_non_ol = _blobs_all[np.all([
-                _blobs_all[:, axis] >= start, 
-                _blobs_all[:, axis] < bounds[0]], axis=0)]
-            # collect all these non-overlapping region blobs
-            if blobs_all_non_ol is None:
-                blobs_all_non_ol = blobs_non_ol
-            elif blobs_non_ol is not None:
-                blobs_all_non_ol = np.concatenate(
-                    (blobs_all_non_ol, blobs_non_ol))
+            # multiprocess pruning by overlapping planes
+            pool = mp.Pool()
+            pool_results = []
+            blobs_all_non_ol = None # all blobs from non-overlapping regions
+            for i in range(num_sections):
+                # build overlapping region dimensions based on size of sub-region
+                # in the given axis
+                coord = np.zeros(3).astype(np.int)
+                coord[axis] = i
+                lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
+                offset = sub_rois_offsets[tuple(coord)]
+                size = sub_rois[tuple(coord)].shape
+                lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"
+                                    .format(offset, size, overlap, tol))
+                # each region extends into the next region, so the overlap is
+                # the end of the region minus its overlap and a tolerance space,
+                # extending back out to the end plus the tolerance
+                shift = overlap[axis] + tol[axis]
+                bounds = [offset[axis] + size[axis] - shift,
+                          offset[axis] + size[axis] + tol[axis]]
+                lib_clrbrain.printv("axis {}, boundaries: {}".format(axis, bounds))
+                blobs_ol = blobs[np.all([
+                    blobs[:, axis] >= bounds[0], 
+                    blobs[:, axis] < bounds[1]], axis=0)]
+                
+                # non-overlapping area is the rest of the region, subtracting the
+                # tolerance unless the region is first and not overlapped
+                start = offset[axis]
+                if i > 0:
+                    start += shift
+                blobs_non_ol = blobs[np.all([
+                    blobs[:, axis] >= start, 
+                    blobs[:, axis] < bounds[0]], axis=0)]
+                # collect all these non-overlapping region blobs
+                if blobs_all_non_ol is None:
+                    blobs_all_non_ol = blobs_non_ol
+                elif blobs_non_ol is not None:
+                    blobs_all_non_ol = np.concatenate(
+                        (blobs_all_non_ol, blobs_non_ol))
+                
+                # prune blobs from overlapping regions vis multiprocessing
+                pool_results.append(pool.apply_async(
+                    detector.remove_close_blobs_within_sorted_array, 
+                    args=(blobs_ol, BLOB_COORD_SLICE, tol)))
             
-            # prune blobs from overlapping regions vis multiprocessing
-            pool_results.append(pool.apply_async(
-                detector.remove_close_blobs_within_sorted_array, 
-                args=(blobs_ol, BLOB_COORD_SLICE, tol)))
-        
-        # collect all the pruned blob lists
-        blobs_all_ol = None
-        for result in pool_results:
-            blobs_ol_pruned = result.get()
+            # collect all the pruned blob lists
+            blobs_all_ol = None
+            for result in pool_results:
+                blobs_ol_pruned = result.get()
+                if blobs_all_ol is None:
+                    blobs_all_ol = blobs_ol_pruned
+                elif blobs_ol_pruned is not None:
+                    blobs_all_ol = np.concatenate((blobs_all_ol, blobs_ol_pruned))
+            
+            # recombine blobs from the non-overlapping with the pruned  
+            # overlapping regions from the entire stack
+            pool.close()
+            pool.join()
             if blobs_all_ol is None:
-                blobs_all_ol = blobs_ol_pruned
-            elif blobs_ol_pruned is not None:
-                blobs_all_ol = np.concatenate((blobs_all_ol, blobs_ol_pruned))
-        
-        # re-combine blobs from the non-overlapping with the pruned overlapping 
-        # regions
-        pool.close()
-        pool.join()
-        if blobs_all_ol is None:
-            _blobs_all = blobs_all_non_ol
-        elif blobs_all_non_ol is None:
-            _blobs_all = blobs_all_ol
-        else:
-            _blobs_all = np.concatenate((blobs_all_non_ol, blobs_all_ol))
-    return _blobs_all
+                blobs = blobs_all_non_ol
+            elif blobs_all_non_ol is None:
+                blobs = blobs_all_ol
+            else:
+               blobs = np.concatenate((blobs_all_non_ol, blobs_all_ol))
+        # build up list from each channel
+        blobs_all.append(blobs)
+    blobs_all = np.vstack(blobs_all)
+    return blobs_all
 
 def main(process_args_only=False):
     """Starts the visualization GUI.
@@ -773,10 +781,9 @@ def process_file(filename_base, offset, roi_size):
             filename_info_proc = _splice_before(filename_info_proc, 
                                                 series_fill, splice)
         
-        # perform detection on given area in single channel
+        # get ROI for given region, including all channels
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
-        if roi.ndim >=4:
-            roi = roi[..., config.channel]
+        _, channels = plot_3d.setup_channels(roi, config.channel, 3)
         
         # chunk into super-ROIs, which will each be further chunked into 
         # sub-ROIs for multi-processing
@@ -797,7 +804,7 @@ def process_file(filename_base, offset, roi_size):
                     print("===============================================\n"
                           "Processing stack {} of {}"
                           .format(coord, np.add(super_rois.shape, -1)))
-                    merged, segs = process_stack(roi, overlap, tol)
+                    merged, segs = process_stack(roi, overlap, tol, channels)
                     del merged # TODO: check if helps reduce memory buildup
                     if segs is not None:
                         # transpose seg coords since part of larger stack
@@ -808,7 +815,7 @@ def process_file(filename_base, offset, roi_size):
         # prune segments in overlapping region between super-ROIs
         time_pruning_start = time()
         segments_all = _prune_blobs_mp(
-            seg_rois, overlap, tol, super_rois, super_rois_offsets)
+            seg_rois, overlap, tol, super_rois, super_rois_offsets, channels)
         pruning_time = time() - time_pruning_start
         '''# report any remaining duplicates
         np.set_printoptions(linewidth=500, threshold=10000000)
@@ -882,7 +889,7 @@ def process_file(filename_base, offset, roi_size):
         return stats, fdbk
     return None, None
     
-def process_stack(roi, overlap, tol):
+def process_stack(roi, overlap, tol, channels):
     """Processes a stack, whcih can be a sub-region within an ROI.
     
     Args:
@@ -979,7 +986,7 @@ def process_stack(roi, overlap, tol):
         # prune segments
         time_pruning_start = time()
         segments_all = _prune_blobs_mp(
-            seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
+            seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
         if segments_all is not None:

@@ -196,6 +196,9 @@ def replace_rel_with_abs_blob_coords(blobs):
     blobs[:, :3] = blobs[:, 7:]
     return blobs
 
+def blobs_in_channel(blobs, channel):
+    return blobs[blobs[:, 6] == channel]
+
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.
     

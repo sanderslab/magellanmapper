@@ -96,7 +96,8 @@ class ListSelections(HasTraits):
 
 class SegmentsArrayAdapter(TabularAdapter):
     columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
-               ("radius", 3), ("confirmed", 4), ("abs_z", 6), ("abs_y", 7), ("abs_x", 8), ]
+               ("radius", 3), ("confirmed", 4), ("channel", 6), ("abs_z", 7), 
+               ("abs_y", 8), ("abs_x", 9)]
     index_text = Property
     
     def _get_index_text(self):
@@ -513,7 +514,7 @@ class Visualization(HasTraits):
                 if config.process_settings["thresholding"]:
                     # thresholds prior to blob detection
                     roi = plot_3d.threshold(roi)
-                segs_all = detector.segment_blob(roi)
+                segs_all = detector.detect_blobs(roi, config.channel)
             else:
                 # get all previously processed blobs in ROI plus additional 
                 # padding region to show surrounding blobs
@@ -536,7 +537,8 @@ class Visualization(HasTraits):
                 segs_all = np.concatenate((segs, segs_outside), axis=0)
                 
             # convert segments to visualizer table format and plot
-            self.segments = self._create_vis_segments(segs_all, offset)
+            self.segments = detector.shift_blob_abs_coords(
+                segs_all, offset[::-1])
             show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
             _, self.segs_in_mask = detector.get_blobs_in_roi(
                 self.segments, np.zeros(3), 
@@ -705,22 +707,6 @@ class Visualization(HasTraits):
             self.border[2] = 0 # ignore z
         print("set border to {}".format(self.border))
     
-    def _create_vis_segments(self, segs, offset):
-        """Create segments in the format used in this class.
-        
-        Args:
-            segs: Numpy array of segments, generally given as an (n, 4)
-                dimension array, where each segment is in 
-                (z, y, x, radius, confirmed, truth, ...) format. Any values 
-                after the truth flag will be ignored.
-        
-        Returns:
-            Array of segments with the absolute coordinates appended to the 
-            end of each segment based on ``offset``.
-        """
-        return np.concatenate(
-            (segs[:, :6], np.add(segs[:, :3], offset[::-1])), axis=1)
-    
     def _add_segment(self, seg, offset):
         """Formats a segment to the specification used within this module and 
         adds the segment to this class object's segments list.
@@ -735,11 +721,11 @@ class Visualization(HasTraits):
             format.
         """
         print(seg)
-        seg = self._create_vis_segments(np.array([seg]), offset)
+        seg = np.array([detector.shift_blob_abs_coords(seg, offset[::-1])])
         print("added segment: {}".format(seg))
         # concatenate for in-place array update, though append
         # and re-assigning also probably works
-        #print(self.segments)
+        print(self.segments)
         if self.segments is None or len(self.segments) == 0:
             # copy since the object may be changed elsewhere; cast to float64 
             # since original type causes an incorrect database insertion 
@@ -829,15 +815,15 @@ class Visualization(HasTraits):
             segi = self._get_vis_segments_index(segment_new)
             seg = self.segments[segi]
             seg[3] = -1 * abs(seg[3])
-            seg[4] = -1
+            detector.update_blob_confirmed(seg, -1)
             self._force_seg_refresh(segi, show=True)
             #self.segments = np.delete(self.segments, segi, 0)
             #seg = None
         elif segment_old is not None:
             # updates an existing segment
             self._segs_moved.append(segment_old)
-            diff = np.subtract(segment_new[0:3], segment_old[0:3])
-            segment_new[6:9] += diff
+            diff = np.subtract(segment_new[:3], segment_old[:3])
+            detector.shift_blob_abs_coords(segment_new, diff)
             segi = self._get_vis_segments_index(segment_old)
             if segi != -1:
                 self.segments[segi] = segment_new

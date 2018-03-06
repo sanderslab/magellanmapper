@@ -282,6 +282,7 @@ def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg,
         edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth, 
         linestyle=linestyle, alpha=alpha)
     ax.add_patch(circle)
+    #print("added circle: {}".format(circle))
     draggable_circle = DraggableCircle(
         circle, segment, fn_update_seg, facecolor)
     draggable_circle.connect()
@@ -846,9 +847,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 if (axi != -1 and axi >= z_planes_padding 
                     and axi < z_planes - z_planes_padding):
                     
-                    seg = np.array([axi - z_planes_padding, 
+                    seg = np.array([[axi - z_planes_padding, 
                                      event.ydata.astype(int), 
-                                     event.xdata.astype(int), -5, 1, -1])
+                                     event.xdata.astype(int), -5]])
+                    seg = detector.format_blobs(seg, channel)[0]
+                    detector.update_blob_confirmed(seg, 1)
                     seg = fn_update_seg(seg, offset=offset)
                     # adds a circle to denote the new segment
                     patch = _plot_circle(

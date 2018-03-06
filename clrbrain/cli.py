@@ -137,9 +137,9 @@ def segment_sub_roi(sub_rois_offsets, coord):
     The array of ROIs is assumed to be cli.sub_rois.
     
     Args:
-        sub_rois_offsets: Array of offsets for each sub_roi in
-            the larger array, used to give transpose the segments
-            into absolute coordinates.
+        sub_rois_offsets: Array of offsets each given as (z, y, x) 
+            for each sub_roi in the larger array, used to transpose the 
+            segments into absolute coordinates.
         coord: Coordinate of the sub-ROI in the order (z, y, x).
     
     Returns:
@@ -149,15 +149,16 @@ def segment_sub_roi(sub_rois_offsets, coord):
     sub_roi = sub_rois[coord]
     print("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    segments = detector.segment_blob(sub_roi)
+    segments = detector.detect_blobs(sub_roi, config.channel)
     offset = sub_rois_offsets[coord]
-    if segments is not None:
-        # duplicate positions, appending to end of each blob, for further
-        # adjustments such as shifting the blob based on close duplicates
-        segments = np.concatenate((segments, segments[:, 0:4]), axis=1)
-        # transpose segments
-        segments = np.add(segments, (offset[0], offset[1], offset[2], 0, 0, 0,
-                                     offset[0], offset[1], offset[2], 0))
+    #print("segs before (offset: {}):\n{}".format(offset, segments))
+    # shift both coordinate sets (at beginning and end of array) to 
+    # absolute positioning, using the latter set to store shifted coordinates 
+    # based on duplicates and the former for initial positions to check for 
+    # multiple duplicates
+    detector.shift_blob_rel_coords(segments, offset)
+    detector.shift_blob_abs_coords(segments, offset)
+    #print("segs after:\n{}".format(segments))
     return (coord, segments)
 
 def collect_segments(segments_all, segments, region, tol):
@@ -823,8 +824,8 @@ def process_file(filename_base, offset, roi_size):
         fdbk = None
         if segments_all is not None:
             # remove the duplicated elements that were used for pruning
-            segments_all[:, 0:4] = segments_all[:, 6:]
-            segments_all = segments_all[:, 0:6]
+            detector.replace_rel_with_abs_blob_coords(segments_all)
+            segments_all = detector.remove_abs_blob_coords(segments_all)
             
             # compared detected blobs with truth blobs
             if truth_db_type == TRUTH_DB_TYPES[1]:
@@ -982,7 +983,7 @@ def process_stack(roi, overlap, tol):
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
         if segments_all is not None:
-            segments_all[:, 0:4] = segments_all[:, 6:]
+            detector.replace_rel_with_abs_blob_coords(segments_all)
         pruning_time = time() - time_pruning_start
         
     else:

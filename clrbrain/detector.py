@@ -98,7 +98,7 @@ def show_blob_surroundings(blobs, roi, padding=1):
         print("{}\n".format(surroundings))
     np.set_printoptions()
 
-def segment_blob(roi):
+def detect_blobs(roi, channel):
     """Detects objects using 3D blob detection technique.
     
     Args:
@@ -108,47 +108,92 @@ def segment_blob(roi):
         Array of detected blobs, each given as 
             (z, row, column, radius, confirmation).
     """
-    # use 3D blob detection from skimage v.0.13pre
+    # use 3D blob detection from skimage fork
     time_start = time()
-    settings = config.process_settings
-    # scaling as a factor in pixel/um, where scaling of 1um/pixel  
-    # corresponds to factor of 1, and 0.25um/pixel corresponds to
-    # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
-    # x scaling alone
-    scale = calc_scaling_factor()
-    scaling_factor = scale[2]
+    multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
+    blobs_all = []
+    for i in channels:
+        roi_detect = roi[..., i] if multichannel else roi
+        settings = config.process_settings
+        # scaling as a factor in pixel/um, where scaling of 1um/pixel  
+        # corresponds to factor of 1, and 0.25um/pixel corresponds to
+        # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
+        # x scaling alone
+        scale = calc_scaling_factor()
+        scaling_factor = scale[2]
+        
+        # adjust scaling for blob pruning
+        res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
+        # further tweak, typically scaling down
+        res_norm = np.multiply(res_norm, settings["scale_factor"])
+        segmenting_mean = np.mean(roi)
+        #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
+        lib_clrbrain.printv("segmenting_mean: {}".format(segmenting_mean))
+        overlap = settings["overlap"]
+        if segmenting_mean > settings["segmenting_mean_thresh"]:
+            # turn off scaling for higher density region
+            res_norm = None
+            overlap += 0.05
+        #print("res_norm: {}".format(res_norm))
+        
+        # find blobs
+        blobs_log = blob_log(roi_detect, 
+                             min_sigma=settings["min_sigma_factor"]*scaling_factor, 
+                             max_sigma=settings["max_sigma_factor"]*scaling_factor, 
+                             num_sigma=settings["num_sigma"], 
+                             threshold=0.1,
+                             overlap=overlap, scale=res_norm)
+        lib_clrbrain.printv("time for 3D blob detection: %f" %(time() - time_start))
+        if blobs_log.size < 1:
+            print("no blobs detected")
+            return None
+        blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
+        #print(blobs_log)
+        blobs = format_blobs(blobs_log, i)
+        blobs_all.append(blobs)
+    blobs_all = np.vstack(blobs_all)
+    return blobs_all
+
+def format_blobs(blobs, channel):
+    """Format blobs with additional fields for confirmation, truth, and 
+    channel, abs z, abs y, abs x values.
     
-    # adjust scaling for blob pruning
-    res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
-    # further tweak, typically scaling down
-    res_norm = np.multiply(res_norm, settings["scale_factor"])
-    segmenting_mean = np.mean(roi)
-    #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
-    lib_clrbrain.printv("segmenting_mean: {}".format(segmenting_mean))
-    overlap = settings["overlap"]
-    if segmenting_mean > settings["segmenting_mean_thresh"]:
-        # turn off scaling for higher density region
-        res_norm = None
-        overlap += 0.05
-    #print("res_norm: {}".format(res_norm))
+    Blobs can be assumed to start with (z, y, x, radius) but should use 
+    ``detector`` functions to manipulate other fields of blob arrays to 
+    ensure that the correct columns are accessed.
     
-    # find blobs
-    blobs_log = blob_log(roi, 
-                         min_sigma=settings["min_sigma_factor"]*scaling_factor, 
-                         max_sigma=settings["max_sigma_factor"]*scaling_factor, 
-                         num_sigma=settings["num_sigma"], 
-                         threshold=0.1,
-                         overlap=overlap, scale=res_norm)
-    lib_clrbrain.printv("time for 3D blob detection: %f" %(time() - time_start))
-    if blobs_log.size < 1:
-        print("no blobs detected")
-        return None
-    blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
-    #print(blobs_log)
-    #print("found {} blobs".format(blobs_log.shape[0]))
-    # adding fields for confirmation and truth flags
-    extras = np.ones((blobs_log.shape[0], 2)) * -1
-    blobs = np.concatenate((blobs_log, extras), axis=1)
+    Args:
+        blobs: Numpy 2D array in [[z, y, x, radius], ...] format.
+        channel: Channel to set.
+    
+    Returns:
+        Blobs array formatted as 
+        [[z, y, x, radius, confirmation, truth, channel, 
+          abs_z, abs_y, abs_x], ...].
+    """
+    extras = np.ones((blobs.shape[0], 6)) * -1
+    extras[:, 2] = channel
+    extras[:, 3:] = blobs[:, :3]
+    blobs = np.concatenate((blobs, extras), axis=1)
+    return blobs
+
+def remove_abs_blob_coords(blobs):
+    return blobs[:, :7]
+
+def shift_blob_rel_coords(blobs, offset):
+    blobs[..., :3] += offset
+    return blobs
+
+def shift_blob_abs_coords(blobs, offset):
+    blobs[..., -1*len(offset):] += offset
+    return blobs
+
+def update_blob_confirmed(blob, confirmed):
+    blob[4] = confirmed
+    return blob
+
+def replace_rel_with_abs_blob_coords(blobs):
+    blobs[:, :3] = blobs[:, 7:]
     return blobs
 
 def remove_duplicate_blobs(blobs, region):

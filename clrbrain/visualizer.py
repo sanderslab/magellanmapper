@@ -520,8 +520,10 @@ class Visualization(HasTraits):
                 # get all previously processed blobs in ROI plus additional 
                 # padding region to show surrounding blobs
                 segs_all, _ = detector.get_blobs_in_roi(
-                    cli.segments_proc, offset, 
-                    roi_size, plot_2d.padding)
+                    cli.segments_proc, offset, roi_size, plot_2d.padding)
+                segs_all = detector.format_blobs(segs_all)
+                segs_all = detector.blobs_in_channel(
+                    segs_all, config.channel)
                 # shift coordinates to be relative to offset
                 segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             print("segs_all:\n{}".format(segs_all))
@@ -529,6 +531,7 @@ class Visualization(HasTraits):
             if not self._is_segs_none(segs):
                 # if segs provided (eg from ROI), use only these segs within 
                 # the ROI and add segs from the padding area outside the ROI
+                segs = detector.format_blobs(segs)
                 _, segs_in_mask = detector.get_blobs_in_roi(
                     segs_all, np.zeros(3), 
                     roi_size, np.multiply(self.border, -1))

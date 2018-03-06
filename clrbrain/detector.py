@@ -147,7 +147,7 @@ def detect_blobs(roi, channel):
             "time for 3D blob detection: {}".format(time() - time_start))
         if blobs_log.size < 1:
             print("no blobs detected")
-            return None
+            continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
         blobs = format_blobs(blobs_log, i)
         #print(blobs)
@@ -155,27 +155,41 @@ def detect_blobs(roi, channel):
     blobs_all = np.vstack(blobs_all)
     return blobs_all
 
-def format_blobs(blobs, channel):
+def format_blobs(blobs, channel=None):
     """Format blobs with additional fields for confirmation, truth, and 
     channel, abs z, abs y, abs x values.
     
-    Blobs can be assumed to start with (z, y, x, radius) but should use 
-    ``detector`` functions to manipulate other fields of blob arrays to 
+    Blobs in Clrbrain can be assumed to start with (z, y, x, radius) but should 
+    use ``detector`` functions to manipulate other fields of blob arrays to 
     ensure that the correct columns are accessed.
     
     Args:
-        blobs: Numpy 2D array in [[z, y, x, radius], ...] format.
-        channel: Channel to set.
+        blobs: Numpy 2D array in [[z, y, x, radius, ...], ...] format.
+        channel: Channel to set. Defaults to None, in which case the channel 
+            will not be updated.
     
     Returns:
         Blobs array formatted as 
         [[z, y, x, radius, confirmation, truth, channel, 
           abs_z, abs_y, abs_x], ...].
     """
-    extras = np.ones((blobs.shape[0], 6)) * -1
-    extras[:, 2] = channel
-    extras[:, 3:] = blobs[:, :3]
+    # target num of cols minus current cols
+    shape = blobs.shape
+    extra_cols = 10 - shape[1]
+    #print("extra_cols: {}".format(extra_cols))
+    extras = np.ones((shape[0], extra_cols)) * -1
+    print(blobs)
     blobs = np.concatenate((blobs, extras), axis=1)
+    # copy relative coords to abs coords
+    blobs[:, -3:] = blobs[:, :3]
+    channel_dim = 6
+    if channel is not None:
+        # update channel if given
+        blobs[:, channel_dim] = channel
+    elif shape[1] <= channel_dim:
+        # if original shape of each blob was 6 or less as was the case 
+        # prior to v.0.6.0, need to update channel with default value
+        blobs[:, channel_dim] = 0
     return blobs
 
 def remove_abs_blob_coords(blobs):
@@ -198,6 +212,8 @@ def replace_rel_with_abs_blob_coords(blobs):
     return blobs
 
 def blobs_in_channel(blobs, channel):
+    if channel is None:
+        return blobs
     return blobs[blobs[:, 6] == channel]
 
 def remove_duplicate_blobs(blobs, region):

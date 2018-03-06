@@ -126,7 +126,7 @@ def detect_blobs(roi, channel):
         res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
         # further tweak, typically scaling down
         res_norm = np.multiply(res_norm, settings["scale_factor"])
-        segmenting_mean = np.mean(roi)
+        segmenting_mean = np.mean(roi_detect)
         #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
         lib_clrbrain.printv("segmenting_mean: {}".format(segmenting_mean))
         overlap = settings["overlap"]
@@ -143,13 +143,14 @@ def detect_blobs(roi, channel):
                              num_sigma=settings["num_sigma"], 
                              threshold=0.1,
                              overlap=overlap, scale=res_norm)
-        lib_clrbrain.printv("time for 3D blob detection: %f" %(time() - time_start))
+        lib_clrbrain.printv(
+            "time for 3D blob detection: {}".format(time() - time_start))
         if blobs_log.size < 1:
             print("no blobs detected")
             return None
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
-        #print(blobs_log)
         blobs = format_blobs(blobs_log, i)
+        #print(blobs)
         blobs_all.append(blobs)
     blobs_all = np.vstack(blobs_all)
     return blobs_all

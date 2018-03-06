@@ -360,7 +360,8 @@ class Visualization(HasTraits):
                 _scene_3d_shown = True
             else:
                 # 3D point rendering
-                _scene_3d_shown = plot_3d.plot_3d_points(self.roi, self, config.channel)
+                _scene_3d_shown = plot_3d.plot_3d_points(
+                    self.roi, self, config.channel)
             
             # process ROI in prep for showing filtered 2D view and segmenting
             self.roi = plot_3d.saturate_roi(self.roi, channel=config.channel)

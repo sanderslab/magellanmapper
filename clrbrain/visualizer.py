@@ -541,16 +541,17 @@ class Visualization(HasTraits):
                 segs_all = np.concatenate((segs, segs_outside), axis=0)
                 
             # convert segments to visualizer table format and plot
-            self.segments = detector.shift_blob_abs_coords(
-                segs_all, offset[::-1])
-            show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
-            _, self.segs_in_mask = detector.get_blobs_in_roi(
-                self.segments, np.zeros(3), 
-                roi_size, np.multiply(self.border, -1))
-            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
-                self.segments, self.scene.mlab, self.segs_in_mask, show_shadows)
-            self._segs_scale_high = scale * 2
-            self.segs_scale = scale
+            if segs_all is not None:
+                self.segments = detector.shift_blob_abs_coords(
+                    segs_all, offset[::-1])
+                show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
+                _, self.segs_in_mask = detector.get_blobs_in_roi(
+                    self.segments, np.zeros(3), 
+                    roi_size, np.multiply(self.border, -1))
+                self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
+                    self.segments, self.scene.mlab, self.segs_in_mask, show_shadows)
+                self._segs_scale_high = scale * 2
+                self.segs_scale = scale
             #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     

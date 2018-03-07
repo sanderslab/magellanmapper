@@ -188,11 +188,16 @@ class Visualization(HasTraits):
         """Formats the segment as a strong for feedback.
         
         Args:
-            seg: The segment as an array of (z, row, column, radius).
+            seg: The segment as an array given by 
+                :func:``detector.blob_for_db``.
+        
+        Returns:
+            Segment formatted as a string.
         """
         seg_str = seg[0:3].astype(int).astype(str).tolist()
         seg_str.append(str(round(seg[3], 3)))
-        seg_str.append(str(int(seg[4])))
+        seg_str.append(str(int(detector.get_blob_confirmed(seg))))
+        seg_str.append(str(int(detector.get_blob_channel(seg))))
         return ", ".join(seg_str)
     
     def _append_roi(self, roi, rois_dict):
@@ -226,7 +231,7 @@ class Visualization(HasTraits):
         for i in range(len(self.segments)):
             seg = self.segments[i]
             # uses absolute coordinates from end of seg
-            seg_db = self._seg_for_db(seg)
+            seg_db = detector.blob_for_db(seg)
             if seg[4] == -1 and seg[3] < config.POS_THRESH:
                 # attempts to delete user added segments, where radius assumed to be 0,
                 # that are no longer selected
@@ -271,7 +276,7 @@ class Visualization(HasTraits):
             # delete the original entry of blobs that moved since replacement
             # is based on coordinates, so moved blobs wouldn't be replaced
             for i in range(len(self._segs_moved)):
-                self._segs_moved[i] = self._seg_for_db(self._segs_moved[i])
+                self._segs_moved[i] = detector.blob_for_db(self._segs_moved[i])
             sqlite.delete_blobs(
                 config.db.conn, config.db.cur, roi_id, self._segs_moved)
             self._segs_moved = []
@@ -531,13 +536,13 @@ class Visualization(HasTraits):
             if not self._is_segs_none(segs):
                 # if segs provided (eg from ROI), use only these segs within 
                 # the ROI and add segs from the padding area outside the ROI
-                segs = detector.format_blobs(segs)
                 _, segs_in_mask = detector.get_blobs_in_roi(
                     segs_all, np.zeros(3), 
                     roi_size, np.multiply(self.border, -1))
                 segs_outside = segs_all[np.logical_not(segs_in_mask)]
                 print("segs_outside:\n{}".format(segs_outside))
                 segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
+                segs = detector.format_blobs(segs)
                 segs_all = np.concatenate((segs, segs_outside), axis=0)
                 
             # convert segments to visualizer table format and plot
@@ -740,20 +745,6 @@ class Visualization(HasTraits):
             self.segments = np.concatenate((self.segments, seg))
         #print("segs:\n{}".format(self.segments))
         return seg
-    
-    def _seg_for_db(self, seg):
-        """Convert segment output from the format used within this module 
-        to that used in :module:`sqlite`, where coordinates are absolute 
-        rather than relative to the offset.
-        
-        Args:
-            seg: Segment in 
-                (z, y, x, rad, confirmed, truth, abs_z, abs_y, abs_x) format.
-        
-        Returns:
-            Segment in (abs_z, abs_y, abs_x, rad, confirmed, truth) format.
-        """
-        return np.array([*seg[6:9], *seg[3:6]])
     
     def _get_vis_segments_index(self, segment):
         # must take from vis rather than saved copy in case user 

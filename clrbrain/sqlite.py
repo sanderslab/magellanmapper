@@ -15,6 +15,7 @@ import sqlite3
 import numpy as np
 
 from clrbrain import config
+from clrbrain import detector
 
 DB_NAME = "clrbrain.db"
 DB_NAME_VERIFIED = "clrbrain_verified.db"
@@ -377,9 +378,9 @@ def insert_blobs(conn, cur, roi_id, blobs):
     Args:
         conn: The connection.
         cur: Connection's cursor.
-        blobs: Array of blobs arrays, assumes to be in (z, y, x, radius, confirmed)
-            format. "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 
-            1 = correct.
+        blobs: Array of blobs arrays, assumed to be formatted accorind to 
+            :func:``detector.format_blob``. "Confirmed" is given as 
+            -1 = unconfirmed, 0 = incorrect, 1 = correct.
     """
     blobs_list = []
     confirmed = 0
@@ -388,10 +389,12 @@ def insert_blobs(conn, cur, roi_id, blobs):
         blob_entry.extend(blob)
         #print("blob type:\n{}".format(blob.dtype))
         blobs_list.append(blob_entry)
-        if blob[4] == 1:
+        if detector.get_blob_confirmed(blob) == 1:
             confirmed = confirmed + 1
-    cur.executemany("INSERT OR REPLACE INTO blobs (roi_id, z, y, x, radius, confirmed, truth) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)", blobs_list)
+    #print(match_elements(_COLS_BLOBS, ", ", "?"))
+    cur.executemany("INSERT OR REPLACE INTO blobs ({}) VALUES ({})"
+                    .format(_COLS_BLOBS, match_elements(
+                            _COLS_BLOBS, ", ", "?")), blobs_list)
     print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
     
@@ -401,18 +404,18 @@ def delete_blobs(conn, cur, roi_id, blobs):
     Args:
         conn: The connection.
         cur: Connection's cursor.
-        blobs: Array of blobs arrays, assumes to be in (z, y, x...)
-            format.
+        blobs: Array of blobs arrays, assumed to be formatted accorind to 
+            :func:``detector.format_blob``.
     
     Returns:
         The number of rows deleted.
     """
     deleted = 0
     for blob in blobs:
-        blob_entry = [roi_id]
-        blob_entry.extend(blob[0:3])
+        blob_entry = [roi_id, *blob[:3], detector.get_blob_channel(blob)]
+        print("attempting to delete blob {}".format(blob))
         cur.execute("DELETE FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
-                    "AND x = ?", blob_entry)
+                    "AND x = ? AND channel = ?", blob_entry)
         count =  cur.rowcount
         if count > 0:
             deleted += count
@@ -524,6 +527,12 @@ def get_roi_offset(roi):
 
 def get_roi_size(roi):
     return (roi["size_x"], roi["size_y"], roi["size_z"])
+
+def match_elements(src, delim, repeat):
+    src_split = src.split(delim)
+    return delim.join([repeat] * len(src_split))
+
+
 
 def _merge_dbs(db_paths, db_merged=None):
     if db_merged is None:

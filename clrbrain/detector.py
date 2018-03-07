@@ -224,6 +224,21 @@ def blobs_in_channel(blobs, channel):
         return blobs
     return blobs[blobs[:, 6] == channel]
 
+def blob_for_db(blob):
+    """Convert segment output from the format used within this module 
+    to that used in :module:`sqlite`, where coordinates are absolute 
+    rather than relative to the offset.
+    
+    Args:
+        seg: Segment in 
+            (z, y, x, rad, confirmed, truth, channel, abs_z, abs_y, abs_x) 
+            format.
+    
+    Returns:
+        Segment in (abs_z, abs_y, abs_x, rad, confirmed, truth, channel) format.
+    """
+    return np.array([*blob[-3:], *blob[3:7]])
+
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.
     

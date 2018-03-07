@@ -20,7 +20,9 @@ DB_NAME = "clrbrain.db"
 DB_NAME_VERIFIED = "clrbrain_verified.db"
 DB_NAME_MERGED = "clrbrain_merged.db"
 DB_SUFFIX_TRUTH = "_truth.db"
-DB_VERSION = 2
+DB_VERSION = 3
+
+_COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
 
 def _backup_db(path):
     i = 1
@@ -84,6 +86,7 @@ def _create_table_blobs(cur):
                                     "roi_id INTEGER, x INTEGER, y INTEGER, "
                                     "z INTEGER, radius REAL, "
                                     "confirmed INTEGER, truth INTEGER, "
+                                    "channel INTEGER, "
                 "UNIQUE (roi_id, x, y, z, truth))")
 
 def upgrade_db(conn, cur):
@@ -103,7 +106,7 @@ def upgrade_db(conn, cur):
     # start upgrading DB for each version increment
     print("Starting database upgrade...")
     if db_ver < 2:
-        print("upgrading DB version from {}".format(db_ver))
+        print("upgrading DB version from {} to 2".format(db_ver))
         
         # about table to track DB version numbers
         print("inserting new about table")
@@ -114,9 +117,23 @@ def upgrade_db(conn, cur):
         print("upgrading blobs table")
         cur.execute("ALTER TABLE blobs RENAME TO tmp_blobs")
         _create_table_blobs(cur)
-        cols = "roi_id, z, y, x, radius, confirmed"
-        cur.execute("INSERT INTO blobs (" + cols + ", truth) SELECT " + cols + ", -1 FROM tmp_blobs")
+        cols = _COLS_BLOBS.rsplit(",", 2)[0]
+        cur.execute("INSERT INTO blobs (" + cols + ", truth) SELECT " 
+                    + cols + ", -1 FROM tmp_blobs")
         cur.execute("DROP TABLE tmp_blobs")
+        
+    if db_ver < 3:
+        print("upgrading DB version from {} to 3".format(db_ver))
+        
+        # new column for channel and updated unique constraint on blobs table
+        print("upgrading blobs table")
+        cur.execute("ALTER TABLE blobs RENAME TO tmp_blobs")
+        _create_table_blobs(cur)
+        cols = _COLS_BLOBS.rsplit(",", 1)[0]
+        cur.execute("INSERT INTO blobs (" + cols + ", channel) SELECT " 
+                    + cols + ", 0 FROM tmp_blobs")
+        cur.execute("DROP TABLE tmp_blobs")
+    
     print("...finished database upgrade.")
     conn.commit()
 
@@ -403,12 +420,12 @@ def delete_blobs(conn, cur, roi_id, blobs):
     return deleted
 
 def _parse_blobs(rows):
-    blobs = np.empty((len(rows), 6))
+    blobs = np.empty((len(rows), 7))
     rowi = 0
     for row in rows:
         blobs[rowi] = [
             row["z"], row["y"], row["x"], row["radius"], row["confirmed"], 
-            row["truth"]
+            row["truth"], row["channel"]
         ]
         rowi += 1
     return blobs
@@ -423,7 +440,8 @@ def select_blobs(cur, roi_id):
     Returns:
         Blobs in the given ROI.
     """
-    cur.execute("SELECT * FROM blobs WHERE roi_id = ?", (roi_id, ))
+    cur.execute(
+        "SELECT {} FROM blobs WHERE roi_id = ?".format(_COLS_BLOBS), (roi_id, ))
     return _parse_blobs(cur.fetchall())
 
 def select_blobs_confirmed(cur, confirmed):
@@ -436,7 +454,9 @@ def select_blobs_confirmed(cur, confirmed):
     Returns:
         Blobs in the given ROI.
     """
-    cur.execute("SELECT * FROM blobs WHERE confirmed = ?", (confirmed, ))
+    cur.execute(
+        "SELECT {} FROM blobs WHERE confirmed = ?".format(_COLS_BLOBS), 
+        (confirmed, ))
     return _parse_blobs(cur.fetchall())
 
 def verification_stats(conn, cur):

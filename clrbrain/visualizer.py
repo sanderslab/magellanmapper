@@ -730,7 +730,7 @@ class Visualization(HasTraits):
         print("added segment: {}".format(seg))
         # concatenate for in-place array update, though append
         # and re-assigning also probably works
-        print(self.segments)
+        #print(self.segments)
         if self.segments is None or len(self.segments) == 0:
             # copy since the object may be changed elsewhere; cast to float64 
             # since original type causes an incorrect database insertion 

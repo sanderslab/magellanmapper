@@ -205,9 +205,15 @@ def shift_blob_abs_coords(blobs, offset):
     blobs[..., -1*len(offset):] += offset
     return blobs
 
+def get_blob_confirmed(blob):
+    return blob[4]
+
 def update_blob_confirmed(blob, confirmed):
     blob[4] = confirmed
     return blob
+
+def get_blob_channel(blob):
+    return blob[6]
 
 def replace_rel_with_abs_blob_coords(blobs):
     blobs[:, :3] = blobs[:, 7:]

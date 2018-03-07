@@ -49,7 +49,7 @@ verify = False
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
 
-SEG_LINEWIDTH = 0.5
+SEG_LINEWIDTH = 1
 ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
 PLANE = ("xy", "xz", "yz")
@@ -75,6 +75,14 @@ truth_color_dict = {
     -1: None,
     0: "m",
     1: "b"
+}
+
+edgecolor_dict = {
+    0: "w",
+    1: "c",
+    2: "y",
+    3: "m",
+    4: "g"
 }
 
 class DraggableCircle:
@@ -262,21 +270,24 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
     collection.set_linewidth(linewidth)
     return collection
 
-def _plot_circle(ax, segment, edgecolor, linewidth, linestyle, fn_update_seg, 
+def _plot_circle(ax, segment, linewidth, linestyle, fn_update_seg, 
                  alpha=0.5):
-    """Draw a DraggableCircle from the given segment.
+    """Create and draw a DraggableCircle from the given segment.
     
     Args:
+        ax: Matplotlib axes.
         segment: Numpy array of segments, generally as an (n, 4)
             dimension array, where each segment is in (z, y, x, radius).
-        edgecolor: Color of patch borders.
-        facecolor: Color of patch interior.
+        linewidth: Edge line width.
+        linestyle: Edge line style.
         fn_update_seg: Function to call from DraggableCircle.
+        alpha: Alpha transparency level; defaults to 0.5.
     
     Returns:
         The DraggableCircle object.
     """
-    facecolor = segs_color_dict[segment[4]]
+    facecolor = segs_color_dict[detector.get_blob_confirmed(segment)]
+    edgecolor = edgecolor_dict[detector.get_blob_channel(segment)]
     circle = patches.Circle(
         (segment[2], segment[1]), radius=_get_radius(segment), 
         edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth, 
@@ -511,7 +522,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             if segments_z is not None:
                 for seg in segments_z:
                     _plot_circle(
-                        ax, seg, "w", SEG_LINEWIDTH, ":", fn_update_seg)
+                        ax, seg, SEG_LINEWIDTH, ":", fn_update_seg)
             
             # shows truth blobs as small, solid circles
             if blobs_truth is not None:
@@ -841,7 +852,18 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # add points that were not segmented by ctrl-clicking on zoom plots
     def on_btn_release(event):
         ax = event.inaxes
-        if event.key == "control":
+        print("event key: {}".format(event.key))
+        if event.key is None:
+            # for some reason becomes none with previous event was 
+            # ctrl combo and this event is control
+            print("Unable to detect key, please try again")
+        elif event.key == "control" or event.key.startswith("ctrl"):
+            seg_channel = channel
+            if channel is None:
+                # specify channel by key combos if displaying multiple channels
+                if event.key.endswith("+1"):
+                    # ctrl+1
+                    seg_channel = 1
             try:
                 axi = ax_z_list.index(ax)
                 if (axi != -1 and axi >= z_planes_padding 
@@ -850,12 +872,12 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                     seg = np.array([[axi - z_planes_padding, 
                                      event.ydata.astype(int), 
                                      event.xdata.astype(int), -5]])
-                    seg = detector.format_blobs(seg, channel)[0]
+                    seg = detector.format_blobs(seg, seg_channel)[0]
                     detector.update_blob_confirmed(seg, 1)
                     seg = fn_update_seg(seg, offset=offset)
                     # adds a circle to denote the new segment
                     patch = _plot_circle(
-                        ax, seg, "none", SEG_LINEWIDTH, "-", fn_update_seg)
+                        ax, seg, SEG_LINEWIDTH, "-", fn_update_seg)
             except ValueError as e:
                 print(e)
                 print("not on a plot to select a point")
@@ -880,7 +902,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 print("Pasting a copied in segment")
                 seg_new = fn_update_seg(seg_new, offset=offset)
             _plot_circle(
-                ax, seg_new, "w", SEG_LINEWIDTH, ":", fn_update_seg)
+                ax, seg_new, SEG_LINEWIDTH, ":", fn_update_seg)
        
     fig.canvas.mpl_connect("button_release_event", on_btn_release)
     

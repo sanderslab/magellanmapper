@@ -206,6 +206,8 @@ def shift_blob_abs_coords(blobs, offset):
     return blobs
 
 def get_blob_confirmed(blob):
+    if blob.ndim > 1:
+        return blob[..., 4]
     return blob[4]
 
 def update_blob_confirmed(blob, confirmed):

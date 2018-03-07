@@ -21,6 +21,7 @@ except ImportError as e:
 
 from clrbrain import config
 from clrbrain import chunking
+from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import sqlite
 from clrbrain import plot_2d
@@ -62,7 +63,7 @@ def export_rois(db, image5d, channel, path, border):
             # flag to avoid confirmation color in 2D plots
             roi_id = roi["id"]
             blobs = sqlite.select_blobs(db.cur, roi_id)
-            blobs = blobs[blobs[:, 4] == 1]
+            blobs = blobs[detector.get_blob_confirmed(blobs) == 1]
             blobs[:, 4] = -1
             
             # adjust ROI size and offset if border set

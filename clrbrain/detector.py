@@ -114,7 +114,7 @@ def detect_blobs(roi, channel):
     blobs_all = []
     for i in channels:
         roi_detect = roi[..., i] if multichannel else roi
-        settings = config.process_settings
+        settings = config.get_process_settings(i)
         # scaling as a factor in pixel/um, where scaling of 1um/pixel  
         # corresponds to factor of 1, and 0.25um/pixel corresponds to
         # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
@@ -152,6 +152,8 @@ def detect_blobs(roi, channel):
         blobs = format_blobs(blobs_log, i)
         #print(blobs)
         blobs_all.append(blobs)
+    if not blobs_all:
+        return None
     blobs_all = np.vstack(blobs_all)
     return blobs_all
 

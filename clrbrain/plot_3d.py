@@ -58,8 +58,9 @@ def saturate_roi(roi, clip_vmax=-1, channel=None):
     roi_out = None
     for i in channels:
         roi_show = roi[..., i] if multichannel else roi
+        settings = config.get_process_settings(i)
         if clip_vmax == -1:
-            clip_vmax = config.process_settings["clip_vmax"]
+            clip_vmax = settings["clip_vmax"]
         # enhance contrast and normalize to 0-1 scale
         vmin, vmax = np.percentile(roi_show, (5, clip_vmax))
         lib_clrbrain.printv("vmin: {}, vmax: {}".format(vmin, vmax))
@@ -94,7 +95,7 @@ def denoise_roi(roi, channel=None):
     roi_out = None
     for i in channels:
         roi_show = roi[..., i] if multichannel else roi
-        settings = config.process_settings
+        settings = config.get_process_settings(i)
         # find gross density
         saturated_mean = np.mean(roi_show)
         lib_clrbrain.printv("saturated_mean: {}".format(saturated_mean))

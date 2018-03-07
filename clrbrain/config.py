@@ -137,10 +137,17 @@ def update_process_settings(settings, settings_type):
             settings["max_sigma_factor"] = 20
             settings["num_sigma"] = 10
             settings["overlap"] = 0.2
-      
 
-# defaults to lightsheet 5x settings
+
+# default settings and list of settings for each channel
 process_settings = ProcessSettings()
+process_settings_list = [process_settings]
+
+def get_process_settings(i):
+    settings = process_settings
+    if len(process_settings_list) > i:
+        settings = process_settings_list[i]
+    return settings
 
 
 # REGISTRATION SETTINGS

@@ -389,7 +389,7 @@ def main(process_args_only=False):
     parser.add_argument("--mag")
     parser.add_argument("--zoom")
     parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("--microscope")
+    parser.add_argument("--microscope", nargs="*")
     parser.add_argument("--truth_db")
     parser.add_argument("--roc", action="store_true")
     parser.add_argument("--plane")
@@ -494,8 +494,14 @@ def main(process_args_only=False):
         print("Set zoom to {}".format(detector.zoom))
     # microscope settings default to lightsheet 5x but can be updated
     if args.microscope is not None:
-        config.update_process_settings(config.process_settings, args.microscope)
-    print("Set microscope processing settings to {}"
+        for i in range(len(args.microscope)):
+            settings = config.process_settings if i == 0 else config.ProcessSettings()
+            config.update_process_settings(settings, args.microscope[i])
+            if i > 0:
+                config.process_settings_list.append(settings)
+                print("Added {} settings for channel {}".format(
+                      config.process_settings_list[i]["microscope_type"], i))
+    print("Set default microscope processing settings to {}"
           .format(config.process_settings["microscope_type"]))
     # registration profile settings
     if args.reg_profile is not None:

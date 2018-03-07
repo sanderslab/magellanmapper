@@ -111,7 +111,6 @@ def upgrade_db(conn, cur):
         # about table to track DB version numbers
         print("inserting new about table")
         _create_table_about(cur)
-        insert_about(conn, cur, DB_VERSION, datetime.datetime.now())
         
         # new column with unique constraint on blobs table
         print("upgrading blobs table")
@@ -133,6 +132,9 @@ def upgrade_db(conn, cur):
         cur.execute("INSERT INTO blobs (" + cols + ", channel) SELECT " 
                     + cols + ", 0 FROM tmp_blobs")
         cur.execute("DROP TABLE tmp_blobs")
+    
+    # record database upgrade version and time
+    insert_about(conn, cur, DB_VERSION, datetime.datetime.now())
     
     print("...finished database upgrade.")
     conn.commit()

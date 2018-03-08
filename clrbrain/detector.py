@@ -211,7 +211,7 @@ def get_blob_confirmed(blob):
     return blob[4]
 
 def update_blob_confirmed(blob, confirmed):
-    blob[4] = confirmed
+    blob[..., 4] = confirmed
     return blob
 
 def get_blob_channel(blob):

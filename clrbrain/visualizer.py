@@ -717,35 +717,6 @@ class Visualization(HasTraits):
             self.border[2] = 0 # ignore z
         print("set border to {}".format(self.border))
     
-    def _add_segment(self, seg, offset):
-        """Formats a segment to the specification used within this module and 
-        adds the segment to this class object's segments list.
-        
-        Args:
-            seg: Segment in (z, y, x, rad, confirmed, truth) format.
-            offset: Offset in (x, y, z) format for consistency with 
-                offset values given as user input.
-        
-        Returns:
-            Segment in (z, y, x, rad, confirmed, truth, abs_z, abs_y, abs_x) 
-            format.
-        """
-        print(seg)
-        seg = np.array([detector.shift_blob_abs_coords(seg, offset[::-1])])
-        print("added segment: {}".format(seg))
-        # concatenate for in-place array update, though append
-        # and re-assigning also probably works
-        #print(self.segments)
-        if self.segments is None or len(self.segments) == 0:
-            # copy since the object may be changed elsewhere; cast to float64 
-            # since original type causes an incorrect database insertion 
-            # for some reason
-            self.segments = np.copy(seg).astype(np.float64)
-        else:
-            self.segments = np.concatenate((self.segments, seg))
-        #print("segs:\n{}".format(self.segments))
-        return seg
-    
     def _get_vis_segments_index(self, segment):
         # must take from vis rather than saved copy in case user 
         # manually updates the table
@@ -773,31 +744,23 @@ class Visualization(HasTraits):
            if not show:
                self.segs_selected.remove(i)
     
-    def update_segment(self, segment_new, segment_old=None, offset=None, 
-                       remove=False):
+    def update_segment(self, segment_new, segment_old=None, remove=False):
         """Update this class object's segments list with a new or updated 
-        segment.
+        segment
         
         Args:
             segment_new: Segment that was either added or updated, including 
                 changes to coordinates or radius. Segments are generally 
-                given as an (z, y, x, radius, confirmed, truth, ...) array, 
-                where any elements after these ones are ignored.
+                given as an array in :func:``detector.format_blob`` format.
             segment_old: Previous version of the segment; defaults to None, 
                 in which case ``segment_new`` will only be added rather than 
                 any previously segment updated.
-            offset: Offset for ``segment_new``'s coordinates, used only 
-                when adding a completely new segment. This segment's 
-                coordinates are given in relative coordinates, and extra 
-                fields will be appended to the segment to store its 
-                absolute coordinates.
-            remove: True if the segment should be removed, in which case 
-                ``segment_old`` and ``offset`` will be ignored. Defaults to 
+            remove: True if the segment should be removed instead of added, 
+                in which case ``segment_old`` will be ignored. Defaults to 
                 False.
         
         Returns:
-            The updated segment in 
-            (z, y, x, rad, confirmed, truth, abs_z, abs_y, abs_x) format.
+            The updated segment.
         """
         seg = segment_new
         # remove all row selections to ensure that no more than one 
@@ -816,7 +779,7 @@ class Visualization(HasTraits):
             #self.segments = np.delete(self.segments, segi, 0)
             #seg = None
         elif segment_old is not None:
-            # updates an existing segment
+            # update an existing segment
             self._segs_moved.append(segment_old)
             diff = np.subtract(segment_new[:3], segment_old[:3])
             detector.shift_blob_abs_coords(segment_new, diff)
@@ -825,10 +788,18 @@ class Visualization(HasTraits):
                 self.segments[segi] = segment_new
                 print("updated seg: {}".format(segment_new))
                 self._force_seg_refresh(segi, show=True)
-        elif offset is not None:
-            # adds a new segment with the given offset
-            seg = self._add_segment(segment_new, offset)[0]
+        else:
+            # add a new segment to the visualizer table
+            segs = [seg] # for concatenation
+            if self.segments is None or len(self.segments) == 0:
+                # copy since the object may be changed elsewhere; cast to 
+                # float64 since original type causes an incorrect database 
+                # insertion for some reason
+                self.segments = np.copy(segs).astype(np.float64)
+            else:
+                self.segments = np.concatenate((self.segments, segs))
             self.segs_selected.append(len(self.segments) - 1)
+            print("added segment to table: {}".format(seg))
         return seg
     
     @property

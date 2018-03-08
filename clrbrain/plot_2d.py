@@ -513,9 +513,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     if seg[0] != z_relative and seg[3] > 0:
                         # add segments to Visualizer table
                         seg[0] = z_relative
-                        roi_offset = np.copy(offset)
-                        roi_offset[2] -= z_relative
-                        segments_z[i] = fn_update_seg(seg, offset=roi_offset)
+                        detector.shift_blob_abs_coords(
+                            segments_z[i], (-1 * z_relative, 0, 0))
+                        segments_z[i] = fn_update_seg(seg)
             else:
                 # apply only to segments in their current z
                 segments_z = segs_in[segs_in[:, 0] == z_relative]
@@ -872,9 +872,10 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                     seg = np.array([[axi - z_planes_padding, 
                                      event.ydata.astype(int), 
                                      event.xdata.astype(int), -5]])
-                    seg = detector.format_blobs(seg, seg_channel)[0]
+                    seg = detector.format_blobs(seg, seg_channel)
+                    detector.shift_blob_abs_coords(seg, offset[::-1])
                     detector.update_blob_confirmed(seg, 1)
-                    seg = fn_update_seg(seg, offset=offset)
+                    seg = fn_update_seg(seg[0])
                     # adds a circle to denote the new segment
                     patch = _plot_circle(
                         ax, seg, SEG_LINEWIDTH, "-", fn_update_seg)
@@ -900,7 +901,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 seg_new = fn_update_seg(seg_new, seg_old)
             else:
                 print("Pasting a copied in segment")
-                seg_new = fn_update_seg(seg_new, offset=offset)
+                detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
+                seg_new = fn_update_seg(seg_new)
             _plot_circle(
                 ax, seg_new, SEG_LINEWIDTH, ":", fn_update_seg)
        

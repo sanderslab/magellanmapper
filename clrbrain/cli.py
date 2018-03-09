@@ -778,8 +778,8 @@ def process_file(filename_base, offset, roi_size):
             shape = roi_size
             roi_offset = offset
             splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
-            print("using {}".format(splice))
-            series_fill = str(config.series).zfill(5)
+            print("Using {} for ROI processing".format(splice))
+            series_fill = importer.series_as_str(config.series)
             filename_roi = lib_clrbrain.insert_before_ext(
                 config.filename, "_" + splice)
             filename_image5d_proc = _splice_before(filename_image5d_proc, 

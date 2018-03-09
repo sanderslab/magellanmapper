@@ -48,6 +48,9 @@ from clrbrain import plot_2d
 from clrbrain import register
 from clrbrain import sqlite
 
+
+_ROI_DEFAULT = "None selected"
+
 def main():
     """Starts the visualization GUI.
     
@@ -92,7 +95,7 @@ class VisHandler(Handler):
         config.db.conn.close()
 
 class ListSelections(HasTraits):
-    selections = List(["test0", "test1"])
+    selections = List([_ROI_DEFAULT])
 
 class SegmentsArrayAdapter(TabularAdapter):
     columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
@@ -142,7 +145,6 @@ class Visualization(HasTraits):
     rois_selections_class = Instance(ListSelections)
     rois_check_list = Str
     _rois_dict = None
-    _roi_default = "None selected"
     _rois = None
     _segments = Array
     _segs_moved = [] # orig seg of moved blobs to track for deletion
@@ -383,14 +385,8 @@ class Visualization(HasTraits):
         self._update_structure_level(curr_offset, curr_roi_size)
         
         self._reset_segments()
-        
-    def __init__(self):
-        # Do not forget to call the parent's __init__
-        HasTraits.__init__(self)
-        self._set_border()
-        
-        # set up file parameters
-        self._filename = config.filename
+    
+    def _setup_for_image(self):
         if cli.image5d.ndim >= 5:
             self._channel_high = cli.image5d.shape[4] - 1
         self._channel = config.channel
@@ -414,16 +410,24 @@ class Visualization(HasTraits):
                              else cli.roi_size)
         
         # set up selector for loading past saved ROIs
-        self._rois_dict = {self._roi_default: None}
+        self._rois_dict = {_ROI_DEFAULT: None}
         self._rois = config.db.get_rois(os.path.basename(config.filename))
         self.rois_selections_class = ListSelections()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
                 self._append_roi(roi, self._rois_dict)
         self.rois_selections_class.selections = list(self._rois_dict.keys())
-        self.rois_check_list = self._roi_default
+        self.rois_check_list = _ROI_DEFAULT
+        
+        # show the default ROI
+        self.show_3d()
+    
+    def __init__(self):
+        # Do not forget to call the parent's __init__
+        HasTraits.__init__(self)
         
         # default options setup
+        self._set_border()
         self._circles_2d = [plot_2d.CIRCLES[0]]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
@@ -431,15 +435,34 @@ class Visualization(HasTraits):
         self._check_list_3d = [self._DEFAULTS_3D[2]]
         #self._structure_scale = self._structure_scale_high
         
-        # show the default ROI
-        self.show_3d()
+        # setup interface for image
+        # TODO: show the currently loaded Numpy image file without triggering 
+        # update
+        #self._filename = config.filename
+        self._setup_for_image()
     
     @on_trait_change("_filename")
     def update_filename(self):
-        """Update the selected filename.
+        """Update the selected filename and load the corresponding image.
+        
+        Since an original (eg .czi) image can be processed in so many 
+        different ways, assume that the user will select the Numpy image 
+        file instead of the raw image. Image settings will be constructed 
+        from the Numpy image filename. Processed files (eg ROIs, blobs) 
+        will not be loaded for now.
         """
-        config.filename = self._filename
-        print("Changed filename to {}".format(config.filename))
+        filename, series = importer.deconstruct_np_filename(self._filename)
+        if filename is not None and series is not None:
+            config.filename = filename
+            config.series = series
+            print("Changed filename to {}, series to {}"
+                  .format(config.filename, config.series))
+            # TODO: consider loading processed images, blobs, etc
+            cli.image5d = importer.read_file(config.filename, config.series)
+            self._setup_for_image()
+        else:
+            print("Could not parse filename {} and series {}"
+                  .format(filename, series))
     
     @on_trait_change("_channel")
     def update_channel(self):
@@ -473,7 +496,7 @@ class Visualization(HasTraits):
         if self._scene_3d_shown:
             self.scene.mlab.orientation_axes()
         # updates the GUI here even though it doesn't elsewhere for some reason
-        self.rois_check_list = self._roi_default
+        self.rois_check_list = _ROI_DEFAULT
         #print("reset selected ROI to {}".format(self.rois_check_list))
         #print("view: {}\nroll: {}".format(
         #    self.scene.mlab.view(), self.scene.mlab.roll()))
@@ -647,7 +670,7 @@ class Visualization(HasTraits):
     @on_trait_change('rois_check_list')
     def update_roi(self):
         print("got {}".format(self.rois_check_list))
-        if self.rois_check_list != self._roi_default:
+        if self.rois_check_list not in ("", _ROI_DEFAULT):
             # get chosen ROI reconstruct original ROI size and offset including border
             roi = self._rois_dict[self.rois_check_list]
             cli.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
@@ -680,7 +703,7 @@ class Visualization(HasTraits):
             # any change to border flag resets ROI selection and segments
             print("changed Border flag")
             self._border_on = border_checked
-            self.rois_check_list = self._roi_default
+            self.rois_check_list = _ROI_DEFAULT
             self._reset_segments()
     
     def _curr_offset(self):

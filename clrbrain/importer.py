@@ -20,6 +20,7 @@ Attributes:
 import os
 from time import time
 import glob
+import re
 import multiprocessing as mp
 from xml import etree as et
 
@@ -191,8 +192,34 @@ def _make_filenames(filename, series, modifier="", ext="czi"):
     filename_info_npz = filename_base + SUFFIX_INFO
     return filename_image5d_npz, filename_info_npz
 
+def series_as_str(series):
+    return str(series).zfill(5)
+
 def filename_to_base(filename, series, modifier="", ext="czi"):
-    return filename.replace("." + ext, "_") + modifier + str(series).zfill(5)
+    return filename.replace("." + ext, "_") + modifier + series_as_str(series)
+
+def deconstruct_np_filename(np_filename, ext="czi"):
+    """Deconstruct Numpy image filename to the appropriate image components.
+    
+    Args:
+        np_filename: Numpy image filename, including series number.
+        ext: Original image's extension; defaults to "czi".
+    
+    Returns:
+        Tuple with ``filename`` as the path before the series section and 
+        ``series`` as the series number as an integer. Both elements default 
+        to None if the series component could not be found ``np_filename``.
+    """
+    series_reg = re.compile(r"\_[0-9]{5}")
+    series_fill = re.findall(series_reg, np_filename)
+    series = None
+    filename = None
+    if series_fill:
+        series = int(series_fill[0][1:])
+        filename = series_reg.split(np_filename)[0] + "." + ext
+    #series_fill = "_{}".format(series_as_str(series))
+    #return np_filename.split(series_fill)[0]
+    return filename, series
 
 def _save_image_info(filename_info_npz, names, sizes, resolutions, 
                      magnification, zoom, pixel_type, near_min, near_max, 

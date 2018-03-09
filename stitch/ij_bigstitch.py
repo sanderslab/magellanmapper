@@ -1,5 +1,5 @@
 # BigStitcher script via ImageJ/Fiji
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Stitches multi-series imaginge files (eg CZI format) through the Fiji
 BigStitcher plugin.
 
@@ -90,7 +90,7 @@ perform_task("Calculate pairwise shifts ...", options)
 options = (
     "select=" + dataset_path_xml + " "
     "filter_by_link_quality "
-    "min_r=0.50 "
+    "min_r=0.80 "
     "max_r=1 "
     "max_shift_in_x=0 "
     "max_shift_in_y=0 "

@@ -23,6 +23,7 @@ from skimage import restoration
 from skimage import img_as_float
 from skimage import filters
 from skimage import morphology
+from skimage import transform
 
 from clrbrain import config
 from clrbrain import detector
@@ -221,6 +222,15 @@ def deconvolve(roi):
     #roi_deconvolved = restoration.unsupervised_wiener(roi, psf)
     return roi_deconvolved
 
+def _make_isotropic(roi):
+    res = detector.resolutions[0]
+    resize_factor = np.divide(res, np.amin(res))
+    isotropic_shape = np.array(roi.shape)
+    isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
+    print("original ROI shape: {}, isotropic: {}"
+          .format(roi.shape, isotropic_shape))
+    return transform.resize(roi, isotropic_shape)
+
 def plot_3d_surface(roi, vis):
     """Plots areas with greater intensity as 3D surfaces.
     
@@ -235,6 +245,9 @@ def plot_3d_surface(roi, vis):
     vis_mlab = vis.scene.mlab
     pipeline = vis_mlab.pipeline
     vis_mlab.clf()
+    settings = config.process_settings
+    if settings["isotropic"]:
+        roi = _make_isotropic(roi)
     
     # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
     roi = np.transpose(roi)
@@ -306,10 +319,13 @@ def plot_3d_points(roi, vis, channel):
     vis.scene.mlab.points3d(scalars)
     '''
     vis.scene.mlab.clf()
+    settings = config.process_settings
     
     # streamline the image
     roi = saturate_roi(roi, 99.5, channel)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
+    if settings["isotropic"]:
+        roi = _make_isotropic(roi)
     
     # separate parallel arrays for each dimension of all coordinates for
     # Mayavi input format, with the ROI itself given as a 1D scalar array 
@@ -325,8 +341,8 @@ def plot_3d_points(roi, vis, channel):
     x = np.ones((shape[0] * shape[1], shape[2]))
     for i in range(shape[0] * shape[1]):
         x[i] = np.arange(shape[2])
-    multichannel, channels = setup_channels(roi, channel, 3)
     colormaps = ("Greens", "Reds")
+    multichannel, channels = setup_channels(roi, channel, 3)
     for i in channels:
         roi_show = roi[..., i] if multichannel else roi
         roi_show_1d = roi_show.reshape(roi_show.size)
@@ -339,7 +355,7 @@ def plot_3d_points(roi, vis, channel):
         # adjust range from 0-1 to region of colormap to use
         roi_show_1d = lib_clrbrain.normalize(roi_show_1d, 0.2, 1.0)
         # clear background points to see remaining structures
-        remove = np.where(roi_show_1d < config.process_settings["points_3d_thresh"])
+        remove = np.where(roi_show_1d < settings["points_3d_thresh"])
         roi_show_1d = np.delete(roi_show_1d, remove)
         #print(roi_show_1d)
         points_len = roi_show_1d.size
@@ -509,6 +525,14 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     """
     if segments.shape[0] <= 0:
         return None, None, 0
+    settings = config.process_settings
+    if settings["isotropic"]:
+        res = detector.resolutions[0]
+        resize_factor = np.divide(res, np.amin(res))
+        segments = np.copy(segments) # since editing segs
+        segments[:, :3] *= resize_factor[:3]
+        #print(segments)
+    
     radii = segments[:, 3]
     scale = 5 if radii is None else np.mean(np.mean(radii) + np.amax(radii))
     print("blob point scaling: {}".format(scale))

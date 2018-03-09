@@ -360,14 +360,15 @@ class Visualization(HasTraits):
             self.roi = plot_3d.prepare_roi(
                 cli.image5d, curr_roi_size, curr_offset)
             
-            vis = (plot_3d.mlab_3d, config.process_settings["vis_3d"])
+            settings = config.process_settings
+            vis = (plot_3d.mlab_3d, settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering
                 plot_3d.plot_3d_surface(self.roi, self)
-                _scene_3d_shown = True
+                self._scene_3d_shown = True
             else:
                 # 3D point rendering
-                _scene_3d_shown = plot_3d.plot_3d_points(
+                self._scene_3d_shown = plot_3d.plot_3d_points(
                     self.roi, self, config.channel)
             
             # process ROI in prep for showing filtered 2D view and segmenting
@@ -420,6 +421,7 @@ class Visualization(HasTraits):
         self.rois_check_list = _ROI_DEFAULT
         
         # show the default ROI
+        settings = config.process_settings
         self.show_3d()
     
     def __init__(self):
@@ -577,7 +579,8 @@ class Visualization(HasTraits):
                     self.segments, np.zeros(3), 
                     roi_size, np.multiply(self.border, -1))
                 self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
-                    self.segments, self.scene.mlab, self.segs_in_mask, show_shadows)
+                    self.segments, self.scene.mlab, self.segs_in_mask, 
+                    show_shadows)
                 self._segs_scale_high = scale * 2
                 self.segs_scale = scale
             #detector.show_blob_surroundings(self.segments, self.roi)

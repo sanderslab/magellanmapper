@@ -144,7 +144,6 @@ then
 else
 	echo "$env_name already exists, will update"
 	conda env update -f "$config"
-	#exit 1
 fi
 
 # check that the environment was created and activate it
@@ -172,23 +171,25 @@ conda activate $env_name
 install_shallow_clone() {
     local folder="`basename $1`"
     local folder="${folder%.*}"
-    if [ ! -e "../$folder" ]
+    if [ ! -e "$folder" ]
     then
-        cd ..
+        # TODO: check whether shallow clone will yield the 
+        # correct fetch/merge steps later
         echo "Cloning into $folder"
         git clone --depth 1 $1
         cd "$folder"
     else
         echo "Updating $folder"
-        cd "../$folder"
+        cd "$folder"
         git fetch
-        git pull
+        git merge
     fi
     pip install -e .
-    cd ../clrbrain
+    cd ..
 }
 
 # pip dependencies that are not available in Conda
+cd ..
 pip install matplotlib-scalebar
 pip install vtk==8.1.0
 install_shallow_clone https://github.com/enthought/traits.git
@@ -200,6 +201,7 @@ install_shallow_clone https://github.com/the4thchild/scikit-image.git
 # for some reason
 install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
 pip install python-bioformats==1.1.0
+cd "$BASE_DIR"
 
 if [ $build_simple_elastix -eq 1 ]
 then

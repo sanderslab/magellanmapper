@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sets up the Clrbrain environment
-# Author: David Young 2017
+# Author: David Young 2017, 2018
 
 ################################################
 # Sets up the initial Clrbrain environment with Anaconda and all
@@ -15,9 +15,11 @@
 # -Assumes that the Clrbrain git repo has already been cloned
 # -Creates the Anaconda environment, which should be first
 #  removed if you want to start with a clean environment
+# -Git dependencies will be cloned into the parent folder of 
+#  Clrbrain
 ################################################
 
-CONDA_ENV="clr2"
+CONDA_ENV="clr3"
 env_name="$CONDA_ENV"
 build_simple_elastix=0
 
@@ -140,8 +142,9 @@ then
 	fi
 	conda env create -f "$config"
 else
-	echo "$env_name already exists. Exiting."
-	exit 1
+	echo "$env_name already exists, will update"
+	conda env update -f "$config"
+	#exit 1
 fi
 
 # check that the environment was created and activate it
@@ -157,9 +160,45 @@ fi
 . "$CONDA_PREFIX/etc/profile.d/conda.sh"
 conda activate $env_name
 
-# install additional dependencies could not be installed in the 
-# same session as the initial install for some reason
-pip install "git+https://github.com/LeeKamentsky/python-javabridge.git@2b6e7b067aeeac27fc5359ebba56f316a85527cc"
+############################################
+# Download a shallow Git clone and pip install its Python package.
+# Globals:
+#   None
+# Arguments:
+#   Git repository URL
+# Returns:
+#   None
+############################################
+install_shallow_clone() {
+    local folder="`basename $1`"
+    local folder="${folder%.*}"
+    if [ ! -e "../$folder" ]
+    then
+        cd ..
+        echo "Cloning into $folder"
+        git clone --depth 1 $1
+        cd "$folder"
+    else
+        echo "Updating $folder"
+        cd "../$folder"
+        git fetch
+        git pull
+    fi
+    pip install -e .
+    cd ../clrbrain
+}
+
+# pip dependencies that are not available in Conda
+pip install matplotlib-scalebar
+pip install vtk==8.1.0
+install_shallow_clone https://github.com/enthought/traits.git
+install_shallow_clone https://github.com/enthought/pyface.git
+install_shallow_clone https://github.com/enthought/traitsui.git
+install_shallow_clone https://github.com/enthought/mayavi.git
+install_shallow_clone https://github.com/the4thchild/scikit-image.git
+# also cannot be installed in Conda environment configuration script 
+# for some reason
+install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
 pip install python-bioformats==1.1.0
 
 if [ $build_simple_elastix -eq 1 ]
@@ -169,5 +208,5 @@ then
 fi
 
 echo "clrbrain environment setup complete!"
-echo "** Please run \"source activate $env_name\" to enter the environment for Clrbrain **"
+echo "** Please run \"conda activate $env_name\" to enter the environment for Clrbrain **"
 

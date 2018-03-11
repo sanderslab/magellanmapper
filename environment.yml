@@ -10,3 +10,4 @@ dependencies:
 - pyqt=5
 - cython
 - pygments
+- dask

@@ -129,17 +129,17 @@ fi
 
 # creates "clr" conda environment
 echo "Checking for $env_name Anaconda environment..."
+config="$ENV_CONFIG"
+if [[ "$env_name" != "$CONDA_ENV" ]]
+then
+    # change name in environment file with user-defined name
+    config="env_${env_name}.yml"
+    sed -e "s/$CONDA_ENV/$env_name/g" "$ENV_CONFIG" > "$config"
+fi
 check_env="`conda env list | grep -w $env_name`"
 if [[ "$check_env" == "" ]]
 then
 	echo "Creating new conda environment..."
-	config="$ENV_CONFIG"
-	if [[ "$env_name" != "$CONDA_ENV" ]]
-	then
-	    # change name in environment file with user-defined name
-	    config="env_${env_name}.yml"
-	    sed -e "s/$CONDA_ENV/$env_name/g" "$ENV_CONFIG" > "$config"
-	fi
 	conda env create -f "$config"
 else
 	echo "$env_name already exists, will update"
@@ -171,20 +171,45 @@ conda activate $env_name
 install_shallow_clone() {
     local folder="`basename $1`"
     local folder="${folder%.*}"
-    if [ ! -e "$folder" ]
-    then
+    if [ ! -e "$folder" ]; then
+        # download and install fresh repo with shallow clone
+        # and editable installation
         # TODO: check whether shallow clone will yield the 
         # correct fetch/merge steps later
         echo "Cloning into $folder"
-        git clone --depth 1 $1
+        target=$1
+        if [[ "$#" -gt 1 ]]; then
+            target="${target} -b $2"
+        fi
+        git clone --depth 1 $target
         cd "$folder"
+        pip install -e .
     else
+        # update repo if changes found upstream on given branch
         echo "Updating $folder"
         cd "$folder"
         git fetch
-        git merge
+        branch="master" # default branch
+        if [[ "$#" -gt 1 ]]; then
+            # use given branch, if any
+            branch="$2"
+            echo "Checking for differences with $branch"
+        fi
+        if [[ `git rev-parse --abbrev-ref HEAD` != "$branch" ]]; then
+            echo "Not on $branch branch so will ignore updates"
+        elif [[ `git diff-index HEAD --` ]]; then
+            echo "Uncommitted file changes exist so will not update"
+        elif [[ `git log HEAD..origin/"$branch" --oneline` ]]; then
+            # merge in updates only if on same branch as given one, 
+            # differences exist between current status and upstream 
+            # branch, and no tracked files have uncommitted changes
+            #git merge
+            echo "You may need to run post-update step such as "
+            echo "\"python setup.py build_ext -i\""
+        else
+            echo "No changes found upstream on $branch branch"
+        fi
     fi
-    pip install -e .
     cd ..
 }
 
@@ -196,7 +221,7 @@ install_shallow_clone https://github.com/enthought/traits.git
 install_shallow_clone https://github.com/enthought/pyface.git
 install_shallow_clone https://github.com/enthought/traitsui.git
 install_shallow_clone https://github.com/enthought/mayavi.git
-install_shallow_clone https://github.com/the4thchild/scikit-image.git
+install_shallow_clone https://github.com/the4thchild/scikit-image.git blob3d2
 # also cannot be installed in Conda environment configuration script 
 # for some reason
 install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git

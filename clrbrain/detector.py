@@ -180,7 +180,6 @@ def format_blobs(blobs, channel=None):
     extra_cols = 10 - shape[1]
     #print("extra_cols: {}".format(extra_cols))
     extras = np.ones((shape[0], extra_cols)) * -1
-    print(blobs)
     blobs = np.concatenate((blobs, extras), axis=1)
     # copy relative coords to abs coords
     blobs[:, -3:] = blobs[:, :3]

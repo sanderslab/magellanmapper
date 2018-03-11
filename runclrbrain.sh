@@ -116,10 +116,7 @@ TIFF_IMG="${OUT_DIR}/${OUT_NAME_BASE}.tiff"
 
 # Rename output file(s):
 FUSED="fused_tp_0"
-# For multi-channel TIFF files:
 #for f in ${OUT_DIR}/${FUSED}*.tif; do mv $f ${f/$FUSED/$OUT_NAME_BASE}; done
-# For single-channel TIFFs:
-#mv "${OUT_DIR}/fused.tif" "$TIFF_IMG"
 
 # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
 #python -u -m clrbrain.cli --img "$TIFF_IMG" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --proc importonly

@@ -51,7 +51,7 @@ EXTRA_ARGS="$@"
 # run from script directory
 BASE_DIR="`dirname $0`"
 cd "$BASE_DIR"
-echo $PWD
+BASE_DIR="$PWD"
 
 # check for Java jar availability
 if ! command -v "javac" &> /dev/null
@@ -156,8 +156,8 @@ then
 fi
 # need to reload conda script for unclear reasons; assume that 
 # CONDA_PREFIX has already been set by base environment
-. "$CONDA_PREFIX/etc/profile.d/conda.sh"
-conda activate $env_name
+#. "$CONDA_PREFIX/etc/profile.d/conda.sh"
+source activate $env_name
 
 ############################################
 # Download a shallow Git clone and pip install its Python package.
@@ -183,7 +183,6 @@ install_shallow_clone() {
         fi
         git clone --depth 1 $target
         cd "$folder"
-        pip install -e .
     else
         # update repo if changes found upstream on given branch
         echo "Updating $folder"
@@ -203,12 +202,16 @@ install_shallow_clone() {
             # merge in updates only if on same branch as given one, 
             # differences exist between current status and upstream 
             # branch, and no tracked files have uncommitted changes
-            #git merge
+            git merge
             echo "You may need to run post-update step such as "
             echo "\"python setup.py build_ext -i\""
         else
             echo "No changes found upstream on $branch branch"
         fi
+    fi
+    if [[ ! `pip list --format=columns | grep $folder` ]]; then
+        echo "Installing $folder"
+        pip install -e .
     fi
     cd ..
 }
@@ -221,7 +224,7 @@ install_shallow_clone https://github.com/enthought/traits.git
 install_shallow_clone https://github.com/enthought/pyface.git
 install_shallow_clone https://github.com/enthought/traitsui.git
 install_shallow_clone https://github.com/enthought/mayavi.git
-install_shallow_clone https://github.com/the4thchild/scikit-image.git blob3d2
+install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
 # also cannot be installed in Conda environment configuration script 
 # for some reason
 install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git

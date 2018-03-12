@@ -9,13 +9,13 @@ Attributes:
 
 import os
 import glob
-import shutil
 import datetime
 import sqlite3
 import numpy as np
 
 from clrbrain import config
 from clrbrain import detector
+from clrbrain import lib_clrbrain
 
 DB_NAME = "clrbrain.db"
 DB_NAME_VERIFIED = "clrbrain_verified.db"
@@ -24,18 +24,6 @@ DB_SUFFIX_TRUTH = "_truth.db"
 DB_VERSION = 3
 
 _COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
-
-def _backup_db(path):
-    i = 1
-    backup_path = None
-    while True:
-        suffix = "({}).db".format(i)
-        backup_path = path.replace(".db", suffix)
-        if not os.path.exists(backup_path):
-            shutil.move(path, backup_path)
-            print("Backed up database to {}".format(backup_path))
-            break
-        i += 1
 
 def _create_db(path):
     """Creates the database including initial schema insertion.
@@ -46,11 +34,7 @@ def _create_db(path):
     # creates empty database in the current working directory if
     # not already there.
     if os.path.exists(path):
-        _backup_db(path)
-        '''
-        raise FileExistsError("{} already exists; please rename"
-                              " or remove it first".format(db_path))
-        '''
+        lib_clrbrain.backup_file(path)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()

@@ -301,7 +301,9 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         info_up["scaling"] = scaling
         info_up["plane"] = plot_2d.plane
     
-    # save updated info
+    # backup and save updated info
+    lib_clrbrain.backup_file(
+        filename_info_npz, modifier="_v{}".format(curr_ver))
     info_up["ver"] = IMAGE5D_NP_VER
     outfile_info = open(filename_info_npz, "wb")
     np.savez(outfile_info, **info_up)

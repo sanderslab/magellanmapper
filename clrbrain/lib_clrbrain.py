@@ -4,6 +4,8 @@
 """Shared functions with the Clrbrain package.
 """
 
+import os
+import shutil
 import numpy as np
 
 from clrbrain import config
@@ -144,6 +146,31 @@ def show_full_arrays(on=True):
         np.set_printoptions(linewidth=500, threshold=10000000)
     else:
         np.set_printoptions()
+
+def backup_file(path, modifier=""):
+    """Backup a file to the next given available path with an index number 
+    before the extension.
+    
+    The backed up path will be in the format 
+    ``path-before-ext[modifier](i).ext``, where ``[modifier]`` is an optional 
+    additional string, and ``i`` is the index number, which will be 
+    incremented to avoid overwriting an existing file.
+    
+    Args:
+        path: Path of file to backup.
+        modifier: Modifier string to place before the index number.
+    """
+    i = 1
+    ext = os.path.splitext(path)
+    backup_path = None
+    while True:
+        suffix = "{}({})".format(modifier, i)
+        backup_path = insert_before_ext(path, suffix)
+        if not os.path.exists(backup_path):
+            shutil.move(path, backup_path)
+            print("Backed up {} to {}".format(path, backup_path))
+            break
+        i += 1
 
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))

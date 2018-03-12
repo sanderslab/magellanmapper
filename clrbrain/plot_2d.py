@@ -665,7 +665,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         offset = lib_clrbrain.swap_elements(offset, 1, 2)
         border = lib_clrbrain.swap_elements(border, 1, 2)
         border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
-        segments[:, [0, 1]] = segments[:, [1, 0]]
+        if segments is not None and len(segments) > 0:
+            segments[:, [0, 1]] = segments[:, [1, 0]]
     elif plane == PLANE[2]:
         # "yz" planes; roll backward to flip x-z and x-y
         roi_size = lib_clrbrain.roll_elements(roi_size, -1)
@@ -673,10 +674,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         border = lib_clrbrain.roll_elements(border, -1)
         border_full = lib_clrbrain.roll_elements(border_full, -1)
         print("orig segments:\n{}".format(segments))
-        # roll forward since segments in zyx order
-        segments[:, [0, 2]] = segments[:, [2, 0]]
-        segments[:, [1, 2]] = segments[:, [2, 1]]
-        print("rolled segments:\n{}".format(segments))
+        if segments is not None and len(segments) > 0:
+            # roll forward since segments in zyx order
+            segments[:, [0, 2]] = segments[:, [2, 0]]
+            segments[:, [1, 2]] = segments[:, [2, 1]]
+            print("rolled segments:\n{}".format(segments))
     print("2D border: {}".format(border))
     
     # total number of z-planes

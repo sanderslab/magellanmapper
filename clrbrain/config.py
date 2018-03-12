@@ -188,6 +188,8 @@ channel = 0 # channel of interest
 
 # DATABASE
 
+DB_NAME = "clrbrain.db"
+db_name = DB_NAME
 db = None # main DB
 truth_db = None # truth blobs DB
 verified_db = None # automated verifications DB

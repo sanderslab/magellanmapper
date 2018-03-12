@@ -17,7 +17,6 @@ from clrbrain import config
 from clrbrain import detector
 from clrbrain import lib_clrbrain
 
-DB_NAME = "clrbrain.db"
 DB_NAME_VERIFIED = "clrbrain_verified.db"
 DB_NAME_MERGED = "clrbrain_merged.db"
 DB_SUFFIX_TRUTH = "_truth.db"
@@ -138,7 +137,7 @@ def start_db(path=None, new_db=False):
         cur: Connection's cursor.
     """
     if path is None:
-        path = DB_NAME
+        path = config.db_name
     if new_db or not os.path.exists(path):
         conn, cur = _create_db(path)
     else:

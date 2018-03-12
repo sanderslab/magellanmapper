@@ -404,6 +404,7 @@ def main(process_args_only=False):
     parser.add_argument("--delay")
     parser.add_argument("--no_show", action="store_true")
     parser.add_argument("--border", nargs="*")
+    parser.add_argument("--db")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -550,6 +551,9 @@ def main(process_args_only=False):
         borders = _parse_coords(args.border)
         config.border = borders[0]
         print("Set ROI export to clip to border: {}".format(config.border))
+    if args.db:
+        config.db_name = args.db
+        print("Set database name to {}".format(config.db_name))
     
     # load "truth blobs" from separate database for viewing
     ext = lib_clrbrain.get_filename_ext(config.filename)

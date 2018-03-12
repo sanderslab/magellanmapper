@@ -104,7 +104,7 @@ PROC_TYPES = (
 )
 proc_type = None
 
-TRUTH_DB_TYPES = ("view", "verify", "verified")
+TRUTH_DB_TYPES = ("view", "verify", "verified", "edit")
 truth_db_type = None
 
 BLOB_COORD_SLICE = slice(0, 3)
@@ -197,8 +197,7 @@ def _splice_before(base, search, splice, post_splice="_"):
         return base
     return base[0:i] + splice + post_splice + base[i:]
 
-def _load_db(filename_base, suffix):
-    path = os.path.basename(filename_base + suffix)
+def _load_db(path):
     if not os.path.exists(path):
         raise FileNotFoundError("{} not found for DB".format(path))
     print("Set to load DB from {}".format(path))
@@ -207,7 +206,8 @@ def _load_db(filename_base, suffix):
     return db
 
 def _load_truth_db(filename_base):
-    truth_db = _load_db(filename_base, sqlite.DB_SUFFIX_TRUTH)
+    path = os.path.basename(filename_base + sqlite.DB_SUFFIX_TRUTH)
+    truth_db = _load_db(path)
     truth_db.load_truth_blobs()
     config.truth_db = truth_db
     return truth_db
@@ -562,7 +562,8 @@ def main(process_args_only=False):
         truth_db_type = args.truth_db
         print("Set truth_db type to {}".format(truth_db_type))
     if args.truth_db == TRUTH_DB_TYPES[0]:
-        # loads truth DB
+        # loads truth DB as a separate database in parallel with the given 
+        # editable database
         try:
             _load_truth_db(filename_base)
         except FileNotFoundError as e:
@@ -576,12 +577,17 @@ def main(process_args_only=False):
         # loads verified DB as the main DB, which includes copies of truth 
         # values with flags for whether they were detected
         try:
-            config.db = _load_db(sqlite.DB_NAME_VERIFIED, "")
+            config.db = _load_db(sqlite.DB_NAME_VERIFIED)
             config.verified_db = config.db
         except FileNotFoundError as e:
             print(e)
             print("Could not load verified DB from {}"
                   .format(sqlite.DB_NAME_VERIFIED))
+    elif args.truth_db == TRUTH_DB_TYPES[3]:
+        # loads truth DB as the main database for editing rather than 
+        # loading as a truth database
+        config.db_name = os.path.basename(filename_base + sqlite.DB_SUFFIX_TRUTH)
+        print("Editing truth database at {}".format(config.db_name))
     if config.db is None:
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)

@@ -267,8 +267,10 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     if curr_ver <= 12:
         # ver 12 -> 13
         
-        lows = [info_up["near_min"]]
-        highs = [info_up["near_max"]]
+        # default to simply converting the existing scalar to a one-element 
+        # list of repeated existing value, assuming single-channel
+        near_mins = [info_up["near_min"]]
+        near_maxs = [info_up["near_max"]]
         scaling = None
         
         # assumed that 2nd filename given is the original file from which to 
@@ -282,14 +284,20 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
             # into memory; otherwise, defer to re-importing the image
             lows, highs = _calc_intensity_bounds(image5d)
         elif image5d.ndim >= 5:
-            # default to simply converting the existing scalar to a list 
-            # of repeated scalars
-            channels = image5d.shape[4]
-            print("channels: {}".format(channels))
-            lows = [lows[0] for i in range(channels)]
-            highs = [highs[0] for i in range(channels)]
-        info_up["near_min"] = lows
-        info_up["near_max"] = highs
+            # recalculate near min/max for multichannel
+            print("updating near min/max (this may take awhile)")
+            lows = []
+            highs = []
+            for i in range(len(image5d[0])):
+                low, high = _calc_intensity_bounds(image5d[0, i], dim_channel=2)
+                print("bounds for plane {}: {}, {}".format(i, low, high))
+                lows.append(low)
+                highs.append(high)
+            num_channels = image5d.shape[4]
+            near_mins, near_maxs = _calc_near_intensity_bounds(
+                num_channels, near_mins, near_maxs, lows, highs)
+        info_up["near_min"] = near_mins
+        info_up["near_max"] = near_maxs
         info_up["scaling"] = scaling
         info_up["plane"] = plot_2d.plane
     
@@ -540,14 +548,8 @@ def read_file(filename, series, load=True, z_max=-1,
                     image5d[t, z, :, :, channel_num] = img
                 else:
                     image5d[t, z] = img
-        if num_files > 1:
-            # get min/max from list of 1-element arrays
-            near_mins.append(min(lows)[0])
-            near_maxs.append(max(highs)[0])
-        else:
-            # get min/max from columns of 2D array
-            near_mins = np.amin(np.array(lows), 0)
-            near_maxs = np.amax(np.array(highs), 0)
+        near_mins, near_maxs = _calc_near_intensity_bounds(
+            num_files, near_mins, near_maxs, lows, highs)
     print("file import time: {}".format(time() - time_start))
     time_start = time()
     image5d.flush() # may not be necessary but ensure contents to disk
@@ -659,6 +661,17 @@ def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
         lows.append(low)
         highs.append(high)
     return lows, highs
+
+def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows, highs):
+    if num_channels > 1:
+        # get min/max from list of 1-element arrays
+        near_mins.append(min(lows)[0])
+        near_maxs.append(max(highs)[0])
+    else:
+        # get min/max from columns of 2D array
+        near_mins = np.amin(np.array(lows), 0)
+        near_maxs = np.amax(np.array(highs), 0)
+    return near_mins, near_maxs
 
 def transpose_npy(filename, series, plane=None, rescale=None):
     """Transpose Numpy NPY saved arrays into new planar orientations and/or 

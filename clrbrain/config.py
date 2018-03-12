@@ -122,6 +122,7 @@ def update_process_settings(settings, settings_type):
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)
+        #settings["isotropic"] = True
         
         if settings_type.endswith("_contrast"):
             settings["microscope_type"] = settings_type
@@ -136,11 +137,11 @@ def update_process_settings(settings, settings_type):
             settings["max_sigma_factor"] = 20
             settings["num_sigma"] = 10
             settings["overlap"] = 0.2
-      
-        elif settings_type.endswith("_small"):
-            settings["vis_3d"] = "surface"
-            settings["points_3d_thresh"] = 0.3 # used only if not surface
-            settings["isotropic"] = True
+  
+    elif settings_type.endswith("small"):
+        settings["vis_3d"] = "surface"
+        settings["points_3d_thresh"] = 0.3 # used only if not surface
+        settings["isotropic"] = True
 
 
 # default settings and list of settings for each channel

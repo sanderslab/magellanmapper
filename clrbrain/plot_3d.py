@@ -222,9 +222,15 @@ def deconvolve(roi):
     #roi_deconvolved = restoration.unsupervised_wiener(roi, psf)
     return roi_deconvolved
 
-def _make_isotropic(roi):
+def _calc_isotropic_factor():
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))
+    scale = config.process_settings["scale_factor"]
+    resize_factor *= scale
+    return resize_factor
+
+def _make_isotropic(roi):
+    resize_factor = _calc_isotropic_factor()
     isotropic_shape = np.array(roi.shape)
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
     print("original ROI shape: {}, isotropic: {}"
@@ -527,8 +533,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
         return None, None, 0
     settings = config.process_settings
     if settings["isotropic"]:
-        res = detector.resolutions[0]
-        resize_factor = np.divide(res, np.amin(res))
+        resize_factor = _calc_isotropic_factor()
         segments = np.copy(segments) # since editing segs
         segments[:, :3] *= resize_factor[:3]
         #print(segments)

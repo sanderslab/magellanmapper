@@ -152,13 +152,14 @@ def segment_sub_roi(sub_rois_offsets, coord):
     segments = detector.detect_blobs(sub_roi, config.channel)
     offset = sub_rois_offsets[coord]
     #print("segs before (offset: {}):\n{}".format(offset, segments))
-    # shift both coordinate sets (at beginning and end of array) to 
-    # absolute positioning, using the latter set to store shifted coordinates 
-    # based on duplicates and the former for initial positions to check for 
-    # multiple duplicates
-    detector.shift_blob_rel_coords(segments, offset)
-    detector.shift_blob_abs_coords(segments, offset)
-    #print("segs after:\n{}".format(segments))
+    if segments is not None:
+        # shift both coordinate sets (at beginning and end of array) to 
+        # absolute positioning, using the latter set to store shifted 
+        # coordinates based on duplicates and the former for initial 
+        # positions to check for multiple duplicates
+        detector.shift_blob_rel_coords(segments, offset)
+        detector.shift_blob_abs_coords(segments, offset)
+        #print("segs after:\n{}".format(segments))
     return (coord, segments)
 
 def collect_segments(segments_all, segments, region, tol):

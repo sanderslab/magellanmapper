@@ -365,7 +365,7 @@ class Visualization(HasTraits):
             vis = (plot_3d.mlab_3d, settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering
-                plot_3d.plot_3d_surface(self.roi, self)
+                plot_3d.plot_3d_surface(self.roi, self, config.channel)
                 self._scene_3d_shown = True
             else:
                 # 3D point rendering

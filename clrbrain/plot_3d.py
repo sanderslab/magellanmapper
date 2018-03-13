@@ -30,6 +30,7 @@ from clrbrain import detector
 from clrbrain import lib_clrbrain
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
+_MAYAVI_COLORMAPS = ("Greens", "Reds", "Blues", "Oranges")
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
 near_max = [-1.0]
@@ -231,7 +232,7 @@ def _make_isotropic(roi):
           .format(roi.shape, isotropic_shape))
     return transform.resize(roi, isotropic_shape)
 
-def plot_3d_surface(roi, vis):
+def plot_3d_surface(roi, vis, channel):
     """Plots areas with greater intensity as 3D surfaces.
     
     Args:
@@ -245,57 +246,61 @@ def plot_3d_surface(roi, vis):
     vis_mlab = vis.scene.mlab
     pipeline = vis_mlab.pipeline
     vis_mlab.clf()
+    roi = saturate_roi(roi, 97, channel=channel)
     settings = config.process_settings
     if settings["isotropic"]:
         roi = _make_isotropic(roi)
     
-    # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
-    roi = np.transpose(roi)
-    
-    # prepare the data source with gentle saturation and stronger denoising
-    # to minimize extraneous contours from background noise
-    #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
-    roi = saturate_roi(roi, 97)
-    roi = np.clip(roi, 0.2, 1.0)
-    roi = restoration.denoise_tv_chambolle(roi, weight=0.2)
-    surface = pipeline.scalar_field(roi)
-    
-    '''
-    # create the surface
-    surface = pipeline.contour(surface)
-    
-    # removes many more extraneous points
-    surface = pipeline.user_defined(surface, filter="SmoothPolyDataFilter")
-    surface.filter.number_of_iterations = 400
-    surface.filter.relaxation_factor = 0.015
-    # holes within cells?
-    surface = pipeline.user_defined(surface, filter="Curvatures")
-    vis_mlab.pipeline.surface(surface)
-    
-    # colorizes
-    module_manager = surface.children[0]
-    module_manager.scalar_lut_manager.data_range = np.array([-0.6, 0.5])
-    module_manager.scalar_lut_manager.lut_mode = "Greens"
-    '''
-    
-    # based on Surface with contours enabled
-    '''
-    surface = pipeline.contour_surface(
-        surface, color=(0.7, 1, 0.7), line_width=6.0)
-    surface.actor.property.representation = 'wireframe'
-    #surface.actor.property.line_width = 6.0
-    surface.actor.mapper.scalar_visibility = False
-    '''
-    
-    # uses unique IsoSurface module but appears to have 
-    # similar output to contour_surface
-    surface = pipeline.iso_surface(surface, color=(0.7, 1, 0.7))
-    try:
-        surface.contour.minimum_contour = 0.5
-        surface.contour.maximum_contour = 1.0
-    except Exception as e:
-        print(e)
-        print("ignoring min/max contour for now")
+    colormaps = ("Greens", "Reds")
+    multichannel, channels = setup_channels(roi, channel, 3)
+    for i in channels:
+        roi_show = roi[..., i] if multichannel else roi
+        # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
+        roi_show = np.transpose(roi_show)
+        
+        # prepare the data source with gentle saturation and stronger denoising
+        # to minimize extraneous contours from background noise
+        #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
+        roi_show = np.clip(roi_show, 0.2, 1.0)
+        roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.2)
+        surface = pipeline.scalar_field(roi_show)
+        
+        '''
+        # create the surface
+        surface = pipeline.contour(surface)
+        
+        # removes many more extraneous points
+        surface = pipeline.user_defined(surface, filter="SmoothPolyDataFilter")
+        surface.filter.number_of_iterations = 400
+        surface.filter.relaxation_factor = 0.015
+        # holes within cells?
+        surface = pipeline.user_defined(surface, filter="Curvatures")
+        vis_mlab.pipeline.surface(surface)
+        
+        # colorizes
+        module_manager = surface.children[0]
+        module_manager.scalar_lut_manager.data_range = np.array([-0.6, 0.5])
+        module_manager.scalar_lut_manager.lut_mode = "Greens"
+        '''
+        
+        # based on Surface with contours enabled
+        '''
+        surface = pipeline.contour_surface(
+            surface, color=(0.7, 1, 0.7), line_width=6.0)
+        surface.actor.property.representation = 'wireframe'
+        #surface.actor.property.line_width = 6.0
+        surface.actor.mapper.scalar_visibility = False
+        '''
+        
+        # uses unique IsoSurface module but appears to have 
+        # similar output to contour_surface
+        surface = pipeline.iso_surface(surface, colormap=_MAYAVI_COLORMAPS[i])
+        try:
+            surface.contour.minimum_contour = 0.5
+            surface.contour.maximum_contour = 1.0
+        except Exception as e:
+            print(e)
+            print("ignoring min/max contour for now")
     
 def plot_3d_points(roi, vis, channel):
     """Plots all pixels as points in 3D space.
@@ -341,7 +346,6 @@ def plot_3d_points(roi, vis, channel):
     x = np.ones((shape[0] * shape[1], shape[2]))
     for i in range(shape[0] * shape[1]):
         x[i] = np.arange(shape[2])
-    colormaps = ("Greens", "Reds")
     multichannel, channels = setup_channels(roi, channel, 3)
     for i in channels:
         roi_show = roi[..., i] if multichannel else roi
@@ -369,7 +373,7 @@ def plot_3d_points(roi, vis, channel):
         #roi_show_1d = roi_show_1d[::mask]
         vis.scene.mlab.points3d(
             np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
-            roi_show_1d, mode="sphere", colormap=colormaps[i], 
+            roi_show_1d, mode="sphere", colormap=_MAYAVI_COLORMAPS[i], 
             scale_mode="none", mask_points=mask, line_width=1.0, vmax=1.0, 
             vmin=0.0, transparent=True)
     print("time for 3D points display: {}".format(time() - time_start))

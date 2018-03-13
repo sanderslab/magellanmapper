@@ -851,64 +851,67 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 add_scale_bar(ax_z)
             ax_z_list.append(ax_z)
     
-    # add points that were not segmented by ctrl-clicking on zoom plots
-    def on_btn_release(event):
-        ax = event.inaxes
-        print("event key: {}".format(event.key))
-        if event.key is None:
-            # for some reason becomes none with previous event was 
-            # ctrl combo and this event is control
-            print("Unable to detect key, please try again")
-        elif event.key == "control" or event.key.startswith("ctrl"):
-            seg_channel = channel
-            if channel is None:
-                # specify channel by key combos if displaying multiple channels
-                if event.key.endswith("+1"):
-                    # ctrl+1
-                    seg_channel = 1
-            try:
+    if not circles == CIRCLES[2].lower():
+        # add points that were not segmented by ctrl-clicking on zoom plots 
+        # as long as not in "no circles" mode
+        def on_btn_release(event):
+            ax = event.inaxes
+            print("event key: {}".format(event.key))
+            if event.key is None:
+                # for some reason becomes none with previous event was 
+                # ctrl combo and this event is control
+                print("Unable to detect key, please try again")
+            elif event.key == "control" or event.key.startswith("ctrl"):
+                seg_channel = channel
+                if channel is None:
+                    # specify channel by key combos if displaying multiple 
+                    # channels
+                    if event.key.endswith("+1"):
+                        # ctrl+1
+                        seg_channel = 1
+                try:
+                    axi = ax_z_list.index(ax)
+                    if (axi != -1 and axi >= z_planes_padding 
+                        and axi < z_planes - z_planes_padding):
+                        
+                        seg = np.array([[axi - z_planes_padding, 
+                                         event.ydata.astype(int), 
+                                         event.xdata.astype(int), -5]])
+                        seg = detector.format_blobs(seg, seg_channel)
+                        detector.shift_blob_abs_coords(seg, offset[::-1])
+                        detector.update_blob_confirmed(seg, 1)
+                        seg = fn_update_seg(seg[0])
+                        # adds a circle to denote the new segment
+                        patch = _plot_circle(
+                            ax, seg, SEG_LINEWIDTH, "-", fn_update_seg)
+                except ValueError as e:
+                    print(e)
+                    print("not on a plot to select a point")
+            elif event.key == "v":
+                _circle_last_picked_len = len(_circle_last_picked)
+                if _circle_last_picked_len < 1:
+                    print("No previously picked circle to paste")
+                    return
+                moved_item = _circle_last_picked[_circle_last_picked_len - 1]
+                circle, move_type = moved_item
                 axi = ax_z_list.index(ax)
-                if (axi != -1 and axi >= z_planes_padding 
-                    and axi < z_planes - z_planes_padding):
-                    
-                    seg = np.array([[axi - z_planes_padding, 
-                                     event.ydata.astype(int), 
-                                     event.xdata.astype(int), -5]])
-                    seg = detector.format_blobs(seg, seg_channel)
-                    detector.shift_blob_abs_coords(seg, offset[::-1])
-                    detector.update_blob_confirmed(seg, 1)
-                    seg = fn_update_seg(seg[0])
-                    # adds a circle to denote the new segment
-                    patch = _plot_circle(
-                        ax, seg, SEG_LINEWIDTH, "-", fn_update_seg)
-            except ValueError as e:
-                print(e)
-                print("not on a plot to select a point")
-        elif event.key == "v":
-            _circle_last_picked_len = len(_circle_last_picked)
-            if _circle_last_picked_len < 1:
-                print("No previously picked circle to paste")
-                return
-            moved_item = _circle_last_picked[_circle_last_picked_len - 1]
-            circle, move_type = moved_item
-            axi = ax_z_list.index(ax)
-            dz = axi - z_planes_padding - circle.segment[0]
-            seg_old = np.copy(circle.segment)
-            seg_new = np.copy(circle.segment)
-            seg_new[0] += dz
-            if move_type == _CUT:
-                print("Pasting a cut segment")
-                _draggable_circles.remove(circle)
-                _circle_last_picked.remove(moved_item)
-                seg_new = fn_update_seg(seg_new, seg_old)
-            else:
-                print("Pasting a copied in segment")
-                detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
-                seg_new = fn_update_seg(seg_new)
-            _plot_circle(
-                ax, seg_new, SEG_LINEWIDTH, ":", fn_update_seg)
-       
-    fig.canvas.mpl_connect("button_release_event", on_btn_release)
+                dz = axi - z_planes_padding - circle.segment[0]
+                seg_old = np.copy(circle.segment)
+                seg_new = np.copy(circle.segment)
+                seg_new[0] += dz
+                if move_type == _CUT:
+                    print("Pasting a cut segment")
+                    _draggable_circles.remove(circle)
+                    _circle_last_picked.remove(moved_item)
+                    seg_new = fn_update_seg(seg_new, seg_old)
+                else:
+                    print("Pasting a copied in segment")
+                    detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
+                    seg_new = fn_update_seg(seg_new)
+                _plot_circle(
+                    ax, seg_new, SEG_LINEWIDTH, ":", fn_update_seg)
+           
+        fig.canvas.mpl_connect("button_release_event", on_btn_release)
     
     # show 3D screenshot if available
     if mlab_screenshot is not None:

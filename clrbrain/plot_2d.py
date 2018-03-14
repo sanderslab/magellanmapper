@@ -496,10 +496,10 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             
             # segments outside the ROI shown in black dotted line only for 
             # their corresponding z
+            segs_out_z = segs_out[segs_out[:, 0] == z_relative]
             if segs_out is not None:
                 collection_adj = _circle_collection(
-                    segs_out[segs_out[:, 0] == z_relative], "k", "none", 
-                    SEG_LINEWIDTH)
+                    segs_out_z, "k", "none", SEG_LINEWIDTH)
                 collection_adj.set_linestyle("--")
                 ax.add_collection(collection_adj)
             
@@ -519,6 +519,14 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             else:
                 # apply only to segments in their current z
                 segments_z = segs_in[segs_in[:, 0] == z_relative]
+                segs_out_z_confirmed = segs_out_z[
+                    detector.get_blob_confirmed(segs_out_z) == 1]
+                if len(segs_out_z_confirmed) > 0:
+                    # include confirmed blobs 
+                    segments_z = np.concatenate(
+                        (segments_z, segs_out_z_confirmed))
+                    print("segs_out_z_confirmed:\n{}"
+                          .format(segs_out_z_confirmed))
             if segments_z is not None:
                 for seg in segments_z:
                     _plot_circle(

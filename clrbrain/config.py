@@ -125,7 +125,7 @@ def update_process_settings(settings, settings_type):
         
         if settings_type.endswith("_contrast"):
             settings["microscope_type"] = settings_type
-            settings["channel_colors"] = ("inferno", "summer")
+            settings["channel_colors"] = ("inferno", "bone")
       
         elif settings_type.endswith("_cytoplasm"):
             settings["microscope_type"] = settings_type

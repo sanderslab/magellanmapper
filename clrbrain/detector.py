@@ -484,7 +484,7 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     return segs_all, mask
 
 def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, 
-                exp_id):
+                exp_id, channel):
     """Compares blobs from detections with truth blobs, prioritizing the inner 
     portion of ROIs to avoid missing detections because of edge effects
     while also adding matches between a blob in the inner ROI and another
@@ -506,7 +506,12 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be considered
             a potential match.
+        output_db: Database in which to save the verification flags, typicall 
+            the database in :attr:``config.verified_db``.
+        exp_id: Experiment ID in ``output_db``.
+        channel: Filter ``blobs_truth`` by this channel.
     """
+    blobs_truth = blobs_in_channel(blobs_truth, channel)
     blobs_truth_rois = None
     blobs_rois = None
     rois_falsehood = []

@@ -870,7 +870,8 @@ def process_file(filename_base, offset, roi_size):
                         rois = config.truth_db.get_rois(exp_name)
                         stats, fdbk = detector.verify_rois(
                             rois, segments_all, config.truth_db.blobs_truth, 
-                            BLOB_COORD_SLICE, tol, config.verified_db, exp_id)
+                            BLOB_COORD_SLICE, tol, config.verified_db, exp_id,
+                            config.channel)
                 except FileNotFoundError as e:
                     print("Could not load truth DB from {}; will not verify ROIs"
                           .format(db_path_base))

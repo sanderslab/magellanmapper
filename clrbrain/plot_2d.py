@@ -300,15 +300,20 @@ def _plot_circle(ax, segment, linewidth, linestyle, fn_update_seg,
     _draggable_circles.append(draggable_circle)
     return draggable_circle
 
-def add_scale_bar(ax):
+def add_scale_bar(ax, downsample=None):
     """Adds a scale bar to the plot.
     
     Uses the x resolution value and assumes that it is in microns per pixel.
     
     Args:
         ax: The plot that will show the bar.
+        downsample: Downsampling factor by which the resolution will be 
+            multiplied; defaults to None.
     """
-    scale_bar = ScaleBar(detector.resolutions[0][2], u'\u00b5m', SI_LENGTH, 
+    res = detector.resolutions[0][2]
+    if downsample:
+        res *= downsample
+    scale_bar = ScaleBar(res, u'\u00b5m', SI_LENGTH, 
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
@@ -346,7 +351,7 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
             vmin_plane = vmin[chl]
         if vmax is not None:
             vmax_plane = vmax[chl]
-        print("vmin: {}, vmax: {}".format(vmin_plane, vmax_plane))
+        #print("vmin: {}, vmax: {}".format(vmin_plane, vmax_plane))
         img_chl = ax.imshow(
             img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin_plane, 
             vmax=vmax_plane, origin=origin, interpolation=interpolation)
@@ -771,7 +776,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         print("patch_offset: {}".format(patch_offset))
         # show the zoomed 2D image along with rectangle showing ROI, 
         # downsampling by using threshold as mask
-        downsample = np.max(np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
+        downsample = np.max(
+            np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
         if downsample < 1: 
             downsample = 1
         imshow_multichannel(
@@ -781,7 +787,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
-        add_scale_bar(ax)
+        add_scale_bar(ax, downsample)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     ax_z_list = []

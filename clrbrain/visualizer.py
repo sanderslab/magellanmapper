@@ -569,6 +569,7 @@ class Visualization(HasTraits):
                 print("segs_outside:\n{}".format(segs_outside))
                 segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
                 segs = detector.format_blobs(segs)
+                segs = detector.blobs_in_channel(segs, config.channel)
                 segs_all = np.concatenate((segs, segs_outside), axis=0)
                 
             # convert segments to visualizer table format and plot

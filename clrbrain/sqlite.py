@@ -71,7 +71,7 @@ def _create_table_blobs(cur):
                                     "z INTEGER, radius REAL, "
                                     "confirmed INTEGER, truth INTEGER, "
                                     "channel INTEGER, "
-                "UNIQUE (roi_id, x, y, z, truth))")
+                "UNIQUE (roi_id, x, y, z, truth, channel))")
 
 def upgrade_db(conn, cur):
     db_ver = 0
@@ -96,7 +96,7 @@ def upgrade_db(conn, cur):
         print("inserting new about table")
         _create_table_about(cur)
         
-        # new column with unique constraint on blobs table
+        # new column for truth with updated unique constraint on blobs table
         print("upgrading blobs table")
         cur.execute("ALTER TABLE blobs RENAME TO tmp_blobs")
         _create_table_blobs(cur)

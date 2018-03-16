@@ -875,17 +875,16 @@ def process_file(filename_base, offset, roi_size):
                     print("Could not load truth DB from {}; will not verify ROIs"
                           .format(db_path_base))
         
-        # save denoised stack, segments, and scaling info to file
         file_time_start = time()
         if config.saveroi:
             '''
-            # write the merged file
+            # write the merged, denoised file (old behavior, <0.4.3)
             # TODO: write files to memmap array to release RAM?
             outfile_image5d_proc = open(filename_image5d_proc, "wb")
             np.save(outfile_image5d_proc, merged)
             outfile_image5d_proc.close()
             '''
-            # write the ROI
+            # write the original, raw ROI
             outfile_image5d_proc = open(filename_image5d_proc, "wb")
             np.save(outfile_image5d_proc, roi)
             outfile_image5d_proc.close()

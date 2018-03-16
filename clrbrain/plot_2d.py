@@ -313,7 +313,7 @@ def add_scale_bar(ax):
     ax.add_artist(scale_bar)
 
 def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, 
-                        vmin=None, vmax=None, origin=None):
+                        vmin=None, vmax=None, origin=None, interpolation=None):
     """Show multichannel 2D image with channels overlaid over one another.
     
     Args:
@@ -346,9 +346,10 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
             vmin_plane = vmin[chl]
         if vmax is not None:
             vmax_plane = vmax[chl]
+        print("vmin: {}, vmax: {}".format(vmin_plane, vmax_plane))
         img_chl = ax.imshow(
             img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin_plane, 
-            vmax=vmax_plane, origin=origin)
+            vmax=vmax_plane, origin=origin, interpolation=interpolation)
         img.append(img_chl)
         i += 1
     return img
@@ -388,7 +389,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             defaults to -1.
     """
     ax = plt.subplot(gs[row, col])
-    _hide_axes(ax)
+    hide_axes(ax)
     size = image5d.shape
     # swap columns if showing a different plane
     plane_axis = "z"
@@ -744,7 +745,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     colormaps = config.process_settings["channel_colors"]
     for i in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, i])
-        _hide_axes(ax)
+        hide_axes(ax)
         img2d_zoom = img2d
         patch_offset = offset[0:2]
         if i > 0:
@@ -928,7 +929,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         # auto to adjust size with less overlap
         ax.imshow(img3d)
         ax.set_aspect(img3d.shape[1] / img3d.shape[0])
-        _hide_axes(ax)
+        hide_axes(ax)
     gs.tight_layout(fig, pad=0.5)
     #gs_zoomed.tight_layout(fig, pad=0.5)
     plt.ion()
@@ -942,13 +943,13 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         plt.savefig(name)
     print("2D plot time: {}".format(time() - time_start))
     
-def _hide_axes(ax):
+def hide_axes(ax):
     """Hides x- and y-axes.
     """
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-def extract_plane(image5d, plane_n, plane=None, savefig=None, name=None):
+def extract_plane(image5d, plane_n, plane=None):
     """Extracts a single 2D plane and saves to file.
     
     Args:
@@ -957,9 +958,6 @@ def extract_plane(image5d, plane_n, plane=None, savefig=None, name=None):
             or multiple indices such as would be used for an animation.
         plane: Type of plane to extract, which should be one of 
             :attribute:`PLANES`.
-        name: Name of the resulting file, without the extension.
-        savefig: Name of extension to use, which also specifies the file 
-            type in which to save.
     """
     origin = None
     aspect = None # aspect ratio
@@ -994,18 +992,6 @@ def extract_plane(image5d, plane_n, plane=None, savefig=None, name=None):
         aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
         img2d = img3d[plane_n, :, :]
     print("aspect: {}, origin: {}".format(aspect, origin))
-    if savefig is not None:
-        filename = name + "." + savefig
-        print("extracting plane as {}".format(filename))
-        fig = plt.figure(frameon=False)
-        ax = fig.add_subplot(111)
-        _hide_axes(ax)
-        colormaps = config.process_settings["channel_colors"]
-        imshow_multichannel(
-            ax, img2d, config.channel, colormaps, aspect, 1, plot_3d.near_min, 
-            vmax_overview, origin=origin)
-        #ax.imshow(img2d, cmap=CMAP_GRBK, aspect=aspect, origin=origin)
-        fig.savefig(filename)
     return img2d, aspect, origin
 
 def cycle_colors(i):
@@ -1094,7 +1080,7 @@ def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
         # xy plane (default)
         img_2d = img[plane_i]
     ax.imshow(img_2d, cmap=cmap, aspect=aspect, alpha=alpha)
-    _hide_axes(ax)
+    hide_axes(ax)
     if title is not None:
         ax.set_title(title)
 

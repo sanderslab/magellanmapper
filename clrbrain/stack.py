@@ -22,13 +22,15 @@ def _import_img(i, path, rescale, multichannel):
     print("importing {}".format(path))
     img = io.imread(path)
     img = transform.rescale(
-        img, rescale, mode="reflect", multichannel=multichannel)
+        img, rescale, mode="reflect", multichannel=multichannel, 
+        preserve_range=True)
     return i, img
 
 def _process_plane(i, plane, rescale, multichannel):
     print("processing plane {}".format(i))
     img = transform.rescale(
-        plane, rescale, mode="reflect", multichannel=multichannel)
+        plane, rescale, mode="reflect", multichannel=multichannel, 
+        preserve_range=True)
     return i, img
 
 def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 
@@ -56,18 +58,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         # Matplotlib figure for building the animation
         fig = plt.figure(frameon=False)
         ax = fig.add_subplot(111)
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
-        
-        # rescaled images will be converted from integer to float, so 
-        # vmax will need to be rescaled to 0-1 range
-        vmin = plot_3d.near_min
-        vmax = plot_2d.vmax_overview
-        max_range = 0
-        if rescale and np.issubdtype(images.dtype, np.integer):
-            max_range = np.iinfo(images.dtype).max
-        if max_range != 0:
-            vmax = vmax / max_range
+        plot_2d.hide_axes(ax)
         
         # import the images as Matplotlib artists via multiprocessing
         plotted_imgs = [None for i in range(num_images)]
@@ -87,23 +78,12 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             if img_size is None:
                 img_size = img.shape
             plotted_imgs[i] = plot_2d.imshow_multichannel(
-                ax, img, config.channel, colormaps, aspect, 1, vmin, vmax)
+                ax, img, config.channel, colormaps, aspect, 1, 
+                vmin=plot_3d.near_min, vmax=plot_2d.vmax_overview)
         pool.close()
         pool.join()
         
-        # need to compress layout to fit image only
-        fig.tight_layout(pad=0.0) # leaves some space for some reason
-        if aspect is None:
-            aspect = 1
-        img_size_inches = np.divide(img_size, fig.dpi) # convert to inches
-        print("img_size: {}, img_size_inches: {}"
-              .format(img_size, img_size_inches))
-        if aspect > 1:
-            fig.set_size_inches(img_size_inches[1], img_size_inches[0] * aspect)
-        else:
-            # multiply both sides by 1 / aspect => number > 1 to enlarge
-            fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
-        print("fig size: {}".format(fig.get_size_inches()))
+        fit_frame_to_image(fig, img_size, aspect)
         
         # export to animated GIF
         if delay is None:
@@ -116,6 +96,21 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             print(e)
             print("No animation writer available for Matplotlib")
         print("saved animation file to {}".format(out_path))
+
+def fit_frame_to_image(fig, shape, aspect):
+    # compress layout to fit image only
+    fig.tight_layout(pad=0.0) # leaves some space for some reason
+    if aspect is None:
+        aspect = 1
+    img_size_inches = np.divide(shape, fig.dpi) # convert to inches
+    print("image shape: {}, img_size_inches: {}"
+          .format(shape, img_size_inches))
+    if aspect > 1:
+        fig.set_size_inches(img_size_inches[1], img_size_inches[0] * aspect)
+    else:
+        # multiply both sides by 1 / aspect => number > 1 to enlarge
+        fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
+    print("fig size: {}".format(fig.get_size_inches()))
 
 def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     """Builds an animated GIF from a stack of images in a directory or an
@@ -163,6 +158,31 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     out_path = os.path.join(parent_path, out_name + "_animation." + ext)
     _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
                         origin=origin, delay=delay)
+
+def save_plane(image5d, plane_n, name):
+    """Extracts a single 2D plane and saves to file.
+    
+    Args:
+        image5d: The full image stack.
+        plane_n: Slice of planes to extract, which can be a single index 
+            or multiple indices such as would be used for an animation.
+        name: Name of the resulting file, without the extension.
+    """
+    img2d, aspect, origin = plot_2d.extract_plane(
+        image5d, plane_n, plane=plot_2d.plane)
+    fig = plt.figure(frameon=False)
+    ax = fig.add_subplot(111)
+    plot_2d.hide_axes(ax)
+    colormaps = config.process_settings["channel_colors"]
+    # use lower max threshold since overview vmax often skewed by 
+    # artifacts over whole image; also use no interpolation for cleanest image
+    plot_2d.imshow_multichannel(
+        ax, img2d, config.channel, colormaps, aspect, 1, vmin=plot_3d.near_min, 
+        vmax=plot_2d.vmax_overview*0.5, origin=origin, interpolation="none")
+    fit_frame_to_image(fig, img2d.shape, aspect)
+    filename = name + "." + plot_2d.savefig
+    print("extracting plane as {}".format(filename))
+    fig.savefig(filename)
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")

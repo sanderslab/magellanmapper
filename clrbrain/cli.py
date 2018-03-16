@@ -747,14 +747,13 @@ def process_file(filename_base, offset, roi_size):
         print("imported {}, will exit".format(config.filename))
     
     elif proc_type == PROC_TYPES[4]:
-        # extracts plane
+        # extract and save plane
         print("extracting plane at {} and exiting".format(offset[2]))
         name = ("{}-(series{})-z{}").format(
             os.path.basename(config.filename).replace(".czi", ""), 
             config.series, str(offset[2]).zfill(5))
-        from clrbrain import plot_2d
-        plot_2d.extract_plane(
-            image5d, offset[2], plot_2d.plane, plot_2d.savefig, name)
+        from clrbrain import stack
+        stack.save_plane(image5d, offset[2], name)
     
     elif proc_type == PROC_TYPES[5]:
         # export ROIs; assumes that info_proc was already loaded to 

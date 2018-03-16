@@ -469,11 +469,14 @@ class Visualization(HasTraits):
     
     @on_trait_change("_channel")
     def update_channel(self):
-        """Update the selected channel.
+        """Update the selected channel, resetting the current state to 
+        prevent displaying the old channel.
         """
         config.channel = self._channel
         if config.channel == -1:
             config.channel = None
+        self.rois_check_list = _ROI_DEFAULT
+        self._reset_segments()
         print("Changed channel to {}".format(config.channel))
     
     @on_trait_change("x_offset,y_offset,z_offset")

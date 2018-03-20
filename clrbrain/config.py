@@ -221,7 +221,7 @@ roc_dict = OrderedDict([
     )
 ])
 '''
-_scale_zs = np.arange(0.1, 1.1, 0.1)
+_scale_zs = np.arange(0.5, 0.61, 0.01)
 _scale_factors = np.ones((len(_scale_zs), 3))
 _scale_factors[:, 0] = _scale_zs
 #print(_scale_factors)

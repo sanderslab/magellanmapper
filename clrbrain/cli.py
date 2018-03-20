@@ -753,7 +753,7 @@ def process_file(filename_base, offset, roi_size):
             os.path.basename(config.filename).replace(".czi", ""), 
             config.series, str(offset[2]).zfill(5))
         from clrbrain import stack
-        stack.save_plane(image5d, offset[2], name)
+        stack.save_plane(image5d, offset, roi_size, name)
     
     elif proc_type == PROC_TYPES[5]:
         # export ROIs; assumes that info_proc was already loaded to 

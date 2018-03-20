@@ -159,17 +159,26 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
                         origin=origin, delay=delay)
 
-def save_plane(image5d, plane_n, name):
+def save_plane(image5d, offset, roi_size=None, name=None):
     """Extracts a single 2D plane and saves to file.
     
     Args:
         image5d: The full image stack.
-        plane_n: Slice of planes to extract, which can be a single index 
-            or multiple indices such as would be used for an animation.
-        name: Name of the resulting file, without the extension.
+        offset: Tuple of x,y,z coordinates of the ROI. The plane will be 
+            extracted from the z coordinate. If ``roi_size`` is not None, 
+            ``offset`` x,y values will be used for the ROI offset within 
+            the plane.
+        roi_size: List of x,y,z dimensions of the ROI; default to None, in 
+            which case the entire plane will be extracted.
+        name: Name of the resulting file, without the extension; default to 
+            None, in which case a standard name will be given.
     """
+    plane_n = offset[2]
     img2d, aspect, origin = plot_2d.extract_plane(
         image5d, plane_n, plane=plot_2d.plane)
+    if roi_size is not None:
+        img2d = img2d[
+            offset[1]:offset[1]+roi_size[1], offset[0]:offset[0]+roi_size[0]]
     fig = plt.figure(frameon=False)
     ax = fig.add_subplot(111)
     plot_2d.hide_axes(ax)
@@ -181,6 +190,8 @@ def save_plane(image5d, plane_n, name):
         vmax=plot_2d.vmax_overview*0.8, 
         origin=origin, interpolation="none")
     fit_frame_to_image(fig, img2d.shape, aspect)
+    if not name:
+        name = "SavedPlane_z{}".format(plane_n)
     filename = name + "." + plot_2d.savefig
     print("extracting plane as {}".format(filename))
     fig.savefig(filename)

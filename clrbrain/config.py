@@ -221,9 +221,13 @@ roc_dict = OrderedDict([
     )
 ])
 '''
+_scale_zs = np.arange(0.1, 1.1, 0.1)
+_scale_factors = np.ones((len(_scale_zs), 3))
+_scale_factors[:, 0] = _scale_zs
+#print(_scale_factors)
 roc_dict = OrderedDict([
     ("overlap_thresh", OrderedDict([
-        ("overlap", np.arange(0.5, 0.6, 0.1)),
+        #("overlap", np.arange(0.5, 0.6, 0.1)),
         #("clip_min", np.arange(0.0, 0.1, 0.1)),
         #("clip_vmax", np.arange(95, 100.5, 0.5)),
         #("clip_max", np.arange(0.6, 0.7, 0.1)),
@@ -234,6 +238,7 @@ roc_dict = OrderedDict([
         #("min_sigma_factor", np.arange(2.5, 3.6, 0.1)),
         #("max_sigma_factor", np.arange(3.5, 4.6, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
+        ("scale_factor", _scale_factors),
     ]))
 ])
 

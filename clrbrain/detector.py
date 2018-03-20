@@ -298,7 +298,8 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
     close_master = []
     close = []
     far = np.max(tol) + 1
-    # compare each element for differences, weighting based on tolerance
+    # compare each element for differences, weighting based on tolerance; 
+    # TODO: incorporate radius
     blobs_diffs_init = np.abs(
         blobs_master[:, region][:, None] - blobs[:, region])
     normalize_factor = np.divide(np.max(tol), tol)
@@ -493,6 +494,10 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
     Saves the verifications to a separate database with a name in the same
     format as saved processed files but with "_verified.db" at the end.
     Prints basic statistics on the verification.
+    
+    Note that blobs are found from ROI parameters rather than loading from 
+    database, so blobs recorded within these ROI bounds but from different 
+    ROIs will be included in the verification.
     
     Args:
         rois: Rows of ROIs from sqlite database.

@@ -97,11 +97,13 @@ def parse_grid_stats(stats_dict):
             for i, n in enumerate(params):
                 stat = (params[i], 1 - fdr[i], sens[i], *stats[i].astype(int))
                 for val in stat:
-                    if isinstance(val, (int, np.integer)):
-                        print("{:{align}8}".format(val, align=align), end=" ")
+                    is_array = isinstance(val, np.ndarray)
+                    if is_array or isinstance(val, (int, np.integer)):
+                        print("{:{align}8}"
+                              .format(str(val), align=align), end=" ")
                     else:
-                        print("{:{align}{fill}}".format(
-                            val, fill="8.3f", align=align), end=" ")
+                        print("{:{align}{fill}}"
+                              .format(val, fill="8.3f", align=align), end=" ")
                 print()
             group_dict[key] = (fdr, sens, params)
         print()

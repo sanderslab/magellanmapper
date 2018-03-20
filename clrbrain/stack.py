@@ -178,7 +178,8 @@ def save_plane(image5d, plane_n, name):
     # artifacts over whole image; also use no interpolation for cleanest image
     plot_2d.imshow_multichannel(
         ax, img2d, config.channel, colormaps, aspect, 1, vmin=plot_3d.near_min, 
-        vmax=plot_2d.vmax_overview*0.5, origin=origin, interpolation="none")
+        vmax=plot_2d.vmax_overview*0.8, 
+        origin=origin, interpolation="none")
     fit_frame_to_image(fig, img2d.shape, aspect)
     filename = name + "." + plot_2d.savefig
     print("extracting plane as {}".format(filename))

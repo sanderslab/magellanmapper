@@ -379,7 +379,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             subplot, which can be None. Segments are generally given as an 
             (n, 4) dimension array, where each segment is in (z, y, x, radius).
         segs_out: Subset of segments that are adjacent to rather than
-            inside the ROI, which will be drawn in a different style.
+            inside the ROI, which will be drawn in a different style. Can be 
+            None.
         segs_cmap: Colormap for segments.
         alpha: Opacity level.
         highlight: If true, the plot will be highlighted; defaults 
@@ -502,8 +503,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             
             # segments outside the ROI shown in black dotted line only for 
             # their corresponding z
-            segs_out_z = segs_out[segs_out[:, 0] == z_relative]
+            segs_out_z = None
             if segs_out is not None:
+                segs_out_z = segs_out[segs_out[:, 0] == z_relative]
                 collection_adj = _circle_collection(
                     segs_out_z, "k", "none", SEG_LINEWIDTH)
                 collection_adj.set_linestyle("--")
@@ -525,14 +527,15 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             else:
                 # apply only to segments in their current z
                 segments_z = segs_in[segs_in[:, 0] == z_relative]
-                segs_out_z_confirmed = segs_out_z[
-                    detector.get_blob_confirmed(segs_out_z) == 1]
-                if len(segs_out_z_confirmed) > 0:
-                    # include confirmed blobs 
-                    segments_z = np.concatenate(
-                        (segments_z, segs_out_z_confirmed))
-                    print("segs_out_z_confirmed:\n{}"
-                          .format(segs_out_z_confirmed))
+                if segs_out_z is not None:
+                    segs_out_z_confirmed = segs_out_z[
+                        detector.get_blob_confirmed(segs_out_z) == 1]
+                    if len(segs_out_z_confirmed) > 0:
+                        # include confirmed blobs 
+                        segments_z = np.concatenate(
+                            (segments_z, segs_out_z_confirmed))
+                        print("segs_out_z_confirmed:\n{}"
+                              .format(segs_out_z_confirmed))
             if segments_z is not None:
                 for seg in segments_z:
                     _plot_circle(

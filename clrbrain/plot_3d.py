@@ -37,13 +37,29 @@ near_max = [-1.0]
 near_min = [0.0]
 
 def setup_channels(roi, channel, dim_channel):
+    """Setup channels array for the given ROI dimensions.
+    
+    Args:
+        roi: Region of interest, which is either a 3D or 4D array of 
+            [[z, y, x, (c)], ...].
+        channel: Channel to select, which can be None to indicate all 
+            channels.
+        dim_channel: Index of the channel dimension.
+    
+    Returns:
+        A tuple of ``multichannel``, a boolean value where True indicates that 
+        the ROI is multichannel (ie 4D), and ``channels``, an array of the 
+        channel indices of ROI to include.
+    """
     multichannel = roi.ndim > dim_channel
     channels = [0]
     if multichannel:
         channels = range(roi.shape[dim_channel]) if channel is None else [channel]
+    '''
     lib_clrbrain.printv(
         "multichannel: {}, channels: {}, roi shape: {}, channel: {}"
         .format(multichannel, channels, roi.shape, channel))
+    '''
     return multichannel, channels
 
 def saturate_roi(roi, clip_vmax=-1, channel=None):

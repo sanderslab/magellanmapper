@@ -1,6 +1,6 @@
 #!/bin/bash
 # Chunking image stacks
-# Author: David Young, 2017
+# Author: David Young, 2017, 2018
 """Divides a region into smaller chunks and reassembles it.
 
 Attributes:
@@ -18,6 +18,7 @@ import math
 
 from clrbrain import config
 from clrbrain import detector
+from clrbrain import lib_clrbrain
 
 OVERLAP_FACTOR = 5
 
@@ -79,7 +80,7 @@ def stack_splitter(roi, max_pixels, overlap):
         from the master ``roi`` array in (z, y, x) order coordinates.
     """
     size = roi.shape
-    print("total stack size: {}".format(size))
+    lib_clrbrain.printv("total stack size: {}".format(size))
     
     # prepare the array containing sub ROI slices with type object so that it
     # can contain an arbitrary object of any size and channels, accessible by
@@ -89,7 +90,7 @@ def stack_splitter(roi, max_pixels, overlap):
     #print("num_units: {}".format(num_units))
     sub_rois = np.zeros(num_units, dtype=object)
     sub_rois_offsets = np.zeros(np.append(num_units, 3))
-    print("sub_rois_offsets shape: {}".format(sub_rois_offsets.shape))
+    lib_clrbrain.printv("sub_rois_offsets shape: {}".format(sub_rois_offsets.shape))
     
     # fill with sub ROIs including overlap extending into next sub ROI except for 
     # the last one in each dimension
@@ -194,7 +195,7 @@ def get_split_stack_total_shape(sub_rois, overlap):
     channel_dim = 3
     if len(shape_sub_roi) > channel_dim:
         final_shape[channel_dim] = shape_sub_roi[channel_dim]
-    print("final_shape: {}".format(final_shape))
+    lib_clrbrain.printv("final_shape: {}".format(final_shape))
     return final_shape
 
 def merge_split_stack2(sub_rois, overlap, offset, output):
@@ -450,9 +451,9 @@ def merge_blobs(blob_rois):
                 blobs = blob_rois[coord]
                 #print("checking blobs in {}:\n{}".format(coord, blobs))
                 if blobs is None:
-                    print("no blobs to add, skipping")
+                    lib_clrbrain.printv("no blobs to add, skipping")
                 elif blobs_all is None:
-                    print("initializing master blobs list")
+                    lib_clrbrain.printv("initializing master blobs list")
                     blobs_all = blobs
                 else:
                     blobs_all = np.concatenate((blobs_all, blobs))

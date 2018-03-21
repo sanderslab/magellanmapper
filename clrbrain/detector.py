@@ -524,8 +524,9 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
     #tol[0] -= 1
     inner_padding = np.flipud(np.ceil(tol))
     #tol = np.flipud(inner_padding)
-    print("verifying blobs with tol {}, inner_padding {}"
-          .format(tol, inner_padding))
+    lib_clrbrain.printv(
+        "verifying blobs with tol {}, inner_padding {}"
+        .format(tol, inner_padding))
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
         size = (roi["size_x"], roi["size_y"], roi["size_z"])
@@ -534,18 +535,19 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
         # get all detected and truth blobs for inner and total ROI
         offset_inner = np.add(offset, inner_padding)
         size_inner = np.subtract(size, inner_padding * 2)
-        print("offset: {}, offset_inner: {}, size: {}, size_inner: {}"
-              .format(offset, offset_inner, size, size_inner))
+        lib_clrbrain.printv(
+            "offset: {}, offset_inner: {}, size: {}, size_inner: {}"
+            .format(offset, offset_inner, size, size_inner))
         blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
         blobs_inner, blobs_inner_mask = get_blobs_in_roi(
             blobs_roi, offset_inner, size_inner)
         blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)
         blobs_truth_inner, blobs_truth_inner_mask = get_blobs_in_roi(
             blobs_truth_roi, offset_inner, size_inner)
-        print("blobs_roi:\n{}".format(blobs_roi))
-        print("blobs_inner:\n{}".format(blobs_inner))
-        print("blobs_truth_inner:\n{}".format(blobs_truth_inner))
-        print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
+        lib_clrbrain.printv("blobs_roi:\n{}".format(blobs_roi))
+        lib_clrbrain.printv("blobs_inner:\n{}".format(blobs_inner))
+        lib_clrbrain.printv("blobs_truth_inner:\n{}".format(blobs_truth_inner))
+        lib_clrbrain.printv("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         
         # compare inner region of detected cells with all truth ROIs, where
         # closest blob detector prioritizes the closest matches
@@ -555,17 +557,18 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
         blobs_inner[detected, 4] = 1
         blobs_truth_roi[blobs_truth_inner_mask, 5] = 0
         blobs_truth_roi[found_truth, 5] = 1
-        print("detected inner:\n{}"
+        lib_clrbrain.printv("detected inner:\n{}"
               .format(blobs_inner[blobs_inner[:, 4] == 1]))
-        print("truth detected:\n{}"
+        lib_clrbrain.printv("truth detected:\n{}"
               .format(blobs_truth_roi[blobs_truth_roi[:, 5] == 1]))
         
         # add any truth blobs missed in the inner ROI by comparing with 
         # outer ROI of detected blobs
         blobs_truth_inner_missed = blobs_truth_roi[blobs_truth_roi[:, 5] == 0]
         blobs_outer = blobs_roi[np.invert(blobs_inner_mask)]
-        print("blobs_outer:\n{}".format(blobs_outer))
-        print("blobs_truth_inner_missed:\n{}".format(blobs_truth_inner_missed))
+        lib_clrbrain.printv("blobs_outer:\n{}".format(blobs_outer))
+        lib_clrbrain.printv(
+            "blobs_truth_inner_missed:\n{}".format(blobs_truth_inner_missed))
         found_truth_out, detected = _find_closest_blobs(
             blobs_outer, blobs_truth_inner_missed, region, tol)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
@@ -575,11 +578,15 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
         blobs_roi_extra = blobs_outer[detected]
         blobs_roi_extra[:, 4] = 1
         blobs_inner_plus = np.concatenate((blobs_inner, blobs_roi_extra))
-        print("truth blobs detected by an outside blob:\n{}".format(
-              blobs_truth_inner_missed[blobs_truth_inner_missed[:, 5] == 1]))
-        print("all those outside detection blobs:\n{}".format(blobs_roi_extra))
-        print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
-        print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
+        lib_clrbrain.printv(
+            "truth blobs detected by an outside blob:\n{}".format(
+            blobs_truth_inner_missed[blobs_truth_inner_missed[:, 5] == 1]))
+        lib_clrbrain.printv(
+            "all those outside detection blobs:\n{}".format(blobs_roi_extra))
+        lib_clrbrain.printv(
+            "blobs_inner_plus:\n{}".format(blobs_inner_plus))
+        lib_clrbrain.printv(
+            "blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
         
         # store blobs in separate verified DB
         roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id, 

@@ -48,7 +48,8 @@ def grid_search(fnc, *fnc_args):
                 stats = []
                 params = grid_dict[key]
                 for param in params:
-                    print("Processing with settings {} for {}"
+                    print("===============================================\n"
+                          "Grid search hyperparameters {} for {}"
                           .format(name, param))
                     settings[key] = param
                     stat, summaries = fnc(*fnc_args)

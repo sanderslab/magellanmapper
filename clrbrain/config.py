@@ -228,12 +228,12 @@ _scale_factors[:, 0] = _scale_zs
 roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         #("overlap", np.arange(0.5, 0.6, 0.1)),
-        #("clip_min", np.arange(0.0, 0.1, 0.1)),
-        #("clip_vmax", np.arange(95, 100.5, 0.5)),
-        #("clip_max", np.arange(0.6, 0.7, 0.1)),
+        ("clip_min", np.arange(0.0, 0.3, 0.1)),
+        ("clip_vmax", np.arange(95, 100.5, 0.5)),
+        ("clip_max", np.arange(0.5, 0.8, 0.1)),
         #("segmenting_mean_thresh", np.arange(0.2, 0.8, 0.1)),
         #("segmenting_mean_thresh", np.arange(-5, -4.9, 0.1)),
-        ("segmenting_mean_thresh", np.arange(5, 5.1, 0.1)),
+        #("segmenting_mean_thresh", np.arange(5, 5.1, 0.1)),
         #"denoise_size", np.arange(5, 25, 2)
         #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
         #("tot_var_denoise", (False, True)),

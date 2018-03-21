@@ -593,7 +593,7 @@ class ClrDB():
     
     def load_truth_blobs(self):
         self.blobs_truth = select_blobs_confirmed(self.cur, 1)
-        print("truth blobs:\n{}".format(self.blobs_truth))
+        lib_clrbrain.printv("truth blobs:\n{}".format(self.blobs_truth))
     
     def get_rois(self, filename):
         exps = select_experiment(self.cur, filename)

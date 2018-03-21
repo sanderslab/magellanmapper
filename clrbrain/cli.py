@@ -122,7 +122,7 @@ def denoise_sub_roi(coord):
             identify the sub-ROI, and the denoised sub-ROI.
     """
     sub_roi = sub_rois[coord]
-    print("denoising sub_roi at {} of {}, with shape {}..."
+    lib_clrbrain.printv("denoising sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     sub_roi = plot_3d.saturate_roi(sub_roi, channel=config.channel)
     sub_roi = plot_3d.denoise_roi(sub_roi, channel=config.channel)
@@ -148,7 +148,7 @@ def segment_sub_roi(sub_rois_offsets, coord):
             identify the sub-ROI, and the denoised sub-ROI.
     """
     sub_roi = sub_rois[coord]
-    print("segmenting sub_roi at {} of {}, with shape {}..."
+    lib_clrbrain.printv("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     segments = detector.detect_blobs(sub_roi, config.channel)
     #segments[:, :3] /= plot_3d.calc_isotropic_factor()[:3]
@@ -338,7 +338,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels
                     blobs_all_non_ol = np.concatenate(
                         (blobs_all_non_ol, blobs_non_ol))
                 
-                # prune blobs from overlapping regions vis multiprocessing
+                # prune blobs from overlapping regions via multiprocessing
                 pool_results.append(pool.apply_async(
                     detector.remove_close_blobs_within_sorted_array, 
                     args=(blobs_ol, BLOB_COORD_SLICE, tol)))
@@ -954,8 +954,9 @@ def process_stack(roi, overlap, tol, channels):
                                      args=(coord, )))
         for result in pool_results:
             coord, sub_roi = result.get()
-            print("replacing sub_roi at {} of {}"
-                  .format(coord, np.add(sub_rois.shape, -1)))
+            lib_clrbrain.printv(
+                "replacing sub_roi at {} of {}"
+                .format(coord, np.add(sub_rois.shape, -1)))
             sub_rois[coord] = sub_roi
         
         pool.close()
@@ -993,8 +994,9 @@ def process_stack(roi, overlap, tol, channels):
         seg_rois = np.zeros(sub_rois.shape, dtype=object)
         for result in pool_results:
             coord, segments = result.get()
-            print("adding segments from sub_roi at {} of {}"
-                  .format(coord, np.add(sub_rois.shape, -1)))
+            lib_clrbrain.printv(
+                "adding segments from sub_roi at {} of {}"
+                .format(coord, np.add(sub_rois.shape, -1)))
             seg_rois[coord] = segments
         
         pool.close()

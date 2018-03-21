@@ -228,6 +228,7 @@ _scale_factors[:, 0] = _scale_zs
 roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         #("overlap", np.arange(0.5, 0.6, 0.1)),
+        ("scale_factor", np.array([(0.6, 1, 1)])),
         ("clip_min", np.arange(0.0, 0.3, 0.1)),
         ("clip_vmax", np.arange(95, 100.5, 0.5)),
         ("clip_max", np.arange(0.5, 0.8, 0.1)),

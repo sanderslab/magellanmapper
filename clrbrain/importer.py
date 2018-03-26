@@ -364,21 +364,6 @@ def read_file(filename, series, load=True, z_max=-1,
             while load_info:
                 # image info, such as microscopy data
                 output = np.load(filename_info_npz)
-                '''
-                # convert old monolithic archive into 2 separate archives
-                filename_npz = filename + str(series).zfill(5) + ".npz" # old format
-                output = np.load(filename_npz)
-                outfile_image5d = open(filename_image5d_npz, "wb")
-                np.save(outfile_image5d, output["image5d"])
-                outfile_image5d.close()
-                outfile_info = open(filename_info_npz, "wb")
-                np.savez(outfile_info, names=output["names"], sizes=output["sizes"], 
-                         resolutions=output["resolutions"], magnification=output["magnification"], 
-                         zoom=output["zoom"], pixel_type=output["pixel_type"])
-                outfile_info.close()
-                print('file opening time: %f' %(time() - time_start))
-                return
-                '''
                 image5d_ver_num = -1
                 try:
                     # find the info version number
@@ -439,17 +424,6 @@ def read_file(filename, series, load=True, z_max=-1,
                     # offset and size given
                     image5d = plot_3d.prepare_roi(image5d, size, offset)
                     image5d = roi_to_image5d(image5d)
-                '''
-                max_range = 0
-                if plot_3d.near_max is not None:
-                    #print("dtype: {}".format(image5d.dtype))
-                    if np.issubdtype(image5d.dtype, np.integer):
-                        max_range = np.iinfo(image5d.dtype).max
-                    elif np.issubdtype(image5d.dtype, np.float):
-                        max_range = np.ninfo(image5d.dtype).max
-                    if max_range != 0:
-                        plot_2d.vmax_overview = plot_3d.near_max / max_range
-                '''
                 if update_info:
                     load_info = _update_image5d_np_ver(
                         image5d_ver_num, image5d, output, filename_info_npz)

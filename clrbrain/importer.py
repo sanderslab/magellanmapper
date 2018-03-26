@@ -311,6 +311,71 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     
     return True
 
+def read_info(filename_info_npz):
+    """Load image info, such as saved microscopy data and image ranges, 
+    storing some values into appropriate module level variables.
+    
+    Args:
+        filename_info_npz: Path to image info file.
+    
+    Returns:
+        Tuple of ``output``, the dictionary with image info, and 
+        ``image5d_ver_num``, the version number of the info file.
+    """
+    output = np.load(filename_info_npz)
+    image5d_ver_num = -1
+    try:
+        # find the info version number
+        image5d_ver_num = output["ver"]
+        print("loaded image5d version number {}"
+              .format(image5d_ver_num))
+    except KeyError:
+        print("could not find image5d version number")
+    try:
+        names = output["names"]
+        print("names: {}".format(names))
+    except KeyError:
+        print("could not find names")
+    try:
+        sizes = output["sizes"]
+        print("sizes {}".format(sizes))
+    except KeyError:
+        print("could not find sizes")
+    try:
+        detector.resolutions = output["resolutions"]
+        print("set resolutions to {}".format(detector.resolutions))
+    except KeyError:
+        print("could not find resolutions")
+    try:
+        detector.magnification = output["magnification"]
+        print("magnification: {}".format(detector.magnification))
+    except KeyError:
+        print("could not find magnification")
+    try:
+        detector.zoom = output["zoom"]
+        print("zoom: {}".format(detector.zoom))
+    except KeyError:
+        print("could not find zoom")
+    # TODO: remove since stored in image5d?
+    try:
+        pixel_type = output["pixel_type"]
+        print("pixel type is {}".format(pixel_type))
+    except KeyError:
+        print("could not find pixel_type")
+    try:
+        plot_3d.near_min = output["near_min"]
+        print("set near_min to {}".format(plot_3d.near_min))
+    except KeyError:
+        print("could not find near_max")
+    try:
+        plot_3d.near_max = output["near_max"]
+        print("set near_max to {}".format(plot_3d.near_max))
+        plot_2d.vmax_overview = plot_3d.near_max * 1.1
+        print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
+    except KeyError:
+        print("could not find near_max")
+    return output, image5d_ver_num
+
 def read_file(filename, series, load=True, z_max=-1, 
               offset=None, size=None, channel=None, return_info=False, 
               import_if_absent=True, update_info=True):
@@ -362,60 +427,7 @@ def read_file(filename, series, load=True, z_max=-1,
             time_start = time()
             load_info = True
             while load_info:
-                # image info, such as microscopy data
-                output = np.load(filename_info_npz)
-                image5d_ver_num = -1
-                try:
-                    # find the info version number
-                    image5d_ver_num = output["ver"]
-                    print("loaded image5d version number {}"
-                          .format(image5d_ver_num))
-                except KeyError:
-                    print("could not find image5d version number")
-                try:
-                    names = output["names"]
-                    print("names: {}".format(names))
-                except KeyError:
-                    print("could not find names")
-                try:
-                    sizes = output["sizes"]
-                    print("sizes {}".format(sizes))
-                except KeyError:
-                    print("could not find sizes")
-                try:
-                    detector.resolutions = output["resolutions"]
-                    print("set resolutions to {}".format(detector.resolutions))
-                except KeyError:
-                    print("could not find resolutions")
-                try:
-                    detector.magnification = output["magnification"]
-                    print("magnification: {}".format(detector.magnification))
-                except KeyError:
-                    print("could not find magnification")
-                try:
-                    detector.zoom = output["zoom"]
-                    print("zoom: {}".format(detector.zoom))
-                except KeyError:
-                    print("could not find zoom")
-                # TODO: remove since stored in image5d?
-                try:
-                    pixel_type = output["pixel_type"]
-                    print("pixel type is {}".format(pixel_type))
-                except KeyError:
-                    print("could not find pixel_type")
-                try:
-                    plot_3d.near_min = output["near_min"]
-                    print("set near_min to {}".format(plot_3d.near_min))
-                except KeyError:
-                    print("could not find near_max")
-                try:
-                    plot_3d.near_max = output["near_max"]
-                    print("set near_max to {}".format(plot_3d.near_max))
-                    plot_2d.vmax_overview = plot_3d.near_max * 1.1
-                    print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
-                except KeyError:
-                    print("could not find near_max")
-                
+                output, image5d_ver_num = read_info(filename_info_npz)
                 # load original image, using mem-mapped accessed for the image
                 # file to minimize memory requirement, only loading on-the-fly
                 image5d = np.load(filename_image5d_npz, mmap_mode="r")

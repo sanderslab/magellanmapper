@@ -266,7 +266,8 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     duration = time_pruning_end - time_pruning_start
     return segments_all, duration
 
-def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels):
+def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
+                    channels):
     """Prune close blobs within overlapping regions by checking within
     entire planes across the ROI in parallel with multiprocessing.
     
@@ -303,8 +304,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels
             pool_results = []
             blobs_all_non_ol = None # all blobs from non-overlapping regions
             for i in range(num_sections):
-                # build overlapping region dimensions based on size of sub-region
-                # in the given axis
+                # build overlapping region dimensions based on size of 
+                # sub-region in the given axis
                 coord = np.zeros(3).astype(np.int)
                 coord[axis] = i
                 lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
@@ -318,13 +319,14 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels
                 shift = overlap[axis] + tol[axis]
                 bounds = [offset[axis] + size[axis] - shift,
                           offset[axis] + size[axis] + tol[axis]]
-                lib_clrbrain.printv("axis {}, boundaries: {}".format(axis, bounds))
+                lib_clrbrain.printv(
+                    "axis {}, boundaries: {}".format(axis, bounds))
                 blobs_ol = blobs[np.all([
                     blobs[:, axis] >= bounds[0], 
                     blobs[:, axis] < bounds[1]], axis=0)]
                 
-                # non-overlapping area is the rest of the region, subtracting the
-                # tolerance unless the region is first and not overlapped
+                # non-overlapping area is the rest of the region, subtracting 
+                # the tolerance unless the region is first and not overlapped
                 start = offset[axis]
                 if i > 0:
                     start += shift
@@ -350,7 +352,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels
                 if blobs_all_ol is None:
                     blobs_all_ol = blobs_ol_pruned
                 elif blobs_ol_pruned is not None:
-                    blobs_all_ol = np.concatenate((blobs_all_ol, blobs_ol_pruned))
+                    blobs_all_ol = np.concatenate(
+                        (blobs_all_ol, blobs_ol_pruned))
             
             # recombine blobs from the non-overlapping with the pruned  
             # overlapping regions from the entire stack
@@ -375,7 +378,8 @@ def main(process_args_only=False):
     Args:
         process_args_only: If True, processes command-line arguments and exits.
     """
-    parser = argparse.ArgumentParser(description="Setup environment for Clrbrain")
+    parser = argparse.ArgumentParser(
+        description="Setup environment for Clrbrain")
     global roi_size, \
             rois_sizes, offset, offsets, proc_type, mlab_3d, truth_db_type
     parser.add_argument("--img", nargs="*")
@@ -458,7 +462,8 @@ def main(process_args_only=False):
     if args.size is not None:
         roi_sizes = _parse_coords(args.size)
         roi_size = roi_sizes[0]
-        print("Set ROI sizes to {}, current size {}".format(roi_sizes, roi_size))
+        print("Set ROI sizes to {}, current size {}"
+              .format(roi_sizes, roi_size))
     if args.padding_2d is not None:
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
@@ -559,7 +564,8 @@ def main(process_args_only=False):
     
     # load "truth blobs" from separate database for viewing
     ext = lib_clrbrain.get_filename_ext(config.filename)
-    filename_base = importer.filename_to_base(config.filename, config.series, ext=ext)
+    filename_base = importer.filename_to_base(
+        config.filename, config.series, ext=ext)
     if args.truth_db is not None:
         truth_db_type = args.truth_db
         print("Set truth_db type to {}".format(truth_db_type))
@@ -588,7 +594,8 @@ def main(process_args_only=False):
     elif args.truth_db == TRUTH_DB_TYPES[3]:
         # loads truth DB as the main database for editing rather than 
         # loading as a truth database
-        config.db_name = os.path.basename(filename_base + sqlite.DB_SUFFIX_TRUTH)
+        config.db_name = os.path.basename(
+            filename_base + sqlite.DB_SUFFIX_TRUTH)
         print("Editing truth database at {}".format(config.db_name))
     if config.db is None:
         config.db = sqlite.ClrDB()
@@ -604,7 +611,8 @@ def main(process_args_only=False):
     
     # process the image stack for each series
     for series in series_list:
-        filename_base = importer.filename_to_base(config.filename, series, ext=ext)
+        filename_base = importer.filename_to_base(
+            config.filename, series, ext=ext)
         if config.roc:
             # grid search with ROC curve
             stats_dict = mlearn.grid_search(
@@ -696,6 +704,8 @@ def process_file(filename_base, offset, roi_size):
             shape = None
             path = config.filename
             try:
+                # find original image path and prepare to extract ROI from it 
+                # based on offset/roi_size saved in processed file
                 basename = output_info["basename"]
                 roi_offset = _check_np_none(output_info["offset"])
                 shape = _check_np_none(output_info["roi_size"])
@@ -708,8 +718,8 @@ def process_file(filename_base, offset, roi_size):
                 print(e)
                 print("No information on portion of stack to load")
             image5d = importer.read_file(
-                path, config.series, offset=roi_offset, size=shape, channel=config.channel,
-                import_if_absent=False)
+                path, config.series, offset=roi_offset, size=shape, 
+                channel=config.channel, import_if_absent=False)
             if image5d is None:
                 # if unable to load original image, attempts to use ROI file
                 image5d = image5d_proc
@@ -762,13 +772,15 @@ def process_file(filename_base, offset, roi_size):
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
         db = config.db if config.truth_db is None else config.truth_db
-        exporter.export_rois(db, image5d, config.channel, filename_base, config.border)
+        exporter.export_rois(
+            db, image5d, config.channel, filename_base, config.border)
         
     elif proc_type == PROC_TYPES[6]:
         # transpose Numpy array
         from clrbrain import plot_2d
         importer.transpose_npy(
-            config.filename, config.series, plane=plot_2d.plane, rescale=config.rescale)
+            config.filename, config.series, plane=plot_2d.plane, 
+            rescale=config.rescale)
         
     elif proc_type == PROC_TYPES[7]:
         # generate animated GIF
@@ -854,7 +866,8 @@ def process_file(filename_base, offset, roi_size):
             
             # compared detected blobs with truth blobs
             if truth_db_type == TRUTH_DB_TYPES[1]:
-                db_path_base = _splice_before(filename_base, series_fill, splice)
+                db_path_base = _splice_before(
+                    filename_base, series_fill, splice)
                 try:
                     _load_truth_db(db_path_base)
                     if config.truth_db is not None:
@@ -874,8 +887,8 @@ def process_file(filename_base, offset, roi_size):
                             BLOB_COORD_SLICE, tol, config.verified_db, exp_id,
                             config.channel)
                 except FileNotFoundError as e:
-                    print("Could not load truth DB from {}; will not verify ROIs"
-                          .format(db_path_base))
+                    print("Could not load truth DB from {}; "
+                          "will not verify ROIs".format(db_path_base))
         
         file_time_start = time()
         if config.saveroi:
@@ -895,7 +908,7 @@ def process_file(filename_base, offset, roi_size):
         #print("merged shape: {}".format(merged.shape))
         np.savez(outfile_info_proc, segments=segments_all, 
                  resolutions=detector.resolutions, 
-                 basename=os.path.basename(config.filename), # only save filename
+                 basename=os.path.basename(config.filename), # only save name
                  offset=offset, roi_size=roi_size) # None unless explicitly set
         outfile_info_proc.close()
         
@@ -967,7 +980,8 @@ def process_stack(roi, overlap, tol, channels):
         '''
         merged = chunking.merge_split_stack(sub_rois, overlap_denoise)
         '''
-        merged_shape = chunking.get_split_stack_total_shape(sub_rois, overlap_denoise)
+        merged_shape = chunking.get_split_stack_total_shape(
+            sub_rois, overlap_denoise)
         merged = np.zeros(tuple(merged_shape), dtype=sub_rois[0, 0, 0].dtype)
         chunking.merge_split_stack2(sub_rois, overlap_denoise, 0, merged)
         time_denoising_end = time()
@@ -1040,7 +1054,8 @@ def process_stack(roi, overlap, tol, channels):
         
         # older pruning method than multiprocessing version
         segments_all, pruning_time = _prune_blobs(
-            seg_rois, BLOB_COORD_SLICE, overlap, tol, sub_rois, sub_rois_offsets)
+            seg_rois, BLOB_COORD_SLICE, overlap, tol, sub_rois, 
+            sub_rois_offsets)
     
     # benchmarking time
     print("total denoising time (s): {}"

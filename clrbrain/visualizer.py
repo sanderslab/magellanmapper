@@ -510,8 +510,15 @@ class Visualization(HasTraits):
     @on_trait_change("scene.activated")
     def _orient_camera(self):
         # default camera position after initiation, with distance based on 
-        # ROI size
-        view = self.scene.mlab.view(75, 140, np.max(self.roi_array[0]) * 3)
+        # ROI size and further zoomed out based on any isotropic factor resizing
+        zoom_out = 3
+        isotropic_factor = config.process_settings["isotropic"]
+        if isotropic_factor is not None:
+            # only use max dimension since this factor seems to influence the 
+            # overall zoom the most
+            zoom_out *= np.amax(isotropic_factor)
+        view = self.scene.mlab.view(
+            75, 140, np.max(self.roi_array[0]) * zoom_out)
         roll = self.scene.mlab.roll(-175)
         if self._scene_3d_shown:
             self.scene.mlab.orientation_axes()

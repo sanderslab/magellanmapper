@@ -64,7 +64,7 @@ class ProcessSettings(dict):
         self["segmenting_mean_thresh"] = 0.4
         self["scale_factor"] = (1, 1, 1)
         self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
-        self["isotropic"] = False
+        self["isotropic"] = None
 
 def update_process_settings(settings, settings_type):
     """Update processing profiles, including layering modifications upon 
@@ -110,6 +110,7 @@ def update_process_settings(settings, settings_type):
     
     elif settings_type.startswith("lightsheet_5x"):
         settings["microscope_type"] = settings_type
+        #settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
         settings["clip_max"] = 0.6
@@ -122,6 +123,7 @@ def update_process_settings(settings, settings_type):
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)
+        settings["isotropic"] = (1, 3, 3)
         
         if settings_type.endswith("_contrast"):
             settings["microscope_type"] = settings_type

@@ -242,7 +242,8 @@ def deconvolve(roi):
 def calc_isotropic_factor():
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))
-    #resize_factor *= config.process_settings["scale_factor"]
+    resize_factor *= config.process_settings["isotropic"]
+    #print("isotropic resize factor: {}".format(resize_factor))
     return resize_factor
     #return np.array((1, 1, 1))
 
@@ -270,7 +271,7 @@ def plot_3d_surface(roi, vis, channel):
     vis_mlab.clf()
     roi = saturate_roi(roi, 97, channel=channel)
     settings = config.process_settings
-    if settings["isotropic"]:
+    if settings["isotropic"] is not None:
         roi = make_isotropic(roi)
     
     colormaps = ("Greens", "Reds")
@@ -351,7 +352,7 @@ def plot_3d_points(roi, vis, channel):
     # streamline the image
     roi = saturate_roi(roi, 99.5, channel)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
-    if settings["isotropic"]:
+    if settings["isotropic"] is not None:
         roi = make_isotropic(roi)
     
     # separate parallel arrays for each dimension of all coordinates for
@@ -552,7 +553,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     if segments.shape[0] <= 0:
         return None, None, 0
     settings = config.process_settings
-    if settings["isotropic"]:
+    if settings["isotropic"] is not None:
         resize_factor = calc_isotropic_factor()
         segments = np.copy(segments) # since editing segs
         segments[:, :3] *= resize_factor[:3]

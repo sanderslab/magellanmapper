@@ -226,7 +226,7 @@ _scale_factors[:, 0] = _scale_zs
 #print(_scale_factors)
 
 # isotropic factors
-_isotropic_zs = np.arange(0.1, 1.1, 0.1)
+_isotropic_zs = np.arange(0.61, 0.8, 0.01)
 _isotropic_factors = np.ones((len(_isotropic_zs), 3))
 _isotropic_factors[:, 0] = _isotropic_zs
 #print(_isotropic_factors)

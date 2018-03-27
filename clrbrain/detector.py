@@ -110,6 +110,9 @@ def detect_blobs(roi, channel):
     """
     # use 3D blob detection from skimage fork
     time_start = time()
+    isotropic = config.process_settings["isotropic"]
+    if isotropic is not None:
+        roi = plot_3d.make_isotropic(roi, isotropic)
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     blobs_all = []
     for i in channels:
@@ -155,6 +158,10 @@ def detect_blobs(roi, channel):
     if not blobs_all:
         return None
     blobs_all = np.vstack(blobs_all)
+    if isotropic is not None:
+        isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
+        blobs_all = multiply_blob_rel_coords(blobs_all, 1 / isotropic_factor)
+        blobs_all = multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
     return blobs_all
 
 def format_blobs(blobs, channel=None):

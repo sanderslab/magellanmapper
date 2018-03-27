@@ -147,14 +147,9 @@ def segment_sub_roi(sub_rois_offsets, coord):
             identify the sub-ROI, and the denoised sub-ROI.
     """
     sub_roi = sub_rois[coord]
-    sub_roi = plot_3d.make_isotropic(sub_roi)
     lib_clrbrain.printv("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     segments = detector.detect_blobs(sub_roi, config.channel)
-    isotropic_factor = plot_3d.calc_isotropic_factor(
-        config.process_settings["isotropic"])
-    segments = detector.multiply_blob_rel_coords(segments, 1 / isotropic_factor)
-    segments = detector.multiply_blob_abs_coords(segments, 1 / isotropic_factor)
     offset = sub_rois_offsets[coord]
     #print("segs before (offset: {}):\n{}".format(offset, segments))
     if segments is not None:

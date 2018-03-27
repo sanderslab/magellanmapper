@@ -122,9 +122,9 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.5
         settings["segment_size"] = 200
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = 0.5
+        settings["segmenting_mean_thresh"] = -0.5
         settings["scale_factor"] = (0.63, 1, 1)
-        settings["isotropic"] = (1, 3, 3)
+        settings["isotropic"] = (0.5, 1, 1)#(1, 3, 3)
         
         if settings_type.endswith("_contrast"):
             settings["microscope_type"] = settings_type

@@ -253,7 +253,7 @@ def make_isotropic(roi):
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
     print("original ROI shape: {}, isotropic: {}"
           .format(roi.shape, isotropic_shape))
-    return transform.resize(roi, isotropic_shape)
+    return transform.resize(roi, isotropic_shape, preserve_range=True)
 
 def plot_3d_surface(roi, vis, channel):
     """Plots areas with greater intensity as 3D surfaces.

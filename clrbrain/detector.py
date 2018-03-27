@@ -204,6 +204,19 @@ def shift_blob_abs_coords(blobs, offset):
     blobs[..., -1*len(offset):] += offset
     return blobs
 
+def multiply_blob_rel_coords(blobs, factor):
+    if blobs is not None:
+        rel_coords = blobs[..., :3] * factor
+        blobs[..., :3] = np.around(rel_coords).astype(np.int)
+    return blobs
+
+def multiply_blob_abs_coords(blobs, factor):
+    if blobs is not None:
+        start = -1*len(factor)
+        abs_coords = blobs[..., start:] * factor
+        blobs[..., start:] = np.around(abs_coords).astype(np.int)
+    return blobs
+
 def get_blob_confirmed(blob):
     if blob.ndim > 1:
         return blob[..., 4]

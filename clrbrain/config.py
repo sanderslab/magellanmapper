@@ -218,15 +218,6 @@ roc_dict = OrderedDict([
     )
 ])
 
-roc_dict = OrderedDict([
-    ("threshold_otsu", OrderedDict([
-        ("thresholding", "otsu"),
-        ("thresholding_size", np.array([64]))])
-        #("thresholding_size", np.arange(32, 128, 4))])
-        #("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
-    )
-])
-'''
 _scale_zs = np.arange(0.57, 0.61, 0.01)
 _scale_factors = np.ones((len(_scale_zs), 3))
 _scale_factors[:, 0] = _scale_zs
@@ -250,7 +241,15 @@ roc_dict = OrderedDict([
         #("num_sigma", np.arange(5, 16, 1)),
     ]))
 ])
+'''
 
+roc_dict = OrderedDict([
+    ("unfused_baseline", OrderedDict([
+        ("scale_factor", np.array([(0.59, 1, 1)])),
+        ("clip_vmax", np.arange(98.5, 99, 0.5)),
+        ("clip_max", np.arange(0.5, 0.6, 0.1)),
+    ]))
+])
 
 
 # default colors using 7-color palatte for color blindness

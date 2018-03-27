@@ -734,6 +734,10 @@ def process_file(filename_base, offset, roi_size):
     if image5d is None:
         if os.path.isdir(config.filename):
             image5d = importer.import_dir(os.path.join(config.filename, "*"))
+        elif (config.filename.endswith(".nii.gz") 
+              or config.filename.endswith(".mha")):
+            image5d = importer.read_file_sitk(
+                config.filename, config.filenames[1], config.series)
         else:
             image5d = importer.read_file(config.filename, config.series)
     

@@ -29,6 +29,13 @@ import javabridge as jb
 import bioformats as bf
 from skimage import io
 from skimage import transform
+try:
+    import SimpleITK as sitk
+except ImportError as e:
+    print(e)
+    print("WARNING: SimpleElastix could not be found, so there will be error "
+          "when attempting to read Nifti, raw, or other formats by "
+          "SimpleITK/SimpleElastix")
 
 from clrbrain import chunking
 from clrbrain import config
@@ -186,6 +193,7 @@ def find_sizes(filename):
     return sizes, dtype
 
 def _make_filenames(filename, series, modifier="", ext="czi"):
+    print("filename: {}".format(filename))
     filename_base = filename_to_base(filename, series, modifier, ext)
     print("filename_base: {}".format(filename_base))
     filename_image5d_npz = filename_base + SUFFIX_IMAGE5D
@@ -549,6 +557,16 @@ def read_file(filename, series, load=True, z_max=-1,
                      [shape], [detector.resolutions[series]], 
                      detector.magnification, detector.zoom, 
                      image5d.dtype, near_mins, near_maxs)
+    return image5d
+
+def read_file_sitk(filename_sitk, filename_np, series):
+    ext = lib_clrbrain.get_filename_ext(filename_np)
+    filename_image5d_npz, filename_info_npz = _make_filenames(
+        filename_np, series, ext=ext)
+    output, image5d_ver_num = read_info(filename_info_npz)
+    img_sitk = sitk.ReadImage(filename_sitk)
+    img_np = sitk.GetArrayFromImage(img_sitk)
+    image5d = img_np[None] # insert time axis as first dim
     return image5d
 
 def import_dir(path):

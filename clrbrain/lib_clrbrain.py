@@ -172,6 +172,17 @@ def backup_file(path, modifier=""):
             break
         i += 1
 
+def is_binary(img):
+    """Check if image is binary.
+    
+    Args:
+        img: Image array.
+    
+    Returns:
+        True if the image is composed of only 0 and 1 values.
+    """
+    return ((img == 0) | (img == 1)).all()
+
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))
     a = np.arange(2 * 3).reshape(2, 3).astype(np.float)

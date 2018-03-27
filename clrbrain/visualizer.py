@@ -43,6 +43,7 @@ from clrbrain import cli
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import importer
+from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 from clrbrain import register
@@ -373,8 +374,13 @@ class Visualization(HasTraits):
                     self.roi, self, config.channel)
             
             # process ROI in prep for showing filtered 2D view and segmenting
-            self.roi = plot_3d.saturate_roi(self.roi, channel=config.channel)
-            self.roi = plot_3d.denoise_roi(self.roi, config.channel)
+            if not lib_clrbrain.is_binary(self.roi):
+                self.roi = plot_3d.saturate_roi(
+                    self.roi, channel=config.channel)
+                self.roi = plot_3d.denoise_roi(self.roi, config.channel)
+            else:
+                lib_clrbrain.printv(
+                    "binary image detected, will not preprocess")
         
         else:
             self.scene.mlab.clf()

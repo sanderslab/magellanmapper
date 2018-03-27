@@ -122,7 +122,7 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.5
         settings["segment_size"] = 200
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = -5
+        settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)
         settings["isotropic"] = (0.5, 1, 1)#(1, 3, 3)
         
@@ -226,7 +226,7 @@ _scale_factors[:, 0] = _scale_zs
 #print(_scale_factors)
 
 # isotropic factors
-_isotropic_zs = np.arange(0.61, 0.8, 0.01)
+_isotropic_zs = np.arange(0.91, 1.1, 0.01)
 _isotropic_factors = np.ones((len(_isotropic_zs), 3))
 _isotropic_factors[:, 0] = _isotropic_zs
 #print(_isotropic_factors)
@@ -245,6 +245,7 @@ roc_dict = OrderedDict([
         #("overlap", np.arange(0.5, 0.6, 0.1)),
         #("scale_factor", _scale_factors),
         #("scale_factor", np.array([(0.6, 1, 1)])),
+        ("segmenting_mean_thresh", -5),
         ("isotropic", _isotropic_factors),
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),

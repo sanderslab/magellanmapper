@@ -151,7 +151,8 @@ def segment_sub_roi(sub_rois_offsets, coord):
     lib_clrbrain.printv("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     segments = detector.detect_blobs(sub_roi, config.channel)
-    isotropic_factor = plot_3d.calc_isotropic_factor()
+    isotropic_factor = plot_3d.calc_isotropic_factor(
+        config.process_settings["isotropic"])
     segments = detector.multiply_blob_rel_coords(segments, 1 / isotropic_factor)
     segments = detector.multiply_blob_abs_coords(segments, 1 / isotropic_factor)
     offset = sub_rois_offsets[coord]

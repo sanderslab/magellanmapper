@@ -239,16 +239,16 @@ def deconvolve(roi):
     #roi_deconvolved = restoration.unsupervised_wiener(roi, psf)
     return roi_deconvolved
 
-def calc_isotropic_factor():
+def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))
-    resize_factor *= config.process_settings["isotropic"]
+    resize_factor *= scale
     #print("isotropic resize factor: {}".format(resize_factor))
     return resize_factor
     #return np.array((1, 1, 1))
 
-def make_isotropic(roi):
-    resize_factor = calc_isotropic_factor()
+def make_isotropic(roi, scale):
+    resize_factor = calc_isotropic_factor(scale)
     isotropic_shape = np.array(roi.shape)
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
     print("original ROI shape: {}, isotropic: {}"
@@ -273,8 +273,9 @@ def plot_3d_surface(roi, vis, channel):
     vis_mlab.clf()
     roi = saturate_roi(roi, 97, channel=channel)
     settings = config.process_settings
-    if settings["isotropic"] is not None:
-        roi = make_isotropic(roi)
+    isotropic_vis = settings["isotropic_vis"]
+    if isotropic_vis is not None:
+        roi = make_isotropic(roi, isotropic_vis)
     
     colormaps = ("Greens", "Reds")
     multichannel, channels = setup_channels(roi, channel, 3)
@@ -354,8 +355,9 @@ def plot_3d_points(roi, vis, channel):
     # streamline the image
     roi = saturate_roi(roi, 99.5, channel)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
-    if settings["isotropic"] is not None:
-        roi = make_isotropic(roi)
+    isotropic_vis = settings["isotropic_vis"]
+    if isotropic_vis is not None:
+        roi = make_isotropic(roi, isotropic_vis)
     
     # separate parallel arrays for each dimension of all coordinates for
     # Mayavi input format, with the ROI itself given as a 1D scalar array 
@@ -555,8 +557,9 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     if segments.shape[0] <= 0:
         return None, None, 0
     settings = config.process_settings
-    if settings["isotropic"] is not None:
-        resize_factor = calc_isotropic_factor()
+    isotropic_vis = settings["isotropic_vis"]
+    if isotropic_vis is not None:
+        resize_factor = calc_isotropic_factor(isotropic_vis)
         segments = np.copy(segments) # since editing segs
         segments[:, :3] *= resize_factor[:3]
         #print(segments)

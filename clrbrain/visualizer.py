@@ -518,7 +518,7 @@ class Visualization(HasTraits):
         # default camera position after initiation, with distance based on 
         # ROI size and further zoomed out based on any isotropic factor resizing
         zoom_out = 3
-        isotropic_factor = config.process_settings["isotropic"]
+        isotropic_factor = config.process_settings["isotropic_vis"]
         if isotropic_factor is not None:
             # only use max dimension since this factor seems to influence the 
             # overall zoom the most

@@ -141,7 +141,7 @@ def detect_blobs(roi, channel):
                              min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                              max_sigma=settings["max_sigma_factor"]*scaling_factor, 
                              num_sigma=settings["num_sigma"], 
-                             threshold=0.1,
+                             threshold=settings["detection_threshold"],
                              overlap=overlap, scale=res_norm)
         lib_clrbrain.printv(
             "time for 3D blob detection: {}".format(time() - time_start))

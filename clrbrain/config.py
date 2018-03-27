@@ -55,6 +55,7 @@ class ProcessSettings(dict):
         self["min_sigma_factor"] = 3
         self["max_sigma_factor"] = 30
         self["num_sigma"] = 10
+        self["detection_threshold"] = 0.1
         self["overlap"] = 0.5
         self["thresholding"] = None
         self["thresholding_size"] = -1
@@ -142,7 +143,10 @@ def update_process_settings(settings, settings_type):
         elif settings_type.endswith("_small"):
             settings["vis_3d"] = "surface"
             settings["points_3d_thresh"] = 0.3 # used only if not surface
-            settings["isotropic"] = True
+            settings["isotropic"] = (1, 1, 1)
+
+        elif settings_type.endswith("_binary"):
+            settings["detection_threshold"] = 0.001
 
 
 # default settings and list of settings for each channel

@@ -202,7 +202,7 @@ install_shallow_clone() {
             # merge in updates only if on same branch as given one, 
             # differences exist between current status and upstream 
             # branch, and no tracked files have uncommitted changes
-            git merge
+            git merge origin/$branch
             echo "You may need to run post-update step such as "
             echo "\"python setup.py build_ext -i\""
         else

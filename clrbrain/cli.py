@@ -582,8 +582,12 @@ def main(process_args_only=False):
     elif args.truth_db == TRUTH_DB_TYPES[2]:
         # loads verified DB as the main DB, which includes copies of truth 
         # values with flags for whether they were detected
+        name = sqlite.DB_NAME_VERIFIED
+        if args.db is not None:
+            # explicitly set DB name takes precedence
+            name = config.db_name
         try:
-            config.db = _load_db(sqlite.DB_NAME_VERIFIED)
+            config.db = _load_db(name)
             config.verified_db = config.db
         except FileNotFoundError as e:
             print(e)

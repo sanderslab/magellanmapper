@@ -46,12 +46,12 @@ class ProcessSettings(dict):
     def __init__(self, *args, **kwargs):
         self["microscope_type"] = "default"
         self["vis_3d"] = "points"
+        self["points_3d_thresh"] = 0.85
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2
         self["clip_max"] = 1.0
         self["tot_var_denoise"] = False
         self["unsharp_strength"] = 0.3
-        self["points_3d_thresh"] = 0.85
         self["min_sigma_factor"] = 3
         self["max_sigma_factor"] = 30
         self["num_sigma"] = 10
@@ -113,6 +113,7 @@ def update_process_settings(settings, settings_type):
     elif settings_type.startswith("lightsheet_5x"):
         settings["microscope_type"] = settings_type
         #settings["vis_3d"] = "surface"
+        settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
         settings["clip_max"] = 0.6

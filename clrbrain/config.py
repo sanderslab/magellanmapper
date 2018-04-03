@@ -231,9 +231,15 @@ _scale_factors[:, 0] = _scale_zs
 #print(_scale_factors)
 
 # isotropic factors
-_isotropic_zs = np.arange(0.91, 1.1, 0.01)
+_isotropic_zs = np.arange(1.1, 1.16, 0.01)
 _isotropic_factors = np.ones((len(_isotropic_zs), 3))
 _isotropic_factors[:, 0] = _isotropic_zs
+#print(_isotropic_factors)
+
+# pruning tolerance factors
+_prune_tol_zs = np.arange(2.5, 4.6, 0.5)
+_prune_tol_factors = np.ones((len(_prune_tol_zs), 3)) * 1.3
+_prune_tol_factors[:, 0] = _prune_tol_zs
 #print(_isotropic_factors)
 
 roc_dict = OrderedDict([
@@ -251,8 +257,10 @@ roc_dict = OrderedDict([
         #("scale_factor", _scale_factors),
         #("scale_factor", np.array([(0.6, 1, 1)])),
         ("segmenting_mean_thresh", -5),
-        ("isotropic", _isotropic_factors),
-        #("isotropic", np.array([(0.96, 1, 1)])),
+        #("isotropic", _isotropic_factors),
+        ("isotropic", np.array([(0.96, 1, 1)])),
+        ("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
+        #("prune_tol_factor", _prune_tol_factors),
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
         #("clip_max", np.arange(0.3, 0.7, 0.1)),

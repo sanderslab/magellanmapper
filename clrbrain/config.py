@@ -259,7 +259,7 @@ roc_dict = OrderedDict([
         ("segmenting_mean_thresh", -5),
         #("isotropic", _isotropic_factors),
         ("isotropic", np.array([(0.96, 1, 1)])),
-        ("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
+        #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
         #("prune_tol_factor", _prune_tol_factors),
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
@@ -273,6 +273,7 @@ roc_dict = OrderedDict([
         #("min_sigma_factor", np.arange(2.5, 3.6, 0.1)),
         #("max_sigma_factor", np.arange(3.5, 4.6, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
+        ("detection_threshold", np.arange(0.08, 0.13, 0.01)),
     ]))
 ])
 

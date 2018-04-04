@@ -755,7 +755,18 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             title = "{}x".format(int(zoom))
         ax.set_title(title)
     
-    def show_overview(ax, img2d_zoom, level):
+    def show_overview(ax, img2d, level):
+        """Show overview image with progressive zooming on the ROI for each 
+        zoom level.
+        
+        Args:
+            ax: Subplot axes.
+            img2d: Image in which to zoom.
+            level: Zoom level, where 0 is the original image.
+        
+        Returns:
+            The zoom amount as by which ``img2d`` was divided.
+        """
         patch_offset = offset[0:2]
         zoom = 1
         if level > 0:
@@ -768,24 +779,23 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             # progressively decrease size, zooming in for each level
             zoom = zoom_mult + 3
             size = np.floor(zoom_shape / zoom).astype(int)
-            print("zoom: {}, check: {}".format(zoom, np.divide(zoom_shape, size)))
             end = np.add(origin, size)
             # keep the zoomed area within the full 2D image
             for j in range(len(origin)):
                 if end[j] > zoom_shape[j]:
                     origin[j] -= end[j] - zoom_shape[j]
             # zoom and position ROI patch position
-            img2d_zoom = img2d_zoom[origin[1]:end[1], origin[0]:end[0]]
-            print(img2d_zoom.shape, origin, size)
+            img2d = img2d[origin[1]:end[1], origin[0]:end[0]]
+            #print(img2d_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
         # show the zoomed 2D image along with rectangle showing ROI, 
         # downsampling by using threshold as mask
         downsample = np.max(
-            np.divide(img2d_zoom.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
+            np.divide(img2d.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
         if downsample < 1: 
             downsample = 1
         imshow_multichannel(
-            ax, img2d_zoom[::downsample, ::downsample], channel, colormaps, 
+            ax, img2d[::downsample, ::downsample], channel, colormaps, 
             aspect, 1, plot_3d.near_min, vmax_overview)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
@@ -795,13 +805,25 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         return zoom
     
     def scroll_overview(event):
+        """Scroll through overview images along their orthogonal axis if the 
+        mouse is positioned within one of the scroll windows.
+        
+        Args:
+            event: Mouse or key event. For mouse events, scroll step sizes 
+                will be used for movements. For key events, up/down arrows 
+                will be used.
+        """
         if event.inaxes in ax_overviews:
+            # only respond to events with mouse in an overview window
             nonlocal z_overview
             step = 0
             if isinstance(event, backend_bases.MouseEvent):
+                # scroll movements are scaled from 0 for each event
                 step += event.step
             elif isinstance(event, backend_bases.KeyEvent):
-                print("got key {}".format(event.key))
+                # finer-grained movements through keyboard controls since the 
+                # finest scroll movements may be > 1
+                #print("got key {}".format(event.key))
                 if event.key == "up":
                     step += 1
                 elif event.key == "down":
@@ -814,11 +836,13 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             elif z_overview_new >= max_size:
                 z_overview_new = max_size - 1
             if step != 0 and z_overview_new != z_overview:
+                # move only if step registered and changing position
                 z_overview = z_overview_new
                 img2d, aspect, origin = extract_plane(
                     image5d, z_overview, plane)
                 for level in range(zoom_levels - 1):
                     ax = ax_overviews[level]
+                    ax.clear() # prevent performance degradation
                     zoom = show_overview(ax, img2d, level)
                     set_overview_title(ax, plane, z_overview, zoom, level)
     
@@ -1048,6 +1072,15 @@ def extract_plane(image5d, plane_n, plane=None):
     return img2d, aspect, origin
 
 def max_plane(img3d, plane):
+    """Get the max plane for the given 3D image.
+    
+    Args:
+        img3d: Image array in (z, y, x) order.
+        plane: Plane as a value from :attr:``PLANE``.
+    
+    Returns:
+        Number of elements along ``plane``'s axis.
+    """
     shape = img3d.shape
     if plane == PLANE[1]:
         return shape[1]
@@ -1057,6 +1090,14 @@ def max_plane(img3d, plane):
         return shape[0]
 
 def get_plane_axis(plane):
+    """Gets the name of the plane corresponding to the given axis.
+    
+    Args:
+        plane: An element of :attr:``PLANE``.
+    
+    Returns:
+        The axis name orthogonal to :attr:``PLANE``.
+    """
     plane_axis = "z"
     if plane == PLANE[1]:
         plane_axis = "y"

@@ -399,17 +399,15 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
     hide_axes(ax)
     size = image5d.shape
     # swap columns if showing a different plane
-    plane_axis = "z"
+    plane_axis = get_plane_axis(plane)
     image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
     if plane == PLANE[1]:
         # "xz" planes
         size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
-        plane_axis = "y"
     elif plane == PLANE[2]:
         # "yz" planes
         size = lib_clrbrain.swap_elements(size, 0, 2, image5d_shape_offset)
         size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
-        plane_axis = "x"
     z = offset[2]
     ax.set_title("{}={}".format(plane_axis, z))
     if border is not None:
@@ -749,8 +747,17 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # overview subplotting
     ax_overviews = [] # overview axes
     
+    def set_overview_title(ax, plane, z_overview, zoom, level):
+        plane_axis = get_plane_axis(plane)
+        if level == 0:
+            title = "{}={}".format(plane_axis, z_overview)
+        else:
+            title = "{}x".format(int(zoom))
+        ax.set_title(title)
+    
     def show_overview(ax, img2d_zoom, level):
         patch_offset = offset[0:2]
+        zoom = 1
         if level > 0:
             # move origin progressively closer with each zoom level
             zoom_mult = math.pow(level, 3)
@@ -759,7 +766,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 / (zoom_levels + zoom_mult)).astype(int)
             zoom_shape = np.flipud(img2d.shape[:2])
             # progressively decrease size, zooming in for each level
-            size = np.floor(zoom_shape / (zoom_mult + 3)).astype(int)
+            zoom = zoom_mult + 3
+            size = np.floor(zoom_shape / zoom).astype(int)
+            print("zoom: {}, check: {}".format(zoom, np.divide(zoom_shape, size)))
             end = np.add(origin, size)
             # keep the zoomed area within the full 2D image
             for j in range(len(origin)):
@@ -783,6 +792,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
         add_scale_bar(ax, downsample)
+        return zoom
     
     def scroll_overview(event):
         if event.inaxes in ax_overviews:
@@ -808,8 +818,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 img2d, aspect, origin = extract_plane(
                     image5d, z_overview, plane)
                 for level in range(zoom_levels - 1):
-                    show_overview(ax_overviews[level], img2d, level)
-        
+                    ax = ax_overviews[level]
+                    zoom = show_overview(ax, img2d, level)
+                    set_overview_title(ax, plane, z_overview, zoom, level)
     
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels
@@ -819,7 +830,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         ax = plt.subplot(gs[0, level])
         ax_overviews.append(ax)
         hide_axes(ax)
-        show_overview(ax, img2d, level)
+        zoom = show_overview(ax, img2d, level)
+        set_overview_title(ax, plane, z_overview, zoom, level)
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
     
@@ -1043,6 +1055,14 @@ def max_plane(img3d, plane):
         return shape[2]
     else:
         return shape[0]
+
+def get_plane_axis(plane):
+    plane_axis = "z"
+    if plane == PLANE[1]:
+        plane_axis = "y"
+    elif plane == PLANE[2]:
+        plane_axis = "x"
+    return plane_axis
 
 def cycle_colors(i):
     num_colors = len(config.colors)

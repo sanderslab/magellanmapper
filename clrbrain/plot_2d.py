@@ -25,6 +25,7 @@ from matplotlib import pyplot as plt, cm
 from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
+import matplotlib.backend_bases as backend_bases
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
@@ -757,8 +758,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 offset[0:2], zoom_levels + zoom_mult - 1) 
                 / (zoom_levels + zoom_mult)).astype(int)
             zoom_shape = np.flipud(img2d.shape[:2])
-            #zoom_shape = np.array(img2d.shape[1::-1])
-            #print("zoom_shape: {}".format(zoom_shape))
             # progressively decrease size, zooming in for each level
             size = np.floor(zoom_shape / (zoom_mult + 3)).astype(int)
             end = np.add(origin, size)
@@ -770,7 +769,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             img2d_zoom = img2d_zoom[origin[1]:end[1], origin[0]:end[0]]
             print(img2d_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
-        print("patch_offset: {}".format(patch_offset))
         # show the zoomed 2D image along with rectangle showing ROI, 
         # downsampling by using threshold as mask
         downsample = np.max(
@@ -789,16 +787,28 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     def scroll_overview(event):
         if event.inaxes in ax_overviews:
             nonlocal z_overview
-            z_overview += event.step
+            step = 0
+            if isinstance(event, backend_bases.MouseEvent):
+                step += event.step
+            elif isinstance(event, backend_bases.KeyEvent):
+                print("got key {}".format(event.key))
+                if event.key == "up":
+                    step += 1
+                elif event.key == "down":
+                    step -= 1
+            z_overview_new = z_overview + step
+            print("scroll step of {} to z {}".format(step, z_overview))
             max_size = max_plane(image5d[0], plane)
-            if z_overview < 0:
-                z_overview = 0
-            elif z_overview >= max_size:
-                z_overview = max_size - 1
-            print("mouse scroll step of {} to z {}".format(event.step, z_overview))
-            img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
-            for level in range(zoom_levels - 1):
-                show_overview(ax_overviews[level], img2d, level)
+            if z_overview_new < 0:
+                z_overview_new = 0
+            elif z_overview_new >= max_size:
+                z_overview_new = max_size - 1
+            if step != 0 and z_overview_new != z_overview:
+                z_overview = z_overview_new
+                img2d, aspect, origin = extract_plane(
+                    image5d, z_overview, plane)
+                for level in range(zoom_levels - 1):
+                    show_overview(ax_overviews[level], img2d, level)
         
     
     # overview images taken from the bottom plane of the offset, with
@@ -811,6 +821,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         hide_axes(ax)
         show_overview(ax, img2d, level)
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
+    fig.canvas.mpl_connect("key_press_event", scroll_overview)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     ax_z_list = []
@@ -1003,7 +1014,7 @@ def extract_plane(image5d, plane_n, plane=None):
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
         origin = "lower"
         img2d = img3d[:, plane_n, :]
-        print("img2d.shape: {}".format(img2d.shape))
+        #print("img2d.shape: {}".format(img2d.shape))
         if img2d.ndim > 2 and img2d.shape[1] > 1:
             # make y the "z" axis for stack of 2D plots, such as animations
             img2d = np.swapaxes(img2d, 0, 1)
@@ -1012,7 +1023,7 @@ def extract_plane(image5d, plane_n, plane=None):
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
         origin = "lower"
         img2d = img3d[:, :, plane_n]
-        print("img2d.shape: {}".format(img2d.shape))
+        #print("img2d.shape: {}".format(img2d.shape))
         if img2d.ndim > 2 and img2d.shape[2] > 1:
             # make x the "z" axis for stack of 2D plots, such as animations
             img2d = np.swapaxes(img2d, 0, 2)
@@ -1021,7 +1032,7 @@ def extract_plane(image5d, plane_n, plane=None):
         # defaults to "xy"
         aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
         img2d = img3d[plane_n, :, :]
-    print("aspect: {}, origin: {}".format(aspect, origin))
+    #print("aspect: {}, origin: {}".format(aspect, origin))
     return img2d, aspect, origin
 
 def max_plane(img3d, plane):

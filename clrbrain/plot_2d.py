@@ -745,20 +745,14 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     gs = gridspec.GridSpec(2, top_cols, wspace=0.7, hspace=0.4,
                            height_ratios=height_ratios)
     
+    # overview subplotting
+    ax_overviews = [] # overview axes
     
-    
-    # overview images taken from the bottom plane of the offset, with
-    # progressively zoomed overview images if set for additional zoom levels
-    overview_cols = zoom_plot_cols // zoom_levels
-    colormaps = config.process_settings["channel_colors"]
-    for i in range(zoom_levels - 1):
-        ax = plt.subplot(gs[0, i])
-        hide_axes(ax)
-        img2d_zoom = img2d
+    def show_overview(ax, img2d_zoom, level):
         patch_offset = offset[0:2]
-        if i > 0:
+        if level > 0:
             # move origin progressively closer with each zoom level
-            zoom_mult = math.pow(i, 3)
+            zoom_mult = math.pow(level, 3)
             origin = np.floor(np.multiply(
                 offset[0:2], zoom_levels + zoom_mult - 1) 
                 / (zoom_levels + zoom_mult)).astype(int)
@@ -791,6 +785,32 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
         add_scale_bar(ax, downsample)
+    
+    def scroll_overview(event):
+        if event.inaxes in ax_overviews:
+            nonlocal z_overview
+            z_overview += event.step
+            max_size = max_plane(image5d[0], plane)
+            if z_overview < 0:
+                z_overview = 0
+            elif z_overview >= max_size:
+                z_overview = max_size - 1
+            print("mouse scroll step of {} to z {}".format(event.step, z_overview))
+            img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
+            for level in range(zoom_levels - 1):
+                show_overview(ax_overviews[level], img2d, level)
+        
+    
+    # overview images taken from the bottom plane of the offset, with
+    # progressively zoomed overview images if set for additional zoom levels
+    overview_cols = zoom_plot_cols // zoom_levels
+    colormaps = config.process_settings["channel_colors"]
+    for level in range(zoom_levels - 1):
+        ax = plt.subplot(gs[0, level])
+        ax_overviews.append(ax)
+        hide_axes(ax)
+        show_overview(ax, img2d, level)
+    fig.canvas.mpl_connect("scroll_event", scroll_overview)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     ax_z_list = []
@@ -977,6 +997,7 @@ def extract_plane(image5d, plane_n, plane=None):
         img3d = image5d[:]
     # extract a single 2D plane or a stack of planes if plane_n is a slice, 
     # which would be used for animations
+    img2d = None
     if plane == PLANE[1]:
         # xz plane
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
@@ -1002,6 +1023,15 @@ def extract_plane(image5d, plane_n, plane=None):
         img2d = img3d[plane_n, :, :]
     print("aspect: {}, origin: {}".format(aspect, origin))
     return img2d, aspect, origin
+
+def max_plane(img3d, plane):
+    shape = img3d.shape
+    if plane == PLANE[1]:
+        return shape[1]
+    elif plane == PLANE[2]:
+        return shape[2]
+    else:
+        return shape[0]
 
 def cycle_colors(i):
     num_colors = len(config.colors)

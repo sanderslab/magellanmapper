@@ -395,11 +395,18 @@ class Visualization(HasTraits):
         self._reset_segments()
     
     def _setup_for_image(self):
+        """Setup GUI parameters for the loaded image5d.
+        """
+        # set up channel spinner based on number of channels available
         if cli.image5d.ndim >= 5:
+            # increase max channels based on channel dimension
             self._channel_high = cli.image5d.shape[4] - 1
-        if config.channel is None:
-            config.channel = 0
-        self._channel = config.channel
+        else:
+            # only one channel available
+            self._channel_low = 0
+        # None channel defaults to all channels, represented in the channel 
+        # spinner here by -1 
+        self._channel = -1 if config.channel is None else config.channel
         
         # dimension max values in pixels
         size = cli.image5d.shape[1:4]

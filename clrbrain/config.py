@@ -194,7 +194,7 @@ SUFFIX_INFO_PROC = "_info_proc.npz"
 filename = None # current image file path
 filenames = None # list of multiple image paths
 series = 0 # series for multi-stack files
-channel = 0 # channel of interest
+channel = None # channel of interest, where None specifies all channels
 
 
 # DATABASE

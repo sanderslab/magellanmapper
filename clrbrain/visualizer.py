@@ -397,6 +397,8 @@ class Visualization(HasTraits):
     def _setup_for_image(self):
         if cli.image5d.ndim >= 5:
             self._channel_high = cli.image5d.shape[4] - 1
+        if config.channel is None:
+            config.channel = 0
         self._channel = config.channel
         
         # dimension max values in pixels

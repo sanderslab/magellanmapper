@@ -439,6 +439,7 @@ def read_file(filename, series, load=True, z_max=-1,
                 # load original image, using mem-mapped accessed for the image
                 # file to minimize memory requirement, only loading on-the-fly
                 image5d = np.load(filename_image5d_npz, mmap_mode="r")
+                print("image5d shape: {}".format(image5d.shape))
                 if offset is not None and size is not None:
                     # simplifies to reducing the image to a subset as an ROI if 
                     # offset and size given
@@ -464,28 +465,34 @@ def read_file(filename, series, load=True, z_max=-1,
     time_start = time()
     image5d = None
     shape = None
-    load_channel = 0
     if offset is None:
         offset = (0, 0, 0) # (x, y, z)
-    name = os.path.basename(filename)
-    filenames = sorted(glob.glob(
-        os.path.splitext(filename)[0] + CHANNEL_SEPARATOR + "*"))
-    if len(filenames) == 0:
-        filenames.append(filename)
-    print(filenames)
-    num_files = len(filenames)
+    num_files = 1
     if ext == "tiff" or ext == "tif":
         # import multipage TIFFs
         print("Loading multipage TIFF...")
         
+        # find files for each channel, defaulting to load all channels available
+        name = os.path.basename(filename)
+        channel_num = "*" if channel is None else "{}*".format(channel)
+        filenames = sorted(glob.glob(
+            os.path.splitext(filename)[0] + CHANNEL_SEPARATOR + channel_num))
+        print(filenames)
+        num_files = len(filenames)
+        
+        # require resolution information as it will be necessary for 
+        # detections, etc.
         if detector.resolutions is None:
             raise IOError("Could not import {}. Please specify resolutions, "
                           "magnification, and zoom.".format(filenames[0]))
         sizes, dtype = find_sizes(filenames[0])
         shape = list(sizes[0])
+        
+        # fit the final shape to the number of channels
         if num_files > 1:
             shape[-1] = num_files
         if shape[-1] == 1:
+            # remove channel dimension if only single channel
             shape = shape[:-1]
         shape = tuple(shape)
         print(shape)
@@ -495,20 +502,20 @@ def read_file(filename, series, load=True, z_max=-1,
         print("Loading {} file...".format(ext))
         
         # parses the XML tree directly
+        filenames = [filename]
         names, sizes, detector.resolutions, detector.magnification, \
             detector.zoom, pixel_type = parse_ome_raw(filenames[0])
         shape = sizes[series]
         if z_max != -1:
             shape[1] = z_max
         #dtype = getattr(np, pixel_type)
-        # generate image stack dimensions based on whether channel dim exists
-        if shape[4] <= 1:
-            # for 1 channel images, remove channel dimension since redundant
+        if shape[4] <= 1 or channel is not None:
+            # remove channel dimension if only single channel or channel is 
+            # explicitly specified
             shape = shape[:-1]
-            load_channel = 0
-        else:
-            # load all channels
-            load_channel = None
+            if channel is None:
+                # default to channel 0 if not specified by only single channel
+                channel = 0
         name = names[series]
     near_mins = []
     near_maxs = []
@@ -525,7 +532,7 @@ def read_file(filename, series, load=True, z_max=-1,
         for t in range(shape[0]):
             for z in range(shape[1]):
                 print("loading planes from [{}, {}]".format(t, z))
-                img = rdr.read(z=(z + offset[2]), t=t, c=load_channel,
+                img = rdr.read(z=(z + offset[2]), t=t, c=channel,
                                series=series, rescale=False)
                 if image5d is None:
                     # open file as memmap to directly output to disk, which is much 

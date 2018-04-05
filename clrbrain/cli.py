@@ -742,7 +742,8 @@ def process_file(filename_base, offset, roi_size):
             image5d = importer.read_file_sitk(
                 config.filename, config.filenames[1], config.series)
         else:
-            image5d = importer.read_file(config.filename, config.series)
+            image5d = importer.read_file(
+                config.filename, config.series, channel=config.channel)
     
     if config.load_labels is not None:
         # load labels image and set up scaling

@@ -23,14 +23,14 @@ def _import_img(i, path, rescale, multichannel):
     img = io.imread(path)
     img = transform.rescale(
         img, rescale, mode="reflect", multichannel=multichannel, 
-        preserve_range=True)
+        preserve_range=True, anti_aliasing=True)
     return i, img
 
 def _process_plane(i, plane, rescale, multichannel):
     print("processing plane {}".format(i))
     img = transform.rescale(
         plane, rescale, mode="reflect", multichannel=multichannel, 
-        preserve_range=True)
+        preserve_range=True, anti_aliasing=True)
     return i, img
 
 def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 

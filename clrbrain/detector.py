@@ -112,6 +112,8 @@ def detect_blobs(roi, channel):
     time_start = time()
     isotropic = config.process_settings["isotropic"]
     if isotropic is not None:
+        # interpolate for (near) isotropy during detection, using only the 
+        # first process settings since applies to entire ROI
         roi = plot_3d.make_isotropic(roi, isotropic)
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     blobs_all = []
@@ -125,18 +127,22 @@ def detect_blobs(roi, channel):
         scale = calc_scaling_factor()
         scaling_factor = scale[2]
         
-        # adjust scaling for blob pruning
-        res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
-        # further tweak, typically scaling down
-        res_norm = np.multiply(res_norm, settings["scale_factor"])
-        segmenting_mean = np.mean(roi_detect)
-        #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
-        lib_clrbrain.printv("segmenting_mean: {}".format(segmenting_mean))
+        res_norm = None
         overlap = settings["overlap"]
-        if segmenting_mean > settings["segmenting_mean_thresh"]:
-            # turn off scaling for higher density region
-            res_norm = None
-            overlap += 0.05
+        if settings["scale_factor"] is not None:
+            # anisotropic kernel for blob pruning; typically don't mix with 
+            # isotropic factor
+            res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
+            # further tweak, typically scaling down
+            res_norm = np.multiply(res_norm, settings["scale_factor"])
+            segmenting_mean = np.mean(roi_detect)
+            #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
+            lib_clrbrain.printv("segmenting_mean: {}".format(segmenting_mean))
+            if segmenting_mean > settings["segmenting_mean_thresh"]:
+                # turn off scaling for higher density region
+                res_norm = None
+                overlap += 0.05
+        #print("overlap: {}, scale_factor: {}".format(overlap, settings["scale_factor"]))
         #print("res_norm: {}".format(res_norm))
         
         # find blobs
@@ -159,6 +165,8 @@ def detect_blobs(roi, channel):
         return None
     blobs_all = np.vstack(blobs_all)
     if isotropic is not None:
+        # if detected on isotropic ROI, need to reposition blob coordinates 
+        # for original, non-isotropic ROI
         isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
         blobs_all = multiply_blob_rel_coords(blobs_all, 1 / isotropic_factor)
         blobs_all = multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)

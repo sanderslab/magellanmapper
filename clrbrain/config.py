@@ -110,7 +110,8 @@ def update_process_settings(settings, settings_type):
             settings["min_sigma_factor"] = 2.5
             settings["max_sigma_factor"] = 3
     
-    elif settings_type.startswith("lightsheet_5x"):
+    elif settings_type.startswith("lightsheet_5x-v01"):
+        # detection settings from pre-v.0.6.2
         settings["microscope_type"] = settings_type
         #settings["vis_3d"] = "surface"
         settings["points_3d_thresh"] = 0.7
@@ -124,11 +125,28 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.5
         settings["segment_size"] = 200
         settings["prune_tol_factor"] = (3, 1.3, 1.3)
-        # TODO: make very neg (eg -10 to essentially turn off) once 
-        # turn on isotropic
         settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)
-        #settings["isotropic"] = (0.96, 1, 1)
+        settings["isotropic_vis"] = (1, 3, 3)
+        
+    elif settings_type.startswith("lightsheet_5x"):
+        # detection settings from v.0.6.2+
+        settings["microscope_type"] = settings_type
+        #settings["vis_3d"] = "surface"
+        settings["points_3d_thresh"] = 0.7
+        settings["clip_vmax"] = 98.5
+        settings["clip_min"] = 0
+        settings["clip_max"] = 0.5
+        settings["unsharp_strength"] = 0.3
+        settings["min_sigma_factor"] = 3
+        settings["max_sigma_factor"] = 4
+        settings["num_sigma"] = 10
+        settings["overlap"] = 0.55
+        settings["segment_size"] = 200
+        settings["prune_tol_factor"] = (3, 1.3, 1.3)
+        settings["segmenting_mean_thresh"] = -10 # unused since scale factor off
+        settings["scale_factor"] = None
+        settings["isotropic"] = (0.96, 1, 1)
         settings["isotropic_vis"] = (1, 3, 3)
         
         if settings_type.endswith("_contrast"):
@@ -245,9 +263,9 @@ _prune_tol_factors[:, 0] = _prune_tol_zs
 roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         # unfused baseline
-        ("scale_factor", 0.59),
-        ("clip_vmax", 98.5),
-        ("clip_max", 0.5),
+        #("scale_factor", 0.59),
+        #("clip_vmax", 98.5),
+        #("clip_max", 0.5),
         #("scale_factor", np.array([(0.59, 1, 1)])),
         #("clip_vmax", np.arange(98.5, 99, 0.5)),
         #("clip_max", np.arange(0.5, 0.6, 0.1)),
@@ -255,7 +273,7 @@ roc_dict = OrderedDict([
         # test parameters
         #("scale_factor", _scale_factors),
         #("scale_factor", np.array([(0.6, 1, 1)])),
-        ("segmenting_mean_thresh", -5),
+        #("segmenting_mean_thresh", -5),
         #("isotropic", _isotropic_factors),
         ("isotropic", np.array([(0.96, 1, 1)])),
         #("overlap", np.arange(0.1, 1.0, 0.1)),

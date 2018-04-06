@@ -805,46 +805,43 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         return zoom
     
     def scroll_overview(event):
-        """Scroll through overview images along their orthogonal axis if the 
-        mouse is positioned within one of the scroll windows.
+        """Scroll through overview images along their orthogonal axis.
         
         Args:
             event: Mouse or key event. For mouse events, scroll step sizes 
                 will be used for movements. For key events, up/down arrows 
                 will be used.
         """
-        if event.inaxes in ax_overviews:
-            # only respond to events with mouse in an overview window
-            nonlocal z_overview
-            step = 0
-            if isinstance(event, backend_bases.MouseEvent):
-                # scroll movements are scaled from 0 for each event
-                step += event.step
-            elif isinstance(event, backend_bases.KeyEvent):
-                # finer-grained movements through keyboard controls since the 
-                # finest scroll movements may be > 1
-                #print("got key {}".format(event.key))
-                if event.key == "up":
-                    step += 1
-                elif event.key == "down":
-                    step -= 1
-            z_overview_new = z_overview + step
-            print("scroll step of {} to z {}".format(step, z_overview))
-            max_size = max_plane(image5d[0], plane)
-            if z_overview_new < 0:
-                z_overview_new = 0
-            elif z_overview_new >= max_size:
-                z_overview_new = max_size - 1
-            if step != 0 and z_overview_new != z_overview:
-                # move only if step registered and changing position
-                z_overview = z_overview_new
-                img2d, aspect, origin = extract_plane(
-                    image5d, z_overview, plane)
-                for level in range(zoom_levels - 1):
-                    ax = ax_overviews[level]
-                    ax.clear() # prevent performance degradation
-                    zoom = show_overview(ax, img2d, level)
-                    set_overview_title(ax, plane, z_overview, zoom, level)
+        nonlocal z_overview
+        step = 0
+        if isinstance(event, backend_bases.MouseEvent):
+            # scroll movements are scaled from 0 for each event
+            step += event.step
+        elif isinstance(event, backend_bases.KeyEvent):
+            # finer-grained movements through keyboard controls since the 
+            # finest scroll movements may be > 1
+            #print("got key {}".format(event.key))
+            if event.key == "up":
+                step += 1
+            elif event.key == "down":
+                step -= 1
+        z_overview_new = z_overview + step
+        print("scroll step of {} to z {}".format(step, z_overview))
+        max_size = max_plane(image5d[0], plane)
+        if z_overview_new < 0:
+            z_overview_new = 0
+        elif z_overview_new >= max_size:
+            z_overview_new = max_size - 1
+        if step != 0 and z_overview_new != z_overview:
+            # move only if step registered and changing position
+            z_overview = z_overview_new
+            img2d, aspect, origin = extract_plane(
+                image5d, z_overview, plane)
+            for level in range(zoom_levels - 1):
+                ax = ax_overviews[level]
+                ax.clear() # prevent performance degradation
+                zoom = show_overview(ax, img2d, level)
+                set_overview_title(ax, plane, z_overview, zoom, level)
     
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels

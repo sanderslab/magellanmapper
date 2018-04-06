@@ -701,6 +701,7 @@ def process_file(filename_base, offset, roi_size):
             output_info = np.load(filename_info_proc)
             segments_proc = output_info["segments"]
             print("{} segments loaded".format(len(segments_proc)))
+            #print("segments range:\n{}".format(np.max(segments_proc, axis=0)))
             detector.resolutions = output_info["resolutions"]
             roi_offset = None
             shape = None
@@ -845,7 +846,8 @@ def process_file(filename_base, offset, roi_size):
                     if segs is not None:
                         # transpose seg coords since part of larger stack
                         off = super_rois_offsets[coord]
-                        segs = np.add(segs, (*off, 0, 0, 0, *off, 0))
+                        detector.shift_blob_rel_coords(segs, off)
+                        detector.shift_blob_abs_coords(segs, off)
                     seg_rois[coord] = segs
         
         # prune segments in overlapping region between super-ROIs

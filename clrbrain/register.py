@@ -758,7 +758,12 @@ def get_label_ids_from_position(coord, labels_img, scaling):
     # at once
     coord_scaled = np.transpose(coord_scaled)
     coord_scaled = np.split(coord_scaled, coord_scaled.shape[0])
-    #print("coord_scaled: {}".format(coord_scaled))
+    '''
+    print("coord: {}".format(coord))
+    print("coord_scaled: {}".format(coord_scaled))
+    print("max coord scaled: {}".format(np.max(coord_scaled, axis=2)))
+    print("labels_img shape: {}".format(labels_img.shape))
+    '''
     return labels_img[coord_scaled][0]
 
 def get_label(coord, labels_img, labels_ref, scaling, level=None):
@@ -1122,6 +1127,7 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 info = np.load(filename_base + config.SUFFIX_INFO_PROC)
                 blobs = info["segments"]
                 print("loading {} blobs".format(len(blobs)))
+                #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
                 # load large image just to get resolutions; 
                 # TODO: consider saving scaling info in scaled image
                 image5d = importer.read_file(img_path, config.series)

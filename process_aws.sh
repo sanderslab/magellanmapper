@@ -90,7 +90,7 @@ FOUND_NPZ=0
 IMG_BASE=${IMG/.czi/_}$(printf %05d $SERIES)
 IMG_BASE="`basename $IMG_BASE`"
 EXP_PATH="`dirname $IMG`"
-EXP="`basenmae $EXP_PATH`"
+EXP="`basename $EXP_PATH`"
 NPZ_IMG=$IMG_BASE"_image5d.npz"
 NPZ_INFO=$IMG_BASE"_info.npz"
 for NPZ in $NPZ_IMG $NPZ_INFO

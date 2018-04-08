@@ -251,8 +251,8 @@ def make_isotropic(roi, scale):
     resize_factor = calc_isotropic_factor(scale)
     isotropic_shape = np.array(roi.shape)
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
-    print("original ROI shape: {}, isotropic: {}"
-          .format(roi.shape, isotropic_shape))
+    lib_clrbrain.printv("original ROI shape: {}, isotropic: {}"
+                        .format(roi.shape, isotropic_shape))
     return transform.resize(
         roi, isotropic_shape, preserve_range=True, mode="reflect", 
         anti_aliasing=True)

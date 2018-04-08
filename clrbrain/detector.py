@@ -155,7 +155,7 @@ def detect_blobs(roi, channel):
         lib_clrbrain.printv(
             "time for 3D blob detection: {}".format(time() - time_start))
         if blobs_log.size < 1:
-            print("no blobs detected")
+            lib_clrbrain.printv("no blobs detected")
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
         blobs = format_blobs(blobs_log, i)

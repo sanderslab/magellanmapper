@@ -693,7 +693,8 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     Saves file to a new NPY archive with "transposed" inserted just prior
     to the series name so that "transposed" can be appended to the original
     filename for future loading within Clrbrain. Files are saved through 
-    memmap-based arrays to minimize RAM usage.
+    memmap-based arrays to minimize RAM usage. Currently transposes all 
+    channels, ignoring :attr:``config.channel`` parameter.
     
     Args:
         filename: Full file path in :attribute:cli:`filename` format.
@@ -763,8 +764,6 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         rescaled_shape = chunking.get_split_stack_total_shape(sub_rois, overlap)
         if offset > 0:
             rescaled_shape = np.concatenate(([1], rescaled_shape))
-        if multichannel:
-            rescaled_shape = np.concatenate((rescaled_shape, [rescaled.shape[-1]]))
         print("rescaled_shape: {}".format(rescaled_shape))
         # rescale chunks directly into memmap-backed array to minimize RAM usage
         image5d_transposed = np.lib.format.open_memmap(

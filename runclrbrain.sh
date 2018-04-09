@@ -55,11 +55,11 @@ OFFSET=50,580,230
 # Load ROI, starting at the given offset and ROI size
 #./run --img "$IMG" --channel 0 --offset $OFFSET --size $SIZE --savefig pdf --microscope "$MICROSCOPE"
 
-# Process an entire stack locally
+# Process an entire stack locally on 1st channel
 #python -u -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
 
-# Process an entire stack on AWS (run from within EC2 instance)
-#./process_aws.sh -f "$IMG" -s $S3_DIR --  --microscope "$MICROSCOPE"
+# Process an entire stack on AWS (run from within EC2 instance) on 1st channel
+#./process_aws.sh -f "$IMG" -s $S3_DIR --  --microscope "$MICROSCOPE" --channel 0
 
 # Extract a single z-plane
 #python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"

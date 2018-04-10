@@ -409,6 +409,7 @@ def main(process_args_only=False):
     parser.add_argument("--no_show", action="store_true")
     parser.add_argument("--border", nargs="*")
     parser.add_argument("--db")
+    parser.add_argument("--groups", nargs="*")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -602,6 +603,9 @@ def main(process_args_only=False):
     if config.db is None:
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
+    if args.groups:
+        config.groups = args.groups
+        print("Set groups to {}".format(config.groups))
     
     # setup Matplotlib parameters/styles
     #print(plt.style.available)

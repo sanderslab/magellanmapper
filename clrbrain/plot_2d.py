@@ -1358,10 +1358,13 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label, ti
     bars = []
     if len(lists) < 1: return
     indices = np.arange(len(lists[0]))
+    #print("indices: {}".format(indices))
     #print("lists: {}".format(lists))
     #print("errs: {}".format(errs))
     for i in range(len(lists)):
-        err = None if errs is None else errs[i]
+        err = errs[i] if errs else None
+        print("lens: {}, {}".format(len(lists[i]), len(x_labels)))
+        #print("showing list: {}".format(lists[i]))
         bars.append(ax.bar(
             indices + width * i, lists[i], width=width, color=colors[i], 
             linewidth=0, yerr=err))
@@ -1386,8 +1389,23 @@ def _get_mean_sem(group_dict, key, vals):
     group_dict[key].append(stats.sem(vals))
     return np.mean(vals)
 
+def _get_group_vals(volumes_dict, key_label, key_type, mask):
+    """Get volumes from dictionary for the given key, weeding out elements 
+    that are None or not in mask.
+    """
+    vols = volumes_dict[key_label][key_type]
+    if not isinstance(vols, list):
+        #vols = [vols]
+        return vols
+    vols = np.array(vols)
+    #print("group vols raw: {}, mask: {}".format(vols, mask))
+    vols = vols[mask]
+    vols = vols[vols != None]
+    #print("vols: {}".format(vols))
+    return vols
+
 def plot_volumes(volumes_dict, ignore_empty=False, title=None, densities=False, 
-                 show=True, multiple=False):
+                 show=True, groups=None):
     """Plot volumes and densities.
     
     Args:
@@ -1418,65 +1436,107 @@ def plot_volumes(volumes_dict, ignore_empty=False, title=None, densities=False,
     unit = "mm"
     width = 0.1 # default bar width
     
+    # "side" and "mirrored" for opposite side (R/L agnostic)
     SIDE = "side"
     MIR = "mirrored"
     SIDE_SEM = SIDE + "_sem"
     MIR_SEM = MIR + "_sem"
-    vol_group = {SIDE: [], MIR: [], SIDE_SEM: [], MIR_SEM: []}
-    dens_group = copy.deepcopy(vol_group)
+    VOL = "volume"
+    DENS = "density"
+    if groups is None:
+        groups = [""]
+    multiple = len(groups) > 1
+    groups_unique = np.unique(groups)
+    groups_dict = {}
     names = []
-    for key in volumes_dict.keys():
-        # find negative keys based on the given positive key to show them
-        # side-by-side
-        if key >= 0:
-            name = volumes_dict[key][config.ABA_NAME]
-            
-            # get volumes in the given unit
-            vol_side = np.divide(volumes_dict[key][config.VOL_KEY], unit_factor)
-            vol_mirrored = np.divide(
-                volumes_dict[-1 * key].get(config.VOL_KEY), unit_factor)
-            
-            if (ignore_empty and vol_mirrored is not None 
-                and abs(np.sum([vol_side, vol_mirrored])) < config.POS_THRESH):
-                # skip completely empty regions if flagged
-                print("skipping {} as both sides are empty".format(name))
-            else:
-                # extract names and volumes
-                names.append(name)
-                if multiple:
-                    # calculate 
-                    vol_side = _get_mean_sem(vol_group, SIDE_SEM, vol_side)
-                    vol_mirrored = _get_mean_sem(vol_group, MIR_SEM, vol_mirrored)
-                vol_group[SIDE].append(vol_side)
-                if vol_mirrored is None:
-                    volume_mirrored = 0
-                vol_group[MIR].append(vol_mirrored)
-                if densities:
-                    # calculate densities based on blobs counts and volumes
-                    blobs_side = volumes_dict[key][config.BLOBS_KEY]
-                    blobs_mirrored = volumes_dict[-1 * key].get(
-                        config.BLOBS_KEY)
-                    print("id {}: blobs R {}, L {}".format(
-                        key, blobs_side, blobs_mirrored))
-                    density_side = np.divide(blobs_side, vol_side)
-                    density_mirrored = np.divide(blobs_mirrored, vol_mirrored)
+    for group in groups_unique:
+        # dictionary of mean and SEM arrays for each side, which will be 
+        # populated in same order as experiments in volumes_dict
+        vol_group = {SIDE: [], MIR: [], SIDE_SEM: [], MIR_SEM: []}
+        dens_group = copy.deepcopy(vol_group)
+        groups_dict[group] = {VOL: vol_group, DENS: dens_group}
+        group_mask = np.array(groups) == group
+        for key in volumes_dict.keys():
+            # find negative keys based on the given positive key to show them
+            # side-by-side
+            if key >= 0:
+                name = volumes_dict[key][config.ABA_NAME]
+                
+                # get volumes in the given unit, which are scalar for individual 
+                # image, list if multiple images
+                vol_side = np.divide(_get_group_vals(volumes_dict, key, config.VOL_KEY, group_mask), unit_factor)
+                vol_mirrored = np.divide(_get_group_vals(volumes_dict, -1 * key, config.VOL_KEY, group_mask), unit_factor)
+                
+                if (ignore_empty and vol_mirrored is not None 
+                    and abs(np.sum([vol_side, vol_mirrored])) < config.POS_THRESH):
+                    # skip completely empty regions if flagged
+                    print("skipping {} as both sides are empty".format(name))
+                else:
+                    # extract names and volumes
+                    if name not in names:
+                        names.append(name)
+                        print("adding {} to group {}".format(name, group))
                     if multiple:
-                        density_side = _get_mean_sem(dens_group, SIDE_SEM, density_side)
-                        density_mirrored = _get_mean_sem(dens_group, MIR_SEM, density_mirrored)
-                    dens_group[SIDE].append(density_side)
-                    dens_group[MIR].append(density_mirrored)
+                        # store SEMs in vol_group and return mean vol
+                        vol_side = _get_mean_sem(vol_group, SIDE_SEM, vol_side)
+                        vol_mirrored = _get_mean_sem(
+                            vol_group, MIR_SEM, vol_mirrored)
+                    # store volume means (or individual values)
+                    vol_group[SIDE].append(vol_side)
+                    if vol_mirrored is None:
+                        volume_mirrored = 0
+                    vol_group[MIR].append(vol_mirrored)
+                    if densities:
+                        # calculate densities based on blobs counts and volumes
+                        blobs_side = _get_group_vals(volumes_dict, key, config.BLOBS_KEY, group_mask)
+                        blobs_mirrored = _get_group_vals(volumes_dict, -1 * key, config.BLOBS_KEY, group_mask)
+                        print("id {}: blobs R {}, L {}".format(
+                            key, blobs_side, blobs_mirrored))
+                        density_side = np.divide(blobs_side, vol_side)
+                        density_mirrored = np.divide(blobs_mirrored, vol_mirrored)
+                        if multiple:
+                            # density means and SEMs, storing the SEMs
+                            density_side = _get_mean_sem(
+                                dens_group, SIDE_SEM, density_side)
+                            density_mirrored = _get_mean_sem(
+                                dens_group, MIR_SEM, density_mirrored)
+                        # store density means (or individual values)
+                        dens_group[SIDE].append(density_side)
+                        dens_group[MIR].append(density_mirrored)
     
     # generate bar plots
-    legend_names = ("Left", "Right")
-    bar_colors = ("b", "g")
-    errs = (vol_group[MIR_SEM], vol_group[SIDE_SEM]) if multiple else None
+    sides_names = ("Left", "Right")
+    means_keys = (MIR, SIDE)
+    sem_keys = (MIR_SEM, SIDE_SEM)
+    legend_names = []
+    vols = []
+    dens = []
+    errs_vols = []
+    errs_dens = []
+    bar_colors = []
+    i = 0
+    for group_name in groups_unique:
+        group = groups_dict[group_name]
+        for side in sides_names:
+            legend_names.append("{} {}".format(group_name, side))
+            bar_colors.append("C{}".format(i))
+            i += 1
+        for means_key in means_keys:
+            vols.append(group[VOL][means_key])
+            dens.append(group[DENS][means_key])
+        if multiple:
+            for sem_key in sem_keys:
+                errs_vols.append(group[VOL][sem_key])
+                errs_dens.append(group[DENS][sem_key])
+            
+    #errs = (vol_group[MIR_SEM], vol_group[SIDE_SEM]) if multiple else None
     _bar_plots(
-        ax_vols, (vol_group[MIR], vol_group[SIDE]), errs, legend_names, names, 
+        ax_vols, vols, errs_vols, legend_names, names, 
         bar_colors, width, "Volume (cubic {})".format(unit), "Volumes")
     if densities:
-        errs = (dens_group[MIR_SEM], dens_group[SIDE_SEM]) if multiple else None
+        #errs = (dens_group[MIR_SEM], dens_group[SIDE_SEM]) if multiple else None
         _bar_plots(
-            ax_densities, (dens_group[MIR], dens_group[SIDE]), errs, legend_names, 
+            ax_densities, dens, errs_dens, legend_names, 
             names, bar_colors, width, 
             "Cell density (cells / cubic {})".format(unit), "Densities")
     

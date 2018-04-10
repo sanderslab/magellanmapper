@@ -351,6 +351,9 @@ BLOBS_KEY = "blobs"
 # flip/rotate the image; the direction of change can be variable
 flip = None
 
+# groups, such as genotypes and sex or combos
+groups = None
+
 
 # STACK PROCESSING
 

@@ -1376,9 +1376,11 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label, ti
         err = None if errs is None or len(errs) < 1 else errs[i]
         #print("lens: {}, {}".format(len(lists[i]), len(x_labels)))
         #print("showing list: {}".format(lists[i]))
+        num_bars = len(lists[i])
+        err_dict = {"elinewidth": width * 20 / num_bars}
         bars.append(ax.bar(
             indices + width * i, lists[i], width=width, color=colors[i], 
-            linewidth=0, yerr=err))
+            linewidth=0, yerr=err, error_kw=err_dict))
     ax.set_title(title)
     ax.set_ylabel(y_label)
     ax.set_xticks(indices + width)

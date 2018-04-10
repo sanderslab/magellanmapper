@@ -1328,13 +1328,11 @@ if __name__ == "__main__":
         for vol, path in zip(vol_dicts, json_paths):
             exp_name = os.path.basename(path)
             plot_2d.plot_volumes(
-                vol, ignore_empty=True, 
-                title=os.path.splitext(exp_name)[0], 
+                vol, title=os.path.splitext(exp_name)[0], 
                 densities=densities, show=show)
             exps.append(exp_name.split("-")[0])
         group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
         plot_2d.plot_volumes(
-            group_vol_dict, ignore_empty=True, 
-            title="Volume Means from {} at Level {}".format(
+            group_vol_dict, title="Volume Means from {} at Level {}".format(
                 ", ".join(exps), config.labels_level), 
             densities=densities, show=show, groups=config.groups)

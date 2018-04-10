@@ -30,6 +30,7 @@ from clrbrain import plot_2d
 
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
+IMG_EXP = "exp.mhd"
 IMG_GROUPED = "grouped.mhd"
 
 NODE = "node"
@@ -150,6 +151,17 @@ def _get_bbox_region(bbox):
     #print("shape: {}, slices: {}".format(shape, slices))
     return shape, slices
 
+def _truncate_labels(img_np, x_thresh, y_thresh):
+    #img_np = sitk.GetArrayFromImage(img)
+    shape = img_np.shape
+    x_start = int(x_thresh * shape[2])
+    y_start = int(y_thresh * shape[1])
+    print("truncating from x_start {} and y_start {}".format(x_start, y_start))
+    img_np[:, y_start:] = 0
+    img_np[:, :, x_start:] = 0
+    #img_truncated = sitk.GetImageFromArray(img_np)
+    return img_np
+
 def _mirror_labels(img, img_ref):
     """Mirror labels across sagittal midline and add lateral edges.
     
@@ -235,6 +247,9 @@ def _mirror_labels(img, img_ref):
         # skip mirroring if no planes are empty or only first plane is empty
         print("nothing to mirror")
         return img
+    # truncate ventral and dorsal portions since variable amount of tissue 
+    # or quality of imaging in these regions
+    _truncate_labels(img_np, 0.77, 0.55)
     img_reflected = sitk.GetImageFromArray(img_np)
     img_reflected.SetSpacing(img.GetSpacing())
     img_reflected.SetOrigin(img.GetOrigin())
@@ -450,8 +465,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     if write_imgs:
         # write atlas and labels files, transposed according to plane setting
-        imgs_names = (IMG_ATLAS, IMG_LABELS)
-        imgs_write = [transformed_img, imgs_transformed[0]]
+        imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS)
+        imgs_write = [fixed_img, transformed_img, imgs_transformed[0]]
         '''
         # TESTING: transpose saved images to new orientation
         img = sitk.ReadImage(_reg_out_path(name_prefix, IMG_LABELS))

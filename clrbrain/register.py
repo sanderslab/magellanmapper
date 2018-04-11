@@ -1145,13 +1145,16 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
                 # load large image just to get resolutions; 
                 # TODO: consider saving scaling info in scaled image
+                if scale is None:
                 image5d = importer.read_file(img_path, config.series)
                 scaling = importer.calc_scaling(image5d, labels_img)
-                if scale is not None:
+                else:
                     # use scaled image for pixel comparison
                     img_path = lib_clrbrain.insert_before_ext(
                         img_path, "_" + importer.make_modifier_scale(scale))
-                    image5d = importer.read_file(img_path, config.series)
+                    image5d, img_info = importer.read_file(img_path, config.series, return_info=True)
+                    scaling = img_info["scaling"]
+                print("using scaling: {}".format(scaling))
                 # annotate blobs based on position
                 blobs_ids = get_label_ids_from_position(
                     blobs[:, 0:3], labels_img, scaling)

@@ -1334,9 +1334,13 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     if show:
         plt.show()
 
-def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label, title):
+def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label, 
+               title):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
+    
+    Bars groups where all values would be below :attr:``config.POS_THRESH`` 
+    are not plotted.
     
     Args:
         ax: Axes.

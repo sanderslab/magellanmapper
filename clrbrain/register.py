@@ -1110,9 +1110,12 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
         densities: True if densities should be displayed; defaults to False.
     
     Returns:
-        The volumes dictionary in the format of {[ID as int]: 
-        {name: [name as str], volume: [volume as float], blobs: 
-        [blobs as int]}, ...}.
+        A tuple of ``volumes_dict``, the volumes dictionary in the format 
+        of ``{[ID as int]: {name: [name as str], volume: [volume as float], 
+        blobs: [blobs as int]}, ...}``; ``json_path``, the path to the JSON 
+        file where the dictionary is saved; and ``index``, which is the same 
+        as the ``index`` parameter to identify the order in which this 
+        function was called if launched from multiprocessing.
     """
     # reload saved volumes dictionary if possible for the given level
     volumes_dict = None
@@ -1143,16 +1146,18 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 blobs = info["segments"]
                 print("loading {} blobs".format(len(blobs)))
                 #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
-                # load large image just to get resolutions; 
-                # TODO: consider saving scaling info in scaled image
                 if scale is None:
-                image5d = importer.read_file(img_path, config.series)
-                scaling = importer.calc_scaling(image5d, labels_img)
+                    # pixel comparison based on original image if rescale 
+                    # CLI flag not available, but **very slow**
+                    image5d = importer.read_file(img_path, config.series)
+                    scaling = importer.calc_scaling(image5d, labels_img)
                 else:
-                    # use scaled image for pixel comparison
+                    # use scaled image for pixel comparison, retrieving 
+                    # saved scaling as of v.0.6.0
                     img_path = lib_clrbrain.insert_before_ext(
                         img_path, "_" + importer.make_modifier_scale(scale))
-                    image5d, img_info = importer.read_file(img_path, config.series, return_info=True)
+                    image5d, img_info = importer.read_file(
+                        img_path, config.series, return_info=True)
                     scaling = img_info["scaling"]
                 print("using scaling: {}".format(scaling))
                 # annotate blobs based on position
@@ -1183,6 +1188,13 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
 def register_volumes_mp(img_paths, labels_ref_lookup, level, scale=None, 
                         densities=False):
     start_time = time()
+    '''
+    # testing capping processes when calculating volumes for levels since 
+    # appeared to run slowly with multiple files in parallel during some 
+    # tests but not others
+    processes = 4 if level is None else None
+    pool = mp.Pool(processes=processes)
+    '''
     pool = mp.Pool()
     pool_results = []
     img_paths_len = len(img_paths)
@@ -1245,7 +1257,7 @@ def group_volumes(labels_ref_lookup, vol_dicts):
                             entry_vol[config.VOL_KEY])
                         entry_group[config.BLOBS_KEY].append(
                             entry_vol[config.BLOBS_KEY])
-    print("grouped_vol_dict: {}".format(grouped_vol_dict))
+    #print("grouped_vol_dict: {}".format(grouped_vol_dict))
     return grouped_vol_dict
 
 def _test_labels_lookup():

@@ -136,8 +136,9 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 def _get_bbox(img_np, threshold=10):
-    labels, walker = detector.segment_rw(img_np, vmin=threshold, vmax=threshold)
-    labels_props = measure.regionprops(labels, walker)
+    labels, walker = detector.segment_rw(
+        img_np, 0, vmin=threshold, vmax=threshold, remove_small=200)
+    labels_props = measure.regionprops(labels[0], walker[0])
     if len(labels_props) < 1:
         return None
     labels_bbox = labels_props[0].bbox

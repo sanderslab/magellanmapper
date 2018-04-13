@@ -48,7 +48,7 @@ def calc_scaling_factor():
     lib_clrbrain.printv("scaling_factor: {}".format(factor))
     return factor
 
-def segment_rw(roi, channel, beta=50.0, vmin=1.0, vmax=1.1):
+def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -69,9 +69,10 @@ def segment_rw(roi, channel, beta=50.0, vmin=1.0, vmax=1.1):
         markers[roi_segment < vmin] = 2
         markers[roi_segment >= vmax] = 1
         walker = segmentation.random_walker(roi_segment, markers, beta=beta, mode="bf")
+        if remove_small:
+            walker = morphology.remove_small_objects(walker == 1, remove_small)
         
         # label neighboring pixels to segmented regions
-        #walker = morphology.remove_small_objects(walker == 1, 200)
         label = measure.label(walker, background=0)
         
         labels.append(label)

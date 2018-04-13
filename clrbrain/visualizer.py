@@ -301,6 +301,7 @@ class Visualization(HasTraits):
         self.segments = None
         self.segs_pts = None
         self.segs_in_mask = None
+        self.labels = None
         self._circles_window_opened = False
         self.segs_feedback = ""
     

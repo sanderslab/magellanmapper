@@ -464,16 +464,16 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         # show labels if provided and within ROI
-        for i in range(len(labels)):
-            label = labels[i]
-            if (label is not None and z_relative >= 0 
-                and z_relative < label.shape[0]):
-                try:
-                    ax.contour(label[z_relative], colors="C{}".format(i))
-                except ValueError as e:
-                    print(e)
-                    print("could not show label:\n{}".format(label[z_relative]))
-                #ax.imshow(label[z_relative])
+        if labels:
+            for i in range(len(labels)):
+                label = labels[i]
+                if z_relative >= 0 and z_relative < label.shape[0]:
+                    try:
+                        ax.contour(label[z_relative], colors="C{}".format(i))
+                    except ValueError as e:
+                        print(e)
+                        print("could not show label:\n{}".format(label[z_relative]))
+                    #ax.imshow(label[z_relative])
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):

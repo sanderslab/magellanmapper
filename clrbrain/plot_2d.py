@@ -1339,18 +1339,20 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
-    Bars groups where all values would be below :attr:``config.POS_THRESH`` 
-    are not plotted.
+    Each list represents an experimental group, such as WT or het. 
+    Corresponding elements in each list are grouped together in bar groups, 
+    such as WT vs het at time point 0. Bars groups where all values would be 
+    below :attr:``config.POS_THRESH`` are not plotted.
     
     Args:
         ax: Axes.
         lists: Tuple of mean lists to display, with each list getting a 
-            separate set of bar plots. All lists should be the same size as one 
-            another.
+            separate set of bar plots with a legend entry. All lists should 
+            be the same size as one another.
         errs: Tuple of variance lists (eg standard deviation or error) to 
             display, with each list getting a separate
             set of bar plots. All lists should be the same size as one 
-            another.
+            another and each list in ``lists``.
         list_names: List of names of each list, where the list size should 
             be the same size as the size of ``lists``.
         x_labels: List of labels for each bar group, where the list size 
@@ -1361,30 +1363,31 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     """
     bars = []
     if len(lists) < 1: return
+    
+    # convert lists to Numpy arrays to allow fancy indexing
     lists = np.array(lists)
-    if errs:
-        errs = np.array(errs)
+    if errs: errs = np.array(errs)
+    x_labels = np.array(x_labels)
     print("lists: {}".format(lists))
+    
+    # skip bar groups where all bars would be ~0
     mask = np.all(lists > config.POS_THRESH, axis=0)
-    print("mask (len {}): {}".format(len(mask), mask))
-    print("errs before: {}".format(errs))
-    mask_len = len(mask)
-    if mask_len > 0:
-        x_labels = np.array(x_labels)
-        x_labels_len = len(x_labels)
-        print("x_labels before (len {}): {}".format(x_labels_len, x_labels))
-        if np.all(mask):
-            print("skip none")
-        else:
-            print("skipping {}".format(x_labels[~mask]))
-            x_labels = x_labels[mask]
-            lists = lists[:, mask]
-            # len(errs) may be > 0 when errs.size == 0
-            if errs is not None and errs.size > 0:
-                errs = errs[:, mask]
+    print("mask: {}".format(mask))
+    if np.all(mask):
+        print("skip none")
+    else:
+        print("skipping {}".format(x_labels[~mask]))
+        x_labels = x_labels[mask]
+        lists = lists[:, mask]
+        # len(errs) may be > 0 when errs.size == 0
+        if errs is not None and errs.size > 0:
+            errs = errs[:, mask]
     indices = np.arange(len(lists[0]))
     #print("lists: {}".format(lists))
     #print("x_labels: {}".format(x_labels))
+    
+    # show each list as a set of bar plots so that corresponding elements in 
+    # each list will be grouped together as bar groups
     for i in range(len(lists)):
         err = None if errs is None or errs.size < 1 else errs[i]
         #print("lens: {}, {}".format(len(lists[i]), len(x_labels)))

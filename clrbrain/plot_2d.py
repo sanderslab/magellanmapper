@@ -446,17 +446,6 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             roi = roi[tuple(region)]
         #print("roi shape: {}".format(roi.shape))
         
-        # show labels if provided and within ROI; for some reason if added
-        # after imshow, the main image gets squeezed to show full patches
-        if (labels is not None and z_relative >= 0 
-            and z_relative < labels.shape[0]):
-            try:
-                ax.contour(labels[z_relative])
-            except ValueError as e:
-                print(e)
-                print("could not show label:\n{}".format(labels[z_relative]))
-            #ax.imshow(labels[z_relative])
-        
         if highlight:
             # highlight borders of z plane at bottom of ROI
             for spine in ax.spines.values():
@@ -473,6 +462,18 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         imshow_multichannel(
             ax, roi, channel, colormaps, aspect, alpha)#, 0.0, vmax_overview)
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
+        
+        # show labels if provided and within ROI
+        for i in range(len(labels)):
+            label = labels[i]
+            if (label is not None and z_relative >= 0 
+                and z_relative < label.shape[0]):
+                try:
+                    ax.contour(label[z_relative], colors="C{}".format(i))
+                except ValueError as e:
+                    print(e)
+                    print("could not show label:\n{}".format(label[z_relative]))
+                #ax.imshow(label[z_relative])
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):

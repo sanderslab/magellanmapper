@@ -48,7 +48,7 @@ def calc_scaling_factor():
     lib_clrbrain.printv("scaling_factor: {}".format(factor))
     return factor
 
-def segment_rw(roi, beta=50.0, vmin=0.33, vmax=0.4):
+def segment_rw(roi, channel, beta=50.0, vmin=1.0, vmax=1.1):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -59,16 +59,25 @@ def segment_rw(roi, beta=50.0, vmin=0.33, vmax=0.4):
     """
     print("Random-Walker based segmentation...")
     # random-walker segmentation
-    markers = np.zeros(roi.shape, dtype=np.uint8)
-    markers[roi >= vmax] = 1
-    markers[roi < vmin] = 2
-    walker = segmentation.random_walker(roi, markers, beta=beta, mode="bf")
+    labels = []
+    walkers = []
+    multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
+    for i in channels:
+        roi_segment = roi[..., i] if multichannel else roi
+        #settings = config.get_process_settings(i)
+        markers = np.zeros(roi_segment.shape, dtype=np.uint8)
+        markers[roi_segment < vmin] = 2
+        markers[roi_segment >= vmax] = 1
+        walker = segmentation.random_walker(roi_segment, markers, beta=beta, mode="bf")
+        
+        # label neighboring pixels to segmented regions
+        #walker = morphology.remove_small_objects(walker == 1, 200)
+        label = measure.label(walker, background=0)
+        
+        labels.append(label)
+        walkers.append(walker)
     
-    # label neighboring pixels to segmented regions
-    walker = morphology.remove_small_objects(walker == 1, 200)
-    labels = measure.label(walker, background=0)
-    
-    return labels, walker
+    return labels, walkers
 
 def _blob_surroundings(blob, roi, padding, plane=False):
     rad = blob[3]

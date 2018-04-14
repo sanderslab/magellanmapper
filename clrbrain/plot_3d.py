@@ -277,7 +277,13 @@ def plot_3d_surface(roi, vis, channel):
     if isotropic_vis is not None:
         roi = make_isotropic(roi, isotropic_vis)
     
-    colormaps = ("Greens", "Reds")
+    # turn off segmentation if ROI too big (arbitrarily set here as 
+    # > 10 million pixels) to avoid performance hit and since likely showing 
+    # large region of downsampled image anyway, where don't need hi res
+    num_pixels = np.prod(roi.shape)
+    to_segment = num_pixels < 10000000
+    
+    time_start = time()
     multichannel, channels = setup_channels(roi, channel, 3)
     for i in channels:
         roi_show = roi[..., i] if multichannel else roi
@@ -289,6 +295,14 @@ def plot_3d_surface(roi, vis, channel):
         #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
         roi_show = np.clip(roi_show, 0.2, 1.0)
         roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.2)
+        
+        # build surface from segmented ROI
+        if to_segment:
+            _, walker = detector.segment_rw(roi_show, i, vmin=0.7, vmax=0.8)
+            roi_show = walker[0]
+        else:
+            print("deferring segmentation as {} px is above threshold"
+                  .format(num_pixels))
         surface = pipeline.scalar_field(roi_show)
         
         '''
@@ -327,6 +341,8 @@ def plot_3d_surface(roi, vis, channel):
         except Exception as e:
             print(e)
             print("ignoring min/max contour for now")
+    
+    print("time to render 3D surface: {}".format(time() - time_start))
     
 def plot_3d_points(roi, vis, channel):
     """Plots all pixels as points in 3D space.

@@ -68,7 +68,8 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
         markers = np.zeros(roi_segment.shape, dtype=np.uint8)
         markers[roi_segment < vmin] = 2
         markers[roi_segment >= vmax] = 1
-        walker = segmentation.random_walker(roi_segment, markers, beta=beta, mode="bf")
+        walker = segmentation.random_walker(
+            roi_segment, markers, beta=beta, mode="cg_mg")
         if remove_small:
             walker = morphology.remove_small_objects(walker == 1, remove_small)
         

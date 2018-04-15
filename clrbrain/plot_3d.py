@@ -372,7 +372,8 @@ def plot_3d_points(roi, vis, channel):
     settings = config.process_settings
     
     # streamline the image
-    roi = saturate_roi(roi, 99.5, channel)
+    roi = saturate_roi(roi, 98.5, channel)
+    roi = np.clip(roi, 0.2, 0.8)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
     isotropic_vis = settings["isotropic_vis"]
     if isotropic_vis is not None:

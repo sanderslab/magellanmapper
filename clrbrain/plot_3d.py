@@ -271,7 +271,11 @@ def plot_3d_surface(roi, vis, channel):
     vis_mlab = vis.scene.mlab
     pipeline = vis_mlab.pipeline
     vis_mlab.clf()
-    roi = saturate_roi(roi, 97, channel=channel)
+    # saturate to remove noise and normalize values
+    roi = saturate_roi(roi, 99, channel=channel)
+    #roi = np.clip(roi, 0.2, 0.8)
+    #roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
+        
     settings = config.process_settings
     isotropic_vis = settings["isotropic_vis"]
     if isotropic_vis is not None:
@@ -287,22 +291,21 @@ def plot_3d_surface(roi, vis, channel):
     multichannel, channels = setup_channels(roi, channel, 3)
     for i in channels:
         roi_show = roi[..., i] if multichannel else roi
-        # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
-        roi_show = np.transpose(roi_show)
         
-        # prepare the data source with gentle saturation and stronger denoising
-        # to minimize extraneous contours from background noise
-        #roi = morphology.dilation(roi) # fill in holes to smooth surfaces
-        roi_show = np.clip(roi_show, 0.2, 1.0)
-        roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.2)
+        # clip to minimize sub-nuclear variation
+        roi_show = np.clip(roi_show, 0.2, 0.8)
+        #roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.1)
         
         # build surface from segmented ROI
         if to_segment:
-            _, walker = detector.segment_rw(roi_show, i, vmin=0.7, vmax=0.8)
-            roi_show = walker[0]
+            _, walker = detector.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
+            roi_show *= np.subtract(walker[0], 1)
         else:
             print("deferring segmentation as {} px is above threshold"
                   .format(num_pixels))
+        
+        # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
+        roi_show = np.transpose(roi_show)
         surface = pipeline.scalar_field(roi_show)
         
         '''

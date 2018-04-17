@@ -1392,7 +1392,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     for i in range(len(lists)):
         err = None if errs is None or errs.size < 1 else errs[i]
         #print("lens: {}, {}".format(len(lists[i]), len(x_labels)))
-        print("showing list: {}, err: {}".format(lists[i], err))
+        #print("showing list: {}, err: {}".format(lists[i], err))
         num_bars = len(lists[i])
         err_dict = {"elinewidth": width * 20 / num_bars}
         bars.append(ax.bar(
@@ -1404,26 +1404,34 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     ax.set_xticklabels(x_labels, rotation=80, horizontalalignment="right")
     ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
 
-def _get_mean_sem(group_dict, key, vals, mask):
-    """Get the mean and standard error of the mean (SEM), storing the SEM 
+def _volumes_mean_sem(group_dict, key_mean, key_sem, vals, mask):
+    """Calculate the mean and standard error of the mean (SEM), storing them 
     in the dictionary.
+    
+    Values are filtered by ``mask``, and empty (ie near-zero or None) volumes 
+    are excluded as well.
     
     Args:
         group_dict: Dictionary where the SEM will be stored.
-        key: Key at which the SEM will be stored.
-        vals: Values from which to calculate the SEM.
-    
-    Returns:
-        The mean of ``vals``.
+        key_mean: Key at which the mean will be stored.
+        key_sem: Key at which the SEM will be stored.
+        vals: Values from which to calculate.
+        mask: Boolean array corresponding to ``vals`` of values to keep.
     """
+    # convert to Numpy array to filter by make
     vals = np.array(vals)
     if mask is not None:
         vals = vals[mask]
-    print("group vals raw: {}, mask: {}".format(vals, mask))
-    vals = vals[vals != None]
-    print("err: {}".format(stats.sem(vals)))
-    group_dict[key].append(stats.sem(vals))
-    return np.mean(vals)
+    print("group vals raw: {}, mask: {}, n: {}".format(vals, mask, vals.size))
+    
+    # further prune to remove None or near-zero values (ie no volume found)
+    vals = vals[vals != None] # TODO: check if actually encounter None vals
+    vals = vals[vals > config.POS_THRESH]
+    mean = np.mean(vals)
+    sem = stats.sem(vals)
+    print("mean: {}, err: {}, n after pruning: {}".format(mean, sem, vals.size))
+    group_dict[key_mean].append(mean)
+    group_dict[key_sem].append(sem)
 
 def plot_volumes(volumes_dict, title=None, densities=False, 
                  show=True, groups=None):
@@ -1486,18 +1494,17 @@ def plot_volumes(volumes_dict, title=None, densities=False,
                 # image, list if multiple images
                 vol_side = np.divide(volumes_dict[key][config.VOL_KEY], unit_factor)
                 vol_mirrored = np.divide(volumes_dict[-1 * key][config.VOL_KEY], unit_factor)
-                
+                # store vol and SEMs in vol_group
                 if isinstance(vol_side, np.ndarray):
-                    # store SEMs in vol_group and return mean vol
-                    vol_side = _get_mean_sem(vol_group, SIDE_SEM, vol_side, group_mask)
-                    vol_mirrored = _get_mean_sem(
-                        vol_group, MIR_SEM, vol_mirrored, group_mask)
-                # store volume means (or individual values)
-                print("vol_side: {}, vol_mirrored: {}".format(vol_side, vol_mirrored))
-                vol_group[SIDE].append(vol_side)
-                if vol_mirrored is None:
-                    volume_mirrored = 0
-                vol_group[MIR].append(vol_mirrored)
+                    # for multiple experiments, store mean and error
+                    _volumes_mean_sem(vol_group, SIDE, SIDE_SEM, vol_side, group_mask)
+                    _volumes_mean_sem(
+                        vol_group, MIR, MIR_SEM, vol_mirrored, group_mask)
+                else:
+                    # for single experiment, store only vol
+                    vol_group[SIDE].append(vol_side)
+                    vol_group[MIR].append(vol_mirrored)
+                
                 if densities:
                     # calculate densities based on blobs counts and volumes
                     blobs_side = volumes_dict[key][config.BLOBS_KEY]
@@ -1508,14 +1515,13 @@ def plot_volumes(volumes_dict, title=None, densities=False,
                     density_mirrored = np.nan_to_num(np.divide(blobs_mirrored, vol_mirrored))
                     if isinstance(density_side, np.ndarray):
                         # density means and SEMs, storing the SEMs
-                        density_side = _get_mean_sem(
-                            dens_group, SIDE_SEM, density_side, group_mask)
-                        density_mirrored = _get_mean_sem(
-                            dens_group, MIR_SEM, density_mirrored, group_mask)
-                    print("density_side: {}, density_mirrored: {}".format(density_side, density_mirrored))
-                    # store density means (or individual values)
-                    dens_group[SIDE].append(density_side)
-                    dens_group[MIR].append(density_mirrored)
+                        _volumes_mean_sem(
+                            dens_group, SIDE, SIDE_SEM, density_side, group_mask)
+                        _volumes_mean_sem(
+                            dens_group, MIR, MIR_SEM, density_mirrored, group_mask)
+                    else:
+                        dens_group[SIDE].append(density_side)
+                        dens_group[MIR].append(density_mirrored)
     
     # generate bar plots
     sides_names = ("Left", "Right")

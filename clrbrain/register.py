@@ -1239,13 +1239,16 @@ def group_volumes(labels_ref_lookup, vol_dicts):
         label_ids = [key, -1 * key]
         for label_id in label_ids:
             # entry associated with the ID, which should be identical for 
-            # each dictionary except the numerical values
+            # each dictionary except the numerical values; eg all volume 
+            # lengths should be the same as one another since if one 
+            # vol_dict has an entry for the given label_id, all vol dicts 
+            # should have an entry as well
             entry_group = None
             for vol_dict in vol_dicts:
                 entry_vol = vol_dict.get(label_id)
                 if entry_vol is not None:
                     if entry_group is None:
-                        # shallow copy since only immutable values
+                        # shallow copy since only immutable values within dict
                         entry_group = dict(entry_vol)
                         entry_group[config.VOL_KEY] = [
                             entry_group[config.VOL_KEY]]

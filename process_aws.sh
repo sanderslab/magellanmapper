@@ -136,6 +136,6 @@ NPZ_IMG_PROC=$IMG_BASE"_image5d_proc.npz"
 NPZ_INFO_PROC=$IMG_BASE"_info_proc.npz"
 for NPZ in $NPZ_INFO_PROC #$NPZ_IMG_PROC 
 do
-    aws s3 cp "$${DEST}/${NPZ}" s3://"${S3_DIR}/${EXP}/${NPZ}"
+    aws s3 cp "${DEST}/${NPZ}" s3://"${S3_DIR}/${EXP}/${NPZ}"
 done
 

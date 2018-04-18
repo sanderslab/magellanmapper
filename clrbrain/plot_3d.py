@@ -119,7 +119,9 @@ def denoise_roi(roi, channel=None):
         lib_clrbrain.printv("saturated_mean: {}".format(saturated_mean))
         
         # additional simple thresholding
-        denoised = np.clip(roi_show, settings["clip_min"], settings["clip_max"])
+        vmin, vmax = np.percentile(roi_show, (0, settings["clip_max"] * 100))
+        denoised = np.clip(roi_show, vmin, vmax)
+        #denoised = np.clip(roi_show, settings["clip_min"], settings["clip_max"])
         
         if settings["tot_var_denoise"]:
             # total variation denoising

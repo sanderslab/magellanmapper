@@ -249,7 +249,7 @@ _scale_factors[:, 0] = _scale_zs
 #print(_scale_factors)
 
 # isotropic factors
-_isotropic_zs = np.arange(0.1, 1.5, 0.1)
+_isotropic_zs = np.arange(0.9, 1.1, 0.1)
 _isotropic_factors = np.ones((len(_isotropic_zs), 3))
 _isotropic_factors[:, 0] = _isotropic_zs
 #print(_isotropic_factors)
@@ -274,14 +274,14 @@ roc_dict = OrderedDict([
         #("scale_factor", _scale_factors),
         #("scale_factor", np.array([(0.6, 1, 1)])),
         #("segmenting_mean_thresh", -5),
-        #("isotropic", _isotropic_factors),
-        ("isotropic", np.array([(0.96, 1, 1)])),
+        ("isotropic", _isotropic_factors),
+        #("isotropic", np.array([(0.96, 1, 1)])),
         #("overlap", np.arange(0.1, 1.0, 0.1)),
         #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
         #("prune_tol_factor", _prune_tol_factors),
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
-        ("clip_max", np.arange(0.55, 0.95, 0.05)),
+        ("clip_max", np.arange(0.55, 0.85, 0.05)),
         #("segmenting_mean_thresh", np.arange(0.2, 0.8, 0.1)),
         #("segmenting_mean_thresh", np.arange(-5, -4.9, 0.1)),
         #("segmenting_mean_thresh", np.arange(5, 5.1, 0.1)),

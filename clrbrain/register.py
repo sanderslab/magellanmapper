@@ -259,7 +259,7 @@ def _mirror_labels(img, img_ref):
         return img
     # truncate ventral and dorsal portions since variable amount of tissue 
     # or quality of imaging in these regions
-    _truncate_labels(img_np, (0, 0.77))#, (0, 0.55))
+    _truncate_labels(img_np, (0, 0.77), (0, 0.55))
     img_reflected = replace_sitk_with_numpy(img, img_np)
     return img_reflected
 
@@ -460,9 +460,13 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
         result_img = sitk.Cast(result_img, img.GetPixelID())
+        '''
+        # remove bottom planes after registration; make sure to turn off 
+        # bottom plane removal in mirror step
         img_np = sitk.GetArrayFromImage(result_img)
         _truncate_labels(img_np, z_frac=(0.2, 1.0))
         result_img = replace_sitk_with_numpy(result_img, img_np)
+        '''
         imgs_transformed.append(result_img)
         print(result_img)
         '''

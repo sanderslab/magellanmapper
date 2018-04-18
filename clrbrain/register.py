@@ -152,15 +152,24 @@ def _get_bbox_region(bbox):
     #print("shape: {}, slices: {}".format(shape, slices))
     return shape, slices
 
-def _truncate_labels(img_np, x_thresh, y_thresh):
-    #img_np = sitk.GetArrayFromImage(img)
+def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
     shape = img_np.shape
-    x_start = int(x_thresh * shape[2])
-    y_start = int(y_thresh * shape[1])
-    print("truncating from x_start {} and y_start {}".format(x_start, y_start))
-    img_np[:, y_start:] = 0
-    img_np[:, :, x_start:] = 0
-    #img_truncated = sitk.GetImageFromArray(img_np)
+    bounds = (z_frac, y_frac, x_frac)
+    axis = 0
+    bounds_len = len(bounds)
+    for bound in bounds:
+        if bound is not None:
+            # convert boundary fractions to absolute coordinates for the 
+            # given axis, filling the other axes with full slices
+            bound_abs = np.multiply(bound, shape[axis]).astype(np.int)
+            slices = [slice(None)] * bounds_len
+            slices[axis] = slice(0, bound_abs[0])
+            img_np[slices] = 0
+            slices[axis] = slice(bound_abs[1], None)
+            img_np[slices] = 0
+            print("truncated axis {} outside of bounds {}"
+                  .format(axis, bound_abs))
+        axis += 1
     return img_np
 
 def _mirror_labels(img, img_ref):
@@ -250,11 +259,17 @@ def _mirror_labels(img, img_ref):
         return img
     # truncate ventral and dorsal portions since variable amount of tissue 
     # or quality of imaging in these regions
-    _truncate_labels(img_np, 0.77, 0.55)
-    img_reflected = sitk.GetImageFromArray(img_np)
-    img_reflected.SetSpacing(img.GetSpacing())
-    img_reflected.SetOrigin(img.GetOrigin())
+    _truncate_labels(img_np, (0, 0.77))#, (0, 0.55))
+    img_reflected = replace_sitk_with_numpy(img, img_np)
     return img_reflected
+
+def replace_sitk_with_numpy(img_sitk, img_np):
+    spacing = img_sitk.GetSpacing()
+    origin = img_sitk.GetOrigin()
+    img_sitk_back = sitk.GetImageFromArray(img_np)
+    img_sitk_back.SetSpacing(spacing)
+    img_sitk_back.SetOrigin(origin)
+    return img_sitk_back
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
@@ -445,6 +460,9 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
         result_img = sitk.Cast(result_img, img.GetPixelID())
+        img_np = sitk.GetArrayFromImage(result_img)
+        _truncate_labels(img_np, z_frac=(0.2, 1.0))
+        result_img = replace_sitk_with_numpy(result_img, img_np)
         imgs_transformed.append(result_img)
         print(result_img)
         '''

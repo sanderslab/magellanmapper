@@ -1143,7 +1143,11 @@ def plot_roc(stats_dict, name):
             lines.append(line)
             colori += 1
             for i, n in enumerate(params):
-                plt.annotate(n, (fdr[i], sens[i]))
+                annotation = n
+                if isinstance(n, float):
+                    # limit max decimal points while avoiding trailing zeros
+                    annotation = "{:.3g}".format(n)
+                plt.annotate(annotation, (fdr[i], sens[i]))
         # iterated legend position to avoid overlap from multiple legends
         legend = plt.legend(
             handles=lines, loc=posi, title=group, fancybox=True, 

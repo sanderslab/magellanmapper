@@ -136,7 +136,8 @@ def denoise_roi(roi, channel=None):
         denoised = denoised + high_pass
         
         # further erode denser regions to decrease overlap among blobs
-        if saturated_mean > 0.2:
+        if saturated_mean > settings["erosion_threshold"]:
+            #print("denoising for saturated mean of {}".format(saturated_mean))
             denoised = morphology.erosion(denoised, morphology.octahedron(1))
         if multichannel:
             if roi_out is None:

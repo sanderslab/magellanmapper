@@ -138,8 +138,10 @@ def denoise_roi(roi, channel=None):
         denoised = denoised + high_pass
         
         # further erode denser regions to decrease overlap among blobs
+        '''
         if saturated_mean > 0.2:
             denoised = morphology.erosion(denoised, morphology.octahedron(1))
+        '''
         if multichannel:
             if roi_out is None:
                 roi_out = np.zeros(roi.shape, dtype=denoised.dtype)

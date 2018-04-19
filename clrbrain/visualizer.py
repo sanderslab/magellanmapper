@@ -254,12 +254,18 @@ class Visualization(HasTraits):
                     feedback.append("{} outside, ignored".format(self._format_seg(seg_db)))
         
         segs_transposed_np = np.array(segs_transposed)
-        if (len(segs_transposed_np) > 0 
-            and np.any(
-                np.logical_and(segs_transposed_np[:, 4] == -1, 
-                np.logical_not(segs_transposed_np[:, 3] < config.POS_THRESH)))):
-            feedback.insert(0, "Segments *NOT* added. Please ensure that all "
-                               "segments in the ROI have been verified.\n")
+        unverified = None
+        if (len(segs_transposed_np) > 0):
+            # unverified blobs are those with default confirmation setting 
+            # and radius > 0, where radii < 0 would indicate a user-added circle
+            unverified = np.logical_and(
+                detector.get_blob_confirmed(segs_transposed_np) == -1, 
+                np.logical_not(segs_transposed_np[:, 3] < config.POS_THRESH))
+        if np.any(unverified):
+            # show missing verifications and prevent saving
+            feedback.insert(0, "Detected blobs *NOT* added. Please check these "
+                               "blobs' missing verifications:\n{}\n"
+                               .format(segs_transposed_np[unverified, :4]))
         else:
             # inserts experiment if not already added, then segments
             feedback.append("\nInserting segments:")

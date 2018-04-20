@@ -623,8 +623,8 @@ def plot_roi(roi, segments, channel, show=True, title=""):
     
 
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
-                  offset, segments, mask_in, 
-                  segs_cmap, border=None, plane="xy", padding_stack=None,
+                  offset, segments, mask_in, segs_cmap, fn_close_listener, 
+                  border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None, labels=None, blobs_truth=None, circles=None, 
                   mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS):
@@ -643,6 +643,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             This array can include adjacent segments as well.
         mask_in: Boolean mask of ``segments`` within the ROI.
         segs_cmap: Colormap for segments inside the ROI.
+        fn_close_listener: Handle figure close events.
         border: Border dimensions in pixels given as (x, y, z); defaults
             to None.
         plane: The plane to show in each 2D plot, with "xy" to show the 
@@ -1002,6 +1003,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                     ax, seg_new, SEG_LINEWIDTH, ":", fn_update_seg)
            
         fig.canvas.mpl_connect("button_release_event", on_btn_release)
+        # reset circles window flag
+        fig.canvas.mpl_connect("close_event", fn_close_listener)
     
     # show 3D screenshot if available
     if mlab_screenshot is not None:

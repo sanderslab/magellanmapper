@@ -628,6 +628,11 @@ class Visualization(HasTraits):
         if self.segs_pts is not None:
             self.segs_pts.glyph.glyph.scale_factor = self.segs_scale
     
+    def _fig_close_listener(self, evt):
+        """Handle figure close events.
+        """
+        self._circles_window_opened = False
+    
     def _btn_2d_trait_fired(self):
         # prevent showing duplicate windows with selectable circles
         circles = self._circles_2d[0].lower()
@@ -677,9 +682,11 @@ class Visualization(HasTraits):
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         screenshot = self.scene.mlab.screenshot(antialiased=True)
         stack_args = (
-            self.update_segment, title, filename_base, img, config.channel, curr_roi_size, 
-            curr_offset, self.segments, self.segs_in_mask, self.segs_cmap, self._full_border(self.border), 
-            self._planes_2d[0].lower())
+            self.update_segment, title, filename_base, img, config.channel, 
+            curr_roi_size, curr_offset, self.segments, self.segs_in_mask, 
+            self.segs_cmap, self._fig_close_listener, 
+            # additional args with defaults
+            self._full_border(self.border), self._planes_2d[0].lower())
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
             "circles": circles, "grid": grid}

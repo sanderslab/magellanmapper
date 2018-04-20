@@ -756,17 +756,17 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             title = "{}x".format(int(zoom))
         ax.set_title(title)
     
-    def show_overview(ax, img2d, level):
+    def show_overview(ax, img2d_ov, level):
         """Show overview image with progressive zooming on the ROI for each 
         zoom level.
         
         Args:
             ax: Subplot axes.
-            img2d: Image in which to zoom.
+            img2d_ov: Image in which to zoom.
             level: Zoom level, where 0 is the original image.
         
         Returns:
-            The zoom amount as by which ``img2d`` was divided.
+            The zoom amount as by which ``img2d_ov`` was divided.
         """
         patch_offset = offset[0:2]
         zoom = 1
@@ -776,7 +776,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             origin = np.floor(np.multiply(
                 offset[0:2], zoom_levels + zoom_mult - 1) 
                 / (zoom_levels + zoom_mult)).astype(int)
-            zoom_shape = np.flipud(img2d.shape[:2])
+            zoom_shape = np.flipud(img2d_ov.shape[:2])
             # progressively decrease size, zooming in for each level
             zoom = zoom_mult + 3
             size = np.floor(zoom_shape / zoom).astype(int)
@@ -786,18 +786,25 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 if end[j] > zoom_shape[j]:
                     origin[j] -= end[j] - zoom_shape[j]
             # zoom and position ROI patch position
-            img2d = img2d[origin[1]:end[1], origin[0]:end[0]]
-            #print(img2d_zoom.shape, origin, size)
+            img2d_ov = img2d_ov[origin[1]:end[1], origin[0]:end[0]]
+            #print(img2d_ov_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
         # show the zoomed 2D image along with rectangle showing ROI, 
         # downsampling by using threshold as mask
         downsample = np.max(
-            np.divide(img2d.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
+            np.divide(img2d_ov.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
         if downsample < 1: 
             downsample = 1
+        min_show = plot_3d.near_min
+        max_show = vmax_overview
+        if np.prod(img2d_ov) < 2 * np.prod(roi_size[1:]):
+            # remove normalization from overview image if close in size to 
+            # zoomed plots to emphasize the raw image
+            min_show = None
+            max_show = None
         imshow_multichannel(
-            ax, img2d[::downsample, ::downsample], channel, colormaps, 
-            aspect, 1, plot_3d.near_min, vmax_overview)
+            ax, img2d_ov[::downsample, ::downsample], channel, colormaps, 
+            aspect, 1, min_show, max_show)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 

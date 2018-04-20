@@ -818,7 +818,7 @@ class Visualization(HasTraits):
     
     def update_segment(self, segment_new, segment_old=None, remove=False):
         """Update this class object's segments list with a new or updated 
-        segment
+        segment.
         
         Args:
             segment_new: Segment that was either added or updated, including 
@@ -883,14 +883,17 @@ class Visualization(HasTraits):
         """Sets segments.
         
         Args:
-            val: Numpy array of (n, 9) shape with segments. The columns
-                correspond to (z, y, x, radius, confirmed, truth, abs_z,
-                abs_y, abs_x). Note that the "abs" values are different from 
-                those used for duplicate shifting.
+            val: Numpy array of (n, 10) shape with segments. The columns
+                correspond to (z, y, x, radius, confirmed, truth, channel, 
+                abs_z,abs_y, abs_x). Note that the "abs" values are different 
+                from those used for duplicate shifting. If None, the 
+                segments will be reset to an empty list.
         """
         # no longer need to give default value if None, presumably from 
         # update of TraitsUI from 5.1.0 to 5.2.0pre
-        if val is not None:
+        if val is None:
+            self._segments = []
+        else:
             self._segments = val
     
     # the layout of the dialog created

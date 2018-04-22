@@ -193,14 +193,18 @@ class RegisterSettings(dict):
         self["affine_iter_max"] = "1024"
         self["bspline_iter_max"] = "256"
         self["bspline_grid_space_voxels"] = "50"
+        self["resize_factor"] = 0.7
 
 def update_register_settings(settings, settings_type):
-    if settings_type == "finer":
+    if settings_type.startswith("finer"):
+        # more aggressive parameters for finer tuning
         settings["register_type"] = settings_type
-        settings["translation_iter_max"] = "2048"
-        settings["affine_iter_max"] = "1024"
         settings["bspline_iter_max"] = "512"
-        settings["bspline_grid_space_voxels"] = "50"
+      
+        if settings_type.endswith("_big"):
+            # atlas is big relative to the experimental image, so need to 
+            # more aggressively downsize the atlas
+            settings["resize_factor"] = 0.625
 
 register_settings = RegisterSettings()
 

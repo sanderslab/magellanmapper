@@ -325,14 +325,26 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
         # rescale based on xy dimensions of given and target image so that
         # they are not so far off from one another that scaling does not occur; 
         # assume that size discrepancies in z don't affect registration and 
-        # for some reason may even prevent registration;
-        # TODO: consider only resizing of rescale is > 1 since downsampling 
-        # can apparently cause artifacts
+        # for some reason may even prevent registration
         size_diff = np.divide(target_size[::-1][1:3], transposed.shape[1:3])
-        rescale = np.mean(size_diff)
-        print("rescaling image by {}x".format(rescale))
-        transposed = transform.rescale(transposed, rescale, mode="reflect", 
-            preserve_range=True, multichannel=False).astype(img_dtype)
+        resize_factor = config.register_settings["resize_factor"]
+        rescale = np.mean(size_diff) * resize_factor
+        if rescale > 0.5:
+            print("rescaling image by {}x after applying resize factor of {}"
+                  .format(rescale, resize_factor))
+            transposed = transform.rescale(
+                transposed, rescale, mode="reflect", preserve_range=True, 
+                multichannel=False, anti_aliasing=True).astype(img_dtype)
+        '''
+        # alternative method based on resize rather than rescale
+        final_size = np.multiply(
+            target_size[::-1], config.register_settings["resize_factor"])
+            .astype(np.int)
+        final_size[0] = transposed.shape[0]
+        print("resizing to shape of {}".format(final_size))
+        transposed = transform.resize(transposed, final_size, mode="reflect", 
+            preserve_range=True, anti_aliasing=True).astype(img_dtype)
+        '''
         # casted back since transpose changes data type even when 
         # preserving range
         print(transposed.dtype, np.min(transposed), np.max(transposed))
@@ -430,6 +442,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # affine to sheer and scale
     param_map = sitk.GetDefaultParameterMap("affine")
     param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
+    #param_map["NumberOfResolutions"] = ["6"]
     param_map_vector.append(param_map)
     # bspline for non-rigid deformation
     param_map = sitk.GetDefaultParameterMap("bspline")

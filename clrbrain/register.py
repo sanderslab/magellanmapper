@@ -494,7 +494,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     if show_imgs:
         # show individual SimpleITK images in default viewer
         sitk.Show(fixed_img)
-        sitk.Show(moving_img)
+        #sitk.Show(moving_img)
         sitk.Show(transformed_img)
         for img in imgs_transformed:
             sitk.Show(img)

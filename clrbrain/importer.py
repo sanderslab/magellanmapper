@@ -819,7 +819,7 @@ def save_np_image(image, filename, series):
     out_file = open(filename_image5d_npz, "wb")
     np.save(out_file, image)
     out_file.close()
-    lows, highs = _calc_intensity_bounds(image5d)
+    lows, highs = _calc_intensity_bounds(image)
     _save_image_info(
         filename_info_npz, [os.path.basename(filename)], [image.shape], 
         detector.resolutions, detector.magnification, detector.zoom, 

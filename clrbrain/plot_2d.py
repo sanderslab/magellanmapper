@@ -798,7 +798,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             downsample = 1
         min_show = plot_3d.near_min
         max_show = vmax_overview
-        if np.prod(img2d_ov) < 2 * np.prod(roi_size[1:]):
+        print(img2d_ov.shape, roi_size)
+        print(np.prod(img2d_ov.shape[1:3]), np.prod(roi_size[:2]))
+        if np.prod(img2d_ov.shape[1:3]) < 2 * np.prod(roi_size[:2]):
             # remove normalization from overview image if close in size to 
             # zoomed plots to emphasize the raw image
             min_show = None

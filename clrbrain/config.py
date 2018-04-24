@@ -84,7 +84,7 @@ def update_process_settings(settings, settings_type):
             additional modifications made by matching ends of names.
     """
     if settings_type.startswith("2p_20x"):
-        settings["microscope_type"] = settings_type
+        settings["microscope_type"] = "2p_20x"
         settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 97
         settings["clip_min"] = 0
@@ -107,13 +107,13 @@ def update_process_settings(settings, settings_type):
         settings["segmenting_mean_thresh"] = -0.25
         
         if settings_type.endswith("_zebrafish"):
-            settings["microscope_type"] = settings_type
+            settings["microscope_type"] += "_zebrafish"
             settings["min_sigma_factor"] = 2.5
             settings["max_sigma_factor"] = 3
     
     elif settings_type.startswith("lightsheet_5x-v01"):
         # detection settings from pre-v.0.6.2
-        settings["microscope_type"] = settings_type
+        settings["microscope_type"] = "lightsheet_5x-v01"
         #settings["vis_3d"] = "surface"
         settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
@@ -130,9 +130,9 @@ def update_process_settings(settings, settings_type):
         settings["scale_factor"] = (0.63, 1, 1)
         settings["isotropic_vis"] = (1, 3, 3)
         
-    elif settings_type.startswith("lightsheet_5x"):
-        # detection settings from v.0.6.2+
-        settings["microscope_type"] = settings_type
+    elif settings_type.startswith("lightsheet"):
+        # detection settings from v.0.6.2+, based on lightsheet 5x
+        settings["microscope_type"] = "lightsheet"
         #settings["vis_3d"] = "surface"
         settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
@@ -151,11 +151,11 @@ def update_process_settings(settings, settings_type):
         #settings["isotropic_vis"] = (1, 3, 3)
         
         if settings_type.endswith("_contrast"):
-            settings["microscope_type"] = settings_type
+            settings["microscope_type"] += "_contrast"
             settings["channel_colors"] = ("inferno", "bone")
       
         elif settings_type.endswith("_cytoplasm"):
-            settings["microscope_type"] = settings_type
+            settings["microscope_type"] += "_cytoplasm"
             settings["clip_min"] = 0.3
             settings["clip_max"] = 0.8
             settings["points_3d_thresh"] = 0.7
@@ -165,12 +165,18 @@ def update_process_settings(settings, settings_type):
             settings["overlap"] = 0.2
       
         elif settings_type.endswith("_small"):
-            settings["vis_3d"] = "surface"
+            settings["microscope_type"] += "_small"
             settings["points_3d_thresh"] = 0.3 # used only if not surface
             settings["isotropic_vis"] = (1, 1, 1)
 
         elif settings_type.endswith("_binary"):
+            settings["microscope_type"] = "_binary"
             settings["detection_threshold"] = 0.001
+        
+        elif settings_type.endswith("_20x"):
+            settings["microscope_type"] += "_20x"
+            settings["segment_size"] = 100
+
 
 
 # default settings and list of settings for each channel

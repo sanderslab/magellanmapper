@@ -150,5 +150,18 @@ def _test_loading_rois(db, channel, path):
         plot_2d.savefig = None
         plot_2d.plot_roi(img, blobs, channel, show=True, title=path_base)
 
+def blobs_to_csv(blobs, path):
+    """Exports blob coordinates and radius to CSV file, compressed with GZIP.
+    
+    Args:
+        blobs: Blobs array, assumed to be in [[z, y, x, radius, ...], ...] 
+            format.
+        path: Path to blobs file. The CSV file will be the same as this path 
+            except replacing the extension with ``.csv.gz``.
+    """
+    path_out = "{}.csv.gz".format(os.path.splitext(path)[0])
+    header = "z,y,x,r"
+    np.savetxt(path_out, blobs[:, :4], delimiter=",", header=header)
+
 if __name__ == "__main__":
     print("Clrbrain exporter")

@@ -53,10 +53,10 @@ Attributes:
         processed images and segments. ``extract`` extracts a single plane 
         using the z-value from the offset and exits. ``export_rois`` 
         exports ROIs from the current database to serial 2D plots. 
-        ``transpose`` transposes the 
-        Numpy image file associated with ``filename`` with the ``--rescale`` 
-        option. ``animated`` generates an animated GIF with the 
-        ``--interval`` and ``--rescale`` options.
+        ``transpose`` transposes the Numpy image file associated with 
+        ``filename`` with the ``--rescale`` option. ``animated`` generates 
+        an animated GIF with the ``--interval`` and ``--rescale`` options. 
+        ``export_blobs`` exports blob coordinates/radii to compressed CSV file.
     proc: The chosen processing mode; defaults to None.
     TRUTH_DB_TYPES: Truth database modes. ``view`` loads the truth 
         database corresponding to the filename and any offset/size to show 
@@ -100,7 +100,7 @@ _blobs_all = None # share blobs among multiple processes
 
 PROC_TYPES = (
     "importonly", "processing", "processing_mp", "load", "extract", 
-    "export_rois", "transpose", "animated"
+    "export_rois", "transpose", "animated", "export_blobs"
 )
 proc_type = None
 
@@ -687,7 +687,7 @@ def process_file(filename_base, offset, roi_size):
     
     # LOAD MAIN IMAGE
     
-    if proc_type == PROC_TYPES[3] or proc_type == PROC_TYPES[5]:
+    if proc_type in (PROC_TYPES[3], PROC_TYPES[5], PROC_TYPES[8]):
         # loads from processed files
         global image5d_proc, segments_proc
         try:
@@ -801,6 +801,10 @@ def process_file(filename_base, offset, roi_size):
         stack.animated_gif(
             config.filename, series=config.series, interval=config.interval, 
             rescale=config.rescale, delay=config.delay)
+    
+    elif proc_type == PROC_TYPES[8]:
+        # export blobs to CSV file
+        exporter.blobs_to_csv(segments_proc, filename_info_proc)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # denoises and segments the region, saving processed image

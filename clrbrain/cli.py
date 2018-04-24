@@ -368,6 +368,9 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
     blobs_all = np.vstack(blobs_all)
     return blobs_all
 
+def _is_arg_true(arg):
+    return arg.lower() == "true" or arg == "1"
+
 def main(process_args_only=False):
     """Starts the visualization GUI.
     
@@ -532,11 +535,13 @@ def main(process_args_only=False):
         if labels_len > 1:
             config.labels_level = int(args.labels[1])
             print("Set labels level to {}".format(config.labels_level))
+        if labels_len > 2:
+            config.labels_mirror = _is_arg_true(args.labels[2])
+            print("Set labels mirroring to {}".format(config.labels_mirror))
     if args.flip:
         config.flip = []
         for flip in args.flip:
-            flip = flip.lower()
-            config.flip.append(flip.lower() == "true" or flip == "1")
+            config.flip.append(_is_arg_true(flip))
         print("Set flip to {}".format(config.flip))
     if args.register:
         config.register_type = args.register

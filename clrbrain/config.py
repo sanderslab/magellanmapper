@@ -205,13 +205,20 @@ class RegisterSettings(dict):
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
         # more aggressive parameters for finer tuning
-        settings["register_type"] = settings_type
+        settings["register_type"] = "finer"
         settings["bspline_iter_max"] = "512"
       
         if settings_type.endswith("_big"):
             # atlas is big relative to the experimental image, so need to 
             # more aggressively downsize the atlas
+            settings["register_type"] += "_big"
             settings["resize_factor"] = 0.625
+
+        elif settings_type.endswith("_group"):
+            # registered to group-registered atlas assumes images are 
+            # roughly the same size
+            settings["register_type"] += "_group"
+            settings["resize_factor"] = 1.0
 
 register_settings = RegisterSettings()
 
@@ -355,6 +362,7 @@ labels_scaling = None
 labels_ref = None
 labels_ref_lookup = None
 labels_level = None
+labels_mirror = True
 REGISTER_TYPES = ("single", "group", "overlays", "volumes", "densities")
 register_type = None
 ABA_NAME = "name"

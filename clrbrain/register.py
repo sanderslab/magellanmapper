@@ -467,7 +467,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         # currently assumes only one labels file, where ABA only gives half of 
         # atlas so need to mirror one side to other
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
-        img = _mirror_labels(img, sitk.ReadImage(moving_file))
+        if config.labels_mirror:
+            img = _mirror_labels(img, sitk.ReadImage(moving_file))
         img = transpose_img(img, plane, flip, target_size=fixed_img_size)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
@@ -537,8 +538,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     '''
     # Dice Similarity Coefficient (DSC) of total brain volume by applying 
     # simple binary mask for estimate of background vs foreground
-    fixed_binary_img = sitk.BinaryThreshold(fixed_img, _SIGNAL_THRESHOLD)
-    transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
+    fixed_binary_img = sitk.BinaryThreshold(
+        fixed_img, _get_binary_threshold(fixed_img))
+    transformed_binary_img = sitk.BinaryThreshold(
+        transformed_img, _get_binary_threshold(transformed_img))
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)
     #sitk.Show(transformed_binary_img)
@@ -548,7 +551,14 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file, None)
-    
+
+def _get_binary_threshold(img):
+    threshold = _SIGNAL_THRESHOLD
+    img_np = sitk.GetArrayFromImage(img)
+    if np.amax(img_np) > 1:
+        threshold = 10.0
+    return threshold
+
 def register_group(img_files, flip=None, show_imgs=True, 
              write_imgs=True, name_prefix=None):
     """Group registers several images to one another.

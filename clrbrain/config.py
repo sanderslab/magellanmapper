@@ -175,7 +175,8 @@ def update_process_settings(settings, settings_type):
         
         elif settings_type.endswith("_20x"):
             settings["microscope_type"] += "_20x"
-            settings["segment_size"] = 100
+            # fit into ~32GB RAM instance after isotropic interpolation
+            settings["segment_size"] = 50
 
 
 

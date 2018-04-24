@@ -706,6 +706,7 @@ def process_file(filename_base, offset, roi_size):
             segments_proc = output_info["segments"]
             print("{} segments loaded".format(len(segments_proc)))
             #print("segments range:\n{}".format(np.max(segments_proc, axis=0)))
+            #print("segments:\n{}".format(segments_proc))
             detector.resolutions = output_info["resolutions"]
             roi_offset = None
             shape = None
@@ -832,8 +833,8 @@ def process_file(filename_base, offset, roi_size):
         overlap = chunking.calc_overlap()
         tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
                .astype(int))
-        max_pixels = (roi.shape[0], config.sub_stack_max_pixels, 
-                      config.sub_stack_max_pixels)
+        max_pixels = np.multiply(
+            np.ones(3), config.sub_stack_max_pixels).astype(np.int)
         print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
         super_rois, super_rois_offsets = chunking.stack_splitter(
             roi, max_pixels, overlap)

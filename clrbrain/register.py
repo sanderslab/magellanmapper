@@ -31,7 +31,7 @@ from clrbrain import plot_2d
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
 IMG_EXP = "exp.mhd"
-IMG_GROUPED = "grouped.mhd"
+IMG_GROUPED = "grouped"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -593,7 +593,7 @@ def register_group(img_files, flip=None, show_imgs=True,
             size = img.GetSize()[::-1]
         else:
             img.SetOrigin(origin)
-        print("img_file:\n{}".format(img))
+        print("img_file: {}\n{}".format(img_file, img))
         img_vector.push_back(img)
         #sitk.Show(img)
     #sitk.ProcessObject.SetGlobalDefaultDirectionTolerance(1)
@@ -613,12 +613,32 @@ def register_group(img_files, flip=None, show_imgs=True,
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
+    # extract individual 3D images from 4D result image
+    transformed_img_vector = sitk.VectorOfImage()
+    extract_filter = sitk.ExtractImageFilter()
+    size = list(transformed_img.GetSize())
+    size[3] = 0 # set t to 0 to collapse this dimension
+    extract_filter.SetSize(size)
+    for i in range(len(img_files)):
+        extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
+        img = extract_filter.Execute(transformed_img)
+        if show_imgs:
+            sitk.Show(img)
+        transformed_img_vector.push_back(img)
+    # TODO: attempts to compose a combined image from the groupwise registered 
+    # image but currently only appears to show the first image
+    compose_filter = sitk.ComposeImageFilter()
+    transformed_img = sitk.Compose(transformed_img_vector)
+    
     if show_imgs:
         sitk.Show(transformed_img)
     
     if write_imgs:
-        # write both the .mhd and Numpy array files
-        out_path = name_prefix + IMG_GROUPED
+        # write both the .mhd and Numpy array files to a separate folder to 
+        # mimic the atlas folder format
+        out_path = os.path.join(name_prefix, IMG_ATLAS)
+        if not os.path.exists(name_prefix):
+            os.makedirs(name_prefix)
         print("writing {}".format(out_path))
         sitk.WriteImage(transformed_img, out_path, False)
         img_np = sitk.GetArrayFromImage(transformed_img)

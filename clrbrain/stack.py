@@ -12,6 +12,7 @@ from skimage import transform
 from skimage import io
 import matplotlib.pyplot as plt
 from matplotlib import animation
+from scipy import ndimage
 
 from clrbrain import config
 from clrbrain import plot_2d
@@ -26,11 +27,18 @@ def _import_img(i, path, rescale, multichannel):
         preserve_range=True, anti_aliasing=True)
     return i, img
 
-def _process_plane(i, plane, rescale, multichannel):
+def _process_plane(i, plane, rescale, multichannel, rotate=None):
     print("processing plane {}".format(i))
     img = transform.rescale(
         plane, rescale, mode="reflect", multichannel=multichannel, 
         preserve_range=True, anti_aliasing=True)
+    if rotate:
+        # rotate, filling background with edge color
+        #img = img[10:-100, 10:-80] # manually crop out any border
+        cval = np.mean(img[0, 0])
+        img = ndimage.rotate(img, rotate, cval=cval)
+        # additional cropping for oblique bottom edge after rotation
+        #img = img[:-50]
     return i, img
 
 def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 
@@ -50,6 +58,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
     with plt.style.context("classic"):
         
         # ascending order of all files in the directory
+        #images = images[5:-2] # manually remove border planes
         num_images = len(images)
         print("images.shape: {}".format(images.shape))
         if num_images < 1:
@@ -69,6 +78,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         pool = mp.Pool()
         pool_results = []
         for image in images:
+            # add rotation argument if necessary
             pool_results.append(pool.apply_async(
                 process_fnc, args=(i, image, rescale, multichannel)))
             i += 1
@@ -77,9 +87,13 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             i, img = result.get()
             if img_size is None:
                 img_size = img.shape
+            # tweak max values to change saturation
+            vmax = plot_2d.vmax_overview
+            #vmax = np.multiply(vmax, (0.9, 1.0))
             plotted_imgs[i] = plot_2d.imshow_multichannel(
                 ax, img, config.channel, colormaps, aspect, 1, 
-                vmin=plot_3d.near_min, vmax=plot_2d.vmax_overview)
+                vmin=plot_3d.near_min, vmax=vmax, 
+                origin=origin)
         pool.close()
         pool.join()
         

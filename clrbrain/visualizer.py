@@ -585,11 +585,11 @@ class Visualization(HasTraits):
                 # padding region to show surrounding blobs
                 segs_all, _ = detector.get_blobs_in_roi(
                     cli.segments_proc, offset, roi_size, plot_2d.padding)
+                # shift coordinates to be relative to offset
+                segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
                 segs_all = detector.format_blobs(segs_all)
                 segs_all = detector.blobs_in_channel(
                     segs_all, config.channel)
-                # shift coordinates to be relative to offset
-                segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             print("segs_all:\n{}".format(segs_all))
             
             if not self._is_segs_none(segs):

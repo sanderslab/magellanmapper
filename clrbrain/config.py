@@ -139,6 +139,7 @@ def update_process_settings(settings, settings_type):
         settings["clip_min"] = 0
         settings["clip_max"] = 0.5
         settings["unsharp_strength"] = 0.3
+        settings["erosion_threshold"] = 0.3
         settings["min_sigma_factor"] = 3
         settings["max_sigma_factor"] = 4
         settings["num_sigma"] = 10
@@ -281,6 +282,10 @@ _prune_tol_factors[:, 0] = _prune_tol_zs
 
 roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
+        # test single value by iterating on value that should not affect 
+        # detection ability
+        ("points_3d_thresh", [0.7]),
+        
         # unfused baseline
         #("scale_factor", 0.59),
         #("clip_vmax", 98.5),
@@ -293,7 +298,7 @@ roc_dict = OrderedDict([
         #("scale_factor", _scale_factors),
         #("scale_factor", np.array([(0.6, 1, 1)])),
         #("segmenting_mean_thresh", -5),
-        ("isotropic", _isotropic_factors),
+        #("isotropic", _isotropic_factors),
         #("isotropic", np.array([(0.96, 1, 1)])),
         #("overlap", np.arange(0.1, 1.0, 0.1)),
         #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
@@ -301,7 +306,7 @@ roc_dict = OrderedDict([
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
         #("clip_max", np.arange(0.3, 0.7, 0.1)),
-        ("erosion_threshold", np.arange(0.16, 0.35, 0.02)),
+        #("erosion_threshold", np.arange(0.16, 0.35, 0.02)),
         #("segmenting_mean_thresh", np.arange(0.2, 0.8, 0.1)),
         #("segmenting_mean_thresh", np.arange(-5, -4.9, 0.1)),
         #("segmenting_mean_thresh", np.arange(5, 5.1, 0.1)),

@@ -1,0 +1,71 @@
+#!/bin/bash
+# Prepare a server the Clrbrain pipeline
+# Author: David Young 2018
+
+################################################
+# Sets up a server for processing files in the Clrbrain 
+# pipeline. Both initial setup and preparing existing servers 
+# is supported.
+# 
+# Arguments:
+#   -h: Show help and exit.
+#   -s: Set up a fresh server, including drive initiation.
+#
+# Assumptions:
+# - Two additional drives are attached:
+#   1) /dev/nvme1n1: for swap
+#   2) /dev/nvmme2n1: ext4 format, for storage
+# - Username: "ec2-user", a standard username on AWS
+################################################
+
+setup=0
+
+OPTIND=1
+while getopts hn:s opt; do
+    case $opt in
+        h)  echo $HELP
+            exit 0
+            ;;
+        s)  setup=1
+            echo "Set to prepare a new server instance"
+            ;;
+        :)  echo "Option -$OPTARG requires an argument"
+            exit 1
+            ;;
+        --) ;;
+    esac
+done
+
+# pass arguments after "--" to another script if necessary
+shift "$((OPTIND-1))"
+EXTRA_ARGS="$@"
+
+# run from script directory
+BASE_DIR="`dirname $0`"
+cd "$BASE_DIR"
+BASE_DIR="$PWD"
+
+# show current drive arrangement
+lsblk -p
+
+if [[ $setup -eq 1 ]]; then
+    # initialize swap and storage drives if setting up 
+    # a new server instance
+    sudo mkswap /dev/nvme1n1
+    sudo mkfs -t ext4 /dev/nvme2n1
+fi
+
+# turn on swap and mount storage drive; these commands 
+# should fail if these drives were not initialized or 
+# attached
+sudo swapon /dev/nvme1n1
+swapon -s
+sudo mount /dev/nvme2n1 /data
+lsblk -p
+
+if [[ $setup -eq 1 ]]; then
+    # change ownership if new drive attached
+    sudo chown -R ec2-user.ec2-user /data
+fi
+
+exit 0

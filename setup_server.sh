@@ -10,24 +10,36 @@
 # Arguments:
 #   -h: Show help and exit.
 #   -s: Set up a fresh server, including drive initiation.
+#   -l: Use legacy drive specifications.
 #
 # Assumptions:
 # - Two additional drives are attached:
 #   1) /dev/nvme1n1: for swap
-#   2) /dev/nvmme2n1: ext4 format, for storage
+#   2) /dev/nvmme2n1: ext4 format, for data
+# - If \"-l\" flag is given, legacy devices are assumed: 
+#   1) /dev/xvdf for swap
+#   2) /dev/xvdg for data
 # - Username: "ec2-user", a standard username on AWS
 ################################################
 
 setup=0
+swap="/dev/nvme1n1"
+data="/dev/nvme2n1"
 
 OPTIND=1
-while getopts hn:s opt; do
+while getopts hsl opt; do
     case $opt in
         h)  echo $HELP
             exit 0
             ;;
         s)  setup=1
             echo "Set to prepare a new server instance"
+            ;;
+        l)  swap="/dev/xvdf"
+            data="/dev/xvdg"
+            echo "Set to use legacy device specifiers:"
+            echo "swap set to $swap"
+            echo "data set to $data"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -51,16 +63,16 @@ lsblk -p
 if [[ $setup -eq 1 ]]; then
     # initialize swap and storage drives if setting up 
     # a new server instance
-    sudo mkswap /dev/nvme1n1
-    sudo mkfs -t ext4 /dev/nvme2n1
+    sudo mkswap "$swap"
+    sudo mkfs -t ext4 "$data"
 fi
 
 # turn on swap and mount storage drive; these commands 
 # should fail if these drives were not initialized or 
 # attached
-sudo swapon /dev/nvme1n1
+sudo swapon "$swap"
 swapon -s
-sudo mount /dev/nvme2n1 /data
+sudo mount "$data" /data
 lsblk -p
 
 if [[ $setup -eq 1 ]]; then

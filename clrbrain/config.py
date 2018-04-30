@@ -201,6 +201,7 @@ class RegisterSettings(dict):
         self["affine_iter_max"] = "1024"
         self["bspline_iter_max"] = "256"
         self["bspline_grid_space_voxels"] = "50"
+        self["groupwise_iter_max"] = "1024"
         self["resize_factor"] = 0.7
 
 def update_register_settings(settings, settings_type):

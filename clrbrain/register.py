@@ -600,35 +600,38 @@ def register_group(img_files, flip=None, show_imgs=True,
     #sitk.ProcessObject.SetGlobalDefaultCoordinateTolerance(100)
     img_combined = sitk.JoinSeries(img_vector)
     
+    settings = config.register_settings
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(img_combined)
     elastix_img_filter.SetMovingImage(img_combined)
     param_map = sitk.GetDefaultParameterMap("groupwise")
-    param_map["FinalGridSpacingInVoxels"] = ["50"]
+    param_map["FinalGridSpacingInVoxels"] = [
+        settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     # TESTING:
-    #param_map["MaximumNumberOfIterations"] = ["0"]
+    #param_map["MaximumNumberOfIterations"] = 0
+    param_map["MaximumNumberOfIterations"] = [settings["groupwise_iter_max"]]
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
     # extract individual 3D images from 4D result image
-    transformed_img_vector = sitk.VectorOfImage()
     extract_filter = sitk.ExtractImageFilter()
     size = list(transformed_img.GetSize())
     size[3] = 0 # set t to 0 to collapse this dimension
     extract_filter.SetSize(size)
+    imgs = []
     for i in range(len(img_files)):
         extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
         img = extract_filter.Execute(transformed_img)
         if show_imgs:
             sitk.Show(img)
-        transformed_img_vector.push_back(img)
-    # TODO: attempts to compose a combined image from the groupwise registered 
-    # image but currently only appears to show the first image
-    compose_filter = sitk.ComposeImageFilter()
-    transformed_img = sitk.Compose(transformed_img_vector)
+        imgs.append(sitk.GetArrayFromImage(img))
+    # combine all images by taking their mean; 
+    # TODO: likely need a way to ensure a consistent amount of tissue per image
+    img_mean = np.mean(imgs, axis=0)
+    transformed_img = replace_sitk_with_numpy(transformed_img, img_mean)
     
     if show_imgs:
         sitk.Show(transformed_img)

@@ -41,6 +41,8 @@ Command-line arguments in addition to those from attributes listed below:
         groupwise registration.
     * rescale: Rescaling factor as a float value.
     * interval: Interval as an int, such as for animated GIF stack planes.
+    * chunk_shape: Stack processing chunk shape given as integeres in z,y,x 
+        order. Defaults to :attr:``config.sub_stack_max_pixels``.
 
 Attributes:
     roi_size: The size in pixels of the region of interest. Set with
@@ -413,6 +415,7 @@ def main(process_args_only=False):
     parser.add_argument("--border", nargs="*")
     parser.add_argument("--db")
     parser.add_argument("--groups", nargs="*")
+    parser.add_argument("--chunk_shape", nargs="*")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -565,6 +568,18 @@ def main(process_args_only=False):
     if args.db:
         config.db_name = args.db
         print("Set database name to {}".format(config.db_name))
+    if args.groups:
+        config.groups = args.groups
+        print("Set groups to {}".format(config.groups))
+    if args.chunk_shape is not None:
+        # TODO: given as z,y,x for overall project order consistency; need 
+        # to consider whether to shift to x,y,z for user-input consistency or 
+        # to change user-input to z,y,x
+        chunk_shapes = _parse_coords(args.chunk_shape)
+        if len(chunk_shapes) > 0:
+            config.sub_stack_max_pixels = chunk_shapes[0]
+            print("Set chunk shape to {}".format(config.sub_stack_max_pixels))
+    
     
     # load "truth blobs" from separate database for viewing
     ext = lib_clrbrain.get_filename_ext(config.filename)
@@ -608,9 +623,6 @@ def main(process_args_only=False):
     if config.db is None:
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
-    if args.groups:
-        config.groups = args.groups
-        print("Set groups to {}".format(config.groups))
     
     # setup Matplotlib parameters/styles
     #print(plt.style.available)
@@ -842,8 +854,7 @@ def process_file(filename_base, offset, roi_size):
         overlap = chunking.calc_overlap()
         tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
                .astype(int))
-        max_pixels = np.multiply(
-            np.ones(3), config.sub_stack_max_pixels).astype(np.int)
+        max_pixels = config.sub_stack_max_pixels
         print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
         super_rois, super_rois_offsets = chunking.stack_splitter(
             roi, max_pixels, overlap)

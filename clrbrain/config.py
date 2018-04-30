@@ -353,8 +353,8 @@ rc_params_mpl2_img_interp = {
 
 
 
-# max pixels for x- and y- dimensions of sub-stacks for stack processing
-sub_stack_max_pixels = 1000
+# max pixels of sub-stacks for stack processing (z, y, x order)
+sub_stack_max_pixels = (1000, 1000, 1000)
 
 # flag to save ROI to file
 saveroi = False

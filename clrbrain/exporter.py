@@ -40,6 +40,9 @@ def make_roi_paths(path, roi_id, channel):
 def export_rois(db, image5d, channel, path, border):
     """Export all ROIs from database.
     
+    If the current processing profile includes isotropic interpolation, the 
+    ROIs will be resized to make isotropic according to this factor.
+    
     Args:
         db: Database from which to export.
         image5d: The image with the ROIs.
@@ -74,6 +77,15 @@ def export_rois(db, image5d, channel, path, border):
                     blobs[:, 0:3], np.add(offset, border)[::-1])
             print("exporting ROI of shape {}".format(img3d.shape))
             
+            isotropic = config.process_settings["isotropic"]
+            blobs_orig = blobs
+            if isotropic is not None:
+                # interpolation for isotropy if set in first processing profile
+                img3d = plot_3d.make_isotropic(img3d, isotropic)
+                isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
+                blobs_orig = np.copy(blobs)
+                blobs = detector.multiply_blob_rel_coords(blobs, isotropic_factor)
+            
             # export ROI and 2D plots
             path_base, path_img, path_img_nifti, path_blobs, path_img_annot, \
                 path_img_annot_nifti = make_roi_paths(path, roi_id, channel)
@@ -94,7 +106,10 @@ def export_rois(db, image5d, channel, path, border):
             lib_clrbrain.show_full_arrays()
             
             # export image and blobs, stripping blob flags and adjusting 
-            # user-added segments' radii
+            # user-added segments' radii; use original rather than blobs with 
+            # any interpolation since the ground truth will itself be 
+            # interpolated
+            blobs = blobs_orig
             blobs = blobs[:, 0:4]
             # prior to v.0.5.0, user-added segments had a radius of 0.0
             blobs[np.isclose(blobs[:, 3], 0), 3] = 5.0
@@ -111,6 +126,11 @@ def export_rois(db, image5d, channel, path, border):
             
             # convert blobs to ground truth
             img3d_truth = plot_3d.build_ground_truth(size, blobs)
+            if isotropic is not None:
+                img3d_truth = plot_3d.make_isotropic(img3d_truth, isotropic)
+                # remove fancy blending since truth set must be binary
+                img3d_truth[img3d_truth >= 0.5] = 1
+                img3d_truth[img3d_truth < 0.5] = 0
             print("exporting truth ROI of shape {}".format(img3d_truth.shape))
             np.save(path_img_annot, img3d_truth)
             #print(img3d_truth)

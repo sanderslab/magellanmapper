@@ -83,6 +83,8 @@ def update_process_settings(settings, settings_type):
             will be matched by the start of the settings name, with 
             additional modifications made by matching ends of names.
     """
+    # MAIN PROFILES
+    
     if settings_type.startswith("2p_20x"):
         settings["microscope_type"] = "2p_20x"
         settings["vis_3d"] = "surface"
@@ -106,11 +108,6 @@ def update_process_settings(settings, settings_type):
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -0.25
         
-        if settings_type.endswith("_zebrafish"):
-            settings["microscope_type"] += "_zebrafish"
-            settings["min_sigma_factor"] = 2.5
-            settings["max_sigma_factor"] = 3
-    
     elif settings_type.startswith("lightsheet_5x-v01"):
         # detection settings from pre-v.0.6.2
         settings["microscope_type"] = "lightsheet_5x-v01"
@@ -150,35 +147,50 @@ def update_process_settings(settings, settings_type):
         settings["scale_factor"] = None
         settings["isotropic"] = (0.96, 1, 1)
         #settings["isotropic_vis"] = (1, 3, 3)
-        
-        if settings_type.endswith("_contrast"):
-            settings["microscope_type"] += "_contrast"
-            settings["channel_colors"] = ("inferno", "bone")
-      
-        elif settings_type.endswith("_cytoplasm"):
-            settings["microscope_type"] += "_cytoplasm"
-            settings["clip_min"] = 0.3
-            settings["clip_max"] = 0.8
-            settings["points_3d_thresh"] = 0.7
-            settings["min_sigma_factor"] = 8
-            settings["max_sigma_factor"] = 20
-            settings["num_sigma"] = 10
-            settings["overlap"] = 0.2
-      
-        elif settings_type.endswith("_small"):
-            settings["microscope_type"] += "_small"
-            settings["points_3d_thresh"] = 0.3 # used only if not surface
-            settings["isotropic_vis"] = (1, 1, 1)
+    
+    
+    
+    # PROFILE MODIFIERS
+    # any/all/none can be combined with any main profile, modifiers lower in 
+    # this listing taking precedence over prior ones and the main profile
+    
+    if "_zebrafish" in settings_type:
+        settings["microscope_type"] += "_zebrafish"
+        settings["min_sigma_factor"] = 2.5
+        settings["max_sigma_factor"] = 3
+    
+    if "_contrast" in settings_type:
+        settings["microscope_type"] += "_contrast"
+        settings["channel_colors"] = ("inferno", "bone")
+  
+    if "_cytoplasm" in settings_type:
+        settings["microscope_type"] += "_cytoplasm"
+        settings["clip_min"] = 0.3
+        settings["clip_max"] = 0.8
+        settings["points_3d_thresh"] = 0.7
+        settings["min_sigma_factor"] = 8
+        settings["max_sigma_factor"] = 20
+        settings["num_sigma"] = 10
+        settings["overlap"] = 0.2
+  
+    if "_small" in settings_type:
+        settings["microscope_type"] += "_small"
+        settings["points_3d_thresh"] = 0.3 # used only if not surface
+        settings["isotropic_vis"] = (1, 1, 1)
 
-        elif settings_type.endswith("_binary"):
-            settings["microscope_type"] = "_binary"
-            settings["detection_threshold"] = 0.001
-        
-        elif settings_type.endswith("_20x"):
-            settings["microscope_type"] += "_20x"
-            # fit into ~32GB RAM instance after isotropic interpolation
-            settings["segment_size"] = 50
-
+    if "_binary" in settings_type:
+        settings["microscope_type"] = "_binary"
+        settings["detection_threshold"] = 0.001
+    
+    if "_20x" in settings_type:
+        settings["microscope_type"] += "_20x"
+        # fit into ~32GB RAM instance after isotropic interpolation
+        settings["segment_size"] = 50
+    
+    if "_exportdl" in settings_type:
+        settings["microscope_type"] += "_exportdl"
+        # export to deep learning framework with required dimensions
+        settings["isotropic"] = (0.93, 1, 1)
 
 
 # default settings and list of settings for each channel

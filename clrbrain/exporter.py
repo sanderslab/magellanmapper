@@ -27,15 +27,22 @@ from clrbrain import sqlite
 from clrbrain import plot_2d
 from clrbrain import plot_3d
 
-def make_roi_paths(path, roi_id, channel):
+def make_roi_paths(path, roi_id, channel, make_dirs=False):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
-    path_img = "{}_ch{}.npy".format(path_base, channel)
-    path_img_nifti = "{}_ch{}.nii.gz".format(path_base, channel)
-    path_blobs = "{}_blobs.npy".format(path_base)
-    path_img_annot = "{}_ch{}_annot.npy".format(path_base, channel)
-    path_img_annot_nifti = "{}_ch{}_annot.nii.gz".format(path_base, channel)
-    return path_base, path_img, path_img_nifti, path_blobs, path_img_annot, \
-        path_img_annot_nifti
+    path_dir_nifti = "{}_nifti".format(path_base)
+    name_base = os.path.basename(path_base)
+    path_img = os.path.join(path_base, "{}_ch{}.npy".format(name_base, channel))
+    path_img_nifti = os.path.join(path_dir_nifti, "{}_ch{}.nii.gz".format(name_base, channel))
+    path_blobs = os.path.join(path_base, "{}_blobs.npy".format(name_base))
+    path_img_annot = os.path.join(path_base, "{}_ch{}_annot.npy".format(name_base, channel))
+    path_img_annot_nifti = os.path.join(path_dir_nifti, "{}_ch{}_annot.nii.gz".format(name_base, channel))
+    if make_dirs:
+        if not os.path.exists(path_base):
+            os.makedirs(path_base)
+        if not os.path.exists(path_dir_nifti):
+            os.makedirs(path_dir_nifti)
+    return path_base, path_dir_nifti, path_img, path_img_nifti, path_blobs, \
+        path_img_annot, path_img_annot_nifti
 
 def export_rois(db, image5d, channel, path, border):
     """Export all ROIs from database.
@@ -84,12 +91,15 @@ def export_rois(db, image5d, channel, path, border):
                 img3d = plot_3d.make_isotropic(img3d, isotropic)
                 isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
                 blobs_orig = np.copy(blobs)
-                blobs = detector.multiply_blob_rel_coords(blobs, isotropic_factor)
+                blobs = detector.multiply_blob_rel_coords(
+                    blobs, isotropic_factor)
             
             # export ROI and 2D plots
-            path_base, path_img, path_img_nifti, path_blobs, path_img_annot, \
-                path_img_annot_nifti = make_roi_paths(path, roi_id, channel)
+            path_base, path_dir_nifti, path_img, path_img_nifti, path_blobs, \
+                path_img_annot, path_img_annot_nifti = make_roi_paths(
+                    path, roi_id, channel, make_dirs=True)
             np.save(path_img, img3d)
+            print("saved 3D image to {}".format(path_img))
             # WORKAROUND: for some reason SimpleITK gives a conversion error 
             # when converting from uint16 (>u2) Numpy array
             img3d = img3d.astype(np.float64)
@@ -102,7 +112,9 @@ def export_rois(db, image5d, channel, path, border):
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
             sitk.WriteImage(img3d_sitk, path_img_nifti, False)
-            plot_2d.plot_roi(img3d, blobs, channel, show=False, title=path_base)
+            plot_2d.plot_roi(
+                img3d, blobs, channel, show=False, 
+                title=os.path.splitext(path_img)[0])
             lib_clrbrain.show_full_arrays()
             
             # export image and blobs, stripping blob flags and adjusting 

@@ -564,8 +564,8 @@ class Visualization(HasTraits):
         else:
             if self._DEFAULTS_2D[2] in self._check_list_2d:
                 # shows labels around segments with Random-Walker
-                #self.labels, _ = detector.segment_rw(self.roi, config.channel)
-                _, self.labels = detector.segment_rw(self.roi, config.channel)
+                self.labels, walker = detector.segment_rw(self.roi, config.channel)
+                #_, self.labels = detector.segment_rw(self.roi, config.channel)
             
             # collect segments in ROI and padding region, ensureing coordinates 
             # are relative to offset
@@ -618,6 +618,7 @@ class Visualization(HasTraits):
                     show_shadows)
                 self._segs_scale_high = scale * 2
                 self.segs_scale = scale
+            self.labels = detector.segment_ws(self.roi, walker, self.segments[self.segs_in_mask])
             #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     

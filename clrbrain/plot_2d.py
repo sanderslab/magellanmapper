@@ -464,16 +464,18 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         # show labels if provided and within ROI
-        if labels:
+        if labels is not None:
             for i in range(len(labels)):
                 label = labels[i]
                 if z_relative >= 0 and z_relative < label.shape[0]:
                     try:
-                        ax.contour(label[z_relative], colors="C{}".format(i))
+                        #ax.contour(label[z_relative], colors="C{}".format(i))\
+                        pass
                     except ValueError as e:
                         print(e)
                         print("could not show label:\n{}".format(label[z_relative]))
-                    #ax.imshow(label[z_relative])
+                    #ax.imshow(label[z_relative], cmap="nipy_spectral")
+                    ax.imshow(label, cmap="nipy_spectral")
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):

@@ -12,9 +12,12 @@ Attributes:
 from time import time
 import math
 import numpy as np
+from scipy import ndimage
+from skimage import filters
 from skimage import segmentation
 from skimage import measure
 from skimage import morphology
+from skimage.feature import peak_local_max
 from skimage.feature import blob_log
 
 from clrbrain import config
@@ -74,12 +77,46 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
             walker = morphology.remove_small_objects(walker == 1, remove_small)
         
         # label neighboring pixels to segmented regions
+        walker = morphology.erosion(walker, morphology.ball(3))
         label = measure.label(walker, background=0)
         
         labels.append(label)
         walkers.append(walker)
+        lib_clrbrain.show_full_arrays()
+        print(walker)
     
     return labels, walkers
+
+def segment_ws(roi, thresholded, blobs):    
+    '''
+    roi_ws = plot_3d.saturate_roi(roi, 0.5, 99.5)
+    roi_ws = plot_3d.denoise_roi(roi_ws, False, 1.0, False)
+    roi_thresh = filters.threshold_otsu(roi_ws, 64)
+    thresh = roi_ws > roi_thresh
+    '''
+    thresholded = thresholded[0]
+    roi = roi[..., 0]
+    roi_thresh = filters.threshold_otsu(roi, 64)
+    thresholded = roi > roi_thresh
+    distance = ndimage.distance_transform_edt(thresholded)
+    try:
+        local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=thresholded)
+    except IndexError as e:
+        print(e)
+        raise e
+    markers = measure.label(local_max)
+    '''
+    markers = np.zeros(roi.shape, dtype=np.uint8)
+    coords = np.transpose(blobs[:, :3]).astype(np.int)
+    coords = np.split(coords, coords.shape[0])
+    print(coords)
+    markers[coords] = 1
+    '''
+    labels_ws = morphology.watershed(-distance, markers)#, mask=roi)
+    #labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
+    #print("num ws blobs: {}".format(len(np.unique(labels_ws)) - 1))
+    print(labels_ws)
+    return labels_ws
 
 def _blob_surroundings(blob, roi, padding, plane=False):
     rad = blob[3]

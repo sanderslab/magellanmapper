@@ -77,7 +77,7 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
             walker = morphology.remove_small_objects(walker == 1, remove_small)
         
         # label neighboring pixels to segmented regions
-        walker = morphology.erosion(walker, morphology.ball(3))
+        walker = morphology.erosion(walker, morphology.octahedron(2))
         label = measure.label(walker, background=0)
         
         labels.append(label)
@@ -87,18 +87,12 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
     
     return labels, walkers
 
-def segment_ws(roi, thresholded, blobs):    
+def segment_ws(roi, thresholded, blobs): 
+    roi = roi[..., 0]   
+    thresholded = thresholded[0] - 1
     '''
-    roi_ws = plot_3d.saturate_roi(roi, 0.5, 99.5)
-    roi_ws = plot_3d.denoise_roi(roi_ws, False, 1.0, False)
-    roi_thresh = filters.threshold_otsu(roi_ws, 64)
-    thresh = roi_ws > roi_thresh
-    '''
-    thresholded = thresholded[0]
-    roi = roi[..., 0]
     roi_thresh = filters.threshold_otsu(roi, 64)
     thresholded = roi > roi_thresh
-    distance = ndimage.distance_transform_edt(thresholded)
     try:
         local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=thresholded)
     except IndexError as e:
@@ -106,16 +100,19 @@ def segment_ws(roi, thresholded, blobs):
         raise e
     markers = measure.label(local_max)
     '''
-    markers = np.zeros(roi.shape, dtype=np.uint8)
+    distance = ndimage.distance_transform_edt(thresholded)
+    markers = np.zeros(thresholded.shape, dtype=np.uint8)
     coords = np.transpose(blobs[:, :3]).astype(np.int)
     coords = np.split(coords, coords.shape[0])
     print(coords)
     markers[coords] = 1
-    '''
-    labels_ws = morphology.watershed(-distance, markers)#, mask=roi)
-    #labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
+    markers = measure.label(markers)
+    labels_ws = morphology.watershed(-distance, markers)
+    labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
     #print("num ws blobs: {}".format(len(np.unique(labels_ws)) - 1))
     print(labels_ws)
+    labels_ws = np.array([labels_ws])
+    print(labels_ws.shape)
     return labels_ws
 
 def _blob_surroundings(blob, roi, padding, plane=False):

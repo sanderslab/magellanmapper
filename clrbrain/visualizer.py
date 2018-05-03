@@ -556,6 +556,7 @@ class Visualization(HasTraits):
         return segs is None or not isinstance(segs, np.ndarray)
     
     def _btn_segment_trait_fired(self, segs=None):
+        walker = None
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
             # TODO: also check ProcessSettings and/or do away with mlab_3d flag
@@ -618,7 +619,9 @@ class Visualization(HasTraits):
                     show_shadows)
                 self._segs_scale_high = scale * 2
                 self.segs_scale = scale
-            self.labels = detector.segment_ws(self.roi, walker, self.segments[self.segs_in_mask])
+            if walker is not None:
+                self.labels = detector.segment_ws(
+                    self.roi, walker, self.segments[self.segs_in_mask])
             #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     

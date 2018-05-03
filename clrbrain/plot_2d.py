@@ -26,7 +26,7 @@ from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import matplotlib.backend_bases as backend_bases
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.colors import LinearSegmentedColormap, NoNorm
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
 from skimage import exposure
@@ -364,7 +364,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
                  highlight=False, border=None, plane="xy", roi=None, 
                  z_relative=-1, labels=None, blobs_truth=None, circles=None, 
-                 aspect=None, grid=False):
+                 aspect=None, grid=False, cmap_labels=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -474,8 +474,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     except ValueError as e:
                         print(e)
                         print("could not show label:\n{}".format(label[z_relative]))
-                    #ax.imshow(label[z_relative], cmap="nipy_spectral")
-                    ax.imshow(label, cmap="nipy_spectral")
+                    ax.imshow(label[z_relative], cmap=cmap_labels, norm=NoNorm())
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):
@@ -899,6 +898,13 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     gs_zoomed = gridspec.GridSpecFromSubplotSpec(zoom_plot_rows, zoom_plot_cols, 
                                                  gs[1, :],
                                                  wspace=0.1, hspace=0.1)
+    cmap_labels = None
+    if labels is not None:
+        # generate discrete colormap for labels
+        num_colors = len(np.unique(labels))
+        cmap_labels = lib_clrbrain.discrete_colormap(num_colors)
+        cmap_labels = LinearSegmentedColormap.from_list(
+            "discrete_cmap", cmap_labels / 255.0)
     # plot the fully zoomed plots
     #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots
     for i in range(zoom_plot_rows):
@@ -941,7 +947,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 segs_in, segs_out, segs_cmap, alpha, z == z_overview, 
                 border_full if show_border else None, plane, roi_show, 
                 z_relative, labels, blobs_truth_z, circles=circles, 
-                aspect=aspect, grid=grid)
+                aspect=aspect, grid=grid, cmap_labels=cmap_labels)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             ax_z_list.append(ax_z)

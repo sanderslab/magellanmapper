@@ -183,6 +183,29 @@ def is_binary(img):
     """
     return ((img == 0) | (img == 1)).all()
 
+def discrete_colormap(num_colors):
+    """Make a discrete colormap using :attr:``config.colors`` as the 
+    starting colors and filling in the rest with randomly generated RGB values.
+    
+    Args:
+        num_colors: Number of discrete colors to generate.
+    
+    Returns:
+        2D Numpy array in the format [[R, G, B, alpha], ...]. This colormap 
+        will need to be converted into a Matplotlib colormap using 
+        ``LinearSegmentedColormap.from_list`` to generate a map that can 
+        be used directly in functions such as ``imshow``.
+    """
+    # generate random combination of RGB values for each number of colors
+    cmap = (np.random.random((num_colors, 4)) * 255).astype(np.uint8)
+    cmap[:, -1] = 170 # make slightly transparent
+    # prioritize default colors by replacing first colors with default ones
+    for i in range(len(config.colors)):
+        if i >= num_colors:
+            break
+        cmap[i, :3] = config.colors[i]
+    return cmap
+
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))
     a = np.arange(2 * 3).reshape(2, 3).astype(np.float)

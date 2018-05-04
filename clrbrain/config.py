@@ -159,10 +159,15 @@ def update_process_settings(settings, settings_type):
             minor_ver = int(ver_split[-1])
         
             if minor_ver >= 1:
-            # detection settings from v.0.6.4
-            settings["microscope_type"] += ".1"
-            settings["erosion_threshold"] = 0.3
+                # detection settings from v.0.6.4
+                settings["microscope_type"] += ".1"
+                settings["erosion_threshold"] = 0.3
                 settings["sub_stack_max_pixels"] = (1000, 1000, 1000)
+        
+            if minor_ver >= 2:
+                # detection settings from v.0.6.6
+                settings["microscope_type"] += ".2"
+                settings["sub_stack_max_pixels"] = (1200, 800, 800)
     
     elif settings_type.startswith("lightsheet"):
         # detection settings optimized for lightsheet
@@ -184,7 +189,7 @@ def update_process_settings(settings, settings_type):
         settings["scale_factor"] = None
         settings["isotropic"] = (0.96, 1, 1)
         #settings["isotropic_vis"] = (1, 3, 3)
-        settings["sub_stack_max_pixels"] = (1000, 1000, 1000)
+        settings["sub_stack_max_pixels"] = (1200, 800, 800)
     
     
     

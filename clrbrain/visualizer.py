@@ -564,7 +564,7 @@ class Visualization(HasTraits):
             self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
         else:
             if self._DEFAULTS_2D[2] in self._check_list_2d:
-                # shows labels around segments with Random-Walker
+                # segments with Random-Walker
                 self.labels, walker = detector.segment_rw(self.roi, config.channel)
                 #_, self.labels = detector.segment_rw(self.roi, config.channel)
             
@@ -606,8 +606,8 @@ class Visualization(HasTraits):
                 segs = detector.blobs_in_channel(segs, config.channel)
                 segs_all = np.concatenate((segs, segs_outside), axis=0)
                 
-            # convert segments to visualizer table format and plot
             if segs_all is not None:
+                # convert segments to visualizer table format and plot
                 self.segments = detector.shift_blob_abs_coords(
                     segs_all, offset[::-1])
                 show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
@@ -619,7 +619,9 @@ class Visualization(HasTraits):
                     show_shadows)
                 self._segs_scale_high = scale * 2
                 self.segs_scale = scale
+            
             if walker is not None:
+                # 3D-seeded watershed segmentation using detection blobs
                 self.labels = detector.segment_ws(
                     self.roi, walker, self.segments[self.segs_in_mask])
             #detector.show_blob_surroundings(self.segments, self.roi)

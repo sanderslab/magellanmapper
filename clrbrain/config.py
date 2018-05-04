@@ -40,6 +40,11 @@ POS_THRESH = 0.001 # threshold for positive values for float comparison
 CMAP_GRBK_NAME = "Green_black"
 CMAP_RDBK_NAME = "Red_black"
 
+# max pixels of sub-stacks for stack processing (z, y, x order), which can 
+# be set from command-line and takes precedence over process settings to 
+# allow custom configurations depending on instance type
+sub_stack_max_pixels = None
+
 # PROCESSING SETTINGS
 
 class ProcessSettings(dict):
@@ -68,6 +73,8 @@ class ProcessSettings(dict):
         self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
         self["isotropic"] = None
         self["isotropic_vis"] = None
+        # module level variable will take precedence
+        self["sub_stack_max_pixels"] = (1000, 1000, 1000)
 
 def update_process_settings(settings, settings_type):
     """Update processing profiles, including layering modifications upon 
@@ -144,7 +151,12 @@ def update_process_settings(settings, settings_type):
         settings["scale_factor"] = None
         settings["isotropic"] = (0.96, 1, 1)
         
-        if settings_type.endswith(".1"):
+        ver_split = settings_type.split(".")
+        if len(ver_split) >= 2:
+            # minor versioning to allow slight modifications to profile
+            minor_ver = int(ver_split[-1])
+        
+            if minor_ver >= 1:
             # detection settings from v.0.6.4
             settings["microscope_type"] += ".1"
             settings["erosion_threshold"] = 0.3
@@ -386,9 +398,6 @@ rc_params_mpl2_img_interp = {
 }
 
 
-
-# max pixels of sub-stacks for stack processing (z, y, x order)
-sub_stack_max_pixels = (1000, 1000, 1000)
 
 # flag to save ROI to file
 saveroi = False

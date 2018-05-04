@@ -42,7 +42,9 @@ Command-line arguments in addition to those from attributes listed below:
     * rescale: Rescaling factor as a float value.
     * interval: Interval as an int, such as for animated GIF stack planes.
     * chunk_shape: Stack processing chunk shape given as integeres in z,y,x 
-        order. Defaults to :attr:``config.sub_stack_max_pixels``.
+        order. This value will take precedence over the 
+        ``sub_stack_max_pixels`` entry in the :class:``ProcessSettings`` 
+        profile entry.
 
 Attributes:
     roi_size: The size in pixels of the region of interest. Set with
@@ -852,9 +854,14 @@ def process_file(filename_base, offset, roi_size):
         # chunk into super-ROIs, which will each be further chunked into 
         # sub-ROIs for multi-processing
         overlap = chunking.calc_overlap()
-        tol = (np.multiply(overlap, config.process_settings["prune_tol_factor"])
+        settings = config.process_settings # use default settings
+        tol = (np.multiply(overlap, settings["prune_tol_factor"])
                .astype(int))
         max_pixels = config.sub_stack_max_pixels
+        if max_pixels is None:
+            # command-line set max takes precedence, but if not set, take 
+            # from process settings
+            max_pixels = settings["sub_stack_max_pixels"]
         print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
         super_rois, super_rois_offsets = chunking.stack_splitter(
             roi, max_pixels, overlap)

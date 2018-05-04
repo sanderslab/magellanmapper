@@ -376,9 +376,6 @@ def plot_3d_points(roi, vis, channel):
     roi = saturate_roi(roi, 98.5, channel)
     roi = np.clip(roi, 0.2, 0.8)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
-    isotropic_vis = settings["isotropic_vis"]
-    if isotropic_vis is not None:
-        roi = make_isotropic(roi, isotropic_vis)
     
     # separate parallel arrays for each dimension of all coordinates for
     # Mayavi input format, with the ROI itself given as a 1D scalar array 
@@ -420,11 +417,14 @@ def plot_3d_points(roi, vis, channel):
         # TODO: better performance if manually interval the points rather than 
         # through mask flag?
         #roi_show_1d = roi_show_1d[::mask]
-        vis.scene.mlab.points3d(
+        pts = vis.scene.mlab.points3d(
             np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
             roi_show_1d, mode="sphere", colormap=_MAYAVI_COLORMAPS[i], 
             scale_mode="scalar", mask_points=mask, line_width=1.0, vmax=1.0, 
             vmin=0.0, transparent=True)
+        isotropic = settings["isotropic_vis"]
+        if isotropic is not None:
+            pts.actor.actor.scale = isotropic[::-1]
     print("time for 3D points display: {}".format(time() - time_start))
     '''
     for i in range(roi_1d.size):

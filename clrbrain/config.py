@@ -188,7 +188,7 @@ def update_process_settings(settings, settings_type):
         settings["segmenting_mean_thresh"] = -10 # unused since scale factor off
         settings["scale_factor"] = None
         settings["isotropic"] = (0.96, 1, 1)
-        #settings["isotropic_vis"] = (1, 3, 3)
+        settings["isotropic_vis"] = (1.3, 1, 1)
         settings["sub_stack_max_pixels"] = (1200, 800, 800)
     
     

@@ -572,7 +572,7 @@ def read_file_sitk(filename_sitk, filename_np, series):
         filename_np, series, ext=ext)
     output, image5d_ver_num = read_info(filename_info_npz)
     img_sitk = sitk.ReadImage(filename_sitk)
-    img_np = sitk.GetArrayFromImage(img_sitk)
+    img_np = np.rot90(sitk.GetArrayFromImage(img_sitk), 2, (1, 2))
     image5d = img_np[None] # insert time axis as first dim
     return image5d
 

@@ -235,6 +235,11 @@ def update_process_settings(settings, settings_type):
         # export to deep learning framework with required dimensions
         settings["isotropic"] = (0.93, 1, 1)
 
+    if "_importdl" in settings_type:
+        settings["microscope_type"] += "_importdl"
+        # import from deep learning predicted image
+        settings["isotropic"] = None # assume already isotropic
+
 
 # default settings and list of settings for each channel
 process_settings = ProcessSettings()

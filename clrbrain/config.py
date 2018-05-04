@@ -132,6 +132,8 @@ def update_process_settings(settings, settings_type):
         settings["segmenting_mean_thresh"] = 0.5
         settings["scale_factor"] = (0.63, 1, 1)
         settings["isotropic_vis"] = (1, 3, 3)
+        # mimic absence of z-limit
+        settings["sub_stack_max_pixels"] = (100000, 1000, 1000)
         
     elif settings_type.startswith("lightsheet_v02"):
         # detection settings from v.0.6.2
@@ -160,6 +162,7 @@ def update_process_settings(settings, settings_type):
             # detection settings from v.0.6.4
             settings["microscope_type"] += ".1"
             settings["erosion_threshold"] = 0.3
+                settings["sub_stack_max_pixels"] = (1000, 1000, 1000)
     
     elif settings_type.startswith("lightsheet"):
         # detection settings optimized for lightsheet
@@ -181,6 +184,7 @@ def update_process_settings(settings, settings_type):
         settings["scale_factor"] = None
         settings["isotropic"] = (0.96, 1, 1)
         #settings["isotropic_vis"] = (1, 3, 3)
+        settings["sub_stack_max_pixels"] = (1000, 1000, 1000)
     
     
     

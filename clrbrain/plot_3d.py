@@ -404,11 +404,12 @@ def plot_3d_points(roi, vis, channel):
             z = np.reshape(z, roi_show.size)
         #print(shape, roi_show.shape, x.shape)
         
-        # adjust range from 0-1 to region of colormap to use
-        roi_show_1d = lib_clrbrain.normalize(roi_show_1d, 0.2, 1.0)
         # clear background points to see remaining structures
-        remove = np.where(roi_show_1d < settings["points_3d_thresh"])
+        thresh = filters.threshold_otsu(roi_show, 64)# * settings["points_3d_thresh"]
+        remove = np.where(roi_show_1d < thresh)
         roi_show_1d = np.delete(roi_show_1d, remove)
+        # adjust range from 0-1 to region of colormap to use
+        roi_show_1d = lib_clrbrain.normalize(roi_show_1d, 0.6, 1.0)
         #print(roi_show_1d)
         points_len = roi_show_1d.size
         if points_len == 0:
@@ -422,7 +423,7 @@ def plot_3d_points(roi, vis, channel):
         vis.scene.mlab.points3d(
             np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
             roi_show_1d, mode="sphere", colormap=_MAYAVI_COLORMAPS[i], 
-            scale_mode="none", mask_points=mask, line_width=1.0, vmax=1.0, 
+            scale_mode="scalar", mask_points=mask, line_width=1.0, vmax=1.0, 
             vmin=0.0, transparent=True)
     print("time for 3D points display: {}".format(time() - time_start))
     '''

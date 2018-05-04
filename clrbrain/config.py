@@ -51,7 +51,7 @@ class ProcessSettings(dict):
     def __init__(self, *args, **kwargs):
         self["microscope_type"] = "default"
         self["vis_3d"] = "points"
-        self["points_3d_thresh"] = 0.85
+        self["points_3d_thresh"] = 0.85 # deprecated in v.0.6.6
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2
         self["clip_max"] = 1.0

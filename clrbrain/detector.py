@@ -142,7 +142,7 @@ def segment_ws(roi, thresholded=None, blobs=None):
     labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
     #print("num ws blobs: {}".format(len(np.unique(labels_ws)) - 1))
     print(labels_ws)
-    labels_ws = np.array([labels_ws])
+    labels_ws = labels_ws[None]
     return labels_ws
 
 def _blob_surroundings(blob, roi, padding, plane=False):

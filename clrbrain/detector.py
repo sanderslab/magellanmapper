@@ -76,8 +76,9 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
         if remove_small:
             walker = morphology.remove_small_objects(walker == 1, remove_small)
         
-        # label neighboring pixels to segmented regions
-        walker = morphology.erosion(walker, morphology.octahedron(2))
+        # attempt to reduce connection by eroding and label neighboring 
+        # pixels to segmented regions
+        walker = morphology.erosion(walker, morphology.octahedron(1))
         label = measure.label(walker, background=0)
         
         labels.append(label)
@@ -88,31 +89,55 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
     return labels, walkers
 
 def segment_ws(roi, thresholded, blobs): 
+    """Segment an ROI using a 3D-seeded watershed.
+    
+    Args:
+        roi: ROI as a Numpy array in (z, y, x) order.
+        thresholded: Thresholded image such as a segmentation into foreground/
+            background given by Random-walker (:func:``segment_rw``).
+        blobs: Blobs as a Numpy array in [[z, y, x, ...], ...] order, which 
+            are used as seeds for the watershed.
+    
+    Returns:
+        Watershed labels as in the shape of [roi.shape], allowing for 
+        multiple sets of labels.
+    """
+    # TODO: extend to multichannel
     roi = roi[..., 0]   
-    thresholded = thresholded[0] - 1
+    thresholded = thresholded[0] - 1 # r-w assigned 0 values to > 0 val labels
+    
     '''
+    # Ostu thresholing and object separate based on local max rather than 
+    # seeded watershed approach
     roi_thresh = filters.threshold_otsu(roi, 64)
     thresholded = roi > roi_thresh
     try:
-        local_max = peak_local_max(distance, indices=False, footprint=morphology.ball(1), labels=thresholded)
+        local_max = peak_local_max(
+            distance, indices=False, footprint=morphology.ball(1), 
+            labels=thresholded)
     except IndexError as e:
         print(e)
         raise e
     markers = measure.label(local_max)
+    
     '''
+    # distance transform to find boundaries in thresholded image
     distance = ndimage.distance_transform_edt(thresholded)
+    
+    # convert blobs into marker image
     markers = np.zeros(thresholded.shape, dtype=np.uint8)
     coords = np.transpose(blobs[:, :3]).astype(np.int)
     coords = np.split(coords, coords.shape[0])
-    print(coords)
     markers[coords] = 1
     markers = measure.label(markers)
-    labels_ws = morphology.watershed(-distance, markers)
+    
+    # watershed with slight increase in compactness to give basins with 
+    # more regular, larger shape, and minimize number of small objects
+    labels_ws = morphology.watershed(-distance, markers, compactness=0.01)
     labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
     #print("num ws blobs: {}".format(len(np.unique(labels_ws)) - 1))
     print(labels_ws)
     labels_ws = np.array([labels_ws])
-    print(labels_ws.shape)
     return labels_ws
 
 def _blob_surroundings(blob, roi, padding, plane=False):

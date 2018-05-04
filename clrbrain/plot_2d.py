@@ -902,7 +902,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     if labels is not None:
         # generate discrete colormap for labels
         num_colors = len(np.unique(labels))
-        cmap_labels = lib_clrbrain.discrete_colormap(num_colors)
+        cmap_labels = lib_clrbrain.discrete_colormap(num_colors, alpha=200)
         cmap_labels = LinearSegmentedColormap.from_list(
             "discrete_cmap", cmap_labels / 255.0)
     # plot the fully zoomed plots

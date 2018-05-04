@@ -591,7 +591,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     # colormap has to be at least 2 colors
     segs_in = segments[segs_in_mask]
     num_colors = segs_in.shape[0] if segs_in.shape[0] >= 2 else 2
-    cmap = lib_clrbrain.discrete_colormap(num_colors)
+    cmap = lib_clrbrain.discrete_colormap(num_colors, alpha=170)
     cmap_indices = np.arange(segs_in.shape[0])
     
     if show_shadows:

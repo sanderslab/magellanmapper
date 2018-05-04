@@ -108,10 +108,9 @@ def update_process_settings(settings, settings_type):
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -0.25
         
-    elif settings_type.startswith("lightsheet_5x-v01"):
-        # detection settings from pre-v.0.6.2
-        settings["microscope_type"] = "lightsheet_5x-v01"
-        #settings["vis_3d"] = "surface"
+    elif settings_type.startswith("lightsheet_v01"):
+        # detection settings up through v.0.6.1
+        settings["microscope_type"] = "lightsheet_v01"
         settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
@@ -127,8 +126,31 @@ def update_process_settings(settings, settings_type):
         settings["scale_factor"] = (0.63, 1, 1)
         settings["isotropic_vis"] = (1, 3, 3)
         
+    elif settings_type.startswith("lightsheet_v02"):
+        # detection settings from v.0.6.2
+        settings["microscope_type"] = "lightsheet_v02"
+        settings["points_3d_thresh"] = 0.7
+        settings["clip_vmax"] = 98.5
+        settings["clip_min"] = 0
+        settings["clip_max"] = 0.5
+        settings["unsharp_strength"] = 0.3
+        settings["min_sigma_factor"] = 3
+        settings["max_sigma_factor"] = 4
+        settings["num_sigma"] = 10
+        settings["overlap"] = 0.55
+        settings["segment_size"] = 200
+        settings["prune_tol_factor"] = (3, 1.3, 1.3)
+        settings["segmenting_mean_thresh"] = -10 # unused since scale factor off
+        settings["scale_factor"] = None
+        settings["isotropic"] = (0.96, 1, 1)
+        
+        if settings_type.endswith(".1"):
+            # detection settings from v.0.6.4
+            settings["microscope_type"] += ".1"
+            settings["erosion_threshold"] = 0.3
+    
     elif settings_type.startswith("lightsheet"):
-        # detection settings from v.0.6.2+, based on lightsheet 5x
+        # detection settings optimized for lightsheet
         settings["microscope_type"] = "lightsheet"
         #settings["vis_3d"] = "surface"
         settings["points_3d_thresh"] = 0.7

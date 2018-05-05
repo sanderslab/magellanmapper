@@ -173,7 +173,6 @@ def update_process_settings(settings, settings_type):
         # detection settings optimized for lightsheet
         settings["microscope_type"] = "lightsheet"
         #settings["vis_3d"] = "surface"
-        settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
         settings["clip_max"] = 0.5

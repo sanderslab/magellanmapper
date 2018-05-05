@@ -278,9 +278,6 @@ def plot_3d_surface(roi, vis, channel):
     #roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
         
     settings = config.process_settings
-    isotropic_vis = settings["isotropic_vis"]
-    if isotropic_vis is not None:
-        roi = make_isotropic(roi, isotropic_vis)
     
     # turn off segmentation if ROI too big (arbitrarily set here as 
     # > 10 million pixels) to avoid performance hit and since likely showing 
@@ -345,6 +342,9 @@ def plot_3d_surface(roi, vis, channel):
         except Exception as e:
             print(e)
             print("ignoring min/max contour for now")
+        isotropic = settings["isotropic_vis"]
+        if isotropic is None:
+            surface.actor.actor.scale = isotropic[::-1]
     
     print("time to render 3D surface: {}".format(time() - time_start))
     
@@ -579,12 +579,6 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     if segments.shape[0] <= 0:
         return None, None, 0
     settings = config.process_settings
-    isotropic_vis = settings["isotropic_vis"]
-    if isotropic_vis is not None:
-        resize_factor = calc_isotropic_factor(isotropic_vis)
-        segments = np.copy(segments) # since editing segs
-        segments[:, :3] *= resize_factor[:3]
-        #print(segments)
     
     radii = segments[:, 3]
     scale = 5 if radii is None else np.mean(np.mean(radii) + np.amax(radii))
@@ -632,6 +626,10 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
         mask_points=mask, scale_mode="none", scale_factor=scale/2, resolution=50, 
         opacity=0.2) 
     pts_in.module_manager.scalar_lut_manager.lut.table = cmap
+    isotropic = settings["isotropic_vis"]
+    if isotropic is None:
+        for pts in [pts_out, pts_in]:
+            pts.actor.actor.scale = isotropic[::-1]
     
     return pts_in, cmap, scale
 

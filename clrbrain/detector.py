@@ -51,7 +51,8 @@ def calc_scaling_factor():
     lib_clrbrain.printv("scaling_factor: {}".format(factor))
     return factor
 
-def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
+def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None, 
+               erosion=None):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -76,15 +77,16 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None):
         if remove_small:
             walker = morphology.remove_small_objects(walker == 1, remove_small)
         
-        # attempt to reduce connection by eroding and label neighboring 
-        # pixels to segmented regions
-        walker = morphology.erosion(walker, morphology.octahedron(1))
+        # label neighboring pixels to segmented regions
+        if erosion:
+            # attempt to reduce connection by eroding first
+            walker = morphology.erosion(walker, morphology.octahedron(erosion))
         label = measure.label(walker, background=0)
         
         labels.append(label)
         walkers.append(walker)
-        lib_clrbrain.show_full_arrays()
-        print(walker)
+        #lib_clrbrain.show_full_arrays()
+        #print(walker)
     
     return labels, walkers
 

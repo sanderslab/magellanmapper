@@ -565,7 +565,8 @@ class Visualization(HasTraits):
         else:
             if self._DEFAULTS_2D[2] in self._check_list_2d:
                 # segments with Random-Walker
-                self.labels, walker = detector.segment_rw(self.roi, config.channel)
+                self.labels, walker = detector.segment_rw(
+                    self.roi, config.channel, erosion=1)
                 #_, self.labels = detector.segment_rw(self.roi, config.channel)
             
             # collect segments in ROI and padding region, ensureing coordinates 

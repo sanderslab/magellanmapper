@@ -42,7 +42,7 @@ ABA_ID = "id"
 ABA_PARENT = "parent_structure_id"
 ABA_LEVEL = "st_level"
 
-_SIGNAL_THRESHOLD = 0.004
+_SIGNAL_THRESHOLD = 0.01
 
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
@@ -539,6 +539,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         moving_img, transformed_img, translation, flip=True)
     
     # overlap stats
+    measure_overlap(fixed_img, transformed_img)
+    
+    # show overlays last since blocks until fig is closed
+    _show_overlays(imgs, translation, fixed_file, None)
+
+def measure_overlap(fixed_img, transformed_img):
     overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
     '''
     # mean Dice Similarity Coefficient (DSC) of labeled regions;
@@ -550,20 +556,26 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # Dice Similarity Coefficient (DSC) of total brain volume by applying 
     # simple binary mask for estimate of background vs foreground
     fixed_binary_img = sitk.BinaryThreshold(
-        fixed_img, _get_binary_threshold(fixed_img))
+        fixed_img, _get_img_threshold(fixed_img))
     transformed_binary_img = sitk.BinaryThreshold(
-        transformed_img, _get_binary_threshold(transformed_img))
+        transformed_img, _get_img_threshold(transformed_img))
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)
     #sitk.Show(transformed_binary_img)
     total_dsc = overlap_filter.GetDiceCoefficient()
     #print("Mean regional DSC: {}".format(mean_region_dsc))
     print("Total DSC: {}".format(total_dsc))
-    
-    # show overlays last since blocks until fig is closed
-    _show_overlays(imgs, translation, fixed_file, None)
 
-def _get_binary_threshold(img):
+def _get_img_threshold(img):
+    """Get manual image threshold.
+    
+    Args:
+        img: Image in SimpleITK format.
+    
+    Returns:
+        :const:``_SIGNAL_THRESHOLD`` by default, which assumes that the 
+        image intensities max at 1; 10.0 if the max intensity is > 1.
+    """
     threshold = _SIGNAL_THRESHOLD
     img_np = sitk.GetArrayFromImage(img)
     if np.amax(img_np) > 1:
@@ -697,6 +709,9 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     out_path = _reg_out_path(name_prefix, IMG_LABELS)
     print("Reading in {}".format(out_path))
     labels_img = sitk.GetArrayFromImage(sitk.ReadImage(out_path))
+    
+    # calculate the Dice similarity coefficient
+    measure_overlap(_load_numpy_to_sitk(fixed_file), transformed_sitk)
     
     # overlay the images
     imgs = [roi, moving_img, transformed_img, labels_img]

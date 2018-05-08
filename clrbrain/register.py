@@ -136,9 +136,20 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 def _get_bbox(img_np, threshold=10):
-    labels, walker = detector.segment_rw(
-        img_np, 0, vmin=threshold, vmax=threshold, remove_small=200)
-    labels_props = measure.regionprops(labels[0], walker[0])
+    """Get the bounding box for an object within an image.
+    
+    Args:
+        img_np: Image as a Numpy array.
+        threshold: Threshold level; defaults to 10.
+    
+    Returns:
+        Bounding box of the first object in the image.
+    """
+    # threshold the image, removing any small object
+    thresholded = img_np > threshold
+    thresholded = morphology.remove_small_objects(thresholded, 200)
+    # make labels for foreground and get label properties
+    labels_props = measure.regionprops(measure.label(thresholded))
     if len(labels_props) < 1:
         return None
     labels_bbox = labels_props[0].bbox

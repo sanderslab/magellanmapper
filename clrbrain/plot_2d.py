@@ -468,14 +468,16 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             for i in range(len(labels)):
                 label = labels[i]
                 if z_relative >= 0 and z_relative < label.shape[0]:
+                    '''
                     try:
-                        #ax.contour(label[z_relative], colors="C{}".format(i))\
+                        ax.contour(label[z_relative], colors="C{}".format(i))\
                         pass
                     except ValueError as e:
                         print(e)
                         print("could not show label:\n{}".format(label[z_relative]))
+                    '''
                     ax.imshow(label[z_relative], cmap=cmap_labels, norm=NoNorm())
-                    #ax.imshow(label[z_relative]) # is showing only threshold
+                    #ax.imshow(label[z_relative]) # showing only threshold
         
         if ((segs_in is not None or segs_out is not None) 
             and not circles == CIRCLES[2].lower()):
@@ -903,7 +905,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     if labels is not None:
         # generate discrete colormap for labels
         num_colors = len(np.unique(labels))
-        cmap_labels = lib_clrbrain.discrete_colormap(num_colors, alpha=150)
+        cmap_labels = lib_clrbrain.discrete_colormap(num_colors, alpha=150, prioritize_default=False)
         cmap_labels = LinearSegmentedColormap.from_list(
             "discrete_cmap", cmap_labels / 255.0)
     # plot the fully zoomed plots

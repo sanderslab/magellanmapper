@@ -183,12 +183,16 @@ def is_binary(img):
     """
     return ((img == 0) | (img == 1)).all()
 
-def discrete_colormap(num_colors, alpha=255):
+def discrete_colormap(num_colors, alpha=255, prioritize_default=True):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
     Args:
         num_colors: Number of discrete colors to generate.
+        alpha: Transparency level.
+        prioritize_defaults: If True, the default colors from 
+            :attr:``config.colors`` will replace the initial colormap elements; 
+            defaults to True.
     
     Returns:
         2D Numpy array in the format [[R, G, B, alpha], ...]. This colormap 
@@ -199,11 +203,12 @@ def discrete_colormap(num_colors, alpha=255):
     # generate random combination of RGB values for each number of colors
     cmap = (np.random.random((num_colors, 4)) * 255).astype(np.uint8)
     cmap[:, -1] = alpha # make slightly transparent
-    # prioritize default colors by replacing first colors with default ones
-    for i in range(len(config.colors)):
-        if i >= num_colors:
-            break
-        cmap[i, :3] = config.colors[i]
+    if prioritize_default:
+        # prioritize default colors by replacing first colors with default ones
+        for i in range(len(config.colors)):
+            if i >= num_colors:
+                break
+            cmap[i, :3] = config.colors[i]
     return cmap
 
 if __name__ == "__main__":

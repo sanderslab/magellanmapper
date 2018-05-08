@@ -166,7 +166,7 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "Border zone", "Outline", "Grid"]
+    _DEFAULTS_2D = ["Filtered", "Border zone", "Segmentation", "Grid"]
     _planes_2d = List
     _border_on = False # remembers last border selection
     _DEFAULT_BORDER = np.zeros(3) # default ROI border size
@@ -615,18 +615,24 @@ class Visualization(HasTraits):
                 self.segs_scale = scale
             
             if self._DEFAULTS_2D[2] in self._check_list_2d:
+                blobs = self.segments[self.segs_in_mask]
                 '''
                 # 3D-seeded watershed segmentation using detection blobs
                 self.labels, walker = detector.segment_rw(
                     self.roi, config.channel, erosion=1)
-                self.labels = detector.segment_ws(
-                    self.roi, walker, self.segments[self.segs_in_mask])
+                self.labels = detector.segment_ws(self.roi, walker, blobs)
                 '''
                 # 3D-seeded random-walker with high beta to limit walking 
-                # into background
+                # into background, also removing objects smaller than the 
+                # smallest blob, roughly normalized for anisotropy and 
+                # reduced by not including the 4/3 factor
+                min_size = int(
+                    np.pi * np.power(np.amin(np.abs(blobs[:, 3])), 3) 
+                    / np.mean(plot_3d.calc_isotropic_factor(1)))
+                print("min size threshold for r-w: {}".format(min_size))
                 self.labels, walker = detector.segment_rw(
                     self.roi, config.channel, beta=5000, 
-                    blobs=self.segments[self.segs_in_mask])
+                    blobs=blobs, remove_small=min_size)
             #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     

@@ -51,8 +51,18 @@ def calc_scaling_factor():
     lib_clrbrain.printv("scaling_factor: {}".format(factor))
     return factor
 
+def markers_from_blobs(roi, blobs):
+    # use blobs as seeds by converting blobs into marker image
+    markers = np.zeros(roi.shape, dtype=np.uint8)
+    coords = np.transpose(blobs[:, :3]).astype(np.int)
+    coords = np.split(coords, coords.shape[0])
+    markers[coords] = 1
+    markers = morphology.dilation(markers, morphology.ball(1))
+    markers = measure.label(markers)
+    return markers
+
 def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None, 
-               erosion=None):
+               erosion=None, blobs=None):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
@@ -62,16 +72,21 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         Labels for the segmented regions, which can be plotted as surfaces.
     """
     print("Random-Walker based segmentation...")
-    # random-walker segmentation
     labels = []
     walkers = []
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     for i in channels:
         roi_segment = roi[..., i] if multichannel else roi
         #settings = config.get_process_settings(i)
-        markers = np.zeros(roi_segment.shape, dtype=np.uint8)
-        markers[roi_segment < vmin] = 2
-        markers[roi_segment >= vmax] = 1
+        if blobs is None:
+            # mark unknown pixels as 0 by distinguishing known background 
+            # and foreground
+            markers = np.zeros(roi_segment.shape, dtype=np.uint8)
+            markers[roi_segment < vmin] = 2
+            markers[roi_segment >= vmax] = 1
+        else:
+            # derive markers from blobs
+            markers = markers_from_blobs(roi_segment, blobs)
         walker = segmentation.random_walker(
             roi_segment, markers, beta=beta, mode="cg_mg")
         if remove_small:
@@ -131,12 +146,7 @@ def segment_ws(roi, thresholded=None, blobs=None):
             raise e
         markers = measure.label(local_max)
     else:
-        # use blobs as seeds by converting blobs into marker image
-        markers = np.zeros(thresholded.shape, dtype=np.uint8)
-        coords = np.transpose(blobs[:, :3]).astype(np.int)
-        coords = np.split(coords, coords.shape[0])
-        markers[coords] = 1
-        markers = measure.label(markers)
+        markers = markers_from_blobs(thresholded, blobs)
     
     # watershed with slight increase in compactness to give basins with 
     # more regular, larger shape, and minimize number of small objects

@@ -556,19 +556,12 @@ class Visualization(HasTraits):
         return segs is None or not isinstance(segs, np.ndarray)
     
     def _btn_segment_trait_fired(self, segs=None):
-        walker = None
         if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
             # segments using the Random-Walker algorithm
             # TODO: also check ProcessSettings and/or do away with mlab_3d flag
             self.labels, self.walker = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
         else:
-            if self._DEFAULTS_2D[2] in self._check_list_2d:
-                # segments with Random-Walker
-                self.labels, walker = detector.segment_rw(
-                    self.roi, config.channel, erosion=1)
-                #_, self.labels = detector.segment_rw(self.roi, config.channel)
-            
             # collect segments in ROI and padding region, ensureing coordinates 
             # are relative to offset
             segs_all = None
@@ -621,10 +614,19 @@ class Visualization(HasTraits):
                 self._segs_scale_high = scale * 2
                 self.segs_scale = scale
             
-            if walker is not None:
+            if self._DEFAULTS_2D[2] in self._check_list_2d:
+                '''
                 # 3D-seeded watershed segmentation using detection blobs
+                self.labels, walker = detector.segment_rw(
+                    self.roi, config.channel, erosion=1)
                 self.labels = detector.segment_ws(
                     self.roi, walker, self.segments[self.segs_in_mask])
+                '''
+                # 3D-seeded random-walker with high beta to limit walking 
+                # into background
+                self.labels, walker = detector.segment_rw(
+                    self.roi, config.channel, beta=5000, 
+                    blobs=self.segments[self.segs_in_mask])
             #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     

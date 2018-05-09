@@ -218,17 +218,18 @@ install_shallow_clone() {
 
 # pip dependencies that are not available in Conda
 cd ..
-pip install matplotlib-scalebar
-pip install vtk==8.1.0
-install_shallow_clone https://github.com/enthought/traits.git
-install_shallow_clone https://github.com/enthought/pyface.git
-install_shallow_clone https://github.com/enthought/traitsui.git
+pip install -U matplotlib-scalebar
+pip install -U vtk==8.1.0
+pip install -U PyQt5
+#install_shallow_clone https://github.com/enthought/traits.git
+#install_shallow_clone https://github.com/enthought/pyface.git
+#install_shallow_clone https://github.com/enthought/traitsui.git
 install_shallow_clone https://github.com/enthought/mayavi.git
 install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
 # also cannot be installed in Conda environment configuration script 
 # for some reason
 install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
-pip install python-bioformats==1.1.0
+pip install -U python-bioformats==1.1.0
 cd "$BASE_DIR"
 
 if [ $build_simple_elastix -eq 1 ]

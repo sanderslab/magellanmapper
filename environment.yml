@@ -7,8 +7,9 @@ dependencies:
 - numpy
 - scipy
 - matplotlib
-- pyqt=5
 - cython
 - pygments
 - dask
 - pyamg
+- traitsui
+- pyface

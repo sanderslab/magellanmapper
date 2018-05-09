@@ -30,11 +30,12 @@ Command-line arguments in addition to those from attributes listed below:
         cli.py, though order is natural here as command-line argument).
     * saveroi: Save ROI from original image to file during stack processing.
     * register: Registration type. See :attr:``config.REGISTER_TYPES`` for 
-        types of registration.
+        types of registration and :mod:``register`` for how to use these 
+        types.
     * labels: Load annotation JSON file. The first argument is the path 
         to the JSON file. If a 2nd arguments is given, it is taken as an int of 
         the ontology level for grouping volumes.
-    * flip_horiz: Flags for flipping images horizontally for registration. 
+    * flip: Flags for flipping images horizontally for registration. 
         "0" or "false" (case-insensivite) are taken as False, and 
         "1" or "true" are taken as True. The number of flags should 
         correspond to the number of images to register, such as several for 

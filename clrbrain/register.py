@@ -2,6 +2,33 @@
 # Image registration
 # Author: David Young, 2017, 2018
 """Register images to one another.
+
+The registration type can be given on the command-line (see :mod:``cli``) as 
+outlined here. Each type can be coupled with additional arguments in ``cli``.
+    * ``single``: Register a single image to a reference atlas. Filenames 
+        should be given in :attr:``config.filenames``, where the first 
+        filename is the fixed image (eg the experiment), and the 
+        second image is the moving image (eg the atlas). The atlas rather 
+        than the experimental image is typically moved here since the 
+        experimental image is usually much larger and more difficult to move. 
+        For faster registration, a downsampled image can be given as this 
+        experiment image, and the third argument to ``filenames`` can 
+        optionally be given as a name prefix corresponding to the original 
+        experiment file. ``flip`` can also be given to flip the 
+    * ``group``: Register multiple experimental images to one another via 
+        groupwise registration. All the images given in 
+        :attr:``config.filenames`` will be registered to one another, except 
+        the last filename, which will be used as the output name prefix.
+    * ``overlays``: Overlay the moving image on top of the fixed image to 
+        visualize alignment. ``flip`` can be given to flip the moving image.
+    * ``volumes``: Calculate volumes for each region in the experimental 
+        image based on the corresponding registered labels image. ``labels`` 
+        should be given to specify the labels file and level. ``rescale`` is 
+        used to find the rescaled, typically downsampled images to use as a 
+        much faster way to calculate volumes. ``no_show`` suppresses 
+        graph display.
+    *   ``densities``: Similar to ``volumes`` but include nuclei densities 
+        per region by loading the processed stack file.
 """
 
 import os
@@ -675,15 +702,17 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     """Shows overlays of previously saved registered images.
     
     Should be run after :func:`register` has written out images in default
-    (xy) orthogonal orientation.
+    (xy) orthogonal orientation. Also output the Dice similiarity coefficient.
     
     Args:
         fixed_file: Path to the fixed file.
         moving_file_dir: Moving files directory, from which the original
             atlas will be retrieved.
+        plane: Orthogonal plane to flip the moving image.
         flip: If true, will flip the fixed file first; defaults to False.
         name_prefix: Path with base name where registered files are located; 
             defaults to None, in which case the fixed_file path will be used.
+        out_plane: Output plane to view.
     """
     # get the experiment file
     if name_prefix is None:
@@ -1432,7 +1461,8 @@ if __name__ == "__main__":
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
         prefix = config.filenames[-1]
-        register_group(config.filenames[:-1], flip=config.flip, name_prefix=prefix)
+        register_group(
+            config.filenames[:-1], flip=config.flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[2]:
         # overlay registered images in each orthogonal plane
         for out_plane in plot_2d.PLANE:

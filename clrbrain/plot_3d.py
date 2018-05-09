@@ -360,15 +360,13 @@ def plot_3d_points(roi, vis, channel):
             4D (z, y, x, channel) ndarray.
         vis: Visualization object on which to draw the contour. Any 
             current image will be cleared first.
+        channel: Channel to select, which can be None to indicate all 
+            channels.
     
     Returns:
         True if points were rendered, False if no points to render.
     """
     print("plotting as 3D points")
-    '''
-    scalars = vis.scene.mlab.pipeline.scalar_scatter(roi)
-    vis.scene.mlab.points3d(scalars)
-    '''
     vis.scene.mlab.clf()
     settings = config.process_settings
     
@@ -399,15 +397,17 @@ def plot_3d_points(roi, vis, channel):
             x = np.reshape(x, roi_show.size)
             y = np.reshape(y, roi_show.size)
             z = np.reshape(z, roi_show.size)
-        #print(shape, roi_show.shape, x.shape)
         
         # clear background points to see remaining structures
-        thresh = filters.threshold_otsu(roi_show, 64)# * settings["points_3d_thresh"]
+        thresh = 0 #settings["points_3d_thresh"]
+        if len(np.unique(roi_show)) > 1:
+            # need > 1 val to threshold
+            thresh = filters.threshold_otsu(roi_show, 64)
         remove = np.where(roi_show_1d < thresh)
         roi_show_1d = np.delete(roi_show_1d, remove)
+        
         # adjust range from 0-1 to region of colormap to use
         roi_show_1d = lib_clrbrain.normalize(roi_show_1d, 0.6, 1.0)
-        #print(roi_show_1d)
         points_len = roi_show_1d.size
         if points_len == 0:
             print("no 3D points to display")
@@ -425,11 +425,8 @@ def plot_3d_points(roi, vis, channel):
         isotropic = settings["isotropic_vis"]
         if isotropic is not None:
             pts.actor.actor.scale = isotropic[::-1]
+    
     print("time for 3D points display: {}".format(time() - time_start))
-    '''
-    for i in range(roi_1d.size):
-        print("x: {}, y: {}, z: {}, s: {}".format(x[i], y[i], z[i], roi_1d[i]))
-    '''
     return True
 
 def _shadow_img2d(img2d, shape, axis, vis):

@@ -399,10 +399,12 @@ def plot_3d_points(roi, vis, channel):
             z = np.reshape(z, roi_show.size)
         
         # clear background points to see remaining structures
-        thresh = 0 #settings["points_3d_thresh"]
+        thresh = 0
         if len(np.unique(roi_show)) > 1:
             # need > 1 val to threshold
-            thresh = filters.threshold_otsu(roi_show, 64)
+            thresh = (filters.threshold_otsu(roi_show, 64) 
+                      * settings["points_3d_thresh"])
+        print("removing 3D points below threshold of {}".format(thresh))
         remove = np.where(roi_show_1d < thresh)
         roi_show_1d = np.delete(roi_show_1d, remove)
         

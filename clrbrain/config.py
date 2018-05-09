@@ -51,7 +51,7 @@ class ProcessSettings(dict):
     def __init__(self, *args, **kwargs):
         self["microscope_type"] = "default"
         self["vis_3d"] = "points"
-        self["points_3d_thresh"] = 0.85 # deprecated in v.0.6.6
+        self["points_3d_thresh"] = 0.85 # frac of thresh (changed in v.0.6.6)
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2
         self["clip_max"] = 1.0
@@ -173,6 +173,7 @@ def update_process_settings(settings, settings_type):
         # detection settings optimized for lightsheet
         settings["microscope_type"] = "lightsheet"
         #settings["vis_3d"] = "surface"
+        settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
         settings["clip_max"] = 0.5

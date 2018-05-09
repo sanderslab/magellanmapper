@@ -41,9 +41,13 @@ BASE_DIR="`dirname $0`"
 cd "$BASE_DIR"
 echo $PWD
 
-# Replace microscope type with available profiles, such as "lightsheet_5x", 
-# "2p_20x", or "lightsheet_5x", or "lightsheet_5x_contrast"
-MICROSCOPE="lightsheet_5x"
+# Replace microscope type with available profiles, such as "lightsheet", 
+# "2p_20x", or "lightsheet_v02", or with modifiers, such as 
+# "lightsheet_contrast" or "lightsheet_contrast_cytoplasm". Multiple 
+# profiles can also be given for multiple channels, such as 
+# "lightsheet lightsheet_cytoplasm" for a nuclear marker in channel 0 
+# and cytoplasmic marker in channel 1
+MICROSCOPE="lightsheet"
 
 # Replace region of interest (ROI) size and offset
 SIZE=700,90,50
@@ -54,12 +58,6 @@ OFFSET=50,580,230
 
 # Load ROI, starting at the given offset and ROI size
 #./run --img "$IMG" --channel 0 --offset $OFFSET --size $SIZE --savefig pdf --microscope "$MICROSCOPE"
-
-# Process an entire stack locally on 1st channel
-#python -u -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
-
-# Process an entire stack on AWS (run from within EC2 instance) on 1st channel
-#./process_aws.sh -f "$IMG" -s $S3_DIR --  --microscope "$MICROSCOPE" --channel 0
 
 # Extract a single z-plane
 #python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"
@@ -73,6 +71,18 @@ IMG_ROI="${IMG_PATH_BASE}_(${OFFSET})x(${SIZE}).${EXT}"
 #python -u -m clrbrain.cli --img "$IMG" --proc transpose --rescale 0.05 --plane yz
 IMG_TRANSPOSED="${IMG_PATH_BASE}_transposed.${EXT}"
 #python -u -m clrbrain.cli --img "$IMG_TRANSPOSED" --proc animated --interval 5 --rescale 1.0
+
+
+####################################
+# Whole Image Processing Workflow
+
+# Process an entire image locally on 1st channel, chunked into multiple 
+# smaller stacks to minimize RAM usage and multiprocessed for efficiency
+#python -u -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
+
+# Similar processing but integrated with S3 access from AWS (run from 
+# within EC2 instance)
+#./process_aws.sh -f "$IMG" -s $S3_DIR --  --microscope "$MICROSCOPE" --channel 0
 
 
 ####################################

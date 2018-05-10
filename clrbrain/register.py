@@ -1434,6 +1434,8 @@ if __name__ == "__main__":
     print("Clrbrain image registration")
     from clrbrain import cli
     cli.main(True)
+    plot_2d.setup_style()
+    
     # name prefix to use a different name from the input files, such as when 
     # registering transposed/scaled images but outputting paths corresponding 
     # to the original image

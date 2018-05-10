@@ -25,7 +25,7 @@ Command-line arguments in addition to those from attributes listed below:
     * mlab_3d: 3D visualization mode (see plot_3d.py).
     * padding_2d: Padding around the ROI given as (x, y, z) from which to 
         include segments and and show further 2D planes.
-    * plane: Plane type (see plot_2d.py PLANE).
+    * plane: Plane type (see :const:``config.PLANE``).
     * res: Resolution given as (x, y, z) in floating point (see
         cli.py, though order is natural here as command-line argument).
     * saveroi: Save ROI from original image to file during stack processing.
@@ -77,9 +77,6 @@ import argparse
 from time import time
 import multiprocessing as mp
 import numpy as np
-import matplotlib.pylab as pylab
-import matplotlib.pyplot as plt
-#from memory_profiler import profile
 
 from clrbrain import chunking
 from clrbrain import config
@@ -626,11 +623,6 @@ def main(process_args_only=False):
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
     
-    # setup Matplotlib parameters/styles
-    #print(plt.style.available)
-    plt.style.use("seaborn")
-    pylab.rcParams.update(config.rc_params)
-    
     if process_args_only:
         return
     
@@ -645,6 +637,7 @@ def main(process_args_only=False):
             parsed_dict = mlearn.parse_grid_stats(stats_dict)
             # plot ROC curve
             from clrbrain import plot_2d
+            plot_2d.setup_style()
             plot_2d.plot_roc(parsed_dict, config.filename)
         else:
             # processes file with default settings

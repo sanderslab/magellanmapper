@@ -58,6 +58,7 @@ def main():
     Processes command-line arguments.
     """
     cli.main()
+    plot_2d.setup_style()
     push_exception_handler(reraise_exceptions=True)
     visualization = Visualization()
     visualization.configure_traits()

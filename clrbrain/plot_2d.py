@@ -26,6 +26,7 @@ from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import matplotlib.backend_bases as backend_bases
+import matplotlib.pylab as pylab
 from matplotlib.colors import LinearSegmentedColormap, NoNorm
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
@@ -1592,6 +1593,12 @@ def plot_volumes(volumes_dict, title=None, densities=False,
     if show:
         plt.show()
 
+def setup_style():
+    # setup Matplotlib parameters/styles
+    #print(plt.style.available)
+    plt.style.use("seaborn")
+    pylab.rcParams.update(config.rc_params)
+    
 if __name__ == "__main__":
     print("Testing plot_2d...")
     stats_dict = { 

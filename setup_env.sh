@@ -10,9 +10,11 @@
 #   -h: Show help and exit.
 #   -n: Set the Conda environment name; defaults to CONDA_ENV.
 #   -s: Build and install SimpleElastix.
+#   -l: Lightweight environment setup, which does not include 
+#       GUI components such as Matplotlib or Mayavi.
 #
 # Assumptions:
-# -Assumes that the Clrbrain git repo has already been cloned
+# -Assumes that the Clrbrain source package
 # -Creates the Anaconda environment, which should be first
 #  removed if you want to start with a clean environment
 # -Git dependencies will be cloned into the parent folder of 
@@ -20,13 +22,17 @@
 ################################################
 
 CONDA_ENV="clr3"
+CONDA_ENV_LIGHT="clrclu"
 env_name="$CONDA_ENV"
 build_simple_elastix=0
+lightweight=0
 
 ENV_CONFIG="environment.yml"
+ENV_CONFIG_LIGHT="environment_light.yml"
+config="$ENV_CONFIG"
 
 OPTIND=1
-while getopts hn:s opt; do
+while getopts hn:sl opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -36,6 +42,11 @@ while getopts hn:s opt; do
             ;;
         s)  build_simple_elastix=1
             echo "Set to build and install SimpleElastix"
+            ;;
+        l)  lightweight=1
+            env_name="$CONDA_ENV_LIGHT"
+            config="$ENV_CONFIG_LIGHT"
+            echo "Set to create lightweight (no GUI) environment"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -129,7 +140,6 @@ fi
 
 # creates "clr" conda environment
 echo "Checking for $env_name Anaconda environment..."
-config="$ENV_CONFIG"
 if [[ "$env_name" != "$CONDA_ENV" ]]
 then
     # change name in environment file with user-defined name
@@ -216,19 +226,25 @@ install_shallow_clone() {
     cd ..
 }
 
-# pip dependencies that are not available in Conda
+# pip dependencies that are not available in Conda, some of which are 
+# git-pip installed from Clrbrain parent directory
 cd ..
-pip install -U matplotlib-scalebar
-pip install -U vtk==8.1.0
-# pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
-# version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 
-# Matplotlib in Conda on Linux64 is not compatible with this release, 
-# however, and will install the Conda package alongside the pip one
-pip install -U PyQt5
-#install_shallow_clone https://github.com/enthought/traits.git
-#install_shallow_clone https://github.com/enthought/pyface.git
-#install_shallow_clone https://github.com/enthought/traitsui.git
-install_shallow_clone https://github.com/enthought/mayavi.git
+if [[ $lightweight -eq 0 ]]; then
+    # install dependencies for GUI requirement
+    pip install -U matplotlib-scalebar
+    pip install -U vtk==8.1.0
+    # pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
+    # version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 
+    # Matplotlib in Conda on Linux64 is not compatible with this release, 
+    # however, and will install the Conda package alongside the pip one
+    pip install -U PyQt5
+    #install_shallow_clone https://github.com/enthought/traits.git
+    #install_shallow_clone https://github.com/enthought/pyface.git
+    #install_shallow_clone https://github.com/enthought/traitsui.git
+    install_shallow_clone https://github.com/enthought/mayavi.git
+fi
+
+# install remaining dependencies
 install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
 # also cannot be installed in Conda environment configuration script 
 # for some reason

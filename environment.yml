@@ -8,8 +8,6 @@ dependencies:
 - scipy
 - matplotlib
 - cython
-- pygments
 - dask
 - pyamg
 - traitsui
-- pyface

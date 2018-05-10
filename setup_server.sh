@@ -2,25 +2,27 @@
 # Prepare a server the Clrbrain pipeline
 # Author: David Young 2018
 
-################################################
-# Sets up a server for processing files in the Clrbrain 
-# pipeline. Both initial setup and preparing existing servers 
-# is supported.
-# 
-# Arguments:
-#   -h: Show help and exit.
-#   -s: Set up a fresh server, including drive initiation.
-#   -l: Use legacy drive specifications.
-#
-# Assumptions:
-# - Two additional drives are attached:
-#   1) /dev/nvme1n1: for swap
-#   2) /dev/nvmme2n1: ext4 format, for data
-# - If \"-l\" flag is given, legacy devices are assumed: 
-#   1) /dev/xvdf for swap
-#   2) /dev/xvdg for data
-# - Username: "ec2-user", a standard username on AWS
-################################################
+HELP="
+Sets up a server for processing files in the Clrbrain 
+pipeline. Both initial setup and preparing existing servers 
+is supported.
+
+Arguments:
+   -h: Show help and exit.
+   -s: Set up a fresh server, including drive initiation.
+   -l: Use legacy drive specifications.
+
+Assumptions:
+- Two additional drives are attached:
+  1) /dev/nvme1n1: for swap
+  2) /dev/nvmme2n1: ext4 format, for data
+- If \"-l\" flag is given, legacy devices are assumed: 
+  1) /dev/xvdf for swap
+  2) /dev/xvdg for data
+- Username: "ec2-user", a standard username on AWS
+"
+
+DIR_DATA="/data"
 
 setup=0
 swap="/dev/nvme1n1"
@@ -72,12 +74,15 @@ fi
 # attached
 sudo swapon "$swap"
 swapon -s
-sudo mount "$data" /data
+if [[ ! -d "$DIR_DATA" ]]; then
+    sudo mkdir "$DIR_DATA"
+fi
+sudo mount "$data" "$DIR_DATA"
 lsblk -p
 
 if [[ $setup -eq 1 ]]; then
     # change ownership if new drive attached
-    sudo chown -R ec2-user.ec2-user /data
+    sudo chown -R ec2-user.ec2-user "$DIR_DATA"
 fi
 
 exit 0

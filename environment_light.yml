@@ -6,5 +6,6 @@ dependencies:
 - cython
 - numpy
 - scipy
+- matplotlib
 - dask
 - pyamg

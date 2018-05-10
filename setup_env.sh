@@ -21,15 +21,19 @@
 #  Clrbrain
 ################################################
 
+# default Conda environment names as found in .yml configs
 CONDA_ENV="clr3"
 CONDA_ENV_LIGHT="clrclu"
-env_name="$CONDA_ENV"
-build_simple_elastix=0
-lightweight=0
+env_default="$CONDA_ENV"
+env_name=""
 
+# default .yml files
 ENV_CONFIG="environment.yml"
 ENV_CONFIG_LIGHT="environment_light.yml"
-config="$ENV_CONFIG"
+config_default="$ENV_CONFIG"
+
+build_simple_elastix=0
+lightweight=0
 
 OPTIND=1
 while getopts hn:sl opt; do
@@ -44,8 +48,8 @@ while getopts hn:sl opt; do
             echo "Set to build and install SimpleElastix"
             ;;
         l)  lightweight=1
-            env_name="$CONDA_ENV_LIGHT"
-            config="$ENV_CONFIG_LIGHT"
+            env_default="$CONDA_ENV_LIGHT"
+            config_default="$ENV_CONFIG_LIGHT"
             echo "Set to create lightweight (no GUI) environment"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
@@ -138,18 +142,21 @@ then
 	fi
 fi
 
-# creates "clr" conda environment
-echo "Checking for $env_name Anaconda environment..."
-if [[ "$env_name" != "$CONDA_ENV" ]]
-then
+# create or update Conda environment
+config="$config_default"
+if [[ "$env_name" == "" ]]; then
+    echo "Setting up default Conda environment, $env_default"
+    env_name="$env_default"
+else
     # change name in environment file with user-defined name
+    echo "Updating environment configuration for $env_name"
     config="env_${env_name}.yml"
-    sed -e "s/$CONDA_ENV/$env_name/g" "$ENV_CONFIG" > "$config"
+    sed -e "s/$env_default/$env_name/g" "$config_default" > "$config"
 fi
 check_env="`conda env list | grep -w $env_name`"
 if [[ "$check_env" == "" ]]
 then
-	echo "Creating new conda environment..."
+	echo "Creating new Conda environment from $config..."
 	conda env create -f "$config"
 else
 	echo "$env_name already exists, will update"

@@ -7,7 +7,6 @@ dependencies:
 - numpy
 - scipy
 - matplotlib
-- cython
 - dask
 - pyamg
 - traitsui

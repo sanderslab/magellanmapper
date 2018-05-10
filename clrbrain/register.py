@@ -314,7 +314,7 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     
     Args:
         img_sitk: Image in SimpleITK format.
-        plane: One of :attr:``plot_2d.PLANES`` elements, specifying the 
+        plane: One of :attr:``config.PLANES`` elements, specifying the 
             planar orientation in which to transpose the image. The current 
             orientation is taken to be "xy".
         rotate: Rotate the final output image by 180 degrees; defaults to False.
@@ -329,19 +329,19 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     spacing = img_sitk.GetSpacing()
     origin = img_sitk.GetOrigin()
     transposed = img
-    if plane is not None and plane != plot_2d.PLANE[0]:
+    if plane is not None and plane != config.PLANE[0]:
         # swap z-y to get (y, z, x) order for xz orientation
         transposed = np.swapaxes(transposed, 0, 1)
         # sitk convention is opposite of numpy with (x, y, z) order
         spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
         origin = lib_clrbrain.swap_elements(origin, 1, 2)
-        if plane == plot_2d.PLANE[1]:
+        if plane == config.PLANE[1]:
             # rotate
             transposed = transposed[..., ::-1]
             transposed = np.swapaxes(transposed, 1, 2)
             spacing = lib_clrbrain.swap_elements(spacing, 0, 1)
             origin = lib_clrbrain.swap_elements(origin, 0, 1)
-        elif plane == plot_2d.PLANE[2]:
+        elif plane == config.PLANE[2]:
             # swap new y-x to get (x, z, y) order for yz orientation
             transposed = np.swapaxes(transposed, 0, 2)
             spacing = lib_clrbrain.swap_elements(spacing, 0, 2)
@@ -349,7 +349,7 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
             # rotate
             transposed = np.swapaxes(transposed, 1, 2)
             spacing = lib_clrbrain.swap_elements(spacing, 0, 1)
-        if plane == plot_2d.PLANE[1] or plane == plot_2d.PLANE[2]:
+        if plane == config.PLANE[1] or plane == config.PLANE[2]:
             # flip upside-down
             transposed[:] = np.flipud(transposed[:])
         else:
@@ -1454,8 +1454,8 @@ if __name__ == "__main__":
         print("Please choose a registration type")
     elif config.register_type == config.REGISTER_TYPES[0]:
         # "single", basic registration of 1st to 2nd image, transposing the 
-        # second image according to plot_2d.plane and config.flip_horiz
-        register(*config.filenames[0:2], plane=plot_2d.plane, 
+        # second image according to config.plane and config.flip_horiz
+        register(*config.filenames[0:2], plane=config.plane, 
                  flip=flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[1]:
         # groupwise registration, which assumes that the last image 
@@ -1465,9 +1465,9 @@ if __name__ == "__main__":
             config.filenames[:-1], flip=config.flip, name_prefix=prefix)
     elif config.register_type == config.REGISTER_TYPES[2]:
         # overlay registered images in each orthogonal plane
-        for out_plane in plot_2d.PLANE:
+        for out_plane in config.PLANE:
             overlay_registered_imgs(
-                *config.filenames[0:2], plane=plot_2d.plane, 
+                *config.filenames[0:2], plane=config.plane, 
                 flip=flip, name_prefix=prefix, 
                 out_plane=out_plane)
     elif config.register_type in (

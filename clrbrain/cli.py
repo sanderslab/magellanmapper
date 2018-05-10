@@ -90,7 +90,6 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 from clrbrain import mlearn
-from clrbrain import exporter
 
 roi_size = None # current region of interest
 roi_sizes = None # list of regions of interest
@@ -528,8 +527,8 @@ def main(process_args_only=False):
           .format(config.register_settings["register_type"]))
     if args.plane is not None:
         from clrbrain import plot_2d
-        plot_2d.plane = args.plane
-        print("Set plane to {}".format(plot_2d.plane))
+        config.plane = args.plane
+        print("Set plane to {}".format(config.plane))
     if args.saveroi:
         config.saveroi = args.saveroi
         print("Set save ROI to file to ".format(config.saveroi))
@@ -804,15 +803,15 @@ def process_file(filename_base, offset, roi_size):
         # export ROIs; assumes that info_proc was already loaded to 
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
+        from clrbrain import exporter
         db = config.db if config.truth_db is None else config.truth_db
         exporter.export_rois(
             db, image5d, config.channel, filename_base, config.border)
         
     elif proc_type == PROC_TYPES[6]:
         # transpose Numpy array
-        from clrbrain import plot_2d
         importer.transpose_npy(
-            config.filename, config.series, plane=plot_2d.plane, 
+            config.filename, config.series, plane=config.plane, 
             rescale=config.rescale)
         
     elif proc_type == PROC_TYPES[7]:
@@ -824,6 +823,7 @@ def process_file(filename_base, offset, roi_size):
     
     elif proc_type == PROC_TYPES[8]:
         # export blobs to CSV file
+        from clrbrain import exporter
         exporter.blobs_to_csv(segments_proc, filename_info_proc)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:

@@ -53,10 +53,7 @@ padding = (5, 5, 3) # human (x, y, z) order
 SEG_LINEWIDTH = 1
 ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
-PLANE = ("xy", "xz", "yz")
-plane = None
 CIRCLES = ("Circles", "Repeat circles", "No circles", "Full annotation")
-vmax_overview = 1.0
 _DOWNSAMPLE_THRESH = 1000
 
 # need to store DraggableCircles objects to prevent premature garbage collection
@@ -401,10 +398,10 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
     # swap columns if showing a different plane
     plane_axis = get_plane_axis(plane)
     image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
-    if plane == PLANE[1]:
+    if plane == config.PLANE[1]:
         # "xz" planes
         size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
-    elif plane == PLANE[2]:
+    elif plane == config.PLANE[2]:
         # "yz" planes
         size = lib_clrbrain.swap_elements(size, 0, 2, image5d_shape_offset)
         size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
@@ -434,9 +431,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             region = [z_relative, slice(0, roi_size[1]), 
                       slice(0, roi_size[0])]
         # swap columns if showing a different plane
-        if plane == PLANE[1]:
+        if plane == config.PLANE[1]:
             region = lib_clrbrain.swap_elements(region, 0, 1)
-        elif plane == PLANE[2]:
+        elif plane == config.PLANE[2]:
             region = lib_clrbrain.swap_elements(region, 0, 2)
             region = lib_clrbrain.swap_elements(region, 0, 1)
         # get the zoomed region
@@ -460,7 +457,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         # show the ROI, which is now a 2D zoomed image
         colormaps = config.process_settings["channel_colors"]
         imshow_multichannel(
-            ax, roi, channel, colormaps, aspect, alpha)#, 0.0, vmax_overview)
+            ax, roi, channel, colormaps, aspect, alpha)#, 0.0, config.vmax_overview)
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         # show labels if provided and within ROI
@@ -681,7 +678,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # adjust array order based on which plane to show
     border_full = np.copy(border)
     border[2] = 0
-    if plane == PLANE[1]:
+    if plane == config.PLANE[1]:
         # "xz" planes; flip y-z to give y-planes instead of z
         roi_size = lib_clrbrain.swap_elements(roi_size, 1, 2)
         offset = lib_clrbrain.swap_elements(offset, 1, 2)
@@ -689,7 +686,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
         if segments is not None and len(segments) > 0:
             segments[:, [0, 1]] = segments[:, [1, 0]]
-    elif plane == PLANE[2]:
+    elif plane == config.PLANE[2]:
         # "yz" planes; roll backward to flip x-z and x-y
         roi_size = lib_clrbrain.roll_elements(roi_size, -1)
         offset = lib_clrbrain.roll_elements(offset, -1)
@@ -801,7 +798,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         if downsample < 1: 
             downsample = 1
         min_show = plot_3d.near_min
-        max_show = vmax_overview
+        max_show = config.vmax_overview
         #print(img2d_ov.shape, roi_size)
         #print(np.prod(img2d_ov.shape[1:3]), np.prod(roi_size[:2]))
         if np.prod(img2d_ov.shape[1:3]) < 2 * np.prod(roi_size[:2]):
@@ -1054,7 +1051,7 @@ def extract_plane(image5d, plane_n, plane=None):
         plane_n: Slice of planes to extract, which can be a single index 
             or multiple indices such as would be used for an animation.
         plane: Type of plane to extract, which should be one of 
-            :attribute:`PLANES`.
+            :attribute:`config.PLANES`.
     """
     origin = None
     aspect = None # aspect ratio
@@ -1066,7 +1063,7 @@ def extract_plane(image5d, plane_n, plane=None):
     # extract a single 2D plane or a stack of planes if plane_n is a slice, 
     # which would be used for animations
     img2d = None
-    if plane == PLANE[1]:
+    if plane == config.PLANE[1]:
         # xz plane
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
         origin = "lower"
@@ -1075,7 +1072,7 @@ def extract_plane(image5d, plane_n, plane=None):
         if img2d.ndim > 2 and img2d.shape[1] > 1:
             # make y the "z" axis for stack of 2D plots, such as animations
             img2d = np.swapaxes(img2d, 0, 1)
-    elif plane == PLANE[2]:
+    elif plane == config.PLANE[2]:
         # yz plane
         aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
         origin = "lower"
@@ -1097,15 +1094,15 @@ def max_plane(img3d, plane):
     
     Args:
         img3d: Image array in (z, y, x) order.
-        plane: Plane as a value from :attr:``PLANE``.
+        plane: Plane as a value from :attr:``config.PLANE``.
     
     Returns:
         Number of elements along ``plane``'s axis.
     """
     shape = img3d.shape
-    if plane == PLANE[1]:
+    if plane == config.PLANE[1]:
         return shape[1]
-    elif plane == PLANE[2]:
+    elif plane == config.PLANE[2]:
         return shape[2]
     else:
         return shape[0]
@@ -1114,15 +1111,15 @@ def get_plane_axis(plane):
     """Gets the name of the plane corresponding to the given axis.
     
     Args:
-        plane: An element of :attr:``PLANE``.
+        plane: An element of :attr:``config.PLANE``.
     
     Returns:
-        The axis name orthogonal to :attr:``PLANE``.
+        The axis name orthogonal to :attr:``config.PLANE``.
     """
     plane_axis = "z"
-    if plane == PLANE[1]:
+    if plane == config.PLANE[1]:
         plane_axis = "y"
-    elif plane == PLANE[2]:
+    elif plane == config.PLANE[2]:
         plane_axis = "x"
     return plane_axis
 
@@ -1200,11 +1197,11 @@ def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
         title: Subplot title; defaults to None, in which case no title will 
             be shown.
     """
-    if out_plane == PLANE[1]:
+    if out_plane == config.PLANE[1]:
         # xz plane
         img_2d = img[:, plane_i]
         img_2d = np.flipud(img_2d)
-    elif out_plane == PLANE[2]:
+    elif out_plane == config.PLANE[2]:
         # yz plane, which requires a flip when original orientation is 
         # horizontal section
         # TODO: generalize to other original orientations
@@ -1286,7 +1283,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     plane_frac = 2#5 / 2
     if out_plane is None:
         out_plane = plane
-    if out_plane == PLANE[1]:
+    if out_plane == config.PLANE[1]:
         # xz plane
         aspect = resolution[0] / resolution[2]
         z = exp.shape[1] // plane_frac
@@ -1294,7 +1291,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
             atlas_z = atlas.shape[1] // plane_frac
         else:
             atlas_z = int(z - translation[1])
-    elif out_plane == PLANE[2]:
+    elif out_plane == config.PLANE[2]:
         # yz plane
         aspect = resolution[0] / resolution[1]
         z = exp.shape[2] // plane_frac

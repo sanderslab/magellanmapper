@@ -445,6 +445,9 @@ rescale = None # rescale image
 interval = None # interval
 delay = None # delay time between images
 
-# EXPORT IMAGES
+# 2D IMAGES
 
+PLANE = ("xy", "xz", "yz")
+plane = None
+vmax_overview = 1.0
 border = None # clip ROI to border (x,y,z order)

@@ -40,7 +40,6 @@ except ImportError as e:
 from clrbrain import chunking
 from clrbrain import config
 from clrbrain import detector
-from clrbrain import plot_2d
 from clrbrain import plot_3d
 from clrbrain import lib_clrbrain
 
@@ -307,7 +306,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         info_up["near_min"] = near_mins
         info_up["near_max"] = near_maxs
         info_up["scaling"] = scaling
-        info_up["plane"] = plot_2d.plane
+        info_up["plane"] = config.plane
     
     # backup and save updated info
     lib_clrbrain.backup_file(
@@ -378,8 +377,8 @@ def read_info(filename_info_npz):
     try:
         plot_3d.near_max = output["near_max"]
         print("set near_max to {}".format(plot_3d.near_max))
-        plot_2d.vmax_overview = plot_3d.near_max * 1.1
-        print("Set vmax_overview to {}".format(plot_2d.vmax_overview))
+        config.vmax_overview = plot_3d.near_max * 1.1
+        print("Set vmax_overview to {}".format(config.vmax_overview))
     except KeyError:
         print("could not find near_max")
     return output, image5d_ver_num
@@ -719,12 +718,12 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     multichannel = image5d.ndim >=5
     image5d_swapped = image5d
     
-    if plane is not None and plane != plot_2d.PLANE[0]:
+    if plane is not None and plane != config.PLANE[0]:
         # swap z-y to get (y, z, x) order for xz orientation
         image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 1)
         detector.resolutions[0] = lib_clrbrain.swap_elements(
             detector.resolutions[0], 0, 1)
-        if plane == plot_2d.PLANE[2]:
+        if plane == config.PLANE[2]:
             # swap new y-x to get (x, z, y) order for yz orientation
             image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
             detector.resolutions[0] = lib_clrbrain.swap_elements(
@@ -779,7 +778,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         image5d_transposed = np.lib.format.open_memmap(
             filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
             shape=image5d_swapped.shape)
-        if plane == plot_2d.PLANE[1] or plane == plot_2d.PLANE[2]:
+        if plane == config.PLANE[1] or plane == config.PLANE[2]:
             # flip upside-down if re-orienting planes
             if offset:
                 image5d_transposed[0, :] = np.fliplr(image5d_swapped[0, :])

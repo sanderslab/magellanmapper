@@ -88,7 +88,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             if img_size is None:
                 img_size = img.shape
             # tweak max values to change saturation
-            vmax = plot_2d.vmax_overview
+            vmax = config.vmax_overview
             #vmax = np.multiply(vmax, (0.9, 1.0))
             plotted_imgs[i] = plot_2d.imshow_multichannel(
                 ax, img, config.channel, colormaps, aspect, 1, 
@@ -137,7 +137,7 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
             a directory, all images from this directory will be imported in 
             Python sorted order. If the path is a saved Numpy array (eg .npy 
             file), animations will be built by plane, using the plane 
-            orientation set in :const:`plot_2d.plane`.
+            orientation set in :const:`config.plane`.
         series: Stack to build for multiseries files; defaults to 0.
         interval: Every nth image will be incorporated into the animation; 
             defaults to None, in which case 1 will be used.
@@ -163,7 +163,7 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     else:
         image5d = importer.read_file(path, series)
         planes, aspect, origin = plot_2d.extract_plane(
-            image5d, slice(None, None, interval), plane=plot_2d.plane)
+            image5d, slice(None, None, interval), plane=config.plane)
         out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
     ext = plot_2d.savefig
@@ -189,7 +189,7 @@ def save_plane(image5d, offset, roi_size=None, name=None):
     """
     plane_n = offset[2]
     img2d, aspect, origin = plot_2d.extract_plane(
-        image5d, plane_n, plane=plot_2d.plane)
+        image5d, plane_n, plane=config.plane)
     if roi_size is not None:
         img2d = img2d[
             offset[1]:offset[1]+roi_size[1], offset[0]:offset[0]+roi_size[0]]
@@ -201,7 +201,7 @@ def save_plane(image5d, offset, roi_size=None, name=None):
     # artifacts over whole image; also use no interpolation for cleanest image
     plot_2d.imshow_multichannel(
         ax, img2d, config.channel, colormaps, aspect, 1, vmin=plot_3d.near_min, 
-        vmax=plot_2d.vmax_overview*0.8, 
+        vmax=config.vmax_overview*0.8, 
         origin=origin, interpolation="none")
     fit_frame_to_image(fig, img2d.shape, aspect)
     if not name:

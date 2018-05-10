@@ -22,6 +22,7 @@
 FIJI="http://downloads.imagej.net/fiji/latest/fiji-nojre.zip"
 update=0 # update Clrbrain
 update_fiji=0 # update Fiji/ImageJ
+run_script=""
 
 # run from parent directory
 base_dir="`dirname $0`"
@@ -29,7 +30,7 @@ cd "$base_dir"
 echo $PWD
 
 OPTIND=1
-while getopts hi:p:uf opt; do
+while getopts hi:p:ufr: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -46,6 +47,9 @@ while getopts hi:p:uf opt; do
         f)  update_fiji=1
             echo "Set to update Fiji only"
             ;;
+        r)  run_script="$OPTARG"
+            echo "Set run script to $run_script"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -61,15 +65,13 @@ git_hash=`git rev-parse --short HEAD`
 archive="clrbrain_${git_hash}.zip"
 git archive -o "$archive" HEAD
 
+# basic update
 deploy_files="$archive"
-#mv_recon="multiview-reconstruction-*-SNAPSHOT.jar"
 server_cmd="unzip -o $archive -d clrbrain"
-#server_cmd="echo hello"
-cmd_fiji_update="Fiji.app/ImageJ-linux64 --update update"
 
-# full deployment
-if [ $update -eq 0 ]
-then
+# append for initial deployment
+if [[ $update -eq 0 ]]; then
+    #mv_recon="multiview-reconstruction-*-SNAPSHOT.jar"
     #deploy_files+=" ../multiview-reconstruction/target/$mv_recon"
     server_cmd+=" && wget $FIJI"
     server_cmd+=" && unzip fiji-nojre.zip"
@@ -78,11 +80,26 @@ then
     #server_cmd+=" ; rm Fiji.app/plugins/multiview?reconstruction-*.jar ; mv $mv_recon Fiji.app/plugins"
 fi
 
+# append customized run script, such as that prepared by 
+# setup_runclrbrain.sh
+if [[ "$run_script" != "" ]]; then
+    deploy_files+=" $run_script"
+    server_cmd+=" && mv $run_script clrbrain"
+fi
+
 # add on Fiji update
-if [ $update_fiji -eq 1 ]
-then
+if [[ $update_fiji -eq 1 ]]; then
+    cmd_fiji_update="Fiji.app/ImageJ-linux64 --update update"
     server_cmd+=" && $cmd_fiji_update"
 fi
 
+# summarize files and commands
+echo -e "\nFiles to deploy:"
+echo "$deploy_files"
+echo -e "\nCommand to execute on server:"
+echo "$server_cmd"
+echo ""
+
+# execute upload and server commands
 scp -i "$pem" $deploy_files ec2-user@"$ip":~
 ssh -t -i "$pem" ec2-user@"$ip" "$server_cmd"

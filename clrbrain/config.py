@@ -455,3 +455,8 @@ PLANE = ("xy", "xz", "yz")
 plane = None
 vmax_overview = 1.0
 border = None # clip ROI to border (x,y,z order)
+
+
+# AWS
+
+ec2_start = None

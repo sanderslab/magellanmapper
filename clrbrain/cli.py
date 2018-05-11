@@ -46,6 +46,8 @@ Command-line arguments in addition to those from attributes listed below:
         order. This value will take precedence over the 
         ``sub_stack_max_pixels`` entry in the :class:``ProcessSettings`` 
         profile entry.
+    * ec2_start: EC2 start instances parameters, used in 
+        :function:``aws.start_instances``.
 
 Attributes:
     roi_size: The size in pixels of the region of interest. Set with
@@ -438,6 +440,7 @@ def main(process_args_only=False):
     parser.add_argument("--db")
     parser.add_argument("--groups", nargs="*")
     parser.add_argument("--chunk_shape", nargs="*")
+    parser.add_argument("--ec2_start", nargs="*")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -598,8 +601,18 @@ def main(process_args_only=False):
         if len(chunk_shapes) > 0:
             config.sub_stack_max_pixels = chunk_shapes[0]
             print("Set chunk shape to {}".format(config.sub_stack_max_pixels))
+    if args.ec2_start is not None:
+        start = args.ec2_start
+        if len(start) > 0:
+            start[-1] = [int(n) for n in start[-1].split(",")]
+        config.ec2_start = start
+        print("Set ec2 start to {}".format(config.ec2_start))
     
     # prep filename
+    if not config.filename:
+        # unable to parse anymore args without filename
+        print("filename not specified, stopping argparsing")
+        return
     ext = lib_clrbrain.get_filename_ext(config.filename)
     filename_base = importer.filename_to_base(
         config.filename, config.series, ext=ext)

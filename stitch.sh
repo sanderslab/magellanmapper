@@ -1,55 +1,56 @@
 #!/bin/bash
 # Stitch files using ImageJ/Fiji plugin
-# Author: David Young 2017
+# Author: David Young 2017, 2018
 
-################################################
-# Stitch files using ImageJ/Fiji plugin.
-#
-# Arguments:
-#   -h: Show help and exit.
-#   -f: Path to image file.
-#   -o: Output directory.
-#   -c: Compute overlap and write registered tile configuration. 
-#     Defaults to use coordinates from TileConfiguration.txt 
-#     directly.
-#   -w: Write fused file. Defaults not to write.
-#   -b: Use BigStitcher. -o, -w, and -c flags will be ignored.
-#
-# To run in normal (not BigStitcher) mode:
-# -Run the stitch/tile_config.py utility to build a positions
-#  configuration file since the .czi file may not contain
-#  position information, such as for Lightsheet files
-# -Sample run command, using nohup in case of long server
-#  operation: 
-#  nohup ./stitch.sh -f "/path/to/img.czi" > /path/to/output 2>&1 &
-# -Track results: "tail -f /path/to/output"
-# -Note: The resulting TileConfiguration.registered.txt file 
-#  places unregistered tiles at (0, 0, 0), which will reduce the
-#  intensity of the 1st tile. Please check this file to manually
-#  reposition tiles if necessary:
-#   -Edit TileConfiguration.registered.txt with positions from
-#    surrounding tiles
-#   -Move TileConfiguration.registered.txt to TileConfiguration.txt
-#   -Kill the current ImageJ process
-#   -Edit stitch/ij_stitch.py to remove "compute_overlap" option
-#   -Re-run this script
-#
-# To run in BigStitcher mode:
-# -Run ./stitch.sh -f "/path/to/img.czi" -b
-################################################
+HELP="
+Stitch files using ImageJ/Fiji plugin.
+
+Arguments:
+  -h: Show help and exit.
+  -f: Path to image file.
+  -w [0|1|2]: 0 = Stitch but do not write fused file. Stitching 
+      plugin will compute overlap and write registered tile 
+      configuration. BigStitcher will import and calculate 
+      alignments.
+      1 = Write fused file only. Stitching plugin will use 
+      coordinates from TileConfiguration.txt.
+      2 = Stitch and write fused file(s).
+  -b: Use BigStitcher.
+
+To run in normal (not BigStitcher) mode:
+-Run the stitch/tile_config.py utility to build a positions
+ configuration file since the .czi file may not contain
+ position information, such as for Lightsheet files
+-Sample run command, using nohup in case of long server
+ operation: 
+ nohup ./stitch.sh -f \"/path/to/img.czi\" > /path/to/output 2>&1 &
+-Track results: \"tail -f /path/to/output\"
+-Note: The resulting TileConfiguration.registered.txt file 
+ places unregistered tiles at (0, 0, 0), which will reduce the
+ intensity of the 1st tile. Please check this file to manually
+ reposition tiles if necessary:
+  -Edit TileConfiguration.registered.txt with positions from
+   surrounding tiles
+  -Move TileConfiguration.registered.txt to TileConfiguration.txt
+  -Kill the current ImageJ process
+  -Edit stitch/ij_stitch.py to remove "compute_overlap" option
+  -Re-run this script
+
+To run in BigStitcher mode:
+-Run ./stitch.sh -f \"/path/to/img.czi\" -b
+"
 
 # run from parent directory
 base_dir="`dirname $0`"
 cd "$base_dir"
 echo $PWD
 
-compute_overlap=0
-write_fused=0
+write_fused=2
 out_dir=""
 big_stitch=0
 
 OPTIND=1
-while getopts hf:o:cwb opt; do
+while getopts hf:w:b opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -57,14 +58,8 @@ while getopts hf:o:cwb opt; do
         f)  IMG="$OPTARG"
             echo "Set image file to $IMG"
             ;;
-        o)  out_dir="$OPTARG"
-            echo "Set output directory to $out_dir"
-            ;;
-        c)  compute_overlap=1
-            echo "Set to compute overlap between tiles"
-            ;;
-        w)  write_fused=1
-            echo "Set to fuse and write"
+        w)  write_fused="$OPTARG"
+            echo "Set fuse and write to $write_fused"
             ;;
         b)  big_stitch=1
             echo "Set to use BigStitcher"
@@ -129,10 +124,10 @@ echo "Reserving $mem MB of memory"
 if [ $big_stitch -eq 1 ]
 then
     # BigStitcher; not working in headless mode so will require GUI availability
-    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'"'
+    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
 else
     # Fiji Stitching plugin; does not appear to work when fed a separate script in "-macro" mode
-    $IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",compute_overlap="'"$compute_overlap"'",write_fused="'"$write_fused"'"'
+    $IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
     
     # manually move files to output directory since specifying this directory
     # within the Stitching plugin requires the tile configuration file to be

@@ -14,6 +14,7 @@ import os
 from time import time
 
 #@String in_file
+#@int write_fused
 
 def perform_task(task, options):
     print("Running {}".format(task))
@@ -46,7 +47,7 @@ time_start = time()
     "timepoints_per_partition=1 "
     "setups_per_partition=0 "
 '''
-options = (
+options_define = (
     "define_dataset=[Automatic Loader (Bioformats based)] "
     "project_filename=" + dataset_name_xml + " "
     "path=" + in_file + " "
@@ -60,17 +61,15 @@ options = (
     "use_deflate_compression "
     "export_path=" + dataset_path
 )
-perform_task("Define dataset ...", options);
 
 # choose the illumination for each tile
-options = (
+options_illuminators = (
     "select=" + dataset_path_xml + " "
     "selection=[Pick brightest]"
 )
-perform_task("Select Illuminations", options);
 
 # calculate tile shifts
-options = (
+options_shifts = (
     "select=" + dataset_path_xml + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
@@ -84,10 +83,9 @@ options = (
     "downsample_in_y=4 "
     "downsample_in_z=1"
 )
-perform_task("Calculate pairwise shifts ...", options)
 
 # filter out poor alignments (currently set to filter none)
-options = (
+options_filter = (
     "select=" + dataset_path_xml + " "
     "filter_by_link_quality "
     "min_r=0.80 "
@@ -97,10 +95,9 @@ options = (
     "max_shift_in_z=0 "
     "max_displacement=0"
 )
-perform_task("Filter pairwise shifts ...", options);
 
 # apply the shifts in an iterative manner
-options = (
+options_apply = (
     "select=" + dataset_path_xml + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
@@ -119,12 +116,11 @@ options = (
     "global_optimization_strategy=[Two-Round using Metadata to align unconnected Tiles] "
     "fix_group_0-0"
 )
-perform_task("Optimize globally and apply shifts ...", options);
 
 # fuse the image and export to .tiff;
 # assume that Multiview-Reconstruction plugin has been patched to avoid 
 # inserting the bounding box dimensions in the dropdown box choices
-options = (
+options_fuse = (
     "select=" + dataset_path_xml + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
@@ -143,6 +139,20 @@ options = (
     "fused_image=[Save as (compressed) TIFF stacks] "
     "output_file_directory=" + out_dir
 )
-perform_task("Fuse dataset ...", options);
+
+
+# perform stitching tasks
+
+if write_fused in (0, 2):
+    # 0 for import/align only; 2 for all
+    perform_task("Define dataset ...", options_define);
+    perform_task("Select Illuminations", options_illuminators);
+    perform_task("Calculate pairwise shifts ...", options_shifts)
+    perform_task("Filter pairwise shifts ...", options_filter);
+    perform_task("Optimize globally and apply shifts ...", options_apply);
+
+if write_fused in (1, 2):
+    # 1 and 2 both including writing fused file(s)
+    perform_task("Fuse dataset ...", options_fuse);
 
 print("\nTotal elapsed time: {}".format(time() - time_start))

@@ -106,13 +106,14 @@ ZOOM="1.0"
 OUT_NAME_BASE="${NAME_BASE}_stitched"
 TIFF_DIR="${OUT_DIR}/${OUT_NAME_BASE}"
 
-# Replace the tile parameters with your image's setup
+# Replace the tile parameters with your image's setup; set up tile 
+# configuration manually and compute alignment refinement
 #python -m stitch.tile_config --img "$NAME" --target_dir "$OUT_DIR" --cols 6 --rows 7 --size 1920,1920,1000 --overlap 0.1 --directionality bi --start_direction right
-#./stitch.sh -f "$IMG" -o "$TIFF_DIR" -c
+#./stitch.sh -f "$IMG" -o "$TIFF_DIR" -w 0
 
 # Before the next steps, please manually check alignments to ensure that they 
 # fit properly, especially since unregistered tiles may be shifted to (0, 0, 0)
-#./stitch.sh -f "$IMG" -o "$TIFF_DIR" -w
+#./stitch.sh -f "$IMG" -o "$TIFF_DIR" -w 1
 #python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
 
 
@@ -121,8 +122,13 @@ TIFF_DIR="${OUT_DIR}/${OUT_NAME_BASE}"
 OUT_NAME_BASE="${NAME_BASE}_bigstitched"
 TIFF_IMG="${OUT_DIR}/${OUT_NAME_BASE}.tiff"
 
-# The plugin may not find paths on its initial run; if so, try re-running
-#./stitch.sh -f "$IMG" -b
+# Import file into BigStitcher HDF5 format (warning: large file, just 
+# under size of original file) and find alignments
+#./stitch.sh -f "$IMG" -b -w 0
+
+# Before writing stitched file, advise checking alignments; when 
+# satisfied, then run this fusion step
+#./stitch.sh -f "$IMG" -b -w 1
 
 # Rename output file(s):
 FUSED="fused_tp_0"

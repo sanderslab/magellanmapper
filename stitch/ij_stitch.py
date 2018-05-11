@@ -11,14 +11,12 @@ from ij import IJ
 import os
 
 #@String in_file
-#@int compute_overlap
 #@int write_fused
 
 out_dir = os.path.dirname(in_file)
 print("in_file: {}".format(in_file))
 print("out_dir: {}".format(out_dir))
-print("compute_overlap: {}".format(type(compute_overlap)))
-if write_fused == 1:
+if write_fused in (1, 2):
     fusion_method = "Linear Blending"
 else:
     fusion_method = "Do not fuse images (only write TileConfiguration)"
@@ -35,7 +33,7 @@ options = ("type=[Positions from file] "
            "use_virtual_input_images "
            "computation_parameters=[Save memory (but be slower)] "
            "image_output=[Write to disk] ")
-if compute_overlap == 1:
+if write_fused in (0, 2):
     options += "compute_overlap "
 
 print(options)

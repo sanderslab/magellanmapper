@@ -11,7 +11,7 @@ from botocore.exceptions import ClientError
 from clrbrain import cli
 from clrbrain import config
 
-def start_instances(ami_id, instance_type, subnet_id, sec_group, ebs):
+def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, ebs):
     client = boto3.client("ec2")
     #print(ec2.describe_instances())
     
@@ -41,7 +41,14 @@ def start_instances(ami_id, instance_type, subnet_id, sec_group, ebs):
                 "SubnetId": subnet_id, 
                 "Groups": [sec_group]
             }], 
-            BlockDeviceMappings=mappings,
+            BlockDeviceMappings=mappings, 
+            TagSpecifications=[{
+                "ResourceType": "instance", 
+                "Tags": [{
+                    "Key": "Name", 
+                    "Value": tag_name
+                }]
+            }], 
             DryRun=False)
         print(result)
     except ClientError as e:

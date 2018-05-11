@@ -41,14 +41,34 @@ Use the sample stack processing command in `runclrbrain.sh`.
 
 ### Server
 
-- Launch an instance; graphical support and login (eg `vncserver`) currently required during installation because of Mayavi (see above)
-- Attach a swap drive (eg 100GB) and storage drive (4-5x your image size)
-- Deploy the Clrbrain Git as an archive: `./deploy.sh -p [your_aws_pem] -i [server_ip]`, which will:
- - Archive the Clrbrain Git directory and `scp` it to the server
- - Download and install ImageJ/Fiji onto the server
- - Update Fiji and install BigStitcher for image stitching
- - To only update an existing Clrbrain directory on the server, add `-u`
-- Log into your instance
+Optional dependencies:
+
+- `awscli`: AWS Command Line Interface for basic up/downloading of images and processed files S3. Install via Pip.
+- `boto3`: AWS Python client to manage EC2 instances.
+
+Launch and setup a server:
+
+- Launch an instance
+  - In the standard Conda environment, graphical support and login (eg `vncserver`) are currently required during installation because of Mayavi (see above)
+  - To install/run without a GUI, run a lightweight setup: `./setup_env.sh -l` ("L" arg), which avoids the Mayavi stack
+- Attach a swap drive (eg 100GB) and storage drive (4-5x your image size): `./setup_server.sh -s` ("s" flag to initialize drives)
+
+Deploy the Clrbrain folder and supporting files:
+
+```
+./deploy.sh -p [your_aws_pem] -i [server_ip] \
+    -d [optional_file0] -d [optional_file1]
+```
+
+- This script by default will:
+  - Archive the Clrbrain Git directory and `scp` it to the server
+  - Download and install ImageJ/Fiji onto the server
+  - Update Fiji and install BigStitcher for image stitching
+- To only update an existing Clrbrain directory on the server, add `-u`
+- To add multiple files or folders such as `.aws` credentials, use the `-d` option as many times as you'd like
+
+Log into your instance:
+
 - Setup drives: `./setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
 - Install and run Clrbrain as above
 
@@ -76,7 +96,9 @@ export LANG=en_US.UTF-8
 - After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
 
 ### Mayavi installation
-- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error. Will need to work on making Mayavi optional for purely headless systems for analysis.
+- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error
+- As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
+- Mayavi is not currently working on Linux (tested on RHEL 7.5 as of 2018-05-10)
 
 ### Image Stitching
 - The original stitcher, `Stitching`, requires a large amount of RAM/swap space and runs single-threaded, taking days to stitch a multi-tile image

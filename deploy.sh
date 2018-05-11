@@ -14,6 +14,8 @@ Arguments:
   -u: Upload and update Clrbrain files only, skipping the rest of 
       deployment.
   -f: Update Fiji/ImageJ. Assume that it has already been deployed.
+  -g [git_hash]: Archive and upload the given specific Git commit; 
+      otherwise, defaults to HEAD.
 "
 
 FIJI="http://downloads.imagej.net/fiji/latest/fiji-nojre.zip"
@@ -21,6 +23,7 @@ update=0 # update Clrbrain
 update_fiji=0 # update Fiji/ImageJ
 run_script="" # run script, which will be added to Clrbrain folder
 deploy_files=() # files to deploy
+git_hash="" # git commit, including short hashes
 
 # run from parent directory
 base_dir="`dirname $0`"
@@ -28,7 +31,7 @@ cd "$base_dir"
 echo $PWD
 
 OPTIND=1
-while getopts hi:p:ufr:d: opt; do
+while getopts hi:p:ufr:d:g: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -51,6 +54,9 @@ while getopts hi:p:ufr:d: opt; do
         d)  deploy_files+=("$OPTARG")
             echo "Adding $OPTARG to file deployment list"
             ;;
+        g)  git_hash="$OPTARG"
+            echo "Using $git_hash as git hash"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -62,9 +68,11 @@ done
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-git_hash=`git rev-parse --short HEAD`
+if [[ "$git_hash" == "" ]]; then
+    git_hash=`git rev-parse --short HEAD`
+fi
 archive="clrbrain_${git_hash}.zip"
-git archive -o "$archive" HEAD
+git archive -o "$archive" "$git_hash"
 
 # basic update
 deploy_files+=("$archive")

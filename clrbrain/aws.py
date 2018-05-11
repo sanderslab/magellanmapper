@@ -5,11 +5,27 @@
 Attributes:
 """
 
+import multiprocessing as mp
+
 import boto3
+import boto3.session
 from botocore.exceptions import ClientError
 
 from clrbrain import cli
 from clrbrain import config
+
+def instance_info(instance_id):
+    # run in separate sessions since each resource shares data
+    session = boto3.session.Session()
+    ec2 = session.resource("ec2")
+    instance = ec2.Instance(instance_id)
+    print("checking instance {}".format(instance))
+    instance.wait_until_running()
+    instance.load()
+    instance_id = instance.instance_id
+    instance_ip = instance.public_ip_address
+    print("instance ID: {}, IP: {}".format(instance_id, instance_ip))
+    return instance_id, instance_ip
 
 def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, ebs):
     client = boto3.client("ec2")
@@ -32,7 +48,7 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, ebs):
     
     res = boto3.resource("ec2")
     try:
-        result = res.create_instances(
+        instances = res.create_instances(
             MinCount=1, MaxCount=1, 
             ImageId=ami_id, InstanceType=instance_type, 
             NetworkInterfaces=[{
@@ -50,7 +66,20 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, ebs):
                 }]
             }], 
             DryRun=False)
-        print(result)
+        print(instances)
+        
+        # show instance info once running, multiprocessing to allow waiting for 
+        # each instance to start running
+        pool = mp.Pool()
+        pool_results = []
+        for instance in instances:
+            pool_results.append(
+                pool.apply_async(instance_info, args=(instance.id, )))
+        for result in pool_results:
+            inst_id, inst_ip = result.get()
+        pool.close()
+        pool.join()
+            
     except ClientError as e:
         print(e)
 

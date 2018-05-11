@@ -2,27 +2,25 @@
 # Deploy Clrbrain to AWS
 # Author: David Young 2017, 2018
 
-################################################
-# Deploy Clrbrain and related files to AWS.
-#
-# Clrbrain will be updated by default. Unless the "-u" flag is given, 
-# the rest of the deployment including Fiji/ImageJ installation will 
-# be completed.
-#
-# Arguments:
-#   -h: Show help and exit.
-#   -i: IP address of the AWS EC2 instance.
-#   -p: Path to the .pem file for accessing EC2.
-#   -u: Upload and update Clrbrain files only, skipping the rest of 
-#       deployment.
-#   -f: Update Fiji/ImageJ. Assume that it has already been deployed.
-#
-################################################
+HELP="
+Deploy Clrbrain and related files to AWS.
+
+Arguments:
+  -h: Show help and exit.
+  -d [file]: Deploy file or folder recursively. Can be used 
+      multiple times to add additional files for upload.
+  -i [IP]: IP address of the AWS EC2 instance.
+  -p [path]: Path to the .pem file for accessing EC2.
+  -u: Upload and update Clrbrain files only, skipping the rest of 
+      deployment.
+  -f: Update Fiji/ImageJ. Assume that it has already been deployed.
+"
 
 FIJI="http://downloads.imagej.net/fiji/latest/fiji-nojre.zip"
 update=0 # update Clrbrain
 update_fiji=0 # update Fiji/ImageJ
-run_script=""
+run_script="" # run script, which will be added to Clrbrain folder
+deploy_files=() # files to deploy
 
 # run from parent directory
 base_dir="`dirname $0`"
@@ -30,7 +28,7 @@ cd "$base_dir"
 echo $PWD
 
 OPTIND=1
-while getopts hi:p:ufr: opt; do
+while getopts hi:p:ufr:d: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -50,6 +48,9 @@ while getopts hi:p:ufr: opt; do
         r)  run_script="$OPTARG"
             echo "Set run script to $run_script"
             ;;
+        d)  deploy_files+=("$OPTARG")
+            echo "Adding $OPTARG to file deployment list"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -66,7 +67,7 @@ archive="clrbrain_${git_hash}.zip"
 git archive -o "$archive" HEAD
 
 # basic update
-deploy_files="$archive"
+deploy_files+=("$archive")
 server_cmd="unzip -o $archive -d clrbrain"
 
 # append for initial deployment
@@ -83,7 +84,7 @@ fi
 # append customized run script, such as that prepared by 
 # setup_runclrbrain.sh
 if [[ "$run_script" != "" ]]; then
-    deploy_files+=" $run_script"
+    deploy_files+=("$run_script")
     server_cmd+=" && mv $run_script clrbrain"
 fi
 
@@ -95,11 +96,11 @@ fi
 
 # summarize files and commands
 echo -e "\nFiles to deploy:"
-echo "$deploy_files"
+echo "${deploy_files[@]}"
 echo -e "\nCommand to execute on server:"
 echo "$server_cmd"
 echo ""
 
 # execute upload and server commands
-scp -i "$pem" $deploy_files ec2-user@"$ip":~
+scp -i "$pem" -r ${deploy_files[@]} ec2-user@"$ip":~
 ssh -t -i "$pem" ec2-user@"$ip" "$server_cmd"

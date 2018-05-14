@@ -195,14 +195,18 @@ def collect_segments(segments_all, segments, region, tol):
 def _splice_before(base, search, splice, post_splice="_"):
     i = base.rfind(search)
     if i == -1:
+        # fallback to splicing before extension
         i = base.rfind(".")
         if i == -1:
             return base
         else:
+            # turn post-splice into pre-splice delimiter, assuming that the 
+            # absence of search string means delimiter is not before the ext
+            splice = post_splice + splice
             post_splice = ""
     return base[0:i] + splice + post_splice + base[i:]
 
-def roi_name(base, offset, shape):
+def make_subimage_name(base, offset, shape):
     shape = roi_size
     roi_offset = offset
     roi_site = "{}x{}".format(roi_offset, shape).replace(" ", "")
@@ -846,8 +850,8 @@ def process_file(filename_base, offset, roi_size):
             roi_offset = (0, 0, 0)
         else:
             # sets up processing for partial stack
-            filename_image5d_proc = roi_name(filename_image5d_proc, offset, roi_size)
-            filename_info_proc = roi_name(filename_info_proc, offset, roi_size)
+            filename_image5d_proc = make_subimage_name(filename_image5d_proc, offset, roi_size)
+            filename_info_proc = make_subimage_name(filename_info_proc, offset, roi_size)
         
         # get ROI for given region, including all channels
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
@@ -909,22 +913,22 @@ def process_file(filename_base, offset, roi_size):
             
             # compared detected blobs with truth blobs
             if truth_db_type == TRUTH_DB_TYPES[1]:
-                db_path_base = roi_name(filename_base, offset, roi_size)
+                db_path_base = os.path.basename(
+                    make_subimage_name(filename_base, offset, roi_size))
                 filename = config.filename
                 try:
                     print("about to verify with truth db from {}".format(db_path_base))
                     _load_truth_db(db_path_base)
-                    exp_name = roi_name(os.path.basename(filename), roi_offset, shape)
+                    exp_name = make_subimage_name(
+                        os.path.basename(filename), roi_offset, shape)
                 except FileNotFoundError as e:
                     filename = config.filenames[1]
-                    print("couldn't find, looking at {}".format(config.db_name))
-                    truth_i = config.db_name.find(sqlite.DB_SUFFIX_TRUTH)
-                    db_path_base = config.db_name[:truth_i]
+                    print("couldn't find truth db, using {}".format(config.db_name))
+                    config.truth_db = config.db
+                    config.truth_db.load_truth_blobs()
                     exp_name = importer.deconstruct_np_filename(config.db_name)[0]
                 print("exp name: {}".format(exp_name))
                 try:
-                    print("about to verify with truth db from {}".format(db_path_base))
-                    _load_truth_db(db_path_base)
                     if config.truth_db is not None:
                         # series not included in exp name since in ROI
                         exp_id = sqlite.insert_experiment(

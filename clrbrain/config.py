@@ -65,7 +65,7 @@ class ProcessSettings(dict):
         self["overlap"] = 0.5
         self["thresholding"] = None
         self["thresholding_size"] = -1
-        self["denoise_size"] = 25
+        self["denoise_size"] = 25 # None turns off preprocessing in stack proc
         self["segment_size"] = 500
         self["prune_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
@@ -224,6 +224,7 @@ def update_process_settings(settings, settings_type):
 
     if "_binary" in settings_type:
         settings["microscope_type"] = "_binary"
+        settings["denoise_size"] = None
         settings["detection_threshold"] = 0.001
     
     if "_20x" in settings_type:

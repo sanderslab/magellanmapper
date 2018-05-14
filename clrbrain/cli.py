@@ -1000,13 +1000,15 @@ def process_stack(roi, overlap, tol, channels):
     # need to make module-level to allow shared memory of this large array
     global sub_rois
     scaling_factor = detector.calc_scaling_factor()
-    max_pixels = np.ceil(np.multiply(
-        scaling_factor, config.process_settings["denoise_size"])).astype(int)
-    # no overlap for denoising
-    overlap_denoise = np.zeros(3).astype(np.int)
-    sub_rois, _ = chunking.stack_splitter(roi, max_pixels, overlap_denoise)
+    denoise_size = config.process_settings["denoise_size"]
+    if denoise_size:
+        max_pixels = np.ceil(
+            np.multiply(scaling_factor, denoise_size)).astype(int)
+        # no overlap for denoising
+        overlap_denoise = np.zeros(3).astype(np.int)
+        sub_rois, _ = chunking.stack_splitter(roi, max_pixels, overlap_denoise)
     segments_all = None
-    merged = None
+    merged = roi
     
     # process ROI
     time_denoising_start = time()
@@ -1014,8 +1016,7 @@ def process_stack(roi, overlap, tol, channels):
         # Multiprocessing
         
         # denoise all sub-ROIs and re-merge
-        if not lib_clrbrain.is_binary(roi):
-            # TODO: need to check without loading whole ROI
+        if denoise_size:
             pool = mp.Pool()
             pool_results = []
             # asynchronously denoise since denoising is independent of adjacent
@@ -1045,7 +1046,6 @@ def process_stack(roi, overlap, tol, channels):
         else:
             lib_clrbrain.printv(
                 "binary image detected, will not preprocess")
-            merged = roi
         
         time_denoising_end = time()
         

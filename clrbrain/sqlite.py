@@ -48,6 +48,7 @@ def _create_db(path):
     insert_about(conn, cur, DB_VERSION, datetime.datetime.now())
     
     conn.commit()
+    print("created db at {}".format(path))
     return conn, cur
 
 def _create_table_about(cur):

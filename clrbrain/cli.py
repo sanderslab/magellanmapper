@@ -195,8 +195,21 @@ def collect_segments(segments_all, segments, region, tol):
 def _splice_before(base, search, splice, post_splice="_"):
     i = base.rfind(search)
     if i == -1:
-        return base
+        i = base.rfind(".")
+        if i == -1:
+            return base
+        else:
+            post_splice = ""
     return base[0:i] + splice + post_splice + base[i:]
+
+def roi_name(base, offset, shape):
+    shape = roi_size
+    roi_offset = offset
+    roi_site = "{}x{}".format(roi_offset, shape).replace(" ", "")
+    series_fill = importer.series_as_str(config.series)
+    name = _splice_before(base, series_fill, roi_site)
+    print("ROI name: {}".format(name))
+    return name
 
 def _load_db(path):
     if not os.path.exists(path):
@@ -756,6 +769,8 @@ def process_file(filename_base, offset, roi_size):
             image5d = importer.import_dir(os.path.join(config.filename, "*"))
         elif (config.filename.endswith(".nii.gz") 
               or config.filename.endswith(".mha")):
+            # load metadata from 2nd filename argument for consistency with 
+            # other images loaded here
             image5d = importer.read_file_sitk(
                 config.filename, config.filenames[1], config.series)
         else:
@@ -823,23 +838,16 @@ def process_file(filename_base, offset, roi_size):
         # denoises and segments the region, saving processed image
         # and segments to file
         time_start = time()
+        roi_offset = offset
+        shape = roi_size
         if roi_size is None or offset is None:
             # uses the entire stack if no size or offset specified
             shape = image5d.shape[3:0:-1]
             roi_offset = (0, 0, 0)
         else:
             # sets up processing for partial stack
-            shape = roi_size
-            roi_offset = offset
-            splice = "{}x{}".format(roi_offset, shape).replace(" ", "")
-            print("Using {} for ROI processing".format(splice))
-            series_fill = importer.series_as_str(config.series)
-            filename_roi = lib_clrbrain.insert_before_ext(
-                config.filename, "_" + splice)
-            filename_image5d_proc = _splice_before(filename_image5d_proc, 
-                                                   series_fill, splice)
-            filename_info_proc = _splice_before(filename_info_proc, 
-                                                series_fill, splice)
+            filename_image5d_proc = roi_name(filename_image5d_proc, offset, roi_size)
+            filename_info_proc = roi_name(filename_info_proc, offset, roi_size)
         
         # get ROI for given region, including all channels
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
@@ -901,26 +909,38 @@ def process_file(filename_base, offset, roi_size):
             
             # compared detected blobs with truth blobs
             if truth_db_type == TRUTH_DB_TYPES[1]:
-                db_path_base = _splice_before(
-                    filename_base, series_fill, splice)
+                db_path_base = roi_name(filename_base, offset, roi_size)
+                filename = config.filename
                 try:
+                    print("about to verify with truth db from {}".format(db_path_base))
+                    _load_truth_db(db_path_base)
+                    exp_name = roi_name(os.path.basename(filename), roi_offset, shape)
+                except FileNotFoundError as e:
+                    filename = config.filenames[1]
+                    print("couldn't find, looking at {}".format(config.db_name))
+                    truth_i = config.db_name.find(sqlite.DB_SUFFIX_TRUTH)
+                    db_path_base = config.db_name[:truth_i]
+                    exp_name = importer.deconstruct_np_filename(config.db_name)[0]
+                print("exp name: {}".format(exp_name))
+                try:
+                    print("about to verify with truth db from {}".format(db_path_base))
                     _load_truth_db(db_path_base)
                     if config.truth_db is not None:
-                        '''
-                        verified_db = sqlite.ClrDB()
-                        verified_db.load_db(
-                            os.path.basename(db_path_base) + "_verified.db", True)
-                        '''
                         # series not included in exp name since in ROI
-                        exp_name = os.path.basename(filename_roi)
                         exp_id = sqlite.insert_experiment(
                             config.verified_db.conn, config.verified_db.cur, 
                             exp_name, None)
                         rois = config.truth_db.get_rois(exp_name)
+                        blobs_truth = config.truth_db.blobs_truth
+                        isotropic_truth = settings["isotropic_truth"]
+                        resize = None
+                        if isotropic_truth:
+                            resize = plot_3d.calc_isotropic_factor(isotropic_truth)
+                            print("resize: {}".format(resize))
                         stats, fdbk = detector.verify_rois(
-                            rois, segments_all, config.truth_db.blobs_truth, 
+                            rois, segments_all, blobs_truth, 
                             BLOB_COORD_SLICE, tol, config.verified_db, exp_id,
-                            config.channel)
+                            config.channel, resize=resize)
                 except FileNotFoundError as e:
                     print("Could not load truth DB from {}; "
                           "will not verify ROIs".format(db_path_base))
@@ -990,35 +1010,39 @@ def process_stack(roi, overlap, tol, channels):
         # Multiprocessing
         
         # denoise all sub-ROIs and re-merge
-        pool = mp.Pool()
-        pool_results = []
-        # asynchronously denoise since denoising is independent of adjacent
-        # sub-ROIs
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    pool_results.append(pool.apply_async(denoise_sub_roi, 
-                                     args=(coord, )))
-        for result in pool_results:
-            coord, sub_roi = result.get()
+        if not lib_clrbrain.is_binary(roi):
+            # TODO: need to check without loading whole ROI
+            pool = mp.Pool()
+            pool_results = []
+            # asynchronously denoise since denoising is independent of adjacent
+            # sub-ROIs
+            for z in range(sub_rois.shape[0]):
+                for y in range(sub_rois.shape[1]):
+                    for x in range(sub_rois.shape[2]):
+                        coord = (z, y, x)
+                        pool_results.append(pool.apply_async(denoise_sub_roi, 
+                                         args=(coord, )))
+            for result in pool_results:
+                coord, sub_roi = result.get()
+                lib_clrbrain.printv(
+                    "replacing sub_roi at {} of {}"
+                    .format(coord, np.add(sub_rois.shape, -1)))
+                sub_rois[coord] = sub_roi
+            
+            pool.close()
+            pool.join()
+            
+            # re-merge into one large ROI (the image stack) in preparation for 
+            # segmenting with differently sized chunks
+            merged_shape = chunking.get_split_stack_total_shape(
+                sub_rois, overlap_denoise)
+            merged = np.zeros(tuple(merged_shape), dtype=sub_rois[0, 0, 0].dtype)
+            chunking.merge_split_stack2(sub_rois, overlap_denoise, 0, merged)
+        else:
             lib_clrbrain.printv(
-                "replacing sub_roi at {} of {}"
-                .format(coord, np.add(sub_rois.shape, -1)))
-            sub_rois[coord] = sub_roi
+                "binary image detected, will not preprocess")
+            merged = roi
         
-        pool.close()
-        pool.join()
-        
-        # re-merge into one large ROI (the image stack) in preparation for 
-        # segmenting with differently sized chunks
-        '''
-        merged = chunking.merge_split_stack(sub_rois, overlap_denoise)
-        '''
-        merged_shape = chunking.get_split_stack_total_shape(
-            sub_rois, overlap_denoise)
-        merged = np.zeros(tuple(merged_shape), dtype=sub_rois[0, 0, 0].dtype)
-        chunking.merge_split_stack2(sub_rois, overlap_denoise, 0, merged)
         time_denoising_end = time()
         
         # segment objects through blob detection, using larger sub-ROI size

@@ -68,7 +68,11 @@ Attributes:
         alongside the current database. ``verify`` creates a new database 
         to store results from ROC curve building. ``verified`` loads the  
         verified database generated from the prior mode.
-    truth_db_type: The chosen truth database type; defaults to None.
+    truth_db_type: The chosen truth database type; defaults to None. The first 
+        argument will compared with ``TRUTH_DB_TYPES``. If a second argument 
+        is given, it will be used as the path to the truth database for 
+        ``view`` and ``verify``, the main and verified databases for 
+        ``verified``, and the main database for ``edit``.
 """
 
 import os
@@ -212,19 +216,21 @@ def make_subimage_name(base, offset, shape):
     roi_site = "{}x{}".format(roi_offset, shape).replace(" ", "")
     series_fill = importer.series_as_str(config.series)
     name = _splice_before(base, series_fill, roi_site)
-    print("ROI name: {}".format(name))
+    print("subimage name: {}".format(name))
     return name
 
 def _load_db(path):
     if not os.path.exists(path):
         raise FileNotFoundError("{} not found for DB".format(path))
-    print("Set to load DB from {}".format(path))
+    print("loading DB from {}".format(path))
     db = sqlite.ClrDB()
     db.load_db(path, False)
     return db
 
 def _load_truth_db(filename_base):
-    path = os.path.basename(filename_base + sqlite.DB_SUFFIX_TRUTH)
+    path = filename_base
+    if not filename_base.endswith(sqlite.DB_SUFFIX_TRUTH):
+        path = os.path.basename(filename_base + sqlite.DB_SUFFIX_TRUTH)
     truth_db = _load_db(path)
     truth_db.load_truth_blobs()
     config.truth_db = truth_db
@@ -416,7 +422,7 @@ def main(process_args_only=False):
     parser.add_argument("--zoom")
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--microscope", nargs="*")
-    parser.add_argument("--truth_db")
+    parser.add_argument("--truth_db", nargs="*")
     parser.add_argument("--roc", action="store_true")
     parser.add_argument("--plane")
     parser.add_argument("--saveroi", action="store_true")
@@ -581,9 +587,6 @@ def main(process_args_only=False):
         borders = _parse_coords(args.border)
         config.border = borders[0]
         print("Set ROI export to clip to border: {}".format(config.border))
-    if args.db:
-        config.db_name = args.db
-        print("Set database name to {}".format(config.db_name))
     if args.groups:
         config.groups = args.groups
         print("Set groups to {}".format(config.groups))
@@ -596,52 +599,79 @@ def main(process_args_only=False):
             config.sub_stack_max_pixels = chunk_shapes[0]
             print("Set chunk shape to {}".format(config.sub_stack_max_pixels))
     
-    
-    # load "truth blobs" from separate database for viewing
+    # prep filename
     ext = lib_clrbrain.get_filename_ext(config.filename)
     filename_base = importer.filename_to_base(
         config.filename, config.series, ext=ext)
+    
+    
+    # Database prep
+    
+    if args.db:
+        config.db_name = args.db
+        print("Set database name to {}".format(config.db_name))
+    # load "truth blobs" from separate database for viewing
+    truth_db_type = None
     if args.truth_db is not None:
-        truth_db_type = args.truth_db
+        truth_db_type = args.truth_db[0]
         print("Set truth_db type to {}".format(truth_db_type))
-    if args.truth_db == TRUTH_DB_TYPES[0]:
+        if len(args.truth_db) > 1:
+            config.truth_db_name = args.truth_db[1]
+            print("Set truth_db name to {}".format(config.truth_db_name))
+    if truth_db_type == TRUTH_DB_TYPES[0]:
         # loads truth DB as a separate database in parallel with the given 
-        # editable database
+        # editable database, with name based on filename by default unless 
+        # truth DB name explicitly given
+        path = config.truth_db_name if config.truth_db_name else filename_base
         try:
-            _load_truth_db(filename_base)
+            _load_truth_db(path)
         except FileNotFoundError as e:
             print(e)
             print("Could not load truth DB from current image path")
-    elif args.truth_db == TRUTH_DB_TYPES[1]:
+    elif truth_db_type == TRUTH_DB_TYPES[1]:
         # creates a new verified DB to store all ROC results
         config.verified_db = sqlite.ClrDB()
         config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
-    elif args.truth_db == TRUTH_DB_TYPES[2]:
+        if config.truth_db_name:
+            # load truth DB path to verify against if explicitly given
+            try:
+                _load_truth_db(config.truth_db_name)
+            except FileNotFoundError as e:
+                print(e)
+                print("Could not load truth DB from {}"
+                      .format(config.truth_db_name))
+    elif truth_db_type == TRUTH_DB_TYPES[2]:
         # loads verified DB as the main DB, which includes copies of truth 
         # values with flags for whether they were detected
-        name = sqlite.DB_NAME_VERIFIED
-        if args.db is not None:
-            # explicitly set DB name takes precedence
-            name = config.db_name
+        path = sqlite.DB_NAME_VERIFIED
+        if config.truth_db_name: path = config.truth_db_name
         try:
-            config.db = _load_db(name)
+            config.db = _load_db(path)
             config.verified_db = config.db
         except FileNotFoundError as e:
             print(e)
             print("Could not load verified DB from {}"
                   .format(sqlite.DB_NAME_VERIFIED))
-    elif args.truth_db == TRUTH_DB_TYPES[3]:
+    elif truth_db_type == TRUTH_DB_TYPES[3]:
         # loads truth DB as the main database for editing rather than 
         # loading as a truth database
-        config.db_name = os.path.basename(
-            filename_base + sqlite.DB_SUFFIX_TRUTH)
+        config.db_name = config.truth_db_name
+        if not config.db_name: 
+            config.db_name = "{}{}".format(
+                os.path.basename(filename_base), sqlite.DB_SUFFIX_TRUTH)
         print("Editing truth database at {}".format(config.db_name))
+    
     if config.db is None:
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
     
+    
+    
+    # done with arg parsing
     if process_args_only:
         return
+    
+    
     
     # process the image stack for each series
     for series in series_list:
@@ -912,22 +942,26 @@ def process_file(filename_base, offset, roi_size):
             
             # compared detected blobs with truth blobs
             if truth_db_type == TRUTH_DB_TYPES[1]:
-                db_path_base = os.path.basename(
-                    make_subimage_name(filename_base, offset, roi_size))
-                filename = config.filename
+                db_path_base = None
                 try:
-                    print("about to verify with truth db from {}".format(db_path_base))
-                    _load_truth_db(db_path_base)
-                    exp_name = make_subimage_name(
-                        os.path.basename(filename), roi_offset, shape)
-                except FileNotFoundError as e:
-                    filename = config.filenames[1]
-                    print("couldn't find truth db, using {}".format(config.db_name))
-                    config.truth_db = config.db
-                    config.truth_db.load_truth_blobs()
-                    exp_name = importer.deconstruct_np_filename(config.db_name)[0]
-                print("exp name: {}".format(exp_name))
-                try:
+                    if config.truth_db_name and config.truth_db:
+                        # use explicitly given truth DB if given, which can 
+                        # containg multiple experiments for different subimages
+                        print("using truth DB from {}"
+                              .format(config.truth_db_name))
+                        exp_name = importer.deconstruct_np_filename(
+                            config.truth_db_name)[0]
+                    else:
+                        # find truth DB based on filename and subimage
+                        db_path_base = os.path.basename(
+                            make_subimage_name(filename_base, offset, roi_size))
+                        print("about to verify with truth db from {}"
+                              .format(db_path_base))
+                        _load_truth_db(db_path_base)
+                        exp_name = make_subimage_name(
+                            os.path.basename(config.filename), roi_offset, 
+                            shape)
+                    print("exp name: {}".format(exp_name))
                     if config.truth_db is not None:
                         # series not included in exp name since in ROI
                         exp_id = sqlite.insert_experiment(
@@ -994,11 +1028,11 @@ def process_stack(roi, overlap, tol, channels):
     global sub_rois
     scaling_factor = detector.calc_scaling_factor()
     denoise_size = config.process_settings["denoise_size"]
+    # no overlap for denoising
+    overlap_denoise = np.zeros(3).astype(np.int)
     if denoise_size:
         max_pixels = np.ceil(
             np.multiply(scaling_factor, denoise_size)).astype(int)
-        # no overlap for denoising
-        overlap_denoise = np.zeros(3).astype(np.int)
         sub_rois, _ = chunking.stack_splitter(roi, max_pixels, overlap_denoise)
     segments_all = None
     merged = roi
@@ -1038,7 +1072,7 @@ def process_stack(roi, overlap, tol, channels):
             chunking.merge_split_stack2(sub_rois, overlap_denoise, 0, merged)
         else:
             lib_clrbrain.printv(
-                "binary image detected, will not preprocess")
+                "no denoise size specified, will not preprocess")
         
         time_denoising_end = time()
         

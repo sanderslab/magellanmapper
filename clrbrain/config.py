@@ -302,8 +302,9 @@ channel = None # channel of interest, where None specifies all channels
 # DATABASE
 
 DB_NAME = "clrbrain.db"
-db_name = DB_NAME
+db_name = DB_NAME # path to main DB
 db = None # main DB
+truth_db_name = None # path to truth DB
 truth_db = None # truth blobs DB
 verified_db = None # automated verifications DB
 

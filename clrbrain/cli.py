@@ -666,8 +666,7 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
     for i in range(len(offsets)):
         size = (roi_sizes[i] if roi_sizes_len > 1 
                 else roi_sizes[0])
-        stat_roi, fdbk = process_file(
-            filename_base, offsets[i], size)
+        stat_roi, fdbk, _ = process_file(filename_base, offsets[i], size)
         if stat_roi is not None:
             stat = np.add(stat, stat_roi)
         summaries.append(
@@ -952,8 +951,8 @@ def process_file(filename_base, offset, roi_size):
         print("total segments found: {}".format(segs_len))
         print("file save time: {}".format(time() - file_time_start))
         print("total file processing time (s): {}".format(time() - time_start))
-        return stats, fdbk
-    return None, None
+        return stats, fdbk, segments_all
+    return None, None, None
     
 def process_stack(roi, overlap, tol, channels):
     """Processes a stack, whcih can be a sub-region within an ROI.

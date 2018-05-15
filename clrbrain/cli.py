@@ -213,9 +213,17 @@ def _splice_before(base, search, splice, post_splice="_"):
     return base[0:i] + splice + post_splice + base[i:]
 
 def make_subimage_name(base, offset, shape):
-    shape = roi_size
-    roi_offset = offset
-    roi_site = "{}x{}".format(roi_offset, shape).replace(" ", "")
+    """Make name of subimage for a given offset and shape.
+    
+    Args:
+        base: Start of name, which can include full parent path.
+        offset: Offset, generally given as a tuple.
+        shape: Shape, generally given as a tuple.
+    
+    Returns:
+        Name (or path) to subimage.
+    """
+    roi_site = "{}x{}".format(offset, shape).replace(" ", "")
     series_fill = importer.series_as_str(config.series)
     name = _splice_before(base, series_fill, roi_site)
     print("subimage name: {}".format(name))

@@ -73,7 +73,7 @@ class ProcessSettings(dict):
         self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
         self["isotropic"] = None
         self["isotropic_vis"] = None
-        self["isotropic_truth"] = None
+        self["resize_blobs"] = None
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
 
@@ -241,7 +241,7 @@ def update_process_settings(settings, settings_type):
         settings["microscope_type"] += "_importdl"
         # import from deep learning predicted image
         settings["isotropic"] = None # assume already isotropic
-        settings["isotropic_truth"] = (.93, 1, 1) # 
+        settings["resize_blobs"] = (.2, 1, 1) # 
 
 
 # default settings and list of settings for each channel

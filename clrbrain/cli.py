@@ -935,16 +935,10 @@ def process_file(filename_base, offset, roi_size):
                             config.verified_db.conn, config.verified_db.cur, 
                             exp_name, None)
                         rois = config.truth_db.get_rois(exp_name)
-                        blobs_truth = config.truth_db.blobs_truth
-                        isotropic_truth = settings["isotropic_truth"]
-                        resize = None
-                        if isotropic_truth:
-                            resize = plot_3d.calc_isotropic_factor(isotropic_truth)
-                            print("resize: {}".format(resize))
                         stats, fdbk = detector.verify_rois(
-                            rois, segments_all, blobs_truth, 
+                            rois, segments_all, config.truth_db.blobs_truth, 
                             BLOB_COORD_SLICE, tol, config.verified_db, exp_id,
-                            config.channel, resize=resize)
+                            config.channel)
                 except FileNotFoundError as e:
                     print("Could not load truth DB from {}; "
                           "will not verify ROIs".format(db_path_base))

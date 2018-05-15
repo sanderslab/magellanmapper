@@ -600,7 +600,7 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     return segs_all, mask
 
 def verify_rois(rois, blobs, blobs_truth, region, tol, output_db, 
-                exp_id, channel, resize=None):
+                exp_id, channel):
     """Compares blobs from detections with truth blobs, prioritizing the inner 
     portion of ROIs to avoid missing detections because of edge effects
     while also adding matches between a blob in the inner ROI and another
@@ -642,19 +642,16 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
     lib_clrbrain.printv(
         "verifying blobs with tol {}, inner_padding {}"
         .format(tol, inner_padding))
-    if resize is not None:
-        blobs_truth = multiply_blob_rel_coords(blobs_truth, resize)
-        print("resized truth blobs:\n{}".format(blobs_truth))
+    settings = config.get_process_settings(channel)
+    resize = settings["resize_blobs"]
+    if resize:
+        blobs = multiply_blob_rel_coords(blobs, resize)
+        #tol = np.multiply(resize, tol).astype(np.int)
+        lib_clrbrain.printv("resized blobs by {}:\n{}".format(resize, blobs))
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
         size = (roi["size_x"], roi["size_y"], roi["size_z"])
         series = roi["series"]
-        if resize is not None:
-            # TODO: doesn't align with exported ROIs
-            offset *= resize
-            size *= resize
-            tol = np.multiply(resize, tol).astype(np.int)
-            print("resized offset: {}, size: {}, tol: {}".format(offset, size, tol))
         
         # get all detected and truth blobs for inner and total ROI
         offset_inner = np.add(offset, inner_padding)
@@ -663,6 +660,13 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
             "offset: {}, offset_inner: {}, size: {}, size_inner: {}"
             .format(offset, offset_inner, size, size_inner))
         blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
+        if resize is not None:
+            # TODO: doesn't align with exported ROIs
+            lib_clrbrain.printv("shifting blobs in ROI by offset {}, border {}"
+                                .format(offset, config.border))
+            blobs_roi = shift_blob_rel_coords(blobs_roi, offset)
+            if config.border:
+                blobs_roi = shift_blob_rel_coords(blobs_roi, config.border)
         blobs_inner, blobs_inner_mask = get_blobs_in_roi(
             blobs_roi, offset_inner, size_inner)
         blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)

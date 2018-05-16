@@ -1394,11 +1394,11 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     lists = np.array(lists)
     if errs: errs = np.array(errs)
     x_labels = np.array(x_labels)
-    print("lists: {}".format(lists))
+    #print("lists: {}".format(lists))
     
     # skip bar groups where all bars would be ~0
     mask = np.all(lists > config.POS_THRESH, axis=0)
-    print("mask: {}".format(mask))
+    #print("mask: {}".format(mask))
     if np.all(mask):
         print("skip none")
     else:
@@ -1426,7 +1426,16 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     ax.set_title(title)
     ax.set_ylabel(y_label)
     ax.set_xticks(indices + width)
-    ax.set_xticklabels(x_labels, rotation=80, horizontalalignment="right")
+    
+    # scale font size of x-axis labels by a sigmoid function to rapidly 
+    # decrease size for larger numbers of labels so they don't overlap
+    font_size = plt.rcParams["axes.titlesize"]
+    font_size *= (math.atan(len(x_labels) / 3 - 5) * -2 / math.pi + 1) / 2
+    font_dict = { "fontsize": font_size }
+    #print("======>", font_dict)
+    ax.set_xticklabels(
+        x_labels, rotation=80, horizontalalignment="right", fontdict=font_dict)
+    
     ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
 
 def _volumes_mean_sem(group_dict, key_mean, key_sem, vals, mask):

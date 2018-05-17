@@ -254,8 +254,15 @@ def make_isotropic(roi, scale):
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
     lib_clrbrain.printv("original ROI shape: {}, isotropic: {}"
                         .format(roi.shape, isotropic_shape))
+    mode = "reflect"
+    if np.any(np.array(roi.shape) == 1):
+        # may crash with floating point exception if 1px thick (see 
+        # https://github.com/scikit-image/scikit-image/issues/3001, which 
+        # causes multiprocessing Pool to hang since the exception isn't 
+        # raised), so need to change mode in this case
+        mode = "edge"
     return transform.resize(
-        roi, isotropic_shape, preserve_range=True, mode="reflect", 
+        roi, isotropic_shape, preserve_range=True, mode=mode, 
         anti_aliasing=True)
 
 def plot_3d_surface(roi, vis, channel):

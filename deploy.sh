@@ -74,9 +74,10 @@ fi
 archive="clrbrain_${git_hash}.zip"
 git archive -o "$archive" "$git_hash"
 
-# basic update
+# basic deployment
 deploy_files+=("$archive")
 server_cmd="unzip -o $archive -d clrbrain"
+cmd_fiji_update="Fiji.app/ImageJ-linux64 --update update"
 
 # append for initial deployment
 if [[ $update -eq 0 ]]; then
@@ -98,7 +99,6 @@ fi
 
 # add on Fiji update
 if [[ $update_fiji -eq 1 ]]; then
-    cmd_fiji_update="Fiji.app/ImageJ-linux64 --update update"
     server_cmd+=" && $cmd_fiji_update"
 fi
 

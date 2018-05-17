@@ -239,7 +239,7 @@ cd ..
 if [[ $lightweight -eq 0 ]]; then
     # install dependencies for GUI requirement
     pip install -U matplotlib-scalebar
-    pip install -U vtk==8.1.0
+    #pip install -U vtk==8.1.0
     # pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
     # version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 
     # Matplotlib in Conda on Linux64 is not compatible with this release, 

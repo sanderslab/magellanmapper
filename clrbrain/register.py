@@ -54,6 +54,7 @@ from clrbrain import detector
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_2d
+from clrbrain import stats
 
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
@@ -1486,10 +1487,13 @@ if __name__ == "__main__":
         # plot volumes for individual experiments for each region
         show = not config.no_show
         exps = []
+        unit_factor = np.power(1000.0, 3)
         for vol, path in zip(vol_dicts, json_paths):
             exp_name = os.path.basename(path)
+            vol_stats = tuple(stats.volume_stats(
+                vol, densities, unit_factor=unit_factor))
             plot_2d.plot_volumes(
-                vol, title=os.path.splitext(exp_name)[0], 
+                vol_stats, title=os.path.splitext(exp_name)[0], 
                 densities=densities, show=show)
             # experiment identifiers, assumed to be at the start of the image 
             # filename, separated by a "-"; if no dash, will use the whole name
@@ -1497,7 +1501,9 @@ if __name__ == "__main__":
         
         # plot mean volumes of all experiments for each region
         group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
+        vol_stats = tuple(stats.volume_stats(
+            group_vol_dict, densities, config.groups, unit_factor))
         plot_2d.plot_volumes(
-            group_vol_dict, title="Volume Means from {} at Level {}".format(
+            vol_stats, title="Volume Means from {} at Level {}".format(
                 ", ".join(exps), config.labels_level), 
             densities=densities, show=show, groups=config.groups)

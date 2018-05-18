@@ -40,7 +40,7 @@ def _volumes_mean_sem(group_dict, key_mean, key_sem, vals, mask):
     group_dict[key_mean].append(mean)
     group_dict[key_sem].append(sem)
 
-def volume_stats(volumes_dict, densities, groups, unit_factor):
+def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
     # "side" and "mirrored" for opposite side (R/L agnostic)
     SIDE = "side"
     MIR = "mirrored"
@@ -102,7 +102,9 @@ def volume_stats(volumes_dict, densities, groups, unit_factor):
                     else:
                         dens_group[SIDE].append(density_side)
                         dens_group[MIR].append(density_mirrored)
-    return groups_dict, (MIR, SIDE), (MIR_SEM, SIDE_SEM), (VOL, DENS)
+    names = [volumes_dict[key][config.ABA_NAME] 
+             for key in volumes_dict.keys() if key >= 0]
+    return groups_dict, names, (MIR, SIDE), (MIR_SEM, SIDE_SEM), (VOL, DENS)
 
 if __name__ == "__main__":
     print("Starting Clrbrain stats...")

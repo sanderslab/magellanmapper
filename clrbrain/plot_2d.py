@@ -37,7 +37,6 @@ from clrbrain import importer
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
-from clrbrain import stats
 
 colormap_2d = cm.inferno
 CMAP_GRBK = LinearSegmentedColormap.from_list(
@@ -1437,8 +1436,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     
     ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
 
-def plot_volumes(volumes_dict, title=None, densities=False, 
-                 show=True, groups=None):
+def plot_volumes(vol_stats, title=None, densities=False, 
+                 show=True, groups=[""]):
     """Plot volumes and densities.
     
     Args:
@@ -1465,15 +1464,10 @@ def plot_volumes(volumes_dict, title=None, densities=False,
     ax_densities = plt.subplot(gs[0, 1]) if densities else None
     
     # measurement units, assuming a base unit of microns
-    unit_factor = np.power(1000.0, 3)
     unit = "mm"
     width = 0.1 # default bar width
     
-    if groups is None:
-        groups = [""]
-    print("groups: {}".format(groups))
-    groups_dict, means_keys, sem_keys, meas_keys = stats.volume_stats(
-        volumes_dict, densities, groups, unit_factor)
+    groups_dict, names, means_keys, sem_keys, meas_keys = vol_stats
     
     # generate bar plots
     sides_names = ("Left", "Right")
@@ -1498,8 +1492,6 @@ def plot_volumes(volumes_dict, title=None, densities=False,
             errs_vols.append(group[meas_keys[0]][sem_key])
             errs_dens.append(group[meas_keys[1]][sem_key])
             
-    names = [volumes_dict[key][config.ABA_NAME] 
-             for key in volumes_dict.keys() if key >= 0]
     _bar_plots(
         ax_vols, vols, errs_vols, legend_names, names, 
         bar_colors, width, "Volume (cubic {})".format(unit), "Volumes")

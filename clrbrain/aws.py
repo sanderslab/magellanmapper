@@ -27,10 +27,8 @@ def instance_info(instance_id):
     print("instance ID: {}, IP: {}".format(instance_id, instance_ip))
     return instance_id, instance_ip
 
-def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, ebs):
-    client = boto3.client("ec2")
-    #print(ec2.describe_instances())
-    
+def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, 
+                    key_name, ebs):
     mappings = []
     for i in range(len(ebs)):
         device = ebs[i]
@@ -65,6 +63,7 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, ebs):
                     "Value": tag_name
                 }]
             }], 
+            KeyName=key_name, 
             DryRun=False)
         print(instances)
         

@@ -1474,6 +1474,7 @@ if __name__ == "__main__":
                 out_plane=out_plane)
     elif config.register_type in (
         config.REGISTER_TYPES[3], config.REGISTER_TYPES[4]):
+        
         # compute grouped volumes/densities by ontology level
         densities = config.register_type == config.REGISTER_TYPES[4]
         ref = load_labels_ref(config.load_labels)
@@ -1481,8 +1482,8 @@ if __name__ == "__main__":
         vol_dicts, json_paths = register_volumes_mp(
             config.filenames, labels_ref_lookup, 
             config.labels_level, config.rescale, densities)
-        # experiment identifiers, assumed to be at the start of the image 
-        # filename, separated by a "-"; if no dash, will use the whole name
+        
+        # plot volumes for individual experiments for each region
         show = not config.no_show
         exps = []
         for vol, path in zip(vol_dicts, json_paths):
@@ -1490,7 +1491,11 @@ if __name__ == "__main__":
             plot_2d.plot_volumes(
                 vol, title=os.path.splitext(exp_name)[0], 
                 densities=densities, show=show)
+            # experiment identifiers, assumed to be at the start of the image 
+            # filename, separated by a "-"; if no dash, will use the whole name
             exps.append(exp_name.split("-")[0])
+        
+        # plot mean volumes of all experiments for each region
         group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
         plot_2d.plot_volumes(
             group_vol_dict, title="Volume Means from {} at Level {}".format(

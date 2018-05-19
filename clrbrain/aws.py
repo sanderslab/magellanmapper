@@ -36,10 +36,12 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group,
         if i > 0:
             # iterate alphabetically starting with f since i >= 1
             name = "/dev/sd{}".format(chr(ord("e") + i))
+        # use gp2 since otherwise may default to "standard" (magnetic HDD)
         mapping = {
             "DeviceName": name, 
             "Ebs": {
-                "VolumeSize": device
+                "VolumeSize": device, 
+                "VolumeType": "gp2"
             }
         }
         mappings.append(mapping)

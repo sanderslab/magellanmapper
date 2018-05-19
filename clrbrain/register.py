@@ -1498,12 +1498,17 @@ if __name__ == "__main__":
             # experiment identifiers, assumed to be at the start of the image 
             # filename, separated by a "-"; if no dash, will use the whole name
             exps.append(exp_name.split("-")[0])
+            #stats.volume_stats_to_csv(vol_stats, "csvtest")
         
         # plot mean volumes of all experiments for each region
         group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
         vol_stats = tuple(stats.volume_stats(
             group_vol_dict, densities, config.groups, unit_factor))
+        title = "Volume Means from {} at Level {}".format(
+            ", ".join(exps), config.labels_level)
         plot_2d.plot_volumes(
-            vol_stats, title="Volume Means from {} at Level {}".format(
-                ", ".join(exps), config.labels_level), 
-            densities=densities, show=show, groups=config.groups)
+            vol_stats, title=title, densities=densities, show=show, 
+            groups=config.groups)
+        
+        # write to CSV file
+        stats.volume_stats_to_csv(vol_stats, title, config.groups)

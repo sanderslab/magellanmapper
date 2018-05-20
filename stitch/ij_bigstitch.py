@@ -156,3 +156,5 @@ if write_fused in (1, 2):
     perform_task("Fuse dataset ...", options_fuse);
 
 print("\nTotal elapsed time: {}".format(time() - time_start))
+
+IJ.run("Quit")

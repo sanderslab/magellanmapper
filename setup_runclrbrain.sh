@@ -45,7 +45,7 @@ EXTRA_ARGS="$@"
 output="${RUN_SCRIPT%.*}_${abbr}.sh"
 
 # replace S3_DIR and IMG variable assignments
-sed -e "s:IMG=.*:IMG=\"${img}\":" \
+sed -e "s:IMG=\"/path.*:IMG=\"${img}\":" \
     -e "s:S3_DIR=.*:S3_DIR=\"${s3_dir}\":" \
     "$RUN_SCRIPT" > "$output"
 chmod 755 "$output"

@@ -35,6 +35,13 @@ options = ("type=[Positions from file] "
            "image_output=[Write to disk] ")
 if write_fused in (0, 2):
     options += "compute_overlap "
+    IJ.run("Quit")
+else:
+    # keep ImageJ/Fiji open so the user can review image alignments in the 
+    # tile configuration file and manually close the app, after which any 
+    # enclosing script can continue, including re-running this script with 
+    # write flag on
+    print("\nLeaving ImageJ/Fiji open for review of alignments")
 
 print(options)
 IJ.run("Grid/Collection stitching", options);

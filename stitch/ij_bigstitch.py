@@ -145,16 +145,21 @@ options_fuse = (
 
 if write_fused in (0, 2):
     # 0 for import/align only; 2 for all
-    perform_task("Define dataset ...", options_define);
-    perform_task("Select Illuminations", options_illuminators);
+    perform_task("Define dataset ...", options_define)
+    perform_task("Select Illuminations", options_illuminators)
     perform_task("Calculate pairwise shifts ...", options_shifts)
-    perform_task("Filter pairwise shifts ...", options_filter);
-    perform_task("Optimize globally and apply shifts ...", options_apply);
+    perform_task("Filter pairwise shifts ...", options_filter)
+    perform_task("Optimize globally and apply shifts ...", options_apply)
 
 if write_fused in (1, 2):
     # 1 and 2 both including writing fused file(s)
-    perform_task("Fuse dataset ...", options_fuse);
+    perform_task("Fuse dataset ...", options_fuse)
+    IJ.run("Quit")
+else:
+    # keep ImageJ/Fiji open so the user can review image alignments and 
+    # manually close the app, after which any enclosing script can continue, 
+    # including re-running this script with write flag on
+    print("\nLeaving ImageJ/Fiji open for review of alignments")
 
 print("\nTotal elapsed time: {}".format(time() - time_start))
 
-IJ.run("Quit")

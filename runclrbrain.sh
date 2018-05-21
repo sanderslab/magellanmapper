@@ -34,6 +34,13 @@ S3_DIR="path/to/your/bucket/artifact"
 # and cytoplasmic marker in channel 1
 MICROSCOPE="lightsheet"
 
+# Grouped pathways to follow typical pipelines
+PIPELINES=("gui" "full" "process_only")
+pipeline=""
+
+
+# OPTIONAL: curate specific pathway(s)
+
 # Choose whether to show GUI, in which case rest of pathways will be 
 # ignored; replace ROI offset/size with desired coordinates/dimensions 
 # in x,y,z format
@@ -43,18 +50,18 @@ size=70,70,10
 
 # Choose stitch pathway index, or "" for none
 STITCH_PATHWAYS=("stitching" "bigstitcher")
-stitch_pathway="${STITCH_PATHWAYS[1]}"
+stitch_pathway=""
 
 # Choose rescale pathway index, or "" for none
 TRANSPOSE_PATHWAYS=("rescale")
-transpose_pathway="${TRANSPOSE_PATHWAYS[0]}"
+transpose_pathway=""
 scale=0.05 # rescaling factor
 plane="" # xy, yz, zy, or leave empty
 animation="" # gif or mp4
 
 # Choose whole image processing index, or "" for none
 WHOLE_IMG_PROCS=("local" "pull_from_s3")
-whole_img_proc="${WHOLE_IMG_PROCS[0]}"
+whole_img_proc=""
 
 # Choose whether to upload all resulting files to AWS S3
 upload=0 # 0 for no, 1 to upload
@@ -76,6 +83,22 @@ BASE_DIR="`dirname $0`"
 cd "$BASE_DIR"
 echo $PWD
 
+# set pat combinations for common grouped pathways
+if [[ "$pipeline" = "${PIPELINES[0]}" ]]; then
+    gui=1
+elif [[ "$pipeline" = "${PIPELINES[1]}" ]]; then
+    gui=0
+    stitch_pathway="${STITCH_PATHWAYS[1]}"
+    transpose_pathway="${TRANSPOSE_PATHWAYS[0]}"
+    whole_img_proc="${WHOLE_IMG_PROCS[0]}"
+    upload=1
+elif [[ "$pipeline" = "${PIPELINES[2]}" ]]; then
+    gui=0
+    stitch_pathway=""
+    transpose_pathway=""
+    whole_img_proc="${WHOLE_IMG_PROCS[1]}"
+    upload=0 # process_aws script uploads automatically
+fi
 
 
 ####################################
@@ -88,7 +111,7 @@ if [[ $gui -eq 1 ]]; then
     # displaying the GUI.
 
     # Import raw image stack into Numpy array if it doesn't exist already
-    python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
+    #python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
     
     # Load ROI, starting at the given offset and ROI size
     ./run --img "$IMG" --channel 0 --offset $offset --size $size --savefig pdf --microscope "$MICROSCOPE"
@@ -125,7 +148,7 @@ fi
 
 out_name_base=""
 clr_img=""
-if [[ "$stitch_pathway" == "${STITCH_PATHWAYS[0]}" ]]; then
+if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
     # ALTERNATIVE 1: Stitching plugin (old)
     
     OUT_NAME_BASE="${NAME%.*}_stitched"
@@ -142,7 +165,7 @@ if [[ "$stitch_pathway" == "${STITCH_PATHWAYS[0]}" ]]; then
     python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
     clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
     
-elif [[ "$stitch_pathway" == "${STITCH_PATHWAYS[1]}" ]]; then
+elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     # ALTERNATIVE 2: BigStitcher plugin
     
     OUT_NAME_BASE="${NAME%.*}_bigstitched"
@@ -174,7 +197,7 @@ fi
 
 clr_img_base="${clr_img%.*}"
 
-if [[ "$transpose_pathway" == "${TRANSPOSE_PATHWAYS[0]}" ]]; then
+if [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[0]}" ]]; then
     img_transposed=""
     if [[ "$plane" != "" ]]; then
         # Both rescale and transpose an image from z-axis (xy plane) to x-axis (yz plane) orientation
@@ -197,12 +220,12 @@ fi
 ####################################
 # Whole Image Processing Workflow
 
-if [[ "$whole_img_proc" == "${WHOLE_IMG_PROCS[0]}" ]]; then
+if [[ "$whole_img_proc" = "${WHOLE_IMG_PROCS[0]}" ]]; then
     # Process an entire image locally on 1st channel, chunked into multiple 
     # smaller stacks to minimize RAM usage and multiprocessed for efficiency
     python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
 
-elif [[ "$whole_img_proc" == "${WHOLE_IMG_PROCS[1]}" ]]; then
+elif [[ "$whole_img_proc" = "${WHOLE_IMG_PROCS[1]}" ]]; then
     # Similar processing but integrated with S3 access from AWS (run from 
     # within EC2 instance)
     ./process_aws.sh -f "$clr_img" -s $S3_DIR --  --microscope "$MICROSCOPE" --channel 0

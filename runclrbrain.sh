@@ -5,9 +5,10 @@
 ################################################
 # Sample scenarios and workflows for Clrbrain
 #
-# Use this file as a template for your own scenarioes. Edit path 
-# variables with your own file paths. Uncomment (ie remove the 
-# "#" symbol) to apply the given scenario for your files.
+# Use this file as a template for your own scenarios. Edit path 
+# variables with your own file paths. Change the indices of the 
+# pathway flags to turn various parts on/off or to select the 
+# desired pathway type.
 ################################################
 
 
@@ -33,21 +34,27 @@ S3_DIR="path/to/your/bucket/artifact"
 # and cytoplasmic marker in channel 1
 MICROSCOPE="lightsheet"
 
-# Choose stitch pathway, or "" for none
-STITCH_PATHWAYS=("stitching" "bigstitcher")
-stitch_pathway=$STITCH_PATHWAYS[0]
+# Choose whether to show GUI, in which case rest of pathways will be 
+# ignored; replace ROI offset/size with desired coordinates/dimensions 
+# in x,y,z format
+gui=0
+offset=30,30,8
+size=70,70,10
 
-# Choose rescale pathway, or "" for none
+# Choose stitch pathway index, or "" for none
+STITCH_PATHWAYS=("stitching" "bigstitcher")
+stitch_pathway="${STITCH_PATHWAYS[1]}"
+
+# Choose rescale pathway index, or "" for none
 TRANSPOSE_PATHWAYS=("rescale")
-transpose_pathway=$TRANSPOSE_PATHWAYS[0]
-# Replace with your rescaling factor and plane transposition
-scale=0.05
+transpose_pathway="${TRANSPOSE_PATHWAYS[0]}"
+scale=0.05 # rescaling factor
 plane="" # xy, yz, zy, or leave empty
 animation="" # gif or mp4
 
-# Choose whole image processing, or "" for none
+# Choose whole image processing index, or "" for none
 WHOLE_IMG_PROCS=("local" "pull_from_s3")
-whole_img_proc=$WHOLE_IMG_PROCS[0]
+whole_img_proc="${WHOLE_IMG_PROCS[0]}"
 
 # Choose whether to upload all resulting files to AWS S3
 upload=0 # 0 for no, 1 to upload
@@ -72,26 +79,32 @@ echo $PWD
 
 
 ####################################
-# Basic Usage
+# Graphical display
 
-# Replace region of interest (ROI) size and offset
-SIZE=700,90,50
-OFFSET=50,580,230
+if [[ $gui -eq 1 ]]; then
+    # Run Clrbrain GUI, importing the image into Numpy-based format that 
+    # Clrbrain can read if not available. A few additional scenarios are
+    # also shown, currently commented out. The script will exit after 
+    # displaying the GUI.
 
-# Import raw image stack into Numpy array
-#python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
-
-# Load ROI, starting at the given offset and ROI size
-#./run --img "$IMG" --channel 0 --offset $OFFSET --size $SIZE --savefig pdf --microscope "$MICROSCOPE"
-
-# Extract a single z-plane
-#python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"
-
-# Process a sub-region of the stack and load it
-#python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v --offset $OFFSET --size $SIZE --microscope "$MICROSCOPE"
-IMG_ROI="${IMG_PATH_BASE}_(${OFFSET})x(${SIZE}).${EXT}"
-#./run --img "$IMG_ROI" -v --channel 0 -v --proc load --offset $OFFSET --size $SIZE --savefig pdf --microscope "$MICROSCOPE"
-
+    # Import raw image stack into Numpy array if it doesn't exist already
+    python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
+    
+    # Load ROI, starting at the given offset and ROI size
+    ./run --img "$IMG" --channel 0 --offset $offset --size $size --savefig pdf --microscope "$MICROSCOPE"
+    
+    # Extract a single z-plane
+    #python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"
+    
+    # Process a sub-stack and load it
+    substack_offset=100,800,410
+    substack_size=800,100,48
+    #python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v --offset $substack_offset --size $substack_size --microscope "$MICROSCOPE"
+    IMG_ROI="${IMG_PATH_BASE}_(${substack_offset})x(${substack_size}).${EXT}"
+    #./run --img "$IMG_ROI" -v --channel 0 -v --proc load --offset $substack_offset --size $substack_size --savefig pdf --microscope "$MICROSCOPE"
+    
+    exit 0
+fi
 
 
 ####################################
@@ -102,15 +115,17 @@ RESOLUTIONS="0.913,0.913,4.935"
 MAGNIFICATION="5.0"
 ZOOM="1.0"
 
-# Get large, unstitched image file from cloud, where the fused (all 
-# illuminators merged) image is used for the Stitching pathway, and 
-# the unfused, original image is used for the BigStitcher pathway
-#mkdir $OUT_DIR
-#aws s3 cp s3://"${S3_DIR}/${EXP}/${NAME}" $OUT_DIR
+if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
+    # Get large, unstitched image file from cloud, where the fused (all 
+    # illuminators merged) image is used for the Stitching pathway, and 
+    # the unfused, original image is used for the BigStitcher pathway
+    mkdir $OUT_DIR
+    aws s3 cp s3://"${S3_DIR}/${EXP}/${NAME}" $OUT_DIR
+fi
 
 out_name_base=""
 clr_img=""
-if [[ "$stitch_pathway" == "$STITCH_PATHWAYS[0]" ]]; then
+if [[ "$stitch_pathway" == "${STITCH_PATHWAYS[0]}" ]]; then
     # ALTERNATIVE 1: Stitching plugin (old)
     
     OUT_NAME_BASE="${NAME%.*}_stitched"
@@ -127,7 +142,7 @@ if [[ "$stitch_pathway" == "$STITCH_PATHWAYS[0]" ]]; then
     python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
     clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
     
-elif [[ "$stitch_pathway" == "$STITCH_PATHWAYS[1]" ]]; then
+elif [[ "$stitch_pathway" == "${STITCH_PATHWAYS[1]}" ]]; then
     # ALTERNATIVE 2: BigStitcher plugin
     
     OUT_NAME_BASE="${NAME%.*}_bigstitched"
@@ -159,7 +174,7 @@ fi
 
 clr_img_base="${clr_img%.*}"
 
-if [[ "$transpose_pathway" == "$TRANSPOSE_PATHWAYS[0]" ]]; then
+if [[ "$transpose_pathway" == "${TRANSPOSE_PATHWAYS[0]}" ]]; then
     img_transposed=""
     if [[ "$plane" != "" ]]; then
         # Both rescale and transpose an image from z-axis (xy plane) to x-axis (yz plane) orientation
@@ -182,12 +197,12 @@ fi
 ####################################
 # Whole Image Processing Workflow
 
-if [[ "$whole_img_proc" == "$WHOLE_IMG_PROCS[0]" ]]; then
+if [[ "$whole_img_proc" == "${WHOLE_IMG_PROCS[0]}" ]]; then
     # Process an entire image locally on 1st channel, chunked into multiple 
     # smaller stacks to minimize RAM usage and multiprocessed for efficiency
     python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
 
-elif [[ "$whole_img_proc" == "$WHOLE_IMG_PROCS[1]" ]]; then
+elif [[ "$whole_img_proc" == "${WHOLE_IMG_PROCS[1]}" ]]; then
     # Similar processing but integrated with S3 access from AWS (run from 
     # within EC2 instance)
     ./process_aws.sh -f "$clr_img" -s $S3_DIR --  --microscope "$MICROSCOPE" --channel 0

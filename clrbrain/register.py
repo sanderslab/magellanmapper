@@ -1500,8 +1500,13 @@ if __name__ == "__main__":
             exps.append(exp_name.split("-")[0])
             #stats.volume_stats_to_csv(vol_stats, "csvtest")
         
-        # plot mean volumes of all experiments for each region
+        # generate single volumes dictionary and export to CSV
         group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
+        path = "Vols_from_{}_level_{}"
+               .format(", ".join(exps), config.labels_level)
+        stats.volumes_to_csv(group_vol_dict, path, config.groups, unit_factor)
+        
+        # plot mean volumes of all experiments for each region
         vol_stats = tuple(stats.volume_stats(
             group_vol_dict, densities, config.groups, unit_factor))
         title = "Volume Means from {} at Level {}".format(
@@ -1510,5 +1515,5 @@ if __name__ == "__main__":
             vol_stats, title=title, densities=densities, show=show, 
             groups=config.groups)
         
-        # write to CSV file
+        # write stats to CSV file
         stats.volume_stats_to_csv(vol_stats, title, config.groups)

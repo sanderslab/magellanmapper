@@ -1,16 +1,26 @@
 #!/bin/bash
-# Template for running Clrbrain
+# Clrbrain pipelines and sample run commands
 # Author: David Young 2017, 2018
 
-################################################
-# Sample scenarios and workflows for Clrbrain
-#
-# Use this file as a template for your own scenarios. Edit path 
-# variables with your own file paths. Change the indices of the 
-# pathway flags to turn various parts on/off or to select the 
-# desired pathway type.
-################################################
+HELP="
+Run Clrbrain pipelines. Choose various pathways from command-line, 
+or copy this script to select the commands you desire. You can 
+also find examples of various commands to call directly.
 
+Note that currently not all options are settable through at 
+command-line and will need to be set manually in the script 
+instead.
+
+Arguments:
+    -h: Show help documentation.
+    -i: Set image path.
+    -a: Set AWS S3 path (excluding s://)
+    -p: Set pipeline, which takes precedence over individual 
+        pathways.
+    -s: Set stitching pathway.
+    -t: Set transposition pathway.
+    -w: Set whole image processing pathway.
+"
 
 
 ####################################
@@ -36,7 +46,7 @@ MICROSCOPE="lightsheet"
 
 # Grouped pathways to follow typical pipelines
 PIPELINES=("gui" "full" "process_only")
-pipeline=""
+pipeline="gui"
 
 
 # OPTIONAL: curate specific pathway(s)
@@ -70,6 +80,45 @@ upload=0 # 0 for no, 1 to upload
 
 ####################################
 # Script setup
+
+# override pathway settings with user arguments
+OPTIND=1
+while getopts hi:a:p:s:t:w: opt; do
+    case $opt in
+        h)  echo "$HELP"
+            exit 0
+            ;;
+        i)  IMG="$OPTARG"
+            echo "Set pipeline to $pipeline"
+            ;;
+        a)  S3_DIR="$OPTARG"
+            echo "Set pipeline to $pipeline"
+            ;;
+        p)  pipeline="$OPTARG"
+            echo "Set pipeline to $pipeline"
+            ;;
+        s)  stitch_pathway="$OPTARG"
+            echo "Set stitch pathway to $stitch_pathway"
+            ;;
+        t)  transpose_pathway="$OPTARG"
+            echo "Set transpose pathway to $transpose_pathway"
+            ;;
+        w)  whole_img_proc="$OPTARG"
+            echo "Set whole img proc to $whole_img_proc"
+            ;;
+        :)  echo "Option -$OPTARG requires an argument"
+            exit 1
+            ;;
+        --) ;;
+    esac
+done
+readonly IMG
+readonly S3_DIR
+
+# pass arguments after "--" to another script if necessary
+shift "$((OPTIND-1))"
+EXTRA_ARGS="$@"
+
 
 # Parsing names from your image path
 OUT_DIR="`dirname $IMG`"

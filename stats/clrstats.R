@@ -5,22 +5,39 @@ kModel = c("logit", "linregr")
 
 # logistic regression
 statsByCols <- function(df, col.start, model) {
+	# Calculates statistics for columns starting with the given string using 
+	# the selected model
+	#
+	# Values of 0 will be ignored. If all values for a given vector are 0, 
+	# statistics will not be computed.
+	#
+	# Args:
+	#   df: Data frame with columns for Genos, Sides, and names starting with 
+	#     col.start.
+	#   col.start: Columns starting with this string will be included.
+	#   model: Model to use, corresponding to one of kModel.
+	
+	# filter cols only starting with search string
 	cols <- names(df)[grepl(col.start, names(df))]
 	for (name in cols) {
+		# filter out values of 0, using as mask for corresponding columns
 		nonzero <- df[[name]] > 0
 		cat("---------------------------\n")
 		if (any(nonzero)) {
-			vals = df[[name]][nonzero]
+			vals <- df[[name]][nonzero]
+			genos <- df$Geno[nonzero]
+			sides <- df$Side[nonzero]
 			cat(name, ": ", vals, "\n")
 			if (model == kModel[1]) {
-				fit.logit <- glm(
-					df$Geno[nonzero] ~ vals * df$Side[nonzero], 
-					family=binomial(link="logit"))
-				print(summary.glm(fit.logit))
+				# logistic regression
+				fit <- glm(genos ~ vals * sides, family=binomial)
+				print(summary.glm(fit))
 			} else if (model == kModel[2]) {
-				fit.linregr <- lm(vals ~ df$Geno[nonzero] * df$Side[nonzero])
-				print(summary.lm(fit.linregr))
+				# linear regression
+				fit <- lm(vals ~ genos * sides)
+				print(summary.lm(fit))
 			}
+			hist(vals)
 		} else {
 			cat(name, ": no non-zero samples found\n\n")
 		}

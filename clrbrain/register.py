@@ -1502,8 +1502,11 @@ if __name__ == "__main__":
         
         # generate single volumes dictionary and export to CSV
         group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
+        '''
         path = "Vols_from_{}_level_{}"
                .format(", ".join(exps), config.labels_level)
+        '''
+        path = "vols_by_sample"
         stats.volumes_to_csv(group_vol_dict, path, config.groups, unit_factor)
         
         # plot mean volumes of all experiments for each region

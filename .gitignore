@@ -4,3 +4,4 @@ __pycache__
 *.pdf
 *.zip
 docs/_build
+.Rproj.user

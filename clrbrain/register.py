@@ -1507,7 +1507,10 @@ if __name__ == "__main__":
                .format(", ".join(exps), config.labels_level)
         '''
         path = "vols_by_sample"
-        stats.volumes_to_csv(group_vol_dict, path, config.groups, unit_factor)
+        #stats.volumes_to_csv(group_vol_dict, path, config.groups, unit_factor)
+        stats.volumes_to_csv_region(
+            group_vol_dict, config.labels_level, path, config.groups, 
+            unit_factor)
         
         # plot mean volumes of all experiments for each region
         vol_stats = tuple(stats.volume_stats(

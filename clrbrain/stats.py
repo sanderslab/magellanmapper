@@ -7,6 +7,7 @@ Attributes:
 
 import copy
 import csv
+from collections import OrderedDict
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -272,7 +273,8 @@ def volumes_to_csv(volumes_dict, path, groups=[""], unit_factor=1.0):
     print("exported volume data per sample to CSV at {}".format(path))
     return data_frame
 
-def volumes_to_csv_indiv(volumes_dict, level, path, groups=[""], unit_factor=1.0):
+def volumes_to_csv_region(volumes_dict, level, path, groups=[""], 
+                          unit_factor=1.0):
     """Export volumes from each sample to Pandas format and CSV file, with 
     measurements for each region on a separate line.
     
@@ -296,16 +298,13 @@ def volumes_to_csv_indiv(volumes_dict, level, path, groups=[""], unit_factor=1.0
         Pandas ``DataFrame`` with regional measurements given as one region 
         per line.
     """
-    header = ["Sample", "Geno", "Side", "Region", "Level", "Vol", "Dens", "Nuclei"]
+    header = [
+        "Sample", "Geno", "Side", "Region", "Level", "Vol", "Dens", "Nuclei"]
     num_samples = len(groups)
-    samples = []
-    genos = []
-    sides = []
-    regions = []
-    levels = []
-    vols = []
-    densities = []
-    nuclei = []
+    #data = {k: [] for k in header} # retains order for Python 3.6 but not <
+    data = OrderedDict()
+    for h in header:
+        data[h] = []
     for key in volumes_dict.keys():
         # find negative keys based on the given positive key to group them
         if key >= 0:
@@ -323,23 +322,22 @@ def volumes_to_csv_indiv(volumes_dict, level, path, groups=[""], unit_factor=1.0
                 np.divide(blobs_mirrored, vol_mirrored))
             
             # concatenate vol/dens from each side into 1d list
-            samples.extend(list(range(num_samples)) * 2)
-            genos.extend(groups * 2)
-            sides.extend(["L"] * num_samples)
-            sides.extend(["R"] * num_samples)
-            regions.extend([key] * num_samples)
-            regions.extend([-1 * key] * num_samples)
-            levels.extend([level] * num_samples * 2)
-            vols.extend(vol_side.tolist())
-            vols.extend(vol_mirrored.tolist())
-            densities.extend(density_side.tolist())
-            densities.extend(density_mirrored.tolist())
-            nuclei.extend(blobs_side)
-            nuclei.extend(blobs_mirrored)
+            data[header[0]].extend(list(range(num_samples)) * 2)
+            data[header[1]].extend(groups * 2)
+            data[header[2]].extend(["L"] * num_samples)
+            data[header[2]].extend(["R"] * num_samples)
+            data[header[3]].extend([key] * num_samples)
+            data[header[3]].extend([-1 * key] * num_samples)
+            data[header[4]].extend([level] * num_samples * 2)
+            data[header[5]].extend(vol_side.tolist())
+            data[header[5]].extend(vol_mirrored.tolist())
+            data[header[6]].extend(density_side.tolist())
+            data[header[6]].extend(density_mirrored.tolist())
+            data[header[7]].extend(blobs_side)
+            data[header[7]].extend(blobs_mirrored)
             
     # pool lists and add to Pandas data frame
-    volumes_dataset = list(zip(samples, genos, sides, regions, levels, vols, densities, nuclei))
-    data_frame = pd.DataFrame(data=volumes_dataset, columns=header)
+    data_frame = pd.DataFrame(data=data, columns=header)
     ext = ".csv"
     if not path.endswith(ext): path += ext
     data_frame.to_csv(path, index=False)

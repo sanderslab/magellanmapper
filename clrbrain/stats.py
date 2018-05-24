@@ -273,8 +273,7 @@ def volumes_to_csv(volumes_dict, path, groups=[""], unit_factor=1.0):
     print("exported volume data per sample to CSV at {}".format(path))
     return data_frame
 
-def volumes_to_csv_region(volumes_dict, level, path, groups=[""], 
-                          unit_factor=1.0):
+def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
     """Export volumes from each sample to Pandas format and CSV file, with 
     measurements for each region on a separate line.
     
@@ -337,11 +336,14 @@ def volumes_to_csv_region(volumes_dict, level, path, groups=[""],
             
     # pool lists and add to Pandas data frame
     data_frame = pd.DataFrame(data=data, columns=header)
+    return data_frame
+
+def data_frames_to_csv(data_frames, path):
     ext = ".csv"
     if not path.endswith(ext): path += ext
-    data_frame.to_csv(path, index=False)
+    combined = pd.concat(data_frames)
+    combined.to_csv(path, index=False)
     print("exported volume data per sample to CSV at {}".format(path))
-    return data_frame
 
 if __name__ == "__main__":
     print("Starting Clrbrain stats...")

@@ -29,6 +29,7 @@ outlined here. Each type can be coupled with additional arguments in ``cli``.
         graph display.
     *   ``densities``: Similar to ``volumes`` but include nuclei densities 
         per region by loading the processed stack file.
+    *   ``export``: Export regional volumes and related measures to CSV file.
 """
 
 import os
@@ -1436,6 +1437,7 @@ if __name__ == "__main__":
     from clrbrain import cli
     cli.main(True)
     plot_2d.setup_style()
+    unit_factor = np.power(1000.0, 3)
     
     # name prefix to use a different name from the input files, such as when 
     # registering transposed/scaled images but outputting paths corresponding 
@@ -1487,7 +1489,6 @@ if __name__ == "__main__":
         # plot volumes for individual experiments for each region
         show = not config.no_show
         exps = []
-        unit_factor = np.power(1000.0, 3)
         for vol, path in zip(vol_dicts, json_paths):
             exp_name = os.path.basename(path)
             vol_stats = tuple(stats.volume_stats(
@@ -1500,19 +1501,8 @@ if __name__ == "__main__":
             exps.append(exp_name.split("-")[0])
             #stats.volume_stats_to_csv(vol_stats, "csvtest")
         
-        # generate single volumes dictionary and export to CSV
-        group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
-        '''
-        path = "Vols_from_{}_level_{}"
-               .format(", ".join(exps), config.labels_level)
-        '''
-        path = "vols_by_sample"
-        #stats.volumes_to_csv(group_vol_dict, path, config.groups, unit_factor)
-        stats.volumes_to_csv_region(
-            group_vol_dict, config.labels_level, path, config.groups, 
-            unit_factor)
-        
         # plot mean volumes of all experiments for each region
+        group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
         vol_stats = tuple(stats.volume_stats(
             group_vol_dict, densities, config.groups, unit_factor))
         title = "Volume Means from {} at Level {}".format(
@@ -1523,3 +1513,26 @@ if __name__ == "__main__":
         
         # write stats to CSV file
         stats.volume_stats_to_csv(vol_stats, title, config.groups)
+        
+    elif config.register_type == config.REGISTER_TYPES[5]:
+        # export registered stats to CSV file
+        levels = [config.labels_level]
+        if not config.labels_level:
+            # default to all levels (0-13) if given level is None
+            levels = list(range(14))
+        ref = load_labels_ref(config.load_labels)
+        labels_ref_lookup = create_aba_reverse_lookup(ref)
+        dfs = []
+        for level in levels:
+            # register volumes, combine from all samples, and conver to 
+            # Pandas data frame for the given level
+            vol_dicts, json_paths = register_volumes_mp(
+                config.filenames, labels_ref_lookup, level, config.rescale, 
+                True)
+            group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
+            #stats.volumes_to_csv(group_vol_dict, path, config.groups, unit_factor)
+            dfs.append(stats.regions_to_pandas(
+                group_vol_dict, level, config.groups, unit_factor))
+        # combine data frames and export to CSV
+        stats.data_frames_to_csv(dfs, "vols_by_sample")
+        

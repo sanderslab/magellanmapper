@@ -430,7 +430,8 @@ labels_ref = None
 labels_ref_lookup = None
 labels_level = None
 labels_mirror = True
-REGISTER_TYPES = ("single", "group", "overlays", "volumes", "densities")
+REGISTER_TYPES = (
+    "single", "group", "overlays", "volumes", "densities", "export")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"

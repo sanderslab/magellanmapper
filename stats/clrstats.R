@@ -1,7 +1,9 @@
 # Clrbrain stats in R
 # Author: David Young, 2018
 
-kModel = c("logit", "linregr")
+library("gee")
+
+kModel = c("logit", "linregr", "gee")
 
 # logistic regression
 statsByCols <- function(df, col.start, model) {
@@ -36,6 +38,11 @@ statsByCols <- function(df, col.start, model) {
 				# linear regression
 				fit <- lm(vals ~ genos * sides)
 				print(summary.lm(fit))
+			} else if (model == kModel[3]) {
+				# generalized estimating equations
+				ids <- df$Sample[nonzero]
+				fit <- gee(
+					genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
 			}
 			hist(vals)
 		} else {
@@ -56,4 +63,8 @@ statsByCols(df, "Vol", kModel[1])
 print("Calculating linear regressions...")
 statsByCols(df, "Dens", kModel[2])
 statsByCols(df, "Vol", kModel[2])
+
+print("Calculating GEEs...")
+statsByCols(df, "Dens", kModel[3])
+statsByCols(df, "Vol", kModel[3])
 

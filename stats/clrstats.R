@@ -8,9 +8,37 @@ kModel = c("logit", "linregr", "gee")
 # measurements, which correspond to columns in main data frame
 kMeas = c("Vol", "Dens", "Nuclei")
 
+fitModel <- function(model, vals, genos, sides, ids=NULL) {
+	# Fit data with the given model.
+	#
+	# Args:
+	#   model: Model to use, corresponding to one of kModel.
+	#   vals: Main independent variable.
+	#   genos: Genotypes vector.
+	#   sides: Vector indicated which side the given values is on, eg 
+	#     corresponding to left or right
+	#   ids: Vector of sample IDs; defaults to NULL.
+	
+	fit <- NULL
+	if (model == kModel[1]) {
+		# logistic regression
+		fit <- glm(genos ~ vals * sides, family=binomial)
+		print(summary.glm(fit))
+	} else if (model == kModel[2]) {
+		# linear regression
+		fit <- lm(vals ~ genos * sides)
+		print(summary.lm(fit))
+	} else if (model == kModel[3]) {
+		# generalized estimating equations
+		fit <- gee(
+			genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
+	}
+	return(fit)
+}
+
 statsByCols <- function(df, col.start, model) {
 	# Calculates statistics for columns starting with the given string using 
-	# the selected model
+	# the selected model.
 	#
 	# Values of 0 will be ignored. If all values for a given vector are 0, 
 	# statistics will not be computed.
@@ -32,20 +60,7 @@ statsByCols <- function(df, col.start, model) {
 			genos <- df$Geno[nonzero]
 			sides <- df$Side[nonzero]
 			cat(name, ": ", vals, "\n")
-			if (model == kModel[1]) {
-				# logistic regression
-				fit <- glm(genos ~ vals * sides, family=binomial)
-				print(summary.glm(fit))
-			} else if (model == kModel[2]) {
-				# linear regression
-				fit <- lm(vals ~ genos * sides)
-				print(summary.lm(fit))
-			} else if (model == kModel[3]) {
-				# generalized estimating equations
-				ids <- df$Sample[nonzero]
-				fit <- gee(
-					genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
-			}
+			fit <- fitModel(model, vals, genos, sides, ids)
 			hist(vals)
 		} else {
 			cat(name, ": no non-zero samples found\n\n")
@@ -78,21 +93,9 @@ statsByRegion <- function(df, col, model) {
 			vals <- df.region[[col]][nonzero]
 			genos <- df.region$Geno[nonzero]
 			sides <- df.region$Side[nonzero]
+			ids <- df.region$Sample[nonzero]
 			cat("Region", region, ": ", vals, "\n")
-			if (model == kModel[1]) {
-				# logistic regression
-				fit <- glm(genos ~ vals * sides, family=binomial)
-				print(summary.glm(fit))
-			} else if (model == kModel[2]) {
-				# linear regression
-				fit <- lm(vals ~ genos * sides)
-				print(summary.lm(fit))
-			} else if (model == kModel[3]) {
-				# generalized estimating equations
-				ids <- df.region$Sample[nonzero]
-				fit <- gee(
-					genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
-			}
+			fit <- fitModel(model, vals, genos, sides, ids)
 			hist(vals)
 		} else {
 			cat(region, ": no non-zero samples found\n\n")
@@ -105,7 +108,8 @@ df <- read.csv("../vols_by_sample.csv")
 print.data.frame(df)
 cat("\n\n")
 
-for (model in kModel) {
+# show stats for first 2 models
+for (model in kModel[1:2]) {
 	cat("-----------------------\nCalculating", model, "stats...", "\n")
 	for (meas in kMeas) {
 		statsByRegion(df, meas, model)

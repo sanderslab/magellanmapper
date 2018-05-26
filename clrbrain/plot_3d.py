@@ -131,7 +131,10 @@ def denoise_roi(roi, channel=None):
         # sharpening
         unsharp_strength = settings["unsharp_strength"]
         blur_size = 8
-        blurred = filters.gaussian(denoised, blur_size)
+        # turn off multichannel since assume operation on single channel at 
+        # a time and to avoid treating as multichannel if 3D ROI happens to 
+        # have x size of 3
+        blurred = filters.gaussian(denoised, blur_size, multichannel=False)
         high_pass = denoised - unsharp_strength * blurred
         denoised = denoised + high_pass
         

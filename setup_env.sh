@@ -238,26 +238,42 @@ install_shallow_clone() {
 cd ..
 if [[ $lightweight -eq 0 ]]; then
     # install dependencies for GUI requirement
+    
     pip install -U matplotlib-scalebar
+    
+    # use Conda now that VTK 8.1 is available there
     #pip install -U vtk==8.1.0
+    
     # pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
     # version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 
     # Matplotlib in Conda on Linux64 is not compatible with this release, 
     # however, and will install the Conda package alongside the pip one
     pip install -U PyQt5
+    
+    # use Conda now that TraitsUI and Pyface 6 available there
     #install_shallow_clone https://github.com/enthought/traits.git
     #install_shallow_clone https://github.com/enthought/pyface.git
     #install_shallow_clone https://github.com/enthought/traitsui.git
-    install_shallow_clone https://github.com/enthought/mayavi.git
+    
+    # use Mayavi 4.6 release with Python 3 support
+    #install_shallow_clone https://github.com/enthought/mayavi.git
+    pip install -U mayavi
 fi
 
-# install remaining dependencies
-install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
-# also cannot be installed in Conda environment configuration script 
-# for some reason
-install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
+# use Scikit-image 0.14 release
+#install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
+pip install -U scikit-image
+
+# cannot be installed in Conda environment configuration script 
+# for some reason and need latest Pip release of Javabridge
+#install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
+pip install -U javabridge
+
+# need older version since ver > 1.1 give heap space error
 pip install -U python-bioformats==1.1.0
+
 cd "$BASE_DIR"
+
 
 if [ $build_simple_elastix -eq 1 ]
 then
@@ -265,6 +281,7 @@ then
     ./build_se.sh -i
 fi
 
-echo "clrbrain environment setup complete!"
-echo "** Please run \"conda activate $env_name\" to enter the environment for Clrbrain **"
+echo "Clrbrain environment setup complete!"
+echo "** Please run \"conda activate $env_name\" or \"source activate $env_name\""
+echo "   depending on your Conda setup to enter the environment for Clrbrain **"
 

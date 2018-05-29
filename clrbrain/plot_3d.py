@@ -636,7 +636,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
         opacity=0.2) 
     pts_in.module_manager.scalar_lut_manager.lut.table = cmap
     isotropic = settings["isotropic_vis"]
-    if isotropic is None:
+    if isotropic is not None:
         for pts in [pts_out, pts_in]:
             pts.actor.actor.scale = isotropic[::-1]
     

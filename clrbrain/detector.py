@@ -214,31 +214,43 @@ def detect_blobs(roi, channel):
         scale = calc_scaling_factor()
         scaling_factor = scale[2]
         
-        res_norm = None
         overlap = settings["overlap"]
+        detect_dict = {}
         if settings["scale_factor"] is not None:
-            # anisotropic kernel for blob pruning; typically don't mix with 
-            # isotropic factor
+            # anisotropic kernel for blob pruning, which requires a custom 
+            # Scikit-image repo and should only be used if not interpolating 
+            # for isotropy
             res_norm = np.divide(resolutions[0], np.min(resolutions[0]))
             # further tweak, typically scaling down
             res_norm = np.multiply(res_norm, settings["scale_factor"])
             segmenting_mean = np.mean(roi_detect)
-            #print("min: {}, max: {}".format(np.min(roi), np.max(roi)))
             lib_clrbrain.printv("segmenting_mean: {}".format(segmenting_mean))
             if segmenting_mean > settings["segmenting_mean_thresh"]:
                 # turn off scaling for higher density region
                 res_norm = None
                 overlap += 0.05
-        #print("overlap: {}, scale_factor: {}".format(overlap, settings["scale_factor"]))
-        #print("res_norm: {}".format(res_norm))
+            else:
+                detect_dict["scale"] = res_norm
+        #print("detection dict: {}".format(detect_dict))
         
         # find blobs
-        blobs_log = blob_log(roi_detect, 
-                             min_sigma=settings["min_sigma_factor"]*scaling_factor, 
-                             max_sigma=settings["max_sigma_factor"]*scaling_factor, 
-                             num_sigma=settings["num_sigma"], 
-                             threshold=settings["detection_threshold"],
-                             overlap=overlap, scale=res_norm)
+        try:
+            blobs_log = blob_log(
+                roi_detect, 
+                min_sigma=settings["min_sigma_factor"]*scaling_factor, 
+                max_sigma=settings["max_sigma_factor"]*scaling_factor, 
+                num_sigma=settings["num_sigma"], 
+                threshold=settings["detection_threshold"],
+                overlap=overlap, **detect_dict)
+        except TypeError as e:
+            print(e)
+            raise TypeError(
+                 "If you see an error involving the 'scale' keyword, you need "
+                 "\na custom Scikit-image repo extended to include an "
+                 "anisotropic kernel, "
+                 "\navailable at "
+                 "https://github.com/the4thchild/scikit-image.git"
+                 "\nbut deprecated in Clrbrain 0.6.8")
         lib_clrbrain.printv(
             "time for 3D blob detection: {}".format(time() - time_start))
         if blobs_log.size < 1:

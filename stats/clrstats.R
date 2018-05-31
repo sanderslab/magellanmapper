@@ -7,6 +7,9 @@ library("gee")
 kModel = c("logit", "linregr", "gee")
 # measurements, which correspond to columns in main data frame
 kMeas = c("Vol", "Dens", "Nuclei")
+kStatsPathIn <- "../vols_by_sample.csv"
+kStatsPathOut <- "../vols_stats.csv"
+kRegionIDsPath <- "../region_ids.csv"
 
 fitModel <- function(model, vals, genos, sides, ids=NULL) {
 	# Fit data with the given model.
@@ -146,7 +149,7 @@ filterStats <- function(stats) {
 	return(filtered)
 }
 
-volcanoPlot <- function(stats, meas) {
+volcanoPlot <- function(stats, meas, y.thresh=NULL, region.ids=NULL) {
 	# Generate a volcano plot.
 	#
 	# Args:
@@ -156,7 +159,21 @@ volcanoPlot <- function(stats, meas) {
 	plot(
 		x, y, main=paste(meas, "Differences"), xlab="Effects", ylab="-log(p)",
 		type="p", col="blue", pch=16)
-	text(x, y, label=stats$Region, cex=0.3, pos=3)
+	x.lbl <- x
+	y.lbl <- y
+	lbls <- stats$Region
+	if (!is.null(region.ids)) {
+		lbls.df <- merge(stats, region.ids, by="Region")
+		print(lbls.df)
+		lbls <- paste(lbls.df$Region, lbls.df$RegionName, sep="\n")
+	}
+	if (!is.null(y.thresh)) {
+		y.high <- y > y.thresh
+		x.lbl <- x[y.high]
+		y.lbl <- y[y.high]
+		lbls <- lbls[y.high]
+	}
+	text(x.lbl, y.lbl, label=lbls, cex=0.3, pos=3)
 }
 
 calcVolStats <- function(path.in, path.out, meas, model) {
@@ -188,6 +205,7 @@ calcVolStats <- function(path.in, path.out, meas, model) {
 }
 
 meas <- kMeas[2]
-stats <- calcVolStats(
-	"../vols_by_sample.csv", "../vols_stats.csv", meas, kModel[1])
-volcanoPlot(stats, meas)
+stats <- calcVolStats(kStatsPathIn, kStatsPathOut, meas, kModel[1])
+# stats <- read.csv(kStatsPathOut)
+region.ids <- read.csv(kRegionIDsPath)
+volcanoPlot(stats, meas, y.thresh=2, region.ids=region.ids)

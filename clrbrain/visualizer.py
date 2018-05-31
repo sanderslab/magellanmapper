@@ -696,7 +696,6 @@ class Visualization(HasTraits):
                            curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(config.filename, config.series)
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
-        screenshot = self.scene.mlab.screenshot(antialiased=True)
         stack_args = (
             self.update_segment, title, filename_base, img, config.channel, 
             curr_roi_size, curr_offset, self.segments, self.segs_in_mask, 
@@ -708,26 +707,28 @@ class Visualization(HasTraits):
             "circles": circles, "grid": grid}
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # layout for square ROIs with 3D screenshot, creating a square-ish fig
+            screenshot = self.scene.mlab.screenshot(antialiased=True)
             plot_2d.plot_2d_stack(*stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[2]:
             # single row
+            screenshot = self.scene.mlab.screenshot(antialiased=True)
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, single_zoom_row=True, 
                 z_level=plot_2d.Z_LEVELS[1], mlab_screenshot=screenshot)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[3]:
             # layout for wide ROIs to maximize real estate on widescreen
             plot_2d.plot_2d_stack(
-                *stack_args, **stack_args_named, zoom_levels=2, mlab_screenshot=None, zoom_cols=7)
+                *stack_args, **stack_args_named, zoom_levels=2, zoom_cols=7)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[4]:
             # multi-zoom overview plots
-            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=5, mlab_screenshot=None)
+            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=5)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[5]:
             # layout for square ROIs with thin rows to create a tall fig
             plot_2d.plot_2d_stack(
-                *stack_args, **stack_args_named, zoom_levels=3, mlab_screenshot=None, zoom_cols=6)
+                *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
         else:
             # defaults to Square style without oblique view
-            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=3, mlab_screenshot=None)
+            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=3)
     
     def _btn_save_segments_fired(self):
         self.save_segs()

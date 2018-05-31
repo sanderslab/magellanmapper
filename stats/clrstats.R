@@ -2,6 +2,8 @@
 # Author: David Young, 2018
 
 library("gee")
+library("plotly")
+library("ggplot2")
 
 # statistical models to use
 kModel = c("logit", "linregr", "gee")
@@ -149,7 +151,7 @@ filterStats <- function(stats) {
 	return(filtered)
 }
 
-volcanoPlot <- function(stats, meas, y.thresh=NULL, region.ids=NULL) {
+volcanoPlot <- function(stats, meas, y.thresh=NULL) {
 	# Generate a volcano plot.
 	#
 	# Args:
@@ -161,12 +163,7 @@ volcanoPlot <- function(stats, meas, y.thresh=NULL, region.ids=NULL) {
 		type="p", col="blue", pch=16)
 	x.lbl <- x
 	y.lbl <- y
-	lbls <- stats$Region
-	if (!is.null(region.ids)) {
-		lbls.df <- merge(stats, region.ids, by="Region")
-		print(lbls.df)
-		lbls <- paste(lbls.df$Region, lbls.df$RegionName, sep="\n")
-	}
+	lbls <- paste(stats$Region, stats$RegionName, sep="\n")
 	if (!is.null(y.thresh)) {
 		y.high <- y > y.thresh
 		x.lbl <- x[y.high]
@@ -174,9 +171,13 @@ volcanoPlot <- function(stats, meas, y.thresh=NULL, region.ids=NULL) {
 		lbls <- lbls[y.high]
 	}
 	text(x.lbl, y.lbl, label=lbls, cex=0.3, pos=3)
+	# plot_ly(data=stats, x=x, y=y)
+	#g <- ggplot(data=stats, aes(x=x, y=y)) + geom_point(size=2)
+	# ggplotly(g, tooltip=c("Region"))
+	#print(g)
 }
 
-calcVolStats <- function(path.in, path.out, meas, model) {
+calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 	# Calculate volumetric stats from the given CSV file.
 	#
 	# Args:
@@ -199,13 +200,18 @@ calcVolStats <- function(path.in, path.out, meas, model) {
 	# calculate stats, filter out NAs and extract effects and p-values
 	stats <- statsByRegion(df, meas, model)
 	stats.filtered <- filterStats(stats)
+	stats.filtered <- merge(stats.filtered, region.ids, by="Region")
 	print(stats.filtered)
 	write.csv(stats.filtered, path.out)
 	return(stats.filtered)
 }
 
 meas <- kMeas[2]
-stats <- calcVolStats(kStatsPathIn, kStatsPathOut, meas, kModel[1])
-# stats <- read.csv(kStatsPathOut)
 region.ids <- read.csv(kRegionIDsPath)
-volcanoPlot(stats, meas, y.thresh=2, region.ids=region.ids)
+if (file.exists(kStatsPathOut)) {
+	stats <- read.csv(kStatsPathOut)
+} else {
+	stats <- calcVolStats(
+		kStatsPathIn, kStatsPathOut, meas, kModel[1], region.ids)
+}
+volcanoPlot(stats, meas, y.thresh=2)

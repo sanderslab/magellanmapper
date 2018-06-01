@@ -732,15 +732,11 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     moving_img = sitk.GetArrayFromImage(moving_sitk)
     
     # get the registered atlas file, which should already be transposed
-    out_path = _reg_out_path(name_prefix, IMG_ATLAS)
-    print("Reading in {}".format(out_path))
-    transformed_sitk = sitk.ReadImage(out_path)
+    transformed_sitk = load_registered_img(name_prefix, get_sitk=True)
     transformed_img = sitk.GetArrayFromImage(transformed_sitk)
     
     # get the registered labels file, which should also already be transposed
-    out_path = _reg_out_path(name_prefix, IMG_LABELS)
-    print("Reading in {}".format(out_path))
-    labels_img = sitk.GetArrayFromImage(sitk.ReadImage(out_path))
+    labels_img = load_registered_img(name_prefix, reg_name=IMG_LABELS)
     
     # calculate the Dice similarity coefficient
     measure_overlap(_load_numpy_to_sitk(fixed_file), transformed_sitk)
@@ -752,13 +748,29 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
         moving_sitk, transformed_sitk, translation, flip=True)
     _show_overlays(imgs, translation, fixed_file, out_plane)
 
-def load_labels(fixed_file, get_sitk=False):
-    labels_path = _reg_out_path(fixed_file, IMG_LABELS)
-    labels_img = sitk.ReadImage(labels_path)
-    print("loaded labels image from {}".format(labels_path))
+def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS):
+    """Load atlas-based image that has been registered to another image.
+    
+    Args:
+        img_path: Path as had been given to generate the registered images, 
+            with the parent path of the registered images and base name of 
+            the original image.
+        get_sitk: True if the image should be returned as a SimpleITK image; 
+            defaults to False, in which case the corresponding Numpy array will 
+            be extracted instead.
+        reg_name: Atlas image type to open; defaults to :const:``IMG_ATLAS``, 
+            which will open the main atlas.
+    
+    Returns:
+        The atlas-based image, either as a SimpleITK image or its 
+        corresponding Numpy array.
+    """
+    reg_img_path = _reg_out_path(img_path, reg_name)
+    reg_img = sitk.ReadImage(reg_img_path)
+    print("loaded registered image from {}".format(reg_img_path))
     if get_sitk:
-        return labels_img
-    return sitk.GetArrayFromImage(labels_img)
+        return reg_img
+    return sitk.GetArrayFromImage(reg_img)
 
 def load_labels_ref(path):
     labels_ref = None
@@ -1263,7 +1275,8 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             # build volumes dictionary for the given level, which can be None
             
             # load labels image and setup labels dictionary
-            labels_img_sitk = load_labels(img_path, get_sitk=True)
+            labels_img_sitk = load_registered_img(
+                img_path, get_sitk=True, reg_name=IMG_LABELS)
             spacing = labels_img_sitk.GetSpacing()
             labels_img = sitk.GetArrayFromImage(labels_img_sitk)
             print("labels_img shape: {}".format(labels_img.shape))
@@ -1439,12 +1452,14 @@ def _test_labels_lookup():
     #lookup_id = 126652058 # last item
     time_dict_start = time()
     id_dict = create_aba_reverse_lookup(ref)
-    labels_img = load_labels(config.filename)
+    labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
     max_labels = np.max(labels_img)
     print("max_labels: {}".format(max_labels))
     #mirror_reverse_lookup(id_dict, max_labels, " (R)")
     #pprint(id_dict)
     time_dict_end = time()
+    
+    # look up a single ID
     time_node_start = time()
     found = id_dict[lookup_id]
     time_node_end = time()
@@ -1461,8 +1476,10 @@ def _test_labels_lookup():
     print("time to find node directly (s): {}".format(time_direct_end - time_direct_start))
     
     # get a list of IDs corresponding to each blob
-    blobs = np.array([[300, 5000, 8000], [350, 5500, 4500], [400, 6000, 5000]])
-    ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, np.ones(3) * config.labels_scaling)
+    blobs = np.array([[300, 5000, 3000], [350, 5500, 4500], [400, 6000, 5000]])
+    image5d = importer.read_file(config.filename, config.series)
+    scaling = importer.calc_scaling(image5d, labels_img)
+    ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
     print("blob IDs:\n{}".format(ids))
 
 def _test_mirror_labels(moving_file_dir):

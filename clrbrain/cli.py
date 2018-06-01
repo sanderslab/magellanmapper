@@ -834,7 +834,8 @@ def process_file(filename_base, offset, roi_size):
     if config.load_labels is not None:
         # load labels image and set up scaling
         from clrbrain import register
-        config.labels_img = register.load_labels(config.filename)
+        config.labels_img = register.load_registered_img(
+            config.filename, reg_name=register.IMG_LABELS)
         config.labels_scaling = importer.calc_scaling(
             image5d, config.labels_img)
         config.labels_ref = register.load_labels_ref(config.load_labels)

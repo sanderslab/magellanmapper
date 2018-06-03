@@ -32,7 +32,7 @@ from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         Property, File)
 from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
                           RangeEditor, HSplit, TabularEditor, CheckListEditor, 
-                          FileEditor)
+                          FileEditor, TextEditor)
 from traitsui.tabular_adapter import TabularAdapter
 from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
@@ -181,6 +181,7 @@ class Visualization(HasTraits):
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
+    _region_id = Int
     _mlab_title = None
     _scene_3d_shown = False # 3D Mayavi display shown
     _circles_window_opened = True # 2D plots with circles window opened
@@ -772,6 +773,25 @@ class Visualization(HasTraits):
             self.rois_check_list = _ROI_DEFAULT
             self._reset_segments()
     
+    @on_trait_change("_region_id")
+    def _region_id_changed(self):
+        print("region ID: {}".format(self._region_id))
+        props, bbox, centroid = register.get_region_from_id(
+            config. labels_ref_lookup, self._region_id, config.labels_img, 
+            config.labels_scaling)
+        if centroid is None:
+            self.segs_feedback = (
+                "Could not find the region corresponding to ID {}"
+                .format(self._region_id))
+            return
+        self.segs_feedback = (
+            "Found region ID {}. Redraw to show.".format(self._region_id))
+        curr_roi_size = self.roi_array[0].astype(int)
+        corner = np.subtract(
+            centroid, 
+            np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
+        self.z_offset, self.y_offset, self.x_offset = corner
+    
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)
     
@@ -1008,12 +1028,20 @@ class Visualization(HasTraits):
                         high_name="_segs_scale_high",
                         mode="slider"),
                 ),
-                Item(
-                    "_structure_scale",
-                    editor=RangeEditor(
-                        low_name="_structure_scale_low",
-                        high_name="_structure_scale_high",
-                        mode="slider"),
+                HGroup(
+                    Item(
+                        "_structure_scale",
+                        editor=RangeEditor(
+                            low_name="_structure_scale_low",
+                            high_name="_structure_scale_high",
+                            mode="slider"),
+                        label="Level"
+                    ),
+                    Item(
+                        "_region_id",
+                        editor=TextEditor(auto_set=False, enter_set=True, evaluate=int),
+                        label="Region"
+                    ),
                 ),
                 VGroup(
                     Item(

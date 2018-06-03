@@ -75,6 +75,7 @@ LEFT_SUFFIX = " (L)"
 ABA_ID = "id"
 ABA_PARENT = "parent_structure_id"
 ABA_LEVEL = "st_level"
+ABA_CHILDREN = "children"
 
 _SIGNAL_THRESHOLD = 0.01
 
@@ -891,7 +892,7 @@ def create_aba_reverse_lookup(labels_ref):
     Returns:
         Reverse lookup dictionary as output by :func:`create_reverse_lookup`.
     """
-    return create_reverse_lookup(labels_ref["msg"][0], ABA_ID, "children")
+    return create_reverse_lookup(labels_ref["msg"][0], ABA_ID, ABA_CHILDREN)
 
 def get_label_ids_from_position(coord, labels_img, scaling):
     """Get the atlas label IDs for the given coordinates.
@@ -990,6 +991,42 @@ def get_label_name(label):
         print(e, name)
     return name
 
+def get_children(labels_ref_lookup, label_id, children_all=[]):
+    label = labels_ref_lookup.get(label_id)
+    if label:
+        children = label[NODE][ABA_CHILDREN]
+        for child in children:
+            child_id = child[ABA_ID]
+            #print("child_id: {}".format(child_id))
+            children_all.append(child_id)
+            get_children(labels_ref_lookup, child_id, children_all)
+    return children_all
+
+def get_region_from_id(labels_ref_lookup, label_id, labels_img, scaling):
+    # TODO: use only deepest child?
+    region_ids = get_children(labels_ref_lookup, abs(label_id), [abs(label_id)])
+    if label_id < 0: region_ids = np.multiply(-1, region_ids)
+    print("region IDs: {}".format(len(region_ids)))
+    #img_region = (labels_img == label_id).astype(np.int)
+    img_region = np.isin(labels_img, region_ids)#.astype(np.int32)
+    img_region = morphology.remove_small_objects(img_region, 10)
+    img_region = img_region.astype(np.int32)
+    print("img_region 1's: {}".format(np.count_nonzero(img_region)))
+    props = measure.regionprops(img_region)
+    print("num props: {}".format(len(props)))
+    scaling_inv = 1 / scaling
+    if len(props) > 0:
+        bbox_scaled = np.array(props[0].bbox)
+        bbox_scaled[:3] = bbox_scaled[:3] * scaling_inv
+        bbox_scaled[3:] = bbox_scaled[3:] * scaling_inv
+        centroid_scaled = np.array(props[0].centroid) * scaling_inv
+        bbox_scaled = np.around(bbox_scaled).astype(np.int)
+        centroid_scaled = np.around(centroid_scaled).astype(np.int)
+        print(props[0].bbox, props[0].centroid)
+        print(bbox_scaled, centroid_scaled)
+        return props, bbox_scaled, centroid_scaled
+    return props, None, None
+
 def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None, 
                   blobs_ids=None, image5d=None):
     """Get volumes by labels IDs.
@@ -1008,7 +1045,10 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             volumes for all label IDs will be returned. If a level is 
             given, only regions from that level will be returned, while 
             children will be collapsed into the parent at that level, and 
-            regions above this level will be ignored.
+            regions above this level will be ignored. Recommended practice is 
+            to generate this volumes dict with level of None to use as a 
+            master dictionary, followed by volumes at a given level using 
+            :func:``volumes_dict_level_grouping``.
         blobs_ids: List of label IDs for blobs. If None, blob densities will 
             not be calculated.
         image5d: Image to which ``labels_img`` is registered, used to 
@@ -1081,18 +1121,22 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                       "(theor max of {})".format(vol, vol_image5d, vol_theor))
                 vol = vol_image5d
             
+            # get blobs annotated to the given label
             blobs = None
             blobs_len = 0
             if blobs_ids is not None:
                 blobs = blobs_ids[blobs_ids == label_id]
                 blobs_len = len(blobs)
             #print("checking id {} with vol {}".format(label_id, vol))
+            
+            # insert a regional dict for the given label
             label_level = label[NODE][ABA_LEVEL]
             name = label[NODE][config.ABA_NAME]
-            # include region in volumes dict if at the given level, no level 
-            # specified, or at the default (organism) level, which is used 
-            # to catch all children without a parent at the given level
             if level is None or label_level == level or label_level == -1:
+                # include region in volumes dict if at the given level, no 
+                # level specified (to build a mster dict), or at the default 
+                # (organism) level, which is used to catch all children without 
+                # a parent at the given level
                 region_dict = {
                     config.ABA_NAME: label[NODE][config.ABA_NAME],
                     config.VOL_KEY: vol,
@@ -1102,6 +1146,11 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                 print("inserting region {} (id {}) with {} vol and {} blobs "
                       .format(name, label_id, vol, blobs_len))
             else:
+                # add vol and blobs to parent with a regional dict, which is 
+                # parent at the given level; assume that these dicts will have 
+                # already been made for these parents since key order is 
+                # hierarchical, while regions higher than given level or in 
+                # another hierachical branch will not find a parent with dict
                 parents = label.get(PARENT_IDS)
                 if parents is not None:
                     if label_id < 0:
@@ -1122,6 +1171,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                     if not found_parent:
                         print("could not find parent for {} with blobs {}"
                               .format(label_id, blobs_len))
+    
     # blobs summary
     blobs_tot = 0
     for key in volumes_dict.keys():
@@ -1538,6 +1588,14 @@ def _test_mirror_labels(moving_file_dir):
     img = _mirror_labels(img, img_ref)
     sitk.Show(img)
 
+def _test_region_from_id():
+    labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
+    image5d = importer.read_file(config.filename, config.series)
+    scaling = importer.calc_scaling(image5d, labels_img)
+    ref = load_labels_ref(config.load_labels)
+    id_dict = create_aba_reverse_lookup(ref)
+    props, bbox, centroid = get_region_from_id(id_dict, -15565, labels_img, scaling)
+
 if __name__ == "__main__":
     print("Clrbrain image registration")
     from clrbrain import cli
@@ -1558,6 +1616,7 @@ if __name__ == "__main__":
     
     #_test_labels_lookup()
     #_test_mirror_labels(config.filenames[1])
+    #_test_region_from_id()
     #os._exit(os.EX_OK)
     
     if config.register_type is None:

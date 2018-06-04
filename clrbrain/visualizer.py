@@ -776,7 +776,12 @@ class Visualization(HasTraits):
     @on_trait_change("_region_id")
     def _region_id_changed(self):
         print("region ID: {}".format(self._region_id))
+        '''
         props, bbox, centroid = register.get_region_from_id(
+            config. labels_ref_lookup, self._region_id, config.labels_img, 
+            config.labels_scaling)
+        '''
+        centroid = register.get_region_middle(
             config. labels_ref_lookup, self._region_id, config.labels_img, 
             config.labels_scaling)
         if centroid is None:

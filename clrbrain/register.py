@@ -51,6 +51,7 @@ except ImportError as e:
     print("WARNING: SimpleElastix could not be found, so there will be error "
           "when attempting to register images or load registered images")
 import numpy as np
+from skimage import filters
 from skimage import measure
 from skimage import morphology
 from skimage import transform
@@ -1191,13 +1192,19 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
     scaling_vol = np.prod(resolution)
     scaling_vol_image5d = scaling_vol
     scaling_inv = None
+    thresh = _SIGNAL_THRESHOLD
     if image5d is not None and image5d.shape[1:4] != labels_img.shape:
+        # find scale between larger image5d and labels image
         scaling = importer.calc_scaling(image5d, labels_img)
         scaling_inv = np.divide(1, scaling)
         #scaling_vol_image5d = np.prod(detector.resolutions[0])
         scaling_vol_image5d = scaling_vol * np.prod(scaling)
         print("images have different shapes so will scale to compare "
               "with scaling of {}".format(scaling_inv))
+    elif image5d is not None:
+        # find global threshold from scaled (presumably smaller) image
+        thresh = filters.threshold_mean(image5d)
+        print("using signal threshold of {}".format(thresh))
     for key in ids:
         label_ids = [key, -1 * key]
         for label_id in label_ids:
@@ -1208,7 +1215,9 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             
             if image5d is not None:
                 # find volume of corresponding region in experiment image
-                # where significant signal (eg actual tissue) is present
+                # where significant signal (eg actual tissue) is present; 
+                # assume that rest of region does not contain blobs since 
+                # not checking for blobs there
                 vol_image5d = 0
                 vol_theor = 0 # to verify
                 if scaling_inv is not None:
@@ -1226,7 +1235,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                             coords[i][1]:coords_end[i][1],
                             coords[i][2]:coords_end[i][2]]
                         present = region_image5d[
-                            region_image5d > _SIGNAL_THRESHOLD]
+                            region_image5d > thresh]
                         #print("len of region with tissue: {}".format(len(region_present)))
                         vol_image5d += len(present) * scaling_vol_image5d
                         vol_theor += region_image5d.size * scaling_vol_image5d
@@ -1234,7 +1243,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                     # use scaled image, whose size should match the labels image
                     image5d_in_region = image5d[0, mask_id]
                     present = image5d_in_region[
-                        image5d_in_region >= _SIGNAL_THRESHOLD]
+                        image5d_in_region >= thresh]
                     vol_image5d = len(present) * scaling_vol_image5d
                     vol_theor = len(image5d_in_region) * scaling_vol_image5d
                     pixels = len(image5d_in_region)

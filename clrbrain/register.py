@@ -894,7 +894,7 @@ def create_aba_reverse_lookup(labels_ref):
     """
     return create_reverse_lookup(labels_ref["msg"][0], ABA_ID, ABA_CHILDREN)
 
-def get_label_ids_from_position(coord, labels_img, scaling):
+def get_label_ids_from_position(coord, labels_img, scaling, rounding=False):
     """Get the atlas label IDs for the given coordinates.
     
     Args:
@@ -904,22 +904,35 @@ def get_label_ids_from_position(coord, labels_img, scaling):
             label IDs.
         scaling: Scaling factor for the labels image size compared with the 
             experiment image.
+        rounding: True to round coordinates after scaling, which should be 
+            used rounding to reverse coordinates that were previously scaled 
+            inversely to avoid size degredation with repeated scaling. 
+            Typically rounding is False (default) so that coordinates fall 
+            evenly to their lowest integer, without exceeding max bounds.
     
     Returns:
         An array of label IDs corresponding to ``coords``, or a scalar of 
         one ID if only one coordinate is given.
     """
     print("getting label IDs from coordinates")
-    # scale coordinates to atlas image size, clipping to ensure that rounding 
-    # does not cause coordinates to exceed labels image shape
-    coord_scaled = np.around(np.multiply(coord, scaling)).astype(np.int)
+    # scale coordinates to atlas image size
+    coord_scaled = np.multiply(coord, scaling)
+    if rounding: 
+        # round when extra precision is necessary, such as during reverse 
+        # scaling, which requires clipping so coordinates don't exceed labels 
+        # image shape
+        coord_scaled = np.around(coord_scaled).astype(np.int)
+        coord_scaled = np.clip(
+            coord_scaled, None, np.subtract(labels_img.shape, 1))
+    else:
+        # tpyically don't round to stay within bounds
+        coord_scaled = coord_scaled.astype(np.int)
     '''
     exceeding = np.greater_equal(coord_scaled, labels_img.shape)
     print("exceeding:\n{}".format(exceeding))
     print("cood_scaled exceeding:\n{}".format(coord_scaled[np.any(exceeding, axis=1)]))
     print("y exceeding:\n{}".format(coord_scaled[coord_scaled[:, 1] >= labels_img.shape[1]]))
     '''
-    coord_scaled = np.clip(coord_scaled, None, np.subtract(labels_img.shape, 1))
     
     # split coordinates into lists by dimension to index the labels image
     # at once
@@ -933,7 +946,8 @@ def get_label_ids_from_position(coord, labels_img, scaling):
     '''
     return labels_img[coord_scaled][0]
 
-def get_label(coord, labels_img, labels_ref, scaling, level=None):
+def get_label(coord, labels_img, labels_ref, scaling, level=None, 
+              rounding=False):
     """Get the atlas label for the given coordinates.
     
     Args:
@@ -949,13 +963,15 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None):
             to the given coordinates will be returned. If a level is given, 
             the label at the highest (numerically lowest) level encompassing 
             this region will be returned.
+        rounding: True to round coordinates after scaling (see 
+            :func:``get_label_ids_from_position``); defaults to False.
     
     Returns:
         The label dictionary at those coordinates, or None if no label is 
         found.
     """
-    label_id = get_label_ids_from_position(coord, labels_img, scaling)
-    print("label_id: {}".format(label_id))
+    label_id = get_label_ids_from_position(coord, labels_img, scaling, rounding)
+    print("found label_id: {}".format(label_id))
     mirrored = label_id < 0
     if mirrored:
         label_id = -1 * label_id
@@ -976,7 +992,7 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None):
                     break
         if label is not None:
             label[MIRRORED] = mirrored
-            print("label: {}".format(label_id))
+            print("label ID at level {}: {}".format(level, label_id))
     except KeyError as e:
         print("could not find label id {} or its parent (error {})"
               .format(label_id, e))
@@ -1078,8 +1094,10 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
         mid_ind = sort_ind[int(num_coords / 2)]
         coord_middle = [region_coords[i][mid_ind] 
                         for i in range(len(region_coords))]
-        print("coord_middle (unscaled): {}".format(coord_middle))
-        print(img_region[tuple(coord_middle)])
+        coord_tup = tuple(coord_middle)
+        print("coord_middle (unscaled): {}".format(coord_tup))
+        print("ID at middle coord: {} (in region? {})"
+              .format(labels_img[coord_tup], img_region[coord_tup]))
         coord_middle = tuple(np.around(coord_middle / scaling).astype(np.int))
     print("coord_middle: {}".format(coord_middle))
     return coord_middle
@@ -1701,7 +1719,7 @@ def _test_region_from_id():
     id_dict = create_aba_reverse_lookup(ref)
     #props, bbox, centroid = get_region_from_id(id_dict, -15565, labels_img, scaling)
     centroid = get_region_middle(id_dict, 15572, labels_img, scaling)
-    atlas_label = get_label(centroid, labels_img, id_dict, scaling, None)
+    atlas_label = get_label(centroid, labels_img, id_dict, scaling, None, True)
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

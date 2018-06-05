@@ -328,7 +328,7 @@ class Visualization(HasTraits):
                 level = None
             self._atlas_label = register.get_label(
                 center[::-1], config.labels_img, config.labels_ref_lookup, 
-                config.labels_scaling, level)
+                config.labels_scaling, level, rounding=True)
             if self._atlas_label is not None:
                 title = register.get_label_name(self._atlas_label)
                 if title is not None:

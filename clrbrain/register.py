@@ -591,32 +591,16 @@ def measure_overlap(fixed_img, transformed_img):
     '''
     # Dice Similarity Coefficient (DSC) of total brain volume by applying 
     # simple binary mask for estimate of background vs foreground
-    fixed_binary_img = sitk.BinaryThreshold(
-        fixed_img, _get_img_threshold(fixed_img))
-    transformed_binary_img = sitk.BinaryThreshold(
-        transformed_img, _get_img_threshold(transformed_img))
+    thresh = filters.threshold_mean(sitk.GetArrayFromImage(fixed_img))
+    print("measuring overlap with threshold of {}".format(thresh))
+    fixed_binary_img = sitk.BinaryThreshold(fixed_img, thresh)
+    transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)
     #sitk.Show(transformed_binary_img)
     total_dsc = overlap_filter.GetDiceCoefficient()
     #print("Mean regional DSC: {}".format(mean_region_dsc))
     print("Total DSC: {}".format(total_dsc))
-
-def _get_img_threshold(img):
-    """Get manual image threshold.
-    
-    Args:
-        img: Image in SimpleITK format.
-    
-    Returns:
-        :const:``_SIGNAL_THRESHOLD`` by default, which assumes that the 
-        image intensities max at 1; 10.0 if the max intensity is > 1.
-    """
-    threshold = _SIGNAL_THRESHOLD
-    img_np = sitk.GetArrayFromImage(img)
-    if np.amax(img_np) > 1:
-        threshold = 10.0
-    return threshold
 
 def register_group(img_files, flip=None, show_imgs=True, 
              write_imgs=True, name_prefix=None):
@@ -1192,6 +1176,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
     scaling_vol = np.prod(resolution)
     scaling_vol_image5d = scaling_vol
     scaling_inv = None
+    # default to simple threshold since costly to calc for large image
     thresh = _SIGNAL_THRESHOLD
     if image5d is not None and image5d.shape[1:4] != labels_img.shape:
         # find scale between larger image5d and labels image

@@ -910,16 +910,24 @@ def get_label_ids_from_position(coord, labels_img, scaling):
         one ID if only one coordinate is given.
     """
     print("getting label IDs from coordinates")
-    # scale coordinates to atlas image size
+    # scale coordinates to atlas image size, clipping to ensure that rounding 
+    # does not cause coordinates to exceed labels image shape
     coord_scaled = np.around(np.multiply(coord, scaling)).astype(np.int)
+    '''
+    exceeding = np.greater_equal(coord_scaled, labels_img.shape)
+    print("exceeding:\n{}".format(exceeding))
+    print("cood_scaled exceeding:\n{}".format(coord_scaled[np.any(exceeding, axis=1)]))
+    print("y exceeding:\n{}".format(coord_scaled[coord_scaled[:, 1] >= labels_img.shape[1]]))
+    '''
+    coord_scaled = np.clip(coord_scaled, None, np.subtract(labels_img.shape, 1))
     
     # split coordinates into lists by dimension to index the labels image
     # at once
     coord_scaled = np.transpose(coord_scaled)
     coord_scaled = np.split(coord_scaled, coord_scaled.shape[0])
     '''
-    print("coord: {}".format(coord))
-    print("coord_scaled: {}".format(coord_scaled))
+    print("coord:\n{}".format(coord))
+    print("coord_scaled:\n{}".format(coord_scaled))
     print("max coord scaled: {}".format(np.max(coord_scaled, axis=2)))
     print("labels_img shape: {}".format(labels_img.shape))
     '''

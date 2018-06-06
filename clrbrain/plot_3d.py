@@ -588,19 +588,25 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     if segments.shape[0] <= 0:
         return None, None, 0
     settings = config.process_settings
+    segs = segments
+    isotropic = settings["isotropic_vis"]
+    if isotropic is not None:
+        # adjust position based on isotropic factor
+        segs = np.copy(segs)
+        segs[:, :3] = np.multiply(segs[:, :3], isotropic)
     
-    radii = segments[:, 3]
+    radii = segs[:, 3]
     scale = 5 if radii is None else np.mean(np.mean(radii) + np.amax(radii))
     print("blob point scaling: {}".format(scale))
     # colormap has to be at least 2 colors
-    segs_in = segments[segs_in_mask]
+    segs_in = segs[segs_in_mask]
     num_colors = segs_in.shape[0] if segs_in.shape[0] >= 2 else 2
     cmap = lib_clrbrain.discrete_colormap(num_colors, alpha=170)
     cmap_indices = np.arange(segs_in.shape[0])
     
     if show_shadows:
         # show projections onto side planes
-        segs_ones = np.ones(segments.shape[0])
+        segs_ones = np.ones(segs.shape[0])
         # xy
         _shadow_blob(
             segs_in[:, 2], segs_in[:, 1], segs_ones * -10, cmap_indices,
@@ -619,10 +625,10 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
         shadows.actor.actor.position = [0, 0, 0]
         
     # show the blobs
-    points_len = len(segments)
+    points_len = len(segs)
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
-    # show segments within the ROI
+    # show segs within the ROI
     pts_in = mlab.points3d(
         segs_in[:, 2], segs_in[:, 1], 
         segs_in[:, 0], cmap_indices, 
@@ -630,15 +636,11 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     # show segments within padding or boder region as more transparent
     segs_out_mask = np.logical_not(segs_in_mask)
     pts_out = mlab.points3d(
-        segments[segs_out_mask, 2], segments[segs_out_mask, 1], 
-        segments[segs_out_mask, 0], color=(0, 0, 0), 
+        segs[segs_out_mask, 2], segs[segs_out_mask, 1], 
+        segs[segs_out_mask, 0], color=(0, 0, 0), 
         mask_points=mask, scale_mode="none", scale_factor=scale/2, resolution=50, 
         opacity=0.2) 
     pts_in.module_manager.scalar_lut_manager.lut.table = cmap
-    isotropic = settings["isotropic_vis"]
-    if isotropic is not None:
-        for pts in [pts_out, pts_in]:
-            pts.actor.actor.scale = isotropic[::-1]
     
     return pts_in, cmap, scale
 

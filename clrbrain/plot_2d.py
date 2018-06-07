@@ -204,7 +204,9 @@ class DraggableCircle:
             _circle_last_picked.append((self, _COPY))
             print("copied seg: {}".format(self.segment))
         elif event.mouseevent.key == "d":
-            # delete segment
+            # delete segment, which will be stored as cut segment to allow 
+            # undoing the deletion by pasting
+            _circle_last_picked.append((self, _CUT))
             self.remove_self()
             self.fn_update_seg(self.segment, remove=True)
             print("deleted seg: {}".format(self.segment))
@@ -844,7 +846,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             elif event.key == "down":
                 step -= 1
         z_overview_new = z_overview + step
-        print("scroll step of {} to z {}".format(step, z_overview))
+        #print("scroll step of {} to z {}".format(step, z_overview))
         max_size = max_plane(image5d[0], plane)
         if z_overview_new < 0:
             z_overview_new = 0
@@ -896,8 +898,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 segs_out = segs_out[segs_out[:, 5] == -1]
             #print("segs_in:\n{}".format(segs_in))
         
-    # selected or newly added patches since difficult to get patch from collection,
-    # and they don't appear to be individually editable
+    # selected or newly added patches since difficult to get patch from 
+    # collection,and they don't appear to be individually editable
     seg_patch_dict = {}
     
     # sub-gridspec for fully zoomed plots to allow flexible number of columns
@@ -908,7 +910,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     if labels is not None:
         # generate discrete colormap for labels
         num_colors = len(np.unique(labels))
-        cmap_labels = lib_clrbrain.discrete_colormap(num_colors, alpha=150, prioritize_default=False)
+        cmap_labels = lib_clrbrain.discrete_colormap(
+            num_colors, alpha=150, prioritize_default=False)
         cmap_labels = LinearSegmentedColormap.from_list(
             "discrete_cmap", cmap_labels / 255.0)
     # plot the fully zoomed plots

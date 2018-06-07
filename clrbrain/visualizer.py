@@ -838,7 +838,7 @@ class Visualization(HasTraits):
         #print("seg: {}".format(segment))
         #print(self.segments == segment)
         segi = np.where((self.segments == segment).all(axis=1))
-        if len(segi) > 0:
+        if len(segi) > 0 and len(segi[0]) > 0:
             return segi[0][0]
         return -1
     
@@ -858,17 +858,24 @@ class Visualization(HasTraits):
            if not show:
                self.segs_selected.remove(i)
     
+    def _flag_seg_for_deletion(self, seg):
+        seg[3] = -1 * abs(seg[3])
+        detector.update_blob_confirmed(seg, -1)
+    
     def update_segment(self, segment_new, segment_old=None, remove=False):
         """Update this class object's segments list with a new or updated 
         segment.
         
         Args:
-            segment_new: Segment that was either added or updated, including 
-                changes to coordinates or radius. Segments are generally 
-                given as an array in :func:``detector.format_blob`` format.
-            segment_old: Previous version of the segment; defaults to None, 
-                in which case ``segment_new`` will only be added rather than 
-                any previously segment updated.
+            segment_new: Segment to either add or update, including 
+                changes to relative coordinates or radius. Segments are 
+                generally given as an array in :func:``detector.format_blob`` 
+                format. 
+            segment_old: Previous version of the segment, which if found will 
+                be replaced by ``segment_new``. The absolute coordinates of 
+                ``segment_new`` will also be updated based on the relative 
+                coordinates' difference between ``segment_new`` and 
+                ``segments_old`` as a convenience. Defaults to None.
             remove: True if the segment should be removed instead of added, 
                 in which case ``segment_old`` will be ignored. Defaults to 
                 False.
@@ -885,22 +892,26 @@ class Visualization(HasTraits):
         if remove:
             # remove segments, changing radius and confirmation values to 
             # flag for deletion from database while saving the ROI
-            segi = self._get_vis_segments_index(segment_new)
+            segi = self._get_vis_segments_index(seg)
             seg = self.segments[segi]
-            seg[3] = -1 * abs(seg[3])
-            detector.update_blob_confirmed(seg, -1)
+            self._flag_seg_for_deletion(seg)
             self._force_seg_refresh(segi, show=True)
-            #self.segments = np.delete(self.segments, segi, 0)
-            #seg = None
         elif segment_old is not None:
-            # update an existing segment
+            # update abs coordinates of new segment based on relative coords 
+            # since the new segment will typically only update relative coords
+            # TODO: consider requiring new seg to already have abs coord updated
             self._segs_moved.append(segment_old)
-            diff = np.subtract(segment_new[:3], segment_old[:3])
-            detector.shift_blob_abs_coords(segment_new, diff)
+            diff = np.subtract(seg[:3], segment_old[:3])
+            detector.shift_blob_abs_coords(seg, diff)
             segi = self._get_vis_segments_index(segment_old)
+            if segi == -1:
+                # check if deleted segment if not found
+                self._flag_seg_for_deletion(segment_old)
+                segi = self._get_vis_segments_index(segment_old)
             if segi != -1:
-                self.segments[segi] = segment_new
-                print("updated seg: {}".format(segment_new))
+                # update an existing segment if found
+                self.segments[segi] = seg
+                print("updated seg: {}".format(seg))
                 self._force_seg_refresh(segi, show=True)
         else:
             # add a new segment to the visualizer table

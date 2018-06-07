@@ -110,11 +110,11 @@ class DraggableCircle:
     def remove_self(self):
         self.disconnect()
         self.circle.remove()
-        #segi = self.get_vis_segments_index(self.segment)
-        #self.vis_segments.remove(segi)
     
     def on_press(self, event):
-        """Initiate drag events with Shift-click inside a circle.
+        """Initiate drag events with Shift- or Alt-click inside a circle.
+        
+        Shift-click to move a circle, and Alt-click to resize a circle's radius.
         """
         if (event.key != "shift" and event.key != "alt" 
             or event.inaxes != self.circle.axes):
@@ -185,8 +185,8 @@ class DraggableCircle:
         self.circle.figure.canvas.draw()
     
     def on_pick(self, event):
-        """Select the verification flag with unmodified (no Ctrl of Shift)
-        button press on a circle.
+        """Select the verification flag with button press on a circle when 
+        not dragging the circle.
         """
         if (event.mouseevent.key == "control" 
             or event.mouseevent.key == "shift" 
@@ -209,13 +209,20 @@ class DraggableCircle:
             self.fn_update_seg(self.segment, remove=True)
             print("deleted seg: {}".format(self.segment))
         else:
+            # change verification flag
             seg_old = np.copy(self.segment)
-            i = self.facecolori + 1
+            # "r"-click to change flag in reverse order
+            change = -1 if event.mouseevent.key == "r" else 1
+            i = self.facecolori + change
+            # wrap around keys if exceeding min/max
             if i > max(segs_color_dict.keys()):
                 if self.segment[3] < config.POS_THRESH:
+                    # user-added segments simply disappear when exceeding
                     _circle_last_picked.append((self, _CUT))
                     self.remove_self()
                 i = -1
+            elif i < min(segs_color_dict.keys()):
+                i = max(segs_color_dict.keys())
             self.circle.set_facecolor(segs_color_dict[i])
             self.facecolori = i
             self.segment[4] = i

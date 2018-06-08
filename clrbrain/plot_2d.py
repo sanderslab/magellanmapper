@@ -500,11 +500,11 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     r_orig = np.abs(np.copy(segs_in[:, 3]))
                     segs_in[:, 3] = np.subtract(
                         r_orig, np.divide(z_diff, 3))
-                    # make circles below 3/4 of their original radius 
+                    # make circles below 85% of their original radius 
                     # invisible but not removed to preserve their corresponding 
                     # colormap index
                     segs_in[np.less(
-                        segs_in[:, 3], np.multiply(r_orig, 3/4)), 3] = 0
+                        segs_in[:, 3], np.multiply(r_orig, 0.85)), 3] = 0
                 collection = _circle_collection(
                     segs_in, segs_cmap.astype(float) / 255.0, "none", 
                     SEG_LINEWIDTH)

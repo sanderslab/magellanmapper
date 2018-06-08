@@ -708,7 +708,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             print("rolled segments:\n{}".format(segments))
     print("2D border: {}".format(border))
     
-    # total number of z-planes
+    # mark z-planes to show
     z_start = offset[2]
     z_planes = roi_size[2]
     if padding_stack is None:
@@ -716,7 +716,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     z_planes_padding = padding_stack[2] # additional z's above/below
     print("padding: {}, savefig: {}".format(padding, savefig))
     z_planes = z_planes + z_planes_padding * 2
-    z_overview = z_start
+    # position overview at bottom (default), middle, or top of stack
+    z_overview = z_start # abs positioning
     if z_level == Z_LEVELS[1]:
         z_overview = (2 * z_start + z_planes) // 2
     elif z_level == Z_LEVELS[2]:
@@ -757,6 +758,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     
     # overview subplotting
     ax_overviews = [] # overview axes
+    ax_z_list = [] # zoom plot axes
     
     def set_overview_title(ax, plane, z_overview, zoom, level):
         plane_axis = get_plane_axis(plane)
@@ -833,6 +835,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 will be used.
         """
         nonlocal z_overview
+        z_curr = z_overview
         step = 0
         if isinstance(event, backend_bases.MouseEvent):
             # scroll movements are scaled from 0 for each event
@@ -840,11 +843,15 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         elif isinstance(event, backend_bases.KeyEvent):
             # finer-grained movements through keyboard controls since the 
             # finest scroll movements may be > 1
-            #print("got key {}".format(event.key))
             if event.key == "up":
                 step += 1
             elif event.key == "down":
                 step -= 1
+            elif event.key == "right":
+                if event.inaxes in ax_z_list:
+                    # right-arrow to jump to z-plane of given zoom plot
+                    z_overview = (ax_z_list.index(event.inaxes) + z_start 
+                                  - z_planes_padding)
         z_overview_new = z_overview + step
         #print("scroll step of {} to z {}".format(step, z_overview))
         max_size = max_plane(image5d[0], plane)
@@ -852,7 +859,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             z_overview_new = 0
         elif z_overview_new >= max_size:
             z_overview_new = max_size - 1
-        if step != 0 and z_overview_new != z_overview:
+        if z_overview_new != z_curr:
             # move only if step registered and changing position
             z_overview = z_overview_new
             img2d, aspect, origin = extract_plane(
@@ -877,7 +884,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
-    ax_z_list = []
     segs_in = None
     segs_out = None
     if (circles != CIRCLES[2].lower() and segments is not None 
@@ -968,9 +974,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             ax = event.inaxes
             print("event key: {}".format(event.key))
             if event.key is None:
-                # for some reason becomes none with previous event was 
+                # for some reason becomes none if previous event was 
                 # ctrl combo and this event is control
-                print("Unable to detect key, please try again")
+                pass
             elif event.key == "control" or event.key.startswith("ctrl"):
                 seg_channel = channel
                 if channel is None:

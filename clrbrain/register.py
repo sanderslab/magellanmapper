@@ -422,13 +422,6 @@ def _load_numpy_to_sitk(numpy_file, rotate=False, size=None):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     return sitk_img
 
-'''
-def _rescale_img_sitk(img_sitk, rescale):
-    img = sitk.GetArrayFromImage(img_sitk)
-    img = transform.rescale(img, rescale, mode="reflect")
-    return sitk.GetImageFromArray(img)
-'''
-
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None):
     """Registers two images to one another using the SimpleElastix library.
@@ -1065,7 +1058,7 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
     # get a list of all the region's coordinates to sort, using z as primary key
     img_region = np.isin(labels_img, region_ids)
     region_coords = np.where(img_region)
-    #print("region_coords: {}".format(region_coords))
+    print("region_coords:\n{}".format(region_coords))
     sort_ind = np.lexsort(region_coords[::-1])
     #print("sort_ind: {}".format(sort_ind))
     
@@ -1085,9 +1078,9 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
               .format(labels_img[coord_tup], img_region[coord_tup]))
         coord_middle = tuple(np.around(coord_middle / scaling).astype(np.int))
     print("coord_middle: {}".format(coord_middle))
-    return coord_middle
+    return coord_middle, img_region
 
-def get_region_from_id(labels_ref_lookup, label_id, labels_img, scaling):
+def get_region_from_id(img_region, scaling):
     """Get the entire region encompassing a given label ID.
     
     Args:
@@ -1112,12 +1105,7 @@ def get_region_from_id(labels_ref_lookup, label_id, labels_img, scaling):
         :func:``get_region_middle`` instead.
     """
     # TODO: use only deepest child?
-    region_ids = get_children(labels_ref_lookup, abs(label_id), [abs(label_id)])
-    if label_id < 0: region_ids = np.multiply(-1, region_ids)
-    print("region IDs: {}".format(len(region_ids)))
-    #img_region = (labels_img == label_id).astype(np.int)
-    img_region = np.isin(labels_img, region_ids)#.astype(np.int32)
-    img_region = morphology.remove_small_objects(img_region, 10)
+    #img_region = morphology.remove_small_objects(img_region, 10)
     img_region = img_region.astype(np.int32)
     print("img_region 1's: {}".format(np.count_nonzero(img_region)))
     props = measure.regionprops(img_region)
@@ -1711,9 +1699,10 @@ def _test_region_from_id():
     scaling = importer.calc_scaling(image5d, labels_img)
     ref = load_labels_ref(config.load_labels)
     id_dict = create_aba_reverse_lookup(ref)
-    #props, bbox, centroid = get_region_from_id(id_dict, -15565, labels_img, scaling)
-    centroid = get_region_middle(id_dict, 15572, labels_img, scaling)
-    atlas_label = get_label(centroid, labels_img, id_dict, scaling, None, True)
+    middle, img_region = get_region_middle(id_dict, 17751, labels_img, scaling)
+    atlas_label = get_label(middle, labels_img, id_dict, scaling, None, True)
+    props, bbox, centroid = get_region_from_id(img_region, scaling)
+    print("bbox: {}, centroid: {}".format(bbox, centroid))
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

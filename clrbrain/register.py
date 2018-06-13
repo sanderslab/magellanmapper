@@ -500,6 +500,9 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # apply transformation to label files
     img_files = (IMG_LABELS, )
     transform_param_map = elastix_img_filter.GetTransformParameterMap()
+    # turn off to avoid overshooting the interpolation for the labels image 
+    # (see Elastix manual section 4.3)
+    transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
     transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     imgs_transformed = []

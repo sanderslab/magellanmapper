@@ -1697,12 +1697,30 @@ def _test_mirror_labels(moving_file_dir):
     sitk.Show(img)
 
 def _test_region_from_id():
+    """Test finding a region by ID in a labels image.
+    """
+    if len(config.filenames) > 1:
+        # unregistered, original labels image; assume that atlas directory has 
+        # been given similarly to register fn
+        path = os.path.join(config.filenames[1], IMG_LABELS)
+        labels_img = sitk.ReadImage(path)
+        labels_img = sitk.GetArrayFromImage(labels_img)
+        scaling = np.ones(3)
+        print("loaded labels image from {}".format(path))
+    else:
+        # registered labels image and associated experiment file
     labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
+        if config.filename.endswith(".mhd"):
+            img = sitk.ReadImage(config.filename)
+            img = sitk.GetArrayFromImage(img)
+            image5d = img[None]
+        else:
     image5d = importer.read_file(config.filename, config.series)
     scaling = importer.calc_scaling(image5d, labels_img)
+        print("loaded experiment image from {}".format(config.filename))
     ref = load_labels_ref(config.load_labels)
     id_dict = create_aba_reverse_lookup(ref)
-    middle, img_region = get_region_middle(id_dict, 17751, labels_img, scaling)
+    middle, img_region = get_region_middle(id_dict, 15570, labels_img, scaling)
     atlas_label = get_label(middle, labels_img, id_dict, scaling, None, True)
     props, bbox, centroid = get_region_from_id(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))

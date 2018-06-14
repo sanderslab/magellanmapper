@@ -493,7 +493,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                 # while hiding outside segments
                 segs_in[segs_in[:, 0] != z_relative, 3] = 0
             
-            # show segments from all z's as circles with colored outlines
+            # show segments from all z's as circles with colored outlines, 
+            # gradually decreasing in size when moving away from the blob's 
+            # central z-plane
             if segs_in is not None and segs_cmap is not None:
                 if circles in (CIRCLES[1].lower(), CIRCLES[3].lower()):
                     z_diff = np.abs(np.subtract(segs_in[:, 0], z_relative))
@@ -504,7 +506,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     # invisible but not removed to preserve their corresponding 
                     # colormap index
                     segs_in[np.less(
-                        segs_in[:, 3], np.multiply(r_orig, 0.85)), 3] = 0
+                        segs_in[:, 3], np.multiply(r_orig, 0.9)), 3] = 0
                 collection = _circle_collection(
                     segs_in, segs_cmap.astype(float) / 255.0, "none", 
                     SEG_LINEWIDTH)

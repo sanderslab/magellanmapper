@@ -276,7 +276,8 @@ def _mirror_labels(img, img_ref):
             # assume that the reference image background is about < 10, the 
             # default threshold
             plane_region = transform.resize(
-                plane_region, shape, preserve_range=True)
+                plane_region, shape, preserve_range=True, order=0, 
+                anti_aliasing=True, mode="reflect")
             #print("plane_region max: {}".format(np.max(plane_region)))
             img_np[i, slices[0], slices[1]] = plane_region
         i -= 1
@@ -380,8 +381,9 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
             print("rescaling image by {}x after applying resize factor of {}"
                   .format(rescale, resize_factor))
             transposed = transform.rescale(
-                transposed, rescale, mode="reflect", preserve_range=True, 
-                multichannel=False, anti_aliasing=True).astype(img_dtype)
+                transposed, rescale, mode="constant", preserve_range=True, 
+                multichannel=False, anti_aliasing=True, 
+                order=0).astype(img_dtype)
         '''
         # alternative method based on resize rather than rescale
         final_size = np.multiply(

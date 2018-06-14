@@ -488,16 +488,18 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             and not circles == CIRCLES[2].lower()):
             segs_in = np.copy(segs_in)
             if circles is None or circles == CIRCLES[0].lower():
+                # show circles at detection point only mode: 
                 # zero radius of all segments outside of current z to preserve 
                 # the order of segments for the corresponding colormap order 
                 # while hiding outside segments
                 segs_in[segs_in[:, 0] != z_relative, 3] = 0
             
-            # show segments from all z's as circles with colored outlines, 
-            # gradually decreasing in size when moving away from the blob's 
-            # central z-plane
             if segs_in is not None and segs_cmap is not None:
                 if circles in (CIRCLES[1].lower(), CIRCLES[3].lower()):
+                    # repeat circles and full annotation: 
+                    # show segments from all z's as circles with colored 
+                    # outlines, gradually decreasing in size when moving away 
+                    # from the blob's central z-plane
                     z_diff = np.abs(np.subtract(segs_in[:, 0], z_relative))
                     r_orig = np.abs(np.copy(segs_in[:, 3]))
                     segs_in[:, 3] = np.subtract(
@@ -507,6 +509,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     # colormap index
                     segs_in[np.less(
                         segs_in[:, 3], np.multiply(r_orig, 0.9)), 3] = 0
+                # show colored, non-pickable circles
                 collection = _circle_collection(
                     segs_in, segs_cmap.astype(float) / 255.0, "none", 
                     SEG_LINEWIDTH)
@@ -522,35 +525,41 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                 collection_adj.set_linestyle("--")
                 ax.add_collection(collection_adj)
             
-            # overlay segments with dotted line patch and make pickable for 
-            # verifying the segment
-            segments_z = segs_in[segs_in[:, 3] > 0] # full annotation
-            if circles == CIRCLES[3].lower():
-                # when showing full annotation, include all segments in the ROI
-                for i in range(len(segments_z)):
-                    seg = segments_z[i]
-                    if seg[0] != z_relative and seg[3] > 0:
-                        # add segments to Visualizer table
-                        seg[0] = z_relative
-                        detector.shift_blob_abs_coords(
-                            segments_z[i], (-1 * z_relative, 0, 0))
-                        segments_z[i] = fn_update_seg(seg)
-            else:
-                # apply only to segments in their current z
-                segments_z = segs_in[segs_in[:, 0] == z_relative]
-                if segs_out_z is not None:
-                    segs_out_z_confirmed = segs_out_z[
-                        detector.get_blob_confirmed(segs_out_z) == 1]
-                    if len(segs_out_z_confirmed) > 0:
-                        # include confirmed blobs 
-                        segments_z = np.concatenate(
-                            (segments_z, segs_out_z_confirmed))
-                        print("segs_out_z_confirmed:\n{}"
-                              .format(segs_out_z_confirmed))
-            if segments_z is not None:
-                for seg in segments_z:
-                    _plot_circle(
-                        ax, seg, SEG_LINEWIDTH, ":", fn_update_seg)
+            if z_relative >= 0 and z_relative < roi_size[2]:
+                # for planes within ROI, overlay segments with dotted line 
+                # patch and make pickable for verifying the segment
+                segments_z = segs_in[segs_in[:, 3] > 0] # full annotation
+                if circles == CIRCLES[3].lower():
+                    # when showing full annotation, show all segments in the 
+                    # ROI with adjusted radii unless radius is <= 0
+                    for i in range(len(segments_z)):
+                        seg = segments_z[i]
+                        if seg[0] != z_relative:
+                            # add segments outside of plane to Visualizer table 
+                            # since they have been added to the plane, 
+                            # adjusting rel and abs z coords to the given plane
+                            z_diff = z_relative - seg[0]
+                            seg[0] = z_relative
+                            detector.shift_blob_abs_coords(
+                                segments_z[i], (z_diff, 0, 0))
+                            segments_z[i] = fn_update_seg(seg)
+                else:
+                    # apply only to segments in their current z
+                    segments_z = segs_in[segs_in[:, 0] == z_relative]
+                    if segs_out_z is not None:
+                        segs_out_z_confirmed = segs_out_z[
+                            detector.get_blob_confirmed(segs_out_z) == 1]
+                        if len(segs_out_z_confirmed) > 0:
+                            # include confirmed blobs 
+                            segments_z = np.concatenate(
+                                (segments_z, segs_out_z_confirmed))
+                            print("segs_out_z_confirmed:\n{}"
+                                  .format(segs_out_z_confirmed))
+                if segments_z is not None:
+                    # show pickable circles
+                    for seg in segments_z:
+                        _plot_circle(
+                            ax, seg, SEG_LINEWIDTH, ":", fn_update_seg)
             
             # shows truth blobs as small, solid circles
             if blobs_truth is not None:

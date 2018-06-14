@@ -384,16 +384,6 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
                 transposed, rescale, mode="constant", preserve_range=True, 
                 multichannel=False, anti_aliasing=True, 
                 order=0).astype(img_dtype)
-        '''
-        # alternative method based on resize rather than rescale
-        final_size = np.multiply(
-            target_size[::-1], config.register_settings["resize_factor"])
-            .astype(np.int)
-        final_size[0] = transposed.shape[0]
-        print("resizing to shape of {}".format(final_size))
-        transposed = transform.resize(transposed, final_size, mode="reflect", 
-            preserve_range=True, anti_aliasing=True).astype(img_dtype)
-        '''
         # casted back since transpose changes data type even when 
         # preserving range
         print(transposed.dtype, np.min(transposed), np.max(transposed))
@@ -403,23 +393,27 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     return transposed
 
 def _load_numpy_to_sitk(numpy_file, rotate=False, size=None):
+    """Load Numpy image array to SimpleITK Image object.
+    
+    Args:
+        numpy_file: Path to Numpy archive file.
+        rotate: True if the image should be rotated 180 deg; defaults to False.
+        size: Resize dimensions as a list of (z, y, x) pixels; defaults to 
+            None, in which case the image will not be resized.
+    
+    Returns:
+        The image in SimpleITK format.
+    """
     image5d = importer.read_file(numpy_file, config.series)
     roi = image5d[0, ...] # not using time dimension
     if size is not None:
-        roi = transform.resize(roi, size)#, anti_aliasing=True)
+        # use default interpolation, but should change to nearest neighbor 
+        # if using for labels
+        roi = transform.resize(roi, size, anti_aliasing=True, mode="reflect")
     if rotate:
         roi = np.rot90(roi, 2, (1, 2))
-    '''
-    rescale = 0.7
-    roi = transform.rescale(roi, rescale, mode="reflect")
-    roi = roi[:, :int(roi.shape[1]*0.9), :]
-    from clrbrain import plot_3d
-    roi = plot_3d.saturate_roi(roi, 50.0)
-    '''
     sitk_img = sitk.GetImageFromArray(roi)
-    #spacing = np.multiply(detector.resolutions[0], 1 / rescale)
     spacing = detector.resolutions[0]
-    #print("spacing: {}".format(spacing))
     sitk_img.SetSpacing(spacing[::-1])
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     return sitk_img
@@ -462,7 +456,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
     fixed_img_size = fixed_img.GetSize()
-    moving_img = transpose_img(moving_img, plane, flip, target_size=fixed_img_size)
+    moving_img = transpose_img(
+        moving_img, plane, flip, target_size=fixed_img_size)
     
     print("fixed image from {}:\n{}".format(fixed_file, fixed_img))
     print("moving image from {}:\n{}".format(moving_file, moving_img))

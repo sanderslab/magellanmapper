@@ -264,41 +264,40 @@ class Visualization(HasTraits):
                 detector.get_blob_confirmed(segs_transposed_np) == -1, 
                 np.logical_not(segs_transposed_np[:, 3] < config.POS_THRESH))
         if np.any(unverified):
-            # show missing verifications and prevent saving
-            feedback.insert(0, "Detected blobs *NOT* added. Please check these "
+            # show missing verifications
+            feedback.insert(0, "**WARNING** Please check these "
                                "blobs' missing verifications:\n{}\n"
                                .format(segs_transposed_np[unverified, :4]))
-        else:
-            # inserts experiment if not already added, then segments
-            feedback.append("\nInserting segments:")
-            for seg in segs_transposed:
+        # inserts experiment if not already added, then segments
+        feedback.append("\nInserting segments:")
+        for seg in segs_transposed:
+            feedback.append(self._format_seg(seg))
+        if len(segs_to_delete) > 0:
+            feedback.append("\nDeleting segments:")
+            for seg in segs_to_delete:
                 feedback.append(self._format_seg(seg))
-            if len(segs_to_delete) > 0:
-                feedback.append("\nDeleting segments:")
-                for seg in segs_to_delete:
-                    feedback.append(self._format_seg(seg))
-            exp_id = sqlite.select_or_insert_experiment(config.db.conn, config.db.cur, 
-                                                        os.path.basename(config.filename),
-                                                        None)
-            roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, config.series, 
-                                       np.add(self._curr_offset(), self.border).tolist(), 
-                                       np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
-            sqlite.delete_blobs(config.db.conn, config.db.cur, roi_id, segs_to_delete)
-            
-            # delete the original entry of blobs that moved since replacement
-            # is based on coordinates, so moved blobs wouldn't be replaced
-            for i in range(len(self._segs_moved)):
-                self._segs_moved[i] = detector.blob_for_db(self._segs_moved[i])
-            sqlite.delete_blobs(
-                config.db.conn, config.db.cur, roi_id, self._segs_moved)
-            self._segs_moved = []
-            
-            # insert blobs into DB and save ROI in GUI
-            sqlite.insert_blobs(config.db.conn, config.db.cur, roi_id, segs_transposed)
-            roi = sqlite.select_roi(config.db.cur, roi_id)
-            self._append_roi(roi, self._rois_dict)
-            self.rois_selections_class.selections = list(self._rois_dict.keys())
-            feedback.append(out)
+        exp_id = sqlite.select_or_insert_experiment(config.db.conn, config.db.cur, 
+                                                    os.path.basename(config.filename),
+                                                    None)
+        roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, config.series, 
+                                   np.add(self._curr_offset(), self.border).tolist(), 
+                                   np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
+        sqlite.delete_blobs(config.db.conn, config.db.cur, roi_id, segs_to_delete)
+        
+        # delete the original entry of blobs that moved since replacement
+        # is based on coordinates, so moved blobs wouldn't be replaced
+        for i in range(len(self._segs_moved)):
+            self._segs_moved[i] = detector.blob_for_db(self._segs_moved[i])
+        sqlite.delete_blobs(
+            config.db.conn, config.db.cur, roi_id, self._segs_moved)
+        self._segs_moved = []
+        
+        # insert blobs into DB and save ROI in GUI
+        sqlite.insert_blobs(config.db.conn, config.db.cur, roi_id, segs_transposed)
+        roi = sqlite.select_roi(config.db.cur, roi_id)
+        self._append_roi(roi, self._rois_dict)
+        self.rois_selections_class.selections = list(self._rois_dict.keys())
+        feedback.append(out)
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str

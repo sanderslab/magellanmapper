@@ -683,6 +683,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             Defaults to None, in which case image5d will be used instead.
         zoom_cols: Number of columns per row to reserve for zoomed plots; 
             defaults to :attr:``ZOOM_COLS``.
+        img_region: 3D boolean or binary array corresponding to a scaled 
+            version of ``image5d`` with the selected region labeled as True 
+            or 1. ``config.labels_scaling`` will be used to scale up this 
+            region to overlay on overview images. Defaults to None, in which 
+            case the region will be ignored.
     """
     time_start = time()
     
@@ -740,12 +745,19 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     print("z_overview: {}".format(z_overview))
     
     def prep_overview():
-        # pick image based on chosen orientation
+        """Prep overview image planes based on chosen orientation.
+        """
+        # main overview image
         img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
         img_region_2d = None
         if img_region is not None:
-            img_region_2d, _, _ = extract_plane(
+            # extract correponding plane from scaled region image and 
+            # convert it to an RGBA image, using region as alpha channel and 
+            # inverting it opacify areas outside of selected region
+            img, _, _ = extract_plane(
                 img_region, int(scaling[0] * z_overview), plane)
+            img_region_2d = np.ones(img.shape + (4,))
+            img_region_2d[..., 3] = np.invert(img) * 0.5
         return img2d, aspect, origin, img_region_2d
     
     img2d, aspect, origin, img_region_2d = prep_overview()
@@ -784,10 +796,22 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     ax_z_list = [] # zoom plot axes
     
     def set_overview_title(ax, plane, z_overview, zoom, level):
+        """Set the overview image title.
+        
+        Args:
+            ax: Matplotlib axes on which to display the title.
+            plane: Plane string.
+            z_overview: Value along the axis corresponding to that plane.
+            zoom: Amount of zoom for the overview image.
+            level: Overview view image level, where 0 is unzoomed, 1 is the 
+                next zoom, etc.
+        """
         plane_axis = get_plane_axis(plane)
         if level == 0:
+            # show the axis and axis value for unzoomed overview
             title = "{}={}".format(plane_axis, z_overview)
         else:
+            # show zoom for subsequent overviews
             title = "{}x".format(int(zoom))
         ax.set_title(title)
     
@@ -847,10 +871,12 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         imshow_multichannel(
             ax, img, channel, colormaps, aspect, 1, min_show, max_show)
         if img_region_2d is not None:
+            # overlay image with selected region highlighted by opacifying 
+            # all surrounding areas
             img = transform.resize(
                 img_region_2d, img.shape, order=0, anti_aliasing=True, 
                 mode="reflect")
-            ax.imshow(img, alpha=0.5)
+            ax.imshow(img)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 

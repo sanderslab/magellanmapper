@@ -30,7 +30,7 @@ from matplotlib.colors import LinearSegmentedColormap, NoNorm
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
 from skimage import exposure
-from skimage import img_as_float
+from skimage import transform
 
 from clrbrain import detector
 from clrbrain import importer
@@ -367,8 +367,8 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
-                 highlight=False, border=None, plane="xy", roi=None, 
-                 z_relative=-1, labels=None, blobs_truth=None, circles=None, 
+                 z_relative, highlight=False, border=None, plane="xy", 
+                 roi=None, labels=None, blobs_truth=None, circles=None, 
                  aspect=None, grid=False, cmap_labels=None):
     """Shows subplots of the region of interest.
     
@@ -389,16 +389,16 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             None.
         segs_cmap: Colormap for segments.
         alpha: Opacity level.
+        z_relative: Index of the z-plane relative to the start of the ROI.
         highlight: If true, the plot will be highlighted; defaults 
             to False.
-            Defaults to None.
+        border: Border dimensions in pixels given as (x, y, z); defaults
+            to None.
         plane: The plane to show in each 2D plot, with "xy" to show the 
             XY plane (default) and "xz" to show XZ plane.
         roi: A denoised region of interest, to show in place of image5d for the
             zoomed images. Defaults to None, in which case image5d will be
             used instead.
-        z_relative: Index of the z-plane relative to the start of the ROI; 
-            defaults to -1.
     """
     ax = plt.subplot(gs[row, col])
     hide_axes(ax)
@@ -631,7 +631,7 @@ def plot_roi(roi, segments, channel, show=True, title=""):
             # with all segments
             ax_z = show_subplot(
                 fig, gs, i, j, image5d, channel, roi_size, zoom_offset, None,
-                segments, None, None, 1.0, circles=CIRCLES[0], z_relative=z, 
+                segments, None, None, 1.0, z_relative, circles=CIRCLES[0], 
                 roi=roi)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
@@ -647,7 +647,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                   border=None, plane="xy", padding_stack=None,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None, labels=None, blobs_truth=None, circles=None, 
-                  mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS):
+                  mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS, 
+                  img_region=None):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -697,6 +698,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # adjust array order based on which plane to show
     border_full = np.copy(border)
     border[2] = 0
+    scaling = np.copy(config.labels_scaling)
     if plane == config.PLANE[1]:
         # "xz" planes; flip y-z to give y-planes instead of z
         roi_size = lib_clrbrain.swap_elements(roi_size, 1, 2)
@@ -705,6 +707,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
         if segments is not None and len(segments) > 0:
             segments[:, [0, 1]] = segments[:, [1, 0]]
+        scaling = lib_clrbrain.swap_elements(scaling, 1, 2)
     elif plane == config.PLANE[2]:
         # "yz" planes; roll backward to flip x-z and x-y
         roi_size = lib_clrbrain.roll_elements(roi_size, -1)
@@ -717,6 +720,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             segments[:, [0, 2]] = segments[:, [2, 0]]
             segments[:, [1, 2]] = segments[:, [2, 1]]
             print("rolled segments:\n{}".format(segments))
+        scaling = lib_clrbrain.roll_elements(scaling, -1)
     print("2D border: {}".format(border))
     
     # mark z-planes to show
@@ -735,8 +739,16 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         z_overview = z_start + z_planes
     print("z_overview: {}".format(z_overview))
     
-    # pick image based on chosen orientation
-    img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
+    def prep_overview():
+        # pick image based on chosen orientation
+        img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
+        img_region_2d = None
+        if img_region is not None:
+            img_region_2d, _, _ = extract_plane(
+                img_region, int(scaling[0] * z_overview), plane)
+        return img2d, aspect, origin, img_region_2d
+    
+    img2d, aspect, origin, img_region_2d = prep_overview()
     
     # plot layout depending on number of z-planes
     if single_zoom_row:
@@ -779,7 +791,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             title = "{}x".format(int(zoom))
         ax.set_title(title)
     
-    def show_overview(ax, img2d_ov, level):
+    def show_overview(ax, img2d_ov, img_region_2d, level):
         """Show overview image with progressive zooming on the ROI for each 
         zoom level.
         
@@ -810,6 +822,12 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                     origin[j] -= end[j] - zoom_shape[j]
             # zoom and position ROI patch position
             img2d_ov = img2d_ov[origin[1]:end[1], origin[0]:end[0]]
+            if img_region_2d is not None:
+                origin_scaled = np.multiply(origin, scaling[2:0:-1]).astype(np.int)
+                end_scaled = np.multiply(end, scaling[2:0:-1]).astype(np.int)
+                img_region_2d = img_region_2d[
+                    origin_scaled[1]:end_scaled[1], 
+                    origin_scaled[0]:end_scaled[0]]
             #print(img2d_ov_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
         # show the zoomed 2D image along with rectangle showing ROI, 
@@ -820,16 +838,19 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             downsample = 1
         min_show = plot_3d.near_min
         max_show = config.vmax_overview
-        #print(img2d_ov.shape, roi_size)
-        #print(np.prod(img2d_ov.shape[1:3]), np.prod(roi_size[:2]))
         if np.prod(img2d_ov.shape[1:3]) < 2 * np.prod(roi_size[:2]):
             # remove normalization from overview image if close in size to 
             # zoomed plots to emphasize the raw image
             min_show = None
             max_show = None
+        img = img2d_ov[::downsample, ::downsample]
         imshow_multichannel(
-            ax, img2d_ov[::downsample, ::downsample], channel, colormaps, 
-            aspect, 1, min_show, max_show)
+            ax, img, channel, colormaps, aspect, 1, min_show, max_show)
+        if img_region_2d is not None:
+            img = transform.resize(
+                img_region_2d, img.shape, order=0, anti_aliasing=True, 
+                mode="reflect")
+            ax.imshow(img, alpha=0.5)
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
@@ -873,12 +894,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         if z_overview_new != z_curr:
             # move only if step registered and changing position
             z_overview = z_overview_new
-            img2d, aspect, origin = extract_plane(
-                image5d, z_overview, plane)
+            img2d, aspect, origin, img_region_2d = prep_overview()
             for level in range(zoom_levels - 1):
                 ax = ax_overviews[level]
                 ax.clear() # prevent performance degradation
-                zoom = show_overview(ax, img2d, level)
+                zoom = show_overview(ax, img2d, img_region_2d, level)
                 set_overview_title(ax, plane, z_overview, zoom, level)
     
     # overview images taken from the bottom plane of the offset, with
@@ -889,7 +909,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         ax = plt.subplot(gs[0, level])
         ax_overviews.append(ax)
         hide_axes(ax)
-        zoom = show_overview(ax, img2d, level)
+        zoom = show_overview(ax, img2d, img_region_2d, level)
         set_overview_title(ax, plane, z_overview, zoom, level)
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
@@ -970,9 +990,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             ax_z = show_subplot(
                 fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset, 
                 fn_update_seg,
-                segs_in, segs_out, segs_cmap, alpha, z == z_overview, 
-                border_full if show_border else None, plane, roi_show, 
-                z_relative, labels, blobs_truth_z, circles=circles, 
+                segs_in, segs_out, segs_cmap, alpha, z_relative, 
+                z == z_overview, border_full if show_border else None, plane, 
+                roi_show, labels, blobs_truth_z, circles=circles, 
                 aspect=aspect, grid=grid, cmap_labels=cmap_labels)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)

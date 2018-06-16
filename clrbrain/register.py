@@ -1057,6 +1057,7 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
     
     # get a list of all the region's coordinates to sort, using z as primary key
     img_region = np.isin(labels_img, region_ids)
+    #img_region = morphology.remove_small_objects(img_region, 100)
     region_coords = np.where(img_region)
     print("region_coords:\n{}".format(region_coords))
     sort_ind = np.lexsort(region_coords[::-1])
@@ -1105,7 +1106,6 @@ def get_region_from_id(img_region, scaling):
         :func:``get_region_middle`` instead.
     """
     # TODO: use only deepest child?
-    #img_region = morphology.remove_small_objects(img_region, 10)
     img_region = img_region.astype(np.int32)
     print("img_region 1's: {}".format(np.count_nonzero(img_region)))
     props = measure.regionprops(img_region)
@@ -1706,18 +1706,18 @@ def _test_region_from_id():
         print("loaded labels image from {}".format(path))
     else:
         # registered labels image and associated experiment file
-    labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
+        labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
         if config.filename.endswith(".mhd"):
             img = sitk.ReadImage(config.filename)
             img = sitk.GetArrayFromImage(img)
             image5d = img[None]
         else:
-    image5d = importer.read_file(config.filename, config.series)
-    scaling = importer.calc_scaling(image5d, labels_img)
+            image5d = importer.read_file(config.filename, config.series)
+        scaling = importer.calc_scaling(image5d, labels_img)
         print("loaded experiment image from {}".format(config.filename))
     ref = load_labels_ref(config.load_labels)
     id_dict = create_aba_reverse_lookup(ref)
-    middle, img_region = get_region_middle(id_dict, 15570, labels_img, scaling)
+    middle, img_region = get_region_middle(id_dict, 16376, labels_img, scaling)
     atlas_label = get_label(middle, labels_img, id_dict, scaling, None, True)
     props, bbox, centroid = get_region_from_id(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))

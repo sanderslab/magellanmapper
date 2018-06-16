@@ -189,6 +189,7 @@ class Visualization(HasTraits):
     _channel = Int # channel number, 0-based
     _channel_low = -1 # -1 used for None, which translates to "all"
     _channel_high = 0
+    _img_region = None
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -526,6 +527,7 @@ class Visualization(HasTraits):
             self.scene.mlab.orientation_axes()
         # updates the GUI here even though it doesn't elsewhere for some reason
         self.rois_check_list = _ROI_DEFAULT
+        self._img_region = None
         #print("reset selected ROI to {}".format(self.rois_check_list))
         #print("view: {}\nroll: {}".format(
         #    self.scene.mlab.view(), self.scene.mlab.roll()))
@@ -704,7 +706,7 @@ class Visualization(HasTraits):
             self._full_border(self.border), self._planes_2d[0].lower())
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
-            "circles": circles, "grid": grid}
+            "circles": circles, "grid": grid, "img_region": self._img_region}
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # layout for square ROIs with 3D screenshot, creating a square-ish fig
             screenshot = self.scene.mlab.screenshot(antialiased=True)
@@ -775,12 +777,7 @@ class Visualization(HasTraits):
     @on_trait_change("_region_id")
     def _region_id_changed(self):
         print("region ID: {}".format(self._region_id))
-        '''
-        props, bbox, centroid = register.get_region_from_id(
-            config. labels_ref_lookup, self._region_id, config.labels_img, 
-            config.labels_scaling)
-        '''
-        centroid = register.get_region_middle(
+        centroid, self._img_region = register.get_region_middle(
             config. labels_ref_lookup, self._region_id, config.labels_img, 
             config.labels_scaling)
         if centroid is None:
@@ -789,12 +786,13 @@ class Visualization(HasTraits):
                 .format(self._region_id))
             return
         self.segs_feedback = (
-            "Found region ID {}. Redraw to show.".format(self._region_id))
+            "Found region ID {}".format(self._region_id))
         curr_roi_size = self.roi_array[0].astype(int)
         corner = np.subtract(
             centroid, 
             np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
         self.z_offset, self.y_offset, self.x_offset = corner
+        self.show_3d()
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

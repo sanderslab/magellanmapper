@@ -785,14 +785,14 @@ class Visualization(HasTraits):
                 "Could not find the region corresponding to ID {}"
                 .format(self._region_id))
             return
-        self.segs_feedback = (
-            "Found region ID {}".format(self._region_id))
         curr_roi_size = self.roi_array[0].astype(int)
         corner = np.subtract(
             centroid, 
             np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
         self.z_offset, self.y_offset, self.x_offset = corner
         self.show_3d()
+        self.segs_feedback = (
+            "Found region ID {}".format(self._region_id))
     
     def _curr_offset(self):
         return (self.x_offset, self.y_offset, self.z_offset)

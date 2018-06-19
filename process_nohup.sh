@@ -46,7 +46,7 @@ out_path="${OUT_BASE}.txt"
 if [[ -e "$out_path" ]]; then
     out_base_last="${OUT_BASE}1"
     i=2
-    while [ -e "${out_base_last}.txt" ]; do
+    while [[ -e "${out_base_last}.txt" ]]; do
         out_base_last="${OUT_BASE}"$i
         let i++
     done
@@ -56,6 +56,15 @@ echo "Output file: $out_path"
 
 # run rest of args in nohup and display output
 nohup $EXTRA_ARGS > "$out_path" 2>&1 &
-HISPID=$!
-echo "Started process $HISPID in nohup"
-tail -f "$out_path"
+PID_NOHUP=$!
+echo "Started \"$EXTRA_ARGS\" in nohup (PID $PID_NOHUP)"
+tail -f "$out_path" &
+PID_TAIL=$!
+
+# in case process does in fact complete during this session, 
+# notify the user of completion
+while ps -p $PID_NOHUP > /dev/null; do
+    sleep 1
+done
+echo "$PID_NOHUP completed, exiting."
+kill $PID_TAIL

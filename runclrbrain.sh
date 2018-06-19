@@ -89,10 +89,10 @@ while getopts hi:a:p:s:t:w: opt; do
             exit 0
             ;;
         i)  IMG="$OPTARG"
-            echo "Set pipeline to $pipeline"
+            echo "Set image path to $IMG"
             ;;
         a)  S3_DIR="$OPTARG"
-            echo "Set pipeline to $pipeline"
+            echo "Set AWS S3 directory to $S3_DIR"
             ;;
         p)  pipeline="$OPTARG"
             echo "Set pipeline to $pipeline"
@@ -286,7 +286,7 @@ fi
 
 if [[ $upload -eq 1 ]]; then
     # upload all resulting files to S3
-    aws s3 cp $OUT_DIR s3://"${S3_DIR}/${EXP}" --recursive --exclude "*" --include *.npz
+    aws s3 cp $OUT_DIR s3://"${S3_DIR}/${EXP}" --recursive --exclude "*" --include "*.npz"
 fi
 
 exit 0

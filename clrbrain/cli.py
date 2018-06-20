@@ -48,6 +48,9 @@ Command-line arguments in addition to those from attributes listed below:
         profile entry.
     * ec2_start: EC2 start instances parameters, used in 
         :function:``aws.start_instances``.
+    * notify: Notification with up to three parameters for URL, message, and 
+        attachement, stored respectively as :attr:``config.notify_url``, 
+        :attr:``config.notify_msg``, and :attr:``config.notify_attach``.
 
 Attributes:
     roi_size: The size in pixels of the region of interest. Set with
@@ -449,6 +452,7 @@ def main(process_args_only=False):
     parser.add_argument("--groups", nargs="*")
     parser.add_argument("--chunk_shape", nargs="*")
     parser.add_argument("--ec2_start", nargs="*")
+    parser.add_argument("--notify", nargs="*")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -615,6 +619,17 @@ def main(process_args_only=False):
             start[-1] = [int(n) for n in start[-1].split(",")]
         config.ec2_start = start
         print("Set ec2 start to {}".format(config.ec2_start))
+    if args.notify:
+        notify_len = len(args.notify)
+        if notify_len > 0:
+            config.notify_url = args.notify[0]
+            print("Set notification URL to {}".format(config.notify_url))
+        if notify_len > 1:
+            config.notify_msg = args.notify[1]
+            print("Set notification message")
+        if notify_len > 2:
+            config.notify_attach = args.notify[2]
+            print("Set notification attachment")
     
     # prep filename
     if not config.filename:

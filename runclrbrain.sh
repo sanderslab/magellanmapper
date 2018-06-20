@@ -227,11 +227,11 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
     # Replace the tile parameters with your image's setup; set up tile 
     # configuration manually and compute alignment refinement
     python -m stitch.tile_config --img "$NAME" --target_dir "$OUT_DIR" --cols 6 --rows 7 --size 1920,1920,1000 --overlap 0.1 --directionality bi --start_direction right
-    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -w 0
+    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 0
     
     # Before the next steps, please manually check alignments to ensure that they 
     # fit properly, especially since unregistered tiles may be shifted to (0, 0, 0)
-    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -w 1
+    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1
     python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
     clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
     
@@ -242,11 +242,20 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     
     # Import file into BigStitcher HDF5 format (warning: large file, just 
     # under size of original file) and find alignments
-    ./stitch.sh -f "$IMG" -b -w 0
+    ./stitch.sh -f "$IMG" -s "bigstitcher" -w 0
+    
+    # notify user via Slack and open ImageJ/Fiji for review, which will 
+    # also keep script from continuing until user closes ImageJ/Fiji 
+    # after review
+    msg="Stitching completed for $IMG, now awaiting your alignment review"
+    python -u -m clrbrain.notify --notify "$url_notify" "$msg"
+    echo "=================================="
+    echo "$msg"
+    ./stitch.sh -s "none"
     
     # Before writing stitched file, advise checking alignments; when 
     # satisfied, then run this fusion step
-    ./stitch.sh -f "$IMG" -b -w 1
+    ./stitch.sh -f "$IMG" -s "bigstitcher" -w 1
     
     # Rename output file(s):
     FUSED="fused_tp_0"
@@ -312,7 +321,7 @@ if [[ "$url_notify" != "" ]]; then
     if [[ "$output_path" != "" ]]; then
         attach=`tail $output_path`
     fi
-    curl -X POST -H 'Content-type: application/json' --data '{"text":"'"$msg"'","attachments":[{"text":"'"$attach"'"}]}' "$url_notify"
+    python -u -m clrbrain.notify --notify "$url_notify" "$msg" "$attach"
 fi
 
 if [[ $clean_up -eq 1 ]]; then

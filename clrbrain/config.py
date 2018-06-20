@@ -462,3 +462,9 @@ border = None # clip ROI to border (x,y,z order)
 # AWS
 
 ec2_start = None
+
+# SLACK NOTIFICATIONS
+
+notify_url = None
+notify_msg = None
+notify_attach = None

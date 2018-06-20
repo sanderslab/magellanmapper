@@ -15,7 +15,10 @@ Arguments:
       1 = Write fused file only. Stitching plugin will use 
       coordinates from TileConfiguration.txt.
       2 = Stitch and write fused file(s).
-  -b: Use BigStitcher.
+  -s [none|stitching|bigstitcher]: Type of stitcher to use; 
+      defaults to BigStitcher. Alternatives are Stitching (the 
+      original ImageJ/Fiji plugin), or none. If none, ImageJ/Fiji 
+      will simply be opened and left open for stitching review.
 
 To run in normal (not BigStitcher) mode:
 -Run the stitch/tile_config.py utility to build a positions
@@ -47,10 +50,11 @@ echo $PWD
 
 write_fused=2
 out_dir=""
-big_stitch=0
+STITCH_TYPES=("none" "stitching" "bigstitcher")
+stitch=STITCH_TYPES[2]
 
 OPTIND=1
-while getopts hf:w:b opt; do
+while getopts hf:w:s: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -61,8 +65,8 @@ while getopts hf:w:b opt; do
         w)  write_fused="$OPTARG"
             echo "Set fuse and write to $write_fused"
             ;;
-        b)  big_stitch=1
-            echo "Set to use BigStitcher"
+        s)  stitch="$OPTARG"
+            echo "Set stitch type to $stitch"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -104,8 +108,7 @@ echo "Assumes Fiji executable is located at $IJ"
 
 # calculates memory to reserve based on image file size with generous
 # extra padding room (TODO: check if too much for large files)
-if [ $big_stitch -eq 1 ]
-then
+if [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
     mem=`free|awk '/Mem\:/ { print $2 }'`
     mem=$((mem/1000-2000))
 else
@@ -120,12 +123,7 @@ then
 fi
 echo "Reserving $mem MB of memory"
 
-# evaluates the options directly from command-line
-if [ $big_stitch -eq 1 ]
-then
-    # BigStitcher; not working in headless mode so will require GUI availability
-    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
-else
+if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
     # Fiji Stitching plugin; does not appear to work when fed a separate script in "-macro" mode
     $IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
     
@@ -145,5 +143,11 @@ else
         mkdir "$out_dir"
     fi
     mv "$in_dir"/img_t* "$out_dir"
+elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
+    # BigStitcher; not working in headless mode so will require GUI availability
+    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
+else
+    # no stitching, just open ImageJ/Fiji
+    $IJ --ij2
 fi
 

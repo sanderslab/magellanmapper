@@ -50,19 +50,27 @@ readonly DEST
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-# get output filename, avoiding overwriting existing file
-OUT_BASE="${DEST}/out"
+# create output filename based on first arg in EXTRA_ARGS
+out_name="${EXTRA_ARGS%% *}"
+out_name="`basename ${EXTRA_ARGS%.*}`"
+OUT_BASE="${DEST}/out_${out_name}"
 out_path="${OUT_BASE}.txt"
+echo "Output file: $out_path"
 if [[ -e "$out_path" ]]; then
-    out_base_last="${OUT_BASE}1"
+    # avoid overwriting existing file by appending next 
+    # available integer
+    out_base_last="${OUT_BASE}(1)"
     i=2
     while [[ -e "${out_base_last}.txt" ]]; do
-        out_base_last="${OUT_BASE}"$i
+        out_base_last="${OUT_BASE}(${i})"
         let i++
     done
-    out_path="${out_base_last}.txt"
+    out_path_last="${out_base_last}.txt"
+    mv "$out_path" "$out_path_last"
+    echo "Backed up original $out_path to $out_path_last"
 fi
-echo "Output file: $out_path"
+# file may not have been created by time trying to show with tail
+touch "$out_path"
 
 # run rest of args in nohup and display output
 if [[ $pass_output -eq 1 ]]; then

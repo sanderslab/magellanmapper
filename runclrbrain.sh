@@ -13,13 +13,17 @@ instead.
 
 Arguments:
     -h: Show help documentation.
-    -i: Set image path.
-    -a: Set AWS S3 path (excluding s://)
-    -p: Set pipeline, which takes precedence over individual 
+    -i [path]: Set image path.
+    -a [path]: Set AWS S3 path (excluding s://)
+    -p [pipeline]: Set pipeline, which takes precedence over individual 
         pathways.
-    -s: Set stitching pathway.
-    -t: Set transposition pathway.
-    -w: Set whole image processing pathway.
+    -s [pathway]: Set stitching pathway.
+    -t [pathway]: Set transposition pathway.
+    -w [pathway]: Set whole image processing pathway.
+    -o [path]: Path to output file to send in notification and to S3.
+    -n [URL]: Slack notification URL.
+    -c: Server clean-up, including upload, notification, and 
+        poweroff if appropriate.
 "
 
 
@@ -305,15 +309,16 @@ if [[ $clean_up -eq 1 ]]; then
     
     attach=""
     if [[ "$output_path" != "" ]]; then
+        # prepare tail of output file for notification and upload full file to S3
         #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
         attach=`tail $output_path`
+        name="`basename $output_path`"
+        aws s3 cp "$output_path" s3://"${S3_DIR}/${EXP}/${name}" --dryrun
     fi
-    echo "$attach"
     
     if [[ $upload -eq 1 ]]; then
         # upload all resulting files to S3
         aws s3 cp $OUT_DIR s3://"${S3_DIR}/${EXP}" --recursive --exclude "*" --include "*.npz"
-        aws s3 cp "$output_path" s3://"${S3_DIR}/${EXP}/$output_path"
     fi
     
     if [[ "$url_notify" != "" ]]; then

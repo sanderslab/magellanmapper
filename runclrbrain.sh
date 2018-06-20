@@ -303,28 +303,31 @@ fi
 
 
 ####################################
-# Clean-up tasks
+# Post-Processing
+
+if [[ "$url_notify" != "" ]]; then
+    # post-processing notification to Slack
+    msg="Clrbrain pipeline for $IMG completed"
+    attach=""
+    if [[ "$output_path" != "" ]]; then
+        attach=`tail $output_path`
+    fi
+    curl -X POST -H 'Content-type: application/json' --data '{"text":"'"$msg"'","attachments":[{"text":"'"$attach"'"}]}' "$url_notify"
+fi
 
 if [[ $clean_up -eq 1 ]]; then
+    # Server Clean-Up
     
-    attach=""
     if [[ "$output_path" != "" ]]; then
         # prepare tail of output file for notification and upload full file to S3
         #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
-        attach=`tail $output_path`
         name="`basename $output_path`"
-        aws s3 cp "$output_path" s3://"${S3_DIR}/${EXP}/${name}" --dryrun
+        aws s3 cp "$output_path" s3://"${S3_DIR}/${EXP}/${name}"
     fi
     
     if [[ $upload -eq 1 ]]; then
         # upload all resulting files to S3
         aws s3 cp $OUT_DIR s3://"${S3_DIR}/${EXP}" --recursive --exclude "*" --include "*.npz"
-    fi
-    
-    if [[ "$url_notify" != "" ]]; then
-        # post notification to Slack
-        msg="Clrbrain pipeline for $IMG completed"
-        curl -X POST -H 'Content-type: application/json' --data '{"text":"'"$msg"'","attachments":[{"text":"'"$attach"'"}]}' "$url_notify"
     fi
     
     echo "Finishing clean-up tasks, shutting down..."

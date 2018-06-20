@@ -55,7 +55,7 @@ fi
 echo "Output file: $out_path"
 
 # run rest of args in nohup and display output
-nohup $EXTRA_ARGS > "$out_path" 2>&1 &
+nohup $EXTRA_ARGS -o "$out_path" > "$out_path" 2>&1 &
 PID_NOHUP=$!
 echo "Started \"$EXTRA_ARGS\" in nohup (PID $PID_NOHUP)"
 tail -f "$out_path" &
@@ -66,5 +66,5 @@ PID_TAIL=$!
 while ps -p $PID_NOHUP > /dev/null; do
     sleep 1
 done
-echo "$PID_NOHUP completed, exiting."
 kill $PID_TAIL
+echo "$PID_NOHUP completed, exiting."

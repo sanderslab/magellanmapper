@@ -76,14 +76,22 @@ whole_img_proc=""
 # Choose whether to upload all resulting files to AWS S3
 upload=0 # 0 for no, 1 to upload
 
+# Path to output file, to upload if specified
+output_path=""
 
+# Slack notification URL, to post when done
+url_notify=""
+
+# Server clean-up, to perform post-processing tasks including 
+# upload and shutdown
+clean_up=0
 
 ####################################
 # Script setup
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w: opt; do
+while getopts hi:a:p:s:t:w:o:n:c opt; do
     case $opt in
         h)  echo "$HELP"
             exit 0
@@ -105,6 +113,15 @@ while getopts hi:a:p:s:t:w: opt; do
             ;;
         w)  whole_img_proc="$OPTARG"
             echo "Set whole img proc to $whole_img_proc"
+            ;;
+        o)  output_path="$OPTARG"
+            echo "Set output path to $output_path"
+            ;;
+        n)  url_notify="$OPTARG"
+            echo "Set Slack notification URL to $url_notify"
+            ;;
+        c)  clean_up=1
+            echo "Set to perform server clean-up tasks once done"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -282,11 +299,31 @@ fi
 
 
 ####################################
-# Upload stitched image to cloud
+# Clean-up tasks
 
-if [[ $upload -eq 1 ]]; then
-    # upload all resulting files to S3
-    aws s3 cp $OUT_DIR s3://"${S3_DIR}/${EXP}" --recursive --exclude "*" --include "*.npz"
+if [[ $clean_up -eq 1 ]]; then
+    
+    attach=""
+    if [[ "$output_path" != "" ]]; then
+        #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
+        attach=`tail $output_path`
+    fi
+    echo "$attach"
+    
+    if [[ $upload -eq 1 ]]; then
+        # upload all resulting files to S3
+        aws s3 cp $OUT_DIR s3://"${S3_DIR}/${EXP}" --recursive --exclude "*" --include "*.npz"
+        aws s3 cp "$output_path" s3://"${S3_DIR}/${EXP}/$output_path"
+    fi
+    
+    if [[ "$url_notify" != "" ]]; then
+        # post notification to Slack
+        msg="Clrbrain pipeline for $IMG completed"
+        curl -X POST -H 'Content-type: application/json' --data '{"text":"'"$msg"'","attachments":[{"text":"'"$attach"'"}]}' "$url_notify"
+    fi
+    
+    echo "Finishing clean-up tasks, shutting down..."
+    poweroff
 fi
 
 exit 0

@@ -6,7 +6,7 @@ Attributes:
 """
 
 import json
-import urllib.request as request
+from urllib import request
 
 from clrbrain import cli
 from clrbrain import config

@@ -1481,6 +1481,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
             errs = errs[:, mask]
     indices = np.arange(len(lists[0]))
     print("lists:\n{}".format(lists))
+    if lists.size < 1: return
     #print("x_labels: {}".format(x_labels))
     
     # show each list as a set of bar plots so that corresponding elements in 

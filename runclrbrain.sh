@@ -217,7 +217,7 @@ if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
 fi
 
 out_name_base=""
-clr_img=""
+clr_img="$IMG"
 if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
     # ALTERNATIVE 1: Stitching plugin (old)
     
@@ -340,7 +340,7 @@ if [[ $clean_up -eq 1 ]]; then
     fi
     
     echo "Finishing clean-up tasks, shutting down..."
-    poweroff
+    sudo poweroff
 fi
 
 exit 0

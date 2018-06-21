@@ -1342,6 +1342,15 @@ def volumes_dict_level_grouping(volumes_dict, level):
                             blobs_len = region_dict[config.BLOBS_KEY]
                             region_dict_level[config.VOL_KEY] += vol
                             region_dict_level[config.BLOBS_KEY] += blobs_len
+                            parent_level = labels_ref_lookup[
+                                abs(parent)][NODE][ABA_LEVEL]
+                            if parent_level == -1:
+                                # some branches skip levels, so if parent at 
+                                # given level can't be found, vol goes to 
+                                # catch-all parent (level of -1)
+                                print("================> parent of id {} not "
+                                      "found for level {}; will store in "
+                                      "catch-all parent".format(parent, level))
                             print("added {} vol and {} blobs from {} (id {}) "
                                   "to {}".format(vol, blobs_len, name, 
                                   label_id, region_dict[config.ABA_NAME]))

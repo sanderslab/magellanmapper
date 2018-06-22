@@ -1451,7 +1451,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
             set of bar plots. All lists should be the same size as one 
             another and each list in ``lists``.
         list_names: List of names of each list, where the list size should 
-            be the same size as the length of ``lists``.
+            be the same size as the length of ``lists``. If None, legend will 
+            not be displayed.
         x_labels: List of labels for each bar group, where the list size 
             should be equal to the size of each list in ``lists``.
         width: Width of each bar.
@@ -1508,7 +1509,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     ax.set_xticklabels(
         x_labels, rotation=80, horizontalalignment="right", fontdict=font_dict)
     
-    ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
+    if list_names:
+        ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
 
 def plot_volumes(vol_stats, title=None, densities=False, show=True, 
                  groups=[""]):
@@ -1553,7 +1555,8 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
     for group_name in groups_unique:
         group = groups_dict[group_name]
         for side in sides_names:
-            legend_names.append("{} {}".format(group_name, side))
+            name = "{} {}".format(group_name, side) if group_name else side
+            legend_names.append(name)
             bar_colors.append("C{}".format(i))
             i += 1
         for meas in meas_keys:
@@ -1576,9 +1579,10 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         # assume that meas_group 0 is means/count, 1 is errs
         meas_group = bar_stats[meas]
         meas_unit = meas_units[i].replace("\u00b5m", unit)
+        legend = legend_names if i == 0 else None
         _bar_plots(
             ax, meas_group[0], meas_group[1], 
-            legend_names, names, bar_colors, width, meas_unit, meas)  
+            legend, names, bar_colors, width, meas_unit, meas)  
     
     # finalize the image with title and tight layout
     if title is None:

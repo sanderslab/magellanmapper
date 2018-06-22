@@ -63,12 +63,14 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
     
     Returns:
         Tuple of ``group_dict``, ``names``, ``mean_keys``, ``err_keys``, and 
-        ``measurement_keys``.
+        ``measurement_keys``, ``measurement_units``.
         ``group_dict`` is a dictionary with group names as keys. Each value is 
         another dictionary with ``meausurement_keys`` as keys, such as 
-        "volumes" or "densities". Values are in turn additional dictionaries 
-        with ``mean_keys`` as keys for sub-groups, such as "right" or "left", 
-        and ``err_keys`` as keys for error values, such "SEM_of_th_right" 
+        "volumes" or "densities", and the corresponding ``measurement_units``, 
+        such as "cubic mm". Values are in turn additional dictionaries 
+        with ``mean_keys`` as keys for sub-groups  such as "right" or "left" 
+        that could be means or simple counts,
+        and ``err_keys`` as keys for error values, such "SEM_of_the_right" 
         or "SEM_of_the_left". These values are 2-dimensional lists in the 
         format, 
         ``[[name0_val0, name0_val2, ...], [name1_val0, name2_val1, ...], ...]``,
@@ -82,6 +84,7 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
     SIDE_SEM = SIDE + "_sem"
     MIR_SEM = MIR + "_sem"
     VOL = "volume"
+    BLOBS = "blobs"
     DENS = "density"
     multiple = groups is not None
     groups_unique = np.unique(groups)
@@ -91,8 +94,10 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
         # dictionary of mean and SEM arrays for each side, which will be 
         # populated in same order as experiments in volumes_dict
         vol_group = {SIDE: [], MIR: [], SIDE_SEM: [], MIR_SEM: []}
+        blobs_group = copy.deepcopy(vol_group)
         dens_group = copy.deepcopy(vol_group)
-        groups_dict[group] = {VOL: vol_group, DENS: dens_group}
+        groups_dict[group] = {
+            VOL: vol_group, BLOBS: blobs_group, DENS: dens_group}
         group_mask = np.array(groups) == group if multiple else None
         for key in volumes_dict.keys():
             # find negative keys based on the given positive key to show them
@@ -129,17 +134,26 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
                     if isinstance(density_side, np.ndarray):
                         # density means and SEMs, storing the SEMs
                         _volumes_mean_sem(
+                            blobs_group, SIDE, SIDE_SEM, blobs_side, group_mask)
+                        _volumes_mean_sem(
+                            blobs_group, MIR, MIR_SEM, blobs_mirrored, 
+                            group_mask)
+                        _volumes_mean_sem(
                             dens_group, SIDE, SIDE_SEM, density_side, 
                             group_mask)
                         _volumes_mean_sem(
                             dens_group, MIR, MIR_SEM, density_mirrored, 
                             group_mask)
                     else:
+                        blobs_group[SIDE].append(blobs_side)
+                        blobs_group[MIR].append(blobs_mirrored)
                         dens_group[SIDE].append(density_side)
                         dens_group[MIR].append(density_mirrored)
     names = [volumes_dict[key][config.ABA_NAME] 
              for key in volumes_dict.keys() if key >= 0]
-    return groups_dict, names, (MIR, SIDE), (MIR_SEM, SIDE_SEM), (VOL, DENS)
+    return groups_dict, names, (MIR, SIDE), (MIR_SEM, SIDE_SEM), \
+           (VOL, BLOBS, DENS), \
+           ("cubic \u00b5m", "nuclei", "nuclei / cubic \u00b5m")
 
 def volume_stats_to_csv(vol_stats, path, groups=[""]):
     """Export volume mean stats to CSV file.
@@ -154,7 +168,7 @@ def volume_stats_to_csv(vol_stats, path, groups=[""]):
             individual sample.
     """
     # unpack volume stats
-    groups_dict, names, means_keys, sem_keys, meas_keys = vol_stats
+    groups_dict, names, means_keys, sem_keys, meas_keys, meas_units = vol_stats
     ext = ".csv"
     if not path.endswith(ext): path += ext
     

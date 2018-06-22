@@ -1528,28 +1528,23 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
             which case each label's value will be assumed to be a scalar 
             rather than a list of values.
     """
-    # setup figure layout with single subplot for volumes only or 
-    # side-by-side subplots if including densities
-    fig = plt.figure()
-    subplots_width = 2 if densities else 1
-    gs = gridspec.GridSpec(1, subplots_width)
-    ax_vols = plt.subplot(gs[0, 0])
-    ax_densities = plt.subplot(gs[0, 1]) if densities else None
+    # unpack volume stats
+    groups_dict, names, means_keys, sem_keys, meas_keys, meas_units = vol_stats
+    num_meas = len(meas_keys)
     
     # measurement units, assuming a base unit of microns
     unit = "mm"
     width = 0.1 # default bar width
     
-    # unpack volume stats
-    groups_dict, names, means_keys, sem_keys, meas_keys = vol_stats
-    
     # generate bar plots
     sides_names = ("Left", "Right")
     legend_names = []
-    vols = []
-    dens = []
-    errs_vols = []
-    errs_dens = []
+    bar_stats = {}
+    STATS_TYPES = ("mean", "err")
+    for meas in meas_keys:
+        bar_stats[meas] = {}
+        for stat_type in STATS_TYPES:
+            bar_stats[meas][stat_type] = []
     bar_colors = []
     i = 0
     groups_unique = np.unique(groups)
@@ -1560,20 +1555,29 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
             bar_colors.append("C{}".format(i))
             i += 1
         for means_key in means_keys:
-            vols.append(group[meas_keys[0]][means_key])
-            dens.append(group[meas_keys[1]][means_key])
+            for i in range(num_meas):
+                meas = meas_keys[i]
+                bar_stats[meas][STATS_TYPES[0]].append(group[meas][means_key])
         for sem_key in sem_keys:
-            errs_vols.append(group[meas_keys[0]][sem_key])
-            errs_dens.append(group[meas_keys[1]][sem_key])
-            
-    _bar_plots(
-        ax_vols, vols, errs_vols, legend_names, names, 
-        bar_colors, width, "Volume (cubic {})".format(unit), "Volumes")
-    if densities:
+            for i in range(num_meas):
+                meas = meas_keys[i]
+                bar_stats[meas][STATS_TYPES[1]].append(group[meas][sem_key])
+    
+    # setup figure layout with single subplot for volumes only or 
+    # side-by-side subplots with additional measurements if including densities
+    fig = plt.figure()
+    subplots_width = num_meas if densities else 1
+    gs = gridspec.GridSpec(1, subplots_width)
+    
+    for i in range(num_meas):
+        if i > 0 and not densities: break
+        ax = plt.subplot(gs[0, i])
+        meas = meas_keys[i]
+        meas_group = bar_stats[meas]
+        meas_unit = meas_units[i].replace("\u00b5m", unit)
         _bar_plots(
-            ax_densities, dens, errs_dens, legend_names, 
-            names, bar_colors, width, 
-            "Cell density (cells / cubic {})".format(unit), "Densities")
+            ax, meas_group[STATS_TYPES[0]], meas_group[STATS_TYPES[1]], 
+            legend_names, names, bar_colors, width, meas_unit, meas)  
     
     # finalize the image with title and tight layout
     if title is None:

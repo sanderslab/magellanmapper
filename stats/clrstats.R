@@ -2,8 +2,8 @@
 # Author: David Young, 2018
 
 library("gee")
-library("plotly")
-library("ggplot2")
+# library("plotly")
+# library("ggplot2")
 
 # statistical models to use
 kModel = c("logit", "linregr", "gee")
@@ -107,7 +107,8 @@ statsByRegion <- function(df, col, model) {
 			genos <- df.region$Geno[nonzero]
 			sides <- df.region$Side[nonzero]
 			ids <- df.region$Sample[nonzero]
-			cat("Region", region, ": ", vals, "\n")
+			cat("Region", region, ": ", vals, "from ", sum(nonzero), 
+					"nonzero regions\n")
 			
 			# apply stats and store in stats data frame, using list to allow 
 			# arbitrary size
@@ -115,7 +116,7 @@ statsByRegion <- function(df, col, model) {
 			stats$Stats[i] <- list(summary(fit)$coefficients)
 			
 			# show histogram to check for parametric distribution
-			hist(vals)
+			#hist(vals)
 		} else {
 			# ignore region if all values 0, leaving entry for region as NA
 			cat(region, ": no non-zero samples found\n\n")
@@ -142,11 +143,13 @@ filterStats <- function(stats) {
 		if (is.na(stats.filt$Stats[i])) next
 		# get coefficients, stored in one-element list, removing first 
 		# ("non-intercept") row
+		# print(stats.filt$Region[i])
+		# print(stats.filt$Stats[i])
 		stats.coef <- stats.filt$Stats[i][[1]][-(1:1), ]
 		if (is.null(filtered)) {
 			# build data frame if not yet generated to store pertinent coefficients 
 			# from each type of main effect or interaction
-			interactions <- rownames(stats.coef)
+			interactions <- gsub(":", ".", rownames(stats.coef))
 			cols <- list("Region")
 			for (interact in interactions) {
 				cols <- append(cols, paste0(interact, ".effect"))
@@ -159,10 +162,12 @@ filterStats <- function(stats) {
 		}
 		for (j in seq_along(interactions)) {
 			# insert effect, p-value, and -log(p) after region name for each 
-			# main effect/interaction
-			filtered[i, j * 3 - 1] <- stats.coef[j, 1]
-			filtered[i, j * 3] <- stats.coef[j, 4]
-			filtered[i, j * 3 + 1] <- -1 * log(stats.coef[j, 4])
+			# main effect/interaction, ignoring missing rows
+			if (nrow(stats.coef) >= j) {
+				filtered[i, j * 3 - 1] <- stats.coef[j, 1]
+				filtered[i, j * 3] <- stats.coef[j, 4]
+				filtered[i, j * 3 + 1] <- -1 * log(stats.coef[j, 4])
+			}
 		}
 	}
 	return(filtered)
@@ -194,11 +199,14 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 		y.lbl <- y[y.high]
 		lbls <- lbls[y.high]
 	}
-	text(x.lbl, y.lbl, label=lbls, cex=0.3, pos=3)
+	if (length(lbls) > 0) {
+		text(x.lbl, y.lbl, label=lbls, cex=0.3, pos=3)
+	}
 	# plot_ly(data=stats, x=x, y=y)
 	#g <- ggplot(data=stats, aes(x=x, y=y)) + geom_point(size=2)
 	# ggplotly(g, tooltip=c("Region"))
 	#print(g)
+	dev.print(pdf, file=paste("../volcano", meas, paste0(interaction, ".pdf"), sep="_"))
 }
 
 calcVolStats <- function(path.in, path.out, meas, model, region.ids) {

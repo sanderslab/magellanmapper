@@ -1536,15 +1536,17 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
     unit = "mm"
     width = 0.1 # default bar width
     
-    # generate bar plots
+    # group stats into a list for each set of bars
     sides_names = ("Left", "Right")
     legend_names = []
     bar_stats = {}
-    STATS_TYPES = ("mean", "err")
+    stats_keys = (means_keys, sem_keys)
+    num_stats = len(stats_keys)
     for meas in meas_keys:
+        # nested dict for each meas to contain stats types (eg mean, err)
         bar_stats[meas] = {}
-        for stat_type in STATS_TYPES:
-            bar_stats[meas][stat_type] = []
+        for i in range(num_stats):
+            bar_stats[meas][i] = []
     bar_colors = []
     i = 0
     groups_unique = np.unique(groups)
@@ -1554,14 +1556,11 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
             legend_names.append("{} {}".format(group_name, side))
             bar_colors.append("C{}".format(i))
             i += 1
-        for means_key in means_keys:
-            for i in range(num_meas):
-                meas = meas_keys[i]
-                bar_stats[meas][STATS_TYPES[0]].append(group[meas][means_key])
-        for sem_key in sem_keys:
-            for i in range(num_meas):
-                meas = meas_keys[i]
-                bar_stats[meas][STATS_TYPES[1]].append(group[meas][sem_key])
+        for meas in meas_keys:
+            for j in range(num_stats):
+                for stat_key in stats_keys[j]:
+                    # append val from stat type for each measurement
+                    bar_stats[meas][j].append(group[meas][stat_key])
     
     # setup figure layout with single subplot for volumes only or 
     # side-by-side subplots with additional measurements if including densities
@@ -1569,14 +1568,16 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
     subplots_width = num_meas if densities else 1
     gs = gridspec.GridSpec(1, subplots_width)
     
+    # generate bar plots
     for i in range(num_meas):
         if i > 0 and not densities: break
         ax = plt.subplot(gs[0, i])
         meas = meas_keys[i]
+        # assume that meas_group 0 is means/count, 1 is errs
         meas_group = bar_stats[meas]
         meas_unit = meas_units[i].replace("\u00b5m", unit)
         _bar_plots(
-            ax, meas_group[STATS_TYPES[0]], meas_group[STATS_TYPES[1]], 
+            ax, meas_group[0], meas_group[1], 
             legend_names, names, bar_colors, width, meas_unit, meas)  
     
     # finalize the image with title and tight layout

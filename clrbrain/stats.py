@@ -84,7 +84,7 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
     SIDE_SEM = SIDE + "_sem"
     MIR_SEM = MIR + "_sem"
     VOL = "volume"
-    BLOBS = "blobs"
+    BLOBS = "nuclei"
     DENS = "density"
     multiple = groups is not None
     groups_unique = np.unique(groups)

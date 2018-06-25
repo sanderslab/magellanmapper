@@ -319,7 +319,7 @@ if [[ "$url_notify" != "" ]]; then
     msg="Clrbrain pipeline for $IMG completed"
     attach=""
     if [[ "$output_path" != "" ]]; then
-        attach=`tail $output_path`
+        attach="$output_path"
     fi
     python -u -m clrbrain.notify --notify "$url_notify" "$msg" "$attach"
 fi

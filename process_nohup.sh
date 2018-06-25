@@ -12,13 +12,14 @@ current session is closed.
 
 Arguments:
     -h: Show help documentation.
-    -d [dir]: Set the destination directory. Output will be in a 
-        unique file of the format, dir/out[n].txt.
+    -d path/to/file: Set the destination path. Any existing file 
+        of the same name will be moved backed up first. Defaults 
+        to \"out.txt\".
     -o: Pass the output file as an argument (eg \"-o file.txt\"), 
         appended to the extra arguments.
 "
 
-DEST="."
+dest="out.txt"
 pass_output=0
 
 # run from parent directory
@@ -32,11 +33,11 @@ while getopts hd:o opt; do
         h)  echo "$HELP"
             exit 0
             ;;
-        d)  DEST="$OPTARG"
-            echo "Set destination output directory to $DEST"
+        d)  dest="$OPTARG"
+            echo "Set destination output path to $DEST"
             ;;
         o)  pass_output=1
-            echo "Set to pass output file to command nohup will run"
+            echo "Set to pass output file to command that nohup will run"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -44,25 +45,23 @@ while getopts hd:o opt; do
         --) ;;
     esac
 done
-readonly DEST
 
 # pass arguments after "--" to clrbrain
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-# create output filename based on first arg in EXTRA_ARGS
-out_name="${EXTRA_ARGS%% *}"
-out_name="`basename ${EXTRA_ARGS%.*}`"
-OUT_BASE="${DEST}/out_${out_name}"
-out_path="${OUT_BASE}.txt"
+# create output filename based on dest
+dest_ext="${dest##.*}"
+dest_base="${dest%.*}"
+out_path="$dest"
 echo "Output file: $out_path"
 if [[ -e "$out_path" ]]; then
     # avoid overwriting existing file by appending next 
     # available integer
-    out_base_last="${OUT_BASE}(1)"
+    out_base_last="${dest_base}(1)"
     i=2
     while [[ -e "${out_base_last}.txt" ]]; do
-        out_base_last="${OUT_BASE}(${i})"
+        out_base_last="${dest_base}(${i})"
         let i++
     done
     out_path_last="${out_base_last}.txt"

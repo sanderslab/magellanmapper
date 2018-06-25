@@ -211,6 +211,28 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True):
             cmap[i, :3] = config.colors[i]
     return cmap
 
+def last_lines(path, n):
+    """Get the last lines of a file by simply loading the entire file and 
+    returning only the last specified lines, without depending on any 
+    underlying system commands.
+    
+    Args:
+        path: Path to file.
+        n: Number of lines at the end of the file to extract; if the file is 
+            shorter than this number, all lines are returned.
+    
+    Returns:
+        The last ``n`` lines as a list, or all lines if ``n`` is greater than 
+        the number of lines in the file.
+    """
+    lines = None
+    with open(path, "r") as f:
+        lines = f.read().splitlines()
+        num_lines = len(lines)
+        if n > num_lines:
+            return lines
+    return lines[-1*n:]
+
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))
     a = np.arange(2 * 3).reshape(2, 3).astype(np.float)

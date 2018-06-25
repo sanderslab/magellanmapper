@@ -10,11 +10,16 @@ from urllib import request
 
 from clrbrain import cli
 from clrbrain import config
+from clrbrain import lib_clrbrain
 
 def post(url, msg, attachment):
     post_fields = {"text": msg}
     if attachment:
-        post_fields["attachments"] = [{"text": attachment}]
+        lines = lib_clrbrain.last_lines(attachment, 20)
+        if lines:
+            attach_msg = "\n".join(lines)
+            #print("got lines: {}".format(attach_msg))
+            post_fields["attachments"] = [{"text": attach_msg}]
     header = {"Content-type": "application/json"}
     req = request.Request(url, json.dumps(post_fields).encode("utf8"), header)
     response = request.urlopen(req)

@@ -49,8 +49,9 @@ Command-line arguments in addition to those from attributes listed below:
     * ec2_start: EC2 start instances parameters, used in 
         :function:``aws.start_instances``.
     * notify: Notification with up to three parameters for URL, message, and 
-        attachement, stored respectively as :attr:``config.notify_url``, 
-        :attr:``config.notify_msg``, and :attr:``config.notify_attach``.
+        attachment file path, stored respectively as 
+        :attr:``config.notify_url``, :attr:``config.notify_msg``, and 
+        :attr:``config.notify_attach``.
 
 Attributes:
     roi_size: The size in pixels of the region of interest. Set with
@@ -626,10 +627,11 @@ def main(process_args_only=False):
             print("Set notification URL to {}".format(config.notify_url))
         if notify_len > 1:
             config.notify_msg = args.notify[1]
-            print("Set notification message")
+            print("Set notification message to {}".format(config.notify_msg))
         if notify_len > 2:
             config.notify_attach = args.notify[2]
-            print("Set notification attachment")
+            print("Set notification attachment path to {}"
+                  .format(config.notify_attach))
     
     # prep filename
     if not config.filename:

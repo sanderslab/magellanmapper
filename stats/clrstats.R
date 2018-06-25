@@ -90,7 +90,7 @@ statsByRegion <- function(df, col, model) {
 	
 	# find all regions
 	regions <- unique(df$Region)
-	cols <- c("Region", "Stats")
+	cols <- c("Region", "Stats", "MeanNuclei")
 	stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
 	names(stats) <- cols
 	for (i in seq_along(regions)) {
@@ -111,9 +111,10 @@ statsByRegion <- function(df, col, model) {
 					"nonzero regions\n")
 			
 			# apply stats and store in stats data frame, using list to allow 
-			# arbitrary size
+			# arbitrary size and storing mean nuclei as well
 			fit <- fitModel(model, vals, genos, sides, ids)
 			stats$Stats[i] <- list(summary(fit)$coefficients)
+			stats$MeanNuclei[i] <- mean(df.region$Nuclei)
 			
 			# show histogram to check for parametric distribution
 			#hist(vals)
@@ -139,6 +140,7 @@ filterStats <- function(stats) {
 	stats.filt <- stats[non.na, ]
 	filtered <- NULL
 	interactions <- NULL
+	offset <- 0 # number of columns ahead of coefficients
 	for (i in 1:nrow(stats.filt)) {
 		if (is.na(stats.filt$Stats[i])) next
 		# get coefficients, stored in one-element list, removing first 
@@ -150,7 +152,8 @@ filterStats <- function(stats) {
 			# build data frame if not yet generated to store pertinent coefficients 
 			# from each type of main effect or interaction
 			interactions <- gsub(":", ".", rownames(stats.coef))
-			cols <- list("Region")
+			cols <- list("Region", "MeanNuclei")
+			offset <- length(cols)
 			for (interact in interactions) {
 				cols <- append(cols, paste0(interact, ".effect"))
 				cols <- append(cols, paste0(interact, ".p"))
@@ -159,14 +162,15 @@ filterStats <- function(stats) {
 			filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
 			names(filtered) <- cols
 			filtered$Region <- stats.filt$Region
+			filtered$MeanNuclei <- stats.filt$MeanNuclei
 		}
 		for (j in seq_along(interactions)) {
 			# insert effect, p-value, and -log(p) after region name for each 
 			# main effect/interaction, ignoring missing rows
 			if (nrow(stats.coef) >= j) {
-				filtered[i, j * 3 - 1] <- stats.coef[j, 1]
-				filtered[i, j * 3] <- stats.coef[j, 4]
-				filtered[i, j * 3 + 1] <- -1 * log(stats.coef[j, 4])
+				filtered[i, j * 3 - 2 + offset] <- stats.coef[j, 1]
+				filtered[i, j * 3 - 1 + offset] <- stats.coef[j, 4]
+				filtered[i, j * 3 + offset] <- -1 * log(stats.coef[j, 4])
 			}
 		}
 	}
@@ -187,9 +191,12 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 	
 	x <- stats[[paste0(interaction, ".effect")]]
 	y <- stats[[paste0(interaction, ".logp")]]
+	# weight size based on relative num of nuclei
+	size <- stats$MeanNuclei / max(stats$MeanNuclei) * 3
+	# print(data.frame(x, size))
 	plot(
 		x, y, main=paste(meas, "Differences for", interaction), xlab="Effects", 
-		ylab="-log(p)", type="p", col="blue", pch=16)
+		ylab="-log(p)", type="p", col="blue", pch=16, cex=size)
 	x.lbl <- x
 	y.lbl <- y
 	lbls <- paste(stats$Region, stats$RegionName, sep="\n")
@@ -232,6 +239,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 	# calculate stats, filter out NAs and extract effects and p-values
 	stats <- statsByRegion(df, meas, model)
 	stats.filtered <- filterStats(stats)
+	# merge in region name based on matching IDs
 	stats.filtered <- merge(stats.filtered, region.ids, by="Region")
 	print(stats.filtered)
 	write.csv(stats.filtered, path.out)

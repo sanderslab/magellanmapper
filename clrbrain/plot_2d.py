@@ -648,7 +648,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                   zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0], 
                   roi=None, labels=None, blobs_truth=None, circles=None, 
                   mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS, 
-                  img_region=None):
+                  img_region=None, max_intens_proj=False):
     """Shows a figure of 2D plots to compare with the 3D plot.
     
     Args:
@@ -688,6 +688,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             or 1. ``config.labels_scaling`` will be used to scale up this 
             region to overlay on overview images. Defaults to None, in which 
             case the region will be ignored.
+        max_intens_proj: True to show overview images as local max intensity 
+            projections through the ROI. Defaults to Faslse.
     """
     time_start = time()
     
@@ -703,7 +705,10 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # adjust array order based on which plane to show
     border_full = np.copy(border)
     border[2] = 0
-    scaling = np.copy(config.labels_scaling)
+    scaling = None
+    if config.labels_scaling is not None:
+        # check for None since np.copy of None is not None
+        scaling = np.copy(config.labels_scaling)
     if plane == config.PLANE[1]:
         # "xz" planes; flip y-z to give y-planes instead of z
         roi_size = lib_clrbrain.swap_elements(roi_size, 1, 2)
@@ -712,7 +717,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
         if segments is not None and len(segments) > 0:
             segments[:, [0, 1]] = segments[:, [1, 0]]
-        scaling = lib_clrbrain.swap_elements(scaling, 1, 2)
+        if scaling is not None:
+            scaling = lib_clrbrain.swap_elements(scaling, 1, 2)
     elif plane == config.PLANE[2]:
         # "yz" planes; roll backward to flip x-z and x-y
         roi_size = lib_clrbrain.roll_elements(roi_size, -1)
@@ -725,7 +731,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             segments[:, [0, 2]] = segments[:, [2, 0]]
             segments[:, [1, 2]] = segments[:, [2, 1]]
             print("rolled segments:\n{}".format(segments))
-        scaling = lib_clrbrain.roll_elements(scaling, -1)
+        if scaling is not None:
+            scaling = lib_clrbrain.roll_elements(scaling, -1)
     print("2D border: {}".format(border))
     
     # mark z-planes to show
@@ -748,12 +755,19 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         """Prep overview image planes based on chosen orientation.
         """
         # main overview image
-        img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
+        z_range = z_overview
+        if max_intens_proj:
+            # max intensity projection (MIP) is local, through the entire ROI 
+            # and thus not changing with scrolling
+            z_range = np.arange(z_start, z_start + roi_size[2])
+        img2d, aspect, origin = extract_plane(
+            image5d, z_range, plane, max_intens_proj)
         img_region_2d = None
         if img_region is not None:
             # extract correponding plane from scaled region image and 
             # convert it to an RGBA image, using region as alpha channel and 
-            # inverting it opacify areas outside of selected region
+            # inverting it opacify areas outside of selected region; if in 
+            # MIP mode, will still only show lowest plane
             img, _, _ = extract_plane(
                 img_region, int(scaling[0] * z_overview), plane)
             img_region_2d = np.ones(img.shape + (4,))
@@ -808,8 +822,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         """
         plane_axis = get_plane_axis(plane)
         if level == 0:
-            # show the axis and axis value for unzoomed overview
-            title = "{}={}".format(plane_axis, z_overview)
+            if max_intens_proj:
+                title = "Max Intensity Projection"
+            else:
+                # show the axis and axis value for unzoomed overview
+                title = "{}={}".format(plane_axis, z_overview)
         else:
             # show zoom for subsequent overviews
             title = "{}x".format(int(zoom))
@@ -847,7 +864,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             # zoom and position ROI patch position
             img2d_ov = img2d_ov[origin[1]:end[1], origin[0]:end[0]]
             if img_region_2d is not None:
-                origin_scaled = np.multiply(origin, scaling[2:0:-1]).astype(np.int)
+                origin_scaled = np.multiply(
+                    origin, scaling[2:0:-1]).astype(np.int)
                 end_scaled = np.multiply(end, scaling[2:0:-1]).astype(np.int)
                 img_region_2d = img_region_2d[
                     origin_scaled[1]:end_scaled[1], 
@@ -892,6 +910,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 will be used for movements. For key events, up/down arrows 
                 will be used.
         """
+        # no scrolling if MIP since already showing full ROI
+        if max_intens_proj:
+            print("skipping overview scrolling while showing max intensity "
+                  "projection")
+            return
         nonlocal z_overview
         z_curr = z_overview
         step = 0
@@ -1115,7 +1138,7 @@ def hide_axes(ax):
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
 
-def extract_plane(image5d, plane_n, plane=None):
+def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
     """Extracts a single 2D plane and saves to file.
     
     Args:
@@ -1124,6 +1147,10 @@ def extract_plane(image5d, plane_n, plane=None):
             or multiple indices such as would be used for an animation.
         plane: Type of plane to extract, which should be one of 
             :attribute:`config.PLANES`.
+        max_intens_projection: True to show a max intensity projection, which 
+            assumes that plane_n is an array of multiple, typically 
+            contiguous planes along which the max intensity pixel will 
+            be taken. Defaults to False.
     """
     origin = None
     aspect = None # aspect ratio
@@ -1158,6 +1185,9 @@ def extract_plane(image5d, plane_n, plane=None):
         # defaults to "xy"
         aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
         img2d = img3d[plane_n, :, :]
+    if max_intens_proj:
+        # max intensity projection assumes axis 0 is the "z" axis
+        img2d = np.amax(img2d, axis=0)
     #print("aspect: {}, origin: {}".format(aspect, origin))
     return img2d, aspect, origin
 

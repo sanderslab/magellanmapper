@@ -167,7 +167,8 @@ class Visualization(HasTraits):
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw"]
     _check_list_2d = List
-    _DEFAULTS_2D = ["Filtered", "Border zone", "Segmentation", "Grid"]
+    _DEFAULTS_2D = [
+        "Filtered", "Border zone", "Segmentation", "Grid", "Max inten proj"]
     _planes_2d = List
     _border_on = False # remembers last border selection
     _DEFAULT_BORDER = np.zeros(3) # default ROI border size
@@ -696,8 +697,10 @@ class Visualization(HasTraits):
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         title = _fig_title(register.get_label_name(self._atlas_label), 
                            curr_offset, curr_roi_size)
-        filename_base = importer.filename_to_base(config.filename, config.series)
+        filename_base = importer.filename_to_base(
+            config.filename, config.series)
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
+        max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
         stack_args = (
             self.update_segment, title, filename_base, img, config.channel, 
             curr_roi_size, curr_offset, self.segments, self.segs_in_mask, 
@@ -706,16 +709,19 @@ class Visualization(HasTraits):
             self._full_border(self.border), self._planes_2d[0].lower())
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
-            "circles": circles, "grid": grid, "img_region": self._img_region}
+            "circles": circles, "grid": grid, "img_region": self._img_region, 
+            "max_intens_proj": max_intens_proj}
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
-            # layout for square ROIs with 3D screenshot, creating a square-ish fig
+            # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(antialiased=True)
-            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, mlab_screenshot=screenshot)
+            plot_2d.plot_2d_stack(
+                *stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[2]:
             # single row
             screenshot = self.scene.mlab.screenshot(antialiased=True)
             plot_2d.plot_2d_stack(
-                *stack_args, **stack_args_named, zoom_levels=3, single_zoom_row=True, 
+                *stack_args, **stack_args_named, zoom_levels=3, 
+                single_zoom_row=True, 
                 z_level=plot_2d.Z_LEVELS[1], mlab_screenshot=screenshot)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[3]:
             # layout for wide ROIs to maximize real estate on widescreen
@@ -723,14 +729,16 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=2, zoom_cols=7)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[4]:
             # multi-zoom overview plots
-            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=5)
+            plot_2d.plot_2d_stack(
+                *stack_args, **stack_args_named, zoom_levels=5)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[5]:
             # layout for square ROIs with thin rows to create a tall fig
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
         else:
             # defaults to Square style without oblique view
-            plot_2d.plot_2d_stack(*stack_args, **stack_args_named, zoom_levels=3)
+            plot_2d.plot_2d_stack(
+                *stack_args, **stack_args_named, zoom_levels=3)
     
     def _btn_save_segments_fired(self):
         self.save_segs()

@@ -302,7 +302,11 @@ def plot_3d_surface(roi, vis, channel):
         
         # clip to minimize sub-nuclear variation
         roi_show = np.clip(roi_show, 0.2, 0.8)
-        #roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.1)
+        
+        # denoising makes for much cleaner images but also seems to allow 
+        # structures to blend together. TODO: consider segmented individual 
+        # structures and rendering them as separate surfaces to avoid blending
+        roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.1)
         
         # build surface from segmented ROI
         if to_segment:

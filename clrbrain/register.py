@@ -200,6 +200,19 @@ def _get_bbox_region(bbox):
     return shape, slices
 
 def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
+    """Truncate image by zero-ing out pixels outside of given bounds.
+    
+    Args:
+        img_np: 3D image array in Numpy format.
+        x_frac: 2D tuple of (x_start, x_end), given as fractions of the image. 
+            Defaults to None, in which case the full image in that direction 
+            will be preserved.
+        y_frac: Same as ``x_frac`` but for y-axis.
+        z_frac: Same as ``x_frac`` but for z-axis.
+    
+    Returns:
+        The truncated image.
+    """
     shape = img_np.shape
     bounds = (z_frac, y_frac, x_frac)
     axis = 0
@@ -305,7 +318,7 @@ def _mirror_labels(img, img_ref):
         # skip mirroring if no planes are empty or only first plane is empty
         print("nothing to mirror")
         return img
-    # truncate ventral and dorsal portions since variable amount of tissue 
+    # truncate ventral and posterior portions since variable amount of tissue 
     # or quality of imaging in these regions
     _truncate_labels(img_np, (0, 0.77), (0, 0.55))
     img_reflected = replace_sitk_with_numpy(img, img_np)
@@ -392,24 +405,18 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     transposed.SetOrigin(origin)
     return transposed
 
-def _load_numpy_to_sitk(numpy_file, rotate=False, size=None):
+def _load_numpy_to_sitk(numpy_file, rotate=False):
     """Load Numpy image array to SimpleITK Image object.
     
     Args:
         numpy_file: Path to Numpy archive file.
         rotate: True if the image should be rotated 180 deg; defaults to False.
-        size: Resize dimensions as a list of (z, y, x) pixels; defaults to 
-            None, in which case the image will not be resized.
     
     Returns:
         The image in SimpleITK format.
     """
     image5d = importer.read_file(numpy_file, config.series)
     roi = image5d[0, ...] # not using time dimension
-    if size is not None:
-        # use default interpolation, but should change to nearest neighbor 
-        # if using for labels
-        roi = transform.resize(roi, size, anti_aliasing=True, mode="reflect")
     if rotate:
         roi = np.rot90(roi, 2, (1, 2))
     sitk_img = sitk.GetImageFromArray(roi)
@@ -595,8 +602,44 @@ def measure_overlap(fixed_img, transformed_img):
     #print("Mean regional DSC: {}".format(mean_region_dsc))
     print("Total DSC: {}".format(total_dsc))
 
+def _crop_image(img_np, labels_img, axis):
+    """Crop image by removing the empty space at the start of the given axis.
+    
+    Args:
+        img_np: 3D image array in Numpy format.
+        labels_img: 3D image array in Numpy format of the same shape as 
+            ``img_np``, typically a labels image from which to find the empty 
+            region to crop.
+        axis: Axis along which to crop.
+    
+    Returns:
+        The cropped image with planes removed along the start of the given 
+        axis until the first non-empty plane is reached.
+    """
+    # find the first non-zero plane in the labels image along the given axis, 
+    # expanding slices to the include the rest of the image
+    slices = [slice(None)] * labels_img.ndim
+    shape = labels_img.shape
+    for i in range(shape[axis]):
+        slices[axis] = i
+        plane = labels_img[slices]
+        if not np.allclose(plane, 0):
+            print("found first non-zero plane at i of {}".format(i))
+            break
+    
+    # crop image if a region of empty planes is found at the start of the axis
+    img_crop = img_np
+    if i < shape[axis]:
+        slices = [slice(None)] * img_np.ndim
+        slices[axis] = slice(i, shape[axis])
+        img_crop = img_crop[slices]
+        print("cropped image from shape {} to {}".format(shape, img_crop.shape))
+    else:
+        print("could not find non-empty plane at which to crop")
+    return img_crop
+
 def register_group(img_files, flip=None, show_imgs=True, 
-             write_imgs=True, name_prefix=None):
+             write_imgs=True, name_prefix=None, scale=None):
     """Group registers several images to one another.
     
     Args:
@@ -610,6 +653,8 @@ def register_group(img_files, flip=None, show_imgs=True,
             True.
         name_prefix: Path with base name where registered files are located; 
             defaults to None, in which case the fixed_file path will be used.
+        scale: Rescaling factor as a scalar value, used to find the rescaled, 
+            smaller images corresponding to ``img_files``. Defaults to None.
     """
     if name_prefix is None:
         name_prefix = img_files[0]
@@ -618,12 +663,30 @@ def register_group(img_files, flip=None, show_imgs=True,
     origin = None
     size = None
     for i in range(len(img_files)):
+        # load image, fipping if necessary
         img_file = img_files[i]
+        if scale:
+            # use scaled image if rescale arg given
+            img_file = lib_clrbrain.insert_before_ext(
+                img_file, "_" + importer.make_modifier_scale(scale))
         if flip is not None:
             flip_img = flip[i]
+        img = _load_numpy_to_sitk(img_file, flip_img)
+        img_np = sitk.GetArrayFromImage(img)
+        
+        # crop y-axis based on registered labels to ensure that sample images 
+        # have the same structures since variable amount of tissue posteriorly
+        labels_img = load_registered_img(img_files[i], reg_name=IMG_LABELS)
+        img_np = _crop_image(img_np, labels_img, 1)
+        
         # force all images into same size and origin as first image 
         # to avoid groupwise registration error on physical space mismatch
-        img = _load_numpy_to_sitk(img_file, flip_img, size)
+        if size is not None:
+            # use default interpolation, but should change to nearest neighbor 
+            # if using for labels
+            img_np = transform.resize(
+                img_np, size, anti_aliasing=True, mode="reflect")
+        img = replace_sitk_with_numpy(img, img_np)
         if origin is None:
             origin = img.GetOrigin()
             size = img.GetSize()[::-1]
@@ -644,12 +707,12 @@ def register_group(img_files, flip=None, show_imgs=True,
     param_map["FinalGridSpacingInVoxels"] = [
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
-    # TESTING:
-    #param_map["MaximumNumberOfIterations"] = 0
     param_map["MaximumNumberOfIterations"] = [settings["groupwise_iter_max"]]
+    # TESTING:
+    #param_map["MaximumNumberOfIterations"] = ["0"]
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
-    transform = elastix_img_filter.Execute()
+    transform_filter = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
     # extract individual 3D images from 4D result image
@@ -1763,7 +1826,8 @@ if __name__ == "__main__":
         # filename given is the prefix and uses the full flip array
         prefix = config.filenames[-1]
         register_group(
-            config.filenames[:-1], flip=config.flip, name_prefix=prefix)
+            config.filenames[:-1], flip=config.flip, name_prefix=prefix, 
+            scale=config.rescale)
     elif config.register_type == config.REGISTER_TYPES[2]:
         # overlay registered images in each orthogonal plane
         for out_plane in config.PLANE:

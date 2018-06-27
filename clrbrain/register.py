@@ -514,13 +514,16 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         # currently assumes only one labels file, where ABA only gives half of 
         # atlas so need to mirror one side to other
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
+        unique_lbls_orig = np.unique(sitk.GetArrayFromImage(img))
         if config.labels_mirror:
             img = _mirror_labels(img, sitk.ReadImage(moving_file))
+        unique_lbls_mirrored = np.unique(sitk.GetArrayFromImage(img))
         img = transpose_img(img, plane, flip, target_size=fixed_img_size)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
         result_img = transformix_img_filter.GetResultImage()
         result_img = sitk.Cast(result_img, img.GetPixelID())
+        unique_lbls_result = np.unique(sitk.GetArrayFromImage(result_img))
         '''
         # remove bottom planes after registration; make sure to turn off 
         # bottom plane removal in mirror step
@@ -576,6 +579,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     # overlap stats
     measure_overlap(fixed_img, transformed_img)
+    print("unique labels in orig image ({}):".format(unique_lbls_orig.size))
+    for lbl in unique_lbls_orig:
+        print(lbl)
+    print("vs mirrored ({}):".format(unique_lbls_mirrored.size))
+    for lbl in unique_lbls_mirrored:
+        print(lbl)
+    print("vs transformed ({}):".format(unique_lbls_result.size))
+    for lbl in unique_lbls_result:
+        print(lbl)
     
     # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file, None)

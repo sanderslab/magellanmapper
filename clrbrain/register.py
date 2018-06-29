@@ -744,7 +744,7 @@ def register_group(img_files, flip=None, show_imgs=True,
         print("writing {}".format(out_path))
         sitk.WriteImage(transformed_img, out_path, False)
         img_np = sitk.GetArrayFromImage(transformed_img)
-        importer.save_np_image(img_np, out_path, config.series)
+        importer.save_np_image(img_np[None], out_path, config.series)
     
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):

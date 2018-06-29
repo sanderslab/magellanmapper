@@ -842,8 +842,9 @@ def process_file(filename_base, offset, roi_size):
               or config.filename.endswith(".mha")):
             # load metadata from 2nd filename argument for consistency with 
             # other images loaded here
+            rotate = config.flip is not None and config.flip[0]
             image5d = importer.read_file_sitk(
-                config.filename, config.filenames[1], config.series)
+                config.filename, config.filenames[1], config.series, rotate)
         else:
             image5d = importer.read_file(
                 config.filename, config.series, channel=config.channel)

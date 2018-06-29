@@ -565,13 +565,32 @@ def read_file(filename, series, load=True, z_max=-1,
                      image5d.dtype, near_mins, near_maxs)
     return image5d
 
-def read_file_sitk(filename_sitk, filename_np, series):
+def read_file_sitk(filename_sitk, filename_np, series, rotate=False):
+    """Read file through SimpleITK and export to Numpy array format, 
+    loading associated metadata and formatting array into Clrbrain image5d 
+    format.
+    
+    Args:
+        filename_sitk: Path to file in a format that can be read by SimpleITK.
+        filename_np: Path to basis for Clrbrain Numpy archive files, which 
+            will be used to load metadata file.
+        series: Image series number used to find the associated Numpy 
+            archive.
+        rotate: True if the image should be rotated 90 deg; defaults to False.
+    
+    Returns:
+        Image array in Clrbrain image5d format. Associated metadata will 
+        have been loaded into module-level variables.
+    """
     ext = lib_clrbrain.get_filename_ext(filename_np)
     filename_image5d_npz, filename_info_npz = _make_filenames(
         filename_np, series, ext=ext)
     output, image5d_ver_num = read_info(filename_info_npz)
     img_sitk = sitk.ReadImage(filename_sitk)
-    img_np = np.rot90(sitk.GetArrayFromImage(img_sitk), 2, (1, 2))
+    img_np = sitk.GetArrayFromImage(img_sitk)
+    if rotate:
+        # apparently need to rotate images output by deep learning toolkit
+        img_np = np.rot90(img_np, 2, (1, 2))
     image5d = img_np[None] # insert time axis as first dim
     return image5d
 

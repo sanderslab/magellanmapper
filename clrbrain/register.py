@@ -33,6 +33,9 @@ outlined here. Each type can be coupled with additional arguments in ``cli``.
         file.
     *   ``export_regions``: Export atlas annotation region information such 
         as region ID to name CSV file and region network SIF file.
+    *   ``new_atlas``: Based on "single" registration, outputting registered 
+        files in the naming format of a new atlas and bypassing label 
+        truncation.
 """
 
 import os
@@ -250,8 +253,7 @@ def _mirror_labels(img, img_ref):
         img_ref: Reference atlas image in SimpleITK format.
     
     Returns:
-        The mirrored image in the same dimensions, origin, and spacing as the 
-        original image.
+        The mirrored image in Numpy format.
     """
     # TODO: check to make sure values don't get wrapped around if np.int32
     # max value is less than data max val
@@ -317,12 +319,7 @@ def _mirror_labels(img, img_ref):
     else:
         # skip mirroring if no planes are empty or only first plane is empty
         print("nothing to mirror")
-        return img
-    # truncate ventral and posterior portions since variable amount of tissue 
-    # or quality of imaging in these regions
-    _truncate_labels(img_np, (0, 0.77), (0, 0.55))
-    img_reflected = replace_sitk_with_numpy(img, img_np)
-    return img_reflected
+    return img_np
 
 def replace_sitk_with_numpy(img_sitk, img_np):
     spacing = img_sitk.GetSpacing()
@@ -426,7 +423,8 @@ def _load_numpy_to_sitk(numpy_file, rotate=False):
     return sitk_img
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
-             show_imgs=True, write_imgs=True, name_prefix=None):
+             show_imgs=True, write_imgs=True, name_prefix=None, 
+             new_atlas=False):
     """Registers two images to one another using the SimpleElastix library.
     
     Args:
@@ -437,7 +435,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
             since it is likely to be lower resolution than the Numpy file.
         plane: Planar orientation to which the atlas will be transposed, 
             considering the atlas' original plane as "xy".
-        flip: True if the atlas should be flipped/rotated; defaults to False.
+        flip: True if the moving files (does not apply to fixed file) should 
+            be flipped/rotated; defaults to False.
         show_imgs: True if the output images should be displayed; defaults to 
             True.
         write_imgs: True if the images should be written to file; defaults to 
@@ -466,8 +465,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     moving_img = transpose_img(
         moving_img, plane, flip, target_size=fixed_img_size)
     
-    print("fixed image from {}:\n{}".format(fixed_file, fixed_img))
-    print("moving image from {}:\n{}".format(moving_file, moving_img))
+    print("fixed image from {} (type {}):\n{}".format(
+        fixed_file, fixed_img.GetPixelIDTypeAsString(), fixed_img))
+    print("moving image from {} (type {}):\n{}".format(
+        moving_file, moving_img.GetPixelIDTypeAsString(), moving_img))
     
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(fixed_img)
@@ -515,7 +516,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         # atlas so need to mirror one side to other
         img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
         if config.labels_mirror:
-            img = _mirror_labels(img, sitk.ReadImage(moving_file))
+            img_np = _mirror_labels(img, sitk.ReadImage(moving_file))
+            if not new_atlas:
+                # truncate ventral and posterior portions since variable 
+                # amount of tissue or quality of imaging in these regions
+                _truncate_labels(img_np, (0, 0.77), (0, 0.55))
+            img = replace_sitk_with_numpy(img, img_np)
         img = transpose_img(img, plane, flip, target_size=fixed_img_size)
         transformix_img_filter.SetMovingImage(img)
         transformix_img_filter.Execute()
@@ -551,14 +557,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         # write atlas and labels files, transposed according to plane setting
         imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS)
         imgs_write = [fixed_img, transformed_img, imgs_transformed[0]]
-        '''
-        # TESTING: transpose saved images to new orientation
-        img = sitk.ReadImage(_reg_out_path(name_prefix, IMG_LABELS))
-        imgs_names = ("test.mhd", )
-        imgs_write = [img]
-        '''
         for i in range(len(imgs_write)):
-            out_path = _reg_out_path(name_prefix, imgs_names[i])
+            out_path = imgs_names[i]
+            if new_atlas:
+                if out_path == IMG_EXP:
+                    # no need to output exp if new atlas since already saved
+                    continue
+                out_path = os.path.join(os.path.dirname(name_prefix), out_path)
+            else:
+                out_path = _reg_out_path(name_prefix, out_path)
             print("writing {}".format(out_path))
             sitk.WriteImage(imgs_write[i], out_path, False)
 
@@ -1816,11 +1823,14 @@ if __name__ == "__main__":
     if config.register_type is None:
         # explicitly require a registration type
         print("Please choose a registration type")
-    elif config.register_type == config.REGISTER_TYPES[0]:
+    elif config.register_type in (
+        config.REGISTER_TYPES[0], config.REGISTER_TYPES[7]):
         # "single", basic registration of 1st to 2nd image, transposing the 
-        # second image according to config.plane and config.flip_horiz
+        # second image according to config.plane and config.flip_horiz; 
+        # "new_atlas" registers similarly but outputs new atlas files
+        new_atlas = config.register_type == config.REGISTER_TYPES[7]
         register(*config.filenames[0:2], plane=config.plane, 
-                 flip=flip, name_prefix=prefix)
+                 flip=flip, name_prefix=prefix, new_atlas=new_atlas)
     elif config.register_type == config.REGISTER_TYPES[1]:
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array

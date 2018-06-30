@@ -432,7 +432,7 @@ labels_level = None
 labels_mirror = True
 REGISTER_TYPES = (
     "single", "group", "overlays", "volumes", "densities", "export_vols", 
-    "export_regions")
+    "export_regions", "new_atlas")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"

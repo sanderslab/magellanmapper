@@ -459,6 +459,13 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     else:
         fixed_img = fixed_file
     '''
+    # preprocessing; store original fixed image for overlap measure
+    fixed_img_orig = fixed_img
+    img_np = sitk.GetArrayFromImage(fixed_img)
+    #img_np = plot_3d.saturate_roi(img_np)
+    img_np = plot_3d.denoise_roi(img_np)
+    fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
+    
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
     fixed_img_size = fixed_img.GetSize()
@@ -589,7 +596,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         moving_img, transformed_img, translation, flip=True)
     
     # overlap stats
-    measure_overlap(fixed_img, transformed_img)
+    measure_overlap(fixed_img_orig, transformed_img)
     
     # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file, None)

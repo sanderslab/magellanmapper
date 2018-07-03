@@ -64,6 +64,7 @@ from clrbrain import detector
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_2d
+from clrbrain import plot_3d
 from clrbrain import stats
 
 IMG_ATLAS = "atlasVolume.mhd"
@@ -422,6 +423,26 @@ def _load_numpy_to_sitk(numpy_file, rotate=False):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     return sitk_img
 
+def _curate_img(fixed_img, result_img):
+    result_img_np = sitk.GetArrayFromImage(result_img)
+    fixed_img_np = sitk.GetArrayFromImage(fixed_img)
+    
+    # mask image showing where result is 0 but fixed image is above thresh 
+    # to fill in with nearest neighbors
+    thresh = filters.threshold_mean(fixed_img_np)
+    print("thresh: {}".format(thresh))
+    to_fill = np.logical_and(
+        result_img_np == 0, fixed_img_np > thresh)
+    result_img_np = plot_3d.in_paint(result_img_np, to_fill)
+    
+    # remove pixels from result image where fixed image is below threshold
+    result_img_np[fixed_img_np <= thresh] = 0
+    result_img = replace_sitk_with_numpy(result_img, result_img_np)
+    result_img_np[np.abs(result_img_np) > 0] = 11
+    result_img_for_overlap = replace_sitk_with_numpy(result_img, result_img_np)
+    measure_overlap(fixed_img, result_img_for_overlap)
+    return result_img
+
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
              new_atlas=False):
@@ -553,6 +574,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         result_img = transformix_img_filter.GetResultImage()
         result_img = sitk.Cast(result_img, img.GetPixelID())
         '''
+        if new_atlas:
+            result_img = _curate_img(fixed_img_orig, result_img)
         # remove bottom planes after registration; make sure to turn off 
         # bottom plane removal in mirror step
         img_np = sitk.GetArrayFromImage(result_img)
@@ -623,9 +646,9 @@ def measure_overlap(fixed_img, transformed_img):
     '''
     # Dice Similarity Coefficient (DSC) of total brain volume by applying 
     # simple binary mask for estimate of background vs foreground
-    thresh = filters.threshold_mean(sitk.GetArrayFromImage(fixed_img))
+    thresh = float(filters.threshold_mean(sitk.GetArrayFromImage(fixed_img)))
     print("measuring overlap with threshold of {}".format(thresh))
-    fixed_binary_img = sitk.BinaryThreshold(fixed_img, float(thresh))
+    fixed_binary_img = sitk.BinaryThreshold(fixed_img, thresh)
     transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)
@@ -1821,6 +1844,15 @@ def _test_region_from_id():
     atlas_label = get_label(middle, labels_img, id_dict, scaling, None, True)
     props, bbox, centroid = get_region_from_id(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))
+
+def _test_curate_img(path):
+    fixed_img = _load_numpy_to_sitk(path)
+    moving_path = os.path.join(os.path.dirname(path), IMG_LABELS)
+    moving_img = sitk.ReadImage(moving_path)
+    result_img = _curate_img(fixed_img, moving_img)
+    sitk.Show(fixed_img)
+    sitk.Show(moving_img)
+    sitk.Show(result_img)
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

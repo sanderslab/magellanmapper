@@ -18,6 +18,7 @@ Attributes:
 from time import time
 import numpy as np
 import math
+from scipy import ndimage
 from skimage import draw
 from skimage import restoration
 from skimage import img_as_float
@@ -242,6 +243,24 @@ def deconvolve(roi):
     roi_deconvolved = restoration.richardson_lucy(roi, psf, iterations=30)
     #roi_deconvolved = restoration.unsupervised_wiener(roi, psf)
     return roi_deconvolved
+
+def in_paint(roi, to_fill):
+    """In-paint to interpolate values into pixels to fill from nearest 
+    neighbors.
+    
+    Args:
+        roi: ROI in which to fill pixels.
+        to_fill: Boolean array of same shape as ``roi`` where True values 
+            designate the pixels to fill.
+    
+    Returns:
+        ROI with pixels corresponding to ``to_fill`` filled with nearest 
+        neighbors.
+    """
+    indices = ndimage.distance_transform_edt(
+        to_fill, return_distances=False, return_indices=True)
+    filled = roi[tuple(indices)]
+    return filled
 
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]

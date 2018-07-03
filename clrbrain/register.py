@@ -446,6 +446,9 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     """
     if name_prefix is None:
         name_prefix = fixed_file
+    settings = config.register_settings
+    
+    # load fixed image, assumed to be experimental image
     fixed_img = _load_numpy_to_sitk(fixed_file)
     '''
     # for some reason cannot load the .mhd file directly for the fixed file 
@@ -461,11 +464,13 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     '''
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
+    if settings["preprocess"]:
     img_np = sitk.GetArrayFromImage(fixed_img)
     #img_np = plot_3d.saturate_roi(img_np)
     img_np = plot_3d.denoise_roi(img_np)
     fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
     
+    # load moving image, assumed to be atlas
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
     fixed_img_size = fixed_img.GetSize()
@@ -481,7 +486,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     elastix_img_filter.SetFixedImage(fixed_img)
     elastix_img_filter.SetMovingImage(moving_img)
     
-    settings = config.register_settings
     param_map_vector = sitk.VectorOfParameterMap()
     # translation to shift and rotate
     param_map = sitk.GetDefaultParameterMap("translation")
@@ -502,7 +506,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
-    if new_atlas:
+    if settings["point_based"]:
         # point-based registration added to b-spline, which takes point sets 
         # found in name_prefix's folder; note that coordinates are from the 
         # originally set fixed and moving images, not after transformation up 

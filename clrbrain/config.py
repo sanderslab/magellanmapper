@@ -296,6 +296,8 @@ class RegisterSettings(SettingsDict):
         self["bspline_grid_space_voxels"] = "50"
         self["groupwise_iter_max"] = "1024"
         self["resize_factor"] = 0.7
+        self["preprocess"] = False
+        self["point_based"] = False
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -315,6 +317,7 @@ def update_register_settings(settings, settings_type):
             settings["settings_name"] += "_group"
             settings["resize_factor"] = 1.0
     
+    settings.add_modifier("_register", {"preprocess": True}, settings_type)
     
     if verbose:
         print("process settings for {}:\n{}"

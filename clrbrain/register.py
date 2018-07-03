@@ -600,7 +600,7 @@ def measure_overlap(fixed_img, transformed_img):
     # simple binary mask for estimate of background vs foreground
     thresh = filters.threshold_mean(sitk.GetArrayFromImage(fixed_img))
     print("measuring overlap with threshold of {}".format(thresh))
-    fixed_binary_img = sitk.BinaryThreshold(fixed_img, thresh)
+    fixed_binary_img = sitk.BinaryThreshold(fixed_img, float(thresh))
     transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)

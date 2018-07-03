@@ -47,9 +47,33 @@ sub_stack_max_pixels = None
 
 # PROCESSING SETTINGS
 
-class ProcessSettings(dict):
+class SettingsDict(dict):
     def __init__(self, *args, **kwargs):
-        self["microscope_type"] = "default"
+        self["settings_name"] = "default"
+
+    def add_modifier(self, mod_name, mods, settings_type=None):
+        """Add a modifer dictionary, overwriting any existing settings 
+        with values from this dictionary.
+        
+        Args:
+            mod_name: Name of the modifier, which will be appended to the 
+                name of the current settings.
+            mods: Dictionary with keys matching default keys and values to 
+                replace the correspondings values.
+            settings_type: The full name of the final settings. If given,  
+                the modifier will only be added if ``settings_type`` 
+                contains ``mod_name`` within the string. Defaults to None, 
+                in which case ``mods`` will be added regardless.
+        """
+        if settings_type and not mod_name in settings_type: return
+        self["settings_name"] += mod_name
+        for key in mods.keys():
+            self[key] = mods[key]
+
+class ProcessSettings(SettingsDict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(self)
+        self["settings_name"] = "default"
         self["vis_3d"] = "points"
         self["points_3d_thresh"] = 0.85 # frac of thresh (changed in v.0.6.6)
         self["clip_vmax"] = 99.5
@@ -77,25 +101,6 @@ class ProcessSettings(dict):
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
     
-    def add_modifier(self, mod_name, mods, settings_type=None):
-        """Add a modifer dictionary, overwriting any existing settings 
-        with values from this dictionary.
-        
-        Args:
-            mod_name: Name of the modifier, which will be appended to the 
-                name of the current settings.
-            mods: Dictionary with keys matching default keys and values to 
-                replace the correspondings values.
-            settings_type: The full name of the final settings. If given,  
-                the modifier will only be added if ``settings_type`` 
-                contains ``mod_name`` within the string. Defaults to None, 
-                in which case ``mods`` will be added regardless.
-        """
-        if settings_type and not mod_name in settings_type: return
-        self["microscope_type"] += mod_name
-        for key in mods.keys():
-            self[key] = mods[key]
-
 def update_process_settings(settings, settings_type):
     """Update processing profiles, including layering modifications upon 
     existing base layers.
@@ -113,7 +118,7 @@ def update_process_settings(settings, settings_type):
     # MAIN PROFILES
     
     if settings_type.startswith("2p_20x"):
-        settings["microscope_type"] = "2p_20x"
+        settings["settings_name"] = "2p_20x"
         settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 97
         settings["clip_min"] = 0
@@ -137,7 +142,7 @@ def update_process_settings(settings, settings_type):
         
     elif settings_type.startswith("lightsheet_v01"):
         # detection settings up through v.0.6.1
-        settings["microscope_type"] = "lightsheet_v01"
+        settings["settings_name"] = "lightsheet_v01"
         settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
@@ -157,7 +162,7 @@ def update_process_settings(settings, settings_type):
         
     elif settings_type.startswith("lightsheet_v02"):
         # detection settings from v.0.6.2
-        settings["microscope_type"] = "lightsheet_v02"
+        settings["settings_name"] = "lightsheet_v02"
         settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
         settings["clip_min"] = 0
@@ -180,18 +185,18 @@ def update_process_settings(settings, settings_type):
         
             if minor_ver >= 1:
                 # detection settings from v.0.6.4
-                settings["microscope_type"] += ".1"
+                settings["settings_name"] += ".1"
                 settings["erosion_threshold"] = 0.3
                 settings["sub_stack_max_pixels"] = (1000, 1000, 1000)
         
             if minor_ver >= 2:
                 # detection settings from v.0.6.6
-                settings["microscope_type"] += ".2"
+                settings["settings_name"] += ".2"
                 settings["sub_stack_max_pixels"] = (1200, 800, 800)
     
     elif settings_type.startswith("lightsheet"):
         # detection settings optimized for lightsheet
-        settings["microscope_type"] = "lightsheet"
+        settings["settings_name"] = "lightsheet"
         #settings["vis_3d"] = "surface"
         settings["points_3d_thresh"] = 0.7
         settings["clip_vmax"] = 98.5
@@ -218,16 +223,16 @@ def update_process_settings(settings, settings_type):
     # this listing taking precedence over prior ones and the main profile
     
     if "_zebrafish" in settings_type:
-        settings["microscope_type"] += "_zebrafish"
+        settings["settings_name"] += "_zebrafish"
         settings["min_sigma_factor"] = 2.5
         settings["max_sigma_factor"] = 3
     
     if "_contrast" in settings_type:
-        settings["microscope_type"] += "_contrast"
+        settings["settings_name"] += "_contrast"
         settings["channel_colors"] = ("inferno", "bone")
   
     if "_cytoplasm" in settings_type:
-        settings["microscope_type"] += "_cytoplasm"
+        settings["settings_name"] += "_cytoplasm"
         settings["clip_min"] = 0.3
         settings["clip_max"] = 0.8
         settings["points_3d_thresh"] = 0.7
@@ -237,27 +242,27 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.2
   
     if "_small" in settings_type:
-        settings["microscope_type"] += "_small"
+        settings["settings_name"] += "_small"
         settings["points_3d_thresh"] = 0.3 # used only if not surface
         settings["isotropic_vis"] = (1, 1, 1)
 
     if "_binary" in settings_type:
-        settings["microscope_type"] = "_binary"
+        settings["settings_name"] = "_binary"
         settings["denoise_size"] = None
         settings["detection_threshold"] = 0.001
     
     if "_20x" in settings_type:
-        settings["microscope_type"] += "_20x"
+        settings["settings_name"] += "_20x"
         # fit into ~32GB RAM instance after isotropic interpolation
         settings["segment_size"] = 50
     
     if "_exportdl" in settings_type:
-        settings["microscope_type"] += "_exportdl"
+        settings["settings_name"] += "_exportdl"
         # export to deep learning framework with required dimensions
         settings["isotropic"] = (0.93, 1, 1)
 
     if "_importdl" in settings_type:
-        settings["microscope_type"] += "_importdl"
+        settings["settings_name"] += "_importdl"
         # import from deep learning predicted image
         settings["isotropic"] = None # assume already isotropic
         settings["resize_blobs"] = (.2, 1, 1) # 
@@ -266,7 +271,7 @@ def update_process_settings(settings, settings_type):
     
     if verbose:
         print("process settings for {}:\n{}"
-              .format(settings["microscope_type"], settings))
+              .format(settings["settings_name"], settings))
     
 # default settings and list of settings for each channel
 process_settings = ProcessSettings()
@@ -281,9 +286,10 @@ def get_process_settings(i):
 
 # REGISTRATION SETTINGS
 
-class RegisterSettings(dict):
+class RegisterSettings(SettingsDict):
     def __init__(self, *args, **kwargs):
-        self["register_type"] = "default"
+        super().__init__(self)
+        self["settings_name"] = "default"
         self["translation_iter_max"] = "2048"
         self["affine_iter_max"] = "1024"
         self["bspline_iter_max"] = "256"
@@ -294,20 +300,26 @@ class RegisterSettings(dict):
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
         # more aggressive parameters for finer tuning
-        settings["register_type"] = "finer"
+        settings["settings_name"] = "finer"
         settings["bspline_iter_max"] = "512"
       
         if settings_type.endswith("_big"):
             # atlas is big relative to the experimental image, so need to 
             # more aggressively downsize the atlas
-            settings["register_type"] += "_big"
+            settings["settings_name"] += "_big"
             settings["resize_factor"] = 0.625
 
         elif settings_type.endswith("_group"):
             # registered to group-registered atlas assumes images are 
             # roughly the same size
-            settings["register_type"] += "_group"
+            settings["settings_name"] += "_group"
             settings["resize_factor"] = 1.0
+    
+    
+    if verbose:
+        print("process settings for {}:\n{}"
+              .format(settings["settings_name"], settings))
+    
 
 register_settings = RegisterSettings()
 

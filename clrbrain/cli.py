@@ -552,15 +552,15 @@ def main(process_args_only=False):
             if i > 0:
                 config.process_settings_list.append(settings)
                 print("Added {} settings for channel {}".format(
-                      config.process_settings_list[i]["microscope_type"], i))
+                      config.process_settings_list[i]["settings_name"], i))
     print("Set default microscope processing settings to {}"
-          .format(config.process_settings["microscope_type"]))
+          .format(config.process_settings["settings_name"]))
     # registration profile settings
     if args.reg_profile is not None:
         config.update_register_settings(
             config.register_settings, args.reg_profile)
     print("Set register settings to {}"
-          .format(config.register_settings["register_type"]))
+          .format(config.register_settings["settings_name"]))
     if args.plane is not None:
         from clrbrain import plot_2d
         config.plane = args.plane

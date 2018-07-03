@@ -76,6 +76,25 @@ class ProcessSettings(dict):
         self["resize_blobs"] = None
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
+    
+    def add_modifier(self, mod_name, mods, settings_type=None):
+        """Add a modifer dictionary, overwriting any existing settings 
+        with values from this dictionary.
+        
+        Args:
+            mod_name: Name of the modifier, which will be appended to the 
+                name of the current settings.
+            mods: Dictionary with keys matching default keys and values to 
+                replace the correspondings values.
+            settings_type: The full name of the final settings. If given,  
+                the modifier will only be added if ``settings_type`` 
+                contains ``mod_name`` within the string. Defaults to None, 
+                in which case ``mods`` will be added regardless.
+        """
+        if settings_type and not mod_name in settings_type: return
+        self["microscope_type"] += mod_name
+        for key in mods.keys():
+            self[key] = mods[key]
 
 def update_process_settings(settings, settings_type):
     """Update processing profiles, including layering modifications upon 
@@ -242,8 +261,13 @@ def update_process_settings(settings, settings_type):
         # import from deep learning predicted image
         settings["isotropic"] = None # assume already isotropic
         settings["resize_blobs"] = (.2, 1, 1) # 
-
-
+    
+    settings.add_modifier("_register", {"unsharp_strength": 1.5}, settings_type)
+    
+    if verbose:
+        print("process settings for {}:\n{}"
+              .format(settings["microscope_type"], settings))
+    
 # default settings and list of settings for each channel
 process_settings = ProcessSettings()
 process_settings_list = [process_settings]

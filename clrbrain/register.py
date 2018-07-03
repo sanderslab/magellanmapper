@@ -495,10 +495,17 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
+    metric = list(param_map["Metric"])
+    metric.append("CorrespondingPointsEuclideanDistanceMetric")
+    param_map["Metric"] = metric
+    #param_map["Metric2Weight"] = ["0.5"]
+    
     
     param_map_vector.append(param_map)
     elastix_img_filter.SetParameterMap(param_map_vector)
     elastix_img_filter.PrintParameterMap()
+    elastix_img_filter.SetFixedPointSetFileName(os.path.join(os.path.dirname(name_prefix), "fix_pts.txt"))
+    elastix_img_filter.SetMovingPointSetFileName(os.path.join(os.path.dirname(name_prefix), "mov_pts.txt"))
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     

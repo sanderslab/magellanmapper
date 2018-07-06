@@ -588,7 +588,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     # prep labels image
     labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
-    labels_pixel_id = labels_img.GetPixelID()
     labels_img_np = None
         if config.labels_mirror:
         # ABA E18pt5 labels file only gives half of atlas so need to mirror 
@@ -606,6 +605,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
     
     # apply atlas transformation to labels image
+    labels_pixel_id = labels_img.GetPixelID() # now as signed int
+    print("labels_pixel type: {}".format(labels_img.GetPixelIDTypeAsString()))
     transformix_img_filter.SetMovingImage(labels_img)
         transformix_img_filter.Execute()
     labels_img = transformix_img_filter.GetResultImage()
@@ -658,7 +659,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         sitk.GetArrayFromImage(fixed_img),
         sitk.GetArrayFromImage(moving_img), 
         sitk.GetArrayFromImage(transformed_img), 
-        sitk.GetArrayFromImage(imgs_transformed[0])]
+        sitk.GetArrayFromImage(labels_img)]
     # save transform parameters and attempt to find the original position 
     # that corresponds to the final position that will be displayed
     _, translation = _handle_transform_file(name_prefix, transform_param_map)

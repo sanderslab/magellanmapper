@@ -298,6 +298,7 @@ class RegisterSettings(SettingsDict):
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False
+        self["truncate_labels"] = (None, (0.33, 1.0), (0.45, 1.0))
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -312,12 +313,20 @@ def update_register_settings(settings, settings_type):
             settings["resize_factor"] = 0.625
 
         elif settings_type.endswith("_group"):
-            # registered to group-registered atlas assumes images are 
-            # roughly the same size
             settings["settings_name"] += "_group"
             settings["resize_factor"] = 1.0
     
-    settings.add_modifier("_register", {"preprocess": True}, settings_type)
+    settings.add_modifier(
+        "_new", 
+        {"preprocess": True}, 
+        settings_type)
+    
+    # registered to group-registered atlas assumes images are roughly same size
+    settings.add_modifier(
+        "_generated", 
+        {"resize_factor": 1.0, 
+         "truncate_labels": (None, None, (0.2, 1.0))}, 
+        settings_type)
     
     if verbose:
         print("process settings for {}:\n{}"

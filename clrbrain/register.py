@@ -578,45 +578,52 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
-    # apply transformation to label files
-    img_files = (IMG_LABELS, )
+    # prep filter to apply transformation to label files
     transform_param_map = elastix_img_filter.GetTransformParameterMap()
     # turn off to avoid overshooting the interpolation for the labels image 
     # (see Elastix manual section 4.3)
     transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
     transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
-    imgs_transformed = []
-    for img_file in img_files:
-        # currently assumes only one labels file, where ABA only gives half of 
-        # atlas so need to mirror one side to other
-        img = sitk.ReadImage(os.path.join(moving_file_dir, img_file))
+    
+    # prep labels image
+    labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
+    labels_pixel_id = labels_img.GetPixelID()
+    labels_img_np = None
         if config.labels_mirror:
-            img_np = _mirror_labels(img, sitk.ReadImage(moving_file))
+        # ABA E18pt5 labels file only gives half of atlas so need to mirror 
+        # one side to other
+        labels_img_np = _mirror_labels(labels_img, sitk.ReadImage(moving_file))
+    if labels_img_np is not None:
+        labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
+    labels_img = transpose_img(
+        labels_img, plane, flip, target_size=fixed_img_size)
             if not new_atlas:
                 # truncate ventral and posterior portions since variable 
                 # amount of tissue or quality of imaging in these regions
-                _truncate_labels(img_np, (0, 0.77), (0, 0.55))
-            img = replace_sitk_with_numpy(img, img_np)
-        img = transpose_img(img, plane, flip, target_size=fixed_img_size)
-        transformix_img_filter.SetMovingImage(img)
+        labels_img_np = sitk.GetArrayFromImage(labels_img)
+        _truncate_labels(labels_img_np, *settings["truncate_labels"])
+        labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
+    
+    # apply atlas transformation to labels image
+    transformix_img_filter.SetMovingImage(labels_img)
         transformix_img_filter.Execute()
-        result_img = transformix_img_filter.GetResultImage()
-        result_img = sitk.Cast(result_img, img.GetPixelID())
+    labels_img = transformix_img_filter.GetResultImage()
+    labels_img = sitk.Cast(labels_img, labels_pixel_id)
         if new_atlas:
-            result_img = _curate_img(fixed_img_orig, result_img)[0]
+        labels_img, transformed_img = _curate_img(
+            fixed_img_orig, labels_img, [transformed_img])
         '''
         # remove bottom planes after registration; make sure to turn off 
         # bottom plane removal in mirror step
-        img_np = sitk.GetArrayFromImage(result_img)
+    img_np = sitk.GetArrayFromImage(labels_img)
         _truncate_labels(img_np, z_frac=(0.2, 1.0))
-        result_img = replace_sitk_with_numpy(result_img, img_np)
+    labels_img = replace_sitk_with_numpy(labels_img, img_np)
         '''
-        imgs_transformed.append(result_img)
-        print(result_img)
+    print(labels_img)
         '''
         LabelStatistics = sitk.LabelStatisticsImageFilter()
-        LabelStatistics.Execute(fixed_img, result_img)
+    LabelStatistics.Execute(fixed_img, labels_img)
         count = LabelStatistics.GetCount(1)
         mean = LabelStatistics.GetMean(1)
         variance = LabelStatistics.GetVariance(1)
@@ -628,13 +635,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         sitk.Show(fixed_img)
         #sitk.Show(moving_img)
         sitk.Show(transformed_img)
-        for img in imgs_transformed:
-            sitk.Show(img)
+        sitk.Show(labels_img)
     
     if write_imgs:
         # write atlas and labels files, transposed according to plane setting
         imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS)
-        imgs_write = [fixed_img, transformed_img, imgs_transformed[0]]
+        imgs_write = [fixed_img, transformed_img, labels_img]
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
             if new_atlas:
@@ -1907,8 +1913,8 @@ if __name__ == "__main__":
     #_test_labels_lookup()
     #_test_mirror_labels(config.filenames[1])
     #_test_region_from_id()
-    #os._exit(os.EX_OK)
     #_test_curate_img(config.filenames[0])
+    #os._exit(os.EX_OK)
     
     if config.register_type is None:
         # explicitly require a registration type

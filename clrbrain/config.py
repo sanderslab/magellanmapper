@@ -299,6 +299,7 @@ class RegisterSettings(SettingsDict):
         self["preprocess"] = False
         self["point_based"] = False
         self["truncate_labels"] = (None, (0.33, 1.0), (0.45, 1.0))
+        self["labels_mirror"] = True
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -321,7 +322,8 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "_generated", 
         {"resize_factor": 1.0, 
-         "truncate_labels": (None, None, (0.2, 1.0))}, 
+         "truncate_labels": (None, None, (0.2, 1.0)),
+         "labels_mirror": False}, 
         settings_type)
     
     if verbose:

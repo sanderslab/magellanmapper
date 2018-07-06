@@ -576,9 +576,6 @@ def main(process_args_only=False):
         if labels_len > 1:
             config.labels_level = int(args.labels[1])
             print("Set labels level to {}".format(config.labels_level))
-        if labels_len > 2:
-            config.labels_mirror = _is_arg_true(args.labels[2])
-            print("Set labels mirroring to {}".format(config.labels_mirror))
     if args.flip:
         config.flip = []
         for flip in args.flip:

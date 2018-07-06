@@ -591,7 +591,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # prep labels image
     labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
     labels_img_np = None
-        if config.labels_mirror:
+    if settings["labels_mirror"]:
         # ABA E18pt5 labels file only gives half of atlas so need to mirror 
         # one side to other
         labels_img_np = _mirror_labels(labels_img, sitk.ReadImage(moving_file))

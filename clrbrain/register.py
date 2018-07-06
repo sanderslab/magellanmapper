@@ -452,8 +452,10 @@ def _curate_img(fixed_img, labels_img, imgs=None):
     # to fill in with nearest neighbors
     thresh = filters.threshold_mean(fixed_img_np)
     print("thresh: {}".format(thresh))
-    to_fill = np.logical_and(
-        labels_img_np == 0, fixed_img_np > thresh)
+    # fill only empty regions corresponding to filled pixels, but fills 
+    # some with 0 from dist transform pointing to appropriately empty pixels
+    #to_fill = np.logical_and(labels_img_np == 0, fixed_img_np > thresh)
+    to_fill = labels_img_np == 0
     
     result_imgs = []
     for i in range(len(imgs)):
@@ -466,10 +468,10 @@ def _curate_img(fixed_img, labels_img, imgs=None):
         result_img = replace_sitk_with_numpy(img, result_img_np)
         result_imgs.append(result_img)
         if i == 0:
-            # check overlap based on labels images
-    result_img_np[np.abs(result_img_np) > 0] = 11
+            # check overlap based on labels images; should be 1.0 by def
+            result_img_np[result_img_np != 0] = 11
             result_img_for_overlap = replace_sitk_with_numpy(
-                result_img, result_img_np)
+                img, result_img_np)
     measure_overlap(fixed_img, result_img_for_overlap)
     return result_imgs
 

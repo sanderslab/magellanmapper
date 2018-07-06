@@ -311,10 +311,6 @@ def update_register_settings(settings, settings_type):
             # more aggressively downsize the atlas
             settings["settings_name"] += "_big"
             settings["resize_factor"] = 0.625
-
-        elif settings_type.endswith("_group"):
-            settings["settings_name"] += "_group"
-            settings["resize_factor"] = 1.0
     
     settings.add_modifier(
         "_new", 

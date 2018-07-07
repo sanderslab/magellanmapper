@@ -671,12 +671,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         moving_img, transformed_img, translation, flip=True)
     
     # overlap stats
-    measure_overlap(fixed_img_orig, transformed_img)
+    measure_overlap(
+        fixed_img_orig, transformed_img, 
+        transformed_thresh=settings["atlas_threshold"])
     
     # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file, None)
 
-def measure_overlap(fixed_img, transformed_img):
+def measure_overlap(fixed_img, transformed_img, fixed_thresh=None, 
+                    transformed_thresh=None):
     overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
     '''
     # mean Dice Similarity Coefficient (DSC) of labeled regions;
@@ -685,12 +688,19 @@ def measure_overlap(fixed_img, transformed_img):
     overlap_filter.Execute(sitk.Cast(fixed_img, sitk.sitkFloat32), transformed_img)
     mean_region_dsc = overlap_filter.GetDiceCoefficient()
     '''
-    # Dice Similarity Coefficient (DSC) of total brain volume by applying 
+    # Dice Similarity Coefficient (DSC) of total volume by applying 
     # simple binary mask for estimate of background vs foreground
-    thresh = float(filters.threshold_mean(sitk.GetArrayFromImage(fixed_img)))
-    print("measuring overlap with threshold of {}".format(thresh))
-    fixed_binary_img = sitk.BinaryThreshold(fixed_img, thresh)
-    transformed_binary_img = sitk.BinaryThreshold(transformed_img, 10.0)
+    if not fixed_thresh:
+        fixed_thresh = float(
+            filters.threshold_mean(sitk.GetArrayFromImage(fixed_img)))
+    if not transformed_thresh:
+        transformed_thresh = float(
+            filters.threshold_mean(sitk.GetArrayFromImage(transformed_img)))
+    print("measuring overlap with thresholds of {} (fixed) and {} (transformed)"
+          .format(fixed_thresh, transformed_thresh))
+    fixed_binary_img = sitk.BinaryThreshold(fixed_img, fixed_thresh)
+    transformed_binary_img = sitk.BinaryThreshold(
+        transformed_img, transformed_thresh)
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     #sitk.Show(fixed_binary_img)
     #sitk.Show(transformed_binary_img)

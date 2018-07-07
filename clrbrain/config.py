@@ -300,6 +300,7 @@ class RegisterSettings(SettingsDict):
         self["point_based"] = False
         self["truncate_labels"] = (None, (0.33, 1.0), (0.45, 1.0))
         self["labels_mirror"] = True
+        self["atlas_threshold"] = 10.0
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -318,12 +319,15 @@ def update_register_settings(settings, settings_type):
         {"preprocess": True}, 
         settings_type)
     
-    # registered to group-registered atlas assumes images are roughly same size
+    # registered to group-registered atlas assumes images are roughly same 
+    # size, already have mirrored labels aligned with the fixed image toward 
+    # the bottom of the z-dimension, and ca
     settings.add_modifier(
         "_generated", 
         {"resize_factor": 1.0, 
          "truncate_labels": (None, None, (0.2, 1.0)),
-         "labels_mirror": False}, 
+         "labels_mirror": False,
+         "atlas_threshold": None}, 
         settings_type)
     
     if verbose:

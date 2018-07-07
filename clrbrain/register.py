@@ -424,7 +424,7 @@ def _load_numpy_to_sitk(numpy_file, rotate=False):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     return sitk_img
 
-def _curate_img(fixed_img, labels_img, imgs=None):
+def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
     """Curate images by in-painting where corresponding pixels are present in 
     fixed image but not labels or other images and removing pixels 
     present in those images but not the fixed image.
@@ -464,16 +464,19 @@ def _curate_img(fixed_img, labels_img, imgs=None):
         # below threshold
         img = imgs[i]
         result_img_np = sitk.GetArrayFromImage(img)
+        if inpaint:
     result_img_np = plot_3d.in_paint(result_img_np, to_fill)
+        if carve:
     result_img_np[fixed_img_np <= thresh] = 0
         result_img = replace_sitk_with_numpy(img, result_img_np)
         result_imgs.append(result_img)
         if i == 0:
             # check overlap based on labels images; should be 1.0 by def
-            result_img_np[result_img_np != 0] = 11
+            result_img_np[result_img_np != 0] = 2
             result_img_for_overlap = replace_sitk_with_numpy(
                 img, result_img_np)
-    measure_overlap(fixed_img, result_img_for_overlap)
+            measure_overlap(
+                fixed_img, result_img_for_overlap, transformed_thresh=1)
     return result_imgs
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
@@ -614,9 +617,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         transformix_img_filter.Execute()
     labels_img = transformix_img_filter.GetResultImage()
     labels_img = sitk.Cast(labels_img, labels_pixel_id)
-        if new_atlas:
         labels_img, transformed_img = _curate_img(
-            fixed_img_orig, labels_img, [transformed_img])
+        fixed_img_orig, labels_img, imgs=[transformed_img], inpaint=new_atlas)
         '''
         # remove bottom planes after registration; make sure to turn off 
         # bottom plane removal in mirror step

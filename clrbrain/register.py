@@ -70,7 +70,8 @@ from clrbrain import stats
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
 IMG_EXP = "exp.mhd"
-IMG_GROUPED = "grouped"
+IMG_GROUPED = "grouped.mhd"
+IMG_ATLAS_TEMPLATE = "atlasVolumeTemplate.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -643,13 +644,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     if write_imgs:
         # write atlas and labels files, transposed according to plane setting
         imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS)
+        if new_atlas:
+            imgs_names = (IMG_ATLAS, IMG_ATLAS_TEMPLATE, IMG_LABELS)
         imgs_write = [fixed_img, transformed_img, labels_img]
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
             if new_atlas:
-                if out_path == IMG_EXP:
-                    # no need to output exp if new atlas since already saved
-                    continue
                 out_path = os.path.join(os.path.dirname(name_prefix), out_path)
             else:
                 out_path = _reg_out_path(name_prefix, out_path)
@@ -832,7 +832,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     if write_imgs:
         # write both the .mhd and Numpy array files to a separate folder to 
         # mimic the atlas folder format
-        out_path = os.path.join(name_prefix, IMG_ATLAS)
+        out_path = os.path.join(name_prefix, IMG_GROUPED)
         if not os.path.exists(name_prefix):
             os.makedirs(name_prefix)
         print("writing {}".format(out_path))

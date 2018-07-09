@@ -298,7 +298,7 @@ class RegisterSettings(SettingsDict):
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False
-        self["truncate_labels"] = (None, (0.33, 1.0), (0.45, 1.0))
+        self["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
         self["labels_mirror"] = True
         self["atlas_threshold"] = 10.0
 

@@ -479,6 +479,48 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
                 fixed_img, result_img_for_overlap, transformed_thresh=1)
     return result_imgs
 
+def _measure_overlap_labels(fixed_img, labels_img):
+    # check overlap based on labels images; should be 1.0 by def
+    result_img_np = sitk.GetArrayFromImage(labels_img)
+    result_img_np[result_img_np != 0] = 2
+    result_img_for_overlap = replace_sitk_with_numpy(
+        labels_img, result_img_np)
+    measure_overlap(
+        fixed_img, result_img_for_overlap, transformed_thresh=1)
+
+def _transform_labels(transformix_img_filter, labels_img, settings, truncate=False):
+    if truncate:
+        # truncate ventral and posterior portions since variable 
+        # amount of tissue or quality of imaging in these regions
+        labels_img_np = sitk.GetArrayFromImage(labels_img)
+        _truncate_labels(labels_img_np, *settings["truncate_labels"])
+        labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
+    
+    # apply atlas transformation to labels image
+    labels_pixel_id = labels_img.GetPixelID() # now as signed int
+    print("labels_pixel type: {}".format(labels_img.GetPixelIDTypeAsString()))
+    transformix_img_filter.SetMovingImage(labels_img)
+    transformix_img_filter.Execute()
+    labels_img = transformix_img_filter.GetResultImage()
+    labels_img = sitk.Cast(labels_img, labels_pixel_id)
+    '''
+    # remove bottom planes after registration; make sure to turn off 
+    # bottom plane removal in mirror step
+    img_np = sitk.GetArrayFromImage(labels_img)
+    _truncate_labels(img_np, z_frac=(0.2, 1.0))
+    labels_img = replace_sitk_with_numpy(labels_img, img_np)
+    '''
+    print(labels_img)
+    '''
+    LabelStatistics = sitk.LabelStatisticsImageFilter()
+    LabelStatistics.Execute(fixed_img, labels_img)
+    count = LabelStatistics.GetCount(1)
+    mean = LabelStatistics.GetMean(1)
+    variance = LabelStatistics.GetVariance(1)
+    print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
+    '''
+    return labels_img
+
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
              new_atlas=False):
@@ -603,38 +645,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
     labels_img = transpose_img(
         labels_img, plane, flip, target_size=fixed_img_size)
-            if not new_atlas:
-                # truncate ventral and posterior portions since variable 
-                # amount of tissue or quality of imaging in these regions
-        labels_img_np = sitk.GetArrayFromImage(labels_img)
-        _truncate_labels(labels_img_np, *settings["truncate_labels"])
-        labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
-    
-    # apply atlas transformation to labels image
-    labels_pixel_id = labels_img.GetPixelID() # now as signed int
-    print("labels_pixel type: {}".format(labels_img.GetPixelIDTypeAsString()))
-    transformix_img_filter.SetMovingImage(labels_img)
-        transformix_img_filter.Execute()
-    labels_img = transformix_img_filter.GetResultImage()
-    labels_img = sitk.Cast(labels_img, labels_pixel_id)
-        labels_img, transformed_img = _curate_img(
-        fixed_img_orig, labels_img, imgs=[transformed_img], inpaint=new_atlas)
-        '''
-        # remove bottom planes after registration; make sure to turn off 
-        # bottom plane removal in mirror step
-    img_np = sitk.GetArrayFromImage(labels_img)
-        _truncate_labels(img_np, z_frac=(0.2, 1.0))
-    labels_img = replace_sitk_with_numpy(labels_img, img_np)
-        '''
-    print(labels_img)
-        '''
-        LabelStatistics = sitk.LabelStatisticsImageFilter()
-    LabelStatistics.Execute(fixed_img, labels_img)
-        count = LabelStatistics.GetCount(1)
-        mean = LabelStatistics.GetMean(1)
-        variance = LabelStatistics.GetVariance(1)
-        print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
-        '''
+    labels_img_orig = labels_img
+    labels_imgs = []
+    for truncate in (True, False):
+        img = _transform_labels(transformix_img_filter, labels_img, settings, truncate=truncate)
+        img, transformed_img = _curate_img(
+            fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
+        labels_imgs.append(img)
+    labels_img = labels_imgs[0]
+    labels_img_full = labels_imgs[1]
     
     if show_imgs:
         # show individual SimpleITK images in default viewer
@@ -671,9 +690,13 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         moving_img, transformed_img, translation, flip=True)
     
     # overlap stats
+    print("DSC compared with atlas")
     measure_overlap(
         fixed_img_orig, transformed_img, 
         transformed_thresh=settings["atlas_threshold"])
+    
+    print("DSC compared with labels")
+    _measure_overlap_labels(fixed_img_orig, labels_img_full)
     
     # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file, None)

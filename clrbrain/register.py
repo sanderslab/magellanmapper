@@ -665,9 +665,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     if write_imgs:
         # write atlas and labels files, transposed according to plane setting
         imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS)
-        if new_atlas:
-            imgs_names = (IMG_ATLAS, IMG_ATLAS_TEMPLATE, IMG_LABELS)
         imgs_write = [fixed_img, transformed_img, labels_img]
+        if new_atlas:
+            imgs_names = (IMG_ATLAS, IMG_LABELS)
+            imgs_write = [transformed_img, labels_img]
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
             if new_atlas:

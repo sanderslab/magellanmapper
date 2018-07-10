@@ -465,9 +465,9 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
         img = imgs[i]
         result_img_np = sitk.GetArrayFromImage(img)
         if inpaint:
-    result_img_np = plot_3d.in_paint(result_img_np, to_fill)
+            result_img_np = plot_3d.in_paint(result_img_np, to_fill)
         if carve:
-    result_img_np[fixed_img_np <= thresh] = 0
+            result_img_np[fixed_img_np <= thresh] = 0
         result_img = replace_sitk_with_numpy(img, result_img_np)
         result_imgs.append(result_img)
         if i == 0:
@@ -564,10 +564,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
-    img_np = sitk.GetArrayFromImage(fixed_img)
-    #img_np = plot_3d.saturate_roi(img_np)
-    img_np = plot_3d.denoise_roi(img_np)
-    fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
+        img_np = sitk.GetArrayFromImage(fixed_img)
+        #img_np = plot_3d.saturate_roi(img_np)
+        img_np = plot_3d.denoise_roi(img_np)
+        fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
     
     # load moving image, assumed to be atlas
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
@@ -576,6 +576,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     moving_img = transpose_img(
         moving_img, plane, flip, target_size=fixed_img_size)
     
+    # basic info from images just prior to SimpleElastix filtering for 
+    # registration; to view raw images, show these images rather than merely 
+    # turning all iterations to 0 since simply running through the filter 
+    # will alter images
     print("fixed image from {} (type {}):\n{}".format(
         fixed_file, fixed_img.GetPixelIDTypeAsString(), fixed_img))
     print("moving image from {} (type {}):\n{}".format(
@@ -597,7 +601,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # affine to sheer and scale
     param_map = sitk.GetDefaultParameterMap("affine")
     param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
-    #param_map["NumberOfResolutions"] = ["6"]
     param_map_vector.append(param_map)
     # bspline for non-rigid deformation
     param_map = sitk.GetDefaultParameterMap("bspline")
@@ -605,6 +608,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
+    '''
+    # num of resolutions should match num of grid spacings
+    param_map["NumberOfResolutions"] = ["6"]
+    param_map["GridSpacingSchedule"] = ["32", "16", "8", "4", "2", "1"]
+    param_map["GridSpacingSchedule"] = ["8", "4", "2.80322", "1.9881", "1.41", "1"]
+    '''
     if settings["point_based"]:
         # point-based registration added to b-spline, which takes point sets 
         # found in name_prefix's folder; note that coordinates are from the 
@@ -613,10 +622,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         fix_pts_path = os.path.join(os.path.dirname(name_prefix), "fix_pts.txt")
         move_pts_path = os.path.join(os.path.dirname(name_prefix), "mov_pts.txt")
         if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
-    metric = list(param_map["Metric"])
-    metric.append("CorrespondingPointsEuclideanDistanceMetric")
-    param_map["Metric"] = metric
-    #param_map["Metric2Weight"] = ["0.5"]
+            metric = list(param_map["Metric"])
+            metric.append("CorrespondingPointsEuclideanDistanceMetric")
+            param_map["Metric"] = metric
+            #param_map["Metric2Weight"] = ["0.5"]
             elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
             elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
     
@@ -722,6 +731,7 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
             filters.threshold_mean(sitk.GetArrayFromImage(transformed_img)))
     print("measuring overlap with thresholds of {} (fixed) and {} (transformed)"
           .format(fixed_thresh, transformed_thresh))
+    # similar to simple binary thresholding via Numpy
     fixed_binary_img = sitk.BinaryThreshold(fixed_img, fixed_thresh)
     transformed_binary_img = sitk.BinaryThreshold(
         transformed_img, transformed_thresh)

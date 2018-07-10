@@ -222,52 +222,64 @@ def update_process_settings(settings, settings_type):
     # any/all/none can be combined with any main profile, modifiers lower in 
     # this listing taking precedence over prior ones and the main profile
     
-    if "_zebrafish" in settings_type:
-        settings["settings_name"] += "_zebrafish"
-        settings["min_sigma_factor"] = 2.5
-        settings["max_sigma_factor"] = 3
+    settings.add_modifier(
+        "_zebrafish", 
+        {"min_sigma_factor": 2.5,
+         "max_sigma_factor": 3}, 
+        settings_type)
     
-    if "_contrast" in settings_type:
-        settings["settings_name"] += "_contrast"
-        settings["channel_colors"] = ("inferno", "bone")
-  
-    if "_cytoplasm" in settings_type:
-        settings["settings_name"] += "_cytoplasm"
-        settings["clip_min"] = 0.3
-        settings["clip_max"] = 0.8
-        settings["points_3d_thresh"] = 0.7
-        settings["min_sigma_factor"] = 8
-        settings["max_sigma_factor"] = 20
-        settings["num_sigma"] = 10
-        settings["overlap"] = 0.2
-  
-    if "_small" in settings_type:
-        settings["settings_name"] += "_small"
-        settings["points_3d_thresh"] = 0.3 # used only if not surface
-        settings["isotropic_vis"] = (1, 1, 1)
+    settings.add_modifier(
+        "_contrast", 
+        {"channel_colors": ("inferno", "bone")}, 
+        settings_type)
+    
+    settings.add_modifier(
+        "_cytoplasm", 
+        {"clip_min": 0.3,
+         "clip_max": 0.8,
+         "points_3d_thresh": 0.7,
+         "min_sigma_factor": 8,
+         "max_sigma_factor": 20,
+         "num_sigma": 10,
+         "overlap": 0.2}, 
+        settings_type)
+    
+    settings.add_modifier(
+        "_small", 
+        {"points_3d_thresh": 0.3, # used only if not surface
+         "isotropic_vis": (1, 1, 1)}, 
+        settings_type)
+    
+    settings.add_modifier(
+        "_binary", 
+        {"denoise_size": None,
+         "detection_threshold": 0.001}, 
+        settings_type)
 
-    if "_binary" in settings_type:
-        settings["settings_name"] = "_binary"
-        settings["denoise_size"] = None
-        settings["detection_threshold"] = 0.001
-    
-    if "_20x" in settings_type:
-        settings["settings_name"] += "_20x"
-        # fit into ~32GB RAM instance after isotropic interpolation
-        settings["segment_size"] = 50
-    
-    if "_exportdl" in settings_type:
-        settings["settings_name"] += "_exportdl"
-        # export to deep learning framework with required dimensions
-        settings["isotropic"] = (0.93, 1, 1)
+    # fit into ~32GB RAM instance after isotropic interpolation
+    settings.add_modifier(
+        "_20x", 
+        {"segment_size": 50}, 
+        settings_type)
 
-    if "_importdl" in settings_type:
-        settings["settings_name"] += "_importdl"
-        # import from deep learning predicted image
-        settings["isotropic"] = None # assume already isotropic
-        settings["resize_blobs"] = (.2, 1, 1) # 
+    # export to deep learning framework with required dimensions
+    settings.add_modifier(
+        "_exportdl", 
+        {"isotropic": (0.93, 1, 1)}, 
+        settings_type)
+
+    # import from deep learning predicted image
+    settings.add_modifier(
+        "_importdl", 
+        {"isotropic": None, # assume already isotropic
+         "resize_blobs": (.2, 1, 1)}, 
+        settings_type)
     
-    settings.add_modifier("_register", {"unsharp_strength": 1.5}, settings_type)
+    # denoise settings when performing registration
+    settings.add_modifier(
+        "_register", 
+        {"unsharp_strength": 1.5}, 
+        settings_type)
     
     if verbose:
         print("process settings for {}:\n{}"
@@ -307,12 +319,13 @@ def update_register_settings(settings, settings_type):
         # more aggressive parameters for finer tuning
         settings["settings_name"] = "finer"
         settings["bspline_iter_max"] = "512"
-      
-        if settings_type.endswith("_big"):
-            # atlas is big relative to the experimental image, so need to 
-            # more aggressively downsize the atlas
-            settings["settings_name"] += "_big"
-            settings["resize_factor"] = 0.625
+    
+    # atlas is big relative to the experimental image, so need to 
+    # more aggressively downsize the atlas
+    settings.add_modifier(
+        "_big", 
+        {"resize_factor": 0.625}, 
+        settings_type)
     
     settings.add_modifier(
         "_new", 
@@ -405,7 +418,7 @@ roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         # test single value by iterating on value that should not affect 
         # detection ability
-        #("points_3d_thresh", [0.7]),
+        ("points_3d_thresh", [0.7]),
         
         # unfused baseline
         #("scale_factor", 0.59),
@@ -434,8 +447,8 @@ roc_dict = OrderedDict([
         #"denoise_size", np.arange(5, 25, 2)
         #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
         #("tot_var_denoise", (False, True)),
-        ("min_sigma_factor", np.arange(2.5, 3.6, 0.1)),
-        ("max_sigma_factor", np.arange(3.5, 4.6, 0.1)),
+        #("min_sigma_factor", np.arange(2.5, 3.6, 0.1)),
+        #("max_sigma_factor", np.arange(3.5, 4.6, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
         #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
     ]))

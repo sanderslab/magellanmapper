@@ -11,20 +11,23 @@ The setup script will install the following:
 
 - [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python, will be installed if an existing installation isn't found
 - A `clr3` environment with Python 3
-- The Scipy, Numpy, Matplotlib stack
-- Mayavi and related Git repositories, downloaded into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) for the GUI and 3D visualization; note that Mayavi currently requires a graphical environment to install
+- Scipy, Numpy, Matplotlib stack
+- Mayavi and TraitsUI stack for GUI and 3D visualization; note that Mayavi currently requires a graphical environment to install
 - Scikit-Image for image processing
+
+On occasion, dependencies with required updates that have not been released will be downloaded as shallow Git clones into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) and pip installed.
+
+To install/run without a GUI, run a lightweight setup, `./setup_env.sh -l` ("L" arg), which avoids the Mayavi stack.
 
 ## Run Clrbrain
 Opening an image file typically involves importing it into a Numpy array format before loading it in the GUI and processing it headlessly.
 
-- Open `runclrbrain.sh` and edit it with the path to your image file and a sample command, such as file import
 - Open a new terminal if you just installed Miniconda
 - Run the script:
 
 ```
 source activate clr3
-./runclrbrain.sh
+./runclrbrain.sh -i [path_to_your_image]
 ```
 
 ## Access from Git
@@ -36,42 +39,86 @@ source activate clr3
 
 Automated processing will attempt to scale based on your system resources but may require some manual intervention. This pipeline has been tested on a Macbook Pro laptop and AWS EC2 Linux (RHEL and Amazon Linux based) instances.
 
+Optional dependencies:
+
+- ImageJ/Fiji with the BigStitcher plugin: required for tile stitching; downloaded automatically onto a server when running `deploy.sh`
+- ImageMagick: required for stack animation
+- [Slack incoming webhook](https://api.slack.com/incoming-webhooks): to notify when tile stitching alignment is ready for verification and pipeline has completed
+
 ### Local
-Use the sample stack processing command in `runclrbrain.sh`.
+Run a pipeline in `runclrbrain.sh`.
+
+For example, load a `.czi` file and display in the GUI, which will import the file into a Numpy format for faster future loading:
+
+```
+./runclrbrain.sh -i data/HugeImage.czi
+```
+
+To sitch a multi-tile image and perform cell detection on the entire image, which will load BigStitcher in ImageJ/Fiji for tile stitching:
+
+```
+./runclrbrain.sh -i data/HugeImage.czi -p full
+```
+
+See `runclrbrain.sh` for additional sample commands for common scenarios, such as cell detection on a small region of interest. The file can be edited directly to load the same image, for example.
 
 ### Server
 
 Optional dependencies:
 
 - `awscli`: AWS Command Line Interface for basic up/downloading of images and processed files S3. Install via Pip.
-- `boto3`: AWS Python client to manage EC2 instances.
+- `boto3`: AWS Python client to manage EC2 instances. 
 
-Launch and setup a server:
+#### Launch a server
 
-- Launch an instance
-  - In the standard Conda environment, graphical support and login (eg `vncserver`) are currently required during installation because of Mayavi (see above)
-  - To install/run without a GUI, run a lightweight setup: `./setup_env.sh -l` ("L" arg), which avoids the Mayavi stack
-- Attach a swap drive (eg 100GB) and storage drive (4-5x your image size): `./setup_server.sh -s` ("s" flag to initialize drives)
+You can launch a standard server, deploy Clrbrain code, and run a pipeline. Note that typically login with graphical support (eg via `vncserver`) is required during installation for Mayavi and stitching in the standard setup, but you can alternatively run a lightweight install without GUI (see above).
+
+If you already have an AMI with Clrbrain installed, you can launch a new instance of it via Clrbrain:
+
+```
+python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" "subnet-xxxxxxxx" "sg-xxxxxxxx" "UserName" 50,2000
+```
+
+- `Name` is your name of choice
+- `ami` is your previously saved AMI with Clrbrain
+- `m5.4xlarge` is the instance type, which can be changed depending on your performance requirements
+- `subnet` is your subnet group
+- `sg` is your security group
+- `UserName` is the user name whose security key will be uploaded for SSH access
+- `50,2000` creates a 50GB swap and 2000GB data drive, which can be changed depending on your needs
+
+#### Setup server with Clrbrain
 
 Deploy the Clrbrain folder and supporting files:
 
 ```
-./deploy.sh -p [your_aws_pem] -i [server_ip] \
+./deploy.sh -p [path_to_your_aws_pem] -i [server_ip] \
     -d [optional_file0] -d [optional_file1]
 ```
 
 - This script by default will:
-  - Archive the Clrbrain Git directory and `scp` it to the server
+  - Archive the Clrbrain Git directory and `scp` it to the server, using your `.pem` file to access it
   - Download and install ImageJ/Fiji onto the server
   - Update Fiji and install BigStitcher for image stitching
 - To only update an existing Clrbrain directory on the server, add `-u`
 - To add multiple files or folders such as `.aws` credentials, use the `-d` option as many times as you'd like
 
-Log into your instance:
+#### Run Clrbrain on server
 
-- Setup drives: `./setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
-- Install and run Clrbrain as above
+Log into your instance and run the Clrbrain pipeline of choice.
 
+- SSH into your server instance, typically with port forwarding to allow VNC access:
+```
+ssh -L 5900:localhost:5900 -i [path_to_your_aws_pem] ec2-user@[your_server_ip]
+```
+- If necessary, start a graphical server (eg `vncserver`) to run ImageJ/Fiji for stitching or for Mayavi dependency setup
+- Setup drives: `clrbrain/setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
+- If Clrbrain has not been installed, install it with `clrbrain/setup_env.sh` as above
+- Activate the Conda environment set up during installation
+- Run a pipeline, such as this command to fully process a multi-tile image with tile stitching, import to Numpy array, and cell detection, with AWS S3 import/export and Slack notifications along the way, followed by server clean-up/shutdown:
+```
+clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh -i "/data/HugeImage.czi" -a "my/s3/bucket" -n "https://hooks.slack.com/services/my/incoming/webhook" -p full -c
+```
 
 ## Troubleshooting
 

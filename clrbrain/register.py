@@ -2041,6 +2041,9 @@ if __name__ == "__main__":
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         
         if config.register_type == config.REGISTER_TYPES[5]:
+            # convert groupings from strings to numerical format for stats
+            groups_numeric = [
+                config.GROUPS_NUMERIC[geno] for geno in config.groups]
             dfs = []
             for level in levels:
                 # register volumes, combine from all samples, and conver to 
@@ -2049,9 +2052,8 @@ if __name__ == "__main__":
                     config.filenames, labels_ref_lookup, level, config.rescale, 
                     True)
                 group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
-                #stats.volumes_to_csv(group_vol_dict, path, config.groups, unit_factor)
                 dfs.append(stats.regions_to_pandas(
-                    group_vol_dict, level, config.groups, unit_factor))
+                    group_vol_dict, level, groups_numeric, unit_factor))
             
             # combine data frames and export to CSV
             stats.data_frames_to_csv(dfs, "vols_by_sample")

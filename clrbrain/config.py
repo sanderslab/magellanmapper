@@ -511,6 +511,7 @@ BLOBS_KEY = "blobs"
 flip = None
 
 # groups, such as genotypes and sex or combos
+GROUPS_NUMERIC = {"WT": 0.0, "het": 0.5, "null":1.0}
 groups = None
 
 

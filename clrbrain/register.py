@@ -952,8 +952,8 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS):
         corresponding Numpy array.
     """
     reg_img_path = _reg_out_path(img_path, reg_name)
+    print("loading registered image from {}".format(reg_img_path))
     reg_img = sitk.ReadImage(reg_img_path)
-    print("loaded registered image from {}".format(reg_img_path))
     if get_sitk:
         return reg_img
     return sitk.GetArrayFromImage(reg_img)
@@ -1646,8 +1646,7 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 img_path, get_sitk=True, reg_name=IMG_LABELS)
             spacing = labels_img_sitk.GetSpacing()
             labels_img = sitk.GetArrayFromImage(labels_img_sitk)
-            print("labels_img shape: {}".format(labels_img.shape))
-            print(labels_img.dtype)
+            print("{} shape: {}".format(img_path, labels_img.shape))
             
             # load blob densities by region if flagged
             blobs_ids = None

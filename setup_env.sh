@@ -2,24 +2,30 @@
 # Sets up the Clrbrain environment
 # Author: David Young 2017, 2018
 
-################################################
-# Sets up the initial Clrbrain environment with Anaconda and all
-# packages including git repositories.
-# 
-# Arguments:
-#   -h: Show help and exit.
-#   -n: Set the Conda environment name; defaults to CONDA_ENV.
-#   -s: Build and install SimpleElastix.
-#   -l: Lightweight environment setup, which does not include 
-#       GUI components such as Matplotlib or Mayavi.
-#
-# Assumptions:
-# -Assumes that the Clrbrain source package
-# -Creates the Anaconda environment, which should be first
-#  removed if you want to start with a clean environment
-# -Git dependencies will be cloned into the parent folder of 
-#  Clrbrain
-################################################
+HELP="
+Sets up the initial Clrbrain environment with Anaconda and all
+packages including git repositories.
+
+Downloads and installs Miniconda3 if it is not already present. 
+Installs or updates a Conda environment named \"clr3\" by 
+default in a standard graphical setup or \"clrclu\" for a 
+lightweight setup.
+
+Although this installation generally makes use of Conda 
+packages, Pip packages are occasionally used instead if the 
+package or necessary version is unavailable in Conda. In some 
+cases, dependencies that have required updates that are not yet 
+fully released but available on Git, in which case shallow Git 
+clones will be downloaded and installed through Pip.
+
+Arguments:
+   -h: Show help and exit.
+   -a: Install AWS components.
+   -n: Set the Conda environment name; defaults to CONDA_ENV.
+   -s: Build and install SimpleElastix.
+   -l: Lightweight environment setup, which does not include 
+       GUI components such as Matplotlib or Mayavi.
+"
 
 # default Conda environment names as found in .yml configs
 CONDA_ENV="clr3"
@@ -34,9 +40,10 @@ config_default="$ENV_CONFIG"
 
 build_simple_elastix=0
 lightweight=0
+aws=0
 
 OPTIND=1
-while getopts hn:sl opt; do
+while getopts hn:sla opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -51,6 +58,9 @@ while getopts hn:sl opt; do
             env_default="$CONDA_ENV_LIGHT"
             config_default="$ENV_CONFIG_LIGHT"
             echo "Set to create lightweight (no GUI) environment"
+            ;;
+        a)  aws=1
+            echo "Set to install AWS components"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -279,6 +289,12 @@ if [ $build_simple_elastix -eq 1 ]
 then
     # build and install SimpleElastix
     ./build_se.sh -i
+fi
+
+if [[ $aws -eq 1 ]]; then
+    # install AWS components
+    pip install boto3
+    pip install awscli
 fi
 
 echo "Clrbrain environment setup complete!"

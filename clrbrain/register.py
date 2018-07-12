@@ -488,7 +488,8 @@ def _measure_overlap_labels(fixed_img, labels_img):
     measure_overlap(
         fixed_img, result_img_for_overlap, transformed_thresh=1)
 
-def _transform_labels(transformix_img_filter, labels_img, settings, truncate=False):
+def _transform_labels(transformix_img_filter, labels_img, settings, 
+                      truncate=False):
     if truncate:
         # truncate ventral and posterior portions since variable 
         # amount of tissue or quality of imaging in these regions
@@ -549,18 +550,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     # load fixed image, assumed to be experimental image
     fixed_img = _load_numpy_to_sitk(fixed_file)
-    '''
-    # for some reason cannot load the .mhd file directly for the fixed file 
-    # or else get "MovingImage is not present" error, whereas loading the 
-    # fixed file from a Numpy array avoids the error
-    if isinstance(fixed_file, str):
-        if fixed_file.endswith(".mhd"):
-            fixed_img = sitk.ReadImage(fixed_file)
-        else:
-            fixed_img = _load_numpy_to_sitk(fixed_file)
-    else:
-        fixed_img = fixed_file
-    '''
+    
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
@@ -585,6 +575,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     print("moving image from {} (type {}):\n{}".format(
         moving_file, moving_img.GetPixelIDTypeAsString(), moving_img))
     
+    # set up SimpleElastix filter
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(fixed_img)
     elastix_img_filter.SetMovingImage(moving_img)
@@ -657,7 +648,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     labels_img_orig = labels_img
     labels_imgs = []
     for truncate in (True, False):
-        img = _transform_labels(transformix_img_filter, labels_img, settings, truncate=truncate)
+        img = _transform_labels(
+            transformix_img_filter, labels_img, settings, truncate=truncate)
         img, transformed_img = _curate_img(
             fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
         labels_imgs.append(img)
@@ -1936,10 +1928,25 @@ def _test_labels_lookup():
     ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
     print("blob IDs:\n{}".format(ids))
 
-def _test_mirror_labels(moving_file_dir):
+def _test_labels_loading(moving_file_dir, adj_labels=True):
     img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
     img_ref = sitk.ReadImage(os.path.join(moving_file_dir, IMG_ATLAS))
-    img = _mirror_labels(img, img_ref)
+    if adj_labels:
+        # test mirroring and truncation, such as ABA E18pt5
+        img_np = _mirror_labels(img, img_ref)
+        img = replace_sitk_with_numpy(img, img_np)
+        img = transpose_img(
+            img, config.plane, False, target_size=img_ref.GetSize())
+        img_np = _truncate_labels(
+            sitk.GetArrayFromImage(img), 
+            *config.register_settings["truncate_labels"])
+        img = replace_sitk_with_numpy(img, img_np)
+    else:
+        # original image, eg for ABA P56, which does not require mirroring
+        img_np = sitk.GetArrayFromImage(img)
+    label_ids = np.unique(img_np)
+    print("number of labels: {}".format(label_ids.size))
+    print(label_ids)
     sitk.Show(img)
 
 def _test_region_from_id():
@@ -2001,7 +2008,7 @@ if __name__ == "__main__":
         flip = config.flip[0]
     
     #_test_labels_lookup()
-    #_test_mirror_labels(config.filenames[1])
+    #_test_labels_loading(config.filenames[1], False)
     #_test_region_from_id()
     #_test_curate_img(config.filenames[0])
     #os._exit(os.EX_OK)

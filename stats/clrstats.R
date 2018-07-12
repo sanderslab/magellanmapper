@@ -4,6 +4,7 @@
 library("gee")
 # library("plotly")
 # library("ggplot2")
+library("viridis")
 
 # statistical models to use
 kModel = c("logit", "linregr", "gee")
@@ -194,9 +195,19 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 	# weight size based on relative num of nuclei
 	size <- stats$MeanNuclei / max(stats$MeanNuclei) * 3
 	# print(data.frame(x, size))
+	
+	# point colors based on IDs of parents at the level generated for region 
+	# IDs file, using a palette with color for each unique parent
+	parents <- stats$Parent
+	parents.unique <- unique(parents)
+	parents.indices <- match(parents, parents.unique)
+	colors <- viridis(length(parents.unique))
+	colors_parents <- colors[parents.indices]
+	
+	# base plot -log p vs effect size
 	plot(
 		x, y, main=paste(meas, "Differences for", interaction), xlab="Effects", 
-		ylab="-log(p)", type="p", col="blue", pch=16, cex=size)
+		ylab="-log(p)", type="p", pch=16, cex=size, col=colors_parents)
 	x.lbl <- x
 	y.lbl <- y
 	lbls <- paste(stats$Region, stats$RegionName, sep="\n")
@@ -207,7 +218,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 		lbls <- lbls[y.high]
 	}
 	if (length(lbls) > 0) {
-		text(x.lbl, y.lbl, label=lbls, cex=0.3, pos=3)
+		text(x.lbl, y.lbl, label=lbls, cex=0.1)
 	}
 	# plot_ly(data=stats, x=x, y=y)
 	#g <- ggplot(data=stats, aes(x=x, y=y)) + geom_point(size=2)
@@ -257,7 +268,7 @@ if (file.exists(kStatsPathOut)) {
 }
 
 # plot effects and p's
-volcanoPlot(stats, meas, "vals", thresh=c(1e-04, 2.5))
+volcanoPlot(stats, meas, "vals", thresh=c(1e-05, 0.8))
 volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
 # ":" special character automatically changed to "."
 volcanoPlot(stats, meas, "vals.sidesR", thresh=c(1e-04, 25))

@@ -257,18 +257,29 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 	return(stats.filtered)
 }
 
-# calculate stats or retrieve from file
+#######################################
+# choose measurement and model types
 meas <- kMeas[2]
+model <- kModel[2]
+
+
+# set up paramters based on chosen model 
+if (model == kModel[1]) {
+	stat <- "vals"
+} else if (model == kModel[2]) {
+	stat <- "genos"
+}
+# calculate stats or retrieve from file
 region.ids <- read.csv(kRegionIDsPath)
 if (file.exists(kStatsPathOut)) {
 	stats <- read.csv(kStatsPathOut)
 } else {
 	stats <- calcVolStats(
-		kStatsPathIn, kStatsPathOut, meas, kModel[1], region.ids)
+		kStatsPathIn, kStatsPathOut, meas, kModel[2], region.ids)
 }
 
 # plot effects and p's
-volcanoPlot(stats, meas, "vals", thresh=c(1e-05, 0.8))
+volcanoPlot(stats, meas, stat, thresh=c(1e-05, 0.8))
 volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
 # ":" special character automatically changed to "."
-volcanoPlot(stats, meas, "vals.sidesR", thresh=c(1e-04, 25))
+volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25))

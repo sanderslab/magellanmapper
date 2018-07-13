@@ -504,14 +504,20 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     r_orig = np.abs(np.copy(segs_in[:, 3]))
                     segs_in[:, 3] = np.subtract(
                         r_orig, np.divide(z_diff, 3))
-                    # make circles below 85% of their original radius 
+                    # make circles below 90% of their original radius 
                     # invisible but not removed to preserve their corresponding 
                     # colormap index
                     segs_in[np.less(
                         segs_in[:, 3], np.multiply(r_orig, 0.9)), 3] = 0
                 # show colored, non-pickable circles
+                segs_color = segs_in
+                if circles == CIRCLES[3].lower():
+                    # zero out circles from other z's in full annotation mode 
+                    # to minimize crowding and highlight center circle
+                    segs_color = np.copy(segs_in)
+                    segs_color[segs_color[:, 0] != z_relative, 3] = 0
                 collection = _circle_collection(
-                    segs_in, segs_cmap.astype(float) / 255.0, "none", 
+                    segs_color, segs_cmap.astype(float) / 255.0, "none", 
                     SEG_LINEWIDTH)
                 ax.add_collection(collection)
             

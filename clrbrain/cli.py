@@ -612,9 +612,15 @@ def main(process_args_only=False):
             config.sub_stack_max_pixels = chunk_shapes[0]
             print("Set chunk shape to {}".format(config.sub_stack_max_pixels))
     if args.ec2_start is not None:
+        # assume order of tag_name, ami_id, instance_type, subnet_id, 
+        # sec_group, key_name, ebs, and optionally max_count
         start = args.ec2_start
-        if len(start) > 0:
-            start[-1] = [int(n) for n in start[-1].split(",")]
+        i = 6
+        if len(start) > i:
+            start[i] = [int(n) for n in start[i].split(",")]
+        i += 1
+        if len(start) > i:
+            start[i] = int(start[i])
         config.ec2_start = start
         print("Set ec2 start to {}".format(config.ec2_start))
     if args.notify:

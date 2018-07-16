@@ -28,7 +28,7 @@ def instance_info(instance_id):
     return instance_id, instance_ip
 
 def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, 
-                    key_name, ebs):
+                    key_name, ebs, max_count=1):
     mappings = []
     for i in range(len(ebs)):
         device = ebs[i]
@@ -49,7 +49,7 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group,
     res = boto3.resource("ec2")
     try:
         instances = res.create_instances(
-            MinCount=1, MaxCount=1, 
+            MinCount=1, MaxCount=max_count, 
             ImageId=ami_id, InstanceType=instance_type, 
             NetworkInterfaces=[{
                 "DeviceIndex": 0, 

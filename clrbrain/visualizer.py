@@ -241,21 +241,26 @@ class Visualization(HasTraits):
             # uses absolute coordinates from end of seg
             seg_db = detector.blob_for_db(seg)
             if seg[4] == -1 and seg[3] < config.POS_THRESH:
-                # attempts to delete user added segments, where radius assumed to be 0,
-                # that are no longer selected
+                # attempts to delete user added segments, where radius assumed 
+                # to be 0,that are no longer selected
                 feedback.append(
                     "{} to delete (unselected user added or explicitly deleted)"
                     .format(seg_db))
                 segs_to_delete.append(seg_db)
             else:
-                if (seg[0] >= self.border[2] and seg[0] < (curr_roi_size[2] - self.border[2])
-                    and seg[1] >= self.border[1] and seg[1] < (curr_roi_size[1] - self.border[1])
-                    and seg[2] >= self.border[0] and seg[2] < (curr_roi_size[0] - self.border[0])):
-                    # transposes segments within inner ROI to absolute coordinates
-                    feedback.append("{} to insert".format(self._format_seg(seg_db)))
+                if (seg[0] >= self.border[2] 
+                    and seg[0] < (curr_roi_size[2] - self.border[2])
+                    and seg[1] >= self.border[1] 
+                    and seg[1] < (curr_roi_size[1] - self.border[1])
+                    and seg[2] >= self.border[0] 
+                    and seg[2] < (curr_roi_size[0] - self.border[0])):
+                    # transposes segments within inner ROI to absolute coords
+                    feedback.append(
+                        "{} to insert".format(self._format_seg(seg_db)))
                     segs_transposed.append(seg_db)
                 else:
-                    feedback.append("{} outside, ignored".format(self._format_seg(seg_db)))
+                    feedback.append(
+                        "{} outside, ignored".format(self._format_seg(seg_db)))
         
         segs_transposed_np = np.array(segs_transposed)
         unverified = None
@@ -278,13 +283,15 @@ class Visualization(HasTraits):
             feedback.append("\nDeleting segments:")
             for seg in segs_to_delete:
                 feedback.append(self._format_seg(seg))
-        exp_id = sqlite.select_or_insert_experiment(config.db.conn, config.db.cur, 
-                                                    os.path.basename(config.filename),
-                                                    None)
-        roi_id, out = sqlite.select_or_insert_roi(config.db.conn, config.db.cur, exp_id, config.series, 
-                                   np.add(self._curr_offset(), self.border).tolist(), 
-                                   np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
-        sqlite.delete_blobs(config.db.conn, config.db.cur, roi_id, segs_to_delete)
+        exp_id = sqlite.select_or_insert_experiment(
+            config.db.conn, config.db.cur, os.path.basename(config.filename),
+            None)
+        roi_id, out = sqlite.select_or_insert_roi(
+            config.db.conn, config.db.cur, exp_id, config.series, 
+            np.add(self._curr_offset(), self.border).tolist(), 
+            np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
+        sqlite.delete_blobs(
+            config.db.conn, config.db.cur, roi_id, segs_to_delete)
         
         # delete the original entry of blobs that moved since replacement
         # is based on coordinates, so moved blobs wouldn't be replaced
@@ -295,7 +302,8 @@ class Visualization(HasTraits):
         self._segs_moved = []
         
         # insert blobs into DB and save ROI in GUI
-        sqlite.insert_blobs(config.db.conn, config.db.cur, roi_id, segs_transposed)
+        sqlite.insert_blobs(
+            config.db.conn, config.db.cur, roi_id, segs_transposed)
         roi = sqlite.select_roi(config.db.cur, roi_id)
         self._append_roi(roi, self._rois_dict)
         self.rois_selections_class.selections = list(self._rois_dict.keys())
@@ -747,13 +755,18 @@ class Visualization(HasTraits):
     def update_roi(self):
         print("got {}".format(self.rois_check_list))
         if self.rois_check_list not in ("", _ROI_DEFAULT):
-            # get chosen ROI reconstruct original ROI size and offset including border
+            # get chosen ROI to reconstruct original ROI size and offset 
+            # including border
             roi = self._rois_dict[self.rois_check_list]
             cli.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
-            cli.roi_size = tuple(np.add(cli.roi_size, np.multiply(self.border, 2)).astype(int).tolist())
+            cli.roi_size = tuple(
+                np.add(
+                    cli.roi_size, 
+                    np.multiply(self.border, 2)).astype(int).tolist())
             self.roi_array = [cli.roi_size]
             cli.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
-            cli.offset = tuple(np.subtract(cli.offset, self.border).astype(int).tolist())
+            cli.offset = tuple(
+                np.subtract(cli.offset, self.border).astype(int).tolist())
             self.x_offset, self.y_offset, self.z_offset = cli.offset
             
             # redraw the original ROI and prepare verify mode
@@ -1060,7 +1073,8 @@ class Visualization(HasTraits):
                     ),
                     Item(
                         "_region_id",
-                        editor=TextEditor(auto_set=False, enter_set=True, evaluate=int),
+                        editor=TextEditor(
+                            auto_set=False, enter_set=True, evaluate=int),
                         label="Region"
                     ),
                 ),

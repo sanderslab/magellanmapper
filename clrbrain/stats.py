@@ -14,12 +14,14 @@ from scipy import stats
 
 from clrbrain import config
 
-def _volumes_mean_sem(group_dict, key_mean, key_sem, vals, mask):
-    """Calculate the mean and standard error of the mean (SEM), storing them 
-    in the dictionary.
+def _volumes_mean_err(group_dict, key_mean, key_sem, vals, mask, ci=None):
+    """Calculate the mean and error values, storing them in the given group 
+    dictionary.
     
     Values are filtered by ``mask``, and empty (ie near-zero or None) volumes 
-    are excluded as well.
+    are excluded as well. By default, SEM is used as the error measurement. 
+    If a confidence interval argument is given, the size of the CI will be 
+    used instead of SEM.
     
     Args:
         group_dict: Dictionary where the SEM will be stored.
@@ -27,6 +29,7 @@ def _volumes_mean_sem(group_dict, key_mean, key_sem, vals, mask):
         key_sem: Key at which the SEM will be stored.
         vals: Values from which to calculate.
         mask: Boolean array corresponding to ``vals`` of values to keep.
+        ci: Confidence interval alpha level; if None, CI will not be calculated.
     """
     # convert to Numpy array to filter by make
     vals = np.array(vals)
@@ -39,11 +42,22 @@ def _volumes_mean_sem(group_dict, key_mean, key_sem, vals, mask):
     vals = vals[vals > config.POS_THRESH]
     mean = np.mean(vals)
     sem = stats.sem(vals)
-    print("mean: {}, err: {}, n after pruning: {}".format(mean, sem, vals.size))
+    err = sem
+    if ci:
+        # use confidence interval instead of SEM if CI percentage given
+        confidence = stats.t.interval(ci, len(vals) - 1, loc=mean, scale=sem)
+        err = confidence[1] - mean
+        '''
+        # alternative method, which appears to give same result
+        confidence = stats.t.ppf((1 + ci)/2., len(vals) - 1)
+        err = sem * confidence
+        '''
+    print("mean: {}, err: {}, n after pruning: {}".format(mean, err, vals.size))
     group_dict[key_mean].append(mean)
-    group_dict[key_sem].append(sem)
+    group_dict[key_sem].append(err)
 
-def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
+def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0, 
+                 ci=0.95):
     """Generate stats for volumes and densities by region and groups.
     
     Args:
@@ -60,6 +74,7 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
             rather than a list of values.
         unit_factor: Factor by which volumes will be divided to adjust units; 
             defaults to 1.0.
+        ci: Confidence intervale alpha level, which can be None to ignore.
     
     Returns:
         Tuple of ``group_dict``, ``names``, ``mean_keys``, ``err_keys``, and 
@@ -81,8 +96,8 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
     # "side" and "mirrored" for opposite side (R/L agnostic)
     SIDE = "side"
     MIR = "mirrored"
-    SIDE_SEM = SIDE + "_sem"
-    MIR_SEM = MIR + "_sem"
+    SIDE_ERR = SIDE + "_err"
+    MIR_ERR = MIR + "_err"
     VOL = "volume"
     BLOBS = "nuclei"
     DENS = "density"
@@ -93,7 +108,7 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
         print("Finding volumes and densities for group {}".format(group))
         # dictionary of mean and SEM arrays for each side, which will be 
         # populated in same order as experiments in volumes_dict
-        vol_group = {SIDE: [], MIR: [], SIDE_SEM: [], MIR_SEM: []}
+        vol_group = {SIDE: [], MIR: [], SIDE_ERR: [], MIR_ERR: []}
         blobs_group = copy.deepcopy(vol_group)
         dens_group = copy.deepcopy(vol_group)
         groups_dict[group] = {
@@ -112,10 +127,11 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
                 # store vol and SEMs in vol_group
                 if isinstance(vol_side, np.ndarray):
                     # for multiple experiments, store mean and error
-                    _volumes_mean_sem(
-                        vol_group, SIDE, SIDE_SEM, vol_side, group_mask)
-                    _volumes_mean_sem(
-                        vol_group, MIR, MIR_SEM, vol_mirrored, group_mask)
+                    _volumes_mean_err(
+                        vol_group, SIDE, SIDE_ERR, vol_side, group_mask, ci=ci)
+                    _volumes_mean_err(
+                        vol_group, MIR, MIR_ERR, vol_mirrored, group_mask, 
+                        ci=ci)
                 else:
                     # for single experiment, store only vol
                     vol_group[SIDE].append(vol_side)
@@ -133,17 +149,18 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
                         np.divide(blobs_mirrored, vol_mirrored))
                     if isinstance(density_side, np.ndarray):
                         # density means and SEMs, storing the SEMs
-                        _volumes_mean_sem(
-                            blobs_group, SIDE, SIDE_SEM, blobs_side, group_mask)
-                        _volumes_mean_sem(
-                            blobs_group, MIR, MIR_SEM, blobs_mirrored, 
-                            group_mask)
-                        _volumes_mean_sem(
-                            dens_group, SIDE, SIDE_SEM, density_side, 
-                            group_mask)
-                        _volumes_mean_sem(
-                            dens_group, MIR, MIR_SEM, density_mirrored, 
-                            group_mask)
+                        _volumes_mean_err(
+                            blobs_group, SIDE, SIDE_ERR, blobs_side, 
+                            group_mask, ci=ci)
+                        _volumes_mean_err(
+                            blobs_group, MIR, MIR_ERR, blobs_mirrored, 
+                            group_mask, ci=ci)
+                        _volumes_mean_err(
+                            dens_group, SIDE, SIDE_ERR, density_side, 
+                            group_mask, ci=ci)
+                        _volumes_mean_err(
+                            dens_group, MIR, MIR_ERR, density_mirrored, 
+                            group_mask, ci=ci)
                     else:
                         blobs_group[SIDE].append(blobs_side)
                         blobs_group[MIR].append(blobs_mirrored)
@@ -151,7 +168,7 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0):
                         dens_group[MIR].append(density_mirrored)
     names = [volumes_dict[key][config.ABA_NAME] 
              for key in volumes_dict.keys() if key >= 0]
-    return groups_dict, names, (MIR, SIDE), (MIR_SEM, SIDE_SEM), \
+    return groups_dict, names, (MIR, SIDE), (MIR_ERR, SIDE_ERR), \
            (VOL, BLOBS, DENS), \
            ("cubic \u00b5m", "nuclei", "nuclei / cubic \u00b5m")
 

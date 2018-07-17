@@ -275,7 +275,7 @@ if (file.exists(kStatsPathOut)) {
 	stats <- read.csv(kStatsPathOut)
 } else {
 	stats <- calcVolStats(
-		kStatsPathIn, kStatsPathOut, meas, kModel[2], region.ids)
+		kStatsPathIn, kStatsPathOut, meas, model, region.ids)
 }
 
 # plot effects and p's

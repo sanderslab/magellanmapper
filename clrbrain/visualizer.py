@@ -227,7 +227,8 @@ class Visualization(HasTraits):
         based on the current offset. Also inserts a new experiment based 
         on the filename if not already added.
         """
-        if self.segments is None:
+        print("segments", self.segments)
+        if self.segments is None or self.segments.size < 1:
             print("no segments found")
             return
         segs_transposed = []
@@ -659,6 +660,15 @@ class Visualization(HasTraits):
         """Handle figure close events.
         """
         self._circles_window_opened = False
+        circles = self._circles_2d[0].lower()
+        if circles == plot_2d.CIRCLES[3].lower():
+            # reset if in full annotation mode to avoid further duplicating 
+            # circles, saving beforehand to prevent loss from premature  
+            # window closure
+            self.save_segs()
+            self._reset_segments()
+            self._circles_2d = [plot_2d.CIRCLES[0]]
+            self.segs_feedback = "Reset circles after saving full annotations"
     
     def _btn_2d_trait_fired(self):
         # prevent showing duplicate windows with selectable circles

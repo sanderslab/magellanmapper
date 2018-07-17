@@ -193,8 +193,10 @@ def volume_stats_to_csv(vol_stats, path, groups=[""]):
     # for each group-subgroup combo 
     # (eg [WT_R_vols, WT_L_vols, het_R_vols, het_L_vols])
     vols = []
+    blobs = []
     dens = []
     errs_vols = []
+    errs_blobs = []
     errs_dens = []
     bar_colors = []
     header = ["Region"]
@@ -203,13 +205,17 @@ def volume_stats_to_csv(vol_stats, path, groups=[""]):
         group = groups_dict[group_name]
         for means_key in means_keys:
             vols.append(group[meas_keys[0]][means_key])
-            dens.append(group[meas_keys[1]][means_key])
+            blobs.append(group[meas_keys[1]][means_key])
+            dens.append(group[meas_keys[2]][means_key])
         for sem_key in sem_keys:
             errs_vols.append(group[meas_keys[0]][sem_key])
-            errs_dens.append(group[meas_keys[1]][sem_key])
+            errs_blobs.append(group[meas_keys[1]][sem_key])
+            errs_dens.append(group[meas_keys[2]][sem_key])
         # add a set of headers for each group
-        header.extend("{0}_vol_L,{0}_vol_sem_L,{0}_density_L,{0}_density_sem_L,"
-                      "{0}_vol_R,{0}_vol_sem_R,{0}_density_R,{0}_density_sem_R"
+        header.extend("{0}_vol_L,{0}_vol_sem_L,{0}_blobs_L,{0}_vol_blobs_L,"
+                      "{0}_density_L,{0}_density_sem_L,"
+                      "{0}_vol_R,{0}_vol_sem_R,{0}_blobs_R,"
+                      "{0}_blobs_sem_R,{0}_density_R,{0}_density_sem_R"
                       .format(group_name).split(","))
     
     with open(path, "w", newline="") as csv_file:
@@ -225,11 +231,16 @@ def volume_stats_to_csv(vol_stats, path, groups=[""]):
                 err_vol = None
                 if errs_vols[j] and len(errs_vols[j]) > 0:
                     err_vol = errs_vols[j][i]
+                blob = blobs[j][i]
+                err_blobs = None
+                if errs_blobs[j] and len(errs_blobs[j]) > 0:
+                    err_blobs = errs_blobs[j][i]
                 den = dens[j][i]
                 err_den = None
                 if errs_dens[j] and len(errs_dens[j]) > 0:
                     err_den = errs_dens[j][i]
-                row.extend([str(vol), str(err_vol), str(den), str(err_den)])
+                row.extend([str(vol), str(err_vol), str(blob), str(err_blobs), 
+                            str(den), str(err_den)])
             print(row)
             stats_writer.writerow(row)
 

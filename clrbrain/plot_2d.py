@@ -1481,7 +1481,9 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
         ax: Axes.
         lists: Tuple of mean lists to display, with each list getting a 
             separate set of bar plots with a legend entry. All lists should 
-            be the same size as one another.
+            be the same size as one another. The number of lists should equal 
+            the number of legend groups, and the number of entries in each list 
+            should equal the number of bar groups.
         errs: Tuple of variance lists (eg standard deviation or error) to 
             display, with each list getting a separate
             set of bar plots. All lists should be the same size as one 

@@ -639,7 +639,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     labels_img_np = None
     if settings["labels_mirror"]:
         # ABA E18pt5 labels file only gives half of atlas so need to mirror 
-        # one side to other
+        # one side to other based on original atlas
         labels_img_np = _mirror_labels(labels_img, sitk.ReadImage(moving_file))
     if labels_img_np is not None:
         labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
@@ -1935,19 +1935,37 @@ def _test_labels_loading(moving_file_dir, adj_labels=True):
         # test mirroring and truncation, such as ABA E18pt5
         img_np = _mirror_labels(img, img_ref)
         img = replace_sitk_with_numpy(img, img_np)
-        img = transpose_img(
-            img, config.plane, False, target_size=img_ref.GetSize())
+        img = transpose_img(img, config.plane, False)
         img_np = _truncate_labels(
             sitk.GetArrayFromImage(img), 
             *config.register_settings["truncate_labels"])
         img = replace_sitk_with_numpy(img, img_np)
+        img_ref = transpose_img(img_ref, config.plane, False)
     else:
         # original image, eg for ABA P56, which does not require mirroring
         img_np = sitk.GetArrayFromImage(img)
+    
+    # show labels
     label_ids = np.unique(img_np)
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
+    
+    # show and write images with atlas saved as Clrbrain/Numpy format to 
+    # allow opening as an image within Clrbrain alongside the labels image
+    sitk.Show(img_ref)
     sitk.Show(img)
+    target_dir = moving_file_dir + "_test"
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    name_prefix = "test"
+    labels_name = name_prefix + "_00000_" + IMG_LABELS
+    sitk.WriteImage(
+        img, os.path.join(target_dir, labels_name), False)
+    detector.resolutions = [img_ref.GetSpacing()[::-1]]
+    img_test_path = os.path.join(target_dir, name_prefix + ".czi")
+    img_ref_np = sitk.GetArrayFromImage(img_ref)
+    img_ref_np = img_ref_np[None]
+    importer.save_np_image(img_ref_np, img_test_path, 0)
 
 def _test_region_from_id():
     """Test finding a region by ID in a labels image.
@@ -2008,7 +2026,7 @@ if __name__ == "__main__":
         flip = config.flip[0]
     
     #_test_labels_lookup()
-    #_test_labels_loading(config.filenames[1], False)
+    #_test_labels_loading(config.filenames[1])#, False)
     #_test_region_from_id()
     #_test_curate_img(config.filenames[0])
     #os._exit(os.EX_OK)

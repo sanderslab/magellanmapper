@@ -1,18 +1,25 @@
 # Clrbrain stats in R
 # Author: David Young, 2018
 
+library("MASS")
 library("gee")
 # library("plotly")
 # library("ggplot2")
 library("viridis")
 
 # statistical models to use
-kModel = c("logit", "linregr", "gee")
+kModel = c("logit", "linregr", "gee", "logit.ord")
+
 # measurements, which correspond to columns in main data frame
 kMeas = c("Vol", "Dens", "Nuclei")
-kStatsPathIn <- "../vols_by_sample.csv"
-kStatsPathOut <- "../vols_stats.csv"
-kRegionIDsPath <- "../region_ids.csv"
+
+# ordered genotype levels
+kGenoLevels <- c(0, 0.5, 1)
+
+# file paths
+kStatsPathIn <- "../vols_by_sample.csv" # raw values from Clrbrain
+kStatsPathOut <- "../vols_stats.csv" # output stats
+kRegionIDsPath <- "../region_ids.csv" # region-ID map from Clrbrain
 
 fitModel <- function(model, vals, genos, sides, ids=NULL) {
 	# Fit data with the given model.
@@ -24,24 +31,49 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
 	#   sides: Vector indicated which side the given values is on, eg 
 	#     corresponding to left or right
 	#   ids: Vector of sample IDs; defaults to NULL.
+	#
+	# Returns:
+	#   Coefficients of the summary statistics. The first row of coefficients 
+	#   is removed if it is a non-intercept row. The colums are assumed to have 
+	#   effect size in the 2nd column and p-value in the 4th.
 	
-	fit <- NULL
+	coef.tab <- NULL
 	if (model == kModel[1]) {
 		# logistic regression
 		fit <- glm(genos ~ vals * sides, family=binomial)
-		print(summary.glm(fit))
+		coef.tab <- summary.glm(fit)$coefficients
+		# remove first ("non-intercept") row
+		coef.tab <- coef.tab[-(1:1), ]
+		print(coef.tab)
 	} else if (model == kModel[2]) {
 		# linear regression
+		# TODO: see whether need to factorize genos
 		fit <- lm(vals ~ genos * sides)
-		print(summary.lm(fit))
+		coef.tab <- summary.lm(fit)$coefficients
+		# remove first ("non-intercept") row
+		coef.tab <- coef.tab[-(1:1), ]
+		print(coef.tab)
 	} else if (model == kModel[3]) {
 		# generalized estimating equations
+		# TODO: fix model prob "fitted value very close to 1" error
 		fit <- gee(
 			genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
+		coef.tab <- summary(fit)$coefficients
+		print(coef.tab)
+	} else if (model == kModel[4]) {
+		# ordered logistic regression
+		vals <- scale(vals)
+		genos <- factor(genos, levels=kGenoLevels)
+		fit <- polr(genos ~ vals * sides, Hess=TRUE)
+		coef.tab <- coef(summary(fit))
+		# calculate p-vals and incorporate into coefficients
+		p.vals <- pnorm(abs(coef.tab[, "t value"]), lower.tail=FALSE) * 2
+		coef.tab <- cbind(coef.tab, "p value"=p.vals)
+		print(coef.tab)
 	} else {
 		cat("Sorry, model", model, "not found\n")
 	}
-	return(fit)
+	return(coef.tab)
 }
 
 statsByCols <- function(df, col.start, model) {
@@ -56,6 +88,8 @@ statsByCols <- function(df, col.start, model) {
 	#     col.start.
 	#   col.start: Columns starting with this string will be included.
 	#   model: Model to use, corresponding to one of kModel.
+	
+	.Deprecated("statsByRegion")
 	
 	# filter cols only starting with search string
 	cols <- names(df)[grepl(col.start, names(df))]
@@ -90,7 +124,7 @@ statsByRegion <- function(df, col, model) {
 	#   model: Model to use, corresponding to one of kModel.
 	
 	# find all regions
-	regions <- unique(df$Region)
+	regions <- unique(df$Region)#[2:2]
 	cols <- c("Region", "Stats", "MeanNuclei")
 	stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
 	names(stats) <- cols
@@ -113,8 +147,8 @@ statsByRegion <- function(df, col, model) {
 			
 			# apply stats and store in stats data frame, using list to allow 
 			# arbitrary size and storing mean nuclei as well
-			fit <- fitModel(model, vals, genos, sides, ids)
-			stats$Stats[i] <- list(summary(fit)$coefficients)
+			coef.tab <- fitModel(model, vals, genos, sides, ids)
+			stats$Stats[i] <- list(coef.tab)
 			stats$MeanNuclei[i] <- mean(df.region$Nuclei)
 			
 			# show histogram to check for parametric distribution
@@ -144,11 +178,8 @@ filterStats <- function(stats) {
 	offset <- 0 # number of columns ahead of coefficients
 	for (i in 1:nrow(stats.filt)) {
 		if (is.na(stats.filt$Stats[i])) next
-		# get coefficients, stored in one-element list, removing first 
-		# ("non-intercept") row
-		# print(stats.filt$Region[i])
-		# print(stats.filt$Stats[i])
-		stats.coef <- stats.filt$Stats[i][[1]][-(1:1), ]
+		# get coefficients, stored in one-element list
+		stats.coef <- stats.filt$Stats[i][[1]]
 		if (is.null(filtered)) {
 			# build data frame if not yet generated to store pertinent coefficients 
 			# from each type of main effect or interaction
@@ -224,7 +255,8 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 	#g <- ggplot(data=stats, aes(x=x, y=y)) + geom_point(size=2)
 	# ggplotly(g, tooltip=c("Region"))
 	#print(g)
-	dev.print(pdf, file=paste("../volcano", meas, paste0(interaction, ".pdf"), sep="_"))
+	dev.print(
+		pdf, file=paste("../volcano", meas, paste0(interaction, ".pdf"), sep="_"))
 }
 
 calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
@@ -260,15 +292,15 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 #######################################
 # choose measurement and model types
 meas <- kMeas[2]
-model <- kModel[2]
+model <- kModel[4]
 
 
-# set up paramters based on chosen model 
-if (model == kModel[1]) {
-	stat <- "vals"
-} else if (model == kModel[2]) {
+# set up paramters based on chosen model
+stat <- "vals"
+if (model == kModel[2]) {
 	stat <- "genos"
 }
+
 # calculate stats or retrieve from file
 region.ids <- read.csv(kRegionIDsPath)
 if (file.exists(kStatsPathOut)) {

@@ -282,7 +282,7 @@ def insert_roi(conn, cur, exp_id, series, offset, size):
 
 def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
     """Selects an ROI from the given parameters, or inserts the 
-    experiment if not found.
+    ROI if not found.
     
     Args:
         conn: The connection.
@@ -315,7 +315,8 @@ def select_rois(cur, exp_id):
         cur: Connection's cursor.
         experiment_id: ID of the experiment.
     """
-    cur.execute("SELECT id, experiment_id, series, offset_x, offset_y, offset_z, size_x, size_y, "
+    cur.execute("SELECT id, experiment_id, series, "
+                "offset_x, offset_y, offset_z, size_x, size_y, "
                 "size_z FROM rois WHERE experiment_id = ?", (exp_id, ))
     rows = cur.fetchall()
     return rows

@@ -111,7 +111,7 @@ statsByCols <- function(df, col.start, model) {
 }
 
 statsByRegion <- function(df, col, model) {
-	# Calculates statistics given by region for columns starting with the given 
+	# Calculate statistics given by region for columns starting with the given 
 	# string using the selected model.
 	#
 	# Values of 0 will be ignored. If all values for a given vector are 0, 
@@ -155,7 +155,7 @@ statsByRegion <- function(df, col, model) {
 			# show histogram to check for parametric distribution
 			#hist(vals)
 			
-			jitterPlot(df.region.nonzero, col, region)
+			jitterPlot(df.region.nonzero, col)
 		} else {
 			# ignore region if all values 0, leaving entry for region as NA
 			cat(region, ": no non-zero samples found\n\n")
@@ -164,15 +164,24 @@ statsByRegion <- function(df, col, model) {
 	return(stats)
 }
 
-jitterPlot <- function(df.region, col, region) {
-			# plot jitter/scatter plots of values by genotype with mean and 95% CI
+jitterPlot <- function(df.region, col) {
+	# Plot jitter/scatter plots of values by genotype with mean and 95% CI.
+	#
+	# Args:
+	#   df.region: Date frame sliced by region, assumed to be filtered for 
+	#     non-zero values.
+	#   col: Name of column for values.
+	
+	region.id <- df.region$Region[1]
+	region.name <- df.region$RegionName[1]
 	genos <- df.region$Geno
 			genos.unique <- sort(unique(genos))
 	sides <- df.region$Side
 	sides.unique <- sort(unique(sides))
 	vals <- df.region[[col]]
 	maxes <- c(length(genos.unique) * length(sides.unique), max(vals))
-			plot(NULL, frame.plot=TRUE, xlab=region, ylab=col, xaxt="n", 
+	title <- paste0(region.name, " (", region.id, ")")
+	plot(NULL, frame.plot=TRUE, xlab=title, ylab=col, xaxt="n", 
 					 xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]))
 	names <- list()
 			i <- 0
@@ -189,6 +198,7 @@ jitterPlot <- function(df.region, col, region) {
 				vals.mean <- mean(vals.geno)
 				vals.sd <- sd(vals.geno)
 				vals.sem <- vals.sd / sqrt(num.vals)
+			# use 97.5th percentile for 2-tailed 95% confidence level
 				vals.ci <- qt(0.975, df=num.vals-1) * vals.sem
 			segments(x - 0.25, vals.mean, x + 0.25, vals.mean)
 			arrows(x, vals.mean + vals.ci, x, vals.mean - vals.ci, length=0.05, 
@@ -316,13 +326,14 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 	
 	# load CSV file output by Clrbrain Python stats module
 	df <- read.csv(path.in)
+	# merge in region name based on matching IDs
+	df <- merge(df, region.ids, by="Region")
 	print.data.frame(df)
 	cat("\n\n")
 	
 	# calculate stats, filter out NAs and extract effects and p-values
 	stats <- statsByRegion(df, meas, model)
 	stats.filtered <- filterStats(stats)
-	# merge in region name based on matching IDs
 	stats.filtered <- merge(stats.filtered, region.ids, by="Region")
 	print(stats.filtered)
 	write.csv(stats.filtered, path.out)

@@ -168,28 +168,37 @@ jitterPlot <- function(df.region, col, region) {
 			# plot jitter/scatter plots of values by genotype with mean and 95% CI
 	genos <- df.region$Geno
 			genos.unique <- sort(unique(genos))
+	sides <- df.region$Side
+	sides.unique <- sort(unique(sides))
 	vals <- df.region[[col]]
-			maxes <- c(length(genos.unique), max(vals))
+	maxes <- c(length(genos.unique) * length(sides.unique), max(vals))
 			plot(NULL, frame.plot=TRUE, xlab=region, ylab=col, xaxt="n", 
 					 xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]))
+	names <- list()
 			i <- 0
 			for (geno in genos.unique) {
-				vals.geno <- vals[genos == geno]
+		x.adj <- 0
+		mtext(geno, side=1, at=i+0.5)
+		for (side in sides.unique) {
+			vals.geno <- vals[genos == geno & sides == side]
 				print(vals.geno)
 				num.vals <- length(vals.geno)
 				# add jitter to distinguish points
-				points(jitter(rep(i, num.vals), amount=0.2), vals.geno, col=i+1)
+			x <- i + x.adj
+			points(jitter(rep(x, num.vals), amount=0.2), vals.geno, col=i+1, pch=16)
 				vals.mean <- mean(vals.geno)
 				vals.sd <- sd(vals.geno)
 				vals.sem <- vals.sd / sqrt(num.vals)
 				vals.ci <- qt(0.975, df=num.vals-1) * vals.sem
-				segments(i - 0.25, vals.mean, i + 0.25, vals.mean)
-				arrows(i, vals.mean + vals.ci, i, vals.mean - vals.ci, length=0.05, 
+			segments(x - 0.25, vals.mean, x + 0.25, vals.mean)
+			arrows(x, vals.mean + vals.ci, x, vals.mean - vals.ci, length=0.05, 
 							 angle=90, code=3)
-				mtext(geno, side=1, at=i)
+			names <- append(names, paste(geno, side))
 				i <- i + 1
+			x.adj <- x.adj + 0.05
 			}
-			#legend(0, maxes[2] * 0.2, genos.unique, col=1:2, pch=1)
+	}
+	legend(0, maxes[2] * 0.5, names, col=1:length(names), pch=16)
 }
 
 filterStats <- function(stats) {

@@ -37,6 +37,7 @@ from clrbrain import importer
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+from clrbrain import stats
 
 colormap_2d = cm.inferno
 CMAP_GRBK = LinearSegmentedColormap.from_list(
@@ -1576,32 +1577,21 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
     unit = "mm"
     width = 0.1 # default bar width
     
-    # group stats into a list for each set of bars
+    # setup legends and bar colors
     sides_names = ("Left", "Right")
     legend_names = []
-    bar_stats = {}
-    stats_keys = (means_keys, sem_keys)
-    num_stats = len(stats_keys)
-    for meas in meas_keys:
-        # nested dict for each meas to contain stats types (eg mean, err)
-        bar_stats[meas] = {}
-        for i in range(num_stats):
-            bar_stats[meas][i] = []
     bar_colors = []
     i = 0
     groups_unique = np.unique(groups)
     for group_name in groups_unique:
-        group = groups_dict[group_name]
         for side in sides_names:
             name = "{} {}".format(group_name, side) if group_name else side
             legend_names.append(name)
             bar_colors.append("C{}".format(i))
             i += 1
-        for meas in meas_keys:
-            for j in range(num_stats):
-                for stat_key in stats_keys[j]:
-                    # append val from stat type for each measurement
-                    bar_stats[meas][j].append(group[meas][stat_key])
+    
+    # organize stats dictionary by measurements for bar plot format
+    bar_stats = stats.vol_group_to_meas_dict(vol_stats, groups)
     
     # setup figure layout with single subplot for volumes only or 
     # side-by-side subplots with additional measurements if including densities

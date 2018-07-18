@@ -172,6 +172,27 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0,
            (VOL, BLOBS, DENS), \
            ("cubic \u00b5m", "nuclei", "nuclei / cubic \u00b5m")
 
+def vol_group_to_meas_dict(vol_stats, groups):
+    groups_dict, names, means_keys, sem_keys, meas_keys, meas_units = vol_stats
+    # group stats into a list for each set of bars
+    meas_dict = {}
+    stats_keys = (means_keys, sem_keys)
+    num_stats = len(stats_keys)
+    for meas in meas_keys:
+        # nested dict for each meas to contain stats types (eg mean, err)
+        meas_dict[meas] = {}
+        for i in range(num_stats):
+            meas_dict[meas][i] = []
+    groups_unique = np.unique(groups)
+    for group_name in groups_unique:
+        group = groups_dict[group_name]
+        for meas in meas_keys:
+            for j in range(num_stats):
+                for stat_key in stats_keys[j]:
+                    # append val from stat type for each measurement
+                    meas_dict[meas][j].append(group[meas][stat_key])
+    return meas_dict
+
 def volume_stats_to_csv(vol_stats, path, groups=[""]):
     """Export volume mean stats to CSV file.
     
@@ -189,60 +210,36 @@ def volume_stats_to_csv(vol_stats, path, groups=[""]):
     ext = ".csv"
     if not path.endswith(ext): path += ext
     
-    # build lists of all values for the given measurements, with an element 
-    # for each group-subgroup combo 
-    # (eg [WT_R_vols, WT_L_vols, het_R_vols, het_L_vols])
-    vols = []
-    blobs = []
-    dens = []
-    errs_vols = []
-    errs_blobs = []
-    errs_dens = []
-    bar_colors = []
-    header = ["Region"]
-    groups_unique = np.unique(groups)
-    for group_name in groups_unique:
-        group = groups_dict[group_name]
-        for means_key in means_keys:
-            vols.append(group[meas_keys[0]][means_key])
-            blobs.append(group[meas_keys[1]][means_key])
-            dens.append(group[meas_keys[2]][means_key])
-        for sem_key in sem_keys:
-            errs_vols.append(group[meas_keys[0]][sem_key])
-            errs_blobs.append(group[meas_keys[1]][sem_key])
-            errs_dens.append(group[meas_keys[2]][sem_key])
-        # add a set of headers for each group
-        header.extend("{0}_vol_L,{0}_vol_sem_L,{0}_blobs_L,{0}_vol_blobs_L,"
-                      "{0}_density_L,{0}_density_sem_L,"
-                      "{0}_vol_R,{0}_vol_sem_R,{0}_blobs_R,"
-                      "{0}_blobs_sem_R,{0}_density_R,{0}_density_sem_R"
-                      .format(group_name).split(","))
+    meas_stats = vol_group_to_meas_dict(vol_stats, groups)
     
-    with open(path, "w", newline="") as csv_file:
-        stats_writer = csv.writer(csv_file, delimiter=",")
-        stats_writer.writerow(header)
-        
-        # output row for each name, where names list matches each vol list 
-        # (i) within vols, and each vol list is for a separate group (j)
-        for i in range(len(names)):
-            row = [names[i]]
-            for j in range(len(vols)):
-                vol = vols[j][i]
-                err_vol = None
-                if errs_vols[j] and len(errs_vols[j]) > 0:
-                    err_vol = errs_vols[j][i]
-                blob = blobs[j][i]
-                err_blobs = None
-                if errs_blobs[j] and len(errs_blobs[j]) > 0:
-                    err_blobs = errs_blobs[j][i]
-                den = dens[j][i]
-                err_den = None
-                if errs_dens[j] and len(errs_dens[j]) > 0:
-                    err_den = errs_dens[j][i]
-                row.extend([str(vol), str(err_vol), str(blob), str(err_blobs), 
-                            str(den), str(err_den)])
-            print(row)
-            stats_writer.writerow(row)
+    data = OrderedDict()
+    sides = ("L", "R")
+    groups_unique = np.unique(groups)
+    header = ["Region"]
+    for meas in meas_keys:
+        for group_name in groups_unique:
+            for side in sides:
+                header.extend("{0}_{1}_{2},{0}_{1}_err_{2}"
+                              .format(group_name, meas, side).split(","))
+    for h in header:
+        data[h] = []
+    
+    data[header[0]] = names
+    j = 1
+    # generate bar plots
+    for i in range(len(meas_keys)):
+        meas = meas_keys[i]
+        # assume that meas_group 0 is means/count, 1 is errs
+        meas_group = meas_stats[meas]
+        for means, errs in zip(meas_group[0], meas_group[1]):
+            data[header[j]].extend(means)
+            data[header[j + 1]].extend(errs)
+            j += 2
+    
+    data_frame = pd.DataFrame(data=data, columns=header)
+    data_frame.to_csv(path, index=False)
+    print("exported volume data per group to CSV at {}".format(path))
+    return data_frame
 
 def volumes_to_csv(volumes_dict, path, groups=[""], unit_factor=1.0):
     """Export volumes from each sample to Pandas format and CSV file.

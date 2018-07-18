@@ -110,7 +110,7 @@ statsByCols <- function(df, col.start, model) {
 	}
 }
 
-statsByRegion <- function(df, col, model) {
+statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 	# Calculate statistics given by region for columns starting with the given 
 	# string using the selected model.
 	#
@@ -122,6 +122,9 @@ statsByRegion <- function(df, col, model) {
 	#     col.
 	#   col: Column from which to find main stats.
 	#   model: Model to use, corresponding to one of kModel.
+	#   split.by.side: True to keep data split by sides, False to combine 
+	#     corresponding regions from opposite sides into single regions; 
+	#     defaults to True.
 	
 	# find all regions
 	regions <- unique(df$Region)#[2:2]
@@ -155,7 +158,18 @@ statsByRegion <- function(df, col, model) {
 			# show histogram to check for parametric distribution
 			#hist(vals)
 			
-			jitterPlot(df.region.nonzero, col)
+			title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
+			df.jitter <- df.region.nonzero
+			if (!split.by.side) {
+				print(df.region.nonzero)
+				df.jitter <- aggregate(cbind(Vol, Nuclei) ~ Sample, df.jitter, sum)
+				df.jitter$Dens <- df.jitter$Nuclei / df.jitter$Vol
+				df.jitter <- unique(
+					merge(df.jitter, df.region.nonzero[c("Geno", "Sample")], 
+								by="Sample"))
+				print(df.jitter)
+			}
+			jitterPlot(df.jitter, col, title, split.by.side)
 		} else {
 			# ignore region if all values 0, leaving entry for region as NA
 			cat(region, ": no non-zero samples found\n\n")
@@ -164,23 +178,27 @@ statsByRegion <- function(df, col, model) {
 	return(stats)
 }
 
-jitterPlot <- function(df.region, col) {
+jitterPlot <- function(df.region, col, title, split.by.side=TRUE) {
 	# Plot jitter/scatter plots of values by genotype with mean and 95% CI.
 	#
 	# Args:
 	#   df.region: Date frame sliced by region, assumed to be filtered for 
 	#     non-zero values.
 	#   col: Name of column for values.
+	#   title: Plot figure title.
+	#   split.by.side: True to plot separate sub-scatter plots for each 
+	#     region by side; defaults to True.
 	
-	region.id <- df.region$Region[1]
-	region.name <- df.region$RegionName[1]
 	genos <- df.region$Geno
 			genos.unique <- sort(unique(genos))
 	sides <- df.region$Side
 	sides.unique <- sort(unique(sides))
+	if (!split.by.side) {
+		# use a single side for one for-loop pass
+		sides.unique = c("")
+	}
 	vals <- df.region[[col]]
 	maxes <- c(length(genos.unique) * length(sides.unique), max(vals))
-	title <- paste0(region.name, " (", region.id, ")")
 	plot(NULL, frame.plot=TRUE, xlab=title, ylab=col, xaxt="n", 
 					 xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]))
 	names <- list()
@@ -189,7 +207,11 @@ jitterPlot <- function(df.region, col) {
 		x.adj <- 0
 		mtext(geno, side=1, at=i+0.5)
 		for (side in sides.unique) {
+			if (split.by.side) {
 			vals.geno <- vals[genos == geno & sides == side]
+			} else {
+				vals.geno <- vals[genos == geno]
+			}
 				print(vals.geno)
 				num.vals <- length(vals.geno)
 				# add jitter to distinguish points
@@ -209,6 +231,8 @@ jitterPlot <- function(df.region, col) {
 			}
 	}
 	legend(0, maxes[2] * 0.5, names, col=1:length(names), pch=16)
+	dev.print(
+		pdf, file=paste0("../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
 }
 
 filterStats <- function(stats) {
@@ -306,7 +330,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 	# ggplotly(g, tooltip=c("Region"))
 	#print(g)
 	dev.print(
-		pdf, file=paste("../volcano", meas, paste0(interaction, ".pdf"), sep="_"))
+		pdf, file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), sep="_"))
 }
 
 calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
@@ -332,7 +356,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 	cat("\n\n")
 	
 	# calculate stats, filter out NAs and extract effects and p-values
-	stats <- statsByRegion(df, meas, model)
+	stats <- statsByRegion(df, meas, model)#, split.by.side=FALSE)
 	stats.filtered <- filterStats(stats)
 	stats.filtered <- merge(stats.filtered, region.ids, by="Region")
 	print(stats.filtered)

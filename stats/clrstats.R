@@ -138,10 +138,11 @@ statsByRegion <- function(df, col, model) {
 		stats$Region[i] <- region
 		if (any(nonzero)) {
 			# filter each column within region for rows with non-zero values
-			vals <- df.region[[col]][nonzero]
-			genos <- df.region$Geno[nonzero]
-			sides <- df.region$Side[nonzero]
-			ids <- df.region$Sample[nonzero]
+			df.region.nonzero <- df.region[nonzero, ]
+			vals <- df.region.nonzero[[col]]
+			genos <- df.region.nonzero$Geno
+			sides <- df.region.nonzero$Side
+			ids <- df.region.nonzero$Sample
 			cat("Region", region, ": ", vals, "from ", sum(nonzero), 
 					"nonzero regions\n")
 			
@@ -154,8 +155,20 @@ statsByRegion <- function(df, col, model) {
 			# show histogram to check for parametric distribution
 			#hist(vals)
 			
+			jitterPlot(df.region.nonzero, col, region)
+		} else {
+			# ignore region if all values 0, leaving entry for region as NA
+			cat(region, ": no non-zero samples found\n\n")
+		}
+	}
+	return(stats)
+}
+
+jitterPlot <- function(df.region, col, region) {
 			# plot jitter/scatter plots of values by genotype with mean and 95% CI
+	genos <- df.region$Geno
 			genos.unique <- sort(unique(genos))
+	vals <- df.region[[col]]
 			maxes <- c(length(genos.unique), max(vals))
 			plot(NULL, frame.plot=TRUE, xlab=region, ylab=col, xaxt="n", 
 					 xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]))
@@ -177,12 +190,6 @@ statsByRegion <- function(df, col, model) {
 				i <- i + 1
 			}
 			#legend(0, maxes[2] * 0.2, genos.unique, col=1:2, pch=1)
-		} else {
-			# ignore region if all values 0, leaving entry for region as NA
-			cat(region, ": no non-zero samples found\n\n")
-		}
-	}
-	return(stats)
 }
 
 filterStats <- function(stats) {

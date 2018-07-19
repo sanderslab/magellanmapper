@@ -313,7 +313,7 @@ def volumes_to_csv(volumes_dict, path, groups=[""], unit_factor=1.0):
     return data_frame
 
 def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
-    """Export volumes from each sample to Pandas format and CSV file, with 
+    """Export volumes from each sample to Pandas format, with 
     measurements for each region on a separate line.
     
     Args:

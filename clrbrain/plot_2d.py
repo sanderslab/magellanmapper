@@ -1147,7 +1147,7 @@ class PixelDisplay(object):
         z = self.img[int(y), int(x)]
         return "x={:.01f}, y={:.01f}, z={:.01f}".format(x, y, z)
 
-def plot_atlas_editor(image5d, labels_img, channel, offset):
+def plot_atlas_editor(image5d, labels_img, channel, offset, plane=None):
     """Plot ROI as sequence of z-planes containing only the ROI itself.
     
     Args:
@@ -1169,18 +1169,61 @@ def plot_atlas_editor(image5d, labels_img, channel, offset):
     
     ax = plt.subplot(gs[0, 0])
     hide_axes(ax)
-    img2d, aspect, origin = extract_plane(image5d, offset[2])
+    z_overview = offset[2]
     colormaps = config.process_settings["channel_colors"]
-    imshow_multichannel(
-        ax, img2d, channel, colormaps, aspect, 1)
-    
     cmap_labels = _get_labels_colormap(labels_img)
-    labels_image5d = importer.roi_to_image5d(labels_img)
-    img2d, aspect, origin = extract_plane(labels_image5d, offset[2])
-    imshow_multichannel(
-        ax, img2d, 0, [cmap_labels], aspect, 0.7)
+    if not plane:
+        plane = config.PLANE[0]
     
-    ax.format_coord = PixelDisplay(img2d)
+    def show_overview(z_overview):
+        img2d, aspect, origin = extract_plane(image5d, z_overview)
+        imshow_multichannel(
+            ax, img2d, channel, colormaps, aspect, 1, interpolation="none")
+        
+        labels_image5d = importer.roi_to_image5d(labels_img)
+        img2d, aspect, origin = extract_plane(labels_image5d, z_overview)
+        imshow_multichannel(
+            ax, img2d, 0, [cmap_labels], aspect, 0.7, interpolation="none")
+        ax.format_coord = PixelDisplay(img2d)
+    
+    def scroll_overview(event):
+        """Scroll through overview images along their orthogonal axis.
+        
+        Args:
+            event: Mouse or key event. For mouse events, scroll step sizes 
+                will be used for movements. For key events, up/down arrows 
+                will be used.
+        """
+        nonlocal z_overview
+        z_curr = z_overview
+        step = 0
+        if isinstance(event, backend_bases.MouseEvent):
+            # scroll movements are scaled from 0 for each event
+            step += event.step
+        elif isinstance(event, backend_bases.KeyEvent):
+            # finer-grained movements through keyboard controls since the 
+            # finest scroll movements may be > 1
+            if event.key == "up":
+                step += 1
+            elif event.key == "down":
+                step -= 1
+        z_overview_new = z_overview + step
+        #print("scroll step of {} to z {}".format(step, z_overview))
+        max_size = max_plane(image5d[0], plane)
+        if z_overview_new < 0:
+            z_overview_new = 0
+        elif z_overview_new >= max_size:
+            z_overview_new = max_size - 1
+        if z_overview_new != z_curr:
+            # move only if step registered and changing position
+            z_overview = z_overview_new
+            show_overview(z_overview)
+    
+    fig.canvas.mpl_connect("scroll_event", scroll_overview)
+    fig.canvas.mpl_connect("key_press_event", scroll_overview)
+    
+    show_overview(z_overview)
+    
     gs.tight_layout(fig, pad=0.5)
     plt.ion()
     plt.show()

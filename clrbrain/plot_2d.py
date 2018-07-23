@@ -657,6 +657,30 @@ def _get_labels_colormap(labels):
         "discrete_cmap", cmap_labels / 255.0)
     return cmap_labels
 
+def _set_overview_title(ax, plane, z_overview, zoom=1, level=0, 
+                        max_intens_proj=False):
+    """Set the overview image title.
+    
+    Args:
+        ax: Matplotlib axes on which to display the title.
+        plane: Plane string.
+        z_overview: Value along the axis corresponding to that plane.
+        zoom: Amount of zoom for the overview image.
+        level: Overview view image level, where 0 is unzoomed, 1 is the 
+            next zoom, etc.
+    """
+    plane_axis = get_plane_axis(plane)
+    if level == 0:
+        if max_intens_proj:
+            title = "Max Intensity Projection"
+        else:
+            # show the axis and axis value for unzoomed overview
+            title = "{}={}".format(plane_axis, z_overview)
+    else:
+        # show zoom for subsequent overviews
+        title = "{}x".format(int(zoom))
+    ax.set_title(title)
+
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
                   offset, segments, mask_in, segs_cmap, fn_close_listener, 
                   border=None, plane="xy", padding_stack=None,
@@ -824,29 +848,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     ax_overviews = [] # overview axes
     ax_z_list = [] # zoom plot axes
     
-    def set_overview_title(ax, plane, z_overview, zoom, level):
-        """Set the overview image title.
-        
-        Args:
-            ax: Matplotlib axes on which to display the title.
-            plane: Plane string.
-            z_overview: Value along the axis corresponding to that plane.
-            zoom: Amount of zoom for the overview image.
-            level: Overview view image level, where 0 is unzoomed, 1 is the 
-                next zoom, etc.
-        """
-        plane_axis = get_plane_axis(plane)
-        if level == 0:
-            if max_intens_proj:
-                title = "Max Intensity Projection"
-            else:
-                # show the axis and axis value for unzoomed overview
-                title = "{}={}".format(plane_axis, z_overview)
-        else:
-            # show zoom for subsequent overviews
-            title = "{}x".format(int(zoom))
-        ax.set_title(title)
-    
     def show_overview(ax, img2d_ov, img_region_2d, level):
         """Show overview image with progressive zooming on the ROI for each 
         zoom level.
@@ -915,6 +916,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
         add_scale_bar(ax, downsample)
+        _set_overview_title(
+            ax, plane, z_overview, zoom, level, max_intens_proj)
         return zoom
     
     def scroll_overview(event):
@@ -963,7 +966,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 ax = ax_overviews[level]
                 ax.clear() # prevent performance degradation
                 zoom = show_overview(ax, img2d, img_region_2d, level)
-                set_overview_title(ax, plane, z_overview, zoom, level)
     
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels
@@ -974,7 +976,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         ax_overviews.append(ax)
         hide_axes(ax)
         zoom = show_overview(ax, img2d, img_region_2d, level)
-        set_overview_title(ax, plane, z_overview, zoom, level)
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
     
@@ -1185,6 +1186,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, plane=None):
         imshow_multichannel(
             ax, img2d, 0, [cmap_labels], aspect, 0.7, interpolation="none")
         ax.format_coord = PixelDisplay(img2d)
+        _set_overview_title(ax, plane, z_overview)
     
     def scroll_overview(event):
         """Scroll through overview images along their orthogonal axis.

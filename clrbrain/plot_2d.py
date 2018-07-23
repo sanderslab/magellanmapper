@@ -647,7 +647,15 @@ def plot_roi(roi, segments, channel, show=True, title=""):
         plt.show()
     if savefig is not None:
         plt.savefig(title + "." + savefig)
-    
+
+def _get_labels_colormap(labels):
+    # generate discrete colormap for labels
+    num_colors = len(np.unique(labels))
+    cmap_labels = lib_clrbrain.discrete_colormap(
+        num_colors, alpha=150, prioritize_default=False)
+    cmap_labels = LinearSegmentedColormap.from_list(
+        "discrete_cmap", cmap_labels / 255.0)
+    return cmap_labels
 
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
                   offset, segments, mask_in, segs_cmap, fn_close_listener, 
@@ -999,14 +1007,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     gs_zoomed = gridspec.GridSpecFromSubplotSpec(zoom_plot_rows, zoom_plot_cols, 
                                                  gs[1, :],
                                                  wspace=0.1, hspace=0.1)
-    cmap_labels = None
-    if labels is not None:
-        # generate discrete colormap for labels
-        num_colors = len(np.unique(labels))
-        cmap_labels = lib_clrbrain.discrete_colormap(
-            num_colors, alpha=150, prioritize_default=False)
-        cmap_labels = LinearSegmentedColormap.from_list(
-            "discrete_cmap", cmap_labels / 255.0)
+    cmap_labels = None if labels is None else _get_labels_colormap(labels)
     # plot the fully zoomed plots
     #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots
     for i in range(zoom_plot_rows):
@@ -1138,6 +1139,51 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         print("saving figure as {}".format(name))
         plt.savefig(name)
     print("2D plot time: {}".format(time() - time_start))
+    
+class PixelDisplay(object):
+    def __init__(self, img):
+        self.img = img
+    def __call__(self, x, y):
+        z = self.img[int(y), int(x)]
+        return "x={:.01f}, y={:.01f}, z={:.01f}".format(x, y, z)
+
+def plot_atlas_editor(image5d, labels_img, channel, offset):
+    """Plot ROI as sequence of z-planes containing only the ROI itself.
+    
+    Args:
+        roi: The ROI image as a 3D array in (z, y, x) order.
+        segments: Numpy array of segments to display in the subplot, which 
+            can be None. Segments are generally given as an (n, 4)
+            dimension array, where each segment is in (z, y, x, radius).
+            All segments are assumed to be within the ROI for display.
+        channel: Channel of the image to display.
+        show: True if the plot should be displayed to screen; defaults 
+            to True.
+        title: String used as basename of output file. Defaults to "" 
+            and only used if :attr:``savefig`` is set to a file 
+            extension.
+    """
+    fig = plt.figure()
+    #fig.suptitle(title)
+    gs = gridspec.GridSpec(1, 1, wspace=0.1, hspace=0.1)
+    
+    ax = plt.subplot(gs[0, 0])
+    hide_axes(ax)
+    img2d, aspect, origin = extract_plane(image5d, offset[2])
+    colormaps = config.process_settings["channel_colors"]
+    imshow_multichannel(
+        ax, img2d, channel, colormaps, aspect, 1)
+    
+    cmap_labels = _get_labels_colormap(labels_img)
+    labels_image5d = importer.roi_to_image5d(labels_img)
+    img2d, aspect, origin = extract_plane(labels_image5d, offset[2])
+    imshow_multichannel(
+        ax, img2d, 0, [cmap_labels], aspect, 0.7)
+    
+    ax.format_coord = PixelDisplay(img2d)
+    gs.tight_layout(fig, pad=0.5)
+    plt.ion()
+    plt.show()
     
 def hide_axes(ax):
     """Hides x- and y-axes.

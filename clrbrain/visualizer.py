@@ -177,7 +177,7 @@ class Visualization(HasTraits):
     _styles_2d = List
     _DEFAULTS_STYLES_2D = [
         "Square ROI", "Square ROI with 3D", "Single row", "Wide ROI", 
-        "Multi-zoom", "Thin rows"]
+        "Multi-zoom", "Thin rows", "Atlas editor"]
     _atlas_label = None
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
@@ -753,6 +753,10 @@ class Visualization(HasTraits):
             # layout for square ROIs with thin rows to create a tall fig
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
+        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[6]:
+            # atlas editor
+            plot_2d.plot_atlas_editor(
+                cli.image5d, config.labels_img, config.channel, curr_offset)
         else:
             # defaults to Square style without oblique view
             plot_2d.plot_2d_stack(

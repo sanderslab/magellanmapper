@@ -1228,7 +1228,8 @@ class PlotEditor:
         self.ax_img.figure.canvas.mpl_disconnect(self.cidrelease)
         self.ax_img.figure.canvas.mpl_disconnect(self.cidmotion)
 
-def plot_atlas_editor(image5d, labels_img, channel, offset, plane=None):
+def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener, 
+                      plane=None):
     """Plot ROI as sequence of z-planes containing only the ROI itself.
     
     Args:
@@ -1306,6 +1307,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, plane=None):
     
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
+    fig.canvas.mpl_connect("close_event", fn_close_listener)
     
     show_overview(z_overview)
     

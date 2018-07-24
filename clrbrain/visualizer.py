@@ -756,7 +756,8 @@ class Visualization(HasTraits):
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[6]:
             # atlas editor
             plot_2d.plot_atlas_editor(
-                cli.image5d, config.labels_img, config.channel, curr_offset)
+                cli.image5d, config.labels_img, config.channel, curr_offset, 
+                self._fig_close_listener)
         else:
             # defaults to Square style without oblique view
             plot_2d.plot_2d_stack(

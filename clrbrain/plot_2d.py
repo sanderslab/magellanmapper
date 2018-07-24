@@ -648,11 +648,11 @@ def plot_roi(roi, segments, channel, show=True, title=""):
     if savefig is not None:
         plt.savefig(title + "." + savefig)
 
-def _get_labels_colormap(labels):
+def _get_labels_colormap(labels, seed=None):
     # generate discrete colormap for labels
     num_colors = len(np.unique(labels))
     cmap_labels = lib_clrbrain.discrete_colormap(
-        num_colors, alpha=150, prioritize_default=False)
+        num_colors, alpha=150, prioritize_default=False, seed=seed)
     cmap_labels = LinearSegmentedColormap.from_list(
         "discrete_cmap", cmap_labels / 255.0)
     return cmap_labels
@@ -1178,7 +1178,8 @@ class PlotEditor:
         x = int(event.xdata)
         y = int(event.ydata)
         self.intensity = self.img3d[self.plane_n, y, x]
-        print("got intensity {} at x,y,z = {},{},{}".format(self.intensity, x, y, self.plane_n))
+        print("got intensity {} at x,y,z = {},{},{}"
+              .format(self.intensity, x, y, self.plane_n))
         PlotEditor.lock = self
         
         # draw everywhere except the circle itself, store the pixel buffer 
@@ -1198,8 +1199,8 @@ class PlotEditor:
         x = int(event.xdata)
         y = int(event.ydata)
         self.img3d[self.plane_n, y, x] = self.intensity
-        print("changed intensity to {} at x,y,z = {},{},{}".format(self.intensity, x, y, self.plane_n))
-        
+        print("changed intensity to {} at x,y,z = {},{},{}"
+              .format(self.intensity, x, y, self.plane_n))
 
         # restore the saved background and redraw the circle at its new position
         canvas = self.ax_img.figure.canvas
@@ -1253,7 +1254,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     hide_axes(ax)
     z_overview = offset[2]
     colormaps = config.process_settings["channel_colors"]
-    cmap_labels = _get_labels_colormap(labels_img)
+    cmap_labels = _get_labels_colormap(labels_img, 0)
     if not plane:
         plane = config.PLANE[0]
     plot_ed = PlotEditor(labels_img)

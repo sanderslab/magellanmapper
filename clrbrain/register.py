@@ -926,7 +926,8 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
         moving_sitk, transformed_sitk, translation, flip=True)
     _show_overlays(imgs, translation, fixed_file, out_plane)
 
-def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS):
+def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS, 
+                        replace=None):
     """Load atlas-based image that has been registered to another image.
     
     Args:
@@ -938,6 +939,9 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS):
             be extracted instead.
         reg_name: Atlas image type to open; defaults to :const:``IMG_ATLAS``, 
             which will open the main atlas.
+        replace: Numpy image with which to replace and overwrite the loaded 
+            image. Defaults to None, in which case no replacement will take 
+            place.
     
     Returns:
         The atlas-based image, either as a SimpleITK image or its 
@@ -946,6 +950,10 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS):
     reg_img_path = _reg_out_path(img_path, reg_name)
     print("loading registered image from {}".format(reg_img_path))
     reg_img = sitk.ReadImage(reg_img_path)
+    if replace is not None:
+        reg_img = replace_sitk_with_numpy(reg_img, replace)
+        sitk.WriteImage(reg_img, reg_img_path, False)
+        print("replaced {} with current registered image".format(reg_img_path))
     if get_sitk:
         return reg_img
     return sitk.GetArrayFromImage(reg_img)

@@ -142,7 +142,7 @@ class Visualization(HasTraits):
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Detect")
     btn_2d_trait = Button("2D Plots")
-    btn_save_segments = Button("Save Segments")
+    btn_save_segments = Button("Save")
     roi = None # combine with roi_array?
     rois_selections_class = Instance(ListSelections)
     rois_check_list = Str
@@ -185,7 +185,8 @@ class Visualization(HasTraits):
     _region_id = Int
     _mlab_title = None
     _scene_3d_shown = False # 3D Mayavi display shown
-    _circles_window_opened = True # 2D plots with circles window opened
+    _circles_opened_type = None # type of 2D plots windows curr open
+    _opened_window_style = None # 2D plots window style curr open
     _filename = File # file browser
     _channel = Int # channel number, 0-based
     _channel_low = -1 # -1 used for None, which translates to "all"
@@ -313,6 +314,11 @@ class Visualization(HasTraits):
         print(feedback_str)
         self.segs_feedback = feedback_str
     
+    def save_atlas(self):
+        config.labels_img = register.load_registered_img(
+            config.filename, reg_name=register.IMG_LABELS, 
+            replace=config.labels_img)
+    
     def _reset_segments(self):
         """Resets the saved segments.
         """
@@ -320,7 +326,9 @@ class Visualization(HasTraits):
         self.segs_pts = None
         self.segs_in_mask = None
         self.labels = None
-        self._circles_window_opened = False
+        # window with circles may still be open but would lose segments 
+        # table and be unsavable anyway; TODO: warn before resetting segments
+        self._circles_opened_type = None
         self.segs_feedback = ""
     
     def _update_structure_level(self, curr_offset, curr_roi_size):
@@ -659,7 +667,8 @@ class Visualization(HasTraits):
     def _fig_close_listener(self, evt):
         """Handle figure close events.
         """
-        self._circles_window_opened = False
+        self._circles_opened_type = None
+        self._opened_window_style = None
         circles = self._circles_2d[0].lower()
         if circles == plot_2d.CIRCLES[3].lower():
             # reset if in full annotation mode to avoid further duplicating 
@@ -671,16 +680,21 @@ class Visualization(HasTraits):
             self.segs_feedback = "Reset circles after saving full annotations"
     
     def _btn_2d_trait_fired(self):
-        # prevent showing duplicate windows with selectable circles
+        if (self._circles_opened_type 
+            and self._circles_opened_type != plot_2d.CIRCLES[2].lower()
+            or self._opened_window_style == self._DEFAULTS_STYLES_2D[6]):
+            # prevent multiple editable windows from being opened 
+            # simultaneously to avoid unsynchronized state
+            self.segs_feedback = (
+                "Cannot show 2D plots while another editable "
+                "plot is showing. Please redraw.")
+            return
         circles = self._circles_2d[0].lower()
-        if circles != plot_2d.CIRCLES[2].lower():
-            if self._circles_window_opened:
-                self.segs_feedback = (
-                    "Cannot show 2D plots while another plot "
-                    "with circles in showing. Please redraw.")
-                return
-            else:
-                self._circles_window_opened = True
+        if (not self._circles_opened_type 
+            or self._circles_opened_type == plot_2d.CIRCLES[2].lower()):
+            # set opened window type if not already set or non-editable window
+            self._circles_opened_type = circles
+        self._opened_window_style = self._styles_2d[0]
         self.segs_feedback = ""
         
         # shows 2D plots
@@ -764,7 +778,10 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=3)
     
     def _btn_save_segments_fired(self):
-        self.save_segs()
+        if self._opened_window_style == self._DEFAULTS_STYLES_2D[6]:
+            self.save_atlas()
+        else:
+            self.save_segs()
     
     @on_trait_change('rois_check_list')
     def update_roi(self):

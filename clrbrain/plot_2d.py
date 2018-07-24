@@ -1219,6 +1219,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, plane=None):
         if z_overview_new != z_curr:
             # move only if step registered and changing position
             z_overview = z_overview_new
+            ax.clear()
             show_overview(z_overview)
     
     fig.canvas.mpl_connect("scroll_event", scroll_overview)

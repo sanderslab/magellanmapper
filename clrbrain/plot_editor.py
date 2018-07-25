@@ -60,14 +60,14 @@ class PlotEditor:
         canvas = self.ax_img.figure.canvas
         canvas.restore_region(self.background)
         axes = self.ax_img.axes
+        alpha = axes.get_alpha()
         axes.draw_artist(self.ax_img)
-        # transparency for some reason lost during the update until canvas 
-        # is fully redrawn in reset_animation, so need to manually set alpha
-        axes.set_alpha(0.5)
+        # WORKAROUND: transparency for some reason lost in draw_artist unless 
+        # set explicitly even though get_alpha would still return the given val
+        axes.set_alpha(alpha)
         if self.circle:
             axes.draw_artist(self.circle)
         canvas.blit(self.ax_img.axes.bbox)
-        print("updated animation")
     
     def reset_animation(self):
         """Turn off animations and redraw entire figure.

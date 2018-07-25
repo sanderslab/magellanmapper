@@ -237,7 +237,7 @@ def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
         axis += 1
     return img_np
 
-def _mirror_labels(img, img_ref):
+def _mirror_labels(img, img_ref, extent=None):
     """Mirror labels across sagittal midline and add lateral edges.
     
     Assume that the image is in sagittal sections and consists of only one 
@@ -253,6 +253,10 @@ def _mirror_labels(img, img_ref):
     Args:
         img: Labels image in SimpleITK format.
         img_ref: Reference atlas image in SimpleITK format.
+        extent: Tuple (start, end) fractions demarcating the region to mirror; 
+            defaults to None, in which case defaults will be used based on 
+            first found non-zero planes at boundaries. If either value 
+            within the tuple is None, the corresponding default will be used.
     
     Returns:
         The mirrored image in Numpy format.
@@ -263,13 +267,18 @@ def _mirror_labels(img, img_ref):
     img_ref_np = sitk.GetArrayFromImage(img_ref).astype(np.int32)
     tot_planes = len(img_np)
     
-    # find the first non-zero plane
+    # starting plane, assuming border region before image starts
     i = 0
-    for plane in img_np:
-        if not np.allclose(plane, 0):
-            print("found first non-zero plane at i of {}".format(i))
-            break
-        i += 1
+    if extent is None or extent[0] is None:
+        # find the first non-zero plane
+        for plane in img_np:
+            if not np.allclose(plane, 0):
+                print("found first non-zero plane at i of {}".format(i))
+                break
+            i += 1
+    else:
+        # based on settings
+        i = int(extent[0] * tot_planes)
     
     # find the bounds of the reference image in the given plane and resize 
     # the corresponding section of the labels image to the bounds of the 
@@ -299,25 +308,30 @@ def _mirror_labels(img, img_ref):
             img_np[i, slices[0], slices[1]] = plane_region
         i -= 1
     
-    # find the last non-zero plane
+    # ending plane, after which the image should be mirrored
     i = tot_planes
-    for plane in img_np[::-1]:
-        if not np.allclose(plane, 0):
-            break
-        i -= 1
+    if extent is None or extent[1] is None:
+        # find the last non-zero plane
+        for plane in img_np[::-1]:
+            if not np.allclose(plane, 0):
+                print("found last non-zero plane at {}".format(i))
+                break
+            i -= 1
+    else:
+        i = int(extent[1] * tot_planes)
     print("type: {}, max: {}, max avail: {}".format(
         img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     if i <= tot_planes and i >= 0:
-        # if a empty planes at end, fill the empty space with the preceding 
+        # if empty planes at end, fill the empty space with the preceding 
         # planes in mirrored fashion
         remaining_planes = tot_planes - i
-        end = i - remaining_planes
+        end = i - remaining_planes - 1
         if end < 0:
-            end = 0
+            end = None # to slice to beginning with neg increment
             remaining_planes = i
         print("i: {}, end: {}, remaining_planes: {}, tot_planes: {}"
               .format(i, end, remaining_planes, tot_planes))
-        img_np[i:i+remaining_planes] = np.multiply(img_np[i-1:end-1:-1], -1)
+        img_np[i:i+remaining_planes] = np.multiply(img_np[i-1:end:-1], -1)
     else:
         # skip mirroring if no planes are empty or only first plane is empty
         print("nothing to mirror")
@@ -637,10 +651,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # prep labels image
     labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
     labels_img_np = None
-    if settings["labels_mirror"]:
+    labels_mirror = settings["labels_mirror"]
+    if labels_mirror is not None:
         # ABA E18pt5 labels file only gives half of atlas so need to mirror 
         # one side to other based on original atlas
-        labels_img_np = _mirror_labels(labels_img, sitk.ReadImage(moving_file))
+        labels_img_np = _mirror_labels(
+            labels_img, sitk.ReadImage(moving_file), labels_mirror)
     if labels_img_np is not None:
         labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
     labels_img = transpose_img(
@@ -1941,7 +1957,8 @@ def _test_labels_loading(moving_file_dir, adj_labels=True):
     img_ref = sitk.ReadImage(os.path.join(moving_file_dir, IMG_ATLAS))
     if adj_labels:
         # test mirroring and truncation, such as ABA E18pt5
-        img_np = _mirror_labels(img, img_ref)
+        img_np = _mirror_labels(
+            img, img_ref, config.register_settings["labels_mirror"])
         img = replace_sitk_with_numpy(img, img_np)
         img = transpose_img(img, config.plane, False)
         img_np = _truncate_labels(

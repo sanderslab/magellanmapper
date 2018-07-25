@@ -311,7 +311,7 @@ class RegisterSettings(SettingsDict):
         self["preprocess"] = False
         self["point_based"] = False
         self["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
-        self["labels_mirror"] = True
+        self["labels_mirror"] = (None, 0.5)
         self["atlas_threshold"] = 10.0
 
 def update_register_settings(settings, settings_type):
@@ -339,7 +339,7 @@ def update_register_settings(settings, settings_type):
         "_generated", 
         {"resize_factor": 1.0, 
          "truncate_labels": (None, None, (0.2, 1.0)),
-         "labels_mirror": False},
+         "labels_mirror": None}, # turn off mirroring
         settings_type)
     
     # new atlas using group-registered image as the atlas itself should 

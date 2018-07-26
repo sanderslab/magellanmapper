@@ -7,7 +7,7 @@ import matplotlib.patches as patches
 from skimage import draw
 
 class PlotEditor:
-    def __init__(self, img3d):
+    def __init__(self, img3d, alpha_slider, alpha_reset_btn):
         self.img3d = img3d
         self.intensity = None
         self.cidpress = None
@@ -20,11 +20,14 @@ class PlotEditor:
         self.circle = None
         self.background = None
         self.last_loc = None
+        self.alpha_slider = alpha_slider
+        self.alpha_reset_btn = alpha_reset_btn
     
     def set_plane(self, ax_img, plane_n, plane=None):
         self.ax_img = ax_img
         self.plane_n = plane_n
         self.plane = plane
+        self.alpha = self.ax_img.axes.get_alpha()
         self.connect()
     
     def connect(self):
@@ -52,6 +55,7 @@ class PlotEditor:
         canvas.draw()
         self.background = canvas.copy_from_bbox(self.ax_img.axes.bbox)
         canvas.blit(self.ax_img.axes.bbox)
+        print("setup animation")
     
     def update_animation(self):
         """Update animations used cached artists and background and only in 
@@ -60,11 +64,10 @@ class PlotEditor:
         canvas = self.ax_img.figure.canvas
         canvas.restore_region(self.background)
         axes = self.ax_img.axes
-        alpha = axes.get_alpha()
         axes.draw_artist(self.ax_img)
-        # WORKAROUND: transparency for some reason lost in draw_artist unless 
-        # set explicitly even though get_alpha would still return the given val
-        axes.set_alpha(alpha)
+        # WORKAROUND: axes brightens for some reason increased during update 
+        # unless alpha changed to any value
+        axes.set_alpha(1.0)
         if self.circle:
             axes.draw_artist(self.circle)
         canvas.blit(self.ax_img.axes.bbox)
@@ -78,6 +81,19 @@ class PlotEditor:
         self.intensity = None
         self.ax_img.figure.canvas.draw()
         print("reset animation")
+    
+    def alpha_updater(self, alpha):
+        self.alpha = alpha
+        self.ax_img.set_alpha(self.alpha)
+        print("set image alpha to {}".format(self.alpha))
+        self.update_animation()
+    
+    def alpha_reset(self, event):
+        #alpha_updater(alpha_updater)
+        print("resetting slider")
+        self.alpha_slider.reset()
+    
+    #def update_alpha(self, alpha):
     
     def on_press(self, event):
         """Initiate drag events with Shift- or Alt-click inside a circle.
@@ -112,7 +128,7 @@ class PlotEditor:
         x = int(event.xdata)
         y = int(event.ydata)
         if self.last_loc is not None and self.last_loc == (x, y):
-            print("didn't move")
+            #print("didn't move")
             return
         self.last_loc = (x, y)
         
@@ -152,7 +168,7 @@ class PlotEditor:
             self.radius -= 1
         elif event.key == "]":
             self.radius += 1
-        print("radius: {}".format(self.radius))
+        #print("radius: {}".format(self.radius))
         if rad_orig != self.radius and self.circle:
             self.circle.radius = self.radius
     

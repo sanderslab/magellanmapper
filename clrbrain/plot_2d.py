@@ -27,6 +27,7 @@ import matplotlib.patches as patches
 import matplotlib.backend_bases as backend_bases
 import matplotlib.pylab as pylab
 from matplotlib.colors import LinearSegmentedColormap, NoNorm
+from matplotlib.widgets import Slider, Button
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
 from skimage import exposure
@@ -1168,7 +1169,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     """
     fig = plt.figure()
     #fig.suptitle(title)
-    gs = gridspec.GridSpec(1, 1, wspace=0.1, hspace=0.1)
+    gs = gridspec.GridSpec(2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1))
     
     ax = plt.subplot(gs[0, 0])
     hide_axes(ax)
@@ -1177,7 +1178,18 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     cmap_labels = _get_labels_colormap(labels_img, 0)
     if not plane:
         plane = config.PLANE[0]
-    plot_ed = plot_editor.PlotEditor(labels_img)
+    
+    # transparency controls
+    alpha = 0.7
+    gs_controls = gridspec.GridSpecFromSubplotSpec(
+        1, 2, subplot_spec=gs[1, 0], width_ratios=(5, 1))
+    ax_alpha = plt.subplot(gs_controls[0, 0])
+    alpha_slider = Slider(ax_alpha, "Transparency", 0.0, 1.0, valinit=alpha)
+    ax_alpha_reset = plt.subplot(gs_controls[0, 1])
+    alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
+    
+    # plot editor
+    plot_ed = plot_editor.PlotEditor(labels_img, alpha_slider, alpha_reset_btn)
     
     def show_overview(z_overview):
         img2d, aspect, origin = extract_plane(image5d, z_overview)
@@ -1187,7 +1199,8 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         labels_image5d = importer.roi_to_image5d(labels_img)
         img2d, aspect, origin = extract_plane(labels_image5d, z_overview)
         label_ax_img = imshow_multichannel(
-            ax, img2d, 0, [cmap_labels], aspect, 0.7, interpolation="none")
+            ax, img2d, 0, [cmap_labels], aspect, alpha, 
+            interpolation="none")
         ax.format_coord = PixelDisplay(img2d)
         _set_overview_title(ax, plane, z_overview)
         plot_ed.disconnect()
@@ -1230,10 +1243,12 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
     fig.canvas.mpl_connect("close_event", fn_close_listener)
+    alpha_slider.on_changed(plot_ed.alpha_updater)
+    alpha_reset_btn.on_clicked(plot_ed.alpha_reset)
     
     show_overview(z_overview)
     
-    gs.tight_layout(fig, pad=0.5)
+    gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1]) # extra padding for label
     plt.ion()
     plt.show()
     

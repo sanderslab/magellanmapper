@@ -625,22 +625,31 @@ def import_dir(path):
                      [min(lows)], [max(highs)])
     return image5d
 
-def _rescale_sub_roi(coord, sub_roi, rescale, multichannel):
+def _rescale_sub_roi(coord, sub_roi, rescale, target_size, multichannel):
     """Rescale a sub-ROI.
     
     Args:
         coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
             chunked ROI.
         sub_roi: The sub-ROI as an image array in (z, y, x).
-        rescale: Rescaling factor.
+        rescale: Rescaling factor. Can be None, in which case ``target_size`` 
+            will be used instead.
+        target_size: Target rescaling size for the given sub-ROI in (z, y, x). 
+           If ``rescale`` is not None, ``target_size`` will be ignored.
         multichannel: True if the final dimension is for channels.
     
     Return:
-        Tuple of ``coord``, the same as ``coord`` to identify where the 
-        ``rescaled`` sub-ROI is located in multiprocessing.
+        Tuple of ``coord`` and ``rescaled``, where ``coord`` is the same as 
+        the given parameter to identify where the sub-ROI is located during  
+        multiprocessing tasks.
     """
-    rescaled = transform.rescale(
-        sub_roi, rescale, mode="reflect", multichannel=multichannel)
+    rescaled = None
+    if rescale is not None:
+        rescaled = transform.rescale(
+            sub_roi, rescale, mode="reflect", multichannel=multichannel)
+    elif target_size is not None:
+        rescaled = transform.resize(
+            sub_roi, target_size, mode="reflect", anti_aliasing=True)
     return coord, rescaled
 
 def make_modifier_plane(plane):
@@ -664,6 +673,20 @@ def make_modifier_scale(scale):
         String designating the scaling transformation.
     """
     return "scale{}".format(scale)
+
+def make_modifier_resized(target_size):
+    """Make a string designating a resize transformation.
+    
+    Note that the final image size may differ slightly from this size as 
+    it only reflects the size targeted.
+    
+    Args:
+        target_size: Target size of rescaling in x,y,z.
+    
+    Returns:
+        String designating the resize transformation.
+    """
+    return "resized({},{},{})".format(*target_size)
 
 def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     """Calculate image intensity boundaries for the given percentiles, 
@@ -725,14 +748,24 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     time_start = time()
     image5d, info = read_file(filename, series, return_info=True)
     sizes = info["sizes"]
+    
+    # make filenames based on transpositions
     ext = lib_clrbrain.get_filename_ext(filename)
+    target_size = config.register_settings["target_size"]
     modifier = ""
     if plane is not None:
         modifier = make_modifier_plane(plane) + "_"
+    # either rescaling or resizing
     if rescale is not None:
         modifier += make_modifier_scale(rescale) + "_"
+    elif target_size:
+        # target size may differ from final output size but allows a known 
+        # size to be used for finding the file later
+        modifier += make_modifier_resized(target_size) + "_"
     filename_image5d_npz, filename_info_npz = _make_filenames(
         filename, series, modifier=modifier, ext=ext)
+    
+    # TODO: image5d should assume 4/5 dimensions
     offset = 0 if image5d.ndim <= 3 else 1
     multichannel = image5d.ndim >=5
     image5d_swapped = image5d
@@ -749,13 +782,28 @@ def transpose_npy(filename, series, plane=None, rescale=None):
                 detector.resolutions[0], 0, 2)
     
     scaling = None
-    if rescale is not None:
+    if rescale is not None or target_size is not None:
+        # rescale based on scaling factor or target specific size
         rescaled = image5d_swapped
         # TODO: generalize for more than 1 preceding dimension?
         if offset > 0:
             rescaled = rescaled[0]
-        #max_pixels = np.multiply(np.ones(3), 100)
+        #max_pixels = np.multiply(np.ones(3), 10)
         max_pixels = [100, 500, 500]
+        sub_roi_size = None
+        if target_size:
+            # fit image into even number of pixels per chunk by rounding up 
+            # number of chunks and resize each chunk by ratio of total 
+            # target size to chunk number
+            target_size = target_size[::-1] # change to z,y,x
+            num_chunks = np.ceil(np.divide(rescaled.shape, max_pixels))
+            max_pixels = np.ceil(
+                np.divide(rescaled.shape, num_chunks)).astype(np.int)
+            sub_roi_size = np.floor(
+                np.divide(target_size, num_chunks)).astype(np.int)
+            print("target_size: {}, num_chunks: {}, max_pixels: {}, "
+                  "sub_roi_size: {}"
+                  .format(target_size, num_chunks, max_pixels, sub_roi_size))
         
         # rescale in chunks with multiprocessing
         overlap = np.zeros(3).astype(np.int)
@@ -770,7 +818,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
                         pool.apply_async(
                             _rescale_sub_roi, 
                             args=(coord, sub_rois[coord], rescale, 
-                                  multichannel)))
+                                  sub_roi_size, multichannel)))
         for result in pool_results:
             coord, sub_roi = result.get()
             print("replacing sub_roi at {} of {}"
@@ -789,7 +837,15 @@ def transpose_npy(filename, series, plane=None, rescale=None):
             shape=tuple(rescaled_shape))
         chunking.merge_split_stack2(sub_rois, overlap, offset, image5d_transposed)
         
-        detector.resolutions = np.multiply(detector.resolutions, 1 / rescale)
+        if rescale is not None:
+            # scale resolutions based on single rescaling factor
+            detector.resolutions = np.multiply(
+                detector.resolutions, 1 / rescale)
+        else:
+            # scale resolutions based on size ratio for each dimension
+            detector.resolutions = np.multiply(
+                detector.resolutions, 
+                (image5d_swapped.shape / rescaled_shape)[1:])
         sizes[0] = rescaled_shape
         scaling = calc_scaling(image5d_swapped, image5d_transposed)
     else:
@@ -806,7 +862,8 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         else:
             image5d_transposed[:] = image5d_swapped[:]
         sizes[0] = image5d_swapped.shape
-    #print("new shape: {}".format(sizes[0]))
+    
+    # save image metadata
     print("detector.resolutions: {}".format(detector.resolutions))
     print("sizes: {}".format(sizes))
     image5d.flush()

@@ -395,13 +395,13 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 
         # horizontal rotation)
         transposed = np.rot90(transposed, 2, (1, 2))
-    if target_size is not None:
+    resize_factor = config.register_settings["resize_factor"]
+    if target_size is not None and resize_factor:
         # rescale based on xy dimensions of given and target image so that
         # they are not so far off from one another that scaling does not occur; 
         # assume that size discrepancies in z don't affect registration and 
         # for some reason may even prevent registration
         size_diff = np.divide(target_size[::-1][1:3], transposed.shape[1:3])
-        resize_factor = config.register_settings["resize_factor"]
         rescale = np.mean(size_diff) * resize_factor
         if rescale > 0.5:
             print("rescaling image by {}x after applying resize factor of {}"
@@ -410,6 +410,7 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
                 transposed, rescale, mode="constant", preserve_range=True, 
                 multichannel=False, anti_aliasing=True, 
                 order=0).astype(img_dtype)
+            spacing = np.divide(spacing, rescale)
         # casted back since transpose changes data type even when 
         # preserving range
         print(transposed.dtype, np.min(transposed), np.max(transposed))
@@ -516,8 +517,8 @@ def _transform_labels(transformix_img_filter, labels_img, settings,
     print("labels_pixel type: {}".format(labels_img.GetPixelIDTypeAsString()))
     transformix_img_filter.SetMovingImage(labels_img)
     transformix_img_filter.Execute()
-    labels_img = transformix_img_filter.GetResultImage()
-    labels_img = sitk.Cast(labels_img, labels_pixel_id)
+    transformed_labels_img = transformix_img_filter.GetResultImage()
+    transformed_labels_img = sitk.Cast(transformed_labels_img, labels_pixel_id)
     '''
     # remove bottom planes after registration; make sure to turn off 
     # bottom plane removal in mirror step
@@ -525,7 +526,7 @@ def _transform_labels(transformix_img_filter, labels_img, settings,
     _truncate_labels(img_np, z_frac=(0.2, 1.0))
     labels_img = replace_sitk_with_numpy(labels_img, img_np)
     '''
-    print(labels_img)
+    print(transformed_labels_img)
     '''
     LabelStatistics = sitk.LabelStatisticsImageFilter()
     LabelStatistics.Execute(fixed_img, labels_img)
@@ -534,7 +535,7 @@ def _transform_labels(transformix_img_filter, labels_img, settings,
     variance = LabelStatistics.GetVariance(1)
     print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
     '''
-    return labels_img
+    return transformed_labels_img
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
@@ -666,6 +667,14 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     for truncate in (True, False):
         img = _transform_labels(
             transformix_img_filter, labels_img, settings, truncate=truncate)
+        print(img.GetSpacing())
+        # WORKAROUND: labels img may be more rounded than transformed moving 
+        # img for some reason; assume transformed labels and moving image 
+        # should match exactly, so replace labels with moving image's 
+        # transformed spacing
+        img.SetSpacing(transformed_img.GetSpacing())
+        print(img.GetSpacing())
+        print(fixed_img_orig.GetSpacing(), transformed_img.GetSpacing())
         img, transformed_img = _curate_img(
             fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
         labels_imgs.append(img)
@@ -1711,19 +1720,31 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 blobs = info["segments"]
                 print("loading {} blobs".format(len(blobs)))
                 #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
-                if scale is None:
-                    # pixel comparison based on original image if rescale 
-                    # CLI flag not available, but **very slow**
-                    image5d = importer.read_file(img_path, config.series)
-                    scaling = importer.calc_scaling(image5d, labels_img)
-                else:
+                target_size = config.register_settings["target_size"]
+                if scale is not None or target_size is not None:
                     # use scaled image for pixel comparison, retrieving 
                     # saved scaling as of v.0.6.0
+                    modifier = None
+                    if scale is not None:
+                        # scale takes priority as command-line argument
+                        modifier = importer.make_modifier_scale(scale)
+                        print("loading scaled file with {} modifier"
+                              .format(modifier))
+                    else:
+                        # otherwise assume set target size
+                        modifier = importer.make_modifier_resized(target_size)
+                        print("loading resized file with {} modifier"
+                              .format(modifier))
                     img_path = lib_clrbrain.insert_before_ext(
-                        img_path, "_" + importer.make_modifier_scale(scale))
+                        img_path, "_" + modifier)
                     image5d, img_info = importer.read_file(
                         img_path, config.series, return_info=True)
                     scaling = img_info["scaling"]
+                else:
+                    # fall back to pixel comparison based on original image, 
+                    # but **very slow**
+                    image5d = importer.read_file(img_path, config.series)
+                    scaling = importer.calc_scaling(image5d, labels_img)
                 print("using scaling: {}".format(scaling))
                 # annotate blobs based on position
                 blobs_ids = get_label_ids_from_position(

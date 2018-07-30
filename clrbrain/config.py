@@ -313,12 +313,17 @@ class RegisterSettings(SettingsDict):
         self["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
         self["labels_mirror"] = (None, 0.5)
         self["atlas_threshold"] = 10.0
+        self["target_size"] = None
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
         # more aggressive parameters for finer tuning
         settings["settings_name"] = "finer"
         settings["bspline_iter_max"] = "512"
+    
+    elif settings_type.startswith("test"):
+        settings["settings_name"] = "test"
+        settings["target_size"] = (50, 50, 50)
     
     # atlas is big relative to the experimental image, so need to 
     # more aggressively downsize the atlas
@@ -347,6 +352,13 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "_grouped", 
         {"atlas_threshold": None}, 
+        settings_type)
+    
+    # ABA E18pt5 specific settings
+    settings.add_modifier(
+        "_abae18pt5", 
+        {"target_size": (278, 581, 370), # x,y,z in exp orientation
+         "resize_factor": None}, # turn off resizing
         settings_type)
     
     if verbose:

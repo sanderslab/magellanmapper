@@ -15,9 +15,24 @@ The setup script will install the following:
 - Mayavi and TraitsUI stack for GUI and 3D visualization; note that Mayavi currently requires a graphical environment to install
 - Scikit-Image for image processing
 
-On occasion, dependencies with required updates that have not been released will be downloaded as shallow Git clones into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) and pip installed.
+On occasion, Python dependencies with required updates that have not been released will be downloaded as shallow Git clones into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) and pip installed.
 
 To install/run without a GUI, run a lightweight setup, `./setup_env.sh -l` ("L" arg), which avoids the Mayavi stack.
+
+### Additional Build Dependencies
+
+- Java SDK, tested on v8, for importing image files from proprietary formats (eg .czi)
+- SimpleElastix, which can be built via the `build_se.sh` script, for registration tasks
+- GCC or related compilers, for compiling Mayavi and SimpleElastix
+- Git, for downloading unreleased dependencies as above
+
+### Tested Platforms
+
+Clrbrain has been tested to build and run on:
+
+- MacOS, tested on 10.11+
+- Linux, tested on RHEL 7.4+
+- Windows, via built-in Windows Subsystem for Linux (WSL) running Ubuntu 18.04 and an X Server
 
 ## Run Clrbrain
 Opening an image file typically involves importing it into a Numpy array format before loading it in the GUI and processing it headlessly.
@@ -32,7 +47,7 @@ source activate clr3
 
 ## Access from Git
 
-- Contact the project managers aboud loading your public key into this project
+- Contact the project managers about loading your public key to access the project repository
 - Download the repo: `git clone git@bitbucket.org:psychcore/clrbrain.git`
 
 ## Start a processing pipeline
@@ -76,7 +91,7 @@ You can launch a standard server, deploy Clrbrain code, and run a pipeline. Note
 If you already have an AMI with Clrbrain installed, you can launch a new instance of it via Clrbrain:
 
 ```
-python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" "subnet-xxxxxxxx" "sg-xxxxxxxx" "UserName" 50,2000
+python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" "subnet-xxxxxxxx" "sg-xxxxxxxx" "UserName" 50,2000 [2]
 ```
 
 - `Name` is your name of choice
@@ -86,6 +101,7 @@ python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" "subnet
 - `sg` is your security group
 - `UserName` is the user name whose security key will be uploaded for SSH access
 - `50,2000` creates a 50GB swap and 2000GB data drive, which can be changed depending on your needs
+- `2` starts two instances (optional, defaults to 1)
 
 #### Setup server with Clrbrain
 
@@ -143,9 +159,8 @@ export LANG=en_US.UTF-8
 - After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
 
 ### Mayavi installation
-- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error
+- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error, so will require a graphical environment including RDP or an X server
 - As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
-- Mayavi is not currently working on Linux (tested on RHEL 7.5 as of 2018-05-10)
 
 ### Image Stitching
 - The original stitcher, `Stitching`, requires a large amount of RAM/swap space and runs single-threaded, taking days to stitch a multi-tile image

@@ -16,7 +16,7 @@ Arguments:
         of the same name will be moved backed up first. Defaults 
         to \"out.txt\".
     -o: Pass the output file as an argument (eg \"-o file.txt\"), 
-        appended to the extra arguments.
+        prepended to the extra arguments after its first arg.
 "
 
 dest="out.txt"
@@ -73,7 +73,10 @@ touch "$out_path"
 
 # run rest of args in nohup and display output
 if [[ $pass_output -eq 1 ]]; then
-    EXTRA_ARGS+=" -o $out_path"
+    # insert output arg after first extra arg in case EXTRA_ARGS 
+    # contains additional extra args
+    args=($EXTRA_ARGS)
+    EXTRA_ARGS="${args[0]} -o ${out_path} ${args[@]:1}"
 fi
 nohup $EXTRA_ARGS > "$out_path" 2>&1 &
 PID_NOHUP=$!

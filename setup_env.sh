@@ -104,9 +104,11 @@ fi
 echo -n "Detecting environment..."
 SYSTEM=`uname -a`
 ANACONDA_DOWNLOAD_PLATFORM=""
+ext="sh"
 if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
 then
     ANACONDA_DOWNLOAD_PLATFORM="Windows"
+    ext="exe"
 elif [[ "$SYSTEM" =~ "Darwin" ]]
 then
     ANACONDA_DOWNLOAD_PLATFORM="MacOSX"
@@ -126,7 +128,7 @@ if ! command -v "conda" &> /dev/null
 then
 	echo "Downloading and installing Miniconda..."
 	PLATFORM=$ANACONDA_DOWNLOAD_PLATFORM-$BIT
-	MINICONDA=Miniconda3-latest-$PLATFORM.sh
+	MINICONDA="Miniconda3-latest-$PLATFORM.${ext}"
 	CONDA_URL=https://repo.continuum.io/miniconda/$MINICONDA
 	if [[ "$ANACONDA_DOWNLOAD_PLATFORM" == "MacOSX" ]]
 	then
@@ -134,7 +136,8 @@ then
 	else
 		wget "$CONDA_URL"
 	fi
-	sh $MINICONDA
+	chmod 755 "$MINICONDA"
+	./"$MINICONDA"
 	# reload the bash environment, or exit if unable
 	bash_profile=~/.bash_profile
 	if [ ! -f $bash_profile ]

@@ -49,7 +49,7 @@ S3_DIR="path/to/your/bucket/artifact"
 MICROSCOPE="lightsheet"
 
 # Grouped pathways to follow typical pipelines
-PIPELINES=("gui" "full" "process_only")
+PIPELINES=("gui" "full" "process_only", "transpose_only")
 pipeline="gui"
 
 
@@ -62,14 +62,17 @@ gui=0
 offset=30,30,8
 size=70,70,10
 
+# Series/tile to load; use 0 for fully stitched images
+series=0
+
 # Choose stitch pathway index, or "" for none
 STITCH_PATHWAYS=("stitching" "bigstitcher")
 stitch_pathway=""
 
 # Choose rescale pathway index, or "" for none
-TRANSPOSE_PATHWAYS=("rescale")
+TRANSPOSE_PATHWAYS=("rescale", "resize")
 transpose_pathway=""
-scale=0.05 # rescaling factor
+scale="0.05" # rescaling factor
 plane="" # xy, yz, zy, or leave empty
 animation="" # gif or mp4
 
@@ -77,8 +80,9 @@ animation="" # gif or mp4
 WHOLE_IMG_PROCS=("local" "pull_from_s3")
 whole_img_proc=""
 
-# Choose whether to upload all resulting files to AWS S3
-upload=0 # 0 for no, 1 to upload
+# Choose whether to upload resulting files to AWS S3
+UPLOAD_TYPES=("none", "all", "pathways_specific")
+upload="${UPLOAD_TYPES[0]}"
 
 # Path to output file, to upload if specified
 output_path=""
@@ -95,7 +99,7 @@ clean_up=0
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w:o:n:c opt; do
+while getopts hi:a:p:s:t:w:o:n:cz: opt; do
     case $opt in
         h)  echo "$HELP"
             exit 0
@@ -127,6 +131,9 @@ while getopts hi:a:p:s:t:w:o:n:c opt; do
         c)  clean_up=1
             echo "Set to perform server clean-up tasks once done"
             ;;
+        z)  size="$OPTARG"
+            echo "Set size to $size"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -147,6 +154,7 @@ EXP="`basename $OUT_DIR`"
 NAME="`basename $IMG`"
 IMG_PATH_BASE="${OUT_DIR}/${NAME%.*}"
 EXT="${IMG##*.}"
+s3_exp_path=s3://"${S3_DIR}/${EXP}"
 
 # run from script's directory
 BASE_DIR="`dirname $0`"
@@ -155,19 +163,29 @@ echo $PWD
 
 # set pat combinations for common grouped pathways
 if [[ "$pipeline" = "${PIPELINES[0]}" ]]; then
+    # gui pathway
     gui=1
 elif [[ "$pipeline" = "${PIPELINES[1]}" ]]; then
+    # full, including stitching, transposition, and processing
     gui=0
     stitch_pathway="${STITCH_PATHWAYS[1]}"
-    transpose_pathway="${TRANSPOSE_PATHWAYS[0]}"
+    transpose_pathway="${TRANSPOSE_PATHWAYS[1]}"
     whole_img_proc="${WHOLE_IMG_PROCS[0]}"
-    upload=1
+    upload="${UPLOAD_TYPES[1]}"
 elif [[ "$pipeline" = "${PIPELINES[2]}" ]]; then
+    # processing only
     gui=0
     stitch_pathway=""
     transpose_pathway=""
     whole_img_proc="${WHOLE_IMG_PROCS[1]}"
-    upload=0 # process_aws script uploads automatically
+    upload="${UPLOAD_TYPES[2]}"
+elif [[ "$pipeline" = "${PIPELINES[3]}" ]]; then
+    # transposition only
+    gui=0
+    stitch_pathway=""
+    transpose_pathway="${TRANSPOSE_PATHWAYS[1]}"
+    whole_img_proc=""
+    upload="${UPLOAD_TYPES[2]}"
 fi
 
 
@@ -212,8 +230,8 @@ if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
     # Get large, unstitched image file from cloud, where the fused (all 
     # illuminators merged) image is used for the Stitching pathway, and 
     # the unfused, original image is used for the BigStitcher pathway
-    mkdir $OUT_DIR
-    aws s3 cp s3://"${S3_DIR}/${EXP}/${NAME}" $OUT_DIR
+    mkdir "$OUT_DIR"
+    aws s3 cp "${s3_exp_path}/${NAME}" $OUT_DIR
 fi
 
 out_name_base=""
@@ -265,49 +283,82 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     python -u -m clrbrain.cli --img ""${OUT_DIR}/${OUT_NAME_BASE}.tiff"" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --proc importonly
     clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi
+clr_img_base="${clr_img%.*}"
 
-# At this point, you can delete the TIFF image since it has been exported into a Numpy-based 
-# format for loading into Clrbrain
+# At this point, you can delete the TIFF dir/image since it has been 
+# exported into a Numpy-based format for loading into Clrbrain
+
+
+# Get stitched image files from S3 if not present
+series_filled="$(printf %05d $series)"
+npz_img_base="${clr_img_base}_${series_filled}"
+image5d_npz="${npz_img_base}_image5d.npz"
+info_npz="${npz_img_base}_info.npz"
+echo -n "Looking for ${image5d_npz}..."
+if [[ ! -e "$image5d_npz" ]]; then
+    echo "downloading from S3..."
+    mkdir "$OUT_DIR"
+    for npz in "$image5d_npz" "$info_npz"; do
+        aws s3 cp "${s3_exp_path}" "$OUT_DIR" --recursive --exclude "*" --include "$npz"
+    done
+else
+    echo "found"
+fi
 
 
 ####################################
 # Transpose/Resize Image Workflow
 
-
-clr_img_base="${clr_img%.*}"
-
-if [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[0]}" ]]; then
+if [[ "$transpose_pathway" != "" ]]; then
     img_transposed=""
-    if [[ "$plane" != "" ]]; then
-        # Both rescale and transpose an image from z-axis (xy plane) to x-axis (yz plane) orientation
-        python -u -m clrbrain.cli --img "$clr_img" --proc transpose --rescale ${scale} --plane "$plane"
-        img_transposed="${clr_img_base}_plane${plane}_scale${scale}.${EXT}"
-    else
-        # Rescale an image to downsample by the scale factor only
-        python -u -m clrbrain.cli --img "$clr_img" --proc transpose --rescale ${scale}
-        img_transposed="${clr_img_base}_scale${scale}.${EXT}"
+    if [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[0]}" ]]; then
+        if [[ "$plane" != "" ]]; then
+            # Both rescale and transpose an image from z-axis (xy plane) 
+            # to x-axis (yz plane) orientation
+            python -u -m clrbrain.cli --img "$clr_img" --proc transpose --rescale ${scale} --plane "$plane"
+            img_transposed="${clr_img_base}_plane${plane}_scale${scale}.${EXT}"
+        else
+            # Rescale an image to downsample by the scale factor only
+            python -u -m clrbrain.cli --img "$clr_img" --proc transpose --rescale ${scale}
+            img_transposed="${clr_img_base}_scale${scale}.${EXT}"
+        fi
+    elif [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[1]}" ]]; then
+        # Resize to a set size given by a registration profile; replace 
+        # profile name and size to your given profile
+        python -u -m clrbrain.cli --img "$clr_img" --proc transpose $EXTRA_ARGS #--reg_profile "finer_abae18pt5"
+        #size="278,581,370"
+        img_transposed="${clr_img_base}_resized(${size}).${EXT}"
     fi
     
     if [[ "$animation" != "" ]]; then
         # Export transposed image to an animated GIF or MP4 video (requires ImageMagick)
-        scale=1.0
-        python -u -m clrbrain.cli --img "$img_transposed" --proc animated --interval 5 --rescale ${scale} --savefig "$animation"
+        python -u -m clrbrain.cli --img "$img_transposed" --proc animated --interval 5 --rescale 1.0 --savefig "$animation"
     fi
+    
+    if [[ "$upload" == "${UPLOAD_TYPES[2]}" ]]; then
+        # upload transposed files to S3
+        base_path="${img_transposed%.*}"
+        base_path="$(basename $base_path)"
+        echo "uploading ${base_path} to S3 at ${s3_exp_path}"
+        aws s3 cp $OUT_DIR "${s3_exp_path}" --recursive --exclude "*" --include "${base_path}*"
+    fi
+    
 fi
 
 
 ####################################
 # Whole Image Processing Workflow
 
-if [[ "$whole_img_proc" = "${WHOLE_IMG_PROCS[0]}" ]]; then
+if [[ "$whole_img_proc" != "" ]]; then
     # Process an entire image locally on 1st channel, chunked into multiple 
     # smaller stacks to minimize RAM usage and multiprocessed for efficiency
     python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
-
-elif [[ "$whole_img_proc" = "${WHOLE_IMG_PROCS[1]}" ]]; then
-    # Similar processing but integrated with S3 access from AWS (run from 
-    # within EC2 instance)
-    ./process_aws.sh -f "$clr_img" -s $S3_DIR --  --microscope "$MICROSCOPE" --channel 0
+    
+    if [[ "$upload" == "${UPLOAD_TYPES[2]}" ]]; then
+        # upload processed fils to S3
+        aws s3 cp $OUT_DIR "${s3_exp_path}" --recursive --exclude "*" --include "*proc.npz"
+    fi
+    
 fi
 
 
@@ -316,7 +367,7 @@ fi
 
 if [[ "$url_notify" != "" ]]; then
     # post-processing notification to Slack
-    msg="Clrbrain pipeline for $IMG completed"
+    msg="Clrbrain \"$pipeline\" pipeline for $IMG completed"
     attach=""
     if [[ "$output_path" != "" ]]; then
         attach="$output_path"
@@ -331,12 +382,12 @@ if [[ $clean_up -eq 1 ]]; then
         # prepare tail of output file for notification and upload full file to S3
         #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
         name="`basename $output_path`"
-        aws s3 cp "$output_path" s3://"${S3_DIR}/${EXP}/${name}"
+        aws s3 cp "$output_path" "${s3_exp_path}/${name}"
     fi
     
-    if [[ $upload -eq 1 ]]; then
+    if [[ "$upload" == "${UPLOAD_TYPES[1]}" ]]; then
         # upload all resulting files to S3
-        aws s3 cp $OUT_DIR s3://"${S3_DIR}/${EXP}" --recursive --exclude "*" --include "*.npz"
+        aws s3 cp $OUT_DIR "${s3_exp_path}" --recursive --exclude "*" --include "*.npz"
     fi
     
     echo "Finishing clean-up tasks, shutting down..."

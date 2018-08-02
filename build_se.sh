@@ -47,11 +47,38 @@ echo "Building SimpleElastix..."
 base_dir="`dirname $0`"
 cd $base_dir/..
 
+# find platform for Anaconda
+echo -n "Detecting environment..."
+SYSTEM=`uname -a`
+compiler_c="gcc"
+compiler_cpp="g++"
+platform=""
+if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
+then
+    platform="Windows"
+elif [[ "$SYSTEM" =~ "Darwin" ]]
+then
+    platform="MacOSX"
+    compiler_c=clang
+    compiler_cpp=clang++
+elif [[ "$SYSTEM" =~ "Linux" ]]
+then
+    platform="Linux"
+fi
+bit="x86"
+if [[ "$SYSTEM" =~ "x86_64" ]]
+then
+    bit="x86_64"
+fi
+echo "will use $compiler_c C compiler and $compiler_cpp C++ compiler"
+echo "for $platform platform"
+
 # get SimpleElastix git repo if not already present
 if [[ ! -e SimpleElastix ]]
 then
     echo "Cloning SimpleElastix git repo..."
-    git clone https://github.com/SuperElastix/SimpleElastix.git
+    #git clone https://github.com/SuperElastix/SimpleElastix.git
+    git clone https://github.com/the4thchild/SimpleElastix.git
 fi
 
 # build SimpleElastix if install flag is false, in which case 
@@ -79,8 +106,8 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -e "${build_dir}/${PKG}" ]]; then
     # run SuperBuild with flags to find clang on later Mac versions, 
     # turn off all wrappers except the default Python wrapper, and 
     # turn off virtual environment creation
-    cmake -DCMAKE_CXX_COMPILER:STRING=/usr/bin/clang++ \
-        -DCMAKE_C_COMPILER:STRING=/usr/bin/clang \
+    cmake -DCMAKE_CXX_COMPILER:STRING=/usr/bin/$compiler_cpp \
+        -DCMAKE_C_COMPILER:STRING=/usr/bin/$compiler_c \
         -DWRAP_JAVA:BOOL=OFF -DWRAP_LUA:BOOL=OFF \
         -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF \
         -DWRAP_TCL:BOOL=OFF \

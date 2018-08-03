@@ -6,6 +6,9 @@
 import matplotlib.patches as patches
 from skimage import draw
 
+from clrbrain import config
+from clrbrain import register
+
 class PlotEditor:
     def __init__(self, img3d, alpha_slider, alpha_reset_btn):
         self.img3d = img3d
@@ -29,6 +32,7 @@ class PlotEditor:
         self.plane = plane
         self.alpha = self.ax_img.axes.get_alpha()
         self.connect()
+        self.region_label = self.ax_img.axes.text(0, 0, "", color="w")
     
     def connect(self):
         """Connect events to functions.
@@ -153,6 +157,25 @@ class PlotEditor:
             self.ax_img.set_data(self.img3d[self.plane_n])
         
         self.update_animation()
+        
+        # show atlas label name
+        atlas_label = register.get_label(
+            (self.plane_n, y, x), config.labels_img, config.labels_ref_lookup, 
+            config.labels_scaling)
+        name = ""
+        if atlas_label is not None:
+            name = register.get_label_name(atlas_label)
+        self.region_label.set_text(name)
+        # minimize chance of text overflowing out of axes by switching 
+        # alignment at midline horizontally
+        if x > self.img3d.shape[2] / 2:
+            alignment = "right"
+            label_x = x - 10
+        else:
+            alignment = "left"
+            label_x = x + 10
+        self.region_label.set_horizontalalignment(alignment)
+        self.region_label.set_position((label_x, y - 10))
     
     def on_release(self, event):
         """Reset the intensity value to prevent further edits.

@@ -32,7 +32,7 @@ Clrbrain has been tested to build and run on:
 
 - MacOS, tested on 10.11+
 - Linux, tested on RHEL 7.4+
-- Windows, via built-in Windows Subsystem for Linux (WSL) running Ubuntu 18.04 and an X Server
+- Windows, via built-in Windows Subsystem for Linux (WSL) running Ubuntu 18.04 and an X Server (see below for details)
 
 ## Run Clrbrain
 Opening an image file typically involves importing it into a Numpy array format before loading it in the GUI and processing it headlessly.
@@ -139,13 +139,29 @@ clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh -i "/da
 ## Troubleshooting
 
 ### Java installation
-- Tested on Java 8 SE
+- Tested on Java 8 and 10 SE
 - Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
-- You may need to set up the JAVA_HOME environment variable: `JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home`, and add this variable to your PATH in `~/.bash_profile`
+- You may need to set up the JAVA_HOME environment variable, such as `JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home`, and add this variable to your PATH in `~/.bash_profile`
+- Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141)
 
 ### Xcode setup (Mac)
 - `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun` error: The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading Xcode directly from https://developer.apple.com/download/, then run `sudo xcodebuild -license` to accept the license agreement.
 
+### Installation on Windows
+
+Building Clrbrain on Windows can be greatly eased through use of Windows Subsystem for Linux (WSL). Installation can follow the same steps as for Mac.
+
+Running in WSL requires setting up an X Server since WSL does not provide graphical support out of the box. In our experience, the easiest option is to use MobaXTerm, which supports HiDPI and OpenGL.
+
+An alternative X Server is Cygwin/X, which requires the following modifications:
+
+- Change the XWin Server startup shortcut to include `/usr/bin/startxwin -- -listen tcp +iglx -nowgl` to use indirect OpenGL software rendering (see [here](https://x.cygwin.com/docs/ug/using-glx.html))
+- For HiDPI screens, run `export QT_AUTO_SCREEN_SCALE_FACTOR=0` and `export QT_SCALE_FACTOR=2` to increase window/font size (see [here](https://wiki.archlinux.org/index.php/HiDPI#Qt_5))
+
+As an alternative to WSL, Cygwin itself can be used to build Clrbrain and run without an X server. Building is more complicated, however, requiring the following:
+
+- Install Microsoft Visual Studio Build Tools 2017 with Windows SDK to build Mayavi and Javabridge
+- Build SimpleElastix with VS 2017, though this compilation has not worked at least in our experience because of [this issue](https://github.com/SuperElastix/SimpleElastix/issues/126)
 
 ### International setup
 - If you get a Python locale error, add these lines to your `~/.bash_profile` file:
@@ -159,7 +175,7 @@ export LANG=en_US.UTF-8
 - After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
 
 ### Mayavi installation
-- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error, so will require a graphical environment including RDP or an X server
+- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error; use RDP or an X11 forwarding instead
 - As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
 
 ### Image Stitching

@@ -143,6 +143,7 @@ clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh -i "/da
 - Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
 - You may need to set up the JAVA_HOME environment variable, such as `JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home`, and add this variable to your PATH in `~/.bash_profile`
 - Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141)
+- `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step
 
 ### Xcode setup (Mac)
 - `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun` error: The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading Xcode directly from https://developer.apple.com/download/, then run `sudo xcodebuild -license` to accept the license agreement.
@@ -177,6 +178,11 @@ export LANG=en_US.UTF-8
 ### Mayavi installation
 - As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error; use RDP or an X11 forwarding instead
 - As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
+
+### Windowing responsiveness
+- Controls (eg buttons, dropdowns) fail to update on PyQt5 5.10.1 on MacOS 10.10 until switching to another window and back again
+- Workaround is to `pip uninstall PyQT5` and `conda install pyqt` to get PyQt 5.6.0 instead
+- Some text may not update in PyQT 5.10.1 on later Mac versions until switching windows
 
 ### Image Stitching
 - The original stitcher, `Stitching`, requires a large amount of RAM/swap space and runs single-threaded, taking days to stitch a multi-tile image

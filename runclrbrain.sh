@@ -299,7 +299,7 @@ if [[ ! -e "$image5d_npz" ]]; then
     echo "downloading from S3..."
     mkdir "$OUT_DIR"
     for npz in "$image5d_npz" "$info_npz"; do
-        aws s3 cp "${s3_exp_path}/$(basename npz)" "$OUT_DIR"
+        aws s3 cp "${s3_exp_path}/$(basename $npz)" "$OUT_DIR"
     done
 else
     echo "found"

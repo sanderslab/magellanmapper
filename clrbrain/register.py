@@ -759,7 +759,7 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
     #print("Mean regional DSC: {}".format(mean_region_dsc))
     print("Total DSC: {}".format(total_dsc))
 
-def _crop_image(img_np, labels_img, axis):
+def _crop_image(img_np, labels_img, axis, eraser=None):
     """Crop image by removing the empty space at the start of the given axis.
     
     Args:
@@ -768,10 +768,13 @@ def _crop_image(img_np, labels_img, axis):
             ``img_np``, typically a labels image from which to find the empty 
             region to crop.
         axis: Axis along which to crop.
+        eraser: Erase rather than crop, changing pixels that would have been 
+            cropped to the given intensity value instead; defaults to None.
     
     Returns:
         The cropped image with planes removed along the start of the given 
-        axis until the first non-empty plane is reached.
+        axis until the first non-empty plane is reached, or erased if 
+        ``eraser`` is given.
     """
     # find the first non-zero plane in the labels image along the given axis, 
     # expanding slices to the include the rest of the image
@@ -788,9 +791,16 @@ def _crop_image(img_np, labels_img, axis):
     img_crop = img_np
     if i < shape[axis]:
         slices = [slice(None)] * img_np.ndim
-        slices[axis] = slice(i, shape[axis])
-        img_crop = img_crop[slices]
-        print("cropped image from shape {} to {}".format(shape, img_crop.shape))
+        if eraser is None:
+            slices[axis] = slice(i, shape[axis])
+            img_crop = img_crop[slices]
+            print("cropped image from shape {} to {}"
+                  .format(shape, img_crop.shape))
+        else:
+            slices[axis] = slice(0, i)
+            img_crop[slices] = eraser
+            print("erased image outside of {} to {} intensity value"
+                  .format(slices, eraser))
     else:
         print("could not find non-empty plane at which to crop")
     return img_crop
@@ -831,10 +841,11 @@ def register_group(img_files, flip=None, show_imgs=True,
         img = _load_numpy_to_sitk(img_file, flip_img)
         img_np = sitk.GetArrayFromImage(img)
         
-        # crop y-axis based on registered labels to ensure that sample images 
-        # have the same structures since variable amount of tissue posteriorly
+        # erase y-axis based on registered labels to ensure that sample images 
+        # have the same structures since variable amount of tissue posteriorly; 
+        # assume background is 0
         labels_img = load_registered_img(img_files[i], reg_name=IMG_LABELS)
-        img_np = _crop_image(img_np, labels_img, 1)
+        img_np = _crop_image(img_np, labels_img, 1, eraser=0)
         
         # force all images into same size and origin as first image 
         # to avoid groupwise registration error on physical space mismatch

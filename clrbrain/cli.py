@@ -453,6 +453,8 @@ def main(process_args_only=False):
     parser.add_argument("--groups", nargs="*")
     parser.add_argument("--chunk_shape", nargs="*")
     parser.add_argument("--ec2_start", nargs="*")
+    parser.add_argument("--ec2_list", nargs="*")
+    parser.add_argument("--ec2_terminate", nargs="*")
     parser.add_argument("--notify", nargs="*")
     args = parser.parse_args()
     
@@ -623,6 +625,12 @@ def main(process_args_only=False):
             start[i] = int(start[i])
         config.ec2_start = start
         print("Set ec2 start to {}".format(config.ec2_start))
+    if args.ec2_list:
+        config.ec2_list = args.ec2_list
+        print("Set ec2 list to {}".format(config.ec2_list))
+    if args.ec2_terminate:
+        config.ec2_terminate = args.ec2_terminate
+        print("Set ec2 terminate to {}".format(config.ec2_terminate))
     if args.notify:
         notify_len = len(args.notify)
         if notify_len > 0:

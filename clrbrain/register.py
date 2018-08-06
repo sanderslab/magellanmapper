@@ -815,17 +815,16 @@ def register_group(img_files, flip=None, show_imgs=True,
     """
     if name_prefix is None:
         name_prefix = img_files[0]
+    target_size = config.register_settings["target_size"]
     img_vector = sitk.VectorOfImage()
     flip_img = False
     origin = None
     size = None
     for i in range(len(img_files)):
-        # load image, fipping if necessary
+        # load image, fipping if necessary and using tranpsosed img if specified
         img_file = img_files[i]
-        if scale:
-            # use scaled image if rescale arg given
-            img_file = lib_clrbrain.insert_before_ext(
-                img_file, "_" + importer.make_modifier_scale(scale))
+        img_file = importer.get_transposed_image_path(
+            img_file, scale, target_size)
         if flip is not None:
             flip_img = flip[i]
         img = _load_numpy_to_sitk(img_file, flip_img)
@@ -1721,29 +1720,17 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                 print("loading {} blobs".format(len(blobs)))
                 #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
                 target_size = config.register_settings["target_size"]
+                img_path_transposed = importer.get_transposed_image_path(
+                    img_path, scale, target_size)
                 if scale is not None or target_size is not None:
-                    # use scaled image for pixel comparison, retrieving 
-                    # saved scaling as of v.0.6.0
-                    modifier = None
-                    if scale is not None:
-                        # scale takes priority as command-line argument
-                        modifier = importer.make_modifier_scale(scale)
-                        print("loading scaled file with {} modifier"
-                              .format(modifier))
-                    else:
-                        # otherwise assume set target size
-                        modifier = importer.make_modifier_resized(target_size)
-                        print("loading resized file with {} modifier"
-                              .format(modifier))
-                    img_path = lib_clrbrain.insert_before_ext(
-                        img_path, "_" + modifier)
                     image5d, img_info = importer.read_file(
-                        img_path, config.series, return_info=True)
+                        img_path_transposed, config.series, return_info=True)
                     scaling = img_info["scaling"]
                 else:
                     # fall back to pixel comparison based on original image, 
                     # but **very slow**
-                    image5d = importer.read_file(img_path, config.series)
+                    image5d = importer.read_file(
+                        img_path_transposed, config.series)
                     scaling = importer.calc_scaling(image5d, labels_img)
                 print("using scaling: {}".format(scaling))
                 # annotate blobs based on position

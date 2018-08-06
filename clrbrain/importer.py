@@ -688,6 +688,37 @@ def make_modifier_resized(target_size):
     """
     return "resized({},{},{})".format(*target_size)
 
+def get_transposed_image_path(img_path, scale=None, target_size=None):
+    """Get path, modified for any transposition by :func:``transpose_npy`` 
+    naming conventions.
+    
+    Args:
+        img_path: Unmodified image path.
+        scale: Scaling factor; defaults to None, which ignores scaling.
+        target_size: Target size, typically given by a register profile; 
+            defaults to None, which ignores target size.
+    
+    Returns:
+        Modified path for the given transposition, or ``img_path`` unmodified 
+        if all transposition factors are None.
+    """
+    img_path_modified = img_path
+    if scale is not None or target_size is not None:
+        # use scaled image for pixel comparison, retrieving 
+        # saved scaling as of v.0.6.0
+        modifier = None
+        if scale is not None:
+            # scale takes priority as command-line argument
+            modifier = make_modifier_scale(scale)
+            print("loading scaled file with {} modifier".format(modifier))
+        else:
+            # otherwise assume set target size
+            modifier = make_modifier_resized(target_size)
+            print("loading resized file with {} modifier".format(modifier))
+        img_path_modified = lib_clrbrain.insert_before_ext(
+            img_path, "_" + modifier)
+    return img_path_modified
+
 def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     """Calculate image intensity boundaries for the given percentiles, 
     including boundaries for each channel in multichannel images.

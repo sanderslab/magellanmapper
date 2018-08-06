@@ -820,6 +820,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     flip_img = False
     origin = None
     size = None
+    spacing = None
     for i in range(len(img_files)):
         # load image, fipping if necessary and using tranpsosed img if specified
         img_file = img_files[i]
@@ -841,13 +842,19 @@ def register_group(img_files, flip=None, show_imgs=True,
             # use default interpolation, but should change to nearest neighbor 
             # if using for labels
             img_np = transform.resize(
-                img_np, size, anti_aliasing=True, mode="reflect")
+                img_np, size[::-1], anti_aliasing=True, mode="reflect")
         img = replace_sitk_with_numpy(img, img_np)
         if origin is None:
             origin = img.GetOrigin()
-            size = img.GetSize()[::-1]
+            size = img.GetSize()
+            spacing = img.GetSpacing()
         else:
+            # force images into space of first image; may not be exactly 
+            # correct but should be close since resized to match first image, 
+            # and spacing of resized images and atlases largely ignored in 
+            # favor of comparing shapes of large original and registered images
             img.SetOrigin(origin)
+            img.SetSpacing(spacing)
         print("img_file: {}\n{}".format(img_file, img))
         img_vector.push_back(img)
         #sitk.Show(img)

@@ -772,9 +772,10 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
             cropped to the given intensity value instead; defaults to None.
     
     Returns:
-        The cropped image with planes removed along the start of the given 
-        axis until the first non-empty plane is reached, or erased if 
-        ``eraser`` is given.
+        Tuple of ``img_crop, i``, where ``img_crop is the cropped image with 
+        planes removed along the start of the given axis until the first 
+        non-empty plane is reached, or erased if ``eraser`` is given, and 
+        ``i`` is the index of the first non-cropped/erased plane.
     """
     # find the first non-zero plane in the labels image along the given axis, 
     # expanding slices to the include the rest of the image
@@ -803,7 +804,7 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
                   .format(slices, eraser))
     else:
         print("could not find non-empty plane at which to crop")
-    return img_crop
+    return img_crop, i
 
 def register_group(img_files, flip=None, show_imgs=True, 
              write_imgs=True, name_prefix=None, scale=None):
@@ -828,8 +829,11 @@ def register_group(img_files, flip=None, show_imgs=True,
     target_size = config.register_settings["target_size"]
     img_vector = sitk.VectorOfImage()
     flip_img = False
+    # image properties of 1st image, in SimpleITK format
     origin = None
-    size = None
+    size_orig = None
+    size_cropped = None
+    start_y = None
     spacing = None
     for i in range(len(img_files)):
         # load image, fipping if necessary and using tranpsosed img if specified
@@ -839,26 +843,32 @@ def register_group(img_files, flip=None, show_imgs=True,
         if flip is not None:
             flip_img = flip[i]
         img = _load_numpy_to_sitk(img_file, flip_img)
+        size = img.GetSize()
         img_np = sitk.GetArrayFromImage(img)
         
-        # erase y-axis based on registered labels to ensure that sample images 
+        # crop y-axis based on registered labels to ensure that sample images 
         # have the same structures since variable amount of tissue posteriorly; 
-        # assume background is 0
+        # cropping appears to work better than erasing for groupwise reg, 
+        # preventing some images from being stretched into the erased space
         labels_img = load_registered_img(img_files[i], reg_name=IMG_LABELS)
-        img_np = _crop_image(img_np, labels_img, 1, eraser=0)
+        img_np, y_cropped = _crop_image(img_np, labels_img, 1)#, eraser=0)
         
         # force all images into same size and origin as first image 
         # to avoid groupwise registration error on physical space mismatch
-        if size is not None:
+        if size_cropped is not None:
             # use default interpolation, but should change to nearest neighbor 
             # if using for labels
             img_np = transform.resize(
-                img_np, size[::-1], anti_aliasing=True, mode="reflect")
+                img_np, size_cropped[::-1], anti_aliasing=True, mode="reflect")
+            print(img_file, img_np.shape)
         img = replace_sitk_with_numpy(img, img_np)
         if origin is None:
             origin = img.GetOrigin()
-            size = img.GetSize()
+            size_orig = size
+            size_cropped = img.GetSize()
             spacing = img.GetSpacing()
+            start_y = y_cropped
+            print("size_cropped: ", size_cropped, ", size_orig", size_orig)
         else:
             # force images into space of first image; may not be exactly 
             # correct but should be close since resized to match first image, 
@@ -898,11 +908,14 @@ def register_group(img_files, flip=None, show_imgs=True,
     for i in range(len(img_files)):
         extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
         img = extract_filter.Execute(transformed_img)
+        # resize to original shape of first image, all aligned to position 
+        # of subject within first image
+        img_np = np.zeros(size_orig[::-1])
+        img_np[:, start_y:] = sitk.GetArrayFromImage(img)
         if show_imgs:
-            sitk.Show(img)
-        imgs.append(sitk.GetArrayFromImage(img))
-    # combine all images by taking their mean; 
-    # TODO: likely need a way to ensure a consistent amount of tissue per image
+            sitk.Show(replace_sitk_with_numpy(img, img_np))
+        imgs.append(img_np)
+    # combine all images by taking their mean
     img_mean = np.mean(imgs, axis=0)
     transformed_img = replace_sitk_with_numpy(transformed_img, img_mean)
     

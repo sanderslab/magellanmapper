@@ -436,7 +436,11 @@ def _load_numpy_to_sitk(numpy_file, rotate=False):
     sitk_img = sitk.GetImageFromArray(roi)
     spacing = detector.resolutions[0]
     sitk_img.SetSpacing(spacing[::-1])
+    # TODO: consider setting z-origin to 0 since image generally as 
+    # tightly bound to subject as possible
+    #sitk_img.SetOrigin([0, 0, 0])
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
+    #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
     return sitk_img
 
 def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
@@ -905,18 +909,25 @@ def register_group(img_files, flip=None, show_imgs=True,
     size[3] = 0 # set t to 0 to collapse this dimension
     extract_filter.SetSize(size)
     imgs = []
-    for i in range(len(img_files)):
+    means = []
+    num_images = len(img_files)
+    for i in range(num_images):
         extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
         img = extract_filter.Execute(transformed_img)
         # resize to original shape of first image, all aligned to position 
         # of subject within first image
         img_np = np.zeros(size_orig[::-1])
         img_np[:, start_y:] = sitk.GetArrayFromImage(img)
+        means.append(np.mean(img_np))
         if show_imgs:
             sitk.Show(replace_sitk_with_numpy(img, img_np))
         imgs.append(img_np)
     # combine all images by taking their mean
     img_mean = np.mean(imgs, axis=0)
+    mean_of_means = np.mean(means)
+    thresh = mean_of_means / (num_images * 0.2)
+    print("zeroing out pixels below {} based on means {}".format(thresh, means))
+    img_mean[img_mean < thresh] = 0
     transformed_img = replace_sitk_with_numpy(transformed_img, img_mean)
     
     if show_imgs:

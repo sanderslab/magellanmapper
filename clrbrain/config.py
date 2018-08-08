@@ -321,6 +321,10 @@ def update_register_settings(settings, settings_type):
         settings["settings_name"] = "finer"
         settings["bspline_iter_max"] = "512"
     
+    elif settings_type.startswith("groupwise"):
+        settings["settings_name"] = "test"
+        settings["bspline_grid_space_voxels"] = "100"
+    
     elif settings_type.startswith("test"):
         settings["settings_name"] = "test"
         settings["target_size"] = (50, 50, 50)

@@ -810,6 +810,38 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
         print("could not find non-empty plane at which to crop")
     return img_crop, i
 
+def register_rough(fixed_img, moving_img):
+    settings = config.register_settings
+    elastix_img_filter = sitk.ElastixImageFilter()
+    elastix_img_filter.SetFixedImage(fixed_img)
+    elastix_img_filter.SetMovingImage(moving_img)
+    
+    param_map_vector = sitk.VectorOfParameterMap()
+    # translation to shift and rotate
+    param_map = sitk.GetDefaultParameterMap("translation")
+    param_map["MaximumNumberOfIterations"] = [settings["translation_iter_max"]]
+    '''
+    # TESTING: minimal registration
+    param_map["MaximumNumberOfIterations"] = ["0"]
+    '''
+    param_map_vector.append(param_map)
+    # affine to sheer and scale
+    param_map = sitk.GetDefaultParameterMap("affine")
+    param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
+    param_map_vector.append(param_map)
+    param_map = sitk.GetDefaultParameterMap("bspline")
+    param_map["FinalGridSpacingInVoxels"] = [
+        settings["bspline_grid_space_voxels"]]
+    del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
+    param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
+    param_map_vector.append(param_map)
+    
+    elastix_img_filter.SetParameterMap(param_map_vector)
+    elastix_img_filter.PrintParameterMap()
+    transform = elastix_img_filter.Execute()
+    transformed_img = elastix_img_filter.GetResultImage()
+    return transformed_img
+
 def register_group(img_files, flip=None, show_imgs=True, 
              write_imgs=True, name_prefix=None, scale=None):
     """Group registers several images to one another.
@@ -839,6 +871,8 @@ def register_group(img_files, flip=None, show_imgs=True,
     size_cropped = None
     start_y = None
     spacing = None
+    fixed_img = None
+    pixel_id = None
     for i in range(len(img_files)):
         # load image, fipping if necessary and using tranpsosed img if specified
         img_file = img_files[i]
@@ -873,7 +907,12 @@ def register_group(img_files, flip=None, show_imgs=True,
             spacing = img.GetSpacing()
             start_y = y_cropped
             print("size_cropped: ", size_cropped, ", size_orig", size_orig)
+            fixed_img = img
+            pixel_id = img.GetPixelID()
         else:
+            img = register_rough(fixed_img, img)
+            print(img.GetPixelIDTypeAsString())
+            img = sitk.Cast(img, pixel_id)
             # force images into space of first image; may not be exactly 
             # correct but should be close since resized to match first image, 
             # and spacing of resized images and atlases largely ignored in 

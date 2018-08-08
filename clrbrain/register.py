@@ -785,11 +785,20 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
     # expanding slices to the include the rest of the image
     slices = [slice(None)] * labels_img.ndim
     shape = labels_img.shape
-    for i in range(shape[axis]):
+    size_axis = shape[axis]
+    for i in range(size_axis):
         slices[axis] = i
         plane = labels_img[slices]
         if not np.allclose(plane, 0):
             print("found first non-zero plane at i of {}".format(i))
+            break
+    
+    for j in range(size_axis - 1, 0, -1):
+        slices[axis] = size_axis - j
+        plane = labels_img[slices]
+        if not np.allclose(plane, 0):
+            j += 1
+            print("found last non-zero plane at j of {}".format(j))
             break
     
     # crop image if a region of empty planes is found at the start of the axis
@@ -797,7 +806,7 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
     if i < shape[axis]:
         slices = [slice(None)] * img_np.ndim
         if eraser is None:
-            slices[axis] = slice(i, shape[axis])
+            slices[axis] = slice(i, j)
             img_crop = img_crop[slices]
             print("cropped image from shape {} to {}"
                   .format(shape, img_crop.shape))
@@ -808,7 +817,7 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
                   .format(slices, eraser))
     else:
         print("could not find non-empty plane at which to crop")
-    return img_crop, i
+    return img_crop, i, j
 
 def register_rough(fixed_img, moving_img):
     settings = config.register_settings
@@ -869,7 +878,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     origin = None
     size_orig = None
     size_cropped = None
-    start_y = None
+    crop_y = None
     spacing = None
     fixed_img = None
     pixel_id = None
@@ -883,13 +892,14 @@ def register_group(img_files, flip=None, show_imgs=True,
         img = _load_numpy_to_sitk(img_file, flip_img)
         size = img.GetSize()
         img_np = sitk.GetArrayFromImage(img)
+        #img_np = plot_3d.denoise_roi(img_np)
         
         # crop y-axis based on registered labels to ensure that sample images 
         # have the same structures since variable amount of tissue posteriorly; 
         # cropping appears to work better than erasing for groupwise reg, 
         # preventing some images from being stretched into the erased space
         labels_img = load_registered_img(img_files[i], reg_name=IMG_LABELS)
-        img_np, y_cropped = _crop_image(img_np, labels_img, 1)#, eraser=0)
+        img_np, y_start, y_end = _crop_image(img_np, labels_img, 1)#, eraser=0)
         
         # force all images into same size and origin as first image 
         # to avoid groupwise registration error on physical space mismatch
@@ -937,6 +947,10 @@ def register_group(img_files, flip=None, show_imgs=True,
     param_map["MaximumNumberOfIterations"] = [settings["groupwise_iter_max"]]
     # TESTING:
     #param_map["MaximumNumberOfIterations"] = ["0"]
+    '''
+    param_map["NumberOfResolutions"] = ["8"]
+    param_map["GridSpacingSchedule"] = ["8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"]
+    '''
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
     transform_filter = elastix_img_filter.Execute()
@@ -956,7 +970,7 @@ def register_group(img_files, flip=None, show_imgs=True,
         # resize to original shape of first image, all aligned to position 
         # of subject within first image
         img_np = np.zeros(size_orig[::-1])
-        img_np[:, start_y:] = sitk.GetArrayFromImage(img)
+        img_np[:, crop_y[0]:crop_y[1]] = sitk.GetArrayFromImage(img)
         means.append(np.mean(img_np))
         if show_imgs:
             sitk.Show(replace_sitk_with_numpy(img, img_np))

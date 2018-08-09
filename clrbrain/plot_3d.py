@@ -21,8 +21,10 @@ import math
 from scipy import ndimage
 from skimage import draw
 from skimage import restoration
+from skimage import img_as_uint
 from skimage import img_as_float
 from skimage import filters
+from skimage import measure
 from skimage import morphology
 from skimage import transform
 
@@ -261,6 +263,28 @@ def in_paint(roi, to_fill):
         to_fill, return_distances=False, return_indices=True)
     filled = roi[tuple(indices)]
     return filled
+
+def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
+    # erase below simple threshold
+    roi_carved = np.copy(roi)
+    if thresh is None:
+        thresh = filters.threshold_mean(roi_carved)
+    mask = roi_carved < thresh
+    roi_carved[mask] = 0
+    
+    # fill small holes from original ROI
+    roi_uint = roi_carved
+    if not isinstance(roi[..., 0], np.int):
+        print("converting image to uint to remove small holes")
+        roi_uint = img_as_uint(roi_carved)
+    labels = measure.label(roi_uint)
+    to_fill = np.logical_and(
+        morphology.remove_small_holes(labels, holes_area), mask)
+    roi_unfilled = np.copy(roi_carved) if return_unfilled else None
+    roi_carved[to_fill] = roi[to_fill]
+    if return_unfilled:
+        return roi_carved, roi_unfilled
+    return roi_carved
 
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]

@@ -54,7 +54,6 @@ except ImportError as e:
     print("WARNING: SimpleElastix could not be found, so there will be error "
           "when attempting to register images or load registered images")
 import numpy as np
-from skimage import img_as_uint
 from skimage import filters
 from skimage import measure
 from skimage import morphology
@@ -932,22 +931,15 @@ def register_group(img_files, flip=None, show_imgs=True,
     print("zeroing out pixels below {} based on means {}".format(thresh, means))
     #img_mean[img_mean < thresh] = 0
     
-    sitk.Show(replace_sitk_with_numpy(transformed_img, img_mean))
-    img_mean_orig = np.copy(img_mean)
-    mask = img_mean < 0.009
-    img_mean[mask] = 0
-    img_mean_unfilled = replace_sitk_with_numpy(transformed_img, img_mean)
-    sitk.Show(img_mean_unfilled)
-    
-    img_mean_uint = img_as_uint(img_mean)
-    labels = measure.label(img_mean_uint)
-    to_fill = np.logical_and(morphology.remove_small_holes(labels, 10000), mask)
-    img_mean[to_fill] = img_mean_orig[to_fill]
-    
+    # carve groupwise registered image, showing raw, unfilled, and filled
+    img_raw = replace_sitk_with_numpy(transformed_img, img_mean)
+    img_mean, img_mean_unfilled = plot_3d.carve(
+        img_mean, thresh=0.009, holes_area=10000, return_unfilled=True)
+    img_unfilled = replace_sitk_with_numpy(transformed_img, img_mean_unfilled)
     transformed_img = replace_sitk_with_numpy(transformed_img, img_mean)
     
     if show_imgs:
-        sitk.Show(transformed_img)
+        for img in (img_raw, img_unfilled, transformed_img): sitk.Show(img)
     
     if write_imgs:
         # write both the .mhd and Numpy array files to a separate folder to 

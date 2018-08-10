@@ -48,7 +48,8 @@ def calc_scaling_factor():
         raise AttributeError(
             "Must load resolutions from file or set a resolution")
     factor = np.divide(1.0, resolutions[0])
-    lib_clrbrain.printv("scaling_factor: {}".format(factor))
+    lib_clrbrain.printv(
+        "microsope scaling factor based on resolutions: {}".format(factor))
     return factor
 
 def markers_from_blobs(roi, blobs):

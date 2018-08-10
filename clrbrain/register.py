@@ -1321,7 +1321,8 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
         given ID. All children of this ID are included in the region. The 
         region's coordinate sorting prioritizes z, followed by y, etc, meaning 
         that the middle value will be closest to the middle of z but may fall 
-        at an extreme of y, x, etc. Getting the coordinate at the middle 
+        be slightly away from midline in the other axes if this z does not 
+        contain y/x's around midline. Getting the coordinate at the middle 
         of this list rather than another coordinate midway between other values 
         in the region ensures that the returned coordinate will reside within 
         the region itself, including non-contingous regions that may be 
@@ -1333,31 +1334,36 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
     if label_id < 0: region_ids = np.multiply(-1, region_ids)
     print("region IDs: {}".format(region_ids))
     
-    # get a list of all the region's coordinates to sort, using z as primary key
+    # get a list of all the region's coordinates to sort
     img_region = np.isin(labels_img, region_ids)
-    #img_region = morphology.remove_small_objects(img_region, 100)
     region_coords = np.where(img_region)
     print("region_coords:\n{}".format(region_coords))
-    sort_ind = np.lexsort(region_coords[::-1])
-    #print("sort_ind: {}".format(sort_ind))
     
-    # get the coordinate at the middle of the list or sorted region coordinates
-    # TODO: consider recursively selecting a middle fraction of values for 
-    # each dimension to ensure that the dimensions after z are also in the 
-    # middle
-    coord_middle = None
+    def get_middle(region_coords):
+        # recursively get value at middle of list for each axis
+        sort_ind = np.lexsort(region_coords[::-1]) # last axis is primary key
     num_coords = len(sort_ind)
     if num_coords > 0:
         mid_ind = sort_ind[int(num_coords / 2)]
-        coord_middle = [region_coords[i][mid_ind] 
-                        for i in range(len(region_coords))]
-        coord_tup = tuple(coord_middle)
-        print("coord_middle (unscaled): {}".format(coord_tup))
+            mid = region_coords[0][mid_ind]
+            if len(region_coords) > 1:
+                # shift to next axis in tuple of coords
+                mask = region_coords[0] == mid
+                region_coords = tuple(
+                    coords[mask] for coords in region_coords[1:])
+                return (mid, *get_middle(region_coords))
+            return (mid, )
+        return None
+    
+    coord = None
+    coord_labels = get_middle(region_coords)
+    if coord_labels:
+        print("coord_labels (unscaled): {}".format(coord_labels))
         print("ID at middle coord: {} (in region? {})"
-              .format(labels_img[coord_tup], img_region[coord_tup]))
-        coord_middle = tuple(np.around(coord_middle / scaling).astype(np.int))
-    print("coord_middle: {}".format(coord_middle))
-    return coord_middle, img_region
+              .format(labels_img[coord_labels], img_region[coord_labels]))
+        coord = tuple(np.around(coord_labels / scaling).astype(np.int))
+    print("coord at middle: {}".format(coord))
+    return coord, img_region
 
 def get_region_from_id(img_region, scaling):
     """Get the entire region encompassing a given label ID.
@@ -2075,7 +2081,7 @@ def _test_region_from_id():
         print("loaded experiment image from {}".format(config.filename))
     ref = load_labels_ref(config.load_labels)
     id_dict = create_aba_reverse_lookup(ref)
-    middle, img_region = get_region_middle(id_dict, 16376, labels_img, scaling)
+    middle, img_region = get_region_middle(id_dict, 16652, labels_img, scaling)
     atlas_label = get_label(middle, labels_img, id_dict, scaling, None, True)
     props, bbox, centroid = get_region_from_id(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))

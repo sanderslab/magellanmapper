@@ -666,9 +666,9 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
     labels_img = transpose_img(
         labels_img, plane, flip, target_size=fixed_img_size)
-    labels_img_orig = labels_img
-    labels_imgs = []
-    for truncate in (True, False):
+    
+    def make_labels(truncate):
+        nonlocal transformed_img
         img = _transform_labels(
             transformix_img_filter, labels_img, settings, truncate=truncate)
         print(img.GetSpacing())
@@ -681,9 +681,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         print(fixed_img_orig.GetSpacing(), transformed_img.GetSpacing())
         img, transformed_img = _curate_img(
             fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
-        labels_imgs.append(img)
-    labels_img = labels_imgs[0]
-    labels_img_full = labels_imgs[1]
+        return img
+    
+    labels_img_full = make_labels(False)
+    labels_img = labels_img_full if new_atlas else make_labels(True)
     
     if show_imgs:
         # show individual SimpleITK images in default viewer

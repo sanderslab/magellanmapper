@@ -341,9 +341,9 @@ def update_register_settings(settings, settings_type):
         {"preprocess": True}, 
         settings_type)
     
-    # registration to atlas built from registering to group-registered image 
-    # assumes images are roughly same size and already have mirrored labels 
-    # aligned with the fixed image toward the bottom of the z-dimension
+    # registration to new atlas assumes images are roughly same size and 
+    # already have mirrored labels aligned with the fixed image toward the 
+    # bottom of the z-dimension
     settings.add_modifier(
         "_generated", 
         {"resize_factor": 1.0, 
@@ -351,7 +351,7 @@ def update_register_settings(settings, settings_type):
          "labels_mirror": None}, # turn off mirroring
         settings_type)
     
-    # new atlas using group-registered image as the atlas itself should 
+    # atlas that uses groupwise image as the atlas itself should 
     # determine atlas threshold dynamically
     settings.add_modifier(
         "_grouped", 

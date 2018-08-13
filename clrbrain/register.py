@@ -509,6 +509,7 @@ def _measure_overlap_labels(fixed_img, labels_img):
         labels_img, result_img_np)
     measure_overlap(
         fixed_img, result_img_for_overlap, transformed_thresh=1)
+        #fixed_img, result_img_for_overlap, transformed_thresh=1, fixed_thresh=10.0)
 
 def _transform_labels(transformix_img_filter, labels_img, settings, 
                       truncate=False):
@@ -701,6 +702,16 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
     labels_img = transpose_img(
         labels_img, plane, flip, target_size=fixed_img_size)
+    
+    '''
+    labels_img_orig = labels_img
+    print("DSC from original moving image compared with labels")
+    _measure_overlap_labels(
+        moving_img, labels_img_orig)
+    sitk.Show(moving_img)
+    sitk.Show(labels_img_orig)
+    return
+    '''
     
     def make_labels(truncate):
         nonlocal transformed_img

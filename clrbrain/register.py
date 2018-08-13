@@ -573,6 +573,20 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # load fixed image, assumed to be experimental image
     fixed_img = _load_numpy_to_sitk(fixed_file)
     
+    #sitk.Show(fixed_img)
+    img_np = sitk.GetArrayFromImage(fixed_img)
+    #img_np = plot_3d.denoise_roi(img_np)
+    img_np = plot_3d.carve(img_np, thresh=0.009, holes_area=10000)
+    '''
+    slices = [slice(150), slice(0, 110), slice(95, 125)]
+    img_np_preserve = img_np[slices]
+    img_np = plot_3d.carve(img_np, thresh=0.009, holes_area=10000)
+    img_np[slices] = img_np_preserve
+    '''
+    #img_np = morphology.opening(img_np, morphology.ball(2))
+    fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
+    #sitk.Show(fixed_img)
+    
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
@@ -584,6 +598,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # load moving image, assumed to be atlas
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
+    
+    '''
+    moving_img_np = sitk.GetArrayFromImage(moving_img)
+    #moving_img_np = plot_3d.denoise_roi(moving_img_np)
+    #moving_img_np = plot_3d.carve(moving_img_np, thresh=0.009, holes_area=10000)
+    #moving_img_np = morphology.opening(moving_img_np, morphology.ball(2))
+    moving_img = replace_sitk_with_numpy(moving_img, moving_img_np)
+    '''
+    
     fixed_img_size = fixed_img.GetSize()
     moving_img = transpose_img(
         moving_img, plane, flip, target_size=fixed_img_size)
@@ -647,6 +670,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     elastix_img_filter.PrintParameterMap()
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
+    
+    '''
+    img_np, _ = _uncrop_image(
+        sitk.GetArrayFromImage(fixed_img), 
+        sitk.GetArrayFromImage(transformed_img), 1, settings["atlas_threshold"])
+    fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
+    #sitk.Show(fixed_img)
+    #return
+    '''
     
     # prep filter to apply transformation to label files
     transform_param_map = elastix_img_filter.GetTransformParameterMap()
@@ -813,6 +845,50 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
     else:
         print("could not find non-empty plane at which to crop")
     return img_crop, i
+
+def _uncrop_image(img_np, atlas_img, axis, atlas_thresh):
+    """Crop image by removing the empty space at the start of the given axis.
+    
+    Args:
+        img_np: 3D image array in Numpy format.
+        labels_img: 3D image array in Numpy format of the same shape as 
+            ``img_np``, typically a labels image from which to find the empty 
+            region to crop.
+        axis: Axis along which to crop.
+        eraser: Erase rather than crop, changing pixels that would have been 
+            cropped to the given intensity value instead; defaults to None.
+    
+    Returns:
+        Tuple of ``img_crop, i``, where ``img_crop is the cropped image with 
+        planes removed along the start of the given axis until the first 
+        non-empty plane is reached, or erased if ``eraser`` is given, and 
+        ``i`` is the index of the first non-cropped/erased plane.
+    """
+    # find the first non-zero plane in the labels image along the given axis, 
+    # expanding slices to the include the rest of the image
+    slices = [slice(None)] * img_np.ndim
+    shape = img_np.shape
+    for i in range(shape[axis]):
+        slices[axis] = i
+        plane = img_np[slices]
+        if not np.allclose(plane, 0):
+            print("found first all non-zero plane at i of {}".format(i))
+            i += 20
+            break
+    
+    # crop image if a region of empty planes is found at the start of the axis
+    if i < shape[axis]:
+        slices = [slice(None)] * img_np.ndim
+        slices[axis] = slice(0, i)
+        img_uncrop = img_np[slices]
+        img_uncrop = plot_3d.in_paint(img_uncrop, img_uncrop == 0)
+        img_uncrop[atlas_img[slices] < atlas_thresh] = 0
+        img_np[slices] = img_uncrop[:]
+        print(img_np)
+        print(img_np.shape)
+    else:
+        print("could not find non-empty plane at which to crop")
+    return img_np, i
 
 def register_group(img_files, flip=None, show_imgs=True, 
              write_imgs=True, name_prefix=None, scale=None):

@@ -472,9 +472,12 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
     # to fill in with nearest neighbors
     thresh = filters.threshold_mean(fixed_img_np)
     print("thresh: {}".format(thresh))
+    
     # fill only empty regions corresponding to filled pixels, but fills 
     # some with 0 from dist transform pointing to appropriately empty pixels
     #to_fill = np.logical_and(labels_img_np == 0, fixed_img_np > thresh)
+    
+    # fill in all empty areas, assuming will carve later
     to_fill = labels_img_np == 0
     
     result_imgs = []
@@ -573,8 +576,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
+        # need to have set microscope profile to "_register"
         img_np = sitk.GetArrayFromImage(fixed_img)
-        #img_np = plot_3d.saturate_roi(img_np)
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
     

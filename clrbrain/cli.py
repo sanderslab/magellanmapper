@@ -848,15 +848,22 @@ def process_file(filename_base, offset, roi_size):
     # attempts to load the main image stack
     if image5d is None:
         if os.path.isdir(config.filename):
+            # import directory of TIFF images
             image5d = importer.import_dir(os.path.join(config.filename, "*"))
         elif (config.filename.endswith(".nii.gz") 
-              or config.filename.endswith(".mha")):
-            # load metadata from 2nd filename argument for consistency with 
-            # other images loaded here
+              or config.filename.endswith(".mha")
+              or config.filename.endswith(".mhd")):
+            # load formats supported by SimpleITK, using metadata from 
+            # Numpy archive
             rotate = config.flip is not None and config.flip[0]
+            filename_np = config.filename # default to same basic name
+            if len(config.filenames) > 1:
+                # load metadata from 2nd filename argument if given
+                filename_np = config.filenames[1]
             image5d = importer.read_file_sitk(
-                config.filename, config.filenames[1], config.series, rotate)
+                config.filename, filename_np, config.series, rotate)
         else:
+            # load from Clrbrain Numpy format
             image5d = importer.read_file(
                 config.filename, config.series, channel=config.channel)
     

@@ -1343,9 +1343,9 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
     def get_middle(region_coords):
         # recursively get value at middle of list for each axis
         sort_ind = np.lexsort(region_coords[::-1]) # last axis is primary key
-    num_coords = len(sort_ind)
-    if num_coords > 0:
-        mid_ind = sort_ind[int(num_coords / 2)]
+        num_coords = len(sort_ind)
+        if num_coords > 0:
+            mid_ind = sort_ind[int(num_coords / 2)]
             mid = region_coords[0][mid_ind]
             if len(region_coords) > 1:
                 # shift to next axis in tuple of coords

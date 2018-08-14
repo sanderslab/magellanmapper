@@ -354,13 +354,13 @@ def update_register_settings(settings, settings_type):
         {"preprocess": True}, 
         settings_type)
     
-    # registration to new atlas assumes images are roughly same size and 
-    # already have mirrored labels aligned with the fixed image toward the 
-    # bottom of the z-dimension
+    # registration to new atlas assumes images are roughly same size and
+    # orientation (ie transposed) and already have mirrored labels aligned 
+    # with the fixed image toward the bottom of the z-dimension
     settings.add_modifier(
         "_generated", 
         {"resize_factor": 1.0, 
-         "truncate_labels": (None, None, (0.2, 1.0)),
+         "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
          "labels_mirror": None}, # turn off mirroring
         settings_type)
     

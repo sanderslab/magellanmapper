@@ -950,15 +950,26 @@ def register_group(img_files, flip=None, show_imgs=True,
     print("zeroing out pixels below {} based on means {}".format(thresh, means))
     #img_mean[img_mean < thresh] = 0
     
-    # carve groupwise registered image, showing raw, unfilled, and filled
     img_raw = replace_sitk_with_numpy(transformed_img, img_mean)
-    img_mean, img_mean_unfilled = plot_3d.carve(
-        img_mean, thresh=0.009, holes_area=10000, return_unfilled=True)
-    img_unfilled = replace_sitk_with_numpy(transformed_img, img_mean_unfilled)
-    transformed_img = replace_sitk_with_numpy(transformed_img, img_mean)
+    
+    # carve groupwise registered image if given thresholds
+    imgs_to_show = []
+    imgs_to_show.append(img_raw)
+    carve_threshold = settings["carve_threshold"]
+    holes_area = settings["holes_area"]
+    if carve_threshold and holes_area:
+        img_mean, img_mean_unfilled = plot_3d.carve(
+            img_mean, thresh=carve_threshold, holes_area=holes_area, 
+            return_unfilled=True)
+        img_unfilled = replace_sitk_with_numpy(
+            transformed_img, img_mean_unfilled)
+        transformed_img = replace_sitk_with_numpy(transformed_img, img_mean)
+        # will show unfilled and filled in addition to raw image
+        imgs_to_show.append(img_unfilled)
+        imgs_to_show.append(transformed_img)
     
     if show_imgs:
-        for img in (img_raw, img_unfilled, transformed_img): sitk.Show(img)
+        for img in imgs_to_show: sitk.Show(img)
     
     if write_imgs:
         # write both the .mhd and Numpy array files to a separate folder to 

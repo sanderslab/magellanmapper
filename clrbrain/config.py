@@ -310,10 +310,16 @@ class RegisterSettings(SettingsDict):
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False
+        # erase labels outside of x,y,z (applied before transposition), 
+        # where each val is (start, end), given as fractions, or None for the 
+        # whole range
         self["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
         self["labels_mirror"] = (None, 0.5)
         self["atlas_threshold"] = 10.0
-        self["target_size"] = None
+        self["target_size"] = None # x,y,z in exp orientation threshold for 
+        # carving and max size of small holes for removal, respectively
+        self["carve_threshold"] = None
+        self["holes_area"] = None
         # paste in region from first image during groupwise reg; 
         # x,y,z, same format as truncate_labels except in pixels
         self["extend_borders"] = None
@@ -326,7 +332,10 @@ def update_register_settings(settings, settings_type):
     
     elif settings_type.startswith("groupwise"):
         settings["settings_name"] = "groupwise"
+        # groupwise registration
         settings["bspline_grid_space_voxels"] = "30"
+        settings["carve_threshold"] = 0.009
+        settings["holes_area"] = 10000
         settings["extend_borders"] = (None, (0, 100), (80, 140))
     
     elif settings_type.startswith("test"):
@@ -365,7 +374,7 @@ def update_register_settings(settings, settings_type):
     # ABA E18pt5 specific settings
     settings.add_modifier(
         "_abae18pt5", 
-        {"target_size": (278, 581, 370), # x,y,z in exp orientation
+        {"target_size": (278, 581, 370),
          "resize_factor": None}, # turn off resizing
         settings_type)
     

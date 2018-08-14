@@ -913,15 +913,12 @@ def register_group(img_files, flip=None, show_imgs=True,
     size[3] = 0 # set t to 0 to collapse this dimension
     extract_filter.SetSize(size)
     imgs = []
-    means = []
     extend_borders = settings["extend_borders"]
     num_images = len(img_files)
     for i in range(num_images):
         extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
         img = extract_filter.Execute(transformed_img)
         img_np = sitk.GetArrayFromImage(img)
-        #means.append(filters.threshold_mean(img_np))
-        means.append(np.mean(img_np))
         # resize to original shape of first image, all aligned to position 
         # of subject within first image
         img_large_np = np.zeros(size_orig[::-1])
@@ -945,11 +942,6 @@ def register_group(img_files, flip=None, show_imgs=True,
         imgs.append(img_large_np)
     # combine all images by taking their mean
     img_mean = np.mean(imgs, axis=0)
-    mean_of_means = np.mean(means)
-    thresh = mean_of_means / num_images * 2
-    print("zeroing out pixels below {} based on means {}".format(thresh, means))
-    #img_mean[img_mean < thresh] = 0
-    
     img_raw = replace_sitk_with_numpy(transformed_img, img_mean)
     
     # carve groupwise registered image if given thresholds

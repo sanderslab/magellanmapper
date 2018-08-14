@@ -314,6 +314,9 @@ class RegisterSettings(SettingsDict):
         self["labels_mirror"] = (None, 0.5)
         self["atlas_threshold"] = 10.0
         self["target_size"] = None
+        # paste in region from first image during groupwise reg; 
+        # x,y,z, same format as truncate_labels except in pixels
+        self["extend_borders"] = None
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -324,6 +327,7 @@ def update_register_settings(settings, settings_type):
     elif settings_type.startswith("groupwise"):
         settings["settings_name"] = "groupwise"
         settings["bspline_grid_space_voxels"] = "30"
+        settings["extend_borders"] = (None, (0, 100), (80, 140))
     
     elif settings_type.startswith("test"):
         settings["settings_name"] = "test"

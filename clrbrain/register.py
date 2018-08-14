@@ -840,6 +840,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     size_cropped = None
     start_y = None
     spacing = None
+    img_np_template = None # first image, used as template for rest
     for i in range(len(img_files)):
         # load image, fipping if necessary and using tranpsosed img if specified
         img_file = img_files[i]
@@ -850,6 +851,8 @@ def register_group(img_files, flip=None, show_imgs=True,
         img = _load_numpy_to_sitk(img_file, flip_img)
         size = img.GetSize()
         img_np = sitk.GetArrayFromImage(img)
+        if img_np_template is None:
+            img_np_template = np.copy(img_np)
         
         # crop y-axis based on registered labels to ensure that sample images 
         # have the same structures since variable amount of tissue posteriorly; 
@@ -911,6 +914,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     extract_filter.SetSize(size)
     imgs = []
     means = []
+    extend_borders = settings["extend_borders"]
     num_images = len(img_files)
     for i in range(num_images):
         extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
@@ -922,6 +926,20 @@ def register_group(img_files, flip=None, show_imgs=True,
         # of subject within first image
         img_large_np = np.zeros(size_orig[::-1])
         img_large_np[:, start_y:] = img_np
+        if i == 0 and extend_borders:
+            # fill borders with first image to replace cropped area; 
+            # won't fit perfectly, but assume that first image is closest 
+            # since used as template, and any excess signal will be likely 
+            # reduced during subsequent registrations
+            slices = []
+            for border in extend_borders[::-1]:
+                if border:
+                    slices.append(slice(*border))
+                else:
+                    slices.append(slice(None))
+            slices = tuple(slices)
+            # intensify since will take mean later
+            img_large_np[slices] = img_np_template[slices] * num_images
         if show_imgs:
             sitk.Show(replace_sitk_with_numpy(img, img_large_np))
         imgs.append(img_large_np)

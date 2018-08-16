@@ -317,9 +317,11 @@ class RegisterSettings(SettingsDict):
         self["labels_mirror"] = (None, 0.5)
         self["atlas_threshold"] = 10.0
         self["target_size"] = None # x,y,z in exp orientation threshold for 
+        
         # carving and max size of small holes for removal, respectively
         self["carve_threshold"] = None
         self["holes_area"] = None
+        
         # paste in region from first image during groupwise reg; 
         # x,y,z, same format as truncate_labels except in pixels
         self["extend_borders"] = None
@@ -332,16 +334,23 @@ def update_register_settings(settings, settings_type):
         settings["bspline_iter_max"] = "512"
     
     elif settings_type.startswith("groupwise"):
-        # groupwise registration, with larger bspline voxels to avoid over 
-        # deformation of internal structures and increased spacing schedule 
-        # to improve internal alignment
+        # groupwise registration
         settings["settings_name"] = "groupwise"
+        
+        # larger bspline voxels to avoid over deformation of internal structures
         settings["bspline_grid_space_voxels"] = "70"
+        
+        # empirically determined
         settings["carve_threshold"] = 0.009
         settings["holes_area"] = 10000
-        # manually add variable tissue area from first image to create 
-        # bigger atlas to register samples with this variable area
-        settings["extend_borders"] = (None, (0, 100), (80, 140))
+        
+        # empirically determined to add variable tissue area from first image 
+        # since this tissue may be necessary to register to other images 
+        # that contain this variable region
+        settings["extend_borders"] = ((60, 180), (0, 200), (20, 110))
+        
+        # increased number of resolutions with overall increased spacing 
+        # schedule since it appears to improve internal alignment
         settings["grid_spacing_schedule"] = [
             "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"]
     

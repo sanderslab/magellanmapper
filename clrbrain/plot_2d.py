@@ -1180,11 +1180,12 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         plane = config.PLANE[0]
     
     # transparency controls
-    alpha = 0.7
     gs_controls = gridspec.GridSpecFromSubplotSpec(
         1, 2, subplot_spec=gs[1, 0], width_ratios=(5, 1))
     ax_alpha = plt.subplot(gs_controls[0, 0])
-    alpha_slider = Slider(ax_alpha, "Transparency", 0.0, 1.0, valinit=alpha)
+    alpha_slider = Slider(
+        ax_alpha, "Transparency", 0.0, 1.0, 
+        valinit=plot_editor.PlotEditor.ALPHA_DEFAULT)
     ax_alpha_reset = plt.subplot(gs_controls[0, 1])
     alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
     
@@ -1199,7 +1200,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         labels_image5d = importer.roi_to_image5d(labels_img)
         img2d, aspect, origin = extract_plane(labels_image5d, z_overview)
         label_ax_img = imshow_multichannel(
-            ax, img2d, 0, [cmap_labels], aspect, alpha, 
+            ax, img2d, 0, [cmap_labels], aspect, plot_ed.alpha, 
             interpolation="none")
         ax.format_coord = PixelDisplay(img2d)
         _set_overview_title(ax, plane, z_overview)

@@ -10,6 +10,8 @@ from clrbrain import config
 from clrbrain import register
 
 class PlotEditor:
+    ALPHA_DEFAULT = 0.7
+    
     def __init__(self, img3d, alpha_slider, alpha_reset_btn):
         self.img3d = img3d
         self.intensity = None
@@ -23,6 +25,7 @@ class PlotEditor:
         self.circle = None
         self.background = None
         self.last_loc = None
+        self.alpha = self.ALPHA_DEFAULT
         self.alpha_slider = alpha_slider
         self.alpha_reset_btn = alpha_reset_btn
     
@@ -30,7 +33,6 @@ class PlotEditor:
         self.ax_img = ax_img
         self.plane_n = plane_n
         self.plane = plane
-        self.alpha = self.ax_img.axes.get_alpha()
         self.connect()
         self.region_label = self.ax_img.axes.text(0, 0, "", color="w")
     

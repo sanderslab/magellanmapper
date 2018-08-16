@@ -543,6 +543,12 @@ def _transform_labels(transformix_img_filter, labels_img, settings,
     '''
     return transformed_labels_img
 
+def _config_reg_resolutions(grid_spacing_schedule, param_map):
+    if grid_spacing_schedule:
+        # assume spacing given as single val for all dimensions
+        param_map["NumberOfResolutions"] = [str(len(grid_spacing_schedule))]
+        param_map["GridSpacingSchedule"] = grid_spacing_schedule
+
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
              new_atlas=False):
@@ -572,15 +578,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # load fixed image, assumed to be experimental image
     fixed_img = _load_numpy_to_sitk(fixed_file)
     
-    '''
-    img_np = sitk.GetArrayFromImage(fixed_img)
-    img_np = plot_3d.carve(
-        img_np, thresh=0.0095, holes_area=10000)
-    fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
-    sitk.Show(fixed_img)
-    return
-    '''
-       
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
@@ -629,12 +626,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
-    '''
-    # num of resolutions should match num of grid spacings
-    param_map["NumberOfResolutions"] = ["6"]
-    param_map["GridSpacingSchedule"] = ["32", "16", "8", "4", "2", "1"]
-    param_map["GridSpacingSchedule"] = ["8", "4", "2.80322", "1.9881", "1.41", "1"]
-    '''
+    _config_reg_resolutions(settings["grid_spacing_schedule"], param_map)
     if settings["point_based"]:
         # point-based registration added to b-spline, which takes point sets 
         # found in name_prefix's folder; note that coordinates are from the 
@@ -794,7 +786,9 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
         ``i`` is the index of the first non-cropped/erased plane.
     """
     # find the first non-zero plane in the labels image along the given axis, 
-    # expanding slices to the include the rest of the image
+    # expanding slices to the include the rest of the image; 
+    # TODO: consider using mask from given region in labels to zero out 
+    # corresponding region in img_np
     slices = [slice(None)] * labels_img.ndim
     shape = labels_img.shape
     for i in range(shape[axis]):
@@ -913,11 +907,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     param_map["MaximumNumberOfIterations"] = [settings["groupwise_iter_max"]]
     # TESTING:
     #param_map["MaximumNumberOfIterations"] = ["0"]
-    grid_spacing_schedule = settings["grid_spacing_schedule"]
-    if grid_spacing_schedule:
-        # assume spacing given as single val for all dimensions
-        param_map["NumberOfResolutions"] = [str(len(grid_spacing_schedule))]
-        param_map["GridSpacingSchedule"] = grid_spacing_schedule
+    _config_reg_resolutions(settings["grid_spacing_schedule"], param_map)
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
     transform_filter = elastix_img_filter.Execute()

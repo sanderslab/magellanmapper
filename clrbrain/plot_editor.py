@@ -28,29 +28,34 @@ class PlotEditor:
         self.alpha = self.ALPHA_DEFAULT
         self.alpha_slider = alpha_slider
         self.alpha_reset_btn = alpha_reset_btn
+        self.connected = False
     
     def set_plane(self, ax_img, plane_n, plane=None):
         self.ax_img = ax_img
         self.plane_n = plane_n
         self.plane = plane
-        self.connect()
+        if not self.connected:
+            # connect once get AxesImage
+            self.connect()
         self.region_label = self.ax_img.axes.text(0, 0, "", color="w")
+        self.circle = None
     
     def connect(self):
         """Connect events to functions.
         """
-        self.cidpress = self.ax_img.figure.canvas.mpl_connect(
-            "button_press_event", self.on_press)
-        self.cidrelease = self.ax_img.figure.canvas.mpl_connect(
+        canvas = self.ax_img.figure.canvas
+        self.cidpress = canvas.mpl_connect("button_press_event", self.on_press)
+        self.cidrelease = canvas.mpl_connect(
             "button_release_event", self.on_release)
-        self.cidmotion = self.ax_img.figure.canvas.mpl_connect(
+        self.cidmotion = canvas.mpl_connect(
             "motion_notify_event", self.on_motion)
-        self.cidenter = self.ax_img.figure.canvas.mpl_connect(
+        self.cidenter = canvas.mpl_connect(
             "axes_enter_event", self.on_axes_enter)
-        self.cidleave = self.ax_img.figure.canvas.mpl_connect(
+        self.cidleave = canvas.mpl_connect(
             "axes_leave_event", self.on_axes_exit)
-        self.cidkeypress = self.ax_img.figure.canvas.mpl_connect(
+        self.cidkeypress = canvas.mpl_connect(
             "key_press_event", self.on_key_press)
+        self.connected = True
     
     def setup_animation(self):
         """Store the pixel buffer in background to prep for animations.

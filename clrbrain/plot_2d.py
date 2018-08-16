@@ -1204,7 +1204,6 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
             interpolation="none")
         ax.format_coord = PixelDisplay(img2d)
         _set_overview_title(ax, plane, z_overview)
-        plot_ed.disconnect()
         plot_ed.set_plane(label_ax_img[0], z_overview, plane)
     
     def scroll_overview(event):

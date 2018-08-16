@@ -332,9 +332,11 @@ def update_register_settings(settings, settings_type):
         settings["bspline_iter_max"] = "512"
     
     elif settings_type.startswith("groupwise"):
+        # groupwise registration, with larger bspline voxels to avoid over 
+        # deformation of internal structures and increased spacing schedule 
+        # to improve internal alignment
         settings["settings_name"] = "groupwise"
-        # groupwise registration
-        settings["bspline_grid_space_voxels"] = "30"
+        settings["bspline_grid_space_voxels"] = "70"
         settings["carve_threshold"] = 0.009
         settings["holes_area"] = 10000
         # manually add variable tissue area from first image to create 

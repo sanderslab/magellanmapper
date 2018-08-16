@@ -572,6 +572,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # load fixed image, assumed to be experimental image
     fixed_img = _load_numpy_to_sitk(fixed_file)
     
+    '''
+    img_np = sitk.GetArrayFromImage(fixed_img)
+    img_np = plot_3d.carve(
+        img_np, thresh=0.0095, holes_area=10000)
+    fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
+    sitk.Show(fixed_img)
+    return
+    '''
+       
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
@@ -969,6 +978,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     if show_imgs:
         for img in imgs_to_show: sitk.Show(img)
     
+    #transformed_img = img_raw
     if write_imgs:
         # write both the .mhd and Numpy array files to a separate folder to 
         # mimic the atlas folder format

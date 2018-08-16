@@ -915,6 +915,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     #param_map["MaximumNumberOfIterations"] = ["0"]
     grid_spacing_schedule = settings["grid_spacing_schedule"]
     if grid_spacing_schedule:
+        # assume spacing given as single val for all dimensions
         param_map["NumberOfResolutions"] = [str(len(grid_spacing_schedule))]
         param_map["GridSpacingSchedule"] = grid_spacing_schedule
     elastix_img_filter.SetParameterMap(param_map)
@@ -928,7 +929,6 @@ def register_group(img_files, flip=None, show_imgs=True,
     size[3] = 0 # set t to 0 to collapse this dimension
     extract_filter.SetSize(size)
     imgs = []
-    extend_borders = settings["extend_borders"]
     num_images = len(img_files)
     for i in range(num_images):
         extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
@@ -938,31 +938,30 @@ def register_group(img_files, flip=None, show_imgs=True,
         # of subject within first image
         img_large_np = np.zeros(size_orig[::-1])
         img_large_np[:, start_y:] = img_np
-        if i == 0 and extend_borders:
-            # fill borders with first image to replace cropped area; 
-            # won't fit perfectly, but assume that first image is closest 
-            # since used as template, and any excess signal will be likely 
-            # reduced during subsequent registrations
-            slices = []
-            for border in extend_borders[::-1]:
-                if border:
-                    slices.append(slice(*border))
-                else:
-                    slices.append(slice(None))
-            slices = tuple(slices)
-            # intensify since will take mean later
-            img_large_np[slices] = img_np_template[slices] * num_images
         if show_imgs:
             sitk.Show(replace_sitk_with_numpy(img, img_large_np))
         imgs.append(img_large_np)
+    
     # combine all images by taking their mean
     img_mean = np.mean(imgs, axis=0)
+    extend_borders = settings["extend_borders"]
+    carve_threshold = settings["carve_threshold"]
+    if extend_borders and carve_threshold:
+        # merge in specified border region from first image for pixels below 
+        # carving threshold to prioritize groupwise image
+        slices = []
+        for border in extend_borders[::-1]:
+            slices.append(slice(*border) if border else slice(None))
+        slices = tuple(slices)
+        region = img_mean[slices]
+        region_template = img_np_template[slices]
+        mask = region < carve_threshold
+        region[mask] = region_template[mask]
     img_raw = replace_sitk_with_numpy(transformed_img, img_mean)
     
     # carve groupwise registered image if given thresholds
     imgs_to_show = []
     imgs_to_show.append(img_raw)
-    carve_threshold = settings["carve_threshold"]
     holes_area = settings["holes_area"]
     if carve_threshold and holes_area:
         img_mean, img_mean_unfilled = plot_3d.carve(

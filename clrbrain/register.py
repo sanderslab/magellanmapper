@@ -904,6 +904,10 @@ def register_group(img_files, flip=None, show_imgs=True,
     param_map["MaximumNumberOfIterations"] = [settings["groupwise_iter_max"]]
     # TESTING:
     #param_map["MaximumNumberOfIterations"] = ["0"]
+    grid_spacing_schedule = settings["grid_spacing_schedule"]
+    if grid_spacing_schedule:
+        param_map["NumberOfResolutions"] = [str(len(grid_spacing_schedule))]
+        param_map["GridSpacingSchedule"] = grid_spacing_schedule
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
     transform_filter = elastix_img_filter.Execute()

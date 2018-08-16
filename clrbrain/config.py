@@ -323,6 +323,7 @@ class RegisterSettings(SettingsDict):
         # paste in region from first image during groupwise reg; 
         # x,y,z, same format as truncate_labels except in pixels
         self["extend_borders"] = None
+        self["grid_spacing_schedule"] = None
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -336,7 +337,11 @@ def update_register_settings(settings, settings_type):
         settings["bspline_grid_space_voxels"] = "30"
         settings["carve_threshold"] = 0.009
         settings["holes_area"] = 10000
+        # manually add variable tissue area from first image to create 
+        # bigger atlas to register samples with this variable area
         settings["extend_borders"] = (None, (0, 100), (80, 140))
+        settings["grid_spacing_schedule"] = [
+            "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"]
     
     elif settings_type.startswith("test"):
         settings["settings_name"] = "test"

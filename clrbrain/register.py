@@ -549,45 +549,51 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map):
         param_map["NumberOfResolutions"] = [str(len(grid_spacing_schedule))]
         param_map["GridSpacingSchedule"] = grid_spacing_schedule
 
-def import_atlas(moving_file_dir):
-    img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
-    img_ref = sitk.ReadImage(os.path.join(moving_file_dir, IMG_ATLAS))
-    if adj_labels:
-        # test mirroring and truncation, such as ABA E18pt5
-        img_np = _mirror_labels(
-            img, img_ref, config.register_settings["labels_mirror"])
-        img = replace_sitk_with_numpy(img, img_np)
-        img = transpose_img(img, config.plane, False)
-        img_np = _truncate_labels(
-            sitk.GetArrayFromImage(img), 
-            *config.register_settings["truncate_labels"])
-        img = replace_sitk_with_numpy(img, img_np)
-        img_ref = transpose_img(img_ref, config.plane, False)
-    else:
-        # original image, eg for ABA P56, which does not require mirroring
-        img_np = sitk.GetArrayFromImage(img)
+def import_atlas(atlas_dir):
+    # load atlas and corresponding labels
+    img_atlas = sitk.ReadImage(os.path.join(atlas_dir, IMG_ATLAS))
+    img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
+    
+    img_labels_np = None
+    mirror = config.register_settings["labels_mirror"]
+    if mirror:
+        # mirror and truncate labels for labels for only half the brain, 
+        # such as for ABA E18pt5, unlike P56
+        img_labels_np = _mirror_labels(img_labels, img_atlas, mirror)
+        img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
+    
+    # transpose to given plane
+    img_atlas = transpose_img(img_atlas, config.plane, False)
+    img_labels = transpose_img(img_labels, config.plane, False)
+    
+    truncate = config.register_settings["truncate_labels"]
+    if truncate:
+        # truncate labels
+        img_labels_np = _truncate_labels(
+            sitk.GetArrayFromImage(img_labels), *truncate)
+        img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # show labels
-    label_ids = np.unique(img_np)
+    if img_labels_np is None:
+        img_labels_np = sitk.GetArrayFromImage(img_labels)
+    label_ids = np.unique(img_labels_np)
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
     # show and write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
-    sitk.Show(img_ref)
-    sitk.Show(img)
-    target_dir = moving_file_dir + "_test"
+    sitk.Show(img_atlas)
+    sitk.Show(img_labels)
+    target_dir = atlas_dir + "_import"
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
-    name_prefix = "test"
-    labels_name = name_prefix + "_00000_" + IMG_LABELS
+    name_prefix = os.path.join(target_dir, os.path.basename(atlas_dir)) + ".czi"
     sitk.WriteImage(
-        img, os.path.join(target_dir, labels_name), False)
-    detector.resolutions = [img_ref.GetSpacing()[::-1]]
-    img_test_path = os.path.join(target_dir, name_prefix + ".czi")
-    img_ref_np = sitk.GetArrayFromImage(img_ref)
+        img_labels, _reg_out_path(name_prefix, IMG_LABELS), False)
+    detector.resolutions = [img_atlas.GetSpacing()[::-1]]
+    img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
-    importer.save_np_image(img_ref_np, img_test_path, 0)
+    importer.save_np_image(img_ref_np, name_prefix, 0)
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
@@ -2247,3 +2253,6 @@ if __name__ == "__main__":
             # export region IDs to network file
             export_region_network(labels_ref_lookup, "region_network")
         
+    elif config.register_type == config.REGISTER_TYPES[8]:
+        # import original atlas, mirroring if necessary
+        import_atlas(config.filename)

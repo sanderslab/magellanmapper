@@ -394,6 +394,12 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None}, # turn off resizing
         settings_type)
     
+    # ABA P56 specific settings
+    settings.add_modifier(
+        "_abap56", 
+        {"labels_mirror": None}, # turn off mirroring
+        settings_type)
+    
     if verbose:
         print("process settings for {}:\n{}"
               .format(settings["settings_name"], settings))
@@ -546,7 +552,7 @@ labels_level = None
 labels_mirror = True
 REGISTER_TYPES = (
     "single", "group", "overlays", "volumes", "densities", "export_vols", 
-    "export_regions", "new_atlas")
+    "export_regions", "new_atlas", "import_atlas")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"

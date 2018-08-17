@@ -239,6 +239,37 @@ def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
         axis += 1
     return img_np
 
+def _mirror_planes(img_np, start, mirror_mult=1):
+    """Mirror image across its sagittal midline.
+    
+    Args:
+        img: Labels image in Numpy format.
+        start: Starting index at which to begin mirroring, inclusive.
+        mirror_mult: Multiplier for mirrored portion of image, such as -1 
+            when creating a labels map with one side distinct from the other; 
+            defaults to 1.
+    
+    Returns:
+        The mirrored image in Numpy format.
+    """
+    tot_planes = len(img_np)
+    if start <= tot_planes and start >= 0:
+        # if empty planes at end, fill the empty space with the preceding 
+        # planes in mirrored fashion
+        remaining_planes = tot_planes - start
+        end = start - remaining_planes - 1
+        if end < 0:
+            end = None # to slice to beginning with neg increment
+            remaining_planes = start
+        print("start: {}, end: {}, remaining_planes: {}, tot_planes: {}"
+              .format(start, end, remaining_planes, tot_planes))
+        img_np[start:start+remaining_planes] = np.multiply(
+            img_np[start-1:end:-1], mirror_mult)
+    else:
+        # skip mirroring if no planes are empty or only first plane is empty
+        print("nothing to mirror")
+    return img_np
+
 def _mirror_labels(img, img_ref, extent=None):
     """Mirror labels across sagittal midline and add lateral edges.
     
@@ -248,7 +279,7 @@ def _mirror_labels(img, img_ref, extent=None):
     doesn't have any intensity values and set this position as the mirror 
     plane.
     
-    Also assume that the later edges of the image are also missing. Build 
+    Also assume that the lateral edges of the image are also missing. Build 
     edges that match the size of the reference image on one side and mirror 
     over to the other side.
     
@@ -323,21 +354,25 @@ def _mirror_labels(img, img_ref, extent=None):
         i = int(extent[1] * tot_planes)
     print("type: {}, max: {}, max avail: {}".format(
         img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
-    if i <= tot_planes and i >= 0:
-        # if empty planes at end, fill the empty space with the preceding 
-        # planes in mirrored fashion
-        remaining_planes = tot_planes - i
-        end = i - remaining_planes - 1
-        if end < 0:
-            end = None # to slice to beginning with neg increment
-            remaining_planes = i
-        print("i: {}, end: {}, remaining_planes: {}, tot_planes: {}"
-              .format(i, end, remaining_planes, tot_planes))
-        img_np[i:i+remaining_planes] = np.multiply(img_np[i-1:end:-1], -1)
-    else:
-        # skip mirroring if no planes are empty or only first plane is empty
-        print("nothing to mirror")
-    return img_np
+    return _mirror_planes(img_np, i, -1)
+
+def _mirror_atlas(img_np, extent):
+    """Mirror atlas sagittal midline.
+    
+    Assume that the image is in sagittal sections, overwriting from one side 
+    into the other similarly to :func:``_mirror_labels``.
+    
+    Args:
+        img: Labels image in Numpy format.
+        extent: Tuple (start, end) fractions demarcating the region to mirror, 
+            similarly to :func:``_mirror_labels`` but only using the second 
+            value since the lateral edges will not be extended.
+    
+    Returns:
+        The mirrored image in Numpy format.
+    """
+    start = int(extent[1] * len(img_np))
+    return _mirror_planes(img_np, start)
 
 def replace_sitk_with_numpy(img_sitk, img_np):
     spacing = img_sitk.GetSpacing()
@@ -561,6 +596,8 @@ def import_atlas(atlas_dir):
         # such as for ABA E18pt5, unlike P56
         img_labels_np = _mirror_labels(img_labels, img_atlas, mirror)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
+        img_atlas_np = _mirror_atlas(sitk.GetArrayFromImage(img_atlas), mirror)
+        img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
     
     # transpose to given plane
     img_atlas = transpose_img(img_atlas, config.plane, False)
@@ -635,6 +672,11 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # load moving image, assumed to be atlas
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
+    labels_mirror = settings["labels_mirror"]
+    if labels_mirror:
+        moving_img_np = _mirror_atlas(
+            sitk.GetArrayFromImage(moving_img), labels_mirror)
+        moving_img = replace_sitk_with_numpy(moving_img, moving_img_np)
     fixed_img_size = fixed_img.GetSize()
     moving_img = transpose_img(
         moving_img, plane, flip, target_size=fixed_img_size)
@@ -705,7 +747,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # prep labels image
     labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
     labels_img_np = None
-    labels_mirror = settings["labels_mirror"]
     if labels_mirror is not None:
         # ABA E18pt5 labels file only gives half of atlas so need to mirror 
         # one side to other based on original atlas

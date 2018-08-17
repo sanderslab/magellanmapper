@@ -45,6 +45,7 @@ import json
 import multiprocessing as mp
 from collections import OrderedDict
 from pprint import pprint
+import shutil
 from time import time
 import pandas as pd
 try:
@@ -617,6 +618,9 @@ def import_atlas(atlas_dir):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
+    print("DSC compared with labels")
+    _measure_overlap_labels(img_atlas, img_labels)
+    
     # show and write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
     sitk.Show(img_atlas)
@@ -625,8 +629,13 @@ def import_atlas(atlas_dir):
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
     name_prefix = os.path.join(target_dir, os.path.basename(atlas_dir)) + ".czi"
-    sitk.WriteImage(
-        img_labels, _reg_out_path(name_prefix, IMG_LABELS), False)
+    imgs_write = {IMG_ATLAS: img_atlas, IMG_LABELS: img_labels}
+    for suffix in imgs_write.keys():
+        out_path = _reg_out_path(name_prefix, suffix)
+        sitk.WriteImage(imgs_write[suffix], out_path, False)
+        # copy metadata file to allow opening images from bare suffix name, 
+        # such as when this atlas becomes the new atlas for registration
+        shutil.copy(out_path, os.path.join(target_dir, suffix))
     detector.resolutions = [img_atlas.GetSpacing()[::-1]]
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]

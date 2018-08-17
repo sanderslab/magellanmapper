@@ -313,7 +313,7 @@ class RegisterSettings(SettingsDict):
         # erase labels outside of x,y,z (applied before transposition), 
         # where each val is (start, end), given as fractions, or None for the 
         # whole range
-        self["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
+        self["truncate_labels"] = None
         self["labels_mirror"] = (None, 0.5)
         self["atlas_threshold"] = 10.0
         self["target_size"] = None # x,y,z in exp orientation threshold for 
@@ -332,6 +332,7 @@ def update_register_settings(settings, settings_type):
         # more aggressive parameters for finer tuning
         settings["settings_name"] = "finer"
         settings["bspline_iter_max"] = "512"
+        settings["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
     
     elif settings_type.startswith("groupwise"):
         # groupwise registration

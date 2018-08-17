@@ -940,7 +940,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         step = 0
         if isinstance(event, backend_bases.MouseEvent):
             # scroll movements are scaled from 0 for each event
-            step += event.step
+            step += int(event.step) # decimal point num on some platforms
         elif isinstance(event, backend_bases.KeyEvent):
             # finer-grained movements through keyboard controls since the 
             # finest scroll movements may be > 1
@@ -1218,8 +1218,9 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         z_curr = z_overview
         step = 0
         if isinstance(event, backend_bases.MouseEvent):
-            # scroll movements are scaled from 0 for each event
-            step += event.step
+            # scroll movements are scaled from 0 for each event and may be 
+            # decimal point numbers on some platforms
+            step += int(event.step)
         elif isinstance(event, backend_bases.KeyEvent):
             # finer-grained movements through keyboard controls since the 
             # finest scroll movements may be > 1

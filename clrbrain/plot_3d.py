@@ -585,7 +585,7 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None):
             arrs_3d_swapped = [np.swapaxes(arr, *indices) for arr in arrs_3d]
         if arrs_1d is not None:
             arrs_1d_swapped = [lib_clrbrain.swap_elements(arr, *indices) 
-                       for arr in arrs_1d]
+                               for arr in arrs_1d]
         return arrs_3d_swapped, arrs_1d_swapped
     
     if plane == config.PLANE[1]:

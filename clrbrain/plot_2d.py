@@ -1187,18 +1187,19 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     hide_axes(ax)
     
     # set up the image to display
-    z_overview = offset[2]
     colormaps = config.process_settings["channel_colors"]
     cmap_labels = _get_labels_colormap(labels_img, 0)
     if not plane:
         plane = config.PLANE[0]
     print("using plane {}".format(plane))
     max_size = max_plane(image5d[0], plane)
-    labels_image5d = importer.roi_to_image5d(labels_img)
-    arrs_3d, arrs_1d, _, _ = plot_3d.transpose_images(
-        plane, [labels_img], [config.labels_scaling])
-    labels_img_transposed = arrs_3d[0]
+    arrs_3d, arrs_1d, aspect, origin = plot_3d.transpose_images(
+        plane, [image5d[0], labels_img], [config.labels_scaling, offset[::-1]])
+    img3d_transposed = arrs_3d[0]
+    labels_img_transposed = arrs_3d[1]
     scaling = arrs_1d[0]
+    offset_transposed = arrs_1d[1][::-1]
+    z_overview = offset_transposed[2]
     
     # transparency controls
     gs_controls = gridspec.GridSpecFromSubplotSpec(
@@ -1215,12 +1216,14 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         labels_img_transposed, alpha_slider, alpha_reset_btn, scaling)
     
     def show_overview(z_overview):
-        img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
+        # show main image
+        img2d = img3d_transposed[z_overview]
         imshow_multichannel(
             ax, img2d, channel, colormaps, aspect, 1, origin=origin, 
             interpolation="none")
         
-        img2d, aspect, origin = extract_plane(labels_image5d, z_overview, plane)
+        # show labels image
+        img2d = labels_img_transposed[z_overview]
         label_ax_img = imshow_multichannel(
             ax, img2d, 0, [cmap_labels], aspect, plot_ed.alpha, origin=origin, 
             interpolation="none")

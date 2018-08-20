@@ -12,7 +12,7 @@ from clrbrain import register
 class PlotEditor:
     ALPHA_DEFAULT = 0.7
     
-    def __init__(self, img3d, alpha_slider, alpha_reset_btn):
+    def __init__(self, img3d, alpha_slider, alpha_reset_btn, scaling=None):
         self.img3d = img3d
         self.intensity = None
         self.cidpress = None
@@ -29,6 +29,7 @@ class PlotEditor:
         self.alpha_slider = alpha_slider
         self.alpha_reset_btn = alpha_reset_btn
         self.connected = False
+        self.scaling = config.labels_scaling if scaling is None else scaling
     
     def set_plane(self, ax_img, plane_n, plane=None):
         self.ax_img = ax_img
@@ -167,8 +168,8 @@ class PlotEditor:
         
         # show atlas label name
         atlas_label = register.get_label(
-            (self.plane_n, y, x), config.labels_img, config.labels_ref_lookup, 
-            config.labels_scaling)
+            (self.plane_n, y, x), self.img3d, config.labels_ref_lookup, 
+            self.scaling)
         name = ""
         if atlas_label is not None:
             name = register.get_label_name(atlas_label)

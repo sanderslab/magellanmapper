@@ -690,6 +690,8 @@ def _scroll_plane(event, z_overview, max_size, jump=None):
         event: Mouse or key event. For mouse events, scroll step sizes 
             will be used for movements. For key events, up/down arrows 
             will be used.
+        max_size: Maximum number of planes.
+        jump: Function to jump to a given plane; defaults to None.
     """
     step = 0
     if isinstance(event, backend_bases.MouseEvent):
@@ -1172,30 +1174,31 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     """Plot ROI as sequence of z-planes containing only the ROI itself.
     
     Args:
-        roi: The ROI image as a 3D array in (z, y, x) order.
-        segments: Numpy array of segments to display in the subplot, which 
-            can be None. Segments are generally given as an (n, 4)
-            dimension array, where each segment is in (z, y, x, radius).
-            All segments are assumed to be within the ROI for display.
+        image5d: Numpy image array in t,z,y,x,c format.
         channel: Channel of the image to display.
-        show: True if the plot should be displayed to screen; defaults 
-            to True.
-        title: String used as basename of output file. Defaults to "" 
-            and only used if :attr:``savefig`` is set to a file 
-            extension.
+        offset: Index of plane at which to start viewing.
+        fn_close_listener: Handle figure close events.
+        plane: The plane to show in each 2D plot; defaults to None.
     """
+    # set up the figure
     fig = plt.figure()
-    #fig.suptitle(title)
     gs = gridspec.GridSpec(2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1))
-    
     ax = plt.subplot(gs[0, 0])
     hide_axes(ax)
+    
+    # set up the image to display
     z_overview = offset[2]
     colormaps = config.process_settings["channel_colors"]
     cmap_labels = _get_labels_colormap(labels_img, 0)
     if not plane:
         plane = config.PLANE[0]
+    print("using plane {}".format(plane))
     max_size = max_plane(image5d[0], plane)
+    labels_image5d = importer.roi_to_image5d(labels_img)
+    arrs_3d, arrs_1d, _, _ = plot_3d.transpose_images(
+        plane, [labels_img], [config.labels_scaling])
+    labels_img_transposed = arrs_3d[0]
+    scaling = arrs_1d[0]
     
     # transparency controls
     gs_controls = gridspec.GridSpecFromSubplotSpec(
@@ -1208,30 +1211,24 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
     
     # plot editor
-    plot_ed = plot_editor.PlotEditor(labels_img, alpha_slider, alpha_reset_btn)
+    plot_ed = plot_editor.PlotEditor(
+        labels_img_transposed, alpha_slider, alpha_reset_btn, scaling)
     
     def show_overview(z_overview):
-        img2d, aspect, origin = extract_plane(image5d, z_overview)
+        img2d, aspect, origin = extract_plane(image5d, z_overview, plane)
         imshow_multichannel(
-            ax, img2d, channel, colormaps, aspect, 1, interpolation="none")
+            ax, img2d, channel, colormaps, aspect, 1, origin=origin, 
+            interpolation="none")
         
-        labels_image5d = importer.roi_to_image5d(labels_img)
-        img2d, aspect, origin = extract_plane(labels_image5d, z_overview)
+        img2d, aspect, origin = extract_plane(labels_image5d, z_overview, plane)
         label_ax_img = imshow_multichannel(
-            ax, img2d, 0, [cmap_labels], aspect, plot_ed.alpha, 
+            ax, img2d, 0, [cmap_labels], aspect, plot_ed.alpha, origin=origin, 
             interpolation="none")
         ax.format_coord = PixelDisplay(img2d)
         _set_overview_title(ax, plane, z_overview)
         plot_ed.set_plane(label_ax_img[0], z_overview, plane)
     
     def scroll_overview(event):
-        """Scroll through overview images along their orthogonal axis.
-        
-        Args:
-            event: Mouse or key event. For mouse events, scroll step sizes 
-                will be used for movements. For key events, up/down arrows 
-                will be used.
-        """
         nonlocal z_overview
         z_overview_new = _scroll_plane(event, z_overview, max_size)
         if z_overview_new != z_overview:

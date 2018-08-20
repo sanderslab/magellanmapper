@@ -683,6 +683,37 @@ def _set_overview_title(ax, plane, z_overview, zoom=1, level=0,
         title = "{}x".format(int(zoom))
     ax.set_title(title)
 
+def _scroll_plane(event, z_overview, max_size, jump=None):
+    """Scroll through overview images along their orthogonal axis.
+    
+    Args:
+        event: Mouse or key event. For mouse events, scroll step sizes 
+            will be used for movements. For key events, up/down arrows 
+            will be used.
+    """
+    step = 0
+    if isinstance(event, backend_bases.MouseEvent):
+        # scroll movements are scaled from 0 for each event
+        step += int(event.step) # decimal point num on some platforms
+    elif isinstance(event, backend_bases.KeyEvent):
+        # finer-grained movements through keyboard controls since the 
+        # finest scroll movements may be > 1
+        if event.key == "up":
+            step += 1
+        elif event.key == "down":
+            step -= 1
+        elif jump is not None and event.key == "right":
+            z = jump(event)
+            if z: z_overview = z
+    
+    z_overview_new = z_overview + step
+    #print("scroll step of {} to z {}".format(step, z_overview))
+    if z_overview_new < 0:
+        z_overview_new = 0
+    elif z_overview_new >= max_size:
+        z_overview_new = max_size - 1
+    return z_overview_new
+
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
                   offset, segments, mask_in, segs_cmap, fn_close_listener, 
                   border=None, plane="xy", padding_stack=None,
@@ -791,6 +822,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     elif z_level == Z_LEVELS[2]:
         z_overview = z_start + z_planes
     print("z_overview: {}".format(z_overview))
+    max_size = max_plane(image5d[0], plane)
     
     def prep_overview():
         """Prep overview image planes based on chosen orientation.
@@ -922,6 +954,14 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             ax, plane, z_overview, zoom, level, max_intens_proj)
         return zoom
     
+    def jump(event):
+        z_overview = None
+        if event.inaxes in ax_z_list:
+            # right-arrow to jump to z-plane of given zoom plot
+            z_overview = (ax_z_list.index(event.inaxes) + z_start 
+                          - z_planes_padding)
+        return z_overview
+    
     def scroll_overview(event):
         """Scroll through overview images along their orthogonal axis.
         
@@ -936,31 +976,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                   "projection")
             return
         nonlocal z_overview
-        z_curr = z_overview
-        step = 0
-        if isinstance(event, backend_bases.MouseEvent):
-            # scroll movements are scaled from 0 for each event
-            step += int(event.step) # decimal point num on some platforms
-        elif isinstance(event, backend_bases.KeyEvent):
-            # finer-grained movements through keyboard controls since the 
-            # finest scroll movements may be > 1
-            if event.key == "up":
-                step += 1
-            elif event.key == "down":
-                step -= 1
-            elif event.key == "right":
-                if event.inaxes in ax_z_list:
-                    # right-arrow to jump to z-plane of given zoom plot
-                    z_overview = (ax_z_list.index(event.inaxes) + z_start 
-                                  - z_planes_padding)
-        z_overview_new = z_overview + step
-        #print("scroll step of {} to z {}".format(step, z_overview))
-        max_size = max_plane(image5d[0], plane)
-        if z_overview_new < 0:
-            z_overview_new = 0
-        elif z_overview_new >= max_size:
-            z_overview_new = max_size - 1
-        if z_overview_new != z_curr:
+        z_overview_new = _scroll_plane(event, z_overview, max_size, jump)
+        if z_overview_new != z_overview:
             # move only if step registered and changing position
             z_overview = z_overview_new
             img2d, aspect, origin, img_region_2d = prep_overview()
@@ -1178,6 +1195,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     cmap_labels = _get_labels_colormap(labels_img, 0)
     if not plane:
         plane = config.PLANE[0]
+    max_size = max_plane(image5d[0], plane)
     
     # transparency controls
     gs_controls = gridspec.GridSpecFromSubplotSpec(
@@ -1215,27 +1233,8 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
                 will be used.
         """
         nonlocal z_overview
-        z_curr = z_overview
-        step = 0
-        if isinstance(event, backend_bases.MouseEvent):
-            # scroll movements are scaled from 0 for each event and may be 
-            # decimal point numbers on some platforms
-            step += int(event.step)
-        elif isinstance(event, backend_bases.KeyEvent):
-            # finer-grained movements through keyboard controls since the 
-            # finest scroll movements may be > 1
-            if event.key == "up":
-                step += 1
-            elif event.key == "down":
-                step -= 1
-        z_overview_new = z_overview + step
-        #print("scroll step of {} to z {}".format(step, z_overview))
-        max_size = max_plane(image5d[0], plane)
-        if z_overview_new < 0:
-            z_overview_new = 0
-        elif z_overview_new >= max_size:
-            z_overview_new = max_size - 1
-        if z_overview_new != z_curr:
+        z_overview_new = _scroll_plane(event, z_overview, max_size)
+        if z_overview_new != z_overview:
             # move only if step registered and changing position
             z_overview = z_overview_new
             ax.clear()

@@ -579,6 +579,8 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None):
     aspect = None # aspect ratio
     
     def swap(indices):
+        arrs_3d_swapped = None
+        arrs_1d_swapped = None
         if arrs_3d is not None:
             arrs_3d_swapped = [np.swapaxes(arr, *indices) for arr in arrs_3d]
         if arrs_1d is not None:

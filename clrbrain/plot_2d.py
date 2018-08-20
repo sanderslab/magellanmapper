@@ -1276,32 +1276,9 @@ def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
         img3d = image5d[0]
     else:
         img3d = image5d[:]
-    # extract a single 2D plane or a stack of planes if plane_n is a slice, 
-    # which would be used for animations
-    img2d = None
-    if plane == config.PLANE[1]:
-        # xz plane
-        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
-        origin = "lower"
-        img2d = img3d[:, plane_n, :]
-        #print("img2d.shape: {}".format(img2d.shape))
-        if img2d.ndim > 2 and img2d.shape[1] > 1:
-            # make y the "z" axis for stack of 2D plots, such as animations
-            img2d = np.swapaxes(img2d, 0, 1)
-    elif plane == config.PLANE[2]:
-        # yz plane
-        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
-        origin = "lower"
-        img2d = img3d[:, :, plane_n]
-        #print("img2d.shape: {}".format(img2d.shape))
-        if img2d.ndim > 2 and img2d.shape[2] > 1:
-            # make x the "z" axis for stack of 2D plots, such as animations
-            img2d = np.swapaxes(img2d, 0, 2)
-            img2d = np.swapaxes(img2d, 1, 2)
-    else:
-        # defaults to "xy"
-        aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
-        img2d = img3d[plane_n, :, :]
+    arrs_3d, _, aspect, origin = plot_3d.transpose_images(plane, [img3d])
+    img3d = arrs_3d[0]
+    img2d = img3d[plane_n]
     if max_intens_proj:
         # max intensity projection assumes axis 0 is the "z" axis
         img2d = np.amax(img2d, axis=0)

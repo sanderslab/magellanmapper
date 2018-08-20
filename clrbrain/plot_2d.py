@@ -1151,7 +1151,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     #gs_zoomed.tight_layout(fig, pad=0.5)
     plt.ion()
     plt.show()
-    fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
+    #fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
     if savefig is not None:
         name = "{}_offset{}x{}.{}".format(
             os.path.basename(filename), offset, tuple(roi_size), 

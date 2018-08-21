@@ -1183,23 +1183,15 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     # set up the figure
     fig = plt.figure()
     gs = gridspec.GridSpec(2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1))
-    ax = plt.subplot(gs[0, 0])
-    hide_axes(ax)
+    gs_viewers = gridspec.GridSpecFromSubplotSpec(
+        2, 2, subplot_spec=gs[0, 0])
     
     # set up the image to display
     colormaps = config.process_settings["channel_colors"]
     cmap_labels = _get_labels_colormap(labels_img, 0)
     if not plane:
         plane = config.PLANE[0]
-    print("using plane {}".format(plane))
-    max_size = max_plane(image5d[0], plane)
-    arrs_3d, arrs_1d, aspect, origin = plot_3d.transpose_images(
-        plane, [image5d[0], labels_img], [config.labels_scaling, offset[::-1]])
-    img3d_transposed = arrs_3d[0]
-    labels_img_transposed = arrs_3d[1]
-    scaling = arrs_1d[0]
-    offset_transposed = arrs_1d[1][::-1]
-    z_overview = offset_transposed[2]
+    coord = list(offset[::-1])
     
     # transparency controls
     gs_controls = gridspec.GridSpecFromSubplotSpec(
@@ -1211,42 +1203,50 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     ax_alpha_reset = plt.subplot(gs_controls[0, 1])
     alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
     
-    # plot editor
-    plot_ed = plot_editor.PlotEditor(
-        labels_img_transposed, alpha_slider, alpha_reset_btn, scaling)
+    def update_coords(coord, plane_src):
+        coord_rev = lib_clrbrain.transpose_1d_rev(list(coord), plane_src)
+        for plane in config.PLANE:
+            #if plane != plane_src:
+            coord_transposed = lib_clrbrain.transpose_1d(list(coord_rev), plane)
+            print("xy coord: {}, {} coord: {}".format(coord_rev, plane, coord_transposed))
+            plot_eds[plane].update_coord(coord_transposed)
     
-    def show_overview(z_overview):
-        # show main image
-        img2d = img3d_transposed[z_overview]
-        imshow_multichannel(
-            ax, img2d, channel, colormaps, aspect, 1, origin=origin, 
-            interpolation="none")
+    def setup_plot_ed(plane, grid_x, grid_y):
+        ax = plt.subplot(gs_viewers[grid_x, grid_y])
+        hide_axes(ax)
+        print("using plane {}".format(plane))
+        max_size = max_plane(image5d[0], plane)
+        arrs_3d, arrs_1d, aspect, origin = plot_3d.transpose_images(
+            plane, [image5d[0], labels_img], [config.labels_scaling, coord])
+        img3d_transposed = arrs_3d[0]
+        labels_img_transposed = arrs_3d[1]
+        scaling = arrs_1d[0]
+        coord_transposed = arrs_1d[1]
         
-        # show labels image
-        img2d = labels_img_transposed[z_overview]
-        label_ax_img = imshow_multichannel(
-            ax, img2d, 0, [cmap_labels], aspect, plot_ed.alpha, origin=origin, 
-            interpolation="none")
-        ax.format_coord = PixelDisplay(img2d)
-        _set_overview_title(ax, plane, z_overview)
-        plot_ed.set_plane(label_ax_img[0], z_overview, plane)
+        # plot editor
+        plot_ed = plot_editor.PlotEditor(
+            ax, img3d_transposed, labels_img_transposed, cmap_labels, plane, alpha_slider, 
+            alpha_reset_btn, aspect, origin, update_coords, scaling)
+        return plot_ed
+    
+    plot_eds = {}
+    plot_eds[config.PLANE[0]] = setup_plot_ed(config.PLANE[0], slice(0, 2), 0)
+    plot_eds[config.PLANE[1]] = setup_plot_ed(config.PLANE[1], 0, 1)
+    plot_eds[config.PLANE[2]] = setup_plot_ed(config.PLANE[2], 1, 1)
     
     def scroll_overview(event):
-        nonlocal z_overview
-        z_overview_new = _scroll_plane(event, z_overview, max_size)
-        if z_overview_new != z_overview:
-            # move only if step registered and changing position
-            z_overview = z_overview_new
-            ax.clear()
-            show_overview(z_overview)
+        for key in plot_eds.keys():
+            plot_eds[key].scroll_overview(event)
     
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
     fig.canvas.mpl_connect("close_event", fn_close_listener)
+    '''
     alpha_slider.on_changed(plot_ed.alpha_updater)
     alpha_reset_btn.on_clicked(plot_ed.alpha_reset)
+    '''
     
-    show_overview(z_overview)
+    plot_eds[config.PLANE[0]].update_coord(coord)
     
     gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1]) # extra padding for label
     plt.ion()

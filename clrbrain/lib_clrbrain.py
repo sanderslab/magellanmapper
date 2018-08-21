@@ -34,6 +34,28 @@ def swap_elements(arr, axis0, axis1, offset=0):
         arr = tuple(arr)
     return arr
 
+def transpose_1d(arr, plane):
+    transposed = arr
+    if plane == config.PLANE[1]:
+        # make y the "z" axis
+        transposed = swap_elements(arr, 0, 1)
+    elif plane == config.PLANE[2]:
+        # yz plane
+        transposed = swap_elements(arr, 0, 2)
+        transposed = swap_elements(arr, 1, 2)
+    return transposed
+
+def transpose_1d_rev(arr, plane):
+    transposed = arr
+    if plane == config.PLANE[1]:
+        # make y the "z" axis
+        transposed = swap_elements(arr, 1, 0)
+    elif plane == config.PLANE[2]:
+        # yz plane
+        transposed = swap_elements(arr, 2, 1)
+        transposed = swap_elements(arr, 2, 0)
+    return transposed
+
 def roll_elements(arr, shift, axis=None):
     """Roll elements in a tuple safe manner.
     

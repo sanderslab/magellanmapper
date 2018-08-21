@@ -8,12 +8,26 @@ from skimage import draw
 
 from clrbrain import config
 from clrbrain import register
+from clrbrain import plot_2d
 
 class PlotEditor:
     ALPHA_DEFAULT = 0.7
     
-    def __init__(self, img3d, alpha_slider, alpha_reset_btn, scaling=None):
+    def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
+                 alpha_slider, alpha_reset_btn, aspect, origin, fn_update_coords, scaling):
+        self.axes = axes
         self.img3d = img3d
+        self.img3d_labels = img3d_labels
+        self.cmap_labels = cmap_labels
+        self.plane = plane
+        self.alpha = self.ALPHA_DEFAULT
+        self.alpha_slider = alpha_slider
+        self.alpha_reset_btn = alpha_reset_btn
+        self.aspect = aspect
+        self.origin = origin
+        self.fn_update_coords = fn_update_coords
+        self.scaling = config.labels_scaling if scaling is None else scaling
+        
         self.intensity = None
         self.cidpress = None
         self.cidrelease = None
@@ -25,21 +39,10 @@ class PlotEditor:
         self.circle = None
         self.background = None
         self.last_loc = None
-        self.alpha = self.ALPHA_DEFAULT
-        self.alpha_slider = alpha_slider
-        self.alpha_reset_btn = alpha_reset_btn
         self.connected = False
-        self.scaling = config.labels_scaling if scaling is None else scaling
-    
-    def set_plane(self, ax_img, plane_n, plane=None):
-        self.ax_img = ax_img
-        self.plane_n = plane_n
-        self.plane = plane
-        if not self.connected:
-            # connect once get AxesImage
-            self.connect()
-        self.region_label = self.ax_img.axes.text(0, 0, "", color="w")
-        self.circle = None
+        self.hline = None
+        self.vline = None
+        self.coord = None
     
     def connect(self):
         """Connect events to functions.
@@ -58,6 +61,56 @@ class PlotEditor:
             "key_press_event", self.on_key_press)
         self.connected = True
     
+    def update_coord(self, coord):
+        update_overview = self.coord is None or coord[0] != self.coord[0]
+        self.coord = coord
+        if update_overview:
+            self.show_overview()
+        self.draw_crosslines()
+    
+    def draw_crosslines(self):
+        if self.hline is None:
+            self.hline = self.axes.axhline(self.coord[1], linestyle=":")
+            self.vline = self.axes.axvline(self.coord[2], linestyle=":")
+        else:
+            self.hline.set_ydata(self.coord[1])
+            self.vline.set_xdata(self.coord[2])
+    
+    def show_overview(self):
+        self.axes.clear()
+        self.hline = None
+        self.vline = None
+        # show main image
+        img2d = self.img3d[self.coord[0]]
+        plot_2d.imshow_multichannel(
+            self.axes, img2d, 0, 
+            config.process_settings["channel_colors"], self.aspect, 1, origin=self.origin, 
+            interpolation="none")
+        
+        # show labels image
+        img2d = self.img3d_labels[self.coord[0]]
+        label_ax_img = plot_2d.imshow_multichannel(
+            self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, origin=self.origin, 
+            interpolation="none")
+        #ax.format_coord = PixelDisplay(img2d)
+        #_set_overview_title(ax, plane, self.coord[0])
+        self.ax_img = label_ax_img[0]
+        
+        if not self.connected:
+            # connect once get AxesImage
+            self.connect()
+        self.region_label = self.axes.text(0, 0, "", color="w")
+        self.circle = None
+    
+    def scroll_overview(self, event):
+        if event.inaxes != self.axes: return
+        z_overview_new = plot_2d._scroll_plane(event, self.coord[0], self.img3d.shape[0])
+        if z_overview_new != self.coord[0]:
+            # move only if step registered and changing position
+            coord = list(self.coord)
+            coord[0] = z_overview_new
+            self.fn_update_coords(coord, self.plane)
+    
     def setup_animation(self):
         """Store the pixel buffer in background to prep for animations.
         """
@@ -65,8 +118,8 @@ class PlotEditor:
         canvas = self.ax_img.figure.canvas
         self.ax_img.set_animated(True)
         canvas.draw()
-        self.background = canvas.copy_from_bbox(self.ax_img.axes.bbox)
-        canvas.blit(self.ax_img.axes.bbox)
+        self.background = canvas.copy_from_bbox(self.axes.bbox)
+        canvas.blit(self.axes.bbox)
         print("setup animation")
     
     def update_animation(self):
@@ -75,14 +128,14 @@ class PlotEditor:
         """
         canvas = self.ax_img.figure.canvas
         canvas.restore_region(self.background)
-        axes = self.ax_img.axes
+        axes = self.axes
         axes.draw_artist(self.ax_img)
         # WORKAROUND: axes brightens for some reason increased during update 
         # unless alpha changed to any value
         axes.set_alpha(1.0)
         if self.circle:
             axes.draw_artist(self.circle)
-        canvas.blit(self.ax_img.axes.bbox)
+        canvas.blit(self.axes.bbox)
     
     def reset_animation(self):
         """Turn off animations and redraw entire figure.
@@ -101,30 +154,29 @@ class PlotEditor:
         self.update_animation()
     
     def alpha_reset(self, event):
-        #alpha_updater(alpha_updater)
         print("resetting slider")
         self.alpha_slider.reset()
-    
-    #def update_alpha(self, alpha):
     
     def on_press(self, event):
         """Initiate drag events with Shift- or Alt-click inside a circle.
         
         Shift-click to move a circle, and Alt-click to resize a circle's radius.
         """
-        if event.inaxes != self.ax_img.axes: return
+        if event.inaxes != self.axes: return
         x = int(event.xdata)
         y = int(event.ydata)
-        self.intensity = self.img3d[self.plane_n, y, x]
+        self.intensity = self.img3d_labels[self.coord[0], y, x]
         print("got intensity {} at x,y,z = {},{},{}"
-              .format(self.intensity, x, y, self.plane_n))
+              .format(self.intensity, x, y, self.coord[0]))
         self.circle.radius += 1
         self.update_animation()
     
     def on_axes_enter(self, event):
+        if event.inaxes != self.axes: return
         self.setup_animation()
     
     def on_axes_exit(self, event):
+        if event.inaxes != self.axes: return
         if self.circle:
             self.circle.remove()
             self.circle = None
@@ -134,7 +186,7 @@ class PlotEditor:
         """Move the editing pen's circle and draw with the chosen intensity 
         value if set.
         """
-        if event.inaxes != self.ax_img.axes: return
+        if event.inaxes != self.axes: return
         
         # get mouse position and return if no change from last pixel coord
         x = int(event.xdata)
@@ -152,23 +204,24 @@ class PlotEditor:
             self.circle = patches.Circle(
                 (x, y), radius=self.radius, linestyle=":", fill=False, 
                 edgecolor="w")
-            self.ax_img.axes.add_patch(self.circle)
+            self.axes.add_patch(self.circle)
         
         if self.intensity is not None:
             # use the chosen intensity value to overwrite the image with 
             # a pen of the chosen radius
             rr, cc = draw.circle(
-                y, x, self.radius, self.img3d[self.plane_n].shape)
-            self.img3d[self.plane_n, rr, cc] = self.intensity
+                y, x, self.radius, self.img3d_labels[self.coord[0]].shape)
+            self.img3d_labels[self.coord[0], rr, cc] = self.intensity
             print("changed intensity to {} at x,y,z = {},{},{}"
-                  .format(self.intensity, x, y, self.plane_n))
-            self.ax_img.set_data(self.img3d[self.plane_n])
+                  .format(self.intensity, x, y, self.coord[0]))
+            self.ax_img.set_data(self.img3d_labels[self.coord[0]])
         
         self.update_animation()
         
         # show atlas label name
+        coord = [self.coord[0], y, x]
         atlas_label = register.get_label(
-            (self.plane_n, y, x), self.img3d, config.labels_ref_lookup, 
+            coord, self.img3d_labels, config.labels_ref_lookup, 
             self.scaling)
         name = ""
         if atlas_label is not None:
@@ -176,7 +229,7 @@ class PlotEditor:
         self.region_label.set_text(name)
         # minimize chance of text overflowing out of axes by switching 
         # alignment at midline horizontally
-        if x > self.img3d.shape[2] / 2:
+        if x > self.img3d_labels.shape[2] / 2:
             alignment = "right"
             label_x = x - 10
         else:
@@ -184,6 +237,10 @@ class PlotEditor:
             label_x = x + 10
         self.region_label.set_horizontalalignment(alignment)
         self.region_label.set_position((label_x, y - 10))
+        
+        if event.key == "shift":
+            self.coord = coord
+            self.fn_update_coords(self.coord, self.plane)
     
     def on_release(self, event):
         """Reset the intensity value to prevent further edits.

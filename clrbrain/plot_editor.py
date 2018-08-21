@@ -14,7 +14,8 @@ class PlotEditor:
     ALPHA_DEFAULT = 0.7
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
-                 alpha_slider, alpha_reset_btn, aspect, origin, fn_update_coords, scaling):
+                 alpha_slider, alpha_reset_btn, aspect, origin, 
+                 fn_update_coords, fn_refresh_images, scaling):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
@@ -26,6 +27,7 @@ class PlotEditor:
         self.aspect = aspect
         self.origin = origin
         self.fn_update_coords = fn_update_coords
+        self.fn_refresh_images = fn_refresh_images
         self.scaling = config.labels_scaling if scaling is None else scaling
         
         self.intensity = None
@@ -135,6 +137,11 @@ class PlotEditor:
             axes.draw_artist(self.circle)
         canvas.blit(self.axes.bbox)
     
+    def update_image(self):
+        """Replace current image with underlying plane's data.
+        """
+        self.ax_img.set_data(self.img3d_labels[self.coord[0]])
+    
     def reset_animation(self):
         """Turn off animations and redraw entire figure.
         """
@@ -157,9 +164,7 @@ class PlotEditor:
         self.alpha_slider.reset()
     
     def on_press(self, event):
-        """Initiate drag events with Shift- or Alt-click inside a circle.
-        
-        Shift-click to move a circle, and Alt-click to resize a circle's radius.
+        """Pick intensities by clicking on a given pixel.
         """
         if event.inaxes != self.axes: return
         x = int(event.xdata)
@@ -214,6 +219,7 @@ class PlotEditor:
             print("changed intensity to {} at x,y,z = {},{},{}"
                   .format(self.intensity, x, y, self.coord[0]))
             self.ax_img.set_data(self.img3d_labels[self.coord[0]])
+            self.fn_refresh_images(self)
         
         self.update_animation()
         

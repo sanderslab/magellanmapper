@@ -1211,6 +1211,11 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
             print("xy coord: {}, {} coord: {}".format(coord_rev, plane, coord_transposed))
             plot_eds[plane].update_coord(coord_transposed)
     
+    def refresh_images(plot_ed):
+        for key in plot_eds.keys():
+            ed = plot_eds[key]
+            if ed != plot_ed: ed.update_image()
+    
     def setup_plot_ed(plane, grid_x, grid_y):
         ax = plt.subplot(gs_viewers[grid_x, grid_y])
         hide_axes(ax)
@@ -1226,7 +1231,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         # plot editor
         plot_ed = plot_editor.PlotEditor(
             ax, img3d_transposed, labels_img_transposed, cmap_labels, plane, alpha_slider, 
-            alpha_reset_btn, aspect, origin, update_coords, scaling)
+            alpha_reset_btn, aspect, origin, update_coords, refresh_images, scaling)
         return plot_ed
     
     plot_eds = {}

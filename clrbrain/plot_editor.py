@@ -92,8 +92,8 @@ class PlotEditor:
         label_ax_img = plot_2d.imshow_multichannel(
             self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, origin=self.origin, 
             interpolation="none")
-        #ax.format_coord = PixelDisplay(img2d)
-        #_set_overview_title(ax, plane, self.coord[0])
+        self.axes.format_coord = plot_2d.PixelDisplay(img2d)
+        plot_2d._set_overview_title(self.axes, self.plane, self.coord[0])
         self.ax_img = label_ax_img[0]
         
         if not self.connected:

@@ -1238,15 +1238,32 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         for key in plot_eds.keys():
             plot_eds[key].scroll_overview(event)
     
+    def alpha_update(event):
+        for key in plot_eds.keys():
+            plot_eds[key].alpha_updater(event)
+    
+    def alpha_reset(event):
+        for key in plot_eds.keys():
+            plot_eds[key].alpha_reset(event)
+    
+    def axes_enter(event):
+        for key in plot_eds.keys():
+            plot_eds[key].on_axes_enter(event)
+    
+    def axes_exit(event):
+        for key in plot_eds.keys():
+            plot_eds[key].on_axes_exit(event)
+    
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
     fig.canvas.mpl_connect("close_event", fn_close_listener)
-    '''
-    alpha_slider.on_changed(plot_ed.alpha_updater)
-    alpha_reset_btn.on_clicked(plot_ed.alpha_reset)
-    '''
+    fig.canvas.mpl_connect("axes_enter_event", axes_enter)
+    fig.canvas.mpl_connect("axes_leave_event", axes_exit)
     
-    plot_eds[config.PLANE[0]].update_coord(coord)
+    alpha_slider.on_changed(alpha_update)
+    alpha_reset_btn.on_clicked(alpha_reset)
+    
+    update_coords(coord, config.PLANE[0])
     
     gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1]) # extra padding for label
     plt.ion()

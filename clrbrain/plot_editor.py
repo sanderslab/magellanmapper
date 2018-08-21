@@ -43,6 +43,8 @@ class PlotEditor:
         self.hline = None
         self.vline = None
         self.coord = None
+        self.plot_axes = (
+            self.axes, self.alpha_slider.ax, self.alpha_reset_btn.ax)
     
     def connect(self):
         """Connect events to functions.
@@ -53,10 +55,6 @@ class PlotEditor:
             "button_release_event", self.on_release)
         self.cidmotion = canvas.mpl_connect(
             "motion_notify_event", self.on_motion)
-        self.cidenter = canvas.mpl_connect(
-            "axes_enter_event", self.on_axes_enter)
-        self.cidleave = canvas.mpl_connect(
-            "axes_leave_event", self.on_axes_exit)
         self.cidkeypress = canvas.mpl_connect(
             "key_press_event", self.on_key_press)
         self.connected = True
@@ -151,6 +149,7 @@ class PlotEditor:
         self.alpha = alpha
         self.ax_img.set_alpha(self.alpha)
         print("set image alpha to {}".format(self.alpha))
+        # assume animation set up during axes enter
         self.update_animation()
     
     def alpha_reset(self, event):
@@ -172,11 +171,11 @@ class PlotEditor:
         self.update_animation()
     
     def on_axes_enter(self, event):
-        if event.inaxes != self.axes: return
+        if event.inaxes not in self.plot_axes: return
         self.setup_animation()
     
     def on_axes_exit(self, event):
-        if event.inaxes != self.axes: return
+        if event.inaxes not in self.plot_axes: return
         if self.circle:
             self.circle.remove()
             self.circle = None

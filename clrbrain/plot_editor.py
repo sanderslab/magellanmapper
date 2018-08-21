@@ -255,6 +255,10 @@ class PlotEditor:
             self.radius -= 1
         elif event.key == "]":
             self.radius += 1
+        elif event.key == "shift" and event.inaxes == self.axes:
+            # "shift" to update crosshairs and corresponding planes
+            self.coord[1:] = int(event.ydata), int(event.xdata)
+            self.fn_update_coords(self.coord, self.plane)
         #print("radius: {}".format(self.radius))
         if rad_orig != self.radius and self.circle:
             self.circle.radius = self.radius

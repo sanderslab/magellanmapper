@@ -314,9 +314,16 @@ class RegisterSettings(SettingsDict):
         # where each val is (start, end), given as fractions, or None for the 
         # whole range
         self["truncate_labels"] = None
-        self["labels_mirror"] = (None, 0.5)
+        
+        # mirror labels from one side onto the other, assuming only about 
+        # half of the labels for the underlying atlas are present
+        self["labels_mirror"] = (None, 0.5) # planes frac_start, frac_end
+        # expand labels within bounds given by 
+        # (((x_pixels_start, x_pixels_end), ...), (next_region...))
+        self["expand_labels"] = (((None, ), (0, 279), (103, 108)),)
+        
         self["atlas_threshold"] = 10.0
-        self["target_size"] = None # x,y,z in exp orientation threshold for 
+        self["target_size"] = None # x,y,z in exp orientation
         
         # carving and max size of small holes for removal, respectively
         self["carve_threshold"] = None

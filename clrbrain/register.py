@@ -1320,7 +1320,7 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False):
         An array of label IDs corresponding to ``coords``, or a scalar of 
         one ID if only one coordinate is given.
     """
-    print("getting label IDs from coordinates")
+    lib_clrbrain.printv("getting label IDs from coordinates")
     # scale coordinates to atlas image size
     coord_scaled = np.multiply(coord, scaling)
     if rounding: 
@@ -1377,7 +1377,7 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
         found.
     """
     label_id = get_label_ids_from_position(coord, labels_img, scaling, rounding)
-    print("found label_id: {}".format(label_id))
+    lib_clrbrain.printv("found label_id: {}".format(label_id))
     mirrored = label_id < 0
     if mirrored:
         label_id = -1 * label_id
@@ -1398,10 +1398,12 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
                     break
         if label is not None:
             label[MIRRORED] = mirrored
-            print("label ID at level {}: {}".format(level, label_id))
+            lib_clrbrain.printv(
+                "label ID at level {}: {}".format(level, label_id))
     except KeyError as e:
-        print("could not find label id {} or its parent (error {})"
-              .format(label_id, e))
+        lib_clrbrain.printv(
+            "could not find label id {} or its parent (error {})"
+            .format(label_id, e))
     return label
 
 def get_label_name(label):

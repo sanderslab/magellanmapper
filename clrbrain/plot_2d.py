@@ -1208,7 +1208,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         for plane in config.PLANE:
             #if plane != plane_src:
             coord_transposed = lib_clrbrain.transpose_1d(list(coord_rev), plane)
-            print("xy coord: {}, {} coord: {}".format(coord_rev, plane, coord_transposed))
+            #print("xy coord: {}, {} coord: {}".format(coord_rev, plane, coord_transposed))
             plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(plot_ed):

@@ -11,15 +11,16 @@ from clrbrain import register
 from clrbrain import plot_2d
 
 class PlotEditor:
-    ALPHA_DEFAULT = 0.7
+    ALPHA_DEFAULT = 0.4
     
-    def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
+    def __init__(self, axes, img3d, img3d_labels, cmap_labels, norm, plane, 
                  alpha_slider, alpha_reset_btn, aspect, origin, 
                  fn_update_coords, fn_refresh_images, scaling):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
         self.cmap_labels = cmap_labels
+        self.norm = norm
         self.plane = plane
         self.alpha = self.ALPHA_DEFAULT
         self.alpha_slider = alpha_slider
@@ -91,7 +92,7 @@ class PlotEditor:
         img2d = self.img3d_labels[self.coord[0]]
         label_ax_img = plot_2d.imshow_multichannel(
             self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, origin=self.origin, 
-            interpolation="none")
+            interpolation="none", norms=[self.norm])
         self.axes.format_coord = plot_2d.PixelDisplay(img2d)
         plot_2d._set_overview_title(self.axes, self.plane, self.coord[0])
         self.ax_img = label_ax_img[0]
@@ -99,7 +100,8 @@ class PlotEditor:
         if not self.connected:
             # connect once get AxesImage
             self.connect()
-        self.region_label = self.axes.text(0, 0, "", color="w")
+        # text label with color for visibility on axes plus fig background
+        self.region_label = self.axes.text(0, 0, "", color="xkcd:silver")
         self.circle = None
     
     def scroll_overview(self, event):

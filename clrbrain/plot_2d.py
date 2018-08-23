@@ -26,7 +26,8 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import matplotlib.backend_bases as backend_bases
 import matplotlib.pylab as pylab
-from matplotlib.colors import LinearSegmentedColormap, NoNorm
+from matplotlib.colors import (ListedColormap, LinearSegmentedColormap, NoNorm, 
+                               Normalize)
 from matplotlib.widgets import Slider, Button
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
@@ -327,17 +328,23 @@ def add_scale_bar(ax, downsample=None):
     ax.add_artist(scale_bar)
 
 def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, 
-                        vmin=None, vmax=None, origin=None, interpolation=None):
+                        vmin=None, vmax=None, origin=None, interpolation=None, 
+                        norms=None):
     """Show multichannel 2D image with channels overlaid over one another.
     
     Args:
         ax: Axes plot.
         img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
         channel: Channel to display; if None, all channels will be shown.
+        colormaps: List of colormaps corresponding to each channel. Colormaps 
+            can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
         alpha: Default alpha transparency level.
-        vim: Imshow vmin level.
-        vmax: Imshow vmax level.
+        vim: Imshow vmin level; defaults to None.
+        vmax: Imshow vmax level; defaults to None.
+        origin: Image origin; defaults to None.
+        interpolation: Type of interpolation; defaults to None.
+        norms: List of normalizations, which should correspond to ``colormaps``.
     """
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
@@ -351,6 +358,7 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
             # after the 1st channel, all subsequent channels are transluscent
             alpha *= 0.3
         cmap = colormaps[chl]
+        norm = None if norms is None else norms[chl]
         # check for custom colormaps
         if cmap == config.CMAP_GRBK_NAME:
             cmap = CMAP_GRBK
@@ -362,8 +370,9 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
             vmax_plane = vmax[chl]
         #print("vmin: {}, vmax: {}".format(vmin_plane, vmax_plane))
         img_chl = ax.imshow(
-            img2d_show, cmap=cmap, aspect=aspect, alpha=alpha, vmin=vmin_plane, 
-            vmax=vmax_plane, origin=origin, interpolation=interpolation)
+            img2d_show, cmap=cmap, norm=norm, aspect=aspect, alpha=alpha, 
+            vmin=vmin_plane, vmax=vmax_plane, origin=origin, 
+            interpolation=interpolation)
         img.append(img_chl)
         i += 1
     return img
@@ -372,7 +381,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
                  z_relative, highlight=False, border=None, plane="xy", 
                  roi=None, labels=None, blobs_truth=None, circles=None, 
-                 aspect=None, grid=False, cmap_labels=None):
+                 aspect=None, grid=False, cmap_labels=None, norm=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -402,6 +411,15 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         roi: A denoised region of interest, to show in place of image5d for the
             zoomed images. Defaults to None, in which case image5d will be
             used instead.
+        labels: Segmentation labels; defaults to None.
+        blobs_truth: Truth blobs formatted similarly to ``segs_in``; defaults 
+            to None; defaults to None.
+        circles: Type of circles to display, which should be a value of 
+            :const:``CIRCLES``; defaults to None.
+        aspect: Image aspect; defauls to None.
+        grid: True if a grid should be overlaid; defaults to False.
+        cmap_labels: Colormap for labels; defaults to None.
+        norm: Normalization corresponding to ``cmap_labels``; defaults to None.
     """
     ax = plt.subplot(gs[row, col])
     hide_axes(ax)
@@ -484,7 +502,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                         print(e)
                         print("could not show label:\n{}".format(label[z_relative]))
                     '''
-                    ax.imshow(label[z_relative], cmap=cmap_labels, norm=NoNorm())
+                    ax.imshow(label[z_relative], cmap=cmap_labels, norm=norm)
                     #ax.imshow(label[z_relative]) # showing only threshold
         
         if ((segs_in is not None or segs_out is not None) 
@@ -650,14 +668,27 @@ def plot_roi(roi, segments, channel, show=True, title=""):
     if savefig is not None:
         plt.savefig(title + "." + savefig)
 
-def _get_labels_colormap(labels, seed=None):
+def _get_labels_colormap(labels, seed=None, alpha=150, index_direct=True):
     # generate discrete colormap for labels
-    num_colors = len(np.unique(labels))
+    if index_direct:
+        # colormap will be indexed directly by labels image, so num of colors 
+        # equals num of labels
+        num_colors = len(np.unique(labels))
+        norm = NoNorm()
+    else:
+        # generate a color for each int from lowest to highest label, incl 
+        # vals not present in labels, and normalize this range of labels to 
+        # index these colors
+        labels_max = np.amax(labels)
+        labels_min = np.amin(labels)
+        num_colors = labels_max - labels_min
+        norm = Normalize(vmin=labels_min, vmax=labels_max)
     cmap_labels = lib_clrbrain.discrete_colormap(
-        num_colors, alpha=150, prioritize_default=False, seed=seed)
-    cmap_labels = LinearSegmentedColormap.from_list(
-        "discrete_cmap", cmap_labels / 255.0)
-    return cmap_labels
+        num_colors, alpha=alpha, prioritize_default=False, seed=seed)
+    # listed rather than linear cmap since num of colors should equal num 
+    # of possible vals, without requiring interpolation
+    cmap_labels = ListedColormap(cmap_labels / 255.0, "discrete_cmap")
+    return cmap_labels, norm
 
 def _set_overview_title(ax, plane, z_overview, zoom=1, level=0, 
                         max_intens_proj=False):
@@ -1029,7 +1060,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     gs_zoomed = gridspec.GridSpecFromSubplotSpec(zoom_plot_rows, zoom_plot_cols, 
                                                  gs[1, :],
                                                  wspace=0.1, hspace=0.1)
-    cmap_labels = None if labels is None else _get_labels_colormap(labels)
+    cmap_labels, norm = None, None
+    if labels is not None:
+        cmap_labels, norm = _get_labels_colormap(labels)
     # plot the fully zoomed plots
     #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots
     for i in range(zoom_plot_rows):
@@ -1072,7 +1105,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 segs_in, segs_out, segs_cmap, alpha, z_relative, 
                 z == z_overview, border_full if show_border else None, plane, 
                 roi_show, labels, blobs_truth_z, circles=circles, 
-                aspect=aspect, grid=grid, cmap_labels=cmap_labels)
+                aspect=aspect, grid=grid, cmap_labels=cmap_labels, norm=norm)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             ax_z_list.append(ax_z)
@@ -1188,7 +1221,7 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     
     # set up the image to display
     colormaps = config.process_settings["channel_colors"]
-    cmap_labels = _get_labels_colormap(labels_img, 0)
+    cmap_labels, norm = _get_labels_colormap(labels_img, 0, 255, False)
     if not plane:
         plane = config.PLANE[0]
     coord = list(offset[::-1])
@@ -1230,8 +1263,9 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         
         # plot editor
         plot_ed = plot_editor.PlotEditor(
-            ax, img3d_transposed, labels_img_transposed, cmap_labels, plane, alpha_slider, 
-            alpha_reset_btn, aspect, origin, update_coords, refresh_images, scaling)
+            ax, img3d_transposed, labels_img_transposed, cmap_labels, norm, 
+            plane, alpha_slider, alpha_reset_btn, aspect, origin, 
+            update_coords, refresh_images, scaling)
         return plot_ed
     
     plot_eds = {}

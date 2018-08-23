@@ -1251,10 +1251,6 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         for key in plot_eds.keys():
             plot_eds[key].alpha_reset(event)
     
-    def axes_enter(event):
-        for key in plot_eds.keys():
-            plot_eds[key].on_axes_enter(event)
-    
     def axes_exit(event):
         for key in plot_eds.keys():
             plot_eds[key].on_axes_exit(event)
@@ -1262,7 +1258,6 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
     fig.canvas.mpl_connect("close_event", fn_close_listener)
-    fig.canvas.mpl_connect("axes_enter_event", axes_enter)
     fig.canvas.mpl_connect("axes_leave_event", axes_exit)
     
     alpha_slider.on_changed(alpha_update)

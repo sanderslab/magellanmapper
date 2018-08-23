@@ -111,53 +111,15 @@ class PlotEditor:
             coord[0] = z_overview_new
             self.fn_update_coords(coord, self.plane)
     
-    def setup_animation(self):
-        """Store the pixel buffer in background to prep for animations.
-        """
-        PlotEditor.lock = self
-        canvas = self.ax_img.figure.canvas
-        self.ax_img.set_animated(True)
-        canvas.draw()
-        self.background = canvas.copy_from_bbox(self.axes.bbox)
-        canvas.blit(self.axes.bbox)
-        print("setup animation")
-    
-    def update_animation(self):
-        """Update animations used cached artists and background and only in 
-        the axes area for improved efficiency.
-        """
-        canvas = self.ax_img.figure.canvas
-        canvas.restore_region(self.background)
-        axes = self.axes
-        axes.draw_artist(self.ax_img)
-        # WORKAROUND: axes brightens for some reason increased during update 
-        # unless alpha changed to any value
-        axes.set_alpha(1.0)
-        if self.circle:
-            axes.draw_artist(self.circle)
-        canvas.blit(self.axes.bbox)
-    
     def update_image(self):
         """Replace current image with underlying plane's data.
         """
         self.ax_img.set_data(self.img3d_labels[self.coord[0]])
     
-    def reset_animation(self):
-        """Turn off animations and redraw entire figure.
-        """
-        PlotEditor.lock = None
-        self.ax_img.set_animated(False)
-        self.background = None
-        self.intensity = None
-        self.ax_img.figure.canvas.draw()
-        print("reset animation")
-    
     def alpha_updater(self, alpha):
         self.alpha = alpha
         self.ax_img.set_alpha(self.alpha)
         print("set image alpha to {}".format(self.alpha))
-        # assume animation set up during axes enter
-        self.update_animation()
     
     def alpha_reset(self, event):
         print("resetting slider")
@@ -172,19 +134,12 @@ class PlotEditor:
         self.intensity = self.img3d_labels[self.coord[0], y, x]
         print("got intensity {} at x,y,z = {},{},{}"
               .format(self.intensity, x, y, self.coord[0]))
-        self.circle.radius += 1
-        self.update_animation()
-    
-    def on_axes_enter(self, event):
-        if event.inaxes not in self.plot_axes: return
-        self.setup_animation()
     
     def on_axes_exit(self, event):
         if event.inaxes not in self.plot_axes: return
         if self.circle:
             self.circle.remove()
             self.circle = None
-        self.reset_animation()
     
     def on_motion(self, event):
         """Move the editing pen's circle and draw with the chosen intensity 
@@ -203,6 +158,9 @@ class PlotEditor:
         if self.circle:
             # update pen circle position
             self.circle.center = x, y
+            # does not appear to be necessary since text update already 
+            # triggers a redraw, but this would also trigger if no text update
+            self.circle.stale = True
         else:
             # generate new circle if not yet present
             self.circle = patches.Circle(
@@ -220,8 +178,6 @@ class PlotEditor:
                   .format(self.intensity, x, y, self.coord[0]))
             self.ax_img.set_data(self.img3d_labels[self.coord[0]])
             self.fn_refresh_images(self)
-        
-        self.update_animation()
         
         # show atlas label name
         coord = [self.coord[0], y, x]

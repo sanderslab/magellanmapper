@@ -1232,7 +1232,10 @@ class PixelDisplay(object):
     def __init__(self, img):
         self.img = img
     def __call__(self, x, y):
-        z = self.img[int(y), int(x)]
+        if x < 0 or y < 0 or x >= self.img.shape[1] or y >= self.img.shape[0]:
+            z = "n/a"
+        else:
+            z = self.img[int(y), int(x)]
         return "x={:.01f}, y={:.01f}, z={}".format(x, y, z)
 
 def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener):

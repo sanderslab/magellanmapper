@@ -42,12 +42,15 @@ class PlotEditor:
         self.circle = None
         self.background = None
         self.last_loc = None
+        self.press_loc_data = None
         self.connected = False
         self.hline = None
         self.vline = None
         self.coord = None
         self.plot_axes = (
             self.axes, self.alpha_slider.ax, self.alpha_reset_btn.ax)
+        self.xlim = None
+        self.ylim = None
     
     def connect(self):
         """Connect events to functions.
@@ -96,6 +99,9 @@ class PlotEditor:
         plot_2d._set_overview_title(self.axes, self.plane, self.coord[0])
         self.ax_img = label_ax_img[0]
         
+        if self.xlim is not None and self.ylim is not None:
+            self.axes.set_xlim(self.xlim)
+            self.axes.set_ylim(self.ylim)
         if not self.connected:
             # connect once get AxesImage
             self.connect()
@@ -135,6 +141,8 @@ class PlotEditor:
         self.intensity = self.img3d_labels[self.coord[0], y, x]
         print("got intensity {} at x,y,z = {},{},{}"
               .format(self.intensity, x, y, self.coord[0]))
+        self.press_loc_data = (x, y)
+        self.last_loc = (int(event.x), int(event.y))
     
     def on_axes_exit(self, event):
         if event.inaxes not in self.plot_axes: return
@@ -151,58 +159,89 @@ class PlotEditor:
         # get mouse position and return if no change from last pixel coord
         x = int(event.xdata)
         y = int(event.ydata)
-        if self.last_loc is not None and self.last_loc == (x, y):
-            #print("didn't move")
+        x_fig = int(event.x)
+        y_fig = int(event.y)
+        
+        loc = (x_fig, y_fig)
+        if self.last_loc is not None and self.last_loc == loc:
+            print("didn't move")
             return
-        self.last_loc = (x, y)
         
-        if self.circle:
-            # update pen circle position
-            self.circle.center = x, y
-            # does not appear to be necessary since text update already 
-            # triggers a redraw, but this would also trigger if no text update
-            self.circle.stale = True
+        if event.button == 3:
+            # zooming by right-click while moving mouse up/down in y
+            print("x: {}, y: {}, press_loc_data: {}, "
+                  "last_loc: {}, loc: {}, event.x: {}, event.y: {}"
+                  .format(x, y, self.press_loc_data, 
+                  self.last_loc, loc, event.x, event.y))
+            dy = y_fig - self.last_loc[1]
+            xlim = self.axes.get_xlim()
+            zoom_speed = dy * 0.001
+            zoom_x = self.scaling[2] * zoom_speed
+            self.axes.set_xlim(
+                xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_x, 
+                xlim[1] + (self.press_loc_data[0] - xlim[1]) * zoom_x)
+            ylim = self.axes.get_ylim()
+            zoom_y = self.scaling[1] * zoom_speed
+            self.axes.set_ylim(
+                ylim[0] + (self.press_loc_data[1] - ylim[0]) * zoom_y, 
+                ylim[1] + (self.press_loc_data[1] - ylim[1]) * zoom_y)
+            self.axes.figure.canvas.draw_idle()
+            self.xlim = self.axes.get_xlim()
+            self.ylim = self.axes.get_ylim()
         else:
-            # generate new circle if not yet present
-            self.circle = patches.Circle(
-                (x, y), radius=self.radius, linestyle=":", fill=False, 
-                edgecolor="w")
-            self.axes.add_patch(self.circle)
-        
-        if self.intensity is not None:
-            # use the chosen intensity value to overwrite the image with 
-            # a pen of the chosen radius
-            rr, cc = draw.circle(
-                y, x, self.radius, self.img3d_labels[self.coord[0]].shape)
-            self.img3d_labels[self.coord[0], rr, cc] = self.intensity
-            print("changed intensity to {} at x,y,z = {},{},{}"
-                  .format(self.intensity, x, y, self.coord[0]))
-            self.ax_img.set_data(self.img3d_labels[self.coord[0]])
-            self.fn_refresh_images(self)
-        
-        # show atlas label name
-        coord = [self.coord[0], y, x]
-        atlas_label = register.get_label(
-            coord, self.img3d_labels, config.labels_ref_lookup, 
-            self.scaling)
-        name = ""
-        if atlas_label is not None:
-            name = register.get_label_name(atlas_label)
-        self.region_label.set_text(name)
-        # minimize chance of text overflowing out of axes by switching 
-        # alignment at midline horizontally
-        if x > self.img3d_labels.shape[2] / 2:
-            alignment = "right"
-            label_x = x - 10
-        else:
-            alignment = "left"
-            label_x = x + 10
-        self.region_label.set_horizontalalignment(alignment)
-        self.region_label.set_position((label_x, y - 10))
-        
-        if event.key == "shift":
-            self.coord = coord
-            self.fn_update_coords(self.coord, self.plane)
+            # hover movements over image
+            if (x >= 0 and y >= 0 and x < self.img3d.shape[2] 
+                and y < self.img3d.shape[1]):
+                
+                if self.circle:
+                    # update pen circle position
+                    self.circle.center = x, y
+                    # does not appear to be necessary since text update already 
+                    # triggers a redraw, but this would also trigger if no text update
+                    self.circle.stale = True
+                else:
+                    # generate new circle if not yet present
+                    self.circle = patches.Circle(
+                        (x, y), radius=self.radius, linestyle=":", fill=False, 
+                        edgecolor="w")
+                    self.axes.add_patch(self.circle)
+                
+                if self.intensity is not None:
+                    # use the chosen intensity value to overwrite the image with 
+                    # a pen of the chosen radius
+                    rr, cc = draw.circle(
+                        y, x, self.radius, self.img3d_labels[self.coord[0]].shape)
+                    self.img3d_labels[self.coord[0], rr, cc] = self.intensity
+                    print("changed intensity to {} at x,y,z = {},{},{}"
+                          .format(self.intensity, x, y, self.coord[0]))
+                    self.ax_img.set_data(self.img3d_labels[self.coord[0]])
+                    self.fn_refresh_images(self)
+                
+                # show atlas label name
+                coord = [self.coord[0], y, x]
+                atlas_label = register.get_label(
+                    coord, self.img3d_labels, config.labels_ref_lookup, 
+                    self.scaling)
+                name = ""
+                if atlas_label is not None:
+                    name = register.get_label_name(atlas_label)
+                self.region_label.set_text(name)
+                # minimize chance of text overflowing out of axes by switching 
+                # alignment at midline horizontally
+                if x > self.img3d_labels.shape[2] / 2:
+                    alignment = "right"
+                    label_x = x - 10
+                else:
+                    alignment = "left"
+                    label_x = x + 10
+                self.region_label.set_horizontalalignment(alignment)
+                self.region_label.set_position((label_x, y - 10))
+                
+                if event.key == "shift":
+                    self.coord = coord
+                    self.fn_update_coords(self.coord, self.plane)
+                
+        self.last_loc = loc
     
     def on_release(self, event):
         """Reset the intensity value to prevent further edits.

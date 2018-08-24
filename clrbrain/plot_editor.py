@@ -42,6 +42,7 @@ class PlotEditor:
         self.circle = None
         self.background = None
         self.last_loc = None
+        self.last_loc_data = None
         self.press_loc_data = None
         self.connected = False
         self.hline = None
@@ -142,6 +143,7 @@ class PlotEditor:
         print("got intensity {} at x,y,z = {},{},{}"
               .format(self.intensity, x, y, self.coord[0]))
         self.press_loc_data = (x, y)
+        self.last_loc_data = tuple(self.press_loc_data)
         self.last_loc = (int(event.x), int(event.y))
     
     def on_axes_exit(self, event):
@@ -164,30 +166,47 @@ class PlotEditor:
         
         loc = (x_fig, y_fig)
         if self.last_loc is not None and self.last_loc == loc:
-            print("didn't move")
+            #print("didn't move")
             return
         
-        if event.button == 3:
-            # zooming by right-click while moving mouse up/down in y
-            print("x: {}, y: {}, press_loc_data: {}, "
-                  "last_loc: {}, loc: {}, event.x: {}, event.y: {}"
-                  .format(x, y, self.press_loc_data, 
-                  self.last_loc, loc, event.x, event.y))
-            dy = y_fig - self.last_loc[1]
+        loc_data = (x, y)
+        if event.button == 2 or event.key == "cmd" or event.key == "win":
+            # pan when moving mouse while holding down mouse middle button, 
+            # Command key, or Windows key
+            
+            # use data coordinates so same part of image stays under mouse
+            dx = x - self.last_loc_data[0]
+            dy = y - self.last_loc_data[1]
             xlim = self.axes.get_xlim()
-            zoom_speed = dy * 0.001
+            self.axes.set_xlim(xlim[0] - dx, xlim[1] - dx)
+            ylim = self.axes.get_ylim()
+            self.axes.set_ylim(ylim[0] - dy, ylim[1] - dy)
+            self.axes.figure.canvas.draw_idle()
+            self.xlim = self.axes.get_xlim()
+            self.ylim = self.axes.get_ylim()
+            # data itself moved, so update location aong with movement
+            loc_data = (x - dx, y - dy)
+            
+        elif event.button == 3:
+            # zooming by right-click while moving mouse up/down in y
+            
+            # use figure coordinates since data pixels will scale 
+            # during zoom
+            zoom_speed = (y_fig - self.last_loc[1]) * 0.01
             zoom_x = self.scaling[2] * zoom_speed
+            xlim = self.axes.get_xlim()
             self.axes.set_xlim(
                 xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_x, 
                 xlim[1] + (self.press_loc_data[0] - xlim[1]) * zoom_x)
-            ylim = self.axes.get_ylim()
             zoom_y = self.scaling[1] * zoom_speed
+            ylim = self.axes.get_ylim()
             self.axes.set_ylim(
                 ylim[0] + (self.press_loc_data[1] - ylim[0]) * zoom_y, 
                 ylim[1] + (self.press_loc_data[1] - ylim[1]) * zoom_y)
             self.axes.figure.canvas.draw_idle()
             self.xlim = self.axes.get_xlim()
             self.ylim = self.axes.get_ylim()
+            
         else:
             # hover movements over image
             if (x >= 0 and y >= 0 and x < self.img3d.shape[2] 
@@ -242,6 +261,7 @@ class PlotEditor:
                     self.fn_update_coords(self.coord, self.plane)
                 
         self.last_loc = loc
+        self.last_loc_data = loc_data
     
     def on_release(self, event):
         """Reset the intensity value to prevent further edits.

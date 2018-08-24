@@ -1235,8 +1235,7 @@ class PixelDisplay(object):
         z = self.img[int(y), int(x)]
         return "x={:.01f}, y={:.01f}, z={}".format(x, y, z)
 
-def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener, 
-                      plane=None):
+def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener):
     """Plot ROI as sequence of z-planes containing only the ROI itself.
     
     Args:
@@ -1244,7 +1243,6 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         channel: Channel of the image to display.
         offset: Index of plane at which to start viewing.
         fn_close_listener: Handle figure close events.
-        plane: The plane to show in each 2D plot; defaults to None.
     """
     # set up the figure
     fig = plt.figure()
@@ -1256,8 +1254,6 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     colormaps = config.process_settings["channel_colors"]
     cmap_labels, norm = _get_labels_colormap(
         labels_img, 0, 255, False, 150, (0, (0, 0, 0, 255)))
-    if not plane:
-        plane = config.PLANE[0]
     coord = list(offset[::-1])
     
     # transparency controls
@@ -1289,11 +1285,10 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
         print("using plane {}".format(plane))
         max_size = max_plane(image5d[0], plane)
         arrs_3d, arrs_1d, aspect, origin = plot_3d.transpose_images(
-            plane, [image5d[0], labels_img], [config.labels_scaling, coord])
+            plane, [image5d[0], labels_img], [config.labels_scaling])
         img3d_transposed = arrs_3d[0]
         labels_img_transposed = arrs_3d[1]
         scaling = arrs_1d[0]
-        coord_transposed = arrs_1d[1]
         
         # plot editor
         plot_ed = plot_editor.PlotEditor(

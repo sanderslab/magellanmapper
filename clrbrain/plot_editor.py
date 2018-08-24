@@ -8,7 +8,7 @@ from skimage import draw
 
 from clrbrain import config
 from clrbrain import register
-from clrbrain import plot_2d
+from clrbrain import plot_support
 
 class PlotEditor:
     ALPHA_DEFAULT = 0.5
@@ -87,17 +87,17 @@ class PlotEditor:
         self.vline = None
         # show main image in grayscale
         img2d = self.img3d[self.coord[0]]
-        plot_2d.imshow_multichannel(
+        plot_support.imshow_multichannel(
             self.axes, img2d, 0, ["gray"], self.aspect, 1, origin=self.origin, 
             interpolation="none")
         
         # show labels image
         img2d = self.img3d_labels[self.coord[0]]
-        label_ax_img = plot_2d.imshow_multichannel(
+        label_ax_img = plot_support.imshow_multichannel(
             self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, 
             origin=self.origin, interpolation="none", norms=[self.norm])
-        self.axes.format_coord = plot_2d.PixelDisplay(img2d)
-        plot_2d._set_overview_title(self.axes, self.plane, self.coord[0])
+        self.axes.format_coord = PixelDisplay(img2d)
+        plot_support.set_overview_title(self.axes, self.plane, self.coord[0])
         self.ax_img = label_ax_img[0]
         
         if self.xlim is not None and self.ylim is not None:
@@ -112,7 +112,8 @@ class PlotEditor:
     
     def scroll_overview(self, event):
         if event.inaxes != self.axes: return
-        z_overview_new = plot_2d._scroll_plane(event, self.coord[0], self.img3d.shape[0])
+        z_overview_new = plot_support.scroll_plane(
+            event, self.coord[0], self.img3d.shape[0])
         if z_overview_new != self.coord[0]:
             # move only if step registered and changing position
             coord = list(self.coord)
@@ -295,3 +296,13 @@ class PlotEditor:
         for listener in listeners:
             if listener:
                 self.ax_img.figure.canvas.mpl_disconnect(listener)
+
+class PixelDisplay(object):
+    def __init__(self, img):
+        self.img = img
+    def __call__(self, x, y):
+        if x < 0 or y < 0 or x >= self.img.shape[1] or y >= self.img.shape[0]:
+            z = "n/a"
+        else:
+            z = self.img[int(y), int(x)]
+        return "x={:.01f}, y={:.01f}, z={}".format(x, y, z)

@@ -24,10 +24,7 @@ from matplotlib import pyplot as plt, cm
 from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
-import matplotlib.backend_bases as backend_bases
 import matplotlib.pylab as pylab
-from matplotlib.colors import (ListedColormap, LinearSegmentedColormap, NoNorm, 
-                               Normalize)
 from matplotlib.widgets import Slider, Button
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
@@ -39,14 +36,10 @@ from clrbrain import importer
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
-from clrbrain import plot_editor
+from clrbrain import plot_support
 from clrbrain import stats
 
 colormap_2d = cm.inferno
-CMAP_GRBK = LinearSegmentedColormap.from_list(
-    config.CMAP_GRBK_NAME, ["black", "green"])
-CMAP_RDBK = LinearSegmentedColormap.from_list(
-    config.CMAP_RDBK_NAME, ["black", "red"])
 #colormap_2d = cm.gray
 savefig = None
 verify = False
@@ -327,56 +320,6 @@ def add_scale_bar(ax, downsample=None):
                          box_alpha=0, color="w", location=3)
     ax.add_artist(scale_bar)
 
-def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, 
-                        vmin=None, vmax=None, origin=None, interpolation=None, 
-                        norms=None):
-    """Show multichannel 2D image with channels overlaid over one another.
-    
-    Args:
-        ax: Axes plot.
-        img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
-        channel: Channel to display; if None, all channels will be shown.
-        colormaps: List of colormaps corresponding to each channel. Colormaps 
-            can be the names of specific maps in :mod:``config``.
-        aspect: Aspect ratio.
-        alpha: Default alpha transparency level.
-        vim: Imshow vmin level; defaults to None.
-        vmax: Imshow vmax level; defaults to None.
-        origin: Image origin; defaults to None.
-        interpolation: Type of interpolation; defaults to None.
-        norms: List of normalizations, which should correspond to ``colormaps``.
-    """
-    # assume that 3D array has a channel dimension
-    multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
-    img = []
-    i = 0
-    vmin_plane = None
-    vmax_plane = None
-    for chl in channels:
-        img2d_show = img2d[..., chl] if multichannel else img2d
-        if i == 1:
-            # after the 1st channel, all subsequent channels are transluscent
-            alpha *= 0.3
-        cmap = colormaps[chl]
-        norm = None if norms is None else norms[chl]
-        # check for custom colormaps
-        if cmap == config.CMAP_GRBK_NAME:
-            cmap = CMAP_GRBK
-        elif cmap == config.CMAP_RDBK_NAME:
-            cmap = CMAP_RDBK
-        if vmin is not None:
-            vmin_plane = vmin[chl]
-        if vmax is not None:
-            vmax_plane = vmax[chl]
-        #print("vmin: {}, vmax: {}".format(vmin_plane, vmax_plane))
-        img_chl = ax.imshow(
-            img2d_show, cmap=cmap, norm=norm, aspect=aspect, alpha=alpha, 
-            vmin=vmin_plane, vmax=vmax_plane, origin=origin, 
-            interpolation=interpolation)
-        img.append(img_chl)
-        i += 1
-    return img
-
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
                  z_relative, highlight=False, border=None, plane="xy", 
@@ -422,10 +365,10 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         norm: Normalization corresponding to ``cmap_labels``; defaults to None.
     """
     ax = plt.subplot(gs[row, col])
-    hide_axes(ax)
+    plot_support.hide_axes(ax)
     size = image5d.shape
     # swap columns if showing a different plane
-    plane_axis = get_plane_axis(plane)
+    plane_axis = plot_support.get_plane_axis(plane)
     image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
     if plane == config.PLANE[1]:
         # "xz" planes
@@ -485,7 +428,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         
         # show the ROI, which is now a 2D zoomed image
         colormaps = config.process_settings["channel_colors"]
-        imshow_multichannel(
+        plot_support.imshow_multichannel(
             ax, roi, channel, colormaps, aspect, alpha)#, 0.0, config.vmax_overview)
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
@@ -668,118 +611,6 @@ def plot_roi(roi, segments, channel, show=True, title=""):
     if savefig is not None:
         plt.savefig(title + "." + savefig)
 
-def _get_labels_colormap(labels, seed=None, alpha=150, index_direct=True, 
-                         multiplier=255, background=None):
-    '''Generate discrete colormap for labels, using 
-    :func:``lib_clrbrain.discrete_colormap``.
-    
-    Args:
-        labels: Labels of integers for which a distinct color should be 
-            mapped to each unique label.
-        seed: Seed for randomizer to allow consistent colormap between runs; 
-            defaults to None.
-        alpha: Transparency leve; defaults to 150 for semi-transparent.
-        index_direct: True if the colormap will be indexed directly, which 
-            assumes that the labels will serve as indexes to the colormap and 
-            should span sequentially from 0, 1, 2, ...; defaults to True. 
-            If False, a colormap will be generated for the full range of 
-            integers between the lowest and highest label values, inclusive.
-        multiplier: Multiplier for random values generated for RGB values; 
-            defaults to 255.
-        background: Tuple of (backround_label, (R, G, B, A)), where 
-            background_label is the label value specifying the background, 
-            and RGBA value will replace the color corresponding to that label. 
-            Defaults to None.
-    
-    Return:
-        Tuple of ``cmap_labels``, the discrete colormap, and ``norm``, the 
-        normalization object for use with the colormap.
-    '''
-        
-    if index_direct:
-        # colormap will be indexed directly by labels image, so num of colors 
-        # equals num of labels
-        num_colors = len(np.unique(labels))
-        norm = NoNorm()
-    else:
-        # generate a color for each int from lowest to highest label, incl 
-        # vals not present in labels, and normalize this range of labels to 
-        # index these colors
-        labels_max = np.amax(labels)
-        labels_min = np.amin(labels)
-        num_colors = labels_max - labels_min + 1 # since inclusive
-        norm = Normalize(vmin=labels_min, vmax=labels_max)
-    cmap_labels = lib_clrbrain.discrete_colormap(
-        num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
-        multiplier=multiplier)
-    if background is not None:
-        # replace backgound label color with given color
-        bkgdi = np.where(
-            np.array(range(labels_min, labels_max + 1)) == background[0])
-        if len(bkgdi) > 0 and bkgdi[0].size > 0:
-            cmap_labels[bkgdi[0][0]] = background[1]
-    # listed rather than linear cmap since num of colors should equal num 
-    # of possible vals, without requiring interpolation
-    cmap_labels = ListedColormap(cmap_labels / 255.0, "discrete_cmap")
-    return cmap_labels, norm
-
-def _set_overview_title(ax, plane, z_overview, zoom=1, level=0, 
-                        max_intens_proj=False):
-    """Set the overview image title.
-    
-    Args:
-        ax: Matplotlib axes on which to display the title.
-        plane: Plane string.
-        z_overview: Value along the axis corresponding to that plane.
-        zoom: Amount of zoom for the overview image.
-        level: Overview view image level, where 0 is unzoomed, 1 is the 
-            next zoom, etc.
-    """
-    plane_axis = get_plane_axis(plane)
-    if level == 0:
-        if max_intens_proj:
-            title = "Max Intensity Projection"
-        else:
-            # show the axis and axis value for unzoomed overview
-            title = "{}={}".format(plane_axis, z_overview)
-    else:
-        # show zoom for subsequent overviews
-        title = "{}x".format(int(zoom))
-    ax.set_title(title)
-
-def _scroll_plane(event, z_overview, max_size, jump=None):
-    """Scroll through overview images along their orthogonal axis.
-    
-    Args:
-        event: Mouse or key event. For mouse events, scroll step sizes 
-            will be used for movements. For key events, up/down arrows 
-            will be used.
-        max_size: Maximum number of planes.
-        jump: Function to jump to a given plane; defaults to None.
-    """
-    step = 0
-    if isinstance(event, backend_bases.MouseEvent):
-        # scroll movements are scaled from 0 for each event
-        step += int(event.step) # decimal point num on some platforms
-    elif isinstance(event, backend_bases.KeyEvent):
-        # finer-grained movements through keyboard controls since the 
-        # finest scroll movements may be > 1
-        if event.key == "up":
-            step += 1
-        elif event.key == "down":
-            step -= 1
-        elif jump is not None and event.key == "right":
-            z = jump(event)
-            if z: z_overview = z
-    
-    z_overview_new = z_overview + step
-    #print("scroll step of {} to z {}".format(step, z_overview))
-    if z_overview_new < 0:
-        z_overview_new = 0
-    elif z_overview_new >= max_size:
-        z_overview_new = max_size - 1
-    return z_overview_new
-
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
                   offset, segments, mask_in, segs_cmap, fn_close_listener, 
                   border=None, plane="xy", padding_stack=None,
@@ -888,7 +719,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     elif z_level == Z_LEVELS[2]:
         z_overview = z_start + z_planes
     print("z_overview: {}".format(z_overview))
-    max_size = max_plane(image5d[0], plane)
+    max_size = plot_support.max_plane(image5d[0], plane)
     
     def prep_overview():
         """Prep overview image planes based on chosen orientation.
@@ -1002,7 +833,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             min_show = None
             max_show = None
         img = img2d_ov[::downsample, ::downsample]
-        imshow_multichannel(
+        plot_support.imshow_multichannel(
             ax, img, channel, colormaps, aspect, 1, min_show, max_show)
         if img_region_2d is not None:
             # overlay image with selected region highlighted by opacifying 
@@ -1016,7 +847,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
         add_scale_bar(ax, downsample)
-        _set_overview_title(
+        plot_support.set_overview_title(
             ax, plane, z_overview, zoom, level, max_intens_proj)
         return zoom
     
@@ -1042,7 +873,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                   "projection")
             return
         nonlocal z_overview
-        z_overview_new = _scroll_plane(event, z_overview, max_size, jump)
+        z_overview_new = plot_support.scroll_plane(
+            event, z_overview, max_size, jump)
         if z_overview_new != z_overview:
             # move only if step registered and changing position
             z_overview = z_overview_new
@@ -1059,7 +891,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     for level in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, level])
         ax_overviews.append(ax)
-        hide_axes(ax)
+        plot_support.hide_axes(ax)
         zoom = show_overview(ax, img2d, img_region_2d, level)
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
     fig.canvas.mpl_connect("key_press_event", scroll_overview)
@@ -1095,7 +927,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                                                  wspace=0.1, hspace=0.1)
     cmap_labels, norm = None, None
     if labels is not None:
-        cmap_labels, norm = _get_labels_colormap(labels)
+        cmap_labels, norm = plot_support.get_labels_colormap(labels)
     # plot the fully zoomed plots
     #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots
     for i in range(zoom_plot_rows):
@@ -1214,7 +1046,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         # auto to adjust size with less overlap
         ax.imshow(img3d)
         ax.set_aspect(img3d.shape[1] / img3d.shape[0])
-        hide_axes(ax)
+        plot_support.hide_axes(ax)
     gs.tight_layout(fig, pad=0.5)
     #gs_zoomed.tight_layout(fig, pad=0.5)
     plt.ion()
@@ -1228,119 +1060,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         plt.savefig(name)
     print("2D plot time: {}".format(time() - time_start))
     
-class PixelDisplay(object):
-    def __init__(self, img):
-        self.img = img
-    def __call__(self, x, y):
-        if x < 0 or y < 0 or x >= self.img.shape[1] or y >= self.img.shape[0]:
-            z = "n/a"
-        else:
-            z = self.img[int(y), int(x)]
-        return "x={:.01f}, y={:.01f}, z={}".format(x, y, z)
-
-def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener):
-    """Plot ROI as sequence of z-planes containing only the ROI itself.
-    
-    Args:
-        image5d: Numpy image array in t,z,y,x,c format.
-        channel: Channel of the image to display.
-        offset: Index of plane at which to start viewing.
-        fn_close_listener: Handle figure close events.
-    """
-    # set up the figure
-    fig = plt.figure()
-    gs = gridspec.GridSpec(2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1))
-    gs_viewers = gridspec.GridSpecFromSubplotSpec(
-        2, 2, subplot_spec=gs[0, 0])
-    
-    # set up the image to display
-    colormaps = config.process_settings["channel_colors"]
-    cmap_labels, norm = _get_labels_colormap(
-        labels_img, 0, 255, False, 150, (0, (0, 0, 0, 255)))
-    coord = list(offset[::-1])
-    
-    # transparency controls
-    gs_controls = gridspec.GridSpecFromSubplotSpec(
-        1, 2, subplot_spec=gs[1, 0], width_ratios=(5, 1))
-    ax_alpha = plt.subplot(gs_controls[0, 0])
-    alpha_slider = Slider(
-        ax_alpha, "Transparency", 0.0, 1.0, 
-        valinit=plot_editor.PlotEditor.ALPHA_DEFAULT)
-    ax_alpha_reset = plt.subplot(gs_controls[0, 1])
-    alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
-    
-    def update_coords(coord, plane_src):
-        coord_rev = lib_clrbrain.transpose_1d_rev(list(coord), plane_src)
-        for plane in config.PLANE:
-            #if plane != plane_src:
-            coord_transposed = lib_clrbrain.transpose_1d(list(coord_rev), plane)
-            #print("xy coord: {}, {} coord: {}".format(coord_rev, plane, coord_transposed))
-            plot_eds[plane].update_coord(coord_transposed)
-    
-    def refresh_images(plot_ed):
-        for key in plot_eds.keys():
-            ed = plot_eds[key]
-            if ed != plot_ed: ed.update_image()
-    
-    def setup_plot_ed(plane, grid_x, grid_y):
-        ax = plt.subplot(gs_viewers[grid_x, grid_y])
-        hide_axes(ax)
-        print("using plane {}".format(plane))
-        max_size = max_plane(image5d[0], plane)
-        arrs_3d, arrs_1d, aspect, origin = plot_3d.transpose_images(
-            plane, [image5d[0], labels_img], [config.labels_scaling])
-        img3d_transposed = arrs_3d[0]
-        labels_img_transposed = arrs_3d[1]
-        scaling = arrs_1d[0]
-        
-        # plot editor
-        plot_ed = plot_editor.PlotEditor(
-            ax, img3d_transposed, labels_img_transposed, cmap_labels, norm, 
-            plane, alpha_slider, alpha_reset_btn, aspect, origin, 
-            update_coords, refresh_images, scaling)
-        return plot_ed
-    
-    plot_eds = {}
-    plot_eds[config.PLANE[0]] = setup_plot_ed(config.PLANE[0], slice(0, 2), 0)
-    plot_eds[config.PLANE[1]] = setup_plot_ed(config.PLANE[1], 0, 1)
-    plot_eds[config.PLANE[2]] = setup_plot_ed(config.PLANE[2], 1, 1)
-    
-    def scroll_overview(event):
-        for key in plot_eds.keys():
-            plot_eds[key].scroll_overview(event)
-    
-    def alpha_update(event):
-        for key in plot_eds.keys():
-            plot_eds[key].alpha_updater(event)
-    
-    def alpha_reset(event):
-        for key in plot_eds.keys():
-            plot_eds[key].alpha_reset(event)
-    
-    def axes_exit(event):
-        for key in plot_eds.keys():
-            plot_eds[key].on_axes_exit(event)
-    
-    fig.canvas.mpl_connect("scroll_event", scroll_overview)
-    fig.canvas.mpl_connect("key_press_event", scroll_overview)
-    fig.canvas.mpl_connect("close_event", fn_close_listener)
-    fig.canvas.mpl_connect("axes_leave_event", axes_exit)
-    
-    alpha_slider.on_changed(alpha_update)
-    alpha_reset_btn.on_clicked(alpha_reset)
-    
-    update_coords(coord, config.PLANE[0])
-    
-    gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1]) # extra padding for label
-    plt.ion()
-    plt.show()
-    
-def hide_axes(ax):
-    """Hides x- and y-axes.
-    """
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-
 def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
     """Extracts a single 2D plane and saves to file.
     
@@ -1362,7 +1081,7 @@ def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
         img3d = image5d[0]
     else:
         img3d = image5d[:]
-    arrs_3d, _, aspect, origin = plot_3d.transpose_images(plane, [img3d])
+    arrs_3d, _, aspect, origin = plot_support.transpose_images(plane, [img3d])
     img3d = arrs_3d[0]
     img2d = img3d[plane_n]
     if max_intens_proj:
@@ -1370,40 +1089,6 @@ def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
         img2d = np.amax(img2d, axis=0)
     #print("aspect: {}, origin: {}".format(aspect, origin))
     return img2d, aspect, origin
-
-def max_plane(img3d, plane):
-    """Get the max plane for the given 3D image.
-    
-    Args:
-        img3d: Image array in (z, y, x) order.
-        plane: Plane as a value from :attr:``config.PLANE``.
-    
-    Returns:
-        Number of elements along ``plane``'s axis.
-    """
-    shape = img3d.shape
-    if plane == config.PLANE[1]:
-        return shape[1]
-    elif plane == config.PLANE[2]:
-        return shape[2]
-    else:
-        return shape[0]
-
-def get_plane_axis(plane):
-    """Gets the name of the plane corresponding to the given axis.
-    
-    Args:
-        plane: An element of :attr:``config.PLANE``.
-    
-    Returns:
-        The axis name orthogonal to :attr:``config.PLANE``.
-    """
-    plane_axis = "z"
-    if plane == config.PLANE[1]:
-        plane_axis = "y"
-    elif plane == config.PLANE[2]:
-        plane_axis = "x"
-    return plane_axis
 
 def cycle_colors(i):
     num_colors = len(config.colors)
@@ -1495,7 +1180,7 @@ def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
         # xy plane (default)
         img_2d = img[plane_i]
     ax.imshow(img_2d, cmap=cmap, aspect=aspect, alpha=alpha)
-    hide_axes(ax)
+    plot_support.hide_axes(ax)
     if title is not None:
         ax.set_title(title)
 

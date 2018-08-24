@@ -38,6 +38,7 @@ from tvtk.pyface.scene_editor import SceneEditor
 from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 
+from clrbrain import atlas_editor
 from clrbrain import chunking
 from clrbrain import cli
 from clrbrain import config
@@ -769,9 +770,10 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[6]:
             # atlas editor
-            plot_2d.plot_atlas_editor(
+            atlas_ed = atlas_editor.AtlasEditor(
                 cli.image5d, config.labels_img, config.channel, curr_offset, 
                 self._fig_close_listener)
+            atlas_ed.show_atlas()
         else:
             # defaults to Square style without oblique view
             plot_2d.plot_2d_stack(

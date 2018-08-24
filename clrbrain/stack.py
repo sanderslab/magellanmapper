@@ -17,6 +17,7 @@ from scipy import ndimage
 from clrbrain import config
 from clrbrain import plot_2d
 from clrbrain import plot_3d
+from clrbrain import plot_support
 from clrbrain import importer
 
 def _import_img(i, path, rescale, multichannel):
@@ -67,7 +68,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         # Matplotlib figure for building the animation
         fig = plt.figure(frameon=False)
         ax = fig.add_subplot(111)
-        plot_2d.hide_axes(ax)
+        plot_support.hide_axes(ax)
         
         # import the images as Matplotlib artists via multiprocessing
         plotted_imgs = [None for i in range(num_images)]
@@ -90,7 +91,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             # tweak max values to change saturation
             vmax = config.vmax_overview
             #vmax = np.multiply(vmax, (0.9, 1.0))
-            plotted_imgs[i] = plot_2d.imshow_multichannel(
+            plotted_imgs[i] = plot_support.imshow_multichannel(
                 ax, img, config.channel, colormaps, aspect, 1, 
                 vmin=plot_3d.near_min, vmax=vmax, 
                 origin=origin)
@@ -195,11 +196,11 @@ def save_plane(image5d, offset, roi_size=None, name=None):
             offset[1]:offset[1]+roi_size[1], offset[0]:offset[0]+roi_size[0]]
     fig = plt.figure(frameon=False)
     ax = fig.add_subplot(111)
-    plot_2d.hide_axes(ax)
+    plot_support.hide_axes(ax)
     colormaps = config.process_settings["channel_colors"]
     # use lower max threshold since overview vmax often skewed by 
     # artifacts over whole image; also use no interpolation for cleanest image
-    plot_2d.imshow_multichannel(
+    plot_support.imshow_multichannel(
         ax, img2d, config.channel, colormaps, aspect, 1, vmin=plot_3d.near_min, 
         vmax=config.vmax_overview*0.8, 
         origin=origin, interpolation="none")

@@ -206,7 +206,7 @@ def is_binary(img):
     return ((img == 0) | (img == 1)).all()
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
-                      seed=None):
+                      seed=None, multiplier=255):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
@@ -218,6 +218,8 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             defaults to True.
         seed: Random number seed; defaults to None, in which case no seed 
             will be set.
+        multiplier: Multiplier for random values generated for RGB values; 
+            defaults to 255.
     
     Returns:
         2D Numpy array in the format [[R, G, B, alpha], ...]. This colormap 
@@ -228,7 +230,9 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     # generate random combination of RGB values for each number of colors
     if seed is not None:
         np.random.seed(seed)
-    cmap = (np.random.random((num_colors, 4)) * 255).astype(np.uint8)
+    # TODO: consider adding random number offset argument to allow 
+    # returning only higher intensity colors
+    cmap = (np.random.random((num_colors, 4)) * multiplier).astype(np.uint8)
     cmap[:, -1] = alpha # make slightly transparent
     if prioritize_default:
         # prioritize default colors by replacing first colors with default ones

@@ -668,8 +668,34 @@ def plot_roi(roi, segments, channel, show=True, title=""):
     if savefig is not None:
         plt.savefig(title + "." + savefig)
 
-def _get_labels_colormap(labels, seed=None, alpha=150, index_direct=True):
-    # generate discrete colormap for labels
+def _get_labels_colormap(labels, seed=None, alpha=150, index_direct=True, 
+                         multiplier=255, background=None):
+    '''Generate discrete colormap for labels, using 
+    :func:``lib_clrbrain.discrete_colormap``.
+    
+    Args:
+        labels: Labels of integers for which a distinct color should be 
+            mapped to each unique label.
+        seed: Seed for randomizer to allow consistent colormap between runs; 
+            defaults to None.
+        alpha: Transparency leve; defaults to 150 for semi-transparent.
+        index_direct: True if the colormap will be indexed directly, which 
+            assumes that the labels will serve as indexes to the colormap and 
+            should span sequentially from 0, 1, 2, ...; defaults to True. 
+            If False, a colormap will be generated for the full range of 
+            integers between the lowest and highest label values, inclusive.
+        multiplier: Multiplier for random values generated for RGB values; 
+            defaults to 255.
+        background: Tuple of (backround_label, (R, G, B, A)), where 
+            background_label is the label value specifying the background, 
+            and RGBA value will replace the color corresponding to that label. 
+            Defaults to None.
+    
+    Return:
+        Tuple of ``cmap_labels``, the discrete colormap, and ``norm``, the 
+        normalization object for use with the colormap.
+    '''
+        
     if index_direct:
         # colormap will be indexed directly by labels image, so num of colors 
         # equals num of labels
@@ -681,10 +707,17 @@ def _get_labels_colormap(labels, seed=None, alpha=150, index_direct=True):
         # index these colors
         labels_max = np.amax(labels)
         labels_min = np.amin(labels)
-        num_colors = labels_max - labels_min
+        num_colors = labels_max - labels_min + 1 # since inclusive
         norm = Normalize(vmin=labels_min, vmax=labels_max)
     cmap_labels = lib_clrbrain.discrete_colormap(
-        num_colors, alpha=alpha, prioritize_default=False, seed=seed)
+        num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
+        multiplier=multiplier)
+    if background is not None:
+        # replace backgound label color with given color
+        bkgdi = np.where(
+            np.array(range(labels_min, labels_max + 1)) == background[0])
+        if len(bkgdi) > 0 and bkgdi[0].size > 0:
+            cmap_labels[bkgdi[0][0]] = background[1]
     # listed rather than linear cmap since num of colors should equal num 
     # of possible vals, without requiring interpolation
     cmap_labels = ListedColormap(cmap_labels / 255.0, "discrete_cmap")
@@ -1221,7 +1254,8 @@ def plot_atlas_editor(image5d, labels_img, channel, offset, fn_close_listener,
     
     # set up the image to display
     colormaps = config.process_settings["channel_colors"]
-    cmap_labels, norm = _get_labels_colormap(labels_img, 0, 255, False)
+    cmap_labels, norm = _get_labels_colormap(
+        labels_img, 0, 255, False, 150, (0, (0, 0, 0, 255)))
     if not plane:
         plane = config.PLANE[0]
     coord = list(offset[::-1])

@@ -11,7 +11,7 @@ from clrbrain import register
 from clrbrain import plot_2d
 
 class PlotEditor:
-    ALPHA_DEFAULT = 0.4
+    ALPHA_DEFAULT = 0.5
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, norm, plane, 
                  alpha_slider, alpha_reset_btn, aspect, origin, 
@@ -81,18 +81,17 @@ class PlotEditor:
         self.axes.clear()
         self.hline = None
         self.vline = None
-        # show main image
+        # show main image in grayscale
         img2d = self.img3d[self.coord[0]]
         plot_2d.imshow_multichannel(
-            self.axes, img2d, 0, 
-            config.process_settings["channel_colors"], self.aspect, 1, origin=self.origin, 
+            self.axes, img2d, 0, ["gray"], self.aspect, 1, origin=self.origin, 
             interpolation="none")
         
         # show labels image
         img2d = self.img3d_labels[self.coord[0]]
         label_ax_img = plot_2d.imshow_multichannel(
-            self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, origin=self.origin, 
-            interpolation="none", norms=[self.norm])
+            self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, 
+            origin=self.origin, interpolation="none", norms=[self.norm])
         self.axes.format_coord = plot_2d.PixelDisplay(img2d)
         plot_2d._set_overview_title(self.axes, self.plane, self.coord[0])
         self.ax_img = label_ax_img[0]

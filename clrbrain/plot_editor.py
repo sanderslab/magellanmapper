@@ -171,9 +171,9 @@ class PlotEditor:
             return
         
         loc_data = (x, y)
-        if event.button == 2 or event.key == "cmd" or event.key == "win":
-            # pan when moving mouse while holding down mouse middle button, 
-            # Command key, or Windows key
+        if event.button == 2 or event.key == "control":
+            # pan when moving mouse while holding down mouse middle button 
+            # or control key
             
             # use data coordinates so same part of image stays under mouse
             dx = x - self.last_loc_data[0]

@@ -36,8 +36,6 @@ _MASK_DIVIDEND = 10000.0 # 3D max points
 _MAYAVI_COLORMAPS = ("Greens", "Reds", "Blues", "Oranges")
 MLAB_3D_TYPES = ("surface", "point")
 mlab_3d = MLAB_3D_TYPES[1]
-near_max = [-1.0]
-near_min = [0.0]
 
 def setup_channels(roi, channel, dim_channel):
     """Setup channels array for the given ROI dimensions.
@@ -86,8 +84,8 @@ def saturate_roi(roi, clip_vmax=-1, channel=None):
         vmin, vmax = np.percentile(roi_show, (5, clip_vmax))
         lib_clrbrain.printv("vmin: {}, vmax: {}".format(vmin, vmax))
         # ensures that vmax is at least 50% of near max value of image5d
-        lib_clrbrain.printv("near_max: {}".format(near_max[i]))
-        max_thresh = near_max[i] * 0.5
+        lib_clrbrain.printv("near_max: {}".format(config.near_max[i]))
+        max_thresh = config.near_max[i] * 0.5
         if vmax < max_thresh:
             vmax = max_thresh
             lib_clrbrain.printv("adjusted vmax to {}".format(vmax))

@@ -426,6 +426,12 @@ filenames = None # list of multiple image paths
 series = 0 # series for multi-stack files
 channel = None # channel of interest, where None specifies all channels
 
+PLANE = ("xy", "xz", "yz")
+plane = None
+vmax_overview = 1.0
+border = None # clip ROI to border (x,y,z order)
+near_max = [-1.0]
+near_min = [0.0]
 
 # DATABASE
 
@@ -579,13 +585,6 @@ groups = None
 rescale = None # rescale image
 interval = None # interval
 delay = None # delay time between images
-
-# 2D IMAGES
-
-PLANE = ("xy", "xz", "yz")
-plane = None
-vmax_overview = 1.0
-border = None # clip ROI to border (x,y,z order)
 
 
 # AWS

@@ -16,7 +16,6 @@ from scipy import ndimage
 
 from clrbrain import config
 from clrbrain import plot_2d
-from clrbrain import plot_3d
 from clrbrain import plot_support
 from clrbrain import importer
 
@@ -93,7 +92,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             #vmax = np.multiply(vmax, (0.9, 1.0))
             plotted_imgs[i] = plot_support.imshow_multichannel(
                 ax, img, config.channel, colormaps, aspect, 1, 
-                vmin=plot_3d.near_min, vmax=vmax, 
+                vmin=config.near_min, vmax=vmax, 
                 origin=origin)
         pool.close()
         pool.join()
@@ -201,7 +200,7 @@ def save_plane(image5d, offset, roi_size=None, name=None):
     # use lower max threshold since overview vmax often skewed by 
     # artifacts over whole image; also use no interpolation for cleanest image
     plot_support.imshow_multichannel(
-        ax, img2d, config.channel, colormaps, aspect, 1, vmin=plot_3d.near_min, 
+        ax, img2d, config.channel, colormaps, aspect, 1, vmin=config.near_min, 
         vmax=config.vmax_overview*0.8, 
         origin=origin, interpolation="none")
     fit_frame_to_image(fig, img2d.shape, aspect)

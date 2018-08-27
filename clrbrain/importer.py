@@ -370,14 +370,14 @@ def read_info(filename_info_npz):
     except KeyError:
         print("could not find pixel_type")
     try:
-        plot_3d.near_min = output["near_min"]
-        print("set near_min to {}".format(plot_3d.near_min))
+        config.near_min = output["near_min"]
+        print("set near_min to {}".format(config.near_min))
     except KeyError:
         print("could not find near_max")
     try:
-        plot_3d.near_max = output["near_max"]
-        print("set near_max to {}".format(plot_3d.near_max))
-        config.vmax_overview = plot_3d.near_max * 1.1
+        config.near_max = output["near_max"]
+        print("set near_max to {}".format(config.near_max))
+        config.vmax_overview = config.near_max * 1.1
         print("Set vmax_overview to {}".format(config.vmax_overview))
     except KeyError:
         print("could not find near_max")

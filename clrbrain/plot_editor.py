@@ -188,8 +188,9 @@ class PlotEditor:
             # data itself moved, so update location aong with movement
             loc_data = (x - dx, y - dy)
             
-        elif event.button == 3:
-            # zooming by right-click while moving mouse up/down in y
+        elif event.button == 3 or event.key == "alt":
+            # zooming by right-clicking or holding down alt key while moving 
+            # mouse up/down in y
             
             # use figure coordinates since data pixels will scale 
             # during zoom

@@ -402,9 +402,9 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None}, # turn off resizing
         settings_type)
     
-    # ABA P56 specific settings
+    # settings for atlas with full labels
     settings.add_modifier(
-        "_abap56", 
+        "_nomirror", 
         {"labels_mirror": None}, # turn off mirroring
         settings_type)
     

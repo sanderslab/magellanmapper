@@ -604,11 +604,19 @@ def _transform_labels(transformix_img_filter, labels_img, settings,
     '''
     return transformed_labels_img
 
-def _config_reg_resolutions(grid_spacing_schedule, param_map):
+def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
     if grid_spacing_schedule:
         # assume spacing given as single val for all dimensions
-        param_map["NumberOfResolutions"] = [str(len(grid_spacing_schedule))]
         param_map["GridSpacingSchedule"] = grid_spacing_schedule
+        num_res = len(grid_spacing_schedule)
+        res_set = grid_spacing_schedule[:ndim]
+        if len(np.unique(res_set)) != ndim:
+            # any repeated resolutions must mean that each value refers to 
+            # a dimension rather than to all dimensions; note that schedules 
+            # with completely different values per dimension won't be 
+            # identified correctly
+            num_res /= ndim
+        param_map["NumberOfResolutions"] = [str(num_res)]
 
 def import_atlas(atlas_dir):
     # load atlas and corresponding labels
@@ -749,7 +757,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
     param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
-    _config_reg_resolutions(settings["grid_spacing_schedule"], param_map)
+    _config_reg_resolutions(
+        settings["grid_spacing_schedule"], param_map, fixed_img.GetDimension())
     if settings["point_based"]:
         # point-based registration added to b-spline, which takes point sets 
         # found in name_prefix's folder; note that coordinates are from the 
@@ -1053,7 +1062,8 @@ def register_group(img_files, flip=None, show_imgs=True,
     param_map["MaximumNumberOfIterations"] = [settings["groupwise_iter_max"]]
     # TESTING:
     #param_map["MaximumNumberOfIterations"] = ["0"]
-    _config_reg_resolutions(settings["grid_spacing_schedule"], param_map)
+    _config_reg_resolutions(
+        settings["grid_spacing_schedule"], param_map, img_np_template.ndim)
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
     transform_filter = elastix_img_filter.Execute()

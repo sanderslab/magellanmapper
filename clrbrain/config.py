@@ -310,7 +310,7 @@ class RegisterSettings(SettingsDict):
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False
-        # erase labels outside of x,y,z (applied before transposition), 
+        # erase labels outside of x,y,z (applied after transposition), 
         # where each val is (start, end), given as fractions, or None for the 
         # whole range
         self["truncate_labels"] = None
@@ -373,6 +373,8 @@ def update_register_settings(settings, settings_type):
         {"resize_factor": 0.625}, 
         settings_type)
     
+    # new atlas generation: turn on preprocessing
+    # TODO: likely remove since not using preprocessing currently
     settings.add_modifier(
         "_new", 
         {"preprocess": True}, 
@@ -412,6 +414,12 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "_grouped04", 
         {"carve_threshold": 0.015}, 
+        settings_type)
+    
+    # crop anterior region of labels during single registration
+    settings.add_modifier(
+        "_cropanterior", 
+        {"truncate_labels": (None, (0.2, 0.8), (0.45, 1.0))}, 
         settings_type)
     
     if verbose:

@@ -1005,6 +1005,12 @@ def register_group(img_files, flip=None, show_imgs=True,
         # preventing some images from being stretched into the erased space
         labels_img = load_registered_img(img_files[i], reg_name=IMG_LABELS)
         img_np, y_cropped = _crop_image(img_np, labels_img, 1)#, eraser=0)
+        '''
+        # crop anterior region
+        rotated = np.rot90(img_np, 2, (1, 2))
+        rotated, _ = _crop_image(rotated, np.rot90(labels_img, 2, (1, 2)), 1)
+        img_np = np.rot90(rotated, 2, (1, 2))
+        '''
         
         # force all images into same size and origin as first image 
         # to avoid groupwise registration error on physical space mismatch
@@ -1067,7 +1073,7 @@ def register_group(img_files, flip=None, show_imgs=True,
         # resize to original shape of first image, all aligned to position 
         # of subject within first image
         img_large_np = np.zeros(size_orig[::-1])
-        img_large_np[:, start_y:] = img_np
+        img_large_np[:, start_y:start_y+img_np.shape[1]] = img_np
         if show_imgs:
             sitk.Show(replace_sitk_with_numpy(img, img_large_np))
         imgs.append(img_large_np)

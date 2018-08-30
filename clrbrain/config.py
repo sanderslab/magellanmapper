@@ -408,6 +408,12 @@ def update_register_settings(settings, settings_type):
         {"labels_mirror": None}, # turn off mirroring
         settings_type)
     
+    # groupwise registration batch 04
+    settings.add_modifier(
+        "_grouped04", 
+        {"carve_threshold": 0.015}, 
+        settings_type)
+    
     if verbose:
         print("process settings for {}:\n{}"
               .format(settings["settings_name"], settings))

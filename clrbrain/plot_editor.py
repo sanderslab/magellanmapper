@@ -56,7 +56,7 @@ class PlotEditor:
     def connect(self):
         """Connect events to functions.
         """
-        canvas = self.ax_img.figure.canvas
+        canvas = self.axes.figure.canvas
         self.cidpress = canvas.mpl_connect("button_press_event", self.on_press)
         self.cidrelease = canvas.mpl_connect(
             "button_release_event", self.on_release)
@@ -65,6 +65,16 @@ class PlotEditor:
         self.cidkeypress = canvas.mpl_connect(
             "key_press_event", self.on_key_press)
         self.connected = True
+    
+    def disconnect(self):
+        """Connect events to functions.
+        """
+        canvas = self.axes.figure.canvas
+        canvas.mpl_discconnect(self.cidpress)
+        canvas.mpl_discconnect(self.cidrelease)
+        canvas.mpl_discconnect(self.cidmotion)
+        canvas.mpl_discconnect(self.cidkeypress)
+        self.connected = False
     
     def update_coord(self, coord):
         update_overview = self.coord is None or coord[0] != self.coord[0]

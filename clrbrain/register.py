@@ -960,6 +960,23 @@ def register_group(img_files, flip=None, show_imgs=True,
     if name_prefix is None:
         name_prefix = img_files[0]
     target_size = config.register_settings["target_size"]
+    
+    '''
+    # TESTING: assuming first file is a raw groupwise registered image, 
+    # import it for post-processing
+    img = sitk.ReadImage(img_files[0])
+    img_np = sitk.GetArrayFromImage(img)
+    print("thresh mean: {}".format(filters.threshold_mean(img_np)))
+    carve_threshold = config.register_settings["carve_threshold"]
+    holes_area = config.register_settings["holes_area"]
+    img_np, img_np_unfilled = plot_3d.carve(
+        img_np, thresh=carve_threshold, holes_area=holes_area, 
+        return_unfilled=True)
+    sitk.Show(replace_sitk_with_numpy(img, img_np_unfilled))
+    sitk.Show(replace_sitk_with_numpy(img, img_np))
+    return
+    '''
+    
     img_vector = sitk.VectorOfImage()
     flip_img = False
     # image properties of 1st image, in SimpleITK format

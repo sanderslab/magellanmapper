@@ -769,11 +769,12 @@ class Visualization(HasTraits):
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[6]:
-            # atlas editor
-            atlas_ed = atlas_editor.AtlasEditor(
+            # atlas editor; need to retain ref or else instance callbacks 
+            # created within AtlasEditor will be garbage collected
+            self.atlas_ed = atlas_editor.AtlasEditor(
                 cli.image5d, config.labels_img, config.channel, curr_offset, 
                 self._fig_close_listener)
-            atlas_ed.show_atlas()
+            self.atlas_ed.show_atlas()
         else:
             # defaults to Square style without oblique view
             plot_2d.plot_2d_stack(

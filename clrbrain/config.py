@@ -346,10 +346,10 @@ def update_register_settings(settings, settings_type):
         settings["settings_name"] = "groupwise"
         
         # larger bspline voxels to avoid over deformation of internal structures
-        settings["bspline_grid_space_voxels"] = "70"
+        settings["bspline_grid_space_voxels"] = "130"
         
-        # empirically determined
-        settings["carve_threshold"] = 0.009
+        # need to empirically determine
+        settings["carve_threshold"] = 0.01
         settings["holes_area"] = 10000
         
         # empirically determined to add variable tissue area from first image 
@@ -360,7 +360,7 @@ def update_register_settings(settings, settings_type):
         # increased number of resolutions with overall increased spacing 
         # schedule since it appears to improve internal alignment
         settings["grid_spacing_schedule"] = [
-            "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"]
+            "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"]
     
     elif settings_type.startswith("test"):
         settings["settings_name"] = "test"
@@ -410,6 +410,15 @@ def update_register_settings(settings, settings_type):
         {"labels_mirror": None}, # turn off mirroring
         settings_type)
     
+    # groupwise registration batch 02
+    settings.add_modifier(
+        "_grouped02", 
+        {"bspline_grid_space_voxels": "70", 
+         "grid_spacing_schedule": [
+            "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"], 
+         "carve_threshold": 0.009}, 
+        settings_type)
+        
     # groupwise registration batch 04
     settings.add_modifier(
         "_grouped04", 
@@ -572,7 +581,7 @@ saveroi = False
 
 # reference atlas labels
 load_labels = None
-labels_img = None
+labels_img = None # in Numpy format
 labels_scaling = None
 labels_ref = None
 labels_ref_lookup = None

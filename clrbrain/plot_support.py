@@ -121,7 +121,7 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None):
     return arrs_3d, arrs_1d, aspect, origin
 
 def get_labels_colormap(labels, seed=None, alpha=150, index_direct=True, 
-                         multiplier=255, background=None):
+                         multiplier=255, offset=0, background=None):
     '''Generate discrete colormap for labels, using 
     :func:``lib_clrbrain.discrete_colormap``.
     
@@ -138,6 +138,7 @@ def get_labels_colormap(labels, seed=None, alpha=150, index_direct=True,
             integers between the lowest and highest label values, inclusive.
         multiplier: Multiplier for random values generated for RGB values; 
             defaults to 255.
+        offset: Offset to generated random numbers; defaults to 0.
         background: Tuple of (backround_label, (R, G, B, A)), where 
             background_label is the label value specifying the background, 
             and RGBA value will replace the color corresponding to that label. 
@@ -163,7 +164,7 @@ def get_labels_colormap(labels, seed=None, alpha=150, index_direct=True,
         norm = Normalize(vmin=labels_min, vmax=labels_max)
     cmap_labels = lib_clrbrain.discrete_colormap(
         num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
-        multiplier=multiplier)
+        multiplier=multiplier, offset=offset)
     if background is not None:
         # replace backgound label color with given color
         bkgdi = np.where(

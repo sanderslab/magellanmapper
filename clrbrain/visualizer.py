@@ -316,7 +316,7 @@ class Visualization(HasTraits):
         self.segs_feedback = feedback_str
     
     def save_atlas(self):
-        config.labels_img = register.load_registered_img(
+        register.load_registered_img(
             config.filename, reg_name=register.IMG_LABELS, 
             replace=config.labels_img)
     

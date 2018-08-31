@@ -231,7 +231,9 @@ class Visualization(HasTraits):
         """
         print("segments", self.segments)
         if self.segments is None or self.segments.size < 1:
-            print("no segments found")
+            feedback_str = "No segments found to save"
+            print(feedback_str)
+            self.segs_feedback = feedback_str
             return
         segs_transposed = []
         segs_to_delete = []
@@ -319,6 +321,8 @@ class Visualization(HasTraits):
         register.load_registered_img(
             config.filename, reg_name=register.IMG_LABELS, 
             replace=config.labels_img)
+        self.segs_feedback = "Saved labels image at {}".format(
+            datetime.datetime.now())
     
     def _reset_segments(self):
         """Resets the saved segments.

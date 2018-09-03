@@ -24,6 +24,7 @@ Arguments:
     -n [URL]: Slack notification URL.
     -c: Server clean-up, including upload, notification, and 
         poweroff if appropriate.
+    -z [size]: Size in x,y,z format.
 "
 
 
@@ -49,7 +50,7 @@ S3_DIR="path/to/your/bucket/artifact"
 MICROSCOPE="lightsheet"
 
 # Grouped pathways to follow typical pipelines
-PIPELINES=("gui" "full" "process_only", "transpose_only")
+PIPELINES=("gui" "full" "process_only", "transpose_only", "download_only")
 pipeline="gui"
 
 
@@ -186,6 +187,10 @@ elif [[ "$pipeline" = "${PIPELINES[3]}" ]]; then
     transpose_pathway="${TRANSPOSE_PATHWAYS[1]}"
     whole_img_proc=""
     upload="${UPLOAD_TYPES[2]}"
+elif [[ "$pipeline" = "${PIPELINES[4]}" ]]; then
+    # download only
+    gui=0
+    # will download npz files correponding to IMG by default
 fi
 
 

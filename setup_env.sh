@@ -254,8 +254,9 @@ if [[ $lightweight -eq 0 ]]; then
     
     pip install -U matplotlib-scalebar
     
-    # use Conda now that VTK 8.1 is available there
-    #pip install -U vtk==8.1.0
+    # Mayavi install says that vtk not directly required and not 
+    # installed, so need to install directly here
+    pip install -U vtk
     
     # pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
     # version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 

@@ -62,12 +62,29 @@ BASE_DIR="$PWD"
 # show current drive arrangement
 lsblk -p
 
+is_formatted() {
+    format="$(lsblk -o FSTYPE -n $1)"
+    if [[ -z "${format// }" ]]; then
+        return 0
+    else
+        echo "$1 is already formatted"
+        return 1
+    fi
+}
+
 if [[ $setup -eq 1 ]]; then
     # initialize swap and storage drives if setting up 
     # a new server instance
-    sudo mkswap "$swap"
-    sudo mkfs -t ext4 "$data"
+    is_formatted "$swap"
+    if [[ "$?" -eq 0 ]]; then
+        sudo mkswap "$swap"
+    fi
+    is_formatted "$data"
+    if [[ "$?" -eq 0 ]]; then
+        sudo mkfs -t ext4 "$data"
+    fi
 fi
+
 
 # turn on swap and mount storage drive; these commands 
 # should fail if these drives were not initialized or 

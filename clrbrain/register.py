@@ -697,6 +697,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         name_prefix: Path with base name where registered files are located; 
             defaults to None, in which case the fixed_file path will be used.
     """
+    start_time = time()
     if name_prefix is None:
         name_prefix = fixed_file
     settings = config.register_settings
@@ -867,6 +868,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     # show overlays last since blocks until fig is closed
     _show_overlays(imgs, translation, fixed_file, None)
+    print("time elapsed for single registration (s): {}"
+          .format(time() - start_time))
 
 def measure_overlap(fixed_img, transformed_img, fixed_thresh=None, 
                     transformed_thresh=None):
@@ -966,6 +969,7 @@ def register_group(img_files, flip=None, show_imgs=True,
         scale: Rescaling factor as a scalar value, used to find the rescaled, 
             smaller images corresponding to ``img_files``. Defaults to None.
     """
+    start_time = time()
     if name_prefix is None:
         name_prefix = img_files[0]
     target_size = config.register_settings["target_size"]
@@ -1135,6 +1139,9 @@ def register_group(img_files, flip=None, show_imgs=True,
         img_np = sitk.GetArrayFromImage(transformed_img)
         detector.resolutions = [transformed_img.GetSpacing()[::-1]]
         importer.save_np_image(img_np[None], out_path, config.series)
+    
+    print("time elapsed for groupwise registration (s): {}"
+          .format(time() - start_time))
     
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):

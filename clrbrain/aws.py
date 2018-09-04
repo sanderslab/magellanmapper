@@ -52,7 +52,7 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group,
     mappings = []
     for i in range(len(ebs)):
         device = ebs[i]
-        name = "/dev/xvda"
+        name = "/dev/sda1" # default root vol at least on m5 series
         if i > 0:
             # iterate alphabetically starting with f since i >= 1
             name = "/dev/sd{}".format(chr(ord("e") + i))

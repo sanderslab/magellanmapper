@@ -128,14 +128,18 @@ def printv(s):
         print(s)
 
 def get_int(val):
-    """Cast a value as an integer, returning the value instead if any error.
+    """Cast a value as an integer, returning the value if any error.
     
     Args:
-        val: Value to cast.
+        val: Value to cast. If a tuple or list, each entry will be casted 
+            recursively.
     
     Returns:
-        Value casted to int, or the value if any error occurs during casting.
+        Value casted to int, or the original value if any error occurs during 
+        casting.
     """
+    if isinstance(val, (tuple, list)):
+        return [get_int(elt) for elt in val]
     try:
         return int(val)
     except:

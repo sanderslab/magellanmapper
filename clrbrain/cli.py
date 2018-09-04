@@ -409,6 +409,39 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
 def _is_arg_true(arg):
     return arg.lower() == "true" or arg == "1"
 
+def args_with_dict(args):
+    """Parse arguments list with optional arguments given as dictionary-like 
+    elements.
+    
+    Args:
+        args: List of arguments, which can be single values or "=" delimited 
+           values. Single values will be stored in the same order, while 
+           delimited entries will be entered sequentially into a dictionary. 
+           Entries can also be comma-delimited to specify lists.
+    
+    Returns:
+        List of arguments ordered first with single-value entries in the 
+        same order in which they were entered, followed by a dictionary 
+        with all equals-delimited entries, also in the same order as entered. 
+        Entries that contain commas will be split into comma-delimited 
+        lists. All values will be converted to ints if possible.
+    """
+    parsed = []
+    args_dict = {}
+    for arg in args:
+        arg_split = arg.split("=")
+        for_dict = len(arg_split) > 1
+        vals = arg_split[1] if for_dict else arg
+        vals_split = vals.split(",")
+        if len(vals_split) > 1: vals = vals_split
+        vals = lib_clrbrain.get_int(vals)
+        if for_dict:
+            args_dict[arg_split[0]] = vals
+        else:
+            parsed.append(vals)
+    parsed.append(args_dict)
+    return parsed
+
 def main(process_args_only=False):
     """Starts the visualization GUI.
     
@@ -614,16 +647,8 @@ def main(process_args_only=False):
             config.sub_stack_max_pixels = chunk_shapes[0]
             print("Set chunk shape to {}".format(config.sub_stack_max_pixels))
     if args.ec2_start is not None:
-        # assume order of tag_name, ami_id, instance_type, subnet_id, 
-        # sec_group, key_name, ebs, and optionally max_count
-        start = args.ec2_start
-        i = 6
-        if len(start) > i:
-            start[i] = [int(n) for n in start[i].split(",")]
-        i += 1
-        if len(start) > i:
-            start[i] = int(start[i])
-        config.ec2_start = start
+        # start EC2 instances
+        config.ec2_start = args_with_dict(args.ec2_start)
         print("Set ec2 start to {}".format(config.ec2_start))
     if args.ec2_list:
         config.ec2_list = args.ec2_list

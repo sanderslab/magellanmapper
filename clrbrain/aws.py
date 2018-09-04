@@ -48,21 +48,46 @@ def show_instances(instances, get_ip=False):
     pool.join()
 
 def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, 
-                    key_name, ebs, max_count=1):
+                    key_name, ebs, max_count=1, snapshot_ids=None):
+    """Start EC2 instances.
+    
+    Args:
+        tag_name: Name of tag.
+        ami_id: ID for AMI from which to create instances.
+        instance_type: EC2 instance type, such as "t2.micro".
+        subnet_id: ID for subnet.
+        sec_group: ID for security group.
+        key_name: Name of key-pair to access EC2 instance with PEM.
+        ebs: List of sizes in GB for each EBS instance to attach. Can also 
+            be a single value, which will be converted to a tuple.
+        max_count: Target number of instances to create; defaults to 1.
+        snapshot_ids: List of snapshot IDs; defaults to None. Any empty 
+            values will be ignored. Can also be a single value, which will be 
+            converted to a tuple.
+    """
+    # convert single value ebs and snapshots into tuples
+    if not isinstance(ebs, (tuple, list)): ebs = (ebs, )
+    if snapshot_ids and not isinstance(snapshot_ids, (tuple, list)):
+        snapshot_i = tuple(snapshot_ids, )
+    
     mappings = []
     for i in range(len(ebs)):
+        # parse EBS device block mappings
         device = ebs[i]
         name = "/dev/sda1" # default root vol at least on m5 series
         if i > 0:
             # iterate alphabetically starting with f since i >= 1
             name = "/dev/sd{}".format(chr(ord("e") + i))
         # use gp2 since otherwise may default to "standard" (magnetic HDD)
+        ebs_dict = {
+            "VolumeSize": device, 
+            "VolumeType": "gp2"
+        }
+        if snapshot_ids and snapshot_ids[i]: 
+            ebs_dict["SnapshotId"] = snapshot_ids[i]
         mapping = {
             "DeviceName": name, 
-            "Ebs": {
-                "VolumeSize": device, 
-                "VolumeType": "gp2"
-            }
+            "Ebs": ebs_dict
         }
         mappings.append(mapping)
     
@@ -121,7 +146,7 @@ def list_instances(state):
 if __name__ == "__main__":
     cli.main(True)
     if config.ec2_start:
-        start_instances(*config.ec2_start)
+        start_instances(*config.ec2_start[:-1], **config.ec2_start[-1])
     if config.ec2_list:
         list_instances(*config.ec2_list)
     if config.ec2_terminate:

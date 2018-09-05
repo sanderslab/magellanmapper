@@ -304,18 +304,30 @@ clr_img_base="${clr_img%.*}"
 # exported into a Numpy-based format for loading into Clrbrain
 
 
-# Get stitched image files from S3 if not present
+# Check for existing files in Clrbrain Numpy format
 series_filled="$(printf %05d $series)"
 npz_img_base="${clr_img_base}_${series_filled}"
 image5d_npz="${npz_img_base}_image5d.npz"
 info_npz="${npz_img_base}_info.npz"
 echo -n "Looking for ${image5d_npz}..."
 if [[ ! -e "$image5d_npz" ]]; then
+    # Get stitched image files from S3
     echo "downloading from S3..."
     mkdir "$OUT_DIR"
-    for npz in "$image5d_npz" "$info_npz"; do
-        aws s3 cp "${s3_exp_path}/$(basename $npz)" "$OUT_DIR"
-    done
+    zip_name="$(basename $clr_img_base).zip"
+    echo "${OUT_DIR}/${zip_name}"
+    # attempt to retrieve .zip file
+    aws s3 cp "${s3_exp_path}/${zip_name}" "$OUT_DIR"
+    if [[ -e "${OUT_DIR}/${zip_name}" ]]; then
+        cd "$OUT_DIR"
+        unzip -u "$zip_name"
+        cd -
+    else
+        # get individual .npz files if .zip not present
+        for npz in "$image5d_npz" "$info_npz"; do
+            aws s3 cp "${s3_exp_path}/$(basename $npz)" "$OUT_DIR"
+        done
+    fi
 else
     echo "found"
 fi
@@ -351,11 +363,15 @@ if [[ "$transpose_pathway" != "" ]]; then
     fi
     
     if [[ "$upload" == "${UPLOAD_TYPES[2]}" ]]; then
-        # upload transposed files to S3
+        # zip and upload transposed files to S3
         base_path="${img_transposed%.*}"
+        cd "$(dirname $base_path)"
         base_path="$(basename $base_path)"
-        echo "uploading ${base_path} to S3 at ${s3_exp_path}"
-        aws s3 cp $OUT_DIR "${s3_exp_path}" --recursive --exclude "*" --include "${base_path}*"
+        zip_name=${base_path}.zip
+        zip -R "$zip_name" "${base_path}*"
+        echo "uploading $zip_name to S3 at ${s3_exp_path}"
+        aws s3 cp "$zip_name" "${s3_exp_path}"
+        cd -
     fi
     
 fi

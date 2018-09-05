@@ -340,7 +340,7 @@ if [[ "$transpose_pathway" != "" ]]; then
     elif [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[1]}" ]]; then
         # Resize to a set size given by a registration profile, with size 
         # specified by register profile, which needs to be passed as 
-        # --reg_file [name] in EXTRA_ARGS
+        # --reg_file [name] in EXTRA_ARGS, and -z flag to find output name
         python -u -m clrbrain.cli --img "$clr_img" --proc transpose $EXTRA_ARGS
         img_transposed="${clr_img_base}_resized(${size}).${EXT}"
     fi

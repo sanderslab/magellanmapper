@@ -820,7 +820,8 @@ def process_file(filename_base, offset, roi_size):
     # LOAD MAIN IMAGE
     
     if proc_type in (PROC_TYPES[3], PROC_TYPES[5], PROC_TYPES[8]):
-        # loads from processed files
+        # load a processed image, typically a chunk of a larger image
+        print("Loading processed image files")
         global image5d_proc, segments_proc
         try:
             # processed image file, which < v.0.4.3 was the saved 
@@ -870,8 +871,9 @@ def process_file(filename_base, offset, roi_size):
                   .format(filename_info_proc))
             raise e
     
-    # attempts to load the main image stack
     if image5d is None:
+        # load or import the main image stack
+        print("Loading main image")
         if os.path.isdir(config.filename):
             # import directory of TIFF images
             image5d = importer.import_dir(os.path.join(config.filename, "*"))
@@ -888,9 +890,11 @@ def process_file(filename_base, offset, roi_size):
             image5d = importer.read_file_sitk(
                 config.filename, filename_np, config.series, rotate)
         else:
-            # load from Clrbrain Numpy format
+            # load or import from Clrbrain Numpy format
+            load = proc_type != PROC_TYPES[0] # explicitly re/import
             image5d = importer.read_file(
-                config.filename, config.series, channel=config.channel)
+                config.filename, config.series, channel=config.channel, 
+                load=load)
     
     if config.load_labels is not None:
         # load labels image and set up scaling

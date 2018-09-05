@@ -36,9 +36,11 @@ Arguments:
 # "/data/exp_yyyy-mm-dd/WT-cortex.czi"
 IMG="/path/to/your/image"
 
-# parent path of image file in cloud such as AWS S3; eg
-# "MyName/ClearingExps", where the image would be found in 
-# $S3_DIR/exp_yyyy-mm-dd
+# parent path of image directory in cloud such as AWS S3, excluding the 
+# protocol ("s3://"); eg "MyName/ClearingExps"
+# NOTE: the image's directory on S3 is assumed to match that of IMG, 
+# so that for the above example IMG, the image on S3 would be in 
+# s3://$S3_DIR/exp_yyyy-mm-dd
 S3_DIR=""
 
 # Replace microscope type with available profiles, such as "lightsheet", 
@@ -231,6 +233,8 @@ fi
 # Stitching Workflow
 
 # Replace with your lens objective settings
+# TODO: option to gather automatically by importing metadata from 
+# original file, though can take awhile for large files
 RESOLUTIONS="0.913,0.913,4.935"
 MAGNIFICATION="5.0"
 ZOOM="1.0"
@@ -332,10 +336,10 @@ if [[ "$transpose_pathway" != "" ]]; then
             img_transposed="${clr_img_base}_scale${scale}.${EXT}"
         fi
     elif [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[1]}" ]]; then
-        # Resize to a set size given by a registration profile; replace 
-        # profile name and size to your given profile
-        python -u -m clrbrain.cli --img "$clr_img" --proc transpose $EXTRA_ARGS #--reg_profile "finer_abae18pt5"
-        #size="278,581,370"
+        # Resize to a set size given by a registration profile, with size 
+        # specified by register profile, which needs to be passed as 
+        # --reg_file [name] in EXTRA_ARGS
+        python -u -m clrbrain.cli --img "$clr_img" --proc transpose $EXTRA_ARGS
         img_transposed="${clr_img_base}_resized(${size}).${EXT}"
     fi
     

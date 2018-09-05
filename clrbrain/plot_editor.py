@@ -181,9 +181,8 @@ class PlotEditor:
             return
         
         loc_data = (x, y)
-        if event.button == 2 or event.key == "control":
-            # pan when moving mouse while holding down mouse middle button 
-            # or control key
+        if event.button == 2 or (event.button == 1 and event.key == "alt"):
+            # pan by middle-coking or left-click+alt during mouseover
             
             # use data coordinates so same part of image stays under mouse
             dx = x - self.last_loc_data[0]
@@ -198,9 +197,9 @@ class PlotEditor:
             # data itself moved, so update location aong with movement
             loc_data = (x - dx, y - dy)
             
-        elif event.button == 3 or event.key == "alt":
-            # zooming by right-clicking or holding down alt key while moving 
-            # mouse up/down in y
+        elif event.button == 3 or (event.button == 1 and event.key == "control"):
+            # zooming by right-clicking or left-click+ctrl (which coverts 
+            # button event to 3 on Mac at least) while moving mouse up/down in y
             
             # use figure coordinates since data pixels will scale 
             # during zoom

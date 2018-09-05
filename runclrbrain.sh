@@ -39,7 +39,7 @@ IMG="/path/to/your/image"
 # parent path of image file in cloud such as AWS S3; eg
 # "MyName/ClearingExps", where the image would be found in 
 # $S3_DIR/exp_yyyy-mm-dd
-S3_DIR="path/to/your/bucket/artifact"
+S3_DIR=""
 
 # Replace microscope type with available profiles, such as "lightsheet", 
 # "2p_20x", or "lightsheet_v02", or with modifiers, such as 
@@ -193,6 +193,10 @@ elif [[ "$pipeline" = "${PIPELINES[4]}" ]]; then
     # will download npz files correponding to IMG by default
 fi
 
+if [[ "$S3_DIR" = "" ]]; then
+    echo "Unable to upload to S3 as S3 directory is not set"
+    upload="${UPLOAD_TYPES[0]}"
+fi
 
 ####################################
 # Graphical display

@@ -50,7 +50,7 @@ S3_DIR="path/to/your/bucket/artifact"
 MICROSCOPE="lightsheet"
 
 # Grouped pathways to follow typical pipelines
-PIPELINES=("gui" "full" "process_only", "transpose_only", "download_only")
+PIPELINES=("gui" "full" "process_only" "transpose_only" "download_only")
 pipeline="gui"
 
 
@@ -66,19 +66,19 @@ size=70,70,10
 # Series/tile to load; use 0 for fully stitched images
 series=0
 
-# Choose stitch pathway index, or "" for none
+# Choose stitch pathway type, or "" for none
 STITCH_PATHWAYS=("stitching" "bigstitcher")
 stitch_pathway=""
 
-# Choose rescale pathway index, or "" for none
+# Choose rescale pathway type, or "" for none
 TRANSPOSE_PATHWAYS=("rescale", "resize")
 transpose_pathway=""
 scale="0.05" # rescaling factor
 plane="" # xy, yz, zy, or leave empty
 animation="" # gif or mp4
 
-# Choose whole image processing index, or "" for none
-WHOLE_IMG_PROCS=("local" "pull_from_s3")
+# Choose whole image processing type, or "" for none
+WHOLE_IMG_PROCS=("process")
 whole_img_proc=""
 
 # Choose whether to upload resulting files to AWS S3
@@ -178,7 +178,7 @@ elif [[ "$pipeline" = "${PIPELINES[2]}" ]]; then
     gui=0
     stitch_pathway=""
     transpose_pathway=""
-    whole_img_proc="${WHOLE_IMG_PROCS[1]}"
+    whole_img_proc="${WHOLE_IMG_PROCS[0]}"
     upload="${UPLOAD_TYPES[2]}"
 elif [[ "$pipeline" = "${PIPELINES[3]}" ]]; then
     # transposition only

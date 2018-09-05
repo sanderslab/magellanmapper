@@ -279,7 +279,9 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     # also keep script from continuing until user closes ImageJ/Fiji 
     # after review
     msg="Stitching completed for $IMG, now awaiting your alignment review"
-    python -u -m clrbrain.notify --notify "$url_notify" "$msg"
+    if [[ "$url_notify" != "" ]]; then
+        python -u -m clrbrain.notify --notify "$url_notify" "$msg"
+    fi
     echo "=================================="
     echo "$msg"
     ./stitch.sh -s "none"

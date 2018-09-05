@@ -9,7 +9,11 @@ is supported.
 
 Arguments:
    -h: Show help and exit.
+   -d [/dev/path]: Set data device path. If an empty 
+       string, swap will not be set up.
    -s: Set up a fresh server, including drive initiation.
+   -w [/dev/path]: Set swap device path. If an empty 
+       string, data drive will not be set up.
    -l: Use legacy drive specifications.
 
 Assumptions:
@@ -29,7 +33,7 @@ swap="/dev/nvme1n1"
 data="/dev/nvme2n1"
 
 OPTIND=1
-while getopts hsl opt; do
+while getopts hslw:d: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -42,6 +46,12 @@ while getopts hsl opt; do
             echo "Set to use legacy device specifiers:"
             echo "swap set to $swap"
             echo "data set to $data"
+            ;;
+        w)  swap="$OPTARG"
+            echo "Set swap directory to $swap"
+            ;;
+        d)  data="$OPTARG"
+            echo "Set data directory to $data"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -75,13 +85,17 @@ is_formatted() {
 if [[ $setup -eq 1 ]]; then
     # initialize swap and storage drives if setting up 
     # a new server instance
-    is_formatted "$swap"
-    if [[ "$?" -eq 0 ]]; then
-        sudo mkswap "$swap"
+    if [[ "$swap" != "" ]]; then
+        is_formatted "$swap"
+        if [[ "$?" -eq 0 ]]; then
+            sudo mkswap "$swap"
+        fi
     fi
-    is_formatted "$data"
-    if [[ "$?" -eq 0 ]]; then
-        sudo mkfs -t ext4 "$data"
+    if [[ "$data" != "" ]]; then
+        is_formatted "$data"
+        if [[ "$?" -eq 0 ]]; then
+            sudo mkfs -t ext4 "$data"
+        fi
     fi
 fi
 
@@ -89,15 +103,20 @@ fi
 # turn on swap and mount storage drive; these commands 
 # should fail if these drives were not initialized or 
 # attached
-sudo swapon "$swap"
-swapon -s
-if [[ ! -d "$DIR_DATA" ]]; then
-    sudo mkdir "$DIR_DATA"
+if [[ "$swap" != "" ]]; then
+    sudo swapon "$swap"
+    swapon -s
 fi
-sudo mount "$data" "$DIR_DATA"
+
+if [[ "$data" != "" ]]; then
+    if [[ ! -d "$DIR_DATA" ]]; then
+        sudo mkdir "$DIR_DATA"
+    fi
+    sudo mount "$data" "$DIR_DATA"
+fi
 lsblk -p
 
-if [[ $setup -eq 1 ]]; then
+if [[ $setup -eq 1 && -e "$DIR_DATA" ]]; then
     # change ownership if new drive attached
     sudo chown -R ec2-user.ec2-user "$DIR_DATA"
 fi

@@ -243,6 +243,7 @@ def _save_image_info(filename_info_npz, names, sizes, resolutions,
     print("file save time: {}".format(time() - time_start))
     
     # reload and show info file contents
+    print("Saved image metadata:")
     output = np.load(filename_info_npz)
     for key, value in output.items():
         print("{}: {}".format(key, value))
@@ -253,6 +254,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         # no updates necessary
         return False
     
+    print("Updating image metadata to version {}".format(IMAGE5D_NP_VER))
     # update info
     info_up = dict(info)
     if curr_ver <= 10:
@@ -329,6 +331,7 @@ def read_info(filename_info_npz):
         Tuple of ``output``, the dictionary with image info, and 
         ``image5d_ver_num``, the version number of the info file.
     """
+    print("Reading image metadata from {}".format(filename_info_npz))
     output = np.load(filename_info_npz)
     image5d_ver_num = -1
     try:
@@ -759,8 +762,8 @@ def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows, highs)
     return near_mins, near_maxs
 
 def transpose_npy(filename, series, plane=None, rescale=None):
-    """Transpose Numpy NPY saved arrays into new planar orientations and/or 
-    rescaled sizes.
+    """Transpose Numpy NPY saved arrays into new planar orientations and 
+    rescaling or resizing.
     
     Saves file to a new NPY archive with "transposed" inserted just prior
     to the series name so that "transposed" can be appended to the original
@@ -774,15 +777,23 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         plane: Planar orientation (see :attribute:plot_2d:`PLANES`). Defaults 
             to None, in which case no planar transformation will occur.
         rescale: Rescaling factor. Defaults to None, in which case no 
-            rescaling will occur. Rescaling takes place in multiplrocessing.
+            rescaling will occur, and resizing based on register profile 
+            setting will be used instead if available. Rescaling takes place 
+            in multiprocessing.
     """
+    target_size = config.register_settings["target_size"]
+    if plane is None and rescale is None and target_size is None:
+        print("No transposition to perform, skipping")
+        return
+    
     time_start = time()
+    # even if loaded already, reread to get image metadata
+    # TODO: consider saving metadata in config and retrieving from there
     image5d, info = read_file(filename, series, return_info=True)
     sizes = info["sizes"]
     
     # make filenames based on transpositions
     ext = lib_clrbrain.get_filename_ext(filename)
-    target_size = config.register_settings["target_size"]
     modifier = ""
     if plane is not None:
         modifier = make_modifier_plane(plane) + "_"

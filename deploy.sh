@@ -16,6 +16,8 @@ Arguments:
   -f: Update Fiji/ImageJ. Assume that it has already been deployed.
   -g [git_hash]: Archive and upload the given specific Git commit; 
       otherwise, defaults to HEAD.
+  -q: Quiet mode, which will suppress ssh output and cause the 
+      script to return immediately.
   -r [path]: Path to the run script that will be uploaded and 
       excecuted as the last server command.
 "
@@ -26,6 +28,7 @@ update_fiji=0 # update Fiji/ImageJ
 run_script="" # run script, which will be executed as last cmd
 deploy_files=() # files to deploy
 git_hash="" # git commit, including short hashes
+quiet=0
 
 # run from parent directory
 base_dir="`dirname $0`"
@@ -33,7 +36,7 @@ cd "$base_dir"
 echo $PWD
 
 OPTIND=1
-while getopts hi:p:ufr:d:g: opt; do
+while getopts hi:p:ufr:d:g:q opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -58,6 +61,9 @@ while getopts hi:p:ufr:d:g: opt; do
             ;;
         g)  git_hash="$OPTARG"
             echo "Using $git_hash as git hash"
+            ;;
+        q)  quiet=1
+            echo "Set to be quiet"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -110,6 +116,16 @@ echo -e "\nCommand to execute on server:"
 echo "$server_cmd"
 echo ""
 
+# run remote command on server
+run_remote() {
+    ssh -i "$pem" ec2-user@"$ip" "$server_cmd"
+}
+
 # execute upload and server commands
 scp -i "$pem" -r ${deploy_files[@]} ec2-user@"$ip":~
-ssh -t -i "$pem" ec2-user@"$ip" "$server_cmd"
+if [[ $quiet -eq 0 ]]; then
+    run_remote
+else
+    # suppress output and return immediately
+    run_remote >&- 2>&- <&- &
+fi

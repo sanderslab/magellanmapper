@@ -12,6 +12,7 @@ from clrbrain import plot_support
 
 class PlotEditor:
     ALPHA_DEFAULT = 0.5
+    _KEY_MODIFIERS = ("shift", "alt", "control")
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, norm, plane, 
                  alpha_slider, alpha_reset_btn, aspect, origin, 
@@ -145,7 +146,7 @@ class PlotEditor:
         self.alpha_slider.reset()
     
     def on_press(self, event):
-        """Pick intensities by clicking on a given pixel.
+        """Pick intensities by mouse clicking on a given pixel.
         """
         if event.inaxes != self.axes: return
         x = int(event.xdata)
@@ -156,6 +157,14 @@ class PlotEditor:
         self.press_loc_data = (x, y)
         self.last_loc_data = tuple(self.press_loc_data)
         self.last_loc = (int(event.x), int(event.y))
+        
+        if (event.button == 1 and event.key not in self._KEY_MODIFIERS 
+            and event.inaxes == self.axes):
+            
+            # click without modifiers to update crosshairs and corresponding 
+            # planes
+            self.coord[1:] = y, x
+            self.fn_update_coords(self.coord, self.plane)
     
     def on_axes_exit(self, event):
         if event.inaxes not in self.plot_axes: return
@@ -181,8 +190,8 @@ class PlotEditor:
             return
         
         loc_data = (x, y)
-        if event.button == 2 or (event.button == 1 and event.key == "alt"):
-            # pan by middle-coking or left-click+alt during mouseover
+        if event.button == 2 or (event.button == 1 and event.key == "shift"):
+            # pan by middle-click or shift+click during mouseover
             
             # use data coordinates so same part of image stays under mouse
             dx = x - self.last_loc_data[0]
@@ -197,8 +206,10 @@ class PlotEditor:
             # data itself moved, so update location aong with movement
             loc_data = (x - dx, y - dy)
             
-        elif event.button == 3 or (event.button == 1 and event.key == "control"):
-            # zooming by right-clicking or left-click+ctrl (which coverts 
+        elif event.button == 3 or (
+            event.button == 1 and event.key == "control"):
+            
+            # zooming by right-click or ctrl+click (which coverts 
             # button event to 3 on Mac at least) while moving mouse up/down in y
             
             # use figure coordinates since data pixels will scale 
@@ -227,7 +238,8 @@ class PlotEditor:
                     # update pen circle position
                     self.circle.center = x, y
                     # does not appear to be necessary since text update already 
-                    # triggers a redraw, but this would also trigger if no text update
+                    # triggers a redraw, but this would also trigger if no text 
+                    # update
                     self.circle.stale = True
                 else:
                     # generate new circle if not yet present
@@ -236,19 +248,26 @@ class PlotEditor:
                         edgecolor="w")
                     self.axes.add_patch(self.circle)
                 
-                if self.intensity is not None:
-                    # use the chosen intensity value to overwrite the image with 
-                    # a pen of the chosen radius
-                    rr, cc = draw.circle(
-                        y, x, self.radius, self.img3d_labels[self.coord[0]].shape)
-                    self.img3d_labels[self.coord[0], rr, cc] = self.intensity
-                    print("changed intensity to {} at x,y,z = {},{},{}"
-                          .format(self.intensity, x, y, self.coord[0]))
-                    self.ax_img.set_data(self.img3d_labels[self.coord[0]])
-                    self.fn_refresh_images(self)
+                coord = [self.coord[0], y, x]
+                if event.button == 1:
+                    if event.key == "alt" and self.intensity is not None:
+                        # alt+click to use the chosen intensity value to 
+                        # overwrite the image with a pen of the chosen radius
+                        rr, cc = draw.circle(
+                            y, x, self.radius, 
+                            self.img3d_labels[self.coord[0]].shape)
+                        self.img3d_labels[
+                            self.coord[0], rr, cc] = self.intensity
+                        print("changed intensity to {} at x,y,z = {},{},{}"
+                              .format(self.intensity, x, y, self.coord[0]))
+                        self.ax_img.set_data(self.img3d_labels[self.coord[0]])
+                        self.fn_refresh_images(self)
+                    else:
+                        # click and mouseover otherwise moves crosshairs
+                        self.coord = coord
+                        self.fn_update_coords(self.coord, self.plane)
                 
                 # show atlas label name
-                coord = [self.coord[0], y, x]
                 atlas_label = register.get_label(
                     coord, self.img3d_labels, config.labels_ref_lookup, 
                     self.scaling)
@@ -267,9 +286,6 @@ class PlotEditor:
                 self.region_label.set_horizontalalignment(alignment)
                 self.region_label.set_position((label_x, y - 10))
                 
-                if event.key == "shift":
-                    self.coord = coord
-                    self.fn_update_coords(self.coord, self.plane)
                 
         self.last_loc = loc
         self.last_loc_data = loc_data
@@ -288,10 +304,6 @@ class PlotEditor:
             self.radius -= 1
         elif event.key == "]":
             self.radius += 1
-        elif event.key == "shift" and event.inaxes == self.axes:
-            # "shift" to update crosshairs and corresponding planes
-            self.coord[1:] = int(event.ydata), int(event.xdata)
-            self.fn_update_coords(self.coord, self.plane)
         #print("radius: {}".format(self.radius))
         if rad_orig != self.radius and self.circle:
             self.circle.radius = self.radius

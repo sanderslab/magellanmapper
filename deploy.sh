@@ -16,12 +16,14 @@ Arguments:
   -f: Update Fiji/ImageJ. Assume that it has already been deployed.
   -g [git_hash]: Archive and upload the given specific Git commit; 
       otherwise, defaults to HEAD.
+  -r [path]: Path to the run script that will be uploaded and 
+      excecuted as the last server command.
 "
 
 FIJI="http://downloads.imagej.net/fiji/latest/fiji-nojre.zip"
 update=0 # update Clrbrain
 update_fiji=0 # update Fiji/ImageJ
-run_script="" # run script, which will be added to Clrbrain folder
+run_script="" # run script, which will be executed as last cmd
 deploy_files=() # files to deploy
 git_hash="" # git commit, including short hashes
 
@@ -90,16 +92,15 @@ if [[ $update -eq 0 ]]; then
     #server_cmd+=" ; rm Fiji.app/plugins/multiview?reconstruction-*.jar ; mv $mv_recon Fiji.app/plugins"
 fi
 
-# append customized run script, such as that prepared by 
-# setup_runclrbrain.sh
-if [[ "$run_script" != "" ]]; then
-    deploy_files+=("$run_script")
-    server_cmd+=" && mv $run_script clrbrain"
-fi
-
 # add on Fiji update
 if [[ $update_fiji -eq 1 ]]; then
     server_cmd+=" && $cmd_fiji_update"
+fi
+
+# append customized run script and execute it
+if [[ "$run_script" != "" ]]; then
+    deploy_files+=("$run_script")
+    server_cmd+=" && ./$run_script"
 fi
 
 # summarize files and commands

@@ -19,7 +19,17 @@ _EC2_STATES = (
     "pending", "running", "shutting-down", "terminated", "stopping", "stopped")
 
 def instance_info(instance_id, get_ip):
-    # run in separate sessions since each resource shares data
+    """Show settings for a given instance.
+    
+    Args:
+        instance_id: ID of instance to query.
+        get_ip: True to get instance IP, which will require waiting if the 
+            instance is not yet running.
+    
+    Returns:
+        Tuple of ``(instance_id, instance_ip)``.
+    """
+    # run in separate session since each resource shares data
     session = boto3.session.Session()
     ec2 = session.resource("ec2")
     instance = ec2.Instance(instance_id)
@@ -29,23 +39,36 @@ def instance_info(instance_id, get_ip):
         print("checking instance {}".format(instance))
         instance.wait_until_running()
         instance.load()
-        #instance_id = instance.instance_id
         instance_ip = instance.public_ip_address
-    print("instance ID: {}, tags: {}, IP: {}".format(instance_id, tags, instance_ip))
+    # show tag info but not saving for now since not currently used
+    print("instance ID: {}, tags: {}, IP: {}"
+          .format(instance_id, tags, instance_ip))
     return instance_id, instance_ip
 
 def show_instances(instances, get_ip=False):
-    # show instance info once running, multiprocessing to allow waiting for 
+    """Show settings for instances.
+    
+    Args:
+        instances: List of instance objects to query.
+        get_ip: True to get instance IP; defaults to False.
+    
+    Returns:
+        Dictionary of ``instance_id: instance_ip`` entries.
+    """
+    # show instance info in multiprocessing to allow waiting for 
     # each instance to start running
     pool = mp.Pool()
     pool_results = []
     for instance in instances:
         pool_results.append(
             pool.apply_async(instance_info, args=(instance.id, get_ip)))
+    info = {}
     for result in pool_results:
         inst_id, inst_ip = result.get()
+        info[inst_id] = inst_ip
     pool.close()
     pool.join()
+    return info
 
 def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, 
                     key_name, ebs, max_count=1, snapshot_ids=None):
@@ -119,6 +142,11 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group,
         print(e)
 
 def terminate_instances(instance_ids):
+    """Terminate instances with the given IDs.
+    
+    Args:
+        instance_ids: List of IDs of instances to terminate.
+    """
     client = boto3.client("ec2")
     try:
         result = client.terminate_instances(
@@ -129,15 +157,29 @@ def terminate_instances(instance_ids):
         print(e)
 
 def list_instances(state):
+    """List instances with the given state.
+    
+    Args:
+        state: Filter instances by this state.
+    """
     res = boto3.resource("ec2")
     try:
+        # filter instances by state
         filters = [
             {"Name": "instance-state-name", 
             "Values": [state]}
         ]
         instances = res.instances.filter(Filters=filters)
         print("listing instances with state {}:".format(state))
-        show_instances(instances, get_ip=state==_EC2_STATES[1])
+        info = show_instances(instances, get_ip=state==_EC2_STATES[1])
+        
+        # show IDs and IPs as contiguous lists for faster access
+        print("\nall instance IDs:")
+        for key in info.keys():
+            print(key)
+        print("\nall instance IPs:")
+        for val in info.values():
+            print(val)
         
     except ClientError as e:
         print(e)

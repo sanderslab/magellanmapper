@@ -370,7 +370,7 @@ if [[ "$transpose_pathway" != "" ]]; then
         zip_name=${base_path}.zip
         zip -R "$zip_name" "${base_path}*"
         echo "uploading $zip_name to S3 at ${s3_exp_path}"
-        aws s3 cp "$zip_name" "${s3_exp_path}"
+        aws s3 cp "$zip_name" "${s3_exp_path}/${zip_name}"
         cd -
     fi
     

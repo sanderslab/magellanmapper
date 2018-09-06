@@ -217,17 +217,26 @@ class PlotEditor:
             zoom_speed = (y_fig - self.last_loc[1]) * 0.01
             zoom_x = self.scaling[2] * zoom_speed
             xlim = self.axes.get_xlim()
-            self.axes.set_xlim(
+            xlim_update = (
                 xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_x, 
                 xlim[1] + (self.press_loc_data[0] - xlim[1]) * zoom_x)
             zoom_y = self.scaling[1] * zoom_speed
             ylim = self.axes.get_ylim()
-            self.axes.set_ylim(
+            ylim_update = (
                 ylim[0] + (self.press_loc_data[1] - ylim[0]) * zoom_y, 
                 ylim[1] + (self.press_loc_data[1] - ylim[1]) * zoom_y)
-            self.axes.figure.canvas.draw_idle()
-            self.xlim = self.axes.get_xlim()
-            self.ylim = self.axes.get_ylim()
+            
+            # avoid flip by checking that relationship between high and 
+            # low values in updated limits is in the same order as in the 
+            # current limits, which might otherwise flip if zoom speed is high
+            if ((xlim_update[1] - xlim_update[0]) * (xlim[1] - xlim[0]) > 0 and 
+                (ylim_update[1] - ylim_update[0]) * (ylim[1] - ylim[0]) > 0):
+                
+                self.axes.set_xlim(xlim_update)
+                self.axes.set_ylim(ylim_update)
+                self.axes.figure.canvas.draw_idle()
+                self.xlim = self.axes.get_xlim()
+                self.ylim = self.axes.get_ylim()
             
         else:
             # hover movements over image

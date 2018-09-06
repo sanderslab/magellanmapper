@@ -3,6 +3,13 @@ Clrbrain is an imaging informatics GUI and pipeline for high-throughput, automat
 
 Author: David Young, 2017-2018, Stephan Sanders Lab
 
+## Download
+
+Currently access is limited to a private Git repo. Our eventual plan is to make Clrbrain available via Anaconda and Pip.
+
+- Contact the project managers about loading your public key to access the project repository
+- Download the repo: `git clone git@bitbucket.org:psychcore/clrbrain.git`
+
 ## Installation
 ```
 ./setup_env.sh
@@ -32,7 +39,8 @@ Clrbrain has been tested to build and run on:
 
 - MacOS, tested on 10.11+
 - Linux, tested on RHEL 7.4+
-- Windows, via built-in Windows Subsystem for Linux (WSL) running Ubuntu 18.04 and an X Server (see below for details)
+- Windows, tested on Windows 10 via built-in Windows Subsystem for Linux (WSL) running Ubuntu 18.04 and an X Server (see below for details)
+- Alternatively, Windows via Cygwin, tested on 2.10+
 
 ## Run Clrbrain
 Opening an image file typically involves importing it into a Numpy array format before loading it in the GUI and processing it headlessly.
@@ -45,10 +53,38 @@ source activate clr3
 ./runclrbrain.sh -i [path_to_your_image]
 ```
 
-## Access from Git
+`runclrbrain.sh` is a script to run many pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. We will continue to make more of Clbrain functionality accessible from this script.
 
-- Contact the project managers about loading your public key to access the project repository
-- Download the repo: `git clone git@bitbucket.org:psychcore/clrbrain.git`
+## Nuclei annotation editor
+
+The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Press on "Detect" to detect nuclei in the current ROI, then "Plot 2D" to open the figure.
+
+- Click on dotted lines to cycle the nuclei detection flags from incorrect (red), correct (green), or questionable (yellow)
+- Shift+click and drag to move the circle's position
+- Alt+click and drag to resize the circle's radius
+- "c"+click to copy the circle
+- "v"+click in another z-plane to duplicate that circle in the corresponding position in that plane
+- "x"+click to cut the circle
+- "d"+click to delete the circle
+- Arrow up/down to change the overview plots' z-plane
+- Right arrow to jump the overview plots to the same z-plane as the current mouseover
+
+## Atlas editor
+
+The multi-planar image plotter allows simplified viewing and editing of annotation labels for an atlas. Existing labels can be painted into adjacent areas, and synchronized planar viewing allows visualization of changes in each plane with realtime updates.
+
+The atlas image must have an associated annotation image. Use the `--labels` flage to specify a labels `.json` file. Change the "2D plot styles" dropdown to "Atlas editor" and press "Plot 2D" to open the editor.
+
+- Mouseover over any label to see the region name
+- Shift+mouseover to move the crosshairs and the corresponding planes
+- Scroll or arrow up/down to move planes in the current plot
+- Right-click or Ctrl+click + mouse-up/down to zoom
+- Middle-click or Alt+click + mouse drag to pan
+- Click on the color you want to extend, then drag onto the area you want to paint with that color
+- `[` (left bracket) to make the paintbrush smaller
+- `]` (right bracket) to make it bigger
+- Use the save button in the main window with the atlas window still open to resave
+
 
 ## Start a processing pipeline
 

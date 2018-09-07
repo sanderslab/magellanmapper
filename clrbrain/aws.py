@@ -33,6 +33,7 @@ def instance_info(instance_id, get_ip):
     session = boto3.session.Session()
     ec2 = session.resource("ec2")
     instance = ec2.Instance(instance_id)
+    image_id = instance.image_id
     tags = instance.tags
     instance_ip = "n/a"
     if get_ip:
@@ -41,8 +42,8 @@ def instance_info(instance_id, get_ip):
         instance.load()
         instance_ip = instance.public_ip_address
     # show tag info but not saving for now since not currently used
-    print("instance ID: {}, tags: {}, IP: {}"
-          .format(instance_id, tags, instance_ip))
+    print("instance ID: {}, image ID: {}, tags: {}, IP: {}"
+          .format(instance_id, image_id, tags, instance_ip))
     return instance_id, instance_ip
 
 def show_instances(instances, get_ip=False):
@@ -156,25 +157,34 @@ def terminate_instances(instance_ids):
     except ClientError as e:
         print(e)
 
-def list_instances(state):
-    """List instances with the given state.
+def list_instances(state=None, image_id=None):
+    """List instances with the given parameters.
+    
+    Filters that are None will be ignored.
     
     Args:
-        state: Filter instances by this state.
+        state: Filter instances by this state; defaults to None.
+        image_id: Filter instances by this image ID; defaults to None.
     """
     res = boto3.resource("ec2")
     try:
         # filter instances by state
-        filters = [
-            {"Name": "instance-state-name", 
-            "Values": [state]}
-        ]
+        filters = []
+        names = ("instance-state-name", "image-id")
+        vals = (state, image_id)
+        for name, val in zip(names, vals):
+            if val is not None:
+                val = val if isinstance(val, (tuple, list)) else [val]
+                filters.append({
+                    "Name": name, 
+                    "Values": val
+                })
         instances = res.instances.filter(Filters=filters)
         print("listing instances with state {}:".format(state))
         info = show_instances(instances, get_ip=state==_EC2_STATES[1])
         
         # show IDs and IPs as contiguous lists for faster access
-        print("\nall instance IDs:")
+        print("\nall instance IDs ({}):".format(len(info.keys())))
         for key in info.keys():
             print(key)
         print("\nall instance IPs:")
@@ -190,6 +200,10 @@ if __name__ == "__main__":
     if config.ec2_start:
         start_instances(*config.ec2_start[:-1], **config.ec2_start[-1])
     if config.ec2_list:
-        list_instances(*config.ec2_list)
+        if len(config.ec2_list) == 1:
+            # no paremeters required, so may have list of only parameter dict
+            list_instances(**config.ec2_list[0])
+        else:
+            list_instances(*config.ec2_list[:-1], **config.ec2_list[-1])
     if config.ec2_terminate:
         terminate_instances(config.ec2_terminate)

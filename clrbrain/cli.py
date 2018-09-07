@@ -651,7 +651,8 @@ def main(process_args_only=False):
         config.ec2_start = args_with_dict(args.ec2_start)
         print("Set ec2 start to {}".format(config.ec2_start))
     if args.ec2_list:
-        config.ec2_list = args.ec2_list
+        # list EC2 instances
+        config.ec2_list = args_with_dict(args.ec2_list)
         print("Set ec2 list to {}".format(config.ec2_list))
     if args.ec2_terminate:
         config.ec2_terminate = args.ec2_terminate

@@ -645,7 +645,7 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
             num_res /= ndim
         param_map["NumberOfResolutions"] = [str(num_res)]
 
-def import_atlas(atlas_dir):
+def import_atlas(atlas_dir, show=True):
     # load atlas and corresponding labels
     img_atlas = sitk.ReadImage(os.path.join(atlas_dir, IMG_ATLAS))
     img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
@@ -682,10 +682,12 @@ def import_atlas(atlas_dir):
     print("DSC compared with labels")
     _measure_overlap_labels(img_atlas, img_labels)
     
-    # show and write images with atlas saved as Clrbrain/Numpy format to 
+    if show:
+       sitk.Show(img_atlas)
+       sitk.Show(img_labels)
+    
+    # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
-    sitk.Show(img_atlas)
-    sitk.Show(img_labels)
     target_dir = atlas_dir + "_import"
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
@@ -894,7 +896,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     _measure_overlap_labels(fixed_img_orig, labels_img_full)
     
     # show overlays last since blocks until fig is closed
-    _show_overlays(imgs, translation, fixed_file, None)
+    #_show_overlays(imgs, translation, fixed_file, None)
     print("time elapsed for single registration (s): {}"
           .format(time() - start_time))
 
@@ -2293,6 +2295,7 @@ if __name__ == "__main__":
     flip = False
     if config.flip is not None:
         flip = config.flip[0]
+    show = not config.no_show
     
     #_test_labels_lookup()
     #_test_region_from_id()
@@ -2309,14 +2312,15 @@ if __name__ == "__main__":
         # "new_atlas" registers similarly but outputs new atlas files
         new_atlas = config.register_type == config.REGISTER_TYPES[7]
         register(*config.filenames[0:2], plane=config.plane, 
-                 flip=flip, name_prefix=prefix, new_atlas=new_atlas)
+                 flip=flip, name_prefix=prefix, new_atlas=new_atlas, 
+                 show_imgs=show)
     elif config.register_type == config.REGISTER_TYPES[1]:
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
         prefix = config.filenames[-1]
         register_group(
             config.filenames[:-1], flip=config.flip, name_prefix=prefix, 
-            scale=config.rescale)
+            scale=config.rescale, show_imgs=show)
     elif config.register_type == config.REGISTER_TYPES[2]:
         # overlay registered images in each orthogonal plane
         for out_plane in config.PLANE:
@@ -2336,7 +2340,6 @@ if __name__ == "__main__":
             config.labels_level, config.rescale, densities)
         
         # plot volumes for individual experiments for each region
-        show = not config.no_show
         exps = []
         for vol, path in zip(vol_dicts, json_paths):
             exp_name = os.path.basename(path)
@@ -2401,4 +2404,4 @@ if __name__ == "__main__":
         
     elif config.register_type == config.REGISTER_TYPES[8]:
         # import original atlas, mirroring if necessary
-        import_atlas(config.filename)
+        import_atlas(config.filename, show=show)

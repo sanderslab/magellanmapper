@@ -254,8 +254,8 @@ def in_paint(roi, to_fill):
             designate the pixels to fill.
     
     Returns:
-        ROI with pixels corresponding to ``to_fill`` filled with nearest 
-        neighbors.
+        Copy of ROI with pixels corresponding to ``to_fill`` filled with 
+        nearest neighbors.
     """
     indices = ndimage.distance_transform_edt(
         to_fill, return_distances=False, return_indices=True)

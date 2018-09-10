@@ -180,18 +180,21 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 def _get_bbox(img_np, threshold=10):
-    """Get the bounding box for an object within an image.
+    """Get the bounding box for the first object within an image.
     
     Args:
         img_np: Image as a Numpy array.
-        threshold: Threshold level; defaults to 10.
+        threshold: Threshold level; defaults to 10. If None, assume 
+            ``img_np`` is already binary.
     
     Returns:
         Bounding box of the first object in the image.
     """
-    # threshold the image, removing any small object
-    thresholded = img_np > threshold
-    thresholded = morphology.remove_small_objects(thresholded, 200)
+    thresholded = img_np
+    if threshold is not None:
+        # threshold the image, removing any small object
+        thresholded = img_np > threshold
+        thresholded = morphology.remove_small_objects(thresholded, 200)
     # make labels for foreground and get label properties
     labels_props = measure.regionprops(measure.label(thresholded))
     if len(labels_props) < 1:
@@ -201,9 +204,9 @@ def _get_bbox(img_np, threshold=10):
     return labels_bbox
 
 def _get_bbox_region(bbox):
-    shape = (bbox[2] - bbox[0], bbox[3] - bbox[1])
-    slices = (slice(bbox[0], bbox[0] + shape[0]),
-              slice(bbox[1], bbox[1] + shape[1]))
+    dims = len(bbox) // 2 # bbox has min vals for dims, then maxes
+    shape = [bbox[i + dims] - bbox[i] for i in range(dims)]
+    slices = [slice(bbox[i], bbox[i] + shape[i]) for i in range(dims)]
     #print("shape: {}, slices: {}".format(shape, slices))
     return shape, slices
 
@@ -305,7 +308,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
     img_ref_np = sitk.GetArrayFromImage(img_ref).astype(np.int32)
     tot_planes = len(img_np)
     
-    # starting plane, assuming border region before image starts
+    # extend lateral planes: make first plane with signal start even earlier
     i = 0
     if extent is None or extent[0] is None:
         # find the first non-zero plane
@@ -367,7 +370,11 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
                     anti_aliasing=True, mode="reflect")
                 region[i, slices_ref[0], slices_ref[1]] = plane_region
     
-    # ending plane, after which the image should be mirrored
+    # minimize jaggedness in labels, often seen outside of the original 
+    # orthogonal direction
+    smooth_labels(img_np)
+    
+    # mirror planes: find ending plane, after which signal should be mirrored
     i = tot_planes
     if extent is None or extent[1] is None:
         # find the last non-zero plane
@@ -407,6 +414,26 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     img_sitk_back.SetSpacing(spacing)
     img_sitk_back.SetOrigin(origin)
     return img_sitk_back
+
+def smooth_labels(labels_img_np):
+    label_ids = np.unique(labels_img_np)
+    for label_id in label_ids:
+        # get bounding box for label region
+        label_mask = labels_img_np == label_id
+        bbox = _get_bbox(label_mask, threshold=None)
+        print("bbox for label ID {}: {}".format(label_id, bbox))
+        shape, slices = _get_bbox_region(bbox)
+        print("slices for label ID {}: {}".format(label_id, slices))
+        
+        # smooth region and fill empty spaces with closest surrounding labels
+        region = labels_img_np[slices]
+        label_mask_region = region == label_id
+        opened = morphology.binary_opening(label_mask_region)
+        region = plot_3d.in_paint(region, label_mask_region)
+        region[opened] = label_id
+        labels_img_np[slices] = region
+        print("changed num of pixels from {} to {}"
+              .format(len(region[label_mask_region]), len(region[opened])))
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.

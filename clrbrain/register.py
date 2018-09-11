@@ -422,6 +422,7 @@ def smooth_labels(labels_img_np):
         label_mask = labels_img_np == label_id
         bbox = _get_bbox(label_mask, threshold=None)
         print("bbox for label ID {}: {}".format(label_id, bbox))
+        if bbox is None: continue
         shape, slices = _get_bbox_region(bbox)
         print("slices for label ID {}: {}".format(label_id, slices))
         

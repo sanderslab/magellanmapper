@@ -416,8 +416,15 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     return img_sitk_back
 
 def smooth_labels(labels_img_np):
+    # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)
+    label_sizes = {}
     for label_id in label_ids:
+        label_sizes[label_id] = len(labels_img_np[labels_img_np == label_id])
+    label_sizes_ordered = OrderedDict(
+        sorted(label_sizes.items(), key=lambda x: x[1], reverse=True))
+    
+    for label_id in label_sizes_ordered.keys():
         # get bounding box for label region
         label_mask = labels_img_np == label_id
         bbox = _get_bbox(label_mask, threshold=None)

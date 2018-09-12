@@ -291,16 +291,20 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
         img: Labels image in SimpleITK format.
         img_ref: Reference atlas image in SimpleITK format.
         extent: Tuple (start, end) fractions demarcating the region to mirror; 
-            defaults to None, in which case defaults will be used based on 
+            defaults to None, in which case defaults will be found based on 
             first found non-zero planes at boundaries. If either value 
-            within the tuple is None, the corresponding default will be used.
+            within the tuple is None, the corresponding default will be 
+            found.
         expand: Tuple of 
             ((x_pixels_start, end), (y, ...), ...), (next_region, ...)) 
             specifying slice boundaries for regions to expand the labels to 
             the size of the atlas. Defaults to None.
     
     Returns:
-        The mirrored image in Numpy format.
+        Tuple of ``img_np``, ``(extendi, mirrori)``, where ``img_np`` is 
+        the mirrored image in Numpy format, and ``(extendi, mirrori)`` is 
+        a tuple of the indices at which the edge was extended and the 
+        image was mirrored, respectively.
     """
     # TODO: check to make sure values don't get wrapped around if np.int32
     # max value is less than data max val
@@ -309,31 +313,31 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
     tot_planes = len(img_np)
     
     # extend lateral planes: make first plane with signal start even earlier
-    i = 0
+    extendi = 0
     if extent is None or extent[0] is None:
         # find the first non-zero plane
         for plane in img_np:
             if not np.allclose(plane, 0):
-                print("found first non-zero plane at i of {}".format(i))
+                print("found first non-zero plane at extendi of {}".format(extendi))
                 break
-            i += 1
+            extendi += 1
     else:
         # based on settings
-        i = int(extent[0] * tot_planes)
+        extendi = int(extent[0] * tot_planes)
     
     # find the bounds of the reference image in the given plane and resize 
     # the corresponding section of the labels image to the bounds of the 
     # reference image in the next plane closer to the edge, essentially 
     # extending the last edge plane of the labels image
     plane_region = None
-    while i >= 0:
+    while extendi >= 0:
         #print("plane_region max: {}".format(np.max(plane_region)))
-        bbox = _get_bbox(img_ref_np[i])
+        bbox = _get_bbox(img_ref_np[extendi])
         if bbox is None:
             break
         shape, slices = _get_bbox_region(bbox)
         if plane_region is None:
-            plane_region = img_np[i, slices[0], slices[1]]
+            plane_region = img_np[extendi, slices[0], slices[1]]
             # remove ventricular space using empirically determined selem, 
             # which appears to be very sensitive to radius since values above 
             # or below lead to square shaped artifact along outer sample edges
@@ -346,8 +350,8 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
                 plane_region, shape, preserve_range=True, order=0, 
                 anti_aliasing=True, mode="reflect")
             #print("plane_region max: {}".format(np.max(plane_region)))
-            img_np[i, slices[0], slices[1]] = plane_region
-        i -= 1
+            img_np[extendi, slices[0], slices[1]] = plane_region
+        extendi -= 1
     
     if expand:
         # expand selected regions
@@ -357,55 +361,42 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
                 slice(*limits) for limits in expand_limits[::-1])
             region = img_np[expand_slices]
             region_ref = img_ref_np[expand_slices]
-            for i in range(len(region_ref)):
+            for extendi in range(len(region_ref)):
                 # find bounding boxes for labels and atlas within region
-                bbox = _get_bbox(region[i], 0) # assume pos labels region
+                bbox = _get_bbox(region[extendi], 0) # assume pos labels region
                 shape, slices = _get_bbox_region(bbox)
-                plane_region = region[i, slices[0], slices[1]]
-                bbox_ref = _get_bbox(region_ref[i])
+                plane_region = region[extendi, slices[0], slices[1]]
+                bbox_ref = _get_bbox(region_ref[extendi])
                 shape_ref, slices_ref = _get_bbox_region(bbox_ref)
                 # expand bounding box region of labels to that of atlas
                 plane_region = transform.resize(
                     plane_region, shape_ref, preserve_range=True, order=0, 
                     anti_aliasing=True, mode="reflect")
-                region[i, slices_ref[0], slices_ref[1]] = plane_region
+                region[extendi, slices_ref[0], slices_ref[1]] = plane_region
     
     # minimize jaggedness in labels, often seen outside of the original 
     # orthogonal direction
     smooth_labels(img_np)
     
     # mirror planes: find ending plane, after which signal should be mirrored
-    i = tot_planes
+    #mirror_i = _find_last_plane(img_np, extent[1])
+    mirrori = tot_planes
     if extent is None or extent[1] is None:
         # find the last non-zero plane
         for plane in img_np[::-1]:
             if not np.allclose(plane, 0):
-                print("found last non-zero plane at {}".format(i))
+                print("found last non-zero plane at {}".format(mirrori))
                 break
-            i -= 1
+            mirrori -= 1
     else:
-        i = int(extent[1] * tot_planes)
-    print("type: {}, max: {}, max avail: {}".format(
+        mirrori = int(extent[1] * tot_planes)
+    lib_clrbrain.printv("type: {}, max: {}, max avail: {}".format(
         img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
-    return _mirror_planes(img_np, i, -1)
-
-def _mirror_atlas(img_np, extent):
-    """Mirror atlas sagittal midline.
-    
-    Assume that the image is in sagittal sections, overwriting from one side 
-    into the other similarly to :func:``_mirror_labels``.
-    
-    Args:
-        img: Labels image in Numpy format.
-        extent: Tuple (start, end) fractions demarcating the region to mirror, 
-            similarly to :func:``_mirror_labels`` but only using the second 
-            value since the lateral edges will not be extended.
-    
-    Returns:
-        The mirrored image in Numpy format.
-    """
-    start = int(extent[1] * len(img_np))
-    return _mirror_planes(img_np, start)
+    print("total labels: {}".format(np.unique(img_np).size))
+    print("total labels from set midline: {}".format(np.unique(img_np[:mirrori]).size))
+    img_np = _mirror_planes(img_np, mirrori, -1)
+    print("total labels: {}".format(np.unique(img_np).size))
+    return img_np, (extendi, mirrori)
 
 def replace_sitk_with_numpy(img_sitk, img_np):
     spacing = img_sitk.GetSpacing()
@@ -653,25 +644,32 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
             num_res /= ndim
         param_map["NumberOfResolutions"] = [str(num_res)]
 
-def import_atlas(atlas_dir, show=True):
-    # load atlas and corresponding labels
-    img_atlas = sitk.ReadImage(os.path.join(atlas_dir, IMG_ATLAS))
-    img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
-    
-    img_labels_np = None
+def match_atlas_labels(img_atlas, img_labels):
     mirror = config.register_settings["labels_mirror"]
     expand = config.register_settings["expand_labels"]
     if mirror:
         # mirror and truncate labels for labels for only half the brain, 
         # such as for ABA E18pt5, unlike P56
-        img_labels_np = _mirror_labels(img_labels, img_atlas, mirror, expand)
+        img_labels_np, mirror_indices = _mirror_labels(
+            img_labels, img_atlas, mirror, expand)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
-        img_atlas_np = _mirror_atlas(sitk.GetArrayFromImage(img_atlas), mirror)
+        #img_atlas_np = _mirror_atlas(sitk.GetArrayFromImage(img_atlas), mirror)
+        img_atlas_np = _mirror_planes(
+            sitk.GetArrayFromImage(img_atlas), mirror_indices[1])
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
     
     # transpose to given plane
     img_atlas = transpose_img(img_atlas, config.plane, False)
     img_labels = transpose_img(img_labels, config.plane, False)
+    return img_atlas, img_labels
+
+def import_atlas(atlas_dir, show=True):
+    # load atlas and corresponding labels
+    img_atlas = sitk.ReadImage(os.path.join(atlas_dir, IMG_ATLAS))
+    img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
+    
+    #img_labels_np = None
+    img_atlas, img_labels = match_atlas_labels(img_atlas, img_labels)
     
     truncate = config.register_settings["truncate_labels"]
     if truncate:
@@ -681,8 +679,7 @@ def import_atlas(atlas_dir, show=True):
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # show labels
-    if img_labels_np is None:
-        img_labels_np = sitk.GetArrayFromImage(img_labels)
+    img_labels_np = sitk.GetArrayFromImage(img_labels)
     label_ids = np.unique(img_labels_np)
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
@@ -749,18 +746,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         #img_np = plot_3d.saturate_roi(img_np)
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = replace_sitk_with_numpy(fixed_img, img_np)
+    fixed_img_size = fixed_img.GetSize()
     
     # load moving image, assumed to be atlas
     moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
     moving_img = sitk.ReadImage(moving_file)
-    labels_mirror = settings["labels_mirror"]
-    if labels_mirror:
-        moving_img_np = _mirror_atlas(
-            sitk.GetArrayFromImage(moving_img), labels_mirror)
-        moving_img = replace_sitk_with_numpy(moving_img, moving_img_np)
-    fixed_img_size = fixed_img.GetSize()
-    moving_img = transpose_img(
-        moving_img, plane, flip, target_size=fixed_img_size)
+    
+    # load labels image and match with atlas
+    labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
+    moving_img, labels_img = match_atlas_labels(moving_img, labels_img)
     
     # basic info from images just prior to SimpleElastix filtering for 
     # registration; to view raw images, show these images rather than merely 
@@ -825,20 +819,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
     transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
-    
-    # prep labels image
-    labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
-    labels_img_np = None
-    if labels_mirror is not None:
-        # ABA E18pt5 labels file only gives half of atlas so need to mirror 
-        # one side to other based on original atlas
-        expand = config.register_settings["expand_labels"]
-        labels_img_np = _mirror_labels(
-            labels_img, sitk.ReadImage(moving_file), labels_mirror, expand)
-    if labels_img_np is not None:
-        labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
-    labels_img = transpose_img(
-        labels_img, plane, flip, target_size=fixed_img_size)
     
     def make_labels(truncate):
         nonlocal transformed_img

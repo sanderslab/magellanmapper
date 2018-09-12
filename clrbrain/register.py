@@ -429,7 +429,7 @@ def smooth_labels(labels_img_np):
         # smooth region and fill empty spaces with closest surrounding labels
         region = labels_img_np[slices]
         label_mask_region = region == label_id
-        opened = morphology.binary_opening(label_mask_region)
+        opened = morphology.binary_opening(label_mask_region, morphology.ball(4))
         region = plot_3d.in_paint(region, label_mask_region)
         region[opened] = label_id
         labels_img_np[slices] = region

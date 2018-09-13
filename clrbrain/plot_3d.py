@@ -284,6 +284,18 @@ def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
         return roi_carved, roi_unfilled
     return roi_carved
 
+def rotate_nd(img_np, angle, axis=0, order=1):
+    rotated = np.copy(img_np)
+    slices = [slice(None)] * img_np.ndim
+    for i in range(img_np.shape[axis]):
+        #slices[axis] = slice(i, i + 1)
+        slices[axis] = i
+        img2d = img_np[slices]
+        img2d = transform.rotate(
+            img2d, angle, order=order, mode="constant", preserve_range=True)
+        rotated[slices] = img2d
+    return rotated
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

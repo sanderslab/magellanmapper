@@ -274,7 +274,7 @@ def _mirror_planes(img_np, start, mirror_mult=1):
         print("nothing to mirror")
     return img_np
 
-def _mirror_labels(img, img_ref, extent=None, expand=None):
+def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
     """Mirror labels across sagittal midline and add lateral edges.
     
     Assume that the image is in sagittal sections and consists of only one 
@@ -318,7 +318,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
         # find the first non-zero plane
         for plane in img_np:
             if not np.allclose(plane, 0):
-                print("found first non-zero plane at extendi of {}".format(extendi))
+                print("found first non-zero plane at {}".format(extendi))
                 break
             extendi += 1
     else:
@@ -374,6 +374,9 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
                     anti_aliasing=True, mode="reflect")
                 region[extendi, slices_ref[0], slices_ref[1]] = plane_region
     
+    if rotate:
+        img_np = plot_3d.rotate_nd(img_np, rotate, 1, order=0)
+    
     # minimize jaggedness in labels, often seen outside of the original 
     # orthogonal direction
     smooth_labels(img_np)
@@ -393,8 +396,9 @@ def _mirror_labels(img, img_ref, extent=None, expand=None):
     lib_clrbrain.printv("type: {}, max: {}, max avail: {}".format(
         img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     print("total labels: {}".format(np.unique(img_np).size))
-    print("total labels from set midline: {}".format(np.unique(img_np[:mirrori]).size))
     img_np = _mirror_planes(img_np, mirrori, -1)
+    print("total labels from set midline at {}: {}"
+          .format(mirrori, np.unique(img_np[:mirrori]).size))
     print("total labels: {}".format(np.unique(img_np).size))
     return img_np, (extendi, mirrori)
 
@@ -646,16 +650,17 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
 
 def match_atlas_labels(img_atlas, img_labels):
     mirror = config.register_settings["labels_mirror"]
-    expand = config.register_settings["expand_labels"]
     if mirror:
         # mirror and truncate labels for labels for only half the brain, 
         # such as for ABA E18pt5, unlike P56
+        expand = config.register_settings["expand_labels"]
+        rotate = config.register_settings["rotate"]
         img_labels_np, mirror_indices = _mirror_labels(
-            img_labels, img_atlas, mirror, expand)
+            img_labels, img_atlas, mirror, expand, rotate)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
-        #img_atlas_np = _mirror_atlas(sitk.GetArrayFromImage(img_atlas), mirror)
-        img_atlas_np = _mirror_planes(
-            sitk.GetArrayFromImage(img_atlas), mirror_indices[1])
+        img_atlas_np = plot_3d.rotate_nd(
+            sitk.GetArrayFromImage(img_atlas), rotate, 1, order=0)
+        img_atlas_np = _mirror_planes(img_atlas_np, mirror_indices[1])
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
     
     # transpose to given plane

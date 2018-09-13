@@ -321,7 +321,8 @@ class RegisterSettings(SettingsDict):
         # expand labels within bounds given by 
         # (((x_pixels_start, x_pixels_end), ...), (next_region...))
         self["expand_labels"] = (((None, ), (0, 279), (103, 108)),)
-        self["rotate"] = 1
+        # atlas and labels rotation by ((angle0, axis0), ...)
+        self["rotate"] = ((1.5, 1), (2, 2))
         
         self["atlas_threshold"] = 10.0
         self["target_size"] = None # x,y,z in exp orientation

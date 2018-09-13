@@ -375,7 +375,8 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
                 region[extendi, slices_ref[0], slices_ref[1]] = plane_region
     
     if rotate:
-        img_np = plot_3d.rotate_nd(img_np, rotate, 1, order=0)
+        for rot in rotate:
+            img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
     
     # minimize jaggedness in labels, often seen outside of the original 
     # orthogonal direction
@@ -658,8 +659,10 @@ def match_atlas_labels(img_atlas, img_labels):
         img_labels_np, mirror_indices = _mirror_labels(
             img_labels, img_atlas, mirror, expand, rotate)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
-        img_atlas_np = plot_3d.rotate_nd(
-            sitk.GetArrayFromImage(img_atlas), rotate, 1, order=0)
+        img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+        if rotate:
+            for rot in rotate:
+                img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
         img_atlas_np = _mirror_planes(img_atlas_np, mirror_indices[1])
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
     

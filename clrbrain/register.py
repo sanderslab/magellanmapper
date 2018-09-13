@@ -374,7 +374,21 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
                     anti_aliasing=True, mode="reflect")
                 region[extendi, slices_ref[0], slices_ref[1]] = plane_region
     
+    # find approximate midline by locating the last zero plane from far edge 
+    # at which to start mirroring across midline
+    mirrori = tot_planes
+    for plane in img_np[::-1]:
+        if not np.allclose(plane, 0):
+            print("found last zero plane from far border at {}".format(mirrori))
+            break
+        mirrori -= 1
+    
     if rotate:
+        # mirror labels with original values in case rotation will cause 
+        # some labels to be cut off, then rotate for each specified axis
+        #img_np = _mirror_planes(img_np, mirrori)
+        for i in range(mirrori, tot_planes):
+            img_np[i] = img_np[mirrori - 1]
         for rot in rotate:
             img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
     
@@ -382,25 +396,17 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
     # orthogonal direction
     smooth_labels(img_np)
     
-    # mirror planes: find ending plane, after which signal should be mirrored
-    #mirror_i = _find_last_plane(img_np, extent[1])
-    mirrori = tot_planes
-    if extent is None or extent[1] is None:
-        # find the last non-zero plane
-        for plane in img_np[::-1]:
-            if not np.allclose(plane, 0):
-                print("found last non-zero plane at {}".format(mirrori))
-                break
-            mirrori -= 1
-    else:
+    # mirror planes, either based on previously found index or fractional 
+    # profile setting
+    if extent is not None and extent[1] is not None:
         mirrori = int(extent[1] * tot_planes)
     lib_clrbrain.printv("type: {}, max: {}, max avail: {}".format(
         img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
-    print("total labels: {}".format(np.unique(img_np).size))
+    print("total labels before reflection: {}".format(np.unique(img_np).size))
     img_np = _mirror_planes(img_np, mirrori, -1)
-    print("total labels from set midline at {}: {}"
+    print("total labels after reflection up to set midline ({}): {}"
           .format(mirrori, np.unique(img_np[:mirrori]).size))
-    print("total labels: {}".format(np.unique(img_np).size))
+    print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (extendi, mirrori)
 
 def replace_sitk_with_numpy(img_sitk, img_np):

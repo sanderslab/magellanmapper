@@ -317,7 +317,7 @@ class RegisterSettings(SettingsDict):
         
         # mirror labels from one side onto the other, assuming only about 
         # half of the labels for the underlying atlas are present
-        self["labels_mirror"] = (None, 0.5) # planes frac_start, frac_end
+        self["labels_mirror"] = (None, 0.525) # planes frac_start, frac_end
         # expand labels within bounds given by 
         # (((x_pixels_start, x_pixels_end), ...), (next_region...))
         self["expand_labels"] = (((None, ), (0, 279), (103, 108)),)

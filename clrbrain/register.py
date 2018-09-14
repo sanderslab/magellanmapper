@@ -465,6 +465,17 @@ def smooth_labels(labels_img_np, filter_size=4):
             labels_img_np[slices] = region
             print("changed num of pixels from {} to {}"
                   .format(region_size, region[opened].size))
+    label_ids_smoothed = np.unique(labels_img_np)
+    print("number of labels changed from {} to {}"
+          .format(label_ids.size, label_ids_smoothed.size))
+    labels_lost = label_ids[np.isin(label_ids, label_ids_smoothed, invert=True)]
+    print("labels lost during smoothing: {}".format(labels_lost))
+    for lost in labels_lost:
+        region_lost = labels_img_np_orig[labels_img_np_orig == lost]
+        print("size of lost label {}: {}".format(lost, region_lost.size))
+    measure_overlap_labels(
+        sitk.GetImageFromArray(labels_img_np_orig), 
+        sitk.GetImageFromArray(labels_img_np))
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
@@ -951,8 +962,17 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
     #sitk.Show(fixed_binary_img)
     #sitk.Show(transformed_binary_img)
     total_dsc = overlap_filter.GetDiceCoefficient()
-    #print("Mean regional DSC: {}".format(mean_region_dsc))
     print("Total DSC: {}".format(total_dsc))
+    return total_dsc
+
+def measure_overlap_labels(fixed_img, transformed_img):
+    # mean Dice Similarity Coefficient (DSC) of labeled regions
+    overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
+    # fixed_img is 64-bit float (double), while transformed_img is 32-bit
+    overlap_filter.Execute(fixed_img, transformed_img)
+    mean_region_dsc = overlap_filter.GetDiceCoefficient()
+    print("Mean regional DSC: {}".format(mean_region_dsc))
+    return mean_region_dsc
 
 def _crop_image(img_np, labels_img, axis, eraser=None):
     """Crop image by removing the empty space at the start of the given axis.

@@ -182,6 +182,10 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
 def _get_bbox(img_np, threshold=10):
     """Get the bounding box for the first object within an image.
     
+    Since there does not appear to be a guarantee about the order of 
+    objects found in :func:``measure.regionprops``, this bbox method 
+    should only be used when only one object is expected.
+    
     Args:
         img_np: Image as a Numpy array.
         threshold: Threshold level; defaults to 10. If None, assume 
@@ -386,7 +390,6 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
     if rotate:
         # mirror labels with original values in case rotation will cause 
         # some labels to be cut off, then rotate for each specified axis
-        #img_np = _mirror_planes(img_np, mirrori)
         for i in range(mirrori, tot_planes):
             img_np[i] = img_np[mirrori - 1]
         for rot in rotate:
@@ -417,7 +420,8 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     img_sitk_back.SetOrigin(origin)
     return img_sitk_back
 
-def smooth_labels(labels_img_np):
+def smooth_labels(labels_img_np, filter_size=4):
+    labels_img_np_orig = np.copy(labels_img_np)
     # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)
     label_sizes = {}
@@ -425,25 +429,42 @@ def smooth_labels(labels_img_np):
         label_sizes[label_id] = len(labels_img_np[labels_img_np == label_id])
     label_sizes_ordered = OrderedDict(
         sorted(label_sizes.items(), key=lambda x: x[1], reverse=True))
+    label_ids_ordered = label_sizes_ordered.keys()
     
-    for label_id in label_sizes_ordered.keys():
+    for label_id in label_ids_ordered:
+        print("smoothing label ID {}".format(label_id))
         # get bounding box for label region
         label_mask = labels_img_np == label_id
-        bbox = _get_bbox(label_mask, threshold=None)
-        print("bbox for label ID {}: {}".format(label_id, bbox))
-        if bbox is None: continue
-        shape, slices = _get_bbox_region(bbox)
-        print("slices for label ID {}: {}".format(label_id, slices))
-        
-        # smooth region and fill empty spaces with closest surrounding labels
-        region = labels_img_np[slices]
-        label_mask_region = region == label_id
-        opened = morphology.binary_opening(label_mask_region, morphology.ball(4))
-        region = plot_3d.in_paint(region, label_mask_region)
-        region[opened] = label_id
-        labels_img_np[slices] = region
-        print("changed num of pixels from {} to {}"
-              .format(len(region[label_mask_region]), len(region[opened])))
+        props = measure.regionprops(measure.label(label_mask), cache=True)
+        props_sizes = []
+        for prop in props:
+            props_sizes.append((prop, prop.area))
+        props_sizes.sort(key=lambda x: x[1], reverse=True)
+        for prop in props_sizes:
+            print("prop with size: {}".format(prop[1]))
+            # bounding box may no longer exactly correspond after previous 
+            # in-painting but most likely very close and will get new mask 
+            # for each object
+            bbox = prop[0].bbox
+            #print("bbox for label ID {}: {}".format(label_id, bbox))
+            if bbox is None: continue
+            shape, slices = _get_bbox_region(bbox)
+            #print("slices for label ID {}: {}".format(label_id, slices))
+            
+            # smooth region, fill empty spaces with closest surrounding labels
+            region = labels_img_np[slices]
+            label_mask_region = region == label_id
+            region_size = region[label_mask_region].size
+            if region_size == 0:
+                print("no pixels to smooth, skipping")
+                continue
+            opened = morphology.binary_opening(
+                label_mask_region, morphology.ball(filter_size))
+            region = plot_3d.in_paint(region, label_mask_region)
+            region[opened] = label_id
+            labels_img_np[slices] = region
+            print("changed num of pixels from {} to {}"
+                  .format(region_size, region[opened].size))
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.

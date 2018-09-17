@@ -97,6 +97,65 @@ url_notify=""
 # upload and shutdown
 clean_up=0
 
+# Supported compression formats
+COMPRESSION_EXTS=("zst" "zip")
+
+############################################
+# Download compressed file if available.
+# Globals:
+#   COMPRESSION_EXTS
+# Arguments:
+#   1: Path to check on S3, with corresponding formats in 
+#      COMPRESSION_EXTS checked as well, prioritizing any 
+#      given format already in that array.
+#   2: output local directory.
+# Returns:
+#   1 if the file or corresponding compressed file was 
+#   downloaded; 0 if otherwise.
+############################################
+get_compressed_file() {
+    ext="${1##*.}"
+    path_base="${1%.*}"
+    is_compression=0
+    paths=()
+    for e in "${COMPRESSION_EXTS[@]}"; do
+        if [[ "$ext" = "$e" ]]; then
+            # prioritize compression type if given as ext
+            is_compression=1
+            paths+=("$1")
+        fi
+    done
+    for e in "${COMPRESSION_EXTS[@]}"; do
+        if [[ $is_compression -eq 0 || "$e" != "$ext" ]]; then
+            # add name with extension if not yet added
+            paths+=("${path_base}.${e}")
+        fi
+    done
+    # append original file if not already added
+    if [[ $is_compression -eq 0 ]]; then paths+=("$1"); fi
+    
+    for path in "${paths[@]}"; do
+        echo "Checking for $path on S3..."
+        aws s3 cp "$path" "$2"
+        out_path="${2}/$(basename $path)"
+        if [[ -e "$out_path" ]]; then
+            # decompress based on compression type
+            case $ext in
+               "${COMPRESSION_EXTS[0]}") # zstd
+                   pzstd -dc "$out_path" | tar xvf - 
+                   ;;
+               "${COMPRESSION_EXTS[1]}") # zip
+                   cd "$OUT_DIR"
+                   unzip -u "$(basename $path)"
+                   cd -
+                   ;;
+            esac
+            return 1
+        fi
+    done
+    return 0
+}
+
 ####################################
 # Script setup
 
@@ -244,7 +303,8 @@ if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
     # illuminators merged) image is used for the Stitching pathway, and 
     # the unfused, original image is used for the BigStitcher pathway
     mkdir "$OUT_DIR"
-    aws s3 cp "${s3_exp_path}/${NAME}" $OUT_DIR
+    echo "Downloading original image from S3..."
+    get_compressed_file "${s3_exp_path}/${NAME}" "$OUT_DIR"
 fi
 
 out_name_base=""
@@ -312,19 +372,16 @@ info_npz="${npz_img_base}_info.npz"
 echo -n "Looking for ${image5d_npz}..."
 if [[ ! -e "$image5d_npz" ]]; then
     # Get stitched image files from S3
-    echo "downloading from S3..."
+    name="$(basename $clr_img_base).${EXT}"
+    echo "downloading $name from S3..."
     mkdir "$OUT_DIR"
-    zip_name="$(basename $clr_img_base).zip"
-    echo "${OUT_DIR}/${zip_name}"
-    # attempt to retrieve .zip file
-    aws s3 cp "${s3_exp_path}/${zip_name}" "$OUT_DIR"
-    if [[ -e "${OUT_DIR}/${zip_name}" ]]; then
-        cd "$OUT_DIR"
-        unzip -u "$zip_name"
-        cd -
-    else
+    get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"
+    if [[ "$?" -eq 0 ]]; then
         # get individual .npz files if .zip not present
+        echo -n "Could not find compressed files, attempting to download "
+        echo "uncompressed files..."
         for npz in "$image5d_npz" "$info_npz"; do
+            echo "...attempting to download ${npz}..."
             aws s3 cp "${s3_exp_path}/$(basename $npz)" "$OUT_DIR"
         done
     fi

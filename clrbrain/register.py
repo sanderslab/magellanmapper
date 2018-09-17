@@ -420,7 +420,7 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     img_sitk_back.SetOrigin(origin)
     return img_sitk_back
 
-def smooth_labels(labels_img_np, filter_size=4):
+def smooth_labels(labels_img_np, filter_size=3):
     labels_img_np_orig = np.copy(labels_img_np)
     # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)
@@ -455,6 +455,13 @@ def smooth_labels(labels_img_np, filter_size=4):
         selem = morphology.ball(filter_size)
         opened = morphology.binary_opening(label_mask_region, selem)
         region_size_smoothed = np.sum(opened)
+        size_ratio = region_size_smoothed / region_size
+        if size_ratio < 0.5:
+            print("largest region would be lost or too small "
+                  "(ratio {}), will use closing filter instead"
+                  .format(size_ratio))
+            opened = morphology.binary_closing(label_mask_region, selem)
+            region_size_smoothed = np.sum(opened)
         
         # fill empty spaces with closest surrounding labels
         region = plot_3d.in_paint(region, label_mask_region)

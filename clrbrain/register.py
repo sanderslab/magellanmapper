@@ -433,38 +433,36 @@ def smooth_labels(labels_img_np, filter_size=4):
     
     for label_id in label_ids_ordered:
         print("smoothing label ID {}".format(label_id))
+        
         # get bounding box for label region
         label_mask = labels_img_np == label_id
-        props = measure.regionprops(measure.label(label_mask), cache=True)
-        props_sizes = []
-        for prop in props:
-            props_sizes.append((prop, prop.area))
-        props_sizes.sort(key=lambda x: x[1], reverse=True)
-        for prop in props_sizes:
-            print("prop with size: {}".format(prop[1]))
-            # bounding box may no longer exactly correspond after previous 
-            # in-painting but most likely very close and will get new mask 
-            # for each object
-            bbox = prop[0].bbox
-            #print("bbox for label ID {}: {}".format(label_id, bbox))
-            if bbox is None: continue
-            shape, slices = _get_bbox_region(bbox)
-            #print("slices for label ID {}: {}".format(label_id, slices))
-            
-            # smooth region, fill empty spaces with closest surrounding labels
-            region = labels_img_np[slices]
-            label_mask_region = region == label_id
-            region_size = region[label_mask_region].size
-            if region_size == 0:
-                print("no pixels to smooth, skipping")
-                continue
-            opened = morphology.binary_opening(
-                label_mask_region, morphology.ball(filter_size))
-            region = plot_3d.in_paint(region, label_mask_region)
-            region[opened] = label_id
-            labels_img_np[slices] = region
-            print("changed num of pixels from {} to {}"
-                  .format(region_size, region[opened].size))
+        props = measure.regionprops(label_mask.astype(np.int))
+        if len(props) < 1: continue
+        bbox = props[0].bbox
+        if bbox is None: continue
+        shape, slices = _get_bbox_region(bbox)
+        
+        # get region, skipping if no region left
+        region = labels_img_np[slices]
+        label_mask_region = region == label_id
+        region_size = np.sum(label_mask_region)
+        if region_size == 0:
+            print("no pixels to smooth, skipping")
+            continue
+        
+        # smooth region with opening filter, changing to closing filter 
+        # if region would be lost or severely reduced
+        selem = morphology.ball(filter_size)
+        opened = morphology.binary_opening(label_mask_region, selem)
+        region_size_smoothed = np.sum(opened)
+        
+        # fill empty spaces with closest surrounding labels
+        region = plot_3d.in_paint(region, label_mask_region)
+        region[opened] = label_id
+        labels_img_np[slices] = region
+        print("changed num of pixels from {} to {}"
+              .format(region_size, region_size_smoothed))
+    
     label_ids_smoothed = np.unique(labels_img_np)
     print("number of labels changed from {} to {}"
           .format(label_ids.size, label_ids_smoothed.size))

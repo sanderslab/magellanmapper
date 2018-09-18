@@ -31,6 +31,8 @@ class AtlasEditor:
         self.fn_close_listener = fn_close_listener
         
         self.plot_eds = {}
+        self.alpha_slider = None
+        self.alpha_reset_btn = None
         
     def show_atlas(self):
         # set up the figure
@@ -50,11 +52,11 @@ class AtlasEditor:
         gs_controls = gridspec.GridSpecFromSubplotSpec(
             1, 2, subplot_spec=gs[1, 0], width_ratios=(5, 1))
         ax_alpha = plt.subplot(gs_controls[0, 0])
-        alpha_slider = Slider(
-            ax_alpha, "Transparency", 0.0, 1.0, 
+        self.alpha_slider = Slider(
+            ax_alpha, "Opacity", 0.0, 1.0, 
             valinit=plot_editor.PlotEditor.ALPHA_DEFAULT)
         ax_alpha_reset = plt.subplot(gs_controls[0, 1])
-        alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
+        self.alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
     
         def setup_plot_ed(plane, ax):
             plot_support.hide_axes(ax)
@@ -69,7 +71,7 @@ class AtlasEditor:
             # plot editor
             plot_ed = plot_editor.PlotEditor(
                 ax, img3d_transposed, labels_img_transposed, cmap_labels, norm, 
-                plane, alpha_slider, alpha_reset_btn, aspect, origin, 
+                plane, aspect, origin, 
                 self.update_coords, self.refresh_images, scaling)
             return plot_ed
         
@@ -85,8 +87,8 @@ class AtlasEditor:
         fig.canvas.mpl_connect("close_event", self.fn_close_listener)
         fig.canvas.mpl_connect("axes_leave_event", self.axes_exit)
         
-        alpha_slider.on_changed(self.alpha_update)
-        alpha_reset_btn.on_clicked(self.alpha_reset)
+        self.alpha_slider.on_changed(self.alpha_update)
+        self.alpha_reset_btn.on_clicked(self.alpha_reset)
         
         self.update_coords(coord, config.PLANE[0])
         
@@ -116,8 +118,7 @@ class AtlasEditor:
             self.plot_eds[key].alpha_updater(event)
     
     def alpha_reset(self, event):
-        for key in self.plot_eds.keys():
-            self.plot_eds[key].alpha_reset(event)
+        self.alpha_slider.reset()
     
     def axes_exit(self, event):
         for key in self.plot_eds.keys():

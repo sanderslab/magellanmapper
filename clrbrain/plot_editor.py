@@ -15,7 +15,7 @@ class PlotEditor:
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, norm, plane, 
-                 alpha_slider, alpha_reset_btn, aspect, origin, 
+                 aspect, origin, 
                  fn_update_coords, fn_refresh_images, scaling):
         self.axes = axes
         self.img3d = img3d
@@ -24,8 +24,6 @@ class PlotEditor:
         self.norm = norm
         self.plane = plane
         self.alpha = self.ALPHA_DEFAULT
-        self.alpha_slider = alpha_slider
-        self.alpha_reset_btn = alpha_reset_btn
         self.aspect = aspect
         self.origin = origin
         self.fn_update_coords = fn_update_coords
@@ -49,8 +47,6 @@ class PlotEditor:
         self.hline = None
         self.vline = None
         self.coord = None
-        self.plot_axes = (
-            self.axes, self.alpha_slider.ax, self.alpha_reset_btn.ax)
         self.xlim = None
         self.ylim = None
     
@@ -142,10 +138,6 @@ class PlotEditor:
         self.ax_img.set_alpha(self.alpha)
         print("set image alpha to {}".format(self.alpha))
     
-    def alpha_reset(self, event):
-        print("resetting slider")
-        self.alpha_slider.reset()
-    
     def on_press(self, event):
         """Pick intensities by mouse clicking on a given pixel.
         """
@@ -168,7 +160,7 @@ class PlotEditor:
             self.fn_update_coords(self.coord, self.plane)
     
     def on_axes_exit(self, event):
-        if event.inaxes not in self.plot_axes: return
+        if event.inaxes != self.axes: return
         if self.circle:
             self.circle.remove()
             self.circle = None

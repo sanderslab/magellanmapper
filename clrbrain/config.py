@@ -33,17 +33,29 @@ import numpy as np
 from collections import OrderedDict
 
 verbose = False
-no_show = False
 POS_THRESH = 0.001 # threshold for positive values for float comparison
 
 # custom colormaps in plot_2d
 CMAP_GRBK_NAME = "Green_black"
 CMAP_RDBK_NAME = "Red_black"
 
+
+# IMAGE VIEWING
+
+no_show = False
+max_scroll = 20 # max speed when scrolling through planes
+
+
+# STACK PROCESSING
+
+rescale = None # rescale image
+interval = None # interval
+delay = None # delay time between images
 # max pixels of sub-stacks for stack processing (z, y, x order), which can 
 # be set from command-line and takes precedence over process settings to 
 # allow custom configurations depending on instance type
 sub_stack_max_pixels = None
+
 
 # PROCESSING SETTINGS
 
@@ -604,12 +616,6 @@ flip = None
 GROUPS_NUMERIC = {"WT": 0.0, "het": 0.5, "null":1.0}
 groups = None
 
-
-# STACK PROCESSING
-
-rescale = None # rescale image
-interval = None # interval
-delay = None # delay time between images
 
 
 # AWS

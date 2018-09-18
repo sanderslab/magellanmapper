@@ -176,7 +176,7 @@ def get_labels_colormap(labels, seed=None, alpha=150, index_direct=True,
     cmap_labels = ListedColormap(cmap_labels / 255.0, "discrete_cmap")
     return cmap_labels, norm
 
-def scroll_plane(event, z_overview, max_size, jump=None):
+def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
     """Scroll through overview images along their orthogonal axis.
     
     Args:
@@ -185,11 +185,17 @@ def scroll_plane(event, z_overview, max_size, jump=None):
             will be used.
         max_size: Maximum number of planes.
         jump: Function to jump to a given plane; defaults to None.
+        max_scroll: Max number of planes to scroll by mouse. Ignored during 
+            jumps.
     """
     step = 0
     if isinstance(event, backend_bases.MouseEvent):
         # scroll movements are scaled from 0 for each event
-        step += int(event.step) # decimal point num on some platforms
+        steps = event.step
+        if max_scroll is not None and abs(steps) > max_scroll:
+            # cap scroll speed, preserving direction (sign)
+            steps *= max_scroll / abs(steps)
+        step += int(steps) # decimal point num on some platforms
     elif isinstance(event, backend_bases.KeyEvent):
         # finer-grained movements through keyboard controls since the 
         # finest scroll movements may be > 1

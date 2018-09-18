@@ -124,7 +124,8 @@ class PlotEditor:
     def scroll_overview(self, event):
         if event.inaxes != self.axes: return
         z_overview_new = plot_support.scroll_plane(
-            event, self.coord[0], self.img3d.shape[0])
+            event, self.coord[0], self.img3d.shape[0], 
+            max_scroll=config.max_scroll)
         if z_overview_new != self.coord[0]:
             # move only if step registered and changing position
             coord = list(self.coord)

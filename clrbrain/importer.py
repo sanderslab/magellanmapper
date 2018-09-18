@@ -838,9 +838,10 @@ def transpose_npy(filename, series, plane=None, rescale=None):
             # number of chunks and resize each chunk by ratio of total 
             # target size to chunk number
             target_size = target_size[::-1] # change to z,y,x
-            num_chunks = np.ceil(np.divide(rescaled.shape, max_pixels))
+            shape = rescaled.shape[:3]
+            num_chunks = np.ceil(np.divide(shape, max_pixels))
             max_pixels = np.ceil(
-                np.divide(rescaled.shape, num_chunks)).astype(np.int)
+                np.divide(shape, num_chunks)).astype(np.int)
             sub_roi_size = np.floor(
                 np.divide(target_size, num_chunks)).astype(np.int)
             print("target_size: {}, num_chunks: {}, max_pixels: {}, "
@@ -887,7 +888,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
             # scale resolutions based on size ratio for each dimension
             detector.resolutions = np.multiply(
                 detector.resolutions, 
-                (image5d_swapped.shape / rescaled_shape)[1:])
+                (image5d_swapped.shape / rescaled_shape)[1:4])
         sizes[0] = rescaled_shape
         scaling = calc_scaling(image5d_swapped, image5d_transposed)
     else:

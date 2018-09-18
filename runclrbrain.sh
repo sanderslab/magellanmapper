@@ -20,6 +20,7 @@ Arguments:
     -s [pathway]: Set stitching pathway.
     -t [pathway]: Set transposition pathway.
     -w [pathway]: Set whole image processing pathway.
+    -m [ext]: Compression format extension; defaults to zst.
     -o [path]: Path to output file to send in notification and to S3.
     -n [URL]: Slack notification URL.
     -c: Server clean-up, including upload, notification, and 
@@ -98,16 +99,22 @@ url_notify=""
 clean_up=0
 
 # Supported compression formats
-COMPRESSION_EXTS=("zst" "zip")
+COMPRESSION_EXTS=("tar.zst" "zip")
+compression="${COMPRESSION_EXTS[0]}"
+
+# Clrbrain filenames
+image5d_npz=""
+info_npz=""
+proc_npz=""
 
 ############################################
 # Download compressed file if available.
 # Globals:
 #   COMPRESSION_EXTS
 # Arguments:
-#   1: Path to check on S3, with corresponding formats in 
-#      COMPRESSION_EXTS checked as well, prioritizing any 
-#      given format already in that array.
+#   1: Path to check on S3, prioritizing the given extension 
+#      if it is in COMPRESSION_EXTS. If extension is not 
+#      in this array, the original path will be checked last.
 #   2: output local directory.
 # Returns:
 #   1 if the file or corresponding compressed file was 
@@ -137,31 +144,113 @@ get_compressed_file() {
     for path in "${paths[@]}"; do
         echo "Checking for $path on S3..."
         aws s3 cp "$path" "$2"
-        out_path="${2}/$(basename $path)"
+        name="$(basename $path)"
+        out_path="${2}/${name}"
         if [[ -e "$out_path" ]]; then
             # decompress based on compression type
-            case $ext in
+            cd "$2"
+            case "$ext" in
                "${COMPRESSION_EXTS[0]}") # zstd
-                   pzstd -dc "$out_path" | tar xvf - 
+                   pzstd -dc "$name" | tar xvf - 
                    ;;
                "${COMPRESSION_EXTS[1]}") # zip
-                   cd "$OUT_DIR"
-                   unzip -u "$(basename $path)"
-                   cd -
+                   unzip -u "$name"
                    ;;
             esac
+            cd -
             return 1
         fi
     done
     return 0
 }
 
+############################################
+# Compress and upload files to S3.
+# Globals:
+#   COMPRESSION_EXTS
+# Arguments:
+#   1: output base path without extension, where the compressed 
+#      file will be output to the directory path, and the 
+#      basename will be used as the basis for the compressed 
+#      filename.
+#   2: extension of compression format.
+#   3...: remaining arguments are paths of files to be 
+#      compressed.
+# Returns:
+#   None
+############################################
+compress_upload() {
+    local args=("$@")
+    local dir_path="$(dirname "${args[0]}")"
+    local base_path="$(basename "${args[0]}")"
+    echo "${args[@]}, $base_path"
+    local compression="${args[1]}"
+    local paths=()
+    for path in "${args[@]:2}"; do
+        paths+=("$(basename "$path")")
+    done
+    local out_path=""
+    cd "$dir_path"
+    echo "Compressing ${paths[@]} to $compression format..."
+    case "$compression" in
+       "${COMPRESSION_EXTS[0]}") # zstd
+           out_path="${base_path}.${compression}"
+           tar cf - "${paths[@]}" | pzstd > "$out_path"
+           ;;
+       "${COMPRESSION_EXTS[1]}") # zip
+           out_path="${base_path}.${compression}"
+           zip -R "$out_path" "${paths[@]}"
+           ;;
+    esac
+    echo "Uploading to $out_path..."
+    aws s3 cp "$out_path" "${s3_exp_path}/"
+    cd -
+    return 1
+}
+
+############################################
+# Set up paths for Clrbrain formatted files.
+# Globals:
+#   image5d_npz
+#   info_npz
+#   proc_npz
+# Arguments:
+#   Base path from which to construct the filenames, typically 
+#   a full path without extension or series information.
+# Returns:
+#   None
+############################################
+setup_clrbrain_filenames() {
+    local series_filled="$(printf %05d $series)"
+    local npz_img_base="${1}_${series_filled}"
+    image5d_npz="${npz_img_base}_image5d.npz"
+    info_npz="${npz_img_base}_info.npz"
+    proc_npz="${npz_img_base}_info_proc.npz"
+}
+
+############################################
+# Wrapper method for uploading images
+# Globals:
+#   None
+# Arguments:
+#   Base path to pass to setup_clrbrain_filenames.
+# Returns:
+#   None
+############################################
+upload_images() {
+    setup_clrbrain_filenames "$1"
+    local args=("${image5d_npz%.*}" "$compression" "$image5d_npz" "$info_npz")
+    compress_upload "${args[@]}"
+}
+
+
+
 ####################################
 # Script setup
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w:o:n:cz: opt; do
+while getopts hi:a:p:s:t:w:o:n:cz:m: opt; do
     case $opt in
         h)  echo "$HELP"
             exit 0
@@ -183,6 +272,9 @@ while getopts hi:a:p:s:t:w:o:n:cz: opt; do
             ;;
         w)  whole_img_proc="$OPTARG"
             echo "Set whole img proc to $whole_img_proc"
+            ;;
+        m)  compression="$OPTARG"
+            echo "Set compression format to $compression"
             ;;
         o)  output_path="$OPTARG"
             echo "Set output path to $output_path"
@@ -360,19 +452,20 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
 fi
 clr_img_base="${clr_img%.*}"
 
+if [[ "$upload" == "${UPLOAD_TYPES[1]}" ]]; then
+    # upload stitched files in full processing pipeline
+    upload_images "$clr_img_base"
+fi
+
 # At this point, you can delete the TIFF dir/image since it has been 
 # exported into a Numpy-based format for loading into Clrbrain
 
-
 # Check for existing files in Clrbrain Numpy format
-series_filled="$(printf %05d $series)"
-npz_img_base="${clr_img_base}_${series_filled}"
-image5d_npz="${npz_img_base}_image5d.npz"
-info_npz="${npz_img_base}_info.npz"
+setup_clrbrain_filenames "$clr_img_base"
 echo -n "Looking for ${image5d_npz}..."
 if [[ ! -e "$image5d_npz" ]]; then
     # Get stitched image files from S3
-    name="$(basename $clr_img_base).${EXT}"
+    name="$(basename $image5d_npz).${compression}"
     echo "downloading $name from S3..."
     mkdir "$OUT_DIR"
     get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"
@@ -419,16 +512,10 @@ if [[ "$transpose_pathway" != "" ]]; then
         python -u -m clrbrain.cli --img "$img_transposed" --proc animated --interval 5 --rescale 1.0 --savefig "$animation"
     fi
     
-    if [[ "$upload" == "${UPLOAD_TYPES[2]}" ]]; then
+    if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
         # zip and upload transposed files to S3
         base_path="${img_transposed%.*}"
-        cd "$(dirname $base_path)"
-        base_path="$(basename $base_path)"
-        zip_name=${base_path}.zip
-        zip -R "$zip_name" "${base_path}*"
-        echo "uploading $zip_name to S3 at ${s3_exp_path}"
-        aws s3 cp "$zip_name" "${s3_exp_path}/${zip_name}"
-        cd -
+        upload_images "$base_path"
     fi
     
 fi
@@ -442,9 +529,11 @@ if [[ "$whole_img_proc" != "" ]]; then
     # smaller stacks to minimize RAM usage and multiprocessed for efficiency
     python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
     
-    if [[ "$upload" == "${UPLOAD_TYPES[2]}" ]]; then
+    if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
         # upload processed fils to S3
-        aws s3 cp $OUT_DIR "${s3_exp_path}" --recursive --exclude "*" --include "*proc.npz"
+        setup_clrbrain_filenames "$clr_img_base"
+        args=("${proc_npz%.*}" "$compression" "$proc_npz")
+        compress_upload "${args[@]}"
     fi
     
 fi
@@ -471,11 +560,6 @@ if [[ $clean_up -eq 1 ]]; then
         #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
         name="`basename $output_path`"
         aws s3 cp "$output_path" "${s3_exp_path}/${name}"
-    fi
-    
-    if [[ "$upload" == "${UPLOAD_TYPES[1]}" ]]; then
-        # upload all resulting files to S3
-        aws s3 cp $OUT_DIR "${s3_exp_path}" --recursive --exclude "*" --include "*.npz"
     fi
     
     echo "Finishing clean-up tasks, shutting down..."

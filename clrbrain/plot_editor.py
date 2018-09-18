@@ -15,8 +15,8 @@ class PlotEditor:
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, norm, plane, 
-                 aspect, origin, 
-                 fn_update_coords, fn_refresh_images, scaling):
+                 aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
+                 plane_slider):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
@@ -29,6 +29,8 @@ class PlotEditor:
         self.fn_update_coords = fn_update_coords
         self.fn_refresh_images = fn_refresh_images
         self.scaling = config.labels_scaling if scaling is None else scaling
+        self.plane_slider = plane_slider
+        self.plane_slider.on_changed(self.update_plane_slider)
         
         self.intensity = None
         self.cidpress = None
@@ -104,7 +106,7 @@ class PlotEditor:
             self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, 
             origin=self.origin, interpolation="none", norms=[self.norm])
         self.axes.format_coord = PixelDisplay(img2d)
-        plot_support.set_overview_title(self.axes, self.plane, self.coord[0])
+        self.plane_slider.set_val(self.coord[0])
         self.ax_img = label_ax_img[0]
         
         if self.xlim is not None and self.ylim is not None:
@@ -117,16 +119,22 @@ class PlotEditor:
         self.region_label = self.axes.text(0, 0, "", color="xkcd:silver")
         self.circle = None
     
-    def scroll_overview(self, event):
-        if event.inaxes != self.axes: return
-        z_overview_new = plot_support.scroll_plane(
-            event, self.coord[0], self.img3d.shape[0], 
-            max_scroll=config.max_scroll)
+    def _update_overview(self, z_overview_new):
         if z_overview_new != self.coord[0]:
             # move only if step registered and changing position
             coord = list(self.coord)
             coord[0] = z_overview_new
             self.fn_update_coords(coord, self.plane)
+    
+    def scroll_overview(self, event):
+        if event.inaxes != self.axes: return
+        z_overview_new = plot_support.scroll_plane(
+            event, self.coord[0], self.img3d.shape[0], 
+            max_scroll=config.max_scroll)
+        self._update_overview(z_overview_new)
+    
+    def update_plane_slider(self, val):
+        self._update_overview(int(val))
     
     def update_image(self):
         """Replace current image with underlying plane's data.

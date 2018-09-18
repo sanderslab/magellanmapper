@@ -58,7 +58,20 @@ class AtlasEditor:
         ax_alpha_reset = plt.subplot(gs_controls[0, 1])
         self.alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
     
-        def setup_plot_ed(plane, ax):
+        def setup_plot_ed(plane, gs_spec):
+            # subplot grid, with larger height preference for plot for 
+            # each increased row to make sliders of approx equal size and  
+            # align top borders of top images
+            rows_cols = gs_spec.get_rows_columns()
+            extra_rows = rows_cols[3] - rows_cols[2]
+            gs_plot = gridspec.GridSpecFromSubplotSpec(
+                2, 1, subplot_spec=gs_spec, 
+                height_ratios=(1, 10 + 14 * extra_rows), 
+                hspace=0.1/(extra_rows*1.4+1))
+            
+            # image plot with arrays transformed to this editor's 
+            # orthogonal direction
+            ax = plt.subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
             max_size = plot_support.max_plane(self.image5d[0], plane)
             arrs_3d, arrs_1d, aspect, origin = plot_support.transpose_images(
@@ -68,20 +81,28 @@ class AtlasEditor:
             labels_img_transposed = arrs_3d[1]
             scaling = arrs_1d[0]
             
+            # slider through image planes
+            ax_scroll = plt.subplot(gs_plot[0, 0])
+            plane_slider = Slider(
+                ax_scroll, plot_support.get_plane_axis(plane), 0, 
+                len(img3d_transposed) - 1, valfmt="%d", valinit=0, valstep=1)
+            
             # plot editor
             plot_ed = plot_editor.PlotEditor(
                 ax, img3d_transposed, labels_img_transposed, cmap_labels, norm, 
-                plane, aspect, origin, 
-                self.update_coords, self.refresh_images, scaling)
+                plane, aspect, origin, self.update_coords, self.refresh_images, 
+                scaling, plane_slider)
             return plot_ed
         
+        # setup plot editor for all 3 orthogonal directions
         self.plot_eds[config.PLANE[0]] = setup_plot_ed(
-            config.PLANE[0], plt.subplot(gs_viewers[:2, 0]))
+            config.PLANE[0], gs_viewers[:2, 0])
         self.plot_eds[config.PLANE[1]] = setup_plot_ed(
-            config.PLANE[1], plt.subplot(gs_viewers[0, 1]))
+            config.PLANE[1], gs_viewers[0, 1])
         self.plot_eds[config.PLANE[2]] = setup_plot_ed(
-            config.PLANE[2], plt.subplot(gs_viewers[1, 1]))
+            config.PLANE[2], gs_viewers[1, 1])
         
+        # attach listeners
         fig.canvas.mpl_connect("scroll_event", self.scroll_overview)
         fig.canvas.mpl_connect("key_press_event", self.scroll_overview)
         fig.canvas.mpl_connect("close_event", self.fn_close_listener)
@@ -90,9 +111,11 @@ class AtlasEditor:
         self.alpha_slider.on_changed(self.alpha_update)
         self.alpha_reset_btn.on_clicked(self.alpha_reset)
         
+        # initialize planes in all plot editors
         self.update_coords(coord, config.PLANE[0])
         
-        gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1]) # extra padding for label
+        # extra padding for slider labels
+        gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
         plt.ion()
         plt.show()
         

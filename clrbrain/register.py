@@ -84,6 +84,7 @@ ABA_PARENT = "parent_structure_id"
 ABA_LEVEL = "st_level"
 ABA_CHILDREN = "children"
 
+SMOOTHING_MODES=("opening", "gaussian")
 _SIGNAL_THRESHOLD = 0.01
 
 def _reg_out_path(file_path, reg_name):
@@ -420,7 +421,21 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     img_sitk_back.SetOrigin(origin)
     return img_sitk_back
 
-def smooth_labels(labels_img_np, filter_size=3):
+def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
+    """Smooth each label within labels annotation image.
+    
+    Labels images created in one orthogonal direction may have ragged, 
+    high-frequency edges when viewing in the other orthogonal directions. 
+    Smooth these edges by applying a filter to each label.
+    
+    Args:
+        labels_img_np: Labels image as a Numpy array.
+        filter_size: Structuring element or kernel size.
+        mode: One of :const:``SMOOTHING_MODES``, where ``opening`` applies 
+            a morphological opening filter unless the size is severely 
+            reduced, in which case a closing filter is applied instead; and 
+            ``gaussian`` applies a Gaussian blur.
+    """
     labels_img_np_orig = np.copy(labels_img_np)
     # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)
@@ -450,21 +465,31 @@ def smooth_labels(labels_img_np, filter_size=3):
             print("no pixels to smooth, skipping")
             continue
         
-        # smooth region with opening filter, changing to closing filter 
-        # if region would be lost or severely reduced
-        selem = morphology.ball(filter_size)
-        opened = morphology.binary_opening(label_mask_region, selem)
-        region_size_smoothed = np.sum(opened)
-        size_ratio = region_size_smoothed / region_size
-        if size_ratio < 0.5:
-            print("largest region would be lost or too small "
-                  "(ratio {}), will use closing filter instead"
-                  .format(size_ratio))
-            opened = morphology.binary_closing(label_mask_region, selem)
+        # smoothing based on mode
+        region_size_smoothed = 0
+        if mode == SMOOTHING_MODES[0]:
+            # smooth region with opening filter, changing to closing filter 
+            # if region would be lost or severely reduced
+            selem = morphology.ball(filter_size)
+            opened = morphology.binary_opening(label_mask_region, selem)
+            region_size_smoothed = np.sum(opened)
+            size_ratio = region_size_smoothed / region_size
+            if size_ratio < 0.5:
+                print("largest region would be lost or too small "
+                      "(ratio {}), will use closing filter instead"
+                      .format(size_ratio))
+                opened = morphology.binary_closing(label_mask_region, selem)
+                region_size_smoothed = np.sum(opened)
+            
+            # fill empty spaces with closest surrounding labels
+            region = plot_3d.in_paint(region, label_mask_region)
+        elif mode == SMOOTHING_MODES[1]:
+            # smoothing with gaussian blur
+            opened = filters.gaussian(
+                label_mask_region, filter_size, mode="nearest", 
+                multichannel=False).astype(bool)
             region_size_smoothed = np.sum(opened)
         
-        # fill empty spaces with closest surrounding labels
-        region = plot_3d.in_paint(region, label_mask_region)
         region[opened] = label_id
         labels_img_np[slices] = region
         print("changed num of pixels from {} to {}"

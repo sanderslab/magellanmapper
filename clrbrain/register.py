@@ -436,7 +436,9 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
             reduced, in which case a closing filter is applied instead; and 
             ``gaussian`` applies a Gaussian blur.
     """
+    # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
+    
     # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)
     label_sizes = {}
@@ -447,6 +449,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     label_ids_ordered = label_sizes_ordered.keys()
     
     for label_id in label_ids_ordered:
+        # smooth by label
         print("smoothing label ID {}".format(label_id))
         
         # get bounding box for label region
@@ -495,6 +498,8 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         print("changed num of pixels from {} to {}"
               .format(region_size, region_size_smoothed))
     
+    # show label loss metric
+    print("\nMeasuring label loss:")
     label_ids_smoothed = np.unique(labels_img_np)
     print("number of labels changed from {} to {}"
           .format(label_ids.size, label_ids_smoothed.size))
@@ -503,9 +508,26 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     for lost in labels_lost:
         region_lost = labels_img_np_orig[labels_img_np_orig == lost]
         print("size of lost label {}: {}".format(lost, region_lost.size))
+    
+    # show DSC for labels
+    print("\nMeasuring overlap of labels:")
     measure_overlap_labels(
         sitk.GetImageFromArray(labels_img_np_orig), 
         sitk.GetImageFromArray(labels_img_np))
+    
+    # weighted pixel ratio metric of volume change
+    weighted_size_ratio = 0
+    tot_pxs = 0
+    for label_id in label_ids_ordered:
+        # skip backgroud since not a "region"
+        if label_id == 0: continue
+        size_orig = np.sum(labels_img_np_orig == label_id)
+        size_smoothed = np.sum(labels_img_np == label_id)
+        weighted_size_ratio += size_smoothed / size_orig * size_orig
+        tot_pxs += size_orig
+    weighted_size_ratio /= tot_pxs
+    print("\nSize ratio (smoothed:orig) weighted by orig size: {}\n"
+          .format(weighted_size_ratio))
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.

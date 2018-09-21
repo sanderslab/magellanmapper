@@ -14,14 +14,13 @@ class PlotEditor:
     ALPHA_DEFAULT = 0.5
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
-    def __init__(self, axes, img3d, img3d_labels, cmap_labels, norm, plane, 
+    def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
                  aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
                  plane_slider):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
         self.cmap_labels = cmap_labels
-        self.norm = norm
         self.plane = plane
         self.alpha = self.ALPHA_DEFAULT
         self.aspect = aspect
@@ -104,7 +103,7 @@ class PlotEditor:
         img2d = self.img3d_labels[self.coord[0]]
         label_ax_img = plot_support.imshow_multichannel(
             self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, 
-            origin=self.origin, interpolation="none", norms=[self.norm])
+            origin=self.origin, interpolation="none", norms=[self.cmap_labels.norm])
         self.axes.format_coord = PixelDisplay(img2d)
         self.plane_slider.set_val(self.coord[0])
         self.ax_img = label_ax_img[0]

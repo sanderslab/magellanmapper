@@ -44,7 +44,7 @@ class AtlasEditor:
         
         # set up the image to display
         colormaps = config.process_settings["channel_colors"]
-        cmap_labels, norm = plot_support.get_labels_colormap(
+        cmap_labels = plot_support.DiscreteColormap(
             self.labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 255)))
         coord = list(self.offset[::-1])
         
@@ -89,7 +89,7 @@ class AtlasEditor:
             
             # plot editor
             plot_ed = plot_editor.PlotEditor(
-                ax, img3d_transposed, labels_img_transposed, cmap_labels, norm, 
+                ax, img3d_transposed, labels_img_transposed, cmap_labels, 
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
                 scaling, plane_slider)
             return plot_ed

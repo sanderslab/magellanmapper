@@ -324,7 +324,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
                  z_relative, highlight=False, border=None, plane="xy", 
                  roi=None, labels=None, blobs_truth=None, circles=None, 
-                 aspect=None, grid=False, cmap_labels=None, norm=None):
+                 aspect=None, grid=False, cmap_labels=None):
     """Shows subplots of the region of interest.
     
     Args:
@@ -361,8 +361,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             :const:``CIRCLES``; defaults to None.
         aspect: Image aspect; defauls to None.
         grid: True if a grid should be overlaid; defaults to False.
-        cmap_labels: Colormap for labels; defaults to None.
-        norm: Normalization corresponding to ``cmap_labels``; defaults to None.
+        cmap_labels: :class:``plot_support.DiscreteColormap`` for labels; 
+            defaults to None.
     """
     ax = plt.subplot(gs[row, col])
     plot_support.hide_axes(ax)
@@ -445,7 +445,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                         print(e)
                         print("could not show label:\n{}".format(label[z_relative]))
                     '''
-                    ax.imshow(label[z_relative], cmap=cmap_labels, norm=norm)
+                    ax.imshow(label[z_relative], cmap=cmap_labels, norm=cmap_labels.norm)
                     #ax.imshow(label[z_relative]) # showing only threshold
         
         if ((segs_in is not None or segs_out is not None) 
@@ -925,9 +925,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     gs_zoomed = gridspec.GridSpecFromSubplotSpec(zoom_plot_rows, zoom_plot_cols, 
                                                  gs[1, :],
                                                  wspace=0.1, hspace=0.1)
-    cmap_labels, norm = None, None
+    cmap_labels = None
     if labels is not None:
-        cmap_labels, norm = plot_support.get_labels_colormap(labels)
+        cmap_labels = plot_support.DiscreteColormap(labels)
     # plot the fully zoomed plots
     #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots
     for i in range(zoom_plot_rows):
@@ -970,7 +970,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 segs_in, segs_out, segs_cmap, alpha, z_relative, 
                 z == z_overview, border_full if show_border else None, plane, 
                 roi_show, labels, blobs_truth_z, circles=circles, 
-                aspect=aspect, grid=grid, cmap_labels=cmap_labels, norm=norm)
+                aspect=aspect, grid=grid, cmap_labels=cmap_labels)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)
             ax_z_list.append(ax_z)

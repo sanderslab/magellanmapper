@@ -557,7 +557,10 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
         origin = lib_clrbrain.swap_elements(origin, 1, 2)
         if plane == config.PLANE[1]:
             # rotate
-            transposed = transposed[..., ::-1]
+            if transposed.ndim >=4: # multichannel
+                transposed = transposed[..., ::-1, :]
+            else:
+                transposed = transposed[..., ::-1]
             transposed = np.swapaxes(transposed, 1, 2)
             spacing = lib_clrbrain.swap_elements(spacing, 0, 1)
             origin = lib_clrbrain.swap_elements(origin, 0, 1)

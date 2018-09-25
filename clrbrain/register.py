@@ -396,16 +396,18 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
         for rot in rotate:
             img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
     
-    # minimize jaggedness in labels, often seen outside of the original 
-    # orthogonal direction
-    smooth_labels(img_np)
-    
-    # mirror planes, either based on previously found index or fractional 
+    # reset mirroring index baed either on previously found index or fractional 
     # profile setting
     if extent is not None and extent[1] is not None:
         mirrori = int(extent[1] * tot_planes)
     lib_clrbrain.printv("type: {}, max: {}, max avail: {}".format(
         img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
+    
+    # minimize jaggedness in labels, often seen outside of the original 
+    # orthogonal direction, using pre-mirrored slices only since rest will 
+    # be overwritten
+    img_smoothed = img_np[:mirrori]
+    smooth_labels(img_smoothed)
     print("total labels before reflection: {}".format(np.unique(img_np).size))
     img_np = _mirror_planes(img_np, mirrori, -1)
     print("total labels after reflection up to set midline ({}): {}"

@@ -124,18 +124,22 @@ class DiscreteColormap(colors.ListedColormap):
     discrete colormap and associated normalization object.
     
     Attributes:
+        cmap_labels: Tuple of N lists of RGBA values, where N is equal 
+            to the number of colors, with a discrete color for each 
+            unique value in ``labels``.
         norm: Normalization object, which is of type 
             :class:``matplotlib.colors.NoNorm`` if indexing directly or 
             :class:``matplotlib.colors.BoundaryNorm`` if otherwise.
     '''
-    def __init__(self, labels, seed=None, alpha=150, index_direct=True, 
+    def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
                  multiplier=255, offset=0, background=None):
         '''Generate discrete colormap for labels using 
         :func:``lib_clrbrain.discrete_colormap``.
         
         Args:
             labels: Labels of integers for which a distinct color should be 
-                mapped to each unique label.
+                mapped to each unique label. Deafults to None, in which case 
+                no colormap will be generated.
             seed: Seed for randomizer to allow consistent colormap between 
                 runs; defaults to None.
             alpha: Transparency leve; defaults to 150 for semi-transparent.
@@ -153,6 +157,7 @@ class DiscreteColormap(colors.ListedColormap):
                 and RGBA value will replace the color corresponding to that 
                 label. Defaults to None.
         '''
+        if labels is None: return
         self.norm = None
         labels_unique = np.unique(labels)
         num_colors = len(np.unique(labels))
@@ -163,18 +168,42 @@ class DiscreteColormap(colors.ListedColormap):
             # labels themselves serve as bounds, allowing for large gaps 
             # between labels while assigning each label to a unique color
             self.norm = colors.BoundaryNorm(labels_unique, num_colors)
-        cmap_labels = lib_clrbrain.discrete_colormap(
+        self.cmap_labels = lib_clrbrain.discrete_colormap(
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
             multiplier=multiplier, offset=offset)
         if background is not None:
             # replace backgound label color with given color
             bkgdi = np.where(labels_unique == background[0])
             if len(bkgdi) > 0 and bkgdi[0].size > 0:
-                cmap_labels[bkgdi[0][0]] = background[1]
+                self.cmap_labels[bkgdi[0][0]] = background[1]
+        self.make_cmap()
+    
+    def make_cmap(self):
         # listed rather than linear cmap since num of colors should equal num 
         # of possible vals, without requiring interpolation
         super(DiscreteColormap, self).__init__(
-            cmap_labels / 255.0, "discrete_cmap")
+            self.cmap_labels / 255.0, "discrete_cmap")
+    
+    def modified_cmap(self, adjust):
+        """Make a modified discrete colormap from itself.
+        
+        Args:
+            adjust: Value by which to adjust RGB (not A) values.
+        
+        Returns:
+            New ``DiscreteColormap`` instance with ``norm`` pointing to first 
+            instance and ``cmap_labels`` incremented by the given value.
+        """
+        cmap = DiscreteColormap()
+        # TODO: consider whether to copy instead
+        cmap.norm = self.norm
+        cmap.cmap_labels = np.copy(self.cmap_labels)
+        # labels are uint8 so should already fit within RGB bounds; colors 
+        # that exceed these bounds will likely have slightly different tones 
+        # since RGB vals will not change uniformly
+        cmap.cmap_labels[:, :3] += adjust
+        cmap.make_cmap()
+        return cmap
 
 def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
     """Scroll through overview images along their orthogonal axis.

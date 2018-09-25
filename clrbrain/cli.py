@@ -907,6 +907,11 @@ def process_file(filename_base, offset, roi_size):
         config.labels_ref = register.load_labels_ref(config.load_labels)
         config.labels_ref_lookup = register.create_aba_reverse_lookup(
             config.labels_ref)
+        try:
+            config.borders_img = register.load_registered_img(
+                config.filename, reg_name=register.IMG_BORDERS)
+        except FileNotFoundError as e:
+            print(e)
     
     
     # PROCESS BY TYPE

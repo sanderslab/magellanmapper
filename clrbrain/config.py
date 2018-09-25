@@ -601,6 +601,7 @@ labels_ref = None
 labels_ref_lookup = None
 labels_level = None
 labels_mirror = True
+borders_img = None
 REGISTER_TYPES = (
     "single", "group", "overlays", "volumes", "densities", "export_vols", 
     "export_regions", "new_atlas", "import_atlas")

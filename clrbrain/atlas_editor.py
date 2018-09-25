@@ -15,7 +15,8 @@ from clrbrain import plot_editor
 from clrbrain import plot_support
 
 class AtlasEditor:
-    def __init__(self, image5d, labels_img, channel, offset, fn_close_listener):
+    def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
+                 borders_img=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself.
         
         Args:
@@ -29,6 +30,7 @@ class AtlasEditor:
         self.channel = channel
         self.offset = offset
         self.fn_close_listener = fn_close_listener
+        self.borders_img = borders_img
         
         self.plot_eds = {}
         self.alpha_slider = None
@@ -46,6 +48,12 @@ class AtlasEditor:
         colormaps = config.process_settings["channel_colors"]
         cmap_labels = plot_support.DiscreteColormap(
             self.labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
+        cmap_borders = None
+        if self.borders_img is not None:
+            # brightest colormap for original (channel 0) borders
+            cmap_borders = [
+                cmap_labels.modified_cmap(int(40 / (channel + 1)))
+                for channel in range(self.borders_img.shape[-1])]
         coord = list(self.offset[::-1])
         
         # transparency controls
@@ -74,11 +82,17 @@ class AtlasEditor:
             ax = plt.subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
             max_size = plot_support.max_plane(self.image5d[0], plane)
+            arrs_3d = [self.image5d[0], self.labels_img]
+            if self.borders_img is not None:
+                # overlay borders if available
+                arrs_3d.append(self.borders_img)
             arrs_3d, arrs_1d, aspect, origin = plot_support.transpose_images(
-                plane, [self.image5d[0], self.labels_img], 
-                [config.labels_scaling])
+                plane, arrs_3d, [config.labels_scaling])
             img3d_transposed = arrs_3d[0]
             labels_img_transposed = arrs_3d[1]
+            borders_img_transposed = None
+            if len(arrs_3d) >= 3:
+                borders_img_transposed = arrs_3d[2]
             scaling = arrs_1d[0]
             
             # slider through image planes
@@ -91,7 +105,8 @@ class AtlasEditor:
             plot_ed = plot_editor.PlotEditor(
                 ax, img3d_transposed, labels_img_transposed, cmap_labels, 
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
-                scaling, plane_slider)
+                scaling, plane_slider, img3d_borders=borders_img_transposed, 
+                cmap_borders=cmap_borders)
             return plot_ed
         
         # setup plot editor for all 3 orthogonal directions

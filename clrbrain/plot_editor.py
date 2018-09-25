@@ -16,7 +16,7 @@ class PlotEditor:
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
                  aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
-                 plane_slider):
+                 plane_slider, img3d_borders=None, cmap_borders=None):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
@@ -30,6 +30,8 @@ class PlotEditor:
         self.scaling = config.labels_scaling if scaling is None else scaling
         self.plane_slider = plane_slider
         self.plane_slider.on_changed(self.update_plane_slider)
+        self.img3d_borders = img3d_borders
+        self.cmap_borders = cmap_borders
         
         self.intensity = None
         self.cidpress = None
@@ -107,6 +109,17 @@ class PlotEditor:
         self.axes.format_coord = PixelDisplay(img2d)
         self.plane_slider.set_val(self.coord[0])
         self.ax_img = label_ax_img[0]
+        
+        # show borders image
+        if self.img3d_borders is not None:
+            img2d = self.img3d_borders[self.coord[0]]
+            for channel in range(img2d.shape[-1] - 1, -1, -1):
+                # show first (original) borders image last so that its 
+                # colormap values take precedence to highlight original bounds
+                cmap = self.cmap_borders[channel]
+                plot_support.imshow_multichannel(
+                    self.axes, img2d[..., channel], 0, [cmap], self.aspect, 1, 
+                    origin=self.origin, interpolation="none", norms=[cmap.norm])
         
         if self.xlim is not None and self.ylim is not None:
             self.axes.set_xlim(self.xlim)

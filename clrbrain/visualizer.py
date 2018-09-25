@@ -777,7 +777,7 @@ class Visualization(HasTraits):
             # created within AtlasEditor will be garbage collected
             self.atlas_ed = atlas_editor.AtlasEditor(
                 cli.image5d, config.labels_img, config.channel, curr_offset, 
-                self._fig_close_listener)
+                self._fig_close_listener, borders_img=config.borders_img)
             self.atlas_ed.show_atlas()
         else:
             # defaults to Square style without oblique view

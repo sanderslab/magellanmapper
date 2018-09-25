@@ -1442,6 +1442,9 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS,
     """
     reg_img_path = _reg_out_path(img_path, reg_name)
     print("loading registered image from {}".format(reg_img_path))
+    if not os.path.exists(reg_img_path):
+        raise FileNotFoundError(
+            "{} registered image file not found".format(reg_img_path))
     reg_img = sitk.ReadImage(reg_img_path)
     if replace is not None:
         reg_img = replace_sitk_with_numpy(reg_img, replace)

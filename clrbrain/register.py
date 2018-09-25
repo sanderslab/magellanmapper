@@ -526,7 +526,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         weighted_size_ratio += size_smoothed / size_orig * size_orig
         tot_pxs += size_orig
     weighted_size_ratio /= tot_pxs
-    print("\nSize ratio (smoothed:orig) weighted by orig size: {}\n"
+    print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"
           .format(weighted_size_ratio))
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
@@ -685,12 +685,14 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
                 fixed_img, result_img_for_overlap, transformed_thresh=1)
     return result_imgs
 
-def _measure_overlap_labels(fixed_img, labels_img):
-    # check overlap based on labels images; should be 1.0 by def
+def _measure_overlap_combined_labels(fixed_img, labels_img):
+    # check overlap based on combined labels images; should be 1.0 by def 
+    # when using labels img to curate fixed img
     result_img_np = sitk.GetArrayFromImage(labels_img)
     result_img_np[result_img_np != 0] = 2
     result_img_for_overlap = replace_sitk_with_numpy(
         labels_img, result_img_np)
+    print("\nDSC compared with combined labels:")
     measure_overlap(
         fixed_img, result_img_for_overlap, transformed_thresh=1)
 
@@ -785,8 +787,7 @@ def import_atlas(atlas_dir, show=True):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    print("DSC compared with labels")
-    _measure_overlap_labels(img_atlas, img_labels)
+    _measure_overlap_combined_labels(img_atlas, img_labels)
     
     if show:
        sitk.Show(img_atlas)
@@ -981,8 +982,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         fixed_img_orig, transformed_img, 
         transformed_thresh=settings["atlas_threshold"])
     
-    print("DSC compared with labels")
-    _measure_overlap_labels(fixed_img_orig, labels_img_full)
+    _measure_overlap_combined_labels(fixed_img_orig, labels_img_full)
     
     # show overlays last since blocks until fig is closed
     #_show_overlays(imgs, translation, fixed_file, None)
@@ -1026,7 +1026,7 @@ def measure_overlap_labels(fixed_img, transformed_img):
     # fixed_img is 64-bit float (double), while transformed_img is 32-bit
     overlap_filter.Execute(fixed_img, transformed_img)
     mean_region_dsc = overlap_filter.GetDiceCoefficient()
-    print("Mean regional DSC: {}".format(mean_region_dsc))
+    print("Mean regional (label-by-label) DSC: {}".format(mean_region_dsc))
     return mean_region_dsc
 
 def _crop_image(img_np, labels_img, axis, eraser=None):

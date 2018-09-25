@@ -73,6 +73,7 @@ IMG_LABELS = "annotation.mhd"
 IMG_EXP = "exp.mhd"
 IMG_GROUPED = "grouped.mhd"
 IMG_ATLAS_TEMPLATE = "atlasVolumeTemplate.mhd"
+IMG_BORDERS = "borders.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -400,20 +401,34 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
     # profile setting
     if extent is not None and extent[1] is not None:
         mirrori = int(extent[1] * tot_planes)
-    lib_clrbrain.printv("type: {}, max: {}, max avail: {}".format(
-        img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     
     # minimize jaggedness in labels, often seen outside of the original 
     # orthogonal direction, using pre-mirrored slices only since rest will 
     # be overwritten
     img_smoothed = img_np[:mirrori]
+    img_smoothed_orig = np.copy(img_smoothed)
     smooth_labels(img_smoothed)
+    
+    # calculate smoothing metric with borders image
+    borders, metric = label_smoothing_metric(img_smoothed_orig, img_smoothed)
+    shape = list(borders.shape)
+    shape[0] = img_np.shape[0]
+    borders_img_np = np.zeros(shape, dtype=np.int32)
+    borders_img_np[:mirrori] = borders
+    
+    # check that labels will fit in integer type
+    lib_clrbrain.printv(
+        "type: {}, max: {}, max avail: {}".format(
+            img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
+    
+    # mirror and check for label loss
     print("total labels before reflection: {}".format(np.unique(img_np).size))
     img_np = _mirror_planes(img_np, mirrori, -1)
+    borders_img_np = _mirror_planes(borders_img_np, mirrori, -1)
     print("total labels after reflection up to set midline ({}): {}"
           .format(mirrori, np.unique(img_np[:mirrori]).size))
     print("total final labels: {}".format(np.unique(img_np).size))
-    return img_np, (extendi, mirrori)
+    return img_np, (extendi, mirrori), borders_img_np
 
 def replace_sitk_with_numpy(img_sitk, img_np):
     spacing = img_sitk.GetSpacing()
@@ -530,6 +545,85 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     weighted_size_ratio /= tot_pxs
     print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"
           .format(weighted_size_ratio))
+
+def label_smoothing_metric(orig_img_np, smoothed_img_np):
+    """Measure degree of appropriate smoothing, defined as smoothing that 
+    retains the general shape and placement of the region. 
+    
+    Compare the difference in size of a broad, smooth volume encompassing 
+    ragged edges before and after the smoothing algorithm, giving a measure 
+    of reduction in size and thus increase in compactness by smoothing. 
+    To penalize inappropriate smoothing, the smoothed volume lying outside 
+    of the original broad volume is subtracted from this size reduction, 
+    accounting for unwanted deformation that brings the region outside of 
+    its original bounds.
+    
+    Args:
+        original_img_np: Unsmoothed labels image as Numpy array.
+        smoothing_img_np: Smoothed labels image as Numpy array, which 
+            should be of the same shape as ``original_img_np``.
+    
+    Returns:
+        Tuple of ``borders_img_np``, a Numpy array of the same same as 
+        ``original_img_np`` except with an additional channel dimension at 
+        the end, where channel 0 contains the broad borders of the 
+        original image's labels, and channel 1 is that of the smoothed image; 
+        and ``tot_metric``, the smoothing metric as a float value.
+    """
+    # prepare borders image with channel for each set of borders
+    shape = list(orig_img_np.shape)
+    shape.append(2)
+    borders_img_np = np.zeros(shape, dtype=np.int32)
+    
+    # pepare labels and default selem used to find "broad volume"
+    label_ids = np.unique(orig_img_np)
+    selem = morphology.ball(2)
+    
+    def broad_borders(img_np, channel):
+        # use closing filter to approximate volume encompassing rough edges
+        label_mask = img_np == label_id
+        filtered = morphology.binary_closing(label_mask, selem)
+        # erode and subtract from closed volume to get borders for 
+        # displaying change in volume
+        interior = morphology.binary_erosion(filtered)
+        # ensure that border at far edge will be closed
+        #interior[len(interior) - 1] = False
+        filtered_border = np.logical_xor(filtered, interior)
+        nonlocal borders_img_np
+        borders_img_np[filtered_border, channel] = label_id
+        '''
+        # write borders directly on image
+        nonlocal smoothed_img_np
+        smoothed_img_np[filtered_border] = label_id + 1e6
+        '''
+        return filtered
+    
+    tot_metric = 0
+    tot_size = 0
+    for label_id in label_ids:
+        # calculate metric for each label, skipping background since it will 
+        # be incorporated in other labels and otherwise dominates the 
+        # overall value
+        if label_id == 0: continue
+        print("finding border for {}".format(label_id))
+        broad_orig = broad_borders(orig_img_np, 0)
+        broad_smoothed = broad_borders(smoothed_img_np, 1)
+        size_orig = np.sum(broad_orig)
+        # reduction in broad volumes
+        frac_reduced = (
+            1 - np.sum(np.logical_and(broad_orig, broad_smoothed)) / size_orig)
+        # expansion past original values (penalty)
+        frac_expanded = (
+            np.sum(np.logical_and(broad_smoothed, ~broad_orig)) / size_orig)
+        # overall metric for label weighted by original size
+        metric = (frac_reduced - frac_expanded) * size_orig
+        tot_size += size_orig
+        tot_metric += metric
+        print("frac_reduced: {}, frac_expanded: {}, metric: {}"
+              .format(frac_reduced, frac_expanded, metric))
+    if tot_size > 0: tot_metric /= tot_size
+    print("Smoothing metric: {}".format(tot_metric))
+    return borders_img_np, tot_metric
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
@@ -748,12 +842,13 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
 
 def match_atlas_labels(img_atlas, img_labels):
     mirror = config.register_settings["labels_mirror"]
+    img_borders = None
     if mirror:
         # mirror and truncate labels for labels for only half the brain, 
         # such as for ABA E18pt5, unlike P56
         expand = config.register_settings["expand_labels"]
         rotate = config.register_settings["rotate"]
-        img_labels_np, mirror_indices = _mirror_labels(
+        img_labels_np, mirror_indices, borders_img_np = _mirror_labels(
             img_labels, img_atlas, mirror, expand, rotate)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
         img_atlas_np = sitk.GetArrayFromImage(img_atlas)
@@ -762,11 +857,14 @@ def match_atlas_labels(img_atlas, img_labels):
                 img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
         img_atlas_np = _mirror_planes(img_atlas_np, mirror_indices[1])
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
+        
+        img_borders = replace_sitk_with_numpy(img_labels, borders_img_np)
+        img_borders = transpose_img(img_borders, config.plane, False)
     
     # transpose to given plane
     img_atlas = transpose_img(img_atlas, config.plane, False)
     img_labels = transpose_img(img_labels, config.plane, False)
-    return img_atlas, img_labels
+    return img_atlas, img_labels, img_borders
 
 def import_atlas(atlas_dir, show=True):
     # load atlas and corresponding labels
@@ -774,7 +872,7 @@ def import_atlas(atlas_dir, show=True):
     img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
     
     #img_labels_np = None
-    img_atlas, img_labels = match_atlas_labels(img_atlas, img_labels)
+    img_atlas, img_labels, img_borders = match_atlas_labels(img_atlas, img_labels)
     
     truncate = config.register_settings["truncate_labels"]
     if truncate:
@@ -801,7 +899,8 @@ def import_atlas(atlas_dir, show=True):
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
     name_prefix = os.path.join(target_dir, os.path.basename(atlas_dir)) + ".czi"
-    imgs_write = {IMG_ATLAS: img_atlas, IMG_LABELS: img_labels}
+    imgs_write = {
+        IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}
     for suffix in imgs_write.keys():
         out_path = _reg_out_path(name_prefix, suffix)
         sitk.WriteImage(imgs_write[suffix], out_path, False)

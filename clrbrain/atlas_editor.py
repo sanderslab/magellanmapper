@@ -45,7 +45,7 @@ class AtlasEditor:
         # set up the image to display
         colormaps = config.process_settings["channel_colors"]
         cmap_labels = plot_support.DiscreteColormap(
-            self.labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 255)))
+            self.labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
         coord = list(self.offset[::-1])
         
         # transparency controls

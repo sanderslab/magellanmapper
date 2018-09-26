@@ -546,7 +546,8 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"
           .format(weighted_size_ratio))
 
-def label_smoothing_metric(orig_img_np, smoothed_img_np):
+def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2, 
+                           penalty_wt=1.0):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region. 
     
@@ -562,6 +563,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         original_img_np: Unsmoothed labels image as Numpy array.
         smoothing_img_np: Smoothed labels image as Numpy array, which 
             should be of the same shape as ``original_img_np``.
+        filter_size: Structuring element size for determining the filled, 
+            broad volume of each label. Defaults to 2. Larger sizes 
+            favor greater smoothing in the final labels.
+        penalty_wt: Weighting factor for the penalty term, where larger 
+            values favor labels that remain within their original bounds. 
+            Defaults to 1.0, which is neutral and does not penalize 
+            expansion beyond borders any more than increase in label volume.
     
     Returns:
         Tuple of ``borders_img_np``, a Numpy array of the same same as 
@@ -570,6 +578,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         original image's labels, and channel 1 is that of the smoothed image; 
         and ``tot_metric``, the smoothing metric as a float value.
     """
+    print("Calculating smoothing metrics with filter size of {}, "
+          "penalty weighting factor of {}".format(filter_size, penalty_wt))
     # prepare borders image with channel for each set of borders
     shape = list(orig_img_np.shape)
     shape.append(2)
@@ -577,7 +587,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
     
     # pepare labels and default selem used to find "broad volume"
     label_ids = np.unique(orig_img_np)
-    selem = morphology.ball(2)
+    selem = morphology.ball(filter_size)
     
     def broad_borders(img_np, channel):
         # use closing filter to approximate volume encompassing rough edges
@@ -614,7 +624,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
             1 - np.sum(np.logical_and(broad_orig, broad_smoothed)) / size_orig)
         # expansion past original values (penalty)
         frac_expanded = (
-            np.sum(np.logical_and(broad_smoothed, ~broad_orig)) / size_orig)
+            np.sum(np.logical_and(broad_smoothed, ~broad_orig)) / size_orig 
+            * penalty_wt)
         # overall metric for label weighted by original size
         metric = (frac_reduced - frac_expanded) * size_orig
         tot_size += size_orig

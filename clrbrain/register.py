@@ -453,6 +453,8 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
             reduced, in which case a closing filter is applied instead; and 
             ``gaussian`` applies a Gaussian blur.
     """
+    print("Smoothing labels with filter size of {}, mode {}"
+          .format(filter_size, mode))
     # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
     
@@ -580,6 +582,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
     """
     print("Calculating smoothing metrics with filter size of {}, "
           "penalty weighting factor of {}".format(filter_size, penalty_wt))
+    start_time = time()
     # prepare borders image with channel for each set of borders
     shape = list(orig_img_np.shape)
     shape.append(2)
@@ -634,6 +637,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
               .format(frac_reduced, frac_expanded, metric))
     if tot_size > 0: tot_metric /= tot_size
     print("Smoothing metric: {}".format(tot_metric))
+    print("time elapsed for smoothing metric (s): {}"
+          .format(time() - start_time))
     return borders_img_np, tot_metric
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):

@@ -209,10 +209,19 @@ def _get_bbox(img_np, threshold=10):
     #print("bbox: {}".format(labels_bbox))
     return labels_bbox
 
-def _get_bbox_region(bbox):
-    dims = len(bbox) // 2 # bbox has min vals for dims, then maxes
+def _get_bbox_region(bbox, padding=0, img_shape=None):
+    dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes
     shape = [bbox[i + dims] - bbox[i] for i in range(dims)]
-    slices = [slice(bbox[i], bbox[i] + shape[i]) for i in range(dims)]
+    slices = []
+    for i in range(dims):
+        # add padding for slices and update shape
+        start = bbox[i] - padding
+        stop = bbox[i] + shape[i] + padding
+        if img_shape is not None:
+            if start < 0: start = 0
+            if stop >= img_shape[i]: stop = img_shape[i]
+        slices.append(slice(start, stop))
+        shape[i] = stop - start
     #print("shape: {}, slices: {}".format(shape, slices))
     return shape, slices
 
@@ -477,7 +486,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         if len(props) < 1: continue
         bbox = props[0].bbox
         if bbox is None: continue
-        shape, slices = _get_bbox_region(bbox)
+        shape, slices = _get_bbox_region(bbox, filter_size, labels_img_np.shape)
         
         # get region, skipping if no region left
         region = labels_img_np[slices]

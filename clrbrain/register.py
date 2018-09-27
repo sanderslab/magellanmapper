@@ -642,8 +642,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
         broad_smoothed = broad_borders(smoothed_img_np, slices, label_id, 1)
         size_orig = np.sum(broad_orig)
         # reduction in broad volumes
-        frac_reduced = (
-            1 - np.sum(np.logical_and(broad_orig, broad_smoothed)) / size_orig)
+        frac_reduced = 1 - np.sum(broad_smoothed) / size_orig
         # expansion past original values (penalty)
         frac_expanded = (
             np.sum(np.logical_and(broad_smoothed, ~broad_orig)) / size_orig 

@@ -486,7 +486,8 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         if len(props) < 1: continue
         bbox = props[0].bbox
         if bbox is None: continue
-        shape, slices = _get_bbox_region(bbox, filter_size, labels_img_np.shape)
+        _, slices = _get_bbox_region(
+            bbox, 2 * filter_size, labels_img_np.shape)
         
         # get region, skipping if no region left
         region = labels_img_np[slices]
@@ -601,23 +602,20 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
     label_ids = np.unique(orig_img_np)
     selem = morphology.ball(filter_size)
     
-    def broad_borders(img_np, channel):
+    def broad_borders(img_np, slices, label_id, channel):
         # use closing filter to approximate volume encompassing rough edges
-        label_mask = img_np == label_id
-        filtered = morphology.binary_closing(label_mask, selem)
+        # get region, skipping if no region left
+        region = img_np[slices]
+        label_mask_region = region == label_id
+        filtered = morphology.binary_closing(label_mask_region, selem)
+        
         # erode and subtract from closed volume to get borders for 
         # displaying change in volume
         interior = morphology.binary_erosion(filtered)
-        # ensure that border at far edge will be closed
-        #interior[len(interior) - 1] = False
         filtered_border = np.logical_xor(filtered, interior)
         nonlocal borders_img_np
-        borders_img_np[filtered_border, channel] = label_id
-        '''
-        # write borders directly on image
-        nonlocal smoothed_img_np
-        smoothed_img_np[filtered_border] = label_id + 1e6
-        '''
+        borders_region = borders_img_np[slices]
+        borders_region[filtered_border, channel] = label_id
         return filtered
     
     tot_metric = 0
@@ -628,8 +626,20 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
         # overall value
         if label_id == 0: continue
         print("finding border for {}".format(label_id))
-        broad_orig = broad_borders(orig_img_np, 0)
-        broad_smoothed = broad_borders(smoothed_img_np, 1)
+        
+        # use bounding box that fits around label in both original and 
+        # smoothed image to improve efficiency over filtering whole image
+        label_mask = np.logical_or(
+            orig_img_np == label_id, smoothed_img_np == label_id)
+        props = measure.regionprops(label_mask.astype(np.int))
+        if len(props) < 1: continue
+        bbox = props[0].bbox
+        if bbox is None: continue
+        _, slices = _get_bbox_region(bbox, 2 * filter_size, orig_img_np.shape)
+        
+        # get broad, filled volumes
+        broad_orig = broad_borders(orig_img_np, slices, label_id, 0)
+        broad_smoothed = broad_borders(smoothed_img_np, slices, label_id, 1)
         size_orig = np.sum(broad_orig)
         # reduction in broad volumes
         frac_reduced = (

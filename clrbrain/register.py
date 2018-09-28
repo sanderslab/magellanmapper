@@ -620,7 +620,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
     
     tot_metric = 0
     tot_size = 0
-    fracs = []
+    fracs = [("frac_reduced", "frac_expanded", "siz_orig")]
     for label_id in label_ids:
         # calculate metric for each label, skipping background since it will 
         # be incorporated in other labels and otherwise dominates the 
@@ -657,12 +657,10 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
               .format(frac_reduced, frac_expanded, metric))
     if tot_size > 0: tot_metric /= tot_size
     
-    # print metric components for easy copy-paste
-    fracs = np.array(fracs)
-    headers = ("frac_reduced:", "frac_expanded:", "siz_orig:")
-    for i, header in enumerate(headers):
-        print("\n{}".format(header))
-        for e in fracs[:, 0]: print(e)
+    print()
+    for frac in fracs:
+        # print tab-delimited metric components to export to spreadsheets
+        print("\t".join(str(f) for f in frac))
     print("\nSmoothing metric: {}".format(tot_metric))
     print("time elapsed for smoothing metric (s): {}"
           .format(time() - start_time))

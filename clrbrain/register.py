@@ -209,22 +209,6 @@ def _get_bbox(img_np, threshold=10):
     #print("bbox: {}".format(labels_bbox))
     return labels_bbox
 
-def _get_bbox_region(bbox, padding=0, img_shape=None):
-    dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes
-    shape = [bbox[i + dims] - bbox[i] for i in range(dims)]
-    slices = []
-    for i in range(dims):
-        # add padding for slices and update shape
-        start = bbox[i] - padding
-        stop = bbox[i] + shape[i] + padding
-        if img_shape is not None:
-            if start < 0: start = 0
-            if stop >= img_shape[i]: stop = img_shape[i]
-        slices.append(slice(start, stop))
-        shape[i] = stop - start
-    #print("shape: {}, slices: {}".format(shape, slices))
-    return shape, slices
-
 def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
     """Truncate image by zero-ing out pixels outside of given bounds.
     
@@ -350,7 +334,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
         bbox = _get_bbox(img_ref_np[extendi])
         if bbox is None:
             break
-        shape, slices = _get_bbox_region(bbox)
+        shape, slices = plot_3d.get_bbox_region(bbox)
         if plane_region is None:
             plane_region = img_np[extendi, slices[0], slices[1]]
             # remove ventricular space using empirically determined selem, 
@@ -379,10 +363,10 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
             for extendi in range(len(region_ref)):
                 # find bounding boxes for labels and atlas within region
                 bbox = _get_bbox(region[extendi], 0) # assume pos labels region
-                shape, slices = _get_bbox_region(bbox)
+                shape, slices = plot_3d.get_bbox_region(bbox)
                 plane_region = region[extendi, slices[0], slices[1]]
                 bbox_ref = _get_bbox(region_ref[extendi])
-                shape_ref, slices_ref = _get_bbox_region(bbox_ref)
+                shape_ref, slices_ref = plot_3d.get_bbox_region(bbox_ref)
                 # expand bounding box region of labels to that of atlas
                 plane_region = transform.resize(
                     plane_region, shape_ref, preserve_range=True, order=0, 
@@ -481,12 +465,9 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         print("smoothing label ID {}".format(label_id))
         
         # get bounding box for label region
-        label_mask = labels_img_np == label_id
-        props = measure.regionprops(label_mask.astype(np.int))
-        if len(props) < 1: continue
-        bbox = props[0].bbox
+        bbox = plot_3d.get_label_bbox(labels_img_np, label_id)
         if bbox is None: continue
-        _, slices = _get_bbox_region(
+        _, slices = plot_3d.get_bbox_region(
             bbox, 2 * filter_size, labels_img_np.shape)
         
         # get region, skipping if no region left
@@ -633,10 +614,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         label_mask = np.logical_or(
             orig_img_np == label_id, smoothed_img_np == label_id)
         props = measure.regionprops(label_mask.astype(np.int))
-        if len(props) < 1: continue
-        bbox = props[0].bbox
-        if bbox is None: continue
-        _, slices = _get_bbox_region(bbox, 2 * filter_size, orig_img_np.shape)
+        if len(props) < 1 or props[0].bbox is None: continue
+        _, slices = plot_3d.get_bbox_region(
+            props[0].bbox, 2 * filter_size, orig_img_np.shape)
         
         # get broad, filled volumes
         broad_orig = broad_borders(orig_img_np, slices, label_id, 0)

@@ -296,6 +296,30 @@ def rotate_nd(img_np, angle, axis=0, order=1):
         rotated[slices] = img2d
     return rotated
 
+def get_bbox_region(bbox, padding=0, img_shape=None):
+    dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes
+    shape = [bbox[i + dims] - bbox[i] for i in range(dims)]
+    slices = []
+    for i in range(dims):
+        # add padding for slices and update shape
+        start = bbox[i] - padding
+        stop = bbox[i] + shape[i] + padding
+        if img_shape is not None:
+            if start < 0: start = 0
+            if stop >= img_shape[i]: stop = img_shape[i]
+        slices.append(slice(start, stop))
+        shape[i] = stop - start
+    #print("shape: {}, slices: {}".format(shape, slices))
+    return shape, slices
+
+def get_label_bbox(labels_img_np, label_id):
+    label_mask = labels_img_np == label_id
+    print(np.sum(label_mask))
+    props = measure.regionprops(label_mask.astype(np.int))
+    bbox = None
+    if len(props) >= 1: bbox = props[0].bbox
+    return bbox
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

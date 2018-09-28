@@ -398,12 +398,12 @@ class Visualization(HasTraits):
             vis = (plot_3d.mlab_3d, settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering
-                plot_3d.plot_3d_surface(self.roi, self, config.channel)
+                plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
                 self._scene_3d_shown = True
             else:
                 # 3D point rendering
                 self._scene_3d_shown = plot_3d.plot_3d_points(
-                    self.roi, self, config.channel)
+                    self.roi, self.scene.mlab, config.channel)
             
             # process ROI in prep for showing filtered 2D view and segmenting
             if not lib_clrbrain.is_binary(self.roi):

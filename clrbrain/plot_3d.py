@@ -345,20 +345,22 @@ def make_isotropic(roi, scale):
         roi, isotropic_shape, preserve_range=True, mode=mode, 
         anti_aliasing=True)
 
-def plot_3d_surface(roi, vis, channel):
+def plot_3d_surface(roi, scene_mlab, channel, segment=False):
     """Plots areas with greater intensity as 3D surfaces.
     
     Args:
         roi: Region of interest.
-        vis: Visualization object on which to draw the contour. Any 
+        scene_mlab: ``MayaviScene.mlab`` attribute to draw the contour. Any 
             current image will be cleared first.
+        segment: True to denoise and segment ``roi`` before displaying, 
+            which may remove artifacts that might otherwise lead to 
+            spurious surfaces. Defaults to False.
     """
     # Plot in Mayavi
     #mlab.figure()
     print("viewing 3D surface")
-    vis_mlab = vis.scene.mlab
-    pipeline = vis_mlab.pipeline
-    vis_mlab.clf()
+    pipeline = scene_mlab.pipeline
+    scene_mlab.clf()
     # saturate to remove noise and normalize values
     roi = saturate_roi(roi, 99, channel=channel)
     #roi = np.clip(roi, 0.2, 0.8)
@@ -380,18 +382,19 @@ def plot_3d_surface(roi, vis, channel):
         # clip to minimize sub-nuclear variation
         roi_show = np.clip(roi_show, 0.2, 0.8)
         
-        # denoising makes for much cleaner images but also seems to allow 
-        # structures to blend together. TODO: consider segmented individual 
-        # structures and rendering them as separate surfaces to avoid blending
-        roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.1)
-        
-        # build surface from segmented ROI
-        if to_segment:
-            _, walker = detector.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
-            roi_show *= np.subtract(walker[0], 1)
-        else:
-            print("deferring segmentation as {} px is above threshold"
-                  .format(num_pixels))
+        if segment:
+            # denoising makes for much cleaner images but also seems to allow 
+            # structures to blend together. TODO: consider segmented individual 
+            # structures and rendering them as separate surfaces to avoid blending
+            roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.1)
+            
+            # build surface from segmented ROI
+            if to_segment:
+                _, walker = detector.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
+                roi_show *= np.subtract(walker[0], 1)
+            else:
+                print("deferring segmentation as {} px is above threshold"
+                      .format(num_pixels))
         
         # ROI is in (z, y, x) order, so need to transpose or swap x,z axes
         roi_show = np.transpose(roi_show)
@@ -407,7 +410,7 @@ def plot_3d_surface(roi, vis, channel):
         surface.filter.relaxation_factor = 0.015
         # holes within cells?
         surface = pipeline.user_defined(surface, filter="Curvatures")
-        vis_mlab.pipeline.surface(surface)
+        scene_mlab.pipeline.surface(surface)
         
         # colorizes
         module_manager = surface.children[0]
@@ -439,7 +442,7 @@ def plot_3d_surface(roi, vis, channel):
     
     print("time to render 3D surface: {}".format(time() - time_start))
     
-def plot_3d_points(roi, vis, channel):
+def plot_3d_points(roi, scene_mlab, channel):
     """Plots all pixels as points in 3D space.
     
     Points falling below a given threshold will be
@@ -449,7 +452,7 @@ def plot_3d_points(roi, vis, channel):
     Args:
         roi: Region of interest either as a 3D (z, y, x) or 
             4D (z, y, x, channel) ndarray.
-        vis: Visualization object on which to draw the contour. Any 
+        scene_mlab: ``MayaviScene.mlab`` attribute to draw the contour. Any 
             current image will be cleared first.
         channel: Channel to select, which can be None to indicate all 
             channels.
@@ -458,7 +461,7 @@ def plot_3d_points(roi, vis, channel):
         True if points were rendered, False if no points to render.
     """
     print("plotting as 3D points")
-    vis.scene.mlab.clf()
+    scene_mlab.clf()
     settings = config.process_settings
     
     # streamline the image
@@ -510,7 +513,7 @@ def plot_3d_points(roi, vis, channel):
         # TODO: better performance if manually interval the points rather than 
         # through mask flag?
         #roi_show_1d = roi_show_1d[::mask]
-        pts = vis.scene.mlab.points3d(
+        pts = scene_mlab.points3d(
             np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
             roi_show_1d, mode="sphere", colormap=_MAYAVI_COLORMAPS[i], 
             scale_mode="scalar", mask_points=mask, line_width=1.0, vmax=1.0, 

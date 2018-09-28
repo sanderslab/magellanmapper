@@ -558,7 +558,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"
           .format(weighted_size_ratio))
 
-def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2, 
+def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4, 
                            penalty_wt=1.0):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region. 
@@ -576,7 +576,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=2,
         smoothing_img_np: Smoothed labels image as Numpy array, which 
             should be of the same shape as ``original_img_np``.
         filter_size: Structuring element size for determining the filled, 
-            broad volume of each label. Defaults to 2. Larger sizes 
+            broad volume of each label. Defaults to 4. Larger sizes 
             favor greater smoothing in the final labels.
         penalty_wt: Weighting factor for the penalty term, where larger 
             values favor labels that remain within their original bounds. 

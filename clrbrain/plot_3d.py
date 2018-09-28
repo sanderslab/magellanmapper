@@ -434,7 +434,7 @@ def plot_3d_surface(roi, vis, channel):
             print(e)
             print("ignoring min/max contour for now")
         isotropic = settings["isotropic_vis"]
-        if isotropic is None:
+        if isotropic is not None:
             surface.actor.actor.scale = isotropic[::-1]
     
     print("time to render 3D surface: {}".format(time() - time_start))

@@ -601,12 +601,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     
     tot_metric = 0
     tot_size = 0
-    pxs = [("pxs_reduced", "pxs_expanded", "size_orig")]
+    pxs = [("label_id", "pxs_reduced", "pxs_expanded", "size_orig")]
     for label_id in label_ids:
-        # calculate metric for each label, skipping background since it will 
-        # be incorporated in other labels and otherwise dominates the 
-        # overall value
-        if label_id == 0: continue
+        # calculate metric for each label
         print("finding border for {}".format(label_id))
         
         # use bounding box that fits around label in both original and 
@@ -622,16 +619,16 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         broad_orig = broad_borders(orig_img_np, slices, label_id, 0)
         broad_smoothed = broad_borders(smoothed_img_np, slices, label_id, 1)
         size_orig = np.sum(broad_orig)
-        # reduction in broad volumes
+        # reduction in broad volumes (compaction)
         pxs_reduced = size_orig - np.sum(broad_smoothed)
-        # expansion past original values (penalty)
+        # expansion past original values (displacement penalty)
         pxs_expanded = (
             np.sum(np.logical_and(broad_smoothed, ~broad_orig)) * penalty_wt)
-        # overall metric for label weighted by original size
         metric = pxs_reduced - pxs_expanded
-        tot_size += size_orig
+        # will normalize to total foreground
+        if label_id != 0: tot_size += size_orig
         tot_metric += metric
-        pxs.append((pxs_reduced, pxs_expanded, size_orig))
+        pxs.append((label_id, pxs_reduced, pxs_expanded, size_orig))
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
               .format(pxs_reduced, pxs_expanded, metric))
     if tot_size > 0: tot_metric /= tot_size

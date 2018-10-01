@@ -426,6 +426,17 @@ class Visualization(HasTraits):
         
         self._reset_segments()
     
+    def show_label_3d(self, label_id):
+        bbox = plot_3d.get_label_bbox(config.labels_img, label_id)
+        if bbox is None: return
+        _, slices = plot_3d.get_bbox_region(bbox, 10, config.labels_img.shape)
+        label_mask = config.labels_img[slices] == label_id
+        self.roi = np.copy(cli.image5d[0][slices])
+        self.roi[~label_mask] = 0
+        plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
+        #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
+        self._scene_3d_shown = True
+    
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.
         """
@@ -777,7 +788,8 @@ class Visualization(HasTraits):
             # created within AtlasEditor will be garbage collected
             self.atlas_ed = atlas_editor.AtlasEditor(
                 cli.image5d, config.labels_img, config.channel, curr_offset, 
-                self._fig_close_listener, borders_img=config.borders_img)
+                self._fig_close_listener, borders_img=config.borders_img, 
+                fn_show_label_3d=self.show_label_3d)
             self.atlas_ed.show_atlas()
         else:
             # defaults to Square style without oblique view

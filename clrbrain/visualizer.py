@@ -357,6 +357,18 @@ class Visualization(HasTraits):
                 if title is not None:
                     self._mlab_title = self.scene.mlab.title(title)
     
+    def _post_3d_display(self):
+        """Show axes and saved ROI parameters after 3D display.
+        """
+        if self._scene_3d_shown:
+            self.scene.mlab.orientation_axes()
+        # updates the GUI here even though it doesn't elsewhere for some reason
+        self.rois_check_list = _ROI_DEFAULT
+        self._img_region = None
+        #print("reset selected ROI to {}".format(self.rois_check_list))
+        #print("view: {}\nroll: {}".format(
+        #    self.scene.mlab.view(), self.scene.mlab.roll()))
+    
     def show_3d(self):
         """Shows the 3D plot.
         
@@ -427,15 +439,30 @@ class Visualization(HasTraits):
         self._reset_segments()
     
     def show_label_3d(self, label_id):
+        """Show 3D region of main image corresponding to label ID.
+        
+        Args:
+            label_id: ID of label to display.
+        """
+        # get bounding box for label region
         bbox = plot_3d.get_label_bbox(config.labels_img, label_id)
         if bbox is None: return
-        _, slices = plot_3d.get_bbox_region(bbox, 10, config.labels_img.shape)
+        shape, slices = plot_3d.get_bbox_region(
+            bbox, 10, config.labels_img.shape)
+        
+        # update GUI dimensions
+        self.roi_array = [shape[::-1]] # TODO: avoid decimal point
+        self.z_offset, self.y_offset, self.x_offset = [
+            slices[i].start for i in range(len(slices))]
+        self._scene_3d_shown = True
+        
+        # show main image corresponding to label region
         label_mask = config.labels_img[slices] == label_id
         self.roi = np.copy(cli.image5d[0][slices])
         self.roi[~label_mask] = 0
         plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
-        self._scene_3d_shown = True
+        self._post_3d_display()
     
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.
@@ -557,14 +584,7 @@ class Visualization(HasTraits):
     
     def _btn_redraw_trait_fired(self):
         self.show_3d()
-        if self._scene_3d_shown:
-            self.scene.mlab.orientation_axes()
-        # updates the GUI here even though it doesn't elsewhere for some reason
-        self.rois_check_list = _ROI_DEFAULT
-        self._img_region = None
-        #print("reset selected ROI to {}".format(self.rois_check_list))
-        #print("view: {}\nroll: {}".format(
-        #    self.scene.mlab.view(), self.scene.mlab.roll()))
+        self._post_3d_display()
     
     @on_trait_change("scene.activated")
     def _orient_camera(self):

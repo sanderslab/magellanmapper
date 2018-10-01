@@ -16,7 +16,8 @@ class PlotEditor:
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
                  aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
-                 plane_slider, img3d_borders=None, cmap_borders=None):
+                 plane_slider, img3d_borders=None, cmap_borders=None, 
+                 fn_show_label_3d=None):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
@@ -32,6 +33,7 @@ class PlotEditor:
         self.plane_slider.on_changed(self.update_plane_slider)
         self.img3d_borders = img3d_borders
         self.cmap_borders = cmap_borders
+        self.fn_show_label_3d = fn_show_label_3d
         
         self.intensity = None
         self.cidpress = None
@@ -178,6 +180,10 @@ class PlotEditor:
             # planes
             self.coord[1:] = y, x
             self.fn_update_coords(self.coord, self.plane)
+            
+            if event.key == "3" and self.fn_show_label_3d is not None:
+                # extract label ID and display in 3D viewer
+                self.fn_show_label_3d(self.img3d_labels[tuple(self.coord)])
     
     def on_axes_exit(self, event):
         if event.inaxes != self.axes: return

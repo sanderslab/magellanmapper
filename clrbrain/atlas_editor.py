@@ -16,14 +16,19 @@ from clrbrain import plot_support
 
 class AtlasEditor:
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
-                 borders_img=None):
+                 borders_img=None, fn_show_label_3d=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself.
         
         Args:
-            image5d: Numpy image array in t,z,y,x,c format.
+            image5d: Numpy image array in t,z,y,x,[c] format.
             channel: Channel of the image to display.
             offset: Index of plane at which to start viewing.
             fn_close_listener: Handle figure close events.
+            borders_img: Numpy image array in z,y,x,c format to show label 
+                borders, such as that generated during label smoothing. 
+                Defaults to None.
+            fn_show_label_3d: Function to call to show a label in a 
+                3D viewer.
         """
         self.image5d = image5d
         self.labels_img = labels_img
@@ -31,6 +36,7 @@ class AtlasEditor:
         self.offset = offset
         self.fn_close_listener = fn_close_listener
         self.borders_img = borders_img
+        self.fn_show_label_3d = fn_show_label_3d
         
         self.plot_eds = {}
         self.alpha_slider = None
@@ -106,7 +112,8 @@ class AtlasEditor:
                 ax, img3d_transposed, labels_img_transposed, cmap_labels, 
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
                 scaling, plane_slider, img3d_borders=borders_img_transposed, 
-                cmap_borders=cmap_borders)
+                cmap_borders=cmap_borders, 
+                fn_show_label_3d=self.fn_show_label_3d)
             return plot_ed
         
         # setup plot editor for all 3 orthogonal directions

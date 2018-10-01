@@ -314,7 +314,6 @@ def get_bbox_region(bbox, padding=0, img_shape=None):
 
 def get_label_bbox(labels_img_np, label_id):
     label_mask = labels_img_np == label_id
-    print(np.sum(label_mask))
     props = measure.regionprops(label_mask.astype(np.int))
     bbox = None
     if len(props) >= 1: bbox = props[0].bbox

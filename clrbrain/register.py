@@ -601,7 +601,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     
     tot_metric = 0
     tot_size = 0
-    fracs = [("frac_reduced", "frac_expanded", "siz_orig")]
+    pxs = [("pxs_reduced", "pxs_expanded", "size_orig")]
     for label_id in label_ids:
         # calculate metric for each label, skipping background since it will 
         # be incorporated in other labels and otherwise dominates the 
@@ -623,24 +623,23 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         broad_smoothed = broad_borders(smoothed_img_np, slices, label_id, 1)
         size_orig = np.sum(broad_orig)
         # reduction in broad volumes
-        frac_reduced = 1 - np.sum(broad_smoothed) / size_orig
+        pxs_reduced = size_orig - np.sum(broad_smoothed)
         # expansion past original values (penalty)
-        frac_expanded = (
-            np.sum(np.logical_and(broad_smoothed, ~broad_orig)) / size_orig 
-            * penalty_wt)
+        pxs_expanded = (
+            np.sum(np.logical_and(broad_smoothed, ~broad_orig)) * penalty_wt)
         # overall metric for label weighted by original size
-        metric = (frac_reduced - frac_expanded) * size_orig
+        metric = pxs_reduced - pxs_expanded
         tot_size += size_orig
         tot_metric += metric
-        fracs.append((frac_reduced, frac_expanded, size_orig))
-        print("frac_reduced: {}, frac_expanded: {}, metric: {}"
-              .format(frac_reduced, frac_expanded, metric))
+        pxs.append((pxs_reduced, pxs_expanded, size_orig))
+        print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
+              .format(pxs_reduced, pxs_expanded, metric))
     if tot_size > 0: tot_metric /= tot_size
     
     print()
-    for frac in fracs:
+    for px in pxs:
         # print tab-delimited metric components to export to spreadsheets
-        print("\t".join(str(f) for f in frac))
+        print("\t".join(str(f) for f in px))
     print("\nSmoothing metric: {}".format(tot_metric))
     print("time elapsed for smoothing metric (s): {}"
           .format(time() - start_time))

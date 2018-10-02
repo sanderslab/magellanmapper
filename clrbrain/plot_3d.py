@@ -600,6 +600,48 @@ def crop_to_labels(img_labels, img_ref):
     extracted_ref[~mask_dil] = 0
     return extracted_labels, extracted_ref
 
+def interpolate_between_planes(labels_img, label_id, axis, bounds):
+    """Interpolate between two planes for the given labeled region. 
+    
+    The labels image will be updated in-place.
+    
+    Args:
+        labels_img: Labels image as a Numpy array in z,y,x dimensions.
+        label_id: ID of label whose planes will be replaced.
+        axis: Axis along which planes will be selected.
+        bounds: 2-element list demarcating the planes between which to 
+            interpolate. The list will be sorted, and the lower bound 
+            will mark the starting plane, while the upper bound will mark 
+            the ending plane, inclusive.
+    """
+    # get bounding box for label to limit the volume needed to resize
+    bbox = get_label_bbox(labels_img, label_id)
+    if bbox is None: return
+    shape, slices = get_bbox_region(bbox)
+    region = labels_img[slices]
+    
+    # prep region to interpolate by taking region from only the planes at bounds
+    bounds_sorted = np.copy(bounds)
+    bounds_sorted.sort()
+    offset = slices[axis].start
+    bounds_sorted -= offset
+    slices_planes = [slice(None)] * labels_img.ndim
+    slices_planes[axis] = slice(
+        bounds_sorted[0], bounds_sorted[1] + 1, 
+        bounds_sorted[1] - bounds_sorted[0])
+    
+    # interpolate back to shape within bounds
+    shape_planes = np.copy(shape)
+    shape_planes[axis] = bounds_sorted[1] - bounds_sorted[0] + 1
+    interpolated = transform.resize(
+        region[slices_planes], shape_planes, preserve_range=True, order=0, 
+        anti_aliasing=True, mode="reflect").astype(labels_img.dtype)
+    
+    # replace corresponding sub-images
+    slices_planes[axis] = slice(bounds_sorted[0], bounds_sorted[1] + 1)
+    region[slices_planes] = interpolated
+    labels_img[slices] = region
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

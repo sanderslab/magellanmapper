@@ -17,7 +17,7 @@ class PlotEditor:
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
                  aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
                  plane_slider, img3d_borders=None, cmap_borders=None, 
-                 fn_show_label_3d=None):
+                 fn_show_label_3d=None, interp_planes=None):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
@@ -34,6 +34,7 @@ class PlotEditor:
         self.img3d_borders = img3d_borders
         self.cmap_borders = cmap_borders
         self.fn_show_label_3d = fn_show_label_3d
+        self.interp_planes = interp_planes
         
         self.intensity = None
         self.cidpress = None
@@ -166,20 +167,21 @@ class PlotEditor:
         if event.inaxes != self.axes: return
         x = int(event.xdata)
         y = int(event.ydata)
-        self.intensity = self.img3d_labels[self.coord[0], y, x]
-        print("got intensity {} at x,y,z = {},{},{}"
-              .format(self.intensity, x, y, self.coord[0]))
         self.press_loc_data = (x, y)
         self.last_loc_data = tuple(self.press_loc_data)
         self.last_loc = (int(event.x), int(event.y))
         
-        if (event.button == 1 and event.key not in self._KEY_MODIFIERS 
-            and event.inaxes == self.axes):
-            
-            # click without modifiers to update crosshairs and corresponding 
-            # planes
-            self.coord[1:] = y, x
-            self.fn_update_coords(self.coord, self.plane)
+        if event.button == 1:
+            if event.key not in self._KEY_MODIFIERS:
+                # click without modifiers to update crosshairs and 
+                # corresponding planes
+                self.coord[1:] = y, x
+                self.fn_update_coords(self.coord, self.plane)
+            elif event.key == "alt":
+               # get intensity under cursor in prep to paint it
+               self.intensity = self.img3d_labels[self.coord[0], y, x]
+               print("got intensity {} at x,y,z = {},{},{}"
+                     .format(self.intensity, x, y, self.coord[0]))
             
             if event.key == "3" and self.fn_show_label_3d is not None:
                 # extract label ID and display in 3D viewer
@@ -319,9 +321,15 @@ class PlotEditor:
         self.last_loc_data = loc_data
     
     def on_release(self, event):
-        """Reset the intensity value to prevent further edits.
+        """On mouse click release, reset the intensity value to prevent 
+        further edits and update plane interpolation values if intensity 
+        value was set.
         """
-        self.intensity = None
+        if self.intensity is not None:
+            if self.interp_planes is not None:
+                self.interp_planes.update_plane(
+                    self.plane, self.coord[0], self.intensity)
+            self.intensity = None
         print("released!")
     
     def on_key_press(self, event):

@@ -13,6 +13,7 @@ from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_editor
 from clrbrain import plot_support
+from clrbrain import plot_3d
 
 class AtlasEditor:
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
@@ -29,7 +30,7 @@ class AtlasEditor:
                 borders, such as that generated during label smoothing. 
                 Defaults to None.
             fn_show_label_3d: Function to call to show a label in a 
-                3D viewer.
+                3D viewer. Defaults to None.
         """
         self.image5d = image5d
         self.labels_img = labels_img
@@ -42,6 +43,8 @@ class AtlasEditor:
         self.plot_eds = {}
         self.alpha_slider = None
         self.alpha_reset_btn = None
+        self.interp_planes = InterpolatePlanes()
+        self.interp_btn = None
         
     def show_atlas(self):
         # set up the figure
@@ -65,13 +68,15 @@ class AtlasEditor:
         
         # transparency controls
         gs_controls = gridspec.GridSpecFromSubplotSpec(
-            1, 2, subplot_spec=gs[1, 0], width_ratios=(5, 1))
+            1, 3, subplot_spec=gs[1, 0], width_ratios=(4, 1, 1))
         ax_alpha = plt.subplot(gs_controls[0, 0])
         self.alpha_slider = Slider(
             ax_alpha, "Opacity", 0.0, 1.0, 
             valinit=plot_editor.PlotEditor.ALPHA_DEFAULT)
         ax_alpha_reset = plt.subplot(gs_controls[0, 1])
         self.alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
+        ax_interp = plt.subplot(gs_controls[0, 2])
+        self.interp_btn = Button(ax_interp, "Interpolate", hovercolor="0.5")
     
         def setup_plot_ed(plane, gs_spec):
             # subplot grid, with larger height preference for plot for 
@@ -114,7 +119,8 @@ class AtlasEditor:
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
                 scaling, plane_slider, img3d_borders=borders_img_transposed, 
                 cmap_borders=cmap_borders, 
-                fn_show_label_3d=self.fn_show_label_3d)
+                fn_show_label_3d=self.fn_show_label_3d, 
+                interp_planes=self.interp_planes)
             return plot_ed
         
         # setup plot editor for all 3 orthogonal directions
@@ -133,6 +139,7 @@ class AtlasEditor:
         
         self.alpha_slider.on_changed(self.alpha_update)
         self.alpha_reset_btn.on_clicked(self.alpha_reset)
+        self.interp_btn.on_clicked(self.interpolate)
         
         # initialize planes in all plot editors
         self.update_coords(coord, config.PLANE[0])
@@ -176,6 +183,82 @@ class AtlasEditor:
         for key in self.plot_eds.keys():
             self.plot_eds[key].on_axes_exit(event)
     
+    def interpolate(self, event):
+        try:
+            self.interp_planes.interpolate(self.labels_img)
+            self.refresh_images(None)
+        except ValueError as e:
+            print(e)
+
+class InterpolatePlanes:
+    """Track manually edited planes between which to interpolate changes 
+    for a given label.
+    
+    This interpolation replaces unedited planes based on the trends of 
+    the edited ones to avoid the need to manually edit every single plane.
+    
+    Attribtes:
+        plane: Plane in which editing has occurred.
+        bounds: Unsorted start and end planes.
+        label_id: Label ID of the edited region.
+    """
+    def __init__(self):
+        """Initialize ``InterpolatePlanes`` with empty attibutes.
+        """
+        self.plane = None
+        self.bounds = None
+        self.label_id = None
+    
+    def update_plane(self, plane, i, label_id):
+        """Update the current plane.
+        
+        Args:
+            plane: Plane direction, which will overwrite any current direction.
+            i: Index of the plane to add, which will overwrite the oldest 
+                bounds element.
+            label_id: ID of label, which will overwrite any current ID.
+        """
+        if self.plane is not None and (
+            plane != self.plane or label_id != self.label_id):
+            # reset bounds if new plane or label ID don't match prior settings 
+            # and previously set (plane and label_id should have been set 
+            # together)
+            self.bounds = None
+        self.plane = plane
+        self.label_id = label_id
+        self.bounds = i
+        print(self)
+        
+    def interpolate(self, labels_img):
+        """Interpolate between :attr:``bounds`` in the given :attr:``plane`` 
+        direction in the bounding box surrounding :attr:``label_id``.
+        
+        Args:
+            labels_img: Labels image as a Numpy array of x,y,z dimensions.
+        """
+        if not any(self.bounds):
+            raise ValueError("boundaries not fully set: {}".format(self.bounds))
+        plot_3d.interpolate_between_planes(
+            labels_img, self.label_id, config.PLANE.index(self.plane), 
+            self.bounds)
+    
+    def __str__(self):
+        return "{}: {} (ID: {})".format(
+            plot_support.get_plane_axis(self.plane), self.bounds, self.label_id)
+    
+    @property
+    def bounds(self):
+        return self._bounds
+    
+    @bounds.setter
+    def bounds(self, val):
+        if val is None:
+            self._bounds = [None, None]
+        elif isinstance(val, int):
+            self._bounds.append(val)
+            del self._bounds[0]
+        else:
+            self._bounds = val
 
 if __name__ == "__main__":
     print("Starting atlas editor")

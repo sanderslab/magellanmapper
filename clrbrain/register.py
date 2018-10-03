@@ -284,7 +284,8 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True):
         print("nothing to mirror")
     return img_np
 
-def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
+def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None, 
+                   smooth=True):
     """Mirror labels across sagittal midline and add lateral edges.
     
     Assume that the image is in sagittal sections and consists of only one 
@@ -309,6 +310,9 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
             ((x_pixels_start, end), (y, ...), ...), (next_region, ...)) 
             specifying slice boundaries for regions to expand the labels to 
             the size of the atlas. Defaults to None.
+        rotate: Tuple of ((angle0, axis0), ...) by which to rotate the 
+            labels. Defaults to None.
+        smooth: True if labels should be smoothed; defaults to True.
     
     Returns:
         Tuple of ``img_np``, ``(extendi, mirrori)``, where ``img_np`` is 
@@ -406,19 +410,23 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
     if extent is not None and extent[1] is not None:
         mirrori = int(extent[1] * tot_planes)
     
-    # minimize jaggedness in labels, often seen outside of the original 
-    # orthogonal direction, using pre-mirrored slices only since rest will 
-    # be overwritten
-    img_smoothed = img_np[:mirrori]
-    img_smoothed_orig = np.copy(img_smoothed)
-    smooth_labels(img_smoothed)
-    
-    # calculate smoothing metric with borders image
-    borders, metric = label_smoothing_metric(img_smoothed_orig, img_smoothed)
-    shape = list(borders.shape)
-    shape[0] = img_np.shape[0]
-    borders_img_np = np.zeros(shape, dtype=np.int32)
-    borders_img_np[:mirrori] = borders
+    borders_img_np = None
+    if smooth:
+        # minimize jaggedness in labels, often seen outside of the original 
+        # orthogonal direction, using pre-mirrored slices only since rest will 
+        # be overwritten
+        img_smoothed = img_np[:mirrori]
+        img_smoothed_orig = np.copy(img_smoothed)
+        smooth_labels(img_smoothed)
+        
+        # calculate smoothing metric with borders image
+        borders, metric = label_smoothing_metric(
+            img_smoothed_orig, img_smoothed)
+        shape = list(borders.shape)
+        shape[0] = img_np.shape[0]
+        borders_img_np = np.zeros(shape, dtype=np.int32)
+        borders_img_np[:mirrori] = borders
+        borders_img_np = _mirror_planes(borders_img_np, mirrori, -1)
     
     # check that labels will fit in integer type
     lib_clrbrain.printv(
@@ -428,7 +436,6 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None):
     # mirror and check for label loss
     print("total labels before reflection: {}".format(np.unique(img_np).size))
     img_np = _mirror_planes(img_np, mirrori, -1)
-    borders_img_np = _mirror_planes(borders_img_np, mirrori, -1)
     print("total labels after reflection up to set midline ({}): {}"
           .format(mirrori, np.unique(img_np[:mirrori]).size))
     print("total final labels: {}".format(np.unique(img_np).size))
@@ -886,8 +893,9 @@ def match_atlas_labels(img_atlas, img_labels):
         img_atlas_np = _mirror_planes(img_atlas_np, mirror_indices[1])
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
         
-        img_borders = replace_sitk_with_numpy(img_labels, borders_img_np)
-        img_borders = transpose_img(img_borders, config.plane, False)
+        if borders_img_np is not None:
+            img_borders = replace_sitk_with_numpy(img_labels, borders_img_np)
+            img_borders = transpose_img(img_borders, config.plane, False)
     
     # transpose to given plane
     img_atlas = transpose_img(img_atlas, config.plane, False)
@@ -930,8 +938,10 @@ def import_atlas(atlas_dir, show=True):
     imgs_write = {
         IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}
     for suffix in imgs_write.keys():
+        img = imgs_write[suffix]
+        if img is None: continue
         out_path = _reg_out_path(name_prefix, suffix)
-        sitk.WriteImage(imgs_write[suffix], out_path, False)
+        sitk.WriteImage(img, out_path, False)
         # copy metadata file to allow opening images from bare suffix name, 
         # such as when this atlas becomes the new atlas for registration
         shutil.copy(out_path, os.path.join(target_dir, suffix))

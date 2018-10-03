@@ -468,7 +468,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         bbox = plot_3d.get_label_bbox(labels_img_np, label_id)
         if bbox is None: continue
         _, slices = plot_3d.get_bbox_region(
-            bbox, 2 * filter_size, labels_img_np.shape)
+            bbox, np.ceil(2 * filter_size).astype(int), labels_img_np.shape)
         
         # get region, skipping if no region left
         region = labels_img_np[slices]

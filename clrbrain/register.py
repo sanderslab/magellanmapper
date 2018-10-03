@@ -242,19 +242,30 @@ def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
         axis += 1
     return img_np
 
-def _mirror_planes(img_np, start, mirror_mult=1):
+def _mirror_planes(img_np, start, mirror_mult=1, resize=True):
     """Mirror image across its sagittal midline.
     
     Args:
-        img: Labels image in Numpy format.
+        img: Labels image in Numpy format, which will be edited directly 
+            unless ``resize`` is True.
         start: Starting index at which to begin mirroring, inclusive.
         mirror_mult: Multiplier for mirrored portion of image, such as -1 
             when creating a labels map with one side distinct from the other; 
             defaults to 1.
+        resize: True if the image should be resized to be symmetric in size 
+            across ``start``; defaults to True.
     
     Returns:
         The mirrored image in Numpy format.
     """
+    if resize:
+        shape = img_np.shape
+        shape_resized = np.copy(shape)
+        shape_resized[0] = start * 2
+        img_resized = np.zeros(shape_resized, dtype=img_np.dtype)
+        img_resized[:shape[0]] = img_np
+        print("original shape: {}, new shape: {}".format(shape, shape_resized))
+        img_np = img_resized
     tot_planes = len(img_np)
     if start <= tot_planes and start >= 0:
         # if empty planes at end, fill the empty space with the preceding 

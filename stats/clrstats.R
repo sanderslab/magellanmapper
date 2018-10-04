@@ -162,11 +162,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			df.jitter <- df.region.nonzero
 			if (!split.by.side) {
 				print(df.region.nonzero)
-				df.jitter <- aggregate(cbind(Vol, Nuclei) ~ Sample, df.jitter, sum)
+				df.jitter <- aggregate(
+					cbind(Vol, Nuclei) ~ Sample + Geno, df.jitter, sum)
 				df.jitter$Dens <- df.jitter$Nuclei / df.jitter$Vol
-				df.jitter <- unique(
-					merge(df.jitter, df.region.nonzero[c("Geno", "Sample")], 
-								by="Sample"))
 				print(df.jitter)
 			}
 			jitterPlot(df.jitter, col, title, split.by.side)

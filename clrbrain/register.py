@@ -579,8 +579,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             favor greater smoothing in the final labels.
         penalty_wt: Weighting factor for the penalty term, where larger 
             values favor labels that remain within their original bounds. 
-            Defaults to 1.0, which is neutral and does not penalize 
-            expansion beyond borders any more than increase in label volume.
+            Defaults to 1.0.
     
     Returns:
         Tuple of ``borders_img_np``, a Numpy array of the same same as 
@@ -592,8 +591,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     print("Calculating smoothing metrics with filter size of {}, "
           "penalty weighting factor of {}".format(filter_size, penalty_wt))
     start_time = time()
-    # prepare borders image with channel for each set of borders
+    
+    # prepare roughness images to track global overlap
     shape = list(orig_img_np.shape)
+    roughs = [np.zeros(shape, dtype=np.int8)]
+    roughs.append(np.copy(roughs[0]))
+    
+    # prepare borders image with channel for each set of borders
     shape.append(2)
     borders_img_np = np.zeros(shape, dtype=np.int32)
     
@@ -601,12 +605,14 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     label_ids = np.unique(orig_img_np)
     selem = morphology.ball(filter_size)
     
-    def broad_borders(img_np, slices, label_id, channel):
+    def broad_borders(img_np, slices, label_id, channel, rough_img_np):
         # use closing filter to approximate volume encompassing rough edges
         # get region, skipping if no region left
         region = img_np[slices]
         label_mask_region = region == label_id
         filtered = morphology.binary_closing(label_mask_region, selem)
+        rough_img_np[slices] = np.add(
+            rough_img_np[slices], filtered.astype(np.int8))
         
         # erode and subtract from closed volume to get borders for 
         # displaying change in volume
@@ -634,8 +640,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             props[0].bbox, 2 * filter_size, orig_img_np.shape)
         
         # get broad, filled volumes
-        broad_orig = broad_borders(orig_img_np, slices, label_id, 0)
-        broad_smoothed = broad_borders(smoothed_img_np, slices, label_id, 1)
+        broad_orig = broad_borders(orig_img_np, slices, label_id, 0, roughs[0])
+        broad_smoothed = broad_borders(
+            smoothed_img_np, slices, label_id, 1, roughs[1])
         size_orig = np.sum(broad_orig)
         # reduction in broad volumes (compaction)
         pxs_reduced = size_orig - np.sum(broad_smoothed)
@@ -649,13 +656,24 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         pxs.append((label_id, pxs_reduced, pxs_expanded, size_orig))
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
               .format(pxs_reduced, pxs_expanded, metric))
-    if tot_size > 0: tot_metric /= tot_size
+    roughs_metric = None
+    if tot_size > 0:
+        # normalize to total original label foreground
+        tot_metric /= tot_size
+        # find only amount of overlap, subtracting label count itself
+        roughs = [rough - 1 for rough in roughs]
+        roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
     
     print()
     for px in pxs:
         # print tab-delimited metric components to export to spreadsheets
         print("\t".join(str(f) for f in px))
-    print("\nSmoothing metric: {}".format(tot_metric))
+    print()
+    if roughs_metric is not None:
+       print("Roughness original: {}".format(roughs_metric[0]))
+       print("Roughness smoothed: {}".format(roughs_metric[1]))
+       print("roughness diff: {}".format(roughs_metric[0] - roughs_metric[1]))
+    print("Smoothing metric: {}".format(tot_metric))
     print("time elapsed for smoothing metric (s): {}"
           .format(time() - start_time))
     return borders_img_np, tot_metric

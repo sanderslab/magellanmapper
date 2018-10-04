@@ -995,7 +995,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     # load labels image and match with atlas
     labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
-    moving_img, labels_img = match_atlas_labels(moving_img, labels_img)
+    moving_img, labels_img, _ = match_atlas_labels(moving_img, labels_img)
     
     # basic info from images just prior to SimpleElastix filtering for 
     # registration; to view raw images, show these images rather than merely 

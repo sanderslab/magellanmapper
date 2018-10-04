@@ -489,6 +489,8 @@ def main(process_args_only=False):
     parser.add_argument("--ec2_list", nargs="*")
     parser.add_argument("--ec2_terminate", nargs="*")
     parser.add_argument("--notify", nargs="*")
+    parser.add_argument("--prefix")
+    parser.add_argument("--suffix")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -675,6 +677,12 @@ def main(process_args_only=False):
             config.notify_attach = args.notify[2]
             print("Set notification attachment path to {}"
                   .format(config.notify_attach))
+    if args.prefix:
+        config.prefix = args.prefix
+        print("Set path prefix to {}".format(config.prefix))
+    if args.suffix:
+        config.suffix = args.suffix
+        print("Set path suffix to {}".format(config.suffix))
     
     # prep filename
     if not config.filename:

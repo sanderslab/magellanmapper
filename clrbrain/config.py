@@ -463,6 +463,9 @@ filenames = None # list of multiple image paths
 series = 0 # series for multi-stack files
 channel = None # channel of interest, where None specifies all channels
 
+prefix = None # alternate path
+suffix = None # modifier to existing base path
+
 PLANE = ("xy", "xz", "yz")
 plane = None
 vmax_overview = 1.0

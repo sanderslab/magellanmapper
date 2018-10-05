@@ -621,7 +621,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         nonlocal borders_img_np
         borders_region = borders_img_np[slices]
         borders_region[filtered_border, channel] = label_id
-        return filtered
+        return label_mask_region, filtered
     
     tot_metric = 0
     tot_size = 0
@@ -640,8 +640,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             props[0].bbox, 2 * filter_size, orig_img_np.shape)
         
         # get broad, filled volumes
-        broad_orig = broad_borders(orig_img_np, slices, label_id, 0, roughs[0])
-        broad_smoothed = broad_borders(
+        mask_orig, broad_orig = broad_borders(
+            orig_img_np, slices, label_id, 0, roughs[0])
+        mask_smoothed, broad_smoothed = broad_borders(
             smoothed_img_np, slices, label_id, 1, roughs[1])
         size_orig = np.sum(broad_orig)
         # reduction in broad volumes (compaction)
@@ -651,7 +652,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             np.sum(np.logical_and(broad_smoothed, ~broad_orig)) * penalty_wt)
         metric = pxs_reduced - pxs_expanded
         # will normalize to total foreground
-        if label_id != 0: tot_size += size_orig
+        if label_id != 0: tot_size += np.sum(mask_orig)
         tot_metric += metric
         pxs.append((label_id, pxs_reduced, pxs_expanded, size_orig))
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
@@ -668,7 +669,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     for px in pxs:
         # print tab-delimited metric components to export to spreadsheets
         print("\t".join(str(f) for f in px))
-    print()
+    print("\nTotal foreground pxs: {}".format(tot_size))
     if roughs_metric is not None:
        print("Roughness original: {}".format(roughs_metric[0]))
        print("Roughness smoothed: {}".format(roughs_metric[1]))

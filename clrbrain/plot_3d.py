@@ -296,6 +296,24 @@ def rotate_nd(img_np, angle, axis=0, order=1):
         rotated[slices] = img2d
     return rotated
 
+def perimeter_nd(img_np):
+    """Get perimeter of image subtracting eroded image from given image.
+    
+    Args:
+        img_np: Numpy array of arbitrary dimensions.
+    
+    Returns:
+        The perimeter as the border that would have been eroded.
+    """
+    interior = morphology.binary_erosion(img_np)
+    img_border = np.logical_xor(img_np, interior)
+    return img_border
+
+def borders_distance(borders_orig, borders_shifted):
+    borders_dist = ndimage.distance_transform_edt(~borders_orig)
+    dist_to_orig = borders_dist[borders_shifted]
+    return dist_to_orig
+
 def get_bbox_region(bbox, padding=0, img_shape=None):
     dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes
     shape = [bbox[i + dims] - bbox[i] for i in range(dims)]

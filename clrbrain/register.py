@@ -86,6 +86,7 @@ ABA_LEVEL = "st_level"
 ABA_CHILDREN = "children"
 
 SMOOTHING_MODES=("opening", "gaussian")
+SMOOTHING_METRIC_MODES=("vol", "area")
 _SIGNAL_THRESHOLD = 0.01
 
 def _reg_out_path(file_path, reg_name):
@@ -558,17 +559,24 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
           .format(weighted_size_ratio))
 
 def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4, 
-                           penalty_wt=1.0):
+                           penalty_wt=1.0, mode=SMOOTHING_METRIC_MODES[1]):
     """Measure degree of appropriate smoothing, defined as smoothing that 
-    retains the general shape and placement of the region. 
+    retains the general shape and placement of the region.
     
-    Compare the difference in size of a broad, smooth volume encompassing 
-    ragged edges before and after the smoothing algorithm, giving a measure 
-    of reduction in size and thus increase in compactness by smoothing. 
-    To penalize inappropriate smoothing, the smoothed volume lying outside 
-    of the original broad volume is subtracted from this size reduction, 
-    accounting for unwanted deformation that brings the region outside of 
-    its original bounds.
+    Several methods are available as metrices:
+    
+    ``vol``: Compare the difference in size of a broad, smooth volume 
+    encompassing ragged edges before and after the smoothing algorithm, giving 
+    a measure of reduction in size and thus increase in compactness by 
+    smoothing. To penalize inappropriate smoothing, the smoothed volume 
+    lying outside of the original broad volume is subtracted from this 
+    size reduction, accounting for unwanted deformation that brings the 
+    region outside of its original bounds.
+    
+    ``area``: Compare surface areas of each label before and after 
+    smoothing. Compaction is taken as a reduction in overall surface area, 
+    while the displacement penalty is measured by the distance transform 
+    of the smoothed border from the original border.
     
     Args:
         original_img_np: Unsmoothed labels image as Numpy array.
@@ -580,6 +588,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         penalty_wt: Weighting factor for the penalty term, where larger 
             values favor labels that remain within their original bounds. 
             Defaults to 1.0.
+        mode: One of :const:``SMOOTHING_METRIC_MODES`` (see above for 
+            description of the modes).
     
     Returns:
         Tuple of ``borders_img_np``, a Numpy array of the same same as 
@@ -605,6 +615,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     label_ids = np.unique(orig_img_np)
     selem = morphology.ball(filter_size)
     
+    def update_borders_img(borders, slices, label_id, channel):
+        nonlocal borders_img_np
+        borders_region = borders_img_np[slices]
+        borders_region[borders, channel] = label_id
+    
     def broad_borders(img_np, slices, label_id, channel, rough_img_np):
         # use closing filter to approximate volume encompassing rough edges
         # get region, skipping if no region left
@@ -613,15 +628,19 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         filtered = morphology.binary_closing(label_mask_region, selem)
         rough_img_np[slices] = np.add(
             rough_img_np[slices], filtered.astype(np.int8))
-        
-        # erode and subtract from closed volume to get borders for 
-        # displaying change in volume
-        interior = morphology.binary_erosion(filtered)
-        filtered_border = np.logical_xor(filtered, interior)
-        nonlocal borders_img_np
-        borders_region = borders_img_np[slices]
-        borders_region[filtered_border, channel] = label_id
+        filtered_border = plot_3d.perimeter_nd(filtered)
+        update_borders_img(filtered_border, slices, label_id, channel)
         return label_mask_region, filtered
+    
+    def surface_area(img_np, slices, label_id, rough_img_np):
+        # use closing filter to approximate volume encompassing rough edges
+        # get region, skipping if no region left
+        region = img_np[slices]
+        label_mask_region = region == label_id
+        borders = plot_3d.perimeter_nd(label_mask_region)
+        rough_img_np[slices] = np.add(
+            rough_img_np[slices], borders.astype(np.int8))
+        return label_mask_region, borders
     
     tot_metric = 0
     tot_size = 0
@@ -639,20 +658,37 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         _, slices = plot_3d.get_bbox_region(
             props[0].bbox, 2 * filter_size, orig_img_np.shape)
         
-        # get broad, filled volumes
-        mask_orig, broad_orig = broad_borders(
-            orig_img_np, slices, label_id, 0, roughs[0])
-        mask_smoothed, broad_smoothed = broad_borders(
-            smoothed_img_np, slices, label_id, 1, roughs[1])
-        size_orig = np.sum(broad_orig)
-        # reduction in broad volumes (compaction)
-        pxs_reduced = size_orig - np.sum(broad_smoothed)
-        # expansion past original values (displacement penalty)
-        pxs_expanded = (
-            np.sum(np.logical_and(broad_smoothed, ~broad_orig)) * penalty_wt)
+        if mode == SMOOTHING_METRIC_MODES[0]:
+            # "vol": measure wrapping volume by closing filter
+            mask_orig, broad_orig = broad_borders(
+                orig_img_np, slices, label_id, 0, roughs[0])
+            _, broad_smoothed = broad_borders(
+                smoothed_img_np, slices, label_id, 1, roughs[1])
+            # reduction in broad volumes (compaction)
+            pxs_reduced = np.sum(broad_orig) - np.sum(broad_smoothed)
+            # expansion past original broad volume (displacement penalty)
+            pxs_expanded = (
+                np.sum(np.logical_and(broad_smoothed, ~broad_orig)) 
+                * penalty_wt)
+        else:
+            # "area": measure surface area
+            if label_id == 0: continue
+            mask_orig, borders_orig = surface_area(
+                orig_img_np, slices, label_id, roughs[0])
+            update_borders_img(borders_orig, slices, label_id, 0)
+            _, borders_smoothed = surface_area(
+                smoothed_img_np, slices, label_id, roughs[1])
+            # reduction in surface area (compaction)
+            pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
+            # expansion past original borders (displacement penalty)
+            dist_to_orig = plot_3d.borders_distance(
+                borders_orig, borders_smoothed)
+            pxs_expanded = np.sum(dist_to_orig)
+        
         metric = pxs_reduced - pxs_expanded
         # will normalize to total foreground
-        if label_id != 0: tot_size += np.sum(mask_orig)
+        size_orig = np.sum(mask_orig)
+        if label_id != 0: tot_size += size_orig
         tot_metric += metric
         pxs.append((label_id, pxs_reduced, pxs_expanded, size_orig))
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
@@ -661,8 +697,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     if tot_size > 0:
         # normalize to total original label foreground
         tot_metric /= tot_size
-        # find only amount of overlap, subtracting label count itself
-        roughs = [rough - 1 for rough in roughs]
+        if mode == SMOOTHING_METRIC_MODES[0]:
+            # find only amount of overlap, subtracting label count itself
+            roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
     
     print()

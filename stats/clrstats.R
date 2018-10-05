@@ -64,12 +64,19 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
 		# ordered logistic regression
 		vals <- scale(vals)
 		genos <- factor(genos, levels=kGenoLevels)
-		fit <- polr(genos ~ vals * sides, Hess=TRUE)
-		coef.tab <- coef(summary(fit))
-		# calculate p-vals and incorporate into coefficients
-		p.vals <- pnorm(abs(coef.tab[, "t value"]), lower.tail=FALSE) * 2
-		coef.tab <- cbind(coef.tab, "p value"=p.vals)
-		print(coef.tab)
+		fit <- tryCatch({
+			fit <- polr(genos ~ vals * sides, Hess=TRUE)
+			print(coef.tab)
+			coef.tab <- coef(summary(fit))
+			# calculate p-vals and incorporate into coefficients
+			p.vals <- pnorm(abs(coef.tab[, "t value"]), lower.tail=FALSE) * 2
+			coef.tab <- cbind(coef.tab, "p value"=p.vals)
+		},
+			error=function(e) {
+				print(paste("Could not calculate ordered logistic regression", 
+							e, "skipping"))
+			}
+		)
 	} else {
 		cat("Sorry, model", model, "not found\n")
 	}
@@ -152,6 +159,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			# apply stats and store in stats data frame, using list to allow 
 			# arbitrary size and storing mean nuclei as well
 			coef.tab <- fitModel(model, vals, genos, sides, ids)
+			if (is.null(coef.tab)) next
 			stats$Stats[i] <- list(coef.tab)
 			stats$MeanNuclei[i] <- mean(df.region$Nuclei)
 			

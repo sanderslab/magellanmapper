@@ -138,13 +138,13 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 	cols <- c("Region", "Stats", "MeanNuclei")
 	stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
 	names(stats) <- cols
+	last.found <- FALSE # to group console output
 	for (i in seq_along(regions)) {
 		region <- regions[i]
 		# filter data frame for the given region
 		df.region <- df[df$Region == region, ]
 		# generate mask to filter out values of 0
 		nonzero <- df.region[[col]] > 0
-		cat("---------------------------\n")
 		stats$Region[i] <- region
 		if (any(nonzero)) {
 			# filter each column within region for rows with non-zero values
@@ -153,7 +153,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			genos <- df.region.nonzero$Geno
 			sides <- df.region.nonzero$Side
 			ids <- df.region.nonzero$Sample
-			cat("Region", region, ": ", vals, "from ", sum(nonzero), 
+			if (!last.found) cat("\n")
+			cat("\nRegion", region, ": ", vals, "from ", sum(nonzero), 
 					"nonzero regions\n")
 			
 			# apply stats and store in stats data frame, using list to allow 
@@ -176,9 +177,17 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 				print(df.jitter)
 			}
 			jitterPlot(df.jitter, col, title, split.by.side)
+			last.found <- TRUE
 		} else {
-			# ignore region if all values 0, leaving entry for region as NA
-			cat(region, ": no non-zero samples found\n\n")
+			# ignore region if all values 0, leaving entry for region as NA and 
+			# grouping output for empty regions to minimize console output; 
+			# TDOO: consider grouping into list and displaying only at end
+			if (last.found) {
+				cat("\nno non-zero samples found:", region)
+			} else {
+				cat(",", region)
+			}
+			last.found <- FALSE
 		}
 	}
 	return(stats)

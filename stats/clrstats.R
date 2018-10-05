@@ -331,7 +331,8 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 		pdf, file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), sep="_"))
 }
 
-calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
+calcVolStats <- function(path.in, path.out, meas, model, region.ids, 
+												 split.by.side=TRUE) {
 	# Calculate volumetric stats from the given CSV file.
 	#
 	# Args:
@@ -342,6 +343,8 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 	#     \code{\link{kMeas}}.
 	#   model: Model type to use for stats, which should be one of 
 	#     \code{\link{kModel}}.
+	#   split.by.side: True to plot separate sub-scatter plots for each 
+	#     region by side; defaults to True.
 	#
 	# Returns:
 	#   Filtered data frame from \code{\link{filterStats}}.
@@ -354,7 +357,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 	cat("\n\n")
 	
 	# calculate stats, filter out NAs and extract effects and p-values
-	stats <- statsByRegion(df, meas, model)#, split.by.side=FALSE)
+	stats <- statsByRegion(df, meas, model, split.by.side=split.by.side)
 	stats.filtered <- filterStats(stats)
 	stats.filtered <- merge(stats.filtered, region.ids, by="Region")
 	print(stats.filtered)
@@ -366,7 +369,8 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids) {
 # choose measurement and model types
 meas <- kMeas[2]
 model <- kModel[4]
-
+split.by.side = TRUE # false to combine sides
+load.stats = TRUE # false to force recalculating stats
 
 # set up paramters based on chosen model
 stat <- "vals"
@@ -376,11 +380,12 @@ if (model == kModel[2]) {
 
 # calculate stats or retrieve from file
 region.ids <- read.csv(kRegionIDsPath)
-if (file.exists(kStatsPathOut)) {
+if (load.stats && file.exists(kStatsPathOut)) {
 	stats <- read.csv(kStatsPathOut)
 } else {
 	stats <- calcVolStats(
-		kStatsPathIn, kStatsPathOut, meas, model, region.ids)
+		kStatsPathIn, kStatsPathOut, meas, model, region.ids, 
+		split.by.side=split.by.side)
 }
 
 # plot effects and p's

@@ -585,9 +585,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         filter_size: Structuring element size for determining the filled, 
             broad volume of each label. Defaults to 4. Larger sizes 
             favor greater smoothing in the final labels.
-        penalty_wt: Weighting factor for the penalty term, where larger 
-            values favor labels that remain within their original bounds. 
-            Defaults to 1.0.
+        penalty_wt: Weighting factor for the penalty term. For ``vol`` 
+            mode, larger  values favor labels that remain within their 
+            original bounds. For ``area`` mode, this value is used as an 
+            offset for pixel perimeter displacement, where larger values 
+            tolerate more displacement. Defaults to 1.0.
         mode: One of :const:``SMOOTHING_METRIC_MODES`` (see above for 
             description of the modes).
     
@@ -680,9 +682,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                 smoothed_img_np, slices, label_id, roughs[1])
             # reduction in surface area (compaction)
             pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
-            # expansion past original borders (displacement penalty)
+            # expansion past original borders (displacement penalty), 
+            # using wt as a distance offset given that initial px displacement 
+            # is actually necessary for compaction
             dist_to_orig = plot_3d.borders_distance(
                 borders_orig, borders_smoothed)
+            dist_to_orig -= penalty_wt
+            dist_to_orig[dist_to_orig < 0] = 0
             pxs_expanded = np.sum(dist_to_orig)
         
         metric = pxs_reduced - pxs_expanded

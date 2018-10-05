@@ -2646,13 +2646,16 @@ if __name__ == "__main__":
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         
         if config.register_type == config.REGISTER_TYPES[5]:
+            # export volumes to CSV
+            
             # convert groupings from strings to numerical format for stats
             groups_numeric = [
                 config.GROUPS_NUMERIC[geno] for geno in config.groups]
             dfs = []
             for level in levels:
-                # register volumes, combine from all samples, and convert to 
-                # Pandas data frame for the given level
+                # register segments (or simply load if already done), combine 
+                # from all samples, and convert to Pandas data frame for 
+                # the given level
                 vol_dicts, json_paths = register_volumes_mp(
                     config.filenames, labels_ref_lookup, level, config.rescale, 
                     True, suffix=config.suffix)

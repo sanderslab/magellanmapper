@@ -672,6 +672,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             pxs_expanded = (
                 np.sum(np.logical_and(broad_smoothed, ~broad_orig)) 
                 * penalty_wt)
+            # normalize to total foreground
+            size_orig = np.sum(mask_orig)
         else:
             # "area": measure surface area
             mask_orig, borders_orig = surface_area(
@@ -681,6 +683,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                 smoothed_img_np, slices, label_id, roughs[1])
             # reduction in surface area (compaction)
             pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
+            # normalize to original surface area
+            size_orig = np.sum(borders_orig)
             # expansion past original borders (displacement penalty), 
             # using wt as a distance offset given that initial px displacement 
             # is actually necessary for compaction
@@ -691,8 +695,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             pxs_expanded = np.sum(dist_to_orig)
         
         metric = pxs_reduced - pxs_expanded
-        # will normalize to total foreground
-        size_orig = np.sum(mask_orig)
         if label_id != 0: tot_size += size_orig
         tot_metric += metric
         pxs.append((label_id, pxs_reduced, pxs_expanded, size_orig))

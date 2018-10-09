@@ -674,7 +674,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                 * penalty_wt)
         else:
             # "area": measure surface area
-            if label_id == 0: continue
             mask_orig, borders_orig = surface_area(
                 orig_img_np, slices, label_id, roughs[0])
             update_borders_img(borders_orig, slices, label_id, 0)

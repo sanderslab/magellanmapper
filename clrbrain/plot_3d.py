@@ -317,28 +317,26 @@ def borders_distance(borders_orig, borders_shifted, filter_size=None):
         borders_shifted: Shifted borders as a boolean mask, which should 
             match the shape of ``borders_orig``.
         filter_size: Size of structuring element to use in filter for 
-            getting the distances around the original border. Defaults 
-            to None, in which case these distances will not be obtained.
+            smoothing the original border with a closing filter before 
+            finding distances. Defaults to None, in which case no filter 
+            will be applied.
     
     Returns:
-        Numpy array the same shape as ``borders_orig`` with distances 
-        generated from a Euclidean distance transform. If ``filter_size`` 
-        is given, two additional values are returned: ``borders_dist``, 
-        the full distance transform array; and ``borders_orig_filled``, 
-        the region surrounding the original borderse filled with a 
-        closing filter.
+        Tuple of ``dist_to_orig``, a Numpy array the same shape as 
+        ``borders_orig`` with distances generated from a Euclidean 
+        distance transform to the original borders, or to the smoothed 
+        borders if ``filter_size`` is given; and ``borders_orig`` to 
+        allow accessing the smoothed borders.
     """
+    if filter_size is not None:
+        # find the pixels surrounding the original border
+        borders_orig = morphology.binary_closing(
+            borders_orig, morphology.ball(filter_size))
     # find distances to the original borders, inverted to become background
     borders_dist = ndimage.distance_transform_edt(~borders_orig)
     # gather the distances corresponding to the shifted border
     dist_to_orig = borders_dist[borders_shifted]
-    if filter_size is None:
-        return dist_to_orig
-    # find the pixels surrounding the original border
-    borders_orig_filled = morphology.binary_closing(
-        borders_orig, morphology.ball(filter_size))
-    dist_within_orig = borders_dist[borders_orig_filled]
-    return dist_to_orig, borders_dist, borders_orig_filled
+    return dist_to_orig, borders_orig
 
 def get_bbox_region(bbox, padding=0, img_shape=None):
     dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes

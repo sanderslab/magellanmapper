@@ -693,21 +693,12 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             # expansion past original borders (displacement penalty), 
             # using wt as a distance offset given that initial px displacement 
             # is actually necessary for compaction
-            if filter_size is None:
-                dist_to_orig = plot_3d.borders_distance(
-                    borders_orig, borders_smoothed)
-            else:
+            dist_to_orig, borders_orig_filled = plot_3d.borders_distance(
+                borders_orig, borders_smoothed, filter_size=filter_size)
+            if filter_size is not None:
                 # find distances around the original borders to show 
                 # distances potentially in appropriately compacted areas
-                dist_to_orig, borders_dist, borders_orig_filled = (
-                    plot_3d.borders_distance(
-                        borders_orig, borders_smoothed, 
-                        filter_size=filter_size))
-                dist_within_orig = borders_dist[borders_orig_filled]
                 update_borders_img(borders_orig_filled, slices, label_id, 1)
-                dists = dist_within_orig[dist_within_orig > 0]
-                border_dist = 0 if len(dists) == 0 else np.mean(dists)
-                pxs.setdefault("border_dist", []).append(border_dist)
             dist_to_orig -= penalty_wt
             dist_to_orig[dist_to_orig < 0] = 0
             pxs_expanded = np.sum(dist_to_orig)

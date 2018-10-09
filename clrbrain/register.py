@@ -598,7 +598,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         ``original_img_np`` except with an additional channel dimension at 
         the end, where channel 0 contains the broad borders of the 
         original image's labels, and channel 1 is that of the smoothed image; 
-        and ``tot_metric``, the smoothing metric as a float value.
+        ``tot_metric``, the smoothing metric as a float value; and 
+        ``pd``, the metric components as a Pandas data frame.
     """
     print("Calculating smoothing metrics with filter size of {}, "
           "penalty weighting factor of {}".format(filter_size, penalty_wt))
@@ -646,7 +647,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     
     tot_metric = 0
     tot_size = 0
-    pxs = [("label_id", "pxs_reduced", "pxs_expanded", "size_orig")]
+    pxs = {}
+    cols = ("label_id", "pxs_reduced", "pxs_expanded", "size_orig")
     for label_id in label_ids:
         # calculate metric for each label
         print("finding border for {}".format(label_id))
@@ -697,7 +699,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         metric = pxs_reduced - pxs_expanded
         if label_id != 0: tot_size += size_orig
         tot_metric += metric
-        pxs.append((label_id, pxs_reduced, pxs_expanded, size_orig))
+        vals = (label_id, pxs_reduced, pxs_expanded, size_orig)
+        for col, val in zip(cols, vals):
+            pxs.setdefault(col, []).append(val)
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
               .format(pxs_reduced, pxs_expanded, metric))
     roughs_metric = None
@@ -710,9 +714,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
     
     print()
-    for px in pxs:
-        # print tab-delimited metric components to export to spreadsheets
-        print("\t".join(str(f) for f in px))
+    df = pd.DataFrame(pxs)
+    print(df.to_csv(sep="\t", index=False))
     print("\nTotal foreground pxs: {}".format(tot_size))
     if roughs_metric is not None:
        print("Roughness original: {}".format(roughs_metric[0]))
@@ -721,7 +724,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     print("Smoothing metric: {}".format(tot_metric))
     print("time elapsed for smoothing metric (s): {}"
           .format(time() - start_time))
-    return borders_img_np, tot_metric
+    return borders_img_np, tot_metric, df
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.

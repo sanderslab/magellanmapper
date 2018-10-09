@@ -421,7 +421,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
         smooth_labels(img_smoothed)
         
         # calculate smoothing metric with borders image
-        borders, metric = label_smoothing_metric(
+        borders, _, _ = label_smoothing_metric(
             img_smoothed_orig, img_smoothed)
         shape = list(borders.shape)
         shape[0] = img_np.shape[0]
@@ -616,7 +616,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     
     # pepare labels and default selem used to find "broad volume"
     label_ids = np.unique(orig_img_np)
-    selem = morphology.ball(filter_size)
     
     def update_borders_img(borders, slices, label_id, channel):
         nonlocal borders_img_np
@@ -647,6 +646,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     
     tot_metric = 0
     tot_size = 0
+    padding = 2 if filter_size is None else 2 * filter_size
     pxs = {}
     cols = ("label_id", "pxs_reduced", "pxs_expanded", "size_orig")
     for label_id in label_ids:
@@ -660,10 +660,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
         props = measure.regionprops(label_mask.astype(np.int))
         if len(props) < 1 or props[0].bbox is None: continue
         _, slices = plot_3d.get_bbox_region(
-            props[0].bbox, 2 * filter_size, orig_img_np.shape)
+            props[0].bbox, padding, orig_img_np.shape)
         
         if mode == SMOOTHING_METRIC_MODES[0]:
             # "vol": measure wrapping volume by closing filter
+            selem = morphology.ball(filter_size)
             mask_orig, broad_orig = broad_borders(
                 orig_img_np, slices, label_id, 0, roughs[0])
             _, broad_smoothed = broad_borders(
@@ -690,8 +691,21 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             # expansion past original borders (displacement penalty), 
             # using wt as a distance offset given that initial px displacement 
             # is actually necessary for compaction
-            dist_to_orig = plot_3d.borders_distance(
-                borders_orig, borders_smoothed)
+            if filter_size is None:
+                dist_to_orig = plot_3d.borders_distance(
+                    borders_orig, borders_smoothed)
+            else:
+                # find distances around the original borders to show 
+                # distances potentially in appropriately compacted areas
+                dist_to_orig, borders_dist, borders_orig_filled = (
+                    plot_3d.borders_distance(
+                        borders_orig, borders_smoothed, 
+                        filter_size=filter_size))
+                dist_within_orig = borders_dist[borders_orig_filled]
+                update_borders_img(borders_orig_filled, slices, label_id, 1)
+                dists = dist_within_orig[dist_within_orig > 0]
+                border_dist = 0 if len(dists) == 0 else np.mean(dists)
+                pxs.setdefault("border_dist", []).append(border_dist)
             dist_to_orig -= penalty_wt
             dist_to_orig[dist_to_orig < 0] = 0
             pxs_expanded = np.sum(dist_to_orig)

@@ -309,10 +309,36 @@ def perimeter_nd(img_np):
     img_border = np.logical_xor(img_np, interior)
     return img_border
 
-def borders_distance(borders_orig, borders_shifted):
+def borders_distance(borders_orig, borders_shifted, filter_size=None):
+    """Measure distance between borders.
+    
+    Args:
+        borders_orig: Original borders as a boolean mask.
+        borders_shifted: Shifted borders as a boolean mask, which should 
+            match the shape of ``borders_orig``.
+        filter_size: Size of structuring element to use in filter for 
+            getting the distances around the original border. Defaults 
+            to None, in which case these distances will not be obtained.
+    
+    Returns:
+        Numpy array the same shape as ``borders_orig`` with distances 
+        generated from a Euclidean distance transform. If ``filter_size`` 
+        is given, two additional values are returned: ``borders_dist``, 
+        the full distance transform array; and ``borders_orig_filled``, 
+        the region surrounding the original borderse filled with a 
+        closing filter.
+    """
+    # find distances to the original borders, inverted to become background
     borders_dist = ndimage.distance_transform_edt(~borders_orig)
+    # gather the distances corresponding to the shifted border
     dist_to_orig = borders_dist[borders_shifted]
-    return dist_to_orig
+    if filter_size is None:
+        return dist_to_orig
+    # find the pixels surrounding the original border
+    borders_orig_filled = morphology.binary_closing(
+        borders_orig, morphology.ball(filter_size))
+    dist_within_orig = borders_dist[borders_orig_filled]
+    return dist_to_orig, borders_dist, borders_orig_filled
 
 def get_bbox_region(bbox, padding=0, img_shape=None):
     dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes

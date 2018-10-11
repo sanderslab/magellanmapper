@@ -683,7 +683,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             mask_orig, borders_orig = surface_area(
                 orig_img_np, slices, label_id, roughs[0])
             update_borders_img(borders_orig, slices, label_id, 0)
-            _, borders_smoothed = surface_area(
+            mask_smoothed, borders_smoothed = surface_area(
                 smoothed_img_np, slices, label_id, roughs[1])
             # reduction in surface area (compaction)
             pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
@@ -728,6 +728,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                     dist_to_orig, sigma=penalty_wt, multichannel=False, 
                     preserve_range=True)
             pxs_expanded = np.sum(dist_to_orig)
+            sa_to_vol = (np.sum(borders_smoothed) / np.sum(mask_smoothed)
+                         - np.sum(borders_orig) / np.sum(mask_orig))
+            pxs.setdefault("SA_to_vol_diff", []).append(sa_to_vol)
         else:
             raise TypeError("no metric of mode {}".format(mode))
         

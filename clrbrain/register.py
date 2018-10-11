@@ -703,11 +703,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                     # find distances around the original borders to show 
                     # distances potentially in appropriately compacted areas
                     update_borders_img(borders_orig_filled, slices, label_id, 1)
-                # modify dist by power function to decrease weight of pxs close 
-                # to orig (possibly appropriate compaction) and more heavily 
-                # weight farther ones
-                dist_to_orig = np.power(dist_to_orig / penalty_wt, 2)
-                pxs_expanded = np.sum(dist_to_orig)
             elif mode == SMOOTHING_METRIC_MODES[2]:
                 # "area_radial": displacement determined using difference 
                 # in radial distances from center to get signed distances
@@ -727,7 +722,12 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                 # penalize regressions (TODO: does not work for separate 
                 # background spaces, such as ventricles)
                 mask = radial_diff < 0 if label_id == 0 else radial_diff > 0
-                pxs_expanded = np.sum(np.abs(radial_diff[mask]))
+                dist_to_orig = np.abs(radial_diff[mask])
+            if penalty_wt is not None:
+                dist_to_orig = filters.gaussian(
+                    dist_to_orig, sigma=penalty_wt, multichannel=False, 
+                    preserve_range=True)
+            pxs_expanded = np.sum(dist_to_orig)
         else:
             raise TypeError("no metric of mode {}".format(mode))
         

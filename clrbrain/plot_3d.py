@@ -362,7 +362,7 @@ def radial_dist(borders, centroid):
     borders_dist[borders] = radial_dist[borders]
     return borders_dist
 
-def radial_dist_diff(radial_orig, radial_shifted, indices, sigma=None):
+def radial_dist_diff(radial_orig, radial_shifted, indices):
     """Measure the difference between corresponding points in radial 
     distance arrays to get the relative distance from one set of borders 
     to another with reference to the centroid from which the radial 
@@ -374,9 +374,6 @@ def radial_dist_diff(radial_orig, radial_shifted, indices, sigma=None):
     Args:
         radial_orig: Radial original distances as a Numpy array.
         radial_shifted: Radial shifted distances as a Numpy array.
-        sigma: Sigma by which to Gaussian smooth the resulting distance 
-            difference to remove high frequency fluctuations. Defaults to 
-            None, in which case smoothing will not be applied.
     
     Returns:
         A Numpy array the same shape as ``radial_orig`` with differences 
@@ -393,9 +390,6 @@ def radial_dist_diff(radial_orig, radial_shifted, indices, sigma=None):
     print(dist_at_nearest_orig)
     print(radial_diff)
     '''
-    if sigma is not None:
-        radial_diff = filters.gaussian(
-            radial_diff, sigma=sigma, multichannel=False, preserve_range=True)
     return radial_diff
 
 def get_bbox_region(bbox, padding=0, img_shape=None):

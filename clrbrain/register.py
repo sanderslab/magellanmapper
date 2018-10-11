@@ -644,6 +644,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             rough_img_np[slices], borders.astype(np.int8))
         return label_mask_region, borders
     
+    def gaus(distances):
+        if penalty_wt is not None:
+            distances = filters.gaussian(
+                distances, sigma=penalty_wt, multichannel=False, 
+                preserve_range=True)
+        return distances
+    
     tot_metric = 0
     tot_size = 0
     padding = 2 if filter_size is None else 2 * filter_size
@@ -703,13 +710,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                     # find distances around the original borders to show 
                     # distances potentially in appropriately compacted areas
                     update_borders_img(borders_orig_filled, slices, label_id, 1)
+                dist_to_orig = gaus(dist_to_orig)
             elif mode == SMOOTHING_METRIC_MODES[2]:
                 # "area_radial": displacement determined using difference 
                 # in radial distances from center to get signed distances
                 region = orig_img_np[slices]
                 props = measure.regionprops((region == label_id).astype(np.int))
                 centroid = props[0].centroid
-                print(centroid)
                 radial_dist_orig = plot_3d.radial_dist(borders_orig, centroid)
                 radial_dist_smoothed = plot_3d.radial_dist(
                     borders_smoothed, centroid)
@@ -717,16 +724,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                 # for compaction, smooth out those distances and use only 
                 # pos vals to avoid cancelation
                 radial_diff = plot_3d.radial_dist_diff(
-                    radial_dist_orig, radial_dist_smoothed, indices)#, 0.25)
+                    radial_dist_orig, radial_dist_smoothed, indices)
+                radial_diff = gaus(radial_diff)
                 # background centroid is in empty middle space so need to 
                 # penalize regressions (TODO: does not work for separate 
                 # background spaces, such as ventricles)
                 mask = radial_diff < 0 if label_id == 0 else radial_diff > 0
                 dist_to_orig = np.abs(radial_diff[mask])
-            if penalty_wt is not None:
-                dist_to_orig = filters.gaussian(
-                    dist_to_orig, sigma=penalty_wt, multichannel=False, 
-                    preserve_range=True)
             pxs_expanded = np.sum(dist_to_orig)
             sa_to_vol = (np.sum(borders_smoothed) / np.sum(mask_smoothed)
                          - np.sum(borders_orig) / np.sum(mask_orig))

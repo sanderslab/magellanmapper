@@ -720,12 +720,14 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                     borders_smoothed, centroid)
                 # assuming that high freq regions are those likely targeted 
                 # for compaction, smooth out those distances and use only 
-                # pos vals to avoid cancelation; TODO: for background, 
-                # centroid is in empty middle space, so pos vals correspond 
-                # to regression rather than to expansion
+                # pos vals to avoid cancelation
                 radial_diff = plot_3d.radial_dist_diff(
                     radial_dist_orig, radial_dist_smoothed, indices)#, 0.25)
-                pxs_expanded = np.sum(radial_diff[radial_diff > 0])
+                # background centroid is in empty middle space so need to 
+                # penalize regressions (TODO: does not work for separate 
+                # background spaces, such as ventricles)
+                mask = radial_diff < 0 if label_id == 0 else radial_diff > 0
+                pxs_expanded = np.sum(np.abs(radial_diff[mask]))
         else:
             raise TypeError("no metric of mode {}".format(mode))
         

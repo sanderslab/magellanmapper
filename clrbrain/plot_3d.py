@@ -307,6 +307,7 @@ def perimeter_nd(img_np):
     """
     interior = morphology.binary_erosion(img_np)
     img_border = np.logical_xor(img_np, interior)
+    #print("perimeter:\n{}".format(img_border))
     return img_border
 
 def borders_distance(borders_orig, borders_shifted, filter_size=None):
@@ -325,7 +326,9 @@ def borders_distance(borders_orig, borders_shifted, filter_size=None):
         Tuple of ``dist_to_orig``, a Numpy array the same shape as 
         ``borders_orig`` with distances generated from a Euclidean 
         distance transform to the original borders, or to the smoothed 
-        borders if ``filter_size`` is given; and ``borders_orig`` to 
+        borders if ``filter_size`` is given; ``indices``, the distance 
+        transform indices in ``borders_orig`` corresponding to each pixel 
+        in ``borders_smoothed``; and ``borders_orig`` to 
         allow accessing the smoothed borders.
     """
     if filter_size is not None:
@@ -333,10 +336,67 @@ def borders_distance(borders_orig, borders_shifted, filter_size=None):
         borders_orig = morphology.binary_closing(
             borders_orig, morphology.ball(filter_size))
     # find distances to the original borders, inverted to become background
-    borders_dist = ndimage.distance_transform_edt(~borders_orig)
+    borders_dist, indices = ndimage.distance_transform_edt(
+        ~borders_orig, return_indices=True)
     # gather the distances corresponding to the shifted border
-    dist_to_orig = borders_dist[borders_shifted]
-    return dist_to_orig, borders_orig
+    dist_to_orig = np.zeros_like(borders_dist)
+    dist_to_orig[borders_shifted] = borders_dist[borders_shifted]
+    #print(borders_orig)
+    return dist_to_orig, indices, borders_orig
+
+def radial_dist(borders, centroid):
+    """Measure radial distance from borders to given center.
+    
+    Args:
+        borders: Original borders as a boolean mask.
+        centroid: Coordinates corresponding to chosen reference point.
+    
+    Returns:
+        A Numpy array the same shape as ``borders`` with distances measured 
+        from each point in ``borders`` to ``centroid`` point.
+    """
+    center_img = np.ones(borders.shape)
+    center_img[tuple(int(n) for n in centroid)] = 0
+    radial_dist = ndimage.distance_transform_edt(center_img)
+    borders_dist = np.zeros_like(radial_dist)
+    borders_dist[borders] = radial_dist[borders]
+    return borders_dist
+
+def radial_dist_diff(radial_orig, radial_shifted, indices, sigma=None):
+    """Measure the difference between corresponding points in radial 
+    distance arrays to get the relative distance from one set of borders 
+    to another with reference to the centroid from which the radial 
+    distances were calculated.
+    
+    Shifted points with positive distances are farther from the reference 
+    point than the closest original point is.
+    
+    Args:
+        radial_orig: Radial original distances as a Numpy array.
+        radial_shifted: Radial shifted distances as a Numpy array.
+        sigma: Sigma by which to Gaussian smooth the resulting distance 
+            difference to remove high frequency fluctuations. Defaults to 
+            None, in which case smoothing will not be applied.
+    
+    Returns:
+        A Numpy array the same shape as ``radial_orig`` with differences 
+        in distance from ``radial_shifted`` to the corresponding points 
+        in ``radial_orig``.
+    """
+    dist_at_nearest_orig = radial_orig[tuple(indices)]
+    dist_at_nearest_orig[radial_shifted <= 0] = 0
+    radial_diff = np.subtract(radial_shifted, dist_at_nearest_orig)
+    '''
+    print(radial_orig)
+    print(radial_shifted)
+    print("indices:\n{}".format(indices))
+    print(dist_at_nearest_orig)
+    print(radial_diff)
+    '''
+    if sigma is not None:
+        radial_diff = filters.gaussian(
+            radial_diff, sigma=sigma, multichannel=False, preserve_range=True)
+    return radial_diff
 
 def get_bbox_region(bbox, padding=0, img_shape=None):
     dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes

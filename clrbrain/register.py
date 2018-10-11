@@ -86,7 +86,7 @@ ABA_LEVEL = "st_level"
 ABA_CHILDREN = "children"
 
 SMOOTHING_MODES=("opening", "gaussian")
-SMOOTHING_METRIC_MODES=("vol", "area")
+SMOOTHING_METRIC_MODES=("vol", "area_edt", "area_radial")
 _SIGNAL_THRESHOLD = 0.01
 
 def _reg_out_path(file_path, reg_name):
@@ -678,7 +678,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             # normalize to total foreground
             size_orig = np.sum(mask_orig)
             if label_id != 0: tot_size += size_orig
-        else:
+        elif mode in SMOOTHING_METRIC_MODES[1:3]:
             # "area": measure surface area
             mask_orig, borders_orig = surface_area(
                 orig_img_np, slices, label_id, roughs[0])
@@ -691,19 +691,43 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             size_orig = np.sum(borders_orig)
             tot_size += size_orig
             # expansion past original borders (displacement penalty), 
-            # using wt as a distance offset given that initial px displacement 
-            # is actually necessary for compaction
-            dist_to_orig, borders_orig_filled = plot_3d.borders_distance(
-                borders_orig, borders_smoothed, filter_size=filter_size)
-            if filter_size is not None:
-                # find distances around the original borders to show 
-                # distances potentially in appropriately compacted areas
-                update_borders_img(borders_orig_filled, slices, label_id, 1)
-            # modify dist by power function to decrease weight of pxs close 
-            # to orig (possibly appropriate compaction) and more heavily 
-            # weight farther ones
-            dist_to_orig = np.power(dist_to_orig / penalty_wt, 2)
-            pxs_expanded = np.sum(dist_to_orig)
+            # using filter to give buffer around irregular borders to 
+            # offset distances there
+            dist_to_orig, indices, borders_orig_filled = (
+                plot_3d.borders_distance(
+                    borders_orig, borders_smoothed, filter_size=filter_size))
+            if mode == SMOOTHING_METRIC_MODES[1]:
+                # "area_edt": displacement determined using distance transform 
+                # from shifted to original borrders
+                if filter_size is not None:
+                    # find distances around the original borders to show 
+                    # distances potentially in appropriately compacted areas
+                    update_borders_img(borders_orig_filled, slices, label_id, 1)
+                # modify dist by power function to decrease weight of pxs close 
+                # to orig (possibly appropriate compaction) and more heavily 
+                # weight farther ones
+                dist_to_orig = np.power(dist_to_orig / penalty_wt, 2)
+                pxs_expanded = np.sum(dist_to_orig)
+            elif mode == SMOOTHING_METRIC_MODES[2]:
+                # "area_radial": displacement determined using difference 
+                # in radial distances from center to get signed distances
+                region = orig_img_np[slices]
+                props = measure.regionprops((region == label_id).astype(np.int))
+                centroid = props[0].centroid
+                print(centroid)
+                radial_dist_orig = plot_3d.radial_dist(borders_orig, centroid)
+                radial_dist_smoothed = plot_3d.radial_dist(
+                    borders_smoothed, centroid)
+                # assuming that high freq regions are those likely targeted 
+                # for compaction, smooth out those distances and use only 
+                # pos vals to avoid cancelation; TODO: for background, 
+                # centroid is in empty middle space, so pos vals correspond 
+                # to regression rather than to expansion
+                radial_diff = plot_3d.radial_dist_diff(
+                    radial_dist_orig, radial_dist_smoothed, indices)#, 0.25)
+                pxs_expanded = np.sum(radial_diff[radial_diff > 0])
+        else:
+            raise TypeError("no metric of mode {}".format(mode))
         
         metric = pxs_reduced - pxs_expanded
         tot_metric += metric
@@ -2599,6 +2623,14 @@ def _test_curate_img(path):
     sitk.Show(result_imgs[0])
     sitk.Show(result_imgs[1])
 
+def _test_smoothing_metric():
+    img = np.zeros((6, 6, 6), dtype=int)
+    img[1:5, 1:5, 1:5] = 1
+    img_smoothed = morphology.binary_erosion(img)
+    print("img:\n{}".format(img))
+    print("img_smoothed:\n{}".format(img_smoothed))
+    label_smoothing_metric(img, img_smoothed)
+
 if __name__ == "__main__":
     print("Clrbrain image registration")
     from clrbrain import cli
@@ -2623,6 +2655,7 @@ if __name__ == "__main__":
     #_test_labels_lookup()
     #_test_region_from_id()
     #_test_curate_img(config.filenames[0])
+    #_test_smoothing_metric()
     #os._exit(os.EX_OK)
     
     if config.register_type is None:

@@ -702,7 +702,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             # offset distances there
             dist_to_orig, indices, borders_orig_filled = (
                 plot_3d.borders_distance(
-                    borders_orig, borders_smoothed, filter_size=filter_size))
+                    borders_orig, borders_smoothed, mask_orig=mask_orig, 
+                    filter_size=filter_size))
             if mode == SMOOTHING_METRIC_MODES[1]:
                 # "area_edt": displacement determined using distance transform 
                 # from shifted to original borrders
@@ -711,6 +712,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                     # distances potentially in appropriately compacted areas
                     update_borders_img(borders_orig_filled, slices, label_id, 1)
                 dist_to_orig = gaus(dist_to_orig)
+                dist_to_orig[dist_to_orig < 0] = 0
             elif mode == SMOOTHING_METRIC_MODES[2]:
                 # "area_radial": displacement determined using difference 
                 # in radial distances from center to get signed distances

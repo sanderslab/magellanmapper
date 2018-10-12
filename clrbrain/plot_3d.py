@@ -310,13 +310,45 @@ def perimeter_nd(img_np):
     #print("perimeter:\n{}".format(img_border))
     return img_border
 
-def borders_distance(borders_orig, borders_shifted, filter_size=None):
+def signed_distance_transform(borders, mask=None, return_indices=False):
+    """Signed version of Euclidean distance transform where values within a 
+    given mask are considered negative.
+    
+    This version can be applied to the case of a border where 
+    distances inside the border, defined as those within the original 
+    image from which the borders were construcuted, are considered negative.
+    
+    Args:
+        borders: Borders as a boolean mask.
+        mask: Mask where distances will be considered neg, such as a 
+            mask of the full image for the borders. Defaults to None, in 
+            which case distances will be given as-is.
+        return_indices: True if distance transform indices should be given; 
+            defaults to False.
+    
+    Returns:
+        ``transform`` as the signed distances. If ``return_indices`` is True, 
+        ``indices`` is also returned.
+    """
+    if return_indices:
+        transform, indices = ndimage.distance_transform_edt(
+            borders, return_indices=return_indices)
+    else:
+        transform = ndimage.distance_transform_edt(borders)
+    if mask is not None: transform[mask] *= -1
+    if return_indices: return transform, indices
+    return transform
+
+def borders_distance(borders_orig, borders_shifted, mask_orig=None, 
+                     filter_size=None):
     """Measure distance between borders.
     
     Args:
         borders_orig: Original borders as a boolean mask.
         borders_shifted: Shifted borders as a boolean mask, which should 
             match the shape of ``borders_orig``.
+        mask_orig: Mask of original image for signed distances; defaults 
+            to None, in which case all distances will be >= 0.
         filter_size: Size of structuring element to use in filter for 
             smoothing the original border with a closing filter before 
             finding distances. Defaults to None, in which case no filter 
@@ -335,16 +367,18 @@ def borders_distance(borders_orig, borders_shifted, filter_size=None):
         # find the pixels surrounding the original border
         borders_orig = morphology.binary_closing(
             borders_orig, morphology.ball(filter_size))
-    # find distances to the original borders, inverted to become background
-    borders_dist, indices = ndimage.distance_transform_edt(
-        ~borders_orig, return_indices=True)
+    # find distances to the original borders, inverted to become background, 
+    # where neg dists are within orig image
+    borders_dist, indices = signed_distance_transform(
+        ~borders_orig, mask=mask_orig, return_indices=True)
     # gather the distances corresponding to the shifted border
     dist_to_orig = np.zeros_like(borders_dist)
     dist_to_orig[borders_shifted] = borders_dist[borders_shifted]
+    '''
     lib_clrbrain.print_compact(borders_orig, "borders orig", True)
     lib_clrbrain.print_compact(borders_dist, "borders dist", True)
     lib_clrbrain.print_compact(dist_to_orig, "dist_to_orig", True)
-    #print(borders_orig)
+    '''
     return dist_to_orig, indices, borders_orig
 
 def radial_dist(borders, centroid):

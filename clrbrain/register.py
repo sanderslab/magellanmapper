@@ -86,7 +86,7 @@ ABA_LEVEL = "st_level"
 ABA_CHILDREN = "children"
 
 SMOOTHING_MODES=("opening", "gaussian")
-SMOOTHING_METRIC_MODES=("vol", "area_edt", "area_radial")
+SMOOTHING_METRIC_MODES=("vol", "area_edt", "area_radial", "area_displvol")
 _SIGNAL_THRESHOLD = 0.01
 
 def _reg_out_path(file_path, reg_name):
@@ -646,6 +646,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
     
     def gaus(distances):
         if penalty_wt is not None:
+            # low-pass filter the distances between borders to remove shifts 
+            # likely resulting from appropriate compaction
             distances = filters.gaussian(
                 distances, sigma=penalty_wt, multichannel=False, 
                 preserve_range=True)
@@ -685,62 +687,63 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             # normalize to total foreground
             size_orig = np.sum(mask_orig)
             if label_id != 0: tot_size += size_orig
-        elif mode in SMOOTHING_METRIC_MODES[1:3]:
+        elif mode in SMOOTHING_METRIC_MODES[1:]:
             # "area": measure surface area
             mask_orig, borders_orig = surface_area(
                 orig_img_np, slices, label_id, roughs[0])
             update_borders_img(borders_orig, slices, label_id, 0)
             mask_smoothed, borders_smoothed = surface_area(
                 smoothed_img_np, slices, label_id, roughs[1])
-            # reduction in surface area (compaction)
+            # reduction in surface area (compaction), normalized to orig SA
             pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
-            # normalize to original surface area
             size_orig = np.sum(borders_orig)
             tot_size += size_orig
-            # expansion past original borders (displacement penalty), 
-            # using filter to give buffer around irregular borders to 
-            # offset distances there
-            dist_to_orig, indices, borders_orig_filled = (
-                plot_3d.borders_distance(
-                    borders_orig, borders_smoothed, mask_orig=mask_orig, 
-                    filter_size=filter_size))
-            if mode == SMOOTHING_METRIC_MODES[1]:
-                # "area_edt": displacement determined using distance transform 
-                # from shifted to original borrders
-                if filter_size is not None:
-                    # find distances around the original borders to show 
-                    # distances potentially in appropriately compacted areas
-                    update_borders_img(borders_orig_filled, slices, label_id, 1)
-                dist_to_orig = gaus(dist_to_orig)
-                dist_to_orig[dist_to_orig < 0] = 0
-            elif mode == SMOOTHING_METRIC_MODES[2]:
-                # "area_radial": displacement determined using difference 
-                # in radial distances from center to get signed distances
-                region = orig_img_np[slices]
-                props = measure.regionprops((region == label_id).astype(np.int))
-                centroid = props[0].centroid
-                radial_dist_orig = plot_3d.radial_dist(borders_orig, centroid)
-                radial_dist_smoothed = plot_3d.radial_dist(
-                    borders_smoothed, centroid)
-                # assuming that high freq regions are those likely targeted 
-                # for compaction, smooth out those distances and use only 
-                # pos vals to avoid cancelation
-                radial_diff = plot_3d.radial_dist_diff(
-                    radial_dist_orig, radial_dist_smoothed, indices)
-                radial_diff = gaus(radial_diff)
-                dist_to_orig = np.abs(radial_diff)
-            # take square root of distances, first rounding numbers between 
-            # 0-1 in case of Gaussian filtering to avoid inflating numbers
-            mask = np.logical_and(
-                np.greater(dist_to_orig, 0), np.less(dist_to_orig, 1))
-            dist_to_orig[mask] = np.round(dist_to_orig[mask])
-            dist_to_orig = np.sqrt(dist_to_orig)
-            '''
-            # SA weighted by distance is essentially the integral of the SA, 
-            # so this sum can be treated as a vol to normalize by the tot 
-            # vol for a unitless fraction, then multiplied by orig SA to 
-            # bring back the same units as the compaction
-            dist_wt = np.sum(dist_to_orig)
+            
+            if mode == SMOOTHING_METRIC_MODES[3]:
+                # "area_displvol": measure displacement by simple vol expansion
+                dist_wt = np.sum(np.logical_and(mask_smoothed, ~mask_orig))
+            else:
+                # signed distance between borders; option to use filter for 
+                # buffer around irregular borders to offset distances there
+                dist_to_orig, indices, borders_orig_filled = (
+                    plot_3d.borders_distance(
+                        borders_orig, borders_smoothed, mask_orig=mask_orig, 
+                        filter_size=filter_size))
+                if mode == SMOOTHING_METRIC_MODES[1]:
+                    # "area_edt": direct distances between borders
+                    if filter_size is not None:
+                        update_borders_img(
+                            borders_orig_filled, slices, label_id, 1)
+                    dist_to_orig = gaus(dist_to_orig) # filter signed dists
+                    dist_to_orig[dist_to_orig < 0] = 0 # only expansion
+                elif mode == SMOOTHING_METRIC_MODES[2]:
+                    # "area_radial": radial distances from center to get 
+                    # signed distances (DEPRECATED: signed dist in area_edt)
+                    region = orig_img_np[slices]
+                    props = measure.regionprops(
+                        (region == label_id).astype(np.int))
+                    centroid = props[0].centroid
+                    radial_dist_orig = plot_3d.radial_dist(
+                        borders_orig, centroid)
+                    radial_dist_smoothed = plot_3d.radial_dist(
+                        borders_smoothed, centroid)
+                    radial_diff = plot_3d.radial_dist_diff(
+                        radial_dist_orig, radial_dist_smoothed, indices)
+                    radial_diff = gaus(radial_diff)
+                    dist_to_orig = np.abs(radial_diff)
+                '''
+                # take square root of distances, first rounding numbers between 
+                # 0-1 in case of Gaussian filtering to avoid inflating numbers
+                mask = np.logical_and(
+                    np.greater(dist_to_orig, 0), np.less(dist_to_orig, 1))
+                dist_to_orig[mask] = np.round(dist_to_orig[mask])
+                dist_to_orig = np.sqrt(dist_to_orig)
+                '''
+                # SA weighted by distance is essentially the integral of the 
+                # SA, so this sum can be treated as a vol
+                dist_wt = np.sum(dist_to_orig)
+            # normalize weighted displacement by tot vol for a unitless 
+            # fraction and multiply by orig SA to bring back compaction units
             pxs_expanded = dist_wt / np.sum(mask_orig) * size_orig
             sa_to_vol = (np.sum(borders_smoothed) / np.sum(mask_smoothed)
                          - np.sum(borders_orig) / np.sum(mask_orig))

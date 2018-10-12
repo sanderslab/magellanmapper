@@ -322,19 +322,24 @@ class RegisterSettings(SettingsDict):
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False
+        
         # erase labels outside of x,y,z (applied after transposition), 
         # where each val is (start, end), given as fractions, or None for the 
         # whole range
         self["truncate_labels"] = None
         
-        # mirror labels from one side onto the other, assuming only about 
-        # half of the labels for the underlying atlas are present
-        self["labels_mirror"] = (None, 0.525) # planes frac_start, frac_end
+        # mirror labels from one side onto the other, given as 
+        # (frac_start, frac_end), or None to avoid mirroring
+        self["labels_mirror"] = None
+        
         # expand labels within bounds given by 
-        # (((x_pixels_start, x_pixels_end), ...), (next_region...))
-        self["expand_labels"] = (((None, ), (0, 279), (103, 108)),)
-        # atlas and labels rotation by ((angle0, axis0), ...)
-        self["rotate"] = ((1.5, 1), (2, 2))
+        # (((x_pixels_start, x_pixels_end), ...), (next_region...)), or None 
+        # to avoid expansion
+        self["expand_labels"] = None
+        
+        # atlas and labels rotation by ((angle0, axis0), ...), or None to 
+        # avoid rotation
+        self["rotate"] = None
         
         self["atlas_threshold"] = 10.0
         self["target_size"] = None # x,y,z in exp orientation
@@ -415,7 +420,11 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "_abae18pt5", 
         {"target_size": (278, 581, 370),
-         "resize_factor": None}, # turn off resizing
+         "resize_factor": None, # turn off resizing
+         "labels_mirror": (None, 0.525), 
+         "expand_labels": (((None, ), (0, 279), (103, 108)),), 
+         "rotate": ((1.5, 1), (2, 2))
+        }, 
         settings_type)
     
     # settings for atlas with full labels

@@ -726,11 +726,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                 radial_diff = plot_3d.radial_dist_diff(
                     radial_dist_orig, radial_dist_smoothed, indices)
                 radial_diff = gaus(radial_diff)
-                # background centroid is in empty middle space so need to 
-                # penalize regressions (TODO: does not work for separate 
-                # background spaces, such as ventricles)
-                mask = radial_diff < 0 if label_id == 0 else radial_diff > 0
-                dist_to_orig = np.abs(radial_diff[mask])
+                dist_to_orig = np.abs(radial_diff)
             pxs_expanded = np.sum(dist_to_orig)
             sa_to_vol = (np.sum(borders_smoothed) / np.sum(mask_smoothed)
                          - np.sum(borders_orig) / np.sum(mask_orig))

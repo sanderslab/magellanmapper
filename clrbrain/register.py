@@ -734,7 +734,14 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
             mask = np.logical_and(
                 np.greater(dist_to_orig, 0), np.less(dist_to_orig, 1))
             dist_to_orig[mask] = np.round(dist_to_orig[mask])
-            pxs_expanded = np.sum(np.sqrt(dist_to_orig))
+            dist_to_orig = np.sqrt(dist_to_orig)
+            '''
+            # SA weighted by distance is essentially the integral of the SA, 
+            # so this sum can be treated as a vol to normalize by the tot 
+            # vol for a unitless fraction, then multiplied by orig SA to 
+            # bring back the same units as the compaction
+            dist_wt = np.sum(dist_to_orig)
+            pxs_expanded = dist_wt / np.sum(mask_orig) * size_orig
             sa_to_vol = (np.sum(borders_smoothed) / np.sum(mask_smoothed)
                          - np.sum(borders_orig) / np.sum(mask_orig))
             pxs.setdefault("SA_to_vol_diff", []).append(sa_to_vol)

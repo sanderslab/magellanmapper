@@ -173,6 +173,33 @@ def show_full_arrays(on=True):
     else:
         np.set_printoptions()
 
+def print_compact(arr, msg=None, mid=False):
+    """Print a Numpy array in a compact form to visual comparison with 
+    other arrays.
+    
+    The array will be rounded, converted to integer, and optionally 
+    reduced to a single plane to maximize chance of printing a 
+    non-truncated array (or plane) to compare more easily with modified 
+    versions of the array or other arrays.
+    
+    Args:
+        arr: Numpy array.
+        msg: Message to print on separate line before the array; defaults to 
+            None, in which case the message will not be printed.
+        mid: True to only print the middle element of the array.
+    
+    Returns:
+        The compact array as a new array.
+    """
+    compact = np.around(arr).astype(int)
+    if msg: print(msg)
+    if mid:
+        i = len(compact) // 2
+        print(compact[i])
+    else:
+        print(compact)
+    return compact
+
 def backup_file(path, modifier=""):
     """Backup a file to the next given available path with an index number 
     before the extension.

@@ -341,6 +341,9 @@ def borders_distance(borders_orig, borders_shifted, filter_size=None):
     # gather the distances corresponding to the shifted border
     dist_to_orig = np.zeros_like(borders_dist)
     dist_to_orig[borders_shifted] = borders_dist[borders_shifted]
+    lib_clrbrain.print_compact(borders_orig, "borders orig", True)
+    lib_clrbrain.print_compact(borders_dist, "borders dist", True)
+    lib_clrbrain.print_compact(dist_to_orig, "dist_to_orig", True)
     #print(borders_orig)
     return dist_to_orig, indices, borders_orig
 

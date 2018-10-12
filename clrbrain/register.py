@@ -729,7 +729,12 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4,
                     radial_dist_orig, radial_dist_smoothed, indices)
                 radial_diff = gaus(radial_diff)
                 dist_to_orig = np.abs(radial_diff)
-            pxs_expanded = np.sum(dist_to_orig)
+            # take square root of distances, first rounding numbers between 
+            # 0-1 in case of Gaussian filtering to avoid inflating numbers
+            mask = np.logical_and(
+                np.greater(dist_to_orig, 0), np.less(dist_to_orig, 1))
+            dist_to_orig[mask] = np.round(dist_to_orig[mask])
+            pxs_expanded = np.sum(np.sqrt(dist_to_orig))
             sa_to_vol = (np.sum(borders_smoothed) / np.sum(mask_smoothed)
                          - np.sum(borders_orig) / np.sum(mask_orig))
             pxs.setdefault("SA_to_vol_diff", []).append(sa_to_vol)

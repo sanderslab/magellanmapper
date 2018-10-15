@@ -260,13 +260,19 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True):
         The mirrored image in Numpy format.
     """
     if resize:
+        # made mirror index midline by adjusting image shape
         shape = img_np.shape
         shape_resized = np.copy(shape)
         shape_resized[0] = start * 2
-        img_resized = np.zeros(shape_resized, dtype=img_np.dtype)
-        img_resized[:shape[0]] = img_np
         print("original shape: {}, new shape: {}".format(shape, shape_resized))
-        img_np = img_resized
+        if shape_resized[0] > shape[0]:
+            # shift image into larger array, adding extra z padding
+            img_resized = np.zeros(shape_resized, dtype=img_np.dtype)
+            img_resized[:shape[0]] = img_np
+            img_np = img_resized
+        else:
+            # truncate original image to fit into smaller shape
+            img_np = img_np[:shape_resized[0]]
     tot_planes = len(img_np)
     if start <= tot_planes and start >= 0:
         # if empty planes at end, fill the empty space with the preceding 
@@ -406,8 +412,8 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
         for rot in rotate:
             img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
     
-    # reset mirroring index baed either on previously found index or fractional 
-    # profile setting
+    # reset mirroring index based either on previously found index or 
+    # fractional profile setting
     if extent is not None and extent[1] is not None:
         mirrori = int(extent[1] * tot_planes)
     

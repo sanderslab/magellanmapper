@@ -432,9 +432,9 @@ def update_register_settings(settings, settings_type):
         "_abap4", 
         {"target_size": (724, 403, 398),
          "resize_factor": None, # turn off resizing
-         "labels_mirror": (None, 0.495), 
-         "expand_labels": None, #(((None, ), (0, 279), (103, 108)),), 
-         "rotate": None #((1.5, 1), (2, 2))
+         "labels_mirror": (None, 0.487), 
+         "expand_labels": None, 
+         "rotate": ((0.22, 1), )
         }, 
         settings_type)
     

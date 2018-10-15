@@ -570,8 +570,8 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"
           .format(weighted_size_ratio))
 
-def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=4, 
-                           penalty_wt=1.0, mode=SMOOTHING_METRIC_MODES[1]):
+def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None, 
+                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[1]):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
     
@@ -1040,7 +1040,8 @@ def import_atlas(atlas_dir, show=True):
     img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
     
     #img_labels_np = None
-    img_atlas, img_labels, img_borders = match_atlas_labels(img_atlas, img_labels)
+    img_atlas, img_labels, img_borders = match_atlas_labels(
+        img_atlas, img_labels)
     
     truncate = config.register_settings["truncate_labels"]
     if truncate:

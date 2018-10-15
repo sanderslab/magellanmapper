@@ -159,7 +159,7 @@ class DiscreteColormap(colors.ListedColormap):
         '''
         if labels is None: return
         self.norm = None
-        labels_unique = np.unique(labels)
+        labels_unique = np.unique(labels).astype(np.int32)
         num_colors = len(np.unique(labels))
         # make first boundary below first label to avoid off-by-one errors
         # that appear to occur when viewing an image with an additional 

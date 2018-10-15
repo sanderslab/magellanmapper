@@ -441,12 +441,23 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
             img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     
     # mirror and check for label loss
-    print("total labels before reflection: {}".format(np.unique(img_np).size))
+    labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
     img_np = _mirror_planes(img_np, mirrori, -1)
-    print("total labels after reflection up to set midline ({}): {}"
-          .format(mirrori, np.unique(img_np[:mirrori]).size))
     print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (extendi, mirrori), borders_img_np
+
+def labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
+    print("Measuring label loss:")
+    print("number of labels changed from {} to {}"
+          .format(label_ids_orig.size, label_ids.size))
+    labels_lost = label_ids_orig[np.isin(
+        label_ids_orig, label_ids, invert=True)]
+    print("labels lost during smoothing: {}".format(labels_lost))
+    if label_img_np_orig is not None:
+        for lost in labels_lost:
+            region_lost = labels_img_np_orig[labels_img_np_orig == lost]
+            print("size of lost label {}: {}".format(lost, region_lost.size))
+    return labels_lost
 
 def replace_sitk_with_numpy(img_sitk, img_np):
     spacing = img_sitk.GetSpacing()
@@ -534,15 +545,10 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
               .format(region_size, region_size_smoothed))
     
     # show label loss metric
-    print("\nMeasuring label loss:")
+    print()
     label_ids_smoothed = np.unique(labels_img_np)
-    print("number of labels changed from {} to {}"
-          .format(label_ids.size, label_ids_smoothed.size))
-    labels_lost = label_ids[np.isin(label_ids, label_ids_smoothed, invert=True)]
-    print("labels lost during smoothing: {}".format(labels_lost))
-    for lost in labels_lost:
-        region_lost = labels_img_np_orig[labels_img_np_orig == lost]
-        print("size of lost label {}: {}".format(lost, region_lost.size))
+    labels_lost(label_ids, label_ids_smoothed, 
+        label_img_np_orig=labels_img_np_orig)
     
     # show DSC for labels
     print("\nMeasuring overlap of labels:")

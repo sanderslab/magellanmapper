@@ -427,6 +427,17 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
+    # ABA P4 specific settings
+    settings.add_modifier(
+        "_abap4", 
+        {"target_size": (724, 403, 398),
+         "resize_factor": None, # turn off resizing
+         "labels_mirror": (None, 0.495), 
+         "expand_labels": None, #(((None, ), (0, 279), (103, 108)),), 
+         "rotate": None #((1.5, 1), (2, 2))
+        }, 
+        settings_type)
+    
     # settings for atlas with full labels
     settings.add_modifier(
         "_nomirror", 

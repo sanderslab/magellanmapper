@@ -453,6 +453,19 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
+    # ABA P28 specific settings
+    settings.add_modifier(
+        "_abap28", 
+        {"target_size": (863, 480, 418),
+         "resize_factor": None, # turn off resizing
+         # will still cross midline since some regions only have labels 
+         # past midline
+         "labels_mirror": (0.11, 0.512), 
+         # rotate for symmetry, which also reduces label loss
+         "rotate": ((1, 2), )
+        }, 
+        settings_type)
+    
     # settings for atlas with full labels
     settings.add_modifier(
         "_nomirror", 

@@ -434,8 +434,22 @@ def update_register_settings(settings, settings_type):
         {"target_size": (724, 403, 398),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.487), 
-         "expand_labels": None, 
+         # open caudal labels to allow smallest mirror plane index, though 
+         # still cross midline since some regions only have labels past midline
          "rotate": ((0.22, 1), )
+        }, 
+        settings_type)
+    
+    # ABA P14 specific settings
+    settings.add_modifier(
+        "_abap14", 
+        {"target_size": (390, 794, 469),
+         "resize_factor": None, # turn off resizing
+         # will still cross midline since some regions only have labels 
+         # past midline
+         "labels_mirror": (None, 0.5), 
+         # rotate conservatively for symmetry without losing labels
+         "rotate": ((-0.4, 1), )
         }, 
         settings_type)
     

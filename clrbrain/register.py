@@ -363,17 +363,24 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
     
     # find the bounds of the reference image in the given plane and resize 
     # the corresponding section of the labels image to the bounds of the 
-    # reference image in the next plane closer to the edge, essentially 
-    # extending the last edge plane of the labels image
+    # reference image in the next plane closer to the edge, recursively 
+    # extending the nearest plane with labels based on the underlying atlas; 
+    # assume that each nearer plane is the same size or smaller than the next 
+    # farther plane, such as a tapering specimen
     plane_region = None
+    region = img_np
+    region_ref = img_ref_np
     while extendi >= 0:
         #print("plane_region max: {}".format(np.max(plane_region)))
-        bbox = _get_bbox(img_ref_np[extendi])
+        # re-sclice region to this plane's extent of atlas signal
+        bbox = _get_bbox(region_ref[extendi])
         if bbox is None:
             break
         shape, slices = plot_3d.get_bbox_region(bbox)
+        region_ref = region_ref[:, slices[0], slices[1]]
+        region = region[:, slices[0], slices[1]]
         if plane_region is None:
-            plane_region = img_np[extendi, slices[0], slices[1]]
+            plane_region = region[extendi]
             # remove ventricular space using empirically determined selem, 
             # which appears to be very sensitive to radius since values above 
             # or below lead to square shaped artifact along outer sample edges
@@ -386,7 +393,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
                 plane_region, shape, preserve_range=True, order=0, 
                 anti_aliasing=True, mode="reflect")
             #print("plane_region max: {}".format(np.max(plane_region)))
-            img_np[extendi, slices[0], slices[1]] = plane_region
+            region[extendi] = plane_region
         extendi -= 1
     
     if expand:

@@ -204,8 +204,13 @@ def _get_bbox(img_np, threshold=10):
         thresholded = morphology.remove_small_objects(thresholded, 200)
     # make labels for foreground and get label properties
     labels_props = measure.regionprops(measure.label(thresholded))
-    if len(labels_props) < 1:
+    num_props = len(labels_props)
+    if num_props < 1:
         return None
+    elif num_props > 1:
+        # TODO: consider checking all properties and getting largest
+        print("warning: number of region properties > 1 ({})"
+              .format(num_props))
     labels_bbox = labels_props[0].bbox
     #print("bbox: {}".format(labels_bbox))
     return labels_bbox

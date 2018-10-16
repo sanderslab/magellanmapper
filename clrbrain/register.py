@@ -333,17 +333,27 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
     img_ref_np = sitk.GetArrayFromImage(img_ref).astype(np.int32)
     tot_planes = len(img_np)
     
-    # extend lateral planes: make first plane with signal start even earlier
+    # extend near edges: lateral edges of atlas labels (ie low z) are missing 
+    # in many ABA developing mouse atlases, requiring extension
     extendi = 0
+    extendi_first = None
     if extent is None or extent[0] is None:
         # find the first non-zero plane
         for plane in img_np:
             if not np.allclose(plane, 0):
-                print("found first non-zero plane at {}".format(extendi))
-                break
+                if extendi_first is None:
+                    extendi_first = extendi
+                elif extendi - extendi_first >= 1:
+                    # require at least 2 contiguous planes with signal
+                    extendi = extendi_first
+                    print("found start of contiguous non-zero planes at {}"
+                          .format(extendi))
+                    break
+            else:
+                extendi_first = None
             extendi += 1
     else:
-        # based on settings
+        # based on profile settings
         extendi = int(extent[0] * tot_planes)
     
     # find the bounds of the reference image in the given plane and resize 

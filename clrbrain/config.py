@@ -330,7 +330,11 @@ class RegisterSettings(SettingsDict):
         self["truncate_labels"] = None
         
         # mirror labels from one side onto the other, given as 
-        # (frac_start, frac_end), or None to avoid mirroring
+        # (frac_start, frac_end, [frac_dup]), or None to avoid mirroring; 
+        # use None for frac_start/end to find fractions automatically; 
+        # frac_dup is the starting fraction at which planes will be 
+        # duplicated, such duplicating atlas planes to keep more labels 
+        # before mirroring
         self["labels_mirror"] = None
         
         # expand labels within bounds given by 
@@ -458,9 +462,10 @@ def update_register_settings(settings, settings_type):
         "_abap28", 
         {"target_size": (863, 480, 418),
          "resize_factor": None, # turn off resizing
+         # include start since some lateral labels are only partially complete; 
          # will still cross midline since some regions only have labels 
          # past midline
-         "labels_mirror": (0.11, 0.512), 
+         "labels_mirror": (0.11, 0.48), # (0.11, 0.51, 0.48) for dup
          # rotate for symmetry, which also reduces label loss
          "rotate": ((1, 2), )
         }, 

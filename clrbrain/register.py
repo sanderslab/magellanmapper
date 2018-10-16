@@ -248,7 +248,8 @@ def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
         axis += 1
     return img_np
 
-def _mirror_planes(img_np, start, mirror_mult=1, resize=True):
+def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None, 
+                   rand_dup=None):
     """Mirror image across its sagittal midline.
     
     Args:
@@ -260,6 +261,16 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True):
             defaults to 1.
         resize: True if the image should be resized to be symmetric in size 
             across ``start``; defaults to True.
+        start_dup: Fraction at which to start duplicating planes before 
+            mirroring, which may be useful for atlases where entired labeled 
+            regions are past midline, where duplication of a few atlas 
+            planes may simply expand rather than duplicating structures; 
+            defaults to None.
+        rand_dup: Multiplier for randomizer to choose duplicate planes from 
+            a random selection within this given range prior to ``start_dup``. 
+            Defaults to None, in which case the plane just prior to 
+            the duplication starting plane will simply be duplicated 
+            throughout the region.
     
     Returns:
         The mirrored image in Numpy format.
@@ -279,6 +290,25 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True):
             # truncate original image to fit into smaller shape
             img_np = img_np[:shape_resized[0]]
     tot_planes = len(img_np)
+    if start_dup is not None:
+        # duplicate planes starting at this fraction of total planes, 
+        # typically corresponding to the true midline
+        n = int(start_dup * tot_planes)
+        num_planes = start - n
+        if rand_dup is not None:
+            # randomly pick planes from 1 to rand_dup behind the starting plane
+            np.random.seed(num_planes)
+            dup = n - np.ceil(np.random.rand(num_planes) * rand_dup)
+            dup = dup.astype(int)
+            dup[dup < 0] = 0
+        else:
+            # duplicate the prior plane through the entire region
+            dup = np.repeat(n - 1, num_planes)
+        for i in range(num_planes):
+            plane_i = n + i
+            if plane_i > 0 and plane_i < tot_planes:
+                print("duplicating plane {} from {}".format(plane_i, dup[i]))
+                img_np[plane_i] = img_np[dup[i]]
     if start <= tot_planes and start >= 0:
         # if empty planes at end, fill the empty space with the preceding 
         # planes in mirrored fashion
@@ -1054,7 +1084,10 @@ def match_atlas_labels(img_atlas, img_labels):
         if rotate:
             for rot in rotate:
                 img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
-        img_atlas_np = _mirror_planes(img_atlas_np, mirror_indices[1])
+        start_dup = None
+        if len(mirror) > 2: start_dup = mirror[2]
+        img_atlas_np = _mirror_planes(
+            img_atlas_np, mirror_indices[1], start_dup=start_dup)
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
         
         if borders_img_np is not None:

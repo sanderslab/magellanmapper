@@ -429,11 +429,13 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
         # calculate smoothing metric with borders image
         borders, _, _ = label_smoothing_metric(
             img_smoothed_orig, img_smoothed)
-        shape = list(borders.shape)
-        shape[0] = img_np.shape[0]
-        borders_img_np = np.zeros(shape, dtype=np.int32)
-        borders_img_np[:mirrori] = borders
-        borders_img_np = _mirror_planes(borders_img_np, mirrori, -1)
+        if borders is not None:
+            # mirror borders image
+            shape = list(borders.shape)
+            shape[0] = img_np.shape[0]
+            borders_img_np = np.zeros(shape, dtype=np.int32)
+            borders_img_np[:mirrori] = borders
+            borders_img_np = _mirror_planes(borders_img_np, mirrori, -1)
     
     # check that labels will fit in integer type
     lib_clrbrain.printv(
@@ -571,7 +573,8 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
           .format(weighted_size_ratio))
 
 def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None, 
-                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[1]):
+                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[1], 
+                           save_borders=False):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
     
@@ -604,12 +607,15 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             tolerate more displacement. Defaults to 1.0.
         mode: One of :const:``SMOOTHING_METRIC_MODES`` (see above for 
             description of the modes).
+        save_borders: True to save borders of original and smoothed images 
+            in a separate, multichannel image; defaults to False.
     
     Returns:
         Tuple of ``borders_img_np``, a Numpy array of the same same as 
         ``original_img_np`` except with an additional channel dimension at 
         the end, where channel 0 contains the broad borders of the 
-        original image's labels, and channel 1 is that of the smoothed image; 
+        original image's labels, and channel 1 is that of the smoothed image, 
+        or None if ``save_borders`` is False; 
         ``tot_metric``, the smoothing metric as a float value; and 
         ``pd``, the metric components as a Pandas data frame.
     """
@@ -624,13 +630,16 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     
     # prepare borders image with channel for each set of borders
     shape.append(2)
-    borders_img_np = np.zeros(shape, dtype=np.int32)
+    borders_img_np = None
+    if save_borders:
+        borders_img_np = np.zeros(shape, dtype=np.int32)
     
     # pepare labels and default selem used to find "broad volume"
     label_ids = np.unique(orig_img_np)
     
     def update_borders_img(borders, slices, label_id, channel):
         nonlocal borders_img_np
+        if borders_img_np is None: return
         borders_region = borders_img_np[slices]
         borders_region[borders, channel] = label_id
     

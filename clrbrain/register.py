@@ -476,10 +476,10 @@ def labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
           .format(label_ids_orig.size, label_ids.size))
     labels_lost = label_ids_orig[np.isin(
         label_ids_orig, label_ids, invert=True)]
-    print("labels lost during smoothing: {}".format(labels_lost))
+    print("IDs of labels lost: {}".format(labels_lost))
     if label_img_np_orig is not None:
         for lost in labels_lost:
-            region_lost = labels_img_np_orig[labels_img_np_orig == lost]
+            region_lost = label_img_np_orig[label_img_np_orig == lost]
             print("size of lost label {}: {}".format(lost, region_lost.size))
     return labels_lost
 

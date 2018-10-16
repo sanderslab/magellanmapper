@@ -322,6 +322,7 @@ class RegisterSettings(SettingsDict):
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False
+        self["smooth"] = False # smooth labels
         
         # erase labels outside of x,y,z (applied after transposition), 
         # where each val is (start, end), given as fractions, or None for the 
@@ -442,6 +443,12 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "_nomirror", 
         {"labels_mirror": None}, # turn off mirroring
+        settings_type)
+    
+    # enable label smoothing
+    settings.add_modifier(
+        "_smooth", 
+        {"smooth": True}, 
         settings_type)
     
     # groupwise registration batch 02

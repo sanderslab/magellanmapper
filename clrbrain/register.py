@@ -292,7 +292,7 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True):
     return img_np
 
 def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None, 
-                   smooth=True):
+                   smooth=False):
     """Mirror labels across sagittal midline and add lateral edges.
     
     Assume that the image is in sagittal sections and consists of only one 
@@ -319,7 +319,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
             the size of the atlas. Defaults to None.
         rotate: Tuple of ((angle0, axis0), ...) by which to rotate the 
             labels. Defaults to None.
-        smooth: True if labels should be smoothed; defaults to True.
+        smooth: True if labels should be smoothed; defaults to False.
     
     Returns:
         Tuple of ``img_np``, ``(extendi, mirrori)``, where ``img_np`` is 
@@ -1009,6 +1009,7 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
 
 def match_atlas_labels(img_atlas, img_labels):
     mirror = config.register_settings["labels_mirror"]
+    smooth = config.register_settings["smooth"]
     img_borders = None
     if mirror:
         # mirror and truncate labels for labels for only half the brain, 
@@ -1016,7 +1017,7 @@ def match_atlas_labels(img_atlas, img_labels):
         expand = config.register_settings["expand_labels"]
         rotate = config.register_settings["rotate"]
         img_labels_np, mirror_indices, borders_img_np = _mirror_labels(
-            img_labels, img_atlas, mirror, expand, rotate)
+            img_labels, img_atlas, mirror, expand, rotate, smooth)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
         img_atlas_np = sitk.GetArrayFromImage(img_atlas)
         if rotate:
@@ -1104,6 +1105,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
             False.
         name_prefix: Path with base name where registered files are located; 
             defaults to None, in which case the fixed_file path will be used.
+        new_atlas: True to generate registered images that will serve as a 
+            new atlas; defaults to False.
     """
     start_time = time()
     if name_prefix is None:

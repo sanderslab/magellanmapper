@@ -421,7 +421,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
             # default threshold
             plane_region = transform.resize(
                 plane_region, shape, preserve_range=True, order=0, 
-                anti_aliasing=True, mode="reflect")
+                anti_aliasing=False, mode="reflect")
             #print("plane_region max: {}".format(np.max(plane_region)))
             region[extendi] = plane_region
         extendi -= 1
@@ -444,7 +444,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
                 # expand bounding box region of labels to that of atlas
                 plane_region = transform.resize(
                     plane_region, shape_ref, preserve_range=True, order=0, 
-                    anti_aliasing=True, mode="reflect")
+                    anti_aliasing=False, mode="reflect")
                 region[extendi, slices_ref[0], slices_ref[1]] = plane_region
     
     # find approximate midline by locating the last zero plane from far edge 
@@ -919,7 +919,7 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
                   .format(rescale, resize_factor))
             transposed = transform.rescale(
                 transposed, rescale, mode="constant", preserve_range=True, 
-                multichannel=False, anti_aliasing=True, 
+                multichannel=False, anti_aliasing=False, 
                 order=0).astype(img_dtype)
             spacing = np.divide(spacing, rescale)
         # casted back since transpose changes data type even when 

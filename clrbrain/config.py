@@ -484,6 +484,18 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
+    # ABA P56 specific settings
+    settings.add_modifier(
+        "_abap56", 
+        {"target_size": (528, 320, 456), # same atlas image as ABA P56dev
+         "resize_factor": None, # turn off resizing
+         # turn off start by setting to 0; 
+         # original atlas appears to have already been mirrored, but mirror 
+         # again at the same position simply to give neg labels on opp side
+         "labels_mirror": (0, 0.5)
+        }, 
+        settings_type)
+    
     # settings for atlas with full labels
     settings.add_modifier(
         "_nomirror", 

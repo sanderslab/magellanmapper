@@ -183,11 +183,7 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 def _get_bbox(img_np, threshold=10):
-    """Get the bounding box for the first object within an image.
-    
-    Since there does not appear to be a guarantee about the order of 
-    objects found in :func:``measure.regionprops``, this bbox method 
-    should only be used when only one object is expected.
+    """Get the bounding box for the largest object within an image.
     
     Args:
         img_np: Image as a Numpy array.
@@ -195,7 +191,7 @@ def _get_bbox(img_np, threshold=10):
             ``img_np`` is already binary.
     
     Returns:
-        Bounding box of the first object in the image.
+        Bounding box of the largest object in the image.
     """
     thresholded = img_np
     if threshold is not None:
@@ -211,7 +207,11 @@ def _get_bbox(img_np, threshold=10):
         # TODO: consider checking all properties and getting largest
         print("warning: number of region properties > 1 ({})"
               .format(num_props))
-    labels_bbox = labels_props[0].bbox
+    props_sizes = []
+    for prop in labels_props:
+        props_sizes.append((prop, prop.area))
+    props_sizes.sort(key=lambda x: x[1], reverse=True)
+    labels_bbox = props_sizes[0][0].bbox
     #print("bbox: {}".format(labels_bbox))
     return labels_bbox
 

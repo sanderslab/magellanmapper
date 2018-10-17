@@ -193,24 +193,9 @@ def _get_bbox(img_np, threshold=10):
     Returns:
         Bounding box of the largest object in the image.
     """
-    thresholded = img_np
-    if threshold is not None:
-        # threshold the image, removing any small object
-        thresholded = img_np > threshold
-        thresholded = morphology.remove_small_objects(thresholded, 200)
-    # make labels for foreground and get label properties
-    labels_props = measure.regionprops(measure.label(thresholded))
-    num_props = len(labels_props)
-    if num_props < 1:
-        return None
-    elif num_props > 1:
-        # TODO: consider checking all properties and getting largest
-        print("warning: number of region properties > 1 ({})"
-              .format(num_props))
-    props_sizes = []
-    for prop in labels_props:
-        props_sizes.append((prop, prop.area))
-    props_sizes.sort(key=lambda x: x[1], reverse=True)
+    props_sizes = plot_3d.get_thresholded_regionprops(
+        img_np, threshold=threshold, sort_reverse=True)
+    if props_sizes is None: return None
     labels_bbox = props_sizes[0][0].bbox
     #print("bbox: {}".format(labels_bbox))
     return labels_bbox

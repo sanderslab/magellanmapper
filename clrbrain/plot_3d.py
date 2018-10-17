@@ -452,6 +452,33 @@ def get_label_bbox(labels_img_np, label_id):
     if len(props) >= 1: bbox = props[0].bbox
     return bbox
 
+def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
+    """Get the region properties for a thresholded image.
+    
+    Args:
+        img_np: Image as a Numpy array.
+        threshold: Threshold level; defaults to 10. If None, assume 
+            ``img_np`` is already binary.
+    
+    Returns:
+        List of ``(prop, area)`` sorted by area.
+    """
+    thresholded = img_np
+    if threshold is not None:
+        # threshold the image, removing any small object
+        thresholded = img_np > threshold
+        thresholded = morphology.remove_small_objects(thresholded, 200)
+    # make labels for foreground and get label properties
+    labels_props = measure.regionprops(measure.label(thresholded))
+    num_props = len(labels_props)
+    if num_props < 1:
+        return None
+    props_sizes = []
+    for prop in labels_props:
+        props_sizes.append((prop, prop.area))
+    props_sizes.sort(key=lambda x: x[1], reverse=sort_reverse)
+    return props_sizes
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

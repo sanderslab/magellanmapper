@@ -205,7 +205,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE) {
 	#     region by side; defaults to True.
 	
 	genos <- df.region$Geno
-			genos.unique <- sort(unique(genos))
+	genos.unique <- sort(unique(genos))
 	sides <- df.region$Side
 	sides.unique <- sort(unique(sides))
 	if (!split.by.side) {
@@ -217,37 +217,38 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE) {
 	plot(NULL, frame.plot=TRUE, xlab=title, ylab=col, xaxt="n", 
 					 xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]))
 	names <- list()
-			i <- 0
-			for (geno in genos.unique) {
+	i <- 0
+	for (geno in genos.unique) {
 		x.adj <- 0
 		mtext(geno, side=1, at=i+0.5)
 		for (side in sides.unique) {
 			if (split.by.side) {
-			vals.geno <- vals[genos == geno & sides == side]
+				vals.geno <- vals[genos == geno & sides == side]
 			} else {
 				vals.geno <- vals[genos == geno]
 			}
-				print(vals.geno)
-				num.vals <- length(vals.geno)
-				# add jitter to distinguish points
+			print(vals.geno)
+			num.vals <- length(vals.geno)
+			# add jitter to distinguish points
 			x <- i + x.adj
 			points(jitter(rep(x, num.vals), amount=0.2), vals.geno, col=i+1, pch=16)
-				vals.mean <- mean(vals.geno)
-				vals.sd <- sd(vals.geno)
-				vals.sem <- vals.sd / sqrt(num.vals)
+			vals.mean <- mean(vals.geno)
+			vals.sd <- sd(vals.geno)
+			vals.sem <- vals.sd / sqrt(num.vals)
 			# use 97.5th percentile for 2-tailed 95% confidence level
-				vals.ci <- qt(0.975, df=num.vals-1) * vals.sem
+			vals.ci <- qt(0.975, df=num.vals-1) * vals.sem
 			segments(x - 0.25, vals.mean, x + 0.25, vals.mean)
 			arrows(x, vals.mean + vals.ci, x, vals.mean - vals.ci, length=0.05, 
-							 angle=90, code=3)
+						 angle=90, code=3)
 			names <- append(names, paste(geno, side))
-				i <- i + 1
+			i <- i + 1
 			x.adj <- x.adj + 0.05
-			}
+		}
 	}
 	legend(0, maxes[2] * 0.5, names, col=1:length(names), pch=16)
 	dev.print(
-		pdf, file=paste0("../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
+		pdf, file=paste0(
+			"../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
 }
 
 filterStats <- function(stats) {

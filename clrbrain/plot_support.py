@@ -159,12 +159,13 @@ class DiscreteColormap(colors.ListedColormap):
         '''
         if labels is None: return
         self.norm = None
-        labels_unique = np.unique(labels).astype(np.int32)
+        labels_unique = np.unique(labels).astype(np.float32)
         num_colors = len(np.unique(labels))
-        # make first boundary below first label to avoid off-by-one errors
-        # that appear to occur when viewing an image with an additional 
-        # extreme label
-        labels_unique -= 1
+        # make first boundary slightly below first label to encompass it 
+        # to avoid off-by-one errors that appear to occur when viewing an 
+        # image with an additional extreme label
+        offset = 0.5
+        labels_unique -= offset
         # number of boundaries should be one more than number of labels to 
         # avoid need for interpolation of boundary bin numbers and 
         # potential merging of 2 extreme labels
@@ -181,7 +182,7 @@ class DiscreteColormap(colors.ListedColormap):
             multiplier=multiplier, offset=offset)
         if background is not None:
             # replace backgound label color with given color
-            bkgdi = np.where(labels_unique == background[0] - 1)
+            bkgdi = np.where(labels_unique == background[0] - offset)
             if len(bkgdi) > 0 and bkgdi[0].size > 0:
                 self.cmap_labels[bkgdi[0][0]] = background[1]
         self.make_cmap()

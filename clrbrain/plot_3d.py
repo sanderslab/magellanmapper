@@ -479,6 +479,67 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
     props_sizes.sort(key=lambda x: x[1], reverse=sort_reverse)
     return props_sizes
 
+def extend_edge(prop, region, region_ref, plane_region, planei, 
+                largest_only=False):
+    """Recursively extend the nearest plane with labels based on the 
+    underlying atlas.
+    
+    Assume that each nearer plane is the same size or smaller than the next 
+    farther plane, such as the tapering edge of a specimen. The number of 
+    objects to extend is set by the first plane, after which only the 
+    largest object in each region will be followed.
+    
+    Args:
+        prop: Region property. If None, new region properties will be found.
+        region: Labels region, which will be updated in-place.
+        region_ref: Corresponding reference atlas region.
+        plane_region: Labels template that will be resized for current plane.
+        planei: Plane index.
+        largest_only: True to only use the property with the largest area; 
+            defaults to False.
+    """
+    if planei < 0: return
+    if prop is None:
+        # find the bounds of the reference image in the given plane to resize 
+        # the corresponding section of the labels image to the bounds of the 
+        # reference image in the next plane closer to the edge
+        prop_sizes = get_thresholded_regionprops(
+            region_ref[planei], sort_reverse=largest_only)
+        if prop_sizes is None: return
+        if largest_only:
+            num_props = len(prop_sizes)
+            if num_props > 1:
+                print("ignoring smaller {} prop(s) in plane {}"
+                      .format(num_props - 1, planei))
+            prop_sizes = prop_sizes[:1]
+        for prop_size in prop_sizes:
+            # extend each object
+            _, slices = get_bbox_region(prop_size[0].bbox)
+            prop_region_ref = region_ref[:, slices[0], slices[1]]
+            prop_region = region[:, slices[0], slices[1]]
+            extend_edge(
+                prop_size[0], prop_region, prop_region_ref, plane_region, 
+                planei)
+    else:
+        if plane_region is None:
+            plane_region = region[planei]
+            # remove ventricular space using empirically determined selem, 
+            # which appears to be very sensitive to radius since values above 
+            # or below lead to square shaped artifact along outer sample edges
+            plane_region = morphology.closing(
+                plane_region, morphology.square(12))
+        else:
+            # assume that the reference image background is about < 10, the 
+            # default threshold
+            plane_region = transform.resize(
+                plane_region, region[planei].shape, preserve_range=True, order=0, 
+                anti_aliasing=False, mode="reflect")
+            region[planei] = plane_region
+        # recursively follow largest area in next plane, assuming that this 
+        # dominant object follows the current template; ignore new, 
+        # presumably smaller regions since their template is unknown
+        extend_edge(None, region, region_ref, plane_region, planei - 1, True)
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

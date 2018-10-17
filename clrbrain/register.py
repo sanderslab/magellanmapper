@@ -630,8 +630,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         ``tot_metric``, the smoothing metric as a float value; and 
         ``pd``, the metric components as a Pandas data frame.
     """
-    print("Calculating smoothing metrics with filter size of {}, "
-          "penalty weighting factor of {}".format(filter_size, penalty_wt))
+    print("Calculating smoothing metrics, mode {} with filter size of {}, "
+          "penalty weighting factor of {}"
+          .format(mode, filter_size, penalty_wt))
     start_time = time()
     
     # prepare roughness images to track global overlap

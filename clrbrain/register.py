@@ -677,15 +677,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             rough_img_np[slices], borders.astype(np.int8))
         return label_mask_region, borders
     
-    def gaus(distances):
-        if penalty_wt is not None:
-            # low-pass filter the distances between borders to remove shifts 
-            # likely resulting from appropriate compaction
-            distances = filters.gaussian(
-                distances, sigma=penalty_wt, multichannel=False, 
-                preserve_range=True)
-        return distances
-    
     tot_metric = 0
     tot_size = 0
     padding = 2 if filter_size is None else 2 * filter_size
@@ -741,17 +732,16 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 dist_to_orig, indices, borders_orig_filled = (
                     plot_3d.borders_distance(
                         borders_orig, borders_smoothed, mask_orig=mask_orig, 
-                        filter_size=filter_size))
+                        filter_size=filter_size, gaus_sigma=penalty_wt))
                 if mode == SMOOTHING_METRIC_MODES[1]:
                     # "area_edt": direct distances between borders
                     if filter_size is not None:
                         update_borders_img(
                             borders_orig_filled, slices, label_id, 1)
-                    dist_to_orig = gaus(dist_to_orig) # filter signed dists
                     dist_to_orig[dist_to_orig < 0] = 0 # only expansion
                 elif mode == SMOOTHING_METRIC_MODES[2]:
                     # "area_radial": radial distances from center to get 
-                    # signed distances (DEPRECATED: signed dist in area_edt)
+                    # signed distances (DEPRECATED: use signed dist in area_edt)
                     region = orig_img_np[slices]
                     props = measure.regionprops(
                         (region == label_id).astype(np.int))
@@ -762,7 +752,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                         borders_smoothed, centroid)
                     radial_diff = plot_3d.radial_dist_diff(
                         radial_dist_orig, radial_dist_smoothed, indices)
-                    radial_diff = gaus(radial_diff)
                     dist_to_orig = np.abs(radial_diff)
                 '''
                 # take square root of distances, first rounding numbers between 

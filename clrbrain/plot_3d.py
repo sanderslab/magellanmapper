@@ -340,7 +340,7 @@ def signed_distance_transform(borders, mask=None, return_indices=False):
     return transform
 
 def borders_distance(borders_orig, borders_shifted, mask_orig=None, 
-                     filter_size=None):
+                     filter_size=None, gaus_sigma=None):
     """Measure distance between borders.
     
     Args:
@@ -353,6 +353,8 @@ def borders_distance(borders_orig, borders_shifted, mask_orig=None,
             smoothing the original border with a closing filter before 
             finding distances. Defaults to None, in which case no filter 
             will be applied.
+        gaus_sigma: Low-pass filter distances with Gaussian kernel; defaults 
+            to None.
     
     Returns:
         Tuple of ``dist_to_orig``, a Numpy array the same shape as 
@@ -371,6 +373,12 @@ def borders_distance(borders_orig, borders_shifted, mask_orig=None,
     # where neg dists are within orig image
     borders_dist, indices = signed_distance_transform(
         ~borders_orig, mask=mask_orig, return_indices=True)
+    if gaus_sigma is not None:
+        # low-pass filter the distances between borders to remove shifts 
+        # likely resulting from appropriate compaction
+        borders_dist = filters.gaussian(
+            borders_dist, sigma=gaus_sigma, multichannel=False, 
+            preserve_range=True)
     # gather the distances corresponding to the shifted border
     dist_to_orig = np.zeros_like(borders_dist)
     dist_to_orig[borders_shifted] = borders_dist[borders_shifted]

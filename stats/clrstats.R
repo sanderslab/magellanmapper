@@ -8,7 +8,7 @@ library("gee")
 library("viridis")
 
 # statistical models to use
-kModel = c("logit", "linregr", "gee", "logit.ord")
+kModel = c("logit", "linregr", "gee", "logit.ord", "t.paired")
 
 # measurements, which correspond to columns in main data frame
 kMeas = c("Vol", "Dens", "Nuclei")
@@ -80,6 +80,39 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
 	return(coef.tab)
 }
 
+tModel <- function(vals, conditions) {
+	# Model by T-test.
+	#
+	# Args:
+	#   vals: List of values to compare, ordered with the first half matching 
+	#     the second half.
+	#   conditions: List of length two with conditions by which to group.
+	#
+	# Returns:
+	#   Data frame of with p-value and mean of differences columns.
+	
+	conditions.unique = sort(unique(conditions))
+	cond1 <- vals[conditions == conditions.unique[1]]
+	cond2 <- vals[conditions == conditions.unique[2]]
+	
+	# filter pairs where either pair is 0
+	nonzero <- cond1 > 0 & cond2 > 0
+	cond1 <- cond1[nonzero]
+	cond2 <- cond2[nonzero]
+	if (length(cond1) < 1) {
+		return(NULL)
+	}
+	fit <- t.test(cond1, cond2, paired=TRUE)
+	print(fit)
+	
+	# basic stats data frame
+	coef.tab <- data.frame(matrix(nrow=1, ncol=2))
+	names(coef.tab) <- c("vals.effect", "vals.p")
+	coef.tab$vals.effect <- c(fit$estimate)
+	coef.tab$vals.p <- c(fit$p.value)
+	return(coef.tab)
+}
+
 statsByCols <- function(df, col.start, model) {
 	# Calculates statistics for columns starting with the given string using 
 	# the selected model.
@@ -145,18 +178,37 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 		stats$Region[i] <- region
 		if (any(nonzero)) {
 			# filter each column within region for rows with non-zero values
-			df.region.nonzero <- df.region[nonzero, ]
+			df.region.nonzero <- NULL
+			split.col <- NULL
+			if (model == kModel[5]) {
+				# paired t-test splits by "Condition" column, keeping nonzero 
+				# for now to ensure pairing
+				df.region.nonzero <- aggregate(
+					cbind(Vol, Nuclei) ~ Sample + Geno + Condition + RegionName, 
+					df.region, sum)
+				df.region.nonzero$Dens <- (
+					df.region.nonzero$Nuclei / df.region.nonzero$Vol)
+				df.region.nonzero$Dens[is.na(df.region.nonzero$Dens)] = 0
+				split.col <- "Condition"
+				#print(df.region.nonzero)
+			} else {
+				df.region.nonzero <- df.region[nonzero, ]
+			}
 			vals <- df.region.nonzero[[col]]
-			genos <- df.region.nonzero$Geno
-			sides <- df.region.nonzero$Side
-			ids <- df.region.nonzero$Sample
 			if (!last.found) cat("\n")
 			cat("\nRegion", region, ": ", vals, "from ", sum(nonzero), 
 					"nonzero regions\n")
 			
 			# apply stats and store in stats data frame, using list to allow 
 			# arbitrary size and storing mean nuclei as well
-			coef.tab <- fitModel(model, vals, genos, sides, ids)
+			if (model == kModel[5]) {
+				coef.tab <- tModel(vals, df.region.nonzero$Condition)
+			} else {
+				genos <- df.region.nonzero$Geno
+				sides <- df.region.nonzero$Side
+				ids <- df.region.nonzero$Sample
+				coef.tab <- fitModel(model, vals, genos, sides, ids)
+			}
 			if (is.null(coef.tab)) next
 			stats$Stats[i] <- list(coef.tab)
 			stats$MeanNuclei[i] <- mean(df.region$Nuclei)
@@ -167,13 +219,12 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
 			df.jitter <- df.region.nonzero
 			if (!split.by.side) {
-				print(df.region.nonzero)
 				df.jitter <- aggregate(
 					cbind(Vol, Nuclei) ~ Sample + Geno, df.jitter, sum)
 				df.jitter$Dens <- df.jitter$Nuclei / df.jitter$Vol
 				print(df.jitter)
 			}
-			jitterPlot(df.jitter, col, title, split.by.side)
+			jitterPlot(df.jitter, col, title, split.by.side, split.col)
 			last.found <- TRUE
 		} else {
 			# ignore region if all values 0, leaving entry for region as NA and 
@@ -190,7 +241,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 	return(stats)
 }
 
-jitterPlot <- function(df.region, col, title, split.by.side=TRUE) {
+jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
+											 split.col=NULL) {
 	# Plot jitter/scatter plots of values by genotype with mean and 95% CI.
 	#
 	# Args:
@@ -200,12 +252,18 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE) {
 	#   title: Plot figure title.
 	#   split.by.side: True to plot separate sub-scatter plots for each 
 	#     region by side; defaults to True.
+	#   split.col: Column name by which to split; defaults to NULL, in which 
+	#     case "Side" will be used as the column name.
 	
+	if (is.null(split.col)) {
+		# default column name by which to split
+		split.col <- "Side"
+	}
 	genos <- df.region$Geno
 	genos.unique <- sort(unique(genos))
-	sides <- df.region$Side
+	sides <- df.region[[split.col]]
 	sides.unique <- sort(unique(sides))
-	if (!split.by.side) {
+	if (!split.by.side | length(sides.unique) == 0) {
 		# use a single side for one for-loop pass
 		sides.unique = c("")
 	}

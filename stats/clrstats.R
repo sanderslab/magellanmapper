@@ -44,7 +44,6 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
 		coef.tab <- summary.glm(fit)$coefficients
 		# remove first ("non-intercept") row
 		coef.tab <- coef.tab[-(1:1), ]
-		print(coef.tab)
 	} else if (model == kModel[2]) {
 		# linear regression
 		# TODO: see whether need to factorize genos
@@ -52,21 +51,18 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
 		coef.tab <- summary.lm(fit)$coefficients
 		# remove first ("non-intercept") row
 		coef.tab <- coef.tab[-(1:1), ]
-		print(coef.tab)
 	} else if (model == kModel[3]) {
 		# generalized estimating equations
 		# TODO: fix model prob "fitted value very close to 1" error
 		fit <- gee(
 			genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
 		coef.tab <- summary(fit)$coefficients
-		print(coef.tab)
 	} else if (model == kModel[4]) {
 		# ordered logistic regression
 		vals <- scale(vals)
 		genos <- factor(genos, levels=kGenoLevels)
 		fit <- tryCatch({
 			fit <- polr(genos ~ vals * sides, Hess=TRUE)
-			print(coef.tab)
 			coef.tab <- coef(summary(fit))
 			# calculate p-vals and incorporate into coefficients
 			p.vals <- pnorm(abs(coef.tab[, "t value"]), lower.tail=FALSE) * 2
@@ -80,6 +76,7 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
 	} else {
 		cat("Sorry, model", model, "not found\n")
 	}
+	print(coef.tab)
 	return(coef.tab)
 }
 

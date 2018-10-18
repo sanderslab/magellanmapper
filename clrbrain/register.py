@@ -679,6 +679,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     
     tot_metric = 0
     tot_size = 0
+    tot_sa_to_vol_ratio = 0
     padding = 2 if filter_size is None else 2 * filter_size
     pxs = {}
     cols = ("label_id", "pxs_reduced", "pxs_expanded", "size_orig")
@@ -767,9 +768,18 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             # normalize weighted displacement by tot vol for a unitless 
             # fraction and multiply by orig SA to bring back compaction units
             pxs_expanded = dist_wt / np.sum(mask_orig) * size_orig
-            sa_to_vol = (np.sum(borders_smoothed) / np.sum(mask_smoothed)
-                         - np.sum(borders_orig) / np.sum(mask_orig))
-            pxs.setdefault("SA_to_vol_diff", []).append(sa_to_vol)
+            
+            # SA:vol metrics, including ratio of SA:vol ratios
+            sa_to_vol_orig = np.sum(borders_orig) / np.sum(mask_orig)
+            vol_smoothed = np.sum(mask_smoothed)
+            sa_to_vol_smoothed = 0
+            if vol_smoothed > 0:
+                sa_to_vol_smoothed = np.sum(borders_smoothed) / vol_smoothed
+            sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
+            tot_sa_to_vol_ratio += sa_to_vol_ratio * size_orig
+            pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
+            pxs.setdefault("sa_to_vol_smoothed", []).append(sa_to_vol_smoothed)
+            pxs.setdefault("sa_to_vol_ratio", []).append(sa_to_vol_ratio)
         else:
             raise TypeError("no metric of mode {}".format(mode))
         
@@ -788,6 +798,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
+        if tot_sa_to_vol_ratio != 0:
+            tot_sa_to_vol_ratio /= tot_size
     
     print()
     df = pd.DataFrame(pxs)
@@ -798,6 +810,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
        print("Roughness smoothed: {}".format(roughs_metric[1]))
        print("roughness diff: {}".format(roughs_metric[0] - roughs_metric[1]))
     print("Smoothing metric: {}".format(tot_metric))
+    if tot_sa_to_vol_ratio != 0:
+        print("SA:Vol weighted ratio: {}".format(tot_sa_to_vol_ratio))
     print("time elapsed for smoothing metric (s): {}"
           .format(time() - start_time))
     return borders_img_np, tot_metric, df

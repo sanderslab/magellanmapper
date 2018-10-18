@@ -180,7 +180,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 	cols <- c("Region", "Stats", "MeanNuclei")
 	stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
 	names(stats) <- cols
-	last.found <- FALSE # to group console output
+	regions.ignored <- vector()
 	for (i in seq_along(regions)) {
 		region <- regions[i]
 		# filter data frame for the given region
@@ -207,7 +207,6 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 				df.region.nonzero <- df.region[nonzero, ]
 			}
 			vals <- df.region.nonzero[[col]]
-			if (!last.found) cat("\n")
 			cat("\nRegion", region, ": ", vals, "from ", sum(nonzero), 
 					"nonzero regions\n")
 			
@@ -237,19 +236,15 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 				print(df.jitter)
 			}
 			jitterPlot(df.jitter, col, title, split.by.side, split.col)
-			last.found <- TRUE
 		} else {
 			# ignore region if all values 0, leaving entry for region as NA and 
 			# grouping output for empty regions to minimize console output; 
 			# TDOO: consider grouping into list and displaying only at end
-			if (last.found) {
-				cat("\nno non-zero samples found:", region)
-			} else {
-				cat(",", region)
-			}
-			last.found <- FALSE
+			regions.ignored <- append(regions.ignored, region)
 		}
 	}
+	cat("\nno non-zero samples found for these regions:")
+	print(regions.ignored)
 	return(stats)
 }
 

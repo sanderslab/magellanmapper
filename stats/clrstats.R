@@ -375,6 +375,10 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 	#     condition is met.
 	
 	x <- stats[[paste0(interaction, ".effect")]]
+	if (length(x) < 1) {
+		cat("no values found to generate volcano plot, skipping\n")
+		return()
+	}
 	y <- stats[[paste0(interaction, ".logp")]]
 	# weight size based on relative num of nuclei
 	size <- stats$MeanNuclei / max(stats$MeanNuclei) * 3

@@ -86,23 +86,35 @@ tModel <- function(vals, conditions) {
 	# Args:
 	#   vals: List of values to compare, ordered with the first half matching 
 	#     the second half.
-	#   conditions: List of length two with conditions by which to group.
+	#   conditions: List assumed to have at least two conditions by which to 
+	#     group; only the first two sorted conditions will be used, and all 
+	#     other conditions will be ignored.
 	#
 	# Returns:
 	#   Data frame of with p-value and mean of differences columns.
 	
 	conditions.unique = sort(unique(conditions))
-	cond1 <- vals[conditions == conditions.unique[1]]
-	cond2 <- vals[conditions == conditions.unique[2]]
+	val.conds <- list()
+	nonzero <- NULL
+	for (i in seq_along(conditions.unique)) {
+		# append with vals fro condition, building up nonzero mask
+		val.conds[[i]] <- vals[conditions == conditions.unique[i]]
+		nonzero.cond <- val.conds[[i]] > 0
+		if (is.null(nonzero)) {
+			nonzero <- nonzero.cond
+		} else {
+			nonzero <- nonzero & nonzero.cond
+		}
+	}
 	
-	# filter pairs where either pair is 0
-	nonzero <- cond1 > 0 & cond2 > 0
-	cond1 <- cond1[nonzero]
-	cond2 <- cond2[nonzero]
-	if (length(cond1) < 1) {
+	# remove pairs with any 0 value and return if no pairs left
+	for (i in 1:length(val.conds)) {
+		val.conds[[i]] <- val.conds[[i]][nonzero]
+	}
+	if (length(val.conds) < 1 | length(val.conds[[1]]) < 1) {
 		return(NULL)
 	}
-	fit <- t.test(cond1, cond2, paired=TRUE)
+	fit <- t.test(val.conds[[1]], val.conds[[2]], paired=TRUE)
 	print(fit)
 	
 	# basic stats data frame

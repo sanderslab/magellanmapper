@@ -117,11 +117,13 @@ tModel <- function(vals, conditions) {
 	fit <- t.test(val.conds[[1]], val.conds[[2]], paired=TRUE)
 	print(fit)
 	
-	# basic stats data frame
-	coef.tab <- data.frame(matrix(nrow=1, ncol=2))
-	names(coef.tab) <- c("vals.effect", "vals.p")
-	coef.tab$vals.effect <- c(fit$estimate)
-	coef.tab$vals.p <- c(fit$p.value)
+	# basic stats data frame in format for filterStats
+	coef.tab <- data.frame(matrix(nrow=1, ncol=4))
+	names(coef.tab) <- c("Value", "col2", "col3", "P")
+	rownames(coef.tab) <- c("vals")
+	coef.tab$Value <- c(fit$estimate)
+	coef.tab$P <- c(fit$p.value)
+	print(coef.tab)
 	return(coef.tab)
 }
 
@@ -289,7 +291,6 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
 			} else {
 				vals.geno <- vals[genos == geno]
 			}
-			print(vals.geno)
 			num.vals <- length(vals.geno)
 			# add jitter to distinguish points
 			x <- i + x.adj

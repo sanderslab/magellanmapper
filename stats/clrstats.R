@@ -7,8 +7,8 @@ library("gee")
 # library("ggplot2")
 library("viridis")
 
-# statistical models to use
-kModel = c("logit", "linregr", "gee", "logit.ord", "t.paired")
+# statistical models
+kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon")
 
 # measurements, which correspond to columns in main data frame
 kMeas = c("Vol", "Dens", "Nuclei")
@@ -22,7 +22,7 @@ kStatsPathOut <- "../vols_stats.csv" # output stats
 kRegionIDsPath <- "../region_ids.csv" # region-ID map from Clrbrain
 
 fitModel <- function(model, vals, genos, sides, ids=NULL) {
-	# Fit data with the given model.
+	# Fit data with the given regression model.
 	#
 	# Args:
 	#   model: Model to use, corresponding to one of kModel.
@@ -80,8 +80,8 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
 	return(coef.tab)
 }
 
-tModel <- function(vals, conditions) {
-	# Model by T-test.
+meansModel <- function(vals, conditions, model, paired=FALSE) {
+	# Test for differences of means.
 	#
 	# Args:
 	#   vals: List of values to compare, ordered with the first half matching 
@@ -89,41 +89,77 @@ tModel <- function(vals, conditions) {
 	#   conditions: List assumed to have at least two conditions by which to 
 	#     group; only the first two sorted conditions will be used, and all 
 	#     other conditions will be ignored.
+	#   model: One of kModels to apply, which should be a mean test such as 
+	#     "ttest" or "wilcoxon".
+	#   paired: True for paired test; defaults to FALSE.
 	#
 	# Returns:
 	#   Data frame of with p-value and mean of differences columns.
 	
+  # require at least 2 condition to compare
 	conditions.unique = sort(unique(conditions))
+	if (length(conditions.unique) < 2) {
+	  cat("need at least 2 conditions, skipping\n")
+	  return(NULL)
+	}
+	
+	# build lists of value vectors for each condition
 	val.conds <- list()
 	nonzero <- NULL
+	num.per.cond <- NULL
 	for (i in seq_along(conditions.unique)) {
-		# append with vals from condition, building up nonzero mask
 		val.conds[[i]] <- vals[conditions == conditions.unique[i]]
 		nonzero.cond <- val.conds[[i]] > 0
-		if (is.null(nonzero)) {
-			nonzero <- nonzero.cond
+		if (paired) {
+		  # build up nonzero mask to filter out any pairs with any zero vals
+  		if (is.null(nonzero)) {
+  			nonzero <- nonzero.cond
+  		} else if (num.per.cond != length(val.conds[[i]])) {
+			  cat("unequal number of values per conditions, cannot compare\n")
+			  return(NULL)
+  		} else {
+  		  nonzero <- nonzero & nonzero.cond
+  		}
 		} else {
-			nonzero <- nonzero & nonzero.cond
+		  val.conds[[i]] <- val.conds[[i]][nonzero]
+		}
+		num.per.cond <- length(val.conds[[i]])
+		if (num.per.cond <= 0) {
+		  cat("no values for at least one condition, cannot complete\n")
+		  return(NULL)
 		}
 	}
 	
-	# remove pairs with any 0 value and return if no pairs left
-	for (i in 1:length(val.conds)) {
-		val.conds[[i]] <- val.conds[[i]][nonzero]
+	if (paired) {
+	  # remove pairs with any 0 value and return if no pairs left
+	  num.nonzero <- sum(nonzero)
+	  if (num.nonzero == 0) {
+	    cat("no non-zero values remain, cannot complete\n")
+	    return(NULL)
+	  } else if (num.nonzero < num.per.cond) {
+	    for (i in 1:length(val.conds)) {
+	      val.conds[[i]] <- val.conds[[i]][nonzero]
+	    }
+	  }
 	}
-	if (length(val.conds) < 1 | length(val.conds[[1]]) < 1) {
-		return(NULL)
+	
+	if (model == kModel[5]) {
+		# Student's t-test
+		result <- t.test(val.conds[[1]], val.conds[[2]], paired=paired)
+	} else if (model == kModel[6]) {
+		# Wilcoxon test (Mann-Whitney if not paired)
+		result <- wilcox.test(
+			val.conds[[1]], val.conds[[2]], paired=paired, conf.int=TRUE)
 	}
-	fit <- t.test(val.conds[[1]], val.conds[[2]], paired=TRUE)
-	print(fit)
+	print(result)
 	
 	# basic stats data frame in format for filterStats
 	coef.tab <- data.frame(matrix(nrow=1, ncol=4))
 	names(coef.tab) <- c("Value", "col2", "col3", "P")
 	rownames(coef.tab) <- c("vals")
-	coef.tab$Value <- c(fit$estimate)
-	coef.tab$P <- c(fit$p.value)
-	#print(coef.tab)
+	coef.tab$Value <- c(result$estimate)
+	coef.tab$P <- c(result$p.value)
+	print(coef.tab)
 	return(coef.tab)
 }
 
@@ -196,7 +232,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			df.region.nonzero <- NULL
 			split.col <- NULL
 			paired <- FALSE
-			if (model == kModel[5]) {
+			if (is.element(model, kModel[5:7])) {
 				# paired t-test splits by "Condition" column, keeping nonzero 
 				# for now to ensure pairing
 				df.region.nonzero <- aggregate(
@@ -217,8 +253,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			
 			# apply stats and store in stats data frame, using list to allow 
 			# arbitrary size and storing mean nuclei as well
-			if (model == kModel[5]) {
-				coef.tab <- tModel(vals, df.region.nonzero$Condition)
+			if (is.element(model, kModel[5:7])) {
+				coef.tab <- meansModel(
+					vals, df.region.nonzero$Condition, model, paired)
 			} else {
 				genos <- df.region.nonzero$Geno
 				sides <- df.region.nonzero$Side

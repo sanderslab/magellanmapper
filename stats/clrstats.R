@@ -416,7 +416,7 @@ filterStats <- function(stats) {
 			if (nrow(stats.coef) >= j) {
 				filtered[i, j * 3 - 2 + offset] <- stats.coef[j, 1]
 				filtered[i, j * 3 - 1 + offset] <- stats.coef[j, 4]
-				filtered[i, j * 3 + offset] <- -1 * log(stats.coef[j, 4])
+				filtered[i, j * 3 + offset] <- -1 * log10(stats.coef[j, 4])
 			}
 		}
 	}
@@ -456,7 +456,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 	# base plot -log p vs effect size
 	plot(
 		x, y, main=paste(meas, "Differences for", interaction), xlab="Effects", 
-		ylab="-ln(p)", type="p", pch=16, cex=size, col=colors_parents)
+		ylab="-log10(p)", type="p", pch=16, cex=size, col=colors_parents)
 	x.lbl <- x
 	y.lbl <- y
 	lbls <- paste(stats$Region, stats$RegionName, sep="\n")

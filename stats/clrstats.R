@@ -194,6 +194,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			# filter each column within region for rows with non-zero values
 			df.region.nonzero <- NULL
 			split.col <- NULL
+			paired <- FALSE
 			if (model == kModel[5]) {
 				# paired t-test splits by "Condition" column, keeping nonzero 
 				# for now to ensure pairing
@@ -204,6 +205,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 					df.region.nonzero$Nuclei / df.region.nonzero$Vol)
 				df.region.nonzero$Dens[is.na(df.region.nonzero$Dens)] = 0
 				split.col <- "Condition"
+				paired <- TRUE
 				#print(df.region.nonzero)
 			} else {
 				df.region.nonzero <- df.region[nonzero, ]
@@ -237,7 +239,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 				df.jitter$Dens <- df.jitter$Nuclei / df.jitter$Vol
 				print(df.jitter)
 			}
-			jitterPlot(df.jitter, col, title, split.by.side, split.col)
+			jitterPlot(df.jitter, col, title, split.by.side, split.col, paired)
 		} else {
 			# ignore region if all values 0, leaving entry for region as NA and 
 			# grouping output for empty regions to minimize console output; 
@@ -251,7 +253,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 }
 
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
-											 split.col=NULL) {
+											 split.col=NULL, paired=FALSE) {
 	# Plot jitter/scatter plots of values by genotype with mean and 95% CI.
 	#
 	# Args:
@@ -260,9 +262,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
 	#   col: Name of column for values.
 	#   title: Plot figure title.
 	#   split.by.side: True to plot separate sub-scatter plots for each 
-	#     region by side; defaults to True.
+	#     region by side; defaults to TRUE
 	#   split.col: Column name by which to split; defaults to NULL, in which 
 	#     case "Side" will be used as the column name.
+	#   paired: True to show pairing between values, which assumes that values 
+	#     are in the same order when filtered by split.col. Jitter will be 
+	#     turned off to ensure that start and end x-values are the same for 
+	#     pairings. Defaults to FALSE.
 	
 	if (is.null(split.col)) {
 		# default column name by which to split
@@ -284,17 +290,24 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
 	i <- 0
 	for (geno in genos.unique) {
 		x.adj <- 0
+		x.pos <- vector(length=length(sides.unique))
 		mtext(geno, side=1, at=i+0.5)
+		vals.sides <- list()
 		for (side in sides.unique) {
 			if (split.by.side) {
 				vals.geno <- vals[genos == geno & sides == side]
 			} else {
 				vals.geno <- vals[genos == geno]
 			}
+			vals.sides <- append(vals.sides, list(vals.geno))
 			num.vals <- length(vals.geno)
-			# add jitter to distinguish points
 			x <- i + x.adj
-			points(jitter(rep(x, num.vals), amount=0.2), vals.geno, col=i+1, pch=16)
+			x.vals <- rep(x, num.vals)
+			if (!paired) {
+				# add jitter to distinguish points
+				x.vals <- jitter(x.vals, amount=0.2)
+			}
+			points(x.vals, vals.geno, col=i+1, pch=16)
 			vals.mean <- mean(vals.geno)
 			vals.sd <- sd(vals.geno)
 			vals.sem <- vals.sd / sqrt(num.vals)
@@ -305,7 +318,15 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
 						 angle=90, code=3)
 			names <- append(names, paste(geno, side))
 			i <- i + 1
+			x.pos[i] <- x
 			x.adj <- x.adj + 0.05
+		}
+		if (paired) {
+			# connect pairs of points with segments, assuming same order for each 
+			# vector of values
+			for (i in seq_along(vals.sides[[1]])) {
+				segments(x.pos[1], vals.sides[[1]][i], x.pos[2], vals.sides[[2]][i])
+			}
 		}
 	}
 	legend(0, maxes[2] * 0.5, names, col=1:length(names), pch=16)

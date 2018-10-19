@@ -285,8 +285,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			regions.ignored <- append(regions.ignored, region)
 		}
 	}
-	cat("\nno non-zero samples found for these regions:")
-	print(regions.ignored)
+	if (length(regions.ignored) > 0) {
+		cat("\nno non-zero samples found for these regions:")
+		print(regions.ignored)
+	}
 	return(stats)
 }
 

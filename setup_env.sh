@@ -279,9 +279,10 @@ fi
 pip install -U scikit-image
 
 # cannot be installed in Conda environment configuration script 
-# for some reason and need latest Pip release of Javabridge
-install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
-#pip install -U javabridge
+# for some reason; also for some reason install from shallow clone gives 
+# version number of 0.0.0, so install gets overwritten by bioformats install
+#install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
+pip install -U javabridge
 
 # need older version since ver > 1.1 give heap space error
 pip install -U python-bioformats==1.1.0

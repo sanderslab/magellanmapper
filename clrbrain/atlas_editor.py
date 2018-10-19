@@ -22,7 +22,8 @@ class AtlasEditor:
         Args:
             image5d: Numpy image array in t,z,y,x,[c] format.
             channel: Channel of the image to display.
-            offset: Index of plane at which to start viewing.
+            offset: Index of plane at which to start viewing in x,y,z (user) 
+                order.
             fn_close_listener: Handle figure close events.
             borders_img: Numpy image array in z,y,x,c format to show label 
                 borders, such as that generated during label smoothing. 
@@ -141,12 +142,18 @@ class AtlasEditor:
         plt.ion()
         plt.show()
         
-    def update_coords(self, coord, plane_src):
+    def update_coords(self, coord, plane_src=config.PLANE[0]):
+        """Update all plot editors with given coordinates.
+        
+        Args:
+            coord: Coordinate at which to center images, in z,y,x order.
+            plane_src: One of :const:``config.PLANE`` to specify the 
+                orientation from which the coordinates were given; defaults 
+                to :const:``config.PLANE[0]``.
+        """
         coord_rev = lib_clrbrain.transpose_1d_rev(list(coord), plane_src)
         for plane in config.PLANE:
-            #if plane != plane_src:
             coord_transposed = lib_clrbrain.transpose_1d(list(coord_rev), plane)
-            #print("xy coord: {}, {} coord: {}".format(coord_rev, plane, coord_transposed))
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed):

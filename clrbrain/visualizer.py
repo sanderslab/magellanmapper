@@ -883,6 +883,9 @@ class Visualization(HasTraits):
             np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
         self.z_offset, self.y_offset, self.x_offset = corner
         self.show_3d()
+        if self.atlas_ed is not None:
+            # sync with atlas editor to point at center of region
+            self.atlas_ed.update_coords(centroid)
         self.segs_feedback = (
             "Found region ID {}".format(self._region_id))
     

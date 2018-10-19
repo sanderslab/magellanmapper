@@ -1961,7 +1961,7 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
     # get a list of all the region's coordinates to sort
     img_region = np.isin(labels_img, region_ids)
     region_coords = np.where(img_region)
-    print("region_coords:\n{}".format(region_coords))
+    #print("region_coords:\n{}".format(region_coords))
     
     def get_middle(region_coords):
         # recursively get value at middle of list for each axis

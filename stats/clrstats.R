@@ -97,7 +97,7 @@ tModel <- function(vals, conditions) {
 	val.conds <- list()
 	nonzero <- NULL
 	for (i in seq_along(conditions.unique)) {
-		# append with vals fro condition, building up nonzero mask
+		# append with vals from condition, building up nonzero mask
 		val.conds[[i]] <- vals[conditions == conditions.unique[i]]
 		nonzero.cond <- val.conds[[i]] > 0
 		if (is.null(nonzero)) {
@@ -123,7 +123,7 @@ tModel <- function(vals, conditions) {
 	rownames(coef.tab) <- c("vals")
 	coef.tab$Value <- c(fit$estimate)
 	coef.tab$P <- c(fit$p.value)
-	print(coef.tab)
+	#print(coef.tab)
 	return(coef.tab)
 }
 
@@ -178,7 +178,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 	#     defaults to True.
 	
 	# find all regions
-	regions <- unique(df$Region)#[2:2]
+	regions <- unique(df$Region)
+	#regions <- c() # TESTING: insert single region
 	cols <- c("Region", "Stats", "MeanNuclei")
 	stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
 	names(stats) <- cols
@@ -416,7 +417,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 	# base plot -log p vs effect size
 	plot(
 		x, y, main=paste(meas, "Differences for", interaction), xlab="Effects", 
-		ylab="-log(p)", type="p", pch=16, cex=size, col=colors_parents)
+		ylab="-ln(p)", type="p", pch=16, cex=size, col=colors_parents)
 	x.lbl <- x
 	y.lbl <- y
 	lbls <- paste(stats$Region, stats$RegionName, sep="\n")
@@ -427,7 +428,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 		lbls <- lbls[y.high]
 	}
 	if (length(lbls) > 0) {
-		text(x.lbl, y.lbl, label=lbls, cex=0.1)
+		text(x.lbl, y.lbl, label=lbls, cex=0.2)
 	}
 	# plot_ly(data=stats, x=x, y=y)
 	#g <- ggplot(data=stats, aes(x=x, y=y)) + geom_point(size=2)

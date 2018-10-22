@@ -8,7 +8,8 @@ library("gee")
 library("viridis")
 
 # statistical models
-kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon")
+kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
+           "ttest.paired", "wilcoxon.paired")
 
 # measurements, which correspond to columns in main data frame
 kMeas = c("Vol", "Dens", "Nuclei")
@@ -111,13 +112,16 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
     }
   }
   
-  if (model == kModel[5]) {
+  result <- NULL
+  if (model == kModel[5] | model == kModel[7]) {
     # Student's t-test
     result <- t.test(val.conds[[1]], val.conds[[2]], paired=paired)
-  } else if (model == kModel[6]) {
+  } else if (model == kModel[6] | model == kModel[8]) {
     # Wilcoxon test (Mann-Whitney if not paired)
     result <- wilcox.test(
       val.conds[[1]], val.conds[[2]], paired=paired, conf.int=TRUE)
+  } else {
+    cat("Sorry, model", model, "not found\n")
   }
   print(result)
   
@@ -250,6 +254,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols
   regions.ignored <- vector()
+  
   for (i in seq_along(regions)) {
     region <- regions[i]
     # filter data frame for the given region
@@ -257,14 +262,15 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
     # generate mask to filter out values of 0
     nonzero <- df.region[[col]] > 0
     stats$Region[i] <- region
+    
     if (any(nonzero)) {
       cat("\nRegion", region, "\n")
-      # filter each column within region for rows with non-zero values
       df.region.nonzero <- NULL
       split.col <- NULL
       paired <- FALSE
-      if (is.element(model, kModel[5:7])) {
-        # paired tests split by "Condition" column
+      
+      if (is.element(model, kModel[7:9])) {
+        # paired tests, which split by "Condition" column
         split.col <- "Condition"
         paired <- TRUE
         df.region.nonzero <- aggregate(
@@ -278,16 +284,19 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
         #print(df.region.nonzero)
         if (is.null(df.region.nonzero)) next
       } else {
+        # filter each column within region for rows with non-zero values
         df.region.nonzero <- df.region[nonzero, ]
       }
       vals <- df.region.nonzero[[col]]
       
       # apply stats and store in stats data frame, using list to allow 
       # arbitrary size and storing mean nuclei as well
-      if (is.element(model, kModel[5:7])) {
+      if (is.element(model, kModel[5:9])) {
+        # means tests
         coef.tab <- meansModel(
           vals, df.region.nonzero$Condition, model, paired)
       } else {
+        # regression tests
         genos <- df.region.nonzero$Geno
         sides <- df.region.nonzero$Side
         ids <- df.region.nonzero$Sample
@@ -300,6 +309,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
       # show histogram to check for parametric distribution
       #hist(vals)
       
+      # plot individual values grouped by genotype and selected column
       title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
       df.jitter <- df.region.nonzero
       if (!split.by.side) {

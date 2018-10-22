@@ -456,6 +456,12 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
     # mirror and check for label loss
     labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
     img_np = _mirror_planes(img_np, mirrori, -1)
+    half_before = img_np[:mirrori]
+    half_after = img_np[:mirrori-1:-1]
+    print("halves equal before mirroring?",
+          np.array_equal(half_before, half_after))
+    print("same labels in each half before mirroring?", 
+          np.array_equal(np.unique(half_before), np.unique(half_after)))
     print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (extendi, mirrori), borders_img_np
 

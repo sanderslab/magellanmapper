@@ -138,7 +138,7 @@ class AtlasEditor:
         self.update_coords(coord, config.PLANE[0])
         
         # extra padding for slider labels
-        gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
+        gs.tight_layout(fig)
         plt.ion()
         plt.show()
         

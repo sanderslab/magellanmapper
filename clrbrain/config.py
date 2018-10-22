@@ -477,9 +477,7 @@ def update_register_settings(settings, settings_type):
         {"target_size": (528, 320, 456),
          "resize_factor": None, # turn off resizing
          # include start since some lateral labels are only partially complete; 
-         # original atlas appears to have already been mirrored, but mirror 
-         # again at the same position to give neg labels on opposite 
-         # hemisphere and allow edge extension
+         # stained sections and labels almost but not symmetric
          "labels_mirror": (0.138, 0.5)
         }, 
         settings_type)
@@ -489,9 +487,10 @@ def update_register_settings(settings, settings_type):
         "_abap56", 
         {"target_size": (528, 320, 456), # same atlas image as ABA P56dev
          "resize_factor": None, # turn off resizing
-         # turn off start by setting to 0; 
-         # original atlas appears to have already been mirrored, but mirror 
-         # again at the same position simply to give neg labels on opp side
+         # turn off start by setting to 0; same stained sections as for P56dev; 
+         # labels are already mirrored starting at z=228, but atlas is not
+         # here, mirror starting at the same z-plane to make both sections 
+         # and labels symmetric and aligned with one another
          "labels_mirror": (0, 0.5)
         }, 
         settings_type)

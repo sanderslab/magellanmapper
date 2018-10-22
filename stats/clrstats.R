@@ -84,11 +84,11 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
 	# Test for differences of means.
 	#
 	# Args:
-	#   vals: List of values to compare, ordered with the first half matching 
-	#     the second half.
+	#   vals: List of values to compare.
 	#   conditions: List assumed to have at least two conditions by which to 
 	#     group; only the first two sorted conditions will be used, and all 
-	#     other conditions will be ignored.
+	#     other conditions will be ignored. For paired tests, number of 
+  #     values per condition is assumed to be the same.
 	#   model: One of kModels to apply, which should be a mean test such as 
 	#     "ttest" or "wilcoxon".
 	#   paired: True for paired test; defaults to FALSE.
@@ -98,49 +98,17 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
 	
   # require at least 2 condition to compare
 	conditions.unique = sort(unique(conditions))
-	if (length(conditions.unique) < 2) {
-	  cat("need at least 2 conditions, skipping\n")
-	  return(NULL)
-	}
 	
 	# build lists of value vectors for each condition
 	val.conds <- list()
-	nonzero <- NULL
 	num.per.cond <- NULL
 	for (i in seq_along(conditions.unique)) {
 		val.conds[[i]] <- vals[conditions == conditions.unique[i]]
-		nonzero.cond <- val.conds[[i]] > 0
-		if (paired) {
-		  # build up nonzero mask to filter out any pairs with any zero vals
-  		if (is.null(nonzero)) {
-  			nonzero <- nonzero.cond
-  		} else if (num.per.cond != length(val.conds[[i]])) {
-			  cat("unequal number of values per conditions, cannot compare\n")
-			  return(NULL)
-  		} else {
-  		  nonzero <- nonzero & nonzero.cond
-  		}
-		} else {
-		  val.conds[[i]] <- val.conds[[i]][nonzero]
-		}
 		num.per.cond <- length(val.conds[[i]])
 		if (num.per.cond <= 0) {
 		  cat("no values for at least one condition, cannot complete\n")
 		  return(NULL)
 		}
-	}
-	
-	if (paired) {
-	  # remove pairs with any 0 value and return if no pairs left
-	  num.nonzero <- sum(nonzero)
-	  if (num.nonzero == 0) {
-	    cat("no non-zero values remain, cannot complete\n")
-	    return(NULL)
-	  } else if (num.nonzero < num.per.cond) {
-	    for (i in 1:length(val.conds)) {
-	      val.conds[[i]] <- val.conds[[i]][nonzero]
-	    }
-	  }
 	}
 	
 	if (model == kModel[5]) {
@@ -197,6 +165,68 @@ statsByCols <- function(df, col.start, model) {
 	}
 }
 
+setupPairing <- function(df.region, col, split.col) {
+  # Setup data frame for comparing paired groups.
+  #
+  # Args:
+  #   df.region: Data frame only the samples to compare.
+  #   col: Column name of values to compare.
+  #   split.col: Column name by which to split samples into groups, assumed 
+  #     to have at least two groups within column.
+  #
+  # Returns:
+  #   New data frame filtering out any pair that lacks positive values for 
+  #   both members of the pair, or NULL if unable to pair.
+  
+  # require at least 2 condition to compare
+  conditions <- df.region[[split.col]]
+  conditions.unique = sort(unique(conditions))
+  if (length(conditions.unique) < 2) {
+    cat("need at least 2 conditions, cannot set up pairing\n")
+    return(NULL)
+  }
+  vals <- df.region[[col]]
+  
+  # build up nonzero mask to filter out any pairs with any zero vals
+  nonzero <- NULL
+  num.per.cond <- NULL
+  for (cond in conditions.unique) {
+    val.cond <- vals[cond == conditions]
+    # TODO: look for all non-zero, not just pos vals
+    nonzero.cond <- val.cond > 0
+    if (is.null(nonzero)) {
+      nonzero <- nonzero.cond
+    } else if (num.per.cond != length(val.cond)) {
+      cat("unequal number of values per conditions, cannot match pairs\n")
+      return(NULL)
+    } else {
+      nonzero <- nonzero & nonzero.cond
+    }
+    num.per.cond <- length(val.cond)
+  }
+  
+  df.filtered <- NULL
+  num.nonzero <- sum(nonzero)
+  if (num.nonzero == 0) {
+    cat("no non-zero values would remain after filtering\n")
+    return(NULL)
+  } else if (num.nonzero < num.per.cond) {
+    # build new data frame with each condition filtered by mask
+    for (cond in conditions.unique) {
+      df.nonzero <- df.region[cond == conditions, ][nonzero, ]
+      if (is.null(df.filtered)) {
+        df.filtered <- df.nonzero
+      } else {
+        df.filtered <- rbind(df.filtered, df.nonzero)
+      }
+    }
+  } else {
+    # no filtering required
+    df.filtered <- df.region
+  }
+  return(df.filtered)
+}
+
 statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 	# Calculate statistics given by region for columns starting with the given 
 	# string using the selected model.
@@ -233,17 +263,19 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 			split.col <- NULL
 			paired <- FALSE
 			if (is.element(model, kModel[5:7])) {
-				# paired t-test splits by "Condition" column, keeping nonzero 
-				# for now to ensure pairing
+				# paired tests split by "Condition" column
+			  split.col <- "Condition"
+			  paired <- TRUE
 				df.region.nonzero <- aggregate(
 					cbind(Vol, Nuclei) ~ Sample + Geno + Condition + RegionName, 
 					df.region, sum)
 				df.region.nonzero$Dens <- (
 					df.region.nonzero$Nuclei / df.region.nonzero$Vol)
 				df.region.nonzero$Dens[is.na(df.region.nonzero$Dens)] = 0
-				split.col <- "Condition"
-				paired <- TRUE
+				# filter pairs with where either sample has a zero value
+				df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
 				#print(df.region.nonzero)
+				if (is.null(df.region.nonzero)) next
 			} else {
 				df.region.nonzero <- df.region[nonzero, ]
 			}

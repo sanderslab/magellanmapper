@@ -555,9 +555,9 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 #######################################
 # choose measurement and model types
 meas <- kMeas[2]
-model <- kModel[4]
+model <- kModel[8]
 split.by.side = TRUE # false to combine sides
-load.stats = TRUE # false to force recalculating stats
+load.stats = FALSE # true to load saved stats and only regenerate volcano plots
 
 # set up paramters based on chosen model
 stat <- "vals"

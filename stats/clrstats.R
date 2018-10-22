@@ -258,6 +258,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 		nonzero <- df.region[[col]] > 0
 		stats$Region[i] <- region
 		if (any(nonzero)) {
+		  cat("\nRegion", region, "\n")
 			# filter each column within region for rows with non-zero values
 			df.region.nonzero <- NULL
 			split.col <- NULL
@@ -280,8 +281,6 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
 				df.region.nonzero <- df.region[nonzero, ]
 			}
 			vals <- df.region.nonzero[[col]]
-			cat("\nRegion", region, ": ", vals, "from ", sum(nonzero), 
-					"nonzero regions\n")
 			
 			# apply stats and store in stats data frame, using list to allow 
 			# arbitrary size and storing mean nuclei as well
@@ -538,7 +537,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 	stats <- statsByRegion(df, meas, model, split.by.side=split.by.side)
 	stats.filtered <- filterStats(stats)
 	stats.filtered <- merge(stats.filtered, region.ids, by="Region")
-	print(stats.filtered)
+	#print(stats.filtered)
 	write.csv(stats.filtered, path.out)
 	return(stats.filtered)
 }

@@ -1048,6 +1048,7 @@ def match_atlas_labels(img_atlas, img_labels):
     mirror = config.register_settings["labels_mirror"]
     rotate = config.register_settings["rotate"]
     smooth = config.register_settings["smooth"]
+    crop = config.register_settings["crop_to_labels"]
     img_borders = None
     if mirror or rotate:
         # mirror and truncate labels for labels for only half the brain, 
@@ -1070,6 +1071,13 @@ def match_atlas_labels(img_atlas, img_labels):
         if borders_img_np is not None:
             img_borders = replace_sitk_with_numpy(img_labels, borders_img_np)
             img_borders = transpose_img(img_borders, config.plane, False)
+    
+    if crop:
+        img_labels_np, img_atlas_np = plot_3d.crop_to_labels(
+            sitk.GetArrayFromImage(img_labels), 
+            sitk.GetArrayFromImage(img_atlas))
+        img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
+        img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # transpose to given plane
     img_atlas = transpose_img(img_atlas, config.plane, False)

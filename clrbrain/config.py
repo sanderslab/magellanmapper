@@ -323,6 +323,7 @@ class RegisterSettings(SettingsDict):
         self["preprocess"] = False
         self["point_based"] = False
         self["smooth"] = False # smooth labels
+        self["crop_to_labels"] = False # crop labels and atlas to nonzero labels
         
         # erase labels outside of x,y,z (applied after transposition), 
         # where each val is (start, end), given as fractions, or None for the 
@@ -449,7 +450,8 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.49), 
          "atlas_threshold": 80, # to avoid edge over-extension into skull
-         "rotate": ((-4, 1), )
+         "rotate": ((-4, 1), ), 
+         "crop_to_labels": True
         }, 
         settings_type)
     

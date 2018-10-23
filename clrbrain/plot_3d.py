@@ -550,6 +550,38 @@ def extend_edge(prop, region, region_ref, threshold, plane_region, planei,
         extend_edge(
             None, region, region_ref, threshold, plane_region, planei - 1, True)
 
+def crop_to_labels(img_labels, img_ref):
+    """Crop images to match labels volume.
+    
+    Both labels and reference images will be cropped to match the extent of 
+    labels with a small padding region. Reference image pixels outside 
+    of a small dilation of the labels maks will be turned to zero.
+    
+    Args:
+        img_labels: Labels image as Numpy array.
+        img_ref: Reference image as Numpy array.
+    
+    Returns:
+        Tuple of ``extracted_labels``, the cropped labels, and 
+        ``extracted_ref``, the cropped reference image, extracting only 
+        pixels corresponding to the labels.
+    """
+    # get bounding box of all labels, assuming 0 is background
+    mask = img_labels != 0
+    props = measure.regionprops(mask.astype(np.int))
+    if not props or len(props) < 1: return
+    shape, slices = get_bbox_region(
+        props[0].bbox, padding=5, img_shape=img_labels.shape)
+    
+    # crop images to bbox and erase reference pixels just outside of 
+    # corresponding labels
+    extracted_labels = img_labels[tuple(slices)]
+    extracted_ref = img_ref[tuple(slices)]
+    mask_dil = morphology.binary_dilation(
+        extracted_labels != 0, morphology.ball(2))
+    extracted_ref[~mask_dil] = 0
+    return extracted_labels, extracted_ref
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

@@ -290,10 +290,10 @@ def rotate_nd(img_np, angle, axis=0, order=1):
     for i in range(img_np.shape[axis]):
         #slices[axis] = slice(i, i + 1)
         slices[axis] = i
-        img2d = img_np[slices]
+        img2d = img_np[tuple(slices)]
         img2d = transform.rotate(
             img2d, angle, order=order, mode="constant", preserve_range=True)
-        rotated[slices] = img2d
+        rotated[tuple(slices)] = img2d
     return rotated
 
 def perimeter_nd(img_np):

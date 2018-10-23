@@ -526,7 +526,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
             bbox, np.ceil(2 * filter_size).astype(int), labels_img_np.shape)
         
         # get region, skipping if no region left
-        region = labels_img_np[slices]
+        region = labels_img_np[tuple(slices)]
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
         if region_size == 0:
@@ -559,7 +559,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
             region_size_smoothed = np.sum(opened)
         
         region[opened] = label_id
-        labels_img_np[slices] = region
+        labels_img_np[tuple(slices)] = region
         print("changed num of pixels from {} to {}"
               .format(region_size, region_size_smoothed))
     
@@ -676,11 +676,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     def surface_area(img_np, slices, label_id, rough_img_np):
         # use closing filter to approximate volume encompassing rough edges
         # get region, skipping if no region left
-        region = img_np[slices]
+        region = img_np[tuple(slices)]
         label_mask_region = region == label_id
         borders = plot_3d.perimeter_nd(label_mask_region)
         rough_img_np[slices] = np.add(
-            rough_img_np[slices], borders.astype(np.int8))
+            rough_img_np[tuple(slices)], borders.astype(np.int8))
         return label_mask_region, borders
     
     tot_metric = 0
@@ -1828,7 +1828,7 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False):
     print("max coord scaled: {}".format(np.max(coord_scaled, axis=2)))
     print("labels_img shape: {}".format(labels_img.shape))
     '''
-    return labels_img[coord_scaled][0]
+    return labels_img[tuple(coord_scaled)][0]
 
 def get_label(coord, labels_img, labels_ref, scaling, level=None, 
               rounding=False):

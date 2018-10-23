@@ -432,6 +432,16 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
+    # ABA E11pt5 specific settings
+    settings.add_modifier(
+        "_abae11pt5", 
+        {"target_size": (345, 371, 158),
+         "resize_factor": None, # turn off resizing
+         "labels_mirror": (0, 0.52), 
+         "rotate": ((-5, 1), (-1, 2))
+        }, 
+        settings_type)
+    
     # ABA P4 specific settings
     settings.add_modifier(
         "_abap4", 

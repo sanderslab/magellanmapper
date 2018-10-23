@@ -421,6 +421,27 @@ def update_register_settings(settings, settings_type):
         {"atlas_threshold": None}, 
         settings_type)
     
+    # ABA E11pt5 specific settings
+    settings.add_modifier(
+        "_abae11pt5", 
+        {"target_size": (345, 371, 158),
+         "resize_factor": None, # turn off resizing
+         "labels_mirror": (0, 0.52), 
+         "rotate": ((5, 1), )
+        }, 
+        settings_type)
+    
+    # ABA E13pt5 specific settings
+    settings.add_modifier(
+        "_abae13pt5", 
+        {"target_size": (552, 673, 340),
+         "resize_factor": None, # turn off resizing
+         "labels_mirror": (None, 0.48), 
+         "atlas_threshold": 80, # to avoid edge over-extension into skull
+         "rotate": ((-4, 1), (-2, 2))
+        }, 
+        settings_type)
+    
     # ABA E18pt5 specific settings
     settings.add_modifier(
         "_abae18pt5", 
@@ -429,16 +450,6 @@ def update_register_settings(settings, settings_type):
          "labels_mirror": (None, 0.525), 
          "expand_labels": (((None, ), (0, 279), (103, 108)),), 
          "rotate": ((1.5, 1), (2, 2))
-        }, 
-        settings_type)
-    
-    # ABA E11pt5 specific settings
-    settings.add_modifier(
-        "_abae11pt5", 
-        {"target_size": (345, 371, 158),
-         "resize_factor": None, # turn off resizing
-         "labels_mirror": (0, 0.52), 
-         "rotate": ((-5, 1), (-1, 2))
         }, 
         settings_type)
     

@@ -467,6 +467,9 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
         img_np: Image as a Numpy array.
         threshold: Threshold level; defaults to 10. If None, assume 
             ``img_np`` is already binary.
+        sort_reverse: Sort properties from largest to smallest area; 
+            defaults to False, in which case sorting is from smallest to 
+            largest.
     
     Returns:
         List of ``(prop, area)`` sorted by area.
@@ -541,8 +544,8 @@ def extend_edge(prop, region, region_ref, threshold, plane_region, planei,
             # assume that the reference image background is about < 10, the 
             # default threshold
             plane_region = transform.resize(
-                plane_region, region[planei].shape, preserve_range=True, order=0, 
-                anti_aliasing=False, mode="reflect")
+                plane_region, region[planei].shape, preserve_range=True, 
+                order=0, anti_aliasing=False, mode="reflect")
             region[planei] = plane_region
         # recursively follow largest area in next plane, assuming that this 
         # dominant object follows the current template; ignore new, 

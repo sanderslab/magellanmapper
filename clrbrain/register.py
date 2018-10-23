@@ -1045,14 +1045,26 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
         param_map["NumberOfResolutions"] = [str(num_res)]
 
 def match_atlas_labels(img_atlas, img_labels):
+    """Apply register profile settings to labels and match atlas image 
+    accordingly.
+    
+    Args:
+        img_labels: Labels image as SimpleITK image.
+        img_ref: Reference image as SimpleITK image.
+    
+    Returns:
+        Tuple of ``img_atlas``, the updated atlas; ``img_labels``, the 
+        updated labels; and ``img_borders``, a new SimpleITK image of the 
+        same shape as the prior images except an extra channels dimension 
+        as given by :func:``_curate_labels``.
+    """
     mirror = config.register_settings["labels_mirror"]
     rotate = config.register_settings["rotate"]
     smooth = config.register_settings["smooth"]
     crop = config.register_settings["crop_to_labels"]
     img_borders = None
     if mirror or rotate:
-        # mirror and truncate labels for labels for only half the brain, 
-        # such as for ABA E18pt5, unlike P56
+        # curate labels and apply similarly to atlas
         expand = config.register_settings["expand_labels"]
         img_labels_np, mirror_indices, borders_img_np = _curate_labels(
             img_labels, img_atlas, mirror, expand, rotate, smooth)

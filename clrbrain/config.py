@@ -442,6 +442,17 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
+    # ABA E15pt5 specific settings
+    settings.add_modifier(
+        "_abae15pt5", 
+        {"target_size": (704, 982, 386),
+         "resize_factor": None, # turn off resizing
+         "labels_mirror": (None, 0.49), 
+         "atlas_threshold": 80, # to avoid edge over-extension into skull
+         "rotate": ((-4, 1), )
+        }, 
+        settings_type)
+    
     # ABA E18pt5 specific settings
     settings.add_modifier(
         "_abae18pt5", 

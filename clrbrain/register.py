@@ -311,28 +311,28 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
         print("nothing to mirror")
     return img_np
 
-def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None, 
+def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None, 
                    smooth=False):
-    """Mirror labels across sagittal midline and add lateral edges.
+    """Curate labels through extension, mirroring, and smoothing.
     
-    Assume that the image is in sagittal sections and consists of only one 
-    hemisphere, empty from the far z planes toward the middle but not 
-    necessarily the exact middle of the image. Find the first plane that 
-    doesn't have any intensity values and set this position as the mirror 
-    plane.
+    Extension fills in missing edge labels by extrapolating edge planes 
+    to the volume of the underlying reference image. Mirroring copies labels 
+    from one half of the image to the other for symmetry. Smoothing 
+    removes jagged edges from slightly misaligned labels.
     
-    Also assume that the lateral edges of the image are also missing. Build 
-    edges that match the size of the reference image on one side and mirror 
-    over to the other side.
+    Assume that the image is in sagittal sections, typically consisting of 
+    only one hemisphere, empty from the far z planes toward the middle but not 
+    necessarily the exact middle of the image. The egde to extend are low z 
+    planes. Mirroring takes place across a z-plane, ideally at the true 
+    midline.
     
     Args:
         img: Labels image in SimpleITK format.
         img_ref: Reference atlas image in SimpleITK format.
         extent: Tuple (start, end) fractions demarcating the region to mirror; 
-            defaults to None, in which case defaults will be found based on 
-            first found non-zero planes at boundaries. If either value 
-            within the tuple is None, the corresponding default will be 
-            found.
+            defaults to None, in which case mirroring will be skipped. 
+            If either value within the tuple is None, the corresponding 
+            default will be found.
         expand: Tuple of 
             ((x_pixels_start, end), (y, ...), ...), (next_region, ...)) 
             specifying slice boundaries for regions to expand the labels to 
@@ -357,35 +357,36 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
     # in many ABA developing mouse atlases, requiring extension
     extendi = 0
     extendi_first = None
-    if extent is None or extent[0] is None:
-        # find the first non-zero plane
-        for plane in img_np:
-            if not np.allclose(plane, 0):
-                if extendi_first is None:
-                    extendi_first = extendi
-                elif extendi - extendi_first >= 1:
-                    # require at least 2 contiguous planes with signal
-                    extendi = extendi_first
-                    print("found start of contiguous non-zero planes at {}"
-                          .format(extendi))
-                    break
-            else:
-                extendi_first = None
-            extendi += 1
-    else:
-        # based on profile settings
-        extendi = int(extent[0] * tot_planes)
-        print("extending near edge from plane {}".format(extendi))
-    
-    # find the bounds of the reference image in the given plane and resize 
-    # the corresponding section of the labels image to the bounds of the 
-    # reference image in the next plane closer to the edge, recursively 
-    # extending the nearest plane with labels based on the underlying atlas; 
-    # assume that each nearer plane is the same size or smaller than the next 
-    # farther plane, such as a tapering specimen
-    plot_3d.extend_edge(
-        None, img_np, img_ref_np, 
-        config.register_settings["atlas_threshold"], None, extendi)
+    if extent:
+        if len(extent) > 0 and extent[0] is None:
+            # find the first non-zero plane
+            for plane in img_np:
+                if not np.allclose(plane, 0):
+                    if extendi_first is None:
+                        extendi_first = extendi
+                    elif extendi - extendi_first >= 1:
+                        # require at least 2 contiguous planes with signal
+                        extendi = extendi_first
+                        print("found start of contiguous non-zero planes at {}"
+                              .format(extendi))
+                        break
+                else:
+                    extendi_first = None
+                extendi += 1
+        else:
+            # based on profile settings
+            extendi = int(extent[0] * tot_planes)
+            print("extending near edge from plane {}".format(extendi))
+        
+        # find the bounds of the reference image in the given plane and resize 
+        # the corresponding section of the labels image to the bounds of the 
+        # reference image in the next plane closer to the edge, recursively 
+        # extending the nearest plane with labels based on the underlying 
+        # atlas; assume that each nearer plane is the same size or smaller 
+        # than the next farther plane, such as a tapering specimen
+        plot_3d.extend_edge(
+            None, img_np, img_ref_np, 
+            config.register_settings["atlas_threshold"], None, extendi)
     
     if expand:
         # expand selected regions
@@ -418,10 +419,11 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
         mirrori -= 1
     
     if rotate:
-        # mirror labels with original values in case rotation will cause 
-        # some labels to be cut off, then rotate for each specified axis
-        for i in range(mirrori, tot_planes):
-            img_np[i] = img_np[mirrori - 1]
+        if extent:
+            # mirroring labels with original values in case rotation will cause 
+            # some labels to be cut off, then rotate for each specified axis
+            for i in range(mirrori, tot_planes):
+                img_np[i] = img_np[mirrori - 1]
         for rot in rotate:
             img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
     
@@ -429,6 +431,7 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
     # fractional profile setting
     if extent is not None and extent[1] is not None:
         mirrori = int(extent[1] * tot_planes)
+        print("will mirror starting at plane index {}".format(mirrori))
     
     borders_img_np = None
     if smooth:
@@ -457,9 +460,11 @@ def _mirror_labels(img, img_ref, extent=None, expand=None, rotate=None,
     
     # mirror and check for label loss
     labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
-    img_np = _mirror_planes(img_np, mirrori, -1)
+    if extent:
+        img_np = _mirror_planes(img_np, mirrori, -1)
     half_before = img_np[:mirrori]
     half_after = img_np[:mirrori-1:-1]
+    print("Checking for baseline labels symmetry")
     print("halves equal before mirroring?",
           np.array_equal(half_before, half_after))
     print("same labels in each half before mirroring?", 
@@ -1041,24 +1046,25 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
 
 def match_atlas_labels(img_atlas, img_labels):
     mirror = config.register_settings["labels_mirror"]
+    rotate = config.register_settings["rotate"]
     smooth = config.register_settings["smooth"]
     img_borders = None
-    if mirror:
+    if mirror or rotate:
         # mirror and truncate labels for labels for only half the brain, 
         # such as for ABA E18pt5, unlike P56
         expand = config.register_settings["expand_labels"]
-        rotate = config.register_settings["rotate"]
-        img_labels_np, mirror_indices, borders_img_np = _mirror_labels(
+        img_labels_np, mirror_indices, borders_img_np = _curate_labels(
             img_labels, img_atlas, mirror, expand, rotate, smooth)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
         img_atlas_np = sitk.GetArrayFromImage(img_atlas)
         if rotate:
             for rot in rotate:
                 img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
-        start_dup = None
-        if len(mirror) > 2: start_dup = mirror[2]
-        img_atlas_np = _mirror_planes(
-            img_atlas_np, mirror_indices[1], start_dup=start_dup)
+        if mirror:
+            start_dup = None
+            if len(mirror) > 2: start_dup = mirror[2]
+            img_atlas_np = _mirror_planes(
+                img_atlas_np, mirror_indices[1], start_dup=start_dup)
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
         
         if borders_img_np is not None:

@@ -487,7 +487,7 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
     props_sizes.sort(key=lambda x: x[1], reverse=sort_reverse)
     return props_sizes
 
-def extend_edge(prop, region, region_ref, plane_region, planei, 
+def extend_edge(prop, region, region_ref, threshold, plane_region, planei, 
                 largest_only=False):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas.
@@ -501,6 +501,7 @@ def extend_edge(prop, region, region_ref, plane_region, planei,
         prop: Region property. If None, new region properties will be found.
         region: Labels region, which will be updated in-place.
         region_ref: Corresponding reference atlas region.
+        threshold: Threshold intensity for ``region_ref``.
         plane_region: Labels template that will be resized for current plane.
         planei: Plane index.
         largest_only: True to only use the property with the largest area; 
@@ -512,7 +513,7 @@ def extend_edge(prop, region, region_ref, plane_region, planei,
         # the corresponding section of the labels image to the bounds of the 
         # reference image in the next plane closer to the edge
         prop_sizes = get_thresholded_regionprops(
-            region_ref[planei], sort_reverse=largest_only)
+            region_ref[planei], threshold=threshold, sort_reverse=largest_only)
         if prop_sizes is None: return
         if largest_only:
             num_props = len(prop_sizes)
@@ -526,8 +527,8 @@ def extend_edge(prop, region, region_ref, plane_region, planei,
             prop_region_ref = region_ref[:, slices[0], slices[1]]
             prop_region = region[:, slices[0], slices[1]]
             extend_edge(
-                prop_size[0], prop_region, prop_region_ref, plane_region, 
-                planei)
+                prop_size[0], prop_region, prop_region_ref, threshold, 
+                plane_region, planei)
     else:
         if plane_region is None:
             plane_region = region[planei]
@@ -546,7 +547,8 @@ def extend_edge(prop, region, region_ref, plane_region, planei,
         # recursively follow largest area in next plane, assuming that this 
         # dominant object follows the current template; ignore new, 
         # presumably smaller regions since their template is unknown
-        extend_edge(None, region, region_ref, plane_region, planei - 1, True)
+        extend_edge(
+            None, region, region_ref, threshold, plane_region, planei - 1, True)
 
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]

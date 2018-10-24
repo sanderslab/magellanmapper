@@ -25,6 +25,7 @@ import matplotlib.pylab as pylab
 from matplotlib.widgets import Slider, Button
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
+import pandas as pd
 from skimage import exposure
 from skimage import transform
 
@@ -1476,11 +1477,55 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
     if show:
         plt.show()
 
+def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
+               y_label=None, title=None):
+    """Plot line graph from Pandas data frame.
+    
+    Args:
+        path_to_df: Path from which to read saved Pandas data frame.
+        x_col: Name of column to use for x.
+        data_cols: Sequence of names to plot as separate lines.
+        linestyles: Sequence of styles to use for each line; defaults to 
+            None, in which case "-" will be used for all lines.
+        x_label: Name of x-axis.
+        y_label: Name of y-axis.
+        title: Title of figure.
+    """
+    df = pd.read_csv(path_to_df)
+    fig = plt.figure()
+    gs = gridspec.GridSpec(1, 1)
+    ax = plt.subplot(gs[0, 0])
+    x = df[x_col]
+    for i, col in enumerate(data_cols):
+        linestyle = linestyles[i] if linestyles else "-"
+        ax.plot(
+            x, df[col], color="C{}".format(i), linestyle=linestyles[i], 
+            label=col.replace("_", " "))
+    ax.legend(loc="best", fancybox=True, framealpha=0.5)
+    if x_label: ax.set_xlabel(x_label)
+    if y_label: ax.set_ylabel(y_label)
+    if title: ax.set_title(title)
+    gs.tight_layout(fig)
+    if config.savefig is not None:
+        plt.savefig(os.path.splitext(path_to_df)[0] + "." + config.savefig)
+    plt.show()
+
 def setup_style():
     # setup Matplotlib parameters/styles
     #print(plt.style.available)
     plt.style.use("seaborn")
     pylab.rcParams.update(config.rc_params)
-    
+
 if __name__ == "__main__":
+    # set up command-line args and plotting style
+    from clrbrain import cli
+    cli.main(True)
+    setup_style()
     
+    # plot smoothing metrics
+    plot_lines(
+        config.PATH_SMOOTHING_METRICS, "filter", 
+        ("roughness", "compacted", "displaced", "smoothing", 
+         "SA_to_vol"), 
+        (":", "--", "--", "-", "-"), "Smoothing Filter Size", 
+        "Fractional Change", "Label Smoothing")

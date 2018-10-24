@@ -704,7 +704,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             rough_img_np[tuple(slices)], borders.astype(np.int8))
         return label_mask_region, borders
     
-    tot_metric = 0
+    tot_pxs_reduced = 0
+    tot_pxs_expanded = 0
     tot_size = 0
     tot_sa_to_vol_ratio = 0
     padding = 2 if filter_size is None else 2 * filter_size
@@ -808,38 +809,44 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             pxs.setdefault("sa_to_vol_smoothed", []).append(sa_to_vol_smoothed)
             pxs.setdefault("sa_to_vol_ratio", []).append(sa_to_vol_ratio)
         
-        metric = pxs_reduced - pxs_expanded
-        tot_metric += metric
+        tot_pxs_reduced += pxs_reduced
+        tot_pxs_expanded += pxs_expanded
         vals = (label_id, pxs_reduced, pxs_expanded, size_orig)
         for col, val in zip(cols, vals):
             pxs.setdefault(col, []).append(val)
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
-              .format(pxs_reduced, pxs_expanded, metric))
-    roughs_metric = None
+              .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
+    metrics = {"frac_reduced": 0, "frac_expanded": 0, "smoothing": 0, 
+               "rough_orig": 0, "rough_smoothed": 0, "sa_to_vol": 0}
     if tot_size > 0:
         # normalize to total original label foreground
-        tot_metric /= tot_size
+        frac_reduced = tot_pxs_reduced / tot_size
+        frac_expanded = tot_pxs_expanded / tot_size
+        metrics["frac_reduced"] = frac_reduced
+        metrics["frac_expanded"] = frac_expanded
+        metrics["smoothing"] = frac_reduced - frac_expanded
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
-        if tot_sa_to_vol_ratio != 0:
-            tot_sa_to_vol_ratio /= tot_size
+        tot_sa_to_vol_ratio /= tot_size
+        metrics["sa_to_vol"] = tot_sa_to_vol_ratio
+        metrics["rough_orig"] = roughs_metric[0]
+        metrics["rough_smoothed"] = roughs_metric[1]
     
+    # raw stats
     print()
-    df = pd.DataFrame(pxs)
-    print(df.to_csv(sep="\t", index=False))
+    df_pxs = pd.DataFrame(pxs)
+    print(df_pxs.to_csv(sep="\t", index=False))
     print("\nTotal foreground pxs: {}".format(tot_size))
-    if roughs_metric is not None:
-       print("Roughness original: {}".format(roughs_metric[0]))
-       print("Roughness smoothed: {}".format(roughs_metric[1]))
-       print("roughness diff: {}".format(roughs_metric[0] - roughs_metric[1]))
-    print("Smoothing metric: {}".format(tot_metric))
-    if tot_sa_to_vol_ratio != 0:
-        print("SA:Vol weighted ratio: {}".format(tot_sa_to_vol_ratio))
-    print("time elapsed for smoothing metric (s): {}"
+    
+    # data frame just for aligned printing but return metrics dict for 
+    # concatenating multiple runs
+    df_metrics = pd.DataFrame(metrics, index=[0])
+    print(df_metrics.to_string(index=False))
+    print("\ntime elapsed for smoothing metric (s): {}"
           .format(time() - start_time))
-    return borders_img_np, tot_metric, df
+    return borders_img_np, metrics, df_pxs
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.

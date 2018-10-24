@@ -1483,10 +1483,4 @@ def setup_style():
     pylab.rcParams.update(config.rc_params)
     
 if __name__ == "__main__":
-    print("Testing plot_2d...")
-    stats_dict = { 
-        "test1": (np.array([[5, 4, 3], [8, 3, 4]]), [10, 20]),
-        "test2": (np.array([[1225, 1200, 95], [235, 93, 230]]), [25, 34])
-    }
-    plot_roc(stats_dict, "Testing ROC")
     

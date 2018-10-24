@@ -179,7 +179,7 @@ def load_roi_files(db, path):
 def _test_loading_rois(db, channel, path):
     path_base, imgs, img_blobs = load_roi_files(db, path)
     for img, blobs in zip(imgs, img_blobs):
-        plot_2d.savefig = None
+        config.savefig = None
         plot_2d.plot_roi(img, blobs, channel, show=True, title=path_base)
 
 def blobs_to_csv(blobs, path):

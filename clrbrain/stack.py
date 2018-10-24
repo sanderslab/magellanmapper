@@ -166,7 +166,7 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
             image5d, slice(None, None, interval), plane=config.plane)
         out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
-    ext = plot_2d.savefig
+    ext = config.savefig
     if ext is None:
         ext = "gif"
     out_path = os.path.join(parent_path, out_name + "_animation." + ext)
@@ -206,7 +206,7 @@ def save_plane(image5d, offset, roi_size=None, name=None):
     fit_frame_to_image(fig, img2d.shape, aspect)
     if not name:
         name = "SavedPlane_z{}".format(plane_n)
-    filename = name + "." + plot_2d.savefig
+    filename = name + "." + config.savefig
     print("extracting plane as {}".format(filename))
     fig.savefig(filename)
 

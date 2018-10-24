@@ -520,9 +520,8 @@ def main(process_args_only=False):
         print("Set to series_list to {}, current series {}".format(
               series_list, config.series))
     if args.savefig is not None:
-        from clrbrain import plot_2d
-        plot_2d.savefig = args.savefig
-        print("Set savefig extension to {}".format(plot_2d.savefig))
+        config.savefig = args.savefig
+        print("Set savefig extension to {}".format(config.savefig))
     '''
     if args.verify:
         from clrbrain import plot_2d

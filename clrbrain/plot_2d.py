@@ -5,9 +5,6 @@ comparison with 3D visualization.
 
 Attributes:
     colormap_2d: The Matplotlib colormap for 2D plots.
-    savefig: Extension of the file in which to automatically save the
-        window as a figure (eg "pdf"). If None, figures will not be
-        automatically saved.
     verify: If true, verification mode is turned on, which for now
         simply turns on interior borders as the picker remains on
         by default.
@@ -41,7 +38,6 @@ from clrbrain import stats
 
 colormap_2d = cm.inferno
 #colormap_2d = cm.gray
-savefig = None
 verify = False
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
@@ -563,7 +559,7 @@ def plot_roi(roi, segments, channel, show=True, title=""):
         show: True if the plot should be displayed to screen; defaults 
             to True.
         title: String used as basename of output file. Defaults to "" 
-            and only used if :attr:``savefig`` is set to a file 
+            and only used if :attr:``config.savefig`` is set to a file 
             extension.
     """
     fig = plt.figure()
@@ -608,8 +604,8 @@ def plot_roi(roi, segments, channel, show=True, title=""):
     gs.tight_layout(fig, pad=0.5)
     if show:
         plt.show()
-    if savefig is not None:
-        plt.savefig(title + "." + savefig)
+    if config.savefig is not None:
+        plt.savefig(title + "." + config.savefig)
 
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
                   offset, segments, mask_in, segs_cmap, fn_close_listener, 
@@ -710,7 +706,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     if padding_stack is None:
         padding_stack = padding
     z_planes_padding = padding_stack[2] # additional z's above/below
-    print("padding: {}, savefig: {}".format(padding, savefig))
+    print("padding: {}, savefig: {}".format(padding, config.savefig))
     z_planes = z_planes + z_planes_padding * 2
     # position overview at bottom (default), middle, or top of stack
     z_overview = z_start # abs positioning
@@ -1052,10 +1048,10 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     plt.ion()
     plt.show()
     #fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
-    if savefig is not None:
+    if config.savefig is not None:
         name = "{}_offset{}x{}.{}".format(
             os.path.basename(filename), offset, tuple(roi_size), 
-            savefig).replace(" ", "")
+            config.savefig).replace(" ", "")
         print("saving figure as {}".format(name))
         plt.savefig(name)
     print("2D plot time: {}".format(time() - time_start))
@@ -1219,7 +1215,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     """Plot overlays of registered 3D images, showing overlap of atlas and 
     experimental image planes.
     
-    Shows the figure on screen. If :attribute:plot_2d:`savefig` is set, 
+    Shows the figure on screen. If :attr:``config.savefig`` is set, 
     the figure will be saved to file with the extensive given by savefig.
     
     Args:
@@ -1321,8 +1317,8 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         title = "Image Overlays"
     fig.suptitle(title)
     gs.tight_layout(fig)
-    if savefig is not None:
-        plt.savefig(title + "." + savefig)
+    if config.savefig is not None:
+        plt.savefig(title + "." + config.savefig)
     if show:
         plt.show()
 
@@ -1475,8 +1471,8 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         title = "Regional Volumes"
     fig.suptitle(title)
     gs.tight_layout(fig, rect=[0, 0, 1, 0.97]) # extra padding for title
-    if savefig is not None:
-        plt.savefig(title + "." + savefig)
+    if config.savefig is not None:
+        plt.savefig(title + "." + config.savefig)
     if show:
         plt.show()
 

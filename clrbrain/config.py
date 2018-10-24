@@ -35,10 +35,14 @@ from collections import OrderedDict
 verbose = False
 POS_THRESH = 0.001 # threshold for positive values for float comparison
 
+# 2D PLOTTING
+
 # custom colormaps in plot_2d
 CMAP_GRBK_NAME = "Green_black"
 CMAP_RDBK_NAME = "Red_black"
 
+# flag to save files using this extension
+savefig = None
 
 # IMAGE VIEWING
 

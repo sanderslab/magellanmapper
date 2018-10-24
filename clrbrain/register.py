@@ -225,9 +225,9 @@ def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
             bound_abs = np.multiply(bound, shape[axis]).astype(np.int)
             slices = [slice(None)] * bounds_len
             slices[axis] = slice(0, bound_abs[0])
-            img_np[slices] = 0
+            img_np[tuple(slices)] = 0
             slices[axis] = slice(bound_abs[1], None)
-            img_np[slices] = 0
+            img_np[tuple(slices)] = 0
             print("truncated axis {} outside of bounds {}"
                   .format(axis, bound_abs))
         axis += 1
@@ -665,17 +665,17 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     def update_borders_img(borders, slices, label_id, channel):
         nonlocal borders_img_np
         if borders_img_np is None: return
-        borders_region = borders_img_np[slices]
+        borders_region = borders_img_np[tuple(slices)]
         borders_region[borders, channel] = label_id
     
     def broad_borders(img_np, slices, label_id, channel, rough_img_np):
         # use closing filter to approximate volume encompassing rough edges
         # get region, skipping if no region left
-        region = img_np[slices]
+        region = img_np[tuple(slices)]
         label_mask_region = region == label_id
         filtered = morphology.binary_closing(label_mask_region, selem)
-        rough_img_np[slices] = np.add(
-            rough_img_np[slices], filtered.astype(np.int8))
+        rough_img_np[tuple(slices)] = np.add(
+            rough_img_np[tuple(slices)], filtered.astype(np.int8))
         filtered_border = plot_3d.perimeter_nd(filtered)
         update_borders_img(filtered_border, slices, label_id, channel)
         return label_mask_region, filtered
@@ -686,7 +686,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         region = img_np[tuple(slices)]
         label_mask_region = region == label_id
         borders = plot_3d.perimeter_nd(label_mask_region)
-        rough_img_np[slices] = np.add(
+        rough_img_np[tuple(slices)] = np.add(
             rough_img_np[tuple(slices)], borders.astype(np.int8))
         return label_mask_region, borders
     
@@ -756,7 +756,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 elif mode == SMOOTHING_METRIC_MODES[2]:
                     # "area_radial": radial distances from center to get 
                     # signed distances (DEPRECATED: use signed dist in area_edt)
-                    region = orig_img_np[slices]
+                    region = orig_img_np[tuple(slices)]
                     props = measure.regionprops(
                         (region == label_id).astype(np.int))
                     centroid = props[0].centroid
@@ -1391,7 +1391,7 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
     shape = labels_img.shape
     for i in range(shape[axis]):
         slices[axis] = i
-        plane = labels_img[slices]
+        plane = labels_img[tuple(slices)]
         if not np.allclose(plane, 0):
             print("found first non-zero plane at i of {}".format(i))
             break
@@ -1402,12 +1402,12 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
         slices = [slice(None)] * img_np.ndim
         if eraser is None:
             slices[axis] = slice(i, shape[axis])
-            img_crop = img_crop[slices]
+            img_crop = img_crop[tuple(slices)]
             print("cropped image from shape {} to {}"
                   .format(shape, img_crop.shape))
         else:
             slices[axis] = slice(0, i)
-            img_crop[slices] = eraser
+            img_crop[tuple(slices)] = eraser
             print("erased image outside of {} to {} intensity value"
                   .format(slices, eraser))
     else:
@@ -1566,8 +1566,8 @@ def register_group(img_files, flip=None, show_imgs=True,
         for border in extend_borders[::-1]:
             slices.append(slice(*border) if border else slice(None))
         slices = tuple(slices)
-        region = img_mean[slices]
-        region_template = img_np_template[slices]
+        region = img_mean[tuple(slices)]
+        region_template = img_np_template[tuple(slices)]
         mask = region < carve_threshold
         region[mask] = region_template[mask]
     img_raw = replace_sitk_with_numpy(transformed_img, img_mean)

@@ -643,10 +643,23 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         ``tot_metric``, the smoothing metric as a float value; and 
         ``pd``, the metric components as a Pandas data frame.
     """
+    start_time = time()
+    
+    # check parameters by mode
+    if mode == SMOOTHING_METRIC_MODES[0]:
+        if filter_size is None:
+            raise TypeError(
+                "filter size must be an integer, not {}, for mode {}"
+                .format(filter_size, mode))
+        if penalty_wt is None:
+            penalty_wt = 1.0
+            print("defaulting to penalty weight of {} for mode {}"
+                  .format(penalty_wt, mode))
+    elif not mode in SMOOTHING_METRIC_MODES:
+        raise TypeError("no metric of mode {}".format(mode))
     print("Calculating smoothing metrics, mode {} with filter size of {}, "
           "penalty weighting factor of {}"
           .format(mode, filter_size, penalty_wt))
-    start_time = time()
     
     # prepare roughness images to track global overlap
     shape = list(orig_img_np.shape)
@@ -793,8 +806,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
             pxs.setdefault("sa_to_vol_smoothed", []).append(sa_to_vol_smoothed)
             pxs.setdefault("sa_to_vol_ratio", []).append(sa_to_vol_ratio)
-        else:
-            raise TypeError("no metric of mode {}".format(mode))
         
         metric = pxs_reduced - pxs_expanded
         tot_metric += metric

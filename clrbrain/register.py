@@ -312,7 +312,7 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
     return img_np
 
 def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None, 
-                   smooth=False):
+                   smooth=None):
     """Curate labels through extension, mirroring, and smoothing.
     
     Extension fills in missing edge labels by extrapolating edge planes 
@@ -339,7 +339,9 @@ def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None,
             the size of the atlas. Defaults to None.
         rotate: Tuple of ((angle0, axis0), ...) by which to rotate the 
             labels. Defaults to None.
-        smooth: True if labels should be smoothed; defaults to False.
+        smooth: Filter size for smoothing, or sequence of sizes to test 
+            various smoothing strengths via multiprocessing; defaults to 
+            None, in which case smoothing will not be performed.
     
     Returns:
         Tuple of ``img_np``, ``(extendi, mirrori)``, where ``img_np`` is 
@@ -434,17 +436,20 @@ def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None,
         print("will mirror starting at plane index {}".format(mirrori))
     
     borders_img_np = None
-    if smooth:
+    if smooth is not None:
         # minimize jaggedness in labels, often seen outside of the original 
         # orthogonal direction, using pre-mirrored slices only since rest will 
         # be overwritten
         img_smoothed = img_np[:mirrori]
         img_smoothed_orig = np.copy(img_smoothed)
-        smooth_labels(img_smoothed)
-        
-        # calculate smoothing metric with borders image
-        borders, _, _ = label_smoothing_metric(
-            img_smoothed_orig, img_smoothed)
+        borders = None
+        if isinstance(smooth, int):
+            # single filter size
+            _, _, borders = _smoothing(img_smoothed, img_smoothed_orig, smooth)
+        else:
+            # test sequence of filter sizes via multiprocessing, in which 
+            # case the original array will be left unchanged
+            _ = _smoothing_mp(img_smoothed, img_smoothed_orig, smooth)
         if borders is not None:
             # mirror borders image
             shape = list(borders.shape)
@@ -471,6 +476,64 @@ def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None,
           np.array_equal(np.unique(half_before), np.unique(half_after)))
     print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (extendi, mirrori), borders_img_np
+
+def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
+    """Smooth image and calculate smoothing metric for use individually or 
+    in multiprocessing.
+    
+    Args:
+        img_np: Image as Numpy array, which will be directly updated.
+        img_np_orig: Original image as Numpy array for comparison with 
+            smoothed image in metric.
+        filter_size: Structuring element size for smoothing.
+        save_borders: True to save borders; defaults to False
+    
+    Returns:
+        Tuple of ``filter_size``, same as given for reference; ``metric``, 
+        a dictionary of smoothing metrices; and ``borders``, the borders 
+        image.
+    """
+    smooth_labels(img_np, filter_size)
+    borders, metric, df_raw = label_smoothing_metric(
+        img_np_orig, img_np, save_borders=save_borders)
+    return filter_size, metric, borders
+
+def _smoothing_mp(img_np, img_np_orig, filter_sizes, output_path=None):
+    """Smooth image and calculate smoothing metric for a list of smoothing 
+    strengths.
+    
+    Args:
+        img_np: Image as Numpy array, which will be directly updated.
+        img_np_orig: Original image as Numpy array for comparison with 
+            smoothed image in metric.
+        filter_size: Tuple or list of structuring element sizes.
+        output_path: Save metrics data frame to this path; defaults to None, 
+            in which case "smoothing.csv" will be used.
+    
+    Returns:
+        Data frame of combined metrics from smoothing for each filter size.
+    """
+    if not output_path:
+        output_path = "smoothing.csv"
+    pool = mp.Pool()
+    pool_results = []
+    for n in filter_sizes:
+        pool_results.append(pool.apply_async(
+            _smoothing, 
+            args=(img_np, img_np_orig, n)))
+    metrics = []
+    for result in pool_results:
+        filter_size, metric, _ = result.get()
+        metric["filter"] = filter_size
+        metrics.append(metric)
+        print("finished smoothing with filter size {}".format(filter_size))
+    pool.close()
+    pool.join()
+    df = pd.DataFrame(metrics)
+    df.sort_values("filter")
+    df.to_csv(output_path)
+    print("smoothing metrices saved to {}".format(output_path))
+    return df
 
 def labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
     print("Measuring label loss:")
@@ -502,7 +565,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     
     Args:
         labels_img_np: Labels image as a Numpy array.
-        filter_size: Structuring element or kernel size.
+        filter_size: Structuring element or kernel size; defaults to 3.
         mode: One of :const:``SMOOTHING_MODES``, where ``opening`` applies 
             a morphological opening filter unless the size is severely 
             reduced, in which case a closing filter is applied instead; and 
@@ -510,6 +573,10 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     """
     print("Smoothing labels with filter size of {}, mode {}"
           .format(filter_size, mode))
+    if filter_size == 0:
+        print("filter size of 0, skipping")
+        return
+    
     # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
     

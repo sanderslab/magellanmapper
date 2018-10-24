@@ -873,8 +873,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
             tot_sa_to_vol_ratio += sa_to_vol_ratio * size_orig
             pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
-            pxs.setdefault("sa_to_vol_smoothed", []).append(sa_to_vol_smoothed)
-            pxs.setdefault("sa_to_vol_ratio", []).append(sa_to_vol_ratio)
+            pxs.setdefault("SA_to_vol_smoothed", []).append(sa_to_vol_smoothed)
+            pxs.setdefault("SA_to_vol_ratio", []).append(sa_to_vol_ratio)
         
         tot_pxs_reduced += pxs_reduced
         tot_pxs_expanded += pxs_expanded
@@ -883,23 +883,27 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             pxs.setdefault(col, []).append(val)
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
               .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
-    metrics = {"frac_reduced": 0, "frac_expanded": 0, "smoothing": 0, 
-               "rough_orig": 0, "rough_smoothed": 0, "sa_to_vol": 0}
+    metrics = {"compacted": 0, "displaced": 0, "smoothing": 0, 
+               "roughness": 0, "roughness_sm": 0, "SA_to_vol": 0, 
+               "label_loss": 0}
     if tot_size > 0:
         # normalize to total original label foreground
         frac_reduced = tot_pxs_reduced / tot_size
         frac_expanded = tot_pxs_expanded / tot_size
-        metrics["frac_reduced"] = frac_reduced
-        metrics["frac_expanded"] = frac_expanded
+        metrics["compacted"] = frac_reduced
+        metrics["displaced"] = frac_expanded
         metrics["smoothing"] = frac_reduced - frac_expanded
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
         tot_sa_to_vol_ratio /= tot_size
-        metrics["sa_to_vol"] = tot_sa_to_vol_ratio
-        metrics["rough_orig"] = roughs_metric[0]
-        metrics["rough_smoothed"] = roughs_metric[1]
+        metrics["SA_to_vol"] = tot_sa_to_vol_ratio
+        metrics["roughness"] = roughs_metric[0]
+        metrics["roughness_sm"] = roughs_metric[1]
+        num_labels_orig = len(label_ids)
+        metrics["label_loss"] = (
+            num_labels_orig - len(np.unique(smoothed_img_np))) / num_labels_orig
     
     # raw stats
     print()

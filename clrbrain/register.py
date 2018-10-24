@@ -597,7 +597,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
           .format(weighted_size_ratio))
 
 def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None, 
-                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[1], 
+                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[3], 
                            save_borders=False):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
@@ -622,15 +622,16 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         smoothing_img_np: Smoothed labels image as Numpy array, which 
             should be of the same shape as ``original_img_np``.
         filter_size: Structuring element size for determining the filled, 
-            broad volume of each label. Defaults to 4. Larger sizes 
+            broad volume of each label. Defaults to None. Larger sizes 
             favor greater smoothing in the final labels.
         penalty_wt: Weighting factor for the penalty term. For ``vol`` 
             mode, larger  values favor labels that remain within their 
             original bounds. For ``area`` mode, this value is used as a 
             denominator for pixel perimeter displacement, where larger values 
-            tolerate more displacement. Defaults to 1.0.
+            tolerate more displacement. Defaults to None.
         mode: One of :const:``SMOOTHING_METRIC_MODES`` (see above for 
-            description of the modes).
+            description of the modes). Defaults to 
+            :const:``SMOOTHING_METRIC_MODES[3]``
         save_borders: True to save borders of original and smoothed images 
             in a separate, multichannel image; defaults to False.
     

@@ -498,7 +498,8 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
         img_np_orig, img_np, save_borders=save_borders)
     return filter_size, metric, borders
 
-def _smoothing_mp(img_np, img_np_orig, filter_sizes, output_path=None):
+def _smoothing_mp(img_np, img_np_orig, filter_sizes, 
+                  output_path=config.PATH_SMOOTHING_METRICS):
     """Smooth image and calculate smoothing metric for a list of smoothing 
     strengths.
     
@@ -507,14 +508,12 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes, output_path=None):
         img_np_orig: Original image as Numpy array for comparison with 
             smoothed image in metric.
         filter_size: Tuple or list of structuring element sizes.
-        output_path: Save metrics data frame to this path; defaults to None, 
-            in which case "smoothing.csv" will be used.
+        output_path: Save metrics data frame to this path; defaults to 
+            :const:``config.PATH_SMOOTHING_METRICS``.
     
     Returns:
         Data frame of combined metrics from smoothing for each filter size.
     """
-    if not output_path:
-        output_path = "smoothing.csv"
     pool = mp.Pool()
     pool_results = []
     for n in filter_sizes:

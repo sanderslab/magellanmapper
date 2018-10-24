@@ -748,6 +748,9 @@ flip = None
 GROUPS_NUMERIC = {"WT": 0.0, "het": 0.5, "null":1.0}
 groups = None
 
+# smoothing metrics
+PATH_SMOOTHING_METRICS = "smoothing.csv"
+
 
 
 # AWS

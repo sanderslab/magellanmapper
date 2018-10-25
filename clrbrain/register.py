@@ -1139,13 +1139,15 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
             num_res /= ndim
         param_map["NumberOfResolutions"] = [str(num_res)]
 
-def match_atlas_labels(img_atlas, img_labels):
+def match_atlas_labels(img_atlas, img_labels, flip=False):
     """Apply register profile settings to labels and match atlas image 
     accordingly.
     
     Args:
         img_labels: Labels image as SimpleITK image.
         img_ref: Reference image as SimpleITK image.
+        flip: True to rotate images 90deg around the final z axis; 
+            defaults to False.
     
     Returns:
         Tuple of ``img_atlas``, the updated atlas; ``img_labels``, the 
@@ -1180,6 +1182,7 @@ def match_atlas_labels(img_atlas, img_labels):
             img_borders = transpose_img(img_borders, config.plane, False)
     
     if crop:
+        # crop atlas to the mask of the labels with some padding
         img_labels_np, img_atlas_np = plot_3d.crop_to_labels(
             sitk.GetArrayFromImage(img_labels), 
             sitk.GetArrayFromImage(img_atlas))
@@ -1187,8 +1190,8 @@ def match_atlas_labels(img_atlas, img_labels):
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # transpose to given plane
-    img_atlas = transpose_img(img_atlas, config.plane, False)
-    img_labels = transpose_img(img_labels, config.plane, False)
+    img_atlas = transpose_img(img_atlas, config.plane, flip)
+    img_labels = transpose_img(img_labels, config.plane, flip)
     return img_atlas, img_labels, img_borders
 
 def import_atlas(atlas_dir, show=True):
@@ -1287,7 +1290,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     # load labels image and match with atlas
     labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
-    moving_img, labels_img, _ = match_atlas_labels(moving_img, labels_img)
+    moving_img, labels_img, _ = match_atlas_labels(moving_img, labels_img, flip)
     
     # basic info from images just prior to SimpleElastix filtering for 
     # registration; to view raw images, show these images rather than merely 

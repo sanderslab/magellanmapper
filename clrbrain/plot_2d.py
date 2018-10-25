@@ -1478,37 +1478,48 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         plt.show()
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
-               y_label=None, title=None):
+               y_label=None, title=None, show=True):
     """Plot line graph from Pandas data frame.
     
     Args:
         path_to_df: Path from which to read saved Pandas data frame.
+            The figure will be saved to file if :attr:``config.savefig`` is 
+            set, using this same path except with the savefig extension.
         x_col: Name of column to use for x.
         data_cols: Sequence of names to plot as separate lines.
         linestyles: Sequence of styles to use for each line; defaults to 
             None, in which case "-" will be used for all lines.
-        x_label: Name of x-axis.
-        y_label: Name of y-axis.
-        title: Title of figure.
+        x_label: Name of x-axis; defaults to None.
+        y_label: Name of y-axis; defaults to None.
+        title: Title of figure; defaults to None.
+        show: True to display the image; otherwise, . 
+            Defaults to True.
     """
+    # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
     fig = plt.figure()
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
+    
+    # plot selected columns with corresponding styles
     x = df[x_col]
     for i, col in enumerate(data_cols):
         linestyle = linestyles[i] if linestyles else "-"
         ax.plot(
             x, df[col], color="C{}".format(i), linestyle=linestyles[i], 
             label=col.replace("_", " "))
+    
+    # add supporting plot components
     ax.legend(loc="best", fancybox=True, framealpha=0.5)
     if x_label: ax.set_xlabel(x_label)
     if y_label: ax.set_ylabel(y_label)
     if title: ax.set_title(title)
     gs.tight_layout(fig)
+    
+    # save and display
     if config.savefig is not None:
         plt.savefig(os.path.splitext(path_to_df)[0] + "." + config.savefig)
-    plt.show()
+    if show: plt.show()
 
 def setup_style():
     # setup Matplotlib parameters/styles
@@ -1529,4 +1540,4 @@ if __name__ == "__main__":
         path, "filter", 
         ("roughness", "compacted", "displaced", "smoothing", "SA_to_vol"), 
         (":", "--", "--", "-", "-"), "Smoothing Filter Size", 
-        "Fractional Change", "Label Smoothing")
+        "Fractional Change", "Label Smoothing", not config.no_show)

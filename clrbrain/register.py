@@ -1262,7 +1262,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
             True.
         write_imgs: True if the images should be written to file; defaults to 
             False.
-        name_prefix: Path with base name where registered files are located; 
+        name_prefix: Path with base name where registered files will be output; 
             defaults to None, in which case the fixed_file path will be used.
         new_atlas: True to generate registered images that will serve as a 
             new atlas; defaults to False.
@@ -1361,10 +1361,10 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         img = _transform_labels(
             transformix_img_filter, labels_img, settings, truncate=truncate)
         print(img.GetSpacing())
-        # WORKAROUND: labels img may be more rounded than transformed moving 
-        # img for some reason; assume transformed labels and moving image 
-        # should match exactly, so replace labels with moving image's 
-        # transformed spacing
+        # WORKAROUND: labels img floating point vals may be more rounded 
+        # than transformed moving img for some reason; assume transformed 
+        # labels and moving image should match exactly, so replace labels 
+        # with moving image's transformed spacing
         img.SetSpacing(transformed_img.GetSpacing())
         print(img.GetSpacing())
         print(fixed_img_orig.GetSpacing(), transformed_img.GetSpacing())
@@ -1525,7 +1525,7 @@ def register_group(img_files, flip=None, show_imgs=True,
             True.
         write_imgs: True if the images should be written to file; defaults to 
             True.
-        name_prefix: Path with base name where registered files are located; 
+        name_prefix: Path with base name where registered files will be output; 
             defaults to None, in which case the fixed_file path will be used.
         scale: Rescaling factor as a scalar value, used to find the rescaled, 
             smaller images corresponding to ``img_files``. Defaults to None.

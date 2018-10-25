@@ -99,6 +99,19 @@ def get_filename_ext(filename):
         ext = filename_split[1]
     return ext
 
+def combine_paths(base_path, suffix, sep="_"):
+    """Merge two paths.
+    
+    Args:
+        base_path: Path whose dot-extension will be replaced by ``suffix``.
+        suffix: Replacement including new extension.
+        sep: Separator between ``base_path`` and ``suffix``.
+    
+    Returns:
+        Merged path.
+    """
+    return os.path.splitext(base_path)[0] + sep + suffix
+
 def normalize(array, minimum, maximum, background=None):
     """Normalizes an array to fall within the given min and max.
     

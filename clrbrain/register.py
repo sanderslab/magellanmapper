@@ -499,7 +499,7 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     return filter_size, metric, borders
 
 def _smoothing_mp(img_np, img_np_orig, filter_sizes, 
-                  output_path=config.PATH_SMOOTHING_METRICS):
+                  output_path=""):
     """Smooth image and calculate smoothing metric for a list of smoothing 
     strengths.
     
@@ -508,12 +508,18 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes,
         img_np_orig: Original image as Numpy array for comparison with 
             smoothed image in metric.
         filter_size: Tuple or list of structuring element sizes.
-        output_path: Save metrics data frame to this path; defaults to 
-            :const:``config.PATH_SMOOTHING_METRICS``.
+        output_path: Save metrics data frame to this path. If empty string, 
+            will attempt to combine :attr:``config.filename`` with 
+            :const:``config.PATH_SMOOTHING_METRICS``, or simply use the 
+            latter if the former is None. Defaults to "".
     
     Returns:
         Data frame of combined metrics from smoothing for each filter size.
     """
+    if output_path == "":
+        output_path = config.PATH_SMOOTHING_METRICS
+        if config.prefix:
+            output_path = lib_clrbrain.combine_paths(config.prefix, output_path)
     pool = mp.Pool()
     pool_results = []
     for n in filter_sizes:

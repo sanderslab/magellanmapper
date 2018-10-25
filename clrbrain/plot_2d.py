@@ -1523,9 +1523,10 @@ if __name__ == "__main__":
     setup_style()
     
     # plot smoothing metrics
+    path = lib_clrbrain.combine_paths(
+        config.prefix, config.PATH_SMOOTHING_METRICS)
     plot_lines(
-        config.PATH_SMOOTHING_METRICS, "filter", 
-        ("roughness", "compacted", "displaced", "smoothing", 
-         "SA_to_vol"), 
+        path, "filter", 
+        ("roughness", "compacted", "displaced", "smoothing", "SA_to_vol"), 
         (":", "--", "--", "-", "-"), "Smoothing Filter Size", 
         "Fractional Change", "Label Smoothing")

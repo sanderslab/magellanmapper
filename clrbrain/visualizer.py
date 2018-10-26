@@ -457,11 +457,14 @@ class Visualization(HasTraits):
         self._scene_3d_shown = True
         
         # show main image corresponding to label region
-        label_mask = config.labels_img[slices] == label_id
+        label_mask = config.labels_img[tuple(slices)] == label_id
         self.roi = np.copy(cli.image5d[0][slices])
         self.roi[~label_mask] = 0
         plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
+        if config.savefig:
+            self.scene.mlab.savefig(
+                "label3d_{}.{}".format(label_id, config.savefig))
         self._post_3d_display()
     
     def _setup_for_image(self):

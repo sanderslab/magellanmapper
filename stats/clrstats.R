@@ -305,12 +305,12 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
       if (is.null(coef.tab)) next
       stats$Stats[i] <- list(coef.tab)
       stats$MeanNuclei[i] <- mean(df.region$Nuclei)
+      title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
       
       # show histogram to check for parametric distribution
-      #hist(vals)
+      #histogramPlot(vals, title, meas)
       
       # plot individual values grouped by genotype and selected column
-      title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
       df.jitter <- df.region.nonzero
       if (!split.by.side) {
         df.jitter <- aggregate(
@@ -331,6 +331,21 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
     print(regions.ignored)
   }
   return(stats)
+}
+
+histogramPlot <- function(vals, title, meas) {
+  # Plot histogram and save to file.
+  #
+  # Args:
+  #   vals: Values to plot.
+  #   title: Title for plot.
+  #   meas: Measurement to include in filename
+  
+  # may need to tweak width divisor to fit exactly in fig
+  hist(vals, main=strwrap(title, width=dev.size("px")[1]/10))
+  dev.print(
+    pdf, file=paste0(
+      "../plot_histo_", meas, "_", gsub("/| ", "_", title), ".pdf"))
 }
 
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 

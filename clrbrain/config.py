@@ -329,9 +329,10 @@ class RegisterSettings(SettingsDict):
         self["smooth"] = False # smooth labels
         self["crop_to_labels"] = False # crop labels and atlas to nonzero labels
         
-        # erase labels outside of x,y,z (applied after transposition), 
-        # where each val is (start, end), given as fractions, or None for the 
-        # whole range
+        # erase labels outside of ((x_start, x_end), (y_start, ...) ...) 
+        # (applied after transposition), where each val is given as fractions
+        # of the full range or None to not truncate that at that position; 
+        # None for the entire setting turns off truncation
         self["truncate_labels"] = None
         
         # mirror labels from one side onto the other, given as 

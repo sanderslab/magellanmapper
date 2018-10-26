@@ -1092,12 +1092,17 @@ def _measure_overlap_combined_labels(fixed_img, labels_img):
         fixed_img, result_img_for_overlap, transformed_thresh=1)
 
 def _transform_labels(transformix_img_filter, labels_img, settings, 
-                      truncate=False):
+                      truncate=False, flip=False):
     if truncate:
         # truncate ventral and posterior portions since variable 
         # amount of tissue or quality of imaging in these regions
         labels_img_np = sitk.GetArrayFromImage(labels_img)
-        _truncate_labels(labels_img_np, *settings["truncate_labels"])
+        truncation = list(settings["truncate_labels"])
+        if flip:
+            # assume labels were rotated 180deg around the z-axis, so 
+            # need to flip y-axis fracs
+            truncation[1] = np.subtract(1, truncation[1])[::-1]
+        _truncate_labels(labels_img_np, *truncation)
         labels_img = replace_sitk_with_numpy(labels_img, labels_img_np)
     
     # apply atlas transformation to labels image
@@ -1146,7 +1151,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
     Args:
         img_labels: Labels image as SimpleITK image.
         img_ref: Reference image as SimpleITK image.
-        flip: True to rotate images 90deg around the final z axis; 
+        flip: True to rotate images 180deg around the final z axis; 
             defaults to False.
     
     Returns:
@@ -1359,7 +1364,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     def make_labels(truncate):
         nonlocal transformed_img
         img = _transform_labels(
-            transformix_img_filter, labels_img, settings, truncate=truncate)
+            transformix_img_filter, labels_img, settings, truncate=truncate, 
+            flip=flip)
         print(img.GetSpacing())
         # WORKAROUND: labels img floating point vals may be more rounded 
         # than transformed moving img for some reason; assume transformed 

@@ -621,7 +621,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
             opened = morphology.binary_opening(label_mask_region, selem)
             region_size_smoothed = np.sum(opened)
             size_ratio = region_size_smoothed / region_size
-            if size_ratio < 0.5:
+            if size_ratio < 0.01:
                 print("largest region would be lost or too small "
                       "(ratio {}), will use closing filter instead"
                       .format(size_ratio))

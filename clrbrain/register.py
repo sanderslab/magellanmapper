@@ -1025,7 +1025,8 @@ def _load_numpy_to_sitk(numpy_file, rotate=False):
     #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
     return sitk_img
 
-def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
+def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True, 
+                holes_area=None):
     """Curate images by in-painting where corresponding pixels are present in 
     fixed image but not labels or other images and removing pixels 
     present in those images but not the fixed image.
@@ -1036,6 +1037,10 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
             missing pixels and measure overlap.
         imgs: Array of additional images to curate corresponding pixels 
             as those curated in ``labels_img``. Defaults to None.
+        inpaint: True to in-paint; defaults to True.
+        carve: True to carve based on ``fixed_img``; defaults to True. If 
+            ``inpaint`` is True, ``carve`` should typically be True as well.
+        holes_area: Maximum area of holes to fill when carving.
     
     Returns:
         A list of images in SimpleITK format that have been curated.
@@ -1068,7 +1073,8 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True):
         if inpaint:
             result_img_np = plot_3d.in_paint(result_img_np, to_fill)
         if carve:
-            result_img_np[fixed_img_np <= thresh] = 0
+            _, mask = plot_3d.carve(fixed_img_np, thresh, holes_area)
+            result_img_np[~mask] = 0
         result_img = replace_sitk_with_numpy(img, result_img_np)
         result_imgs.append(result_img)
         if i == 0:
@@ -1681,7 +1687,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     imgs_to_show.append(img_raw)
     holes_area = settings["holes_area"]
     if carve_threshold and holes_area:
-        img_mean, img_mean_unfilled = plot_3d.carve(
+        img_mean, _, img_mean_unfilled = plot_3d.carve(
             img_mean, thresh=carve_threshold, holes_area=holes_area, 
             return_unfilled=True)
         img_unfilled = replace_sitk_with_numpy(
@@ -2847,12 +2853,15 @@ def _test_region_from_id():
     props, bbox, centroid = get_region_from_id(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))
 
-def _test_curate_img(path):
+def _test_curate_img(path, prefix):
     fixed_img = _load_numpy_to_sitk(path)
-    moving_dir = os.path.dirname(path)
-    labels_img = sitk.ReadImage(os.path.join(moving_dir, IMG_LABELS))
-    atlas_img = sitk.ReadImage(os.path.join(moving_dir, IMG_ATLAS))
-    result_imgs = _curate_img(fixed_img, labels_img, [atlas_img])
+    labels_img = load_registered_img(prefix, reg_name=IMG_LABELS, get_sitk=True)
+    atlas_img = load_registered_img(prefix, reg_name=IMG_ATLAS, get_sitk=True)
+    labels_img.SetSpacing(fixed_img.GetSpacing())
+    holes_area = config.register_settings["holes_area"]
+    result_imgs = _curate_img(
+        fixed_img, labels_img, [atlas_img], inpaint=False, 
+        holes_area=holes_area)
     sitk.Show(fixed_img)
     sitk.Show(labels_img)
     sitk.Show(result_imgs[0])
@@ -2889,7 +2898,7 @@ if __name__ == "__main__":
     
     #_test_labels_lookup()
     #_test_region_from_id()
-    #_test_curate_img(config.filenames[0])
+    #_test_curate_img(config.filenames[0], config.prefix)
     #_test_smoothing_metric()
     #os._exit(os.EX_OK)
     

@@ -263,26 +263,34 @@ def in_paint(roi, to_fill):
     return filled
 
 def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
-    # erase below simple threshold
+    """Carve image by thresholding and filling in small holes.
+    
+    Args:
+        roi: Image as Numpy array.
+        thresh: Value by which to threshold. Defaults to None, in which 
+            case a mean threshold will be applied.
+        holes_area: Maximum area of holes to fill.
+        return_unfilled: True to return the thresholded by unfilled image.
+    
+    Returns:
+        Tuple of ``roi_carved``, the carved image; ``maks``, the mask 
+        used to carve; and, if ``return_unfilled`` is True, ``roi_unfilled``, 
+        the image after carving but before filling in holes.
+    """
     roi_carved = np.copy(roi)
     if thresh is None:
         thresh = filters.threshold_mean(roi_carved)
-    mask = roi_carved < thresh
-    roi_carved[mask] = 0
+    mask = roi_carved > thresh
+    if holes_area:
+        pxs_orig = np.sum(mask)
+        mask = morphology.remove_small_holes(mask, holes_area)
+        print("{} pxs in holes recovered".format(np.sum(mask) - pxs_orig))
+        roi_unfilled = np.copy(roi_carved) if return_unfilled else None
+    roi_carved[~mask] = 0
     
-    # fill small holes from original ROI
-    roi_uint = roi_carved
-    if not isinstance(roi[..., 0], np.int):
-        print("converting image to uint to remove small holes")
-        roi_uint = img_as_uint(roi_carved)
-    labels = measure.label(roi_uint)
-    to_fill = np.logical_and(
-        morphology.remove_small_holes(labels, holes_area), mask)
-    roi_unfilled = np.copy(roi_carved) if return_unfilled else None
-    roi_carved[to_fill] = roi[to_fill]
-    if return_unfilled:
-        return roi_carved, roi_unfilled
-    return roi_carved
+    if holes_area and return_unfilled:
+        return roi_carved, mask, roi_unfilled
+    return roi_carved, mask
 
 def rotate_nd(img_np, angle, axis=0, order=1):
     rotated = np.copy(img_np)

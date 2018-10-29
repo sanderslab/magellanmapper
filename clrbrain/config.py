@@ -370,6 +370,7 @@ def update_register_settings(settings, settings_type):
         settings["settings_name"] = "finer"
         settings["bspline_iter_max"] = "512"
         settings["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
+        settings["holes_area"] = 5000
     
     elif settings_type.startswith("groupwise"):
         # groupwise registration

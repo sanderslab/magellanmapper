@@ -110,6 +110,7 @@ def combine_paths(base_path, suffix, sep="_"):
     Returns:
         Merged path.
     """
+    if not base_path: return suffix
     return os.path.splitext(base_path)[0] + sep + suffix
 
 def normalize(array, minimum, maximum, background=None):

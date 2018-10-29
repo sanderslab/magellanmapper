@@ -2212,6 +2212,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
     scaling_inv = None
     # default to simple threshold since costly to calc for large image
     thresh = _SIGNAL_THRESHOLD
+    labels_img_orig = None
     if image5d is not None and image5d.shape[1:4] != labels_img.shape:
         # find scale between larger image5d and labels image
         scaling = importer.calc_scaling(image5d, labels_img)
@@ -2221,8 +2222,11 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
         print("images have different shapes so will scale to compare "
               "with scaling of {}".format(scaling_inv))
     elif image5d is not None:
-        # find global threshold from scaled (presumably smaller) image
+        # find global threshold from scaled (presumably smaller) image 
+        # and remove labels pxs below it
         thresh = filters.threshold_mean(image5d)
+        labels_img_orig = np.copy(labels_img)
+        labels_img[image5d[0] < thresh] = 0
         print("using signal threshold of {}".format(thresh))
     for key in ids:
         label_ids = [key, -1 * key]
@@ -2230,13 +2234,15 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             label = labels_ref_lookup[key] # always use pos val
             mask_id = labels_img == label_id
             region = labels_img[mask_id]
-            vol = len(region) * scaling_vol
+            len_region = len(region)
+            vol = len_region * scaling_vol
             
+            # TODO: remove either this section or prior labels carving since 
+            # they duplicate one another
             if image5d is not None:
                 # find volume of corresponding region in experiment image
-                # where significant signal (eg actual tissue) is present; 
-                # assume that rest of region does not contain blobs since 
-                # not checking for blobs there
+                # about threshold; assumes that excluded pixels do not 
+                # contain blobs since does not check for blobs there
                 vol_image5d = 0
                 vol_theor = 0 # to verify
                 if scaling_inv is not None:
@@ -2248,29 +2254,26 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                     coords_end = np.around(
                         np.add(coords, scaling_inv)).astype(np.int32)
                     for i in range(len(coords)):
-                        #print("slicing from {} to {}".format(coords[i], coords_end[i]))
+                        # compare downsampled image px to nearest corresponding 
+                        # full-sized image px
                         region_image5d = image5d[
                             0, coords[i][0]:coords_end[i][0],
                             coords[i][1]:coords_end[i][1],
                             coords[i][2]:coords_end[i][2]]
                         present = region_image5d[
                             region_image5d > thresh]
-                        #print("len of region with tissue: {}".format(len(region_present)))
                         vol_image5d += len(present) * scaling_vol_image5d
                         vol_theor += region_image5d.size * scaling_vol_image5d
+                    vol = vol_image5d
                 else:
-                    # use scaled image, whose size should match the labels image
-                    image5d_in_region = image5d[0, mask_id]
-                    present = image5d_in_region[
-                        image5d_in_region >= thresh]
-                    vol_image5d = len(present) * scaling_vol_image5d
-                    vol_theor = len(image5d_in_region) * scaling_vol_image5d
-                    pixels = len(image5d_in_region)
+                    # show chage in pxs and vol for scaled image5d
+                    pxs_orig = np.sum(labels_img_orig == label_id)
+                    vol_image5d = pxs_orig * scaling_vol
+                    vol_theor = vol
                     print("{} of {} pixels under threshold"
-                          .format(pixels - len(present), pixels))
+                          .format(pxs_orig - len_region, pxs_orig))
                 print("Changing labels vol of {} to image5d vol of {} "
                       "(theor max of {})".format(vol, vol_image5d, vol_theor))
-                vol = vol_image5d
             
             # get blobs annotated to the given label
             blobs = None

@@ -2566,10 +2566,11 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                     blobs[:, 0:3], labels_img, scaling)
                 print("blobs_ids: {}".format(blobs_ids))
             
-            # calculate and plot volumes and densities
+            # calculate and plot volumes and densities; assume that labels 
+            # images has already been thresholded, so no need to pass image5d
             volumes_dict = volumes_by_id(
                 labels_img, labels_ref_lookup, spacing, level=level, 
-                blobs_ids=blobs_ids, image5d=image5d)
+                blobs_ids=blobs_ids)#, image5d=image5d)
         
         elif level is not None:
             # use the all levels volumes dictionary to group child levels 

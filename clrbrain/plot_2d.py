@@ -1538,6 +1538,7 @@ if __name__ == "__main__":
         config.prefix, config.PATH_SMOOTHING_METRICS)
     plot_lines(
         path, "filter", 
-        ("roughness", "compacted", "displaced", "smoothing", "SA_to_vol"), 
-        (":", "--", "--", "-", "-"), "Smoothing Filter Size", 
+        ("roughness", "compacted", "displaced", "smoothing", "SA_to_vol", 
+         "label_loss"), 
+        (":", "--", "--", "-", "-", "-"), "Smoothing Filter Size", 
         "Fractional Change", "Label Smoothing", not config.no_show)

@@ -99,6 +99,21 @@ def get_filename_ext(filename):
         ext = filename_split[1]
     return ext
 
+def get_filename_without_ext(path):
+    """Get filename without extension.
+    
+    Args:
+        path: Full path.
+    
+    Returns:
+        Filename alone without extension; simply returns the filename if 
+        no extension exists.
+    """
+    name = os.path.basename(path)
+    name_split = os.path.splitext(name)
+    if len(name_split) > 1: return name_split[0]
+    return name
+
 def combine_paths(base_path, suffix, sep="_"):
     """Merge two paths.
     

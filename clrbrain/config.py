@@ -736,7 +736,7 @@ labels_mirror = True
 borders_img = None
 REGISTER_TYPES = (
     "single", "group", "overlays", "volumes", "densities", "export_vols", 
-    "export_regions", "new_atlas", "import_atlas")
+    "export_regions", "new_atlas", "import_atlas", "export_common_labels")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"
@@ -751,6 +751,9 @@ groups = None
 
 # smoothing metrics
 PATH_SMOOTHING_METRICS = "smoothing.csv"
+
+# commono lables
+PATH_COMMON_LABELS = "labels_common.csv"
 
 
 

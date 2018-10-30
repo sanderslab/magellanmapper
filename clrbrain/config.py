@@ -90,7 +90,7 @@ class ProcessSettings(SettingsDict):
     def __init__(self, *args, **kwargs):
         super().__init__(self)
         self["settings_name"] = "default"
-        self["vis_3d"] = "points"
+        self["vis_3d"] = "points" # "points" or "surface" 3D visualization
         self["points_3d_thresh"] = 0.85 # frac of thresh (changed in v.0.6.6)
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2

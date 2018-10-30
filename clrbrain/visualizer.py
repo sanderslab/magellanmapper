@@ -167,7 +167,7 @@ class Visualization(HasTraits):
     segs_feedback = Str("Segments output")
     labels = None # segmentation labels
     _check_list_3d = List
-    _DEFAULTS_3D = ["Side panes", "Side circles", "Raw"]
+    _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
     _check_list_2d = List
     _DEFAULTS_2D = [
         "Filtered", "Border zone", "Segmentation", "Grid", "Max inten proj"]
@@ -423,9 +423,7 @@ class Visualization(HasTraits):
             self.roi = plot_3d.prepare_roi(
                 cli.image5d, curr_roi_size, curr_offset)
             
-            settings = config.process_settings
-            vis = (plot_3d.mlab_3d, settings["vis_3d"])
-            if plot_3d.MLAB_3D_TYPES[0] in vis:
+            if self._DEFAULTS_3D[3] in self._check_list_3d:
                 # surface rendering
                 plot_3d.plot_3d_surface(
                     self.roi, self.scene.mlab, config.channel)
@@ -539,6 +537,10 @@ class Visualization(HasTraits):
         self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
         self._check_list_2d = [self._DEFAULTS_2D[1]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
+        if (config.process_settings["vis_3d"].lower() 
+            == self._DEFAULTS_3D[3].lower()):
+            # check "surface" if set in profile
+            self._check_list_3d.append(self._DEFAULTS_3D[3])
         #self._structure_scale = self._structure_scale_high
         
         # setup interface for image
@@ -1110,7 +1112,7 @@ class Visualization(HasTraits):
                 ),
                 Item(
                      "_check_list_3d", 
-                     editor=CheckListEditor(values=_DEFAULTS_3D, cols=3), 
+                     editor=CheckListEditor(values=_DEFAULTS_3D, cols=4), 
                      style="custom",
                      label="3D options"
                 ),

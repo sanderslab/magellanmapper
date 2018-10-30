@@ -22,7 +22,6 @@ Command-line arguments in addition to those from attributes listed below:
     * load_labels: Path to labels reference file, which also serves as a flag 
         to load the labels image as well 
         (see :attr:`config.load_labels`).
-    * mlab_3d: 3D visualization mode (see plot_3d.py).
     * padding_2d: Padding around the ROI given as (x, y, z) from which to 
         include segments and and show further 2D planes.
     * plane: Plane type (see :const:``config.PLANE``).
@@ -459,11 +458,9 @@ def main(process_args_only=False):
     parser.add_argument("--series")
     parser.add_argument("--savefig")
     parser.add_argument("--padding_2d")
-    #parser.add_argument("--verify", action="store_true")
     parser.add_argument("--offset", nargs="*")
     parser.add_argument("--size", nargs="*")
     parser.add_argument("--proc")
-    parser.add_argument("--mlab_3d")
     parser.add_argument("--res")
     parser.add_argument("--mag")
     parser.add_argument("--zoom")
@@ -522,12 +519,6 @@ def main(process_args_only=False):
     if args.savefig is not None:
         config.savefig = args.savefig
         print("Set savefig extension to {}".format(config.savefig))
-    '''
-    if args.verify:
-        from clrbrain import plot_2d
-        plot_2d.verify = args.verify
-        print("Set verify to {}".format(plot_2d.verify))
-    '''
     if args.verbose:
         config.verbose = args.verbose
         print("Set verbose to {}".format(config.verbose))
@@ -559,13 +550,6 @@ def main(process_args_only=False):
         else:
             print("Did not recognize processing type: {}"
                   .format(args.proc))
-    if args.mlab_3d is not None:
-        if args.mlab_3d in plot_3d.MLAB_3D_TYPES:
-            plot_3d.mlab_3d = args.mlab_3d
-            print("3D rendering set to {}".format(plot_3d.mlab_3d))
-        else:
-            print("Did not recognize 3D rendering type: {}"
-                  .format(args.mlab_3d))
     if args.res is not None:
         res_split = args.res.split(",")
         if len(res_split) >= 3:

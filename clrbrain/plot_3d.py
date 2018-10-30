@@ -6,13 +6,6 @@ Provides options for drawing as surfaces or points.
 
 Attributes:
     mask_dividend: Maximum number of points to show.
-    MLAB_3D_TYPES: Tuple of types of 3D visualizations for both the image
-        and segmentation.
-        * "surface": Renders surfaces in Mayavi contour and
-          surface.
-        * "point": Renders as raw points, minus points under
-          the intensity_min threshold.
-    mlab_3d: The chosen type.
 """
 
 from time import time
@@ -34,8 +27,6 @@ from clrbrain import lib_clrbrain
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
 _MAYAVI_COLORMAPS = ("Greens", "Reds", "Blues", "Oranges")
-MLAB_3D_TYPES = ("surface", "point")
-mlab_3d = MLAB_3D_TYPES[1]
 
 def setup_channels(roi, channel, dim_channel):
     """Setup channels array for the given ROI dimensions.

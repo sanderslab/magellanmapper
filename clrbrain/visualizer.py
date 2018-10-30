@@ -369,12 +369,28 @@ class Visualization(HasTraits):
         #print("view: {}\nroll: {}".format(
         #    self.scene.mlab.view(), self.scene.mlab.roll()))
     
-    def show_3d(self):
-        """Shows the 3D plot.
+    def show_3d_surface(self, roi, channel, path_base):
+        """Show 3D surface and save if :attr:``config.savefig`` is set.
         
-        If the processed image flag is true ("proc=1"), the region will be
-        taken from the saved processed array. Type of 3D display depends
-        on the "3d" flag.
+        Args:
+            roi: ROI to display.
+            channel: Channel of ROI to show
+            path_base: Path without extension at which to save the surface 
+                if :attr:``config.savefig`` is set. The extension used 
+                will be that given by ``savefig``.
+        """
+        plot_3d.plot_3d_surface(roi, self.scene.mlab, config.channel)
+        if config.savefig:
+            self.scene.mlab.savefig(
+                "{}.{}".format(path_base, config.savefig))
+    
+    def show_3d(self):
+        """Show the 3D plot and prepare for detections.
+        
+        Type of 3D display depends on configuration settings. A lightly 
+        preprocessed image will be displayed in 3D, and afterward the 
+        ROI will undergo full preprocessing in preparation for detection 
+        and 2D filtered displays steps.
         """
         # ensure that cube dimensions don't exceed array
         curr_roi_size = self.roi_array[0].astype(int)
@@ -410,7 +426,10 @@ class Visualization(HasTraits):
             vis = (plot_3d.mlab_3d, settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering
-                plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
+                self.show_3d_surface(
+                    self.roi, config.channel, 
+                    "surface_({})x({})"
+                    .format(tuple(curr_offset), tuple(curr_roi_size)))
                 self._scene_3d_shown = True
             else:
                 # 3D point rendering
@@ -460,11 +479,10 @@ class Visualization(HasTraits):
         label_mask = config.labels_img[tuple(slices)] == label_id
         self.roi = np.copy(cli.image5d[0][slices])
         self.roi[~label_mask] = 0
-        plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
+        self.show_3d_surface(
+            self.roi, config.channel, 
+            "label3d_{}".format(label_id))
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
-        if config.savefig:
-            self.scene.mlab.savefig(
-                "label3d_{}.{}".format(label_id, config.savefig))
         self._post_3d_display()
     
     def _setup_for_image(self):

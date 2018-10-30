@@ -35,6 +35,7 @@ from traitsui.api import (View, Item, HGroup, VGroup, Handler,
                           FileEditor, TextEditor)
 from traitsui.tabular_adapter import TabularAdapter
 from tvtk.pyface.scene_editor import SceneEditor
+from tvtk.pyface.scene_model import SceneModelError
 from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 
@@ -357,10 +358,25 @@ class Visualization(HasTraits):
                 if title is not None:
                     self._mlab_title = self.scene.mlab.title(title)
     
-    def _post_3d_display(self):
+    def _post_3d_display(self, title="clrbrain3d"):
         """Show axes and saved ROI parameters after 3D display.
+        
+        Args:
+            title: Path without extension to save file if 
+                :attr:``config.savefig`` is set to an extension. Defaults to 
+                "clrbrain3d".
         """
         if self._scene_3d_shown:
+            if config.savefig:
+                path = "{}.{}".format(title, config.savefig)
+                lib_clrbrain.backup_file(path)
+                try:
+                    # save before setting any other objects to avoid VTK 
+                    # render error
+                    self.scene.mlab.savefig(path)
+                except SceneModelError as e:
+                    # the scene may not have been activated yet
+                    print("unable to save 3D surface")
             self.scene.mlab.orientation_axes()
         # updates the GUI here even though it doesn't elsewhere for some reason
         self.rois_check_list = _ROI_DEFAULT
@@ -368,21 +384,6 @@ class Visualization(HasTraits):
         #print("reset selected ROI to {}".format(self.rois_check_list))
         #print("view: {}\nroll: {}".format(
         #    self.scene.mlab.view(), self.scene.mlab.roll()))
-    
-    def show_3d_surface(self, roi, channel, path_base):
-        """Show 3D surface and save if :attr:``config.savefig`` is set.
-        
-        Args:
-            roi: ROI to display.
-            channel: Channel of ROI to show
-            path_base: Path without extension at which to save the surface 
-                if :attr:``config.savefig`` is set. The extension used 
-                will be that given by ``savefig``.
-        """
-        plot_3d.plot_3d_surface(roi, self.scene.mlab, config.channel)
-        if config.savefig:
-            self.scene.mlab.savefig(
-                "{}.{}".format(path_base, config.savefig))
     
     def show_3d(self):
         """Show the 3D plot and prepare for detections.
@@ -426,10 +427,8 @@ class Visualization(HasTraits):
             vis = (plot_3d.mlab_3d, settings["vis_3d"])
             if plot_3d.MLAB_3D_TYPES[0] in vis:
                 # surface rendering
-                self.show_3d_surface(
-                    self.roi, config.channel, 
-                    "surface_({})x({})"
-                    .format(tuple(curr_offset), tuple(curr_roi_size)))
+                plot_3d.plot_3d_surface(
+                    self.roi, self.scene.mlab, config.channel)
                 self._scene_3d_shown = True
             else:
                 # 3D point rendering
@@ -479,11 +478,9 @@ class Visualization(HasTraits):
         label_mask = config.labels_img[tuple(slices)] == label_id
         self.roi = np.copy(cli.image5d[0][slices])
         self.roi[~label_mask] = 0
-        self.show_3d_surface(
-            self.roi, config.channel, 
-            "label3d_{}".format(label_id))
+        plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
-        self._post_3d_display()
+        self._post_3d_display(title="label3d_{}".format(label_id))
     
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.

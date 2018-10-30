@@ -615,14 +615,20 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         # smoothing based on mode
         region_size_smoothed = 0
         if mode == SMOOTHING_MODES[0]:
-            # smooth region with opening filter, changing to closing filter 
+            # smooth region with opening filter, reducing filter size for 
+            # small volumes and changing to closing filter 
             # if region would be lost or severely reduced
-            selem = morphology.ball(filter_size)
+            selem_size = filter_size
+            if region_size < 5000:
+                selem_size = selem_size // 2
+                print("using a smaller filter size of {} for a small region "
+                      "of {} pixels".format(selem_size, region_size))
+            selem = morphology.ball(selem_size)
             opened = morphology.binary_opening(label_mask_region, selem)
             region_size_smoothed = np.sum(opened)
             size_ratio = region_size_smoothed / region_size
             if size_ratio < 0.01:
-                print("largest region would be lost or too small "
+                print("region would be lost or too small "
                       "(ratio {}), will use closing filter instead"
                       .format(size_ratio))
                 opened = morphology.binary_closing(label_mask_region, selem)

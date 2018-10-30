@@ -242,6 +242,9 @@ def backup_file(path, modifier=""):
         path: Path of file to backup.
         modifier: Modifier string to place before the index number.
     """
+    if not os.path.exists(path):
+        # path does not exist, so no need to back up
+        return
     i = 1
     ext = os.path.splitext(path)
     backup_path = None

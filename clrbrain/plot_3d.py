@@ -705,7 +705,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         surface = pipeline.iso_surface(surface, colormap=_MAYAVI_COLORMAPS[i])
         try:
             surface.contour.minimum_contour = 0.5
-            surface.contour.maximum_contour = 1.0
+            surface.contour.maximum_contour = 0.8
         except Exception as e:
             print(e)
             print("ignoring min/max contour for now")

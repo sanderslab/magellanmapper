@@ -359,13 +359,14 @@ class Visualization(HasTraits):
                 if title is not None:
                     self._mlab_title = self.scene.mlab.title(title)
     
-    def _post_3d_display(self, title="clrbrain3d"):
+    def _post_3d_display(self, title="clrbrain3d", show_orientation=True):
         """Show axes and saved ROI parameters after 3D display.
         
         Args:
             title: Path without extension to save file if 
                 :attr:``config.savefig`` is set to an extension. Defaults to 
                 "clrbrain3d".
+            show_orientation: True to show orientation axes; defaults to True.
         """
         if self._scene_3d_shown:
             if config.savefig:
@@ -378,7 +379,8 @@ class Visualization(HasTraits):
                 except SceneModelError as e:
                     # the scene may not have been activated yet
                     print("unable to save 3D surface")
-            self.scene.mlab.orientation_axes()
+            if show_orientation:
+                self.scene.mlab.orientation_axes()
         # updates the GUI here even though it doesn't elsewhere for some reason
         self.rois_check_list = _ROI_DEFAULT
         self._img_region = None
@@ -419,8 +421,7 @@ class Visualization(HasTraits):
         
         # show raw 3D image unless selected not to
         if self._DEFAULTS_3D[2] in self._check_list_3d:
-            # show region of interest based on raw image, using basic denoising 
-            # to normalize values but not fully processing
+            # show region of interest based on raw image
             self.roi = plot_3d.prepare_roi(
                 cli.image5d, curr_roi_size, curr_offset)
             
@@ -482,7 +483,11 @@ class Visualization(HasTraits):
         self.roi[~label_mask] = 0
         plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
-        self._post_3d_display(title="label3d_{}".format(label_id))
+        # WORKAROUND: occasionally the 3D object fails to save and cannot 
+        # be saved with orientation axes on, so turn them off by default 
+        # and defer to the GUI to turn them back on
+        self._post_3d_display(
+            title="label3d_{}".format(label_id), show_orientation=False)
     
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.

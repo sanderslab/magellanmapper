@@ -474,7 +474,10 @@ class Visualization(HasTraits):
         self._scene_3d_shown = True
         
         # show main image corresponding to label region
-        label_mask = config.labels_img[tuple(slices)] == label_id
+        if isinstance(label_id, (tuple, list)):
+            label_mask = np.isin(config.labels_img[tuple(slices)], label_id)
+        else:
+            label_mask = config.labels_img[tuple(slices)] == label_id
         self.roi = np.copy(cli.image5d[0][slices])
         self.roi[~label_mask] = 0
         plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
@@ -890,7 +893,7 @@ class Visualization(HasTraits):
     @on_trait_change("_region_id")
     def _region_id_changed(self):
         print("region ID: {}".format(self._region_id))
-        centroid, self._img_region = register.get_region_middle(
+        centroid, self._img_region, region_ids = register.get_region_middle(
             config. labels_ref_lookup, self._region_id, config.labels_img, 
             config.labels_scaling)
         if centroid is None:
@@ -898,12 +901,21 @@ class Visualization(HasTraits):
                 "Could not find the region corresponding to ID {}"
                 .format(self._region_id))
             return
-        curr_roi_size = self.roi_array[0].astype(int)
-        corner = np.subtract(
-            centroid, 
-            np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
-        self.z_offset, self.y_offset, self.x_offset = corner
-        self.show_3d()
+        if self._DEFAULTS_3D[2] in self._check_list_3d:
+            # in "raw" mode, simply center the current ROI on centroid, 
+            # which may within a sub-label
+            curr_roi_size = self.roi_array[0].astype(int)
+            corner = np.subtract(
+                centroid, 
+                np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
+            self.z_offset, self.y_offset, self.x_offset = corner
+            roi = cli.image5d[0, self._img_region]
+            self.show_3d()
+        else:
+            # in non-"raw" mode, show the full label including sub-labels 
+            # without non-label areas; TODO: consider making default or 
+            # only option
+            self.show_label_3d(region_ids)
         if self.atlas_ed is not None:
             # sync with atlas editor to point at center of region
             self.atlas_ed.update_coords(centroid)

@@ -2091,8 +2091,11 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
             experiment image.
     
     Returns:
-        The middle value of a list of all coordinates in the region at the 
-        given ID. All children of this ID are included in the region. The 
+        Tuple of ``coord``, the middle value of a list of all coordinates 
+        in the region at the given ID; ``img_region``, a boolean mask 
+        of the region within ``labels_img``; and ``region_ids``, a list of 
+        the IDs included in the region. All children of this ID are 
+        included in the region. The 
         region's coordinate sorting prioritizes z, followed by y, etc, meaning 
         that the middle value will be closest to the middle of z but may fall 
         be slightly away from midline in the other axes if this z does not 
@@ -2137,7 +2140,7 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
               .format(labels_img[coord_labels], img_region[coord_labels]))
         coord = tuple(np.around(coord_labels / scaling).astype(np.int))
     print("coord at middle: {}".format(coord))
-    return coord, img_region
+    return coord, img_region, region_ids
 
 def get_region_from_id(img_region, scaling):
     """Get the entire region encompassing a given label ID.
@@ -2854,7 +2857,8 @@ def _test_region_from_id():
         print("loaded experiment image from {}".format(config.filename))
     ref = load_labels_ref(config.load_labels)
     id_dict = create_aba_reverse_lookup(ref)
-    middle, img_region = get_region_middle(id_dict, 16652, labels_img, scaling)
+    middle, img_region, region_ids = get_region_middle(
+        id_dict, 16652, labels_img, scaling)
     atlas_label = get_label(middle, labels_img, id_dict, scaling, None, True)
     props, bbox, centroid = get_region_from_id(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))

@@ -453,7 +453,23 @@ def get_bbox_region(bbox, padding=0, img_shape=None):
     return shape, slices
 
 def get_label_bbox(labels_img_np, label_id):
-    label_mask = labels_img_np == label_id
+    """Get bounding box for a label or set of labels.
+    
+    Args:
+        labels_img_np: Image as Numpy array.
+        label_id: Scalar or sequence of scalars of the label IDs to include 
+            in the bounding box.
+    
+    Returns:
+        Bounding box from :func:``measure.regionprops``.
+    """
+    if isinstance(label_id, (tuple, list)):
+        # sequence of IDs
+        label_mask = np.isin(labels_img_np, label_id)
+        print("label mask", np.sum(label_mask))
+    else:
+        # single ID
+        label_mask = labels_img_np == label_id
     props = measure.regionprops(label_mask.astype(np.int))
     bbox = None
     if len(props) >= 1: bbox = props[0].bbox

@@ -166,6 +166,7 @@ class Visualization(HasTraits):
     segs_cmap = None
     segs_feedback = Str("Segments output")
     labels = None # segmentation labels
+    atlas_ed = None # atlas editor
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
     _check_list_2d = List

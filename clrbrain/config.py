@@ -67,7 +67,7 @@ class SettingsDict(dict):
     def __init__(self, *args, **kwargs):
         self["settings_name"] = "default"
 
-    def add_modifier(self, mod_name, mods, settings_type=None):
+    def add_modifier(self, mod_name, mods, settings_type=None, sep="_"):
         """Add a modifer dictionary, overwriting any existing settings 
         with values from this dictionary.
         
@@ -77,12 +77,18 @@ class SettingsDict(dict):
             mods: Dictionary with keys matching default keys and values to 
                 replace the correspondings values.
             settings_type: The full name of the final settings. If given,  
-                the modifier will only be added if ``settings_type`` 
-                contains ``mod_name`` within the string. Defaults to None, 
+                the modifier will only be added if ``mod_name`` is a distinct 
+                entity within ``settings_type``. Defaults to None, 
                 in which case ``mods`` will be added regardless.
+            sep: Separator between modifier elements. Defaults to "".
         """
-        if settings_type and not mod_name in settings_type: return
-        self["settings_name"] += mod_name
+        name = sep + mod_name
+        if settings_type and not (
+            name + sep in settings_type 
+            or settings_type.endswith(name)):
+            # modifier name must be a distinct entity within settings string
+            return
+        self["settings_name"] += name
         for key in mods.keys():
             self[key] = mods[key]
 
@@ -239,18 +245,18 @@ def update_process_settings(settings, settings_type):
     # this listing taking precedence over prior ones and the main profile
     
     settings.add_modifier(
-        "_zebrafish", 
+        "zebrafish", 
         {"min_sigma_factor": 2.5,
          "max_sigma_factor": 3}, 
         settings_type)
     
     settings.add_modifier(
-        "_contrast", 
+        "contrast", 
         {"channel_colors": ("inferno", "bone")}, 
         settings_type)
     
     settings.add_modifier(
-        "_cytoplasm", 
+        "cytoplasm", 
         {"clip_min": 0.3,
          "clip_max": 0.8,
          "points_3d_thresh": 0.7,
@@ -261,39 +267,39 @@ def update_process_settings(settings, settings_type):
         settings_type)
     
     settings.add_modifier(
-        "_small", 
+        "small", 
         {"points_3d_thresh": 0.3, # used only if not surface
          "isotropic_vis": (1, 1, 1)}, 
         settings_type)
     
     settings.add_modifier(
-        "_binary", 
+        "binary", 
         {"denoise_size": None,
          "detection_threshold": 0.001}, 
         settings_type)
 
     # fit into ~32GB RAM instance after isotropic interpolation
     settings.add_modifier(
-        "_20x", 
+        "20x", 
         {"segment_size": 50}, 
         settings_type)
 
     # export to deep learning framework with required dimensions
     settings.add_modifier(
-        "_exportdl", 
+        "exportdl", 
         {"isotropic": (0.93, 1, 1)}, 
         settings_type)
 
     # import from deep learning predicted image
     settings.add_modifier(
-        "_importdl", 
+        "importdl", 
         {"isotropic": None, # assume already isotropic
          "resize_blobs": (.2, 1, 1)}, 
         settings_type)
     
     # denoise settings when performing registration
     settings.add_modifier(
-        "_register", 
+        "register", 
         {"unsharp_strength": 1.5}, 
         settings_type)
     
@@ -400,14 +406,14 @@ def update_register_settings(settings, settings_type):
     # atlas is big relative to the experimental image, so need to 
     # more aggressively downsize the atlas
     settings.add_modifier(
-        "_big", 
+        "big", 
         {"resize_factor": 0.625}, 
         settings_type)
     
     # new atlas generation: turn on preprocessing
     # TODO: likely remove since not using preprocessing currently
     settings.add_modifier(
-        "_new", 
+        "new", 
         {"preprocess": True}, 
         settings_type)
     
@@ -415,7 +421,7 @@ def update_register_settings(settings, settings_type):
     # orientation (ie transposed) and already have mirrored labels aligned 
     # with the fixed image toward the bottom of the z-dimension
     settings.add_modifier(
-        "_generated", 
+        "generated", 
         {"resize_factor": 1.0, 
          "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
          "labels_mirror": None}, # turn off mirroring
@@ -424,13 +430,13 @@ def update_register_settings(settings, settings_type):
     # atlas that uses groupwise image as the atlas itself should 
     # determine atlas threshold dynamically
     settings.add_modifier(
-        "_grouped", 
+        "grouped", 
         {"atlas_threshold": None}, 
         settings_type)
     
     # ABA E11pt5 specific settings
     settings.add_modifier(
-        "_abae11pt5", 
+        "abae11pt5", 
         {"target_size": (345, 371, 158),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (0, 0.52), 
@@ -440,7 +446,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA E13pt5 specific settings
     settings.add_modifier(
-        "_abae13pt5", 
+        "abae13pt5", 
         {"target_size": (552, 673, 340),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.48), 
@@ -451,7 +457,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA E15pt5 specific settings
     settings.add_modifier(
-        "_abae15pt5", 
+        "abae15pt5", 
         {"target_size": (704, 982, 386),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.49), 
@@ -463,7 +469,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA E18pt5 specific settings
     settings.add_modifier(
-        "_abae18pt5", 
+        "abae18pt5", 
         {"target_size": (278, 581, 370),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.525), 
@@ -474,7 +480,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA P4 specific settings
     settings.add_modifier(
-        "_abap4", 
+        "abap4", 
         {"target_size": (724, 403, 398),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.487), 
@@ -486,7 +492,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA P14 specific settings
     settings.add_modifier(
-        "_abap14", 
+        "abap14", 
         {"target_size": (390, 794, 469),
          "resize_factor": None, # turn off resizing
          # will still cross midline since some regions only have labels 
@@ -499,7 +505,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA P28 specific settings
     settings.add_modifier(
-        "_abap28", 
+        "abap28", 
         {"target_size": (863, 480, 418),
          "resize_factor": None, # turn off resizing
          # include start since some lateral labels are only partially complete; 
@@ -513,7 +519,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA P56 (developing mouse) specific settings
     settings.add_modifier(
-        "_abap56", 
+        "abap56", 
         {"target_size": (528, 320, 456),
          "resize_factor": None, # turn off resizing
          # include start since some lateral labels are only partially complete; 
@@ -524,7 +530,7 @@ def update_register_settings(settings, settings_type):
     
     # ABA P56 (adult) specific settings
     settings.add_modifier(
-        "_abaadultp56", 
+        "abap56adult", 
         {"target_size": (528, 320, 456), # same atlas image as ABA P56dev
          "resize_factor": None, # turn off resizing
          # turn off start by setting to 0; same stained sections as for P56dev; 
@@ -537,7 +543,7 @@ def update_register_settings(settings, settings_type):
     
     # turn off mirroring and rotation to show original atlas and labels
     settings.add_modifier(
-        "_nomirror", 
+        "nomirror", 
         {"labels_mirror": None,
          "rotate": None}, 
         settings_type)
@@ -550,13 +556,13 @@ def update_register_settings(settings, settings_type):
     
     # enable label smoothing
     settings.add_modifier(
-        "_smoothtest", 
+        "smoothtest", 
         {"smooth": (0, 1, 2, 3, 4, 5)},#, 10)}, 
         settings_type)
     
     # groupwise registration batch 02
     settings.add_modifier(
-        "_grouped02", 
+        "grouped02", 
         {"bspline_grid_space_voxels": "70", 
          "grid_spacing_schedule": [
             "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"], 
@@ -565,13 +571,13 @@ def update_register_settings(settings, settings_type):
         
     # groupwise registration batch 04
     settings.add_modifier(
-        "_grouped04", 
+        "grouped04", 
         {"carve_threshold": 0.015}, 
         settings_type)
     
     # crop anterior region of labels during single registration
     settings.add_modifier(
-        "_cropanterior", 
+        "cropanterior", 
         {"truncate_labels": (None, (0.2, 0.8), (0.45, 1.0))}, 
         settings_type)
     

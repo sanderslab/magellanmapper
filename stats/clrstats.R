@@ -99,6 +99,10 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   
   # require at least 2 condition to compare
   conditions.unique = sort(unique(conditions))
+  if (length(conditions.unique) < 2) {
+    cat("need at least 2 conditions, cannot compare means\n")
+    return(NULL)
+  }
   
   # build lists of value vectors for each condition
   val.conds <- list()
@@ -281,12 +285,12 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
         df.region.nonzero$Dens[is.na(df.region.nonzero$Dens)] = 0
         # filter pairs with where either sample has a zero value
         df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
-        #print(df.region.nonzero)
         if (is.null(df.region.nonzero)) next
       } else {
         # filter each column within region for rows with non-zero values
         df.region.nonzero <- df.region[nonzero, ]
       }
+      #print(df.region.nonzero)
       vals <- df.region.nonzero[[col]]
       
       # apply stats and store in stats data frame, using list to allow 

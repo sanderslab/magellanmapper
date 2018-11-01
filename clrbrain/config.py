@@ -511,9 +511,9 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
-    # ABA P56dev specific settings
+    # ABA P56 (developing mouse) specific settings
     settings.add_modifier(
-        "_abap56dev", 
+        "_abap56", 
         {"target_size": (528, 320, 456),
          "resize_factor": None, # turn off resizing
          # include start since some lateral labels are only partially complete; 
@@ -522,9 +522,9 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
-    # ABA P56 specific settings
+    # ABA P56 (adult) specific settings
     settings.add_modifier(
-        "_abap56", 
+        "_abaadultp56", 
         {"target_size": (528, 320, 456), # same atlas image as ABA P56dev
          "resize_factor": None, # turn off resizing
          # turn off start by setting to 0; same stained sections as for P56dev; 

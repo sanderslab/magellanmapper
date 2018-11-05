@@ -506,8 +506,10 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
   #   interaction: Interaction column name whose set of stats should be 
   #     displayed.
   #   thresh: Threshold as a 2-element array corresponding to the x and y 
-  #     values, respectively, above which labels will be shown if either 
-  #     condition is met.
+  #     values, respectively, above which labels will be shown if both 
+  #     condition is met. NA for either value will cause the threshold to 
+  #     be ignored, or NA for the entire argument will ignore thresholding 
+  #     all together.
   
   x <- stats[[paste0(interaction, ".effect")]]
   if (length(x) < 1) {
@@ -535,10 +537,13 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
   y.lbl <- y
   lbls <- paste(stats$Region, stats$RegionName, sep="\n")
   if (!is.null(thresh)) {
-    y.high <- abs(x) > thresh[1] | y > thresh[2]
-    x.lbl <- x[y.high]
-    y.lbl <- y[y.high]
-    lbls <- lbls[y.high]
+    # limit labels only to those within all thresholds, ignoring NAs
+    show.lbl <- abs(x) > 0
+    if (!is.na(thresh[1])) show.lbl <- abs(x) > thresh[1] & show.lbl
+    if (!is.na(thresh[2])) show.lbl <- y > thresh[2] & show.lbl
+    x.lbl <- x[show.lbl]
+    y.lbl <- y[show.lbl]
+    lbls <- lbls[show.lbl]
   }
   if (length(lbls) > 0) {
     text(x.lbl, y.lbl, label=lbls, cex=0.2)
@@ -609,7 +614,7 @@ if (load.stats && file.exists(kStatsPathOut)) {
 }
 
 # plot effects and p's
-volcanoPlot(stats, meas, stat, thresh=c(1e-05, 0.8))
+volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3))
 volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
 # ":" special character automatically changed to "."
 volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25))

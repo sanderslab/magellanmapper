@@ -518,8 +518,8 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
   }
   y <- stats[[paste0(interaction, ".logp")]]
   # weight size based on relative num of nuclei
-  size <- stats$MeanNuclei / max(stats$MeanNuclei) * 3
-  # print(data.frame(x, size))
+  size <- sqrt(stats$MeanNuclei / max(stats$MeanNuclei)) * 3
+  #print(data.frame(x, size))
   
   # point colors based on IDs of parents at the level generated for region 
   # IDs file, using a palette with color for each unique parent

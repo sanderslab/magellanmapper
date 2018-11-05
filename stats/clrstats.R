@@ -435,7 +435,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
 }
 
-filterStats <- function(stats) {
+filterStats <- function(stats, corr=NULL) {
   # Filter regional statistics to remove \code{NA}s and gather the most 
   # pertinent statistical values.
   #
@@ -463,7 +463,6 @@ filterStats <- function(stats) {
       for (interact in interactions) {
         cols <- append(cols, paste0(interact, ".effect"))
         cols <- append(cols, paste0(interact, ".p"))
-        cols <- append(cols, paste0(interact, ".logp"))
       }
       filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
       names(filtered) <- cols
@@ -476,9 +475,24 @@ filterStats <- function(stats) {
       if (nrow(stats.coef) >= j) {
         filtered[i, j * 3 - 2 + offset] <- stats.coef[j, 1]
         filtered[i, j * 3 - 1 + offset] <- stats.coef[j, 4]
-        filtered[i, j * 3 + offset] <- -1 * log10(stats.coef[j, 4])
       }
     }
+  }
+  num.regions <- nrow(filtered)
+  if (!is.null(corr)) {
+    cat("correcting for", num.regions, "regions\n")
+  }
+  for (interact in interactions) {
+    col <- paste0(interact, ".p")
+    col.for.log <- col
+    if (!is.null(corr)) {
+      # apply correction based on number of comparisons
+      col.for.log <- paste0(col, "corr")
+      filtered[[col.for.log]] <- p.adjust(
+        filtered[[col]], method="bonferroni", n=num.regions)
+    }
+    # calculate -log-p values
+    filtered[[paste0(interact, ".logp")]] <- -1 * log10(filtered[[col.for.log]])
   }
   return(filtered)
 }
@@ -538,7 +552,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
 }
 
 calcVolStats <- function(path.in, path.out, meas, model, region.ids, 
-                         split.by.side=TRUE) {
+                         split.by.side=TRUE, corr=NULL) {
   # Calculate volumetric stats from the given CSV file.
   #
   # Args:
@@ -564,7 +578,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   
   # calculate stats, filter out NAs and extract effects and p-values
   stats <- statsByRegion(df, meas, model, split.by.side=split.by.side)
-  stats.filtered <- filterStats(stats)
+  stats.filtered <- filterStats(stats, corr=corr)
   stats.filtered <- merge(stats.filtered, region.ids, by="Region")
   #print(stats.filtered)
   write.csv(stats.filtered, path.out)
@@ -591,7 +605,7 @@ if (load.stats && file.exists(kStatsPathOut)) {
 } else {
   stats <- calcVolStats(
     kStatsPathIn, kStatsPathOut, meas, model, region.ids, 
-    split.by.side=split.by.side)
+    split.by.side=split.by.side, corr="bonferroni")
 }
 
 # plot effects and p's

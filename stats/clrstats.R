@@ -7,6 +7,16 @@ library("gee")
 # library("ggplot2")
 library("viridis")
 
+# library to avoid overlapping text labels
+#install.packages("devtools")
+#library("devtools")
+#install_github("JosephCrispell/addTextLabels")
+library("addTextLabels")
+
+# alternatives for labels overlap, but both still leave some overlap
+#library("plotrix")
+#library("maptools")
+
 # statistical models
 kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
            "ttest.paired", "wilcoxon.paired")
@@ -546,7 +556,13 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
     lbls <- lbls[show.lbl]
   }
   if (length(lbls) > 0) {
-    text(x.lbl, y.lbl, label=lbls, cex=0.2)
+    # place text labels; "text" has full overlap, "thigmophobe.labels" and 
+    # "pointLabels" have varying degrees of overlap, and "addTextLabels" has 
+    # the least overlap
+    #text(x.lbl, y.lbl, label=lbls, cex=0.2)
+    #thigmophobe.labels(x.lbl, y.lbl, label=lbls, cex=0.2)
+    #pointLabel(x.lbl, y.lbl, label=lbls, cex=0.2)
+    addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.2, lwd=0.2)
   }
   # plot_ly(data=stats, x=x, y=y)
   #g <- ggplot(data=stats, aes(x=x, y=y)) + geom_point(size=2)
@@ -594,8 +610,8 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 # choose measurement and model types
 meas <- kMeas[2]
 model <- kModel[8]
-split.by.side = TRUE # false to combine sides
-load.stats = FALSE # true to load saved stats and only regenerate volcano plots
+split.by.side <- TRUE # false to combine sides
+load.stats <- TRUE # true to load saved stats and only regenerate volcano plots
 
 # set up paramters based on chosen model
 stat <- "vals"

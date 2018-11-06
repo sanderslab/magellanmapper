@@ -3,8 +3,6 @@
 
 library("MASS")
 library("gee")
-# library("plotly")
-# library("ggplot2")
 library("viridis")
 
 # library to avoid overlapping text labels
@@ -564,10 +562,6 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
     #pointLabel(x.lbl, y.lbl, label=lbls, cex=0.2)
     addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.2, lwd=0.2)
   }
-  # plot_ly(data=stats, x=x, y=y)
-  #g <- ggplot(data=stats, aes(x=x, y=y)) + geom_point(size=2)
-  # ggplotly(g, tooltip=c("Region"))
-  #print(g)
   dev.print(
     pdf, file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), sep="_"))
 }

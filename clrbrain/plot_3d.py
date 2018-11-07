@@ -11,6 +11,7 @@ Attributes:
 from time import time
 import numpy as np
 import math
+from scipy import interpolate
 from scipy import ndimage
 from skimage import draw
 from skimage import restoration
@@ -24,6 +25,7 @@ from skimage import transform
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import lib_clrbrain
+from clrbrain import plot_support
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
 _MAYAVI_COLORMAPS = ("Greens", "Reds", "Blues", "Oranges")
@@ -318,7 +320,8 @@ def signed_distance_transform(borders, mask=None, return_indices=False):
     image from which the borders were construcuted, are considered negative.
     
     Args:
-        borders: Borders as a boolean mask.
+        borders: Borders as a boolean mask, typically where borders are 
+            False and non-borders are True.
         mask: Mask where distances will be considered neg, such as a 
             mask of the full image for the borders. Defaults to None, in 
             which case distances will be given as-is.
@@ -329,6 +332,8 @@ def signed_distance_transform(borders, mask=None, return_indices=False):
         ``transform`` as the signed distances. If ``return_indices`` is True, 
         ``indices`` is also returned.
     """
+    if borders is None and mask is not None:
+        borders = (1 - perimeter_nd(mask)).astype(bool)
     if return_indices:
         transform, indices = ndimage.distance_transform_edt(
             borders, return_indices=return_indices)
@@ -600,10 +605,48 @@ def crop_to_labels(img_labels, img_ref):
     extracted_ref[~mask_dil] = 0
     return extracted_labels, extracted_ref
 
-def interpolate_between_planes(labels_img, label_id, axis, bounds):
+def interpolate_contours(bottom, top, fracs):
+    '''Interpolate contours between two planes.
+    
+    Args:
+        bottom: bottom plane as an binary mask.
+        top: top plane as an binary mask.
+        fracs: List of fractions between 0 and 1, inclusive, at which to 
+            interpolate contours. 0 corresponds to the bottom plane, while 
+            1 is the top.
+    
+    Returns:
+        Array with each plane corresponding to the interpolated plane at the 
+        given fraction.
+    '''
+    # convert planes to contour distance maps, where pos distances are 
+    # inside the original image
+    bottom = -1 * signed_distance_transform(None, bottom.astype(bool))
+    top = -1 * signed_distance_transform(None, top.astype(bool))
+    r, c = top.shape
+
+    # merge dist maps into an array with shape (2, r, c) and prep 
+    # meshgrid and output array
+    stack = np.stack((bottom, top))
+    points = (np.r_[0, 2], np.arange(r), np.arange(c))
+    grid = np.rollaxis(np.mgrid[:r, :c], 0, 3).reshape((r * c, 2))
+    interpolated = np.zeros((len(fracs), r, c), dtype=bool)
+    
+    for i, frac in enumerate(fracs):
+        # interpolate plane at given fraction between bottom and top planes
+        xi = np.c_[np.full(r * c, frac + 1), grid]
+        out = interpolate.interpn(points, stack, xi)
+        out = out.reshape((r, c))
+        out = out > 0
+        interpolated[i] = out
+    
+    return interpolated
+
+def interpolate_label_between_planes(labels_img, label_id, axis, bounds):
     """Interpolate between two planes for the given labeled region. 
     
-    The labels image will be updated in-place.
+    Assume that the given label ID has only been extended and not erased 
+    within the given image. This image will be updated in-place.
     
     Args:
         labels_img: Labels image as a Numpy array in z,y,x dimensions.
@@ -618,9 +661,9 @@ def interpolate_between_planes(labels_img, label_id, axis, bounds):
     bbox = get_label_bbox(labels_img, label_id)
     if bbox is None: return
     shape, slices = get_bbox_region(bbox)
-    region = labels_img[slices]
+    region = labels_img[tuple(slices)]
     
-    # prep region to interpolate by taking region from only the planes at bounds
+    # prep region to interpolate by taking only the planes at bounds
     bounds_sorted = np.copy(bounds)
     bounds_sorted.sort()
     offset = slices[axis].start
@@ -630,17 +673,32 @@ def interpolate_between_planes(labels_img, label_id, axis, bounds):
         bounds_sorted[0], bounds_sorted[1] + 1, 
         bounds_sorted[1] - bounds_sorted[0])
     
-    # interpolate back to shape within bounds
-    shape_planes = np.copy(shape)
-    shape_planes[axis] = bounds_sorted[1] - bounds_sorted[0] + 1
-    interpolated = transform.resize(
-        region[slices_planes], shape_planes, preserve_range=True, order=0, 
-        anti_aliasing=True, mode="reflect").astype(labels_img.dtype)
+    # interpolate contours of each plane between bounds (inclusive)
+    region_planes = region[tuple(slices_planes)]
+    region_planes_mask = np.zeros_like(region_planes)
+    region_planes_mask[region_planes == label_id] = 1
+    slices_plane = [slice(None)] * 3
+    slices_plane[axis] = 0
+    start = region_planes_mask[tuple(slices_plane)]
+    slices_plane[axis] = 1
+    end = region_planes_mask[tuple(slices_plane)]
+    interpolated = interpolate_contours(
+        start, end, np.linspace(0, 1, bounds_sorted[1] - bounds_sorted[0] + 1))
+    # interpolate_contours puts the bounded planes at the ends of a z-stack, 
+    # so need to transform back to the original orientation
+    if axis == 1:
+        interpolated = np.swapaxes(interpolated, 0, 1)
+    elif axis == 2:
+        interpolated = np.moveaxis(interpolated, 0, -1)
     
-    # replace corresponding sub-images
+    # fill interpolated areas with label and replace corresponding sub-images; 
+    # could consider in-painting if labels were removed, but could slightly 
+    # decrease other areas
     slices_planes[axis] = slice(bounds_sorted[0], bounds_sorted[1] + 1)
-    region[slices_planes] = interpolated
-    labels_img[slices] = region
+    region_within_bounds = region[tuple(slices_planes)]
+    region_within_bounds[interpolated] = label_id
+    region[tuple(slices_planes)] = region_within_bounds
+    labels_img[tuple(slices)] = region
 
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
@@ -1073,3 +1131,22 @@ def build_ground_truth(size, blobs):
     #lib_clrbrain.show_full_arrays()
     #print(img3d)
     return img3d
+
+
+def _test_interpolate_between_planes():
+    '''
+    img = np.zeros((2, 4, 4), dtype=int)
+    img[0, :2, :1] = 1
+    img[1, :2, :] = 1
+    '''
+    img = np.zeros((5, 4, 4), dtype=int)
+    img[0, :2, :1] = 1
+    img[4, :2, :] = 1
+    img[4, 1, 3] = 0
+    print(img)
+    #img = interp_shape(img[0], img[-1], np.linspace(0, 1, 5))
+    interpolate_label_between_planes(img, 1, 0, [0, 4])
+    print(img)
+
+if __name__ == "__main__":
+    _test_interpolate_between_planes()

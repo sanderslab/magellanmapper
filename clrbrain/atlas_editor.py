@@ -238,7 +238,7 @@ class InterpolatePlanes:
         """
         if not any(self.bounds):
             raise ValueError("boundaries not fully set: {}".format(self.bounds))
-        plot_3d.interpolate_between_planes(
+        plot_3d.interpolate_label_between_planes(
             labels_img, self.label_id, config.PLANE.index(self.plane), 
             self.bounds)
     

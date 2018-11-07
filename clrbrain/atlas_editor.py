@@ -43,7 +43,7 @@ class AtlasEditor:
         self.plot_eds = {}
         self.alpha_slider = None
         self.alpha_reset_btn = None
-        self.interp_planes = InterpolatePlanes()
+        self.interp_planes = None
         self.interp_btn = None
         
     def show_atlas(self):
@@ -76,7 +76,9 @@ class AtlasEditor:
         ax_alpha_reset = plt.subplot(gs_controls[0, 1])
         self.alpha_reset_btn = Button(ax_alpha_reset, "Reset")
         ax_interp = plt.subplot(gs_controls[0, 2])
-        self.interp_btn = Button(ax_interp, "Interpolate", hovercolor="0.5")
+        self.interp_btn = Button(ax_interp, "Fill Label")
+        self.interp_planes = InterpolatePlanes(self.interp_btn)
+        self.interp_planes.update_btn()
     
         def setup_plot_ed(plane, gs_spec):
             # subplot grid, with larger height preference for plot for 
@@ -202,13 +204,33 @@ class InterpolatePlanes:
         bounds: Unsorted start and end planes.
         label_id: Label ID of the edited region.
     """
-    def __init__(self):
+    def __init__(self, btn):
         """Initialize ``InterpolatePlanes`` with empty attibutes.
         """
+        self.btn = btn
         self.plane = None
         self.bounds = None
         self.label_id = None
     
+    def update_btn(self):
+        """Update text and color of button to interpolate planes.
+        """
+        if any(self.bounds):
+            # show current values if any exist
+            self.btn.label.set_text(
+                "Fill {} {}\nID {}"
+                .format(plot_support.get_plane_axis(self.plane), self.bounds, 
+                        self.label_id))
+            self.btn.label.set_fontsize("xx-small")
+        if all(self.bounds):
+            # "enable" button by changing to default grayscale color intensities
+            self.btn.color = "0.85"
+            self.btn.hovercolor = "0.95"
+        else:
+            # "disable" button by making darker and no hover response
+            self.btn.color = "0.5"
+            self.btn.hovercolor = "0.5"
+        
     def update_plane(self, plane, i, label_id):
         """Update the current plane.
         
@@ -227,8 +249,8 @@ class InterpolatePlanes:
         self.plane = plane
         self.label_id = label_id
         self.bounds = i
-        print(self)
-        
+        self.update_btn()
+    
     def interpolate(self, labels_img):
         """Interpolate between :attr:``bounds`` in the given :attr:``plane`` 
         direction in the bounding box surrounding :attr:``label_id``.

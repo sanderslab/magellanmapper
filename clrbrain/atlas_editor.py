@@ -74,7 +74,7 @@ class AtlasEditor:
             ax_alpha, "Opacity", 0.0, 1.0, 
             valinit=plot_editor.PlotEditor.ALPHA_DEFAULT)
         ax_alpha_reset = plt.subplot(gs_controls[0, 1])
-        self.alpha_reset_btn = Button(ax_alpha_reset, "Reset", hovercolor="0.5")
+        self.alpha_reset_btn = Button(ax_alpha_reset, "Reset")
         ax_interp = plt.subplot(gs_controls[0, 2])
         self.interp_btn = Button(ax_interp, "Interpolate", hovercolor="0.5")
     

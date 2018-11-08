@@ -297,6 +297,53 @@ def rotate_nd(img_np, angle, axis=0, order=1):
         rotated[tuple(slices)] = img2d
     return rotated
 
+def affine_nd(img_np, axis_along, axis_shift, shift, bounds):
+    """Affine transform an image of arbitrary dimensions.
+    
+    Args:
+        img_np: Numpy array.
+        axis_along: Axis along which to shear, given as an int in standard 
+            Numpy axis convention.
+        axis_shift: Axis giving the direction in which to shear.
+        shift: Tuple of ``(shift_start, shift_end)``, giving the distance 
+            in pixels by which to shear while progressing along ``axis_along``.
+        bounds: Tuple given as ``((z_start, z_end), (y_start, ...) ...)``, 
+            with each value given in pixels demarcating the bounds of the 
+            ROI to transform.
+    
+    Returns:
+        The transformed image.
+    """
+    def get_shift(sl, shift_n, img2d, stop=False):
+        n = sl.stop if stop else sl.start
+        maxn = img_np.shape[axis_shift]
+        if n is None:
+            n = maxn if stop else 0
+        n += shift_n
+        if n < 0:
+            img2d = img2d[abs(n):]
+            n = 0
+        elif n > maxn:
+            img2d = img2d[:-(n-maxn)]
+            n = maxn
+        return n, img2d
+    
+    affined = np.copy(img_np)
+    slices = [slice(bound[0], bound[1]) for bound in bounds]
+    steps = bounds[axis_along][1] - bounds[axis_along][0]
+    shifts = np.linspace(*shift, steps, dtype=int)
+    for i in range(steps):
+        slices[axis_along] = bounds[axis_along][0] + i
+        img2d = np.copy(img_np[tuple(slices)])
+        start, img2d = get_shift(slices[axis_shift], shifts[i], img2d)
+        stop, img2d = get_shift(slices[axis_shift], shifts[i], img2d, True)
+        affined[tuple(slices)] = 0
+        slices_shifted = np.copy(slices)
+        slices_shifted[axis_shift] = slice(start, stop)
+        print(slices_shifted)
+        affined[tuple(slices_shifted)] = img2d
+    return affined
+
 def perimeter_nd(img_np):
     """Get perimeter of image subtracting eroded image from given image.
     
@@ -606,7 +653,7 @@ def crop_to_labels(img_labels, img_ref):
     return extracted_labels, extracted_ref
 
 def interpolate_contours(bottom, top, fracs):
-    '''Interpolate contours between two planes.
+    """Interpolate contours between two planes.
     
     Args:
         bottom: bottom plane as an binary mask.
@@ -618,7 +665,7 @@ def interpolate_contours(bottom, top, fracs):
     Returns:
         Array with each plane corresponding to the interpolated plane at the 
         given fraction.
-    '''
+    """
     # convert planes to contour distance maps, where pos distances are 
     # inside the original image
     bottom = -1 * signed_distance_transform(None, bottom.astype(bool))

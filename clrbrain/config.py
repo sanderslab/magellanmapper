@@ -328,11 +328,12 @@ class RegisterSettings(SettingsDict):
         self["affine_iter_max"] = "1024"
         self["bspline_iter_max"] = "256"
         self["bspline_grid_space_voxels"] = "50"
+        self["grid_spacing_schedule"] = None
         self["groupwise_iter_max"] = "1024"
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False
-        self["smooth"] = False # smooth labels
+        self["smooth"] = None # smooth labels
         self["crop_to_labels"] = False # crop labels and atlas to nonzero labels
         
         # erase labels outside of ((x_start, x_end), (y_start, ...) ...) 
@@ -368,7 +369,6 @@ class RegisterSettings(SettingsDict):
         # paste in region from first image during groupwise reg; 
         # x,y,z, same format as truncate_labels except in pixels
         self["extend_borders"] = None
-        self["grid_spacing_schedule"] = None
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):

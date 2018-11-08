@@ -541,11 +541,20 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
-    # turn off mirroring and rotation to show original atlas and labels
+    # turn off mirroring
     settings.add_modifier(
         "nomirror", 
         {"labels_mirror": None,
-         "rotate": None}, 
+         },
+        settings_type)
+    
+    # turn off most image manipulations to show original atlas and labels 
+    # while allowing transformations set as command-line arguments
+    settings.add_modifier(
+        "raw", 
+        {"labels_mirror": None,
+         "rotate": None, 
+        }, 
         settings_type)
     
     # enable label smoothing

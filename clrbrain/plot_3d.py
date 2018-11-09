@@ -298,7 +298,8 @@ def rotate_nd(img_np, angle, axis=0, order=1):
     return rotated
 
 
-def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None):
+def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None, 
+              attach_far=False):
     """Affine transform an image of arbitrary dimensions.
     
     Args:
@@ -357,13 +358,14 @@ def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None):
             slices_shift = np.copy(slices)
             slices_shift[axis] = bounds[axis][0] + j
             if len(axes) > 1:
-                # recursively call next affine transformation
+                # recursively call next affine transformation with shift 
+                # boundaries based on current max shift
                 shifts_bounds_next = (0, shifts[j])
-                if bounds[axes[1]][0] == 0:
-                    # bounds along the next axis starts at image border, 
-                    # implying that transform will start shifted be shearing 
-                    # inward toward no shift while progressing deeper into 
-                    # the image
+                if axes[1] == axis_attach and attach_far:
+                    # attach at the far end (higher index) by reversing 
+                    # the amount of shift while progressing deeper into 
+                    # the image, starting with large shift and decreasing 
+                    # to no shift at the attachment point
                     shifts_bounds_next = shifts_bounds_next[::-1]
                 affine(axes[1:], shifts_bounds_next, slices_shift)
             else:

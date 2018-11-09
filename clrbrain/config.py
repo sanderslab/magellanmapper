@@ -451,10 +451,16 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          "labels_mirror": (0, 0.52), 
          "rotate": ((-5, 1), (-1, 2)), 
-         "affine": {"axis_along": 1, "axis_shift": 0, "shift": (45, 0), 
-                    "bounds": ((None, None), (135, 310), (0, 115)), 
-                    "axis_attach": 2
-                   }
+         "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
+         "affine": ({
+             "axis_along": 1, "axis_shift": 0, "shift": (45, 0), 
+             "bounds": ((None, None), (135, 310), (0, 115)), 
+             "axis_attach": 2, "attach_far": True
+         },{
+             "axis_along": 2, "axis_shift": 0, "shift": (0, 60), 
+             "bounds": ((None, None), (130, 225), (20, 115)), "axis_attach": 1, 
+             "attach_far": True
+         })
         }, 
         settings_type)
     

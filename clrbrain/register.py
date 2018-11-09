@@ -433,7 +433,8 @@ def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None,
             img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
     
     if affine:
-        img_np = plot_3d.affine_nd(img_np, **affine)
+        for aff in affine:
+            img_np = plot_3d.affine_nd(img_np, **aff)
     
     # reset mirroring index based either on previously found index or 
     # fractional profile setting
@@ -1195,7 +1196,8 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
             for rot in rotate:
                 img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
         if affine:
-            img_atlas_np = plot_3d.affine_nd(img_atlas_np, **affine)
+            for aff in affine:
+                img_atlas_np = plot_3d.affine_nd(img_atlas_np, **aff)
         if mirror:
             start_dup = None
             if len(mirror) > 2: start_dup = mirror[2]

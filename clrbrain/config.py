@@ -450,15 +450,17 @@ def update_register_settings(settings, settings_type):
         {"target_size": (345, 371, 158),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (0, 0.52), 
-         "rotate": ((-5, 1), (-1, 2)), 
+         # rotate axis 0 to open vertical gap for affines (esp 2nd)
          "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
          "affine": ({
+             # shear tail opposite the brain back toward midline
              "axis_along": 1, "axis_shift": 0, "shift": (45, 0), 
-             "bounds": ((None, None), (135, 310), (0, 115)), 
+             "bounds": ((None, None), (80, 310), (0, 115)), 
              "axis_attach": 2, "attach_far": True
          },{
-             "axis_along": 2, "axis_shift": 0, "shift": (0, 60), 
-             "bounds": ((None, None), (130, 225), (20, 115)), "axis_attach": 1, 
+             # shear severely kinked distal end of tail back toward midline
+             "axis_along": 2, "axis_shift": 0, "shift": (0, 130), 
+             "bounds": ((None, None), (80, 140), (20, 145)), "axis_attach": 1, 
              "attach_far": True
          })
         }, 

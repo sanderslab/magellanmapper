@@ -369,6 +369,8 @@ class RegisterSettings(SettingsDict):
         # paste in region from first image during groupwise reg; 
         # x,y,z, same format as truncate_labels except in pixels
         self["extend_borders"] = None
+        
+        self["affine"] = None
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -440,7 +442,11 @@ def update_register_settings(settings, settings_type):
         {"target_size": (345, 371, 158),
          "resize_factor": None, # turn off resizing
          "labels_mirror": (0, 0.52), 
-         "rotate": ((-5, 1), (-1, 2))
+         "rotate": ((-5, 1), (-1, 2)), 
+         "affine": {"axis_along": 1, "axis_shift": 0, "shift": (30, 0), 
+                    "bounds": ((None, None), (135, 310), (0, 110)), 
+                    "axis_attach": 2
+                   }
         }, 
         settings_type)
     
@@ -554,6 +560,7 @@ def update_register_settings(settings, settings_type):
         "raw", 
         {"labels_mirror": None,
          "rotate": None, 
+         "affine": None
         }, 
         settings_type)
     

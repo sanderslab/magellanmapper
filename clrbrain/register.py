@@ -1176,6 +1176,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
     rotate = config.register_settings["rotate"]
     smooth = config.register_settings["smooth"]
     crop = config.register_settings["crop_to_labels"]
+    affine = config.register_settings["affine"]
     img_borders = None
     if mirror or rotate:
         # curate labels and apply similarly to atlas
@@ -1187,6 +1188,8 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         if rotate:
             for rot in rotate:
                 img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
+        if affine:
+            img_atlas_np = plot_3d.affine_nd(img_atlas_np, **affine)
         if mirror:
             start_dup = None
             if len(mirror) > 2: start_dup = mirror[2]

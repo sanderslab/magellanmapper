@@ -550,7 +550,7 @@ def update_register_settings(settings, settings_type):
     
     # enable label smoothing
     settings.add_modifier(
-        "_smooth", 
+        "smooth", 
         {"smooth": 4}, 
         settings_type)
     

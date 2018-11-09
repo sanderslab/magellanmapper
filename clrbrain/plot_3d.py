@@ -323,58 +323,70 @@ def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None):
     Returns:
         The transformed image.
     """
-    def get_shift(sl, shift_n, img2d, stop=False):
-        n = sl.stop if stop else sl.start
-        maxn = img_np.shape[axis_shift]
-        if n is None:
-            n = maxn if stop else 0
-        n += shift_n
-        if n < 0:
-            img2d = img2d[abs(n):]
-            n = 0
-        elif n > maxn:
-            img2d = img2d[:-(n-maxn)]
-            n = maxn
-        return n, img2d
-    
     affined = np.copy(img_np)
+    
+    def get_shift(sl, shift_n, stop=False):
+        # get bounds from a slice and shift while ensuring the indices 
+        # stay within bounds
+        n_dest = sl.stop if stop else sl.start
+        maxn = img_np.shape[axis_shift]
+        if n_dest is None:
+            n_dest = maxn if stop else 0
+        n_img = n_dest
+        n_dest += shift_n
+        if n_dest < 0:
+            # clip dest at 0 while cropping image start
+            n_img = abs(n_dest)
+            n_dest = 0
+        elif n_dest > maxn:
+            # clip dest at max while cropping image end
+            n_img = -(n_dest - maxn)
+            n_dest = maxn
+        return n_dest, n_img
+    
+    
+    def affine(axes, shifts_bounds, slices):
+        # recursively perform affine transformations for an ROI within an 
+        # image along each axis within axes so that sheared regions can 
+        # stay connected along at least one axis
+        axis = axes[0]
+        steps = bounds[axis][1] - bounds[axis][0]
+        shifts = np.linspace(*shifts_bounds, steps, dtype=int)
+        for j in range(steps):
+            # reduce dimension while maintaing the same number/order of axes
+            slices_shift = np.copy(slices)
+            slices_shift[axis] = bounds[axis][0] + j
+            if len(axes) > 1:
+                # recursively call next affine transformation
+                shifts_bounds_next = (0, shifts[j])
+                if bounds[axes[1]][0] == 0:
+                    # bounds along the next axis starts at image border, 
+                    # implying that transform will start shifted be shearing 
+                    # inward toward no shift while progressing deeper into 
+                    # the image
+                    shifts_bounds_next = shifts_bounds_next[::-1]
+                affine(axes[1:], shifts_bounds_next, slices_shift)
+            else:
+                # end-case, where the portion of image that will fit into 
+                # its new destination is shifted
+                sl = slices_shift[axis_shift]
+                start, start_img = get_shift(sl, shifts[j])
+                stop, stop_img = get_shift(sl, shifts[j], True)
+                slices_img = np.copy(slices_shift)
+                slices_img[axis_shift] = slice(start_img, stop_img)
+                img = np.copy(img_np[tuple(slices_img)])
+                affined[tuple(slices_shift)] = 0
+                slices_shift[axis_shift] = slice(start, stop)
+                #print(slices_shift)
+                affined[tuple(slices_shift)] = img
+    
+    # list of axes along which to affine transform recursively
+    axes = [axis_along]
+    if axis_attach is not None: axes.append(axis_attach)
     slices = [slice(bound[0], bound[1]) for bound in bounds]
-    steps_along = bounds[axis_along][1] - bounds[axis_along][0]
-    shifts = np.linspace(*shift, steps_along, dtype=int)
-    '''
-    axes_remaining = np.arange(3)
-    axis_attach = axes_remaining[
-        np.isin((axis_along, axis_shift), axes_remaining, invert=True)]
-    '''
-    if axis_attach is not None:
-        steps_attach = bounds[axis_attach][1] - bounds[axis_attach][0]
-        start_shifted = bounds[axis_attach][0] == 0
-    for i in range(steps_along):
-        slices[axis_along] = bounds[axis_along][0] + i
-        if axis_attach is None:
-            img2d = np.copy(img_np[tuple(slices)])
-            start, img2d = get_shift(slices[axis_shift], shifts[i], img2d)
-            stop, img2d = get_shift(slices[axis_shift], shifts[i], img2d, True)
-            affined[tuple(slices)] = 0
-            slices_shifted = np.copy(slices)
-            slices_shifted[axis_shift] = slice(start, stop)
-            print(slices_shifted)
-            affined[tuple(slices_shifted)] = img2d
-        else:
-            shifts_bounds = (0, shifts[i])
-            if start_shifted:
-                shifts_bounds = shifts_bounds[::-1]
-            shifts_attach = np.linspace(*shifts_bounds, steps_attach, dtype=int)
-            for j in range(steps_attach):
-                slices_attach = np.copy(slices)
-                slices_attach[axis_attach] = j
-                img1d = np.copy(img_np[tuple(slices_attach)])
-                start, img1d = get_shift(slices_attach[axis_shift], shifts_attach[j], img1d)
-                stop, img1d = get_shift(slices_attach[axis_shift], shifts_attach[j], img1d, True)
-                affined[tuple(slices_attach)] = 0
-                slices_attach[axis_shift] = slice(start, stop)
-                print(slices_attach)
-                affined[tuple(slices_attach)] = img1d
+    print("affine transformations along axes {}".format(axes))
+    affine(axes, shift, slices)
+    
     return affined
 
 def perimeter_nd(img_np):

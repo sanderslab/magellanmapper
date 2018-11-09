@@ -312,7 +312,7 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
     return img_np
 
 def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None, 
-                   smooth=None):
+                   smooth=None, affine=None):
     """Curate labels through extension, mirroring, and smoothing.
     
     Extension fills in missing edge labels by extrapolating edge planes 
@@ -338,10 +338,13 @@ def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None,
             specifying slice boundaries for regions to expand the labels to 
             the size of the atlas. Defaults to None.
         rotate: Tuple of ((angle0, axis0), ...) by which to rotate the 
-            labels. Defaults to None.
+            labels. Defaults to None to not rotate.
         smooth: Filter size for smoothing, or sequence of sizes to test 
-            various smoothing strengths via multiprocessing; defaults to 
-            None, in which case smoothing will not be performed.
+            various smoothing strengths via multiprocessing. Defaults to 
+            None to not smooth..
+        affine: Dictionary for selective affine transformation, passed 
+            to :func:`plot_3d.affine_nd`. Defaults to None to not 
+            affine transform.
     
     Returns:
         Tuple of ``img_np``, ``(extendi, mirrori)``, where ``img_np`` is 
@@ -428,6 +431,9 @@ def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None,
                 img_np[i] = img_np[mirrori - 1]
         for rot in rotate:
             img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
+    
+    if affine:
+        img_np = plot_3d.affine_nd(img_np, **affine)
     
     # reset mirroring index based either on previously found index or 
     # fractional profile setting
@@ -1182,7 +1188,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         # curate labels and apply similarly to atlas
         expand = config.register_settings["expand_labels"]
         img_labels_np, mirror_indices, borders_img_np = _curate_labels(
-            img_labels, img_atlas, mirror, expand, rotate, smooth)
+            img_labels, img_atlas, mirror, expand, rotate, smooth, affine)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
         img_atlas_np = sitk.GetArrayFromImage(img_atlas)
         if rotate:

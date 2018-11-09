@@ -370,6 +370,14 @@ class RegisterSettings(SettingsDict):
         # x,y,z, same format as truncate_labels except in pixels
         self["extend_borders"] = None
         
+        # affine transformation as a dict of ``axis_along`` for the axis along 
+        # which to perform the main affine transformation; ``axis_shift`` for 
+        # the axis along which to shear; ``shift`` for a tuple of indices 
+        # of starting to ending shift; ``bounds`` for a tuple of 
+        # ``((z_start z_end), (y_start, ...) ...)`` in indices (note the 
+        # z,y,x ordering to use directly); and an optional ``axis_attach`` 
+        # for the axis along which to perform another affine to attach the 
+        # main affine back to the rest of the image
         self["affine"] = None
 
 def update_register_settings(settings, settings_type):
@@ -443,8 +451,8 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          "labels_mirror": (0, 0.52), 
          "rotate": ((-5, 1), (-1, 2)), 
-         "affine": {"axis_along": 1, "axis_shift": 0, "shift": (30, 0), 
-                    "bounds": ((None, None), (135, 310), (0, 110)), 
+         "affine": {"axis_along": 1, "axis_shift": 0, "shift": (45, 0), 
+                    "bounds": ((None, None), (135, 310), (0, 115)), 
                     "axis_attach": 2
                    }
         }, 

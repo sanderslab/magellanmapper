@@ -55,7 +55,6 @@ class AtlasEditor:
             2, 2, subplot_spec=gs[0, 0])
         
         # set up the image to display
-        colormaps = config.process_settings["channel_colors"]
         cmap_labels = plot_support.DiscreteColormap(
             self.labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
         cmap_borders = None

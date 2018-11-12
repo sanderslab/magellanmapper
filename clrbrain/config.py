@@ -303,6 +303,11 @@ def update_process_settings(settings, settings_type):
         {"unsharp_strength": 1.5}, 
         settings_type)
     
+    settings.add_modifier(
+        "atlas", 
+        {"channel_colors": ("gray", )}, 
+        settings_type)
+    
     if verbose:
         print("process settings for {}:\n{}"
               .format(settings["settings_name"], settings))

@@ -40,7 +40,8 @@ Command-line arguments in addition to those from attributes listed below:
         correspond to the number of images to register, such as several for 
         groupwise registration.
     * rescale: Rescaling factor as a float value.
-    * interval: Interval as an int, such as for animated GIF stack planes.
+    * slice: ``stop`` or ``start,stop[,step]`` values to create a slice
+        object, such as for animated GIF stack planes.
     * chunk_shape: Stack processing chunk shape given as integeres in z,y,x 
         order. This value will take precedence over the 
         ``sub_stack_max_pixels`` entry in the :class:``ProcessSettings`` 
@@ -475,7 +476,7 @@ def main(process_args_only=False):
     parser.add_argument("--register")
     parser.add_argument("--reg_profile")
     parser.add_argument("--rescale")
-    parser.add_argument("--interval")
+    parser.add_argument("--slice")
     parser.add_argument("--delay")
     parser.add_argument("--no_show", action="store_true")
     parser.add_argument("--border", nargs="*")
@@ -613,9 +614,14 @@ def main(process_args_only=False):
     if args.rescale:
         config.rescale = float(args.rescale)
         print("Set rescale to {}".format(config.rescale))
-    if args.interval:
-        config.interval = int(args.interval)
-        print("Set interval to {}".format(config.interval))
+    if args.slice:
+        # specify a generic slice by command-line, assuming same order 
+        # of arguments as for slice built-in function and interpreting 
+        # "none" string as None
+        config.slice_vals = args.slice.split(",")
+        config.slice_vals = [None if val.lower() == "none" else int(val) 
+                             for val in config.slice_vals]
+        print("Set slice values to {}".format(config.slice_vals))
     if args.delay:
         config.delay = int(args.delay)
         print("Set delay to {}".format(config.delay))
@@ -949,7 +955,7 @@ def process_file(filename_base, offset, roi_size):
         # generate animated GIF
         from clrbrain import stack
         stack.animated_gif(
-            config.filename, series=config.series, interval=config.interval, 
+            config.filename, series=config.series, slice_vals=config.slice_vals, 
             rescale=config.rescale, delay=config.delay)
     
     elif proc_type == PROC_TYPES[8]:

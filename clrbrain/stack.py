@@ -126,7 +126,7 @@ def fit_frame_to_image(fig, shape, aspect):
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
     print("fig size: {}".format(fig.get_size_inches()))
 
-def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
+def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None):
     """Builds an animated GIF from a stack of images in a directory or an
     .npy file.
     
@@ -139,16 +139,19 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
             file), animations will be built by plane, using the plane 
             orientation set in :const:`config.plane`.
         series: Stack to build for multiseries files; defaults to 0.
-        interval: Every nth image will be incorporated into the animation; 
-            defaults to None, in which case 1 will be used.
+        slice_vals: List from which to contstruct a slice object to 
+            extract only a portion of the image. Defaults to None, which 
+            will give the whole image.
         rescale: Rescaling factor for each image, performed on a plane-by-plane 
             basis; defaults to None, in which case 1.0 will be used.
         delay: Delay between image display in ms.
     """
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
-    if interval is None:
-        interval = 1
+    if slice_vals is None:
+        img_sl = slice(None, None, interval)
+    else:
+        img_sl = slice(*slice_vals)
     if rescale is None:
         rescale = 1.0
     planes = None
@@ -163,7 +166,7 @@ def animated_gif(path, series=0, interval=None, rescale=None, delay=None):
     else:
         image5d = importer.read_file(path, series)
         planes, aspect, origin = plot_2d.extract_plane(
-            image5d, slice(None, None, interval), plane=config.plane)
+            image5d, img_sl, plane=config.plane)
         out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
     ext = config.savefig

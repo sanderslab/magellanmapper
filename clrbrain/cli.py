@@ -956,7 +956,8 @@ def process_file(filename_base, offset, roi_size):
         from clrbrain import stack
         stack.animated_gif(
             config.filename, series=config.series, slice_vals=config.slice_vals, 
-            rescale=config.rescale, delay=config.delay)
+            rescale=config.rescale, delay=config.delay, 
+            labels_img=config.labels_img)
     
     elif proc_type == PROC_TYPES[8]:
         # export blobs to CSV file

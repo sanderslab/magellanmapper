@@ -19,7 +19,10 @@ from clrbrain import plot_2d
 from clrbrain import plot_support
 from clrbrain import importer
 
-def _import_img(i, path, rescale, multichannel):
+def _import_img(i, paths, labels_img, rescale, multichannel):
+    # simply import and rescale an image; labels_img is unused, included 
+    # only for consistency
+    path = paths[i]
     print("importing {}".format(path))
     img = io.imread(path)
     img = transform.rescale(
@@ -27,22 +30,32 @@ def _import_img(i, path, rescale, multichannel):
         preserve_range=True, anti_aliasing=True)
     return i, img
 
-def _process_plane(i, plane, rescale, multichannel, rotate=None):
+def _process_plane(i, img3d, labels_img, rescale, multichannel, rotate=None):
+    # process a plane from within an image
     print("processing plane {}".format(i))
     img = transform.rescale(
-        plane, rescale, mode="reflect", multichannel=multichannel, 
+        img3d[i], rescale, mode="reflect", multichannel=multichannel, 
         preserve_range=True, anti_aliasing=True)
+    imgs = [img]
+    if labels_img is not None:
+        label = transform.rescale(
+            labels_img[i], rescale, mode="reflect", multichannel=False, 
+            preserve_range=True, anti_aliasing=False, order=0)
+        imgs.append(label)
     if rotate:
         # rotate, filling background with edge color
-        #img = img[10:-100, 10:-80] # manually crop out any border
-        cval = np.mean(img[0, 0])
-        img = ndimage.rotate(img, rotate, cval=cval)
-        # additional cropping for oblique bottom edge after rotation
-        #img = img[:-50]
-    return i, img
+        for i, img in enumerate(imgs):
+            #img = img[10:-100, 10:-80] # manually crop out any border
+            cval = np.mean(img[0, 0])
+            img = ndimage.rotate(img, rotate, cval=cval)
+            # additional cropping for oblique bottom edge after rotation
+            #img = img[:-50]
+            imgs[i] = img
+    return i, imgs
 
 def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 
-                        origin=None, delay=None):
+                        origin=None, delay=None, labels_img=None, 
+                        cmap_labels=None):
     """Builds an animated GIF from a stack of images.
     
     Args:
@@ -53,6 +66,8 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
             index and processed plane.
         delay: Delay between image display in ms. If None, the delay will 
             defaul to 100ms.
+        labels_img: Labels image to overlay; defaults to None.
+        cmap_labels: Colormap for labels image; defaults to None.
     """
     # small border appears around images on occasion with Matplotlib 2 settings
     with plt.style.context("classic"):
@@ -70,30 +85,41 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         plot_support.hide_axes(ax)
         
         # import the images as Matplotlib artists via multiprocessing
-        plotted_imgs = [None for i in range(num_images)]
+        plotted_imgs = [None] * num_images
         img_size = None
         multichannel = images[0].ndim >= 3
         print("channel: {}".format(config.channel))
-        i = 0
         pool = mp.Pool()
         pool_results = []
-        for image in images:
+        for i in range(len(images)):
             # add rotation argument if necessary
             pool_results.append(pool.apply_async(
-                process_fnc, args=(i, image, rescale, multichannel)))
-            i += 1
+                process_fnc, 
+                args=(i, images, labels_img, rescale, multichannel)))
         colormaps = config.process_settings["channel_colors"]
+        imgs_ordered = [None] * len(pool_results)
         for result in pool_results:
-            i, img = result.get()
+            i, imgs = result.get()
             if img_size is None:
-                img_size = img.shape
+                img_size = imgs[0].shape
             # tweak max values to change saturation
             vmax = config.vmax_overview
             #vmax = np.multiply(vmax, (0.9, 1.0))
+            
+            # multiple artists can be shown at each frame by collecting 
+            # each group of artists in a list; imshow_multichannel returns 
+            # a list of artists for each channel
             plotted_imgs[i] = plot_support.imshow_multichannel(
-                ax, img, config.channel, colormaps, aspect, 1, 
+                ax, imgs[0], config.channel, colormaps, aspect, 1, 
                 vmin=config.near_min, vmax=vmax, 
                 origin=origin)
+            if labels_img is not None:
+                # show labels image if available
+                ax_img_label = plot_support.imshow_multichannel(
+                    ax, imgs[1], 0, [cmap_labels], aspect, 0.9, 
+                    origin=origin, interpolation="none", 
+                    norms=[cmap_labels.norm])
+                plotted_imgs[i].extend(ax_img_label)
         pool.close()
         pool.join()
         
@@ -126,7 +152,8 @@ def fit_frame_to_image(fig, shape, aspect):
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
     print("fig size: {}".format(fig.get_size_inches()))
 
-def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None):
+def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None, 
+                 labels_img=None):
     """Builds an animated GIF from a stack of images in a directory or an
     .npy file.
     
@@ -145,11 +172,12 @@ def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None):
         rescale: Rescaling factor for each image, performed on a plane-by-plane 
             basis; defaults to None, in which case 1.0 will be used.
         delay: Delay between image display in ms.
+        labels_img: Labels image as a Numpy z,y,x array; defaults to None.
     """
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
     if slice_vals is None:
-        img_sl = slice(None, None, interval)
+        img_sl = slice(None, None)
     else:
         img_sl = slice(*slice_vals)
     if rescale is None:
@@ -157,6 +185,8 @@ def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None):
     planes = None
     aspect = None
     origin = None
+    planes_labels = None
+    cmap_labels = None
     fnc = None
     if os.path.isdir(path):
         # builds animations from all files in a directory
@@ -164,9 +194,17 @@ def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None):
         print(planes)
         fnc = _import_img
     else:
+        # load image from path and extract ROI based on slice parameters
         image5d = importer.read_file(path, series)
         planes, aspect, origin = plot_2d.extract_plane(
             image5d, img_sl, plane=config.plane)
+        if labels_img is not None:
+            # build discrete colormap and extract ROI from labels
+            cmap_labels = plot_support.DiscreteColormap(
+                labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
+            planes_labels, _, _ = plot_2d.extract_plane(
+                labels_img[None], img_sl, plane=config.plane)
+            
         out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
     ext = config.savefig
@@ -174,7 +212,8 @@ def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None):
         ext = "gif"
     out_path = os.path.join(parent_path, out_name + "_animation." + ext)
     _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
-                        origin=origin, delay=delay)
+                        origin=origin, delay=delay, 
+                        labels_img=planes_labels, cmap_labels=cmap_labels)
 
 def save_plane(image5d, offset, roi_size=None, name=None):
     """Extracts a single 2D plane and saves to file.

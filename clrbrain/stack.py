@@ -69,73 +69,70 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         labels_img: Labels image to overlay; defaults to None.
         cmap_labels: Colormap for labels image; defaults to None.
     """
-    # small border appears around images on occasion with Matplotlib 2 settings
-    with plt.style.context("classic"):
+    # ascending order of all files in the directory
+    #images = images[5:-2] # manually remove border planes
+    num_images = len(images)
+    print("images.shape: {}".format(images.shape))
+    if num_images < 1:
+        return None
+    
+    # Matplotlib figure for building the animation
+    fig = plt.figure(frameon=False)
+    ax = fig.add_subplot(111)
+    plot_support.hide_axes(ax)
+    
+    # import the images as Matplotlib artists via multiprocessing
+    plotted_imgs = [None] * num_images
+    img_size = None
+    multichannel = images[0].ndim >= 3
+    print("channel: {}".format(config.channel))
+    pool = mp.Pool()
+    pool_results = []
+    for i in range(len(images)):
+        # add rotation argument if necessary
+        pool_results.append(pool.apply_async(
+            process_fnc, 
+            args=(i, images, labels_img, rescale, multichannel)))
+    colormaps = config.process_settings["channel_colors"]
+    imgs_ordered = [None] * len(pool_results)
+    for result in pool_results:
+        i, imgs = result.get()
+        if img_size is None:
+            img_size = imgs[0].shape
+        # tweak max values to change saturation
+        vmax = config.vmax_overview
+        #vmax = np.multiply(vmax, (0.9, 1.0))
         
-        # ascending order of all files in the directory
-        #images = images[5:-2] # manually remove border planes
-        num_images = len(images)
-        print("images.shape: {}".format(images.shape))
-        if num_images < 1:
-            return None
-        
-        # Matplotlib figure for building the animation
-        fig = plt.figure(frameon=False)
-        ax = fig.add_subplot(111)
-        plot_support.hide_axes(ax)
-        
-        # import the images as Matplotlib artists via multiprocessing
-        plotted_imgs = [None] * num_images
-        img_size = None
-        multichannel = images[0].ndim >= 3
-        print("channel: {}".format(config.channel))
-        pool = mp.Pool()
-        pool_results = []
-        for i in range(len(images)):
-            # add rotation argument if necessary
-            pool_results.append(pool.apply_async(
-                process_fnc, 
-                args=(i, images, labels_img, rescale, multichannel)))
-        colormaps = config.process_settings["channel_colors"]
-        imgs_ordered = [None] * len(pool_results)
-        for result in pool_results:
-            i, imgs = result.get()
-            if img_size is None:
-                img_size = imgs[0].shape
-            # tweak max values to change saturation
-            vmax = config.vmax_overview
-            #vmax = np.multiply(vmax, (0.9, 1.0))
-            
-            # multiple artists can be shown at each frame by collecting 
-            # each group of artists in a list; imshow_multichannel returns 
-            # a list of artists for each channel
-            plotted_imgs[i] = plot_support.imshow_multichannel(
-                ax, imgs[0], config.channel, colormaps, aspect, 1, 
-                vmin=config.near_min, vmax=vmax, 
-                origin=origin)
-            if labels_img is not None:
-                # show labels image if available
-                ax_img_label = plot_support.imshow_multichannel(
-                    ax, imgs[1], 0, [cmap_labels], aspect, 0.9, 
-                    origin=origin, interpolation="none", 
-                    norms=[cmap_labels.norm])
-                plotted_imgs[i].extend(ax_img_label)
-        pool.close()
-        pool.join()
-        
-        fit_frame_to_image(fig, img_size, aspect)
-        
-        # export to animated GIF
-        if delay is None:
-            delay = 100
-        anim = animation.ArtistAnimation(
-            fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
-        try:
-            anim.save(out_path, writer="imagemagick")
-        except ValueError as e:
-            print(e)
-            print("No animation writer available for Matplotlib")
-        print("saved animation file to {}".format(out_path))
+        # multiple artists can be shown at each frame by collecting 
+        # each group of artists in a list; imshow_multichannel returns 
+        # a list of artists for each channel
+        plotted_imgs[i] = plot_support.imshow_multichannel(
+            ax, imgs[0], config.channel, colormaps, aspect, 1, 
+            vmin=config.near_min, vmax=vmax, 
+            origin=origin)
+        if labels_img is not None:
+            # show labels image if available
+            ax_img_label = plot_support.imshow_multichannel(
+                ax, imgs[1], 0, [cmap_labels], aspect, 0.9, 
+                origin=origin, interpolation="none", 
+                norms=[cmap_labels.norm])
+            plotted_imgs[i].extend(ax_img_label)
+    pool.close()
+    pool.join()
+    
+    fit_frame_to_image(fig, img_size, aspect)
+    
+    # export to animated GIF
+    if delay is None:
+        delay = 100
+    anim = animation.ArtistAnimation(
+        fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
+    try:
+        anim.save(out_path, writer="imagemagick")
+    except ValueError as e:
+        print(e)
+        print("No animation writer available for Matplotlib")
+    print("saved animation file to {}".format(out_path))
 
 def fit_frame_to_image(fig, shape, aspect):
     # compress layout to fit image only

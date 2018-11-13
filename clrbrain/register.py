@@ -2119,7 +2119,7 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
     # gather IDs for label and all its children
     id_abs = abs(label_id)
     region_ids = get_children(labels_ref_lookup, id_abs, [id_abs])
-    if label_id < 0: region_ids = np.multiply(-1, region_ids)
+    if label_id < 0: region_ids = [-1 * n for n in region_ids]
     print("region IDs: {}".format(region_ids))
     
     # get a list of all the region's coordinates to sort

@@ -469,7 +469,8 @@ def update_register_settings(settings, settings_type):
              "axis_along": 2, "axis_shift": 0, "shift": (0, 130), 
              "bounds": ((None, None), (80, 140), (20, 145)), "axis_attach": 1, 
              "attach_far": True
-         })
+         }),
+         "smooth": 2
         }, 
         settings_type)
     
@@ -480,7 +481,8 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.48), 
          "atlas_threshold": 80, # to avoid edge over-extension into skull
-         "rotate": ((-4, 1), (-2, 2))
+         "rotate": ((-4, 1), (-2, 2)),
+         "smooth": 4
         }, 
         settings_type)
     
@@ -492,7 +494,8 @@ def update_register_settings(settings, settings_type):
          "labels_mirror": (None, 0.49), 
          "atlas_threshold": 80, # to avoid edge over-extension into skull
          "rotate": ((-4, 1), ), 
-         "crop_to_labels": True
+         "crop_to_labels": True,
+         "smooth": 2
         }, 
         settings_type)
     
@@ -503,7 +506,8 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          "labels_mirror": (None, 0.525), 
          "expand_labels": (((None, ), (0, 279), (103, 108)),), 
-         "rotate": ((1.5, 1), (2, 2))
+         "rotate": ((1.5, 1), (2, 2)),
+         "smooth": 4
         }, 
         settings_type)
     
@@ -515,7 +519,8 @@ def update_register_settings(settings, settings_type):
          "labels_mirror": (None, 0.487), 
          # open caudal labels to allow smallest mirror plane index, though 
          # still cross midline since some regions only have labels past midline
-         "rotate": ((0.22, 1), )
+         "rotate": ((0.22, 1), ),
+         "smooth": 4
         }, 
         settings_type)
     
@@ -528,7 +533,8 @@ def update_register_settings(settings, settings_type):
          # past midline
          "labels_mirror": (None, 0.5), 
          # rotate conservatively for symmetry without losing labels
-         "rotate": ((-0.4, 1), )
+         "rotate": ((-0.4, 1), ),
+         "smooth": 4
         }, 
         settings_type)
     
@@ -542,7 +548,8 @@ def update_register_settings(settings, settings_type):
          # past midline
          "labels_mirror": (0.11, 0.48), # (0.11, 0.51, 0.48) for dup
          # rotate for symmetry, which also reduces label loss
-         "rotate": ((1, 2), )
+         "rotate": ((1, 2), ),
+         "smooth": 2
         }, 
         settings_type)
     
@@ -553,7 +560,8 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          # include start since some lateral labels are only partially complete; 
          # stained sections and labels almost but not symmetric
-         "labels_mirror": (0.138, 0.5)
+         "labels_mirror": (0.138, 0.5),
+         "smooth": 2
         }, 
         settings_type)
     
@@ -566,14 +574,16 @@ def update_register_settings(settings, settings_type):
          # labels are already mirrored starting at z=228, but atlas is not
          # here, mirror starting at the same z-plane to make both sections 
          # and labels symmetric and aligned with one another
-         "labels_mirror": (0, 0.5)
+         "labels_mirror": (0, 0.5),
+         "smooth": 2
         }, 
         settings_type)
     
-    # turn off mirroring
+    # turn off mirroring along with smoothing
     settings.add_modifier(
         "nomirror", 
         {"labels_mirror": None,
+         "smooth": None
          },
         settings_type)
     
@@ -583,14 +593,15 @@ def update_register_settings(settings, settings_type):
         "raw", 
         {"labels_mirror": None,
          "rotate": None, 
-         "affine": None
+         "affine": None,
+         "smooth": None
         }, 
         settings_type)
     
-    # enable label smoothing
+    # turn off label smoothing
     settings.add_modifier(
-        "smooth", 
-        {"smooth": 4}, 
+        "nosmooth", 
+        {"smooth": None}, 
         settings_type)
     
     # enable label smoothing

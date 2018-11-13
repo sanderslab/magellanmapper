@@ -185,7 +185,7 @@ class Visualization(HasTraits):
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
-    _region_id = Int
+    _region_id = Str
     _mlab_title = None
     _scene_3d_shown = False # 3D Mayavi display shown
     _circles_opened_type = None # type of 2D plots windows curr open
@@ -195,6 +195,7 @@ class Visualization(HasTraits):
     _channel_low = -1 # -1 used for None, which translates to "all"
     _channel_high = 0
     _img_region = None
+    _PREFIX_BOTH_SIDES = "+/-"
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -897,10 +898,30 @@ class Visualization(HasTraits):
     
     @on_trait_change("_region_id")
     def _region_id_changed(self):
+        """Center the viewer on the region specified in the corresponding 
+        text box.
+        
+        :const:``_PREFIX_BOTH_SIDES`` can be given to specify IDs with 
+        both positive and negative values. All other non-integers will 
+        be ignored.
+        """
         print("region ID: {}".format(self._region_id))
+        both_sides = self._region_id.startswith(self._PREFIX_BOTH_SIDES)
+        region_id = self._region_id
+        if both_sides:
+            # user can specify both sides to get corresponding pos and neg IDs
+            region_id = self._region_id[len(self._PREFIX_BOTH_SIDES):]
+        try:
+            region_id = int(region_id)
+        except ValueError:
+            # return if cannot convert to an integer
+            self.segs_feedback = (
+                "Region ID must be an integer n, or \"+/-n\" to get both sides"
+            )
+            return
         centroid, self._img_region, region_ids = register.get_region_middle(
-            config. labels_ref_lookup, self._region_id, config.labels_img, 
-            config.labels_scaling)
+            config. labels_ref_lookup, region_id, config.labels_img, 
+            config.labels_scaling, both_sides=both_sides)
         if centroid is None:
             self.segs_feedback = (
                 "Could not find the region corresponding to ID {}"
@@ -1186,7 +1207,7 @@ class Visualization(HasTraits):
                     Item(
                         "_region_id",
                         editor=TextEditor(
-                            auto_set=False, enter_set=True, evaluate=int),
+                            auto_set=False, enter_set=True, evaluate=str),
                         label="Region"
                     ),
                 ),

@@ -2080,6 +2080,7 @@ def get_children(labels_ref_lookup, label_id, children_all=[]):
     """
     label = labels_ref_lookup.get(label_id)
     if label:
+        # recursively gather the children of the label
         children = label[NODE][ABA_CHILDREN]
         for child in children:
             child_id = child[ABA_ID]
@@ -2088,7 +2089,8 @@ def get_children(labels_ref_lookup, label_id, children_all=[]):
             get_children(labels_ref_lookup, child_id, children_all)
     return children_all
 
-def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
+def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling, 
+                      both_sides=False):
     """Approximate the middle position of a region by taking the middle 
     value of its sorted list of coordinates.
     
@@ -2119,7 +2121,10 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling):
     # gather IDs for label and all its children
     id_abs = abs(label_id)
     region_ids = get_children(labels_ref_lookup, id_abs, [id_abs])
-    if label_id < 0: region_ids = [-1 * n for n in region_ids]
+    if both_sides:
+        region_ids.extend([-1 * n for n in region_ids])
+    elif label_id < 0:
+        region_ids = [-1 * n for n in region_ids]
     print("region IDs: {}".format(region_ids))
     
     # get a list of all the region's coordinates to sort

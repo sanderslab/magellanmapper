@@ -376,10 +376,12 @@ class RegisterSettings(SettingsDict):
         self["extend_borders"] = None
         
         # affine transformation as a dict of ``axis_along`` for the axis along 
-        # which to perform the main affine transformation; ``axis_shift`` for 
-        # the axis along which to shear; ``shift`` for a tuple of indices 
-        # of starting to ending shift; ``bounds`` for a tuple of 
-        # ``((z_start z_end), (y_start, ...) ...)`` in indices (note the 
+        # which to perform transformation (ie the planes that will be 
+        # affine transformed); ``axis_shift`` for the axis or 
+        # direction in which to shear; ``shift`` for a tuple of indices 
+        # of starting to ending shift while traveling from low to high 
+        # indices along ``axis_along``; ``bounds`` for a tuple of 
+        # ``((z_start z_end), (y_start, ...) ...)`` indices (note the 
         # z,y,x ordering to use directly); and an optional ``axis_attach`` 
         # for the axis along which to perform another affine to attach the 
         # main affine back to the rest of the image

@@ -140,12 +140,12 @@ then
 	./"$MINICONDA"
 	# reload the bash environment, or exit if unable
 	bash_profile=~/.bash_profile
-	if [ ! -f $bash_profile ]
-	then
+	if [[ ! -f $bash_profile ]]; then
 		bash_profile=~/.bashrc
 	fi
-	if [ -f $bash_profile ]
-	then
+	if [[ -f $bash_profile && "$ANACONDA_DOWNLOAD_PLATFORM" != "Linux" ]]; then
+		# Ubuntu and likely other Linux platforms short-circuit sourcing 
+		# .bashrc non-interactively so unable to load without hacks
 		# TODO: check if base environment gets activated as not yet 
 		# by default as of Conda 4.4.10
 		source $bash_profile

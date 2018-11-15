@@ -835,12 +835,11 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
     print("viewing 3D surface")
     pipeline = scene_mlab.pipeline
     scene_mlab.clf()
+    settings = config.process_settings
     # saturate to remove noise and normalize values
-    roi = saturate_roi(roi, 99, channel=channel)
+    roi = saturate_roi(roi, settings["clip_vmax"], channel=channel)
     #roi = np.clip(roi, 0.2, 0.8)
     #roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
-        
-    settings = config.process_settings
     
     # turn off segmentation if ROI too big (arbitrarily set here as 
     # > 10 million pixels) to avoid performance hit and since likely showing 

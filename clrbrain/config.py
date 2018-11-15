@@ -305,7 +305,8 @@ def update_process_settings(settings, settings_type):
     
     settings.add_modifier(
         "atlas", 
-        {"channel_colors": ("gray", )}, 
+        {"channel_colors": ("gray", ),
+         "clip_vmax": 97}, 
         settings_type)
     
     if verbose:

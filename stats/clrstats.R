@@ -17,7 +17,7 @@ library("addTextLabels")
 
 # statistical models
 kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
-           "ttest.paired", "wilcoxon.paired")
+           "ttest.paired", "wilcoxon.paired", "fligner")
 
 # measurements, which correspond to columns in main data frame
 kMeas = c("Vol", "Dens", "Nuclei")
@@ -125,6 +125,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   }
   
   result <- NULL
+  col.effect <- "estimate"
   if (model == kModel[5] | model == kModel[7]) {
     # Student's t-test
     result <- t.test(val.conds[[1]], val.conds[[2]], paired=paired)
@@ -132,6 +133,10 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
     # Wilcoxon test (Mann-Whitney if not paired)
     result <- wilcox.test(
       val.conds[[1]], val.conds[[2]], paired=paired, conf.int=TRUE)
+  } else if (model == kModel[9]) {
+    # Fligner-Killen test of variance
+    result <- fligner.test(vals, conditions)
+    col.effect <- "statistic"
   } else {
     cat("Sorry, model", model, "not found\n")
   }
@@ -141,7 +146,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   coef.tab <- data.frame(matrix(nrow=1, ncol=4))
   names(coef.tab) <- c("Value", "col2", "col3", "P")
   rownames(coef.tab) <- c("vals")
-  coef.tab$Value <- c(result$estimate)
+  coef.tab$Value <- c(result[[col.effect]])
   coef.tab$P <- c(result$p.value)
   print(coef.tab)
   return(coef.tab)
@@ -611,10 +616,10 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 
 #######################################
 # choose measurement and model types
-meas <- kMeas[2]
+meas <- kMeas[3]
 model <- kModel[8]
 split.by.side <- TRUE # false to combine sides
-load.stats <- TRUE # true to load saved stats and only regenerate volcano plots
+load.stats <- FALSE # true to load saved stats and only regenerate volcano plots
 
 # set up paramters based on chosen model
 stat <- "vals"

@@ -277,26 +277,32 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
     
     if (any(nonzero)) {
       cat("\nRegion", region, "\n")
-      df.region.nonzero <- NULL
+      df.region.nonzero <- df.region
       split.col <- NULL
-      paired <- FALSE
+      paired <- is.element(model, kModel[7:9])
       
-      if (is.element(model, kModel[7:9])) {
-        # paired tests, which split by "Condition" column
+      if (!paired) {
+        # filter each column within region for rows with non-zero values 
+        # since 0 indicates that the label for the region was suppressed
+        df.region.nonzero <- df.region.nonzero[nonzero, ]
+        if (is.null(df.region.nonzero)) next
+      }
+      if (is.element(model, kModel[5:9])) {
+        # filter for means tests, which split by "Condition" column, 
+        # combining the sides to minimize the number of comparisons 
+        # and ignoring the split.by.sides parameter
         split.col <- "Condition"
-        paired <- TRUE
         df.region.nonzero <- aggregate(
           cbind(Vol, Nuclei) ~ Sample + Geno + Condition + RegionName, 
-          df.region, sum)
+          df.region.nonzero, sum)
         df.region.nonzero$Dens <- (
           df.region.nonzero$Nuclei / df.region.nonzero$Vol)
         df.region.nonzero$Dens[is.na(df.region.nonzero$Dens)] = 0
-        # filter pairs with where either sample has a zero value
-        df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
-        if (is.null(df.region.nonzero)) next
-      } else {
-        # filter each column within region for rows with non-zero values
-        df.region.nonzero <- df.region[nonzero, ]
+        if (paired) {
+          # filter pairs where either sample has a zero value
+          df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
+          if (is.null(df.region.nonzero)) next
+        }
       }
       #print(df.region.nonzero)
       vals <- df.region.nonzero[[col]]

@@ -390,6 +390,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   }
   genos <- df.region$Geno
   genos.unique <- sort(unique(genos))
+  multiple.geno <- length(genos.unique) > 1
   sides <- df.region[[split.col]]
   sides.unique <- sort(unique(sides))
   if (!split.by.side | length(sides.unique) == 0) {
@@ -430,7 +431,9 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       segments(x - 0.25, vals.mean, x + 0.25, vals.mean)
       arrows(x, vals.mean + vals.ci, x, vals.mean - vals.ci, length=0.05, 
              angle=90, code=3)
-      names <- append(names, paste(geno, side))
+      name <- side
+      if (multiple.geno) name <- paste(geno, side)
+      names <- append(names, name)
       i <- i + 1
       x.pos[i] <- x
       x.adj <- x.adj + 0.05

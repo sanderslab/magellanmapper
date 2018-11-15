@@ -904,7 +904,12 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         # uses unique IsoSurface module but appears to have 
         # similar output to contour_surface
         surface = pipeline.iso_surface(surface, colormap=_MAYAVI_COLORMAPS[i])
+        
+        # limit contours for simpler surfaces including smaller file sizes; 
+        # TODO: consider making settable as arg or through profile
+        surface.contour.number_of_contours = 1
         try:
+            # increase min to further reduce complexity
             surface.contour.minimum_contour = 0.5
             surface.contour.maximum_contour = 0.8
         except Exception as e:

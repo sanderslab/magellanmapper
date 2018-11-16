@@ -2199,7 +2199,7 @@ def get_scaled_regionprops(img_region, scaling):
     return props, None, None
 
 def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None, 
-                  blobs_ids=None, image5d=None):
+                  blobs_ids=None, image5d=None, coord_scaled=None):
     """Get volumes by labels IDs.
     
     Args:
@@ -2226,6 +2226,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             verify the actual volume present corresponding to each label. 
             Defaults to None, in which case volume will be based solely on 
             the labels themselves.
+        coord_scaled: Array of scaled coordinates
     
     Returns:
         Nested dictionary of {ID: {:attr:`config.ABA_NAME`: name, 
@@ -2312,6 +2313,21 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                 blobs_len = len(blobs)
             #print("checking id {} with vol {}".format(label_id, vol))
             
+            # get variation in blobs throughout the region
+            coord_counts = []
+            if coord_scaled is not None:
+                coords = coord_scaled[blobs_ids == label_id]
+                if len(coords) > 0:
+                    # find density per px by getting counts of same 
+                    # coordinates and including a 0 for every empty px
+                    coord_unique, coord_counts = np.unique(
+                        coords, return_counts=True, axis=0)
+                    empty_pxs = np.sum(mask_id) - len(coord_unique)
+                    coord_counts = coord_counts.tolist()
+                    coord_counts.extend([0] * empty_pxs)
+                    print("coords:\n{}".format(coords))
+                    print("coord_counts: {}".format(coord_counts))
+            
             # insert a regional dict for the given label
             label_level = label[NODE][ABA_LEVEL]
             name = label[NODE][config.ABA_NAME]
@@ -2323,7 +2339,8 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                 region_dict = {
                     config.ABA_NAME: label[NODE][config.ABA_NAME],
                     config.VOL_KEY: vol,
-                    config.BLOBS_KEY: blobs_len
+                    config.BLOBS_KEY: blobs_len,
+                    config.VARIATION_KEY: coord_counts
                 }
                 volumes_dict[label_id] = region_dict
                 print("inserting region {} (id {}) with {} vol and {} blobs "
@@ -2346,6 +2363,8 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                         if region_dict is not None:
                             region_dict[config.VOL_KEY] += vol
                             region_dict[config.BLOBS_KEY] += blobs_len
+                            region_dict[config.VARIATION_KEY].extend(
+                                coord_counts)
                             print("added {} vol and {} blobs from {} (id {}) "
                                   "to {}".format(vol, blobs_len, name, 
                                   label_id, region_dict[config.ABA_NAME]))
@@ -2361,14 +2380,17 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
         # all blobs matched to a region at the given level; 
         # TODO: find blobs that had a label (ie not 0) but did not match any 
         # parent, including -1
+        volumes_dict[key][config.VARIATION_KEY] = np.std(
+            volumes_dict[key][config.VARIATION_KEY])
         if key >= 0:
             blobs_side = volumes_dict[key][config.BLOBS_KEY]
             blobs_mirrored = volumes_dict[-1 * key][config.BLOBS_KEY]
             print("{} (id {}), {}: volume {}, blobs {}; {}: volume {}, blobs {}"
-                .format(volumes_dict[key][config.ABA_NAME], key, 
-                RIGHT_SUFFIX, volumes_dict[key][config.VOL_KEY], blobs_side, 
-                LEFT_SUFFIX, volumes_dict[-1 * key][config.VOL_KEY], 
-                blobs_mirrored))
+                  .format(volumes_dict[key][config.ABA_NAME], key, 
+                          RIGHT_SUFFIX, volumes_dict[key][config.VOL_KEY], 
+                          blobs_side, LEFT_SUFFIX, 
+                          volumes_dict[-1 * key][config.VOL_KEY], 
+                          blobs_mirrored))
             blobs_tot += blobs_side + blobs_mirrored
     # all unlabeled blobs
     blobs_unlabeled = blobs_ids[blobs_ids == 0]
@@ -2568,6 +2590,7 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             
             # load blob densities by region if flagged
             blobs_ids = None
+            coord_scaled = None
             if densities:
                 # load blobs
                 filename_base = importer.filename_to_base(
@@ -2591,15 +2614,16 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
                     scaling = importer.calc_scaling(image5d, labels_img)
                 print("using scaling: {}".format(scaling))
                 # annotate blobs based on position
-                blobs_ids = get_label_ids_from_position(
-                    blobs[:, 0:3], labels_img, scaling)
+                blobs_ids, coord_scaled = get_label_ids_from_position(
+                    blobs[:, 0:3], labels_img, scaling, 
+                    return_coord_scaled=True)
                 print("blobs_ids: {}".format(blobs_ids))
             
             # calculate and plot volumes and densities; assume that labels 
             # images has already been thresholded, so no need to pass image5d
             volumes_dict = volumes_by_id(
                 labels_img, labels_ref_lookup, spacing, level=level, 
-                blobs_ids=blobs_ids)#, image5d=image5d)
+                blobs_ids=blobs_ids, coord_scaled=coord_scaled)
         
         elif level is not None:
             # use the all levels volumes dictionary to group child levels 
@@ -2849,6 +2873,37 @@ def _test_labels_lookup():
     print("blob IDs:\n{}".format(ids))
     print("coord_scaled:\n{}".format(coord_scaled))
 
+def _test_volumes_by_id():
+    labels_img = np.ones((4, 5, 6), dtype=int) * 15564
+    labels_img[:2, :3, :4] = 15565
+    labels_img[2:, :3, :4] = 15566
+    print(labels_img)
+    ref = load_labels_ref(config.load_labels)
+    labels_ref_lookup = create_aba_reverse_lookup(ref)
+    img_shape = (12, 10, 10)
+    resolution = np.divide(labels_img.shape, img_shape)
+    blobs = np.multiply(
+        np.random.random((10, 3)), img_shape).astype(int)
+    print("blobs:\n{}".format(blobs))
+    blobs_ids, coord_scaled = get_label_ids_from_position(
+        blobs, labels_img, resolution, 
+        return_coord_scaled=True)
+    print("blobs_ids: {}".format(blobs_ids))
+    print("coord_scaled:\n{}".format(coord_scaled))
+    vols_dict = volumes_by_id(
+        labels_img, labels_ref_lookup, 1 / resolution, blobs_ids=blobs_ids, 
+        coord_scaled=coord_scaled)
+    labels_img_count = np.zeros_like(labels_img)
+    coords_unique, coords_count = np.unique(
+        coord_scaled, return_counts=True, axis=0)
+    coordsi = lib_clrbrain.coords_for_indexing(coords_unique)
+    print("coord_scaled:\n{}".format(coord_scaled))
+    print("coords_unique:\n{}".format(coords_unique))
+    print("coordsi:\n{}".format(coordsi))
+    labels_img_count[tuple(coordsi)] = coords_count
+    print("labels_img_count:\n{}".format(labels_img_count))
+    pprint(vols_dict)
+
 def _test_region_from_id():
     """Test finding a region by ID in a labels image.
     """
@@ -2924,6 +2979,7 @@ if __name__ == "__main__":
     
     #_test_labels_lookup()
     #_test_region_from_id()
+    #_test_volumes_by_id()
     #_test_curate_img(config.filenames[0], config.prefix)
     #_test_smoothing_metric()
     #os._exit(os.EX_OK)

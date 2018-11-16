@@ -799,6 +799,7 @@ register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
+VARIATION_KEY = "variation"
 
 # flip/rotate the image; the direction of change can be variable
 flip = None

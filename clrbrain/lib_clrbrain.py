@@ -10,6 +10,12 @@ import numpy as np
 
 from clrbrain import config
 
+# file types that are associated with other types
+_FILE_TYPE_GROUPS = {
+    "obj": "mtl", 
+    "mhd": "raw"
+}
+
 def swap_elements(arr, axis0, axis1, offset=0):
     """Swap elements within an list or tuple.
     
@@ -229,33 +235,46 @@ def print_compact(arr, msg=None, mid=False):
         print(compact)
     return compact
 
-def backup_file(path, modifier=""):
+def backup_file(path, modifier="", i=None):
     """Backup a file to the next given available path with an index number 
     before the extension.
     
     The backed up path will be in the format 
     ``path-before-ext[modifier](i).ext``, where ``[modifier]`` is an optional 
     additional string, and ``i`` is the index number, which will be 
-    incremented to avoid overwriting an existing file.
+    incremented to avoid overwriting an existing file. Will also backup 
+    any associated files as given by :const:``_FILE_TYPE_GROUPS``.
     
     Args:
         path: Path of file to backup.
         modifier: Modifier string to place before the index number.
+        i: Index to use; typically use default of None to iniate recursivie 
+            backup calls.
     """
-    if not os.path.exists(path):
-        # path does not exist, so no need to back up
-        return
-    i = 1
-    ext = os.path.splitext(path)
+    if not i:
+        if not os.path.exists(path):
+            # original path does not exist, so no need to back up
+            return
+        i = 1
     backup_path = None
-    while True:
-        suffix = "{}({})".format(modifier, i)
-        backup_path = insert_before_ext(path, suffix)
-        if not os.path.exists(backup_path):
-            shutil.move(path, backup_path)
-            print("Backed up {} to {}".format(path, backup_path))
-            break
-        i += 1
+    suffix = "{}({})".format(modifier, i)
+    backup_path = insert_before_ext(path, suffix)
+    if not os.path.exists(backup_path):
+        # backup file to currently non-existent path
+        shutil.move(path, backup_path)
+        print("Backed up {} to {}".format(path, backup_path))
+        path_split = os.path.splitext(path)
+        if len(path_split) > 1:
+            # remove ".", which should exist if path was split, and get 
+            # any associated file to backup as well
+            ext_associated = _FILE_TYPE_GROUPS.get(path_split[1][1:])
+            if ext_associated:
+                # back up associated file, using the corresponding i if possible
+                backup_file(
+                    "{}.{}".format(path_split[0], ext_associated), modifier, i)
+    else:
+        # recursively try backing up with next index
+        backup_file(path, modifier, i + 1)
 
 def is_binary(img):
     """Check if image is binary.

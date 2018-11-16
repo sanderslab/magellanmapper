@@ -1933,7 +1933,8 @@ def create_aba_reverse_lookup(labels_ref):
     """
     return create_reverse_lookup(labels_ref["msg"][0], ABA_ID, ABA_CHILDREN)
 
-def get_label_ids_from_position(coord, labels_img, scaling, rounding=False):
+def get_label_ids_from_position(coord, labels_img, scaling, rounding=False, 
+                                return_coord_scaled=False):
     """Get the atlas label IDs for the given coordinates.
     
     Args:
@@ -1948,10 +1949,14 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False):
             inversely to avoid size degredation with repeated scaling. 
             Typically rounding is False (default) so that coordinates fall 
             evenly to their lowest integer, without exceeding max bounds.
+        return_coord_scaled: True to return the array of scaled coordinates; 
+            defaults to False.
     
     Returns:
-        An array of label IDs corresponding to ``coords``, or a scalar of 
-        one ID if only one coordinate is given.
+        An array of label IDs corresponding to ``coord``, or a scalar of 
+        one ID if only one coordinate is given. If ``return_coord_scaled`` is 
+        True, also returns a Numpy array of the same shape as ``coord`` 
+        scaled based on ``scaling``.
     """
     lib_clrbrain.printv("getting label IDs from coordinates")
     # scale coordinates to atlas image size
@@ -1973,17 +1978,13 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False):
     print("y exceeding:\n{}".format(coord_scaled[coord_scaled[:, 1] >= labels_img.shape[1]]))
     '''
     
-    # split coordinates into lists by dimension to index the labels image
-    # at once
-    coord_scaled = np.transpose(coord_scaled)
-    coord_scaled = np.split(coord_scaled, coord_scaled.shape[0])
-    '''
-    print("coord:\n{}".format(coord))
-    print("coord_scaled:\n{}".format(coord_scaled))
-    print("max coord scaled: {}".format(np.max(coord_scaled, axis=2)))
-    print("labels_img shape: {}".format(labels_img.shape))
-    '''
-    return labels_img[tuple(coord_scaled)][0]
+    # index blob coordinates into labels image by int array indexing to 
+    # get the corresponding label IDs
+    coordsi = lib_clrbrain.coords_for_indexing(coord_scaled)
+    label_ids = labels_img[tuple(coordsi)][0]
+    if return_coord_scaled:
+       return label_ids, coord_scaled
+    return label_ids
 
 def get_label(coord, labels_img, labels_ref, scaling, level=None, 
               rounding=False):
@@ -2843,8 +2844,10 @@ def _test_labels_lookup():
     blobs = np.array([[300, 5000, 3000], [350, 5500, 4500], [400, 6000, 5000]])
     image5d = importer.read_file(config.filename, config.series)
     scaling = importer.calc_scaling(image5d, labels_img)
-    ids = get_label_ids_from_position(blobs[:, 0:3], labels_img, scaling)
+    ids, coord_scaled = get_label_ids_from_position(
+        blobs[:, 0:3], labels_img, scaling, return_coord_scaled=True)
     print("blob IDs:\n{}".format(ids))
+    print("coord_scaled:\n{}".format(coord_scaled))
 
 def _test_region_from_id():
     """Test finding a region by ID in a labels image.

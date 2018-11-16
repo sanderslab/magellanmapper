@@ -347,6 +347,23 @@ def last_lines(path, n):
             return lines
     return lines[-1*n:]
 
+def coords_for_indexing(coords):
+    """Convert array of coordinates to array for fancy indexing in a 
+    Numpy array.
+    
+    Args:
+        coords: Array of shape (n, m), where n = number of coordinate sets, 
+            and m = number of coordinate dimensions.
+    
+    Returns:
+        Array of coordinates split into axes, such as 
+        `nd.array(rows_array, columns_array)`). This array can then be used 
+        to index another array through `arr[tuple(indices)]`.
+    """
+    coordsi = np.transpose(coords)
+    coordsi = np.split(coordsi, coordsi.shape[0])
+    return coordsi
+
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))
     a = np.arange(2 * 3).reshape(2, 3).astype(np.float)

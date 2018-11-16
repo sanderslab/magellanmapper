@@ -376,11 +376,16 @@ class Visualization(HasTraits):
                 try:
                     # save before setting any other objects to avoid VTK 
                     # render error
+                    print("saving 3D scene to {}".format(path))
                     self.scene.mlab.savefig(path)
                 except SceneModelError as e:
                     # the scene may not have been activated yet
                     print("unable to save 3D surface")
             if show_orientation:
+                # TODO: cannot save file manually once orientation axes are on 
+                # and have not found a way to turn them off easily, so 
+                # consider turning them off by default and deferring to the 
+                # GUI to turn them back on
                 self.scene.mlab.orientation_axes()
         # updates the GUI here even though it doesn't elsewhere for some reason
         self.rois_check_list = _ROI_DEFAULT
@@ -484,11 +489,9 @@ class Visualization(HasTraits):
         self.roi[~label_mask] = 0
         plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
-        # WORKAROUND: occasionally the 3D object fails to save and cannot 
-        # be saved with orientation axes on, so turn them off by default 
-        # and defer to the GUI to turn them back on
+        name = os.path.splitext(os.path.basename(config.filename))[0]
         self._post_3d_display(
-            title="label3d_{}".format(label_id), show_orientation=False)
+            title="label3d_{}".format(name), show_orientation=False)
     
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.

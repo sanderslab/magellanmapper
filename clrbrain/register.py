@@ -3081,7 +3081,7 @@ if __name__ == "__main__":
         
         # use ABA levels up through the specified level to collect 
         # sub-regions to the given level
-        levels = list(range(config.labels_level))
+        levels = list(range(config.labels_level + 1))
         ref = load_labels_ref(config.load_labels)
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         

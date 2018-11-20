@@ -794,26 +794,34 @@ def interpolate_label_between_planes(labels_img, label_id, axis, bounds):
     region[tuple(slices_planes)] = region_within_bounds
     labels_img[tuple(slices)] = region
 
-def build_heat_map(img_np, coords):
+def build_heat_map(shape, coords):
     """Build a heat map for an image based on point placement within it.
     
+    The heat map is scaled at the level of ``shape``, generally assuming 
+    that ``coords`` have been scaled from a larger size. In other words, 
+    the heat map will show the density at the level of its pixels and 
+    can be further rescaled/resized to show density at different resolutions.
+    
     Args:
-        img_np: Image as a numpy array.
-        coords: Array of coordinates of points within ``img_np``. The array 
+        shape: Shape of image that contains ``coords``.
+        coords: Array of coordinates of points. The array 
             should have shape (n, m), where n = number of coordinate sets, 
             and m = number of coordinate dimensions.
     
     Returns:
-        An image of the same shape as ``img_np`` with values corresponding 
+        An image of shape ``shape`` with values corresponding 
         to the number of point occurrences at each pixel.
     """
-    heat_map = np.zeros_like(img_np)
+    # get counts of points at the same coordinate as a measure of density
     coords_unique, coords_count = np.unique(
         coords, return_counts=True, axis=0)
     coordsi = lib_clrbrain.coords_for_indexing(coords_unique)
     print("coords:\n{}".format(coords))
     print("coords_unique:\n{}".format(coords_unique))
     print("coordsi:\n{}".format(coordsi))
+    dtype = lib_clrbrain.dtype_within_range(
+        0, np.amax(coords_count), True, False)
+    heat_map = np.zeros(shape, dtype=dtype)
     heat_map[tuple(coordsi)] = coords_count
     print("heat_map:\n{}".format(heat_map))
     return heat_map

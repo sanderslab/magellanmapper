@@ -2707,7 +2707,8 @@ def register_volumes_mp(img_paths, labels_ref_lookup, level, scale=None,
     return vols, paths
 
 def group_volumes(labels_ref_lookup, vol_dicts):
-    """Group volumes from multiple volume dictionaries.
+    """Group volumes from multiple volume dictionaries to compare volume 
+    and density data across samples.
     
     Args:
         labels_ref_lookup: The labels reference lookup, assumed to be an 
@@ -2722,6 +2723,7 @@ def group_volumes(labels_ref_lookup, vol_dicts):
         in places of individual values.
     """
     ids = list(labels_ref_lookup.keys())
+    metrics = (config.VOL_KEY, config.BLOBS_KEY, config.VARIATION_KEY)
     grouped_vol_dict = {}
     for key in ids:
         # check all IDs, including negative versions for mirrored labels
@@ -2739,17 +2741,17 @@ def group_volumes(labels_ref_lookup, vol_dicts):
                     if entry_group is None:
                         # shallow copy since only immutable values within dict
                         entry_group = dict(entry_vol)
-                        entry_group[config.VOL_KEY] = [
-                            entry_group[config.VOL_KEY]]
-                        entry_group[config.BLOBS_KEY] = [
-                            entry_group[config.BLOBS_KEY]]
+                        for metric in metrics:
+                            val = entry_group.get(metric)
+                            if val is not None:
+                                entry_group[metric] = [val]
                         grouped_vol_dict[label_id] = entry_group
                     else:
                         # append numerical values to existing lists
-                        entry_group[config.VOL_KEY].append(
-                            entry_vol[config.VOL_KEY])
-                        entry_group[config.BLOBS_KEY].append(
-                            entry_vol[config.BLOBS_KEY])
+                        for metric in metrics:
+                            val = entry_vol.get(metric)
+                            if val is not None:
+                                entry_group[metric].append(val)
     #print("grouped_vol_dict: {}".format(grouped_vol_dict))
     return grouped_vol_dict
 

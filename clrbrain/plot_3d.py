@@ -794,6 +794,30 @@ def interpolate_label_between_planes(labels_img, label_id, axis, bounds):
     region[tuple(slices_planes)] = region_within_bounds
     labels_img[tuple(slices)] = region
 
+def build_heat_map(img_np, coords):
+    """Build a heat map for an image based on point placement within it.
+    
+    Args:
+        img_np: Image as a numpy array.
+        coords: Array of coordinates of points within ``img_np``. The array 
+            should have shape (n, m), where n = number of coordinate sets, 
+            and m = number of coordinate dimensions.
+    
+    Returns:
+        An image of the same shape as ``img_np`` with values corresponding 
+        to the number of point occurrences at each pixel.
+    """
+    heat_map = np.zeros_like(img_np)
+    coords_unique, coords_count = np.unique(
+        coords, return_counts=True, axis=0)
+    coordsi = lib_clrbrain.coords_for_indexing(coords_unique)
+    print("coords:\n{}".format(coords))
+    print("coords_unique:\n{}".format(coords_unique))
+    print("coordsi:\n{}".format(coordsi))
+    heat_map[tuple(coordsi)] = coords_count
+    print("heat_map:\n{}".format(heat_map))
+    return heat_map
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

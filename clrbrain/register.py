@@ -74,6 +74,7 @@ IMG_EXP = "exp.mhd"
 IMG_GROUPED = "grouped.mhd"
 IMG_ATLAS_TEMPLATE = "atlasVolumeTemplate.mhd"
 IMG_BORDERS = "borders.mhd"
+IMG_HEAT_MAP = "heat.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -2578,15 +2579,15 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
         json_path_all = get_volumes_dict_path(mod_path, None)
         volumes_dict = open_json(json_path_all)
         
+        # load labels image and setup labels dictionary
+        labels_img_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS)
+        spacing = labels_img_sitk.GetSpacing()
+        labels_img = sitk.GetArrayFromImage(labels_img_sitk)
+        print("{} shape: {}".format(img_path, labels_img.shape))
+        
         if volumes_dict is None:
             # build volumes dictionary for the given level, which can be None
-            
-            # load labels image and setup labels dictionary
-            labels_img_sitk = load_registered_img(
-                mod_path, get_sitk=True, reg_name=IMG_LABELS)
-            spacing = labels_img_sitk.GetSpacing()
-            labels_img = sitk.GetArrayFromImage(labels_img_sitk)
-            print("{} shape: {}".format(img_path, labels_img.shape))
             
             # load blob densities by region if flagged
             blobs_ids = None
@@ -2623,7 +2624,15 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             # images has already been thresholded, so no need to pass image5d
             volumes_dict = volumes_by_id(
                 labels_img, labels_ref_lookup, spacing, level=level, 
-                blobs_ids=blobs_ids, coord_scaled=coord_scaled)
+                blobs_ids=blobs_ids)
+            
+            # build heat map to store densities per label px, which will 
+            # be used to calculate variances per label
+            heat_map = plot_3d.build_heat_map(labels_img, coord_scaled)
+            out_path = _reg_out_path(mod_path, IMG_HEAT_MAP)
+            print("writing {}".format(out_path))
+            heat_map_sitk = replace_sitk_with_numpy(labels_img_sitk, heat_map)
+            sitk.WriteImage(heat_map_sitk, out_path, False)
         
         elif level is not None:
             # use the all levels volumes dictionary to group child levels 
@@ -2891,17 +2900,7 @@ def _test_volumes_by_id():
     print("blobs_ids: {}".format(blobs_ids))
     print("coord_scaled:\n{}".format(coord_scaled))
     vols_dict = volumes_by_id(
-        labels_img, labels_ref_lookup, 1 / resolution, blobs_ids=blobs_ids, 
-        coord_scaled=coord_scaled)
-    labels_img_count = np.zeros_like(labels_img)
-    coords_unique, coords_count = np.unique(
-        coord_scaled, return_counts=True, axis=0)
-    coordsi = lib_clrbrain.coords_for_indexing(coords_unique)
-    print("coord_scaled:\n{}".format(coord_scaled))
-    print("coords_unique:\n{}".format(coords_unique))
-    print("coordsi:\n{}".format(coordsi))
-    labels_img_count[tuple(coordsi)] = coords_count
-    print("labels_img_count:\n{}".format(labels_img_count))
+        labels_img, labels_ref_lookup, 1 / resolution, blobs_ids=blobs_ids)
     pprint(vols_dict)
 
 def _test_region_from_id():

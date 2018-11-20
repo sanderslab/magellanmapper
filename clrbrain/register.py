@@ -2341,11 +2341,9 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             # insert a regional dict for the given label
             label_level = label[NODE][ABA_LEVEL]
             name = label[NODE][config.ABA_NAME]
-            if level is None or label_level == level or label_level == -1:
+            if level is None or label_level == level:
                 # include region in volumes dict if at the given level, no 
-                # level specified (to build a mster dict), or at the default 
-                # (organism) level, which is used to catch all children without 
-                # a parent at the given level
+                # level specified (to build a master dict)
                 region_dict = {
                     config.ABA_NAME: label[NODE][config.ABA_NAME],
                     config.VOL_KEY: vol,
@@ -2469,7 +2467,7 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map):
             label = labels_ref_lookup[key] # always use pos val
             label_level = label[NODE][ABA_LEVEL]
             name = label[NODE][config.ABA_NAME]
-            if label_level == level or label_level == -1:
+            if label_level == level:
                 # take values directly from the given level
                 print("found region at given level with id {}".format(label_id))
                 level_dict[label_id] = volumes_dict.get(label_id)

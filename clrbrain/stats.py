@@ -340,7 +340,8 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
         per line.
     """
     header = [
-        "Sample", "Geno", "Side", "Region", "Level", "Vol", "Dens", "Nuclei"]
+        "Sample", "Geno", "Side", "Region", "Level", "Vol", "Dens", "Nuclei", 
+        "Variation"]
     num_samples = len(groups)
     #data = {k: [] for k in header} # retains order for Python 3.6 but not <
     data = OrderedDict()
@@ -349,18 +350,6 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
     for key in volumes_dict.keys():
         # find negative keys based on the given positive key to group them
         if key >= 0:
-            # get volumes in the given unit, which are scalar for 
-            # individual image, list if multiple images
-            vol_side = np.divide(
-                volumes_dict[key][config.VOL_KEY], unit_factor)
-            vol_mirrored = np.divide(
-                volumes_dict[-1 * key][config.VOL_KEY], unit_factor)
-            # calculate densities based on blobs counts and volumes
-            blobs_side = volumes_dict[key][config.BLOBS_KEY]
-            blobs_mirrored = volumes_dict[-1 * key][config.BLOBS_KEY]
-            density_side = np.nan_to_num(np.divide(blobs_side, vol_side))
-            density_mirrored = np.nan_to_num(
-                np.divide(blobs_mirrored, vol_mirrored))
             
             # concatenate vol/dens from each side into 1d list
             data[header[0]].extend(list(range(num_samples)) * 2)
@@ -369,12 +358,21 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
             data[header[2]].extend(["R"] * num_samples)
             data[header[3]].extend([key] * num_samples * 2)
             data[header[4]].extend([level] * num_samples * 2)
-            data[header[5]].extend(vol_side.tolist())
-            data[header[5]].extend(vol_mirrored.tolist())
-            data[header[6]].extend(density_side.tolist())
-            data[header[6]].extend(density_mirrored.tolist())
-            data[header[7]].extend(blobs_side)
-            data[header[7]].extend(blobs_mirrored)
+            
+            for key_signed in (key, -1 * key):
+                # gather metrics, which are scalar for individual images, 
+                # list for multiple (grouped) images
+                
+                # convert volumes to the given unit and use to calc density
+                vol = np.divide(
+                    volumes_dict[key_signed][config.VOL_KEY], unit_factor)
+                blobs = volumes_dict[key_signed][config.BLOBS_KEY]
+                density = np.nan_to_num(np.divide(blobs, vol))
+                data[header[5]].extend(vol.tolist())
+                data[header[6]].extend(density.tolist())
+                data[header[7]].extend(blobs)
+                data[header[8]].extend(
+                    volumes_dict[key_signed][config.VARIATION_KEY])
             
     # pool lists and add to Pandas data frame
     data_frame = pd.DataFrame(data=data, columns=header)

@@ -204,6 +204,9 @@ def volume_stats_to_csv(vol_stats, path, groups=[""]):
         groups: List of groups; defaults to a list with an empty string, which 
             is the default for ``vol_stats`` with no group, including an 
             individual sample.
+    
+    Returns:
+        Volumes stats in a Pandas data frame.
     """
     # unpack volume stats
     groups_dict, names, means_keys, sem_keys, meas_keys, meas_units = vol_stats
@@ -238,7 +241,7 @@ def volume_stats_to_csv(vol_stats, path, groups=[""]):
     
     data_frame = pd.DataFrame(data=data, columns=header)
     data_frame.to_csv(path, index=False)
-    print("exported volume data per group to CSV at {}".format(path))
+    print("exported volume data per group to CSV file: \"{}\"".format(path))
     return data_frame
 
 def volumes_to_csv(volumes_dict, path, groups=[""], unit_factor=1.0):
@@ -382,7 +385,7 @@ def data_frames_to_csv(data_frames, path):
     if not path.endswith(ext): path += ext
     combined = pd.concat(data_frames)
     combined.to_csv(path, index=False)
-    print("exported volume data per sample to CSV at {}".format(path))
+    print("exported volume data per sample to CSV file: \"{}\"".format(path))
 
 if __name__ == "__main__":
     print("Starting Clrbrain stats...")

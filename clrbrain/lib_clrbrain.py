@@ -16,6 +16,13 @@ _FILE_TYPE_GROUPS = {
     "mhd": "raw"
 }
 
+# Numpy numerical dtypes with various ranges
+_DTYPES = {
+    "uint": [np.uint8, np.uint16, np.uint32, np.uint64], 
+    "int": [np.int8, np.int16, np.int32, np.int64], 
+    "float": [np.float16, np.float32, np.float64]
+}
+
 def swap_elements(arr, axis0, axis1, offset=0):
     """Swap elements within an list or tuple.
     
@@ -363,6 +370,37 @@ def coords_for_indexing(coords):
     coordsi = np.transpose(coords)
     coordsi = np.split(coordsi, coordsi.shape[0])
     return coordsi
+
+def dtype_within_range(min_val, max_val, integer, signed):
+    """Get a dtype that will contain the given range.
+    
+    :const:``_DTYPES`` will be used to specify the possible dtypes.
+    
+    Args:
+        min_val: Minimum required value, inclusive.
+        max_val: Maximim required value, inclusive.
+        integer: True to get an int type, False for float.
+        signed: True for a signed int, False for unsigned; ignored for float.
+    
+    Returns:
+        The dtype fitting the range specifications.
+    
+    Raise:
+        TypeError if a dtype with the appropriate range cannot be found.
+    """
+    if integer:
+        type_group = "int" if signed else "uint"
+        fn_info = np.iinfo
+    else:
+        type_group = "float"
+        fn_info = np.finfo
+    types = _DTYPES[type_group]
+    for dtype in types:
+        if fn_info(dtype).min <= min_val and fn_info(dtype).max >= max_val:
+            return dtype
+    raise TypeError(
+        "unable to find numerical type (integer {}, signed {}) containing "
+        "range {} through {}".format(integer, signed, min_val, max_val))
 
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))

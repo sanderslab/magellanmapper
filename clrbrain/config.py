@@ -608,7 +608,8 @@ def update_register_settings(settings, settings_type):
     # enable label smoothing
     settings.add_modifier(
         "smoothtest", 
-        {"smooth": (0, 1, 2, 3, 4, 5)},#, 10)}, 
+        #{"smooth": (0, 1, 2, 3, 4, 5)},#, 10)}, 
+        {"smooth": (0, 0.25, 0.5, 0.75, 1, 1.25)},
         settings_type)
     
     # groupwise registration batch 02

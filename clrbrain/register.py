@@ -569,7 +569,7 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     img_sitk_back.SetOrigin(origin)
     return img_sitk_back
 
-def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
+def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[1]):
     """Smooth each label within labels annotation image.
     
     Labels images created in one orthogonal direction may have ragged, 

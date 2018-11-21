@@ -20,7 +20,7 @@ kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
            "ttest.paired", "wilcoxon.paired", "fligner")
 
 # measurements, which correspond to columns in main data frame
-kMeas = c("Vol", "Dens", "Nuclei")
+kMeas = c("Vol", "Dens", "Nuclei", "Variation")
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -277,7 +277,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
     # filter data frame for the given region
     df.region <- df[df$Region == region, ]
     # generate mask to filter out values of 0
-    nonzero <- df.region[[col]] > 0
+    nonzero <- df.region[[col]] > 0 & !is.nan(df.region[[col]])
     stats$Region[i] <- region
     
     if (any(nonzero)) {
@@ -298,7 +298,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
         # and ignoring the split.by.sides parameter
         split.col <- "Condition"
         df.region.nonzero <- aggregate(
-          cbind(Vol, Nuclei) ~ Sample + Geno + Condition + RegionName, 
+          cbind(Vol, Nuclei, Variation) 
+            ~ Sample + Geno + Condition + RegionName, 
           df.region.nonzero, sum)
         df.region.nonzero$Dens <- (
           df.region.nonzero$Nuclei / df.region.nonzero$Vol)

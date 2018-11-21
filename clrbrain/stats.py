@@ -398,5 +398,20 @@ def data_frames_to_csv(data_frames, path):
     combined.to_csv(path, index=False, na_rep="NaN")
     print("exported volume data per sample to CSV file: \"{}\"".format(path))
 
+def merge_csvs(in_paths, out_path):
+    """Combine and export multiple CSV files to a single CSV file.
+    
+    Args:
+        in_paths: List of paths to CSV files to import as data frames 
+            and concatenate.
+        path: Output path.
+    """
+    dfs = [pd.read_csv(path) for path in in_paths]
+    data_frames_to_csv(dfs, out_path)
+
 if __name__ == "__main__":
     print("Starting Clrbrain stats...")
+    from clrbrain import cli
+    cli.main(True)
+    
+    merge_csvs(config.filenames, config.prefix)

@@ -98,32 +98,26 @@ class PlotEditor:
         self.axes.clear()
         self.hline = None
         self.vline = None
-        # show main image in grayscale
-        cmaps = config.process_settings["channel_colors"]
-        img2d = self.img3d[self.coord[0]]
-        plot_support.imshow_multichannel(
-            self.axes, img2d, 0, cmaps, self.aspect, 1, origin=self.origin, 
-            interpolation="none")
-        
-        # show labels image
-        img2d = self.img3d_labels[self.coord[0]]
-        label_ax_img = plot_support.imshow_multichannel(
-            self.axes, img2d, 0, [self.cmap_labels], self.aspect, self.alpha, 
-            origin=self.origin, interpolation="none", norms=[self.cmap_labels.norm])
-        self.axes.format_coord = PixelDisplay(img2d)
-        self.plane_slider.set_val(self.coord[0])
-        self.ax_img = label_ax_img[0]
-        
-        # show borders image
+        # prep main image in grayscale and labels with discrete colormap
+        imgs2d = [self.img3d[self.coord[0]], self.img3d_labels[self.coord[0]]]
+        cmaps = [config.process_settings["channel_colors"], self.cmap_labels]
+        alphas = [1, self.alpha]
         if self.img3d_borders is not None:
+            # show borders image
             img2d = self.img3d_borders[self.coord[0]]
             for channel in range(img2d.shape[-1] - 1, -1, -1):
                 # show first (original) borders image last so that its 
                 # colormap values take precedence to highlight original bounds
-                cmap = self.cmap_borders[channel]
-                plot_support.imshow_multichannel(
-                    self.axes, img2d[..., channel], 0, [cmap], self.aspect, 1, 
-                    origin=self.origin, interpolation="none", norms=[cmap.norm])
+                imgs2d.append(img2d[..., channel])
+                cmaps.append(self.cmap_borders[channel])
+                alphas.append(1)
+        
+        # overlay all images and set labels for footer value on mouseover
+        ax_imgs = plot_support.overlay_images(
+            self.axes, self.aspect, self.origin, imgs2d, 0, cmaps, alphas)
+        self.axes.format_coord = PixelDisplay(imgs2d[1])
+        self.plane_slider.set_val(self.coord[0])
+        self.ax_img = ax_imgs[1][0]
         
         if self.xlim is not None and self.ylim is not None:
             self.axes.set_xlim(self.xlim)

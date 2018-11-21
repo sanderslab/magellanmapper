@@ -31,6 +31,9 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
+    
+    Returns:
+        List of ``AxesImage`` objects.
     """
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
@@ -62,6 +65,61 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         img.append(img_chl)
         i += 1
     return img
+
+def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas, 
+                   vmins=None, vmaxs=None):
+    """Show multiple, overlaid images.
+    
+    Wrapper function calling :func:``imshow_multichannel`` for multiple 
+    images.
+    
+    Args:
+        ax: Axes.
+        aspect: Aspect ratio.
+        origin: Image origin.
+        imgs2d: List of 2D images to display.
+        channels: Either a single channel for all images or a list of 
+            channels corresponding to each image.
+        cmaps: Either a single colormap for all images or a list of 
+            colormaps corresponding to each image. Colormaps of type 
+            :class:``colormaps.DiscreteColormap`` will have their 
+            normalization object applied as well.
+        alphas: Either a single alpha for all images or a list of 
+            alphas corresponding to each image.
+        vmins: Either a single vmin for all images or a list of 
+            vmins corresponding to each image; defaults to None.
+        vmaxs: Either a single vmax for all images or a list of 
+            vmaxs corresponding to each image; defaults to None.
+    
+    Returns:
+        Nested list containing a list of ``AxesImage`` objects 
+        corresponding to display of each ``imgs2d`` image.
+    """
+    ax_imgs = []
+    num_imgs2d = len(imgs2d)
+    
+    def ensure_list(val):
+        # convert scalars to lists of repeated vals
+        return [val] * num_imgs2d if not isinstance(val, (tuple, list)) else val
+    
+    # convert args that accept scalars but require lists
+    channels = ensure_list(channels)
+    alphas = ensure_list(alphas)
+    vmins = ensure_list(vmins)
+    vmaxs = ensure_list(vmaxs)
+    
+    for i in range(num_imgs2d):
+        cmap = cmaps[i]
+        norm = None
+        if isinstance(cmap, colormaps.DiscreteColormap):
+            # get normalization factor for discrete colormaps
+            norm = [cmap.norm]
+            cmap = [cmap]
+        ax_img = imshow_multichannel(
+            ax, imgs2d[i], channels[i], cmap, aspect, alphas[i], origin=origin, 
+            interpolation="none", norms=norm, vmin=vmins[i], vmax=vmaxs[i])
+        ax_imgs.append(ax_img)
+    return ax_imgs
 
 def max_plane(img3d, plane):
     """Get the max plane for the given 3D image.

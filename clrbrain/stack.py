@@ -105,19 +105,14 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         #vmax = np.multiply(vmax, (0.9, 1.0))
         
         # multiple artists can be shown at each frame by collecting 
-        # each group of artists in a list; imshow_multichannel returns 
-        # a list of artists for each channel
-        plotted_imgs[i] = plot_support.imshow_multichannel(
-            ax, imgs[0], config.channel, cmaps, aspect, 1, 
-            vmin=config.near_min, vmax=vmax, 
-            origin=origin)
-        if labels_img is not None:
-            # show labels image if available
-            ax_img_label = plot_support.imshow_multichannel(
-                ax, imgs[1], 0, [cmap_labels], aspect, 0.9, 
-                origin=origin, interpolation="none", 
-                norms=[cmap_labels.norm])
-            plotted_imgs[i].extend(ax_img_label)
+        # each group of artists in a list; overlay_images returns 
+        # a nested list containing a list for each image, which in turn 
+        # contains a list of artists for each channel
+        ax_imgs = plot_support.overlay_images(
+            ax, aspect, origin, imgs, [config.channel, 0], 
+            [cmaps, cmap_labels], [1, 0.9], 
+            [config.near_min, None], [vmax, None])
+        plotted_imgs[i] = np.array(ax_imgs).flatten()
     pool.close()
     pool.join()
     

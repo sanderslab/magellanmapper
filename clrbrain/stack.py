@@ -198,8 +198,7 @@ def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None,
             image5d, img_sl, plane=config.plane)
         if labels_img is not None:
             # build discrete colormap and extract ROI from labels
-            cmap_labels = colormaps.DiscreteColormap(
-                labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
+            cmap_labels = colormaps.get_labels_discrete_colormap(labels_img)
             planes_labels, _, _ = plot_2d.extract_plane(
                 labels_img[None], img_sl, plane=config.plane)
             

@@ -315,7 +315,8 @@ def volumes_to_csv(volumes_dict, path, groups=[""], unit_factor=1.0):
     print("exported volume data per sample to CSV at {}".format(path))
     return data_frame
 
-def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
+def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0, 
+                      condition=None):
     """Export volumes from each sample to Pandas format, with 
     measurements for each region on a separate line.
     
@@ -334,14 +335,18 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
             rather than a list of values.
         unit_factor: Factor by which volumes will be divided to adjust units; 
             defaults to 1.0.
+        condition: Single condition string for all samples; defaults to None, 
+            in which case an empty string will be used.
     
     Returns:
         Pandas ``DataFrame`` with regional measurements given as one region 
         per line.
     """
+    if condition is None:
+        condition = ""
     header = [
-        "Sample", "Geno", "Side", "Region", "Level", "Vol", "Dens", "Nuclei", 
-        "Variation"]
+        "Sample", "Geno", "Side", "Condition", "Region", "Level", "Vol", 
+        "Dens", "Nuclei", "Variation"]
     num_samples = len(groups)
     #data = {k: [] for k in header} # retains order for Python 3.6 but not <
     data = OrderedDict()
@@ -356,8 +361,10 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
             data[header[1]].extend(groups * 2)
             data[header[2]].extend(["L"] * num_samples)
             data[header[2]].extend(["R"] * num_samples)
-            data[header[3]].extend([key] * num_samples * 2)
-            data[header[4]].extend([level] * num_samples * 2)
+            data[header[3]].extend([condition] * num_samples * 2)
+            data[header[4]].extend([key] * num_samples * 2)
+            data[header[5]].extend([level] * num_samples * 2)
+            n = 6
             
             for key_signed in (key, -1 * key):
                 # gather metrics, which are scalar for individual images, 
@@ -368,10 +375,10 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0):
                     volumes_dict[key_signed][config.VOL_KEY], unit_factor)
                 blobs = volumes_dict[key_signed][config.BLOBS_KEY]
                 density = np.nan_to_num(np.divide(blobs, vol))
-                data[header[5]].extend(vol.tolist())
-                data[header[6]].extend(density.tolist())
-                data[header[7]].extend(blobs)
-                data[header[8]].extend(
+                data[header[n]].extend(vol.tolist())
+                data[header[n + 1]].extend(density.tolist())
+                data[header[n + 2]].extend(blobs)
+                data[header[n + 3]].extend(
                     volumes_dict[key_signed][config.VARIATION_KEY])
             
     # pool lists and add to Pandas data frame

@@ -3092,6 +3092,13 @@ if __name__ == "__main__":
             groups_numeric = [
                 config.GROUPS_NUMERIC[geno] for geno in config.groups]
             dfs = []
+            out_path = "vols_by_sample"
+            # fill condition column and make output path based on prefix arg
+            if config.suffix is None:
+                condition = "original" 
+            else:
+                condition = config.suffix.replace("_", "")
+                out_path += config.suffix
             for level in levels:
                 # register segments (or simply load if already done), combine 
                 # from all samples, and convert to Pandas data frame for 
@@ -3102,10 +3109,11 @@ if __name__ == "__main__":
                 group_vol_dict = group_volumes(labels_ref_lookup, vol_dicts)
                 dfs.append(
                     stats.regions_to_pandas(
-                        group_vol_dict, level, groups_numeric, unit_factor))
+                        group_vol_dict, level, groups_numeric, unit_factor, 
+                        condition))
             
             # combine data frames and export to CSV
-            stats.data_frames_to_csv(dfs, "vols_by_sample")
+            stats.data_frames_to_csv(dfs, out_path)
         
         elif config.register_type == config.REGISTER_TYPES[6]:
             # export region IDs and parents at given level to CSV

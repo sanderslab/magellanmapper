@@ -386,10 +386,16 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0,
     return data_frame
 
 def data_frames_to_csv(data_frames, path):
+    """Combine and export multiple data frames to CSV file.
+    
+    Args:
+        data_frames: List of data frames to concatenate.
+        path: Output path.
+    """
     ext = ".csv"
     if not path.endswith(ext): path += ext
     combined = pd.concat(data_frames)
-    combined.to_csv(path, index=False)
+    combined.to_csv(path, index=False, na_rep="NaN")
     print("exported volume data per sample to CSV file: \"{}\"".format(path))
 
 if __name__ == "__main__":

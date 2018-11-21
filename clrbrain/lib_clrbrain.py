@@ -294,44 +294,6 @@ def is_binary(img):
     """
     return ((img == 0) | (img == 1)).all()
 
-def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
-                      seed=None, multiplier=255, offset=0):
-    """Make a discrete colormap using :attr:``config.colors`` as the 
-    starting colors and filling in the rest with randomly generated RGB values.
-    
-    Args:
-        num_colors: Number of discrete colors to generate.
-        alpha: Transparency level.
-        prioritize_defaults: If True, the default colors from 
-            :attr:``config.colors`` will replace the initial colormap elements; 
-            defaults to True.
-        seed: Random number seed; defaults to None, in which case no seed 
-            will be set.
-        multiplier: Multiplier for random values generated for RGB values; 
-            defaults to 255.
-        offset: Offset to generated random numbers; defaults to 0.
-    
-    Returns:
-        2D Numpy array in the format [[R, G, B, alpha], ...]. This colormap 
-        will need to be converted into a Matplotlib colormap using 
-        ``LinearSegmentedColormap.from_list`` to generate a map that can 
-        be used directly in functions such as ``imshow``.
-    """
-    # generate random combination of RGB values for each number of colors, 
-    # skewed by offset and limited by multiplier
-    if seed is not None:
-        np.random.seed(seed)
-    cmap = (np.random.random((num_colors, 4)) 
-            * multiplier + offset).astype(np.uint8)
-    cmap[:, -1] = alpha # make slightly transparent
-    if prioritize_default:
-        # prioritize default colors by replacing first colors with default ones
-        for i in range(len(config.colors)):
-            if i >= num_colors:
-                break
-            cmap[i, :3] = config.colors[i]
-    return cmap
-
 def last_lines(path, n):
     """Get the last lines of a file by simply loading the entire file and 
     returning only the last specified lines, without depending on any 

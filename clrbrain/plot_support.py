@@ -5,20 +5,15 @@
 """
 
 import numpy as np
-from matplotlib import colors
 import matplotlib.backend_bases as backend_bases
 
+from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 
-CMAP_GRBK = colors.LinearSegmentedColormap.from_list(
-    config.CMAP_GRBK_NAME, ["black", "green"])
-CMAP_RDBK = colors.LinearSegmentedColormap.from_list(
-    config.CMAP_RDBK_NAME, ["black", "red"])
-
-def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha, 
+def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, 
                         vmin=None, vmax=None, origin=None, interpolation=None, 
                         norms=None):
     """Show multichannel 2D image with channels overlaid over one another.
@@ -27,7 +22,7 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
         ax: Axes plot.
         img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
         channel: Channel to display; if None, all channels will be shown.
-        colormaps: List of colormaps corresponding to each channel. Colormaps 
+        cmaps: List of colormaps corresponding to each channel. Colormaps 
             can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
         alpha: Default alpha transparency level.
@@ -35,7 +30,7 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
         vmax: Imshow vmax level; defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
-        norms: List of normalizations, which should correspond to ``colormaps``.
+        norms: List of normalizations, which should correspond to ``cmaps``.
     """
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
@@ -48,13 +43,13 @@ def imshow_multichannel(ax, img2d, channel, colormaps, aspect, alpha,
         if i == 1:
             # after the 1st channel, all subsequent channels are transluscent
             alpha *= 0.3
-        cmap = colormaps[chl]
+        cmap = cmaps[chl]
         norm = None if norms is None else norms[chl]
         # check for custom colormaps
         if cmap == config.CMAP_GRBK_NAME:
-            cmap = CMAP_GRBK
+            cmap = colormaps.CMAP_GRBK
         elif cmap == config.CMAP_RDBK_NAME:
-            cmap = CMAP_RDBK
+            cmap = colormaps.CMAP_RDBK
         if vmin is not None:
             vmin_plane = vmin[chl]
         if vmax is not None:
@@ -118,101 +113,6 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None):
         # defaults to "xy"
         aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
     return arrs_3d, arrs_1d, aspect, origin
-
-class DiscreteColormap(colors.ListedColormap):
-    '''Extends :class:``matplotlib.colors.ListedColormap`` to generate a 
-    discrete colormap and associated normalization object.
-    
-    Attributes:
-        cmap_labels: Tuple of N lists of RGBA values, where N is equal 
-            to the number of colors, with a discrete color for each 
-            unique value in ``labels``.
-        norm: Normalization object, which is of type 
-            :class:``matplotlib.colors.NoNorm`` if indexing directly or 
-            :class:``matplotlib.colors.BoundaryNorm`` if otherwise.
-    '''
-    def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
-                 multiplier=255, offset=0, background=None):
-        '''Generate discrete colormap for labels using 
-        :func:``lib_clrbrain.discrete_colormap``.
-        
-        Args:
-            labels: Labels of integers for which a distinct color should be 
-                mapped to each unique label. Deafults to None, in which case 
-                no colormap will be generated.
-            seed: Seed for randomizer to allow consistent colormap between 
-                runs; defaults to None.
-            alpha: Transparency leve; defaults to 150 for semi-transparent.
-            index_direct: True if the colormap will be indexed directly, which 
-                assumes that the labels will serve as indexes to the colormap 
-                and should span sequentially from 0, 1, 2, ...; defaults to 
-                True. If False, a colormap will be generated for the full 
-                range of integers between the lowest and highest label values, 
-                inclusive.
-            multiplier: Multiplier for random values generated for RGB values; 
-                defaults to 255.
-            offset: Offset to generated random numbers; defaults to 0.
-            background: Tuple of (backround_label, (R, G, B, A)), where 
-                background_label is the label value specifying the background, 
-                and RGBA value will replace the color corresponding to that 
-                label. Defaults to None.
-        '''
-        if labels is None: return
-        self.norm = None
-        labels_unique = np.unique(labels).astype(np.float32)
-        num_colors = len(np.unique(labels))
-        # make first boundary slightly below first label to encompass it 
-        # to avoid off-by-one errors that appear to occur when viewing an 
-        # image with an additional extreme label
-        offset = 0.5
-        labels_unique -= offset
-        # number of boundaries should be one more than number of labels to 
-        # avoid need for interpolation of boundary bin numbers and 
-        # potential merging of 2 extreme labels
-        labels_unique = np.append(labels_unique, [labels_unique[-1] + 1])
-        if index_direct:
-            # asssume label vals increase by 1 from 0 until num_colors
-            self.norm = colors.NoNorm()
-        else:
-            # labels themselves serve as bounds, allowing for large gaps 
-            # between labels while assigning each label to a unique color
-            self.norm = colors.BoundaryNorm(labels_unique, num_colors)
-        self.cmap_labels = lib_clrbrain.discrete_colormap(
-            num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
-            multiplier=multiplier, offset=offset)
-        if background is not None:
-            # replace backgound label color with given color
-            bkgdi = np.where(labels_unique == background[0] - offset)
-            if len(bkgdi) > 0 and bkgdi[0].size > 0:
-                self.cmap_labels[bkgdi[0][0]] = background[1]
-        self.make_cmap()
-    
-    def make_cmap(self):
-        # listed rather than linear cmap since num of colors should equal num 
-        # of possible vals, without requiring interpolation
-        super(DiscreteColormap, self).__init__(
-            self.cmap_labels / 255.0, "discrete_cmap")
-    
-    def modified_cmap(self, adjust):
-        """Make a modified discrete colormap from itself.
-        
-        Args:
-            adjust: Value by which to adjust RGB (not A) values.
-        
-        Returns:
-            New ``DiscreteColormap`` instance with ``norm`` pointing to first 
-            instance and ``cmap_labels`` incremented by the given value.
-        """
-        cmap = DiscreteColormap()
-        # TODO: consider whether to copy instead
-        cmap.norm = self.norm
-        cmap.cmap_labels = np.copy(self.cmap_labels)
-        # labels are uint8 so should already fit within RGB bounds; colors 
-        # that exceed these bounds will likely have slightly different tones 
-        # since RGB vals will not change uniformly
-        cmap.cmap_labels[:, :3] += adjust
-        cmap.make_cmap()
-        return cmap
 
 def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
     """Scroll through overview images along their orthogonal axis.

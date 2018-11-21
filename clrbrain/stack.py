@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from scipy import ndimage
 
+from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import plot_2d
 from clrbrain import plot_support
@@ -93,7 +94,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         pool_results.append(pool.apply_async(
             process_fnc, 
             args=(i, images, labels_img, rescale, multichannel)))
-    colormaps = config.process_settings["channel_colors"]
+    cmaps = config.process_settings["channel_colors"]
     imgs_ordered = [None] * len(pool_results)
     for result in pool_results:
         i, imgs = result.get()
@@ -107,7 +108,7 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
         # each group of artists in a list; imshow_multichannel returns 
         # a list of artists for each channel
         plotted_imgs[i] = plot_support.imshow_multichannel(
-            ax, imgs[0], config.channel, colormaps, aspect, 1, 
+            ax, imgs[0], config.channel, cmaps, aspect, 1, 
             vmin=config.near_min, vmax=vmax, 
             origin=origin)
         if labels_img is not None:
@@ -197,7 +198,7 @@ def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None,
             image5d, img_sl, plane=config.plane)
         if labels_img is not None:
             # build discrete colormap and extract ROI from labels
-            cmap_labels = plot_support.DiscreteColormap(
+            cmap_labels = colormaps.DiscreteColormap(
                 labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
             planes_labels, _, _ = plot_2d.extract_plane(
                 labels_img[None], img_sl, plane=config.plane)
@@ -235,11 +236,11 @@ def save_plane(image5d, offset, roi_size=None, name=None):
     fig = plt.figure(frameon=False)
     ax = fig.add_subplot(111)
     plot_support.hide_axes(ax)
-    colormaps = config.process_settings["channel_colors"]
+    cmaps = config.process_settings["channel_colors"]
     # use lower max threshold since overview vmax often skewed by 
     # artifacts over whole image; also use no interpolation for cleanest image
     plot_support.imshow_multichannel(
-        ax, img2d, config.channel, colormaps, aspect, 1, vmin=config.near_min, 
+        ax, img2d, config.channel, cmaps, aspect, 1, vmin=config.near_min, 
         vmax=config.vmax_overview*0.8, 
         origin=origin, interpolation="none")
     fit_frame_to_image(fig, img2d.shape, aspect)

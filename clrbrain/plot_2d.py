@@ -31,6 +31,7 @@ from skimage import transform
 
 from clrbrain import detector
 from clrbrain import importer
+from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
@@ -358,7 +359,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             :const:``CIRCLES``; defaults to None.
         aspect: Image aspect; defauls to None.
         grid: True if a grid should be overlaid; defaults to False.
-        cmap_labels: :class:``plot_support.DiscreteColormap`` for labels; 
+        cmap_labels: :class:``colormaps.DiscreteColormap`` for labels; 
             defaults to None.
     """
     ax = plt.subplot(gs[row, col])
@@ -424,9 +425,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
         
         # show the ROI, which is now a 2D zoomed image
-        colormaps = config.process_settings["channel_colors"]
+        cmaps = config.process_settings["channel_colors"]
         plot_support.imshow_multichannel(
-            ax, roi, channel, colormaps, aspect, alpha)#, 0.0, config.vmax_overview)
+            ax, roi, channel, cmaps, aspect, alpha)#, 0.0, config.vmax_overview)
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         # show labels if provided and within ROI
@@ -831,7 +832,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             max_show = None
         img = img2d_ov[::downsample, ::downsample]
         plot_support.imshow_multichannel(
-            ax, img, channel, colormaps, aspect, 1, min_show, max_show)
+            ax, img, channel, cmaps, aspect, 1, min_show, max_show)
         if img_region_2d is not None:
             # overlay image with selected region highlighted by opacifying 
             # all surrounding areas
@@ -884,7 +885,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels
     overview_cols = zoom_plot_cols // zoom_levels
-    colormaps = config.process_settings["channel_colors"]
+    cmaps = config.process_settings["channel_colors"]
     for level in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, level])
         ax_overviews.append(ax)
@@ -924,7 +925,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                                                  wspace=0.1, hspace=0.1)
     cmap_labels = None
     if labels is not None:
-        cmap_labels = plot_support.DiscreteColormap(labels)
+        cmap_labels = colormaps.DiscreteColormap(labels)
     # plot the fully zoomed plots
     #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots
     for i in range(zoom_plot_rows):

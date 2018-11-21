@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Slider, Button
 
+from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_editor
@@ -55,7 +56,7 @@ class AtlasEditor:
             2, 2, subplot_spec=gs[0, 0])
         
         # set up the image to display
-        cmap_labels = plot_support.DiscreteColormap(
+        cmap_labels = colormaps.DiscreteColormap(
             self.labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
         cmap_borders = None
         if self.borders_img is not None:

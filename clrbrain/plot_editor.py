@@ -99,10 +99,10 @@ class PlotEditor:
         self.hline = None
         self.vline = None
         # show main image in grayscale
-        colormaps = config.process_settings["channel_colors"]
+        cmaps = config.process_settings["channel_colors"]
         img2d = self.img3d[self.coord[0]]
         plot_support.imshow_multichannel(
-            self.axes, img2d, 0, colormaps, self.aspect, 1, origin=self.origin, 
+            self.axes, img2d, 0, cmaps, self.aspect, 1, origin=self.origin, 
             interpolation="none")
         
         # show labels image

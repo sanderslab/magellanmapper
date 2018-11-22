@@ -1113,11 +1113,12 @@ def _measure_overlap_combined_labels(fixed_img, labels_img):
 
 def _transform_labels(transformix_img_filter, labels_img, settings, 
                       truncate=False, flip=False):
-    if truncate:
+    truncation = settings["truncate_labels"]
+    if truncate and truncation is not None:
         # truncate ventral and posterior portions since variable 
         # amount of tissue or quality of imaging in these regions
         labels_img_np = sitk.GetArrayFromImage(labels_img)
-        truncation = list(settings["truncate_labels"])
+        truncation = list(truncation)
         if flip:
             # assume labels were rotated 180deg around the z-axis, so 
             # need to flip y-axis fracs

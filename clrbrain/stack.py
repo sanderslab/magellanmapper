@@ -16,6 +16,7 @@ from scipy import ndimage
 
 from clrbrain import colormaps
 from clrbrain import config
+from clrbrain import lib_clrbrain
 from clrbrain import plot_2d
 from clrbrain import plot_support
 from clrbrain import importer
@@ -118,6 +119,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     
     fit_frame_to_image(fig, img_size, aspect)
     
+    lib_clrbrain.backup_file(out_path)
     if num_images > 1:
         # export to animated GIF
         if delay is None:

@@ -1399,8 +1399,9 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         img.SetSpacing(transformed_img.GetSpacing())
         print(img.GetSpacing())
         print(fixed_img_orig.GetSpacing(), transformed_img.GetSpacing())
-        img, transformed_img = _curate_img(
-            fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
+        if settings["curate"]:
+            img, transformed_img = _curate_img(
+                fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
         return img
     
     labels_img_full = make_labels(False)

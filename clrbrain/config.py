@@ -341,6 +341,7 @@ class RegisterSettings(SettingsDict):
         self["point_based"] = False
         self["smooth"] = None # smooth labels
         self["crop_to_labels"] = False # crop labels and atlas to nonzero labels
+        self["curate"] = True # carve image; in-paint if generating atlas
         
         # erase labels outside of ((x_start, x_end), (y_start, ...) ...) 
         # (applied after transposition), where each val is given as fractions
@@ -632,6 +633,14 @@ def update_register_settings(settings, settings_type):
         {"truncate_labels": (None, (0.2, 0.8), (0.45, 1.0))}, 
         settings_type)
     
+    # turn off image curation to avoid post-processing with carving 
+    # and in-painting
+    settings.add_modifier(
+        "nopostproc", 
+        {"curate": False, 
+         "truncate_labels": None}, 
+        settings_type)
+    
     if verbose:
         print("process settings for {}:\n{}"
               .format(settings["settings_name"], settings))
@@ -778,8 +787,13 @@ rc_params_mpl2_img_interp = {
 
 
 
+# IMAGE EXPORT
+
 # flag to save ROI to file
 saveroi = False
+
+# alpha levels for overlaid images, defaulting to main image, labels image
+alphas = [1, 0.9]
 
 # IMAGE REGISTRATION
 

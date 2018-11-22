@@ -927,15 +927,6 @@ def process_file(filename_base, offset, roi_size):
         # already imported so does nothing
         print("imported {}, will exit".format(config.filename))
     
-    elif proc_type == PROC_TYPES[4]:
-        # extract and save plane
-        print("extracting plane at {} and exiting".format(offset[2]))
-        name = ("{}-(series{})-z{}").format(
-            os.path.basename(config.filename).replace(".czi", ""), 
-            config.series, str(offset[2]).zfill(5))
-        from clrbrain import stack
-        stack.save_plane(image5d, offset, roi_size, name)
-    
     elif proc_type == PROC_TYPES[5]:
         # export ROIs; assumes that info_proc was already loaded to 
         # give smaller region from which smaller ROIs from the truth DB 
@@ -951,13 +942,15 @@ def process_file(filename_base, offset, roi_size):
             config.filename, config.series, plane=config.plane, 
             rescale=config.rescale)
         
-    elif proc_type == PROC_TYPES[7]:
-        # generate animated GIF
+    elif proc_type in (PROC_TYPES[4], PROC_TYPES[7]):
+        # generate animated GIF or extract single plane
         from clrbrain import stack
+        single = proc_type == PROC_TYPES[4]
         stack.animated_gif(
-            config.filename, series=config.series, slice_vals=config.slice_vals, 
-            rescale=config.rescale, delay=config.delay, 
-            labels_img=config.labels_img)
+            image5d, config.filename, offset=offset, roi_size=roi_size, 
+            slice_vals=config.slice_vals, rescale=config.rescale, 
+            delay=config.delay, labels_img=config.labels_img, 
+            single=single)
     
     elif proc_type == PROC_TYPES[8]:
         # export blobs to CSV file

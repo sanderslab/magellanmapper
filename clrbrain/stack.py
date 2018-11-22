@@ -54,7 +54,7 @@ def _process_plane(i, img3d, labels_img, rescale, multichannel, rotate=None):
             imgs[i] = img
     return i, imgs
 
-def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None, 
+def _build_stack(images, out_path, process_fnc, rescale, aspect=None, 
                         origin=None, delay=None, labels_img=None, 
                         cmap_labels=None):
     """Builds an animated GIF from a stack of images.
@@ -118,17 +118,22 @@ def _build_animated_gif(images, out_path, process_fnc, rescale, aspect=None,
     
     fit_frame_to_image(fig, img_size, aspect)
     
-    # export to animated GIF
-    if delay is None:
-        delay = 100
-    anim = animation.ArtistAnimation(
-        fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
-    try:
-        anim.save(out_path, writer="imagemagick")
-    except ValueError as e:
-        print(e)
-        print("No animation writer available for Matplotlib")
-    print("saved animation file to {}".format(out_path))
+    if num_images > 1:
+        # export to animated GIF
+        if delay is None:
+            delay = 100
+        anim = animation.ArtistAnimation(
+            fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
+        try:
+            anim.save(out_path, writer="imagemagick")
+        except ValueError as e:
+            print(e)
+            print("No animation writer available for Matplotlib")
+        print("saved animation file to {}".format(out_path))
+    else:
+        # single plane figure export
+        print("extracting plane as {}".format(out_path))
+        fig.savefig(out_path)
 
 def fit_frame_to_image(fig, shape, aspect):
     # compress layout to fit image only
@@ -145,23 +150,28 @@ def fit_frame_to_image(fig, shape, aspect):
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
     print("fig size: {}".format(fig.get_size_inches()))
 
-def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None, 
-                 labels_img=None):
+def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None, 
+                 rescale=None, delay=None, labels_img=None, single=False):
     """Builds an animated GIF from a stack of images in a directory or an
     .npy file.
     
     Writes the animated file to the parent directory of path.
     
     Args:
+        image5d: Images as a 4/5D Numpy array (t,z,y,x[c]).
         path: Path to the image directory or saved Numpy array. If the path is 
             a directory, all images from this directory will be imported in 
             Python sorted order. If the path is a saved Numpy array (eg .npy 
             file), animations will be built by plane, using the plane 
             orientation set in :const:`config.plane`.
-        series: Stack to build for multiseries files; defaults to 0.
+        offset: Tuple of offset given in user order (x, y, z); defaults to 
+            None. Requires ``roi_size`` to not be None.
+        roi_size: Size of the region of interest in user order (x, y, z); 
+            defaults to None. Requires ``offset`` to not be None.
         slice_vals: List from which to contstruct a slice object to 
             extract only a portion of the image. Defaults to None, which 
-            will give the whole image.
+            will give the whole image. If ``offset`` and ``roi_size`` are 
+            also given, ``slice_vals`` will only be used for its interval term.
         rescale: Rescaling factor for each image, performed on a plane-by-plane 
             basis; defaults to None, in which case 1.0 will be used.
         delay: Delay between image display in ms.
@@ -169,43 +179,74 @@ def animated_gif(path, series=0, slice_vals=None, rescale=None, delay=None,
     """
     parent_path = os.path.dirname(path)
     name = os.path.basename(path)
-    if slice_vals is None:
-        img_sl = slice(None, None)
+    
+    # build z slice, which will be applied to the transposed image; 
+    # reduce image to 1 plane if in single mode
+    if offset is not None and roi_size is not None:
+        # ROI offset and size take precedence over slice vals except 
+        # for use of the interval term
+        interval = None
+        if slice_vals is not None and len(slice_vals) > 2:
+            interval = slice_vals[2]
+        size = 1 if single else roi_size[2]
+        img_sl = slice(offset[2], offset[2] + size, interval)
+    elif slice_vals is not None:
+        # build directly from slice vals unless single mode
+        if single:
+            img_sl = slice(slice_vals[0], slice_vals[0] + 1)
+        else:
+            img_sl = slice(*slice_vals)
     else:
-        img_sl = slice(*slice_vals)
+        # default to take the whole image
+        img_sl = slice(None, None)
     if rescale is None:
         rescale = 1.0
     planes = None
     aspect = None
     origin = None
-    planes_labels = None
     cmap_labels = None
     fnc = None
+    extracted_planes = []
     if os.path.isdir(path):
         # builds animations from all files in a directory
         planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
         print(planes)
         fnc = _import_img
+        extracted_planes.append(planes)
     else:
-        # load image from path and extract ROI based on slice parameters
-        image5d = importer.read_file(path, series)
-        planes, aspect, origin = plot_2d.extract_plane(
-            image5d, img_sl, plane=config.plane)
+        # load images from path and extract ROI based on slice parameters
+        imgs = [image5d]
         if labels_img is not None:
-            # build discrete colormap and extract ROI from labels
+            imgs.append(labels_img[None])
             cmap_labels = colormaps.get_labels_discrete_colormap(labels_img)
-            planes_labels, _, _ = plot_2d.extract_plane(
-                labels_img[None], img_sl, plane=config.plane)
+        for img in imgs:
+            planes, aspect, origin = plot_2d.extract_plane(
+                img, img_sl, plane=config.plane)
+            if offset is not None and roi_size is not None:
+                # take ROI of x/y vals from transposed image
+                planes = planes[
+                    :, offset[1]:offset[1]+roi_size[1], 
+                    offset[0]:offset[0]+roi_size[0]]
+            extracted_planes.append(planes)
             
         out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
+    
+    # name file based on animation vs single plane extraction
     ext = config.savefig
-    if ext is None:
-        ext = "gif"
-    out_path = os.path.join(parent_path, out_name + "_animation." + ext)
-    _build_animated_gif(planes, out_path, fnc, rescale, aspect=aspect, 
-                        origin=origin, delay=delay, 
-                        labels_img=planes_labels, cmap_labels=cmap_labels)
+    if single:
+        out_name += "_plane_{}{}.{}".format(
+            plot_support.get_plane_axis(config.plane), img_sl.start, ext)
+    else:
+        if ext is None: ext = "gif"
+        out_name += "_animation." + ext
+    out_path = os.path.join(parent_path, out_name)
+    
+    # export planes
+    planes_labels = None if len(extracted_planes) < 2 else extracted_planes[1]
+    _build_stack(extracted_planes[0], out_path, fnc, rescale, aspect=aspect, 
+                 origin=origin, delay=delay, 
+                 labels_img=planes_labels, cmap_labels=cmap_labels)
 
 def save_plane(image5d, offset, roi_size=None, name=None):
     """Extracts a single 2D plane and saves to file.

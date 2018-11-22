@@ -646,9 +646,8 @@ class Visualization(HasTraits):
         return segs is None or not isinstance(segs, np.ndarray)
     
     def _btn_segment_trait_fired(self, segs=None):
-        if plot_3d.mlab_3d == plot_3d.MLAB_3D_TYPES[0]:
-            # segments using the Random-Walker algorithm
-            # TODO: also check ProcessSettings and/or do away with mlab_3d flag
+        if self._DEFAULTS_2D[2] in self._check_list_3d:
+            # "segmentation" option to segment using the Random-Walker
             self.labels, self.walker = detector.segment_rw(self.roi)
             self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
         else:

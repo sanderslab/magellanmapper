@@ -489,6 +489,7 @@ def main(process_args_only=False):
     parser.add_argument("--notify", nargs="*")
     parser.add_argument("--prefix")
     parser.add_argument("--suffix")
+    parser.add_argument("--alphas")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -672,6 +673,9 @@ def main(process_args_only=False):
     if args.suffix:
         config.suffix = args.suffix
         print("Set path suffix to {}".format(config.suffix))
+    if args.alphas:
+        # specify alpha levels
+        config.alphas = [float(val) for val in args.alphas.split(",")]
     
     # prep filename
     if not config.filename:

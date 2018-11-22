@@ -110,7 +110,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         # contains a list of artists for each channel
         ax_imgs = plot_support.overlay_images(
             ax, aspect, origin, imgs, [config.channel, 0], 
-            [cmaps, cmap_labels], [1, 0.9], 
+            [cmaps, cmap_labels], config.alphas, 
             [config.near_min, None], [vmax, None])
         plotted_imgs[i] = np.array(ax_imgs).flatten()
     pool.close()
@@ -218,7 +218,9 @@ def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None,
         imgs = [image5d]
         if labels_img is not None:
             imgs.append(labels_img[None])
-            cmap_labels = colormaps.get_labels_discrete_colormap(labels_img)
+            show_background = config.alphas[0] == 0
+            cmap_labels = colormaps.get_labels_discrete_colormap(
+                labels_img, show_background=show_background)
         for img in imgs:
             planes, aspect, origin = plot_2d.extract_plane(
                 img, img_sl, plane=config.plane)

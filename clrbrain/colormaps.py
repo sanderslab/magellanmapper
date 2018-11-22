@@ -148,15 +148,18 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             cmap[i, :3] = config.colors[i]
     return cmap
 
-def get_labels_discrete_colormap(labels_img):
+def get_labels_discrete_colormap(labels_img, show_background=False):
     """Get a default discrete colormap for a labels image.
     
     Args:
         labels_img: Labels image as a Numpy array.
+        show_backround: True to turn on full opacity for background 
+            label; defaults to False to turn background alpha to 0.
     
     Returns:
         :class:``DiscreteColormap`` object with a separate color for 
         each unique value in ``labels_img``.
     """
+    alpha_bkgd = 255 if show_background else 0
     return DiscreteColormap(
-        labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, 0)))
+        labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, alpha_bkgd)))

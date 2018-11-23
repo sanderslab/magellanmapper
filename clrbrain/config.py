@@ -464,12 +464,12 @@ def update_register_settings(settings, settings_type):
          "affine": ({
              # shear tail opposite the brain back toward midline
              "axis_along": 1, "axis_shift": 0, "shift": (45, 0), 
-             "bounds": ((None, None), (80, 310), (0, 115)), 
+             "bounds": ((None, None), (0, 360), (0, 200)), 
              "axis_attach": 2, "attach_far": True
          },{
              # shear severely kinked distal end of tail back toward midline
-             "axis_along": 2, "axis_shift": 0, "shift": (0, 130), 
-             "bounds": ((None, None), (80, 140), (20, 145)), "axis_attach": 1, 
+             "axis_along": 2, "axis_shift": 0, "shift": (0, 100), 
+             "bounds": ((None, None), (60, 140), (20, 145)), "axis_attach": 1, 
              "attach_far": True
          }),
          "smooth": 2

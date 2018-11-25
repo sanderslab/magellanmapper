@@ -463,8 +463,8 @@ def update_register_settings(settings, settings_type):
          "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
          "affine": ({
              # shear tail opposite the brain back toward midline
-             "axis_along": 1, "axis_shift": 0, "shift": (45, 0), 
-             "bounds": ((None, None), (0, 360), (0, 200)), 
+             "axis_along": 1, "axis_shift": 0, "shift": (60, 0), 
+             "bounds": ((None, None), (70, 250), (0, 200)), 
              "axis_attach": 2, "attach_far": True
          },{
              # similarly shear severely kinked distal end of tail back 
@@ -472,7 +472,7 @@ def update_register_settings(settings, settings_type):
              # of the wraparound; creates sharp transition that requires 
              # cropping to labels; TODO: consider adding 3rd affine 
              # for very distal end to avoid cutting it off
-             "axis_along": 1, "axis_shift": 0, "shift": (0, 100), 
+             "axis_along": 1, "axis_shift": 0, "shift": (0, 90), 
              "bounds": ((None, None), (0, 200), (50, 150)), "axis_attach": 2
          }), 
          "crop_to_labels": True, # req because of 2nd affine

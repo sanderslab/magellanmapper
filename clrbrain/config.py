@@ -467,11 +467,15 @@ def update_register_settings(settings, settings_type):
              "bounds": ((None, None), (0, 360), (0, 200)), 
              "axis_attach": 2, "attach_far": True
          },{
-             # shear severely kinked distal end of tail back toward midline
-             "axis_along": 2, "axis_shift": 0, "shift": (0, 100), 
-             "bounds": ((None, None), (60, 140), (20, 145)), "axis_attach": 1, 
-             "attach_far": True
-         }),
+             # similarly shear severely kinked distal end of tail back 
+             # toward midline, increasing in opposite direction because 
+             # of the wraparound; creates sharp transition that requires 
+             # cropping to labels; TODO: consider adding 3rd affine 
+             # for very distal end to avoid cutting it off
+             "axis_along": 1, "axis_shift": 0, "shift": (0, 100), 
+             "bounds": ((None, None), (0, 200), (50, 150)), "axis_attach": 2
+         }), 
+         "crop_to_labels": True, # req because of 2nd affine
          "smooth": 2
         }, 
         settings_type)

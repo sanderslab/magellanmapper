@@ -414,4 +414,8 @@ if __name__ == "__main__":
     from clrbrain import cli
     cli.main(True)
     
-    merge_csvs(config.filenames, config.prefix)
+    # process stats based on command-line argument
+    
+    if config.stats_type == config.STATS_TYPES[0]:
+        # merge multiple CSV files into single CSV file
+        merge_csvs(config.filenames, config.prefix)

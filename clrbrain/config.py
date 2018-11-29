@@ -801,6 +801,8 @@ saveroi = False
 # alpha levels for overlaid images, defaulting to main image, labels image
 alphas = [1, 0.9]
 
+
+
 # IMAGE REGISTRATION
 
 # reference atlas labels
@@ -831,8 +833,15 @@ groups = None
 # smoothing metrics
 PATH_SMOOTHING_METRICS = "smoothing.csv"
 
-# commono lables
+# common labels
 PATH_COMMON_LABELS = "labels_common.csv"
+
+
+
+# STATS
+
+STATS_TYPES = ("merge_csvs", "exps_by_regions")
+stats_type = None
 
 
 

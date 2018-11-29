@@ -474,6 +474,7 @@ def main(process_args_only=False):
     parser.add_argument("--labels", nargs="*")
     parser.add_argument("--flip", nargs="*")
     parser.add_argument("--register")
+    parser.add_argument("--stats")
     parser.add_argument("--reg_profile")
     parser.add_argument("--rescale")
     parser.add_argument("--slice")
@@ -609,9 +610,17 @@ def main(process_args_only=False):
         for flip in args.flip:
             config.flip.append(_is_arg_true(flip))
         print("Set flip to {}".format(config.flip))
+    
     if args.register:
+        # register type to process in register module
         config.register_type = args.register
         print("Set register type to {}".format(config.register_type))
+    
+    if args.stats:
+        # stats type to process in stats module
+        config.stats_type = args.stats
+        print("Set stats type to {}".format(config.stats_type))
+    
     if args.rescale:
         config.rescale = float(args.rescale)
         print("Set rescale to {}".format(config.rescale))

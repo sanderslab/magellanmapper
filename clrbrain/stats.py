@@ -8,6 +8,7 @@ Attributes:
 import copy
 import csv
 from collections import OrderedDict
+import os
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -392,6 +393,51 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0,
     data_frame = pd.DataFrame(data=data, columns=header)
     return data_frame
 
+def exps_by_regions(path, filter_zeros=True):
+    """Transform volumes by regions data frame to experiments by region.
+    
+    Each experiment will be in a separate column, while each region will 
+    be its own row. Measurements from separate sides of each sample will 
+    be summed. A separate data frame will be generated for each 
+    measurement.
+    
+    Args:
+        path: Path to data frame generated from :func:``regions_to_pandas`` 
+            or an aggregate of these data frames.
+        filter_zero: True to remove rows that contain only zeros.
+    
+    Returns:
+        Dictionary of transformed dataframes with measurements as keys.
+    """
+    df = pd.read_csv(path)
+    measurements = ("Vol", "Nuclei") # raw measurements
+    dfs = {}
+    for meas in measurements:
+        # combines values from each side by summing
+        df_pivoted = df.pivot_table(
+            values=meas, index=["Region"], columns=["Sample"], aggfunc=np.sum)
+        if filter_zeros:
+            # remove rows that contain all zeros and replace remaining zeros 
+            # with NaNs since 0 is used for volumes that could not be found, 
+            # not necessarily those without any nuclei
+            df_pivoted = df_pivoted[(df_pivoted != 0).any(axis=1)]
+            df_pivoted[df_pivoted == 0] = np.nan
+        dfs[meas] = df_pivoted
+    
+    # calculate densities directly from values since simple averaging of 
+    # density columns would not weight appropriately
+    df_dens = dfs[measurements[1]] / dfs[measurements[0]]
+    dfs["Dens"] = df_dens
+    base_path = os.path.splitext(path)[0]
+    
+    # export data frames to separate files
+    for key in dfs.keys():
+        df_pivoted = dfs[key]
+        print("df_{}:\n{}".format(key, df_pivoted))
+        df_path = "{}_{}.csv".format(base_path, key)
+        df_pivoted.to_csv(df_path, na_rep="NaN")
+    return dfs
+
 def data_frames_to_csv(data_frames, path):
     """Combine and export multiple data frames to CSV file.
     
@@ -426,3 +472,7 @@ if __name__ == "__main__":
     if config.stats_type == config.STATS_TYPES[0]:
         # merge multiple CSV files into single CSV file
         merge_csvs(config.filenames, config.prefix)
+    
+    elif config.stats_type == config.STATS_TYPES[1]:
+        # convert volume stats data frame to experiments by region
+        exps_by_regions(config.filename)

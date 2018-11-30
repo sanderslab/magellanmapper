@@ -21,17 +21,34 @@ The setup script will install the following:
 - Scipy, Numpy, Matplotlib stack
 - Mayavi and TraitsUI stack for GUI and 3D visualization; note that Mayavi currently requires a graphical environment to install
 - Scikit-Image for image processing
+- Pandas for stats I/O
+- SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
 
 On occasion, Python dependencies with required updates that have not been released will be downloaded as shallow Git clones into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) and pip installed.
 
 To install/run without a GUI, run a lightweight setup, `./setup_env.sh -l` ("L" arg), which avoids the Mayavi stack.
 
-### Additional Build Dependencies
+### SimpleITK/SimpleElastix dependency
 
-- Java SDK, tested on v8, for importing image files from proprietary formats (eg .czi)
-- SimpleElastix, which can be built via the `build_se.sh` script, for registration tasks
-- GCC or related compilers, for compiling Mayavi and SimpleElastix
-- Git, for downloading unreleased dependencies as above
+SimpleElastix is used for registration tasks in Clrbrain. The library is not currently available in Pip and must be built manually.
+
+Running the environment setup with `./setup_env.sh -s` will attempt to build and install SimpleElastix during setup. Without the `-s` flag, setup will fallback to installing SimpleITK, from which SimpleElastix is derived, to allow opening many 3D image formats such as `.mhd/.raw` and `.nii` files.
+
+To build and install SimpleElastix manually, the `build_se.sh` script can be called directly. Be sure to uninstall SimpleITK from the environment (`pip uninstall SimpleITK`) before installing SimpleElastix to avoid a conflict.
+
+### Additional Build/Runtime Dependencies
+
+#### Required
+
+- Java SDK, tested on v8-11, for importing image files from proprietary formats (eg `.czi`)
+
+#### Optional
+
+- GCC or related compilers for compiling Mayavi and SimpleElastix
+- Git for downloading unreleased dependencies as above
+- R for statistical models
+- Zstd (fallback to Zip) for compression on servers
+- MeshLab for 3D surface clean-up
 
 ### Tested Platforms
 
@@ -39,8 +56,9 @@ Clrbrain has been tested to build and run on:
 
 - MacOS, tested on 10.11+
 - Linux, tested on RHEL 7.4+
-- Windows, tested on Windows 10 via built-in Windows Subsystem for Linux (WSL) running Ubuntu 18.04 and an X Server (see below for details)
-- Alternatively, Windows via Cygwin, tested on 2.10+
+- Windows, tested on Windows 10 (see below for details):
+  - Via built-in Windows Subsystem for Linux (WSL), tested on Ubuntu 18.04 and an X Server
+  - Via Cygwin, tested on Cygwin 2.10+
 
 ## Run Clrbrain
 Opening an image file typically involves importing it into a Numpy array format before loading it in the GUI and processing it headlessly.
@@ -175,30 +193,45 @@ clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh -i "/da
 ## Troubleshooting
 
 ### Java installation
-- Tested on Java 8 and 10 SE
+
+- Tested on Java 8-11 SE
 - Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
 - You may need to set up the JAVA_HOME environment variable, such as `JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home`, and add this variable to your PATH in `~/.bash_profile`
 - Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141)
+- Java 11 similarly changed locations, also fixed in Python-Javabridge
 - `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step
 
 ### Xcode setup (Mac)
+
 - `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun` error: The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading Xcode directly from https://developer.apple.com/download/, then run `sudo xcodebuild -license` to accept the license agreement.
 
 ### Installation on Windows
 
-Building Clrbrain on Windows can be greatly eased through use of Windows Subsystem for Linux (WSL). Installation can follow the same steps as for Mac.
+Currently Clrbrain uses many Bash scripts, which require Cygwin or more recently Windows Subsystem for Linux (WSL) to run. Theoretically Clrbrain most likely could run without them, which we will need to test.
 
-Running in WSL requires setting up an X Server since WSL does not provide graphical support out of the box. In our experience, the easiest option is to use MobaXTerm, which supports HiDPI and OpenGL.
+In the meantime, here are instructions for either Linux-like layer:
+
+#### WSL
+
+After loading a WSL terminal, setup the Clrbrain environment using the same steps as for Mac. SimpleElastix can be built during or after the setup as above.
+
+Running in WSL requires setting up an X Server since WSL does not provide graphical support out of the box. In our experience, the easiest option is to use [MobaXTerm](https://mobaxterm.mobatek.net/), which supports HiDPI and OpenGL.
 
 An alternative X Server is Cygwin/X, which requires the following modifications:
 
 - Change the XWin Server startup shortcut to include `/usr/bin/startxwin -- -listen tcp +iglx -nowgl` to use indirect OpenGL software rendering (see [here](https://x.cygwin.com/docs/ug/using-glx.html))
 - For HiDPI screens, run `export QT_AUTO_SCREEN_SCALE_FACTOR=0` and `export QT_SCALE_FACTOR=2` to increase window/font size (see [here](https://wiki.archlinux.org/index.php/HiDPI#Qt_5))
 
-As an alternative to WSL, Cygwin itself can be used to build Clrbrain and run without an X server. Building is more complicated, however, requiring the following:
+#### Cygwin
+
+As an alternative to WSL, Cygwin itself can be used to build Clrbrain and run without an X server.
+
+Building SimpleElastix on Windows is more complicated, however, requiring the following:
 
 - Install Microsoft Visual Studio Build Tools 2017 with Windows SDK to build Mayavi and Javabridge
 - Build SimpleElastix with VS 2017, though this compilation has not worked at least in our experience because of [this issue](https://github.com/SuperElastix/SimpleElastix/issues/126)
+
+Clrbrain will default to installing SimpleITK, which may be sufficient if registration tasks are not required.
 
 ### International setup
 - If you get a Python locale error, add these lines to your `~/.bash_profile` file:

@@ -552,6 +552,49 @@ def get_bbox_region(bbox, padding=0, img_shape=None):
     #print("shape: {}, slices: {}".format(shape, slices))
     return shape, slices
 
+def replace_vol(img, vol, center, vol_as_mask=False):
+    """Replace a volume within an image, centering on the given coordinates 
+    and cropping the input volume to fit.
+    
+    Args:
+        img: Image as a Numpy array into which ``vol`` will be placed. 
+            ``img`` will be updated in-place.
+        vol: Volume to place in ``img``.
+        center: Coordinates of the center of volume, given in z,y,x order.
+        vol_as_mask: True if ``vol`` should be taken as a mask, where only 
+            its True values will replace the corresponding pixels in ``img``.
+    
+    Returns:
+        ``img`` with ``vol`` centered on ``center``.
+    """
+    dims = vol.ndim
+    slices_img = []
+    slices_vol = []
+    for i in range(dims):
+        start_vol = 0
+        stop_vol = int(vol.shape[i])
+        # center volumes with odd-numbered length, and skew slightly 
+        # toward lower values for even-numbered length
+        start = int(center[i]) - stop_vol // 2
+        stop = start + stop_vol
+        # ensure that slices do not exceed bounds of img, also cropping 
+        # volume if so
+        if start < 0:
+            start_vol = abs(start)
+            start = 0
+        if stop >= img.shape[i]:
+            stop_vol -= stop - img.shape[i]
+            stop = img.shape[i]
+        slices_img.append(slice(start, stop))
+        slices_vol.append(slice(start_vol, stop_vol))
+    if vol_as_mask:
+        # replace vol as a mask
+        img[tuple(slices_img)][vol[tuple(slices_vol)]] = True
+    else:
+        # replace complete vol
+        img[tuple(slices_img)] = vol[tuple(slices_vol)]
+    return img
+
 def get_label_bbox(labels_img_np, label_id):
     """Get bounding box for a label or set of labels.
     
@@ -1239,13 +1282,14 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     
     return pts_in, cmap, scale
 
-def build_ground_truth(size, blobs):
+def build_ground_truth(size, blobs, ellipsoid=False):
     """Build ground truth volumetric image from blobs.
     
     Attributes:
         size: Size given in z,y,x dimensions.
         blobs: Numpy array of segments to display, given as an 
             (n, 4) dimension array, where each segment is in (z, y, x, radius).
+        ellipsoid: True to draw blobs as ellipsoids; defaults to False.
     
     Returns:
         3D image binary image array, where 0 is background, and 1 is 
@@ -1253,12 +1297,19 @@ def build_ground_truth(size, blobs):
     """
     #print("generating ground truth image of size {}".format(size))
     img3d = np.zeros(size, dtype=np.uint8)
+    if ellipsoid: spacing = detector.calc_scaling_factor()
     for i in range(size[0]):
         blobs_in = blobs[blobs[:, 0] == i]
         for blob in blobs_in:
-            rr, cc = draw.circle(*blob[1:4], img3d[i].shape)
-            #print("drawing circle of {} x {}".format(rr, cc))
-            img3d[i, rr, cc] = 1
+            if ellipsoid:
+                # draw blob as ellipse with spacingn given based on resolution
+                ellip = draw.ellipsoid(blob[3], blob[3], blob[3], spacing)
+                replace_vol(img3d, ellip, blob[:3], True)
+            else:
+                # draw blob as circle only in given z-plane
+                rr, cc = draw.circle(*blob[1:4], img3d[i].shape)
+                #print("drawing circle of {} x {}".format(rr, cc))
+                img3d[i, rr, cc] = 1
     #lib_clrbrain.show_full_arrays()
     #print(img3d)
     return img3d

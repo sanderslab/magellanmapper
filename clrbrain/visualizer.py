@@ -717,7 +717,7 @@ class Visualization(HasTraits):
                 / np.mean(plot_3d.calc_isotropic_factor(1)))
             print("min size threshold for r-w: {}".format(min_size))
             self.labels = detector.segment_rw(
-                self.roi, config.channel, beta=5000, 
+                self.roi, config.channel, beta=100000, 
                 blobs=blobs, remove_small=min_size)
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()

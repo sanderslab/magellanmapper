@@ -85,8 +85,9 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
             resulting segmentation.
     
     Returns:
-        The Random-Walker segmentation, or the measured labels 
-        for the segmented regions if ``get_labels`` is True.
+        List of the Random-Walker segmentations for the given channels, 
+        If ``get_labels`` is True, the measured labels for the segmented 
+        regions will be returned instead of the segmentations themselves.
     """
     print("Random-Walker based segmentation...")
     labels = []
@@ -94,7 +95,6 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     for i in channels:
         roi_segment = roi[..., i] if multichannel else roi
-        #settings = config.get_process_settings(i)
         if blobs is None:
             # mark unknown pixels as 0 by distinguishing known background 
             # and foreground
@@ -104,18 +104,33 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         else:
             # derive markers from blobs
             markers = markers_from_blobs(roi_segment, blobs)
+        
+        # perform the segmentation
         walker = segmentation.random_walker(
             roi_segment, markers, beta=beta, mode="cg_mg")
-        if remove_small:
-            walker = morphology.remove_small_objects(walker, remove_small)
         
+        
+        # clean up segmentation
+        
+        #lib_clrbrain.show_full_arrays()
+        if blobs is None:
+            # clean up by using simple threshold to remove all background
+            roi_thresh = filters.threshold_mean(roi_segment)
+            thresholded = roi_segment > roi_thresh
+        else:
+            # use blobs as ellipsoids to identify background to remove
+            thresholded = plot_3d.build_ground_truth(
+                roi_segment.shape, blobs, ellipsoid=True)
+            thresholded = thresholded.astype(bool)
+        walker[~thresholded] = 0
+        
+        if remove_small:
+            # remove artifacts
+            walker = morphology.remove_small_objects(walker, remove_small)
         if erosion:
             # attempt to reduce label connections by eroding
             walker = morphology.erosion(walker, morphology.octahedron(erosion))
-        # clean up by using simple threshold to remove all background
-        roi_thresh = filters.threshold_mean(roi_segment)
-        thresholded = roi_segment > roi_thresh
-        walker[~thresholded] = 0
+        
         
         if get_labels:
             # label neighboring pixels to segmented regions
@@ -125,8 +140,7 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
             #print("label:\n", label)
         
         walkers.append(walker)
-        #lib_clrbrain.show_full_arrays()
-        #print(walker)
+        #print("walker:\n", walker)
     
     if get_labels:
         return labels

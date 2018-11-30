@@ -219,10 +219,10 @@ def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None,
         # load images from path and extract ROI based on slice parameters
         imgs = [image5d]
         if labels_img is not None:
+            # labels is taken as 2nd image
             imgs.append(labels_img[None])
-            show_background = config.alphas[0] == 0
             cmap_labels = colormaps.get_labels_discrete_colormap(
-                labels_img, show_background=show_background)
+                labels_img, config.alphas[1] * 255)
         for img in imgs:
             planes, aspect, origin = plot_2d.extract_plane(
                 img, img_sl, plane=config.plane)

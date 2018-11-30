@@ -56,7 +56,7 @@ class AtlasEditor:
             2, 2, subplot_spec=gs[0, 0])
         
         # set up the image to display
-        cmap_labels = colormaps.get_labels_discrete_colormap(self.labels_img)
+        cmap_labels = colormaps.get_labels_discrete_colormap(self.labels_img, 0)
         cmap_borders = None
         if self.borders_img is not None:
             # brightest colormap for original (channel 0) borders

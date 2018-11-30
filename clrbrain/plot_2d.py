@@ -599,7 +599,7 @@ def plot_roi(roi, segments, channel, show=True, title=""):
             # with all segments
             ax_z = show_subplot(
                 fig, gs, i, j, image5d, channel, roi_size, zoom_offset, None,
-                segments, None, None, 1.0, z_relative, circles=CIRCLES[0], 
+                segments, None, None, 1.0, z, circles=CIRCLES[0], 
                 roi=roi)
             if i == 0 and j == 0:
                 add_scale_bar(ax_z)

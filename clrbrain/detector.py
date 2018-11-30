@@ -112,6 +112,10 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         if erosion:
             # attempt to reduce label connections by eroding
             walker = morphology.erosion(walker, morphology.octahedron(erosion))
+        # clean up by using simple threshold to remove all background
+        roi_thresh = filters.threshold_mean(roi_segment)
+        thresholded = roi_segment > roi_thresh
+        walker[~thresholded] = 0
         
         if get_labels:
             # label neighboring pixels to segmented regions

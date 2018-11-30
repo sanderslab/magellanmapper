@@ -925,7 +925,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                                                  wspace=0.1, hspace=0.1)
     cmap_labels = None
     if labels is not None:
-        cmap_labels = colormaps.DiscreteColormap(labels)
+        cmap_labels = colormaps.get_labels_discrete_colormap(labels)
     # plot the fully zoomed plots
     #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots
     for i in range(zoom_plot_rows):

@@ -432,9 +432,11 @@ class Visualization(HasTraits):
                 cli.image5d, curr_roi_size, curr_offset)
             
             if self._DEFAULTS_3D[3] in self._check_list_3d:
-                # surface rendering
+                # surface rendering, segmenting to clean up image 
+                # if 2D segmentation option checked
+                segment = self._DEFAULTS_2D[2] in self._check_list_2d
                 plot_3d.plot_3d_surface(
-                    self.roi, self.scene.mlab, config.channel)
+                    self.roi, self.scene.mlab, config.channel, segment=segment)
                 self._scene_3d_shown = True
             else:
                 # 3D point rendering
@@ -646,83 +648,78 @@ class Visualization(HasTraits):
         return segs is None or not isinstance(segs, np.ndarray)
     
     def _btn_segment_trait_fired(self, segs=None):
-        if self._DEFAULTS_2D[2] in self._check_list_3d:
-            # "segmentation" option to segment using the Random-Walker
-            self.labels, self.walker = detector.segment_rw(self.roi)
-            self.segs_cmap = plot_3d.show_surface_labels(self.labels, self)
+        # collect segments in ROI and padding region, ensureing coordinates 
+        # are relative to offset
+        segs_all = None
+        offset = self._curr_offset()
+        roi_size = self.roi_array[0].astype(int)
+        if cli.segments_proc is None:
+            # on-the-fly blob detection, which includes border but not 
+            # padding region; already in relative coordinates
+            roi = self.roi
+            if config.process_settings["thresholding"]:
+                # thresholds prior to blob detection
+                roi = plot_3d.threshold(roi)
+            segs_all = detector.detect_blobs(roi, config.channel)
         else:
-            # collect segments in ROI and padding region, ensureing coordinates 
-            # are relative to offset
-            segs_all = None
-            offset = self._curr_offset()
-            roi_size = self.roi_array[0].astype(int)
-            if cli.segments_proc is None:
-                # on-the-fly blob detection, which includes border but not 
-                # padding region; already in relative coordinates
-                roi = self.roi
-                if config.process_settings["thresholding"]:
-                    # thresholds prior to blob detection
-                    roi = plot_3d.threshold(roi)
-                segs_all = detector.detect_blobs(roi, config.channel)
-            else:
-                # get all previously processed blobs in ROI plus additional 
-                # padding region to show surrounding blobs
-                segs_all, _ = detector.get_blobs_in_roi(
-                    cli.segments_proc, offset, roi_size, plot_2d.padding)
-                # shift coordinates to be relative to offset
-                segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
-                segs_all = detector.format_blobs(segs_all)
-                segs_all = detector.blobs_in_channel(
-                    segs_all, config.channel)
-            print("segs_all:\n{}".format(segs_all))
+            # get all previously processed blobs in ROI plus additional 
+            # padding region to show surrounding blobs
+            segs_all, _ = detector.get_blobs_in_roi(
+                cli.segments_proc, offset, roi_size, plot_2d.padding)
+            # shift coordinates to be relative to offset
+            segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
+            segs_all = detector.format_blobs(segs_all)
+            segs_all = detector.blobs_in_channel(
+                segs_all, config.channel)
+        print("segs_all:\n{}".format(segs_all))
+        
+        if not self._is_segs_none(segs):
+            # if segs provided (eg from ROI), use only these segs within 
+            # the ROI and add segs from the padding area outside the ROI
+            _, segs_in_mask = detector.get_blobs_in_roi(
+                segs_all, np.zeros(3), 
+                roi_size, np.multiply(self.border, -1))
+            segs_outside = segs_all[np.logical_not(segs_in_mask)]
+            print("segs_outside:\n{}".format(segs_outside))
+            segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
+            segs = detector.format_blobs(segs)
+            segs = detector.blobs_in_channel(segs, config.channel)
+            segs_all = np.concatenate((segs, segs_outside), axis=0)
             
-            if not self._is_segs_none(segs):
-                # if segs provided (eg from ROI), use only these segs within 
-                # the ROI and add segs from the padding area outside the ROI
-                _, segs_in_mask = detector.get_blobs_in_roi(
-                    segs_all, np.zeros(3), 
-                    roi_size, np.multiply(self.border, -1))
-                segs_outside = segs_all[np.logical_not(segs_in_mask)]
-                print("segs_outside:\n{}".format(segs_outside))
-                segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
-                segs = detector.format_blobs(segs)
-                segs = detector.blobs_in_channel(segs, config.channel)
-                segs_all = np.concatenate((segs, segs_outside), axis=0)
-                
-            if segs_all is not None:
-                # convert segments to visualizer table format and plot
-                self.segments = detector.shift_blob_abs_coords(
-                    segs_all, offset[::-1])
-                show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
-                _, self.segs_in_mask = detector.get_blobs_in_roi(
-                    self.segments, np.zeros(3), 
-                    roi_size, np.multiply(self.border, -1))
-                self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
-                    self.segments, self.scene.mlab, self.segs_in_mask, 
-                    show_shadows)
-                self._segs_scale_high = scale * 2
-                self.segs_scale = scale
-            
-            if self._DEFAULTS_2D[2] in self._check_list_2d:
-                blobs = self.segments[self.segs_in_mask]
-                '''
-                # 3D-seeded watershed segmentation using detection blobs
-                self.labels, walker = detector.segment_rw(
-                    self.roi, config.channel, erosion=1)
-                self.labels = detector.segment_ws(self.roi, walker, blobs)
-                '''
-                # 3D-seeded random-walker with high beta to limit walking 
-                # into background, also removing objects smaller than the 
-                # smallest blob, roughly normalized for anisotropy and 
-                # reduced by not including the 4/3 factor
-                min_size = int(
-                    np.pi * np.power(np.amin(np.abs(blobs[:, 3])), 3) 
-                    / np.mean(plot_3d.calc_isotropic_factor(1)))
-                print("min size threshold for r-w: {}".format(min_size))
-                self.labels, walker = detector.segment_rw(
-                    self.roi, config.channel, beta=5000, 
-                    blobs=blobs, remove_small=min_size)
-            #detector.show_blob_surroundings(self.segments, self.roi)
+        if segs_all is not None:
+            # convert segments to visualizer table format and plot
+            self.segments = detector.shift_blob_abs_coords(
+                segs_all, offset[::-1])
+            show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
+            _, self.segs_in_mask = detector.get_blobs_in_roi(
+                self.segments, np.zeros(3), 
+                roi_size, np.multiply(self.border, -1))
+            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
+                self.segments, self.scene.mlab, self.segs_in_mask, 
+                show_shadows)
+            self._segs_scale_high = scale * 2
+            self.segs_scale = scale
+        
+        if self._DEFAULTS_2D[2] in self._check_list_2d:
+            blobs = self.segments[self.segs_in_mask]
+            '''
+            # 3D-seeded watershed segmentation using detection blobs
+            walker = detector.segment_rw(
+                self.roi, config.channel, erosion=1)
+            self.labels = detector.segment_ws(self.roi, walker, blobs)
+            '''
+            # 3D-seeded random-walker with high beta to limit walking 
+            # into background, also removing objects smaller than the 
+            # smallest blob, roughly normalized for anisotropy and 
+            # reduced by not including the 4/3 factor
+            min_size = int(
+                np.pi * np.power(np.amin(np.abs(blobs[:, 3])), 3) 
+                / np.mean(plot_3d.calc_isotropic_factor(1)))
+            print("min size threshold for r-w: {}".format(min_size))
+            self.labels = detector.segment_rw(
+                self.roi, config.channel, beta=5000, 
+                blobs=blobs, remove_small=min_size)
+        #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     
     @on_trait_change('segs_scale')

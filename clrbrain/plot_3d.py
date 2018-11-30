@@ -190,7 +190,7 @@ def threshold(roi):
                 roi_thresh[i], selem)
         thresholded = roi > roi_thresh
     elif thresh_type == "random_walker":
-        _, thresholded = detector.segment_rw(roi, size)
+        thresholded = detector.segment_rw(roi, size)
     
     # dilation/erosion, adjusted based on overall intensity
     thresh_mean = np.mean(thresholded)
@@ -896,7 +896,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
             
             # build surface from segmented ROI
             if to_segment:
-                _, walker = detector.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
+                walker = detector.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
                 roi_show *= np.subtract(walker[0], 1)
             else:
                 print("deferring segmentation as {} px is above threshold"

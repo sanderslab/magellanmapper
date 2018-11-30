@@ -57,20 +57,36 @@ def markers_from_blobs(roi, blobs):
     markers = np.zeros(roi.shape, dtype=np.uint8)
     coords = np.transpose(blobs[:, :3]).astype(np.int)
     coords = np.split(coords, coords.shape[0])
-    markers[coords] = 1
+    markers[tuple(coords)] = 1
     markers = morphology.dilation(markers, morphology.ball(1))
     markers = measure.label(markers)
     return markers
 
 def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None, 
-               erosion=None, blobs=None):
+               erosion=None, blobs=None, get_labels=False):
     """Segments an image, drawing contours around segmented regions.
     
     Args:
         roi: Region of interest to segment.
+        channel: Channel to pass to :func:``plot_3d.setup_channels``.
+        beta: Random-Walker beta term.
+        vmin: Values under which to exclude in markers; defaults to 0.6. 
+            Ignored if ``blobs`` is given.
+        vmax: Values above which to exclude in markers; defaults to 0.65. 
+            Ignored if ``blobs`` is given.
+        remove_small: Threshold size of small objects to remove; defaults 
+            to None to ignore.
+        erosion: Structuring element size for erosion; defaults 
+            to None to ignore.
+        blobs: Blobs to use for markers; defaults to None, in which 
+            case markers will be determined based on ``vmin``/``vmax`` 
+            thresholds.
+        get_labels: True to measure and return labels from the 
+            resulting segmentation.
     
     Returns:
-        Labels for the segmented regions, which can be plotted as surfaces.
+        The Random-Walker segmentation, or the measured labels 
+        for the segmented regions if ``get_labels`` is True.
     """
     print("Random-Walker based segmentation...")
     labels = []
@@ -93,18 +109,24 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         if remove_small:
             walker = morphology.remove_small_objects(walker, remove_small)
         
-        # label neighboring pixels to segmented regions
         if erosion:
-            # attempt to reduce connection by eroding first
+            # attempt to reduce label connections by eroding
             walker = morphology.erosion(walker, morphology.octahedron(erosion))
-        label = measure.label(walker, background=0)
         
-        labels.append(label)
+        if get_labels:
+            # label neighboring pixels to segmented regions
+            # TODO: check if necessary; useful only if blobs not given?
+            label = measure.label(walker, background=0)
+            labels.append(label)
+            #print("label:\n", label)
+        
         walkers.append(walker)
         #lib_clrbrain.show_full_arrays()
         #print(walker)
     
-    return labels, walkers
+    if get_labels:
+        return labels
+    return walkers
 
 def segment_ws(roi, thresholded=None, blobs=None): 
     """Segment an ROI using a 3D-seeded watershed.

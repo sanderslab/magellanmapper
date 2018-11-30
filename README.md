@@ -61,7 +61,8 @@ Clrbrain has been tested to build and run on:
   - Via Cygwin, tested on Cygwin 2.10+
 
 ## Run Clrbrain
-Opening an image file typically involves importing it into a Numpy array format before loading it in the GUI and processing it headlessly.
+
+Clrbrain can be run as a GUI or headlessly for desktop or server tasks, respectively. To start Clrbrain:
 
 - Open a new terminal if you just installed Miniconda
 - Run the script:
@@ -71,23 +72,31 @@ source activate clr3
 ./runclrbrain.sh -i [path_to_your_image]
 ```
 
-`runclrbrain.sh` is a script to run many pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. We will continue to make more of Clbrain functionality accessible from this script.
+`runclrbrain.sh` is a script to run many pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. The default pipeline will open the Clrbrain GUI.
 
-## Nuclei annotation editor
+Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. Overlaid images in formats that SimpleITK can open do not require import (we are currently working to open these files as primary images without requiring any import).
+
+## 3D viewer
+
+The main Clrbrain GUI displays a 3D viewer and ROI selection controls. Clrbrain uses Mayavi for 3D voxel or surface rendering.
+
+From the ROI selection controls, two different 2D editors can be opened. All but the last `2D styles` options open various forms of the Nuclei Annotation Editor. The final option opens the Atlas Editor, a 2D/3D viewer.
+
+## Nuclei Annotation Editor
 
 The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Press on "Detect" to detect nuclei in the current ROI, then "Plot 2D" to open the figure.
 
 - Click on dotted lines to cycle the nuclei detection flags from incorrect (red), correct (green), or questionable (yellow)
-- Shift+click and drag to move the circle's position
-- Alt+click and drag to resize the circle's radius
-- "c"+click to copy the circle
-- "v"+click in another z-plane to duplicate that circle in the corresponding position in that plane
-- "x"+click to cut the circle
-- "d"+click to delete the circle
-- Arrow up/down to change the overview plots' z-plane
-- Right arrow to jump the overview plots to the same z-plane as the current mouseover
+- `Shift+click` and drag to move the circle's position
+- `Alt+click` and drag to resize the circle's radius
+- `"c"+click` to copy the circle
+- `"v"+click` in another z-plane to duplicate that circle in the corresponding position in that plane
+- `"x"+click` to cut the circle
+- `"d"+click` to delete the circle
+- Arrow `up/down` to change the overview plots' z-plane
+- `Right` arrow to jump the overview plots to the same z-plane as the current mouseover
 
-## Atlas editor
+## Atlas Editor
 
 The multi-planar image plotter allows simplified viewing and editing of annotation labels for an atlas. Existing labels can be painted into adjacent areas, and synchronized planar viewing allows visualization of changes in each plane with realtime updates.
 

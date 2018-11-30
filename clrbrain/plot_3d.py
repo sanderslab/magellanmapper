@@ -1243,7 +1243,7 @@ def build_ground_truth(size, blobs):
     """Build ground truth volumetric image from blobs.
     
     Attributes:
-        size: Size given with user-defined dimensions, (x, y, z).
+        size: Size given in z,y,x dimensions.
         blobs: Numpy array of segments to display, given as an 
             (n, 4) dimension array, where each segment is in (z, y, x, radius).
     
@@ -1252,8 +1252,8 @@ def build_ground_truth(size, blobs):
         foreground.
     """
     #print("generating ground truth image of size {}".format(size))
-    img3d = np.zeros(size[::-1], dtype=np.uint8)
-    for i in range(size[2]):
+    img3d = np.zeros(size, dtype=np.uint8)
+    for i in range(size[0]):
         blobs_in = blobs[blobs[:, 0] == i]
         for blob in blobs_in:
             rr, cc = draw.circle(*blob[1:4], img3d[i].shape)

@@ -41,28 +41,39 @@ config_default="$ENV_CONFIG"
 build_simple_elastix=0
 lightweight=0
 aws=0
+deps_check=1
 
 OPTIND=1
-while getopts hn:sla opt; do
+while getopts hn:slad opt; do
   case $opt in
-    h)  echo $HELP
+    h)
+      echo $HELP
       exit 0
       ;;
-    n)  env_name="$OPTARG"
+    n)
+      env_name="$OPTARG"
       echo "Set to create the Conda environment $env_name"
       ;;
-    s)  build_simple_elastix=1
+    s)
+      build_simple_elastix=1
       echo "Set to build and install SimpleElastix"
       ;;
-    l)  lightweight=1
+    l)
+      lightweight=1
       env_default="$CONDA_ENV_LIGHT"
       config_default="$ENV_CONFIG_LIGHT"
       echo "Set to create lightweight (no GUI) environment"
       ;;
-    a)  aws=1
+    a)
+      aws=1
       echo "Set to install AWS components"
       ;;
-    :)  echo "Option -$OPTARG requires an argument"
+    d)
+      deps_check=0
+      echo "Set to skip dependencies check"
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
     --) ;;
@@ -103,42 +114,46 @@ then
 fi
 echo "will use $os platform with $bit bit for Anaconda"
 
-# Ensure that required tools are available
 
-# check for Java jar availability
-if ! command -v "javac" &> /dev/null
-then
-	echo "Please install JDK or add JAVA_HOME to your path environment variables. Exiting."
-	exit 1
-fi
-
-# Mac-specific check for command-line tools (CLT) package since the commands 
-# that are not activated will still return
-if [[ "$os" == "MacOSX" ]]; then
-  if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
-    if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
-      # ver <= 10.13 apparently also requires CLT headers here
-      :
-    else
-      echo "Mac command-line tools not present/activated."
-      echo "Please run \"xcode-select --install\""
-      exit 1
+# Dependencies check
+if [[ $deps_check -eq 1 ]]; then
+  
+  # check for Java jar availability
+  if ! command -v "javac" &> /dev/null
+  then
+  	echo "Please install a JDK or add JAVA_HOME to your path environment "
+  	echo "variables. Exiting."
+  	exit 1
+  fi
+  
+  # Mac-specific check for command-line tools (CLT) package since the commands 
+  # that are not activated will still return
+  if [[ "$os" == "MacOSX" ]]; then
+    if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
+      if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
+        # ver <= 10.13 apparently also requires CLT headers here
+        :
+      else
+        echo "Mac command-line tools not present/activated."
+        echo "Please run \"xcode-select --install\""
+        exit 1
+      fi
     fi
   fi
-fi
-
-# check for gcc availability for compiling Scikit-image
-if ! command -v "gcc" &> /dev/null
-then
-	echo "Please install gcc. Exiting."
-	exit 1
-fi
-
-# check for git availability for downloading repos for some pip installs
-if ! command -v "git" &> /dev/null
-then
-	echo "Please install git. Exiting."
-	exit 1
+  
+  # check for gcc availability for compiling Scikit-image
+  if ! command -v "gcc" &> /dev/null
+  then
+  	echo "Please install gcc. Exiting."
+  	exit 1
+  fi
+  
+  # check for git availability for downloading repos for some pip installs
+  if ! command -v "git" &> /dev/null
+  then
+  	echo "Please install git. Exiting."
+  	exit 1
+  fi
 fi
 
 # check for Anaconda availability

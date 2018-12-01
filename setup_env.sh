@@ -78,6 +78,33 @@ BASE_DIR="`dirname $0`"
 cd "$BASE_DIR"
 BASE_DIR="$PWD"
 
+# find platform for Anaconda
+echo -n "Detecting environment..."
+SYSTEM=`uname -a`
+ANACONDA_DOWNLOAD_PLATFORM=""
+os_ver=""
+ext="sh"
+if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
+then
+    ANACONDA_DOWNLOAD_PLATFORM="Windows"
+    ext="exe"
+elif [[ "$SYSTEM" =~ "Darwin" ]]
+then
+    ANACONDA_DOWNLOAD_PLATFORM="MacOSX"
+    os_ver="$(/usr/bin/sw_vers -productVersion)"
+elif [[ "$SYSTEM" =~ "Linux" ]]
+then
+    ANACONDA_DOWNLOAD_PLATFORM="Linux"
+fi
+BIT="x86"
+if [[ "$SYSTEM" =~ "x86_64" ]]
+then
+    BIT="x86_64"
+fi
+echo "will use $ANACONDA_DOWNLOAD_PLATFORM platform with $BIT bit for Anaconda"
+
+# Ensure that required tools are available
+
 # check for Java jar availability
 if ! command -v "javac" &> /dev/null
 then
@@ -85,8 +112,22 @@ then
 	exit 1
 fi
 
-# check for gcc availability for compiling Scikit-image;
-# TODO: does not handle case where xcode tools needs to be installed
+# Mac-specific check for command-line tools (CLT) package since the commands 
+# that are not activated will still return
+if [[ "$ANACONDA_DOWNLOAD_PLATFORM" == "MacOSX" ]]; then
+    if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
+        if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
+            # ver <= 10.13 apparently also requires CLT headers here
+            :
+        else
+            echo "Mac command-line tools not present/activated."
+            echo "Please run \"xcode-select --install\""
+            exit 1
+        fi
+    fi
+fi
+
+# check for gcc availability for compiling Scikit-image
 if ! command -v "gcc" &> /dev/null
 then
 	echo "Please install gcc. Exiting."
@@ -99,29 +140,6 @@ then
 	echo "Please install git. Exiting."
 	exit 1
 fi
-
-# find platform for Anaconda
-echo -n "Detecting environment..."
-SYSTEM=`uname -a`
-ANACONDA_DOWNLOAD_PLATFORM=""
-ext="sh"
-if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
-then
-    ANACONDA_DOWNLOAD_PLATFORM="Windows"
-    ext="exe"
-elif [[ "$SYSTEM" =~ "Darwin" ]]
-then
-    ANACONDA_DOWNLOAD_PLATFORM="MacOSX"
-elif [[ "$SYSTEM" =~ "Linux" ]]
-then
-    ANACONDA_DOWNLOAD_PLATFORM="Linux"
-fi
-BIT="x86"
-if [[ "$SYSTEM" =~ "x86_64" ]]
-then
-    BIT="x86_64"
-fi
-echo "will use $ANACONDA_DOWNLOAD_PLATFORM platform with $BIT bit for Anaconda"
 
 # check for Anaconda availability
 if ! command -v "conda" &> /dev/null

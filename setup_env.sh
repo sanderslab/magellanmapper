@@ -81,27 +81,27 @@ BASE_DIR="$PWD"
 # find platform for Anaconda
 echo -n "Detecting environment..."
 SYSTEM=`uname -a`
-ANACONDA_DOWNLOAD_PLATFORM=""
+os=""
 os_ver=""
 ext="sh"
 if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
 then
-    ANACONDA_DOWNLOAD_PLATFORM="Windows"
+    os="Windows"
     ext="exe"
 elif [[ "$SYSTEM" =~ "Darwin" ]]
 then
-    ANACONDA_DOWNLOAD_PLATFORM="MacOSX"
+    os="MacOSX"
     os_ver="$(/usr/bin/sw_vers -productVersion)"
 elif [[ "$SYSTEM" =~ "Linux" ]]
 then
-    ANACONDA_DOWNLOAD_PLATFORM="Linux"
+    os="Linux"
 fi
-BIT="x86"
+bit="x86"
 if [[ "$SYSTEM" =~ "x86_64" ]]
 then
-    BIT="x86_64"
+    bit="x86_64"
 fi
-echo "will use $ANACONDA_DOWNLOAD_PLATFORM platform with $BIT bit for Anaconda"
+echo "will use $os platform with $bit bit for Anaconda"
 
 # Ensure that required tools are available
 
@@ -114,7 +114,7 @@ fi
 
 # Mac-specific check for command-line tools (CLT) package since the commands 
 # that are not activated will still return
-if [[ "$ANACONDA_DOWNLOAD_PLATFORM" == "MacOSX" ]]; then
+if [[ "$os" == "MacOSX" ]]; then
     if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
         if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
             # ver <= 10.13 apparently also requires CLT headers here
@@ -145,10 +145,10 @@ fi
 if ! command -v "conda" &> /dev/null
 then
 	echo "Downloading and installing Miniconda..."
-	PLATFORM=$ANACONDA_DOWNLOAD_PLATFORM-$BIT
+	PLATFORM=$os-$bit
 	MINICONDA="Miniconda3-latest-$PLATFORM.${ext}"
 	CONDA_URL=https://repo.continuum.io/miniconda/$MINICONDA
-	if [[ "$ANACONDA_DOWNLOAD_PLATFORM" == "MacOSX" ]]
+	if [[ "$os" == "MacOSX" ]]
 	then
 		curl -O "$CONDA_URL"
 	else
@@ -161,7 +161,7 @@ then
 	if [[ ! -f $bash_profile ]]; then
 		bash_profile=~/.bashrc
 	fi
-	if [[ -f $bash_profile && "$ANACONDA_DOWNLOAD_PLATFORM" != "Linux" ]]; then
+	if [[ -f $bash_profile && "$os" != "Linux" ]]; then
 		# Ubuntu and likely other Linux platforms short-circuit sourcing 
 		# .bashrc non-interactively so unable to load without hacks
 		# TODO: check if base environment gets activated as not yet 

@@ -72,9 +72,10 @@ IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
 IMG_EXP = "exp.mhd"
 IMG_GROUPED = "grouped.mhd"
-IMG_ATLAS_TEMPLATE = "atlasVolumeTemplate.mhd"
 IMG_BORDERS = "borders.mhd"
 IMG_HEAT_MAP = "heat.mhd"
+IMG_ATLAS_EDGE = "atlasEdge.mhd"
+IMG_LABELS_EDGE = "annotationEdge.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -95,7 +96,7 @@ def _reg_out_path(file_path, reg_name):
     
     Args:
         file_name: Full path of file registered to.
-        reg_name: Filename alone of registered file.
+        reg_name: Suffix for type of registration, eg :const:``IMG_LABELS``.
     
     Returns:
         Full path with the registered filename including extension at the end.
@@ -1727,6 +1728,67 @@ def register_group(img_files, flip=None, show_imgs=True,
     print("time elapsed for groupwise registration (s): {}"
           .format(time() - start_time))
     
+def make_edge_images(path_atlas):
+    """Make edge-detected atlas and associated labels images.
+    
+    The atlas is assumed to be a sample (eg microscopy) image on which 
+    an edge-detection filter will be applied. The labels image is 
+    assumed to be an annotated image whose edges will be found by 
+    obtaining the borders of all annotations.
+    
+    Args:
+        path_atlas: Path to the image atlas. The labels image will be 
+            found as a corresponding, registered image.
+    """
+    
+    # load atlas image, assumed to be experimental image
+    atlas_sitk = _load_numpy_to_sitk(path_atlas)
+    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
+    
+    # apply edge-detection filter
+    atlas_np = filters.gaussian(atlas_np, 5)
+    atlas_np = filters.laplace(atlas_np)
+    vmin = -0.005
+    vmax = 0.005
+    atlas_np = np.clip(atlas_np, vmin, vmax)
+    atlas_np = (atlas_np - vmin) / (vmax - vmin)
+    atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_np)
+    sitk.Show(atlas_sitk_edge)
+    
+    # load associated labels image
+    labels_sitk_edge = None
+    labels_sitk = load_registered_img(
+        path_atlas, get_sitk=True, reg_name=IMG_LABELS)
+    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    
+    # extract boundaries for each label
+    labels_edge = np.zeros(labels_img_np.shape, dtype=np.int8)
+    label_ids = np.unique(labels_img_np)
+    for label_id in label_ids:
+        print("finding border for {}".format(label_id))
+        
+        # get mask of label to get bounding box
+        label_mask = labels_img_np == label_id
+        props = measure.regionprops(label_mask.astype(np.int))
+        if len(props) < 1 or props[0].bbox is None: continue
+        _, slices = plot_3d.get_bbox_region(props[0].bbox)
+        
+        # work on a view of the region for efficiency, obtaining borders 
+        # as eroded region and writing into new array
+        region = labels_img_np[tuple(slices)]
+        label_mask_region = region == label_id
+        borders = plot_3d.perimeter_nd(label_mask_region)
+        borders_region = labels_edge[tuple(slices)]
+        borders_region[borders] = 1
+    
+    labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
+    sitk.Show(labels_sitk_edge)
+    
+    # write images to same directory with edge-based suffix
+    imgs_write = {
+        IMG_ATLAS_EDGE: atlas_sitk_edge, IMG_LABELS_EDGE: labels_sitk_edge}
+    write_reg_images(imgs_write, path_atlas)
+
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.
@@ -3149,3 +3211,7 @@ if __name__ == "__main__":
     elif config.register_type == config.REGISTER_TYPES[9]:
         # export common labels
         export_common_labels(config.filenames, config.PATH_COMMON_LABELS)
+
+    elif config.register_type == config.REGISTER_TYPES[10]:
+        # convert atlas and labels to edge-detected images
+        make_edge_images(config.filename)

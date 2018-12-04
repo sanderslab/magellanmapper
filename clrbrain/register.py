@@ -1111,10 +1111,9 @@ def _measure_overlap_combined_labels(fixed_img, labels_img):
     measure_overlap(
         fixed_img, result_img_for_overlap, transformed_thresh=1)
 
-def _transform_labels(transformix_img_filter, labels_img, settings, 
-                      truncate=False, flip=False):
-    truncation = settings["truncate_labels"]
-    if truncate and truncation is not None:
+def _transform_labels(transformix_img_filter, labels_img, truncation=None, 
+                      flip=False):
+    if truncation is not None:
         # truncate ventral and posterior portions since variable 
         # amount of tissue or quality of imaging in these regions
         labels_img_np = sitk.GetArrayFromImage(labels_img)
@@ -1379,8 +1378,9 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     
     def make_labels(truncate):
         nonlocal transformed_img
+        truncation = settings["truncate_labels"] if truncate else None
         img = _transform_labels(
-            transformix_img_filter, labels_img, settings, truncate=truncate, 
+            transformix_img_filter, labels_img, truncation=truncation, 
             flip=flip)
         print(img.GetSpacing())
         # WORKAROUND: labels img floating point vals may be more rounded 

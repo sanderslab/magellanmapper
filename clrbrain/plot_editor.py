@@ -115,7 +115,7 @@ class PlotEditor:
         # overlay all images and set labels for footer value on mouseover
         ax_imgs = plot_support.overlay_images(
             self.axes, self.aspect, self.origin, imgs2d, 0, cmaps, alphas)
-        self.axes.format_coord = PixelDisplay(imgs2d[1])
+        self.axes.format_coord = PixelDisplay(imgs2d)
         self.plane_slider.set_val(self.coord[0])
         self.ax_img = ax_imgs[1][0]
         
@@ -351,11 +351,24 @@ class PlotEditor:
                 self.ax_img.figure.canvas.mpl_disconnect(listener)
 
 class PixelDisplay(object):
-    def __init__(self, img):
-        self.img = img
+    """Custom image intensity display in :attr:``Axes.format_coord``.
+    
+    Attributes:
+        imgs: Sequence of images whose intensity values will be displayed.
+    """
+    def __init__(self, imgs):
+        self.imgs = imgs
     def __call__(self, x, y):
-        if x < 0 or y < 0 or x >= self.img.shape[1] or y >= self.img.shape[0]:
-            z = "n/a"
-        else:
-            z = self.img[int(y), int(x)]
-        return "x={:.01f}, y={:.01f}, z={}".format(x, y, z)
+        coord = (int(y), int(x))
+        output = "x={}, y={}, z=".format(*coord[::-1])
+        zs = []
+        for i, img in enumerate(self.imgs):
+            if x < 0 or y < 0 or x >= img.shape[1] or y >= img.shape[0]:
+                # no correponding px for the image
+                z = "n/a"
+            else:
+                # get the corresponding intensity value, truncating floats
+                z = img[coord]
+                if isinstance(z, float): z = "{:.4f}".format(z)
+            zs.append("{} (image {})".format(z, i))
+        return output + " ,".join(zs)

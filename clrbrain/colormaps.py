@@ -60,8 +60,8 @@ class DiscreteColormap(colors.ListedColormap):
         # make first boundary slightly below first label to encompass it 
         # to avoid off-by-one errors that appear to occur when viewing an 
         # image with an additional extreme label
-        offset = 0.5
-        labels_unique -= offset
+        labels_offset = 0.5
+        labels_unique -= labels_offset
         # number of boundaries should be one more than number of labels to 
         # avoid need for interpolation of boundary bin numbers and 
         # potential merging of 2 extreme labels
@@ -78,7 +78,7 @@ class DiscreteColormap(colors.ListedColormap):
             multiplier=multiplier, offset=offset)
         if background is not None:
             # replace backgound label color with given color
-            bkgdi = np.where(labels_unique == background[0] - offset)
+            bkgdi = np.where(labels_unique == background[0] - labels_offset)
             if len(bkgdi) > 0 and bkgdi[0].size > 0:
                 self.cmap_labels[bkgdi[0][0]] = background[1]
         self.make_cmap()
@@ -125,7 +125,8 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             will be set.
         multiplier: Multiplier for random values generated for RGB values; 
             defaults to 255.
-        offset: Offset to generated random numbers; defaults to 0.
+        offset: Offset to generated random numbers; defaults to 0. The 
+            final numbers will be in the range from offset to offset+multiplier.
     
     Returns:
         2D Numpy array in the format [[R, G, B, alpha], ...]. This colormap 

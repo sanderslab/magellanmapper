@@ -1255,19 +1255,10 @@ def import_atlas(atlas_dir, show=True):
     # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
     target_dir = atlas_dir + "_import"
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
     name_prefix = os.path.join(target_dir, os.path.basename(atlas_dir)) + ".czi"
     imgs_write = {
         IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}
-    for suffix in imgs_write.keys():
-        img = imgs_write[suffix]
-        if img is None: continue
-        out_path = _reg_out_path(name_prefix, suffix)
-        sitk.WriteImage(img, out_path, False)
-        # copy metadata file to allow opening images from bare suffix name, 
-        # such as when this atlas becomes the new atlas for registration
-        shutil.copy(out_path, os.path.join(target_dir, suffix))
+    write_reg_images(imgs_write, name_prefix, copy_to_suffix=True)
     detector.resolutions = [img_atlas.GetSpacing()[::-1]]
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
@@ -1783,6 +1774,33 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     translation = _translation_adjust(
         moving_sitk, transformed_sitk, translation, flip=True)
     _show_overlays(imgs, translation, fixed_file, out_plane)
+
+def write_reg_images(imgs_write, prefix, copy_to_suffix=False):
+    """Write registered images to file.
+    
+    Args:
+        imgs_write: Dictionary of ``{suffix: image}``, where ``suffix`` 
+            is a registered images suffix, such as :const:``IMAGE_LABELS``, 
+            and ``image`` is a SimpleITK image object. If the image does 
+            not exist, the file will not be written.
+        prefix: Base path from which to construct registered file paths.
+        copy_to_suffix: If True, copy the output path to a file in the 
+            same directory with ``suffix`` as the filename, which may 
+            be useful when setting the registered images as the 
+            main images in the directory. Defaults to False.
+    """
+    target_dir = os.path.dirname(prefix)
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    for suffix in imgs_write.keys():
+        img = imgs_write[suffix]
+        if img is None: continue
+        out_path = _reg_out_path(prefix, suffix)
+        sitk.WriteImage(img, out_path, False)
+        if copy_to_suffix:
+            # copy metadata file to allow opening images from bare suffix name, 
+            # such as when this atlas becomes the new atlas for registration
+            shutil.copy(out_path, os.path.join(target_dir, suffix))
 
 def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS, 
                         replace=None):

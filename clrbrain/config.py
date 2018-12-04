@@ -817,7 +817,7 @@ borders_img = None
 REGISTER_TYPES = (
     "single", "group", "overlays", "volumes", "densities", "export_vols", 
     "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
-    "make_edge_images")
+    "make_edge_images", "reg_labels_to_atlas")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"

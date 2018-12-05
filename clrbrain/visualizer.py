@@ -702,13 +702,15 @@ class Visualization(HasTraits):
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]
-            '''
             # 3D-seeded watershed segmentation using detection blobs
+            '''
+            # could get initial segmentation from r-w
             walker = detector.segment_rw(
                 self.roi, config.channel, erosion=1)
             '''
             self.labels = detector.segment_ws(
                 self.roi, config.channel, None, blobs)
+            '''
             # 3D-seeded random-walker with high beta to limit walking 
             # into background, also removing objects smaller than the 
             # smallest blob, roughly normalized for anisotropy and 
@@ -720,6 +722,7 @@ class Visualization(HasTraits):
             self.labels = detector.segment_rw(
                 self.roi, config.channel, beta=100000, 
                 blobs=blobs, remove_small=min_size)
+            '''
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     

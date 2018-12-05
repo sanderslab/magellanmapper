@@ -1831,12 +1831,16 @@ def make_edge_images(path_atlas):
     atlas_np = filters.laplace(atlas_np)
     vmin, vmax = np.percentile(atlas_np, (2, 98))
     atlas_np = np.clip(atlas_np, vmin, vmax)
-    atlas_np = (atlas_np - vmin) / (vmax - vmin)
+    # comment-out normalizing since need neg vals for zero-crossing
+    #atlas_np = (atlas_np - vmin) / (vmax - vmin)
     
     # remove signal below threshold while keeping any signal in labels
     thresh = filters.threshold_otsu(atlas_np)
     atlas_mask = np.logical_or(atlas_np > thresh, labels_img_np != 0)
     atlas_np[~atlas_mask] = np.amin(atlas_np)
+    
+    # convert to edge-detection image
+    atlas_np = plot_3d.zero_crossing(atlas_np, 1).astype(float)
     
     atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_np)
     sitk.Show(atlas_sitk_edge)

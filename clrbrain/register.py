@@ -75,6 +75,7 @@ IMG_GROUPED = "grouped.mhd"
 IMG_BORDERS = "borders.mhd"
 IMG_HEAT_MAP = "heat.mhd"
 IMG_ATLAS_EDGE = "atlasEdge.mhd"
+IMG_ATLAS_LOG = "atlasLoG.mhd"
 IMG_LABELS_EDGE = "annotationEdge.mhd"
 
 NODE = "node"
@@ -1817,7 +1818,8 @@ def make_edge_images(path_atlas):
     """
     
     # load atlas image, assumed to be experimental image
-    atlas_sitk = _load_numpy_to_sitk(path_atlas)
+    atlas_sitk = load_registered_img(
+        path_atlas, get_sitk=True, reg_name=IMG_ATLAS)
     atlas_np = sitk.GetArrayFromImage(atlas_sitk)
     
     # load associated labels image
@@ -1838,6 +1840,8 @@ def make_edge_images(path_atlas):
     thresh = filters.threshold_otsu(atlas_np)
     atlas_mask = np.logical_or(atlas_np > thresh, labels_img_np != 0)
     atlas_np[~atlas_mask] = np.amin(atlas_np)
+    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_np)
+    sitk.Show(atlas_sitk_log)
     
     # convert to edge-detection image
     atlas_np = plot_3d.zero_crossing(atlas_np, 1).astype(float)
@@ -1872,7 +1876,10 @@ def make_edge_images(path_atlas):
     
     # write images to same directory with edge-based suffix
     imgs_write = {
-        IMG_ATLAS_EDGE: atlas_sitk_edge, IMG_LABELS_EDGE: labels_sitk_edge}
+        IMG_ATLAS_LOG: atlas_sitk_log, 
+        IMG_ATLAS_EDGE: atlas_sitk_edge, 
+        IMG_LABELS_EDGE: labels_sitk_edge, 
+    }
     write_reg_images(imgs_write, path_atlas)
 
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 

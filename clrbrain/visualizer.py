@@ -706,8 +706,9 @@ class Visualization(HasTraits):
             # 3D-seeded watershed segmentation using detection blobs
             walker = detector.segment_rw(
                 self.roi, config.channel, erosion=1)
-            self.labels = detector.segment_ws(self.roi, walker, blobs)
             '''
+            self.labels = detector.segment_ws(
+                self.roi, config.channel, None, blobs)
             # 3D-seeded random-walker with high beta to limit walking 
             # into background, also removing objects smaller than the 
             # smallest blob, roughly normalized for anisotropy and 

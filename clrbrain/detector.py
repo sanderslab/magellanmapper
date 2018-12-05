@@ -52,19 +52,32 @@ def calc_scaling_factor():
         "microsope scaling factor based on resolutions: {}".format(factor))
     return factor
 
-def markers_from_blobs(roi, blobs):
+def _markers_from_blobs(roi, blobs):
     # use blobs as seeds by converting blobs into marker image
     markers = np.zeros(roi.shape, dtype=np.uint8)
-    coords = np.transpose(blobs[:, :3]).astype(np.int)
-    coords = np.split(coords, coords.shape[0])
+    coords = lib_clrbrain.coords_for_indexing(blobs[:, :3].astype(int))
     markers[tuple(coords)] = 1
     markers = morphology.dilation(markers, morphology.ball(1))
     markers = measure.label(markers)
     return markers
 
+def _carve_segs(roi, blobs):
+    # carve out background from segmented area
+    carved = roi
+    if blobs is None:
+        # clean up by using simple threshold to remove all background
+        carved, _ = plot_3d.carve(carved)
+    else:
+        # use blobs as ellipsoids to identify background to remove
+        thresholded = plot_3d.build_ground_truth(
+            carved.shape, blobs, ellipsoid=True)
+        thresholded = thresholded.astype(bool)
+        carved[~thresholded] = 0
+    return carved
+
 def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None, 
                erosion=None, blobs=None, get_labels=False):
-    """Segments an image, drawing contours around segmented regions.
+    """Segments an image using the Random-Walker algorithm.
     
     Args:
         roi: Region of interest to segment.
@@ -82,7 +95,8 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
             case markers will be determined based on ``vmin``/``vmax`` 
             thresholds.
         get_labels: True to measure and return labels from the 
-            resulting segmentation.
+            resulting segmentation instead of returning the segmentations 
+            themselves; defaults to False.
     
     Returns:
         List of the Random-Walker segmentations for the given channels, 
@@ -103,7 +117,7 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
             markers[roi_segment >= vmax] = 1
         else:
             # derive markers from blobs
-            markers = markers_from_blobs(roi_segment, blobs)
+            markers = _markers_from_blobs(roi_segment, blobs)
         
         # perform the segmentation
         walker = segmentation.random_walker(
@@ -113,17 +127,7 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         # clean up segmentation
         
         #lib_clrbrain.show_full_arrays()
-        if blobs is None:
-            # clean up by using simple threshold to remove all background
-            roi_thresh = filters.threshold_mean(roi_segment)
-            thresholded = roi_segment > roi_thresh
-        else:
-            # use blobs as ellipsoids to identify background to remove
-            thresholded = plot_3d.build_ground_truth(
-                roi_segment.shape, blobs, ellipsoid=True)
-            thresholded = thresholded.astype(bool)
-        walker[~thresholded] = 0
-        
+        walker = _carve_segs(walker, blobs)
         if remove_small:
             # remove artifacts
             walker = morphology.remove_small_objects(walker, remove_small)
@@ -146,11 +150,13 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         return labels
     return walkers
 
-def segment_ws(roi, thresholded=None, blobs=None): 
-    """Segment an ROI using a 3D-seeded watershed.
+def segment_ws(roi, channel, thresholded=None, blobs=None): 
+    """Segment an image using a compact watershed, including the option 
+    to use a 3D-seeded watershed approach.
     
     Args:
         roi: ROI as a Numpy array in (z, y, x) order.
+        channel: Channel to pass to :func:``plot_3d.setup_channels``.
         thresholded: Thresholded image such as a segmentation into foreground/
             background given by Random-walker (:func:``segment_rw``). 
             Defaults to None, in which case Otsu thresholding will be performed.
@@ -159,43 +165,49 @@ def segment_ws(roi, thresholded=None, blobs=None):
             case peaks on a distance transform will be used.
     
     Returns:
-        Watershed labels as in the shape of [roi.shape], allowing for 
-        multiple sets of labels.
+        List of watershed labels for each given channel, with each set 
+        of labels given as an image of the same shape as ``roi``.
     """
-    # TODO: extend to multichannel
-    roi = roi[..., 0]
-    if thresholded is None:
-        # Ostu thresholing and object separate based on local max rather than 
-        # seeded watershed approach
-        roi_thresh = filters.threshold_otsu(roi, 64)
-        thresholded = roi > roi_thresh
-    else:
-        thresholded = thresholded[0] - 1 # r-w assigned 0 values to > 0 val labels
-    
-    # distance transform to find boundaries in thresholded image
-    distance = ndimage.distance_transform_edt(thresholded)
-    
-    if blobs is None:
-        # default to finding peaks of distance transform if no blobs given, 
-        # using an anisotropic footprint
-        try:
-            local_max = peak_local_max(
-                distance, indices=False, footprint=np.ones((1, 3, 3)), 
-                labels=thresholded)
-        except IndexError as e:
-            print(e)
-            raise e
-        markers = measure.label(local_max)
-    else:
-        markers = markers_from_blobs(thresholded, blobs)
-    
-    # watershed with slight increase in compactness to give basins with 
-    # more regular, larger shape, and minimize number of small objects
-    labels_ws = morphology.watershed(-distance, markers, compactness=0.01)
-    labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
-    #print("num ws blobs: {}".format(len(np.unique(labels_ws)) - 1))
-    print(labels_ws)
-    labels_ws = labels_ws[None]
+    labels = []
+    multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
+    for i in channels:
+        roi_segment = roi[..., i] if multichannel else roi
+        if thresholded is None:
+            # Ostu thresholing and object separate based on local max 
+            # rather than seeded watershed approach
+            roi_thresh = filters.threshold_otsu(roi, 64)
+            thresholded = roi > roi_thresh
+        else:
+            # r-w assigned 0 values to > 0 val labels
+            thresholded = thresholded[0] - 1
+        
+        # distance transform to find boundaries in thresholded image
+        distance = ndimage.distance_transform_edt(thresholded)
+        
+        if blobs is None:
+            # default to finding peaks of distance transform if no blobs 
+            # given, using an anisotropic footprint
+            try:
+                local_max = peak_local_max(
+                    distance, indices=False, footprint=np.ones((1, 3, 3)), 
+                    labels=thresholded)
+            except IndexError as e:
+                print(e)
+                raise e
+            markers = measure.label(local_max)
+        else:
+            markers = _markers_from_blobs(thresholded, blobs)
+        
+        # watershed with slight increase in compactness to give basins with 
+        # more regular, larger shape
+        labels_ws = morphology.watershed(-distance, markers, compactness=0.1)
+        
+        # clean up segmentation
+        labels_ws = _carve_segs(labels_ws, blobs)
+        labels_ws = morphology.remove_small_objects(labels_ws, min_size=100)
+        #print("num ws blobs: {}".format(len(np.unique(labels_ws)) - 1))
+        labels_ws = labels_ws[None]
+        labels.append(labels_ws)
     return labels_ws
 
 def _blob_surroundings(blob, roi, padding, plane=False):

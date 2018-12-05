@@ -49,6 +49,7 @@ from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 from clrbrain import register
+from clrbrain import segmenter
 from clrbrain import sqlite
 
 
@@ -705,10 +706,10 @@ class Visualization(HasTraits):
             # 3D-seeded watershed segmentation using detection blobs
             '''
             # could get initial segmentation from r-w
-            walker = detector.segment_rw(
+            walker = segmenter.segment_rw(
                 self.roi, config.channel, erosion=1)
             '''
-            self.labels = detector.segment_ws(
+            self.labels = segmenter.segment_ws(
                 self.roi, config.channel, None, blobs)
             '''
             # 3D-seeded random-walker with high beta to limit walking 
@@ -719,7 +720,7 @@ class Visualization(HasTraits):
                 np.pi * np.power(np.amin(np.abs(blobs[:, 3])), 3) 
                 / np.mean(plot_3d.calc_isotropic_factor(1)))
             print("min size threshold for r-w: {}".format(min_size))
-            self.labels = detector.segment_rw(
+            self.labels = segmenter.segment_rw(
                 self.roi, config.channel, beta=100000, 
                 blobs=blobs, remove_small=min_size)
             '''

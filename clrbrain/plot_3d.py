@@ -27,6 +27,7 @@ from clrbrain import config
 from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import plot_support
+from clrbrain import segmenter
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
 _MAYAVI_COLORMAPS = ("Greens", "Reds", "Blues", "Oranges")
@@ -190,7 +191,7 @@ def threshold(roi):
                 roi_thresh[i], selem)
         thresholded = roi > roi_thresh
     elif thresh_type == "random_walker":
-        thresholded = detector.segment_rw(roi, size)
+        thresholded = segmenter.segment_rw(roi, size)
     
     # dilation/erosion, adjusted based on overall intensity
     thresh_mean = np.mean(thresholded)
@@ -961,7 +962,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
             
             # build surface from segmented ROI
             if to_segment:
-                walker = detector.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
+                walker = segmenter.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
                 roi_show *= np.subtract(walker[0], 1)
             else:
                 print("deferring segmentation as {} px is above threshold"

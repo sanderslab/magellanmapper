@@ -1826,17 +1826,17 @@ def make_edge_images(path_atlas):
         path_atlas, get_sitk=True, reg_name=IMG_LABELS)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     
-    # apply edge-detection filter
+    # apply Laplacian of Gaussian filter (sequentially)
     atlas_np = filters.gaussian(atlas_np, 5)
     atlas_np = filters.laplace(atlas_np)
-    vmin = -0.005
-    vmax = 0.005
+    vmin, vmax = np.percentile(atlas_np, (2, 98))
     atlas_np = np.clip(atlas_np, vmin, vmax)
     atlas_np = (atlas_np - vmin) / (vmax - vmin)
     
     # remove signal below threshold while keeping any signal in labels
-    atlas_mask = np.logical_or(atlas_np > 0.6, labels_img_np != 0)
-    atlas_np[~atlas_mask] = 0
+    thresh = filters.threshold_otsu(atlas_np)
+    atlas_mask = np.logical_or(atlas_np > thresh, labels_img_np != 0)
+    atlas_np[~atlas_mask] = np.amin(atlas_np)
     
     atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_np)
     sitk.Show(atlas_sitk_edge)

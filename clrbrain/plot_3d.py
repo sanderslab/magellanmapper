@@ -870,6 +870,28 @@ def build_heat_map(shape, coords):
     print("heat_map:\n{}".format(heat_map))
     return heat_map
 
+def zero_crossing(img, filter_size):
+    """Apply a zero-crossing detector to an image, such as an image 
+    produced by a Laplacian of Gaussian.
+    
+    Args:
+        img: Image as a Numpy array.
+        filter_size: Size of structuring element, where larger sizes 
+            give thicker edges.
+    
+    Returns:
+        Array of same size as ``img`` as a mask of edges.
+    """
+    selem = morphology.ball(filter_size)
+    eroded = morphology.erosion(img, selem)
+    dilated = morphology.dilation(img, selem)
+    # find pixels of border transition, where eroded or dilated pixels 
+    # switch signs compared with original image
+    crossed = np.logical_or(
+        np.logical_and(img > 0, eroded < 0), 
+        np.logical_and(img < 0, dilated > 0))
+    return crossed
+
 def calc_isotropic_factor(scale):
     res = detector.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))

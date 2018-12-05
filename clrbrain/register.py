@@ -1843,6 +1843,7 @@ def make_edge_images(path_atlas):
     atlas_np = plot_3d.zero_crossing(atlas_np, 1).astype(float)
     
     atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_np)
+    atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
     sitk.Show(atlas_sitk_edge)
     
     # extract boundaries for each label
@@ -1866,6 +1867,7 @@ def make_edge_images(path_atlas):
         borders_region[borders] = 1
     
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
+    labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
     sitk.Show(labels_sitk_edge)
     
     # write images to same directory with edge-based suffix

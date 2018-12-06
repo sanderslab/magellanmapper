@@ -553,7 +553,7 @@ def get_bbox_region(bbox, padding=0, img_shape=None):
     #print("shape: {}, slices: {}".format(shape, slices))
     return shape, slices
 
-def replace_vol(img, vol, center, vol_as_mask=False):
+def replace_vol(img, vol, center, vol_as_mask=None):
     """Replace a volume within an image, centering on the given coordinates 
     and cropping the input volume to fit.
     
@@ -562,8 +562,10 @@ def replace_vol(img, vol, center, vol_as_mask=False):
             ``img`` will be updated in-place.
         vol: Volume to place in ``img``.
         center: Coordinates of the center of volume, given in z,y,x order.
-        vol_as_mask: True if ``vol`` should be taken as a mask, where only 
-            its True values will replace the corresponding pixels in ``img``.
+        vol_as_mask: If ``vol`` should be taken as a mask, where only 
+            its True values will replace the corresponding pixels in 
+            ``img``, assign this value to the mask locations. Defaults to 
+            None, in which case the entire ``vol`` will be assigned.
     
     Returns:
         ``img`` with ``vol`` centered on ``center``.
@@ -576,7 +578,7 @@ def replace_vol(img, vol, center, vol_as_mask=False):
         stop_vol = int(vol.shape[i])
         # center volumes with odd-numbered length, and skew slightly 
         # toward lower values for even-numbered length
-        start = int(center[i]) - stop_vol // 2
+        start = int(center[i] - vol.shape[i] // 2)
         stop = start + stop_vol
         # ensure that slices do not exceed bounds of img, also cropping 
         # volume if so
@@ -588,9 +590,9 @@ def replace_vol(img, vol, center, vol_as_mask=False):
             stop = img.shape[i]
         slices_img.append(slice(start, stop))
         slices_vol.append(slice(start_vol, stop_vol))
-    if vol_as_mask:
+    if vol_as_mask is not None:
         # replace vol as a mask
-        img[tuple(slices_img)][vol[tuple(slices_vol)]] = True
+        img[tuple(slices_img)][vol[tuple(slices_vol)]] = vol_as_mask
     else:
         # replace complete vol
         img[tuple(slices_img)] = vol[tuple(slices_vol)]
@@ -1305,36 +1307,48 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     
     return pts_in, cmap, scale
 
-def build_ground_truth(size, blobs, ellipsoid=False):
+def build_ground_truth(img3d, blobs, ellipsoid=False, labels=None, 
+                       spacing=None):
     """Build ground truth volumetric image from blobs.
     
     Attributes:
-        size: Size given in z,y,x dimensions.
+        img3d: Image as 3D Numpy array in which to store results
         blobs: Numpy array of segments to display, given as an 
             (n, 4) dimension array, where each segment is in (z, y, x, radius).
         ellipsoid: True to draw blobs as ellipsoids; defaults to False.
+        labels: Array of labels the same length as ``blobs`` to assign 
+            as the values for each ground truth; defaults to None to 
+            assign a default value of 1 instead.
+        spacing: Spacing by which to multiply blobs` radii; defaults to None, 
+            in which case each blob's radius will be used for all dimensions.
     
     Returns:
-        3D image binary image array, where 0 is background, and 1 is 
-        foreground.
+        ``img3d`` with ground drawn as circles or ellipsoids.
     """
-    #print("generating ground truth image of size {}".format(size))
-    img3d = np.zeros(size, dtype=np.uint8)
-    if ellipsoid: spacing = detector.calc_scaling_factor()
-    for i in range(size[0]):
-        blobs_in = blobs[blobs[:, 0] == i]
-        for blob in blobs_in:
-            if ellipsoid:
-                # draw blob as ellipse with spacingn given based on resolution
-                ellip = draw.ellipsoid(blob[3], blob[3], blob[3], spacing)
-                replace_vol(img3d, ellip, blob[:3], True)
+    if ellipsoid:
+        # draw blobs as ellipses
+        for i, blob in enumerate(blobs):
+            if spacing is None:
+                centroid = np.repeat(blob[3], 3)
             else:
-                # draw blob as circle only in given z-plane
+                # multiply spacing directly rather than using in ellipsoid 
+                # function since the fn does not appear to place the 
+                # ellipsoide in the center of the array
+                centroid = np.multiply(blob[3], spacing)
+            ellip = draw.ellipsoid(*centroid)
+            label = True if labels is None else labels[i]
+            replace_vol(img3d, ellip, blob[:3], vol_as_mask=label)
+    else:
+        # draw blobs as circles only in given z-planes
+        if labels is None: labels = np.ones(len(blobs), dtype=int)
+        for i in range(img3d.shape[0]):
+            mask = blobs[:, 0] == i
+            blobs_in = blobs[mask]
+            labels_in = labels[mask]
+            for blob, label in zip(blobs_in, labels_in):
                 rr, cc = draw.circle(*blob[1:4], img3d[i].shape)
                 #print("drawing circle of {} x {}".format(rr, cc))
-                img3d[i, rr, cc] = 1
-    #lib_clrbrain.show_full_arrays()
-    #print(img3d)
+                img3d[i, rr, cc] = label
     return img3d
 
 

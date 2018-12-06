@@ -31,10 +31,13 @@ def _carve_segs(roi, blobs):
         # clean up by using simple threshold to remove all background
         carved, _ = plot_3d.carve(carved)
     else:
-        # use blobs as ellipsoids to identify background to remove
+        # use blobs as ellipsoids to identify background to remove; 
+        # TODO: consider setting spacing in config since depends on 
+        # microscopy characteristics, such as elongation from 
+        # thick lightsheet
         thresholded = plot_3d.build_ground_truth(
-            carved.shape, blobs, ellipsoid=True)
-        thresholded = thresholded.astype(bool)
+            np.zeros(carved.shape, dtype=bool), blobs, ellipsoid=True)
+        #thresholded = thresholded.astype(bool)
         carved[~thresholded] = 0
     return carved
 

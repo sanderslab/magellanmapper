@@ -137,7 +137,8 @@ def export_rois(db, image5d, channel, path, border):
             np.save(path_blobs, blobs)
             
             # convert blobs to ground truth
-            img3d_truth = plot_3d.build_ground_truth(size[::-1], blobs)
+            img3d_truth = plot_3d.build_ground_truth(
+                np.zeros(size[::-1], dtype=np.uint8), blobs)
             if isotropic is not None:
                 img3d_truth = plot_3d.make_isotropic(img3d_truth, isotropic)
                 # remove fancy blending since truth set must be binary

@@ -371,4 +371,4 @@ class PixelDisplay(object):
                 z = img[coord]
                 if isinstance(z, float): z = "{:.4f}".format(z)
             zs.append("{} (image {})".format(z, i))
-        return output + " ,".join(zs)
+        return output + ", ".join(zs)

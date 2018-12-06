@@ -214,3 +214,44 @@ def labels_to_markers(img, labels_img):
         np.zeros_like(labels_img), np.array(list(blobs.values())), 
         ellipsoid=True, labels=list(blobs.keys()), spacing=spacing)
     return markers
+
+def mask_atlas(atlas, labels_img):
+    """Mask an atlas with its thresholded image filled in with an 
+    associated labels image.
+    
+    Args:
+        img: Image as a Numpy array to segment.
+        labels_img: Labels image of the same shape as ``img``, where all 
+            values except 0 will be taken as an additional 
+            part of the resulting mask.
+    Returns:
+        Boolean array the same shape as ``img`` with True for all 
+        pixels above threshold in ``img`` or within the 
+        foreground of ``labels_img``.
+    """
+    thresh = filters.threshold_otsu(atlas)
+    mask = np.logical_or(atlas > thresh, labels_img != 0)
+    return mask
+
+def segment_from_labels(img, labels_img, markers):
+    """Segment an image using markers from a labels image.
+    
+    Labels images may have been generally manually and thus may not 
+    perfectly match the underlying image. As a way to check or 
+    augment the label image, segment the underlying image using 
+    the labels as the seeds to prescribe the number and initial 
+    location of each label.
+    
+    Args:
+        img: Image as a Numpy array to segment.
+        labels_img: Labels image as an integer Numpy array, where each 
+            unique int is a separate label.
+    
+    Returns:
+        Segmented image of the same shape as ``img`` with the same 
+        number of labels as in ``labels_img``.
+    """
+    watershed = morphology.watershed(img, markers, compactness=0.1)
+    mask = mask_atlas(img, labels_img)
+    watershed[~mask] = 0
+    return watershed

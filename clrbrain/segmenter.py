@@ -12,6 +12,7 @@ from skimage import measure
 from skimage import morphology
 
 from clrbrain import config
+from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 
@@ -175,3 +176,41 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
         labels_ws = labels_ws[None]
         labels.append(labels_ws)
     return labels_ws
+
+def labels_to_markers(img, labels_img):
+    """Convert a labels image to markers.
+    
+    These markers can be used in segmentation algorithms such as 
+    watershed.
+    
+    Args:
+        img: Image as a Numpy array to segment.
+        labels_img: Labels image as an integer Numpy array, where each 
+            unique int is a separate label.
+    
+    Returns:
+        Image array of the same shape as ``img`` and the same number of 
+        labels as in ``labels_img``, with labels reduced to smaller 
+        markers.
+    """
+    blobs = {}
+    labels_unique = np.unique(labels_img)
+    #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
+    for label_id in labels_unique:
+        if label_id == 0: continue
+        print("finding centroid for label ID {}".format(label_id))
+        props = plot_3d.get_label_props(labels_img, label_id)
+        if len(props) >= 1: 
+            # get centroid and convert to ellipsoid marker
+            blob = [int(n) for n in props[0].centroid]
+            blob.append(5)
+            blobs[label_id] = np.array(blob)
+            print("storing centroid as {}".format(blobs[label_id]))
+    
+    # build markers from centroids
+    spacing = detector.calc_scaling_factor()
+    spacing = spacing / np.amin(spacing)
+    markers = plot_3d.build_ground_truth(
+        np.zeros_like(labels_img), np.array(list(blobs.values())), 
+        ellipsoid=True, labels=list(blobs.keys()), spacing=spacing)
+    return markers

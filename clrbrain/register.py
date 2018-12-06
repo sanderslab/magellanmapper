@@ -66,6 +66,7 @@ from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_2d
 from clrbrain import plot_3d
+from clrbrain import segmenter
 from clrbrain import stats
 
 IMG_ATLAS = "atlasVolume.mhd"
@@ -77,6 +78,7 @@ IMG_HEAT_MAP = "heat.mhd"
 IMG_ATLAS_EDGE = "atlasEdge.mhd"
 IMG_ATLAS_LOG = "atlasLoG.mhd"
 IMG_LABELS_EDGE = "annotationEdge.mhd"
+IMG_LABELS_MARKERS = "annotationMarkers.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -1820,13 +1822,19 @@ def make_edge_images(path_atlas):
     # load atlas image, assumed to be experimental image
     atlas_sitk = load_registered_img(
         path_atlas, get_sitk=True, reg_name=IMG_ATLAS)
+    detector.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
     atlas_np = sitk.GetArrayFromImage(atlas_sitk)
     
     # load associated labels image
-    labels_sitk_edge = None
     labels_sitk = load_registered_img(
         path_atlas, get_sitk=True, reg_name=IMG_LABELS)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    
+    # output images
+    atlas_sitk_log = None
+    atlas_sitk_edge = None
+    labels_sitk_edge = None
+    labels_sitk_markers = None
     
     # apply Laplacian of Gaussian filter (sequentially)
     atlas_np = filters.gaussian(atlas_np, 5)
@@ -1839,8 +1847,11 @@ def make_edge_images(path_atlas):
     # remove signal below threshold while keeping any signal in labels
     thresh = filters.threshold_otsu(atlas_np)
     atlas_mask = np.logical_or(atlas_np > thresh, labels_img_np != 0)
+    #atlas_mask = morphology.remove_small_objects(atlas_mask, min_size=10000000)
     atlas_np[~atlas_mask] = np.amin(atlas_np)
+    #atlas_np[atlas_mask] = 1
     atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_np)
+    #atlas_sitk_log = sitk.Cast(atlas_sitk_log, sitk.sitkUInt8)
     sitk.Show(atlas_sitk_log)
     
     # convert to edge-detection image
@@ -1874,11 +1885,16 @@ def make_edge_images(path_atlas):
     labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
     sitk.Show(labels_sitk_edge)
     
+    labels_markers = segmenter.labels_to_markers(atlas_np, labels_img_np)
+    labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
+    sitk.Show(labels_sitk_markers)
+    
     # write images to same directory with edge-based suffix
     imgs_write = {
         IMG_ATLAS_LOG: atlas_sitk_log, 
         IMG_ATLAS_EDGE: atlas_sitk_edge, 
         IMG_LABELS_EDGE: labels_sitk_edge, 
+        IMG_LABELS_MARKERS: labels_sitk_markers, 
     }
     write_reg_images(imgs_write, path_atlas)
 

@@ -598,8 +598,8 @@ def replace_vol(img, vol, center, vol_as_mask=None):
         img[tuple(slices_img)] = vol[tuple(slices_vol)]
     return img
 
-def get_label_bbox(labels_img_np, label_id):
-    """Get bounding box for a label or set of labels.
+def get_label_props(labels_img_np, label_id):
+    """Get region properties for a label or set of labels.
     
     Args:
         labels_img_np: Image as Numpy array.
@@ -607,7 +607,7 @@ def get_label_bbox(labels_img_np, label_id):
             in the bounding box.
     
     Returns:
-        Bounding box from :func:``measure.regionprops``.
+        Region properties from :func:``measure.regionprops``.
     """
     if isinstance(label_id, (tuple, list)):
         # sequence of IDs
@@ -617,6 +617,25 @@ def get_label_bbox(labels_img_np, label_id):
         # single ID
         label_mask = labels_img_np == label_id
     props = measure.regionprops(label_mask.astype(np.int))
+    return props
+
+def get_label_bbox(labels_img_np, label_id):
+    """Get bounding box for a label or set of labels.
+    
+    Assumes that only one set of properties will be found for a given label, 
+    returning only the first set.
+    
+    Args:
+        labels_img_np: Image as Numpy array.
+        label_id: Scalar or sequence of scalars of the label IDs to include 
+            in the bounding box.
+    
+    Returns:
+        Bounding box from :func:``measure.regionprops``. If more than 
+        one set of properties are found, only the box from the first 
+        property will be returned.
+    """
+    props = get_label_props(labels_img_np, label_id)
     bbox = None
     if len(props) >= 1: bbox = props[0].bbox
     return bbox

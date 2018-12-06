@@ -1917,7 +1917,7 @@ def merge_atlas_segmentations(path_fixed):
     """
     # load corresponding edge files
     atlas_sitk = load_registered_img(
-        path_fixed, get_sitk=True, reg_name=IMG_ATLAS_LOG)
+        path_fixed, get_sitk=True, reg_name=IMG_ATLAS_EDGE)
     labels_sitk = load_registered_img(
         path_fixed, get_sitk=True, reg_name=IMG_LABELS)
     labels_sitk_markers = load_registered_img(

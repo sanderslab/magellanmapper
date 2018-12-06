@@ -251,7 +251,8 @@ def segment_from_labels(img, labels_img, markers):
         Segmented image of the same shape as ``img`` with the same 
         number of labels as in ``labels_img``.
     """
-    watershed = morphology.watershed(img, markers, compactness=0.1)
+    distance = ndimage.distance_transform_edt(img == 0)
+    watershed = morphology.watershed(-distance, markers, compactness=0.01)
     mask = mask_atlas(img, labels_img)
     watershed[~mask] = 0
     return watershed

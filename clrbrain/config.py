@@ -349,13 +349,12 @@ class RegisterSettings(SettingsDict):
         # None for the entire setting turns off truncation
         self["truncate_labels"] = None
         
-        # mirror labels from one side onto the other, given as 
-        # (frac_start, frac_end, [frac_dup]), or None to avoid mirroring; 
-        # use None for frac_start/end to find fractions automatically; 
-        # frac_dup is the starting fraction at which planes will be 
-        # duplicated, such duplicating atlas planes to keep more labels 
-        # before mirroring
-        self["labels_mirror"] = None
+        # labels curation, given as fractions of the total planes; 
+        # use None to ignore, -1 to set automatically (for mirror and edge), 
+        # or give a fraction between 0 and 1
+        self["labels_mirror"] = None # reflect planes starting here
+        self["labels_edge"] = None # extend edge labels from here
+        self["labels_dup"] = None # start duplicating planes til last labels
         
         # expand labels within bounds given by 
         # (((x_pixels_start, x_pixels_end), ...), (next_region...)), or None 
@@ -443,7 +442,9 @@ def update_register_settings(settings, settings_type):
         "generated", 
         {"resize_factor": 1.0, 
          "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
-         "labels_mirror": None}, # turn off mirroring
+         "labels_mirror": None, 
+         "labels_edge": None, 
+        }, 
         settings_type)
     
     # atlas that uses groupwise image as the atlas itself should 
@@ -458,7 +459,8 @@ def update_register_settings(settings, settings_type):
         "abae11pt5", 
         {"target_size": (345, 371, 158),
          "resize_factor": None, # turn off resizing
-         "labels_mirror": (0, 0.52), 
+         "labels_mirror": 0.52, 
+         "labels_edge": None, 
          # rotate axis 0 to open vertical gap for affines (esp 2nd)
          "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
          "affine": ({
@@ -487,7 +489,8 @@ def update_register_settings(settings, settings_type):
         "abae13pt5", 
         {"target_size": (552, 673, 340),
          "resize_factor": None, # turn off resizing
-         "labels_mirror": (None, 0.48), 
+         "labels_mirror": 0.48, 
+         "labels_edge": -1, 
          "atlas_threshold": 80, # to avoid edge over-extension into skull
          "rotate": ((-4, 1), (-2, 2)),
          "smooth": 4
@@ -499,7 +502,8 @@ def update_register_settings(settings, settings_type):
         "abae15pt5", 
         {"target_size": (704, 982, 386),
          "resize_factor": None, # turn off resizing
-         "labels_mirror": (None, 0.49), 
+         "labels_mirror": 0.49, 
+         "labels_edge": -1, 
          "atlas_threshold": 80, # to avoid edge over-extension into skull
          "rotate": ((-4, 1), ), 
          "crop_to_labels": True,
@@ -512,7 +516,8 @@ def update_register_settings(settings, settings_type):
         "abae18pt5", 
         {"target_size": (278, 581, 370),
          "resize_factor": None, # turn off resizing
-         "labels_mirror": (None, 0.525), 
+         "labels_mirror": 0.525, 
+         "labels_edge": -1, 
          "expand_labels": (((None, ), (0, 279), (103, 108)),), 
          "rotate": ((1.5, 1), (2, 2)),
          "smooth": 4
@@ -524,7 +529,8 @@ def update_register_settings(settings, settings_type):
         "abap4", 
         {"target_size": (724, 403, 398),
          "resize_factor": None, # turn off resizing
-         "labels_mirror": (None, 0.487), 
+         "labels_mirror": 0.487, 
+         "labels_edge": -1, 
          # open caudal labels to allow smallest mirror plane index, though 
          # still cross midline since some regions only have labels past midline
          "rotate": ((0.22, 1), ),
@@ -539,7 +545,8 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          # will still cross midline since some regions only have labels 
          # past midline
-         "labels_mirror": (None, 0.5), 
+         "labels_mirror": 0.5, 
+         "labels_edge": -1, 
          # rotate conservatively for symmetry without losing labels
          "rotate": ((-0.4, 1), ),
          "smooth": 4
@@ -551,10 +558,12 @@ def update_register_settings(settings, settings_type):
         "abap28", 
         {"target_size": (863, 480, 418),
          "resize_factor": None, # turn off resizing
-         # include start since some lateral labels are only partially complete; 
          # will still cross midline since some regions only have labels 
          # past midline
-         "labels_mirror": (0.11, 0.48), # (0.11, 0.51, 0.48) for dup
+         "labels_mirror": 0.48, 
+         # set edge since some lateral labels are only partially complete
+         "labels_edge": 0.11, 
+         #"labels_dup": 0.48, 
          # rotate for symmetry, which also reduces label loss
          "rotate": ((1, 2), ),
          "smooth": 2
@@ -566,9 +575,10 @@ def update_register_settings(settings, settings_type):
         "abap56", 
         {"target_size": (528, 320, 456),
          "resize_factor": None, # turn off resizing
-         # include start since some lateral labels are only partially complete; 
          # stained sections and labels almost but not symmetric
-         "labels_mirror": (0.138, 0.5),
+         "labels_mirror": 0.5,
+         # set edge since some lateral labels are only partially complete
+         "labels_edge": 0.138, 
          "smooth": 2
         }, 
         settings_type)
@@ -578,11 +588,12 @@ def update_register_settings(settings, settings_type):
         "abap56adult", 
         {"target_size": (528, 320, 456), # same atlas image as ABA P56dev
          "resize_factor": None, # turn off resizing
-         # turn off start by setting to 0; same stained sections as for P56dev; 
+         # same stained sections as for P56dev; 
          # labels are already mirrored starting at z=228, but atlas is not
-         # here, mirror starting at the same z-plane to make both sections 
+         # here, so mirror starting at the same z-plane to make both sections 
          # and labels symmetric and aligned with one another
-         "labels_mirror": (0, 0.5),
+         "labels_mirror": 0.5,
+         "labels_edge": None, 
          "smooth": 2
         }, 
         settings_type)
@@ -591,6 +602,7 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "nomirror", 
         {"labels_mirror": None,
+         "labels_edge": None, 
          "smooth": None
          },
         settings_type)
@@ -600,6 +612,7 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "raw", 
         {"labels_mirror": None,
+         "labels_edge": None, 
          "rotate": None, 
          "affine": None,
          "smooth": None

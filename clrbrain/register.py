@@ -396,8 +396,8 @@ def _curate_labels(img, img_ref, extent=None, expand=None, rotate=None,
         # atlas; assume that each nearer plane is the same size or smaller 
         # than the next farther plane, such as a tapering specimen
         plot_3d.extend_edge(
-            None, img_np, img_ref_np, 
-            config.register_settings["atlas_threshold"], None, extendi)
+            img_np, img_ref_np, config.register_settings["atlas_threshold"], 
+            None, extendi)
     
     if expand:
         # expand selected regions

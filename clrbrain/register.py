@@ -656,6 +656,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
                 multichannel=False).astype(bool)
             region_size_smoothed = np.sum(opened)
         
+        # replace smoothed volume within in-painted region
         region[opened] = label_id
         labels_img_np[tuple(slices)] = region
         print("changed num of pixels from {} to {}"
@@ -1882,7 +1883,9 @@ def make_edge_images(path_atlas):
     labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
     sitk.Show(labels_sitk_edge)
     
-    labels_markers = segmenter.labels_to_markers(atlas_np, labels_img_np)
+    # convert labels image into markers
+    #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
+    labels_markers = segmenter.labels_to_markers_erosion(labels_img_np)
     labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
     sitk.Show(labels_sitk_markers)
     
@@ -1926,7 +1929,8 @@ def merge_atlas_segmentations(path_fixed):
     atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     markers = sitk.GetArrayFromImage(labels_sitk_markers)
-    labels_seg = segmenter.segment_from_labels(atlas_img_np, labels_img_np, markers)
+    labels_seg = segmenter.segment_from_labels(
+        atlas_img_np, labels_img_np, markers)
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     sitk.Show(labels_sitk_seg)
     

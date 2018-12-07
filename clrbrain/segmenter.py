@@ -177,14 +177,13 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
         labels.append(labels_ws)
     return labels_ws
 
-def labels_to_markers(img, labels_img):
-    """Convert a labels image to markers.
+def labels_to_markers_blob(labels_img):
+    """Convert a labels image to markers as blobs.
     
     These markers can be used in segmentation algorithms such as 
     watershed.
     
     Args:
-        img: Image as a Numpy array to segment.
         labels_img: Labels image as an integer Numpy array, where each 
             unique int is a separate label.
     
@@ -213,6 +212,63 @@ def labels_to_markers(img, labels_img):
     markers = plot_3d.build_ground_truth(
         np.zeros_like(labels_img), np.array(list(blobs.values())), 
         ellipsoid=True, labels=list(blobs.keys()), spacing=spacing)
+    return markers
+
+def labels_to_markers_erosion(labels_img, filter_size=8):
+    """Convert a labels image to markers as eroded labels.
+    
+    These markers can be used in segmentation algorithms such as 
+    watershed.
+    
+    Args:
+        labels_img: Labels image as an integer Numpy array, where each 
+            unique int is a separate label.
+        filter_size: Size of structing element for erosion; defaults to 8.
+    
+    Returns:
+        Image array of the same shape as ``img`` and the same number of 
+        labels as in ``labels_img``, with eroded labels.
+    """
+    markers = np.zeros_like(labels_img)
+    labels_unique = np.unique(labels_img)
+    #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
+    for label_id in labels_unique:
+        if label_id == 0: continue
+        print("eroding label ID {}".format(label_id))
+        
+        # get region as mask
+        bbox = plot_3d.get_label_bbox(labels_img, label_id)
+        if bbox is None: continue
+        _, slices = plot_3d.get_bbox_region(bbox)
+        region = labels_img[tuple(slices)]
+        label_mask_region = region == label_id
+        region_size = np.sum(label_mask_region)
+        region_size_filtered = region_size
+        
+        # erode the labels, starting with the given filter size and 
+        # decreasing if the resulting label size falls below a given 
+        # threshold
+        for selem_size in range(filter_size, -1, -1):
+            if selem_size == 0:
+                if size_ratio < 0.01:
+                    print("could not erode without losing region, skipping")
+                    filtered = label_mask_region
+                break
+            elif selem_size < filter_size:
+                print("size ratio of {} after erosion filter size of {}, "
+                      "will reduce filter size".format(size_ratio, selem_size))
+            # erode check size ratio
+            filtered = morphology.binary_erosion(
+                label_mask_region, morphology.ball(selem_size))
+            region_size_filtered = np.sum(filtered)
+            size_ratio = region_size_filtered / region_size
+            if size_ratio > 0.1: break
+        
+        # insert eroded region into markers image
+        markers[tuple(slices)][filtered] = label_id
+        print("changed num of pixels from {} to {}"
+              .format(region_size, np.sum(filtered)))
+    
     return markers
 
 def mask_atlas(atlas, labels_img):

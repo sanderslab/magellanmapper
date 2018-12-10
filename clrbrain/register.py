@@ -91,7 +91,7 @@ ABA_PARENT = "parent_structure_id"
 ABA_LEVEL = "st_level"
 ABA_CHILDREN = "children"
 
-SMOOTHING_MODES=("opening", "gaussian")
+SMOOTHING_MODES=("opening", "gaussian", "closing")
 SMOOTHING_METRIC_MODES=("vol", "area_edt", "area_radial", "area_displvol")
 _SIGNAL_THRESHOLD = 0.01
 
@@ -642,27 +642,37 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
                 print("using a smaller filter size of {} for a small region "
                       "of {} pixels".format(selem_size, region_size))
             selem = morphology.ball(selem_size)
-            opened = morphology.binary_opening(label_mask_region, selem)
-            region_size_smoothed = np.sum(opened)
+            smoothed = morphology.binary_opening(label_mask_region, selem)
+            region_size_smoothed = np.sum(smoothed)
             size_ratio = region_size_smoothed / region_size
             if size_ratio < 0.01:
                 print("region would be lost or too small "
                       "(ratio {}), will use closing filter instead"
                       .format(size_ratio))
-                opened = morphology.binary_closing(label_mask_region, selem)
-                region_size_smoothed = np.sum(opened)
+                smoothed = morphology.binary_closing(label_mask_region, selem)
+                region_size_smoothed = np.sum(smoothed)
             
             # fill empty spaces with closest surrounding labels
             region = plot_3d.in_paint(region, label_mask_region)
+            
         elif mode == SMOOTHING_MODES[1]:
             # smoothing with gaussian blur
-            opened = filters.gaussian(
+            smoothed = filters.gaussian(
                 label_mask_region, filter_size, mode="nearest", 
                 multichannel=False).astype(bool)
-            region_size_smoothed = np.sum(opened)
+            region_size_smoothed = np.sum(smoothed)
+            
+        elif mode == SMOOTHING_MODES[2]:
+            # smooth region with closing filter
+            smoothed = morphology.binary_closing(
+                label_mask_region, morphology.ball(filter_size))
+            region_size_smoothed = np.sum(smoothed)
+            
+            # fill empty spaces with closest surrounding labels
+            region = plot_3d.in_paint(region, label_mask_region)
         
         # replace smoothed volume within in-painted region
-        region[opened] = label_id
+        region[smoothed] = label_id
         labels_img_np[tuple(slices)] = region
         print("changed num of pixels from {} to {}"
               .format(region_size, region_size_smoothed))

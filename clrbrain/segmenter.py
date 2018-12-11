@@ -289,7 +289,7 @@ def mask_atlas(atlas, labels_img):
     mask = np.logical_or(atlas > thresh, labels_img != 0)
     return mask
 
-def segment_from_labels(img, labels_img, markers):
+def segment_from_labels(atlas_img, edges, labels_img, markers):
     """Segment an image using markers from a labels image.
     
     Labels images may have been generally manually and thus may not 
@@ -299,16 +299,22 @@ def segment_from_labels(img, labels_img, markers):
     location of each label.
     
     Args:
-        img: Image as a Numpy array to segment.
-        labels_img: Labels image as an integer Numpy array, where each 
-            unique int is a separate label.
+        atlas_img: Atlas image as a Numpy array to use for finding foreground.
+        edges: Image as a Numpy array to segment, typically an edge-detected 
+            image of the main atlas.
+        labels_img: Labels image as Numpy array of same shape as ``img``, 
+            used to generate a mask of the interior of ``img`` in which 
+            to segment.
+        markers: Image as an integer Numpy array of same shape as ``img`` 
+            to use as seeds for the watershed segmentation. This array 
+            is generally constructed from an array similar to ``labels_img``.
     
     Returns:
         Segmented image of the same shape as ``img`` with the same 
-        number of labels as in ``labels_img``.
+        number of labels as in ``markers``.
     """
-    distance = ndimage.distance_transform_edt(img == 0)
+    distance = ndimage.distance_transform_edt(edges == 0)
     watershed = morphology.watershed(-distance, markers, compactness=0.01)
-    mask = mask_atlas(img, labels_img)
+    mask = mask_atlas(atlas_img, labels_img)
     watershed[~mask] = 0
     return watershed

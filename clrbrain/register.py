@@ -1939,6 +1939,8 @@ def merge_atlas_segmentations(path_fixed):
     """
     # load corresponding edge files
     atlas_sitk = load_registered_img(
+        path_fixed, get_sitk=True, reg_name=IMG_ATLAS)
+    atlas_sitk_edge = load_registered_img(
         path_fixed, get_sitk=True, reg_name=IMG_ATLAS_EDGE)
     labels_sitk = load_registered_img(
         path_fixed, get_sitk=True, reg_name=IMG_LABELS)
@@ -1947,6 +1949,7 @@ def merge_atlas_segmentations(path_fixed):
     
     # get Numpy arrays of images
     atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
+    edges = sitk.GetArrayFromImage(atlas_sitk_edge)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     markers = sitk.GetArrayFromImage(labels_sitk_markers)
     
@@ -1954,8 +1957,8 @@ def merge_atlas_segmentations(path_fixed):
     # since plane mirroring assumes mirroring z-planes
     len_half = atlas_img_np.shape[2] // 2
     labels_seg = segmenter.segment_from_labels(
-        atlas_img_np[..., :len_half], labels_img_np[..., :len_half], 
-        markers[..., :len_half])
+        atlas_img_np[..., :len_half], edges[..., :len_half], 
+        labels_img_np[..., :len_half], markers[..., :len_half])
     labels_seg = _mirror_planes(
         np.swapaxes(labels_seg, 0, 2), len_half, mirror_mult=-1)
     labels_seg = np.swapaxes(labels_seg, 0, 2)

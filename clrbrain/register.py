@@ -1894,21 +1894,21 @@ def make_edge_images(path_atlas):
     labels_sitk_markers = None
     
     # apply Laplacian of Gaussian filter (sequentially)
-    atlas_np = filters.gaussian(atlas_np, 5)
-    atlas_np = filters.laplace(atlas_np)
-    vmin, vmax = np.percentile(atlas_np, (2, 98))
-    atlas_np = np.clip(atlas_np, vmin, vmax)
+    atlas_log = filters.gaussian(atlas_np, 5)
+    atlas_log = filters.laplace(atlas_log)
+    vmin, vmax = np.percentile(atlas_log, (2, 98))
+    atlas_log = np.clip(atlas_log, vmin, vmax)
     # comment-out normalizing since need neg vals for zero-crossing
-    #atlas_np = (atlas_np - vmin) / (vmax - vmin)
+    #atlas_log = (atlas_log - vmin) / (vmax - vmin)
     
     # remove signal below threshold while keeping any signal in labels
-    atlas_mask = segmenter.mask_atlas(atlas_np, labels_img_np)
-    atlas_np[~atlas_mask] = np.amin(atlas_np)
-    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_np)
+    atlas_mask = segmenter.mask_atlas(atlas_log, labels_img_np)
+    atlas_log[~atlas_mask] = np.amin(atlas_log)
+    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
     sitk.Show(atlas_sitk_log)
     
     # convert to edge-detection image
-    atlas_edge = plot_3d.zero_crossing(atlas_np, 1).astype(float)
+    atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
     
     atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
@@ -1928,7 +1928,13 @@ def make_edge_images(path_atlas):
     
     # benchmarking for distances between edges
     print("\nMeasuring edge distance:")
-    measure_edge_dist(atlas_edge, labels_edge)
+    _, dist_to_orig = measure_edge_dist(atlas_edge, labels_edge)
+    dist_sitk = replace_sitk_with_numpy(labels_sitk, dist_to_orig)
+    sitk.Show(dist_sitk)
+    
+    # show weighted average of atlas intensity variation within labels
+    print("\nMeasuring variation of atlas within labels:")
+    measure_var_within_labels(atlas_np, labels_img_np)
     
     # write images to same directory with edge-based suffix
     imgs_write = {
@@ -1995,6 +2001,10 @@ def merge_atlas_segmentations(path_fixed):
     dist_sitk = replace_sitk_with_numpy(labels_sitk_seg, dist_to_orig)
     sitk.Show(dist_sitk)
     
+    # show weighted average of atlas intensity variation within labels
+    print("\nMeasuring variation of atlas within labels:")
+    measure_var_within_labels(atlas_img_np, labels_seg)
+    
     # show DSC for labels
     print("\nMeasuring overlap of labels:")
     measure_overlap_labels(
@@ -2013,9 +2023,13 @@ def measure_edge_dist(atlas_edge, labels_edge):
     :func:``make_edge_images``.
     
     Args:
-        path_fixed: Path to the fixed file, typically the atlas file 
-            with stained sections. The corresponding edge and labels 
-            files will be loaded based on this path.
+        atlas_edge: Image as a Numpy array of the atlas reduced to its edges.
+        labels_edge: Image as a Numpy array of the labels reduced to its edges.
+    
+    Returns:
+        Tuple of the mean closest distance betweed atlas and label edges 
+        and an image array of the same shape as ``labels_edge`` with 
+        label edge values replaced by corresponding distance values.
     """
     # find distance between edges, take mean, and plot distance image
     labels_edge_mask = labels_edge > 0
@@ -2026,6 +2040,32 @@ def measure_edge_dist(atlas_edge, labels_edge):
     #print(dist_to_orig[labels_edge_mask])
     return borders_dist_mean, dist_to_orig
 
+def measure_var_within_labels(atlas_img_np, labels_img_np):
+    """Measure variation of atlas intensities within each label.
+    
+    Args:
+        atlas_img_np: Atlas image as a Numpy array.
+        labels_edge: Labels image as a Numpy array of the labels.
+    """
+    label_ids = np.unique(labels_img_np)
+    variation = np.zeros(label_ids.size)
+    tot_pxs = 0
+    for i, label_id in enumerate(label_ids):
+        if label_id == 0: continue
+        
+        # get weighted standard devation of atlas pxs corresponding to label
+        label_mask = labels_img_np == label_id
+        variation[i] = np.std(atlas_img_np[label_mask])
+        label_size = np.sum(label_mask)
+        print("variation within label {} (size {}): {}"
+              .format(label_id, label_size, variation[i]))
+        variation[i] *= label_size
+        tot_pxs += label_size
+    
+    wt_var = np.sum(variation / tot_pxs)
+    print("weighted average variation of atlas intensities within labels: {}"
+          .format(wt_var))
+    
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.

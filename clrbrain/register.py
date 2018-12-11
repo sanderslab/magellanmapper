@@ -697,7 +697,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         if label_id == 0: continue
         size_orig = np.sum(labels_img_np_orig == label_id)
         size_smoothed = np.sum(labels_img_np == label_id)
-        weighted_size_ratio += size_smoothed / size_orig * size_orig
+        weighted_size_ratio += size_smoothed
         tot_pxs += size_orig
     weighted_size_ratio /= tot_pxs
     print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"

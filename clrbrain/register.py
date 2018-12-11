@@ -1988,6 +1988,7 @@ def merge_atlas_segmentations(path_fixed):
         atlas_img_np[..., :len_half], atlas_edge[..., :len_half], 
         labels_img_np[..., :len_half], markers[..., :len_half])
     smooth_labels(labels_seg, 2, SMOOTHING_MODES[2])
+    smooth_labels(labels_seg, 4, SMOOTHING_MODES[0])
     labels_seg = _mirror_planes(
         np.swapaxes(labels_seg, 0, 2), len_half, mirror_mult=-1)
     labels_seg = np.swapaxes(labels_seg, 0, 2)

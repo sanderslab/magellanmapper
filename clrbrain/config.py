@@ -691,7 +691,7 @@ suffix = None # modifier to existing base path
 
 PLANE = ("xy", "xz", "yz")
 plane = None
-vmax_overview = 1.0
+vmax_overview = [None]
 border = None # clip ROI to border (x,y,z order)
 near_max = [-1.0]
 near_min = [0.0]

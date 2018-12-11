@@ -1826,7 +1826,43 @@ def register_labels_to_atlas(path_fixed):
     # copy original atlas metadata file to allow opening this atlas 
     # alongside new labels image for comparison
     shutil.copy(_reg_out_path(path_fixed, IMG_ATLAS), out_path_base)
+
+def make_labels_edge(labels_img_np):
+    """Convert labels image into label borders image.
     
+    The atlas is assumed to be a sample (eg microscopy) image on which 
+    an edge-detection filter will be applied. 
+    
+    Args:
+        labels_img_np: Image as a Numpy array, assumed to be an 
+            annotated image whose edges will be found by obtaining 
+            the borders of all annotations.
+    
+    Returns:
+        Binary image array the same shape as ``labels_img_np`` with labels 
+        reduced to their corresponding borders.
+    """
+    labels_edge = np.zeros(labels_img_np.shape, dtype=np.int8)
+    label_ids = np.unique(labels_img_np)
+    for label_id in label_ids:
+        print("finding border for {}".format(label_id))
+        
+        # get mask of label to get bounding box
+        label_mask = labels_img_np == label_id
+        props = measure.regionprops(label_mask.astype(np.int))
+        if len(props) < 1 or props[0].bbox is None: continue
+        _, slices = plot_3d.get_bbox_region(props[0].bbox)
+        
+        # work on a view of the region for efficiency, obtaining borders 
+        # as eroded region and writing into new array
+        region = labels_img_np[tuple(slices)]
+        label_mask_region = region == label_id
+        borders = plot_3d.perimeter_nd(label_mask_region)
+        borders_region = labels_edge[tuple(slices)]
+        borders_region[borders] = 1
+    
+    return labels_edge
+
 def make_edge_images(path_atlas):
     """Make edge-detected atlas and associated labels images.
     
@@ -1879,25 +1915,7 @@ def make_edge_images(path_atlas):
     sitk.Show(atlas_sitk_edge)
     
     # extract boundaries for each label
-    labels_edge = np.zeros(labels_img_np.shape, dtype=np.int8)
-    label_ids = np.unique(labels_img_np)
-    for label_id in label_ids:
-        print("finding border for {}".format(label_id))
-        
-        # get mask of label to get bounding box
-        label_mask = labels_img_np == label_id
-        props = measure.regionprops(label_mask.astype(np.int))
-        if len(props) < 1 or props[0].bbox is None: continue
-        _, slices = plot_3d.get_bbox_region(props[0].bbox)
-        
-        # work on a view of the region for efficiency, obtaining borders 
-        # as eroded region and writing into new array
-        region = labels_img_np[tuple(slices)]
-        label_mask_region = region == label_id
-        borders = plot_3d.perimeter_nd(label_mask_region)
-        borders_region = labels_edge[tuple(slices)]
-        borders_region[borders] = 1
-    
+    labels_edge = make_labels_edge(labels_img_np)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
     sitk.Show(labels_sitk_edge)

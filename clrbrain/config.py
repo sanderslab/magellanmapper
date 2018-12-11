@@ -598,7 +598,15 @@ def update_register_settings(settings, settings_type):
         }, 
         settings_type)
     
-    # turn off mirroring along with smoothing
+    # turn off edge extension along with smoothing
+    settings.add_modifier(
+        "noedge", 
+        {"labels_edge": None, 
+         "smooth": None
+         },
+        settings_type)
+    
+    # turn off mirroring along with smoothing and edge extension
     settings.add_modifier(
         "nomirror", 
         {"labels_mirror": None,

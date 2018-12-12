@@ -41,6 +41,10 @@ POS_THRESH = 0.001 # threshold for positive values for float comparison
 CMAP_GRBK_NAME = "Green_black"
 CMAP_RDBK_NAME = "Red_black"
 
+# processing type directly in module
+PLOT_2D_TYPES = ("smoothing_metrics", )
+plot_2d_type = None
+
 # flag to save files using this extension
 savefig = None
 

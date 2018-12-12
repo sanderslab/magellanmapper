@@ -1494,7 +1494,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         x_label: Name of x-axis; defaults to None.
         y_label: Name of y-axis; defaults to None.
         title: Title of figure; defaults to None.
-        show: True to display the image; otherwise, . 
+        show: True to display the image; otherwise, the figure will only 
+            be saved to file, if :attr:``config.savefig`` is set.  
             Defaults to True.
     """
     # load data frame from CSV and setup figure
@@ -1535,12 +1536,13 @@ if __name__ == "__main__":
     cli.main(True)
     setup_style()
     
-    # plot smoothing metrics
-    path = lib_clrbrain.combine_paths(
-        config.prefix, config.PATH_SMOOTHING_METRICS)
-    plot_lines(
-        path, "filter", 
-        ("roughness", "compacted", "displaced", "smoothing_quality", "SA_to_vol", 
-         "label_loss"), 
-        (":", "--", "--", "-", "-", "-"), "Smoothing Filter Size", 
-        "Fractional Change", "Label Smoothing", not config.no_show)
+    if config.plot_2d == config.PLOT_2D_TYPES[0]:
+        # plot smoothing metrics
+        path = lib_clrbrain.combine_paths(
+            config.prefix, config.PATH_SMOOTHING_METRICS)
+        plot_lines(
+            path, "filter", 
+            ("roughness", "compacted", "displaced", "smoothing_quality", "SA_to_vol", 
+             "label_loss"), 
+            (":", "--", "--", "-", "-", "-"), "Smoothing Filter Size", 
+            "Fractional Change", "Label Smoothing", not config.no_show)

@@ -475,6 +475,7 @@ def main(process_args_only=False):
     parser.add_argument("--flip", nargs="*")
     parser.add_argument("--register")
     parser.add_argument("--stats")
+    parser.add_argument("--plot_2d")
     parser.add_argument("--reg_profile")
     parser.add_argument("--rescale")
     parser.add_argument("--slice")
@@ -620,6 +621,11 @@ def main(process_args_only=False):
         # stats type to process in stats module
         config.stats_type = args.stats
         print("Set stats type to {}".format(config.stats_type))
+    
+    if args.plot_2d:
+        # 2D plot type to process in plot_2d module
+        config.plot_2d = args.plot_2d
+        print("Set plot_2d type to {}".format(config.plot_2d))
     
     if args.rescale:
         config.rescale = float(args.rescale)

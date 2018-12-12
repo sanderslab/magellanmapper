@@ -1060,7 +1060,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     print("2D plot time: {}".format(time() - time_start))
     
 def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
-    """Extracts a single 2D plane and saves to file.
+    """Extract a 2D plane or stack of planes.
     
     Args:
         image5d: The full image stack.
@@ -1072,6 +1072,11 @@ def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
             assumes that plane_n is an array of multiple, typically 
             contiguous planes along which the max intensity pixel will 
             be taken. Defaults to False.
+    
+    Returns:
+        Tuple of an array of the image, which is 2D if ``plane_n`` is a 
+        scalar or ``max_intens_projection`` is True, or 3D otherwise; 
+        the aspect ratio; and the origin value.
     """
     origin = None
     aspect = None # aspect ratio

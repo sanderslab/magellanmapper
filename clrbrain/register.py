@@ -1458,12 +1458,13 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     translation = _translation_adjust(
         moving_img, transformed_img, translation, flip=True)
     
-    # overlap stats
+    # overlap stats comparing original and registered atlases
     print("DSC compared with atlas")
     measure_overlap(
         fixed_img_orig, transformed_img, 
         transformed_thresh=settings["atlas_threshold"])
     
+    # compare original atlas with registered labels taken as a whole
     _measure_overlap_combined_labels(fixed_img_orig, labels_img_full)
     
     # show overlays last since blocks until fig is closed

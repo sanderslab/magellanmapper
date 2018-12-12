@@ -304,7 +304,8 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
             image of the main atlas.
         labels_img: Labels image as Numpy array of same shape as ``img``, 
             used to generate a mask of the interior of ``img`` in which 
-            to segment.
+            to segment. If None, a mask be be generated from a thresholded 
+            version of ``atlas_img``.
         markers: Image as an integer Numpy array of same shape as ``img`` 
             to use as seeds for the watershed segmentation. This array 
             is generally constructed from an array similar to ``labels_img``.
@@ -315,6 +316,14 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
     """
     distance = ndimage.distance_transform_edt(edges == 0)
     watershed = morphology.watershed(-distance, markers, compactness=0.01)
-    mask = mask_atlas(atlas_img, labels_img)
+    if labels_img is None:
+        # otsu seems to give more inclusive threshold for these atlases
+        _, mask = plot_3d.carve(
+            atlas_img, thresh=filters.threshold_otsu(atlas_img), 
+            holes_area=5000)
+    else:
+        # use labels if available; ideally should fully cover the atlas 
+        # with the atlas only used to identify outside borders
+        mask = mask_atlas(atlas_img, labels_img)
     watershed[~mask] = 0
     return watershed

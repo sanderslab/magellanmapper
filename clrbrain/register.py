@@ -1842,7 +1842,7 @@ def make_labels_edge(labels_img_np):
     labels_edge = np.zeros(labels_img_np.shape, dtype=np.int8)
     label_ids = np.unique(labels_img_np)
     for label_id in label_ids:
-        print("finding border for {}".format(label_id))
+        print("getting edge for {}".format(label_id))
         
         # get mask of label to get bounding box
         label_mask = labels_img_np == label_id

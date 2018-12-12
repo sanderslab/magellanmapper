@@ -154,7 +154,7 @@ class PlotEditor:
     def alpha_updater(self, alpha):
         self.alpha = alpha
         self.ax_img.set_alpha(self.alpha)
-        print("set image alpha to {}".format(self.alpha))
+        #print("set image alpha to {}".format(self.alpha))
     
     def on_press(self, event):
         """Pick intensities by mouse clicking on a given pixel.

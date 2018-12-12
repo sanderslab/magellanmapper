@@ -1,7 +1,7 @@
 #!/bin/bash
-# File exporter for Clrbrain
+# ROI exporter for Clrbrain
 # Author: David Young, 2017, 2018
-"""Image exporter for Clrbrain.
+"""ROI exporter for Clrbrain.
 
 Convert images and corresponding database entries into formats for 
 machine learning algorithms or other applications.

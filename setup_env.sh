@@ -19,12 +19,12 @@ fully released but available on Git, in which case shallow Git
 clones will be downloaded and installed through Pip.
 
 Arguments:
-   -h: Show help and exit.
-   -a: Install AWS components.
-   -n: Set the Conda environment name; defaults to CONDA_ENV.
-   -s: Build and install SimpleElastix.
-   -l: Lightweight environment setup, which does not include 
-       GUI components such as Matplotlib or Mayavi.
+  -h: Show help and exit.
+  -a: Install AWS components.
+  -n: Set the Conda environment name; defaults to CONDA_ENV.
+  -s: Build and install SimpleElastix.
+  -l: Lightweight environment setup, which does not include 
+    GUI components such as Matplotlib or Mayavi.
 "
 
 # default Conda environment names as found in .yml configs
@@ -41,32 +41,43 @@ config_default="$ENV_CONFIG"
 build_simple_elastix=0
 lightweight=0
 aws=0
+deps_check=1
 
 OPTIND=1
-while getopts hn:sla opt; do
-    case $opt in
-        h)  echo $HELP
-            exit 0
-            ;;
-        n)  env_name="$OPTARG"
-            echo "Set to create the Conda environment $env_name"
-            ;;
-        s)  build_simple_elastix=1
-            echo "Set to build and install SimpleElastix"
-            ;;
-        l)  lightweight=1
-            env_default="$CONDA_ENV_LIGHT"
-            config_default="$ENV_CONFIG_LIGHT"
-            echo "Set to create lightweight (no GUI) environment"
-            ;;
-        a)  aws=1
-            echo "Set to install AWS components"
-            ;;
-        :)  echo "Option -$OPTARG requires an argument"
-            exit 1
-            ;;
-        --) ;;
-    esac
+while getopts hn:slad opt; do
+  case $opt in
+    h)
+      echo $HELP
+      exit 0
+      ;;
+    n)
+      env_name="$OPTARG"
+      echo "Set to create the Conda environment $env_name"
+      ;;
+    s)
+      build_simple_elastix=1
+      echo "Set to build and install SimpleElastix"
+      ;;
+    l)
+      lightweight=1
+      env_default="$CONDA_ENV_LIGHT"
+      config_default="$ENV_CONFIG_LIGHT"
+      echo "Set to create lightweight (no GUI) environment"
+      ;;
+    a)
+      aws=1
+      echo "Set to install AWS components"
+      ;;
+    d)
+      deps_check=0
+      echo "Set to skip dependencies check"
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument"
+      exit 1
+      ;;
+    --) ;;
+  esac
 done
 
 # pass arguments after "--" to clrbrain
@@ -78,59 +89,81 @@ BASE_DIR="`dirname $0`"
 cd "$BASE_DIR"
 BASE_DIR="$PWD"
 
-# check for Java jar availability
-if ! command -v "javac" &> /dev/null
-then
-	echo "Please install JDK or add JAVA_HOME to your path environment variables. Exiting."
-	exit 1
-fi
-
-# check for gcc availability for compiling Scikit-image;
-# TODO: does not handle case where xcode tools needs to be installed
-if ! command -v "gcc" &> /dev/null
-then
-	echo "Please install gcc. Exiting."
-	exit 1
-fi
-
-# check for git availability for downloading repos for some pip installs
-if ! command -v "git" &> /dev/null
-then
-	echo "Please install git. Exiting."
-	exit 1
-fi
-
 # find platform for Anaconda
 echo -n "Detecting environment..."
 SYSTEM=`uname -a`
-ANACONDA_DOWNLOAD_PLATFORM=""
+os=""
+os_ver=""
 ext="sh"
 if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
 then
-    ANACONDA_DOWNLOAD_PLATFORM="Windows"
-    ext="exe"
+  os="Windows"
+  ext="exe"
 elif [[ "$SYSTEM" =~ "Darwin" ]]
 then
-    ANACONDA_DOWNLOAD_PLATFORM="MacOSX"
+  os="MacOSX"
+  os_ver="$(/usr/bin/sw_vers -productVersion)"
 elif [[ "$SYSTEM" =~ "Linux" ]]
 then
-    ANACONDA_DOWNLOAD_PLATFORM="Linux"
+  os="Linux"
 fi
-BIT="x86"
+bit="x86"
 if [[ "$SYSTEM" =~ "x86_64" ]]
 then
-    BIT="x86_64"
+  bit="x86_64"
 fi
-echo "will use $ANACONDA_DOWNLOAD_PLATFORM platform with $BIT bit for Anaconda"
+echo "will use $os platform with $bit bit for Anaconda"
+
+
+# Dependencies check
+if [[ $deps_check -eq 1 ]]; then
+  
+  # check for Java jar availability
+  if ! command -v "javac" &> /dev/null
+  then
+  	echo "Please install a JDK or add JAVA_HOME to your path environment "
+  	echo "variables. Exiting."
+  	exit 1
+  fi
+  
+  # Mac-specific check for command-line tools (CLT) package since the commands 
+  # that are not activated will still return
+  if [[ "$os" == "MacOSX" ]]; then
+    if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
+      if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
+        # ver <= 10.13 apparently also requires CLT headers here
+        :
+      else
+        echo "Mac command-line tools not present/activated."
+        echo "Please run \"xcode-select --install\""
+        exit 1
+      fi
+    fi
+  fi
+  
+  # check for gcc availability for compiling Scikit-image
+  if ! command -v "gcc" &> /dev/null
+  then
+  	echo "Please install gcc. Exiting."
+  	exit 1
+  fi
+  
+  # check for git availability for downloading repos for some pip installs
+  if ! command -v "git" &> /dev/null
+  then
+  	echo "Please install git. Exiting."
+  	exit 1
+  fi
+fi
 
 # check for Anaconda availability
 if ! command -v "conda" &> /dev/null
 then
 	echo "Downloading and installing Miniconda..."
-	PLATFORM=$ANACONDA_DOWNLOAD_PLATFORM-$BIT
+	PLATFORM=$os-$bit
 	MINICONDA="Miniconda3-latest-$PLATFORM.${ext}"
 	CONDA_URL=https://repo.continuum.io/miniconda/$MINICONDA
-	if [[ "$ANACONDA_DOWNLOAD_PLATFORM" == "MacOSX" ]]
+	if [[ "$os" == "MacOSX" ]]
 	then
 		curl -O "$CONDA_URL"
 	else
@@ -143,7 +176,7 @@ then
 	if [[ ! -f $bash_profile ]]; then
 		bash_profile=~/.bashrc
 	fi
-	if [[ -f $bash_profile && "$ANACONDA_DOWNLOAD_PLATFORM" != "Linux" ]]; then
+	if [[ -f $bash_profile && "$os" != "Linux" ]]; then
 		# Ubuntu and likely other Linux platforms short-circuit sourcing 
 		# .bashrc non-interactively so unable to load without hacks
 		# TODO: check if base environment gets activated as not yet 
@@ -158,13 +191,13 @@ fi
 # create or update Conda environment
 config="$config_default"
 if [[ "$env_name" == "" ]]; then
-    echo "Setting up default Conda environment, $env_default"
-    env_name="$env_default"
+  echo "Setting up default Conda environment, $env_default"
+  env_name="$env_default"
 else
-    # change name in environment file with user-defined name
-    echo "Updating environment configuration for $env_name"
-    config="env_${env_name}.yml"
-    sed -e "s/$env_default/$env_name/g" "$config_default" > "$config"
+  # change name in environment file with user-defined name
+  echo "Updating environment configuration for $env_name"
+  config="env_${env_name}.yml"
+  sed -e "s/$env_default/$env_name/g" "$config_default" > "$config"
 fi
 check_env="`conda env list | grep -w $env_name`"
 if [[ "$check_env" == "" ]]
@@ -199,79 +232,79 @@ source activate $env_name
 #   None
 ############################################
 install_shallow_clone() {
-    local folder="`basename $1`"
-    local folder="${folder%.*}"
-    if [ ! -e "$folder" ]; then
-        # download and install fresh repo with shallow clone
-        # and editable installation
-        # TODO: check whether shallow clone will yield the 
-        # correct fetch/merge steps later
-        echo "Cloning into $folder"
-        target=$1
-        if [[ "$#" -gt 1 ]]; then
-            target="${target} -b $2"
-        fi
-        git clone --depth 1 $target
-        cd "$folder"
+  local folder="`basename $1`"
+  local folder="${folder%.*}"
+  if [ ! -e "$folder" ]; then
+    # download and install fresh repo with shallow clone
+    # and editable installation
+    # TODO: check whether shallow clone will yield the 
+    # correct fetch/merge steps later
+    echo "Cloning into $folder"
+    target=$1
+    if [[ "$#" -gt 1 ]]; then
+      target="${target} -b $2"
+    fi
+    git clone --depth 1 $target
+    cd "$folder"
+  else
+    # update repo if changes found upstream on given branch
+    echo "Updating $folder"
+    cd "$folder"
+    git fetch
+    branch="master" # default branch
+    if [[ "$#" -gt 1 ]]; then
+      # use given branch, if any
+      branch="$2"
+      echo "Checking for differences with $branch"
+    fi
+    if [[ `git rev-parse --abbrev-ref HEAD` != "$branch" ]]; then
+      echo "Not on $branch branch so will ignore updates"
+    elif [[ `git diff-index HEAD --` ]]; then
+      echo "Uncommitted file changes exist so will not update"
+    elif [[ `git log HEAD..origin/"$branch" --oneline` ]]; then
+      # merge in updates only if on same branch as given one, 
+      # differences exist between current status and upstream 
+      # branch, and no tracked files have uncommitted changes
+      git merge origin/$branch
+      echo "You may need to run post-update step such as "
+      echo "\"python setup.py build_ext -i\""
     else
-        # update repo if changes found upstream on given branch
-        echo "Updating $folder"
-        cd "$folder"
-        git fetch
-        branch="master" # default branch
-        if [[ "$#" -gt 1 ]]; then
-            # use given branch, if any
-            branch="$2"
-            echo "Checking for differences with $branch"
-        fi
-        if [[ `git rev-parse --abbrev-ref HEAD` != "$branch" ]]; then
-            echo "Not on $branch branch so will ignore updates"
-        elif [[ `git diff-index HEAD --` ]]; then
-            echo "Uncommitted file changes exist so will not update"
-        elif [[ `git log HEAD..origin/"$branch" --oneline` ]]; then
-            # merge in updates only if on same branch as given one, 
-            # differences exist between current status and upstream 
-            # branch, and no tracked files have uncommitted changes
-            git merge origin/$branch
-            echo "You may need to run post-update step such as "
-            echo "\"python setup.py build_ext -i\""
-        else
-            echo "No changes found upstream on $branch branch"
-        fi
+      echo "No changes found upstream on $branch branch"
     fi
-    if [[ ! `pip list --format=columns | grep $folder` ]]; then
-        echo "Installing $folder"
-        pip install -e .
-    fi
-    cd ..
+  fi
+  if [[ ! `pip list --format=columns | grep $folder` ]]; then
+    echo "Installing $folder"
+    pip install -e .
+  fi
+  cd ..
 }
 
 # pip dependencies that are not available in Conda, some of which are 
 # git-pip installed from Clrbrain parent directory
 cd ..
 if [[ $lightweight -eq 0 ]]; then
-    # install dependencies for GUI requirement
-    
-    pip install -U matplotlib-scalebar
-    
-    # Mayavi install says that vtk not directly required and not 
-    # installed, so need to install directly here
-    pip install -U vtk
-    
-    # pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
-    # version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 
-    # Matplotlib in Conda on Linux64 is not compatible with this release, 
-    # however, and will install the Conda package alongside the pip one
-    pip install -U PyQt5
-    
-    # use Conda now that TraitsUI and Pyface 6 available there
-    #install_shallow_clone https://github.com/enthought/traits.git
-    #install_shallow_clone https://github.com/enthought/pyface.git
-    #install_shallow_clone https://github.com/enthought/traitsui.git
-    
-    # use Mayavi 4.6 release with Python 3 support
-    #install_shallow_clone https://github.com/enthought/mayavi.git
-    pip install -U mayavi
+  # install dependencies for GUI requirement
+  
+  pip install -U matplotlib-scalebar
+  
+  # Mayavi install says that vtk not directly required and not 
+  # installed, so need to install directly here
+  pip install -U vtk
+  
+  # pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
+  # version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 
+  # Matplotlib in Conda on Linux64 is not compatible with this release, 
+  # however, and will install the Conda package alongside the pip one
+  pip install -U PyQt5
+  
+  # use Conda now that TraitsUI and Pyface 6 available there
+  #install_shallow_clone https://github.com/enthought/traits.git
+  #install_shallow_clone https://github.com/enthought/pyface.git
+  #install_shallow_clone https://github.com/enthought/traitsui.git
+  
+  # use Mayavi 4.6 release with Python 3 support
+  #install_shallow_clone https://github.com/enthought/mayavi.git
+  pip install -U mayavi
 fi
 
 # use Scikit-image 0.14 release
@@ -292,18 +325,18 @@ cd "$BASE_DIR"
 
 if [ $build_simple_elastix -eq 1 ]
 then
-    # build and install SimpleElastix
-    ./build_se.sh -i
+  # build and install SimpleElastix
+  ./build_se.sh -i
 elif [[ $lightweight -eq 0 ]]; then
-    # install SimpleITK if not installing SimpleElastix and not a 
-    # lightweight install to allow opening files through SimpleITK
-    conda install -y -c simpleitk simpleitk
+  # install SimpleITK if not installing SimpleElastix and not a 
+  # lightweight install to allow opening files through SimpleITK
+  conda install -y -c simpleitk simpleitk
 fi
 
 if [[ $aws -eq 1 ]]; then
-    # install AWS components
-    pip install boto3
-    pip install awscli
+  # install AWS components
+  pip install boto3
+  pip install awscli
 fi
 
 echo "Clrbrain environment setup complete!"

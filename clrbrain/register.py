@@ -923,7 +923,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             pxs.setdefault(col, []).append(val)
         print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
               .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
-    metrics = {"compacted": 0, "displaced": 0, "smoothing": 0, 
+    metrics = {"compacted": 0, "displaced": 0, "smoothing_quality": 0, 
                "roughness": 0, "roughness_sm": 0, "SA_to_vol": 0, 
                "label_loss": 0}
     if tot_size > 0:
@@ -932,7 +932,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         frac_expanded = tot_pxs_expanded / tot_size
         metrics["compacted"] = frac_reduced
         metrics["displaced"] = frac_expanded
-        metrics["smoothing"] = frac_reduced - frac_expanded
+        metrics["smoothing_quality"] = frac_reduced - frac_expanded
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]

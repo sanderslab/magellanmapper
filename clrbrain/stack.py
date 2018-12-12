@@ -1,6 +1,6 @@
 # Stack manipulations
 # Author: David Young, 2017, 2018
-"""Imports and exports stacks in various formats
+"""Import and export image stacks in various formats.
 """
 
 import os
@@ -152,12 +152,14 @@ def fit_frame_to_image(fig, shape, aspect):
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
     print("fig size: {}".format(fig.get_size_inches()))
 
-def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None, 
-                 rescale=None, delay=None, labels_img=None, single=False):
-    """Builds an animated GIF from a stack of images in a directory or an
-    .npy file.
+def stack_to_img_file(image5d, path, offset=None, roi_size=None, 
+                      slice_vals=None, rescale=None, delay=None, 
+                      labels_img=None, animated=True):
+    """Build an image file from a stack of images in a directory or an 
+    array, exporting as an animated GIF or movie for multiple planes or 
+    extracting a single plane to a standard image file format.
     
-    Writes the animated file to the parent directory of path.
+    Writes the file to the parent directory of path.
     
     Args:
         image5d: Images as a 4/5D Numpy array (t,z,y,x[c]).
@@ -170,7 +172,7 @@ def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None,
             None. Requires ``roi_size`` to not be None.
         roi_size: Size of the region of interest in user order (x, y, z); 
             defaults to None. Requires ``offset`` to not be None.
-        slice_vals: List from which to contstruct a slice object to 
+        slice_vals: List from which to construct a slice object to 
             extract only a portion of the image. Defaults to None, which 
             will give the whole image. If ``offset`` and ``roi_size`` are 
             also given, ``slice_vals`` will only be used for its interval term.
@@ -178,9 +180,11 @@ def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None,
             basis; defaults to None, in which case 1.0 will be used.
         delay: Delay between image display in ms.
         labels_img: Labels image as a Numpy z,y,x array; defaults to None.
+        animated: True to extract the images as an animated GIF or movie 
+            file; False to extract a single plane only. Defaults to False.
     """
     parent_path = os.path.dirname(path)
-    name = os.path.basename(path)
+    out_name = lib_clrbrain.get_filename_without_ext(path)
     
     # build z slice, which will be applied to the transposed image; 
     # reduce image to 1 plane if in single mode
@@ -190,14 +194,15 @@ def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None,
         interval = None
         if slice_vals is not None and len(slice_vals) > 2:
             interval = slice_vals[2]
-        size = 1 if single else roi_size[2]
+        size = roi_size[2] if animated else 1
         img_sl = slice(offset[2], offset[2] + size, interval)
     elif slice_vals is not None:
-        # build directly from slice vals unless single mode
-        if single:
-            img_sl = slice(slice_vals[0], slice_vals[0] + 1)
-        else:
+        # build directly from slice vals unless not an animation
+        if animated:
             img_sl = slice(*slice_vals)
+        else:
+            # single plane only for non-animation
+            img_sl = slice(slice_vals[0], slice_vals[0] + 1)
     else:
         # default to take the whole image
         img_sl = slice(None, None)
@@ -232,18 +237,16 @@ def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None,
                     :, offset[1]:offset[1]+roi_size[1], 
                     offset[0]:offset[0]+roi_size[0]]
             extracted_planes.append(planes)
-            
-        out_name = name.replace(".czi", "_").rstrip("_")
         fnc = _process_plane
     
     # name file based on animation vs single plane extraction
     ext = config.savefig
-    if single:
-        out_name += "_plane_{}{}.{}".format(
-            plot_support.get_plane_axis(config.plane), img_sl.start, ext)
-    else:
+    if animated:
         if ext is None: ext = "gif"
         out_name += "_animation." + ext
+    else:
+        out_name += "_plane_{}{}.{}".format(
+            plot_support.get_plane_axis(config.plane), img_sl.start, ext)
     out_path = os.path.join(parent_path, out_name)
     
     # export planes
@@ -251,43 +254,6 @@ def animated_gif(image5d, path, offset=None, roi_size=None, slice_vals=None,
     _build_stack(extracted_planes[0], out_path, fnc, rescale, aspect=aspect, 
                  origin=origin, delay=delay, 
                  labels_img=planes_labels, cmap_labels=cmap_labels)
-
-def save_plane(image5d, offset, roi_size=None, name=None):
-    """Extracts a single 2D plane and saves to file.
-    
-    Args:
-        image5d: The full image stack.
-        offset: Tuple of x,y,z coordinates of the ROI. The plane will be 
-            extracted from the z coordinate. If ``roi_size`` is not None, 
-            ``offset`` x,y values will be used for the ROI offset within 
-            the plane.
-        roi_size: List of x,y,z dimensions of the ROI; default to None, in 
-            which case the entire plane will be extracted.
-        name: Name of the resulting file, without the extension; default to 
-            None, in which case a standard name will be given.
-    """
-    plane_n = offset[2]
-    img2d, aspect, origin = plot_2d.extract_plane(
-        image5d, plane_n, plane=config.plane)
-    if roi_size is not None:
-        img2d = img2d[
-            offset[1]:offset[1]+roi_size[1], offset[0]:offset[0]+roi_size[0]]
-    fig = plt.figure(frameon=False)
-    ax = fig.add_subplot(111)
-    plot_support.hide_axes(ax)
-    cmaps = config.process_settings["channel_colors"]
-    # use lower max threshold since overview vmax often skewed by 
-    # artifacts over whole image; also use no interpolation for cleanest image
-    plot_support.imshow_multichannel(
-        ax, img2d, config.channel, cmaps, aspect, 1, vmin=config.near_min, 
-        vmax=config.vmax_overview*0.8, 
-        origin=origin, interpolation="none")
-    fit_frame_to_image(fig, img2d.shape, aspect)
-    if not name:
-        name = "SavedPlane_z{}".format(plane_n)
-    filename = name + "." + config.savefig
-    print("extracting plane as {}".format(filename))
-    fig.savefig(filename)
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")

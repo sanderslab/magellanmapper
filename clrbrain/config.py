@@ -42,7 +42,7 @@ CMAP_GRBK_NAME = "Green_black"
 CMAP_RDBK_NAME = "Red_black"
 
 # processing type directly in module
-PLOT_2D_TYPES = ("smoothing_metrics", )
+PLOT_2D_TYPES = ("smoothing_metrics", "barplot")
 plot_2d_type = None
 
 # flag to save files using this extension

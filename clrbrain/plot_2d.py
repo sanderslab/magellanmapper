@@ -1524,6 +1524,76 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         plt.savefig(os.path.splitext(path_to_df)[0] + "." + config.savefig)
     if show: plt.show()
 
+def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None, 
+              y_label=None, title=None, show=True):
+    """Plot grouped bars from Pandas data frame.
+    
+    Args:
+        path_to_df: Path from which to read saved Pandas data frame.
+            The figure will be saved to file if :attr:``config.savefig`` is 
+            set, using this same path except with the savefig extension.
+        data_cols: Sequence of names of columns to plot as separate sets 
+            of bars, where each row is part of a separate group. Defaults 
+            to None, which will use plot all columns after the first. 
+            Matching columns with "_err" as suffix will be used for 
+            error bars; if so, there should be an error column for 
+            each data column.
+        col_groups: Name of column specifying names of each group. 
+            Defaults to None, which will use the first column for names.
+        legend_names: Sequence of names for each set of bars. 
+            Defaults to None, which will use ``data_cols`` for names.
+        y_label: Name of y-axis; defaults to None.
+        title: Title of figure; defaults to None, which will use  
+            ``path_to_df`` to build the title.
+        show: True to display the image; otherwise, the figure will only 
+            be saved to file, if :attr:``config.savefig`` is set.  
+            Defaults to True.
+    """
+    # load data frame from CSV and setup figure
+    df = pd.read_csv(path_to_df)
+    fig = plt.figure()
+    gs = gridspec.GridSpec(1, 1)
+    ax = plt.subplot(gs[0, 0])
+    
+    if data_cols is None:
+        # default to using first col as group names, rest of cols as data
+        cols = df.columns.values.tolist()
+        col_groups = cols[0]
+        data_cols = cols[1:]
+    elif col_groups is None:
+        # default to empty group
+        col_groups = [""] * len(data_cols)
+    if legend_names is None:
+        # default to using data column names for names of each set of bars
+        legend_names = [name.replace("_", " ") for name in data_cols]
+    
+    # build lists to plot
+    lists = []
+    errs = []
+    bar_colors = []
+    for i, col in enumerate(data_cols):
+        # each column gives a set of bars, where each bar will be in a 
+        # separate group; find error columns by suffix
+        lists.append(df[col])
+        col_err = col + "_err"
+        if col_err in df:
+            errs.append(df[col_err])
+        bar_colors.append("C{}".format(i))
+    
+    # plot bars
+    if len(errs) < 1: errs = None
+    if title is None:
+        title = os.path.splitext(
+            os.path.basename(path_to_df))[0].replace("_", " ")
+    _bar_plots(ax, lists, errs, legend_names, df[col_groups], bar_colors, 
+               0.5, y_label, title)
+    gs.tight_layout(fig)
+    
+    # save and display
+    if config.savefig is not None:
+        plt.savefig(os.path.splitext(path_to_df)[0] + "." + config.savefig)
+    if show: plt.show()
+
 def setup_style():
     # setup Matplotlib parameters/styles
     #print(plt.style.available)
@@ -1546,3 +1616,7 @@ if __name__ == "__main__":
              "label_loss"), 
             (":", "--", "--", "-", "-", "-"), "Smoothing Filter Size", 
             "Fractional Change", "Label Smoothing", not config.no_show)
+    
+    elif config.plot_2d == config.PLOT_2D_TYPES[1]:
+        # generiic barplot
+        plot_bars(config.filename, show=(not config.no_show))

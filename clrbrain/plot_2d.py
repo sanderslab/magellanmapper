@@ -1391,10 +1391,10 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
         err_dict = {"elinewidth": width * 20 / num_bars}
         bars.append(ax.bar(
             indices + width * i, lists[i], width=width, color=colors[i], 
-            linewidth=0, yerr=err, error_kw=err_dict))
+            linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
     ax.set_title(title)
     ax.set_ylabel(y_label)
-    ax.set_xticks(indices + width)
+    ax.set_xticks(indices + width * len(lists) / 2)
     
     # scale font size of x-axis labels by a sigmoid function to rapidly 
     # decrease size for larger numbers of labels so they don't overlap

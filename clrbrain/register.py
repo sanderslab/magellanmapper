@@ -2081,7 +2081,7 @@ def measure_edge_dist(atlas_edge, labels_edge, labels_img_np=None):
             # ignore neg labels since identical with pos and ignore background
             if label_id <= 0: continue
             
-            # get weighted standard devation of atlas pxs corresponding to label
+            # get distances corresponding to label edge
             label_mask = np.logical_and(labels_img_np == label_id, labels_edge)
             region_dists = dist_to_orig[label_mask]
             pxs = len(region_dists)
@@ -2095,13 +2095,15 @@ def measure_edge_dist(atlas_edge, labels_edge, labels_img_np=None):
             print("mean dist within edge of label {}: {}"
                   .format(label_id, mean_dist))
         
+        # this mean will differ from mean of all edges since excludes 
+        # background
         print("weighted mean of only pos labels:", np.sum(dists_wt) / tot_pxs)
     
     print("mean of distance between edges:", borders_dist_mean)
     return borders_dist_mean, dist_to_orig, dists
 
 def measure_var_within_labels(atlas_img_np, labels_img_np):
-    """Measure variation of atlas intensities within each label.
+    """Measure variation of atlas intensities within each positive label.
     
     Args:
         atlas_img_np: Atlas image as a Numpy array.
@@ -2111,7 +2113,8 @@ def measure_var_within_labels(atlas_img_np, labels_img_np):
     variation = np.zeros(label_ids.size)
     tot_pxs = 0
     for i, label_id in enumerate(label_ids):
-        if label_id == 0: continue
+        # ignore neg labels since identical with pos and ignore background
+        if label_id <= 0: continue
         
         # get weighted standard devation of atlas pxs corresponding to label
         label_mask = labels_img_np == label_id
@@ -2122,7 +2125,7 @@ def measure_var_within_labels(atlas_img_np, labels_img_np):
         variation[i] *= label_size
         tot_pxs += label_size
     
-    wt_var = np.sum(variation / tot_pxs)
+    wt_var = np.sum(variation) / tot_pxs
     print("weighted average variation of atlas intensities within labels: {}"
           .format(wt_var))
     

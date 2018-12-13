@@ -554,10 +554,7 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes,
         print("finished smoothing with filter size {}".format(filter_size))
     pool.close()
     pool.join()
-    df = pd.DataFrame(metrics)
-    df.sort_values("filter")
-    df.to_csv(output_path)
-    print("smoothing metrices saved to {}".format(output_path))
+    df = stats.dict_to_data_frame(metrics, output_path, sort_col="filter")
     return df
 
 def labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):

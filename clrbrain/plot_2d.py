@@ -1330,15 +1330,20 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     if show:
         plt.show()
 
-def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label, 
-               title):
+def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
+               title, padding=0.2):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
-    Each list represents an experimental group, such as WT or het. 
-    Corresponding elements in each list are grouped together in bar groups, 
-    such as WT vs het at time point 0. Bars groups where all values would be 
-    below :attr:``config.POS_THRESH`` are not plotted.
+    Data is given as a list of sublists. Each sublist contains a "set" of 
+    values, with one value per "group." The number of groups is thus the 
+    number of values per sublist, and the number of bars per group is 
+    the number of sublists.
+    
+    Typically each sublist will represents an experimental set, such 
+    as WT or het. Corresponding elements in each set are grouped together 
+    to compare sets, such as WT vs het at time point 0. Bars groups where 
+    all values would be below :attr:``config.POS_THRESH`` are not plotted.
     
     Args:
         ax: Axes.
@@ -1356,9 +1361,10 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
             not be displayed.
         x_labels: List of labels for each bar group, where the list size 
             should be equal to the size of each list in ``lists``.
-        width: Width of each bar.
         y_label: Y-axis label.
         title: Graph title.
+        padding: Fraction of the border space between each bar group 
+            that should be left unoccupied by bars. Defaults to 0.8.
     """
     bars = []
     if len(lists) < 1: return
@@ -1369,7 +1375,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
     x_labels = np.array(x_labels)
     #print("lists: {}".format(lists))
     
-    # skip bar groups where all bars would be ~0
+    # skip bar groups where all bars would be ~0; 
+    # TODO: allow this threshold to be ignored
     mask = np.all(lists > config.POS_THRESH, axis=0)
     #print("mask: {}".format(mask))
     if np.all(mask):
@@ -1381,14 +1388,17 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, width, y_label,
         # len(errs) may be > 0 when errs.size == 0
         if errs is not None and errs.size > 0:
             errs = errs[:, mask]
-    indices = np.arange(len(lists[0]))
+    num_groups = len(lists[0])
+    num_sets = len(lists) # num of bars per group
+    indices = np.arange(num_groups)
     print("lists:\n{}".format(lists))
     if lists.size < 1: return
+    width = (1.0 - padding) / num_sets
     #print("x_labels: {}".format(x_labels))
     
     # show each list as a set of bar plots so that corresponding elements in 
     # each list will be grouped together as bar groups
-    for i in range(len(lists)):
+    for i in range(num_sets):
         err = None if errs is None or errs.size < 1 else errs[i]
         #print("lens: {}, {}".format(len(lists[i]), len(x_labels)))
         #print("showing list: {}, err: {}".format(lists[i], err))
@@ -1437,7 +1447,6 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
     
     # measurement units, assuming a base unit of microns
     unit = "mm"
-    width = 0.1 # default bar width
     
     # setup legends and bar colors
     sides_names = ("Left", "Right")
@@ -1472,7 +1481,7 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         legend = legend_names if i == 0 else None
         _bar_plots(
             ax, meas_group[0], meas_group[1], 
-            legend, names, bar_colors, width, meas_unit, meas)  
+            legend, names, bar_colors, meas_unit, meas)  
     
     # finalize the image with title and tight layout
     if title is None:
@@ -1591,8 +1600,8 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
         title = os.path.splitext(
             os.path.basename(path_to_df))[0].replace("_", " ")
     _bar_plots(ax, lists, errs, legend_names, df[col_groups], bar_colors, 
-               0.5, y_label, title)
-    gs.tight_layout(fig)
+               y_label, title)
+    gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
     
     # save and display
     if config.savefig is not None:

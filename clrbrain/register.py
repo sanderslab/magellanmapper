@@ -78,8 +78,10 @@ IMG_HEAT_MAP = "heat.mhd"
 IMG_ATLAS_EDGE = "atlasEdge.mhd"
 IMG_ATLAS_LOG = "atlasLoG.mhd"
 IMG_LABELS_EDGE = "annotationEdge.mhd"
+IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
 IMG_LABELS_SEG = "annotationSeg.mhd"
+IMG_LABELS_SEG_DIST = "annotationSegDist.mhd"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -1940,6 +1942,7 @@ def make_edge_images(path_atlas):
         IMG_ATLAS_EDGE: atlas_sitk_edge, 
         IMG_LABELS_EDGE: labels_sitk_edge, 
         IMG_LABELS_MARKERS: labels_sitk_markers, 
+        IMG_LABELS_DIST: dist_sitk, 
     }
     write_reg_images(imgs_write, path_atlas)
 
@@ -2012,6 +2015,7 @@ def merge_atlas_segmentations(path_fixed):
     
     imgs_write = {
         IMG_LABELS_SEG: labels_sitk_seg, 
+        IMG_LABELS_SEG_DIST: dist_sitk, 
     }
     write_reg_images(imgs_write, path_fixed)
 

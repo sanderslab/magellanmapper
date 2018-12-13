@@ -1860,7 +1860,7 @@ def make_labels_edge(labels_img_np):
     
     return labels_edge
 
-def make_edge_images(path_atlas):
+def make_edge_images(path_atlas, show=True):
     """Make edge-detected atlas and associated labels images.
     
     The atlas is assumed to be a sample (eg microscopy) image on which 
@@ -1871,6 +1871,8 @@ def make_edge_images(path_atlas):
     Args:
         path_atlas: Path to the image atlas. The labels image will be 
             found as a corresponding, registered image.
+        show_imgs: True if the output images should be displayed; defaults 
+            to True.
     """
     
     # load atlas image, assumed to be experimental image
@@ -1902,38 +1904,33 @@ def make_edge_images(path_atlas):
     atlas_mask = segmenter.mask_atlas(atlas_log, labels_img_np)
     atlas_log[~atlas_mask] = np.amin(atlas_log)
     atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
-    sitk.Show(atlas_sitk_log)
     
     # convert to edge-detection image
     atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
     
     atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
-    sitk.Show(atlas_sitk_edge)
     
     # extract boundaries for each label
     labels_edge = make_labels_edge(labels_img_np)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
-    sitk.Show(labels_sitk_edge)
     
     # convert labels image into markers
     #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
     labels_markers = segmenter.labels_to_markers_erosion(labels_img_np)
     labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
-    sitk.Show(labels_sitk_markers)
     
     # benchmarking for distances between edges
     print("\nMeasuring edge distance:")
     _, dist_to_orig = measure_edge_dist(atlas_edge, labels_edge)
     dist_sitk = replace_sitk_with_numpy(labels_sitk, dist_to_orig)
-    sitk.Show(dist_sitk)
     
     # show weighted average of atlas intensity variation within labels
     print("\nMeasuring variation of atlas within labels:")
     measure_var_within_labels(atlas_np, labels_img_np)
     
-    # write images to same directory with edge-based suffix
+    # show all images
     imgs_write = {
         IMG_ATLAS_LOG: atlas_sitk_log, 
         IMG_ATLAS_EDGE: atlas_sitk_edge, 
@@ -1941,9 +1938,14 @@ def make_edge_images(path_atlas):
         IMG_LABELS_MARKERS: labels_sitk_markers, 
         IMG_LABELS_DIST: dist_sitk, 
     }
+    if show:
+        for img in imgs_write.values():
+            if img: sitk.Show(img)
+    
+    # write images to same directory as atlas with appropriate suffix
     write_reg_images(imgs_write, path_atlas)
 
-def merge_atlas_segmentations(path_fixed):
+def merge_atlas_segmentations(path_fixed, show=True):
     """Merge manual and automated segmentations of an atlas.
     
     Labels may not match their own underlying atlas image well, 
@@ -1962,6 +1964,8 @@ def merge_atlas_segmentations(path_fixed):
         path_fixed: Path to the fixed file, typically the atlas file 
             with stained sections. The corresponding edge and labels 
             files will be loaded based on this path.
+        show_imgs: True if the output images should be displayed; defaults 
+            to True.
     """
     # load corresponding files via SimpleITK
     atlas_sitk = load_registered_img(
@@ -1991,14 +1995,12 @@ def merge_atlas_segmentations(path_fixed):
         np.swapaxes(labels_seg, 0, 2), len_half, mirror_mult=-1)
     labels_seg = np.swapaxes(labels_seg, 0, 2)
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
-    sitk.Show(labels_sitk_seg)
     
     # measure distance between edges of original and new segmentations
     labels_edge = make_labels_edge(labels_seg)
     print("\nMeasuring edge distance:")
     _, dist_to_orig = measure_edge_dist(atlas_edge, labels_edge)
     dist_sitk = replace_sitk_with_numpy(labels_sitk_seg, dist_to_orig)
-    sitk.Show(dist_sitk)
     
     # show weighted average of atlas intensity variation within labels
     print("\nMeasuring variation of atlas within labels:")
@@ -2014,6 +2016,10 @@ def merge_atlas_segmentations(path_fixed):
         IMG_LABELS_SEG: labels_sitk_seg, 
         IMG_LABELS_SEG_DIST: dist_sitk, 
     }
+    if show:
+        for img in imgs_write.values():
+            if img: sitk.Show(img)
+    
     write_reg_images(imgs_write, path_fixed)
 
 def measure_edge_dist(atlas_edge, labels_edge):
@@ -3491,7 +3497,7 @@ if __name__ == "__main__":
 
     elif config.register_type == config.REGISTER_TYPES[10]:
         # convert atlas and labels to edge-detected images
-        make_edge_images(config.filename)
+        make_edge_images(config.filename, show=show)
 
     elif config.register_type == config.REGISTER_TYPES[11]:
         # register labels to its underlying atlas
@@ -3499,4 +3505,4 @@ if __name__ == "__main__":
 
     elif config.register_type == config.REGISTER_TYPES[12]:
         # merge various forms of atlas segmentations
-        merge_atlas_segmentations(config.filename)
+        merge_atlas_segmentations(config.filename, show=show)

@@ -127,19 +127,23 @@ def get_filename_without_ext(path):
     if len(name_split) > 1: return name_split[0]
     return name
 
-def combine_paths(base_path, suffix, sep="_"):
+def combine_paths(base_path, suffix, sep="_", ext=None):
     """Merge two paths.
     
     Args:
         base_path: Path whose dot-extension will be replaced by ``suffix``.
         suffix: Replacement including new extension.
         sep: Separator between ``base_path`` and ``suffix``.
+        ext: Extension to add or substitute; defaults to None to use 
+            the current extension.
     
     Returns:
         Merged path.
     """
     if not base_path: return suffix
-    return os.path.splitext(base_path)[0] + sep + suffix
+    path = os.path.splitext(base_path)[0] + sep + suffix
+    if ext: path = "{}.{}".format(os.path.splitext(path)[0], ext)
+    return path
 
 def normalize(array, minimum, maximum, background=None):
     """Normalizes an array to fall within the given min and max.

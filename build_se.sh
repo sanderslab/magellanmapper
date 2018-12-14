@@ -45,7 +45,12 @@ echo "Building SimpleElastix..."
 
 # base directory is parent of script's directory
 base_dir="`dirname $0`"
-cd $base_dir/..
+cd "$base_dir"
+base_dir="$PWD"
+cd "${base_dir}/.."
+
+# load dependencies
+source "${base_dir}/libclr.sh"
 
 # find platform for Anaconda
 echo -n "Detecting environment..."
@@ -86,19 +91,8 @@ fi
 # package folder doesn't exist
 build_dir="$BUILD_DIR_BASE"
 if [[ $install_wrapper -ne 1 ]] || [[ ! -e "${build_dir}/${PKG}" ]]; then
-    # backup old build directories if necessary and create a new one
-    if [[ -e "$build_dir" ]]; then
-        build_dir_last="${BUILD_DIR_BASE}1"
-        i=2
-        while [ -e "$build_dir_last" ]; do
-            build_dir_last="$BUILD_DIR_BASE"$i
-            let i++
-        done
-        mv "$build_dir" "$build_dir_last"
-    fi
-    mkdir "$build_dir"
-    echo "Created build directory: $build_dir"
-    
+    # backup old build directory if necessary and create a new one
+    backup_dir "$build_dir"
     cd "$build_dir"
     pwd
     

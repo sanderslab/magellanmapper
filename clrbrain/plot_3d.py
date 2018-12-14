@@ -288,10 +288,26 @@ def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
     return roi_carved, mask
 
 def rotate_nd(img_np, angle, axis=0, order=1):
+    """Rotate an image of arbitrary dimensions.
+    
+    This function is essentially a wrapper of 
+    :func:``skimage.transform.rotate``, applied to each 2D plane along a 
+    given axis for volumetric rotation.
+    
+    Args:
+        img_np: Numpy array.
+        angle: Angle by which to rotate.
+        axis: Axis along which to rotate, given as an int in standard 
+            Numpy axis convention; defaults to 0
+        order: Spline interpolation order; defaults to 1.
+    
+    Returns:
+        The rotated image.
+    """
     rotated = np.copy(img_np)
     slices = [slice(None)] * img_np.ndim
     for i in range(img_np.shape[axis]):
-        #slices[axis] = slice(i, i + 1)
+        # rotate each 2D image in the stack along the given axis
         slices[axis] = i
         img2d = img_np[tuple(slices)]
         img2d = transform.rotate(

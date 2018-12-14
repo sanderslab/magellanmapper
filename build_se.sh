@@ -18,7 +18,7 @@
 ################################################
 
 BUILD_DIR_BASE="build_se"
-PKG="SimpleITK-build/Wrapping/Python/Packaging"
+PKG="SimpleITK-build/Wrapping/Python"
 install_wrapper=0
 
 OPTIND=1
@@ -119,7 +119,7 @@ if [ $install_wrapper -eq 1 ]
 then
     echo "Installing Python wrapper..."
     cd "${build_dir}/${PKG}"
-    python setup.py install
+    python Packaging/setup.py install
 fi
 
 echo "Done building SimpleElastix"

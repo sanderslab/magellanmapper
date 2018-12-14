@@ -1984,14 +1984,20 @@ def merge_atlas_segmentations(path_fixed, show=True):
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     markers = sitk.GetArrayFromImage(labels_sitk_markers)
     
-    # segment half of image and mirror to other half; need to swap axes 
-    # since plane mirroring assumes mirroring z-planes
+    # segment half of image and smooth if set
     len_half = atlas_img_np.shape[2] // 2
     labels_seg = segmenter.segment_from_labels(
         atlas_img_np[..., :len_half], atlas_edge[..., :len_half], 
         labels_img_np[..., :len_half], markers[..., :len_half])
-    smooth_labels(labels_seg, 2, SMOOTHING_MODES[2])
-    smooth_labels(labels_seg, 4, SMOOTHING_MODES[0])
+    smoothing = config.register_settings["smooth"]
+    if smoothing is not None:
+        # closing operation to merge breaks from watershed, followed 
+        # by opening operation for overall smoothing with profile setting
+        smooth_labels(labels_seg, 2, SMOOTHING_MODES[2])
+        smooth_labels(labels_seg, smoothing, SMOOTHING_MODES[0])
+    
+    # mirror to other half, swapping axes since plane mirroring 
+    # assumes mirroring z-planes
     labels_seg = _mirror_planes(
         np.swapaxes(labels_seg, 0, 2), len_half, mirror_mult=-1)
     labels_seg = np.swapaxes(labels_seg, 0, 2)

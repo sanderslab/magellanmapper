@@ -89,31 +89,15 @@ BASE_DIR="`dirname $0`"
 cd "$BASE_DIR"
 BASE_DIR="$PWD"
 
-# find platform for Anaconda
-echo -n "Detecting environment..."
-SYSTEM=`uname -a`
-os=""
-os_ver=""
-ext="sh"
-if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
-then
-  os="Windows"
-  ext="exe"
-elif [[ "$SYSTEM" =~ "Darwin" ]]
-then
-  os="MacOSX"
-  os_ver="$(/usr/bin/sw_vers -productVersion)"
-elif [[ "$SYSTEM" =~ "Linux" ]]
-then
-  os="Linux"
-fi
-bit="x86"
-if [[ "$SYSTEM" =~ "x86_64" ]]
-then
-  bit="x86_64"
-fi
-echo "will use $os platform with $bit bit for Anaconda"
+# load dependencies
+source libclr.sh
 
+# find platform for Anaconda
+detect_platform
+ext="sh"
+if [[ "$os" = "Windows" ]]; then
+  ext="ext"
+fi
 
 # Dependencies check
 if [[ $deps_check -eq 1 ]]; then

@@ -32,6 +32,49 @@ backup_dir() {
 }
 
 ############################################
+# Detect computer platform including OS and bit.
+# Globals:
+#   os: Operating system, which is one of Windows, MacOSX, or Linux.
+#   os_ver: OS version, identified for Mac.
+#   bit: Architecture with bit, such as x86 or x86_64
+# Arguments:
+#   NONE
+# Returns:
+#   NONE
+############################################
+detect_platform() {
+  echo -n "Detecting platform..."
+  local system=`uname -a`
+  
+  # detect operating system
+  os=""
+  os_ver=""
+  if [[ "$system" =~ "CYGWIN" ]] || [[ "$system" =~ "WINDOWS" ]]; then
+    os="Windows"
+  elif [[ "$system" =~ "Darwin" ]]; then
+    os="MacOSX"
+    os_ver="$(/usr/bin/sw_vers -productVersion)"
+  elif [[ "$system" =~ "Linux" ]]; then
+    os="Linux"
+  fi
+  if [[ -z "$os" ]]; then
+    echo "Could not detect OS"
+  else
+    readonly os
+    readonly os_ver
+  fi
+  
+  # detect bit
+  bit="x86"
+  if [[ "$system" =~ "x86_64" ]]; then
+    bit="x86_64"
+  fi
+  readonly bit
+  echo "Found $os platform with $bit bit"
+}
+
+
+############################################
 # Suppress all output.
 # Globals:
 #   Redirects all streams to suppress output

@@ -53,30 +53,15 @@ cd "${base_dir}/.."
 source "${base_dir}/libclr.sh"
 
 # find platform for Anaconda
-echo -n "Detecting environment..."
-SYSTEM=`uname -a`
+detect_platform
 compiler_c="gcc"
 compiler_cpp="g++"
-platform=""
-if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
-then
-    platform="Windows"
-elif [[ "$SYSTEM" =~ "Darwin" ]]
-then
-    platform="MacOSX"
+if [[ "$os" = "MacOSX" ]]; then
     compiler_c=clang
     compiler_cpp=clang++
-elif [[ "$SYSTEM" =~ "Linux" ]]
-then
-    platform="Linux"
-fi
-bit="x86"
-if [[ "$SYSTEM" =~ "x86_64" ]]
-then
-    bit="x86_64"
 fi
 echo "will use $compiler_c C compiler and $compiler_cpp C++ compiler"
-echo "for $platform platform"
+echo "for $os platform"
 
 # get SimpleElastix git repo if not already present
 if [[ ! -e SimpleElastix ]]

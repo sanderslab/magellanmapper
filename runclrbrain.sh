@@ -53,7 +53,7 @@ S3_DIR=""
 MICROSCOPE="lightsheet"
 
 # Grouped pathways to follow typical pipelines
-PIPELINES=("gui" "full" "process_only" "transpose_only" "download_only")
+PIPELINES=("gui" "full" "detection" "transposition" "download")
 pipeline="gui"
 
 

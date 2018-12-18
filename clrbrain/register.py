@@ -396,7 +396,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         else:
             # based on profile settings
             edgei = int(edge * tot_planes)
-            print("edgeing near edge from plane {}".format(edgei))
+            print("will extend near edge from plane {}".format(edgei))
         
         # find the bounds of the reference image in the given plane and resize 
         # the corresponding section of the labels image to the bounds of the 
@@ -416,18 +416,19 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
                 slice(*limits) for limits in expand_limits[::-1])
             region = img_np[expand_slices]
             region_ref = img_ref_np[expand_slices]
-            for extendi in range(len(region_ref)):
+            print("expanding planes in slices", expand_slices)
+            for expandi in range(len(region_ref)):
                 # find bounding boxes for labels and atlas within region
-                bbox = _get_bbox(region[extendi], 0) # assume pos labels region
+                bbox = _get_bbox(region[expandi], 0) # assume pos labels region
                 shape, slices = plot_3d.get_bbox_region(bbox)
-                plane_region = region[extendi, slices[0], slices[1]]
-                bbox_ref = _get_bbox(region_ref[extendi])
+                plane_region = region[expandi, slices[0], slices[1]]
+                bbox_ref = _get_bbox(region_ref[expandi])
                 shape_ref, slices_ref = plot_3d.get_bbox_region(bbox_ref)
                 # expand bounding box region of labels to that of atlas
                 plane_region = transform.resize(
                     plane_region, shape_ref, preserve_range=True, order=0, 
                     anti_aliasing=False, mode="reflect")
-                region[extendi, slices_ref[0], slices_ref[1]] = plane_region
+                region[expandi, slices_ref[0], slices_ref[1]] = plane_region
     
     # find approximate midline by locating the last zero plane from far edge 
     # at which to start mirroring across midline
@@ -445,10 +446,12 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             for i in range(mirrori, tot_planes):
                 img_np[i] = img_np[mirrori - 1]
         for rot in rotate:
+            print("rotating by", rot)
             img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
     
     if affine:
         for aff in affine:
+            print("performing affine of", aff)
             img_np = plot_3d.affine_nd(img_np, **aff)
     
     if mirror is not None and mirror != -1:
@@ -484,18 +487,18 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         "type: {}, max: {}, max avail: {}".format(
             img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     
-    # mirror and check for label loss
-    labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
     if mirror is not None:
+        # mirror and check for label loss
+        labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
         img_np = _mirror_planes(img_np, mirrori, -1)
-    half_before = img_np[:mirrori]
-    half_after = img_np[:mirrori-1:-1]
-    print("Checking for baseline labels symmetry")
-    print("halves equal before mirroring?",
-          np.array_equal(half_before, half_after))
-    print("same labels in each half before mirroring?", 
-          np.array_equal(np.unique(half_before), np.unique(half_after)))
-    print("total final labels: {}".format(np.unique(img_np).size))
+        half_before = img_np[:mirrori]
+        half_after = img_np[:mirrori-1:-1]
+        print("Checking for baseline labels symmetry")
+        print("halves equal before mirroring?",
+              np.array_equal(half_before, half_after))
+        print("same labels in each half before mirroring?", 
+              np.array_equal(np.unique(half_before), np.unique(half_after)))
+        print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (edgei, mirrori), borders_img_np
 
 def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):

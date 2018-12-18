@@ -8,6 +8,9 @@ Stitch files using ImageJ/Fiji plugin.
 Arguments:
   -h: Show help and exit.
   -f: Path to image file.
+  -i [path]: Path to ImageJ/Fiji executable file. If not given, the 
+      the path will be auto-detected, assuming that the app folder is in 
+      /Applications on Mac or the parent folder of Clrbrain on Windows/Linux.
   -w [0|1|2]: 0 = Stitch but do not write fused file. Stitching 
       plugin will compute overlap and write registered tile 
       configuration. BigStitcher will import and calculate 
@@ -43,18 +46,14 @@ To run in BigStitcher mode:
 -Run ./stitch.sh -f \"/path/to/img.czi\" -b
 "
 
-# run from parent directory
-base_dir="`dirname $0`"
-cd "$base_dir"
-echo $PWD
-
 write_fused=2
 out_dir=""
 STITCH_TYPES=("none" "stitching" "bigstitcher")
 stitch=STITCH_TYPES[2]
+ij=""
 
 OPTIND=1
-while getopts hf:w:s: opt; do
+while getopts hf:w:s:i: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -68,6 +67,9 @@ while getopts hf:w:s: opt; do
         s)  stitch="$OPTARG"
             echo "Set stitch type to $stitch"
             ;;
+        i)  ij="$OPTARG"
+            echo "Set ImageJ/Fiji path to to $ij"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -79,32 +81,28 @@ done
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-# find ImageJ binary name; assumes Fiji.app folder is either in 
-# the standard Mac Applications directory or in the Clrbrain 
-# parent directory
-echo -n "Detecting environment..."
-SYSTEM=`uname -a`
-bit="32"
-if [[ "$SYSTEM" =~ "x86_64" ]]
-then
-    bit="64"
+# run from script directory
+BASE_DIR="`dirname $0`"
+cd "$BASE_DIR"
+BASE_DIR="$PWD"
+
+# load dependencies
+source libclr.sh
+
+detect_platform
+if [[ -z "$ij" ]]; then
+    # auto-detect ImageJ binary path if not already set; assume that 
+    # Fiji.app folder is in the standard Mac Applications directory (Mac)
+    # or in the Clrbrain parent directory (Windows/Linux)
+    if [[ "$os" = "Windows" ]]; then
+        ij=../Fiji.app/ImageJ-win$bit
+    elif [[ "$os" = "MacOSX" ]]; then
+        ij=/Applications/Fiji.app/Contents/MacOS/ImageJ-macosx
+    elif [[ "$os" = "Linux" ]]; then
+        ij=../Fiji.app/ImageJ-linux$bit
+    fi
 fi
-platform=""
-if [[ "$SYSTEM" =~ "CYGWIN" ]] || [[ "$SYSTEM" =~ "WINDOWS" ]]
-then
-    platform="Windows"
-    IJ=../Fiji.app/ImageJ-win$bit
-elif [[ "$SYSTEM" =~ "Darwin" ]]
-then
-    platform="MacOSX"
-    IJ=/Applications/Fiji.app/Contents/MacOS/ImageJ-macosx
-elif [[ "$SYSTEM" =~ "Linux" ]]
-then
-    platform="Linux"
-    IJ=../Fiji.app/ImageJ-linux$bit
-fi
-echo "will use $platform platform with $bit bit for ImageJ"
-echo "Assumes Fiji executable is located at $IJ"
+echo "Assumes Fiji executable is located at $ij"
 
 # calculates memory to reserve based on image file size with generous
 # extra padding room (TODO: check if too much for large files)
@@ -125,7 +123,7 @@ echo "Reserving $mem MB of memory"
 
 if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
     # Fiji Stitching plugin; does not appear to work when fed a separate script in "-macro" mode
-    $IJ --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
+    "$ij" --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
     
     # manually move files to output directory since specifying this directory
     # within the Stitching plugin requires the tile configuration file to be
@@ -145,9 +143,9 @@ if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
     mv "$in_dir"/img_t* "$out_dir"
 elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
     # BigStitcher; not working in headless mode so will require GUI availability
-    $IJ --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
+    "$ij" --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
 else
     # no stitching, just open ImageJ/Fiji
-    $IJ --ij2
+    "$ij" --ij2
 fi
 

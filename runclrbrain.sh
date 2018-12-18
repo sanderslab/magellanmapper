@@ -14,6 +14,8 @@ instead.
 Arguments:
     -h: Show help documentation.
     -i [path]: Set image path.
+    -f [path]: Path to ImageJ/Fiji executable file. If not given, the 
+        path will be auto-detected as described in stitch.sh.
     -a [path]: Set AWS S3 path (excluding s://)
     -p [pipeline]: Set pipeline, which takes precedence over individual 
         pathways.
@@ -97,6 +99,9 @@ url_notify=""
 # Server clean-up, to perform post-processing tasks including 
 # upload and shutdown
 clean_up=0
+
+# ImageJ/Fiji main executable path
+ij=""
 
 # Supported compression formats
 COMPRESSION_EXTS=("tar.zst" "zip")
@@ -250,7 +255,7 @@ upload_images() {
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w:o:n:cz:m: opt; do
+while getopts hi:a:p:s:t:w:o:n:cz:m:f: opt; do
     case $opt in
         h)  echo "$HELP"
             exit 0
@@ -288,6 +293,9 @@ while getopts hi:a:p:s:t:w:o:n:cz:m: opt; do
         z)  size="$OPTARG"
             echo "Set size to $size"
             ;;
+        f)  ij="$OPTARG"
+            echo "Set ImageJ/Fiji path to $ij"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -313,7 +321,7 @@ s3_exp_path=s3://"${S3_DIR}/${EXP}"
 # run from script's directory
 BASE_DIR="`dirname $0`"
 cd "$BASE_DIR"
-echo $PWD
+BASE_DIR="$PWD"
 
 # set pat combinations for common grouped pathways
 if [[ "$pipeline" = "${PIPELINES[0]}" ]]; then
@@ -417,11 +425,11 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
     # Replace the tile parameters with your image's setup; set up tile 
     # configuration manually and compute alignment refinement
     python -m stitch.tile_config --img "$NAME" --target_dir "$OUT_DIR" --cols 6 --rows 7 --size 1920,1920,1000 --overlap 0.1 --directionality bi --start_direction right
-    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 0
+    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 0 -i "$ij"
     
     # Before the next steps, please manually check alignments to ensure that they 
     # fit properly, especially since unregistered tiles may be shifted to (0, 0, 0)
-    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1
+    ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1 -i "$ij"
     python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
     clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
     
@@ -432,7 +440,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     
     # Import file into BigStitcher HDF5 format (warning: large file, just 
     # under size of original file) and find alignments
-    ./stitch.sh -f "$IMG" -s "bigstitcher" -w 0
+    ./stitch.sh -f "$IMG" -s "bigstitcher" -w 0 -i "$ij"
     
     # notify user via Slack and open ImageJ/Fiji for review, which will 
     # also keep script from continuing until user closes ImageJ/Fiji 
@@ -443,11 +451,11 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     fi
     echo "=================================="
     echo "$msg"
-    ./stitch.sh -s "none"
+    ./stitch.sh -s "none" -i "$ij"
     
     # Before writing stitched file, advise checking alignments; when 
     # satisfied, then run this fusion step
-    ./stitch.sh -f "$IMG" -s "bigstitcher" -w 1
+    ./stitch.sh -f "$IMG" -s "bigstitcher" -w 1 -i "$ij"
     
     # Rename output file(s):
     FUSED="fused_tp_0"

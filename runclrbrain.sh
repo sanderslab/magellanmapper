@@ -53,7 +53,7 @@ S3_DIR=""
 MICROSCOPE="lightsheet"
 
 # Grouped pathways to follow typical pipelines
-PIPELINES=("gui" "full" "detection" "transposition" "download")
+PIPELINES=("gui" "full" "detection" "transposition" "download" "stitching")
 pipeline="gui"
 
 
@@ -327,7 +327,7 @@ elif [[ "$pipeline" = "${PIPELINES[1]}" ]]; then
     whole_img_proc="${WHOLE_IMG_PROCS[0]}"
     upload="${UPLOAD_TYPES[1]}"
 elif [[ "$pipeline" = "${PIPELINES[2]}" ]]; then
-    # processing only
+    # cell detection only
     gui=0
     stitch_pathway=""
     transpose_pathway=""
@@ -344,6 +344,13 @@ elif [[ "$pipeline" = "${PIPELINES[4]}" ]]; then
     # download only
     gui=0
     # will download npz files correponding to IMG by default
+elif [[ "$pipeline" = "${PIPELINES[5]}" ]]; then
+    # stitching only
+    gui=0
+    stitch_pathway="${STITCH_PATHWAYS[1]}"
+    transpose_pathway=""
+    whole_img_proc=""
+    upload="${UPLOAD_TYPES[2]}"
 fi
 
 if [[ "$S3_DIR" = "" ]]; then

@@ -37,13 +37,17 @@ CONFIRMATION = {
 }
 
 def calc_scaling_factor():
-    """Calculates the tolerance based on the  
-    resolutions, using the first resolution.
+    """Calculates the tolerance based on the resolutions, using the 
+    first resolution.
     
     Return:
-        Array of tolerance values in same shape as resolution.
+        Array of tolerance values in same shape as the first resolution.
+    
+    Raises:
+        ``AttributeError`` if the :attr:``resolutions`` is None or has 
+        less than one element.
     """
-    if resolutions is None:
+    if resolutions is None or len(resolutions) < 1:
         raise AttributeError(
             "Must load resolutions from file or set a resolution")
     factor = np.divide(1.0, resolutions[0])

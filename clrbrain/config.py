@@ -625,6 +625,7 @@ def update_register_settings(settings, settings_type):
         "raw", 
         {"labels_mirror": None,
          "labels_edge": None, 
+         "expand_labels": None, 
          "rotate": None, 
          "affine": None,
          "smooth": None

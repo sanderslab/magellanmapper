@@ -4,6 +4,7 @@
 """
 
 import numpy as np
+import pandas as pd
 from scipy import ndimage
 from skimage import feature
 from skimage import filters
@@ -232,6 +233,8 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
     markers = np.zeros_like(labels_img)
     labels_unique = np.unique(labels_img)
     #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
+    sizes_dict = {}
+    cols = ("region", "size_orig", "size_marker", "filter_size")
     for label_id in labels_unique:
         if label_id == 0: continue
         print("eroding label ID {}".format(label_id))
@@ -268,7 +271,12 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
         markers[tuple(slices)][filtered] = label_id
         print("changed num of pixels from {} to {}"
               .format(region_size, np.sum(filtered)))
+        vals = (label_id, region_size, region_size_filtered, selem_size)
+        for col, val in zip(cols, vals):
+            sizes_dict.setdefault(col, []).append(val)
     
+    df_sizes = pd.DataFrame(sizes_dict)
+    print(df_sizes.to_csv(sep="\t", index=False))
     return markers
 
 def mask_atlas(atlas, labels_img):

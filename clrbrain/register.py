@@ -243,7 +243,7 @@ def _truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
     return img_np
 
 def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None, 
-                   rand_dup=None):
+                   rand_dup=None, check_equality=False):
     """Mirror image across its sagittal midline.
     
     Args:
@@ -265,6 +265,8 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
             Defaults to None, in which case the plane just prior to 
             the duplication starting plane will simply be duplicated 
             throughout the region.
+        check_equality: True to check equality from one half to the other 
+            along axis 0; defaults to False.
     
     Returns:
         The mirrored image in Numpy format.
@@ -318,6 +320,15 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
     else:
         # skip mirroring if no planes are empty or only first plane is empty
         print("nothing to mirror")
+    if check_equality:
+        half_len = len(img_np) // 2
+        half_before = img_np[:half_len]
+        half_after = img_np[:half_len-1:-1] * mirror_mult
+        print("Checking for baseline labels symmetry")
+        print("halves equal before mirroring?",
+              np.array_equal(half_before, half_after))
+        print("same labels in each half before mirroring?", 
+              np.array_equal(np.unique(half_before), np.unique(half_after)))
     return img_np
 
 def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None, 
@@ -490,14 +501,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     if mirror is not None:
         # mirror and check for label loss
         labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
-        img_np = _mirror_planes(img_np, mirrori, -1)
-        half_before = img_np[:mirrori]
-        half_after = img_np[:mirrori-1:-1]
-        print("Checking for baseline labels symmetry")
-        print("halves equal before mirroring?",
-              np.array_equal(half_before, half_after))
-        print("same labels in each half before mirroring?", 
-              np.array_equal(np.unique(half_before), np.unique(half_after)))
+        img_np = _mirror_planes(
+            img_np, mirrori, mirror_mult=-1, check_equality=True)
         print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (edgei, mirrori), borders_img_np
 

@@ -1833,6 +1833,14 @@ def register_labels_to_atlas(path_fixed):
     # alongside new labels image for comparison
     shutil.copy(_reg_out_path(path_fixed, IMG_ATLAS), out_path_base)
 
+def _mirror_imported_labels(labels_img_np, start):
+    # mirror labels that have been imported and transformed with x and z swapped
+    labels_img_np = _mirror_planes(
+        np.swapaxes(labels_img_np, 0, 2), start, mirror_mult=-1, 
+        check_equality=True)
+    labels_img_np = np.swapaxes(labels_img_np, 0, 2)
+    return labels_img_np
+
 def make_labels_edge(labels_img_np):
     """Convert labels image into label borders image.
     
@@ -1925,9 +1933,13 @@ def make_edge_images(path_atlas, show=True):
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
     
-    # convert labels image into markers
+    # convert labels image into markers, assuming that labels image is 
+    # symmetric across halves along the x-axis
     #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
-    labels_markers = segmenter.labels_to_markers_erosion(labels_img_np)
+    len_half = labels_img_np.shape[2] // 2
+    labels_markers = segmenter.labels_to_markers_erosion(
+        labels_img_np[..., :len_half])
+    labels_markers = _mirror_imported_labels(labels_markers, len_half)
     labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
     
     # benchmarking for distances between edges
@@ -2003,12 +2015,8 @@ def merge_atlas_segmentations(path_fixed, show=True):
         # by opening operation for overall smoothing with profile setting
         smooth_labels(labels_seg, 2, SMOOTHING_MODES[2])
         smooth_labels(labels_seg, smoothing, SMOOTHING_MODES[0])
-    
-    # mirror to other half, swapping axes since plane mirroring 
-    # assumes mirroring z-planes
-    labels_seg = _mirror_planes(
-        np.swapaxes(labels_seg, 0, 2), len_half, mirror_mult=-1)
-    labels_seg = np.swapaxes(labels_seg, 0, 2)
+    # mirror back to other half
+    labels_seg = _mirror_imported_labels(labels_seg, len_half)
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     # measure distance between edges of original and new segmentations

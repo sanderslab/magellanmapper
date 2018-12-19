@@ -265,7 +265,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
                 label_mask_region, morphology.ball(selem_size))
             region_size_filtered = np.sum(filtered)
             size_ratio = region_size_filtered / region_size
-            if size_ratio > 0.2: break
+            if size_ratio > 0.3: break
         
         # insert eroded region into markers image
         markers[tuple(slices)][filtered] = label_id

@@ -556,6 +556,10 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
   plot(
     x, y, main=paste(meas, "Differences for", interaction), xlab="Effects", 
     ylab="-log10(p)", type="p", pch=16, cex=size, col=colors_parents)
+  # vertical line to denote x = 0
+  abline(v=0, lty="dashed", col=gray(0.5, 0.5))
+  
+  # label points
   x.lbl <- x
   y.lbl <- y
   lbls <- paste(stats$Region, stats$RegionName, sep="\n")
@@ -577,8 +581,11 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
     #pointLabel(x.lbl, y.lbl, label=lbls, cex=0.2)
     addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.2, lwd=0.2)
   }
+  
+  # write to PDF file
   dev.print(
-    pdf, file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), sep="_"))
+    pdf, file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), 
+                    sep="_"))
 }
 
 calcVolStats <- function(path.in, path.out, meas, model, region.ids, 

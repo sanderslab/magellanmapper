@@ -281,6 +281,8 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     
     Args:
         segs_roi: Segments from each sub-region.
+        overlap: 1D array of size 3 with the number of overlapping pixels 
+            for each image axis.
         region: The region of each segment array to compare for closeness,
             given as a slice.
         tol: Tolerance as (z, y, x), within which a segment will be 
@@ -309,6 +311,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
     
     Args:
         segs_roi: Segments from each sub-region.
+        overlap: 1D array of size 3 with the number of overlapping pixels 
+            for each image axis.
         tol: Tolerance as (z, y, x), within which a segment will be 
             considered a duplicate of a segment in the master array and
             removed.
@@ -997,8 +1001,10 @@ def process_file(filename_base, offset, roi_size):
             roi_offset = (0, 0, 0)
         else:
             # sets up processing for partial stack
-            filename_image5d_proc = make_subimage_name(filename_image5d_proc, offset, roi_size)
-            filename_info_proc = make_subimage_name(filename_info_proc, offset, roi_size)
+            filename_image5d_proc = make_subimage_name(
+                filename_image5d_proc, offset, roi_size)
+            filename_info_proc = make_subimage_name(
+                filename_info_proc, offset, roi_size)
         
         # get ROI for given region, including all channels
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
@@ -1015,7 +1021,8 @@ def process_file(filename_base, offset, roi_size):
             # command-line set max takes precedence, but if not set, take 
             # from process settings
             max_pixels = settings["sub_stack_max_pixels"]
-        print("overlap: {}, max_pixels: {}".format(overlap, max_pixels))
+        print("overlap: {}, max_pixels: {}, tol: {}"
+              .format(overlap, max_pixels, tol))
         super_rois, super_rois_offsets = chunking.stack_splitter(
             roi, max_pixels, overlap)
         seg_rois = np.zeros(super_rois.shape, dtype=object)
@@ -1194,9 +1201,8 @@ def process_stack(roi, overlap, tol, channels):
         
         time_denoising_end = time()
         
-        # segment objects through blob detection, using larger sub-ROI size
-        # to minimize the number of sub-ROIs and thus the number of edge 
-        # overlaps to account for
+        # detect blobs, using larger sub-ROI size to minimize the number 
+        # of sub-ROIs and thus the number of edge overlaps
         time_segmenting_start = time()
         max_pixels = np.ceil(np.multiply(
             scaling_factor, 

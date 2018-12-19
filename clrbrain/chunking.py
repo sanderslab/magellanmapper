@@ -23,10 +23,11 @@ from clrbrain import lib_clrbrain
 OVERLAP_FACTOR = 5
 
 def calc_overlap():
-    """Calculate overlap based on scaling factor and overlap.
+    """Calculate overlap based on scaling factor and :const:``OVERLAP_FACTOR``.
     
     Returns:
-        Overlap in same order as :attr:``detector.resolutions``.
+        Overlap as an array in the same shape and order as in 
+        :attr:``detector.resolutions``.
     """
     return np.ceil(np.multiply(detector.calc_scaling_factor(), 
                                OVERLAP_FACTOR)).astype(int)

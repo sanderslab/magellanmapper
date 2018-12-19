@@ -2562,7 +2562,7 @@ def get_children_from_id(labels_ref_lookup, label_id, incl_parent=True,
         region_ids.extend([-1 * n for n in region_ids])
     elif label_id < 0:
         region_ids = [-1 * n for n in region_ids]
-    print("region IDs: {}".format(region_ids))
+    #print("region IDs: {}".format(region_ids))
     return region_ids
 
 def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling, 
@@ -2998,7 +2998,7 @@ def open_json(json_path):
             print("reloading saved volumes dict from {}".format(json_path))
             volumes_dict = json.load(
                 fp, object_hook=lib_clrbrain.convert_indices_to_int)
-            print(volumes_dict)
+            #print(volumes_dict)
     return volumes_dict
 
 def register_volumes(img_path, labels_ref_lookup, level, scale=None, 

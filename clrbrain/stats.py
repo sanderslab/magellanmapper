@@ -354,7 +354,7 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0,
         condition = ""
     header = [
         "Sample", "Geno", "Side", "Condition", "Region", "Level", "Vol", 
-        "Dens", "Nuclei", "Variation"]
+        "Dens", "Nuclei", "VarNuclei", "VarIntensity"]
     num_samples = len(groups)
     #data = {k: [] for k in header} # retains order for Python 3.6 but not <
     data = OrderedDict()
@@ -387,7 +387,9 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0,
                 data[header[n + 1]].extend(density.tolist())
                 data[header[n + 2]].extend(blobs)
                 data[header[n + 3]].extend(
-                    volumes_dict[key_signed][config.VARIATION_KEY])
+                    volumes_dict[key_signed][config.VARIATION_BLOBS_KEY])
+                data[header[n + 4]].extend(
+                    volumes_dict[key_signed][config.VARIATION_EXP_KEY])
             
     # pool lists and add to Pandas data frame
     data_frame = pd.DataFrame(data=data, columns=header)

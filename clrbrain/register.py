@@ -2884,7 +2884,8 @@ def labels_to_parent(labels_ref_lookup, level):
         label_parents[label_id] = parent_at_level
     return label_parents
 
-def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map):
+def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map, 
+                                exp_img):
     """Group child volumes into the given parent level from a volumes 
     dictionary and calculate variance at that level.
     
@@ -2898,6 +2899,8 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map):
         labels_img: Labels image as a Numpy array.
         heat_map: Heat map of blob densities in the same shape as that of 
             ``labels_img``.
+        exp_img: Experimental image in same shape as ``labels_img`` to 
+            calculate variation in image intensities for each label.
     
     Returns:
         The grouped dictionary, including newly calculated variance.
@@ -2921,11 +2924,15 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map):
                 region_ids = get_children_from_id(
                     labels_ref_lookup, label_id, incl_parent=True)
                 label_mask = np.isin(labels_img, region_ids)
-                print("label mask", np.sum(label_mask))
+                #print("label mask", np.sum(label_mask))
                 label_counts = heat_map[label_mask]
-                print("label counts:\n{}".format(label_counts))
-                level_dict[label_id][config.VARIATION_KEY] = np.std(
-                    label_counts)
+                #print("label counts:\n{}".format(label_counts))
+                var_blobs = np.std(label_counts)
+                var_exp = np.std(exp_img[label_mask])
+                print("variation in blobs: {}, exp intensity: {}"
+                      .format(var_blobs, var_exp))
+                level_dict[label_id][config.VARIATION_BLOBS_KEY] = var_blobs
+                level_dict[label_id][config.VARIATION_EXP_KEY] = var_exp
             elif label_level > level:
                 parents = label.get(PARENT_IDS)
                 if parents is not None:
@@ -3104,8 +3111,9 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             # use the all levels volumes dictionary to group child levels 
             # into their parent at the given level
             heat_map = load_registered_img(mod_path, reg_name=IMG_HEAT_MAP)
+            exp_img = load_registered_img(mod_path, reg_name=IMG_EXP)
             volumes_dict = volumes_dict_level_grouping(
-                volumes_dict, level, labels_img, heat_map)
+                volumes_dict, level, labels_img, heat_map, exp_img)
         
         if volumes_dict is not None:
             # output volumes dictionary to file with pretty printing but no 
@@ -3166,7 +3174,9 @@ def group_volumes(labels_ref_lookup, vol_dicts):
         in places of individual values.
     """
     ids = list(labels_ref_lookup.keys())
-    metrics = (config.VOL_KEY, config.BLOBS_KEY, config.VARIATION_KEY)
+    metrics = (
+        config.VOL_KEY, config.BLOBS_KEY, config.VARIATION_BLOBS_KEY, 
+        config.VARIATION_EXP_KEY)
     grouped_vol_dict = {}
     for key in ids:
         # check all IDs, including negative versions for mirrored labels

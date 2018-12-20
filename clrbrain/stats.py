@@ -458,7 +458,7 @@ def dict_to_data_frame(dict_import, path=None, sort_col=None):
     if sort_col is not None:
         df.sort_values(sort_col)
     if path:
-        df.to_csv(path)
+        df.to_csv(path, index=False, na_rep="NaN")
         print("data frame saved to {}".format(path))
     return df
 

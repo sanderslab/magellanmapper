@@ -896,14 +896,10 @@ def build_heat_map(shape, coords):
     coords_unique, coords_count = np.unique(
         coords, return_counts=True, axis=0)
     coordsi = lib_clrbrain.coords_for_indexing(coords_unique)
-    print("coords:\n{}".format(coords))
-    print("coords_unique:\n{}".format(coords_unique))
-    print("coordsi:\n{}".format(coordsi))
     dtype = lib_clrbrain.dtype_within_range(
         0, np.amax(coords_count), True, False)
     heat_map = np.zeros(shape, dtype=dtype)
     heat_map[tuple(coordsi)] = coords_count
-    print("heat_map:\n{}".format(heat_map))
     return heat_map
 
 def zero_crossing(img, filter_size):

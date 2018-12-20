@@ -36,7 +36,7 @@ def _volumes_mean_err(group_dict, key_mean, key_sem, vals, mask, ci=None):
     vals = np.array(vals)
     if mask is not None:
         vals = vals[mask]
-    print("group vals raw: {}, mask: {}, n: {}".format(vals, mask, vals.size))
+    #print("group vals raw: {}, mask: {}, n: {}".format(vals, mask, vals.size))
     
     # further prune to remove None or near-zero values (ie no volume found)
     vals = vals[vals != None] # TODO: check if actually encounter None vals
@@ -53,7 +53,7 @@ def _volumes_mean_err(group_dict, key_mean, key_sem, vals, mask, ci=None):
         confidence = stats.t.ppf((1 + ci)/2., len(vals) - 1)
         err = sem * confidence
         '''
-    print("mean: {}, err: {}, n after pruning: {}".format(mean, err, vals.size))
+    #print("mean: {}, err: {}, n after pruning: {}".format(mean, err, vals.size))
     group_dict[key_mean].append(mean)
     group_dict[key_sem].append(err)
 
@@ -142,8 +142,10 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0,
                     # calculate densities based on blobs counts and volumes
                     blobs_side = volumes_dict[key][config.BLOBS_KEY]
                     blobs_mirrored = volumes_dict[-1 * key][config.BLOBS_KEY]
+                    '''
                     print("id {}: blobs R {}, L {}".format(
                         key, blobs_side, blobs_mirrored))
+                    '''
                     density_side = np.nan_to_num(
                         np.divide(blobs_side, vol_side))
                     density_mirrored = np.nan_to_num(

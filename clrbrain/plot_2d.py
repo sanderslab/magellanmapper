@@ -1391,7 +1391,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     num_groups = len(lists[0])
     num_sets = len(lists) # num of bars per group
     indices = np.arange(num_groups)
-    print("lists:\n{}".format(lists))
+    #print("lists:\n{}".format(lists))
     if lists.size < 1: return
     width = (1.0 - padding) / num_sets
     #print("x_labels: {}".format(x_labels))

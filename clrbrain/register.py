@@ -3101,7 +3101,6 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             # build heat map to store densities per label px, which will 
             # be used to calculate variances per label
             heat_map = plot_3d.build_heat_map(labels_img.shape, coord_scaled)
-            print("heat map dtype: {}".format(heat_map.dtype))
             out_path = _reg_out_path(mod_path, IMG_HEAT_MAP)
             print("writing {}".format(out_path))
             heat_map_sitk = replace_sitk_with_numpy(labels_img_sitk, heat_map)
@@ -3119,7 +3118,7 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             # output volumes dictionary to file with pretty printing but no 
             # sorting to ensure that IDs are in the same hierarchical order 
             # as labels reference, even if not grouped hierarchically
-            print(volumes_dict)
+            #print(volumes_dict)
             with open(json_path, "w") as fp:
                 json.dump(volumes_dict, fp, indent=4)
     

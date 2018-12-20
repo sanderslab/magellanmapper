@@ -68,6 +68,7 @@ from clrbrain import plot_2d
 from clrbrain import plot_3d
 from clrbrain import segmenter
 from clrbrain import stats
+from clrbrain import vols
 
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
@@ -1846,42 +1847,6 @@ def _mirror_imported_labels(labels_img_np, start):
     labels_img_np = np.swapaxes(labels_img_np, 0, 2)
     return labels_img_np
 
-def make_labels_edge(labels_img_np):
-    """Convert labels image into label borders image.
-    
-    The atlas is assumed to be a sample (eg microscopy) image on which 
-    an edge-detection filter will be applied. 
-    
-    Args:
-        labels_img_np: Image as a Numpy array, assumed to be an 
-            annotated image whose edges will be found by obtaining 
-            the borders of all annotations.
-    
-    Returns:
-        Binary image array the same shape as ``labels_img_np`` with labels 
-        reduced to their corresponding borders.
-    """
-    labels_edge = np.zeros_like(labels_img_np)
-    label_ids = np.unique(labels_img_np)
-    for label_id in label_ids:
-        print("getting edge for {}".format(label_id))
-        
-        # get mask of label to get bounding box
-        label_mask = labels_img_np == label_id
-        props = measure.regionprops(label_mask.astype(np.int))
-        if len(props) < 1 or props[0].bbox is None: continue
-        _, slices = plot_3d.get_bbox_region(props[0].bbox)
-        
-        # work on a view of the region for efficiency, obtaining borders 
-        # as eroded region and writing into new array
-        region = labels_img_np[tuple(slices)]
-        label_mask_region = region == label_id
-        borders = plot_3d.perimeter_nd(label_mask_region)
-        borders_region = labels_edge[tuple(slices)]
-        borders_region[borders] = label_id
-    
-    return labels_edge
-
 def _images_to_edges(atlas_sitk, labels_sitk):
     # generate edge images for atlas and labels
     
@@ -1898,7 +1863,7 @@ def _images_to_edges(atlas_sitk, labels_sitk):
     atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
     
     # extract boundaries for each label
-    labels_edge = make_labels_edge(labels_img_np)
+    labels_edge = vols.make_labels_edge(labels_img_np)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     
     return atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge
@@ -1938,6 +1903,7 @@ def make_edge_images(path_atlas, show=True):
     # generate LoG and edge-detected images
     atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge = _images_to_edges(
         atlas_sitk, labels_sitk)
+    
     # convert labels image into markers, assuming that labels image is 
     # symmetric across halves along the x-axis
     #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
@@ -2027,7 +1993,7 @@ def merge_atlas_segmentations(path_fixed, show=True):
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     # measure distance between edges of original and new segmentations
-    labels_edge = make_labels_edge(labels_seg)
+    labels_edge = vols.make_labels_edge(labels_seg)
     dist_sitk = _get_edge_dist_groups(
         path_fixed, atlas_edge, labels_edge, labels_img_np, labels_sitk_seg, 
         IMG_LABELS_SEG_DIST)

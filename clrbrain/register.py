@@ -1909,22 +1909,11 @@ def make_edge_images(path_atlas, show=True):
     labels_sitk_edge = None
     labels_sitk_markers = None
     
-    # apply Laplacian of Gaussian filter (sequentially)
-    atlas_log = filters.gaussian(atlas_np, 5)
-    atlas_log = filters.laplace(atlas_log)
-    vmin, vmax = np.percentile(atlas_log, (2, 98))
-    atlas_log = np.clip(atlas_log, vmin, vmax)
-    # comment-out normalizing since need neg vals for zero-crossing
-    #atlas_log = (atlas_log - vmin) / (vmax - vmin)
-    
-    # remove signal below threshold while keeping any signal in labels
-    atlas_mask = segmenter.mask_atlas(atlas_log, labels_img_np)
-    atlas_log[~atlas_mask] = np.amin(atlas_log)
+    # generate LoG and edge-detected images
+    atlas_log = plot_3d.laplacian_of_gaussian_img(
+        atlas_np, labels_img=labels_img_np)
     atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
-    
-    # convert to edge-detection image
     atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
-    
     atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
     

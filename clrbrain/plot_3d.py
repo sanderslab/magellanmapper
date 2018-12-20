@@ -902,6 +902,33 @@ def build_heat_map(shape, coords):
     heat_map[tuple(coordsi)] = coords_count
     return heat_map
 
+def laplacian_of_gaussian_img(img, sigma=5, labels_img=None):
+    """Generate a Laplacian of Gaussian (LoG) image.
+    
+    Args:
+        img: Image as Numpy array from which the LoG will be generated.
+        sigma: Sigma for Gaussian filters; defaults to 5.
+        labels_img: Labels image as Numpy array in same shape as ``img``, 
+            to use to assist with thresholding out background. Defaults 
+            to None to skip background removal.
+             
+    """
+    # apply Laplacian of Gaussian filter (sequentially)
+    img_log = filters.gaussian(img, 5)
+    img_log = filters.laplace(img_log)
+    vmin, vmax = np.percentile(img_log, (2, 98))
+    img_log = np.clip(img_log, vmin, vmax)
+    
+    # comment-out normalizing since need neg vals for zero-crossing
+    #img_log = (img_log - vmin) / (vmax - vmin)
+    
+    # remove signal below threshold while keeping any signal in labels
+    if labels_img is not None:
+        mask = segmenter.mask_atlas(img_log, labels_img)
+        img_log[~mask] = np.amin(img_log)
+    
+    return img_log
+
 def zero_crossing(img, filter_size):
     """Apply a zero-crossing detector to an image, such as an image 
     produced by a Laplacian of Gaussian.

@@ -3231,21 +3231,17 @@ def export_region_ids(labels_ref_lookup, path, level):
     ext = ".csv"
     if not path.endswith(ext): path += ext
     label_parents = labels_to_parent(labels_ref_lookup, level)
-    header = ["Region", "RegionName", "Parent"]
+    cols = ("Region", "RegionName", "Parent")
     data = OrderedDict()
-    for h in header:
-        data[h] = []
     for key in labels_ref_lookup.keys():
         # does not include laterality distinction, only using original IDs
         label = labels_ref_lookup[key]
-        data[header[0]].append(key)
-        data[header[1]].append(label[NODE][config.ABA_NAME])
         # ID of parent at label_parents' level
         parent = label_parents[key]
-        data[header[2]].append(parent)
-    data_frame = pd.DataFrame(data=data, columns=header)
-    data_frame.to_csv(path, index=False)
-    print("exported volume data per sample to CSV at {}".format(path))
+        vals = (key, label[NODE][config.ABA_NAME], parent)
+        for col, val in zip(cols, vals):
+            data.setdefault(col, []).append(val)
+    data_frame = stats.dict_to_data_frame(data, path)
     return data_frame
 
 def export_region_network(labels_ref_lookup, path):

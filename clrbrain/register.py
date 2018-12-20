@@ -1431,20 +1431,25 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     labels_img_full = make_labels(False)
     labels_img = labels_img_full if new_atlas else make_labels(True)
     
+    # generate LoG and edge-detected images on original atlas and 
+    # full, transformed labels image
+    atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge = _images_to_edges(
+        fixed_img_orig, labels_img_full)
+    
+    imgs_write = (fixed_img, transformed_img, labels_img, atlas_sitk_log, 
+                  atlas_sitk_edge, labels_sitk_edge)
     if show_imgs:
         # show individual SimpleITK images in default viewer
-        sitk.Show(fixed_img)
-        #sitk.Show(moving_img)
-        sitk.Show(transformed_img)
-        sitk.Show(labels_img)
+        for img in imgs_write: sitk.Show(img)
     
     if write_imgs:
         # write atlas and labels files, transposed according to plane setting
-        imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS)
-        imgs_write = [fixed_img, transformed_img, labels_img]
         if new_atlas:
             imgs_names = (IMG_ATLAS, IMG_LABELS)
             imgs_write = [transformed_img, labels_img]
+        else:
+            imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS, IMG_ATLAS_LOG, 
+                          IMG_ATLAS_EDGE, IMG_LABELS_EDGE)
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
             if new_atlas:
@@ -1877,6 +1882,28 @@ def make_labels_edge(labels_img_np):
     
     return labels_edge
 
+def _images_to_edges(atlas_sitk, labels_sitk):
+    # generate edge images for atlas and labels
+    
+    # convert to Numpy arrays
+    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
+    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    
+    # generate LoG and edge-detected images
+    atlas_log = plot_3d.laplacian_of_gaussian_img(
+        atlas_np, labels_img=labels_img_np)
+    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
+    atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
+    atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
+    atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
+    
+    # extract boundaries for each label
+    labels_edge = make_labels_edge(labels_img_np)
+    labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
+    labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
+    
+    return atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge
+
 def make_edge_images(path_atlas, show=True):
     """Make edge-detected atlas and associated labels images.
     
@@ -1910,18 +1937,8 @@ def make_edge_images(path_atlas, show=True):
     labels_sitk_markers = None
     
     # generate LoG and edge-detected images
-    atlas_log = plot_3d.laplacian_of_gaussian_img(
-        atlas_np, labels_img=labels_img_np)
-    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
-    atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
-    atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
-    atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
-    
-    # extract boundaries for each label
-    labels_edge = make_labels_edge(labels_img_np)
-    labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
-    labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
-    
+    atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge = _images_to_edges(
+        atlas_sitk, labels_sitk)
     # convert labels image into markers, assuming that labels image is 
     # symmetric across halves along the x-axis
     #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
@@ -1932,6 +1949,8 @@ def make_edge_images(path_atlas, show=True):
     labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
     
     # benchmarking for distances between edges
+    atlas_edge = sitk.GetArrayFromImage(atlas_sitk_edge)
+    labels_edge = sitk.GetArrayFromImage(labels_sitk_edge)
     dist_sitk = _get_edge_dist_groups(
         path_atlas, atlas_edge, labels_edge, labels_img_np, labels_sitk, 
         IMG_LABELS_DIST)

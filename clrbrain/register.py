@@ -1861,7 +1861,7 @@ def make_labels_edge(labels_img_np):
         Binary image array the same shape as ``labels_img_np`` with labels 
         reduced to their corresponding borders.
     """
-    labels_edge = np.zeros(labels_img_np.shape, dtype=np.int8)
+    labels_edge = np.zeros_like(labels_img_np)
     label_ids = np.unique(labels_img_np)
     for label_id in label_ids:
         print("getting edge for {}".format(label_id))
@@ -1878,7 +1878,7 @@ def make_labels_edge(labels_img_np):
         label_mask_region = region == label_id
         borders = plot_3d.perimeter_nd(label_mask_region)
         borders_region = labels_edge[tuple(slices)]
-        borders_region[borders] = 1
+        borders_region[borders] = label_id
     
     return labels_edge
 
@@ -1900,7 +1900,6 @@ def _images_to_edges(atlas_sitk, labels_sitk):
     # extract boundaries for each label
     labels_edge = make_labels_edge(labels_img_np)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
-    labels_sitk_edge = sitk.Cast(labels_sitk_edge, sitk.sitkUInt8)
     
     return atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge
 
@@ -2097,9 +2096,9 @@ def measure_edge_dist(atlas_edge, labels_edge, labels_img_np=None):
         ``labels_img_np`` is not None.
     """
     # find distance between edges, take mean, and plot distance image
-    labels_edge_mask = labels_edge > 0
+    labels_edge_mask = labels_edge != 0
     dist_to_orig, _, _ = plot_3d.borders_distance(
-        atlas_edge > 0, labels_edge_mask)
+        atlas_edge != 0, labels_edge_mask)
     borders_dist_mean = np.mean(dist_to_orig[labels_edge_mask])
     
     dists = {}

@@ -2843,8 +2843,9 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
     blobs_unlabeled = blobs_ids[blobs_ids == 0]
     blobs_unlabeled_len = len(blobs_unlabeled)
     print("unlabeled blobs (id 0): {}".format(blobs_unlabeled_len))
+    print("labeled blobs: {}".format(blobs_tot))
     blobs_tot += blobs_unlabeled_len
-    print("total blobs accounted for: {}".format(blobs_tot))
+    print("total blobs: {}".format(blobs_tot))
     return volumes_dict
 
 def labels_to_parent(labels_ref_lookup, level):
@@ -2908,16 +2909,21 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map,
     print("grouping volumes for level {}".format(level))
     level_dict = {}
     ids = list(labels_ref_lookup.keys())
+    blobs_tot = 0 # whole volumes dictionary
+    blobs_tot_level = 0 # total at target level
+    blobs_tot_sublevel = 0 # total grouped from sublevels
     for key in ids:
         label_ids = [key, -1 * key]
         for label_id in label_ids:
             label = labels_ref_lookup[key] # always use pos val
             label_level = label[NODE][ABA_LEVEL]
             name = label[NODE][config.ABA_NAME]
+            blobs_tot += volumes_dict.get(label_id)[config.BLOBS_KEY]
             if label_level == level:
                 # take values directly from the given level
                 print("found region at given level with id {}".format(label_id))
                 level_dict[label_id] = volumes_dict.get(label_id)
+                blobs_tot_level += level_dict[label_id][config.BLOBS_KEY]
                 
                 # calculate variance only at the exact level to include all 
                 # pxs from the super-region for the single SD measurement
@@ -2940,7 +2946,8 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map,
                         parents = np.multiply(parents, -1)
                     # start from last parent, assuming parents listed in order 
                     # with last parent at highest numerical level, stopping 
-                    # once parent at level found or parent exceeds given level
+                    # once parent at level found or parent numerically lower 
+                    # than given level
                     found_parent = False
                     for parent in parents[::-1]:
                         parent_level = labels_ref_lookup[
@@ -2949,21 +2956,30 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map,
                             break
                         region_dict_level = level_dict.get(parent)
                         if region_dict_level is not None:
+                            # add volumes and blobs from current region 
+                            # to parent region at target level
                             region_dict = volumes_dict.get(label_id)
                             vol = region_dict[config.VOL_KEY]
                             blobs_len = region_dict[config.BLOBS_KEY]
                             region_dict_level[config.VOL_KEY] += vol
                             region_dict_level[config.BLOBS_KEY] += blobs_len
+                            blobs_tot_sublevel += blobs_len
+                            blobs_tot_level += blobs_len
                             print("added {} vol and {} blobs from {} (id {}) "
                                   "to {}".format(vol, blobs_len, name, 
                                   label_id, region_dict[config.ABA_NAME]))
                             found_parent = True
                             break
                     if not found_parent:
+                        # will not find parent if gap between level of current 
+                        # label and that of parent, where parent level is 
+                        # above the target level
                         print("could not find parent for {}".format(label_id))
             else:
                 print("skipping {} as its level is above target"
                       .format(label_id))
+    print("total blobs in sample: {}, at level: {}, grouped from sublevels: {}"
+          .format(blobs_tot, blobs_tot_level, blobs_tot_sublevel))
     return level_dict
 
 def get_volumes_dict_path(img_path, level):

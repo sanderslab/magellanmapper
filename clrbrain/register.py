@@ -1933,6 +1933,11 @@ def make_edge_images(path_atlas, show=True):
     print("\nMeasuring variation of atlas within labels:")
     measure_var_within_labels(atlas_np, labels_img_np)
     
+    sample = lib_clrbrain.get_filename_without_ext(path_atlas)
+    vols.measure_labels_metrics(
+        sample, atlas_np, labels_img_np, atlas_edge, labels_edge, 
+        sitk.GetArrayFromImage(dist_sitk))
+    
     # show all images
     imgs_write = {
         IMG_ATLAS_LOG: atlas_sitk_log, 
@@ -2012,6 +2017,11 @@ def merge_atlas_segmentations(path_fixed, show=True):
     # show weighted average of atlas intensity variation within labels
     print("\nMeasuring variation of atlas within labels:")
     measure_var_within_labels(atlas_img_np, labels_seg)
+    
+    sample = lib_clrbrain.get_filename_without_ext(path_fixed)
+    vols.measure_labels_metrics(
+        sample, atlas_img_np, labels_seg, atlas_edge, labels_edge, 
+        sitk.GetArrayFromImage(dist_sitk))
     
     # show DSC for labels
     print("\nMeasuring overlap of labels:")

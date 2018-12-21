@@ -8,11 +8,12 @@ import multiprocessing as mp
 from time import time
 
 import numpy as np
+import pandas as pd
 from skimage import measure
 
 from clrbrain import plot_3d
 
-class LabelToEdge:
+class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 
     way to use in multiprocessing without requirement for global variable.
     
@@ -87,10 +88,9 @@ def make_labels_edge(labels_img_np):
     pool = mp.Pool()
     pool_results = []
     for label_id in label_ids:
-        pool_results.append(pool.apply_async(
-            label_to_edge.find_label_edge, 
-            args=(label_id, )))
-    metrics = []
+        pool_results.append(
+            pool.apply_async(
+                label_to_edge.find_label_edge, args=(label_id, )))
     for result in pool_results:
         label_id, slices, borders = result.get()
         if slices is not None:
@@ -102,3 +102,184 @@ def make_labels_edge(labels_img_np):
     print("time elapsed to make labels edge:", time() - start_time)
     
     return labels_edge
+
+class LabelMetrics(object):
+    """Meausure metrics within image labels in a way that allows 
+    multiprocessing without global variables.
+    
+    All images should be of the same shape.
+    
+    Attributes:
+        atlas_img_np: Sample image as a Numpy array.
+        labels_img_np: Integer labels image as a Numpy array.
+        atlas_edge: Numpy array of atlas reduced to binary image of its edges.
+        labels_edge: Numpy array of labels reduced to their edges.
+        dist_to_orig: Distance map of labels to edges, with intensity values 
+            in the same placement as in ``labels_edge``.
+        heat_map: Numpy array as a density map.
+    """
+    atlas_img_np = None
+    labels_img_np = None
+    atlas_edge = None
+    labels_edge = None
+    dist_to_orig = None
+    heat_map = None
+    
+    @classmethod
+    def set_images(cls, atlas_img_np, labels_img_np, atlas_edge, labels_edge, 
+                   dist_to_orig, heat_map=None):
+        """Set the images."""
+        cls.atlas_img_np = atlas_img_np
+        cls.labels_img_np = labels_img_np
+        cls.atlas_edge = atlas_edge
+        cls.labels_edge = labels_edge
+        cls.dist_to_orig = dist_to_orig
+        cls.heat_map = heat_map
+    
+    @classmethod
+    def label_metrics(cls, label_id):
+        """Calculate metrics for a given label or set of labels.
+        
+        Wrapper to call :func:``measure_variation`` and 
+        :func:``measure_edge_dist``.
+        
+        Args:
+            label_id: Integer of the label of sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure variation.
+        
+        Returns:
+            Tuple of the given label ID, intensity variation, number of 
+            pixels in the label, density variation, number of blobs, 
+            edge distance, and number of pixels in the label edge.
+        """
+        #print("getting label metrics for {}".format(label_id))
+        _, var_inten, label_size, var_dens, blobs = cls.measure_variation(
+            label_id)
+        _, edge_dist, edge_size = cls.measure_edge_dist(label_id)
+        return (label_id, var_inten, label_size, var_dens, blobs, edge_dist, 
+                edge_size)
+
+    @classmethod
+    def measure_variation(cls, label_id):
+        """Measure the variation in underlying atlas intensity.
+        
+        Variation is measured by standard deviation of atlas intensity and, 
+        if :attr:``heat_map`` is available, that of the blob density.
+        
+        Args:
+            label_id: Integer of the label of sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure variation.
+        
+        Returns:
+            Tuple of the given label ID, intensity variation, number of 
+            pixels in the label, density variation, and number of blobs.
+        """
+        label_mask = np.isin(cls.labels_img_np, label_id)
+        var_inten = np.std(cls.atlas_img_np[label_mask])
+        label_size = np.sum(label_mask)
+        var_dens = None
+        blobs = None
+        if cls.heat_map is not None:
+            blobs_per_px = cls.heat_map[label_mask]
+            var_dens = np.std(blobs_per_px)
+            blobs = np.sum(blobs_per_px)
+        print("variation within label {} (size {}): intensity: {}, density: {}"
+              .format(label_id, label_size, var_inten, var_dens))
+        return label_id, var_inten, label_size, var_dens, blobs
+
+    @classmethod
+    def measure_edge_dist(cls, label_id):
+        """Measure the distance between edge images.
+        
+        Args:
+            label_id: Integer of the label of sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure variation.
+        
+        Returns:
+            Tuple of the given label ID, edge distance, and number of 
+            pixels in the label edge.
+        """
+        label_mask = np.isin(cls.labels_edge, label_id)
+        region_dists = cls.dist_to_orig[label_mask]
+        mean_dist = np.mean(region_dists)
+        print("mean dist within edge of label {}: {}"
+              .format(label_id, mean_dist))
+        return label_id, mean_dist, region_dists.size
+
+def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge, 
+                           labels_edge, dist_to_orig, heat_map=None):
+    """Compute metrics such as variation and distances within regions 
+    based on maps corresponding to labels image.
+    
+    Args:
+        sample: Sample ID number to be stored in data frame.
+        atlas_img_np: Sample image as a Numpy array.
+        labels_img_np: Integer labels image as a Numpy array.
+        atlas_edge: Numpy array of atlas reduced to binary image of its edges.
+        labels_edge: Numpy array of labels reduced to their edges.
+        dist_to_orig: Distance map of labels to edges, with intensity values 
+            in the same placement as in ``labels_edge``.
+        heat_map: Numpy array as a density map; defaults to None to ignore 
+            density measurements.
+    
+    Returns:
+        Pandas data frame of the regions and weighted means for the metrics.
+    """
+    start_time = time()
+    
+    # use a class to set and process the label without having to 
+    # reference the labels image as a global variable
+    label_metrics = LabelMetrics()
+    label_metrics.set_images(
+        atlas_img_np, labels_img_np, atlas_edge, labels_edge, dist_to_orig, 
+        heat_map)
+    
+    metrics = {}
+    cols = ("Sample", "Region", "Nuclei", "VarNuclei", "VarIntensity", 
+            "EdgeDist")
+    pool = mp.Pool()
+    pool_results = []
+    label_ids = np.unique(labels_img_np)
+    for label_id in label_ids:
+        # include corresponding labels from opposite sides while skipping 
+        # background
+        if label_id == 0: continue
+        pool_results.append(
+            pool.apply_async(
+                label_metrics.label_metrics, args=([label_id, -label_id], )))
+    tot_dist = 0
+    tot_edges = 0
+    tot_var_inten = 0
+    tot_var_dens = 0
+    tot_vol = 0
+    tot_nuc = 0
+    for result in pool_results:
+        # get metrics by label
+        #label_id, blobs, var_dens, var_inten, dist = result.get()
+        (label_id, var_inten, label_size, var_dens, nuc, edge_dist, 
+         edge_size) = result.get()
+        vals = (sample, label_id[0], nuc, var_dens, var_inten, edge_dist)
+        for col, val in zip(cols, vals):
+            metrics.setdefault(col, []).append(val)
+        
+        # weight and accumulate total metrics
+        tot_dist += edge_dist * edge_size
+        tot_edges += edge_size
+        tot_var_inten += var_inten * label_size
+        tot_vol += label_size
+        if nuc is not None:
+            tot_var_dens += var_dens * label_size
+            tot_nuc += nuc
+    pool.close()
+    pool.join()
+    
+    # add row for total metrics from weighted means
+    vals = (sample, "all", tot_nuc, tot_var_dens / tot_vol, 
+            tot_var_inten / tot_vol, tot_dist / tot_edges)
+    for col, val in zip(cols, vals):
+        metrics.setdefault(col, []).append(val)
+    df = pd.DataFrame(metrics)
+    print(df.to_csv())
+    
+    print("time elapsed to measure variation:", time() - start_time)
+    return df

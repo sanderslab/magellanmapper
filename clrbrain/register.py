@@ -379,10 +379,18 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         a tuple of the indices at which the edge was extended and the 
         image was mirrored, respectively.
     """
-    # TODO: check to make sure values don't get wrapped around if np.int32
-    # max value is less than data max val
-    img_np = sitk.GetArrayFromImage(img).astype(np.int32)
-    img_ref_np = sitk.GetArrayFromImage(img_ref).astype(np.int32)
+    # cast to signed int that takes the full range of the labels image
+    img_np = sitk.GetArrayFromImage(img)
+    try:
+        dtype = lib_clrbrain.dtype_within_range(0, np.amax(img_np), True, True)
+        if dtype != img_np.dtype:
+            print("casting labels image to type", dtype)
+            img_np = img_np.astype(dtype)
+    except TypeError as e:
+        # fallback to large signed data type
+        print(e)
+        img_np.astype(np.int32)
+    img_ref_np = sitk.GetArrayFromImage(img_ref)
     tot_planes = len(img_np)
     
     # extend near edges: lateral edges of atlas labels (ie low z) are missing 

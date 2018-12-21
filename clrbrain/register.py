@@ -78,6 +78,7 @@ IMG_BORDERS = "borders.mhd"
 IMG_HEAT_MAP = "heat.mhd"
 IMG_ATLAS_EDGE = "atlasEdge.mhd"
 IMG_ATLAS_LOG = "atlasLoG.mhd"
+IMG_LABELS_TRUNC = "annotationTrunc.mhd"
 IMG_LABELS_EDGE = "annotationEdge.mhd"
 IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
@@ -1445,8 +1446,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge = _images_to_edges(
         fixed_img_orig, labels_img_full)
     
-    imgs_write = (fixed_img, transformed_img, labels_img, atlas_sitk_log, 
-                  atlas_sitk_edge, labels_sitk_edge)
+    imgs_write = (fixed_img, transformed_img, labels_img_full, labels_img, 
+                  atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge)
     if show_imgs:
         # show individual SimpleITK images in default viewer
         for img in imgs_write: sitk.Show(img)
@@ -1457,8 +1458,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
             imgs_names = (IMG_ATLAS, IMG_LABELS)
             imgs_write = [transformed_img, labels_img]
         else:
-            imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS, IMG_ATLAS_LOG, 
-                          IMG_ATLAS_EDGE, IMG_LABELS_EDGE)
+            imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS, IMG_LABELS_TRUNC, 
+                          IMG_ATLAS_LOG, IMG_ATLAS_EDGE, IMG_LABELS_EDGE)
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
             if new_atlas:
@@ -1648,7 +1649,8 @@ def register_group(img_files, flip=None, show_imgs=True,
         # have the same structures since variable amount of tissue posteriorly; 
         # cropping appears to work better than erasing for groupwise reg, 
         # preventing some images from being stretched into the erased space
-        labels_img = load_registered_img(img_files[i], reg_name=IMG_LABELS)
+        labels_img = load_registered_img(
+            img_files[i], reg_name=IMG_LABELS_TRUNC)
         img_np, y_cropped = _crop_image(img_np, labels_img, 1)#, eraser=0)
         '''
         # crop anterior region
@@ -3043,9 +3045,10 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
         json_path_all = get_volumes_dict_path(mod_path, None)
         volumes_dict = open_json(json_path_all)
         
-        # load labels image and setup labels dictionary
+        # load labels image and setup labels dictionary; use truncated 
+        # labels to ignored unwanted areas
         labels_img_sitk = load_registered_img(
-            mod_path, get_sitk=True, reg_name=IMG_LABELS)
+            mod_path, get_sitk=True, reg_name=IMG_LABELS_TRUNC)
         spacing = labels_img_sitk.GetSpacing()
         labels_img = sitk.GetArrayFromImage(labels_img_sitk)
         print("{} shape: {}".format(img_path, labels_img.shape))

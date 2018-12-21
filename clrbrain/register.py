@@ -1997,8 +1997,10 @@ def merge_atlas_segmentations(path_fixed, show=True):
         # by opening operation for overall smoothing with profile setting
         smooth_labels(labels_seg, 2, SMOOTHING_MODES[2])
         smooth_labels(labels_seg, smoothing, SMOOTHING_MODES[0])
-    # mirror back to other half
+    # mirror back to other half and attempt to cast to a smaller type
     labels_seg = _mirror_imported_labels(labels_seg, len_half)
+    if labels_seg.dtype != labels_img_np.dtype:
+        labels_seg = labels_seg.astype(labels_img_np.dtype)
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     # measure distance between edges of original and new segmentations

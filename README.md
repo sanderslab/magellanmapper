@@ -55,7 +55,7 @@ To build and install SimpleElastix manually, the `build_se.sh` script can be cal
 Clrbrain has been tested to build and run on:
 
 - MacOS, tested on 10.11+
-- Linux, tested on RHEL 7.4+
+- Linux, tested on RHEL 7.4+, Ubuntu 18.04
 - Windows, tested on Windows 10 (see below for details):
   - Via built-in Windows Subsystem for Linux (WSL), tested on Ubuntu 18.04 and an X Server
   - Via Cygwin, tested on Cygwin 2.10+
@@ -74,7 +74,7 @@ source activate clr3
 
 `runclrbrain.sh` is a script to run many pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. The default pipeline will open the Clrbrain GUI.
 
-Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. Overlaid images in formats that SimpleITK can open do not require import (we are currently working to open these files as primary images without requiring any import).
+Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK and do not require import (currently we are working on better metadata support though, as of 2018-12-22).
 
 ## 3D viewer
 
@@ -154,7 +154,8 @@ You can launch a standard server, deploy Clrbrain code, and run a pipeline. Note
 If you already have an AMI with Clrbrain installed, you can launch a new instance of it via Clrbrain:
 
 ```
-python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" "subnet-xxxxxxxx" "sg-xxxxxxxx" "UserName" 50,2000 [2]
+python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
+  "subnet-xxxxxxxx" "sg-xxxxxxxx" "UserName" 50,2000 [2]
 ```
 
 - `Name` is your name of choice
@@ -187,16 +188,21 @@ Deploy the Clrbrain folder and supporting files:
 Log into your instance and run the Clrbrain pipeline of choice.
 
 - SSH into your server instance, typically with port forwarding to allow VNC access:
+
 ```
-ssh -L 5900:localhost:5900 -i [path_to_your_aws_pem] ec2-user@[your_server_ip]
+ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
 ```
+
 - If necessary, start a graphical server (eg `vncserver`) to run ImageJ/Fiji for stitching or for Mayavi dependency setup
 - Setup drives: `clrbrain/setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
 - If Clrbrain has not been installed, install it with `clrbrain/setup_env.sh` as above
 - Activate the Conda environment set up during installation
 - Run a pipeline, such as this command to fully process a multi-tile image with tile stitching, import to Numpy array, and cell detection, with AWS S3 import/export and Slack notifications along the way, followed by server clean-up/shutdown:
+
 ```
-clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh -i "/data/HugeImage.czi" -a "my/s3/bucket" -n "https://hooks.slack.com/services/my/incoming/webhook" -p full -c
+clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh \
+  -i "/data/HugeImage.czi" -a "my/s3/bucket" -n \
+  "https://hooks.slack.com/services/my/incoming/webhook" -p full -c
 ```
 
 ## Troubleshooting
@@ -205,13 +211,24 @@ clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh -i "/da
 
 - Tested on Java 8-11 SE
 - Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
-- You may need to set up the JAVA_HOME environment variable, such as `JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home`, and add this variable to your PATH in `~/.bash_profile`
-- Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141)
-- Java 11 similarly changed locations, also fixed in Python-Javabridge
-- `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step
+- You may need to set up the JAVA_HOME environment variable in your `~/.bash_profile` or `~/.bashrc` file, such as:
 
-### Xcode setup (Mac)
+```
+# for a specific JDK installation
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home
+# or for the latest JDK you have installed
+export JAVA_HOME="$(/usr/libexec/java_home)"
+# then add to your path
+export "PATH=$JAVA_HOME:$PATH"
+```
 
+- Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141) in the Python-Javabridge dependency
+- Java 11 similarly changed other Java locations, also fixed in Python-Javabridge
+- `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step; if you don't know whether Java is installed, run `java` from the command-line to check and install any Java 8+ (eg from [OpenJDK](http://openjdk.java.net/), not the default Mac installation) if necessary
+
+### Command Line Tools setup (Mac)
+
+- As of Clrbrain v0.8.0, `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated
 - `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun` error: The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading Xcode directly from https://developer.apple.com/download/, then run `sudo xcodebuild -license` to accept the license agreement.
 
 ### Installation on Windows
@@ -250,19 +267,36 @@ export LANG=en_US.UTF-8
 ```
 
 ### Sciki-image installation
-- If you continue getting errors during Scikit-image compilation, delete the folder and restart its compilation from scratch
-- After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
+
+- By default, Clrbrain will use a precompiled Scikit-image package from Pip
+- Clrbrain < v0.6.8 or use of the `scale_factor` microscope profile setting required a custom Scikit-image installation (see [develop branch of fork](https://github.com/the4thchild/scikit-image/tree/develop)) with compilation:
+  - If you continue getting errors during Scikit-image compilation, delete the folder and restart its compilation from scratch
+  - After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
 
 ### Mayavi installation
+
 - As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error; use RDP or an X11 forwarding instead
 - As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
 
 ### Windowing responsiveness
+
 - Controls (eg buttons, dropdowns) fail to update on PyQt5 5.10.1 on MacOS 10.10 until switching to another window and back again
 - Workaround is to `pip uninstall PyQT5` and `conda install pyqt` to get PyQt 5.6.0 instead
 - Some text may not update in PyQT 5.10.1 on later Mac versions until switching windows
 
 ### Image Stitching
+
+- Image stitching is run through ImageJ/Fiji
+  - ImageJ itself also depends on Java but does not work well on Java > 8 (as of 2018-12-22)
+  - As of Clrbrain v0.8.1, arguments can be given to `runclrbrain.sh` and `stitch.sh` to specify the location of ImageJ
+  - This location can be a script that specifies a specific Java version, such as:
+
+```
+# on Mac
+java="/path/to/java/8"
+open -a "Fiji.app" --args --java-home "$java"
+```
+
 - The original stitcher, `Stitching`, requires a large amount of RAM/swap space and runs single-threaded, taking days to stitch a multi-tile image
 - The new, recommended stitcher, `BigStitcher`, uses RAM much more efficiently through an HDF5 format and utilizes multiprocessing
 - Clrbrain runs these stitchers as ImageJ scripts in an attempt to require minimal intervention
@@ -275,4 +309,5 @@ export LANG=en_US.UTF-8
  - If necessary, use the Manually Align tool to move specific tiles
 
 ### Additional tips
+
 - If you get an `syntax error near unexpected token (` error, the run script may have been formatted incorrectly, eg through the Mac Text Editor program. Try `dos2unix [runclrbrain.sh]` (replace with your run script filename) or re-copying from `runclrbrain.sh`.

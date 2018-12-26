@@ -1441,13 +1441,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     labels_img_full = make_labels(False)
     labels_img = labels_img_full if new_atlas else make_labels(True)
     
-    # generate LoG and edge-detected images on original atlas and 
-    # full, transformed labels image
-    atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge = _images_to_edges(
-        fixed_img_orig, labels_img_full)
-    
-    imgs_write = (fixed_img, transformed_img, labels_img_full, labels_img, 
-                  atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge)
+    imgs_write = (fixed_img, transformed_img, labels_img_full, labels_img)
     if show_imgs:
         # show individual SimpleITK images in default viewer
         for img in imgs_write: sitk.Show(img)
@@ -1458,8 +1452,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
             imgs_names = (IMG_ATLAS, IMG_LABELS)
             imgs_write = [transformed_img, labels_img]
         else:
-            imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS, IMG_LABELS_TRUNC, 
-                          IMG_ATLAS_LOG, IMG_ATLAS_EDGE, IMG_LABELS_EDGE)
+            imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS, IMG_LABELS_TRUNC)
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
             if new_atlas:
@@ -1857,28 +1850,7 @@ def _mirror_imported_labels(labels_img_np, start):
     labels_img_np = np.swapaxes(labels_img_np, 0, 2)
     return labels_img_np
 
-def _images_to_edges(atlas_sitk, labels_sitk):
-    # generate edge images for atlas and labels
-    
-    # convert to Numpy arrays
-    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
-    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
-    
-    # generate LoG and edge-detected images
-    atlas_log = plot_3d.laplacian_of_gaussian_img(
-        atlas_np, labels_img=labels_img_np)
-    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
-    atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
-    atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
-    atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
-    
-    # extract boundaries for each label
-    labels_edge = vols.make_labels_edge(labels_img_np)
-    labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
-    
-    return atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge
-
-def make_edge_images(path_atlas, show=True):
+def make_edge_images(path_atlas, show=True, atlas=True):
     """Make edge-detected atlas and associated labels images.
     
     The atlas is assumed to be a sample (eg microscopy) image on which 
@@ -1891,11 +1863,20 @@ def make_edge_images(path_atlas, show=True):
             found as a corresponding, registered image.
         show_imgs: True if the output images should be displayed; defaults 
             to True.
+        atlas: True if the primary image is an atlas; False if the image 
+            is an experimental/sample image, in which case markers 
+            image will not be created, and stats will not be performed.
     """
     
     # load atlas image, assumed to be experimental image
+    if atlas:
+        print("generating edge images for atlas")
+        atlas_suffix = IMG_ATLAS
+    else:
+        print("generating edge images for experiment/sample image")
+        atlas_suffix = IMG_EXP
     atlas_sitk = load_registered_img(
-        path_atlas, get_sitk=True, reg_name=IMG_ATLAS)
+        path_atlas, get_sitk=True, reg_name=atlas_suffix)
     detector.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
     atlas_np = sitk.GetArrayFromImage(atlas_sitk)
     
@@ -1911,29 +1892,41 @@ def make_edge_images(path_atlas, show=True):
     labels_sitk_markers = None
     
     # generate LoG and edge-detected images
-    atlas_sitk_log, atlas_sitk_edge, labels_sitk_edge = _images_to_edges(
-        atlas_sitk, labels_sitk)
+    
+    # generate LoG and edge-detected images
+    atlas_log = plot_3d.laplacian_of_gaussian_img(
+        atlas_np, labels_img=labels_img_np)
+    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
+    atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
+    atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
+    atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
+    
+    # extract boundaries for each label
+    labels_edge = vols.make_labels_edge(labels_img_np)
+    labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     
     # convert labels image into markers, assuming that labels image is 
     # symmetric across halves along the x-axis
-    #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
-    len_half = labels_img_np.shape[2] // 2
-    labels_markers = segmenter.labels_to_markers_erosion(
-        labels_img_np[..., :len_half])
-    labels_markers = _mirror_imported_labels(labels_markers, len_half)
-    labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
+    if atlas:
+        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
+        len_half = labels_img_np.shape[2] // 2
+        labels_markers = segmenter.labels_to_markers_erosion(
+            labels_img_np[..., :len_half])
+        labels_markers = _mirror_imported_labels(labels_markers, len_half)
+        labels_sitk_markers = replace_sitk_with_numpy(
+            labels_sitk, labels_markers)
     
     # create distance map between edges of original and new segmentations
-    atlas_edge = sitk.GetArrayFromImage(atlas_sitk_edge)
-    labels_edge = sitk.GetArrayFromImage(labels_sitk_edge)
     dist_to_orig = make_edge_dist_image(atlas_edge, labels_edge)
     dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
     
     # show weighted average of atlas intensity variation within labels
-    print("\nMeasuring edge distances and variation within labels:")
-    sample = lib_clrbrain.get_filename_without_ext(path_atlas)
-    vols.measure_labels_metrics(
-        sample, atlas_np, labels_img_np, atlas_edge, labels_edge, dist_to_orig)
+    if atlas:
+        print("\nMeasuring edge distances and variation within labels:")
+        sample = lib_clrbrain.get_filename_without_ext(path_atlas)
+        vols.measure_labels_metrics(
+            sample, atlas_np, labels_img_np, atlas_edge, labels_edge, 
+            dist_to_orig, condition="atlas")
     
     # show all images
     imgs_write = {
@@ -3524,9 +3517,14 @@ if __name__ == "__main__":
         # export common labels
         export_common_labels(config.filenames, config.PATH_COMMON_LABELS)
 
-    elif config.register_type == config.REGISTER_TYPES[10]:
-        # convert atlas and labels to edge-detected images
-        make_edge_images(config.filename, show=show)
+    elif config.register_type in (
+        config.REGISTER_TYPES[10], config.REGISTER_TYPES[13]):
+        
+        # convert atlas or experiment image and associated labels 
+        # to edge-detected images
+        atlas = config.register_type == config.REGISTER_TYPES[10]
+        for img_path in config.filenames:
+            make_edge_images(config.filename, show=show, atlas=atlas)
 
     elif config.register_type == config.REGISTER_TYPES[11]:
         # register labels to its underlying atlas

@@ -845,7 +845,7 @@ REGISTER_TYPES = (
     "single", "group", "overlays", "volumes", "densities", "export_vols", 
     "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
     "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
-    "make_edge_images_exp", "vol_stats")
+    "make_edge_images_exp", "vol_stats", "make_density_images")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"

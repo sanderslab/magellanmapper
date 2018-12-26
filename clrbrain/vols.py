@@ -251,8 +251,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         heat_map)
     
     metrics = {}
-    cols = ("Sample", "Region", "Volume", "Nuclei", "Density", "VarNuclei", 
-            "VarIntensity", "EdgeDist")
+    cols = ("Sample", "Condition", "Region", "Volume", "Nuclei", "Density", 
+            "VarNuclei", "VarIntensity", "EdgeDist")
     pool = mp.Pool()
     pool_results = []
     if label_ids is None:
@@ -283,8 +283,11 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
             vol_physical *= physical_mult
         if unit_factor is not None:
             vol_physical /= unit_factor
+        density = None
+        if nuc is not None:
+            density = nuc / vol_physical
         vals = (sample, condition, label_id[0], vol_physical, nuc, 
-                nuc / vol_physical, var_dens, var_inten, edge_dist)
+                density, var_dens, var_inten, edge_dist)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)
         
@@ -307,7 +310,6 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
     for col, val in zip(cols, vals):
         metrics.setdefault(col, []).append(val)
     df = pd.DataFrame(metrics)
-    df["Nuclei"] = df["Nuclei"].astype(int)
     print(df.to_csv())
     
     print("time elapsed to measure variation:", time() - start_time)

@@ -2054,6 +2054,64 @@ def make_edge_dist_image(atlas_edge, labels_edge):
         atlas_edge != 0, labels_edge_mask)
     return dist_to_orig
 
+def make_density_image(img_path, scale=None, suffix=None):
+    """Make a density image based on associated blobs.
+    
+    Args:
+        img_path: Path to image, which will be used to indentify the blobs file.
+        scale: Rescaling factor as a scalar value. If set, the corresponding 
+            image for this factor will be opened. If None, the full size 
+            image will be used. Defaults to None.
+        suffix: Modifier to append to end of ``img_path`` basename for 
+            registered image files that were output to a modified name; 
+            defaults to None.
+    
+    Returns:
+        Tuple of the density image as a Numpy array in the same shape as 
+        the opened image; Numpy array of blob IDs; and the original 
+        ``img_path`` to track such as for multiprocessing.
+    """
+    mod_path = img_path
+    if suffix is not None:
+        mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
+    labels_img_sitk = load_registered_img(
+        mod_path, get_sitk=True, reg_name=IMG_LABELS)
+    labels_img = sitk.GetArrayFromImage(labels_img_sitk)
+    # load blobs
+    filename_base = importer.filename_to_base(
+        img_path, config.series)
+    info = np.load(filename_base + config.SUFFIX_INFO_PROC)
+    blobs = info["segments"]
+    print("loading {} blobs".format(len(blobs)))
+    #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
+    target_size = config.register_settings["target_size"]
+    img_path_transposed = importer.get_transposed_image_path(
+        img_path, scale, target_size)
+    if scale is not None or target_size is not None:
+        image5d, img_info = importer.read_file(
+            img_path_transposed, config.series, return_info=True)
+        scaling = img_info["scaling"]
+    else:
+        # fall back to pixel comparison based on original image, 
+        # but **very slow**
+        image5d = importer.read_file(
+            img_path_transposed, config.series)
+        scaling = importer.calc_scaling(image5d, labels_img)
+    print("using scaling: {}".format(scaling))
+    # annotate blobs based on position
+    blobs_ids, coord_scaled = get_label_ids_from_position(
+        blobs[:, 0:3], labels_img, scaling, 
+        return_coord_scaled=True)
+    print("blobs_ids: {}".format(blobs_ids))
+    
+    # build heat map to store densities per label px and save to file
+    heat_map = plot_3d.build_heat_map(labels_img.shape, coord_scaled)
+    out_path = _reg_out_path(mod_path, IMG_HEAT_MAP)
+    print("writing {}".format(out_path))
+    heat_map_sitk = replace_sitk_with_numpy(labels_img_sitk, heat_map)
+    sitk.WriteImage(heat_map_sitk, out_path, False)
+    return heat_map, blobs_ids, img_path
+
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.
@@ -2981,50 +3039,17 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
         if volumes_dict is None:
             # build volumes dictionary for the given level, which can be None
             
-            # load blob densities by region if flagged
             blobs_ids = None
             coord_scaled = None
             if densities:
-                # load blobs
-                filename_base = importer.filename_to_base(
-                    img_path, config.series)
-                info = np.load(filename_base + config.SUFFIX_INFO_PROC)
-                blobs = info["segments"]
-                print("loading {} blobs".format(len(blobs)))
-                #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
-                target_size = config.register_settings["target_size"]
-                img_path_transposed = importer.get_transposed_image_path(
-                    img_path, scale, target_size)
-                if scale is not None or target_size is not None:
-                    image5d, img_info = importer.read_file(
-                        img_path_transposed, config.series, return_info=True)
-                    scaling = img_info["scaling"]
-                else:
-                    # fall back to pixel comparison based on original image, 
-                    # but **very slow**
-                    image5d = importer.read_file(
-                        img_path_transposed, config.series)
-                    scaling = importer.calc_scaling(image5d, labels_img)
-                print("using scaling: {}".format(scaling))
-                # annotate blobs based on position
-                blobs_ids, coord_scaled = get_label_ids_from_position(
-                    blobs[:, 0:3], labels_img, scaling, 
-                    return_coord_scaled=True)
-                print("blobs_ids: {}".format(blobs_ids))
+                # get blob densities, saving as heat map
+                _, blobs_ids, _ = make_density_image(img_path, scale, suffix)
             
             # calculate and plot volumes and densities; assume that labels 
             # images has already been thresholded, so no need to pass image5d
             volumes_dict = volumes_by_id(
                 labels_img, labels_ref_lookup, spacing, level=level, 
                 blobs_ids=blobs_ids)
-            
-            # build heat map to store densities per label px, which will 
-            # be used to calculate variances per label
-            heat_map = plot_3d.build_heat_map(labels_img.shape, coord_scaled)
-            out_path = _reg_out_path(mod_path, IMG_HEAT_MAP)
-            print("writing {}".format(out_path))
-            heat_map_sitk = replace_sitk_with_numpy(labels_img_sitk, heat_map)
-            sitk.WriteImage(heat_map_sitk, out_path, False)
         
         elif level is not None:
             # use the all levels volumes dictionary to group child levels 

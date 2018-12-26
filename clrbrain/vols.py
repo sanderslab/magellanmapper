@@ -183,8 +183,9 @@ class LabelMetrics(object):
             blobs_per_px = cls.heat_map[label_mask]
             var_dens = np.std(blobs_per_px)
             blobs = np.sum(blobs_per_px)
-        print("variation within label {} (size {}): intensity: {}, density: {}"
-              .format(label_id, label_size, var_inten, var_dens))
+        print("variation within label {} (size {}): intensity: {}, "
+              "density: {}, blobs: {}".format(
+                  label_id, label_size, var_inten, var_dens, blobs))
         return label_id, var_inten, label_size, var_dens, blobs
 
     @classmethod
@@ -207,7 +208,9 @@ class LabelMetrics(object):
         return label_id, mean_dist, region_dists.size
 
 def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge, 
-                           labels_edge, dist_to_orig, heat_map=None):
+                           labels_edge, dist_to_orig, heat_map=None, 
+                           spacing=None, condition=None, unit_factor=None, 
+                           combine_sides=True, label_ids=None):
     """Compute metrics such as variation and distances within regions 
     based on maps corresponding to labels image.
     
@@ -221,11 +224,24 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
             in the same placement as in ``labels_edge``.
         heat_map: Numpy array as a density map; defaults to None to ignore 
             density measurements.
+        spacing: Sequence of image spacing for each pixel in the images.
+        unit_factor: Factor by which volumes will be divided to adjust units; 
+            defaults to None.
+        combine_stats: True to combine corresponding labels from opposite 
+            sides of the sample; defaults to True. Corresponding labels 
+            are assumed to have the same absolute numerical number and 
+            differ only in signage.
+        labels_ids: Sequence of label IDs to include. Defaults to None, 
+            in which case the labels will be taken from unique values 
+            in ``labels_img_np``.
     
     Returns:
         Pandas data frame of the regions and weighted means for the metrics.
     """
     start_time = time()
+    physical_mult = None
+    if spacing is not None:
+        physical_mult = np.prod(spacing)
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
@@ -235,30 +251,40 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         heat_map)
     
     metrics = {}
-    cols = ("Sample", "Region", "Nuclei", "VarNuclei", "VarIntensity", 
-            "EdgeDist")
+    cols = ("Sample", "Region", "Volume", "Nuclei", "Density", "VarNuclei", 
+            "VarIntensity", "EdgeDist")
     pool = mp.Pool()
     pool_results = []
-    label_ids = np.unique(labels_img_np)
+    if label_ids is None:
+        label_ids = np.unique(labels_img_np)
+        if combine_sides: label_ids = label_ids[label_ids >= 0]
     for label_id in label_ids:
         # include corresponding labels from opposite sides while skipping 
         # background
         if label_id == 0: continue
+        if combine_sides: label_id = [label_id, -label_id]
         pool_results.append(
             pool.apply_async(
-                label_metrics.label_metrics, args=([label_id, -label_id], )))
+                label_metrics.label_metrics, args=(label_id, )))
     tot_dist = 0
     tot_edges = 0
     tot_var_inten = 0
     tot_var_dens = 0
     tot_vol = 0
+    tot_vol_physical = 0
     tot_nuc = 0
     for result in pool_results:
         # get metrics by label
         #label_id, blobs, var_dens, var_inten, dist = result.get()
         (label_id, var_inten, label_size, var_dens, nuc, edge_dist, 
          edge_size) = result.get()
-        vals = (sample, label_id[0], nuc, var_dens, var_inten, edge_dist)
+        vol_physical = label_size
+        if physical_mult is not None:
+            vol_physical *= physical_mult
+        if unit_factor is not None:
+            vol_physical /= unit_factor
+        vals = (sample, condition, label_id[0], vol_physical, nuc, 
+                nuc / vol_physical, var_dens, var_inten, edge_dist)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)
         
@@ -267,6 +293,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         tot_edges += edge_size
         tot_var_inten += var_inten * label_size
         tot_vol += label_size
+        tot_vol_physical += vol_physical
         if nuc is not None:
             tot_var_dens += var_dens * label_size
             tot_nuc += nuc
@@ -274,11 +301,13 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
     pool.join()
     
     # add row for total metrics from weighted means
-    vals = (sample, "all", tot_nuc, tot_var_dens / tot_vol, 
+    vals = (sample, condition, "all", tot_vol_physical, tot_nuc, 
+            tot_nuc / tot_vol_physical, tot_var_dens / tot_vol, 
             tot_var_inten / tot_vol, tot_dist / tot_edges)
     for col, val in zip(cols, vals):
         metrics.setdefault(col, []).append(val)
     df = pd.DataFrame(metrics)
+    df["Nuclei"] = df["Nuclei"].astype(int)
     print(df.to_csv())
     
     print("time elapsed to measure variation:", time() - start_time)

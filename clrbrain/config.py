@@ -852,6 +852,8 @@ VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
 VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
 VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
+SIDE_KEY = "Side"
+GENOTYPE_KEY = "Geno"
 
 # flip/rotate the image; the direction of change can be variable
 flip = None

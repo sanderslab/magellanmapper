@@ -1928,7 +1928,7 @@ def make_edge_images(path_atlas, show=True, atlas=True):
         sample = lib_clrbrain.get_filename_without_ext(path_atlas)
         vols.measure_labels_metrics(
             sample, atlas_np, labels_img_np, atlas_edge, labels_edge, 
-            dist_to_orig, condition="atlas")
+            dist_to_orig)
     
     # show all images
     imgs_write = {
@@ -3181,7 +3181,8 @@ def group_volumes(labels_ref_lookup, vol_dicts):
     #print("grouped_vol_dict: {}".format(grouped_vol_dict))
     return grouped_vol_dict
 
-def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None):
+def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None, 
+                   groups=None):
     """Get volumes and additional label metrics for each single labels ID.
     
     Args:
@@ -3195,6 +3196,8 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None):
             defaults to None to use "original" as the condition.
         unit_factor: Factor by which volumes will be divided to adjust units; 
             defaults to None.
+        groups: Dictionary of sample grouping metadata, where each 
+            entry is a list with a values corresponding to ``img_paths``.
     
     Returns:
         Pandas data frame of volume-related metrics for each sample.
@@ -3209,11 +3212,15 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None):
         condition = config.suffix.replace("_", "")
         out_path += config.suffix
     
+    # grouping metadata, which will be combined with groups
+    grouping = {}
+    grouping["Condition"] = condition
+    
     # use all labels in reference to ensure that no label is missing, even 
     # if labels images do not contain all of these label
     label_ids = list(labels_ref_lookup.keys())
     dfs = []
-    for img_path in img_paths:
+    for i, img_path in enumerate(img_paths):
         # adjust image path with suffix
         mod_path = img_path
         if suffix is not None:
@@ -3230,12 +3237,17 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None):
         heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
         print("tot blobs", np.sum(heat_map))
         
-        # measure stats per label for the given sample
+        # prepare sample name and an arbitrary number of metadata grouping cols
         sample = lib_clrbrain.get_filename_without_ext(mod_path)
+        if groups is not None:
+             for key in groups.keys():
+                 grouping[key] = groups[key][i]
+            
+        # measure stats per label for the given sample
         df = vols.measure_labels_metrics(
             sample, atlas_img_np, labels_img_np, atlas_edge, 
             labels_edge, dist_to_orig, heat_map, atlas_sitk.GetSpacing(), 
-            condition, unit_factor, True, label_ids)
+            unit_factor, True, label_ids, grouping)
         dfs.append(df)
     
     # combine data frames from all samples
@@ -3638,8 +3650,14 @@ if __name__ == "__main__":
         # TODO: replace volumes/densities function
         ref = load_labels_ref(config.load_labels)
         labels_ref_lookup = create_aba_reverse_lookup(ref)
+        groups_numeric = None
+        groups = {}
+        if config.groups is not None:
+            groups[config.GENOTYPE_KEY] = [
+                config.GROUPS_NUMERIC[geno] for geno in config.groups]
         volumes_by_id2(
-            config.filenames, labels_ref_lookup, config.suffix, unit_factor)
+            config.filenames, labels_ref_lookup, config.suffix, unit_factor, 
+            groups)
 
     elif config.register_type == config.REGISTER_TYPES[15]:
         # make density images

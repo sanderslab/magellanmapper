@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from skimage import measure
 
+from clrbrain import config
 from clrbrain import plot_3d
 
 class LabelToEdge(object):
@@ -209,8 +210,8 @@ class LabelMetrics(object):
 
 def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge, 
                            labels_edge, dist_to_orig, heat_map=None, 
-                           spacing=None, condition=None, unit_factor=None, 
-                           combine_sides=True, label_ids=None):
+                           spacing=None, unit_factor=None, 
+                           combine_sides=True, label_ids=None, grouping={}):
     """Compute metrics such as variation and distances within regions 
     based on maps corresponding to labels image.
     
@@ -234,6 +235,9 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         labels_ids: Sequence of label IDs to include. Defaults to None, 
             in which case the labels will be taken from unique values 
             in ``labels_img_np``.
+        grouping: Dictionary of sample grouping metadata, where each 
+            entry will be added as a separate column. Defaults to an 
+            empty dictionary.
     
     Returns:
         Pandas data frame of the regions and weighted means for the metrics.
@@ -251,8 +255,9 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         heat_map)
     
     metrics = {}
-    cols = ("Sample", "Condition", "Region", "Volume", "Nuclei", "Density", 
-            "VarNuclei", "VarIntensity", "EdgeDist")
+    grouping[config.SIDE_KEY] = None
+    cols = ("Sample", *grouping.keys(), "Region", "Volume", "Nuclei", 
+            "Density", "VarNuclei", "VarIntensity", "EdgeDist")
     pool = mp.Pool()
     pool_results = []
     if label_ids is None:
@@ -275,7 +280,6 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
     tot_nuc = 0
     for result in pool_results:
         # get metrics by label
-        #label_id, blobs, var_dens, var_inten, dist = result.get()
         (label_id, var_inten, label_size, var_dens, nuc, edge_dist, 
          edge_size) = result.get()
         vol_physical = label_size
@@ -286,7 +290,16 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         density = None
         if nuc is not None:
             density = nuc / vol_physical
-        vals = (sample, condition, label_id[0], vol_physical, nuc, 
+        
+        # set side, assuming that positive labels are left
+        if combine_sides or label_id == 0:
+            side = "both"
+        elif label_id < 0:
+            side = "R"
+        else:
+            side = "L"
+        grouping[config.SIDE_KEY] = side
+        vals = (sample, *grouping.values(), label_id[0], vol_physical, nuc, 
                 density, var_dens, var_inten, edge_dist)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)
@@ -304,7 +317,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
     pool.join()
     
     # add row for total metrics from weighted means
-    vals = (sample, condition, "all", tot_vol_physical, tot_nuc, 
+    grouping[config.SIDE_KEY] = "both"
+    vals = (sample, *grouping.values(), "all", tot_vol_physical, tot_nuc, 
             tot_nuc / tot_vol_physical, tot_var_dens / tot_vol, 
             tot_var_inten / tot_vol, tot_dist / tot_edges)
     for col, val in zip(cols, vals):

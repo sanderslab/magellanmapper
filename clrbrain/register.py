@@ -2047,7 +2047,7 @@ def make_edge_dist_image(atlas_edge, labels_edge):
         atlas_edge != 0, labels_edge_mask)
     return dist_to_orig
 
-def make_density_image(img_path, scale=None, suffix=None):
+def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
     """Make a density image based on associated blobs.
     
     Args:
@@ -2058,6 +2058,10 @@ def make_density_image(img_path, scale=None, suffix=None):
         suffix: Modifier to append to end of ``img_path`` basename for 
             registered image files that were output to a modified name; 
             defaults to None.
+        labels_img_sitk: Lables image as a SimpleITK ``Image`` object; 
+            defaults to None, in which case the registered labels image file 
+            corresponding to ``img_path`` with any ``suffix`` modifier 
+            will be opened.
     
     Returns:
         Tuple of the density image as a Numpy array in the same shape as 
@@ -2067,8 +2071,9 @@ def make_density_image(img_path, scale=None, suffix=None):
     mod_path = img_path
     if suffix is not None:
         mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
-    labels_img_sitk = load_registered_img(
-        mod_path, get_sitk=True, reg_name=IMG_LABELS)
+    if labels_img_sitk is None:
+        labels_img_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS)
     labels_img = sitk.GetArrayFromImage(labels_img_sitk)
     # load blobs
     filename_base = importer.filename_to_base(
@@ -3036,7 +3041,8 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             coord_scaled = None
             if densities:
                 # get blob densities, saving as heat map
-                _, blobs_ids, _ = make_density_image(img_path, scale, suffix)
+                _, blobs_ids, _ = make_density_image(
+                    img_path, scale, suffix, labels_img_sitk)
             
             # calculate and plot volumes and densities; assume that labels 
             # images has already been thresholded, so no need to pass image5d

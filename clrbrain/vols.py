@@ -16,10 +16,10 @@ from clrbrain import plot_3d
 
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 
-    way to use in multiprocessing without requirement for global variable.
+    way to use in multiprocessing without requirement for global variables.
     
     Attributes:
-        labels_img_np: Integery labels images as a Numpy array.
+        labels_img_np: Integer labels images as a Numpy array.
     """
     labels_img_np = None
     

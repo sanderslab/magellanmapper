@@ -3,6 +3,9 @@
 """Segment regions based on blobs, labels, and underlying features.
 """
 
+import multiprocessing as mp
+from time import time
+
 import numpy as np
 import pandas as pd
 from scipy import ndimage
@@ -215,35 +218,46 @@ def labels_to_markers_blob(labels_img):
         ellipsoid=True, labels=list(blobs.keys()), spacing=spacing)
     return markers
 
-def labels_to_markers_erosion(labels_img, filter_size=8):
-    """Convert a labels image to markers as eroded labels.
+class LabelToMarkerErosion(object):
+    """Convert a label to an eroded marker with class methods as an 
+    encapsulated way to use in multiprocessing without requirement for 
+    global variables.
     
-    These markers can be used in segmentation algorithms such as 
-    watershed.
-    
-    Args:
-        labels_img: Labels image as an integer Numpy array, where each 
-            unique int is a separate label.
-        filter_size: Size of structing element for erosion; defaults to 8.
-    
-    Returns:
-        Image array of the same shape as ``img`` and the same number of 
-        labels as in ``labels_img``, with eroded labels.
+    Attributes:
+        labels_img: Integer labels images as a Numpy array.
     """
-    markers = np.zeros_like(labels_img)
-    labels_unique = np.unique(labels_img)
-    #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
-    sizes_dict = {}
-    cols = ("region", "size_orig", "size_marker", "filter_size")
-    for label_id in labels_unique:
-        if label_id == 0: continue
+    labels_img = None
+    
+    @classmethod
+    def set_labels_img(cls, labels_img):
+        """Set the labels image.
+        
+        Args:
+            val: Labels image to set as class attribute.
+        """
+        cls.labels_img = labels_img
+    
+    @classmethod
+    def erode_label(cls, label_id, filter_size):
+        """Convert a label to a marker as an eroded version of the label.
+        
+        Args:
+            label_id: ID of label to erode.
+            filter_size: Size of structing element for erosion.
+        
+        Returns:
+            Tuple of stats, including ``label_id`` for reference and 
+            sizes of labels; list of slices denoting where to insert 
+            the eroded label; and the eroded label itself.
+        """
         print("eroding label ID {}".format(label_id))
         
-        # get region as mask
-        bbox = plot_3d.get_label_bbox(labels_img, label_id)
-        if bbox is None: continue
+        # get region as mask; assume that label exists and will yield a 
+        # bounding box since labels here are generally derived from the 
+        # labels image itself
+        bbox = plot_3d.get_label_bbox(cls.labels_img, label_id)
         _, slices = plot_3d.get_bbox_region(bbox)
-        region = labels_img[tuple(slices)]
+        region = cls.labels_img[tuple(slices)]
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
         region_size_filtered = region_size
@@ -267,16 +281,57 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
             size_ratio = region_size_filtered / region_size
             if size_ratio > 0.2: break
         
-        # insert eroded region into markers image
-        markers[tuple(slices)][filtered] = label_id
         print("changed num of pixels from {} to {}"
-              .format(region_size, np.sum(filtered)))
-        vals = (label_id, region_size, region_size_filtered, selem_size)
-        for col, val in zip(cols, vals):
-            sizes_dict.setdefault(col, []).append(val)
+              .format(region_size, region_size_filtered))
+        stats = (label_id, region_size, region_size_filtered, selem_size)
+        return stats, slices, filtered
+
+def labels_to_markers_erosion(labels_img, filter_size=8):
+    """Convert a labels image to markers as eroded labels via multiprocessing.
     
+    These markers can be used in segmentation algorithms such as 
+    watershed.
+    
+    Args:
+        labels_img: Labels image as an integer Numpy array, where each 
+            unique int is a separate label.
+        filter_size: Size of structing element for erosion; defaults to 8.
+    
+    Returns:
+        Image array of the same shape as ``img`` and the same number of 
+        labels as in ``labels_img``, with eroded labels.
+    """
+    start_time = time()
+    markers = np.zeros_like(labels_img)
+    labels_unique = np.unique(labels_img)
+    #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
+    sizes_dict = {}
+    cols = ("Region", "SizeOrig", "SizeMarker", "FilterSize")
+    
+    # erode labels via multiprocessing
+    LabelToMarkerErosion.set_labels_img(labels_img)
+    pool = mp.Pool()
+    pool_results = []
+    for label_id in labels_unique:
+        if label_id == 0: continue
+        pool_results.append(
+            pool.apply_async(
+                LabelToMarkerErosion.erode_label, args=(label_id, filter_size)))
+    for result in pool_results:
+        stats, slices, filtered = result.get()
+        # can only mutate markers outside of mp for changes to persist
+        markers[tuple(slices)][filtered] = stats[0]
+        for col, stat in zip(cols, stats):
+            sizes_dict.setdefault(col, []).append(stat)
+        print("finished eroding label ID {}".format(stats[0]))
+    pool.close()
+    pool.join()
+    
+    # show erosion stats
     df_sizes = pd.DataFrame(sizes_dict)
     print(df_sizes.to_csv(sep="\t", index=False))
+    
+    print("time elapsed to erode labels into markers:", time() - start_time)
     return markers
 
 def mask_atlas(atlas, labels_img):

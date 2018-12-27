@@ -309,15 +309,16 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)
         
-        # weight and accumulate total metrics
-        tot_dist += edge_dist * edge_size
-        tot_edges += edge_size
-        tot_var_inten += var_inten * label_size
-        tot_vol += label_size
-        tot_vol_physical += vol_physical
-        if nuc is not None:
-            tot_var_dens += var_dens * label_size
-            tot_nuc += nuc
+        if label_size > 0:
+            # weight and accumulate total metrics if label was present
+            tot_dist += edge_dist * edge_size
+            tot_edges += edge_size
+            tot_var_inten += var_inten * label_size
+            tot_vol += label_size
+            tot_vol_physical += vol_physical
+            if nuc is not None:
+                tot_var_dens += var_dens * label_size
+                tot_nuc += nuc
     pool.close()
     pool.join()
     

@@ -87,6 +87,7 @@ IMG_LABELS_SEG_DIST = "annotationSegDist.mhd"
 _SEG_TYPES = {IMG_LABELS_DIST: "manual", IMG_LABELS_SEG_DIST: "waterfall"}
 
 SAMPLE_VOLS = "vols_by_sample"
+SAMPLE_VOLS_SUMMARY = "vols_by_sample_summary"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -3209,17 +3210,22 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             entry is a list with a values corresponding to ``img_paths``.
     
     Returns:
-        Pandas data frame of volume-related metrics for each sample.
+        Tuple of Pandas data frames with volume-related metrics for each 
+        sample, the first with all each region for each sample in a 
+        separate row, and the second with all regions combined in a 
+        weighted fashion.
     """
     start_time = time()
     
     # prepare data frame output path and condition column based on suffix
     out_path = SAMPLE_VOLS
+    out_path_summary = SAMPLE_VOLS_SUMMARY
     if suffix is None:
         condition = "original" 
     else:
         condition = config.suffix.replace("_", "")
         out_path += config.suffix
+        out_path_summary += config.suffix
     
     # grouping metadata, which will be combined with groups
     grouping = {}
@@ -3229,6 +3235,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     # if labels images do not contain all of these label
     label_ids = list(labels_ref_lookup.keys())
     dfs = []
+    dfs_all = []
     for i, img_path in enumerate(img_paths):
         # adjust image path with suffix
         mod_path = img_path
@@ -3254,18 +3261,21 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                  grouping[key] = groups[key][i]
             
         # measure stats per label for the given sample
-        df = vols.measure_labels_metrics(
+        df, df_all = vols.measure_labels_metrics(
             sample, atlas_img_np, labels_img_np, atlas_edge, 
             labels_edge, dist_to_orig, heat_map, atlas_sitk.GetSpacing(), 
             unit_factor, True, label_ids, grouping)
         dfs.append(df)
+        dfs_all.append(df_all)
     
-    # combine data frames from all samples
+    # combine data frames from all samples, first by region for each 
+    # sample and second with weighted combo of all regions per sample
     df_combined = stats.data_frames_to_csv(
         dfs, out_path, sort_cols=["Sample", "Condition", "Region"])
+    df_combined_all = stats.data_frames_to_csv(
+        dfs_all, out_path_summary)
     print("time elapsed for volumes by ID: {}".format(time() - start_time))
-    return dfs
-
+    return df_combined, df_combined_all
 
 def export_region_ids(labels_ref_lookup, path, level):
     """Export region IDs from annotation reference reverse mapped dictionary 

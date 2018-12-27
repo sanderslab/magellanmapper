@@ -321,16 +321,19 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
                 tot_nuc += nuc
     pool.close()
     pool.join()
+    df = pd.DataFrame(metrics)
+    print(df.to_csv())
     
     # add row for total metrics from weighted means
+    metrics_all = {}
     grouping[config.SIDE_KEY] = "both"
     vals = (sample, *grouping.values(), "all", tot_vol_physical, tot_nuc, 
             tot_nuc / tot_vol_physical, tot_var_dens / tot_vol, 
             tot_var_inten / tot_vol, tot_dist / tot_edges)
     for col, val in zip(cols, vals):
-        metrics.setdefault(col, []).append(val)
-    df = pd.DataFrame(metrics)
-    print(df.to_csv())
+        metrics_all.setdefault(col, []).append(val)
+    df_all = pd.DataFrame(metrics_all)
+    print(df_all.to_csv())
     
     print("time elapsed to measure variation:", time() - start_time)
-    return df
+    return df, df_all

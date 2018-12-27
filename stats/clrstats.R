@@ -214,7 +214,7 @@ setupPairing <- function(df.region, col, split.col) {
   for (cond in conditions.unique) {
     val.cond <- vals[cond == conditions]
     # TODO: look for all non-zero, not just pos vals
-    nonzero.cond <- val.cond > 0
+    nonzero.cond <- val.cond > 0 & !is.nan(val.cond)
     if (is.null(nonzero)) {
       nonzero <- nonzero.cond
     } else if (num.per.cond != length(val.cond)) {
@@ -328,7 +328,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
       }
       if (is.null(coef.tab)) next
       stats$Stats[i] <- list(coef.tab)
-      stats$MeanNuclei[i] <- mean(df.region$Nuclei)
+      stats$MeanNuclei[i] <- mean(df.region.nonzero$Nuclei)
       title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
       
       # show histogram to check for parametric distribution
@@ -540,8 +540,10 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
     return()
   }
   y <- stats[[paste0(interaction, ".logp")]]
-  # weight size based on relative num of nuclei
-  size <- sqrt(stats$MeanNuclei / max(stats$MeanNuclei)) * 3
+  # weight size based on relative num of nuclei, replacing NaNs with a small num
+  nuclei <- stats$MeanNuclei
+  nuclei[is.nan(nuclei)] <- 1
+  size <- sqrt(nuclei / max(nuclei)) * 3
   #print(data.frame(x, size))
   
   # point colors based on IDs of parents at the level generated for region 

@@ -752,7 +752,7 @@ roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         # test single value by iterating on value that should not affect 
         # detection ability
-        ("points_3d_thresh", [0.7]),
+        #("points_3d_thresh", [0.7]),
         
         # unfused baseline
         #("scale_factor", 0.59),
@@ -770,7 +770,7 @@ roc_dict = OrderedDict([
         #("isotropic", np.array([(0.96, 1, 1)])),
         #("overlap", np.arange(0.1, 1.0, 0.1)),
         #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
-        #("prune_tol_factor", _prune_tol_factors),
+        ("prune_tol_factor", _prune_tol_factors),
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
         #("clip_max", np.arange(0.3, 0.7, 0.1)),

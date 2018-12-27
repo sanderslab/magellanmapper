@@ -20,7 +20,7 @@ kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
            "ttest.paired", "wilcoxon.paired", "fligner")
 
 # measurements, which correspond to columns in main data frame
-kMeas = c("Vol", "Dens", "Nuclei", "VarNuclei", "VarIntensity")
+kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", "EdgeDist")
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -189,6 +189,8 @@ statsByCols <- function(df, col.start, model) {
 setupPairing <- function(df.region, col, split.col) {
   # Setup data frame for comparing paired groups.
   #
+  # Assume that the data frame has been sorted by Region > Condition > Sample.
+  #
   # Args:
   #   df.region: Data frame only the samples to compare.
   #   col: Column name of values to compare.
@@ -293,17 +295,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
         if (is.null(df.region.nonzero)) next
       }
       if (is.element(model, kModel[5:9])) {
-        # filter for means tests, which split by "Condition" column, 
-        # combining the sides to minimize the number of comparisons 
-        # and ignoring the split.by.sides parameter
+        # filter for means tests, which split by "Condition" column; 
+        # TODO: reconsider aggregating sides but need way to properly 
+        # average variations in a weighted manner
         split.col <- "Condition"
-        df.region.nonzero <- aggregate(
-          cbind(Vol, Nuclei, VarNuclei, VarIntensity) 
-            ~ Sample + Geno + Condition + RegionName, 
-          df.region.nonzero, sum)
-        df.region.nonzero$Dens <- (
-          df.region.nonzero$Nuclei / df.region.nonzero$Vol)
-        df.region.nonzero$Dens[is.na(df.region.nonzero$Dens)] = 0
         if (paired) {
           # filter pairs where either sample has a zero value
           df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
@@ -338,8 +333,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
       df.jitter <- df.region.nonzero
       if (!split.by.side) {
         df.jitter <- aggregate(
-          cbind(Vol, Nuclei) ~ Sample + Geno, df.jitter, sum)
-        df.jitter$Dens <- df.jitter$Nuclei / df.jitter$Vol
+          cbind(Volume, Nuclei) ~ Sample + Geno, df.jitter, sum)
+        df.jitter$Density <- df.jitter$Nuclei / df.jitter$Volume
         print(df.jitter)
       }
       jitterPlot(df.jitter, col, title, split.by.side, split.col, paired)
@@ -613,6 +608,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   # merge in region name based on matching IDs
   df <- merge(df, region.ids, by="Region")
   print.data.frame(df)
+  print(str(df)) # show data frame structure
   cat("\n\n")
   
   # calculate stats, filter out NAs and extract effects and p-values
@@ -626,7 +622,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 
 #######################################
 # choose measurement and model types
-meas <- kMeas[3]
+meas <- kMeas[4]
 model <- kModel[8]
 split.by.side <- TRUE # false to combine sides
 load.stats <- FALSE # true to load saved stats and only regenerate volcano plots

@@ -355,8 +355,8 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0,
     if condition is None:
         condition = ""
     header = [
-        "Sample", "Geno", "Side", "Condition", "Region", "Level", "Vol", 
-        "Dens", "Nuclei", "VarNuclei", "VarIntensity"]
+        "Sample", "Geno", "Side", "Condition", "Region", "Level", "Volume", 
+        "Density", "Nuclei", "VarNuclei", "VarIntensity"]
     num_samples = len(groups)
     #data = {k: [] for k in header} # retains order for Python 3.6 but not <
     data = OrderedDict()

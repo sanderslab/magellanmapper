@@ -3246,8 +3246,9 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
         print("tot blobs", np.sum(heat_map))
         
-        # prepare sample name and an arbitrary number of metadata grouping cols
-        sample = lib_clrbrain.get_filename_without_ext(mod_path)
+        # prepare sample name with original name for comparison across 
+        # conditions and add an arbitrary number of metadata grouping cols
+        sample = lib_clrbrain.get_filename_without_ext(img_path)
         if groups is not None:
              for key in groups.keys():
                  grouping[key] = groups[key][i]
@@ -3645,7 +3646,7 @@ if __name__ == "__main__":
         atlas = config.register_type == config.REGISTER_TYPES[10]
         for img_path in config.filenames:
             make_edge_images(
-                config.filename, show=show, atlas=atlas, suffix=config.suffix)
+                img_path, show=show, atlas=atlas, suffix=config.suffix)
 
     elif config.register_type == config.REGISTER_TYPES[11]:
         # register labels to its underlying atlas

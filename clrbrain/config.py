@@ -744,9 +744,11 @@ _isotropic_factors[:, 0] = _isotropic_zs
 
 # pruning tolerance factors
 _prune_tol_zs = np.arange(2.5, 4.6, 0.5)
-_prune_tol_factors = np.ones((len(_prune_tol_zs), 3)) * 1.3
-_prune_tol_factors[:, 0] = _prune_tol_zs
-#print(_isotropic_factors)
+_prune_tol_xys = np.arange(0.8, 1.8, 0.2)
+_prune_tol_factors = np.ones((len(_prune_tol_xys), 3)) * 3
+_prune_tol_factors[:, 1] = _prune_tol_xys
+_prune_tol_factors[:, 2] = _prune_tol_xys
+print(_prune_tol_factors)
 
 roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([

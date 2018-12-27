@@ -3261,7 +3261,8 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         dfs.append(df)
     
     # combine data frames from all samples
-    stats.data_frames_to_csv(dfs, out_path)
+    df_combined = stats.data_frames_to_csv(
+        dfs, out_path, sort_cols=["Sample", "Condition", "Region"])
     print("time elapsed for volumes by ID: {}".format(time() - start_time))
     return dfs
 

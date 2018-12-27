@@ -442,38 +442,47 @@ def exps_by_regions(path, filter_zeros=True):
         df_pivoted.to_csv(df_path, na_rep="NaN")
     return dfs
 
-def dict_to_data_frame(dict_import, path=None, sort_col=None):
+def dict_to_data_frame(dict_import, path=None, sort_cols=None):
     """Import dictionary to data frame, with option to export to CSV.
     
     Args:
         dict_import: Dictionary to import.
         path: Output path to export data frame to CSV file; defaults to 
             None for no export.
-        sort_col: Column by which to sort; defaults to None for no sorting.
+        sort_cols: Column as a string of list of columns by which to sort; 
+            defaults to None for no sorting.
     
     Returns:
         The imported data frame.
     """
     df = pd.DataFrame(dict_import)
-    if sort_col is not None:
-        df.sort_values(sort_col)
+    if sort_cols is not None:
+        df.sort_values(sort_cols)
     if path:
         df.to_csv(path, index=False, na_rep="NaN")
         print("data frame saved to {}".format(path))
     return df
 
-def data_frames_to_csv(data_frames, path):
+def data_frames_to_csv(data_frames, path, sort_cols=None):
     """Combine and export multiple data frames to CSV file.
     
     Args:
         data_frames: List of data frames to concatenate.
         path: Output path.
+        sort_cols: Column as a string of list of columns by which to sort; 
+            defaults to None for no sorting.
+    
+    Returns:
+        The combined data frame.
     """
     ext = ".csv"
     if not path.endswith(ext): path += ext
     combined = pd.concat(data_frames)
+    if sort_cols is not None:
+        combined.sort_values(sort_cols)
     combined.to_csv(path, index=False, na_rep="NaN")
     print("exported volume data per sample to CSV file: \"{}\"".format(path))
+    return combined
 
 def merge_csvs(in_paths, out_path):
     """Combine and export multiple CSV files to a single CSV file.

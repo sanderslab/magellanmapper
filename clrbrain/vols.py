@@ -176,14 +176,19 @@ class LabelMetrics(object):
             pixels in the label, density variation, and number of blobs.
         """
         label_mask = np.isin(cls.labels_img_np, label_id)
-        var_inten = np.std(cls.atlas_img_np[label_mask])
         label_size = np.sum(label_mask)
-        var_dens = None
-        blobs = None
-        if cls.heat_map is not None:
-            blobs_per_px = cls.heat_map[label_mask]
-            var_dens = np.std(blobs_per_px)
-            blobs = np.sum(blobs_per_px)
+        
+        var_inten = np.nan
+        var_dens = np.nan
+        blobs = np.nan
+        if label_size > 0:
+            # find variation in intensity of underlying atlas/sample region
+            var_inten = np.std(cls.atlas_img_np[label_mask])
+            if cls.heat_map is not None:
+                # find number of blob and variation in blob density
+                blobs_per_px = cls.heat_map[label_mask]
+                var_dens = np.std(blobs_per_px)
+                blobs = np.sum(blobs_per_px)
         print("variation within label {} (size {}): intensity: {}, "
               "density: {}, blobs: {}".format(
                   label_id, label_size, var_inten, var_dens, blobs))

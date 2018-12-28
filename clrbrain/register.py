@@ -87,7 +87,8 @@ IMG_LABELS_SEG_DIST = "annotationSegDist.mhd"
 _SEG_TYPES = {IMG_LABELS_DIST: "manual", IMG_LABELS_SEG_DIST: "waterfall"}
 
 SAMPLE_VOLS = "vols_by_sample"
-SAMPLE_VOLS_SUMMARY = "vols_by_sample_summary"
+SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
+SAMPLE_VOLS_SUMMARY = SAMPLE_VOLS + "_summary"
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -3192,7 +3193,7 @@ def group_volumes(labels_ref_lookup, vol_dicts):
     return grouped_vol_dict
 
 def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None, 
-                   groups=None):
+                   groups=None, max_level=None, combine_sides=True):
     """Get volumes and additional label metrics for each single labels ID.
     
     Args:
@@ -3208,18 +3209,34 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             defaults to None.
         groups: Dictionary of sample grouping metadata, where each 
             entry is a list with a values corresponding to ``img_paths``.
+        max_level: Integer of maximum ontological level to measure. 
+            Giving this value changes the measurement to volumes 
+            by ontology, where all children of each label are included 
+            in the label rather than taking the label at face value, 
+            the default drawn label. Labels at levels up to and including 
+            this value will be included. Defaults to None to take 
+            labels at face value only.
+        combine_sides: True to combine corresponding labels from opposite 
+            sides of the sample; defaults to True. Corresponding positive 
+            and negative numbers will always be included, and this 
+            flag will only determine whether the sides are combined 
+            rather than kept separate.
     
     Returns:
         Tuple of Pandas data frames with volume-related metrics for each 
         sample, the first with all each region for each sample in a 
         separate row, and the second with all regions combined in a 
-        weighted fashion.
+        weighted fashion. This second data frame will be None if 
+        ``max_levels`` is not None since subregions are already included 
+        in each label.
     """
     start_time = time()
     
     # prepare data frame output path and condition column based on suffix
     out_path = SAMPLE_VOLS
     out_path_summary = SAMPLE_VOLS_SUMMARY
+    if max_level is not None:
+        out_path = SAMPLE_VOLS_LEVELS
     if suffix is None:
         condition = "original" 
     else:
@@ -3234,6 +3251,22 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     # use all labels in reference to ensure that no label is missing, even 
     # if labels images do not contain all of these label
     label_ids = list(labels_ref_lookup.keys())
+    if not combine_sides:
+        # include opposite side as separate labels; otherwise, defer to 
+        # ontology (max_level flag) or labels metrics to get labels from 
+        # opposite sides by combining them
+        label_ids.extend([-1 * n for n in label_ids])
+    if max_level is not None:
+        ids_with_children = []
+        for label_id in label_ids:
+            label = labels_ref_lookup[abs(label_id)]
+            label_level = label[NODE][ABA_LEVEL]
+            if label_level <= max_level:
+                # get children (including parent first) if up through level
+                ids_with_children.append(get_children_from_id(
+                    labels_ref_lookup, label_id, both_sides=combine_sides))
+        label_ids = ids_with_children
+    
     dfs = []
     dfs_all = []
     for i, img_path in enumerate(img_paths):
@@ -3260,20 +3293,26 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
              for key in groups.keys():
                  grouping[key] = groups[key][i]
             
-        # measure stats per label for the given sample
+        # measure stats per label for the given sample; max_level already 
+        # takes care of combining sides
         df, df_all = vols.measure_labels_metrics(
             sample, atlas_img_np, labels_img_np, atlas_edge, 
             labels_edge, dist_to_orig, heat_map, atlas_sitk.GetSpacing(), 
-            unit_factor, True, label_ids, grouping)
+            unit_factor, combine_sides and max_level is None, label_ids, 
+            grouping)
         dfs.append(df)
         dfs_all.append(df_all)
     
-    # combine data frames from all samples, first by region for each 
-    # sample and second with weighted combo of all regions per sample
+    # combine data frames from all samples by region for each sample
     df_combined = stats.data_frames_to_csv(
-        dfs, out_path, sort_cols=["Sample", "Condition", "Region"])
-    df_combined_all = stats.data_frames_to_csv(
-        dfs_all, out_path_summary)
+        dfs, out_path, sort_cols=["Region", "Sample", "Side"])
+    df_combined_all = None
+    if max_level is None:
+        # combine weighted combo of all regions per sample; 
+        # not necessary for levels-based (ontological) volumes since they 
+        # already accumulate from sublevels
+        df_combined_all = stats.data_frames_to_csv(
+            dfs_all, out_path_summary)
     print("time elapsed for volumes by ID: {}".format(time() - start_time))
     return df_combined, df_combined_all
 
@@ -3678,8 +3717,9 @@ if __name__ == "__main__":
             groups[config.GENOTYPE_KEY] = [
                 config.GROUPS_NUMERIC[geno] for geno in config.groups]
         volumes_by_id2(
-            config.filenames, labels_ref_lookup, config.suffix, unit_factor, 
-            groups)
+            config.filenames, labels_ref_lookup, suffix=config.suffix, 
+            unit_factor=unit_factor, groups=groups, 
+            max_level=config.labels_level, combine_sides=True)
 
     elif config.register_type == config.REGISTER_TYPES[15]:
         # make density images

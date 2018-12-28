@@ -155,26 +155,11 @@ class LabelMetrics(object):
             edge distance, and number of pixels in the label edge.
         """
         #print("getting label metrics for {}".format(label_id))
-        disp_id, var_inten, label_size, var_dens, blobs = cls.measure_variation(
+        _, var_inten, label_size, var_dens, blobs = cls.measure_variation(
             label_id)
         _, edge_dist, edge_size = cls.measure_edge_dist(label_id)
-        return (disp_id, var_inten, label_size, var_dens, blobs, edge_dist, 
+        return (label_id, var_inten, label_size, var_dens, blobs, edge_dist, 
                 edge_size)
-    
-    @staticmethod
-    def get_single_label(label_id):
-        """Get an ID as a single element.
-        
-        Args:
-            label_id: Single ID or sequence of IDs.
-        
-        Returns:
-            The first elements if ``label_id`` is a sequence, or the 
-            ``label_id`` itself if not.
-        """
-        if lib_clrbrain.is_seq(label_id) and len(label_id) > 0:
-            return label_id[0]
-        return label_id
     
     @classmethod
     def measure_variation(cls, label_id):
@@ -205,11 +190,11 @@ class LabelMetrics(object):
                 blobs_per_px = cls.heat_map[label_mask]
                 var_dens = np.std(blobs_per_px)
                 blobs = np.sum(blobs_per_px)
-        disp_id = cls.get_single_label(label_id)
+        disp_id = get_single_label(label_id)
         print("variation within label {} (size {}): intensity: {}, "
               "density: {}, blobs: {}".format(
                   disp_id, label_size, var_inten, var_dens, blobs))
-        return disp_id, var_inten, label_size, var_dens, blobs
+        return label_id, var_inten, label_size, var_dens, blobs
 
     @classmethod
     def measure_edge_dist(cls, label_id):
@@ -226,10 +211,24 @@ class LabelMetrics(object):
         label_mask = np.isin(cls.labels_edge, label_id)
         region_dists = cls.dist_to_orig[label_mask]
         mean_dist = np.mean(region_dists)
-        disp_id = cls.get_single_label(label_id)
+        disp_id = get_single_label(label_id)
         print("mean dist within edge of label {}: {}"
               .format(disp_id, mean_dist))
-        return disp_id, mean_dist, region_dists.size
+        return label_id, mean_dist, region_dists.size
+
+def get_single_label(label_id):
+    """Get an ID as a single element.
+    
+    Args:
+        label_id: Single ID or sequence of IDs.
+    
+    Returns:
+        The first elements if ``label_id`` is a sequence, or the 
+        ``label_id`` itself if not.
+    """
+    if lib_clrbrain.is_seq(label_id) and len(label_id) > 0:
+        return label_id[0]
+    return label_id
 
 def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge, 
                            labels_edge, dist_to_orig, heat_map=None, 
@@ -322,7 +321,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         else:
             side = "both"
         grouping[config.SIDE_KEY] = side
-        vals = (sample, *grouping.values(), label_id, vol_physical, nuc, 
+        disp_id = get_single_label(label_id)
+        vals = (sample, *grouping.values(), abs(disp_id), vol_physical, nuc, 
                 density, var_dens, var_inten, edge_dist)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)

@@ -457,7 +457,7 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None):
     """
     df = pd.DataFrame(dict_import)
     if sort_cols is not None:
-        df.sort_values(sort_cols)
+        df = df.sort_values(sort_cols)
     if path:
         df.to_csv(path, index=False, na_rep="NaN")
         print("data frame saved to {}".format(path))
@@ -479,7 +479,7 @@ def data_frames_to_csv(data_frames, path, sort_cols=None):
     if not path.endswith(ext): path += ext
     combined = pd.concat(data_frames)
     if sort_cols is not None:
-        combined.sort_values(sort_cols)
+        combined = combined.sort_values(sort_cols)
     combined.to_csv(path, index=False, na_rep="NaN")
     print("exported volume data per sample to CSV file: \"{}\"".format(path))
     return combined

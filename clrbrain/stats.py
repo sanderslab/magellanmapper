@@ -14,6 +14,7 @@ import pandas as pd
 from scipy import stats
 
 from clrbrain import config
+from clrbrain import lib_clrbrain
 
 def _volumes_mean_err(group_dict, key_mean, key_sem, vals, mask, ci=None):
     """Calculate the mean and error values, storing them in the given group 
@@ -459,6 +460,7 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None):
     if sort_cols is not None:
         df = df.sort_values(sort_cols)
     if path:
+        lib_clrbrain.backup_file(path)
         df.to_csv(path, index=False, na_rep="NaN")
         print("data frame saved to {}".format(path))
     return df
@@ -480,6 +482,7 @@ def data_frames_to_csv(data_frames, path, sort_cols=None):
     combined = pd.concat(data_frames)
     if sort_cols is not None:
         combined = combined.sort_values(sort_cols)
+    lib_clrbrain.backup_file(path)
     combined.to_csv(path, index=False, na_rep="NaN")
     print("exported volume data per sample to CSV file: \"{}\"".format(path))
     return combined

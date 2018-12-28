@@ -1867,10 +1867,11 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
             found as a corresponding, registered image.
         show_imgs: True if the output images should be displayed; defaults 
             to True.
-        atlas: True if the primary image is an atlas; False if the image 
-            is an experimental/sample image, in which case markers 
-            image will not be created, and stats will not be performed.
-        suffix: Modifier to append to end of ``img_path`` basename for 
+        atlas: True if the primary image is an atlas, which is assumed 
+            to be symmetrical. False if the image is an experimental/sample 
+            image, in which case erosion will be performed on the full 
+            images, and stats will not be performed.
+        suffix: Modifier to append to end of ``path_atlas`` basename for 
             registered image files that were output to a modified name; 
             defaults to None.
     """
@@ -1917,16 +1918,17 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     labels_edge = vols.make_labels_edge(labels_img_np)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     
-    # convert labels image into markers, assuming that labels image is 
-    # symmetric across halves along the x-axis
+    # convert labels image into markers
     if atlas:
-        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
+        # assume that labels image is symmetric across halves along the x-axis
         len_half = labels_img_np.shape[2] // 2
         labels_markers = segmenter.labels_to_markers_erosion(
             labels_img_np[..., :len_half])
         labels_markers = _mirror_imported_labels(labels_markers, len_half)
-        labels_sitk_markers = replace_sitk_with_numpy(
-            labels_sitk, labels_markers)
+    else:
+        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
+        labels_markers = segmenter.labels_to_markers_erosion(labels_img_np)
+    labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
     
     # create distance map between edges of original and new segmentations
     dist_to_orig = make_edge_dist_image(atlas_edge, labels_edge)
@@ -1956,7 +1958,7 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     # write images to same directory as atlas with appropriate suffix
     write_reg_images(imgs_write, mod_path)
 
-def merge_atlas_segmentations(path_fixed, show=True):
+def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     """Merge manual and automated segmentations of an atlas.
     
     Labels may not match their own underlying atlas image well, 
@@ -1972,21 +1974,33 @@ def merge_atlas_segmentations(path_fixed, show=True):
     :func:``make_edge_images``.
     
     Args:
-        path_fixed: Path to the fixed file, typically the atlas file 
+        path_atlas: Path to the fixed file, typically the atlas file 
             with stained sections. The corresponding edge and labels 
             files will be loaded based on this path.
         show_imgs: True if the output images should be displayed; defaults 
             to True.
+        atlas: True if the primary image is an atlas, which is assumed 
+            to be symmetrical. False if the image is an experimental/sample 
+            image, in which case segmentation will be performed on the full 
+            images, and stats will not be performed.
+        suffix: Modifier to append to end of ``path_atlas`` basename for 
+            registered image files that were output to a modified name; 
+            defaults to None.
     """
+    # adjust image path with suffix
+    mod_path = path_atlas
+    if suffix is not None:
+        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+    
     # load corresponding files via SimpleITK
     atlas_sitk = load_registered_img(
-        path_fixed, get_sitk=True, reg_name=IMG_ATLAS)
+        mod_path, get_sitk=True, reg_name=IMG_ATLAS)
     atlas_sitk_edge = load_registered_img(
-        path_fixed, get_sitk=True, reg_name=IMG_ATLAS_EDGE)
+        mod_path, get_sitk=True, reg_name=IMG_ATLAS_EDGE)
     labels_sitk = load_registered_img(
-        path_fixed, get_sitk=True, reg_name=IMG_LABELS)
+        mod_path, get_sitk=True, reg_name=IMG_LABELS)
     labels_sitk_markers = load_registered_img(
-        path_fixed, get_sitk=True, reg_name=IMG_LABELS_MARKERS)
+        mod_path, get_sitk=True, reg_name=IMG_LABELS_MARKERS)
     
     # get Numpy arrays of images
     atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
@@ -1994,39 +2008,51 @@ def merge_atlas_segmentations(path_fixed, show=True):
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     markers = sitk.GetArrayFromImage(labels_sitk_markers)
     
-    # segment half of image and smooth if set
-    len_half = atlas_img_np.shape[2] // 2
-    labels_seg = segmenter.segment_from_labels(
-        atlas_img_np[..., :len_half], atlas_edge[..., :len_half], 
-        labels_img_np[..., :len_half], markers[..., :len_half])
+    # segment image from markers
+    if atlas:
+        # segment only half of image, assuming symmetry
+        len_half = atlas_img_np.shape[2] // 2
+        labels_seg = segmenter.segment_from_labels(
+            atlas_img_np[..., :len_half], atlas_edge[..., :len_half], 
+            labels_img_np[..., :len_half], markers[..., :len_half])
+    else:
+        labels_seg = segmenter.segment_from_labels(
+            atlas_img_np, atlas_edge, labels_img_np, markers)
+    
     smoothing = config.register_settings["smooth"]
     if smoothing is not None:
         # closing operation to merge breaks from watershed, followed 
         # by opening operation for overall smoothing with profile setting
         smooth_labels(labels_seg, 2, SMOOTHING_MODES[2])
         smooth_labels(labels_seg, smoothing, SMOOTHING_MODES[0])
-    # mirror back to other half and attempt to cast to a smaller type
-    labels_seg = _mirror_imported_labels(labels_seg, len_half)
+    
+    if atlas:
+        # mirror back to other half
+        labels_seg = _mirror_imported_labels(labels_seg, len_half)
+    
     if labels_seg.dtype != labels_img_np.dtype:
+        # watershed may give different output type, so cast back if so
         labels_seg = labels_seg.astype(labels_img_np.dtype)
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
+    
+    if atlas:
+        # show weighted average of atlas intensity variation within labels
+        print("\nMeasuring edge distances and variation within labels:")
+        sample = lib_clrbrain.get_filename_without_ext(path_fixed)
+        vols.measure_labels_metrics(
+            sample, atlas_img_np, labels_seg, atlas_edge, labels_edge, 
+            dist_to_orig)
+        
+        # show DSC for labels
+        print("\nMeasuring overlap of labels:")
+        measure_overlap_labels(
+            sitk.GetImageFromArray(labels_img_np), 
+            sitk.GetImageFromArray(labels_seg))
     
     # create distance map between edges of original and new segmentations
     labels_edge = vols.make_labels_edge(labels_seg)
     dist_to_orig = make_edge_dist_image(atlas_edge, labels_edge)
     dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
-    
-    # show weighted average of atlas intensity variation within labels
-    print("\nMeasuring edge distances and variation within labels:")
-    sample = lib_clrbrain.get_filename_without_ext(path_fixed)
-    vols.measure_labels_metrics(
-        sample, atlas_img_np, labels_seg, atlas_edge, labels_edge, dist_to_orig)
-    
-    # show DSC for labels
-    print("\nMeasuring overlap of labels:")
-    measure_overlap_labels(
-        sitk.GetImageFromArray(labels_img_np), 
-        sitk.GetImageFromArray(labels_seg))
     
     # show all images
     imgs_write = {

@@ -1914,10 +1914,6 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
     
-    # extract boundaries for each label
-    labels_edge = vols.make_labels_edge(labels_img_np)
-    labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
-    
     # convert labels image into markers
     if atlas:
         # assume that labels image is symmetric across halves along the x-axis
@@ -1930,18 +1926,11 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
         labels_markers = segmenter.labels_to_markers_erosion(labels_img_np)
     labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
     
-    # create distance map between edges of original and new segmentations
-    dist_to_orig = make_edge_dist_image(atlas_edge, labels_edge)
+    # make edge images and calculate metrics
+    dist_to_orig, labels_edge = _edge_metrics(
+        mod_path, atlas_np, labels_img_np, atlas_edge, atlas)
     dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
-    
-    if atlas:
-        # show weighted average of atlas intensity variation within labels; 
-        # TODO: use original name for sample, though may need to add group param
-        print("\nMeasuring edge distances and variation within labels:")
-        sample = lib_clrbrain.get_filename_without_ext(path_atlas)
-        vols.measure_labels_metrics(
-            sample, atlas_np, labels_img_np, atlas_edge, labels_edge, 
-            dist_to_orig)
+    labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     
     # show all images
     imgs_write = {
@@ -2036,35 +2025,79 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     if atlas:
-        # show weighted average of atlas intensity variation within labels
-        print("\nMeasuring edge distances and variation within labels:")
-        sample = lib_clrbrain.get_filename_without_ext(path_fixed)
-        vols.measure_labels_metrics(
-            sample, atlas_img_np, labels_seg, atlas_edge, labels_edge, 
-            dist_to_orig)
-        
         # show DSC for labels
         print("\nMeasuring overlap of labels:")
         measure_overlap_labels(
             sitk.GetImageFromArray(labels_img_np), 
             sitk.GetImageFromArray(labels_seg))
     
+    # show and write image to same directory as atlas with appropriate suffix
+    if show: sitk.Show(labels_sitk_seg)
+    write_reg_images({IMG_LABELS_SEG: labels_sitk_seg}, mod_path)
+    return mod_path
+
+def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
+    """Merge atlas segmentations for a list of files as a multiprocessing 
+    wrapper for :func:``merge_atlas_segmentations``, after which 
+    edge image post-processing is performed separately since it 
+    contains tasks also performed in multiprocessing.
+    
+    Args:
+        img_path: Path to image to load.
+        show_imgs: True if the output images should be displayed; defaults 
+            to True.
+        atlas: True if the image is an atlas; defaults to True.
+        suffix: Modifier to append to end of ``img_path`` basename for 
+            registered image files that were output to a modified name; 
+            defaults to None.
+    """
+    start_time = time()
+    pool = mp.Pool()
+    pool_results = []
+    for img_path in img_paths:
+        print("making image", img_path)
+        pool_results.append(pool.apply_async(
+            merge_atlas_segmentations, args=(img_path, show, atlas, suffix)))
+    heat_maps = []
+    for result in pool_results:
+        path = result.get()
+        # make edge image and calculate metrics as post-processing 
+        # to avoid nested multiprocessing
+        atlas_sitk = load_registered_img(
+            path, get_sitk=True, reg_name=IMG_ATLAS)
+        atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
+        dist_to_orig, _ = _edge_metrics(
+            path, atlas_img_np, IMG_LABELS_SEG, metrics=atlas)
+        dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
+        if show: sitk.Show(dist_sitk)
+        write_reg_images({IMG_LABELS_SEG_DIST: dist_sitk}, path)
+        print("finished {}".format(path))
+    pool.close()
+    pool.join()
+    print("time elapsed for merging atlas segmentations:", time() - start_time)
+
+def _edge_metrics(mod_path, atlas_img_np, labels, atlas_edge=None, 
+                  metrics=True):
+    # helper to make edge image and show metrics with multiprocessing
+    
+    if not isinstance(labels, np.ndarray):
+        # load corresponding files via SimpleITK
+        atlas_edge = load_registered_img(mod_path, reg_name=IMG_ATLAS_EDGE)
+        labels = load_registered_img(mod_path, reg_name=labels)
+    
     # create distance map between edges of original and new segmentations
-    labels_edge = vols.make_labels_edge(labels_seg)
+    labels_edge = vols.make_labels_edge(labels)
     dist_to_orig = make_edge_dist_image(atlas_edge, labels_edge)
-    dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
     
-    # show all images
-    imgs_write = {
-        IMG_LABELS_SEG: labels_sitk_seg, 
-        IMG_LABELS_SEG_DIST: dist_sitk, 
-    }
-    if show:
-        for img in imgs_write.values():
-            if img: sitk.Show(img)
+    if metrics:
+        # show weighted average of atlas intensity variation within labels
+        print("\nMeasuring edge distances and variation within labels:")
+        sample = lib_clrbrain.get_filename_without_ext(mod_path)
+        vols.measure_labels_metrics(
+            sample, atlas_img_np, labels, atlas_edge, labels_edge, 
+            dist_to_orig)
     
-    # write images to same directory as atlas with appropriate suffix
-    write_reg_images(imgs_write, path_fixed)
+    return dist_to_orig, labels_edge
 
 def make_edge_dist_image(atlas_edge, labels_edge):
     """Measure the distance between edge images.
@@ -3728,9 +3761,13 @@ if __name__ == "__main__":
         # register labels to its underlying atlas
         register_labels_to_atlas(config.filename)
 
-    elif config.register_type == config.REGISTER_TYPES[12]:
+    elif config.register_type in (
+        config.REGISTER_TYPES[12], config.REGISTER_TYPES[16]):
+        
         # merge various forms of atlas segmentations
-        merge_atlas_segmentations(config.filename, show=show)
+        atlas = config.register_type == config.REGISTER_TYPES[12]
+        merge_atlas_segmentations_mp(
+            config.filenames, show=show, atlas=atlas, suffix=config.suffix)
 
     elif config.register_type == config.REGISTER_TYPES[14]:
         # volumes stats

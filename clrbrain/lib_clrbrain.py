@@ -372,6 +372,17 @@ def dtype_within_range(min_val, max_val, integer, signed=None):
         "unable to find numerical type (integer {}, signed {}) containing "
         "range {} through {}".format(integer, signed, min_val, max_val))
 
+def is_seq(val):
+    """Check if a value is a non-string sequence.
+    
+    Arg:
+        val: Value to check.
+    
+    Returns:
+        True if the value is a list, tuple, or Numpy array.
+    """
+    return isinstance(val, (list, tuple, np.ndarray))
+
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))
     a = np.arange(2 * 3).reshape(2, 3).astype(np.float)

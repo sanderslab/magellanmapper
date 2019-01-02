@@ -611,7 +611,16 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   
   # load CSV file output by Clrbrain Python stats module
   df <- read.csv(path.in)
-  # merge in region name based on matching IDs
+  
+  # convert summary regions into "Mus Musculus" (ID 15564), the 
+  # over-arching parent
+  region.all <- df$Region == "all"
+  if (any(region.all)) {
+    df$Region <- as.integer(df$Region)
+    df$Region[region.all] <- 15564
+  }
+  
+  # merge in region names based on matching IDs
   df <- merge(df, region.ids, by="Region")
   print.data.frame(df)
   print(str(df)) # show data frame structure

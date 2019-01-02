@@ -189,7 +189,8 @@ statsByCols <- function(df, col.start, model) {
 setupPairing <- function(df.region, col, split.col) {
   # Setup data frame for comparing paired groups.
   #
-  # Assume that the data frame has been sorted by Region > Condition > Sample.
+  # Assume that the data frame has been sorted by sample so that samples 
+  # will be matched after splitting by split.col.
   #
   # Args:
   #   df.region: Data frame only the samples to compare.
@@ -300,7 +301,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
         # average variations in a weighted manner
         split.col <- "Condition"
         if (paired) {
-          # filter pairs where either sample has a zero value
+          # sort by sample, split by condition, and filter out pairs 
+          # where either sample has a zero value
+          df.region.nonzero <- df.region.nonzero[
+            order(df.region.nonzero$Sample), ]
           df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
           if (is.null(df.region.nonzero)) next
         }

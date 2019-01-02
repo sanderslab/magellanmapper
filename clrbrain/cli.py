@@ -497,6 +497,7 @@ def main(process_args_only=False):
     parser.add_argument("--suffix")
     parser.add_argument("--alphas")
     parser.add_argument("--vmax")
+    parser.add_argument("--reg_suffixes", nargs="*")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -704,6 +705,10 @@ def main(process_args_only=False):
         config.vmax_overview = [float(val) for val in args.vmax.split(",")]
         print("Set vmax to", config.vmax_overview)
     
+    if args.reg_suffixes is not None:
+        # specify suffixes of registered images to load
+        config.reg_suffixes = args_with_dict(args.reg_suffixes)
+        print("Set registered image suffixes to {}".format(config.reg_suffixes))
     
     # prep filename
     if not config.filename:
@@ -938,18 +943,38 @@ def process_file(filename_base, offset, roi_size):
                 load=load)
     
     if config.load_labels is not None:
-        # load labels image and set up scaling
+        # load registered files including labels
         from clrbrain import register
+        
+        if config.reg_suffixes is not None:
+            # setup user-specified registered images
+            suffixes = register.get_reg_suffixes_dict(
+                *config.reg_suffixes[:-1], **config.reg_suffixes[-1])
+        else:
+            # use default registere images
+            suffixes = register.get_reg_suffixes_dict()
+        
+        if suffixes[config.REG_SUFFIX_ATLAS] is not None:
+            # if specified, this image will take the place of any previously 
+            # loaded image5d
+            image5d = register.load_registered_img(
+                config.filename, reg_name=suffixes[config.REG_SUFFIX_ATLAS])
+            image5d = image5d[None]
+        
+        # load labels image, set up scaling, and load labels JSON file
         config.labels_img = register.load_registered_img(
-            config.filename, reg_name=register.IMG_LABELS)
+            config.filename, 
+            reg_name=suffixes[config.REG_SUFFIX_ANNOTATION])
         config.labels_scaling = importer.calc_scaling(
             image5d, config.labels_img)
         config.labels_ref = register.load_labels_ref(config.load_labels)
         config.labels_ref_lookup = register.create_aba_reverse_lookup(
             config.labels_ref)
+        
         try:
+            # attempt to load borders image if present
             config.borders_img = register.load_registered_img(
-                config.filename, reg_name=register.IMG_BORDERS)
+                config.filename, reg_name=suffixes[config.REG_SUFFIX_BORDERS])
         except FileNotFoundError as e:
             print(e)
     

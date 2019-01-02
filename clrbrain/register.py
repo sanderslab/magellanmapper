@@ -3482,6 +3482,27 @@ def export_common_labels(img_paths, output_path):
     print("common labels exported to {}".format(output_path))
     return df
 
+def get_reg_suffixes_dict(atlas=None, annotation=None, borders=None):
+    """Get a dictionary of registered image suffixes to load.
+    
+    Args:
+        atlas: Atlas suffix; defaults to None, which will also be set.
+        annotation: Annotation (labels) image suffix; defaults to None, 
+            in which case :const:``IMG_LABELS`` will be set.
+        borders: Borders image; defaults to None, in which case 
+            :const:``IMG_BORDERS`` will be set.
+    
+    Returns:
+        Dictionary of suffixes associated with the given registered image types.
+    """
+    img_suffixes = {
+        config.REG_SUFFIX_ATLAS: None if atlas is None else atlas, 
+        config.REG_SUFFIX_ANNOTATION: (IMG_LABELS 
+            if annotation is None else annotation), 
+        config.REG_SUFFIX_BORDERS: IMG_BORDERS if borders is None else borders, 
+    }
+    return img_suffixes
+
 def _test_labels_lookup():
     """Test labels reverse dictionary creation and lookup.
     """

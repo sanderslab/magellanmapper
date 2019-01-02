@@ -841,6 +841,10 @@ labels_ref_lookup = None
 labels_level = None
 labels_mirror = True
 borders_img = None
+reg_suffixes = None
+REG_SUFFIX_ATLAS = "atlas"
+REG_SUFFIX_ANNOTATION = "annotation"
+REG_SUFFIX_BORDERS = "borders"
 REGISTER_TYPES = (
     "single", "group", "overlays", "volumes", "densities", "export_vols", 
     "export_regions", "new_atlas", "import_atlas", "export_common_labels", 

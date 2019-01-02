@@ -26,7 +26,9 @@ kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", "EdgeDist"
 kGenoLevels <- c(0, 0.5, 1)
 
 # file paths
-kStatsPathIn <- "../vols_by_sample.csv" # raw values from Clrbrain
+# raw values from Clrbrain
+kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
+                   "vols_by_sample_summary.csv")
 kStatsPathOut <- "../vols_stats.csv" # output stats
 kRegionIDsPath <- "../region_ids.csv" # region-ID map from Clrbrain
 
@@ -626,6 +628,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 
 #######################################
 # choose measurement and model types
+kStatsPathIn <- file.path("..", kStatsFilesIn[1])
 meas <- kMeas[4]
 model <- kModel[8]
 split.by.side <- TRUE # false to combine sides

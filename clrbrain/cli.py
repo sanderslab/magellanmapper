@@ -923,8 +923,13 @@ def process_file(filename_base, offset, roi_size):
             if len(config.filenames) > 1:
                 # load metadata from 2nd filename argument if given
                 filename_np = config.filenames[1]
-            image5d = importer.read_file_sitk(
-                config.filename, filename_np, config.series, rotate)
+            try:
+                # load metadata based on filename_np, then attempt to 
+                # load the images from config.filename
+                image5d = importer.read_file_sitk(
+                    config.filename, filename_np, config.series, rotate)
+            except FileNotFoundError as e:
+                print(e)
         else:
             # load or import from Clrbrain Numpy format
             load = proc_type != PROC_TYPES[0] # explicitly re/import

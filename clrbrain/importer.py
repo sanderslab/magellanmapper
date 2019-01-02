@@ -593,22 +593,31 @@ def read_file_sitk(filename_sitk, filename_np, series=0, rotate=False):
     Returns:
         Image array in Clrbrain image5d format. Associated metadata will 
         have been loaded into module-level variables.
+    
+    Raises:
+        ``FileNotFoundError`` if ``filename_sitk`` cannot be found, after 
+        attempting to load metadata from ``filename_np``.
     """
+    # get metadata from Numpy archive
+    filename_image5d_npz, filename_info_npz = _make_filenames(
+        filename_np, series, ext=lib_clrbrain.get_filename_ext(filename_np))
+    if os.path.exists(filename_info_npz):
+        output, image5d_ver_num = read_info(filename_info_npz)
+    
+    # load image via SimpleITK
+    if not os.path.exists(filename_sitk):
+        raise FileNotFoundError("could not find file {}".format(filename_sitk))
     img_sitk = sitk.ReadImage(filename_sitk)
     img_np = sitk.GetArrayFromImage(img_sitk)
-    ext = lib_clrbrain.get_filename_ext(filename_np)
-    filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename_np, series, ext=ext)
-    if not os.path.exists(filename_info_npz):
+    
+    if detector.resolutions is None:
         # fallback to determining metadata directly from sitk file
-        msg = ("Clrbrain image metadata file not given; will fallback to {} "
+        msg = ("Clrbrain image metadata file not loaded; will fallback to {} "
                "for metadata".format(filename_sitk))
         warnings.warn(msg)
         detector.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(detector.resolutions))
-    else:
-        # get metadata from Numpy archive
-        output, image5d_ver_num = read_info(filename_info_npz)
+    
     if rotate:
         # apparently need to rotate images output by deep learning toolkit
         img_np = np.rot90(img_np, 2, (1, 2))

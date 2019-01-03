@@ -23,13 +23,16 @@ class AtlasEditor:
         
         Args:
             image5d: Numpy image array in t,z,y,x,[c] format.
+            labels_img: Numpy image array in z,y,x format.
             channel: Channel of the image to display.
             offset: Index of plane at which to start viewing in x,y,z (user) 
                 order.
             fn_close_listener: Handle figure close events.
-            borders_img: Numpy image array in z,y,x,c format to show label 
+            borders_img: Numpy image array in z,y,x,[c] format to show label 
                 borders, such as that generated during label smoothing. 
-                Defaults to None.
+                Defaults to None. If this image has a different number of 
+                labels than that of ``labels_img``, a new colormap will 
+                be generated.
             fn_show_label_3d: Function to call to show a label in a 
                 3D viewer. Defaults to None.
         """
@@ -55,14 +58,26 @@ class AtlasEditor:
         gs_viewers = gridspec.GridSpecFromSubplotSpec(
             2, 2, subplot_spec=gs[0, 0])
         
-        # set up the image to display
+        # set up colormaps, using the labels image to generate a template 
+        # for the borders image if it has the same number of colors
         cmap_labels = colormaps.get_labels_discrete_colormap(self.labels_img, 0)
         cmap_borders = None
         if self.borders_img is not None:
-            # brightest colormap for original (channel 0) borders
-            cmap_borders = [
-                cmap_labels.modified_cmap(int(40 / (channel + 1)))
-                for channel in range(self.borders_img.shape[-1])]
+            if (np.unique(self.labels_img).size 
+                == np.unique(self.borders_img).size):
+                # get matching colors by using labels colormap as template, 
+                # with brightest colormap for original (channel 0) borders
+                channels = 1
+                if self.borders_img.ndim >= 4:
+                    channels = self.borders_img.shape[-1]
+                cmap_borders = [
+                    cmap_labels.modified_cmap(int(40 / (channel + 1)))
+                    for channel in range(channels)]
+            else:
+                # get a new colormap if borders image has different number 
+                # of labels while still ensuring a transparent background
+                cmap_borders = [
+                    colormaps.get_labels_discrete_colormap(self.borders_img, 0)]
         coord = list(self.offset[::-1])
         
         # transparency controls

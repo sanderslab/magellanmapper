@@ -98,17 +98,22 @@ class PlotEditor:
         self.axes.clear()
         self.hline = None
         self.vline = None
+        
         # prep main image in grayscale and labels with discrete colormap
         imgs2d = [self.img3d[self.coord[0]], self.img3d_labels[self.coord[0]]]
         cmaps = [config.process_settings["channel_colors"], self.cmap_labels]
         alphas = [1, self.alpha]
+        
         if self.img3d_borders is not None:
-            # show borders image
+            # prep borders image, which may have an extra channels 
+            # dimension for multiple sets of borders
             img2d = self.img3d_borders[self.coord[0]]
-            for channel in range(img2d.shape[-1] - 1, -1, -1):
+            channels = img2d.ndim if img2d.ndim >= 3 else 1
+            for channel in range(channels - 1, -1, -1):
                 # show first (original) borders image last so that its 
                 # colormap values take precedence to highlight original bounds
-                imgs2d.append(img2d[..., channel])
+                img_add = img2d[..., channel] if channels > 1 else img2d
+                imgs2d.append(img_add)
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(1)
         

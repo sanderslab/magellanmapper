@@ -81,6 +81,7 @@ class DiscreteColormap(colors.ListedColormap):
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
             if len(bkgdi) > 0 and bkgdi[0].size > 0:
                 self.cmap_labels[bkgdi[0][0]] = background[1]
+        #print(self.cmap_labels)
         self.make_cmap()
     
     def make_cmap(self):

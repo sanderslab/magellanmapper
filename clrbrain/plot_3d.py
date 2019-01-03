@@ -914,7 +914,7 @@ def laplacian_of_gaussian_img(img, sigma=5, labels_img=None):
              
     """
     # apply Laplacian of Gaussian filter (sequentially)
-    img_log = filters.gaussian(img, 5)
+    img_log = filters.gaussian(img, sigma)
     img_log = filters.laplace(img_log)
     vmin, vmax = np.percentile(img_log, (2, 98))
     img_log = np.clip(img_log, vmin, vmax)

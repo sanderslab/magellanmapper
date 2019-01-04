@@ -1906,25 +1906,35 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     labels_sitk_edge = None
     labels_sitk_markers = None
     
-    # generate LoG and edge-detected images
-    atlas_log = plot_3d.laplacian_of_gaussian_img(
-        atlas_np, labels_img=labels_img_np)
-    atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
-    atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
-    atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
-    atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
+    log_sigma = config.register_settings["log_sigma"]
+    erosion = config.register_settings["marker_erosion"]
     
-    # convert labels image into markers
-    if atlas:
-        # assume that labels image is symmetric across halves along the x-axis
-        len_half = labels_img_np.shape[2] // 2
-        labels_markers = segmenter.labels_to_markers_erosion(
-            labels_img_np[..., :len_half])
-        labels_markers = _mirror_imported_labels(labels_markers, len_half)
+    if log_sigma is not None and suffix is None:
+        # generate LoG and edge-detected images for original image
+        atlas_log = plot_3d.laplacian_of_gaussian_img(
+            atlas_np, sigma=log_sigma, labels_img=labels_img_np)
+        atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
+        atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
+        atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
+        atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
     else:
-        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
-        labels_markers = segmenter.labels_to_markers_erosion(labels_img_np)
-    labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, labels_markers)
+        # if modified path or sigma not set, load from original image instead
+        atlas_edge = load_registered_img(path_atlas, reg_name=IMG_ATLAS_EDGE)
+    
+    if erosion is not None:
+        # convert labels image into markers
+        if atlas:
+            # assume that labels image is symmetric across the x-axis
+            len_half = labels_img_np.shape[2] // 2
+            labels_markers = segmenter.labels_to_markers_erosion(
+                labels_img_np[..., :len_half], erosion)
+            labels_markers = _mirror_imported_labels(labels_markers, len_half)
+        else:
+            #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
+            labels_markers = segmenter.labels_to_markers_erosion(
+                labels_img_np, erosion)
+        labels_sitk_markers = replace_sitk_with_numpy(
+            labels_sitk, labels_markers)
     
     # make edge images and calculate metrics
     dist_to_orig, labels_edge = _edge_metrics(

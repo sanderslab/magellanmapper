@@ -391,6 +391,11 @@ class RegisterSettings(SettingsDict):
         # for the axis along which to perform another affine to attach the 
         # main affine back to the rest of the image
         self["affine"] = None
+        
+        # Laplacian of Gaussian sigma; use None to skip
+        self["log_sigma"] = 5
+        # erosion size when converting labels to markers; use None to skip
+        self["marker_erosion"] = 8
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -636,6 +641,12 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "nosmooth", 
         {"smooth": None}, 
+        settings_type)
+    
+    # turn off labels markers generation
+    settings.add_modifier(
+        "nomarkers", 
+        {"marker_erosion": None}, 
         settings_type)
     
     # enable label smoothing

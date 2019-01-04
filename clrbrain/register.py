@@ -3307,15 +3307,26 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     grouping = {}
     grouping["Condition"] = condition
     
-    # use all labels in reference to ensure that no label is missing, even 
-    # if labels images do not contain all of these label
-    label_ids = list(labels_ref_lookup.keys())
+    # setup labels
+    orig_atlas_dir = os.path.dirname(config.load_labels)
+    orig_labels_path = os.path.join(orig_atlas_dir, IMG_LABELS)
+    # need all labels from a reference as registered image may have lost labels
+    if max_level is None and os.path.exists(orig_labels_path):
+        # use all drawn labels in original labels image
+        orig_labels_sitk = sitk.ReadImage(orig_labels_path)
+        orig_labels_np = sitk.GetArrayFromImage(orig_labels_sitk)
+        label_ids = np.unique(orig_labels_np)
+    else:
+        # use all labels in ontology reference to include hierarchical 
+        # labels or if original labels image isn't presenst
+        label_ids = list(labels_ref_lookup.keys())
     if not combine_sides:
         # include opposite side as separate labels; otherwise, defer to 
         # ontology (max_level flag) or labels metrics to get labels from 
         # opposite sides by combining them
         label_ids.extend([-1 * n for n in label_ids])
     if max_level is not None:
+        # setup ontological labels
         ids_with_children = []
         for label_id in label_ids:
             label = labels_ref_lookup[abs(label_id)]

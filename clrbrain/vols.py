@@ -298,7 +298,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
         # include corresponding labels from opposite sides while skipping 
         # background
         if label_id == 0: continue
-        if combine_sides: label_id = [label_id, -label_id]
+        if combine_sides: label_id = [label_id, -1 * label_id]
         pool_results.append(
             pool.apply_async(
                 label_metrics.label_metrics, args=(label_id, )))

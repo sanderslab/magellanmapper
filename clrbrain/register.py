@@ -455,6 +455,12 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
                     anti_aliasing=False, mode="reflect")
                 region[expandi, slices_ref[0], slices_ref[1]] = plane_region
     
+    #labels_img_np = sitk.GetArrayFromImage(img_labels)
+    labels_unique, counts = np.unique(img_np, return_counts=True)
+    counts_dict = {"labels": labels_unique, "counts": counts}
+    print(pd.DataFrame(counts_dict).to_csv())
+    df
+    
     # find approximate midline by locating the last zero plane from far edge 
     # at which to start mirroring across midline
     mirrori = tot_planes
@@ -1899,6 +1905,13 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     labels_sitk = load_registered_img(
         mod_path, get_sitk=True, reg_name=IMG_LABELS)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    print(atlas_sitk, labels_sitk)
+    print(np.sum(atlas_np), np.sum(labels_img_np[labels_img_np > 0]))
+    print(np.amin(labels_img_np), np.amax(labels_img_np))
+    labels_unique, counts = np.unique(labels_img_np, return_counts=True)
+    counts_dict = {"labels": labels_unique, "counts": counts}
+    print(pd.DataFrame(counts_dict).to_csv())
+    df
     
     # output images
     atlas_sitk_log = None
@@ -1946,6 +1959,21 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     
     # write images to same directory as atlas with appropriate suffix
     write_reg_images(imgs_write, mod_path)
+    
+    print(np.sum(atlas_np), np.sum(atlas_edge), 
+          np.sum(labels_img_np[labels_img_np > 0]), np.sum(labels_markers[labels_markers > 0]))
+    len_half = atlas_np.shape[2] // 2
+    print(len_half, np.sum(atlas_np[..., :len_half]), np.sum(atlas_edge[..., :len_half]), 
+          np.sum(labels_img_np[..., :len_half]), np.sum(labels_markers[..., :len_half]))
+    atlas_np = load_registered_img(mod_path, reg_name=atlas_suffix)
+    atlas_edge = load_registered_img(mod_path, reg_name=IMG_ATLAS_EDGE)
+    labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS)
+    labels_markers = load_registered_img(mod_path, reg_name=IMG_LABELS_MARKERS)
+    print(np.sum(atlas_np), np.sum(atlas_edge), 
+          np.sum(labels_img_np[labels_img_np > 0]), np.sum(labels_markers[labels_markers > 0]))
+    len_half = atlas_np.shape[2] // 2
+    print(len_half, np.sum(atlas_np[..., :len_half]), np.sum(atlas_edge[..., :len_half]), 
+          np.sum(labels_img_np[..., :len_half]), np.sum(labels_markers[..., :len_half]))
 
 def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     """Merge manual and automated segmentations of an atlas.

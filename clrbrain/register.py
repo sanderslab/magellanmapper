@@ -3349,7 +3349,6 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         atlas_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_ATLAS)
         atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
-        atlas_edge = load_registered_img(mod_path, reg_name=IMG_ATLAS_EDGE)
         labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_TRUNC)
         labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
         dist_to_orig = load_registered_img(mod_path,reg_name=IMG_LABELS_DIST)
@@ -3366,7 +3365,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # measure stats per label for the given sample; max_level already 
         # takes care of combining sides
         df, df_all = vols.measure_labels_metrics(
-            sample, atlas_img_np, labels_img_np, atlas_edge, 
+            sample, atlas_img_np, labels_img_np, 
             labels_edge, dist_to_orig, heat_map, atlas_sitk.GetSpacing(), 
             unit_factor, combine_sides and max_level is None, label_ids, 
             grouping)

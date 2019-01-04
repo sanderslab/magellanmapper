@@ -94,12 +94,16 @@ if [[ -z "$ij" ]]; then
     # auto-detect ImageJ binary path if not already set; assume that 
     # Fiji.app folder is in the standard Mac Applications directory (Mac)
     # or in the Clrbrain parent directory (Windows/Linux)
+    bit_short="64"
+    if [[ "$bit" =~ "32" ]]; then
+        bit_short="32"
+    fi
     if [[ "$os" = "Windows" ]]; then
-        ij=../Fiji.app/ImageJ-win$bit
+        ij="../Fiji.app/ImageJ-win$bit_short"
     elif [[ "$os" = "MacOSX" ]]; then
-        ij=/Applications/Fiji.app/Contents/MacOS/ImageJ-macosx
+        ij="/Applications/Fiji.app/Contents/MacOS/ImageJ-macosx"
     elif [[ "$os" = "Linux" ]]; then
-        ij=../Fiji.app/ImageJ-linux$bit
+        ij="../Fiji.app/ImageJ-linux$bit_short"
     fi
 fi
 echo "Assumes Fiji executable is located at $ij"

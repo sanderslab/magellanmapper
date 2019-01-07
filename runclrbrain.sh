@@ -467,9 +467,12 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
 fi
 clr_img_base="${clr_img%.*}"
 
-if [[ "$upload" == "${UPLOAD_TYPES[1]}" ]]; then
-    # upload stitched files in full processing pipeline
-    upload_images "$clr_img_base"
+if [[ "$pipeline" = "${PIPELINES[1]}" \
+    || "$pipeline" = "${PIPELINES[5]}" ]]; then
+    if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
+        # upload stitched image for full and stitching pipelines
+        upload_images "$clr_img_base"
+    fi
 fi
 
 # At this point, you can delete the TIFF dir/image since it has been 

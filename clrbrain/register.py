@@ -2104,7 +2104,8 @@ def _edge_metrics(mod_path, atlas_img_np, labels, atlas_edge=None,
         print("\nMeasuring edge distances and variation within labels:")
         sample = lib_clrbrain.get_filename_without_ext(mod_path)
         vols.measure_labels_metrics(
-            sample, atlas_img_np, labels, labels_edge, dist_to_orig)
+            sample, atlas_img_np, labels, atlas_edge, labels_edge, 
+            dist_to_orig)
     
     return dist_to_orig, labels_edge
 

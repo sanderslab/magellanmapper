@@ -128,11 +128,12 @@ class LabelMetrics(object):
     heat_map = None
     
     @classmethod
-    def set_images(cls, atlas_img_np, labels_img_np, labels_edge, 
+    def set_images(cls, atlas_img_np, labels_img_np, atlas_edge, labels_edge, 
                    dist_to_orig, heat_map=None):
         """Set the images."""
         cls.atlas_img_np = atlas_img_np
         cls.labels_img_np = labels_img_np
+        cls.atlas_edge = atlas_edge
         cls.labels_edge = labels_edge
         cls.dist_to_orig = dist_to_orig
         cls.heat_map = heat_map
@@ -237,7 +238,7 @@ def get_single_label(label_id):
         return label_id[0]
     return label_id
 
-def measure_labels_metrics(sample, atlas_img_np, labels_img_np, 
+def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge, 
                            labels_edge, dist_to_orig, heat_map=None, 
                            spacing=None, unit_factor=None, 
                            combine_sides=True, label_ids=None, grouping={}):
@@ -248,6 +249,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         sample: Sample ID number to be stored in data frame.
         atlas_img_np: Sample image as a Numpy array.
         labels_img_np: Integer labels image as a Numpy array.
+        atlas_edge: Numpy array of atlas reduced to binary image of its edges.
         labels_edge: Numpy array of labels reduced to their edges.
         dist_to_orig: Distance map of labels to edges, with intensity values 
             in the same placement as in ``labels_edge``.
@@ -279,7 +281,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     # reference the labels image as a global variable
     label_metrics = LabelMetrics()
     label_metrics.set_images(
-        atlas_img_np, labels_img_np, labels_edge, dist_to_orig, heat_map)
+        atlas_img_np, labels_img_np, atlas_edge, labels_edge, dist_to_orig, 
+        heat_map)
     
     metrics = {}
     grouping[config.SIDE_KEY] = None

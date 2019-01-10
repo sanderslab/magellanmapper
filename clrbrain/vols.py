@@ -151,14 +151,16 @@ class LabelMetrics(object):
         Returns:
             Tuple of the given label ID, intensity variation, number of 
             pixels in the label, density variation, number of blobs, 
-            edge distance, and number of pixels in the label edge.
+            sum edge distances, mean of edge distances, and number of 
+            pixels in the label edge.
         """
         #print("getting label metrics for {}".format(label_id))
         _, var_inten, label_size, var_dens, blobs = cls.measure_variation(
             label_id)
-        _, edge_dist, edge_size = cls.measure_edge_dist(label_id)
-        return (label_id, var_inten, label_size, var_dens, blobs, edge_dist, 
-                edge_size)
+        _, edge_dist_sum, edge_dist_mean, edge_size = cls.measure_edge_dist(
+            label_id)
+        return (label_id, var_inten, label_size, var_dens, blobs, 
+                edge_dist_sum, edge_dist_mean, edge_size)
     
     @classmethod
     def measure_variation(cls, label_id):
@@ -207,21 +209,23 @@ class LabelMetrics(object):
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
-            Tuple of the given label ID, edge distance, and number of 
-            pixels in the label edge. The metrics are NaN if the label 
-            size is 0.
+            Tuple of the given label ID, sum of edge distances, mean of 
+            edge distances, and number ofpixels in the label edge. 
+            The metrics are NaN if the label size is 0.
         """
         label_mask = np.isin(cls.labels_edge, label_id)
+        sum_dist = np.nan
         mean_dist = np.nan
         edge_size = np.nan
         if np.sum(label_mask) > 0:
             region_dists = cls.dist_to_orig[label_mask]
+            sum_dist = np.sum(region_dists)
             mean_dist = np.mean(region_dists)
             edge_size = region_dists.size
         disp_id = get_single_label(label_id)
-        print("mean dist within edge of label {}: {}"
-              .format(disp_id, mean_dist))
-        return label_id, mean_dist, edge_size
+        print("dist within edge of label {}: {} (sum), {} (mean)"
+              .format(disp_id, sum_dist, mean_dist))
+        return label_id, sum_dist, mean_dist, edge_size
 
 def get_single_label(label_id):
     """Get an ID as a single element.
@@ -284,7 +288,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     metrics = {}
     grouping[config.SIDE_KEY] = None
     cols = ("Sample", *grouping.keys(), "Region", "Volume", "Nuclei", 
-            "Density", "VarNuclei", "VarIntensity", "EdgeDist")
+            "Density", "VarNuclei", "VarIntensity", "EdgeDistSum", 
+            "EdgeDistMean")
     pool = mp.Pool()
     pool_results = []
     if label_ids is None:
@@ -303,8 +308,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     totals = {}
     for result in pool_results:
         # get metrics by label
-        (label_id, var_inten, label_size, var_dens, nuc, edge_dist, 
-         edge_size) = result.get()
+        (label_id, var_inten, label_size, var_dens, nuc, edge_dist_sum, 
+         edge_dist_mean, edge_size) = result.get()
         vol_physical = label_size
         if physical_mult is not None:
             vol_physical *= physical_mult
@@ -322,12 +327,13 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         grouping[config.SIDE_KEY] = side
         disp_id = get_single_label(label_id)
         vals = (sample, *grouping.values(), abs(disp_id), vol_physical, nuc, 
-                density, var_dens, var_inten, edge_dist)
+                density, var_dens, var_inten, edge_dist_sum, edge_dist_mean)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)
         
         # weight and accumulate total metrics
-        totals.setdefault("dist", []).append(edge_dist * edge_size)
+        totals.setdefault("dist_sum", []).append(edge_dist_sum * edge_size)
+        totals.setdefault("dist_mean", []).append(edge_dist_mean * edge_size)
         totals.setdefault("edges", []).append(edge_size)
         totals.setdefault("var_inten", []).append(var_inten * label_size)
         totals.setdefault("vol", []).append(label_size)
@@ -349,7 +355,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
             totals["nuc"], totals["nuc"] / totals["vol_physical"], 
             totals["var_dens"] / totals["vol"], 
             totals["var_inten"] / totals["vol"], 
-            totals["dist"] / totals["edges"])
+            totals["dist_sum"] / totals["edges"], 
+            totals["dist_mean"] / totals["edges"])
     for col, val in zip(cols, vals):
         metrics_all.setdefault(col, []).append(val)
     df_all = pd.DataFrame(metrics_all)

@@ -362,7 +362,8 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
     location of each label.
     
     Args:
-        atlas_img: Atlas image as a Numpy array to use for finding foreground.
+        atlas_img: Atlas image as a Numpy array to use for finding foreground. 
+            If None, ``labels_img`` will be used alone.
         edges: Image as a Numpy array to segment, typically an edge-detected 
             image of the main atlas.
         labels_img: Labels image as Numpy array of same shape as ``img``, 
@@ -384,6 +385,9 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
         _, mask = plot_3d.carve(
             atlas_img, thresh=filters.threshold_otsu(atlas_img), 
             holes_area=5000)
+    elif atlas_img is None:
+        # use labels alone if atlas is unavailable
+        mask = labels_img != 0
     else:
         # use labels if available; ideally should fully cover the atlas 
         # with the atlas only used to identify outside borders

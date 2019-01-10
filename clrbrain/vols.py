@@ -10,10 +10,12 @@ from time import time
 import numpy as np
 import pandas as pd
 from skimage import measure
+from skimage import morphology
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+from clrbrain import segmenter
 
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 
@@ -155,11 +157,14 @@ class LabelMetrics(object):
             edge distance, and number of pixels in the label edge.
         """
         #print("getting label metrics for {}".format(label_id))
-        _, var_inten, label_size, var_dens, blobs = cls.measure_variation(
+        _, label_size, metrics, slices, labels_seg = cls.measure_variation(
             label_id)
         _, edge_dist, edge_size = cls.measure_edge_dist(label_id)
+        var_inten = metrics["VarIntensity"]
+        var_dens = metrics["VarDensity"]
+        blobs = metrics["Nuclei"]
         return (label_id, var_inten, label_size, var_dens, blobs, edge_dist, 
-                edge_size)
+                edge_size, slices, labels_seg)
     
     @classmethod
     def measure_variation(cls, label_id):
@@ -180,24 +185,81 @@ class LabelMetrics(object):
         label_mask = np.isin(cls.labels_img_np, label_id)
         label_size = np.sum(label_mask)
         
-        var_inten = np.nan
-        var_dens = np.nan
-        blobs = np.nan
+        sizes = []
+        labels_seg = None
+        slices = None
+        cols = ("VarIntensity", "VarDensity", "Nuclei")
+        metrics = {}
+        for col in cols: metrics[col] = []
+        disp_id = get_single_label(label_id)
         if label_size > 0:
+            props = measure.regionprops(label_mask.astype(np.int))
+            #if len(props) > 0 and props[0].bbox is not None:
+            _, slices = plot_3d.get_bbox_region(props[0].bbox)
+            
+            # work on a view of the region for efficiency
+            labels_region = np.copy(cls.labels_img_np[tuple(slices)])
+            label_mask_region = np.isin(labels_region, label_id)
+            atlas_edge_region = np.copy(cls.atlas_edge[tuple(slices)])
+            #atlas_edge_region = morphology.closing(atlas_edge_region, morphology.ball(5))
+            #labels_region[atlas_edge_region != 0] = 0
+            labels_region[~label_mask_region] = 0
+            labels_seg = segmenter.segment_from_labels(None, atlas_edge_region, label_mask_region, None)
+            #labels_seg = measure.label(labels_region)
+            labels_merged = np.zeros_like(labels_region, dtype=np.int32)
+            labels_unique = np.unique(labels_seg[labels_seg != 0])
+            print("found {} subregions for label ID {}".format(labels_unique.size, label_id))
+            i = 0
+            for seg_id in labels_unique:
+                seg_mask = labels_seg == seg_id
+                size = np.sum(seg_mask)
+                ratio = size / label_size
+                unique_id = disp_id * 100 + i
+                #print("checking subregion {} of size {} (ratio {}) within label {}".format(unique_id, size, ratio, disp_id))
+                if ratio > 0.1:
+                    print("keeping subregion {} of size {} (ratio {}) within label {}".format(unique_id, size, ratio, disp_id))
+                    #print("keeping subregion {} (ratio {})".format(unique_id, ratio))
+                    labels_merged[seg_mask] = unique_id
+                    i += 1
+            #labels_seg = segmenter.segment_from_labels(None, atlas_edge_region, label_mask_region, labels_merged)
+            print("unique labels within labels_merged: {}".format(np.unique(labels_merged)))
+            labels_seg = plot_3d.in_paint(labels_merged, labels_merged == 0)
+            labels_seg[~label_mask_region] = 0
+        
             # find variation in intensity of underlying atlas/sample region
-            var_inten = np.std(cls.atlas_img_np[label_mask])
+            labels_unique = np.unique(labels_seg[labels_seg != 0])
+            print("{} subregions ({}) remain after merging for label ID {}".format(labels_unique.size, labels_unique, label_id))
+            atlas_region = cls.atlas_img_np[tuple(slices)]
+            heat_map_region = None
             if cls.heat_map is not None:
-                # find number of blob and variation in blob density
-                blobs_per_px = cls.heat_map[label_mask]
-                var_dens = np.std(blobs_per_px)
-                blobs = np.sum(blobs_per_px)
+                heat_map_region = cls.heat_map[tuple(slices)]
+            var_dens = np.nan
+            blobs = np.nan
+            for seg_id in labels_unique:
+                seg_mask = labels_seg == seg_id
+                size = np.sum(seg_mask)
+                sizes.append(size)
+                var_inten = np.std(atlas_region[seg_mask])
+                if heat_map_region is not None:
+                    # find number of blob and variation in blob density
+                    blobs_per_px = heat_map_region[seg_mask]
+                    var_dens = np.std(blobs_per_px)
+                    blobs = np.sum(blobs_per_px)
+                vals = (var_inten, var_dens, blobs)
+                for col, val in zip(cols, vals):
+                    metrics[col].append(val)
         else:
             label_size = np.nan
-        disp_id = get_single_label(label_id)
+        tot_size = np.sum(sizes)
+        for key in metrics.keys():
+            print("{} {}: {} (sizes: {})".format(label_id, key, metrics[key], sizes))
+            if tot_size > 0:
+                metrics[key] = np.nansum(np.multiply(metrics[key], sizes)) / tot_size
+            if tot_size <= 0 or metrics[key] == 0: metrics[key] = np.nan
         print("variation within label {} (size {}): intensity: {}, "
               "density: {}, blobs: {}".format(
-                  disp_id, label_size, var_inten, var_dens, blobs))
-        return label_id, var_inten, label_size, var_dens, blobs
+                  disp_id, label_size, *metrics.values()))
+        return label_id, label_size, metrics, slices, labels_seg
 
     @classmethod
     def measure_edge_dist(cls, label_id):
@@ -304,10 +366,16 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
                 label_metrics.label_metrics, args=(label_id, )))
     
     totals = {}
+    labels_subseg = np.zeros_like(labels_img_np, dtype=np.int32)
     for result in pool_results:
         # get metrics by label
         (label_id, var_inten, label_size, var_dens, nuc, edge_dist, 
-         edge_size) = result.get()
+         edge_size, slices, labels_seg) = result.get()
+        
+        region = labels_subseg[tuple(slices)]
+        mask = labels_seg != 0
+        region[mask] = labels_seg[mask]
+        
         vol_physical = label_size
         if physical_mult is not None:
             vol_physical *= physical_mult
@@ -359,4 +427,4 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np, atlas_edge,
     print(df_all.to_csv())
     
     print("time elapsed to measure variation:", time() - start_time)
-    return df, df_all
+    return df, df_all, labels_subseg

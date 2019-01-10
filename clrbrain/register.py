@@ -84,6 +84,7 @@ IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
 IMG_LABELS_SEG = "annotationSeg.mhd"
 IMG_LABELS_SEG_DIST = "annotationSegDist.mhd"
+IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
 _SEG_TYPES = {IMG_LABELS_DIST: "manual", IMG_LABELS_SEG_DIST: "waterfall"}
 
 SAMPLE_VOLS = "vols_by_sample"
@@ -1937,10 +1938,11 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
             labels_sitk, labels_markers)
     
     # make edge images and calculate metrics
-    dist_to_orig, labels_edge = _edge_metrics(
+    dist_to_orig, labels_edge, labels_subseg = _edge_metrics(
         mod_path, atlas_np, labels_img_np, atlas_edge, atlas)
     dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
+    labels_subseg_sitk = replace_sitk_with_numpy(labels_sitk, labels_subseg)
     
     # show all images
     imgs_write = {
@@ -1949,6 +1951,7 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
         IMG_LABELS_EDGE: labels_sitk_edge, 
         IMG_LABELS_MARKERS: labels_sitk_markers, 
         IMG_LABELS_DIST: dist_sitk, 
+        IMG_LABELS_SUBSEG: labels_subseg_sitk, 
     }
     if show:
         for img in imgs_write.values():
@@ -2099,15 +2102,16 @@ def _edge_metrics(mod_path, atlas_img_np, labels, atlas_edge=None,
     labels_edge = vols.make_labels_edge(labels)
     dist_to_orig = make_edge_dist_image(atlas_edge, labels_edge)
     
+    labels_subseg = None
     if metrics:
         # show weighted average of atlas intensity variation within labels
         print("\nMeasuring edge distances and variation within labels:")
         sample = lib_clrbrain.get_filename_without_ext(mod_path)
-        vols.measure_labels_metrics(
+        _, _, labels_subseg = vols.measure_labels_metrics(
             sample, atlas_img_np, labels, atlas_edge, labels_edge, 
             dist_to_orig)
     
-    return dist_to_orig, labels_edge
+    return dist_to_orig, labels_edge, labels_subseg
 
 def make_edge_dist_image(atlas_edge, labels_edge):
     """Measure the distance between edge images.

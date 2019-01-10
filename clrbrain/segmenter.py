@@ -372,13 +372,20 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
             version of ``atlas_img``.
         markers: Image as an integer Numpy array of same shape as ``img`` 
             to use as seeds for the watershed segmentation. This array 
-            is generally constructed from an array similar to ``labels_img``.
+            is generally constructed from an array similar to ``labels_img``. 
+            If None, markers will be auto-generated from local peaks in 
+            the distance transform.
     
     Returns:
         Segmented image of the same shape as ``img`` with the same 
         number of labels as in ``markers``.
     """
     distance = ndimage.distance_transform_edt(edges == 0)
+    if markers is None:
+        # generate a limited number of markers from local peaks in the 
+        # distance transform if markers are not given
+        local_max = feature.peak_local_max(distance, indices=False, num_peaks=5)
+        markers = measure.label(local_max)
     watershed = morphology.watershed(-distance, markers, compactness=0.01)
     if labels_img is None:
         # otsu seems to give more inclusive threshold for these atlases

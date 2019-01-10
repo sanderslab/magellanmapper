@@ -398,11 +398,12 @@ def regions_to_pandas(volumes_dict, level, groups=[""], unit_factor=1.0,
     data_frame = pd.DataFrame(data=data, columns=header)
     return data_frame
 
-def exps_by_regions(path, filter_zeros=True):
-    """Transform volumes by regions data frame to experiments by region.
+def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
+    """Transform volumes by regions data frame to experiments-condition 
+    as columns and regions as rows.
     
-    Each experiment will be in a separate column, while each region will 
-    be its own row. Measurements from separate sides of each sample will 
+    Multiple measurements for each experiment-condition combination such 
+    measurements from separate sides of each sample will 
     be summed. A separate data frame will be generated for each 
     measurement.
     
@@ -410,17 +411,29 @@ def exps_by_regions(path, filter_zeros=True):
         path: Path to data frame generated from :func:``regions_to_pandas`` 
             or an aggregate of these data frames.
         filter_zero: True to remove rows that contain only zeros.
+        sample_delim: Split samples column by this delimiter, taking only 
+            the first split element. Defaults to "-"; if None, will 
+            not split the samples.
     
     Returns:
         Dictionary of transformed dataframes with measurements as keys.
     """
     df = pd.read_csv(path)
-    measurements = ("Vol", "Nuclei") # raw measurements
+    measurements = ("Volume", "Nuclei") # raw measurements
+    
+    # combine sample name with condition
+    samples = df["Sample"]
+    if sample_delim is not None:
+        # use truncated sample names, eg for sample ID
+        samples = samples.str.split(sample_delim, n=1).str[0]
+    df["SampleCond"] = df["Condition"] + "_" + samples
+    
     dfs = {}
     for meas in measurements:
         # combines values from each side by summing
         df_pivoted = df.pivot_table(
-            values=meas, index=["Region"], columns=["Sample"], aggfunc=np.sum)
+            values=meas, index=["Region"], columns=["SampleCond"], 
+            aggfunc=np.sum)
         if filter_zeros:
             # remove rows that contain all zeros and replace remaining zeros 
             # with NaNs since 0 is used for volumes that could not be found, 

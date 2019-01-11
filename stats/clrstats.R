@@ -20,7 +20,8 @@ kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
            "ttest.paired", "wilcoxon.paired", "fligner")
 
 # measurements, which correspond to columns in main data frame
-kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", "EdgeDist")
+kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
+          "EdgeDistSum", "EdgeDistMean")
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -637,8 +638,8 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 
 #######################################
 # choose measurement and model types
-kStatsPathIn <- file.path("..", kStatsFilesIn[1])
-meas <- kMeas[4]
+kStatsPathIn <- file.path("..", kStatsFilesIn[2])
+meas <- kMeas[6]
 model <- kModel[8]
 split.by.side <- TRUE # false to combine sides
 load.stats <- FALSE # true to load saved stats and only regenerate volcano plots

@@ -152,9 +152,6 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
             # r-w assigned 0 values to > 0 val labels
             thresholded = thresholded[0] - 1
         
-        # distance transform to find boundaries in thresholded image
-        distance = ndimage.distance_transform_edt(thresholded)
-        
         if blobs is None:
             # default to finding peaks of distance transform if no blobs 
             # given, using an anisotropic footprint
@@ -171,7 +168,7 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
         
         # watershed with slight increase in compactness to give basins with 
         # more regular, larger shape
-        labels_ws = morphology.watershed(-distance, markers, compactness=0.1)
+        labels_ws = watershed_distance(thresholded, markers, compactness=0.1)
         
         # clean up segmentation
         labels_ws = _carve_segs(labels_ws, blobs)
@@ -377,8 +374,8 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
         Segmented image of the same shape as ``img`` with the same 
         number of labels as in ``markers``.
     """
-    distance = ndimage.distance_transform_edt(edges == 0)
-    watershed = morphology.watershed(-distance, markers, compactness=0.01)
+    watershed = watershed_distance(
+        edges == 0, markers, num_peaks=5, compactness=0.01)
     if labels_img is None:
         # otsu seems to give more inclusive threshold for these atlases
         _, mask = plot_3d.carve(
@@ -389,4 +386,36 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
         # with the atlas only used to identify outside borders
         mask = mask_atlas(atlas_img, labels_img)
     watershed[~mask] = 0
+    return watershed
+
+def watershed_distance(foreground, markers=None, num_peaks=np.inf, 
+                       compactness=0):
+    """Perform watershed segmentation based on distance from foreground 
+    to background.
+    
+    Args:
+        foreground: Boolean array where True represents foreground. The 
+            distances will be measured from foreground to the 
+            nearest background.
+        markers: Array of same size as ``foreground`` with seeds to 
+            use for the watershed. Defaults to None, in which case 
+            markers will be generated from local peaks in the 
+            distance transform.
+        num_peaks: Number of peaks to include when generating markers; 
+            defaults to infinity.
+        compactness: Compactness factor for watershed; defaults to 0.
+    
+    Returns:
+        The segmented image as an array of the same shape as that of 
+        ``foreground``.
+    """
+    distance = ndimage.distance_transform_edt(foreground)
+    if markers is None:
+        # generate a limited number of markers from local peaks in the 
+        # distance transform if markers are not given
+        local_max = feature.peak_local_max(
+            distance, indices=False, num_peaks=num_peaks)
+        markers = measure.label(local_max)
+    watershed = morphology.watershed(
+        -distance, markers, compactness=compactness)
     return watershed

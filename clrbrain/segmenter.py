@@ -147,7 +147,7 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
             # Ostu thresholing and object separate based on local max 
             # rather than seeded watershed approach
             roi_thresh = filters.threshold_otsu(roi, 64)
-            thresholded = roi > roi_thresh
+            thresholded = roi_segment > roi_thresh
         else:
             # r-w assigned 0 values to > 0 val labels
             thresholded = thresholded[0] - 1

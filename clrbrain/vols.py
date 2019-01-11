@@ -84,15 +84,14 @@ def make_labels_edge(labels_img_np):
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
-    label_to_edge = LabelToEdge()
-    label_to_edge.set_labels_img_np(labels_img_np)
+    LabelToEdge.set_labels_img_np(labels_img_np)
     
     pool = mp.Pool()
     pool_results = []
     for label_id in label_ids:
         pool_results.append(
             pool.apply_async(
-                label_to_edge.find_label_edge, args=(label_id, )))
+                LabelToEdge.find_label_edge, args=(label_id, )))
     for result in pool_results:
         label_id, slices, borders = result.get()
         if slices is not None:
@@ -106,7 +105,7 @@ def make_labels_edge(labels_img_np):
     return labels_edge
 
 class LabelMetrics(object):
-    """Meausure metrics within image labels in a way that allows 
+    """Measure metrics within image labels in a way that allows 
     multiprocessing without global variables.
     
     All images should be of the same shape.
@@ -114,7 +113,6 @@ class LabelMetrics(object):
     Attributes:
         atlas_img_np: Sample image as a Numpy array.
         labels_img_np: Integer labels image as a Numpy array.
-        atlas_edge: Numpy array of atlas reduced to binary image of its edges.
         labels_edge: Numpy array of labels reduced to their edges.
         dist_to_orig: Distance map of labels to edges, with intensity values 
             in the same placement as in ``labels_edge``.
@@ -122,7 +120,6 @@ class LabelMetrics(object):
     """
     atlas_img_np = None
     labels_img_np = None
-    atlas_edge = None
     labels_edge = None
     dist_to_orig = None
     heat_map = None
@@ -145,7 +142,7 @@ class LabelMetrics(object):
         :func:``measure_edge_dist``.
         
         Args:
-            label_id: Integer of the label of sequence of multiple labels 
+            label_id: Integer of the label or sequence of multiple labels 
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
@@ -170,7 +167,7 @@ class LabelMetrics(object):
         if :attr:``heat_map`` is available, that of the blob density.
         
         Args:
-            label_id: Integer of the label of sequence of multiple labels 
+            label_id: Integer of the label or sequence of multiple labels 
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
@@ -205,7 +202,7 @@ class LabelMetrics(object):
         """Measure the distance between edge images.
         
         Args:
-            label_id: Integer of the label of sequence of multiple labels 
+            label_id: Integer of the label or sequence of multiple labels 
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
@@ -281,8 +278,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
-    label_metrics = LabelMetrics()
-    label_metrics.set_images(
+    LabelMetrics.set_images(
         atlas_img_np, labels_img_np, labels_edge, dist_to_orig, heat_map)
     
     metrics = {}
@@ -303,7 +299,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         if combine_sides: label_id = [label_id, -1 * label_id]
         pool_results.append(
             pool.apply_async(
-                label_metrics.label_metrics, args=(label_id, )))
+                LabelMetrics.label_metrics, args=(label_id, )))
     
     totals = {}
     for result in pool_results:

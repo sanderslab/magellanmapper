@@ -84,6 +84,7 @@ IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
 IMG_LABELS_SEG = "annotationSeg.mhd"
 IMG_LABELS_SEG_DIST = "annotationSegDist.mhd"
+IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
 _SEG_TYPES = {IMG_LABELS_DIST: "manual", IMG_LABELS_SEG_DIST: "waterfall"}
 
 SAMPLE_VOLS = "vols_by_sample"
@@ -2219,6 +2220,37 @@ def make_density_images_mp(img_paths, scale=None, suffix=None):
     pool.join()
     print("time elapsed for making density images:", time() - start_time)
 
+def make_sub_segmented_labels(img_path, suffix=None):
+    """Divide each label based on anatomical borders to create a 
+    sub-segmented image.
+    
+    Args:
+        img_path: Path to main image from which registered images will 
+            be loaded.
+        suffix: Modifier to append to end of ``img_path`` basename for 
+            registered image files that were output to a modified name; 
+            defaults to None.
+    
+    Returns:
+        Sub-segmented image as a Numpy array of the same shape as 
+        the image at ``img_path``.
+    """
+    # adjust image path with suffix
+    mod_path = img_path
+    if suffix is not None:
+        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+    
+    labels_sitk = load_registered_img(
+        mod_path, get_sitk=True, reg_name=IMG_LABELS)
+    atlas_edge = load_registered_img(mod_path, reg_name=IMG_ATLAS_EDGE)
+    
+    # sub-divide the labels and save to file
+    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    labels_subseg = segmenter.sub_segment_labels(labels_img_np, atlas_edge)
+    labels_subseg_sitk = replace_sitk_with_numpy(labels_sitk, labels_subseg)
+    write_reg_images({IMG_LABELS_SUBSEG: labels_subseg_sitk}, mod_path)
+    return labels_subseg
+
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.
@@ -3828,3 +3860,7 @@ if __name__ == "__main__":
         # make density images
         make_density_images_mp(
             config.filenames, config.rescale, config.suffix)
+
+    elif config.register_type == config.REGISTER_TYPES[17]:
+        # make sub-segmentations
+        make_sub_segmented_labels(config.filename, config.suffix)

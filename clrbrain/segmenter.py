@@ -419,3 +419,171 @@ def watershed_distance(foreground, markers=None, num_peaks=np.inf,
     watershed = morphology.watershed(
         -distance, markers, compactness=compactness)
     return watershed
+
+class SubSegmenter(object):
+    """Sub-segment a label based on anatomical boundaries.
+    
+    All images should be of the same shape.
+    
+    Attributes:
+        labels_img_np: Integer labels image as a Numpy array.
+        atlas_edge: Numpy array of atlas reduced to binary image of its edges.
+    """
+    labels_img_np = None
+    atlas_edge = None
+    
+    @classmethod
+    def set_images(cls, labels_img_np, atlas_edge):
+        """Set the images."""
+        cls.labels_img_np = labels_img_np
+        cls.atlas_edge = atlas_edge
+    
+    @classmethod
+    def sub_segment(cls, label_id, dtype):
+        """Calculate metrics for a given label or set of labels.
+        
+        Wrapper to call :func:``measure_variation`` and 
+        :func:``measure_edge_dist``.
+        
+        Args:
+            label_id: Integer of the label in :attr:``labels_img_np`` 
+                to sub-divide.
+        
+        Returns:
+            Tuple of the given label ID, list of slices where the label 
+            resides in :attr:``labels_img_np``, and an array in the 
+            same shape of the original label, now sub-segmented. The base  
+            value of this sub-segmented array is multiplied by 
+            :const:``config.SUB_SEG_MULT``, with each sub-region 
+            incremented by 1.
+        """
+        label_mask = cls.labels_img_np == label_id
+        label_size = np.sum(label_mask)
+        
+        labels_seg = None
+        slices = None
+        if label_size > 0:
+            props = measure.regionprops(label_mask.astype(np.int))
+            _, slices = plot_3d.get_bbox_region(props[0].bbox)
+            
+            # work on a view of the region for efficiency
+            labels_region = np.copy(cls.labels_img_np[tuple(slices)])
+            label_mask_region = labels_region == label_id
+            atlas_edge_region = cls.atlas_edge[tuple(slices)]
+            #labels_region[atlas_edge_region != 0] = 0
+            labels_region[~label_mask_region] = 0
+            
+            # segment from anatomic borders, limiting peaks to get only 
+            # dominant regions
+            labels_seg = watershed_distance(
+                atlas_edge_region == 0, num_peaks=5, compactness=0.01)
+            labels_seg[~label_mask_region] = 0
+            #labels_seg = measure.label(labels_region)
+            
+            # ensure that sub-segments occupy at least a certain 
+            # percentage of the total label
+            labels_retained = np.zeros_like(labels_region, dtype=dtype)
+            labels_unique = np.unique(labels_seg[labels_seg != 0])
+            print("found {} subregions for label ID {}"
+                  .format(labels_unique.size, label_id))
+            i = 0
+            for seg_id in labels_unique:
+                seg_mask = labels_seg == seg_id
+                size = np.sum(seg_mask)
+                ratio = size / label_size
+                if ratio > 0.2:
+                    # relabel based on original label, expanded to 
+                    # allow for sub-labels
+                    unique_id = np.abs(label_id) * config.SUB_SEG_MULT + i
+                    unique_id = int(unique_id * label_id / np.abs(label_id))
+                    print("keeping subregion {} of size {} (ratio {}) within "
+                          "label {}".format(unique_id, size, ratio, label_id))
+                    labels_retained[seg_mask] = unique_id
+                    i += 1
+            
+            retained_unique = np.unique(labels_retained[labels_retained != 0])
+            print("labels retained within {}: {}"
+                  .format(label_id, retained_unique))
+            '''
+            # find neighboring sub-labels to merge into retained labels
+            neighbor_added = True
+            done = []
+            while len(done) < retained_unique.size:
+                for seg_id in retained_unique:
+                    if seg_id in done: continue
+                    neighbor_added = False
+                    seg_mask = labels_retained == seg_id
+                    exterior = plot_3d.exterior_nd(seg_mask)
+                    neighbors = np.unique(labels_seg[exterior])
+                    for neighbor in neighbors:
+                        mask = np.logical_and(
+                            labels_seg == neighbor, labels_retained == 0)
+                        if neighbor == 0 or np.sum(mask) == 0: continue
+                        print("merging in neighbor {} (size {}) to label {}"
+                              .format(neighbor, np.sum(mask), seg_id))
+                        labels_retained[mask] = seg_id
+                        neighbor_added = True
+                    if not neighbor_added:
+                        print("{} is done".format(seg_id))
+                        done.append(seg_id)
+                print(done, retained_unique)
+            labels_seg = labels_retained
+            '''
+            if retained_unique.size > 0:
+                # in-paint missing space from non-retained sub-labels
+                labels_seg = plot_3d.in_paint(
+                    labels_retained, labels_retained == 0)
+                labels_seg[~label_mask_region] = 0
+            else:
+                # if no sub-labels retained, replace whole region with 
+                # new label
+                labels_seg[label_mask_region] = label_id * config.SUB_SEG_MULT
+        
+        return label_id, slices, labels_seg
+
+def sub_segment_labels(labels_img_np, atlas_edge):
+    """Sub-segment a labels image into sub-labels based on anatomical 
+    boundaries.
+    
+    Args:
+        labels_img_np: Integer labels image as a Numpy array.
+        atlas_edge: Numpy array of atlas reduced to binary image of its edges.
+    
+    Returns:
+        Image as a Numpy array of same shape as ``labels_img_np`` with 
+        each label sub-segmented based on anatomical boundaries. Labels 
+        in this image will correspond to the original labels 
+        multiplied by :const:``config.SUB_SEG_MULT`` to make room for 
+        sub-labels, which will each be incremented by 1.
+    """
+    start_time = time()
+    
+    # use a class to set and process the label without having to 
+    # reference the labels image as a global variable
+    SubSegmenter.set_images(labels_img_np, atlas_edge)
+    
+    pool = mp.Pool()
+    pool_results = []
+    label_ids = np.unique(labels_img_np)
+    max_val = np.amax(labels_img_np) * (config.SUB_SEG_MULT + 1)
+    dtype = lib_clrbrain.dtype_within_range(-max_val, max_val, True)
+    subseg = np.zeros_like(labels_img_np, dtype=dtype)
+    
+    for label_id in label_ids:
+        # skip background
+        if label_id == 0: continue
+        pool_results.append(
+            pool.apply_async(
+                SubSegmenter.sub_segment, args=(label_id, dtype)))
+    
+    for result in pool_results:
+        label_id, slices, labels_seg = result.get()
+        # can only mutate markers outside of mp for changes to persist
+        labels_seg_mask = labels_seg != 0
+        subseg[tuple(slices)][labels_seg_mask] = labels_seg[labels_seg_mask]
+        print("finished sub-segmenting label ID {}".format(label_id))
+    pool.close()
+    pool.join()
+    
+    print("time elapsed to sub-segment labels image:", time() - start_time)
+    return subseg

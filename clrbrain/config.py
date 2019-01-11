@@ -861,7 +861,7 @@ REGISTER_TYPES = (
     "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
     "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
     "make_edge_images_exp", "vol_stats", "make_density_images", 
-    "merge_atlas_segs_exp")
+    "merge_atlas_segs_exp", "make_subsegs")
 register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"
@@ -870,6 +870,7 @@ VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
 VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
 SIDE_KEY = "Side"
 GENOTYPE_KEY = "Geno"
+SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
 
 # flip/rotate the image; the direction of change can be variable
 flip = None

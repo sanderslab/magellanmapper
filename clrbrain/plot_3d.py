@@ -423,6 +423,20 @@ def perimeter_nd(img_np):
     #print("perimeter:\n{}".format(img_border))
     return img_border
 
+def exterior_nd(img_np):
+    """Get the exterior surrounding foreground, the pixels just beyond 
+    the foreground's border, which can be used to find connected neighbors.
+    
+    Args:
+        img_np: Numpy array of arbitrary dimensions with foreground to dilate.
+    
+    Returns:
+        The pixels just outside the image.
+    """
+    dilated = morphology.binary_dilation(img_np)
+    exterior = np.logical_xor(dilated, img_np)
+    return exterior
+
 def signed_distance_transform(borders, mask=None, return_indices=False):
     """Signed version of Euclidean distance transform where values within a 
     given mask are considered negative.

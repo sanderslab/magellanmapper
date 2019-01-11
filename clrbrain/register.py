@@ -3698,37 +3698,42 @@ if __name__ == "__main__":
     #_test_smoothing_metric()
     #os._exit(os.EX_OK)
     
+    reg = config.RegisterTypes[config.register_type]
     if config.register_type is None:
         # explicitly require a registration type
         print("Please choose a registration type")
-    elif config.register_type in (
-        config.REGISTER_TYPES[0], config.REGISTER_TYPES[7]):
+    
+    elif reg in (
+        config.RegisterTypes.single, config.RegisterTypes.new_atlas):
         # "single", basic registration of 1st to 2nd image, transposing the 
         # second image according to config.plane and config.flip_horiz; 
         # "new_atlas" registers similarly but outputs new atlas files
-        new_atlas = config.register_type == config.REGISTER_TYPES[7]
+        new_atlas = reg is config.RegisterTypes.new_atlas
         register(*config.filenames[0:2], plane=config.plane, 
                  flip=flip, name_prefix=config.prefix, new_atlas=new_atlas, 
                  show_imgs=show)
-    elif config.register_type == config.REGISTER_TYPES[1]:
+    
+    elif reg is config.RegisterTypes.group:
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
         prefix = config.filenames[-1]
         register_group(
             config.filenames[:-1], flip=config.flip, name_prefix=config.prefix, 
             scale=config.rescale, show_imgs=show)
-    elif config.register_type == config.REGISTER_TYPES[2]:
+    
+    elif reg is config.RegisterTypes.overlays:
         # overlay registered images in each orthogonal plane
         for out_plane in config.PLANE:
             overlay_registered_imgs(
                 *config.filenames[0:2], plane=config.plane, 
                 flip=flip, name_prefix=config.prefix, 
                 out_plane=out_plane)
-    elif config.register_type in (
-        config.REGISTER_TYPES[3], config.REGISTER_TYPES[4]):
+    
+    elif reg in (
+        config.RegisterTypes.volumes, config.RegisterTypes.densities):
         
         # compute grouped volumes/densities by ontology level
-        densities = config.register_type == config.REGISTER_TYPES[4]
+        densities = reg is config.RegisterTypes.densities
         ref = load_labels_ref(config.load_labels)
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         vol_dicts, json_paths = register_volumes_mp(
@@ -3762,9 +3767,9 @@ if __name__ == "__main__":
         
         # write stats to CSV file
         stats.volume_stats_to_csv(vol_stats, title, config.groups)
-        
-    elif config.register_type in (
-        config.REGISTER_TYPES[5], config.REGISTER_TYPES[6]):
+    
+    elif reg in (
+        config.RegisterTypes.export_vols, config.RegisterTypes.export_regions):
         
         # export registered stats and regions IDs to CSV files
         
@@ -3774,7 +3779,7 @@ if __name__ == "__main__":
         ref = load_labels_ref(config.load_labels)
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         
-        if config.register_type == config.REGISTER_TYPES[5]:
+        if reg is config.RegisterTypes.export_vols:
             # export volumes to CSV
             
             # convert groupings from strings to numerical format for stats
@@ -3804,44 +3809,46 @@ if __name__ == "__main__":
             # combine data frames and export to CSV
             stats.data_frames_to_csv(dfs, out_path)
         
-        elif config.register_type == config.REGISTER_TYPES[6]:
+        elif reg is config.RegisterTypes.export_regions:
             # export region IDs and parents at given level to CSV
             export_region_ids(
                 labels_ref_lookup, "region_ids", config.labels_level)
             # export region IDs to network file
             export_region_network(labels_ref_lookup, "region_network")
-        
-    elif config.register_type == config.REGISTER_TYPES[8]:
+    
+    elif reg is config.RegisterTypes.import_atlas:
         # import original atlas, mirroring if necessary
         import_atlas(config.filename, show=show)
-
-    elif config.register_type == config.REGISTER_TYPES[9]:
+    
+    elif reg is config.RegisterTypes.export_common_labels:
         # export common labels
         export_common_labels(config.filenames, config.PATH_COMMON_LABELS)
-
-    elif config.register_type in (
-        config.REGISTER_TYPES[10], config.REGISTER_TYPES[13]):
+    
+    elif reg in (
+        config.RegisterTypes.make_edge_images, 
+        config.RegisterTypes.make_edge_images_exp):
         
         # convert atlas or experiment image and associated labels 
         # to edge-detected images
-        atlas = config.register_type == config.REGISTER_TYPES[10]
+        atlas = reg is config.RegisterTypes.make_edge_images
         for img_path in config.filenames:
             make_edge_images(
                 img_path, show=show, atlas=atlas, suffix=config.suffix)
-
-    elif config.register_type == config.REGISTER_TYPES[11]:
+    
+    elif reg is config.RegisterTypes.reg_labels_to_atlas:
         # register labels to its underlying atlas
         register_labels_to_atlas(config.filename)
-
-    elif config.register_type in (
-        config.REGISTER_TYPES[12], config.REGISTER_TYPES[16]):
+    
+    elif reg in (
+        config.RegisterTypes.merge_atlas_segs, 
+        config.RegisterTypes.merge_atlas_segs_exp):
         
         # merge various forms of atlas segmentations
-        atlas = config.register_type == config.REGISTER_TYPES[12]
+        atlas = reg is config.RegisterTypes.merge_atlas_segs
         merge_atlas_segmentations_mp(
             config.filenames, show=show, atlas=atlas, suffix=config.suffix)
-
-    elif config.register_type == config.REGISTER_TYPES[14]:
+    
+    elif reg is config.RegisterTypes.vol_stats:
         # volumes stats
         # TODO: replace volumes/densities function
         ref = load_labels_ref(config.load_labels)
@@ -3855,12 +3862,12 @@ if __name__ == "__main__":
             config.filenames, labels_ref_lookup, suffix=config.suffix, 
             unit_factor=unit_factor, groups=groups, 
             max_level=config.labels_level, combine_sides=True)
-
-    elif config.register_type == config.REGISTER_TYPES[15]:
+    
+    elif reg is config.RegisterTypes.make_density_images:
         # make density images
         make_density_images_mp(
             config.filenames, config.rescale, config.suffix)
-
-    elif config.register_type == config.REGISTER_TYPES[17]:
+    
+    elif reg is config.RegisterTypes.make_subsegs:
         # make sub-segmentations
         make_sub_segmented_labels(config.filename, config.suffix)

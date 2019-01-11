@@ -31,6 +31,7 @@ Attributes:
 
 import numpy as np
 from collections import OrderedDict
+from enum import Enum
 
 verbose = False
 POS_THRESH = 0.001 # threshold for positive values for float comparison
@@ -856,13 +857,6 @@ reg_suffixes = None
 REG_SUFFIX_ATLAS = "atlas"
 REG_SUFFIX_ANNOTATION = "annotation"
 REG_SUFFIX_BORDERS = "borders"
-REGISTER_TYPES = (
-    "single", "group", "overlays", "volumes", "densities", "export_vols", 
-    "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
-    "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
-    "make_edge_images_exp", "vol_stats", "make_density_images", 
-    "merge_atlas_segs_exp", "make_subsegs")
-register_type = None
 ABA_NAME = "name"
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
@@ -871,6 +865,18 @@ VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
 SIDE_KEY = "Side"
 GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
+
+# register module modes when called from command-line
+RegisterTypes = Enum(
+    "RegisterTypes", [
+        "single", "group", "overlays", "volumes", "densities", "export_vols", 
+        "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
+        "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
+        "make_edge_images_exp", "vol_stats", "make_density_images", 
+        "merge_atlas_segs_exp", "make_subsegs"
+    ]
+)
+register_type = None
 
 # flip/rotate the image; the direction of change can be variable
 flip = None

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Image registration
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 """Register images to one another.
 
 The registration type can be given on the command-line (see :mod:``cli``) as 
@@ -1938,8 +1938,8 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
             labels_sitk, labels_markers)
     
     # make edge images and calculate metrics
-    dist_to_orig, labels_edge = _edge_metrics(
-        mod_path, atlas_np, labels_img_np, atlas_edge, atlas)
+    dist_to_orig, labels_edge = _edge_distances(
+        atlas_np, labels_img_np, atlas_edge)
     dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     
@@ -2077,8 +2077,8 @@ def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
         atlas_sitk = load_registered_img(
             path, get_sitk=True, reg_name=IMG_ATLAS)
         atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
-        dist_to_orig, _ = _edge_metrics(
-            path, atlas_img_np, IMG_LABELS_SEG, metrics=atlas)
+        dist_to_orig, _ = _edge_distances(
+            atlas_img_np, IMG_LABELS_SEG, path=path)
         dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
         if show: sitk.Show(dist_sitk)
         write_reg_images({IMG_LABELS_SEG_DIST: dist_sitk}, path)
@@ -2087,25 +2087,17 @@ def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
     pool.join()
     print("time elapsed for merging atlas segmentations:", time() - start_time)
 
-def _edge_metrics(mod_path, atlas_img_np, labels, atlas_edge=None, 
-                  metrics=True):
-    # helper to make edge image and show metrics with multiprocessing
+def _edge_distances(atlas_img_np, labels, atlas_edge=None, path=None):
+    # helper to make edge images with multiprocessing
     
     if not isinstance(labels, np.ndarray):
         # load corresponding files via SimpleITK
-        atlas_edge = load_registered_img(mod_path, reg_name=IMG_ATLAS_EDGE)
-        labels = load_registered_img(mod_path, reg_name=labels)
+        atlas_edge = load_registered_img(path, reg_name=IMG_ATLAS_EDGE)
+        labels = load_registered_img(path, reg_name=labels)
     
     # create distance map between edges of original and new segmentations
     labels_edge = vols.make_labels_edge(labels)
     dist_to_orig = make_edge_dist_image(atlas_edge, labels_edge)
-    
-    if metrics:
-        # show weighted average of atlas intensity variation within labels
-        print("\nMeasuring edge distances and variation within labels:")
-        sample = lib_clrbrain.get_filename_without_ext(mod_path)
-        vols.measure_labels_metrics(
-            sample, atlas_img_np, labels, labels_edge, dist_to_orig)
     
     return dist_to_orig, labels_edge
 
@@ -2346,6 +2338,9 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS,
     Returns:
         The atlas-based image, either as a SimpleITK image or its 
         corresponding Numpy array.
+    
+    Raises:
+        ``FileNotFoundError`` if the path cannot be found.
     """
     reg_img_path = _reg_out_path(img_path, reg_name)
     print("loading registered image from {}".format(reg_img_path))
@@ -3390,10 +3385,21 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         atlas_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_ATLAS)
         atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
-        labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_TRUNC)
+        labels_img_np = None
+        try:
+            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_TRUNC)
+        except FileNotFoundError as e:
+            print(e)
+            print("will attempt to load full labels image instead")
+            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS)
         labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
         dist_to_orig = load_registered_img(mod_path,reg_name=IMG_LABELS_DIST)
-        heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
+        heat_map = None
+        try:
+            heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
+        except FileNotFoundError as e:
+            print(e)
+            print("will ignore nuclei stats")
         print("tot blobs", np.sum(heat_map))
         
         # prepare sample name with original name for comparison across 

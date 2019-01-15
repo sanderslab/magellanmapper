@@ -1,9 +1,10 @@
 #!/bin/bash
 # Regional volume and density management
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Measure volumes and densities by regions.
 """
 
+from enum import Enum
 import multiprocessing as mp
 from time import time
 
@@ -14,6 +15,16 @@ from skimage import measure
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+
+# metric keys and column names
+LabelMetrics = Enum(
+    "LabelMetrics", [
+        "Volume", "Nuclei", "Density", 
+        "VolMean", "NucMean", "DensityMean", 
+        "VarNuclei", "VarIntensity", 
+        "EdgeSize", "EdgeDistSum", "EdgeDistMean"
+    ]
+)
 
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 
@@ -104,7 +115,7 @@ def make_labels_edge(labels_img_np):
     
     return labels_edge
 
-class LabelMetrics(object):
+class MeasureLabel(object):
     """Measure metrics within image labels in a way that allows 
     multiprocessing without global variables.
     
@@ -117,22 +128,35 @@ class LabelMetrics(object):
         dist_to_orig: Distance map of labels to edges, with intensity values 
             in the same placement as in ``labels_edge``.
         heat_map: Numpy array as a density map.
+        sub_seg: Integer sub-segmentations labels image as Numpy array.
     """
+    # metric keys
+    _COUNT_METRICS = (LabelMetrics.Volume, LabelMetrics.Nuclei)
+    _VAR_METRICS = (
+        LabelMetrics.VolMean, LabelMetrics.NucMean, 
+        LabelMetrics.VarNuclei, LabelMetrics.VarIntensity)
+    _EDGE_METRICS = (
+        LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
+        LabelMetrics.EdgeDistMean)
+    
+    # images
     atlas_img_np = None
     labels_img_np = None
     labels_edge = None
     dist_to_orig = None
     heat_map = None
+    subseg = None
     
     @classmethod
     def set_images(cls, atlas_img_np, labels_img_np, labels_edge, 
-                   dist_to_orig, heat_map=None):
+                   dist_to_orig, heat_map=None, subseg=None):
         """Set the images."""
         cls.atlas_img_np = atlas_img_np
         cls.labels_img_np = labels_img_np
         cls.labels_edge = labels_edge
         cls.dist_to_orig = dist_to_orig
         cls.heat_map = heat_map
+        cls.subseg = subseg
     
     @classmethod
     def label_metrics(cls, label_id):
@@ -152,57 +176,18 @@ class LabelMetrics(object):
             pixels in the label edge.
         """
         #print("getting label metrics for {}".format(label_id))
-        _, var_inten, label_size, var_dens, blobs = cls.measure_variation(
-            label_id)
-        _, edge_dist_sum, edge_dist_mean, edge_size = cls.measure_edge_dist(
-            label_id)
-        return (label_id, var_inten, label_size, var_dens, blobs, 
-                edge_dist_sum, edge_dist_mean, edge_size)
+        _, count_metrics = cls.measure_counts(label_id)
+        _, var_metrics = cls.measure_variation(label_id)
+        _, edge_metrics = cls.measure_edge_dist(label_id)
+        metrics = {**count_metrics, **var_metrics, **edge_metrics}
+        return label_id, metrics
     
     @classmethod
-    def measure_variation(cls, label_id):
-        """Measure the variation in underlying atlas intensity.
-        
-        Variation is measured by standard deviation of atlas intensity and, 
-        if :attr:``heat_map`` is available, that of the blob density.
-        
-        Args:
-            label_id: Integer of the label or sequence of multiple labels 
-                in :attr:``labels_img_np`` for which to measure variation.
-        
-        Returns:
-            Tuple of the given label ID, intensity variation, number of 
-            pixels in the label, density variation, and number of blobs. 
-            The metrics are NaN if the label size is 0.
-        """
-        label_mask = np.isin(cls.labels_img_np, label_id)
-        label_size = np.sum(label_mask)
-        
-        var_inten = np.nan
-        var_dens = np.nan
-        blobs = np.nan
-        if label_size > 0:
-            # find variation in intensity of underlying atlas/sample region
-            var_inten = np.std(cls.atlas_img_np[label_mask])
-            if cls.heat_map is not None:
-                # find number of blob and variation in blob density
-                blobs_per_px = cls.heat_map[label_mask]
-                var_dens = np.std(blobs_per_px)
-                blobs = np.sum(blobs_per_px)
-        else:
-            label_size = np.nan
-        disp_id = get_single_label(label_id)
-        print("variation within label {} (size {}): intensity: {}, "
-              "density: {}, blobs: {}".format(
-                  disp_id, label_size, var_inten, var_dens, blobs))
-        return label_id, var_inten, label_size, var_dens, blobs
-
-    @classmethod
-    def measure_edge_dist(cls, label_id):
+    def measure_counts(cls, label_ids):
         """Measure the distance between edge images.
         
         Args:
-            label_id: Integer of the label or sequence of multiple labels 
+            label_ids: Integer of the label or sequence of multiple labels 
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
@@ -210,19 +195,97 @@ class LabelMetrics(object):
             edge distances, and number ofpixels in the label edge. 
             The metrics are NaN if the label size is 0.
         """
-        label_mask = np.isin(cls.labels_edge, label_id)
-        sum_dist = np.nan
-        mean_dist = np.nan
-        edge_size = np.nan
+        label_mask = np.isin(cls.labels_img_np, label_ids)
+        metrics = dict.fromkeys(cls._COUNT_METRICS, np.nan)
+        label_size = np.sum(label_mask)
+        if label_size > 0:
+            metrics[LabelMetrics.Volume] = label_size
+            if cls.heat_map is not None:
+                metrics[LabelMetrics.Nuclei] = np.sum(cls.heat_map[label_mask])
+        disp_id = get_single_label(label_ids)
+        print("counts within label {}: {}"
+              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+        return label_ids, metrics
+
+    @classmethod
+    def measure_variation(cls, label_ids):
+        """Measure the variation in underlying atlas intensity.
+        
+        Variation is measured by standard deviation of atlas intensity and, 
+        if :attr:``heat_map`` is available, that of the blob density.
+        
+        Args:
+            label_ids: Integer of the label or sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure variation.
+        
+        Returns:
+            Tuple of the given label ID, intensity variation, number of 
+            pixels in the label, density variation, and number of blobs. 
+            The metrics are NaN if the label size is 0.
+        """
+        metrics = dict((key, []) for key in cls._VAR_METRICS)
+        for label_id in label_ids:
+            label_mask = cls.labels_img_np == label_id
+            label_size = np.sum(label_mask)
+            
+            if label_size > 0:
+                labels_unique = [label_id]
+                if cls.subseg is not None:
+                    labels_unique = np.unique(cls.subseg[label_mask])
+                for seg_id in labels_unique:
+                    seg_mask = label_mask
+                    if cls.subseg is not None:
+                        seg_mask = cls.subseg == seg_id
+                    size = np.sum(seg_mask)
+                    # variation in intensity of underlying atlas/sample region
+                    var_inten = np.std(cls.atlas_img_np[seg_mask])
+                    var_dens = np.nan
+                    blobs = np.nan
+                    if cls.heat_map is not None:
+                        # number of blob and variation in blob density
+                        blobs_per_px = cls.heat_map[seg_mask]
+                        var_dens = np.std(blobs_per_px)
+                        blobs = np.sum(blobs_per_px)
+                    vals = (size, blobs, var_dens, var_inten)
+                    for metric, val in zip(cls._VAR_METRICS, vals):
+                        metrics[metric].append(val)
+        disp_id = get_single_label(label_ids)
+        vols = np.copy(metrics[LabelMetrics.VolMean])
+        tot_size = np.sum(vols)
+        for key in metrics.keys():
+            print("{} {}: {}".format(disp_id, key.name, metrics[key]))
+            if tot_size > 0:
+                metrics[key] = np.nansum(
+                    np.multiply(metrics[key], vols)) / tot_size
+            if tot_size <= 0 or metrics[key] == 0: metrics[key] = np.nan
+        print("variation within label {}: {}"
+              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+        return label_ids, metrics
+
+    @classmethod
+    def measure_edge_dist(cls, label_ids):
+        """Measure the distance between edge images.
+        
+        Args:
+            label_ids: Integer of the label or sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure variation.
+        
+        Returns:
+            Tuple of the given label ID, sum of edge distances, mean of 
+            edge distances, and number ofpixels in the label edge. 
+            The metrics are NaN if the label size is 0.
+        """
+        label_mask = np.isin(cls.labels_edge, label_ids)
+        metrics = dict.fromkeys(cls._EDGE_METRICS, np.nan)
         if np.sum(label_mask) > 0:
             region_dists = cls.dist_to_orig[label_mask]
-            sum_dist = np.sum(region_dists)
-            mean_dist = np.mean(region_dists)
-            edge_size = region_dists.size
-        disp_id = get_single_label(label_id)
-        print("dist within edge of label {}: {} (sum), {} (mean)"
-              .format(disp_id, sum_dist, mean_dist))
-        return label_id, sum_dist, mean_dist, edge_size
+            metrics[LabelMetrics.EdgeDistSum] = np.sum(region_dists)
+            metrics[LabelMetrics.EdgeDistMean] = np.mean(region_dists)
+            metrics[LabelMetrics.EdgeSize] = region_dists.size
+        disp_id = get_single_label(label_ids)
+        print("dist within edge of label {}: {}"
+              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+        return label_ids, metrics
 
 def get_single_label(label_id):
     """Get an ID as a single element.
@@ -240,7 +303,7 @@ def get_single_label(label_id):
 
 def measure_labels_metrics(sample, atlas_img_np, labels_img_np, 
                            labels_edge, dist_to_orig, heat_map=None, 
-                           spacing=None, unit_factor=None, 
+                           subseg=None, spacing=None, unit_factor=None, 
                            combine_sides=True, label_ids=None, grouping={}):
     """Compute metrics such as variation and distances within regions 
     based on maps corresponding to labels image.
@@ -254,6 +317,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
             in the same placement as in ``labels_edge``.
         heat_map: Numpy array as a density map; defaults to None to ignore 
             density measurements.
+        sub_seg: Integer sub-segmentations labels image as Numpy array; 
+            defaults to None to ignore label sub-divisions.
         spacing: Sequence of image spacing for each pixel in the images.
         unit_factor: Factor by which volumes will be divided to adjust units; 
             defaults to None.
@@ -278,14 +343,14 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
-    LabelMetrics.set_images(
-        atlas_img_np, labels_img_np, labels_edge, dist_to_orig, heat_map)
+    MeasureLabel.set_images(
+        atlas_img_np, labels_img_np, labels_edge, dist_to_orig, heat_map, 
+        subseg)
     
     metrics = {}
     grouping[config.SIDE_KEY] = None
-    cols = ("Sample", *grouping.keys(), "Region", "Volume", "Nuclei", 
-            "Density", "VarNuclei", "VarIntensity", "EdgeDistSum", 
-            "EdgeDistMean")
+    cols = ("Sample", *grouping.keys(), "Region", 
+            *[member.name for member in LabelMetrics])
     pool = mp.Pool()
     pool_results = []
     if label_ids is None:
@@ -299,19 +364,32 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         if combine_sides: label_id = [label_id, -1 * label_id]
         pool_results.append(
             pool.apply_async(
-                LabelMetrics.label_metrics, args=(label_id, )))
+                MeasureLabel.label_metrics, args=(label_id, )))
     
     totals = {}
     for result in pool_results:
         # get metrics by label
-        (label_id, var_inten, label_size, var_dens, nuc, edge_dist_sum, 
-         edge_dist_mean, edge_size) = result.get()
+        label_id, label_metrics = result.get()
+        label_size = label_metrics[LabelMetrics.Volume]
+        nuc = label_metrics[LabelMetrics.Nuclei]
+        vol_mean = label_metrics[LabelMetrics.VolMean]
+        nuc_mean = label_metrics[LabelMetrics.NucMean]
+        var_nuc = label_metrics[LabelMetrics.VarNuclei]
+        var_inten = label_metrics[LabelMetrics.VarIntensity]
+        edge_dist_sum = label_metrics[LabelMetrics.EdgeDistSum]
+        edge_dist_mean = label_metrics[LabelMetrics.EdgeDistMean]
+        edge_size = label_metrics[LabelMetrics.EdgeSize]
+        
         vol_physical = label_size
+        vol_mean_physical = vol_mean
         if physical_mult is not None:
             vol_physical *= physical_mult
+            vol_mean_physical *= physical_mult
         if unit_factor is not None:
             vol_physical /= unit_factor
+            vol_mean_physical /= unit_factor
         density = nuc / vol_physical
+        dens_mean = nuc_mean / vol_mean_physical
         
         # set side, assuming that positive labels are left
         if np.all(np.greater(label_id, 0)):
@@ -322,20 +400,30 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
             side = "both"
         grouping[config.SIDE_KEY] = side
         disp_id = get_single_label(label_id)
-        vals = (sample, *grouping.values(), abs(disp_id), vol_physical, nuc, 
-                density, var_dens, var_inten, edge_dist_sum, edge_dist_mean)
+        vals = (sample, *grouping.values(), abs(disp_id), 
+                vol_physical, nuc, density, 
+                vol_mean_physical, nuc_mean, dens_mean, 
+                var_nuc, var_inten, 
+                edge_size, edge_dist_sum, edge_dist_mean)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)
         
         # weight and accumulate total metrics
-        totals.setdefault("dist_sum", []).append(edge_dist_sum * edge_size)
-        totals.setdefault("dist_mean", []).append(edge_dist_mean * edge_size)
-        totals.setdefault("edges", []).append(edge_size)
-        totals.setdefault("var_inten", []).append(var_inten * label_size)
+        totals.setdefault(LabelMetrics.EdgeDistSum, []).append(
+            edge_dist_sum * edge_size)
+        totals.setdefault(LabelMetrics.EdgeDistMean, []).append(
+            edge_dist_mean * edge_size)
+        totals.setdefault(LabelMetrics.EdgeSize, []).append(edge_size)
+        totals.setdefault(LabelMetrics.VarIntensity, []).append(
+            var_inten * label_size)
         totals.setdefault("vol", []).append(label_size)
-        totals.setdefault("vol_physical", []).append(vol_physical)
-        totals.setdefault("var_dens", []).append(var_dens * label_size)
-        totals.setdefault("nuc", []).append(nuc)
+        totals.setdefault(LabelMetrics.Volume, []).append(vol_physical)
+        totals.setdefault(LabelMetrics.VarNuclei, []).append(
+            var_nuc * label_size)
+        totals.setdefault(LabelMetrics.Nuclei, []).append(nuc)
+        totals.setdefault(LabelMetrics.VolMean, []).append(
+            vol_mean_physical)
+        totals.setdefault(LabelMetrics.NucMean, []).append(nuc_mean)
     pool.close()
     pool.join()
     df = pd.DataFrame(metrics)
@@ -347,12 +435,17 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     for key in totals.keys():
         totals[key] = np.nansum(totals[key])
         if totals[key] == 0: totals[key] = np.nan
-    vals = (sample, *grouping.values(), "all", totals["vol_physical"], 
-            totals["nuc"], totals["nuc"] / totals["vol_physical"], 
-            totals["var_dens"] / totals["vol"], 
-            totals["var_inten"] / totals["vol"], 
-            totals["dist_sum"] / totals["edges"], 
-            totals["dist_mean"] / totals["edges"])
+    vals = (sample, *grouping.values(), "all", totals[LabelMetrics.Volume], 
+            totals[LabelMetrics.Nuclei], 
+            totals[LabelMetrics.Nuclei] / totals[LabelMetrics.Volume], 
+            totals[LabelMetrics.VolMean], 
+            totals[LabelMetrics.NucMean], 
+            totals[LabelMetrics.NucMean] / totals[LabelMetrics.VolMean],
+            totals[LabelMetrics.VarNuclei] / totals["vol"], 
+            totals[LabelMetrics.VarIntensity] / totals["vol"], 
+            totals[LabelMetrics.EdgeSize], 
+            totals[LabelMetrics.EdgeDistSum] / totals[LabelMetrics.EdgeSize], 
+            totals[LabelMetrics.EdgeDistMean] / totals[LabelMetrics.EdgeSize])
     for col, val in zip(cols, vals):
         metrics_all.setdefault(col, []).append(val)
     df_all = pd.DataFrame(metrics_all)

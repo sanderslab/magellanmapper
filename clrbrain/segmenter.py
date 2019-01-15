@@ -1,5 +1,5 @@
 # Segmentation methods
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Segment regions based on blobs, labels, and underlying features.
 """
 
@@ -491,7 +491,7 @@ class SubSegmenter(object):
                 seg_mask = labels_seg == seg_id
                 size = np.sum(seg_mask)
                 ratio = size / label_size
-                if ratio > 0.2:
+                if ratio > 0.1:
                     # relabel based on original label, expanded to 
                     # allow for sub-labels
                     unique_id = np.abs(label_id) * config.SUB_SEG_MULT + i

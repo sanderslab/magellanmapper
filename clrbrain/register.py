@@ -2216,6 +2216,9 @@ def make_sub_segmented_labels(img_path, suffix=None):
     """Divide each label based on anatomical borders to create a 
     sub-segmented image.
     
+    The segmented labels image will be loaded, or if not available, the 
+    non-segmented labels will be loaded instead.
+    
     Args:
         img_path: Path to main image from which registered images will 
             be loaded.
@@ -2232,8 +2235,14 @@ def make_sub_segmented_labels(img_path, suffix=None):
     if suffix is not None:
         mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
     
-    labels_sitk = load_registered_img(
-        mod_path, get_sitk=True, reg_name=IMG_LABELS)
+    try:
+        labels_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS_SEG)
+    except FileNotFoundError as e:
+        print(e)
+        print("will use non-segmented labels image instead")
+        labels_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS)
     atlas_edge = load_registered_img(mod_path, reg_name=IMG_ATLAS_EDGE)
     
     # sub-divide the labels and save to file
@@ -3387,11 +3396,16 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
         labels_img_np = None
         try:
-            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_TRUNC)
+            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_SEG)
         except FileNotFoundError as e:
             print(e)
             print("will attempt to load full labels image instead")
-            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS)
+            try:
+                labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_TRUNC)
+            except FileNotFoundError as e:
+                print(e)
+                print("will attempt to load full labels image instead")
+                labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS)
         labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
         dist_to_orig = load_registered_img(mod_path,reg_name=IMG_LABELS_DIST)
         heat_map = None
@@ -3400,6 +3414,12 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         except FileNotFoundError as e:
             print(e)
             print("will ignore nuclei stats")
+        subseg = None
+        try:
+            subseg = load_registered_img(mod_path,reg_name=IMG_LABELS_SUBSEG)
+        except FileNotFoundError as e:
+            print(e)
+            print("will ignore labels sub-segmentations")
         print("tot blobs", np.sum(heat_map))
         
         # prepare sample name with original name for comparison across 
@@ -3413,9 +3433,10 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # takes care of combining sides
         df, df_all = vols.measure_labels_metrics(
             sample, atlas_img_np, labels_img_np, 
-            labels_edge, dist_to_orig, heat_map, atlas_sitk.GetSpacing(), 
-            unit_factor, combine_sides and max_level is None, label_ids, 
-            grouping)
+            labels_edge, dist_to_orig, heat_map, subseg, 
+            atlas_sitk.GetSpacing(), unit_factor, 
+            combine_sides and max_level is None, 
+            label_ids, grouping)
         dfs.append(df)
         dfs_all.append(df_all)
     

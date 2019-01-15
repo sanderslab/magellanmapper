@@ -1,6 +1,6 @@
 #!/bin/bash
 # Library functions shared within Clrbrain
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 """Shared functions with the Clrbrain package.
 """
 
@@ -382,6 +382,20 @@ def is_seq(val):
         True if the value is a list, tuple, or Numpy array.
     """
     return isinstance(val, (list, tuple, np.ndarray))
+
+def enum_dict_aslist(d):
+    """Summarize a dictionary with enums as keys as a shortened 
+    list with only the names of each enum member.
+    
+    Args:
+        d: Dictionary with enums as keys.
+    
+    Returns:
+        List of tuples for all dictionary key-value pairs, with each 
+        tuple containing the enum member name in place of the full 
+        enum as the key.
+    """
+    return [(key.name, val) for key, val in d.items()]
 
 if __name__ == "__main__":
     print(insert_before_ext("test.name01.jpg", "_modifier"))

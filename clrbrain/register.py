@@ -3394,26 +3394,37 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         atlas_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_ATLAS)
         atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
+        
+        # load labels in order of priority: re-segmented labels > 
+        # full labels > truncated labels
         labels_img_np = None
         try:
-            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_SEG)
+            labels_img_np = load_registered_img(
+                mod_path, reg_name=IMG_LABELS_SEG)
         except FileNotFoundError as e:
             print(e)
             print("will attempt to load full labels image instead")
             try:
-                labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS_TRUNC)
+                labels_img_np = load_registered_img(
+                    mod_path, reg_name=IMG_LABELS)
             except FileNotFoundError as e:
                 print(e)
-                print("will attempt to load full labels image instead")
-                labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS)
+                print("will attempt to load trucated labels image instead")
+                labels_img_np = load_registered_img(
+                    mod_path, reg_name=IMG_LABELS_TRUNC)
+        
         labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
         dist_to_orig = load_registered_img(mod_path,reg_name=IMG_LABELS_DIST)
+        
+        # load heat map of nuclei per voxel if available
         heat_map = None
         try:
             heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
         except FileNotFoundError as e:
             print(e)
             print("will ignore nuclei stats")
+        
+        # load sub-segmentation labels if available
         subseg = None
         try:
             subseg = load_registered_img(mod_path,reg_name=IMG_LABELS_SUBSEG)

@@ -3390,10 +3390,18 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         if suffix is not None:
             mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
         
-        # open images registered to the main image
-        atlas_sitk = load_registered_img(
-            mod_path, get_sitk=True, reg_name=IMG_ATLAS)
-        atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
+        # open images registered to the main image, staring with the 
+        # experimental image if available and falling back to atlas
+        try:
+            img_sitk = load_registered_img(
+                mod_path, get_sitk=True, reg_name=IMG_EXP)
+        except FileNotFoundError as e:
+            print(e)
+            print("will load atlas image instead")
+            img_sitk = load_registered_img(
+                mod_path, get_sitk=True, reg_name=IMG_ATLAS)
+        img_np = sitk.GetArrayFromImage(img_sitk)
+        spacing = img_sitk.GetSpacing()[::-1]
         
         # load labels in order of priority: re-segmented labels > 
         # full labels > truncated labels
@@ -3443,9 +3451,9 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # measure stats per label for the given sample; max_level already 
         # takes care of combining sides
         df, df_all = vols.measure_labels_metrics(
-            sample, atlas_img_np, labels_img_np, 
+            sample, img_np, labels_img_np, 
             labels_edge, dist_to_orig, heat_map, subseg, 
-            atlas_sitk.GetSpacing(), unit_factor, 
+            spacing, unit_factor, 
             combine_sides and max_level is None, 
             label_ids, grouping)
         dfs.append(df)

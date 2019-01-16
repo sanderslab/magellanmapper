@@ -310,7 +310,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     
     Args:
         sample: Sample ID number to be stored in data frame.
-        atlas_img_np: Sample image as a Numpy array.
+        atlas_img_np: Atlas or sample image as a Numpy array.
         labels_img_np: Integer labels image as a Numpy array.
         labels_edge: Numpy array of labels reduced to their edges.
         dist_to_orig: Distance map of labels to edges, with intensity values 

@@ -147,11 +147,14 @@ get_compressed_file() {
     if [[ $is_compression -eq 0 ]]; then paths+=("$1"); fi
     
     for path in "${paths[@]}"; do
-        echo "Checking for $path on S3..."
-        aws s3 cp "$path" "$2"
+        # attempt to download and, if necessary, extract file if not present
         name="$(basename $path)"
         out_path="${2}/${name}"
-        if [[ -e "$out_path" ]]; then
+        if [[ ! -f "$out_path" ]]; then
+            echo "Checking for $path on S3..."
+            aws s3 cp "$path" "$2"
+        fi
+        if [[ -f "$out_path" ]]; then
             # decompress based on compression type
             cd "$2"
             if [[ "$name" =~ .*\."${COMPRESSION_EXTS[0]}" ]]; then # .tar.zstd

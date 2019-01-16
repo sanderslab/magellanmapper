@@ -154,14 +154,11 @@ get_compressed_file() {
         if [[ -e "$out_path" ]]; then
             # decompress based on compression type
             cd "$2"
-            case "$ext" in
-               "${COMPRESSION_EXTS[0]}") # zstd
-                   pzstd -dc "$name" | tar xvf - 
-                   ;;
-               "${COMPRESSION_EXTS[1]}") # zip
-                   unzip -u "$name"
-                   ;;
-            esac
+            if [[ "$name" =~ .*\."${COMPRESSION_EXTS[0]}" ]]; then # .tar.zstd
+                pzstd -dc "$name" | tar xvf - 
+            elif [[ "$name" =~ .*\."${COMPRESSION_EXTS[1]}" ]]; then # .zip
+                unzip -u "$name"
+            fi
             cd -
             return 1
         fi

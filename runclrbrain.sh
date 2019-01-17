@@ -483,7 +483,8 @@ setup_clrbrain_filenames "$clr_img_base"
 echo -n "Looking for ${image5d_npz}..."
 if [[ ! -e "$image5d_npz" ]]; then
     # Get stitched image files from S3
-    name="$(basename $image5d_npz).${compression}"
+    name="${image5d_npz%.*}"
+    name="$(basename $name).${compression}"
     echo "downloading $name from S3..."
     mkdir "$OUT_DIR"
     get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"

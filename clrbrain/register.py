@@ -2026,6 +2026,9 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
         # mirror back to other half
         labels_seg = _mirror_imported_labels(labels_seg, len_half)
     
+    # curate back to foreground of original labels
+    labels_seg[labels_img_np == 0] = 0
+    
     if labels_seg.dtype != labels_img_np.dtype:
         # watershed may give different output type, so cast back if so
         labels_seg = labels_seg.astype(labels_img_np.dtype)

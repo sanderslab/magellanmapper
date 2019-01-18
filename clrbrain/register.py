@@ -1915,9 +1915,8 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
         atlas_log = plot_3d.laplacian_of_gaussian_img(
             atlas_np, sigma=log_sigma, labels_img=labels_img_np)
         atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
-        atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(float)
+        atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
         atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
-        atlas_sitk_edge = sitk.Cast(atlas_sitk_edge, sitk.sitkUInt8)
     else:
         # if modified path or sigma not set, load from original image instead
         atlas_edge = load_registered_img(path_atlas, reg_name=IMG_ATLAS_EDGE)

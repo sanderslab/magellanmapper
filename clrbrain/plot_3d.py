@@ -416,7 +416,8 @@ def perimeter_nd(img_np):
         img_np: Numpy array of arbitrary dimensions.
     
     Returns:
-        The perimeter as the border that would have been eroded.
+        The perimeter as a boolean array where True represents the 
+        border that would have been eroded.
     """
     interior = morphology.binary_erosion(img_np)
     img_border = np.logical_xor(img_np, interior)
@@ -431,7 +432,8 @@ def exterior_nd(img_np):
         img_np: Numpy array of arbitrary dimensions with foreground to dilate.
     
     Returns:
-        The pixels just outside the image.
+        The pixels just outside the image as a boolean array where 
+        True represents the border that would have been eroded.
     """
     dilated = morphology.binary_dilation(img_np)
     exterior = np.logical_xor(dilated, img_np)

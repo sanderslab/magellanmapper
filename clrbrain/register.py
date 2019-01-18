@@ -2235,6 +2235,7 @@ def make_sub_segmented_labels(img_path, suffix=None):
     if suffix is not None:
         mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
     
+    # prioritize segmented labels, falling back to regular labels
     try:
         labels_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_LABELS_SEG)
@@ -2243,7 +2244,9 @@ def make_sub_segmented_labels(img_path, suffix=None):
         print("will use non-segmented labels image instead")
         labels_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_LABELS)
-    atlas_edge = load_registered_img(mod_path, reg_name=IMG_ATLAS_EDGE)
+    
+    # atlas edge image is associated with original, not modified image
+    atlas_edge = load_registered_img(img_path, reg_name=IMG_ATLAS_EDGE)
     
     # sub-divide the labels and save to file
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
@@ -3915,5 +3918,6 @@ if __name__ == "__main__":
             config.filenames, config.rescale, config.suffix)
     
     elif reg is config.RegisterTypes.make_subsegs:
-        # make sub-segmentations
-        make_sub_segmented_labels(config.filename, config.suffix)
+        # make sub-segmentations for all images
+        for img_path in config.filenames:
+            make_sub_segmented_labels(img_path, config.suffix)

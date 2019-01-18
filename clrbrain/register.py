@@ -82,10 +82,7 @@ IMG_LABELS_TRUNC = "annotationTrunc.mhd"
 IMG_LABELS_EDGE = "annotationEdge.mhd"
 IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
-IMG_LABELS_SEG = "annotationSeg.mhd"
-IMG_LABELS_SEG_DIST = "annotationSegDist.mhd"
 IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
-_SEG_TYPES = {IMG_LABELS_DIST: "manual", IMG_LABELS_SEG_DIST: "waterfall"}
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
@@ -1936,7 +1933,7 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
         labels_sitk_markers = replace_sitk_with_numpy(
             labels_sitk, labels_markers)
     
-    # make edge images and calculate metrics
+    # make labels edge and edge distance images
     dist_to_orig, labels_edge = _edge_distances(
         atlas_np, labels_img_np, atlas_edge)
     dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
@@ -2043,7 +2040,7 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     
     # show and write image to same directory as atlas with appropriate suffix
     if show: sitk.Show(labels_sitk_seg)
-    write_reg_images({IMG_LABELS_SEG: labels_sitk_seg}, mod_path)
+    write_reg_images({IMG_LABELS: labels_sitk_seg}, mod_path)
     return mod_path
 
 def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
@@ -2071,16 +2068,26 @@ def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
     heat_maps = []
     for result in pool_results:
         path = result.get()
+        
         # make edge image and calculate metrics as post-processing 
         # to avoid nested multiprocessing
         atlas_sitk = load_registered_img(
             path, get_sitk=True, reg_name=IMG_ATLAS)
         atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
-        dist_to_orig, _ = _edge_distances(
-            atlas_img_np, IMG_LABELS_SEG, path=path)
+        dist_to_orig, labels_edge = _edge_distances(
+            atlas_img_np, IMG_LABELS, path=path)
         dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
-        if show: sitk.Show(dist_sitk)
-        write_reg_images({IMG_LABELS_SEG_DIST: dist_sitk}, path)
+        labels_sitk_edge = replace_sitk_with_numpy(atlas_sitk, labels_edge)
+        
+        # write images to same directory as atlas
+        imgs_write = {
+            IMG_LABELS_DIST: dist_sitk, 
+            IMG_LABELS_EDGE: labels_sitk_edge, 
+        }
+        if show:
+            for img in imgs_write.values():
+                if img: sitk.Show(img)
+        write_reg_images(imgs_write, path)
         print("finished {}".format(path))
     pool.close()
     pool.join()
@@ -2234,15 +2241,9 @@ def make_sub_segmented_labels(img_path, suffix=None):
     if suffix is not None:
         mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
     
-    # prioritize segmented labels, falling back to regular labels
-    try:
-        labels_sitk = load_registered_img(
-            mod_path, get_sitk=True, reg_name=IMG_LABELS_SEG)
-    except FileNotFoundError as e:
-        print(e)
-        print("will use non-segmented labels image instead")
-        labels_sitk = load_registered_img(
-            mod_path, get_sitk=True, reg_name=IMG_LABELS)
+    # load labels
+    labels_sitk = load_registered_img(
+        mod_path, get_sitk=True, reg_name=IMG_LABELS)
     
     # atlas edge image is associated with original, not modified image
     atlas_edge = load_registered_img(img_path, reg_name=IMG_ATLAS_EDGE)
@@ -3405,24 +3406,17 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         img_np = sitk.GetArrayFromImage(img_sitk)
         spacing = img_sitk.GetSpacing()[::-1]
         
-        # load labels in order of priority: re-segmented labels > 
-        # full labels > truncated labels
+        # load labels in order of priority: full labels > truncated labels
         labels_img_np = None
         try:
-            labels_img_np = load_registered_img(
-                mod_path, reg_name=IMG_LABELS_SEG)
+            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS)
         except FileNotFoundError as e:
             print(e)
-            print("will attempt to load full labels image instead")
-            try:
-                labels_img_np = load_registered_img(
-                    mod_path, reg_name=IMG_LABELS)
-            except FileNotFoundError as e:
-                print(e)
-                print("will attempt to load trucated labels image instead")
-                labels_img_np = load_registered_img(
-                    mod_path, reg_name=IMG_LABELS_TRUNC)
+            print("will attempt to load trucated labels image instead")
+            labels_img_np = load_registered_img(
+                mod_path, reg_name=IMG_LABELS_TRUNC)
         
+        # load labels edge and edge distances images
         labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
         dist_to_orig = load_registered_img(mod_path,reg_name=IMG_LABELS_DIST)
         

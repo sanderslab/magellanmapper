@@ -1913,6 +1913,12 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
             atlas_np, sigma=log_sigma, labels_img=labels_img_np)
         atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
         atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
+        
+        # add outside boundaries
+        labels_smoothed = morphology.binary_closing(
+            labels_img_np, morphology.ball(1))
+        atlas_perim = plot_3d.perimeter_nd(labels_smoothed)
+        atlas_edge[atlas_perim] = 1
         atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     else:
         # if modified path or sigma not set, load from original image instead

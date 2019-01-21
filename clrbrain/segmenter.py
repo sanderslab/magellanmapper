@@ -374,8 +374,7 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
         Segmented image of the same shape as ``img`` with the same 
         number of labels as in ``markers``.
     """
-    watershed = watershed_distance(
-        edges == 0, markers, num_peaks=5, compactness=0.01)
+    watershed = watershed_distance(edges == 0, markers, compactness=0.01)
     if labels_img is None:
         # otsu seems to give more inclusive threshold for these atlases
         _, mask = plot_3d.carve(

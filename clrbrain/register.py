@@ -697,6 +697,9 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         print("changed num of pixels from {} to {}"
               .format(region_size, region_size_smoothed))
     
+    # remove foreground corresponding to background of original labels
+    labels_img_np[labels_img_np_orig == 0] = 0
+    
     # show label loss metric
     print()
     label_ids_smoothed = np.unique(labels_img_np)

@@ -3302,6 +3302,35 @@ def group_volumes(labels_ref_lookup, vol_dicts):
     #print("grouped_vol_dict: {}".format(grouped_vol_dict))
     return grouped_vol_dict
 
+def _find_atlas_labels(load_labels, max_level, labels_ref_lookup):
+    """Find atlas label IDs from the labels directory.
+    
+    Args:
+        load_labels: Path to labels directory.
+        max_level: Labels level, where None indicates that only the 
+            drawn labels should be found, whereas an int level will 
+            cause the full set of labels from ``labels_ref_lookup`` 
+            to be taken.
+        labels_ref_lookup: Labels reverse lookup dictionary of 
+            label IDs to labels.
+    
+    Returns:
+        Sequence of label IDs.
+    """
+    orig_atlas_dir = os.path.dirname(load_labels)
+    orig_labels_path = os.path.join(orig_atlas_dir, IMG_LABELS)
+    # need all labels from a reference as registered image may have lost labels
+    if max_level is None and os.path.exists(orig_labels_path):
+        # use all drawn labels in original labels image
+        orig_labels_sitk = sitk.ReadImage(orig_labels_path)
+        orig_labels_np = sitk.GetArrayFromImage(orig_labels_sitk)
+        label_ids = np.unique(orig_labels_np)
+    else:
+        # use all labels in ontology reference to include hierarchical 
+        # labels or if original labels image isn't presenst
+        label_ids = list(labels_ref_lookup.keys())
+    return label_ids
+
 def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None, 
                    groups=None, max_level=None, combine_sides=True):
     """Get volumes and additional label metrics for each single labels ID.
@@ -3359,18 +3388,8 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     grouping["Condition"] = condition
     
     # setup labels
-    orig_atlas_dir = os.path.dirname(config.load_labels)
-    orig_labels_path = os.path.join(orig_atlas_dir, IMG_LABELS)
-    # need all labels from a reference as registered image may have lost labels
-    if max_level is None and os.path.exists(orig_labels_path):
-        # use all drawn labels in original labels image
-        orig_labels_sitk = sitk.ReadImage(orig_labels_path)
-        orig_labels_np = sitk.GetArrayFromImage(orig_labels_sitk)
-        label_ids = np.unique(orig_labels_np)
-    else:
-        # use all labels in ontology reference to include hierarchical 
-        # labels or if original labels image isn't presenst
-        label_ids = list(labels_ref_lookup.keys())
+    label_ids = _find_atlas_labels(
+        config.load_labels, max_level, labels_ref_lookup)
     if not combine_sides:
         # include opposite side as separate labels; otherwise, defer to 
         # ontology (max_level flag) or labels metrics to get labels from 
@@ -3482,18 +3501,28 @@ def export_region_ids(labels_ref_lookup, path, level):
             child will be reached prior to the child.
         path: Path to output CSV file; if does not end with ``.csv``, it will 
             be added.
-        level: Level at which to find parent for each label.
+        level: Level at which to find parent for each label. If None, 
+            a parent level of -1 will be used, and label IDs will be 
+            taken from the labels image rather than the full set of 
+            labels from the ``labels_ref_lookup``.
     
     Returns:
         Pandas data frame of the region IDs and corresponding names.
     """
     ext = ".csv"
     if not path.endswith(ext): path += ext
-    label_parents = labels_to_parent(labels_ref_lookup, level)
+    
+    # find parents for label at the given level
+    parent_level = -1 if level is None else level
+    label_parents = labels_to_parent(labels_ref_lookup, parent_level)
+    
     cols = ("Region", "RegionName", "Parent")
     data = OrderedDict()
-    for key in labels_ref_lookup.keys():
+    label_ids = _find_atlas_labels(
+        config.load_labels, level, labels_ref_lookup)
+    for key in label_ids:
         # does not include laterality distinction, only using original IDs
+        if key <= 0: continue
         label = labels_ref_lookup[key]
         # ID of parent at label_parents' level
         parent = label_parents[key]
@@ -3820,7 +3849,10 @@ if __name__ == "__main__":
         
         # use ABA levels up through the specified level to collect 
         # sub-regions to the given level
-        levels = list(range(config.labels_level + 1))
+        if config.labels_level is None:
+            levels = [None]
+        else:
+            levels = list(range(config.labels_level + 1))
         ref = load_labels_ref(config.load_labels)
         labels_ref_lookup = create_aba_reverse_lookup(ref)
         

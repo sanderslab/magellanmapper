@@ -26,12 +26,18 @@ kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity",
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
 
-# file paths
+
+# File Paths
+
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv")
 kStatsPathOut <- "../vols_stats.csv" # output stats
-kRegionIDsPath <- "../region_ids.csv" # region-ID map from Clrbrain
+
+# region-ID map from Clrbrain, which should contain all regions including 
+# hierarchical/ontological ones
+kRegionIDsPath <- "../region_ids.csv"
+
 
 fitModel <- function(model, vals, genos, sides, ids=NULL) {
   # Fit data with the given regression model.
@@ -306,6 +312,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
         if (paired) {
           # sort by sample, split by condition, and filter out pairs 
           # where either sample has a zero value
+          #print(df.region.nonzero)
           df.region.nonzero <- df.region.nonzero[
             order(df.region.nonzero$Sample), ]
           df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
@@ -639,7 +646,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
 #######################################
 # choose measurement and model types
 kStatsPathIn <- file.path("..", kStatsFilesIn[2])
-meas <- kMeas[6]
+meas <- kMeas[4]
 model <- kModel[8]
 split.by.side <- TRUE # false to combine sides
 load.stats <- FALSE # true to load saved stats and only regenerate volcano plots

@@ -349,7 +349,7 @@ def mask_atlas(atlas, labels_img):
     mask = np.logical_or(atlas > thresh, labels_img != 0)
     return mask
 
-def segment_from_labels(atlas_img, edges, labels_img, markers):
+def segment_from_labels(edges, markers, labels_img, atlas_img=None):
     """Segment an image using markers from a labels image.
     
     Labels images may have been generally manually and thus may not 
@@ -359,23 +359,26 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
     location of each label.
     
     Args:
-        atlas_img: Atlas image as a Numpy array to use for finding foreground.
         edges: Image as a Numpy array to segment, typically an edge-detected 
             image of the main atlas.
-        labels_img: Labels image as Numpy array of same shape as ``img``, 
-            used to generate a mask of the interior of ``img`` in which 
-            to segment. If None, a mask be be generated from a thresholded 
-            version of ``atlas_img``.
         markers: Image as an integer Numpy array of same shape as ``img`` 
             to use as seeds for the watershed segmentation. This array 
             is generally constructed from an array similar to ``labels_img``.
+        labels_img: Labels image as Numpy array of same shape as ``img``, 
+            used to generate a mask for the watershed. If None, a mask 
+            will be generated from a thresholded version of ``atlas_img``. 
+            If both ``labels_img`` and ``atlas_img`` are given, their 
+            combined volume will be used as a mask.
+        atlas_img: Atlas image as a Numpy array to use for finding foreground; 
+            defaults to None.
     
     Returns:
         Segmented image of the same shape as ``img`` with the same 
         number of labels as in ``markers``.
     """
-    watershed = watershed_distance(edges == 0, markers, compactness=0.01)
-    if labels_img is None:
+    if atlas_img is None:
+        mask = morphology.binary_opening(labels_img != 0, morphology.ball(2))
+    elif labels_img is None:
         # otsu seems to give more inclusive threshold for these atlases
         _, mask = plot_3d.carve(
             atlas_img, thresh=filters.threshold_otsu(atlas_img), 
@@ -384,11 +387,12 @@ def segment_from_labels(atlas_img, edges, labels_img, markers):
         # use labels if available; ideally should fully cover the atlas 
         # with the atlas only used to identify outside borders
         mask = mask_atlas(atlas_img, labels_img)
-    watershed[~mask] = 0
+    watershed = watershed_distance(
+        edges == 0, markers, compactness=0.005, mask=mask)
     return watershed
 
 def watershed_distance(foreground, markers=None, num_peaks=np.inf, 
-                       compactness=0):
+                       compactness=0, mask=None):
     """Perform watershed segmentation based on distance from foreground 
     to background.
     
@@ -403,6 +407,9 @@ def watershed_distance(foreground, markers=None, num_peaks=np.inf,
         num_peaks: Number of peaks to include when generating markers; 
             defaults to infinity.
         compactness: Compactness factor for watershed; defaults to 0.
+        mask: Boolean or binary array of same size as ``foreground`` 
+            where True or 1 pixels will be filled by the watershed; 
+            defaults to None to fill the whole image.
     
     Returns:
         The segmented image as an array of the same shape as that of 
@@ -416,7 +423,7 @@ def watershed_distance(foreground, markers=None, num_peaks=np.inf,
             distance, indices=False, num_peaks=num_peaks)
         markers = measure.label(local_max)
     watershed = morphology.watershed(
-        -distance, markers, compactness=compactness)
+        -distance, markers, compactness=compactness, mask=mask)
     return watershed
 
 class SubSegmenter(object):

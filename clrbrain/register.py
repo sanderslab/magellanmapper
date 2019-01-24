@@ -2009,11 +2009,11 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
         # segment only half of image, assuming symmetry
         len_half = atlas_img_np.shape[2] // 2
         labels_seg = segmenter.segment_from_labels(
-            atlas_img_np[..., :len_half], atlas_edge[..., :len_half], 
-            labels_img_np[..., :len_half], markers[..., :len_half])
+            atlas_edge[..., :len_half], markers[..., :len_half], 
+            labels_img_np[..., :len_half])
     else:
         labels_seg = segmenter.segment_from_labels(
-            atlas_img_np, atlas_edge, labels_img_np, markers)
+            atlas_edge, markers, labels_img_np)
     
     smoothing = config.register_settings["smooth"]
     if smoothing is not None:

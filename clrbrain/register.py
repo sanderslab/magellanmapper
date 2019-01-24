@@ -2017,9 +2017,7 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     
     smoothing = config.register_settings["smooth"]
     if smoothing is not None:
-        # closing operation to merge breaks from watershed, followed 
-        # by opening operation for overall smoothing with profile setting
-        smooth_labels(labels_seg, 2, SMOOTHING_MODES[2])
+        # smoothing by opening operation based on profile setting
         smooth_labels(labels_seg, smoothing, SMOOTHING_MODES[0])
     
     if atlas:

@@ -465,6 +465,8 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
     sort = np.lexsort((blobs[:, 2], blobs[:, 1], blobs[:, 0]))
     blobs = blobs[sort]
     #print("checking sorted blobs for close duplicates:\n{}".format(blobs))
+    blobs_all = blobs
+    '''
     blobs_all = None
     for blob in blobs:
         # check each blob against all blobs accepted thus far to ensure that
@@ -496,6 +498,7 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
                     break
                 i -= 1
     #print("blobs without close duplicates:\n{}".format(blobs_all))
+    '''
     return blobs_all
 
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):

@@ -112,11 +112,17 @@ echo "${ij[@]}"
 
 # calculates memory to reserve based on image file size with generous
 # extra padding room (TODO: check if too much for large files)
-if [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
-    mem=`free|awk '/Mem\:/ { print $2 }'`
-else
+if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
+    # old stitching plugin, which requires a ton of memory
     mem=`du "$IMG" | awk '{print $1}'`
     mem=$((mem/100))
+elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
+    # BigStitcher plugin, which is more memory efficient
+    if [[ "$os" = "MacOSX" ]]; then
+        mem=$(sysctl -a | awk '/hw.memsize\:/ {print $2}')
+    else
+        mem=`free|awk '/Mem\:/ { print $2 }'`
+    fi
     mem=$((mem/1024*9/10))
 fi
 MIN_MEM=1000

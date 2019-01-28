@@ -114,10 +114,10 @@ echo "${ij[@]}"
 # extra padding room (TODO: check if too much for large files)
 if [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
     mem=`free|awk '/Mem\:/ { print $2 }'`
-    mem=$((mem/1000-2000))
 else
     mem=`du "$IMG" | awk '{print $1}'`
     mem=$((mem/100))
+    mem=$((mem/1024*9/10))
 fi
 MIN_MEM=1000
 if ((mem < MIN_MEM))

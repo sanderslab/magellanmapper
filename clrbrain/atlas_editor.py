@@ -47,6 +47,7 @@ class AtlasEditor:
         self.plot_eds = {}
         self.alpha_slider = None
         self.alpha_reset_btn = None
+        self.alpha_last = None
         self.interp_planes = None
         self.interp_btn = None
         
@@ -149,7 +150,7 @@ class AtlasEditor:
         
         # attach listeners
         fig.canvas.mpl_connect("scroll_event", self.scroll_overview)
-        fig.canvas.mpl_connect("key_press_event", self.scroll_overview)
+        fig.canvas.mpl_connect("key_press_event", self.on_key_press)
         fig.canvas.mpl_connect("close_event", self.fn_close_listener)
         fig.canvas.mpl_connect("axes_leave_event", self.axes_exit)
         
@@ -164,7 +165,34 @@ class AtlasEditor:
         gs.tight_layout(fig)
         plt.ion()
         plt.show()
-        
+    
+    def on_key_press(self, event):
+        """Respond to key press events.
+        """
+        if event.key == "a":
+            # toggle between current and 0 opacity
+            if self.alpha_slider.val == 0:
+                # return to saved alpha if available and reset
+                if self.alpha_last is not None:
+                    self.alpha_slider.set_val(self.alpha_last)
+                self.alpha_last = None
+            else:
+                # make transluscenct, saving alpha if not already saved 
+                # during a halve-opacity event
+                if self.alpha_last is None:
+                    self.alpha_last = self.alpha_slider.val
+                self.alpha_slider.set_val(0)
+        elif event.key == "A":
+            # halve opacity, only saving alpha on first halving to allow 
+            # further halving or manual movements while still returning to 
+            # originally saved alpha
+            if self.alpha_last is None:
+                self.alpha_last = self.alpha_slider.val
+            self.alpha_slider.set_val(self.alpha_slider.val / 2)
+        elif event.key == "up" or event.key == "down":
+            # up/down arrow for scrolling planes
+            self.scroll_overview(event)
+    
     def update_coords(self, coord, plane_src=config.PLANE[0]):
         """Update all plot editors with given coordinates.
         

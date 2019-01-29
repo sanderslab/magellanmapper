@@ -537,6 +537,10 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     smooth_labels(img_np, filter_size)
     borders, metric, df_raw = label_smoothing_metric(
         img_np_orig, img_np, save_borders=save_borders)
+    crop = config.register_settings["crop_to_orig"]
+    if crop:
+        # curate back to foreground of original labels
+        img_np[img_np_orig == 0] = 0
     return filter_size, metric, borders
 
 def _smoothing_mp(img_np, img_np_orig, filter_sizes, 
@@ -2024,8 +2028,10 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
         # mirror back to other half
         labels_seg = _mirror_imported_labels(labels_seg, len_half)
     
-    # curate back to foreground of original labels
-    labels_seg[labels_img_np == 0] = 0
+    crop = config.register_settings["crop_to_orig"]
+    if crop:
+        # curate back to foreground of original labels
+        labels_seg[labels_img_np == 0] = 0
     
     if labels_seg.dtype != labels_img_np.dtype:
         # watershed may give different output type, so cast back if so

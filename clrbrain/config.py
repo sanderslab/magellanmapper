@@ -395,8 +395,13 @@ class RegisterSettings(SettingsDict):
         
         # Laplacian of Gaussian sigma; use None to skip
         self["log_sigma"] = 5
+        
         # erosion size when converting labels to markers; use None to skip
         self["marker_erosion"] = 8
+        
+        # crop labels back to their original extent after smoothing 
+        # (ignored during atlas import if no smoothing)
+        self["crop_to_orig"] = True
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
@@ -648,6 +653,12 @@ def update_register_settings(settings, settings_type):
     settings.add_modifier(
         "nomarkers", 
         {"marker_erosion": None}, 
+        settings_type)
+    
+    # turn off cropping labels to original size
+    settings.add_modifier(
+        "nocrop", 
+        {"crop_to_orig": False}, 
         settings_type)
     
     # enable label smoothing

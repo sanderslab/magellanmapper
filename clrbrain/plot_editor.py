@@ -379,7 +379,7 @@ class PixelDisplay(object):
         self.imgs = imgs
     def __call__(self, x, y):
         coord = (int(y), int(x))
-        output = "x={}, y={}, z=".format(*coord[::-1])
+        output = "x={}, y={}, ".format(*coord[::-1])
         zs = []
         for i, img in enumerate(self.imgs):
             if x < 0 or y < 0 or x >= img.shape[1] or y >= img.shape[0]:
@@ -389,5 +389,5 @@ class PixelDisplay(object):
                 # get the corresponding intensity value, truncating floats
                 z = img[coord]
                 if isinstance(z, float): z = "{:.4f}".format(z)
-            zs.append("{} (image {})".format(z, i))
+            zs.append("z(image{})={}".format(i, z))
         return output + ", ".join(zs)

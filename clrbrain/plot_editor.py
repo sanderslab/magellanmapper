@@ -55,6 +55,7 @@ class PlotEditor:
         self.coord = None
         self.xlim = None
         self.ylim = None
+        self.ax_img = None
     
     def connect(self):
         """Connect events to functions.
@@ -100,9 +101,14 @@ class PlotEditor:
         self.vline = None
         
         # prep main image in grayscale and labels with discrete colormap
-        imgs2d = [self.img3d[self.coord[0]], self.img3d_labels[self.coord[0]]]
-        cmaps = [config.process_settings["channel_colors"], self.cmap_labels]
-        alphas = [1, self.alpha]
+        imgs2d = [self.img3d[self.coord[0]]]
+        cmaps = [config.process_settings["channel_colors"]]
+        alphas = [1]
+        
+        if self.img3d_labels is not None:
+            imgs2d.append(self.img3d_labels[self.coord[0]])
+            cmaps.append(self.cmap_labels)
+            alphas.append(self.alpha)
         
         if self.img3d_borders is not None:
             # prep borders image, which may have an extra channels 
@@ -118,11 +124,12 @@ class PlotEditor:
                 alphas.append(1)
         
         # overlay all images and set labels for footer value on mouseover
+        # TODO: make main image's vmax adjustable
         ax_imgs = plot_support.overlay_images(
             self.axes, self.aspect, self.origin, imgs2d, 0, cmaps, alphas)
         self.axes.format_coord = PixelDisplay(imgs2d)
         self.plane_slider.set_val(self.coord[0])
-        self.ax_img = ax_imgs[1][0]
+        if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]
         
         if self.xlim is not None and self.ylim is not None:
             self.axes.set_xlim(self.xlim)
@@ -154,11 +161,13 @@ class PlotEditor:
     def update_image(self):
         """Replace current image with underlying plane's data.
         """
-        self.ax_img.set_data(self.img3d_labels[self.coord[0]])
+        if self.ax_img is not None:
+            self.ax_img.set_data(self.img3d_labels[self.coord[0]])
     
     def alpha_updater(self, alpha):
         self.alpha = alpha
-        self.ax_img.set_alpha(self.alpha)
+        if self.ax_img is not None:
+            self.ax_img.set_alpha(self.alpha)
         #print("set image alpha to {}".format(self.alpha))
     
     def on_press(self, event):
@@ -178,14 +187,16 @@ class PlotEditor:
                 self.coord[1:] = y, x
                 self.fn_update_coords(self.coord, self.plane)
             elif event.key == "alt":
-               # get intensity under cursor in prep to paint it
-               self.intensity = self.img3d_labels[self.coord[0], y, x]
-               print("got intensity {} at x,y,z = {},{},{}"
-                     .format(self.intensity, x, y, self.coord[0]))
+               if self.img3d_labels is not None:
+                   # get intensity under cursor in prep to paint it
+                   self.intensity = self.img3d_labels[self.coord[0], y, x]
+                   print("got intensity {} at x,y,z = {},{},{}"
+                         .format(self.intensity, x, y, self.coord[0]))
             
             if event.key == "3" and self.fn_show_label_3d is not None:
-                # extract label ID and display in 3D viewer
-                self.fn_show_label_3d(self.img3d_labels[tuple(self.coord)])
+                if self.img3d_labels is not None:
+                    # extract label ID and display in 3D viewer
+                    self.fn_show_label_3d(self.img3d_labels[tuple(self.coord)])
     
     def on_axes_exit(self, event):
         if event.inaxes != self.axes: return
@@ -283,38 +294,41 @@ class PlotEditor:
                     if event.key == "alt" and self.intensity is not None:
                         # alt+click to use the chosen intensity value to 
                         # overwrite the image with a pen of the chosen radius
-                        rr, cc = draw.circle(
-                            y, x, self.radius, 
-                            self.img3d_labels[self.coord[0]].shape)
-                        self.img3d_labels[
-                            self.coord[0], rr, cc] = self.intensity
-                        print("changed intensity to {} at x,y,z = {},{},{}"
-                              .format(self.intensity, x, y, self.coord[0]))
-                        self.ax_img.set_data(self.img3d_labels[self.coord[0]])
-                        self.fn_refresh_images(self)
+                        if self.ax_img is not None:
+                            rr, cc = draw.circle(
+                                y, x, self.radius, 
+                                self.img3d_labels[self.coord[0]].shape)
+                            self.img3d_labels[
+                                self.coord[0], rr, cc] = self.intensity
+                            print("changed intensity to {} at x,y,z = {},{},{}"
+                                  .format(self.intensity, x, y, self.coord[0]))
+                            self.ax_img.set_data(
+                                self.img3d_labels[self.coord[0]])
+                            self.fn_refresh_images(self)
                     else:
                         # click and mouseover otherwise moves crosshairs
                         self.coord = coord
                         self.fn_update_coords(self.coord, self.plane)
                 
-                # show atlas label name
-                atlas_label = register.get_label(
-                    coord, self.img3d_labels, config.labels_ref_lookup, 
-                    self.scaling)
-                name = ""
-                if atlas_label is not None:
-                    name = register.get_label_name(atlas_label)
-                self.region_label.set_text(name)
-                # minimize chance of text overflowing out of axes by switching 
-                # alignment at midline horizontally
-                if x > self.img3d_labels.shape[2] / 2:
-                    alignment = "right"
-                    label_x = x - 10
-                else:
-                    alignment = "left"
-                    label_x = x + 10
-                self.region_label.set_horizontalalignment(alignment)
-                self.region_label.set_position((label_x, y - 10))
+                if self.img3d_labels is not None:
+                    # show atlas label name
+                    atlas_label = register.get_label(
+                        coord, self.img3d_labels, config.labels_ref_lookup, 
+                        self.scaling)
+                    name = ""
+                    if atlas_label is not None:
+                        name = register.get_label_name(atlas_label)
+                    self.region_label.set_text(name)
+                    # minimize chance of text overflowing out of axes by 
+                    # switching alignment at midline horizontally
+                    if x > self.img3d_labels.shape[2] / 2:
+                        alignment = "right"
+                        label_x = x - 10
+                    else:
+                        alignment = "left"
+                        label_x = x + 10
+                    self.region_label.set_horizontalalignment(alignment)
+                    self.region_label.set_position((label_x, y - 10))
                 
                 
         self.last_loc = loc
@@ -352,7 +366,7 @@ class PlotEditor:
             self.cidpress, self.cidrelease, self.cidmotion, self.cidenter, 
             self.cidleave, self.cidkeypress]
         for listener in listeners:
-            if listener:
+            if listener and self.ax_img is not None:
                 self.ax_img.figure.canvas.mpl_disconnect(listener)
 
 class PixelDisplay(object):

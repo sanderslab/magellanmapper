@@ -140,6 +140,20 @@ def max_plane(img3d, plane):
         return shape[0]
 
 def transpose_images(plane, arrs_3d=None, arrs_1d=None):
+    """Transpose images and associated coorinates to the given plane.
+    
+    Args:
+        plane: Target plane, which should be one of :const:``config.PLANE``.
+        arrs_3d: Sequence of 3D arrays to transpose; defaults to None.
+        arrs_1d: Sequence of 1D arrays to transpose, typically coordinates 
+            associated with the 3D arrays; defaults to None.
+    
+    Returns:
+        Tuple of a list of transposed 3D arrays, or None if no 3D arrays 
+        are given; list of transposed 1D arrays, or None if no 1D arrays 
+        are given; aspect ratio as a float; and origin as a string, or 
+        None for default origin.
+    """
     origin = None
     aspect = None # aspect ratio
     

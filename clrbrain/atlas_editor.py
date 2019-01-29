@@ -111,18 +111,25 @@ class AtlasEditor:
             ax = plt.subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
             max_size = plot_support.max_plane(self.image5d[0], plane)
-            arrs_3d = [self.image5d[0], self.labels_img]
+            arrs_3d = [self.image5d[0]]
+            if self.labels_img is not None:
+                # overlay borders if available
+                arrs_3d.append(self.labels_img)
             if self.borders_img is not None:
                 # overlay borders if available
                 arrs_3d.append(self.borders_img)
+            scaling = config.labels_scaling
+            if scaling is not None: scaling = [scaling]
             arrs_3d, arrs_1d, aspect, origin = plot_support.transpose_images(
-                plane, arrs_3d, [config.labels_scaling])
+                plane, arrs_3d, scaling)
             img3d_transposed = arrs_3d[0]
-            labels_img_transposed = arrs_3d[1]
+            labels_img_transposed = None
+            if len(arrs_3d) >= 2:
+                labels_img_transposed = arrs_3d[1]
             borders_img_transposed = None
             if len(arrs_3d) >= 3:
                 borders_img_transposed = arrs_3d[2]
-            scaling = arrs_1d[0]
+            if arrs_1d is not None and len(arrs_1d) > 0: scaling = arrs_1d[0]
             
             # slider through image planes
             ax_scroll = plt.subplot(gs_plot[0, 0])

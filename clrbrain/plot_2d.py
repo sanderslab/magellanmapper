@@ -427,7 +427,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
         # show the ROI, which is now a 2D zoomed image
         cmaps = config.process_settings["channel_colors"]
         plot_support.imshow_multichannel(
-            ax, roi, channel, cmaps, aspect, alpha)#, 0.0, config.vmax_overview)
+            ax, roi, channel, cmaps, aspect, alpha)
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         # show labels if provided and within ROI
@@ -435,15 +435,9 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             for i in range(len(labels)):
                 label = labels[i]
                 if z_relative >= 0 and z_relative < label.shape[0]:
-                    '''
-                    try:
-                        ax.contour(label[z_relative], colors="C{}".format(i))\
-                        pass
-                    except ValueError as e:
-                        print(e)
-                        print("could not show label:\n{}".format(label[z_relative]))
-                    '''
-                    ax.imshow(label[z_relative], cmap=cmap_labels, norm=cmap_labels.norm)
+                    ax.imshow(
+                        label[z_relative], cmap=cmap_labels, 
+                        norm=cmap_labels.norm)
                     #ax.imshow(label[z_relative]) # showing only threshold
         
         if ((segs_in is not None or segs_out is not None) 

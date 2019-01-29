@@ -1,7 +1,7 @@
 # Clrbrain
-Clrbrain is an imaging informatics GUI and pipeline for high-throughput, automated analysis of whole organs. Its design philosophy is to make the raw, original images as accessible as possible; simplify annotation with a focus on nuclei; and scale from the laptop to the cloud in cross-platform environments.
+Clrbrain is an imaging informatics GUI and pipeline for high-throughput, automated analysis of whole organs. Its design philosophy is to make the raw, original images as accessible as possible; simplify annotation from nuclei to atlases; and scale from the laptop to the cloud in cross-platform environments.
 
-Author: David Young, 2017-2018, Stephan Sanders Lab
+Author: David Young, 2017, 2019, Stephan Sanders Lab
 
 ## Download
 
@@ -40,7 +40,7 @@ To build and install SimpleElastix manually, the `build_se.sh` script can be cal
 
 #### Required
 
-- Java SDK, tested on v8-11, for importing image files from proprietary formats (eg `.czi`)
+- Java SDK, tested on v8-11, for importing image files from proprietary formats (eg `.czi`) and the ImageJ-based stitching pipeline (ImageJ currently requires Java 8)
 
 #### Optional
 
@@ -74,17 +74,17 @@ source activate clr3
 
 `runclrbrain.sh` is a script to run many pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. The default pipeline will open the Clrbrain GUI.
 
-Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK and do not require import (currently we are working on better metadata support though, as of 2018-12-22).
+Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
 
 ## 3D viewer
 
 The main Clrbrain GUI displays a 3D viewer and ROI selection controls. Clrbrain uses Mayavi for 3D voxel or surface rendering.
 
-From the ROI selection controls, two different 2D editors can be opened. All but the last `2D styles` options open various forms of the Nuclei Annotation Editor. The final option opens the Atlas Editor, a 2D/3D viewer.
+From the ROI selection controls, two different 2D editors can be opened. All but the last `2D styles` option open various forms of the Nuclei Annotation Editor. The final option opens the Atlas Editor, a 2D/3D viewer.
 
 ## Nuclei Annotation Editor
 
-The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Press on "Detect" to detect nuclei in the current ROI, then "Plot 2D" to open the figure.
+The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Press on `Detect` to detect nuclei in the current ROI, then `Plot 2D` to open the figure.
 
 - Click on dotted lines to cycle the nuclei detection flags from incorrect (red), correct (green), or questionable (yellow)
 - `Shift+click` and drag to move the circle's position
@@ -100,16 +100,18 @@ The multi-level 2D plotter is geared toward simplifying annotation for nuclei. P
 
 The multi-planar image plotter allows simplified viewing and editing of annotation labels for an atlas. Existing labels can be painted into adjacent areas, and synchronized planar viewing allows visualization of changes in each plane with realtime updates.
 
-The atlas image must have an associated annotation image. Use the `--labels` flage to specify a labels `.json` file. Change the "2D plot styles" dropdown to "Atlas editor" and press "Plot 2D" to open the editor.
+The atlas image must have an associated annotation image. Use the `--labels` flage to specify a labels `.json` file. Change the `2D plot styles` dropdown to `Atlas editor` and press `Plot 2D` to open the editor.
 
 - Mouseover over any label to see the region name
-- Shift+mouseover to move the crosshairs and the corresponding planes
-- Scroll or arrow up/down to move planes in the current plot
-- Right-click or Ctrl+click + mouse-up/down to zoom
-- Middle-click or Alt+click + mouse drag to pan
+- `Shift+mouseover` to move the crosshairs and the corresponding planes
+- Scroll or arrow `up`/`down` to move planes in the current plot
+- `Right-click` or `Ctrl+click` + mouse-up/down to zoom
+- `Middle-click` or `Alt+click` + mouse drag to pan
 - Click on the color you want to extend, then drag onto the area you want to paint with that color
 - `[` (left bracket) to make the paintbrush smaller
 - `]` (right bracket) to make it bigger
+- `a` to toggle between 0 and full labels alpha (opacity)
+- `shift+a` to halve alpha (press `a` twice to return to original alpha)
 - Use the save button in the main window with the atlas window still open to resave
 
 
@@ -145,7 +147,7 @@ See `runclrbrain.sh` for additional sample commands for common scenarios, such a
 Optional dependencies:
 
 - `awscli`: AWS Command Line Interface for basic up/downloading of images and processed files S3. Install via Pip.
-- `boto3`: AWS Python client to manage EC2 instances. 
+- `boto3`: AWS Python client to manage EC2 instances.
 
 #### Launch a server
 
@@ -228,8 +230,14 @@ export "PATH=$JAVA_HOME:$PATH"
 
 ### Command Line Tools setup (Mac)
 
-- As of Clrbrain v0.8.0, `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated
-- `xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun` error: The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading Xcode directly from https://developer.apple.com/download/, then run `sudo xcodebuild -license` to accept the license agreement.
+- As of Clrbrain v0.8.0, `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated. If you get:
+
+```
+xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), \
+missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
+```
+
+- The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading Xcode directly from https://developer.apple.com/download/, then run `sudo xcodebuild -license` to accept the license agreement.
 
 ### Installation on Windows
 
@@ -287,26 +295,23 @@ export LANG=en_US.UTF-8
 ### Image Stitching
 
 - Image stitching is run through ImageJ/Fiji
-  - ImageJ itself also depends on Java but does not work well on Java > 8 (as of 2018-12-22)
-  - As of Clrbrain v0.8.1, arguments can be given to `runclrbrain.sh` and `stitch.sh` to specify the location of ImageJ
-  - This location can be a script that specifies a specific Java version, such as:
+  - ImageJ itself also depends on Java but does not work well on Java > 8 (as of 2019-01-29)
+  - As of Clrbrain v0.8.3, an argument can be given to `runclrbrain.sh` and `stitch.sh` to specify the Java home specifically for ImageJ, which should be a typical path exported as `JAVA_HOME` but here passed as an argument to ImageJ, eg:
 
 ```
-# on Mac
-java="/path/to/java/8"
-open -a "Fiji.app" --args --java-home "$java"
+./runclrbrain.sh -j /Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home
 ```
 
-- The original stitcher, `Stitching`, requires a large amount of RAM/swap space and runs single-threaded, taking days to stitch a multi-tile image
-- The new, recommended stitcher, `BigStitcher`, uses RAM much more efficiently through an HDF5 format and utilizes multiprocessing
-- Clrbrain runs these stitchers as ImageJ scripts in an attempt to require minimal intervention
-- BigStitcher throws an exception without a graphical environment, however
+- Two ImageJ stitching plugins are available, which Clrbrain runs as ImageJ scripts in minimize the need for intervention:
+  - The original stitcher, `Stitching`, requires a large amount of RAM/swap space and runs single-threaded, taking days to stitch a multi-tile image
+  - The new, recommended stitcher, `BigStitcher`, uses RAM much more efficiently through an HDF5 format and utilizes multiprocessing
+- BigStitcher currently requires a graphical environment, which is also recommended for manual verification of tile alignment
 - The threshold for links between tiles is set high to minimize false links, falling back on metadata, but still may give false alignments, so manual inspection of stitched images is recommended
 - To fix alignments in BigStitcher:
- - Copy the `.xml~2` file to `fix.xml` to obtain the state just before the optimization step
+ - Copy the `.xml~2` file to `fix.xml` to obtain the state just before the optimization step and open this file in BigStitcher
  - Use its Link Explorer to remove inappropriate links
  - Run the global optimizer again with two round and metadata fallback
- - If necessary, use the Manually Align tool to move specific tiles
+ - If necessary, right-click in the Stitching Explorer to access the `Arrange views > Manually translate views` tool to move specific tiles
 
 ### Additional tips
 

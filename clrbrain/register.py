@@ -1270,6 +1270,8 @@ def import_atlas(atlas_dir, show=True):
     # load atlas and corresponding labels
     img_atlas = sitk.ReadImage(os.path.join(atlas_dir, IMG_ATLAS))
     img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
+    target_dir = atlas_dir + "_import"
+    img_labels_sm = sitk.ReadImage(os.path.join(target_dir + "_smoothed", IMG_LABELS))
     
     #img_labels_np = None
     img_atlas, img_labels, img_borders = match_atlas_labels(
@@ -1281,9 +1283,15 @@ def import_atlas(atlas_dir, show=True):
         img_labels_np = _truncate_labels(
             sitk.GetArrayFromImage(img_labels), *truncate)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
+    img_labels_np = sitk.GetArrayFromImage(img_labels)
+    img_labels_sm_np = sitk.GetArrayFromImage(img_labels_sm)
+    img_labels_np[img_labels_sm_np == 0] = 0
+    img_labels_cropped = replace_sitk_with_numpy(img_labels, img_labels_np)
+    measure_overlap_labels(
+        make_labels_fg(img_labels), make_labels_fg(img_labels_cropped))
+    img_labels = img_labels_cropped
     
     # show labels
-    img_labels_np = sitk.GetArrayFromImage(img_labels)
     label_ids = np.unique(img_labels_np)
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
@@ -1296,7 +1304,6 @@ def import_atlas(atlas_dir, show=True):
     
     # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
-    target_dir = atlas_dir + "_import"
     name_prefix = os.path.join(target_dir, os.path.basename(atlas_dir)) + ".czi"
     imgs_write = {
         IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}

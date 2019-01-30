@@ -1528,8 +1528,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     gs.tight_layout(fig)
     
     # save and display
-    if config.savefig is not None:
-        plt.savefig(os.path.splitext(path_to_df)[0] + "." + config.savefig)
+    save_fig(path_to_df, config.savefig)
     if show: plt.show()
 
 def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None, 
@@ -1598,9 +1597,23 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
     gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
     
     # save and display
-    if config.savefig is not None:
-        plt.savefig(os.path.splitext(path_to_df)[0] + "." + config.savefig)
+    save_fig(path_to_df, config.savefig)
     if show: plt.show()
+
+def save_fig(path, ext):
+    """Save figure, swapping in the given extension for the extension 
+    in the given path.
+    
+    Args:
+        path: Base path to use.
+        ext: Extension to swap into the extension in ``path``. If None, 
+            the figure will not be saved.
+    """
+    if ext is not None:
+        plot_path = os.path.splitext(path)[0] + "." + ext
+        lib_clrbrain.backup_file(plot_path)
+        plt.savefig(plot_path)
+        print("exported figure to ", plot_path)
 
 def setup_style():
     # setup Matplotlib parameters/styles

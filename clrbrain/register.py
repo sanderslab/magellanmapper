@@ -2061,8 +2061,10 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     
     crop = config.register_settings["crop_to_orig"]
     if crop:
-        # curate back to foreground of original labels
-        labels_seg[labels_img_np == 0] = 0
+        # expand background to smoothed background of original labels to 
+        # roughly match background while still allowing holes to be filled
+        mask = morphology.binary_opening(labels_img_np == 0, morphology.ball(1))
+        labels_seg[mask] = 0
     
     if labels_seg.dtype != labels_img_np.dtype:
         # watershed may give different output type, so cast back if so

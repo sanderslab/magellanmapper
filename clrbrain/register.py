@@ -541,6 +541,11 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     if crop:
         # curate back to foreground of original labels
         img_np[img_np_orig == 0] = 0
+    print("\nMeasuring foreground overlap of labels after smoothing:")
+    measure_overlap_labels(
+        make_labels_fg(sitk.GetImageFromArray(img_np)), 
+        make_labels_fg(sitk.GetImageFromArray(img_np_orig)))
+    
     return filter_size, metric, borders
 
 def _smoothing_mp(img_np, img_np_orig, filter_sizes, 
@@ -1145,17 +1150,6 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
                 fixed_img, result_img_for_overlap, transformed_thresh=1)
     return result_imgs
 
-def _measure_overlap_combined_labels(fixed_img, labels_img):
-    # check overlap based on combined labels images; should be 1.0 by def 
-    # when using labels img to curate fixed img
-    result_img_np = sitk.GetArrayFromImage(labels_img)
-    result_img_np[result_img_np != 0] = 2
-    result_img_for_overlap = replace_sitk_with_numpy(
-        labels_img, result_img_np)
-    print("\nDSC compared with combined labels:")
-    measure_overlap(
-        fixed_img, result_img_for_overlap, transformed_thresh=1)
-
 def _transform_labels(transformix_img_filter, labels_img, truncation=None, 
                       flip=False):
     if truncation is not None:
@@ -1496,16 +1490,22 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
 
 def measure_overlap(fixed_img, transformed_img, fixed_thresh=None, 
                     transformed_thresh=None):
-    overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
-    '''
-    # mean Dice Similarity Coefficient (DSC) of labeled regions;
-    # not really applicable here since don't have moving labels;
-    # fixed_img is 64-bit float (double), while transformed_img is 32-bit
-    overlap_filter.Execute(sitk.Cast(fixed_img, sitk.sitkFloat32), transformed_img)
-    mean_region_dsc = overlap_filter.GetDiceCoefficient()
-    '''
-    # Dice Similarity Coefficient (DSC) of total volume by applying 
-    # simple binary mask for estimate of background vs foreground
+    """Measure the Dice Similarity Coefficient (DSC) between two foreground 
+    of two images.
+    
+    Args:
+        fixed_img: Image as a SimpleITK ``Image`` object.
+        transformed_img: Image as a SimpleITK ``Image`` object to compare.
+        fixed_thresh: Threshold to determine the foreground of ``fixed_img``; 
+            defaults to None to determine by a mean threshold.
+        transformed_thresh: Threshold to determine the foreground of 
+            ``transformed_img``; defaults to None to determine by a mean 
+            threshold.
+    
+    Returns:
+        The DSC of the foreground of the two given images.
+    """
+    # use threshold mean if thresholds not given
     if not fixed_thresh:
         fixed_thresh = float(
             filters.threshold_mean(sitk.GetArrayFromImage(fixed_img)))
@@ -1514,25 +1514,56 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
             filters.threshold_mean(sitk.GetArrayFromImage(transformed_img)))
     print("measuring overlap with thresholds of {} (fixed) and {} (transformed)"
           .format(fixed_thresh, transformed_thresh))
+    
     # similar to simple binary thresholding via Numpy
     fixed_binary_img = sitk.BinaryThreshold(fixed_img, fixed_thresh)
     transformed_binary_img = sitk.BinaryThreshold(
         transformed_img, transformed_thresh)
+    overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
-    #sitk.Show(fixed_binary_img)
-    #sitk.Show(transformed_binary_img)
     total_dsc = overlap_filter.GetDiceCoefficient()
-    print("Total DSC: {}".format(total_dsc))
+    print("Foreground DSC: {}".format(total_dsc))
     return total_dsc
 
 def measure_overlap_labels(fixed_img, transformed_img):
-    # mean Dice Similarity Coefficient (DSC) of labeled regions
+    """Measure the mean Dice Similarity Coefficient (DSC) between two 
+    labeled images.
+    
+    Args:
+        fixed_img: Image as a SimpleITK ``Image`` object.
+        transformed_img: Image as a SimpleITK ``Image`` object to compare.
+    
+    Returns:
+        The mean label-by-label DSC of the two given images.
+    """
     overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
-    # fixed_img is 64-bit float (double), while transformed_img is 32-bit
     overlap_filter.Execute(fixed_img, transformed_img)
     mean_region_dsc = overlap_filter.GetDiceCoefficient()
     print("Mean regional (label-by-label) DSC: {}".format(mean_region_dsc))
     return mean_region_dsc
+
+def make_labels_fg(labels_sitk):
+    """Make a labels foreground image.
+    
+    Args:
+        labels_sitk: Labels image as a SimpleITK ``Image`` object, where 
+            0 = background, and all other values are considered foreground.
+    
+    Returns:
+        Labels foreground as a SimpleITK ``Image`` object.
+    """
+    fg_img = sitk.GetArrayFromImage(labels_sitk)
+    fg_img[fg_img != 0] = 1
+    fg_img_sitk = replace_sitk_with_numpy(labels_sitk, fg_img)
+    return fg_img_sitk
+
+def _measure_overlap_combined_labels(fixed_img, labels_img):
+    # check overlap based on combined labels images; should be 1.0 by def 
+    # when using labels img to curate fixed img
+    result_img_for_overlap = make_labels_fg(labels_img)
+    print("\nDSC of thresholded fixed image compared with combined labels:")
+    measure_overlap(
+        fixed_img, result_img_for_overlap, transformed_thresh=1)
 
 def _crop_image(img_np, labels_img, axis, eraser=None):
     """Crop image by removing the empty space at the start of the given axis.
@@ -2038,12 +2069,12 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
         labels_seg = labels_seg.astype(labels_img_np.dtype)
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     
-    if atlas:
-        # show DSC for labels
-        print("\nMeasuring overlap of labels:")
-        measure_overlap_labels(
-            sitk.GetImageFromArray(labels_img_np), 
-            sitk.GetImageFromArray(labels_seg))
+    # show DSCs for labels
+    print("\nMeasuring overlap of individual labels:")
+    measure_overlap_labels(labels_sitk, labels_sitk_seg)
+    print("\nMeasuring foreground overlap of labels:")
+    measure_overlap_labels(
+        make_labels_fg(labels_sitk), make_labels_fg(labels_sitk_seg))
     
     # show and write image to same directory as atlas with appropriate suffix
     if show: sitk.Show(labels_sitk_seg)

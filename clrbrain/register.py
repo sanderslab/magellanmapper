@@ -2070,6 +2070,7 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     # show DSCs for labels
+    _measure_overlap_combined_labels(atlas_sitk, labels_sitk_seg)
     print("\nMeasuring overlap of individual labels:")
     measure_overlap_labels(labels_sitk, labels_sitk_seg)
     print("\nMeasuring foreground overlap of labels:")

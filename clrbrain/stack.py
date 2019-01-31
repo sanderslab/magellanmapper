@@ -186,11 +186,18 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     parent_path = os.path.dirname(path)
     out_name = lib_clrbrain.get_filename_without_ext(path)
     
-    # build z slice, which will be applied to the transposed image; 
+    # build "z" slice, which will be applied to the transposed image; 
     # reduce image to 1 plane if in single mode
     if offset is not None and roi_size is not None:
         # ROI offset and size take precedence over slice vals except 
         # for use of the interval term
+        
+        # tranpose coordinates to given plane
+        _, arrs_1d, _, _ = plot_support.transpose_images(
+            config.plane, arrs_1d=[offset[::-1], roi_size[::-1]])
+        offset = arrs_1d[0][::-1]
+        roi_size = arrs_1d[1][::-1]
+        
         interval = None
         if slice_vals is not None and len(slice_vals) > 2:
             interval = slice_vals[2]

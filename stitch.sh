@@ -124,7 +124,7 @@ elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
     else
         mem=`free|awk '/Mem\:/ { print $2 }'`
     fi
-    mem=$((mem/1024*9/10))
+    mem=$((mem/1024*8/10))
 fi
 MIN_MEM=1000
 if ((mem < MIN_MEM))

@@ -234,7 +234,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
             # labels is taken as 2nd image
             imgs.append(labels_img[None])
             cmap_labels = colormaps.get_labels_discrete_colormap(
-                labels_img, config.alphas[1] * 255)
+                labels_img, 0)
         for img in imgs:
             planes, aspect, origin = plot_2d.extract_plane(
                 img, img_sl, plane=config.plane)

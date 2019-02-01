@@ -371,7 +371,7 @@ class Visualization(HasTraits):
             show_orientation: True to show orientation axes; defaults to True.
         """
         if self._scene_3d_shown:
-            if config.savefig:
+            if config.savefig in config.FORMATS_3D:
                 path = "{}.{}".format(title, config.savefig)
                 lib_clrbrain.backup_file(path)
                 try:

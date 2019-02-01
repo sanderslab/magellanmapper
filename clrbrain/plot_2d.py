@@ -600,8 +600,7 @@ def plot_roi(roi, segments, channel, show=True, title=""):
     gs.tight_layout(fig, pad=0.5)
     if show:
         plt.show()
-    if config.savefig is not None:
-        plt.savefig(title + "." + config.savefig)
+    save_fig(title, config.savefig)
 
 def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size, 
                   offset, segments, mask_in, segs_cmap, fn_close_listener, 
@@ -1045,12 +1044,10 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     plt.ion()
     plt.show()
     #fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
-    if config.savefig is not None:
-        name = "{}_offset{}x{}.{}".format(
-            os.path.basename(filename), offset, tuple(roi_size), 
-            config.savefig).replace(" ", "")
-        print("saving figure as {}".format(name))
-        plt.savefig(name)
+    save_fig("{}_offset{}x{}"
+             .format(os.path.basename(filename), 
+                     offset, tuple(roi_size)).replace(" ", ""), 
+             config.savefig)
     print("2D plot time: {}".format(time() - time_start))
     
 def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
@@ -1319,8 +1316,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         title = "Image Overlays"
     fig.suptitle(title)
     gs.tight_layout(fig)
-    if config.savefig is not None:
-        plt.savefig(title + "." + config.savefig)
+    save_fig(title, config.savefig)
     if show:
         plt.show()
 
@@ -1482,8 +1478,7 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         title = "Regional Volumes"
     fig.suptitle(title)
     gs.tight_layout(fig, rect=[0, 0, 1, 0.97]) # extra padding for title
-    if config.savefig is not None:
-        plt.savefig(title + "." + config.savefig)
+    save_fig(title, config.savefig)
     if show:
         plt.show()
 
@@ -1609,7 +1604,7 @@ def save_fig(path, ext):
         ext: Extension to swap into the extension in ``path``. If None, 
             the figure will not be saved.
     """
-    if ext is not None:
+    if ext is not None and not ext in config.FORMATS_3D:
         plot_path = os.path.splitext(path)[0] + "." + ext
         lib_clrbrain.backup_file(plot_path)
         plt.savefig(plot_path)

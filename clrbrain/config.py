@@ -46,8 +46,9 @@ CMAP_RDBK_NAME = "Red_black"
 PLOT_2D_TYPES = ("smoothing_metrics", "barplot")
 plot_2d_type = None
 
-# flag to save files using this extension
-savefig = None
+# extensions for saving figures
+FORMATS_3D = ("obj", "x3d") # save 3D renderings
+savefig = None # save files using this extension
 
 # IMAGE VIEWING
 

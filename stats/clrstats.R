@@ -529,7 +529,8 @@ filterStats <- function(stats, corr=NULL) {
   return(filtered)
 }
 
-volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
+volcanoPlot <- function(stats, meas, interaction, thresh=NULL, 
+                        log.scale.x=TRUE) {
   # Generate a volcano plot.
   #
   # Args:
@@ -542,6 +543,9 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
   #     condition is met. NA for either value will cause the threshold to 
   #     be ignored, or NA for the entire argument will ignore thresholding 
   #     all together.
+  #   log.scale.x: True to scale x-axis by log10, first normalizing to 
+  #     the minimum x-value before taking the log of the absolute value 
+  #     to avoid negative log values, then returning to the original sign.
   
   x <- stats[[paste0(interaction, ".effect")]]
   if (length(x) < 1) {
@@ -564,8 +568,20 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL) {
   colors_parents <- colors[parents.indices]
   
   # base plot -log p vs effect size
+  if (log.scale.x) {
+    # log scale x, rescaling so abs vals of x are >= 1 to get pos log vals 
+    # and changing back to original sign
+    x.neg <- x < 0
+    x.norm <- x / min(abs(x))
+    x.log <- log(abs(x.norm))
+    x.log[x.neg] <- -1 * x.log[x.neg]
+    print(data.frame(x, x.norm, x.neg, x.log, y))
+    x <- x.log
+  }
+  x.max <- max(abs(x))
   plot(
-    x, y, main=paste(meas, "Differences for", interaction), xlab="Effects", 
+    x, y, xlim=c(-1 * x.max, x.max), 
+    main=paste(meas, "Differences for", interaction), xlab="Effects", 
     ylab="-log10(p)", type="p", pch=16, cex=size, col=colors_parents)
   # vertical line to denote x = 0
   abline(v=0, lty="dashed", col=gray(0.5, 0.5))

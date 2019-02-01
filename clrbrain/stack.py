@@ -252,8 +252,9 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
         if ext is None: ext = "gif"
         out_name += "_animation." + ext
     else:
-        out_name += "_plane_{}{}.{}".format(
-            plot_support.get_plane_axis(config.plane), img_sl.start, ext)
+        label = "" if labels_img is None else "_label"
+        out_name += "_plane_{}{}{}.{}".format(
+            plot_support.get_plane_axis(config.plane), img_sl.start, label, ext)
     out_path = os.path.join(parent_path, out_name)
     
     # export planes

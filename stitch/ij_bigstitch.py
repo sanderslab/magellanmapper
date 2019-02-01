@@ -117,17 +117,18 @@ options_apply = (
     "fix_group_0-0"
 )
 
-# fuse the image and export to .tiff;
-# assume that Multiview-Reconstruction plugin has been patched to avoid 
-# inserting the bounding box dimensions in the dropdown box choices
+# fuse the image and export to .tiff files; 
+# for single-channel: swap "process_channel" and uncomment "processing_channel"
 options_fuse = (
     "select=" + dataset_path_xml + " "
     "process_angle=[All angles] "
     "process_channel=[All channels] "
+    #"process_channel=[Single channel (Select from List)]"
     "process_illumination=[All illuminations] "
     #"process_tile=[Multiple tiles (Select from List)] "
     "process_tile=[All tiles] "
     "process_timepoint=[All Timepoints] "
+    #"processing_channel=[channel Cam2] "
     #"tile_0 tile_1 "
     #"bounding_box=[All Views] "
     "downsampling=1 "

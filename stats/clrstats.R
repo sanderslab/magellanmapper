@@ -26,6 +26,9 @@ kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity",
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
 
+# regions to ignore (eg duplicates)
+kRegionsIgnore <- c(15564)
+
 
 # File Paths
 
@@ -286,9 +289,11 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
   
   for (i in seq_along(regions)) {
     region <- regions[i]
-    # filter data frame for the given region
+    if (is.element(region, kRegionsIgnore)) next
+    
+    # filter data frame for the given region and get mask to filter out 
+    # NaNs and 0's as they indicate that the label for the region was suppressed
     df.region <- df[df$Region == region, ]
-    # generate mask to filter out values of 0
     nonzero <- df.region[[col]] > 0 & !is.nan(df.region[[col]])
     stats$Region[i] <- region
     
@@ -299,8 +304,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
       paired <- is.element(model, kModel[7:9])
       
       if (!paired) {
-        # filter each column within region for rows with non-zero values 
-        # since 0 indicates that the label for the region was suppressed
+        # filter each column within region for rows with non-zero values
         df.region.nonzero <- df.region.nonzero[nonzero, ]
         if (is.null(df.region.nonzero)) next
       }
@@ -637,7 +641,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   df <- read.csv(path.in)
   
   # convert summary regions into "Mus Musculus" (ID 15564), the 
-  # over-arching parent
+  # over-arching parent, which will be skipped if in kRegionsIgnore
   region.all <- df$Region == "all"
   if (any(region.all)) {
     df$Region <- as.integer(df$Region)

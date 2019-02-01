@@ -120,6 +120,7 @@ elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
     # BigStitcher plugin, which is more memory efficient
     if [[ "$os" = "MacOSX" ]]; then
         mem=$(sysctl -a | awk '/hw.memsize\:/ {print $2}')
+        mem=$((mem/1024))
     else
         mem=`free|awk '/Mem\:/ { print $2 }'`
     fi

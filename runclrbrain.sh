@@ -452,11 +452,10 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     echo "$msg"
     ./stitch.sh -s "none" -j "$java_home"
     
-    # Before writing stitched file, advise checking alignments; when 
-    # satisfied, then run this fusion step
+    # Fuse image for each channel
     ./stitch.sh -f "$IMG" -s "bigstitcher" -w 1 -j "$java_home"
     
-    # Rename output file(s):
+    # Rename output file(s)
     FUSED="fused_tp_0"
     for f in ${OUT_DIR}/${FUSED}*.tif; do mv $f ${f/$FUSED/$OUT_NAME_BASE}; done
     

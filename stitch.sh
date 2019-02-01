@@ -103,12 +103,6 @@ elif [[ "$os" = "MacOSX" ]]; then
 elif [[ "$os" = "Linux" ]]; then
     ij="../Fiji.app/ImageJ-linux$bit_short"
 fi
-ij=("$ij")
-if [[ ! -z "$java_home" ]]; then
-    ij+=(--java-home "$java_home")
-fi
-echo "Will run ImageJ/Fiji executable as:"
-echo "${ij[@]}"
 
 # calculates memory to reserve based on image file size with generous
 # extra padding room (TODO: check if too much for large files)
@@ -134,9 +128,27 @@ then
 fi
 echo "Reserving $mem MB of memory"
 
+# setup ImageJ execution with args for JVM
+ij=(
+  "$ij" 
+  "-XX:+HeapDumpOnOutOfMemoryError" 
+  "-XX:HeapDumpPath=$(dirname "$IMG")/heapdump.hprof"
+  "-Xmx${mem}m"
+  "-Xms${mem}m"
+  "--"
+)
+if [[ ! -z "$java_home" ]]; then
+    # specify Java home directly in ImageJ rather than as env var
+    ij+=("--java-home" "$java_home")
+fi
+# add another memory flag since unclear which ones are actually used
+ij+=("--mem" "${mem}m")
+echo "Will run ImageJ/Fiji executable as:"
+echo "${ij[@]}"
+
 if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
     # Fiji Stitching plugin; does not appear to work when fed a separate script in "-macro" mode
-    "${ij[@]}" --mem "$mem"m --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
+    "${ij[@]}" --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
     
     # manually move files to output directory since specifying this directory
     # within the Stitching plugin requires the tile configuration file to be
@@ -155,8 +167,10 @@ if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
     fi
     mv "$in_dir"/img_t* "$out_dir"
 elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
-    # BigStitcher; not working in headless mode so will require GUI availability
-    "${ij[@]}" --ij2 --mem "$mem"m --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
+    # BigStitcher; not working in headless mode so will require GUI; 
+    # --ij2 flag must follow --mem flag or else --mem ignored; 
+    # TODO: check if need --ij2 flag
+    "${ij[@]}" --ij2 --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
 else
     # no stitching, just open ImageJ/Fiji
     "${ij[@]}" --ij2

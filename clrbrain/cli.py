@@ -1011,7 +1011,8 @@ def process_file(filename_base, offset, roi_size):
         stack.stack_to_img_file(
             image5d, config.filename, offset=offset, roi_size=roi_size, 
             slice_vals=config.slice_vals, rescale=config.rescale, 
-            delay=config.delay, labels_img=config.labels_img, 
+            delay=config.delay, 
+            labels_imgs=(config.labels_img, config.borders_img), 
             animated=animated)
     
     elif proc_type == PROC_TYPES[8]:

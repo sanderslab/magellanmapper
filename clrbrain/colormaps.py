@@ -164,3 +164,42 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255):
     """
     return DiscreteColormap(
         labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, alpha_bkgd)))
+
+def get_borders_colormap(borders_img, labels_img, cmap_labels):
+    """Get a colormap for borders, using corresponding labels with 
+    intensity change to distinguish the borders.
+    
+    If the number of labels differs from that of the original colormap, 
+    a new colormap will be generated instead.
+    
+    Args:
+        borders_img: Borders image as a Numpy array, used to determine 
+            the number of labels required. If this image has multiple 
+            channels, a similar colormap with distinct intensity will 
+            be made for each channel.
+        labels_img: Labels image as a Numpy array, used to compare 
+            the number of labels for each channel in ``borders_img``.
+        cmap_labels: The original colormap on which the new colormaps 
+            will be based.
+    
+    Returns:
+        List of borders colormaps corresponding to the number of channels, 
+        or None if ``borders_img`` is None
+    """
+    cmap_borders = None
+    if borders_img is not None:
+        if (np.unique(labels_img).size 
+            == np.unique(borders_img).size):
+            # get matching colors by using labels colormap as template, 
+            # with brightest colormap for original (channel 0) borders
+            channels = 1
+            if borders_img.ndim >= 4:
+                channels = borders_img.shape[-1]
+            cmap_borders = [
+                cmap_labels.modified_cmap(int(40 / (channel + 1)))
+                for channel in range(channels)]
+        else:
+            # get a new colormap if borders image has different number 
+            # of labels while still ensuring a transparent background
+            cmap_borders = [get_labels_discrete_colormap(borders_img, 0)]
+    return cmap_borders

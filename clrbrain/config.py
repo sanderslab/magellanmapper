@@ -850,7 +850,7 @@ rc_params_mpl2_img_interp = {
 saveroi = False
 
 # alpha levels for overlaid images, defaulting to main image, labels image
-alphas = [1, 0.9]
+alphas = [1, 0.9, 0.9]
 
 
 

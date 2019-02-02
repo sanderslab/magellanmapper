@@ -62,23 +62,8 @@ class AtlasEditor:
         # set up colormaps, using the labels image to generate a template 
         # for the borders image if it has the same number of colors
         cmap_labels = colormaps.get_labels_discrete_colormap(self.labels_img, 0)
-        cmap_borders = None
-        if self.borders_img is not None:
-            if (np.unique(self.labels_img).size 
-                == np.unique(self.borders_img).size):
-                # get matching colors by using labels colormap as template, 
-                # with brightest colormap for original (channel 0) borders
-                channels = 1
-                if self.borders_img.ndim >= 4:
-                    channels = self.borders_img.shape[-1]
-                cmap_borders = [
-                    cmap_labels.modified_cmap(int(40 / (channel + 1)))
-                    for channel in range(channels)]
-            else:
-                # get a new colormap if borders image has different number 
-                # of labels while still ensuring a transparent background
-                cmap_borders = [
-                    colormaps.get_labels_discrete_colormap(self.borders_img, 0)]
+        cmap_borders = colormaps.get_borders_colormap(
+            self.borders_img, self.labels_img, cmap_labels)
         coord = list(self.offset[::-1])
         
         # transparency controls

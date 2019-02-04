@@ -1267,11 +1267,29 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
     return img_atlas, img_labels, img_borders
 
 def import_atlas(atlas_dir, show=True):
+    """Import atlas from the given directory, processing it according 
+    to the register settings specified at :attr:``config.register_settings``.
+    
+    The imported atlas will be saved to a directory of the same path as 
+    ``atlas_dir`` except with ``_import`` appended to the end. DSC 
+    will be calculated and saved as a CSV file in this directory as well.
+    
+    Args:
+        atlas_dir: Path to atlas directory.
+        show: True to show the imported atlas.
+    """
     # load atlas and corresponding labels
     img_atlas = sitk.ReadImage(os.path.join(atlas_dir, IMG_ATLAS))
     img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
+    orig = "_raw" in config.register_settings["settings_name"]
+    if orig:
+        # baseline DSC of atlas to labels before any processing
+        cond = "original"  
+        dsc = _measure_overlap_combined_labels(img_atlas, img_labels)
+    else:
+        # defer DSC until after processing
+        cond = "extended" 
     
-    #img_labels_np = None
     img_atlas, img_labels, img_borders = match_atlas_labels(
         img_atlas, img_labels)
     
@@ -1288,7 +1306,17 @@ def import_atlas(atlas_dir, show=True):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    _measure_overlap_combined_labels(img_atlas, img_labels)
+    # prep export paths
+    target_dir = atlas_dir + "_import"
+    basename = os.path.basename(atlas_dir)
+    df_path = os.path.join(target_dir, basename) + "_stats_dsc.csv"
+    name_prefix = os.path.join(target_dir, basename) + ".czi"
+    
+    # measure DSC if processed and prep dict for data frame
+    if not orig:
+        dsc = _measure_overlap_combined_labels(img_atlas, img_labels)
+    metrics = {"Sample": [basename], "Region": "all", "Condition": cond, 
+               "DSC_atlas_labels": [dsc]}
     
     if show:
        sitk.Show(img_atlas)
@@ -1296,8 +1324,6 @@ def import_atlas(atlas_dir, show=True):
     
     # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
-    target_dir = atlas_dir + "_import"
-    name_prefix = os.path.join(target_dir, os.path.basename(atlas_dir)) + ".czi"
     imgs_write = {
         IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}
     write_reg_images(imgs_write, name_prefix, copy_to_suffix=True)
@@ -1305,6 +1331,7 @@ def import_atlas(atlas_dir, show=True):
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
     importer.save_np_image(img_ref_np, name_prefix, 0)
+    stats.dict_to_data_frame(metrics, df_path)
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
@@ -1562,7 +1589,7 @@ def _measure_overlap_combined_labels(fixed_img, labels_img):
     # when using labels img to curate fixed img
     result_img_for_overlap = make_labels_fg(labels_img)
     print("\nDSC of thresholded fixed image compared with combined labels:")
-    measure_overlap(
+    return measure_overlap(
         fixed_img, result_img_for_overlap, transformed_thresh=1)
 
 def _crop_image(img_np, labels_img, axis, eraser=None):

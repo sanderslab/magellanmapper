@@ -21,7 +21,7 @@ kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 
 # measurements, which correspond to columns in main data frame
 kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
-          "EdgeDistSum", "EdgeDistMean")
+          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels")
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -34,7 +34,7 @@ kRegionsIgnore <- c(15564)
 
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
-                   "vols_by_sample_summary.csv")
+                   "vols_by_sample_summary.csv", "dsc_summary.csv")
 kStatsPathOut <- "../vols_stats.csv" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -263,7 +263,8 @@ setupPairing <- function(df.region, col, split.col) {
   return(df.filtered)
 }
 
-statsByRegion <- function(df, col, model, split.by.side=TRUE) {
+statsByRegion <- function(df, col, model, split.by.side=TRUE, 
+                          regions.ignore=NULL) {
   # Calculate statistics given by region for columns starting with the given 
   # string using the selected model.
   #
@@ -278,6 +279,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
   #   split.by.side: True to keep data split by sides, False to combine 
   #     corresponding regions from opposite sides into single regions; 
   #     defaults to True.
+  #   regions.ignore: Vector of regions to ignore; default to NULL.
   
   # find all regions
   regions <- unique(df$Region)
@@ -289,7 +291,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE) {
   
   for (i in seq_along(regions)) {
     region <- regions[i]
-    if (is.element(region, kRegionsIgnore)) next
+    if (!is.null(regions.ignore) & is.element(region, kRegionsIgnore)) next
     
     # filter data frame for the given region and get mask to filter out 
     # NaNs and 0's as they indicate that the label for the region was suppressed
@@ -407,18 +409,22 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     # default column name by which to split
     split.col <- "Side"
   }
-  genos <- df.region$Geno
+  if (is.element("Geno", names(df.region))) {
+    genos <- df.region$Geno
+  } else {
+    genos <- c("")
+  }
   genos.unique <- sort(unique(genos))
   multiple.geno <- length(genos.unique) > 1
   sides <- df.region[[split.col]]
-  sides.unique <- sort(unique(sides))
+  sides.unique <- unique(sides)
   if (!split.by.side | length(sides.unique) == 0) {
     # use a single side for one for-loop pass
     sides.unique = c("")
   }
   vals <- df.region[[col]]
   maxes <- c(length(genos.unique) * length(sides.unique), max(vals))
-  plot(NULL, frame.plot=TRUE, xlab=title, ylab=col, xaxt="n", 
+  plot(NULL, frame.plot=TRUE, xlab=title, ylab=gsub("_", " ", col), xaxt="n", 
            xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]))
   names <- list()
   i <- 0
@@ -655,7 +661,13 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   cat("\n\n")
   
   # calculate stats, filter out NAs and extract effects and p-values
-  stats <- statsByRegion(df, meas, model, split.by.side=split.by.side)
+  regions.ignore <- NULL
+  if (path.in == kStatsFilesIn[2]) {
+    # ignore duplicate when including all levels
+    regions.ignore <- kRegionsIgnore
+  }
+  stats <- statsByRegion(
+    df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore)
   stats.filtered <- filterStats(stats, corr=corr)
   stats.filtered <- merge(stats.filtered, region.ids, by="Region")
   #print(stats.filtered)

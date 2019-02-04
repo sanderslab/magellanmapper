@@ -909,6 +909,7 @@ PATH_COMMON_LABELS = "labels_common.csv"
 
 STATS_TYPES = ("merge_csvs", "exps_by_regions")
 stats_type = None
+seed = 0 # random number generator seed
 
 
 

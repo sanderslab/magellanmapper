@@ -497,6 +497,7 @@ def main(process_args_only=False):
     parser.add_argument("--suffix")
     parser.add_argument("--alphas")
     parser.add_argument("--vmax")
+    parser.add_argument("--seed")
     parser.add_argument("--reg_suffixes", nargs="*")
     args = parser.parse_args()
     
@@ -709,6 +710,11 @@ def main(process_args_only=False):
         # specify suffixes of registered images to load
         config.reg_suffixes = args_with_dict(args.reg_suffixes)
         print("Set registered image suffixes to {}".format(config.reg_suffixes))
+    
+    if args.seed:
+        # specify random number generator seed
+        config.seed = int(args.seed)
+        print("Set random number generator seed to", config.seed)
     
     # prep filename
     if not config.filename:

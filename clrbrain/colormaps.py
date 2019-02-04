@@ -151,7 +151,8 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     return cmap
 
 def get_labels_discrete_colormap(labels_img, alpha_bkgd=255):
-    """Get a default discrete colormap for a labels image.
+    """Get a default discrete colormap for a labels image, assuming that 
+    background is 0, and the seed is determined by :attr:``config.seed``.
     
     Args:
         labels_img: Labels image as a Numpy array.
@@ -163,7 +164,8 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255):
         each unique value in ``labels_img``.
     """
     return DiscreteColormap(
-        labels_img, 0, 255, False, 150, 50, (0, (0, 0, 0, alpha_bkgd)))
+        labels_img, config.seed, 255, False, 150, 50, 
+        (0, (0, 0, 0, alpha_bkgd)))
 
 def get_borders_colormap(borders_img, labels_img, cmap_labels):
     """Get a colormap for borders, using corresponding labels with 

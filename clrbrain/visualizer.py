@@ -910,6 +910,10 @@ class Visualization(HasTraits):
         be ignored.
         """
         print("region ID: {}".format(self._region_id))
+        if config.labels_img is None:
+            self.segs_feedback = "No labels image loaded to find region"
+            return
+        
         both_sides = self._region_id.startswith(self._PREFIX_BOTH_SIDES)
         region_id = self._region_id
         if both_sides:

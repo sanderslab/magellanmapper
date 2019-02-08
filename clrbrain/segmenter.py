@@ -292,7 +292,8 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
     Args:
         labels_img: Labels image as an integer Numpy array, where each 
             unique int is a separate label.
-        filter_size: Size of structing element for erosion; defaults to 8.
+        filter_size: Size of structing element for erosion, which should be
+            > 0; defaults to 8.
     
     Returns:
         Image array of the same shape as ``img`` and the same number of 
@@ -306,6 +307,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
     cols = ("Region", "SizeOrig", "SizeMarker", "FilterSize")
     
     # erode labels via multiprocessing
+    print("Eroding labels to markers with filter size of", filter_size)
     LabelToMarkerErosion.set_labels_img(labels_img)
     pool = mp.Pool()
     pool_results = []

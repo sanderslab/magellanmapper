@@ -400,9 +400,11 @@ class RegisterSettings(SettingsDict):
         # erosion size when converting labels to markers; use None to skip
         self["marker_erosion"] = 8
         
-        # crop labels back to their original extent after smoothing 
-        # (ignored during atlas import if no smoothing)
-        self["crop_to_orig"] = True
+        # crop labels back to their original background after smoothing 
+        # (ignored during atlas import if no smoothing), given as the filter 
+        # size used to open up the backgound before cropping, 0 to use 
+        # the original background as-is, or False not to crop
+        self["crop_to_orig"] = 1
 
 def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):

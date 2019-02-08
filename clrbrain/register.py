@@ -518,6 +518,16 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (edgei, mirrori), borders_img_np
 
+def _crop_to_orig(labels_img_np_orig, labels_img_np, crop):
+    # crop new labels to extent of original labels unless crop is False
+    print("cropping to original labels' extent with filter size of", crop)
+    if crop is False: return
+    mask = labels_img_np_orig == 0
+    if crop > 0:
+        # smooth mask
+        mask = morphology.binary_opening(mask, morphology.ball(crop))
+    labels_img_np[mask] = 0
+
 def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     """Smooth image and calculate smoothing metric for use individually or 
     in multiprocessing.
@@ -537,10 +547,9 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     smooth_labels(img_np, filter_size)
     borders, metric, df_raw = label_smoothing_metric(
         img_np_orig, img_np, save_borders=save_borders)
+    # curate back to lightly smoothed foreground of original labels
     crop = config.register_settings["crop_to_orig"]
-    if crop:
-        # curate back to foreground of original labels
-        img_np[img_np_orig == 0] = 0
+    _crop_to_orig(img_np_orig, img_np, crop)
     print("\nMeasuring foreground overlap of labels after smoothing:")
     measure_overlap_labels(
         make_labels_fg(sitk.GetImageFromArray(img_np)), 
@@ -2086,12 +2095,10 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
         # mirror back to other half
         labels_seg = _mirror_imported_labels(labels_seg, len_half)
     
+    # expand background to smoothed background of original labels to 
+    # roughly match background while still allowing holes to be filled
     crop = config.register_settings["crop_to_orig"]
-    if crop:
-        # expand background to smoothed background of original labels to 
-        # roughly match background while still allowing holes to be filled
-        mask = morphology.binary_opening(labels_img_np == 0, morphology.ball(1))
-        labels_seg[mask] = 0
+    _crop_to_orig(labels_img_np, labels_seg, crop)
     
     if labels_seg.dtype != labels_img_np.dtype:
         # watershed may give different output type, so cast back if so

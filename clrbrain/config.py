@@ -512,7 +512,7 @@ def update_register_settings(settings, settings_type):
          "atlas_threshold": 80, # to avoid edge over-extension into skull
          "rotate": ((-4, 1), (-2, 2)),
          "crop_to_labels": True, 
-         "smooth": 4
+         "smooth": 2, 
         }, 
         settings_type)
     

@@ -422,56 +422,87 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     # use a single side for one for-loop pass
     sides.unique = c("")
   }
+  
+  # setup coordinates to plot and error ranges
   vals <- df.region[[col]]
-  maxes <- c(length(genos.unique) * length(sides.unique), max(vals))
-  plot(NULL, frame.plot=TRUE, xlab=title, ylab=gsub("_", " ", col), xaxt="n", 
-           xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]))
   names <- list()
-  i <- 0
+  vals.groups <- list() # list of vals for each geno-side group
+  num.groups <- length(genos.unique) * length(sides.unique)
+  vals.means <- vector(length=num.groups)
+  vals.cis <-vector(length=num.groups)
+  max.errs <- vector(length=num.groups)
+  i <- 1
   for (geno in genos.unique) {
-    x.adj <- 0
-    x.pos <- vector(length=length(sides.unique))
-    mtext(geno, side=1, at=i+0.5)
-    vals.sides <- list()
     for (side in sides.unique) {
+      # vals for group based on whether to include side
       if (split.by.side) {
         vals.geno <- vals[genos == geno & sides == side]
       } else {
         vals.geno <- vals[genos == geno]
       }
-      vals.sides <- append(vals.sides, list(vals.geno))
+      vals.groups <- append(vals.groups, list(vals.geno))
+      
+      # error bars
+      vals.means[i] <- mean(vals.geno)
       num.vals <- length(vals.geno)
-      x <- i + x.adj
-      x.vals <- rep(x, num.vals)
-      if (!paired) {
-        # add jitter to distinguish points
-        x.vals <- jitter(x.vals, amount=0.2)
-      }
-      points(x.vals, vals.geno, col=i+1, pch=16)
-      vals.mean <- mean(vals.geno)
-      vals.sd <- sd(vals.geno)
-      vals.sem <- vals.sd / sqrt(num.vals)
+      vals.sem <- sd(vals.geno) / sqrt(num.vals)
       # use 97.5th percentile for 2-tailed 95% confidence level
-      vals.ci <- qt(0.975, df=num.vals-1) * vals.sem
-      segments(x - 0.25, vals.mean, x + 0.25, vals.mean)
-      arrows(x, vals.mean + vals.ci, x, vals.mean - vals.ci, length=0.05, 
-             angle=90, code=3)
+      vals.cis[i] <- qt(0.975, df=num.vals-1) * vals.sem
+      max.errs[i] <- vals.means[i] + vals.cis[i]
+      
+      # main label
       name <- side
       if (multiple.geno) name <- paste(geno, side)
       names <- append(names, name)
       i <- i + 1
-      x.pos[i] <- x
+    }
+  }
+  
+  # plot values with means and error bars
+  
+  # max y-val or error bar, whichever is higher
+  maxes <- c(num.groups, max(max(vals), max(max.errs)))
+  plot(NULL, frame.plot=TRUE, xlab=title, ylab=gsub("_", " ", col), xaxt="n", 
+       xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n")
+  # avoid extreme colors
+  colors <- viridis(length(vals.groups), begin=0.2, end=0.7)
+  i <- 1
+  for (geno in genos.unique) {
+    x.adj <- 0
+    mtext(geno, side=1, at=i-0.5)
+    x.pos <- vector(length=length(sides.unique))
+    vals.geno <- list() # vals within genotype, for paired points
+    for (side in sides.unique) {
+      # plot points, adding jitter in x-direction unless paired
+      vals.group <- vals.groups[[i]]
+      vals.geno <- append(vals.geno, vals.groups[i])
+      x <- i + x.adj - 1
+      x.vals <- rep(x, length(vals.group))
+      if (!paired) {
+        # add jitter to distinguish points
+        x.vals <- jitter(x.vals, amount=0.2)
+      }
+      points(x.vals, vals.group, col=colors[i], pch=16)
+      
+      # plot error bars
+      mean <- vals.means[[i]]
+      ci <- vals.cis[[i]]
+      segments(x - 0.25, mean, x + 0.25, mean)
+      arrows(x, mean + ci, x, mean - ci, length=0.05, angle=90, code=3)
+      
+      x.pos[i] <- x # store x for connecting paired points
       x.adj <- x.adj + 0.05
+      i <- i + 1
     }
     if (paired) {
       # connect pairs of points with segments, assuming same order for each 
       # vector of values
-      for (i in seq_along(vals.sides[[1]])) {
-        segments(x.pos[1], vals.sides[[1]][i], x.pos[2], vals.sides[[2]][i])
+      for (j in seq_along(vals.geno[[1]])) {
+        segments(x.pos[1], vals.geno[[1]][j], x.pos[2], vals.geno[[2]][j])
       }
     }
   }
-  legend(0, maxes[2] * 0.5, names, col=1:length(names), pch=16)
+  legend(0, maxes[2] * 0.5, names, col=colors[1:length(names)], pch=16)
   dev.print(
     pdf, file=paste0(
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))

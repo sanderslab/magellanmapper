@@ -265,9 +265,11 @@ def update_process_settings(settings, settings_type):
         "cytoplasm", 
         {"clip_min": 0.3,
          "clip_max": 0.8,
-         "points_3d_thresh": 0.7,
-         "min_sigma_factor": 8,
-         "max_sigma_factor": 20,
+         "points_3d_thresh": 0.7, 
+         # adjust sigmas based on extent of cyto staining; 
+         # TODO: consider adding sigma_mult if ratio remains relatively const
+         "min_sigma_factor": 4, 
+         "max_sigma_factor": 10,
          "num_sigma": 10,
          "overlap": 0.2}, 
         settings_type)

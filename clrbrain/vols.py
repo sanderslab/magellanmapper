@@ -422,29 +422,31 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
             var_nuc * label_size)
         totals.setdefault(LabelMetrics.Nuclei, []).append(nuc)
         totals.setdefault(LabelMetrics.VolMean, []).append(
-            vol_mean_physical)
-        totals.setdefault(LabelMetrics.NucMean, []).append(nuc_mean)
+            vol_mean_physical * label_size)
+        totals.setdefault(LabelMetrics.NucMean, []).append(
+            nuc_mean * label_size)
     pool.close()
     pool.join()
     df = pd.DataFrame(metrics)
     print(df.to_csv())
     
-    # add row for total metrics from weighted means
+    # add row with total metrics from weighted means
     metrics_all = {}
     grouping[config.SIDE_KEY] = "both"
     for key in totals.keys():
         totals[key] = np.nansum(totals[key])
         if totals[key] == 0: totals[key] = np.nan
+    # divide weighted values by sum of corresponding weights
     vals = (sample, *grouping.values(), "all", totals[LabelMetrics.Volume], 
             totals[LabelMetrics.Nuclei], 
             totals[LabelMetrics.Nuclei] / totals[LabelMetrics.Volume], 
-            totals[LabelMetrics.VolMean], 
-            totals[LabelMetrics.NucMean], 
+            totals[LabelMetrics.VolMean] / totals["vol"], 
+            totals[LabelMetrics.NucMean] / totals["vol"], 
             totals[LabelMetrics.NucMean] / totals[LabelMetrics.VolMean],
             totals[LabelMetrics.VarNuclei] / totals["vol"], 
             totals[LabelMetrics.VarIntensity] / totals["vol"], 
             totals[LabelMetrics.EdgeSize], 
-            totals[LabelMetrics.EdgeDistSum] / totals[LabelMetrics.EdgeSize], 
+            totals[LabelMetrics.EdgeDistSum], 
             totals[LabelMetrics.EdgeDistMean] / totals[LabelMetrics.EdgeSize])
     for col, val in zip(cols, vals):
         metrics_all.setdefault(col, []).append(val)

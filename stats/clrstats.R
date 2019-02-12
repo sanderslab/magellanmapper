@@ -130,8 +130,8 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   for (i in seq_along(conditions.unique)) {
     val.conds[[i]] <- vals[conditions == conditions.unique[i]]
     num.per.cond <- length(val.conds[[i]])
-    if (num.per.cond <= 0) {
-      cat("no values for at least one condition, cannot complete\n")
+    if (num.per.cond <= 1) {
+      cat("0-1 values for at least one condition, cannot calculate stats\n")
       return(NULL)
     }
   }
@@ -341,16 +341,17 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         ids <- df.region.nonzero$Sample
         coef.tab <- fitModel(model, vals, genos, sides, ids)
       }
-      if (is.null(coef.tab)) next
-      stats$Stats[i] <- list(coef.tab)
-      stats$MeanNuclei[i] <- mean(df.region.nonzero$Nuclei)
-      title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
+      if (!is.null(coef.tab)) {
+        stats$Stats[i] <- list(coef.tab)
+        stats$MeanNuclei[i] <- mean(df.region.nonzero$Nuclei)
+      }
       
       # show histogram to check for parametric distribution
       #histogramPlot(vals, title, meas)
       
       # plot individual values grouped by genotype and selected column
       df.jitter <- df.region.nonzero
+      title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
       if (!split.by.side) {
         df.jitter <- aggregate(
           cbind(Volume, Nuclei) ~ Sample + Geno, df.jitter, sum)

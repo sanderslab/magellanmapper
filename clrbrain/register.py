@@ -3503,49 +3503,57 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                        .format(df_path))
                 warnings.warn(msg)
         
-        # open images registered to the main image, staring with the 
-        # experimental image if available and falling back to atlas
-        try:
-            img_sitk = load_registered_img(
-                mod_path, get_sitk=True, reg_name=IMG_EXP)
-        except FileNotFoundError as e:
-            print(e)
-            print("will load atlas image instead")
-            img_sitk = load_registered_img(
-                mod_path, get_sitk=True, reg_name=IMG_ATLAS)
-        img_np = sitk.GetArrayFromImage(img_sitk)
-        spacing = img_sitk.GetSpacing()[::-1]
-        
-        # load labels in order of priority: full labels > truncated labels
+        spacing = None
+        img_np = None
         labels_img_np = None
-        try:
-            labels_img_np = load_registered_img(mod_path, reg_name=IMG_LABELS)
-        except FileNotFoundError as e:
-            print(e)
-            print("will attempt to load trucated labels image instead")
-            labels_img_np = load_registered_img(
-                mod_path, reg_name=IMG_LABELS_TRUNC)
-        
-        # load labels edge and edge distances images
-        labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
-        dist_to_orig = load_registered_img(mod_path,reg_name=IMG_LABELS_DIST)
-        
-        # load heat map of nuclei per voxel if available
+        labels_edge = None
+        dist_to_orig = None
         heat_map = None
-        try:
-            heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
-        except FileNotFoundError as e:
-            print(e)
-            print("will ignore nuclei stats")
-        
-        # load sub-segmentation labels if available
         subseg = None
-        try:
-            subseg = load_registered_img(mod_path,reg_name=IMG_LABELS_SUBSEG)
-        except FileNotFoundError as e:
-            print(e)
-            print("will ignore labels sub-segmentations")
-        print("tot blobs", np.sum(heat_map))
+        if df is None:
+            # open images registered to the main image, staring with the 
+            # experimental image if available and falling back to atlas
+            try:
+                img_sitk = load_registered_img(
+                    mod_path, get_sitk=True, reg_name=IMG_EXP)
+            except FileNotFoundError as e:
+                print(e)
+                print("will load atlas image instead")
+                img_sitk = load_registered_img(
+                    mod_path, get_sitk=True, reg_name=IMG_ATLAS)
+            img_np = sitk.GetArrayFromImage(img_sitk)
+            spacing = img_sitk.GetSpacing()[::-1]
+            
+            # load labels in order of priority: full labels > truncated labels
+            try:
+                labels_img_np = load_registered_img(
+                    mod_path, reg_name=IMG_LABELS)
+            except FileNotFoundError as e:
+                print(e)
+                print("will attempt to load trucated labels image instead")
+                labels_img_np = load_registered_img(
+                    mod_path, reg_name=IMG_LABELS_TRUNC)
+            
+            # load labels edge and edge distances images
+            labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
+            dist_to_orig = load_registered_img(
+                mod_path,reg_name=IMG_LABELS_DIST)
+            
+            # load heat map of nuclei per voxel if available
+            try:
+                heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
+            except FileNotFoundError as e:
+                print(e)
+                print("will ignore nuclei stats")
+            
+            # load sub-segmentation labels if available
+            try:
+                subseg = load_registered_img(
+                    mod_path,reg_name=IMG_LABELS_SUBSEG)
+            except FileNotFoundError as e:
+                print(e)
+                print("will ignore labels sub-segmentations")
+            print("tot blobs", np.sum(heat_map))
         
         # prepare sample name with original name for comparison across 
         # conditions and add an arbitrary number of metadata grouping cols

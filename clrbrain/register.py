@@ -3396,7 +3396,7 @@ def _find_atlas_labels(load_labels, max_level, labels_ref_lookup):
         # use all drawn labels in original labels image
         orig_labels_sitk = sitk.ReadImage(orig_labels_path)
         orig_labels_np = sitk.GetArrayFromImage(orig_labels_sitk)
-        label_ids = np.unique(orig_labels_np)
+        label_ids = np.unique(orig_labels_np).tolist()
     else:
         # use all labels in ontology reference to include hierarchical 
         # labels or if original labels image isn't presenst

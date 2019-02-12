@@ -448,7 +448,9 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       vals.sem <- sd(vals.geno) / sqrt(num.vals)
       # use 97.5th percentile for 2-tailed 95% confidence level
       vals.cis[i] <- qt(0.975, df=num.vals-1) * vals.sem
-      max.errs[i] <- vals.means[i] + vals.cis[i]
+      # store max height of error bar setting axis limits
+      err <- if (is.na(vals.cis[i])) 0 else vals.cis[i]
+      max.errs[i] <- vals.means[i] + err
       
       # main label
       name <- side
@@ -484,12 +486,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       }
       points(x.vals, vals.group, col=colors[i], pch=16)
       
-      # plot error bars
+      # plot error bars unless CI is NA, such as infinitely large CI when n = 1
       mean <- vals.means[[i]]
       ci <- vals.cis[[i]]
-      segments(x - 0.25, mean, x + 0.25, mean)
-      arrows(x, mean + ci, x, mean - ci, length=0.05, angle=90, code=3)
-      
+      if (!is.na(ci)) {
+        segments(x - 0.25, mean, x + 0.25, mean)
+        arrows(x, mean + ci, x, mean - ci, length=0.05, angle=90, code=3)
+      }
       x.pos[i] <- x # store x for connecting paired points
       x.adj <- x.adj + 0.05
       i <- i + 1

@@ -3481,12 +3481,15 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     
     dfs = []
     dfs_all = []
+    sort_cols=["Region", "Sample", "Side"]
     for i, img_path in enumerate(img_paths):
         # adjust image path with suffix
         mod_path = img_path
         if suffix is not None:
             mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
         
+        # load data frame if available
+        df_path = "{}_volumes.csv".format(os.path.splitext(mod_path)[0])
         # open images registered to the main image, staring with the 
         # experimental image if available and falling back to atlas
         try:
@@ -3546,12 +3549,14 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             spacing, unit_factor, 
             combine_sides and max_level is None, 
             label_ids, grouping)
+        if max_level is None:
+            stats.data_frames_to_csv([df], df_path, sort_cols=sort_cols)
         dfs.append(df)
         dfs_all.append(df_all)
     
     # combine data frames from all samples by region for each sample
     df_combined = stats.data_frames_to_csv(
-        dfs, out_path, sort_cols=["Region", "Sample", "Side"])
+        dfs, out_path, sort_cols=sort_cols)
     df_combined_all = None
     if max_level is None:
         # combine weighted combo of all regions per sample; 
@@ -4007,10 +4012,14 @@ if __name__ == "__main__":
         if config.groups is not None:
             groups[config.GENOTYPE_KEY] = [
                 config.GROUPS_NUMERIC[geno] for geno in config.groups]
+        # get raw values for each label for each side when measuring 
+        # only drawn labels to generate a data frame that can be 
+        # used for fast aggregation when grouping into levels
+        combine_sides = config.labels_level is not None
         volumes_by_id2(
             config.filenames, labels_ref_lookup, suffix=config.suffix, 
             unit_factor=unit_factor, groups=groups, 
-            max_level=config.labels_level, combine_sides=True)
+            max_level=config.labels_level, combine_sides=combine_sides)
     
     elif reg is config.RegisterTypes.make_density_images:
         # make density images

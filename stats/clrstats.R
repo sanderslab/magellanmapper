@@ -287,6 +287,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   cols <- c("Region", "Stats", "MeanNuclei")
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols
+  # use original order of appearance in Condition column to sort each 
+  # region since order may change from region to region
+  cond.unique <- unique(df$Condition)
   regions.ignored <- vector()
   
   for (i in seq_along(regions)) {
@@ -316,11 +319,13 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         # average variations in a weighted manner
         split.col <- "Condition"
         if (paired) {
-          # sort by sample, split by condition, and filter out pairs 
-          # where either sample has a zero value
+          # sort by sample and condition, matching saved condition order, 
+          # split by condition, and filter out pairs where either sample 
+          # has a zero value
           #print(df.region.nonzero)
           df.region.nonzero <- df.region.nonzero[
-            order(df.region.nonzero$Sample), ]
+            order(df.region.nonzero$Sample, 
+                  match(df.region.nonzero$Condition, cond.unique)), ]
           df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
           if (is.null(df.region.nonzero)) next
         }
@@ -705,7 +710,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
     df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore)
   stats.filtered <- filterStats(stats, corr=corr)
   stats.filtered <- merge(stats.filtered, region.ids, by="Region")
-  #print(stats.filtered)
+  print(stats.filtered)
   write.csv(stats.filtered, path.out)
   return(stats.filtered)
 }

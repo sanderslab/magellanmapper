@@ -47,6 +47,7 @@ from collections import OrderedDict
 from pprint import pprint
 import shutil
 from time import time
+import warnings
 import pandas as pd
 try:
     import SimpleITK as sitk
@@ -3490,6 +3491,18 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         
         # load data frame if available
         df_path = "{}_volumes.csv".format(os.path.splitext(mod_path)[0])
+        df = None
+        if max_level is not None:
+            if os.path.exists(df_path):
+                df = pd.read_csv(df_path)
+            else:
+                msg = ("Could not find raw stats for drawn labels from "
+                       "{}, will measure stats for individual regions "
+                       "repeatedly. To save processing time, consider "
+                       "stopping and re-running first without levels"
+                       .format(df_path))
+                warnings.warn(msg)
+        
         # open images registered to the main image, staring with the 
         # experimental image if available and falling back to atlas
         try:
@@ -3548,7 +3561,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             labels_edge, dist_to_orig, heat_map, subseg, 
             spacing, unit_factor, 
             combine_sides and max_level is None, 
-            label_ids, grouping)
+            label_ids, grouping, df)
         if max_level is None:
             stats.data_frames_to_csv([df], df_path, sort_cols=sort_cols)
         dfs.append(df)

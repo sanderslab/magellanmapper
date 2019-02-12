@@ -19,7 +19,7 @@ from clrbrain import plot_3d
 # metric keys and column names
 LabelMetrics = Enum(
     "LabelMetrics", [
-        "Volume", "Nuclei", "Density", 
+        "Region", "Volume", "Nuclei", "Density", 
         "VolMean", "NucMean", "DensityMean", 
         "VarNuclei", "VarIntensity", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean"
@@ -129,6 +129,7 @@ class MeasureLabel(object):
             in the same placement as in ``labels_edge``.
         heat_map: Numpy array as a density map.
         sub_seg: Integer sub-segmentations labels image as Numpy array.
+        df: Pandas data frame with a row for each sub-region.
     """
     # metric keys
     _COUNT_METRICS = (LabelMetrics.Volume, LabelMetrics.Nuclei)
@@ -139,24 +140,26 @@ class MeasureLabel(object):
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
     
-    # images
+    # images and data frame
     atlas_img_np = None
     labels_img_np = None
     labels_edge = None
     dist_to_orig = None
     heat_map = None
     subseg = None
+    df = None
     
     @classmethod
-    def set_images(cls, atlas_img_np, labels_img_np, labels_edge, 
-                   dist_to_orig, heat_map=None, subseg=None):
-        """Set the images."""
+    def set_data(cls, atlas_img_np, labels_img_np, labels_edge, 
+                   dist_to_orig, heat_map=None, subseg=None, df=None):
+        """Set the images and data frame."""
         cls.atlas_img_np = atlas_img_np
         cls.labels_img_np = labels_img_np
         cls.labels_edge = labels_edge
         cls.dist_to_orig = dist_to_orig
         cls.heat_map = heat_map
         cls.subseg = subseg
+        cls.df = df
     
     @classmethod
     def label_metrics(cls, label_id):
@@ -195,13 +198,24 @@ class MeasureLabel(object):
             edge distances, and number ofpixels in the label edge. 
             The metrics are NaN if the label size is 0.
         """
-        label_mask = np.isin(cls.labels_img_np, label_ids)
         metrics = dict.fromkeys(cls._COUNT_METRICS, np.nan)
-        label_size = np.sum(label_mask)
+        nuclei = np.nan
+        
+        if cls.df is None:
+            # sum up counts within the collective region
+            label_mask = np.isin(cls.labels_img_np, label_ids)
+            label_size = np.sum(label_mask)
+            if cls.heat_map is not None:
+                nuclei = np.sum(cls.heat_map[label_mask])
+        else:
+            # get all rows associated with region and sum stats within columns
+            labels = cls.df.loc[
+                cls.df[LabelMetrics.Region.name].isin(label_ids)]
+            label_size = np.nansum(labels[LabelMetrics.Volume.name])
+            nuclei = np.nansum(labels[LabelMetrics.Nuclei.name])
         if label_size > 0:
             metrics[LabelMetrics.Volume] = label_size
-            if cls.heat_map is not None:
-                metrics[LabelMetrics.Nuclei] = np.sum(cls.heat_map[label_mask])
+            metrics[LabelMetrics.Nuclei] = nuclei
         disp_id = get_single_label(label_ids)
         print("counts within label {}: {}"
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
@@ -224,19 +238,27 @@ class MeasureLabel(object):
             The metrics are NaN if the label size is 0.
         """
         metrics = dict((key, []) for key in cls._VAR_METRICS)
+        if not lib_clrbrain.is_seq(label_ids): label_ids = [label_ids]
+        seg_ids = []
+        
         for label_id in label_ids:
-            label_mask = cls.labels_img_np == label_id
-            label_size = np.sum(label_mask)
-            
-            if label_size > 0:
-                labels_unique = [label_id]
+            # collect all sub-regions
+            if cls.subseg is not None:
+                # get sub-segmentations within region
+                label_mask = cls.labels_img_np == label_id
+                seg_ids.extend(np.unique(cls.subseg[label_mask]).tolist())
+            else:
+                seg_ids.append(label_id)
+        
+        if cls.df is None:
+            # calculate stats for each sub-region
+            for seg_id in seg_ids:
                 if cls.subseg is not None:
-                    labels_unique = np.unique(cls.subseg[label_mask])
-                for seg_id in labels_unique:
-                    seg_mask = label_mask
-                    if cls.subseg is not None:
-                        seg_mask = cls.subseg == seg_id
-                    size = np.sum(seg_mask)
+                    seg_mask = cls.subseg == seg_id
+                else:
+                    seg_mask = cls.labels_img_np == seg_id
+                size = np.sum(seg_mask)
+                if size > 0:
                     # variation in intensity of underlying atlas/sample region
                     var_inten = np.std(cls.atlas_img_np[seg_mask])
                     var_dens = np.nan
@@ -249,11 +271,20 @@ class MeasureLabel(object):
                     vals = (size, blobs, var_dens, var_inten)
                     for metric, val in zip(cls._VAR_METRICS, vals):
                         metrics[metric].append(val)
+        else:
+            # get sub-region stats stored in data frame
+            labels = cls.df.loc[cls.df[LabelMetrics.Region.name].isin(seg_ids)]
+            for i, row in labels.iterrows():
+                if row[LabelMetrics.VolMean.name] > 0:
+                    for metric in cls._VAR_METRICS:
+                        metrics[metric].append(row[metric.name])
+        
+        # weight totals by sub-region size
         disp_id = get_single_label(label_ids)
         vols = np.copy(metrics[LabelMetrics.VolMean])
-        tot_size = np.sum(vols)
+        tot_size = np.sum(vols) # assume no nans
         for key in metrics.keys():
-            print("{} {}: {}".format(disp_id, key.name, metrics[key]))
+            #print("{} {}: {}".format(disp_id, key.name, metrics[key]))
             if tot_size > 0:
                 metrics[key] = np.nansum(
                     np.multiply(metrics[key], vols)) / tot_size
@@ -275,13 +306,36 @@ class MeasureLabel(object):
             edge distances, and number ofpixels in the label edge. 
             The metrics are NaN if the label size is 0.
         """
-        label_mask = np.isin(cls.labels_edge, label_ids)
         metrics = dict.fromkeys(cls._EDGE_METRICS, np.nan)
-        if np.sum(label_mask) > 0:
-            region_dists = cls.dist_to_orig[label_mask]
-            metrics[LabelMetrics.EdgeDistSum] = np.sum(region_dists)
-            metrics[LabelMetrics.EdgeDistMean] = np.mean(region_dists)
-            metrics[LabelMetrics.EdgeSize] = region_dists.size
+        
+        # get collective region
+        if cls.df is None:
+            # get region directly from image
+            label_mask = np.isin(cls.labels_edge, label_ids)
+            label_size = np.sum(label_mask)
+        else:
+            # get all row associated with region
+            labels = cls.df.loc[
+                cls.df[LabelMetrics.Region.name].isin(label_ids)]
+            label_size = np.nansum(labels[LabelMetrics.Volume.name])
+        
+        if label_size > 0:
+            if cls.df is None:
+                # sum and take average directly from image
+                region_dists = cls.dist_to_orig[label_mask]
+                dist_sum = np.sum(region_dists)
+                dist_mean = np.mean(region_dists)
+                size = region_dists.size
+            else:
+                # take sum from rows and weight means by edge sizes
+                dist_sum = np.nansum(labels[LabelMetrics.EdgeDistSum.name])
+                sizes = labels[LabelMetrics.EdgeSize.name]
+                dist_means = labels[LabelMetrics.EdgeDistMean.name]
+                size = np.sum(sizes)
+                dist_mean = np.sum(np.multiply(sizes, dist_means)) / size
+            metrics[LabelMetrics.EdgeDistSum] = dist_sum
+            metrics[LabelMetrics.EdgeDistMean] = dist_mean
+            metrics[LabelMetrics.EdgeSize] = size
         disp_id = get_single_label(label_ids)
         print("dist within edge of label {}: {}"
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
@@ -304,7 +358,8 @@ def get_single_label(label_id):
 def measure_labels_metrics(sample, atlas_img_np, labels_img_np, 
                            labels_edge, dist_to_orig, heat_map=None, 
                            subseg=None, spacing=None, unit_factor=None, 
-                           combine_sides=True, label_ids=None, grouping={}):
+                           combine_sides=True, label_ids=None, grouping={}, 
+                           df=None):
     """Compute metrics such as variation and distances within regions 
     based on maps corresponding to labels image.
     
@@ -332,6 +387,9 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         grouping: Dictionary of sample grouping metadata, where each 
             entry will be added as a separate column. Defaults to an 
             empty dictionary.
+        df: Data frame with rows for all drawn labels to pool into 
+            parent labels instead of re-measuring stats for all 
+            children of each parent; defaults to None.
     
     Returns:
         Pandas data frame of the regions and weighted means for the metrics.
@@ -343,13 +401,13 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
-    MeasureLabel.set_images(
+    MeasureLabel.set_data(
         atlas_img_np, labels_img_np, labels_edge, dist_to_orig, heat_map, 
-        subseg)
+        subseg, df)
     
     metrics = {}
     grouping[config.SIDE_KEY] = None
-    cols = ("Sample", *grouping.keys(), "Region", 
+    cols = ("Sample", *grouping.keys(), 
             *[member.name for member in LabelMetrics])
     pool = mp.Pool()
     pool_results = []
@@ -382,12 +440,17 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         
         vol_physical = label_size
         vol_mean_physical = vol_mean
-        if physical_mult is not None:
-            vol_physical *= physical_mult
-            vol_mean_physical *= physical_mult
-        if unit_factor is not None:
-            vol_physical /= unit_factor
-            vol_mean_physical /= unit_factor
+        if df is None:
+            # convert to physical units at the given value unless 
+            # using data frame, where values presumably already converted
+            if physical_mult is not None:
+                vol_physical *= physical_mult
+                vol_mean_physical *= physical_mult
+            if unit_factor is not None:
+                vol_physical /= unit_factor
+                vol_mean_physical /= unit_factor
+        
+        # calculate densities based on physical volumes
         density = nuc / vol_physical
         dens_mean = nuc_mean / vol_mean_physical
         

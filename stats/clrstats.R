@@ -284,7 +284,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   # find all regions
   regions <- unique(df$Region)
   #regions <- c() # TESTING: insert single region
-  cols <- c("Region", "Stats", "MeanNuclei")
+  cols <- c("Region", "Stats", "Volume")
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols
   # use original order of appearance in Condition column to sort each 
@@ -334,7 +334,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       vals <- df.region.nonzero[[col]]
       
       # apply stats and store in stats data frame, using list to allow 
-      # arbitrary size and storing mean nuclei as well
+      # arbitrary size and storing mean volume as well
       if (is.element(model, kModel[5:9])) {
         # means tests
         coef.tab <- meansModel(
@@ -348,7 +348,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       }
       if (!is.null(coef.tab)) {
         stats$Stats[i] <- list(coef.tab)
-        stats$MeanNuclei[i] <- mean(df.region.nonzero$Nuclei)
+        stats$Volume[i] <- mean(df.region.nonzero$Volume)
       }
       
       # show histogram to check for parametric distribution
@@ -543,7 +543,7 @@ filterStats <- function(stats, corr=NULL) {
       # build data frame if not yet generated to store pertinent coefficients 
       # from each type of main effect or interaction
       interactions <- gsub(":", ".", rownames(stats.coef))
-      cols <- list("Region", "MeanNuclei")
+      cols <- list("Region", "Volume")
       offset <- length(cols)
       for (interact in interactions) {
         cols <- append(cols, paste0(interact, ".effect"))
@@ -552,7 +552,7 @@ filterStats <- function(stats, corr=NULL) {
       filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
       names(filtered) <- cols
       filtered$Region <- stats.filt$Region
-      filtered$MeanNuclei <- stats.filt$MeanNuclei
+      filtered$Volume <- stats.filt$Volume
     }
     for (j in seq_along(interactions)) {
       # insert effect, p-value, and -log(p) after region name for each 
@@ -607,14 +607,13 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     return()
   }
   y <- stats[[paste0(interaction, ".logp")]]
-  # weight size based on relative num of nuclei, replacing NaNs with a small num
-  nuclei <- stats$MeanNuclei
-  nuclei <- stats$Volume
-  if (isTRUE(all.equal(nuclei, rep(0, num.x)))) {
+  # weight size based on mean volume, replacing NaNs with a small num
+  vol <- stats$Volume
+  if (isTRUE(all.equal(vol, rep(0, num.x)))) {
     size <- rep(1, num.x)
   } else {
-    nuclei[is.nan(nuclei) | nuclei == 0] <- 1
-    size <- sqrt(nuclei / max(nuclei)) * 3
+    vol[is.nan(vol) | vol == 0] <- 1
+    size <- sqrt(vol / max(vol)) * 3
   }
   #print(data.frame(x, size))
   

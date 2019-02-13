@@ -601,15 +601,21 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   #     to avoid negative log values, then returning to the original sign.
   
   x <- stats[[paste0(interaction, ".effect")]]
-  if (length(x) < 1) {
+  num.x <- length(x)
+  if (num.x < 1) {
     cat("no values found to generate volcano plot, skipping\n")
     return()
   }
   y <- stats[[paste0(interaction, ".logp")]]
   # weight size based on relative num of nuclei, replacing NaNs with a small num
   nuclei <- stats$MeanNuclei
-  nuclei[is.nan(nuclei) | nuclei == 0] <- 1
-  size <- sqrt(nuclei / max(nuclei)) * 3
+  nuclei <- stats$Volume
+  if (isTRUE(all.equal(nuclei, rep(0, num.x)))) {
+    size <- rep(1, num.x)
+  } else {
+    nuclei[is.nan(nuclei) | nuclei == 0] <- 1
+    size <- sqrt(nuclei / max(nuclei)) * 3
+  }
   #print(data.frame(x, size))
   
   # point colors based on IDs of parents at the level generated for region 

@@ -511,7 +511,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       }
     }
   }
-  legend(0, maxes[2] * 0.5, names, col=colors[1:length(names)], pch=16)
+  legend(maxes[1] * 0.25, maxes[2] * 0.25, names, col=colors[1:length(names)], pch=16)
   dev.print(
     pdf, file=paste0(
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))

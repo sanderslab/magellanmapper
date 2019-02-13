@@ -605,7 +605,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   y <- stats[[paste0(interaction, ".logp")]]
   # weight size based on relative num of nuclei, replacing NaNs with a small num
   nuclei <- stats$MeanNuclei
-  nuclei[is.nan(nuclei)] <- 1
+  nuclei[is.nan(nuclei) | nuclei == 0] <- 1
   size <- sqrt(nuclei / max(nuclei)) * 3
   #print(data.frame(x, size))
   

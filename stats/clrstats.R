@@ -511,7 +511,10 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       }
     }
   }
-  legend(maxes[1] * 0.25, maxes[2] * 0.25, names, col=colors[1:length(names)], pch=16)
+  # allow legend to move outside of plot, positioning at bottom right 
+  # before shifting up a full plot unit to sit above the plot
+  legend("bottomright", legend=names, col=colors[1:length(names)], 
+         pch=16, xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n")
   dev.print(
     pdf, file=paste0(
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))

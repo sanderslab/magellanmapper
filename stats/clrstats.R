@@ -363,7 +363,15 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         df.jitter$Density <- df.jitter$Nuclei / df.jitter$Volume
         print(df.jitter)
       }
-      jitterPlot(df.jitter, col, title, split.by.side, split.col, paired)
+      stats.group <- jitterPlot(
+        df.jitter, col, title, split.by.side, split.col, paired)
+      
+      # add mean and CI for each group to stats data frame
+      names <- stats.group[[1]]
+      for (j in seq_along(names)) {
+        stats[i, paste0(names[j], ".mean")] <- stats.group[[2]][j]
+        stats[i, paste0(names[j], ".ci")] <- stats.group[[3]][j]
+      }
     } else {
       # ignore region if all values 0, leaving entry for region as NA and 
       # grouping output for empty regions to minimize console output; 
@@ -410,6 +418,9 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #     are in the same order when filtered by split.col. Jitter will be 
   #     turned off to ensure that start and end x-values are the same for 
   #     pairings. Defaults to FALSE.
+  #
+  # Returns:
+  #   List of group names, means, and 95% confidence intervals.
   
   if (is.null(split.col)) {
     # default column name by which to split
@@ -430,10 +441,10 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   }
   
   # setup coordinates to plot and error ranges
-  vals <- df.region[[col]]
-  names <- list()
-  vals.groups <- list() # list of vals for each geno-side group
   num.groups <- length(genos.unique) * length(sides.unique)
+  names <- vector(length=num.groups)
+  vals <- df.region[[col]]
+  vals.groups <- list() # list of vals for each geno-side group
   vals.means <- vector(length=num.groups)
   vals.cis <-vector(length=num.groups)
   max.errs <- vector(length=num.groups)
@@ -461,7 +472,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       # main label
       name <- side
       if (multiple.geno) name <- paste(geno, side)
-      names <- append(names, name)
+      names[i] <- name
       i <- i + 1
     }
   }
@@ -518,6 +529,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   dev.print(
     pdf, file=paste0(
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
+  
+  return(list(names, vals.means, vals.cis))
 }
 
 filterStats <- function(stats, corr=NULL) {
@@ -535,6 +548,13 @@ filterStats <- function(stats, corr=NULL) {
   filtered <- NULL
   interactions <- NULL
   offset <- 0 # number of columns ahead of coefficients
+  
+  # get names and mean and CI columns
+  cols.names <- names(stats.filt)
+  cols.means.cis <- c(
+    cols.names[grepl(".mean", cols.names)], 
+    cols.names[grepl(".ci", cols.names)])
+  
   for (i in 1:nrow(stats.filt)) {
     if (is.na(stats.filt$Stats[i])) next
     # get coefficients, stored in one-element list
@@ -561,6 +581,10 @@ filterStats <- function(stats, corr=NULL) {
         filtered[i, j * 3 - 2 + offset] <- stats.coef[j, 1]
         filtered[i, j * 3 - 1 + offset] <- stats.coef[j, 4]
       }
+    }
+    for (col in cols.means.cis) {
+      # add all mean and CI column values
+      filtered[i, col] <- stats.filt[i, col]
     }
   }
   num.regions <- nrow(filtered)

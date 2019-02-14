@@ -734,7 +734,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   
   # calculate stats, filter out NAs and extract effects and p-values
   regions.ignore <- NULL
-  if (path.in == kStatsFilesIn[2]) {
+  if (basename(path.in) == kStatsFilesIn[2]) {
     # ignore duplicate when including all levels
     regions.ignore <- kRegionsIgnore
   }

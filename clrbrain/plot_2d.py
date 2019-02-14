@@ -661,6 +661,9 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                            alpha=0.5))
     if circles is not None:
         circles = circles.lower()
+    # filename for export
+    filename = "{}_offset{}x{}".format(
+        os.path.basename(filename), offset, tuple(roi_size)).replace(" ", "")
     
     # adjust array order based on which plane to show
     border_full = np.copy(border)
@@ -875,6 +878,17 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 ax.clear() # prevent performance degradation
                 zoom = show_overview(ax, img2d, img_region_2d, level)
     
+    def key_press(event):
+        # respond to key presses
+        if event.key == "ctrl+s" or event.key == "cmd+s":
+            # support default save shortcuts on multiple platforms; 
+            # ctrl-s will bring up save dialog from fig, but cmd/win-S 
+            # will bypass
+            save_fig(filename, config.savefig)
+        else:
+            # default to scrolling commands for up/down/right arrows
+            scroll_overview(event)
+    
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels
     overview_cols = zoom_plot_cols // zoom_levels
@@ -885,7 +899,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         plot_support.hide_axes(ax)
         zoom = show_overview(ax, img2d, img_region_2d, level)
     fig.canvas.mpl_connect("scroll_event", scroll_overview)
-    fig.canvas.mpl_connect("key_press_event", scroll_overview)
+    fig.canvas.mpl_connect("key_press_event", key_press)
     
     # zoomed-in views of z-planes spanning from just below to just above ROI
     segs_in = None
@@ -1044,10 +1058,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     plt.ion()
     plt.show()
     #fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
-    save_fig("{}_offset{}x{}"
-             .format(os.path.basename(filename), 
-                     offset, tuple(roi_size)).replace(" ", ""), 
-             config.savefig)
+    save_fig(filename, config.savefig)
     print("2D plot time: {}".format(time() - time_start))
     
 def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):

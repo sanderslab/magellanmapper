@@ -1981,8 +1981,10 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     
     if log_sigma is not None and suffix is None:
         # generate LoG and edge-detected images for original image
+        thresh = (config.register_settings["atlas_threshold"] 
+                  if config.register_settings["log_atlas_thresh"] else None)
         atlas_log = plot_3d.laplacian_of_gaussian_img(
-            atlas_np, sigma=log_sigma, labels_img=labels_img_np)
+            atlas_np, sigma=log_sigma, labels_img=labels_img_np, thresh=thresh)
         atlas_sitk_log = replace_sitk_with_numpy(atlas_sitk, atlas_log)
         atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
         atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)

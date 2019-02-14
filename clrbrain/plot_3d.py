@@ -918,7 +918,7 @@ def build_heat_map(shape, coords):
     heat_map[tuple(coordsi)] = coords_count
     return heat_map
 
-def laplacian_of_gaussian_img(img, sigma=5, labels_img=None):
+def laplacian_of_gaussian_img(img, sigma=5, labels_img=None, thresh=None):
     """Generate a Laplacian of Gaussian (LoG) image.
     
     Args:
@@ -927,6 +927,9 @@ def laplacian_of_gaussian_img(img, sigma=5, labels_img=None):
         labels_img: Labels image as Numpy array in same shape as ``img``, 
             to use to assist with thresholding out background. Defaults 
             to None to skip background removal.
+        thresh: Threshold of atlas image to find background solely from 
+            atlas, without using labels; ``labels_img`` will be 
+            ignored if ``thresh`` is given. Defaults to None.
              
     """
     # apply Laplacian of Gaussian filter (sequentially)
@@ -935,12 +938,16 @@ def laplacian_of_gaussian_img(img, sigma=5, labels_img=None):
     vmin, vmax = np.percentile(img_log, (2, 98))
     img_log = np.clip(img_log, vmin, vmax)
     
-    # comment-out normalizing since need neg vals for zero-crossing
-    #img_log = (img_log - vmin) / (vmax - vmin)
-    
-    # remove signal below threshold while keeping any signal in labels
-    if labels_img is not None:
+    # remove background signal to improve zero-detection at outside borders
+    mask = None
+    if thresh is not None:
+        # simple threshold of atlas to find background
+        mask = img > thresh
+    elif labels_img is not None:
+        # remove signal below threshold while keeping any signal in labels; 
+        # TODO: consider using atlas rather than LoG image
         mask = segmenter.mask_atlas(img_log, labels_img)
+    if mask is not None:
         img_log[~mask] = np.amin(img_log)
     
     return img_log

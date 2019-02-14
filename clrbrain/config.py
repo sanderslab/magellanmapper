@@ -396,8 +396,12 @@ class RegisterSettings(SettingsDict):
         # main affine back to the rest of the image
         self["affine"] = None
         
-        # Laplacian of Gaussian sigma; use None to skip
-        self["log_sigma"] = 5
+        # Laplacian of Gaussian
+        self["log_sigma"] = 5 # Gaussian sigma; use None to skip
+        # use atlas_threshold on atlas image to generate mask for finding 
+        # background rather than using labels and thresholded LoG image, 
+        # useful when ventricular spaces are labeled
+        self["log_atlas_thresh"] = False
         
         # erosion size when converting labels to markers; use None to skip
         self["marker_erosion"] = 8
@@ -481,6 +485,8 @@ def update_register_settings(settings, settings_type):
          "resize_factor": None, # turn off resizing
          "labels_mirror": 0.52, 
          "labels_edge": None, 
+         "log_atlas_thresh": True, 
+         "atlas_threshold": 75, # to avoid over-extension into ventricles
          # rotate axis 0 to open vertical gap for affines (esp 2nd)
          "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
          "affine": ({

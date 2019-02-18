@@ -150,9 +150,10 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
             print("No animation writer available for Matplotlib")
         print("saved animation file to {}".format(out_path))
     else:
-        # single plane figure export
+        # single plane figure export; transparency depends on alphas 
+        # and requires formats supporting transparency (eg png)
         print("extracting plane as {}".format(out_path))
-        fig.savefig(out_path)
+        fig.savefig(out_path, transparent=True)
 
 def fit_frame_to_image(fig, shape, aspect):
     # compress layout to fit image only

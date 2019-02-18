@@ -156,8 +156,14 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         fig.savefig(out_path, transparent=True)
 
 def fit_frame_to_image(fig, shape, aspect):
-    # compress layout to fit image only
-    fig.tight_layout(pad=0.0) # leaves some space for some reason
+    """Compress figure to fit image only.
+    
+    Args:
+        fig: Figure to compress.
+        shape: Shape of image to which the figure will be fit.
+        aspect: Aspect ratio of image.
+    """
+    fig.tight_layout(pad=-0.2) # neg padding to remove thin left border
     if aspect is None:
         aspect = 1
     img_size_inches = np.divide(shape, fig.dpi) # convert to inches

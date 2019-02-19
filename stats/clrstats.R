@@ -517,8 +517,14 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       mean <- vals.means[[i]]
       ci <- vals.cis[[i]]
       if (!is.na(ci)) {
-        segments(x - 0.25, mean, x + 0.25, mean)
-        arrows(x, mean + ci, x, mean - ci, length=0.05, angle=90, code=3)
+        if (i %% 2 == 0) {
+          x.mean <- x + 0.25
+        } else {
+          x.mean <- x - 0.25
+        }
+        points(x.mean, mean, pch=16)
+        arrows(x.mean, mean + ci, x.mean, mean - ci, length=0.05, angle=90, 
+               code=3)
       }
       x.pos[i] <- x # store x for connecting paired points
       x.adj <- x.adj + 0.05

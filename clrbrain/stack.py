@@ -17,7 +17,6 @@ from scipy import ndimage
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
-from clrbrain import plot_2d
 from clrbrain import plot_support
 from clrbrain import importer
 
@@ -271,7 +270,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
                     colormaps.get_borders_colormap(
                         imgs[2], imgs[1], cmaps_labels[0]))
         for img in imgs:
-            planes, aspect, origin = plot_2d.extract_plane(
+            planes, aspect, origin = plot_support.extract_planes(
                 img, img_sl, plane=config.plane)
             if offset is not None and roi_size is not None:
                 # get ROI using transposed coordinates on transposed planes; 

@@ -725,7 +725,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             # max intensity projection (MIP) is local, through the entire ROI 
             # and thus not changing with scrolling
             z_range = np.arange(z_start, z_start + roi_size[2])
-        img2d, aspect, origin = extract_plane(
+        img2d, aspect, origin = plot_support.extract_planes(
             image5d, z_range, plane, max_intens_proj)
         img_region_2d = None
         if img_region is not None:
@@ -733,7 +733,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             # convert it to an RGBA image, using region as alpha channel and 
             # inverting it opacify areas outside of selected region; if in 
             # MIP mode, will still only show lowest plane
-            img, _, _ = extract_plane(
+            img, _, _ = plot_support.extract_planes(
                 img_region, int(scaling[0] * z_overview), plane)
             img_region_2d = np.ones(img.shape + (4,))
             img_region_2d[..., 3] = np.invert(img) * 0.5
@@ -1065,41 +1065,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     #fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
     save_fig(filename, config.savefig)
     print("2D plot time: {}".format(time() - time_start))
-    
-def extract_plane(image5d, plane_n, plane=None, max_intens_proj=False):
-    """Extract a 2D plane or stack of planes.
-    
-    Args:
-        image5d: The full image stack.
-        plane_n: Slice of planes to extract, which can be a single index 
-            or multiple indices such as would be used for an animation.
-        plane: Type of plane to extract, which should be one of 
-            :attribute:`config.PLANES`.
-        max_intens_projection: True to show a max intensity projection, which 
-            assumes that plane_n is an array of multiple, typically 
-            contiguous planes along which the max intensity pixel will 
-            be taken. Defaults to False.
-    
-    Returns:
-        Tuple of an array of the image, which is 2D if ``plane_n`` is a 
-        scalar or ``max_intens_projection`` is True, or 3D otherwise; 
-        the aspect ratio; and the origin value.
-    """
-    origin = None
-    aspect = None # aspect ratio
-    img3d = None
-    if image5d.ndim >= 4:
-        img3d = image5d[0]
-    else:
-        img3d = image5d[:]
-    arrs_3d, _, aspect, origin = plot_support.transpose_images(plane, [img3d])
-    img3d = arrs_3d[0]
-    img2d = img3d[plane_n]
-    if max_intens_proj:
-        # max intensity projection assumes axis 0 is the "z" axis
-        img2d = np.amax(img2d, axis=0)
-    #print("aspect: {}, origin: {}".format(aspect, origin))
-    return img2d, aspect, origin
 
 def cycle_colors(i):
     num_colors = len(config.colors)

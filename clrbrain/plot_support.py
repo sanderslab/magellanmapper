@@ -121,6 +121,41 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         ax_imgs.append(ax_img)
     return ax_imgs
 
+def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
+    """Extract a 2D plane or stack of planes.
+    
+    Args:
+        image5d: The full image stack.
+        plane_n: Slice of planes to extract, which can be a single index 
+            or multiple indices such as would be used for an animation.
+        plane: Type of plane to extract, which should be one of 
+            :attribute:`config.PLANES`.
+        max_intens_projection: True to show a max intensity projection, which 
+            assumes that plane_n is an array of multiple, typically 
+            contiguous planes along which the max intensity pixel will 
+            be taken. Defaults to False.
+    
+    Returns:
+        Tuple of an array of the image, which is 2D if ``plane_n`` is a 
+        scalar or ``max_intens_projection`` is True, or 3D otherwise; 
+        the aspect ratio; and the origin value.
+    """
+    origin = None
+    aspect = None # aspect ratio
+    img3d = None
+    if image5d.ndim >= 4:
+        img3d = image5d[0]
+    else:
+        img3d = image5d[:]
+    arrs_3d, _, aspect, origin = transpose_images(plane, [img3d])
+    img3d = arrs_3d[0]
+    img2d = img3d[plane_n]
+    if max_intens_proj:
+        # max intensity projection assumes axis 0 is the "z" axis
+        img2d = np.amax(img2d, axis=0)
+    #print("aspect: {}, origin: {}".format(aspect, origin))
+    return img2d, aspect, origin
+
 def max_plane(img3d, plane):
     """Get the max plane for the given 3D image.
     

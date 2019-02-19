@@ -511,7 +511,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         # add jitter to distinguish points
         x.vals <- jitter(x.vals, amount=0.2)
       }
-      points(x.vals, vals.group, col=colors[i], pch=16)
+      points(x.vals, vals.group, pch=i)
       
       # plot error bars unless CI is NA, such as infinitely large CI when n = 1
       mean <- vals.means[[i]]

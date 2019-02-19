@@ -826,7 +826,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
-        plot_support.add_scale_bar(ax, downsample)
+        plot_support.add_scale_bar(ax, downsample, plane)
         plot_support.set_overview_title(
             ax, plane, z_overview, zoom, level, max_intens_proj)
         return zoom
@@ -964,7 +964,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 roi_show, labels, blobs_truth_z, circles=circles, 
                 aspect=aspect, grid=grid, cmap_labels=cmap_labels)
             if i == 0 and j == 0:
-                plot_support.add_scale_bar(ax_z)
+                plot_support.add_scale_bar(ax_z, plane=plane)
             ax_z_list.append(ax_z)
     
     if not circles == CIRCLES[2].lower():

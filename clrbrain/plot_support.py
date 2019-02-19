@@ -158,7 +158,7 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
     #print("aspect: {}, origin: {}".format(aspect, origin))
     return img2d, aspect, origin
 
-def add_scale_bar(ax, downsample=None):
+def add_scale_bar(ax, downsample=None, plane=None):
     """Adds a scale bar to the plot.
     
     Uses the x resolution value and assumes that it is in microns per pixel.
@@ -167,8 +167,16 @@ def add_scale_bar(ax, downsample=None):
         ax: The plot that will show the bar.
         downsample: Downsampling factor by which the resolution will be 
             multiplied; defaults to None.
+        plane: Plane of the image, used to transpose the resolutions to 
+            find the corresponding x resolution for the given orientation. 
+            Defaults to None.
     """
-    res = detector.resolutions[0][2]
+    resolutions = detector.resolutions[0]
+    if plane:
+        # transpose resolutions to the given plane
+        _, arrs_1d, _, _ = transpose_images(plane, arrs_1d=[resolutions])
+        resolutions = arrs_1d[0]
+    res = resolutions[2] # assume scale bar is along x-axis
     if downsample:
         res *= downsample
     scale_bar = ScaleBar(res, u'\u00b5m', SI_LENGTH, 

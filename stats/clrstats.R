@@ -538,9 +538,9 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       }
     }
   }
-  # allow legend to move outside of plot, positioning at bottom right 
-  # before shifting up a full plot unit to sit above the plot
-  legend("bottomright", legend=names, col=colors[1:length(names)], 
+  # allow legend to move outside of plot, positioning at top right 
+  # before shifting a full plot unit to sit below the plot
+  legend("topright", legend=names, col=colors[1:length(names)], 
          pch=16, xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n")
   dev.print(
     pdf, file=paste0(

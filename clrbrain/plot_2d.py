@@ -23,8 +23,6 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import matplotlib.pylab as pylab
 from matplotlib.widgets import Slider, Button
-from matplotlib_scalebar.scalebar import ScaleBar
-from matplotlib_scalebar.scalebar import SI_LENGTH
 import pandas as pd
 from skimage import exposure
 from skimage import transform
@@ -301,23 +299,6 @@ def _plot_circle(ax, segment, linewidth, linestyle, fn_update_seg,
     draggable_circle.connect()
     _draggable_circles.append(draggable_circle)
     return draggable_circle
-
-def add_scale_bar(ax, downsample=None):
-    """Adds a scale bar to the plot.
-    
-    Uses the x resolution value and assumes that it is in microns per pixel.
-    
-    Args:
-        ax: The plot that will show the bar.
-        downsample: Downsampling factor by which the resolution will be 
-            multiplied; defaults to None.
-    """
-    res = detector.resolutions[0][2]
-    if downsample:
-        res *= downsample
-    scale_bar = ScaleBar(res, u'\u00b5m', SI_LENGTH, 
-                         box_alpha=0, color="w", location=3)
-    ax.add_artist(scale_bar)
 
 def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset, 
                  fn_update_seg, segs_in, segs_out, segs_cmap, alpha, 
@@ -597,7 +578,7 @@ def plot_roi(roi, segments, channel, show=True, title=""):
                 segments, None, None, 1.0, z, circles=CIRCLES[0], 
                 roi=roi)
             if i == 0 and j == 0:
-                add_scale_bar(ax_z)
+                plot_support.add_scale_bar(ax_z)
     gs.tight_layout(fig, pad=0.5)
     if show:
         plt.show()
@@ -845,7 +826,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
-        add_scale_bar(ax, downsample)
+        plot_support.add_scale_bar(ax, downsample)
         plot_support.set_overview_title(
             ax, plane, z_overview, zoom, level, max_intens_proj)
         return zoom
@@ -983,7 +964,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 roi_show, labels, blobs_truth_z, circles=circles, 
                 aspect=aspect, grid=grid, cmap_labels=cmap_labels)
             if i == 0 and j == 0:
-                add_scale_bar(ax_z)
+                plot_support.add_scale_bar(ax_z)
             ax_z_list.append(ax_z)
     
     if not circles == CIRCLES[2].lower():

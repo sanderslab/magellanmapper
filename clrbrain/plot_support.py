@@ -6,6 +6,8 @@
 
 import numpy as np
 import matplotlib.backend_bases as backend_bases
+from matplotlib_scalebar.scalebar import ScaleBar
+from matplotlib_scalebar.scalebar import SI_LENGTH
 
 from clrbrain import colormaps
 from clrbrain import config
@@ -155,6 +157,23 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
         img2d = np.amax(img2d, axis=0)
     #print("aspect: {}, origin: {}".format(aspect, origin))
     return img2d, aspect, origin
+
+def add_scale_bar(ax, downsample=None):
+    """Adds a scale bar to the plot.
+    
+    Uses the x resolution value and assumes that it is in microns per pixel.
+    
+    Args:
+        ax: The plot that will show the bar.
+        downsample: Downsampling factor by which the resolution will be 
+            multiplied; defaults to None.
+    """
+    res = detector.resolutions[0][2]
+    if downsample:
+        res *= downsample
+    scale_bar = ScaleBar(res, u'\u00b5m', SI_LENGTH, 
+                         box_alpha=0, color="w", location=3)
+    ax.add_artist(scale_bar)
 
 def max_plane(img3d, plane):
     """Get the max plane for the given 3D image.

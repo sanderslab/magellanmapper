@@ -299,7 +299,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     # export planes
     _build_stack(extracted_planes, out_path, fnc, rescale, aspect=aspect, 
                  origin=origin, delay=delay, 
-                 cmaps_labels=cmaps_labels)
+                 cmaps_labels=cmaps_labels, scale_bar=config.scale_bar)
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")

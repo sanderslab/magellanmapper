@@ -863,6 +863,9 @@ saveroi = False
 # alpha levels for overlaid images, defaulting to main image, labels image
 alphas = [1, 0.9, 0.9]
 
+# show scale bars
+scale_bar = True
+
 
 
 # IMAGE REGISTRATION

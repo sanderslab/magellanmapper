@@ -1,6 +1,6 @@
 #!/bin/bash
 # Command line parsing and setup
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 """Command line parser and and environment setup for Clrbrain.
 
 This module can be run either as a script to work in headless mode or 
@@ -499,6 +499,7 @@ def main(process_args_only=False):
     parser.add_argument("--vmax")
     parser.add_argument("--seed")
     parser.add_argument("--reg_suffixes", nargs="*")
+    parser.add_argument("--no_scale_bar", action="store_true")
     args = parser.parse_args()
     
     # set image file path and convert to basis for additional paths
@@ -715,6 +716,11 @@ def main(process_args_only=False):
         # specify random number generator seed
         config.seed = int(args.seed)
         print("Set random number generator seed to", config.seed)
+    
+    if args.no_scale_bar:
+        # turn off scale bar display
+        config.scale_bar = False
+        print("Set scale bar display to {}".format(config.scale_bar))
     
     # prep filename
     if not config.filename:

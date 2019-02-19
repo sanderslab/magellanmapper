@@ -577,7 +577,7 @@ def plot_roi(roi, segments, channel, show=True, title=""):
                 fig, gs, i, j, image5d, channel, roi_size, zoom_offset, None,
                 segments, None, None, 1.0, z, circles=CIRCLES[0], 
                 roi=roi)
-            if i == 0 and j == 0:
+            if i == 0 and j == 0 and config.scale_bar:
                 plot_support.add_scale_bar(ax_z)
     gs.tight_layout(fig, pad=0.5)
     if show:
@@ -826,7 +826,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
-        plot_support.add_scale_bar(ax, downsample, plane)
+        if config.scale_bar: plot_support.add_scale_bar(ax, downsample, plane)
         plot_support.set_overview_title(
             ax, plane, z_overview, zoom, level, max_intens_proj)
         return zoom
@@ -963,7 +963,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                 z == z_overview, border_full if show_border else None, plane, 
                 roi_show, labels, blobs_truth_z, circles=circles, 
                 aspect=aspect, grid=grid, cmap_labels=cmap_labels)
-            if i == 0 and j == 0:
+            if i == 0 and j == 0 and config.scale_bar:
                 plot_support.add_scale_bar(ax_z, plane=plane)
             ax_z_list.append(ax_z)
     

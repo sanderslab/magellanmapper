@@ -48,7 +48,8 @@ SEG_LINEWIDTH = 1
 ZOOM_COLS = 9
 Z_LEVELS = ("bottom", "middle", "top")
 CIRCLES = ("Circles", "Repeat circles", "No circles", "Full annotation")
-_DOWNSAMPLE_THRESH = 1000
+# divisor for finding array interval to downsample images
+_DOWNSAMPLE_MAX_ELTS = 1000
 
 # need to store DraggableCircles objects to prevent premature garbage collection
 _draggable_circles = []
@@ -790,9 +791,10 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         if level > 0:
             # move origin progressively closer with each zoom level
             zoom_mult = math.pow(level, 3)
-            origin = np.floor(np.multiply(
-                offset[0:2], zoom_levels + zoom_mult - 1) 
-                / (zoom_levels + zoom_mult)).astype(int)
+            origin = np.floor(
+                np.multiply(offset[0:2], 
+                            zoom_levels + zoom_mult - 1) 
+                            / (zoom_levels + zoom_mult)).astype(int)
             zoom_shape = np.flipud(img2d_ov.shape[:2])
             # progressively decrease size, zooming in for each level
             zoom = zoom_mult + 3
@@ -813,10 +815,11 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                     origin_scaled[0]:end_scaled[0]]
             #print(img2d_ov_zoom.shape, origin, size)
             patch_offset = np.subtract(patch_offset, origin)
-        # show the zoomed 2D image along with rectangle showing ROI, 
-        # downsampling by using threshold as mask
+        
+        # downsample by taking interval to minimize values required to 
+        # access per plane, which can improve performance considerably
         downsample = np.max(
-            np.divide(img2d_ov.shape, _DOWNSAMPLE_THRESH)).astype(np.int)
+            np.divide(img2d_ov.shape, _DOWNSAMPLE_MAX_ELTS)).astype(np.int)
         if downsample < 1: 
             downsample = 1
         min_show = config.near_min
@@ -827,6 +830,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             min_show = None
             max_show = None
         img = img2d_ov[::downsample, ::downsample]
+        
+        # show the zoomed 2D image along with rectangle highlighting the ROI
         plot_support.imshow_multichannel(
             ax, img, channel, cmaps, aspect, 1, min_show, max_show)
         if img_region_2d is not None:

@@ -61,7 +61,7 @@ def _process_plane(i, img3ds, rescale, multichannel, rotate=None):
     return i, imgs
 
 def _build_stack(images, out_path, process_fnc, rescale, aspect=None, 
-                 origin=None, delay=None, cmaps_labels=None):
+                 origin=None, delay=None, cmaps_labels=None, scale_bar=True):
     """Builds an animated GIF from a stack of images.
     
     Args:
@@ -79,6 +79,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         cmaps_labels: Sequence of colormaps for labels-based images; 
             defaults to None. Length should be equal to that of 
             ``images`` - 1.
+        scale_bar: True to include scale bar; defaults to True.
     """
     # number of image types (eg atlas, labels) and corresponding planes
     num_image_types = len(images)
@@ -133,7 +134,10 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     pool.close()
     pool.join()
     
+    # remove borders and add scale bar
     fit_frame_to_image(fig, img_size, aspect)
+    if scale_bar:
+        plot_support.add_scale_bar(ax, 1 / rescale, config.plane)
     
     lib_clrbrain.backup_file(out_path)
     if num_images > 1:

@@ -16,12 +16,16 @@ library("addTextLabels")
 #library("maptools")
 
 # statistical models
-kModel = c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
+kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
            "ttest.paired", "wilcoxon.paired", "fligner")
 
 # measurements, which correspond to columns in main data frame
-kMeas = c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
+kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels")
+
+# named vector to convert measurement columns with display names
+kMeasNames <- setNames(
+  c("Dice Similarity Coefficient Between Atlas and Labels"), c(kMeas[8]))
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -481,8 +485,14 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   
   # max y-val or error bar, whichever is higher
   maxes <- c(num.groups, max(max(vals), max(max.errs)))
-  plot(NULL, frame.plot=TRUE, xlab=title, ylab=gsub("_", " ", col), xaxt="n", 
-       xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n")
+  if (is.element(col, names(kMeasNames))) {
+    ylab <- kMeasNames[[col]]
+  } else {
+    ylab <- gsub("_", " ", col)
+  }
+  plot(NULL, frame.plot=TRUE, xlab=title, ylab=ylab, xaxt="n", 
+       xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
+       las=1)
   # avoid extreme colors
   colors <- viridis(length(vals.groups), begin=0.2, end=0.7)
   i <- 1

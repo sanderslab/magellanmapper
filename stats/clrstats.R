@@ -3,7 +3,7 @@
 
 library("MASS")
 library("gee")
-library("viridis")
+#library("viridis")
 
 # library to avoid overlapping text labels
 #install.packages("devtools")
@@ -446,7 +446,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   
   # setup coordinates to plot and error ranges
   num.groups <- length(genos.unique) * length(sides.unique)
-  names <- vector(length=num.groups)
+  names.groups <- vector(length=num.groups)
   vals <- df.region[[col]]
   vals.groups <- list() # list of vals for each geno-side group
   vals.means <- vector(length=num.groups)
@@ -476,7 +476,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       # main label
       name <- side
       if (multiple.geno) name <- paste(geno, side)
-      names[i] <- name
+      names.groups[i] <- name
       i <- i + 1
     }
   }
@@ -493,8 +493,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   plot(NULL, frame.plot=TRUE, xlab=title, ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
-  # avoid extreme colors
-  colors <- viridis(length(vals.groups), begin=0.2, end=0.7)
+  
+  colors <- NULL
   i <- 1
   for (geno in genos.unique) {
     x.adj <- 0
@@ -511,7 +511,12 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         # add jitter to distinguish points
         x.vals <- jitter(x.vals, amount=0.2)
       }
-      points(x.vals, vals.group, pch=i)
+      if (!paired | is.null(colors)) {
+        # distinct color for each member in group, using same set of 
+        # colors for each set of points and sample legend if paired
+        colors <- rainbow(length(vals.group), end=0.8)
+      }
+      points(x.vals, vals.group, pch=i+14, col=colors)
       
       # plot error bars unless CI is NA, such as infinitely large CI when n = 1
       mean <- vals.means[[i]]
@@ -540,13 +545,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   }
   # allow legend to move outside of plot, positioning at top right 
   # before shifting a full plot unit to sit below the plot
-  legend("topright", legend=names, col=colors[1:length(names)], 
-         pch=16, xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n")
+  legend("topright", legend=names.groups, pch=15:(14+length(names.groups)), 
+         xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n")
   dev.print(
     pdf, file=paste0(
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
   
-  return(list(names, vals.means, vals.cis))
+  return(list(names.groups, vals.means, vals.cis))
 }
 
 filterStats <- function(stats, corr=NULL) {

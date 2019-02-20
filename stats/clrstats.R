@@ -3,7 +3,7 @@
 
 library("MASS")
 library("gee")
-#library("viridis")
+library("viridis")
 
 # library to avoid overlapping text labels
 #install.packages("devtools")

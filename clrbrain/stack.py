@@ -211,6 +211,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
         animated: True to extract the images as an animated GIF or movie 
             file; False to extract a single plane only. Defaults to False.
     """
+    print("Starting image stack export")
     parent_path = os.path.dirname(path)
     out_name = lib_clrbrain.get_filename_without_ext(path)
     
@@ -230,6 +231,11 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
             interval = slice_vals[2]
         size = roi_size[2] if animated else 1
         img_sl = slice(offset[2], offset[2] + size, interval)
+        if interval < 0:
+            # reverse start/stop order to iterate backward
+            img_sl = slice(img_sl.stop, img_sl.start, interval)
+        print("using ROI offset {}, size {}, {}"
+              .format(offset, size, img_sl))
     elif slice_vals is not None:
         # build directly from slice vals unless not an animation
         if animated:

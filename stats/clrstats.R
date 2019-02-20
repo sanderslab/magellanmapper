@@ -481,8 +481,6 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     }
   }
   
-  # plot values with means and error bars
-  
   # max y-val or error bar, whichever is higher
   maxes <- c(num.groups, max(max(vals), max(max.errs)))
   if (is.element(col, names(kMeasNames))) {
@@ -495,22 +493,32 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # spillover in subsequent plots
   par.old <- par(no.readonly=TRUE)
   if (paired) {
+    # setup sample legend names and number of columns based on max name length
+    names.samples <- unique(levels(df.region$Sample))
+    name.max.len <- max(nchar(names.samples))
+    ncol <- 1
+    if (name.max.len <= 10) ncol <- 2
+    
     # increase bottom margin based on additional rows for sample legend
-    names.samples <- unique(df.region$Sample)
     margin <- par()$mar
-    margin[1] <- margin[1] + length(names.samples) / 8
+    margin[1] <- margin[1] + length(names.samples) / (1.3 * ncol)
     par(mar=margin)
   }
+  
+  # plot values with means and error bars
+  
   plot(NULL, frame.plot=TRUE, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
-  
   colors <- NULL
   i <- 1
   for (geno in genos.unique) {
+    # plot each group of points
+    
+    # add group label for genotypes if more than one total
+    if (length(genos.unique) > 1) mtext(geno, side=1, at=i-0.5)
     x.adj <- 0
-    mtext(geno, side=1, at=i-0.5)
-    x.pos <- vector(length=length(sides.unique))
+    x.pos <- vector(length=length(sides.unique)) # group base x-positions
     vals.geno <- list() # vals within genotype, for paired points
     for (side in sides.unique) {
       # plot points, adding jitter in x-direction unless paired
@@ -564,7 +572,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   if (paired) {
     # add sample legend below group legend to describe paired points
     legend("topright", legend=names.samples, lty=1, 
-           col=colors, xpd=TRUE, inset=c(0, 1.05), ncol=2, bty="n")
+           col=colors, xpd=TRUE, inset=c(0, 1.05), ncol=ncol, bty="n")
   }
   
   # save figure to PDF

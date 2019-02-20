@@ -490,7 +490,18 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   } else {
     ylab <- gsub("_", " ", col)
   }
-  plot(NULL, frame.plot=TRUE, xlab=title, ylab=ylab, xaxt="n", 
+  
+  # save current graphical parameters to reset at end, avoiding setting 
+  # spillover in subsequent plots
+  par.old <- par(no.readonly=TRUE)
+  if (paired) {
+    # increase bottom margin based on additional rows for sample legend
+    names.samples <- unique(df.region$Sample)
+    margin <- par()$mar
+    margin[1] <- margin[1] + length(names.samples) / 8
+    par(mar=margin)
+  }
+  plot(NULL, frame.plot=TRUE, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
   
@@ -538,18 +549,29 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     if (paired) {
       # connect pairs of points with segments, assuming same order for each 
       # vector of values
-      for (j in seq_along(vals.geno[[1]])) {
-        segments(x.pos[1], vals.geno[[1]][j], x.pos[2], vals.geno[[2]][j])
+      vals.group <- vals.geno[[1]]
+      for (j in seq_along(vals.group)) {
+        segments(x.pos[1], vals.group[j], x.pos[2], vals.geno[[2]][j], 
+                 col=colors[j])
       }
     }
   }
-  # allow legend to move outside of plot, positioning at top right 
+  
+  # group legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
   legend("topright", legend=names.groups, pch=15:(14+length(names.groups)), 
          xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n")
+  if (paired) {
+    # add sample legend below group legend to describe paired points
+    legend("topright", legend=names.samples, lty=1, 
+           col=colors, xpd=TRUE, inset=c(0, 1.04), ncol=2, bty="n")
+  }
+  
+  # save figure to PDF
   dev.print(
     pdf, file=paste0(
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
+  par(par.old)
   
   return(list(names.groups, vals.means, vals.cis))
 }

@@ -564,12 +564,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   if (paired) {
     # add sample legend below group legend to describe paired points
     legend("topright", legend=names.samples, lty=1, 
-           col=colors, xpd=TRUE, inset=c(0, 1.04), ncol=2, bty="n")
+           col=colors, xpd=TRUE, inset=c(0, 1.05), ncol=2, bty="n")
   }
   
   # save figure to PDF
   dev.print(
-    pdf, file=paste0(
+    pdf, width=7, height=7, 
+    file=paste0(
       "../plot_jitter_", meas, "_", gsub("/| ", "_", title), ".pdf"))
   par(par.old)
   

@@ -538,7 +538,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         } else {
           x.mean <- x - 0.25
         }
-        points(x.mean, mean, pch=16)
+        points(x.mean, mean, pch=16, cex=2)
         arrows(x.mean, mean + ci, x.mean, mean - ci, length=0.05, angle=90, 
                code=3)
       }

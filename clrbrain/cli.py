@@ -353,9 +353,10 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 size = sub_rois[tuple(coord)].shape
                 lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"
                                     .format(offset, size, overlap, tol))
-                # each region extends into the next region, so the overlap is
-                # the end of the region minus its overlap and a tolerance space,
-                # extending back out to the end plus the tolerance
+                # each region extends into the next region, so the full 
+                # region to check extends from the end of the section, minus 
+                # its overlap and a tolerance space, to the end plus the 
+                # tolerance space
                 shift = overlap[axis] + tol[axis]
                 bounds = [offset[axis] + size[axis] - shift,
                           offset[axis] + size[axis] + tol[axis]]

@@ -443,7 +443,7 @@ def remove_close_blobs_within_array(blobs, region, tol):
                 blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
-def remove_close_blobs_within_sorted_array(blobs, region, tol):
+def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
     """Removes close blobs within a given array, first sorting the array by
     z, y, x.
     
@@ -456,15 +456,21 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be pruned in
             the returned array.
+        blobs_next: Array similar to ``blobs`` but from the immediately 
+           adjacent region; defaults to None.
     
     Return:
-        The blobs array without blobs falling inside the tolerance range.
+        Tuple of all blobs, a blobs array without blobs falling inside 
+        the tolerance range, and ratios, a tuple of pruned:original blobs 
+        and pruned:adjacent blobs, where adjacent blobs are the number of 
+        blobs in the region corresponding to ``blobs_next``.
     """
     if blobs is None:
         return None
     sort = np.lexsort((blobs[:, 2], blobs[:, 1], blobs[:, 0]))
     blobs = blobs[sort]
     #print("checking sorted blobs for close duplicates:\n{}".format(blobs))
+    num_blobs = len(blobs)
     blobs_all = None
     for blob in blobs:
         # check each blob against all blobs accepted thus far to ensure that
@@ -496,7 +502,13 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol):
                     break
                 i -= 1
     #print("blobs without close duplicates:\n{}".format(blobs_all))
-    return blobs_all
+    ratios = None
+    if blobs_next is not None:
+        # calculate pruned:original and pruned:adjacent blob ratios
+        num_blobs_pruned = len(blobs_all)
+        ratios = (
+            num_blobs_pruned / num_blobs, len(blobs_next) / num_blobs_pruned)
+    return blobs_all, ratios
 
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     mask = np.all([

@@ -328,6 +328,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
         return None
     
     blobs_all = []
+    blob_ratios = {}
+    cols = ("ratio_pruning", "ratio_adjacent")
     for i in channels:
         # prune blobs from each channel separately to avoid pruning based on 
         # co-localized channel signals
@@ -366,6 +368,21 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                     blobs[:, axis] >= bounds[0], 
                     blobs[:, axis] < bounds[1]], axis=0)]
                 
+                # get blobs from immediatley adjacent region of the same 
+                # size as that of the overlapping region
+                bounds_next = [
+                    offset[axis] + size[axis] + tol[axis],
+                    offset[axis] + size[axis] + overlap[axis] + 2 * tol[axis]]
+                lib_clrbrain.printv(
+                    "axis {}, boundaries (next): {}".format(axis, bounds_next))
+                blobs_ol_next = None
+                print("checking bounds against", image5d.shape[axis + 1])
+                if np.all(np.less(bounds_next, image5d.shape[axis + 1])):
+                    print("withing bounds of", image5d.shape[axis + 1])
+                    blobs_ol_next = blobs[np.all([
+                        blobs[:, axis] >= bounds_next[0], 
+                        blobs[:, axis] < bounds_next[1]], axis=0)]
+                
                 # non-overlapping area is the rest of the region, subtracting 
                 # the tolerance unless the region is first and not overlapped
                 start = offset[axis]
@@ -384,17 +401,20 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 # prune blobs from overlapping regions via multiprocessing
                 pool_results.append(pool.apply_async(
                     detector.remove_close_blobs_within_sorted_array, 
-                    args=(blobs_ol, BLOB_COORD_SLICE, tol)))
+                    args=(blobs_ol, BLOB_COORD_SLICE, tol, blobs_ol_next)))
             
             # collect all the pruned blob lists
             blobs_all_ol = None
             for result in pool_results:
-                blobs_ol_pruned = result.get()
+                blobs_ol_pruned, ratios = result.get()
                 if blobs_all_ol is None:
                     blobs_all_ol = blobs_ol_pruned
                 elif blobs_ol_pruned is not None:
                     blobs_all_ol = np.concatenate(
                         (blobs_all_ol, blobs_ol_pruned))
+                if ratios:
+                    for col, val in zip(cols, ratios):
+                        blob_ratios.setdefault(col, []).append(val)
             
             # recombine blobs from the non-overlapping with the pruned  
             # overlapping regions from the entire stack
@@ -409,6 +429,13 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
         # build up list from each channel
         blobs_all.append(blobs)
     blobs_all = np.vstack(blobs_all)
+    
+    # export blob ratios as data frame
+    import pandas as pd
+    df = pd.DataFrame(blob_ratios)
+    print(df.to_csv())
+    df.to_csv("blob_ratios.csv")
+    
     return blobs_all
 
 def _is_arg_true(arg):

@@ -87,6 +87,7 @@ import argparse
 from time import time
 import multiprocessing as mp
 import numpy as np
+import pandas as pd
 
 from clrbrain import chunking
 from clrbrain import config
@@ -97,6 +98,7 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 from clrbrain import mlearn
+from clrbrain import stats
 
 roi_size = None # current region of interest
 roi_sizes = None # list of regions of interest
@@ -329,7 +331,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
     
     blobs_all = []
     blob_ratios = {}
-    cols = ("ratio_pruning", "ratio_adjacent")
+    cols = ("blobs", "ratio_pruning", "ratio_adjacent")
     for i in channels:
         # prune blobs from each channel separately to avoid pruning based on 
         # co-localized channel signals
@@ -431,12 +433,9 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
     blobs_all = np.vstack(blobs_all)
     
     # export blob ratios as data frame
-    import pandas as pd
     df = pd.DataFrame(blob_ratios)
-    print(df.to_csv())
-    df.to_csv("blob_ratios.csv")
     
-    return blobs_all
+    return blobs_all, df
 
 def _is_arg_true(arg):
     return arg.lower() == "true" or arg == "1"
@@ -1097,6 +1096,7 @@ def process_file(filename_base, offset, roi_size):
         super_rois, super_rois_offsets = chunking.stack_splitter(
             roi, max_pixels, overlap)
         seg_rois = np.zeros(super_rois.shape, dtype=object)
+        dfs = []
         for z in range(super_rois.shape[0]):
             for y in range(super_rois.shape[1]):
                 for x in range(super_rois.shape[2]):
@@ -1105,7 +1105,7 @@ def process_file(filename_base, offset, roi_size):
                     print("===============================================\n"
                           "Processing stack {} of {}"
                           .format(coord, np.add(super_rois.shape, -1)))
-                    merged, segs = process_stack(roi, overlap, tol, channels)
+                    merged, segs, df = process_stack(roi, overlap, tol, channels)
                     del merged # TODO: check if helps reduce memory buildup
                     if segs is not None:
                         # transpose seg coords since part of larger stack
@@ -1113,11 +1113,15 @@ def process_file(filename_base, offset, roi_size):
                         detector.shift_blob_rel_coords(segs, off)
                         detector.shift_blob_abs_coords(segs, off)
                     seg_rois[coord] = segs
+                    dfs.append(df)
         
         # prune segments in overlapping region between super-ROIs
         time_pruning_start = time()
-        segments_all = _prune_blobs_mp(
+        segments_all, df = _prune_blobs_mp(
             seg_rois, overlap, tol, super_rois, super_rois_offsets, channels)
+        dfs.append(df)
+        df_all = stats.data_frames_to_csv(dfs, "blob_ratios.csv")
+        print(df_all.to_csv())
         pruning_time = time() - time_pruning_start
         '''# report any remaining duplicates
         np.set_printoptions(linewidth=500, threshold=10000000)
@@ -1129,7 +1133,7 @@ def process_file(filename_base, offset, roi_size):
         print(detector.remove_duplicate_blobs(blobs, BLOB_COORD_SLICE))
         '''
         
-        stats = None
+        stats_detection = None
         fdbk = None
         if segments_all is not None:
             # remove the duplicated elements that were used for pruning
@@ -1164,7 +1168,7 @@ def process_file(filename_base, offset, roi_size):
                             config.verified_db.conn, config.verified_db.cur, 
                             exp_name, None)
                         rois = config.truth_db.get_rois(exp_name)
-                        stats, fdbk = detector.verify_rois(
+                        stats_detection, fdbk = detector.verify_rois(
                             rois, segments_all, config.truth_db.blobs_truth, 
                             BLOB_COORD_SLICE, tol, config.verified_db, exp_id,
                             config.channel)
@@ -1199,7 +1203,7 @@ def process_file(filename_base, offset, roi_size):
         print("total segments found: {}".format(segs_len))
         print("file save time: {}".format(time() - file_time_start))
         print("total file processing time (s): {}".format(time() - time_start))
-        return stats, fdbk, segments_all
+        return stats_detection, fdbk, segments_all
     return None, None, None
     
 def process_stack(roi, overlap, tol, channels):
@@ -1235,6 +1239,7 @@ def process_stack(roi, overlap, tol, channels):
     
     # process ROI
     time_denoising_start = time()
+    df = None
     if proc_type == PROC_TYPES[2]:
         # Multiprocessing
         
@@ -1304,7 +1309,7 @@ def process_stack(roi, overlap, tol, channels):
         
         # prune segments
         time_pruning_start = time()
-        segments_all = _prune_blobs_mp(
+        segments_all, df = _prune_blobs_mp(
             seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
@@ -1350,7 +1355,7 @@ def process_stack(roi, overlap, tol, channels):
     print("total pruning time (s): {}".format(pruning_time))
     print("total stack processing time (s): {}".format(time() - time_start))
     
-    return merged, segments_all
+    return merged, segments_all, df
 
 if __name__ == "__main__":
     print("Starting clrbrain command-line interface...")

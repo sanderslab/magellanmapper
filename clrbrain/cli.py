@@ -143,7 +143,7 @@ def denoise_sub_roi(coord):
         sub_roi = plot_3d.threshold(sub_roi)
     return (coord, sub_roi)
 
-def segment_sub_roi(sub_rois_offsets, coord):
+def segment_sub_roi(sub_rois_offsets, coord, roi_offset, overlap):
     """Segments the ROI within an array of ROIs.
     
     The array of ROIs is assumed to be cli.sub_rois.
@@ -161,6 +161,7 @@ def segment_sub_roi(sub_rois_offsets, coord):
     sub_roi = sub_rois[coord]
     lib_clrbrain.printv("segmenting sub_roi at {} of {}, with shape {}..."
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
+    '''
     segments = detector.detect_blobs(sub_roi, config.channel)
     offset = sub_rois_offsets[coord]
     #print("segs before (offset: {}):\n{}".format(offset, segments))
@@ -172,7 +173,25 @@ def segment_sub_roi(sub_rois_offsets, coord):
         detector.shift_blob_rel_coords(segments, offset)
         detector.shift_blob_abs_coords(segments, offset)
         #print("segs after:\n{}".format(segments))
-    return (coord, segments)
+    '''
+    offset = sub_rois_offsets[coord]
+    blobs_in = []
+    for axis in range(3):
+        # get region without overlapping portion
+        start = roi_offset[axis] + offset[axis]
+        end = start + sub_roi.shape[axis]
+        if coord[axis] < sub_rois.shape[axis] - 1:
+            # all regions but last one have overlap
+            end -= overlap[axis]
+        else:
+            # include final pixel
+            end += 1
+        print("including blobs between {} and {} along axis {}"
+              .format(start, end, axis))
+        blobs_in.append(segments_proc[:, axis] >= start)
+        blobs_in.append(segments_proc[:, axis] < end)
+    blobs = segments_proc[np.all(blobs_in, axis=0)]
+    return coord, blobs
 
 def collect_segments(segments_all, segments, region, tol):
     """Adds an array of segments into a master array, removing any close
@@ -1246,7 +1265,7 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
     time_start = time()
     # prepare ROI for processing;
     # need to make module-level to allow shared memory of this large array
-    global sub_rois
+    global sub_rois, segments_proc
     scaling_factor = detector.calc_scaling_factor()
     denoise_size = config.process_settings["denoise_size"]
     # no overlap for denoising
@@ -1309,19 +1328,19 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
         #print("max_factor: {}".format(max_factor))
         sub_rois, sub_rois_offsets = chunking.stack_splitter(
             merged, max_pixels, overlap)
-        '''
+        
         pool = mp.Pool()
         pool_results = []
         for z in range(sub_rois.shape[0]):
             for y in range(sub_rois.shape[1]):
                 for x in range(sub_rois.shape[2]):
                     coord = (z, y, x)
-                    pool_results.append(pool.apply_async(segment_sub_roi, 
-                                     args=(sub_rois_offsets, coord)))
+                    pool_results.append(
+                        pool.apply_async(
+                            segment_sub_roi, 
+                            args=(sub_rois_offsets, coord, roi_offset, overlap)))
         
-        '''
         seg_rois = np.zeros(sub_rois.shape, dtype=object)
-        '''
         for result in pool_results:
             coord, segments = result.get()
             lib_clrbrain.printv(
@@ -1331,8 +1350,8 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
         
         pool.close()
         pool.join()
-        '''
         
+        '''
         for z in range(sub_rois.shape[0]):
             for y in range(sub_rois.shape[1]):
                 for x in range(sub_rois.shape[2]):
@@ -1359,6 +1378,7 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
                         blobs_in.append(segments_proc[:, axis] >= start)
                         blobs_in.append(segments_proc[:, axis] < end)
                     seg_rois[coord] = segments_proc[np.all(blobs_in, axis=0)]
+        '''
     
         time_segmenting_end = time()
         

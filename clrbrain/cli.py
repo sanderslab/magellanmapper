@@ -109,7 +109,6 @@ image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
 sub_rois = None
-_blobs_all = None # share blobs among multiple processes
 
 PROC_TYPES = (
     "importonly", "processing", "processing_mp", "load", "extract", 

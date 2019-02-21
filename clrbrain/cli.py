@@ -1135,18 +1135,21 @@ def process_file(filename_base, offset, roi_size):
         # combine pruning data frames and get weighted mean of ratios
         dfs.append(df)
         df_all = stats.data_frames_to_csv(dfs, "blob_ratios.csv")
-        blob_pruning_means = {}
-        blobs_unpruned = df_all["blobs"]
-        num_blobs_unpruned = np.sum(blobs_unpruned)
         cols = df_all.columns.tolist()
-        for col in cols[1:]:
-            blob_pruning_means["mean_{}".format(col)] = [
-                np.sum(np.multiply(df_all[col], blobs_unpruned)) 
-                / num_blobs_unpruned]
-        df_means = stats.dict_to_data_frame(
-            blob_pruning_means, "blob_ratios_means.csv")
-        print(df_all.to_csv())
-        print(df_means.to_csv())
+        blob_pruning_means = {}
+        if "blobs" in cols:
+            blobs_unpruned = df_all["blobs"]
+            num_blobs_unpruned = np.sum(blobs_unpruned)
+            for col in cols[1:]:
+                blob_pruning_means["mean_{}".format(col)] = [
+                    np.sum(np.multiply(df_all[col], blobs_unpruned)) 
+                    / num_blobs_unpruned]
+            df_means = stats.dict_to_data_frame(
+                blob_pruning_means, "blob_ratios_means.csv")
+            print(df_all.to_csv())
+            print(df_means.to_csv())
+        else:
+            print("no blob ratios found")
         pruning_time = time() - time_pruning_start
         
         '''# report any remaining duplicates

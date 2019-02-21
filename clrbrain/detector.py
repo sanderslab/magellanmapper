@@ -506,14 +506,15 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
                 i -= 1
     #print("blobs without close duplicates:\n{}".format(blobs_all))
     ratios = None
-    if blobs_next is not None:
+    if blobs_next is not None and num_blobs > 0:
         # calculate pruned:original and pruned:adjacent blob ratios
         num_blobs_pruned = len(blobs_all)
         num_blobs_next = len(blobs_next)
         print("num_blobs: {}, blobs after pruning: {}, num_blobs_next: {}"
               .format(num_blobs, num_blobs_pruned, num_blobs_next))
-        ratios = (num_blobs, num_blobs_pruned / num_blobs, 
-                  num_blobs_pruned / num_blobs_next)
+        if num_blobs_next > 0:
+            ratios = (num_blobs, num_blobs_pruned / num_blobs, 
+                      num_blobs_pruned / num_blobs_next)
     return blobs_all, ratios
 
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):

@@ -1588,12 +1588,14 @@ if __name__ == "__main__":
         # plot smoothing metrics
         path = lib_clrbrain.combine_paths(
             config.prefix, config.PATH_SMOOTHING_METRICS)
+        title = "{} Label Smoothing".format(
+            lib_clrbrain.get_filename_without_ext(config.prefix))
         plot_lines(
             path, "filter", 
             ("roughness", "compacted", "displaced", "smoothing_quality", "SA_to_vol", 
              "label_loss"), 
             (":", "--", "--", "-", "-", "-"), "Smoothing Filter Size", 
-            "Fractional Change", "Label Smoothing", not config.no_show)
+            "Fractional Change", title, not config.no_show)
     
     elif config.plot_2d == config.PLOT_2D_TYPES[1]:
         # generiic barplot

@@ -559,7 +559,7 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     return filter_size, metric, borders
 
 def _smoothing_mp(img_np, img_np_orig, filter_sizes, 
-                  output_path=""):
+                  output_path=None):
     """Smooth image and calculate smoothing metric for a list of smoothing 
     strengths.
     
@@ -568,18 +568,27 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes,
         img_np_orig: Original image as Numpy array for comparison with 
             smoothed image in metric.
         filter_size: Tuple or list of structuring element sizes.
-        output_path: Save metrics data frame to this path. If empty string, 
-            will attempt to combine :attr:``config.filename`` with 
-            :const:``config.PATH_SMOOTHING_METRICS``, or simply use the 
-            latter if the former is None. Defaults to "".
+        output_path: Save metrics data frame to this path. Defaults to 
+            None, in which case :attr:``config.prefix`` will be combined 
+            with :const:``config.PATH_SMOOTHING_METRICS``.
+            If :attr:``config.prefix`` is None, :attr:``config.filename`` 
+            will be used instead, and if it is a directory, the directory 
+            name also be used for the filename.
     
     Returns:
         Data frame of combined metrics from smoothing for each filter size.
     """
-    if output_path == "":
+    if output_path is None:
+        # combine with prefix if available or filename
         output_path = config.PATH_SMOOTHING_METRICS
         if config.prefix:
-            output_path = lib_clrbrain.combine_paths(config.prefix, output_path)
+            base_path = config.prefix
+        else:
+            base_path = config.filename
+            if os.path.isdir(base_path):
+                # repeat the directory name in the given directory path
+                base_path = os.path.join(base_path, os.path.basename(base_path))
+        output_path = lib_clrbrain.combine_paths(base_path, output_path)
     pool = mp.Pool()
     pool_results = []
     for n in filter_sizes:

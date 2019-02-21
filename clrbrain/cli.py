@@ -328,6 +328,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
     blobs_merged = chunking.merge_blobs(seg_rois)
     if blobs_merged is None:
         return None
+    print("total blobs after merging:", len(blobs_merged))
     
     blobs_all = []
     blob_ratios = {}
@@ -1097,6 +1098,9 @@ def process_file(filename_base, offset, roi_size):
             roi, max_pixels, overlap)
         seg_rois = np.zeros(super_rois.shape, dtype=object)
         dfs = []
+        output_info = np.load(filename_info_proc)
+        segments_proc = output_info["segments"]
+        print("loaded {} blobs".format(len(segments_proc)))
         for z in range(super_rois.shape[0]):
             for y in range(super_rois.shape[1]):
                 for x in range(super_rois.shape[2]):
@@ -1105,7 +1109,8 @@ def process_file(filename_base, offset, roi_size):
                     print("===============================================\n"
                           "Processing stack {} of {}"
                           .format(coord, np.add(super_rois.shape, -1)))
-                    merged, segs, df = process_stack(roi, overlap, tol, channels)
+                    merged, segs, df = process_stack(
+                        roi, overlap, tol, channels, super_rois_offsets[coord])
                     del merged # TODO: check if helps reduce memory buildup
                     if segs is not None:
                         # transpose seg coords since part of larger stack
@@ -1154,7 +1159,7 @@ def process_file(filename_base, offset, roi_size):
         fdbk = None
         if segments_all is not None:
             # remove the duplicated elements that were used for pruning
-            detector.replace_rel_with_abs_blob_coords(segments_all)
+            #detector.replace_rel_with_abs_blob_coords(segments_all)
             segments_all = detector.remove_abs_blob_coords(segments_all)
             
             # compared detected blobs with truth blobs
@@ -1223,7 +1228,7 @@ def process_file(filename_base, offset, roi_size):
         return stats_detection, fdbk, segments_all
     return None, None, None
     
-def process_stack(roi, overlap, tol, channels):
+def process_stack(roi, overlap, tol, channels, roi_offset):
     """Processes a stack, whcih can be a sub-region within an ROI.
     
     Args:
@@ -1260,6 +1265,7 @@ def process_stack(roi, overlap, tol, channels):
     if proc_type == PROC_TYPES[2]:
         # Multiprocessing
         
+        '''
         # denoise all sub-ROIs and re-merge
         if denoise_size:
             pool = mp.Pool()
@@ -1292,6 +1298,7 @@ def process_stack(roi, overlap, tol, channels):
             lib_clrbrain.printv(
                 "no denoise size specified, will not preprocess")
         
+        '''
         time_denoising_end = time()
         
         # detect blobs, using larger sub-ROI size to minimize the number 
@@ -1303,6 +1310,7 @@ def process_stack(roi, overlap, tol, channels):
         #print("max_factor: {}".format(max_factor))
         sub_rois, sub_rois_offsets = chunking.stack_splitter(
             merged, max_pixels, overlap)
+        '''
         pool = mp.Pool()
         pool_results = []
         for z in range(sub_rois.shape[0]):
@@ -1312,7 +1320,9 @@ def process_stack(roi, overlap, tol, channels):
                     pool_results.append(pool.apply_async(segment_sub_roi, 
                                      args=(sub_rois_offsets, coord)))
         
+        '''
         seg_rois = np.zeros(sub_rois.shape, dtype=object)
+        '''
         for result in pool_results:
             coord, segments = result.get()
             lib_clrbrain.printv(
@@ -1322,6 +1332,35 @@ def process_stack(roi, overlap, tol, channels):
         
         pool.close()
         pool.join()
+        '''
+        
+        for z in range(sub_rois.shape[0]):
+            for y in range(sub_rois.shape[1]):
+                for x in range(sub_rois.shape[2]):
+                    coord = (z, y, x)
+                    offset = sub_rois_offsets[coord]
+                    sub_roi = sub_rois[coord]
+                    lib_clrbrain.printv(
+                        "segmenting sub_roi at {} of {}, with shape {}..."
+                        .format(coord, np.add(sub_rois.shape, -1), 
+                                sub_roi.shape))
+                    blobs_in = []
+                    for axis in range(3):
+                        # get region without overlapping portion
+                        start = roi_offset[axis] + offset[axis]
+                        end = start + sub_roi.shape[axis]
+                        if coord[axis] < sub_rois.shape[axis] - 1:
+                            # all regions but last one have overlap
+                            end -= overlap[axis]
+                        else:
+                            # include final pixel
+                            end += 1
+                        print("including blobs between {} and {} along axis {}"
+                              .format(start, end, axis))
+                        blobs_in.append(segments_proc[:, axis] >= start)
+                        blobs_in.append(segments_proc[:, axis] < end)
+                    seg_rois[coord] = segments_proc[np.all(blobs_in, axis=0)]
+    
         time_segmenting_end = time()
         
         # prune segments
@@ -1330,8 +1369,10 @@ def process_stack(roi, overlap, tol, channels):
             seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
+        '''
         if segments_all is not None:
             detector.replace_rel_with_abs_blob_coords(segments_all)
+        '''
         pruning_time = time() - time_pruning_start
         
     else:

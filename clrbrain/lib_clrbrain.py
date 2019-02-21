@@ -128,10 +128,13 @@ def get_filename_without_ext(path):
     return name
 
 def combine_paths(base_path, suffix, sep="_", ext=None):
-    """Merge two paths.
+    """Merge two paths by splicing ``suffix`` just before the extention 
+    in ``base_path``.
     
     Args:
-        base_path: Path whose dot-extension will be replaced by ``suffix``.
+        base_path: Path whose dot-extension will be replaced by ``suffix``. 
+            If None, ``suffix`` will be returned. If a directory, will 
+            be simply joined with ``suffix``.
         suffix: Replacement including new extension.
         sep: Separator between ``base_path`` and ``suffix``.
         ext: Extension to add or substitute; defaults to None to use 
@@ -141,7 +144,10 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
         Merged path.
     """
     if not base_path: return suffix
-    path = os.path.splitext(base_path)[0] + sep + suffix
+    if os.path.isdir(base_path):
+        path = os.path.join(base_path, suffix)
+    else:
+        path = os.path.splitext(base_path)[0] + sep + suffix
     if ext: path = "{}.{}".format(os.path.splitext(path)[0], ext)
     return path
 

@@ -1570,7 +1570,7 @@ def save_fig(path, ext):
         plot_path = os.path.splitext(path)[0] + "." + ext
         lib_clrbrain.backup_file(plot_path)
         plt.savefig(plot_path)
-        print("exported figure to ", plot_path)
+        print("exported figure to", plot_path)
 
 def setup_style():
     # setup Matplotlib parameters/styles

@@ -186,8 +186,9 @@ def segment_sub_roi(sub_rois_offsets, coord, roi_offset, overlap):
         else:
             # include final pixel
             end += 1
-        print("including blobs between {} and {} along axis {}"
-              .format(start, end, axis))
+        lib_clrbrain.printv(
+            "including blobs between {} and {} along axis {}"
+            .format(start, end, axis))
         blobs_in.append(segments_proc[:, axis] >= start)
         blobs_in.append(segments_proc[:, axis] < end)
     blobs = segments_proc[np.all(blobs_in, axis=0)]
@@ -400,9 +401,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 lib_clrbrain.printv(
                     "axis {}, boundaries (next): {}".format(axis, bounds_next))
                 blobs_ol_next = None
-                print("checking bounds against", image5d.shape[axis + 1])
                 if np.all(np.less(bounds_next, image5d.shape[axis + 1])):
-                    print("withing bounds of", image5d.shape[axis + 1])
                     blobs_ol_next = blobs[np.all([
                         blobs[:, axis] >= bounds_next[0], 
                         blobs[:, axis] < bounds_next[1]], axis=0)]

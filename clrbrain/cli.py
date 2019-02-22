@@ -1136,11 +1136,13 @@ def process_file(filename_base, offset, roi_size):
                     merged, segs, df = process_stack(
                         roi, overlap, tol, channels, super_rois_offsets[coord])
                     del merged # TODO: check if helps reduce memory buildup
+                    '''
                     if segs is not None:
                         # transpose seg coords since part of larger stack
                         off = super_rois_offsets[coord]
                         detector.shift_blob_rel_coords(segs, off)
                         detector.shift_blob_abs_coords(segs, off)
+                    '''
                     seg_rois[coord] = segs
                     dfs.append(df)
         

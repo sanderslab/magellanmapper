@@ -325,7 +325,7 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     return segments_all, duration
 
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
-                    channels):
+                    channels, roi_offset=None):
     """Prune close blobs within overlapping regions by checking within
     entire planes across the ROI in parallel with multiprocessing.
     
@@ -381,8 +381,11 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 # its overlap and a tolerance space, to the end plus the 
                 # tolerance space
                 shift = overlap[axis] + tol[axis]
-                bounds = [offset[axis] + size[axis] - shift,
-                          offset[axis] + size[axis] + tol[axis]]
+                offset_axis = offset[axis]
+                if roi_offset is not None:
+                    offset_axis += roi_offset[axis]
+                bounds = [offset_axis + size[axis] - shift,
+                          offset_axis + size[axis] + tol[axis]]
                 lib_clrbrain.printv(
                     "axis {}, boundaries: {}".format(axis, bounds))
                 blobs_ol = blobs[np.all([
@@ -392,8 +395,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 # get blobs from immediatley adjacent region of the same 
                 # size as that of the overlapping region
                 bounds_next = [
-                    offset[axis] + size[axis] + tol[axis],
-                    offset[axis] + size[axis] + overlap[axis] + 2 * tol[axis]]
+                    offset_axis + size[axis] + tol[axis],
+                    offset_axis + size[axis] + overlap[axis] + 2 * tol[axis]]
                 lib_clrbrain.printv(
                     "axis {}, boundaries (next): {}".format(axis, bounds_next))
                 blobs_ol_next = None
@@ -1359,41 +1362,12 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
         pool.close()
         pool.join()
         
-        '''
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    offset = sub_rois_offsets[coord]
-                    sub_roi = sub_rois[coord]
-                    lib_clrbrain.printv(
-                        "segmenting sub_roi at {} of {}, with shape {}..."
-                        .format(coord, np.add(sub_rois.shape, -1), 
-                                sub_roi.shape))
-                    blobs_in = []
-                    for axis in range(3):
-                        # get region without overlapping portion
-                        start = roi_offset[axis] + offset[axis]
-                        end = start + sub_roi.shape[axis]
-                        if coord[axis] < sub_rois.shape[axis] - 1:
-                            # all regions but last one have overlap
-                            end -= overlap[axis]
-                        else:
-                            # include final pixel
-                            end += 1
-                        print("including blobs between {} and {} along axis {}"
-                              .format(start, end, axis))
-                        blobs_in.append(segments_proc[:, axis] >= start)
-                        blobs_in.append(segments_proc[:, axis] < end)
-                    seg_rois[coord] = segments_proc[np.all(blobs_in, axis=0)]
-        '''
-    
         time_segmenting_end = time()
         
         # prune segments
         time_pruning_start = time()
         segments_all, df = _prune_blobs_mp(
-            seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
+            seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels, roi_offset)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
         '''

@@ -386,12 +386,12 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 # non-overlapping region: the region before the overlap, 
                 # after any overlap with the prior region (n > 1) 
                 # to the start of the overlap (n < last region)
-                shift = overlap[axis] + tol[axis]
                 blobs_ol = None
                 blobs_ol_next = None
                 blobs_in_non_ol = []
+                shift = overlap[axis] + tol[axis]
+                offset_axis = offset[axis]
                 if i < num_sections - 1:
-                    offset_axis = offset[axis]
                     if roi_offset is not None:
                         offset_axis += roi_offset[axis]
                     bounds = [offset_axis + size[axis] - shift,
@@ -415,6 +415,10 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                             blobs[:, axis] < bounds_next[1]], axis=0)]
                     # non-overlapping region extends up this overlap
                     blobs_in_non_ol.append(blobs[:, axis] < bounds[0])
+                else:
+                    # last non-overlapping region extends to end of region
+                    blobs_in_non_ol.append(
+                        blobs[:, axis] < offset_axis + size[axis] + 1)
                 
                 # get non-overlapping area
                 start = offset[axis]

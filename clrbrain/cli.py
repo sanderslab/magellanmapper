@@ -430,6 +430,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
         # build up list from each channel
         blobs_all.append(blobs)
     blobs_all = np.vstack(blobs_all)
+    print("total blobs after pruning:", len(blobs_all))
     
     # export blob ratios as data frame
     df = pd.DataFrame(blob_ratios)
@@ -1127,6 +1128,8 @@ def process_file(filename_base, offset, roi_size):
                     dfs.append(df)
         
         # prune segments in overlapping region between super-ROIs
+        print("===============================================\n"
+              "Pruning super-ROIs")
         time_pruning_start = time()
         segments_all, df = _prune_blobs_mp(
             seg_rois, overlap, tol, super_rois, super_rois_offsets, channels)

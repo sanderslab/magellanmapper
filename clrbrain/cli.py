@@ -192,6 +192,7 @@ def segment_sub_roi(sub_rois_offsets, coord, roi_offset, overlap):
         blobs_in.append(segments_proc[:, axis] >= start)
         blobs_in.append(segments_proc[:, axis] < end)
     blobs = segments_proc[np.all(blobs_in, axis=0)]
+    blobs = detector.format_blobs(blobs)
     return coord, blobs
 
 def collect_segments(segments_all, segments, region, tol):
@@ -1190,7 +1191,7 @@ def process_file(filename_base, offset, roi_size):
         fdbk = None
         if segments_all is not None:
             # remove the duplicated elements that were used for pruning
-            #detector.replace_rel_with_abs_blob_coords(segments_all)
+            detector.replace_rel_with_abs_blob_coords(segments_all)
             segments_all = detector.remove_abs_blob_coords(segments_all)
             
             # compared detected blobs with truth blobs
@@ -1372,10 +1373,8 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
             seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels, roi_offset)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
-        '''
         if segments_all is not None:
             detector.replace_rel_with_abs_blob_coords(segments_all)
-        '''
         pruning_time = time() - time_pruning_start
         
     else:

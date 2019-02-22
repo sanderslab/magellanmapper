@@ -208,6 +208,12 @@ def format_blobs(blobs, channel=None):
 def remove_abs_blob_coords(blobs):
     return blobs[:, :7]
 
+def get_blob_abs_coords(blobs):
+    return blobs[:, 7:10]
+
+def set_blob_abs_coords(blobs, coords):
+    blobs[:, 7:10] = coords
+
 def shift_blob_rel_coords(blobs, offset):
     blobs[..., :3] += offset
     return blobs
@@ -491,9 +497,15 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
                     # duplicate blob to be removed;
                     # shift close blobs to their mean values, storing values in 
                     # the duplicated coordinates and radius of the blob array
+                    abs_between = np.around(
+                        np.divide(
+                            np.add(get_blob_abs_coords(blobs_all[i, None]), 
+                                   get_blob_abs_coords(blob[None])), 2))
+                    set_blob_abs_coords(blobs_all[i, None], abs_between)
                     blobs_all[i, 6:] = np.around(
                         np.divide(np.add(blobs_all[i, 6:], blob[6:]), 2))
-                    #print("{} removed".format(blob))
+                    #print("updated blob:", blobs_all[i])
+                    #print("removed blob:", blob)
                     break
                 elif i == 0 or not (blobs_diff <= tol).any():
                     # add blob since at start of non-duplicate blobs list

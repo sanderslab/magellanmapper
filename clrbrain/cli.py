@@ -356,43 +356,52 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 size = sub_rois[tuple(coord)].shape
                 lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"
                                     .format(offset, size, overlap, tol))
-                # each region extends into the next region, so the full 
-                # region to check extends from the end of the section, minus 
-                # its overlap and a tolerance space, to the end plus the 
-                # tolerance space
+                
+                # overlapping region: each region but the last extends 
+                # into the next region, with the overlapping volume from 
+                # the end of the region, minus the overlap and a tolerance 
+                # space, to the region's end plus this tolerance space; 
+                # non-overlapping region: the region before the overlap, 
+                # after any overlap with the prior region (n > 1) 
+                # to the start of the overlap (n < last region)
                 shift = overlap[axis] + tol[axis]
-                bounds = [offset[axis] + size[axis] - shift,
-                          offset[axis] + size[axis] + tol[axis]]
-                lib_clrbrain.printv(
-                    "axis {}, boundaries: {}".format(axis, bounds))
-                blobs_ol = blobs[np.all([
-                    blobs[:, axis] >= bounds[0], 
-                    blobs[:, axis] < bounds[1]], axis=0)]
-                
-                # get blobs from immediatley adjacent region of the same 
-                # size as that of the overlapping region
-                bounds_next = [
-                    offset[axis] + size[axis] + tol[axis],
-                    offset[axis] + size[axis] + overlap[axis] + 2 * tol[axis]]
-                lib_clrbrain.printv(
-                    "axis {}, boundaries (next): {}".format(axis, bounds_next))
+                blobs_ol = None
                 blobs_ol_next = None
-                print("checking bounds against", image5d.shape[axis + 1])
-                if np.all(np.less(bounds_next, image5d.shape[axis + 1])):
-                    print("withing bounds of", image5d.shape[axis + 1])
-                    blobs_ol_next = blobs[np.all([
-                        blobs[:, axis] >= bounds_next[0], 
-                        blobs[:, axis] < bounds_next[1]], axis=0)]
+                blobs_in_non_ol = []
+                if i < num_sections - 1:
+                    offset_axis = offset[axis]
+                    if roi_offset is not None:
+                        offset_axis += roi_offset[axis]
+                    bounds = [offset_axis + size[axis] - shift,
+                              offset_axis + size[axis] + tol[axis]]
+                    lib_clrbrain.printv(
+                        "axis {}, boundaries: {}".format(axis, bounds))
+                    blobs_ol = blobs[np.all([
+                        blobs[:, axis] >= bounds[0], 
+                        blobs[:, axis] < bounds[1]], axis=0)]
+                    
+                    # get blobs from immediatley adjacent region of the same 
+                    # size as that of the overlapping region
+                    bounds_next = [
+                        offset_axis + size[axis] + tol[axis],
+                        offset_axis + size[axis] + overlap[axis] + 2 * tol[axis]]
+                    lib_clrbrain.printv(
+                        "axis {}, boundaries (next): {}".format(axis, bounds_next))
+                    if np.all(np.less(bounds_next, image5d.shape[axis + 1])):
+                        blobs_ol_next = blobs[np.all([
+                            blobs[:, axis] >= bounds_next[0], 
+                            blobs[:, axis] < bounds_next[1]], axis=0)]
+                    # non-overlapping region extends up this overlap
+                    blobs_in_non_ol.append(blobs[:, axis] < bounds[0])
                 
-                # non-overlapping area is the rest of the region, subtracting 
-                # the tolerance unless the region is first and not overlapped
+                # get non-overlapping area
                 start = offset[axis]
                 if i > 0:
+                    # shift past overlapping part at start of region
                     start += shift
-                blobs_non_ol = blobs[np.all([
-                    blobs[:, axis] >= start, 
-                    blobs[:, axis] < bounds[0]], axis=0)]
-                # collect all these non-overlapping region blobs
+                blobs_in_non_ol.append(blobs[:, axis] >= start)
+                blobs_non_ol = blobs[np.all(blobs_in_non_ol, axis=0)]
+                # collect all non-overlapping region blobs
                 if blobs_all_non_ol is None:
                     blobs_all_non_ol = blobs_non_ol
                 elif blobs_non_ol is not None:
@@ -418,7 +427,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                         blob_ratios.setdefault(col, []).append(val)
             
             # recombine blobs from the non-overlapping with the pruned  
-            # overlapping regions from the entire stack
+            # overlapping regions from the entire stack to re-prune along 
+            # any remaining axes
             pool.close()
             pool.join()
             if blobs_all_ol is None:
@@ -426,7 +436,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
             elif blobs_all_non_ol is None:
                 blobs = blobs_all_ol
             else:
-               blobs = np.concatenate((blobs_all_non_ol, blobs_all_ol))
+                blobs = np.concatenate((blobs_all_non_ol, blobs_all_ol))
         # build up list from each channel
         blobs_all.append(blobs)
     blobs_all = np.vstack(blobs_all)

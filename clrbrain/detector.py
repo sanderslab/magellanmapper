@@ -475,7 +475,7 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
         blobs in the region corresponding to ``blobs_next``.
     """
     if blobs is None:
-        return None
+        return None, None
     sort = np.lexsort((blobs[:, 2], blobs[:, 1], blobs[:, 0]))
     blobs = blobs[sort]
     #print("checking sorted blobs for close duplicates:\n{}".format(blobs))

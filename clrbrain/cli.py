@@ -1084,6 +1084,15 @@ def process_file(filename_base, offset, roi_size):
         time_start = time()
         roi_offset = offset
         shape = roi_size
+        
+        # load presumably unpruned blobs
+        output_info = np.load(filename_info_proc)
+        segments_proc = output_info["segments"]
+        if offset is not None:
+            detector.shift_blob_rel_coords(
+                segments_proc, np.multiply(offset[::-1], -1))
+        print("loaded {} blobs".format(len(segments_proc)))
+        
         if roi_size is None or offset is None:
             # uses the entire stack if no size or offset specified
             shape = image5d.shape[3:0:-1]
@@ -1116,9 +1125,6 @@ def process_file(filename_base, offset, roi_size):
             roi, max_pixels, overlap)
         seg_rois = np.zeros(super_rois.shape, dtype=object)
         dfs = []
-        output_info = np.load(filename_info_proc)
-        segments_proc = output_info["segments"]
-        print("loaded {} blobs".format(len(segments_proc)))
         for z in range(super_rois.shape[0]):
             for y in range(super_rois.shape[1]):
                 for x in range(super_rois.shape[2]):

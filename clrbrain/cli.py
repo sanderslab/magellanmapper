@@ -391,9 +391,9 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 blobs_in_non_ol = []
                 shift = overlap[axis] + tol[axis]
                 offset_axis = offset[axis]
+                if roi_offset is not None:
+                    offset_axis += roi_offset[axis]
                 if i < num_sections - 1:
-                    if roi_offset is not None:
-                        offset_axis += roi_offset[axis]
                     bounds = [offset_axis + size[axis] - shift,
                               offset_axis + size[axis] + tol[axis]]
                     lib_clrbrain.printv(
@@ -421,7 +421,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                         blobs[:, axis] < offset_axis + size[axis] + 1)
                 
                 # get non-overlapping area
-                start = offset[axis]
+                start = offset_axis
                 if i > 0:
                     # shift past overlapping part at start of region
                     start += shift

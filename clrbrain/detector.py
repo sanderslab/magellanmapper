@@ -486,8 +486,7 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
             # initialize array with first blob
             blobs_all = np.array([blob])
         else:
-            # check each blob to add against the last approved blob since
-            # assumes that blobs are sorted, so only need to check last blob
+            # check each blob to add against blobs approved thus far
             i = len(blobs_all) - 1
             while i >= 0:
                 blobs_diff = np.abs(np.subtract(
@@ -502,8 +501,6 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
                             np.add(get_blob_abs_coords(blobs_all[i, None]), 
                                    get_blob_abs_coords(blob[None])), 2))
                     set_blob_abs_coords(blobs_all[i, None], abs_between)
-                    blobs_all[i, 6:] = np.around(
-                        np.divide(np.add(blobs_all[i, 6:], blob[6:]), 2))
                     #print("updated blob:", blobs_all[i])
                     #print("removed blob:", blob)
                     break

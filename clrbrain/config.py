@@ -1,6 +1,6 @@
 #!/bin/bash
 # Config file for shared settings
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 """Configuration storage module.
 
 This module allows customization of settings for various imaging systems, 
@@ -73,7 +73,7 @@ class SettingsDict(dict):
     def __init__(self, *args, **kwargs):
         self["settings_name"] = "default"
 
-    def add_modifier(self, mod_name, mods, settings_type=None, sep="_"):
+    def add_modifier(self, mod_name, mods, name_check=None, sep="_"):
         """Add a modifer dictionary, overwriting any existing settings 
         with values from this dictionary.
         
@@ -82,19 +82,13 @@ class SettingsDict(dict):
                 name of the current settings.
             mods: Dictionary with keys matching default keys and values to 
                 replace the correspondings values.
-            settings_type: The full name of the final settings. If given,  
-                the modifier will only be added if ``mod_name`` is a distinct 
-                entity within ``settings_type``. Defaults to None, 
-                in which case ``mods`` will be added regardless.
-            sep: Separator between modifier elements. Defaults to "".
+            profile: Name of a profile modifier to check; defaults to None. 
+                If matches ``mod_name`` or is None, ``mods`` will be applied.
+            sep: Separator between modifier elements. Defaults to "_".
         """
-        name = sep + mod_name
-        if settings_type and not (
-            name + sep in settings_type 
-            or settings_type.endswith(name)):
-            # modifier name must be a distinct entity within settings string
-            return
-        self["settings_name"] += name
+        # if name to check is given, must match modifier name to continue
+        if name_check is not None and name_check != mod_name: return
+        self["settings_name"] += sep + mod_name
         for key in mods.keys():
             self[key] = mods[key]
 
@@ -145,8 +139,12 @@ def update_process_settings(settings, settings_type):
     """
     # MAIN PROFILES
     
-    if settings_type.startswith("2p_20x"):
-        settings["settings_name"] = "2p_20x"
+    profiles = settings_type.split("_")
+    
+    # TODO: consider treating main profiles simply as modifiers
+    
+    if settings_type.startswith("2p20x"):
+        settings["settings_name"] = "2p20x"
         settings["vis_3d"] = "surface"
         settings["clip_vmax"] = 97
         settings["clip_min"] = 0
@@ -168,7 +166,7 @@ def update_process_settings(settings, settings_type):
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -0.25
         
-    elif settings_type.startswith("lightsheet_v01"):
+    elif settings_type.startswith("lightsheetv01"):
         # detection settings up through v.0.6.1
         settings["settings_name"] = "lightsheet_v01"
         settings["points_3d_thresh"] = 0.7
@@ -188,7 +186,7 @@ def update_process_settings(settings, settings_type):
         # mimic absence of z-limit
         settings["sub_stack_max_pixels"] = (100000, 1000, 1000)
         
-    elif settings_type.startswith("lightsheet_v02"):
+    elif settings_type.startswith("lightsheetv02"):
         # detection settings from v.0.6.2
         settings["settings_name"] = "lightsheet_v02"
         settings["points_3d_thresh"] = 0.7
@@ -245,77 +243,77 @@ def update_process_settings(settings, settings_type):
         settings["sub_stack_max_pixels"] = (1200, 800, 800)
     
     
+    for profile in profiles:
+        # PROFILE MODIFIERS
+        # any/all/none can be combined with any main profile, modifiers lower in 
+        # this listing taking precedence over prior ones and the main profile
+        
+        settings.add_modifier(
+            "zebrafish", 
+            {"min_sigma_factor": 2.5,
+             "max_sigma_factor": 3}, 
+            profile)
+        
+        settings.add_modifier(
+            "contrast", 
+            {"channel_colors": ("inferno", "bone")}, 
+            profile)
+        
+        settings.add_modifier(
+            "cytoplasm", 
+            {"clip_min": 0.3,
+             "clip_max": 0.8,
+             "points_3d_thresh": 0.7, 
+             # adjust sigmas based on extent of cyto staining; 
+             # TODO: consider adding sigma_mult if ratio remains relatively const
+             "min_sigma_factor": 4, 
+             "max_sigma_factor": 10,
+             "num_sigma": 10,
+             "overlap": 0.2}, 
+            profile)
+        
+        settings.add_modifier(
+            "small", 
+            {"points_3d_thresh": 0.3, # used only if not surface
+             "isotropic_vis": (1, 1, 1)}, 
+            profile)
+        
+        settings.add_modifier(
+            "binary", 
+            {"denoise_size": None,
+             "detection_threshold": 0.001}, 
+            profile)
     
-    # PROFILE MODIFIERS
-    # any/all/none can be combined with any main profile, modifiers lower in 
-    # this listing taking precedence over prior ones and the main profile
+        # fit into ~32GB RAM instance after isotropic interpolation
+        settings.add_modifier(
+            "20x", 
+            {"segment_size": 50}, 
+            profile)
     
-    settings.add_modifier(
-        "zebrafish", 
-        {"min_sigma_factor": 2.5,
-         "max_sigma_factor": 3}, 
-        settings_type)
+        # export to deep learning framework with required dimensions
+        settings.add_modifier(
+            "exportdl", 
+            {"isotropic": (0.93, 1, 1)}, 
+            profile)
     
-    settings.add_modifier(
-        "contrast", 
-        {"channel_colors": ("inferno", "bone")}, 
-        settings_type)
-    
-    settings.add_modifier(
-        "cytoplasm", 
-        {"clip_min": 0.3,
-         "clip_max": 0.8,
-         "points_3d_thresh": 0.7, 
-         # adjust sigmas based on extent of cyto staining; 
-         # TODO: consider adding sigma_mult if ratio remains relatively const
-         "min_sigma_factor": 4, 
-         "max_sigma_factor": 10,
-         "num_sigma": 10,
-         "overlap": 0.2}, 
-        settings_type)
-    
-    settings.add_modifier(
-        "small", 
-        {"points_3d_thresh": 0.3, # used only if not surface
-         "isotropic_vis": (1, 1, 1)}, 
-        settings_type)
-    
-    settings.add_modifier(
-        "binary", 
-        {"denoise_size": None,
-         "detection_threshold": 0.001}, 
-        settings_type)
-
-    # fit into ~32GB RAM instance after isotropic interpolation
-    settings.add_modifier(
-        "20x", 
-        {"segment_size": 50}, 
-        settings_type)
-
-    # export to deep learning framework with required dimensions
-    settings.add_modifier(
-        "exportdl", 
-        {"isotropic": (0.93, 1, 1)}, 
-        settings_type)
-
-    # import from deep learning predicted image
-    settings.add_modifier(
-        "importdl", 
-        {"isotropic": None, # assume already isotropic
-         "resize_blobs": (.2, 1, 1)}, 
-        settings_type)
-    
-    # denoise settings when performing registration
-    settings.add_modifier(
-        "register", 
-        {"unsharp_strength": 1.5}, 
-        settings_type)
-    
-    settings.add_modifier(
-        "atlas", 
-        {"channel_colors": ("gray", ),
-         "clip_vmax": 97}, 
-        settings_type)
+        # import from deep learning predicted image
+        settings.add_modifier(
+            "importdl", 
+            {"isotropic": None, # assume already isotropic
+             "resize_blobs": (.2, 1, 1)}, 
+            profile)
+        
+        # denoise settings when performing registration
+        settings.add_modifier(
+            "register", 
+            {"unsharp_strength": 1.5}, 
+            profile)
+        
+        settings.add_modifier(
+            "atlas", 
+            {"channel_colors": ("gray", ),
+             "clip_vmax": 97}, 
+            profile)
     
     if verbose:
         print("process settings for {}:\n{}"
@@ -413,6 +411,9 @@ class RegisterSettings(SettingsDict):
         self["crop_to_orig"] = 1
 
 def update_register_settings(settings, settings_type):
+    
+    profiles = settings_type.split("_")
+    
     if settings_type.startswith("finer"):
         # more aggressive parameters for finer tuning
         settings["settings_name"] = "finer"
@@ -445,269 +446,270 @@ def update_register_settings(settings, settings_type):
         settings["settings_name"] = "test"
         settings["target_size"] = (50, 50, 50)
     
-    # atlas is big relative to the experimental image, so need to 
-    # more aggressively downsize the atlas
-    settings.add_modifier(
-        "big", 
-        {"resize_factor": 0.625}, 
-        settings_type)
-    
-    # new atlas generation: turn on preprocessing
-    # TODO: likely remove since not using preprocessing currently
-    settings.add_modifier(
-        "new", 
-        {"preprocess": True}, 
-        settings_type)
-    
-    # registration to new atlas assumes images are roughly same size and
-    # orientation (ie transposed) and already have mirrored labels aligned 
-    # with the fixed image toward the bottom of the z-dimension
-    settings.add_modifier(
-        "generated", 
-        {"resize_factor": 1.0, 
-         "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
-         "labels_mirror": None, 
-         "labels_edge": None, 
-        }, 
-        settings_type)
-    
-    # atlas that uses groupwise image as the atlas itself should 
-    # determine atlas threshold dynamically
-    settings.add_modifier(
-        "grouped", 
-        {"atlas_threshold": None}, 
-        settings_type)
-    
-    # ABA E11pt5 specific settings
-    settings.add_modifier(
-        "abae11pt5", 
-        {"target_size": (345, 371, 158),
-         "resize_factor": None, # turn off resizing
-         "labels_mirror": 0.52, 
-         "labels_edge": None, 
-         "log_atlas_thresh": True, 
-         "atlas_threshold": 75, # to avoid over-extension into ventricles
-         # rotate axis 0 to open vertical gap for affines (esp 2nd)
-         "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
-         "affine": ({
-             # shear tail opposite the brain back toward midline
-             "axis_along": 1, "axis_shift": 0, "shift": (25, 0), 
-             "bounds": ((None, None), (70, 250), (0, 150))
-         },{
-             # shear end of tail more distally, where the tail wraps 
-             # back on itself
-             "axis_along": 2, "axis_shift": 0, "shift": (0, 50), 
-             "bounds": ((None, None), (0, 200), (50, 150))
-         },{
-             # counter shearing at far distal end, using attachment for 
-             # a more gradual shearing along the y-axis to preserve the 
-             # cord along that axis
-             "axis_along": 2, "axis_shift": 0, "shift": (45, 0), 
-             "bounds": ((None, None), (160, 200), (90, 150)), "axis_attach": 1
-         }), 
-         "crop_to_labels": True, # req because of 2nd affine
-         "smooth": 2
-        }, 
-        settings_type)
-    
-    # ABA E13pt5 specific settings
-    settings.add_modifier(
-        "abae13pt5", 
-        {"target_size": (552, 673, 340),
-         "resize_factor": None, # turn off resizing
-         "labels_mirror": 0.48, 
-         "labels_edge": -1, 
-         "atlas_threshold": 80, # to avoid edge over-extension into skull
-         "rotate": ((-4, 1), (-2, 2)),
-         "crop_to_labels": True, 
-         "smooth": 2, 
-        }, 
-        settings_type)
-    
-    # ABA E15pt5 specific settings
-    settings.add_modifier(
-        "abae15pt5", 
-        {"target_size": (704, 982, 386),
-         "resize_factor": None, # turn off resizing
-         "labels_mirror": 0.49, 
-         "labels_edge": -1, 
-         "atlas_threshold": 80, # to avoid edge over-extension into skull
-         "rotate": ((-4, 1), ), 
-         "crop_to_labels": True,
-         "smooth": 2
-        }, 
-        settings_type)
-    
-    # ABA E18pt5 specific settings
-    settings.add_modifier(
-        "abae18pt5", 
-        {"target_size": (278, 581, 370),
-         "resize_factor": None, # turn off resizing
-         "labels_mirror": 0.525, 
-         "labels_edge": 0.137, 
-         "expand_labels": (((None, ), (0, 279), (103, 108)),), 
-         "rotate": ((1.5, 1), (2, 2)),
-         "smooth": 4
-        }, 
-        settings_type)
-    
-    # ABA P4 specific settings
-    settings.add_modifier(
-        "abap4", 
-        {"target_size": (724, 403, 398),
-         "resize_factor": None, # turn off resizing
-         "labels_mirror": 0.487, 
-         "labels_edge": -1, 
-         # open caudal labels to allow smallest mirror plane index, though 
-         # still cross midline since some regions only have labels past midline
-         "rotate": ((0.22, 1), ),
-         "smooth": 4
-        }, 
-        settings_type)
-    
-    # ABA P14 specific settings
-    settings.add_modifier(
-        "abap14", 
-        {"target_size": (390, 794, 469),
-         "resize_factor": None, # turn off resizing
-         # will still cross midline since some regions only have labels 
-         # past midline
-         "labels_mirror": 0.5, 
-         "labels_edge": -1, 
-         # rotate conservatively for symmetry without losing labels
-         "rotate": ((-0.4, 1), ),
-         "smooth": 4
-        }, 
-        settings_type)
-    
-    # ABA P28 specific settings
-    settings.add_modifier(
-        "abap28", 
-        {"target_size": (863, 480, 418),
-         "resize_factor": None, # turn off resizing
-         # will still cross midline since some regions only have labels 
-         # past midline
-         "labels_mirror": 0.48, 
-         # set edge since some lateral labels are only partially complete
-         "labels_edge": 0.11, 
-         #"labels_dup": 0.48, 
-         # rotate for symmetry, which also reduces label loss
-         "rotate": ((1, 2), ),
-         "smooth": 2
-        }, 
-        settings_type)
-    
-    # ABA P56 (developing mouse) specific settings
-    settings.add_modifier(
-        "abap56", 
-        {"target_size": (528, 320, 456),
-         "resize_factor": None, # turn off resizing
-         # stained sections and labels almost but not symmetric
-         "labels_mirror": 0.5,
-         # set edge since some lateral labels are only partially complete
-         "labels_edge": 0.138, 
-         "smooth": 2
-        }, 
-        settings_type)
-    
-    # ABA P56 (adult) specific settings
-    settings.add_modifier(
-        "abap56adult", 
-        {"target_size": (528, 320, 456), # same atlas image as ABA P56dev
-         "resize_factor": None, # turn off resizing
-         # same stained sections as for P56dev; 
-         # labels are already mirrored starting at z=228, but atlas is not
-         # here, so mirror starting at the same z-plane to make both sections 
-         # and labels symmetric and aligned with one another
-         "labels_mirror": 0.5,
-         "labels_edge": None, 
-         "smooth": 2
-        }, 
-        settings_type)
-    
-    # turn off edge extension along with smoothing
-    settings.add_modifier(
-        "noedge", 
-        {"labels_edge": None, 
-         "smooth": None
-         },
-        settings_type)
-    
-    # turn off mirroring along with smoothing and edge extension
-    settings.add_modifier(
-        "nomirror", 
-        {"labels_mirror": None,
-         "labels_edge": None, 
-         "smooth": None
-         },
-        settings_type)
-    
-    # turn off most image manipulations to show original atlas and labels 
-    # while allowing transformations set as command-line arguments
-    settings.add_modifier(
-        "raw", 
-        {"labels_mirror": None,
-         "labels_edge": None, 
-         "expand_labels": None, 
-         "rotate": None, 
-         "affine": None,
-         "smooth": None
-        }, 
-        settings_type)
-    
-    # turn off label smoothing
-    settings.add_modifier(
-        "nosmooth", 
-        {"smooth": None}, 
-        settings_type)
-    
-    # turn off labels markers generation
-    settings.add_modifier(
-        "nomarkers", 
-        {"marker_erosion": None}, 
-        settings_type)
-    
-    # turn off cropping labels to original size
-    settings.add_modifier(
-        "nocrop", 
-        {"crop_to_orig": False}, 
-        settings_type)
-    
-    # enable label smoothing
-    settings.add_modifier(
-        "smoothtest", 
-        {"smooth": (0, 1, 2, 3, 4, 5)},#, 10)}, 
-        #{"smooth": (0, )}, # TESTING
-        settings_type)
-    
-    # groupwise registration batch 02
-    settings.add_modifier(
-        "grouped02", 
-        {"bspline_grid_space_voxels": "70", 
-         "grid_spacing_schedule": [
-            "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"], 
-         "carve_threshold": 0.009}, 
-        settings_type)
+    for profile in profiles:
+        # atlas is big relative to the experimental image, so need to 
+        # more aggressively downsize the atlas
+        settings.add_modifier(
+            "big", 
+            {"resize_factor": 0.625}, 
+            profile)
         
-    # groupwise registration batch 04
-    settings.add_modifier(
-        "grouped04", 
-        {"carve_threshold": 0.015}, 
-        settings_type)
-    
-    # crop anterior region of labels during single registration
-    settings.add_modifier(
-        "cropanterior", 
-        {"truncate_labels": (None, (0.2, 0.8), (0.45, 1.0))}, 
-        settings_type)
-    
-    # turn off image curation to avoid post-processing with carving 
-    # and in-painting
-    settings.add_modifier(
-        "nopostproc", 
-        {"curate": False, 
-         "truncate_labels": None}, 
-        settings_type)
+        # new atlas generation: turn on preprocessing
+        # TODO: likely remove since not using preprocessing currently
+        settings.add_modifier(
+            "new", 
+            {"preprocess": True}, 
+            profile)
+        
+        # registration to new atlas assumes images are roughly same size and
+        # orientation (ie transposed) and already have mirrored labels aligned 
+        # with the fixed image toward the bottom of the z-dimension
+        settings.add_modifier(
+            "generated", 
+            {"resize_factor": 1.0, 
+             "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
+             "labels_mirror": None, 
+             "labels_edge": None, 
+            }, 
+            profile)
+        
+        # atlas that uses groupwise image as the atlas itself should 
+        # determine atlas threshold dynamically
+        settings.add_modifier(
+            "grouped", 
+            {"atlas_threshold": None}, 
+            profile)
+        
+        # ABA E11pt5 specific settings
+        settings.add_modifier(
+            "abae11pt5", 
+            {"target_size": (345, 371, 158),
+             "resize_factor": None, # turn off resizing
+             "labels_mirror": 0.52, 
+             "labels_edge": None, 
+             "log_atlas_thresh": True, 
+             "atlas_threshold": 75, # to avoid over-extension into ventricles
+             # rotate axis 0 to open vertical gap for affines (esp 2nd)
+             "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
+             "affine": ({
+                 # shear tail opposite the brain back toward midline
+                 "axis_along": 1, "axis_shift": 0, "shift": (25, 0), 
+                 "bounds": ((None, None), (70, 250), (0, 150))
+             },{
+                 # shear end of tail more distally, where the tail wraps 
+                 # back on itself
+                 "axis_along": 2, "axis_shift": 0, "shift": (0, 50), 
+                 "bounds": ((None, None), (0, 200), (50, 150))
+             },{
+                 # counter shearing at far distal end, using attachment for 
+                 # a more gradual shearing along the y-axis to preserve the 
+                 # cord along that axis
+                 "axis_along": 2, "axis_shift": 0, "shift": (45, 0), 
+                 "bounds": ((None, None), (160, 200), (90, 150)), "axis_attach": 1
+             }), 
+             "crop_to_labels": True, # req because of 2nd affine
+             "smooth": 2
+            }, 
+            profile)
+        
+        # ABA E13pt5 specific settings
+        settings.add_modifier(
+            "abae13pt5", 
+            {"target_size": (552, 673, 340),
+             "resize_factor": None, # turn off resizing
+             "labels_mirror": 0.48, 
+             "labels_edge": -1, 
+             "atlas_threshold": 80, # to avoid edge over-extension into skull
+             "rotate": ((-4, 1), (-2, 2)),
+             "crop_to_labels": True, 
+             "smooth": 2, 
+            }, 
+            profile)
+        
+        # ABA E15pt5 specific settings
+        settings.add_modifier(
+            "abae15pt5", 
+            {"target_size": (704, 982, 386),
+             "resize_factor": None, # turn off resizing
+             "labels_mirror": 0.49, 
+             "labels_edge": -1, 
+             "atlas_threshold": 80, # to avoid edge over-extension into skull
+             "rotate": ((-4, 1), ), 
+             "crop_to_labels": True,
+             "smooth": 2
+            }, 
+            profile)
+        
+        # ABA E18pt5 specific settings
+        settings.add_modifier(
+            "abae18pt5", 
+            {"target_size": (278, 581, 370),
+             "resize_factor": None, # turn off resizing
+             "labels_mirror": 0.525, 
+             "labels_edge": 0.137, 
+             "expand_labels": (((None, ), (0, 279), (103, 108)),), 
+             "rotate": ((1.5, 1), (2, 2)),
+             "smooth": 4
+            }, 
+            profile)
+        
+        # ABA P4 specific settings
+        settings.add_modifier(
+            "abap4", 
+            {"target_size": (724, 403, 398),
+             "resize_factor": None, # turn off resizing
+             "labels_mirror": 0.487, 
+             "labels_edge": -1, 
+             # open caudal labels to allow smallest mirror plane index, though 
+             # still cross midline since some regions only have labels past midline
+             "rotate": ((0.22, 1), ),
+             "smooth": 4
+            }, 
+            profile)
+        
+        # ABA P14 specific settings
+        settings.add_modifier(
+            "abap14", 
+            {"target_size": (390, 794, 469),
+             "resize_factor": None, # turn off resizing
+             # will still cross midline since some regions only have labels 
+             # past midline
+             "labels_mirror": 0.5, 
+             "labels_edge": -1, 
+             # rotate conservatively for symmetry without losing labels
+             "rotate": ((-0.4, 1), ),
+             "smooth": 4
+            }, 
+            profile)
+        
+        # ABA P28 specific settings
+        settings.add_modifier(
+            "abap28", 
+            {"target_size": (863, 480, 418),
+             "resize_factor": None, # turn off resizing
+             # will still cross midline since some regions only have labels 
+             # past midline
+             "labels_mirror": 0.48, 
+             # set edge since some lateral labels are only partially complete
+             "labels_edge": 0.11, 
+             #"labels_dup": 0.48, 
+             # rotate for symmetry, which also reduces label loss
+             "rotate": ((1, 2), ),
+             "smooth": 2
+            }, 
+            profile)
+        
+        # ABA P56 (developing mouse) specific settings
+        settings.add_modifier(
+            "abap56", 
+            {"target_size": (528, 320, 456),
+             "resize_factor": None, # turn off resizing
+             # stained sections and labels almost but not symmetric
+             "labels_mirror": 0.5,
+             # set edge since some lateral labels are only partially complete
+             "labels_edge": 0.138, 
+             "smooth": 2
+            }, 
+            profile)
+        
+        # ABA P56 (adult) specific settings
+        settings.add_modifier(
+            "abap56adult", 
+            {"target_size": (528, 320, 456), # same atlas image as ABA P56dev
+             "resize_factor": None, # turn off resizing
+             # same stained sections as for P56dev; 
+             # labels are already mirrored starting at z=228, but atlas is not
+             # here, so mirror starting at the same z-plane to make both sections 
+             # and labels symmetric and aligned with one another
+             "labels_mirror": 0.5,
+             "labels_edge": None, 
+             "smooth": 2
+            }, 
+            profile)
+        
+        # turn off edge extension along with smoothing
+        settings.add_modifier(
+            "noedge", 
+            {"labels_edge": None, 
+             "smooth": None
+             },
+            profile)
+        
+        # turn off mirroring along with smoothing and edge extension
+        settings.add_modifier(
+            "nomirror", 
+            {"labels_mirror": None,
+             "labels_edge": None, 
+             "smooth": None
+             },
+            profile)
+        
+        # turn off most image manipulations to show original atlas and labels 
+        # while allowing transformations set as command-line arguments
+        settings.add_modifier(
+            "raw", 
+            {"labels_mirror": None,
+             "labels_edge": None, 
+             "expand_labels": None, 
+             "rotate": None, 
+             "affine": None,
+             "smooth": None
+            }, 
+            profile)
+        
+        # turn off label smoothing
+        settings.add_modifier(
+            "nosmooth", 
+            {"smooth": None}, 
+            profile)
+        
+        # turn off labels markers generation
+        settings.add_modifier(
+            "nomarkers", 
+            {"marker_erosion": None}, 
+            profile)
+        
+        # turn off cropping labels to original size
+        settings.add_modifier(
+            "nocrop", 
+            {"crop_to_orig": False}, 
+            profile)
+        
+        # enable label smoothing
+        settings.add_modifier(
+            "smoothtest", 
+            {"smooth": (0, 1, 2, 3, 4, 5)},#, 10)}, 
+            #{"smooth": (0, )}, # TESTING
+            profile)
+        
+        # groupwise registration batch 02
+        settings.add_modifier(
+            "grouped02", 
+            {"bspline_grid_space_voxels": "70", 
+             "grid_spacing_schedule": [
+                "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"], 
+             "carve_threshold": 0.009}, 
+            profile)
+            
+        # groupwise registration batch 04
+        settings.add_modifier(
+            "grouped04", 
+            {"carve_threshold": 0.015}, 
+            profile)
+        
+        # crop anterior region of labels during single registration
+        settings.add_modifier(
+            "cropanterior", 
+            {"truncate_labels": (None, (0.2, 0.8), (0.45, 1.0))}, 
+            profile)
+        
+        # turn off image curation to avoid post-processing with carving 
+        # and in-painting
+        settings.add_modifier(
+            "nopostproc", 
+            {"curate": False, 
+             "truncate_labels": None}, 
+            profile)
     
     if verbose:
         print("process settings for {}:\n{}"

@@ -231,7 +231,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
             interval = slice_vals[2]
         size = roi_size[2] if animated else 1
         img_sl = slice(offset[2], offset[2] + size, interval)
-        if interval < 0:
+        if interval is not None and interval < 0:
             # reverse start/stop order to iterate backward
             img_sl = slice(img_sl.stop, img_sl.start, interval)
         print("using ROI offset {}, size {}, {}"

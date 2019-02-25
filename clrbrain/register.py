@@ -2511,25 +2511,6 @@ def create_reverse_lookup(nested_dict, key, key_children, id_dict=OrderedDict(),
         print(e)
     return id_dict
 
-def mirror_reverse_lookup(labels_ref, offset, name_modifier):
-    # NOT CURRENTLY USED: replaced with neg values for mirrored side
-    keys = list(labels_ref.keys())
-    for key in keys:
-        mirrored_key = key + offset
-        mirrored_val = copy.deepcopy(labels_ref[key])
-        node = mirrored_val[NODE]
-        node[ABA_ID] = mirrored_key
-        node[config.ABAKeys.NAME.value] += name_modifier
-        parent = node[ABA_PARENT]
-        if parent is not None:
-            node[ABA_PARENT] += offset
-        try:
-            parent_ids = mirrored_val[PARENT_IDS]
-            parent_ids = np.add(parent_ids, offset).tolist()
-        except KeyError as e:
-            pass
-        labels_ref[mirrored_key] = mirrored_val
-
 def get_node(nested_dict, key, value, key_children):
     """Get a node from a nested dictionary by iterating through all 
     dictionaries until the specified value is found.
@@ -3751,7 +3732,6 @@ def _test_labels_lookup():
     labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
     max_labels = np.max(labels_img)
     print("max_labels: {}".format(max_labels))
-    #mirror_reverse_lookup(id_dict, max_labels, " (R)")
     #pprint(id_dict)
     time_dict_end = time()
     

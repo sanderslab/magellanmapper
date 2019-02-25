@@ -23,9 +23,14 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels")
 
-# named vector to convert measurement columns with display names
+# named vector to convert measurement columns to display names
 kMeasNames <- setNames(
-  c("Dice Similarity Coefficient Between Atlas and Labels"), c(kMeas[8]))
+  c("Within-Region Nuclei Variation", 
+    "Within-Region Intensity Variation", 
+    "Edge Distances to Anatomical Boundaries", 
+    "Mean Edge Distances to Anatomical Boundaries", 
+    "Dice Similarity Coefficient Between Atlas and Labels"), 
+  c(kMeas[4:8]))
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -713,10 +718,15 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     x <- x.log
   }
   x.max <- max(abs(x))
+  if (is.element(meas, names(kMeasNames))) {
+    title <- kMeasNames[[meas]]
+  } else {
+    title <- paste(meas, "Differences for", interaction)
+  }
   plot(
     x, y, xlim=c(-1 * x.max, x.max), 
-    main=paste(meas, "Differences for", interaction), xlab="Effects", 
-    ylab="-log10(p)", type="p", pch=16, cex=size, col=colors_parents)
+    main=title, xlab="Effects", 
+    ylab="-log10(p)", type="p", las=1, pch=16, cex=size, col=colors_parents)
   # vertical line to denote x = 0
   abline(v=0, lty="dashed", col=gray(0.5, 0.5))
   

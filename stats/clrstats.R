@@ -411,7 +411,7 @@ histogramPlot <- function(vals, title, meas) {
 }
 
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
-                       split.col=NULL, paired=FALSE) {
+                       split.col=NULL, paired=FALSE, show.sample.legend=FALSE) {
   # Plot jitter/scatter plots of values by genotype with mean and 95% CI.
   #
   # Args:
@@ -420,13 +420,16 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #   col: Name of column for values.
   #   title: Plot figure title.
   #   split.by.side: True to plot separate sub-scatter plots for each 
-  #     region by side; defaults to TRUE
+  #     region by side; defaults to TRUE.
   #   split.col: Column name by which to split; defaults to NULL, in which 
   #     case "Side" will be used as the column name.
   #   paired: True to show pairing between values, which assumes that values 
   #     are in the same order when filtered by split.col. Jitter will be 
   #     turned off to ensure that start and end x-values are the same for 
   #     pairings. Defaults to FALSE.
+  #   show.sample.legend: True to show a separate legend of samples for 
+  #     each genotype group. Assumes that the number of samples in each 
+  #     split group is the same within each genotype. Defaults to FALSE.
   #
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
@@ -450,7 +453,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   }
   
   # setup coordinates to plot and error ranges
-  num.groups <- length(genos.unique) * length(sides.unique)
+  num.sides <- length(sides.unique)
+  num.groups <- length(genos.unique) * num.sides
   names.groups <- vector(length=num.groups)
   vals <- df.region[[col]]
   vals.groups <- list() # list of vals for each geno-side group
@@ -497,7 +501,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots
   par.old <- par(no.readonly=TRUE)
-  if (paired) {
+  if (show.sample.legend & paired) {
     # setup sample legend names and number of columns based on max name length
     names.samples <- unique(levels(df.region$Sample))
     name.max.len <- max(nchar(names.samples))
@@ -515,7 +519,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   plot(NULL, frame.plot=TRUE, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
-  colors <- NULL
+  colors <- viridis(num.sides, begin=0.2, end=0.8)
   i <- 1
   for (geno in genos.unique) {
     # plot each group of points
@@ -523,8 +527,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     # add group label for genotypes if more than one total
     if (length(genos.unique) > 1) mtext(geno, side=1, at=i-0.5)
     x.adj <- 0
-    x.pos <- vector(length=length(sides.unique)) # group base x-positions
+    x.pos <- vector(length=num.sides) # group base x-positions
     vals.geno <- list() # vals within genotype, for paired points
+    if (show.sample.legend) {
+      # distinct color for each member in group, using same set of
+      # colors for each set of points
+      if (num.sides > 0) colors <- rainbow(length(vals.groups[[1]]), end=0.8)
+    }
     for (side in sides.unique) {
       # plot points, adding jitter in x-direction unless paired
       vals.group <- vals.groups[[i]]
@@ -535,12 +544,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         # add jitter to distinguish points
         x.vals <- jitter(x.vals, amount=0.2)
       }
-      if (!paired | is.null(colors)) {
-        # distinct color for each member in group, using same set of 
-        # colors for each set of points and sample legend if paired
-        colors <- rainbow(length(vals.group), end=0.8)
-      }
-      points(x.vals, vals.group, pch=i+14, col=colors)
+      col <- if (show.sample.legend) colors else colors[i]
+      points(x.vals, vals.group / denom, pch=i+14, col=col)
       
       # plot error bars unless CI is NA, such as infinitely large CI when n = 1
       mean <- vals.means[[i]]
@@ -564,21 +569,23 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       # vector of values
       vals.group <- vals.geno[[1]]
       for (j in seq_along(vals.group)) {
-        segments(x.pos[1], vals.group[j], x.pos[2], vals.geno[[2]][j], 
-                 col=colors[j])
+        col <- if(show.sample.legend) colors[j] else 1
+        segments(x.pos[1], vals.group[j], x.pos[2], 
+                 vals.geno[[2]][j], col=col)
       }
+    }
+    if (show.sample.legend) {
+      # add sample legend below group legend to label colors
+      legend("topright", legend=names.samples, lty=1, 
+             col=colors, xpd=TRUE, inset=c(x.pos[1], 1.05), ncol=ncol, bty="n")
     }
   }
   
   # group legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
+  col <- if(show.sample.legend) 1 else colors
   legend("topright", legend=names.groups, pch=15:(14+length(names.groups)), 
-         xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n")
-  if (paired) {
-    # add sample legend below group legend to describe paired points
-    legend("topright", legend=names.samples, lty=1, 
-           col=colors, xpd=TRUE, inset=c(0, 1.05), ncol=ncol, bty="n")
-  }
+         xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n", col=col)
   
   # save figure to PDF
   dev.print(

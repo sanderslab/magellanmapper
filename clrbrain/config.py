@@ -900,6 +900,9 @@ class ABAKeys(Enum):
     specification.
     """
     NAME = "name"
+    ABA_ID = "id"
+    LEVEL = "st_level"
+    CHILDREN = "children"
 
 # register module modes when called from command-line
 RegisterTypes = Enum(

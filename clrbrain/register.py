@@ -94,10 +94,6 @@ PARENT_IDS = "parent_ids"
 MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
-ABA_ID = "id"
-ABA_PARENT = "parent_structure_id"
-ABA_LEVEL = "st_level"
-ABA_CHILDREN = "children"
 
 SMOOTHING_MODES = ("opening", "gaussian", "closing")
 SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "area_displvol")
@@ -2551,7 +2547,9 @@ def create_aba_reverse_lookup(labels_ref):
     Returns:
         Reverse lookup dictionary as output by :func:`create_reverse_lookup`.
     """
-    return create_reverse_lookup(labels_ref["msg"][0], ABA_ID, ABA_CHILDREN)
+    return create_reverse_lookup(
+        labels_ref["msg"][0], config.ABAKeys.ABA_ID.value, 
+        config.ABAKeys.CHILDREN.value)
 
 def get_label_ids_from_position(coord, labels_img, scaling, rounding=False, 
                                 return_coord_scaled=False):
@@ -2638,7 +2636,7 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
     label = None
     try:
         label = labels_ref[label_id]
-        if level is not None and label[NODE][ABA_LEVEL] > level:
+        if level is not None and label[NODE][config.ABAKeys.LEVEL.value] > level:
             # search for parent at "higher" (numerically lower) level 
             # that matches the target level
             parents = label[PARENT_IDS]
@@ -2647,7 +2645,7 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
                 parents = np.multiply(parents, -1)
             for parent in parents:
                 parent_label = labels_ref[parent]
-                if parent_label[NODE][ABA_LEVEL] == level:
+                if parent_label[NODE][config.ABAKeys.LEVEL.value] == level:
                     label = parent_label
                     break
         if label is not None:
@@ -2705,9 +2703,9 @@ def _get_children(labels_ref_lookup, label_id, children_all=[]):
     label = labels_ref_lookup.get(label_id)
     if label:
         # recursively gather the children of the label
-        children = label[NODE][ABA_CHILDREN]
+        children = label[NODE][config.ABAKeys.CHILDREN.value]
         for child in children:
-            child_id = child[ABA_ID]
+            child_id = child[config.ABAKeys.ABA_ID.value]
             #print("child_id: {}".format(child_id))
             children_all.append(child_id)
             _get_children(labels_ref_lookup, child_id, children_all)
@@ -2958,7 +2956,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             #print("checking id {} with vol {}".format(label_id, vol))
             
             # insert a regional dict for the given label
-            label_level = label[NODE][ABA_LEVEL]
+            label_level = label[NODE][config.ABAKeys.LEVEL.value]
             name = label[NODE][config.ABAKeys.NAME.value]
             if level is None or label_level == level:
                 # include region in volumes dict if at the given level, no 
@@ -3046,13 +3044,13 @@ def labels_to_parent(labels_ref_lookup, level):
     for label_id in ids:
         parent_at_level = 0
         label = labels_ref_lookup[label_id]
-        label_level = label[NODE][ABA_LEVEL]
+        label_level = label[NODE][config.ABAKeys.LEVEL.value]
         if label_level == level:
             parent_at_level = label_id
         elif label_level > level:
             parents = label.get(PARENT_IDS)
             for parent in parents[::-1]:
-                parent_level = labels_ref_lookup[parent][NODE][ABA_LEVEL]
+                parent_level = labels_ref_lookup[parent][NODE][config.ABAKeys.LEVEL.value]
                 if parent_level < level:
                     break
                 elif parent_level == level:
@@ -3091,7 +3089,7 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map,
         label_ids = [key, -1 * key]
         for label_id in label_ids:
             label = labels_ref_lookup[key] # always use pos val
-            label_level = label[NODE][ABA_LEVEL]
+            label_level = label[NODE][config.ABAKeys.LEVEL.value]
             name = label[NODE][config.ABAKeys.NAME.value]
             blobs_tot += volumes_dict.get(label_id)[config.BLOBS_KEY]
             if label_level == level:
@@ -3126,7 +3124,7 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map,
                     found_parent = False
                     for parent in parents[::-1]:
                         parent_level = labels_ref_lookup[
-                            abs(parent)][NODE][ABA_LEVEL]
+                            abs(parent)][NODE][config.ABAKeys.LEVEL.value]
                         if parent_level < level:
                             break
                         region_dict_level = level_dict.get(parent)
@@ -3465,7 +3463,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         ids_with_children = []
         for label_id in label_ids:
             label = labels_ref_lookup[abs(label_id)]
-            label_level = label[NODE][ABA_LEVEL]
+            label_level = label[NODE][config.ABAKeys.LEVEL.value]
             if label_level <= max_level:
                 # get children (including parent first) if up through level
                 ids_with_children.append(get_children_from_id(

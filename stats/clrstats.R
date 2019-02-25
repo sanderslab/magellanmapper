@@ -723,7 +723,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   # label points
   x.lbl <- x
   y.lbl <- y
-  lbls <- paste(stats$Region, stats$RegionName, sep="\n")
+  lbls <- stats$RegionAbbr
   if (!is.null(thresh)) {
     # limit labels only to those within all thresholds, ignoring NAs
     show.lbl <- abs(x) > 0
@@ -740,7 +740,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     #text(x.lbl, y.lbl, label=lbls, cex=0.2)
     #thigmophobe.labels(x.lbl, y.lbl, label=lbls, cex=0.2)
     #pointLabel(x.lbl, y.lbl, label=lbls, cex=0.2)
-    addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.2, lwd=0.2)
+    addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.5, lwd=0.2)
   }
   
   # write to PDF file

@@ -903,6 +903,7 @@ class ABAKeys(Enum):
     ABA_ID = "id"
     LEVEL = "st_level"
     CHILDREN = "children"
+    ACRONYM = "acronym"
 
 # register module modes when called from command-line
 RegisterTypes = Enum(

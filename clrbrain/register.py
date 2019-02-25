@@ -3604,7 +3604,7 @@ def export_region_ids(labels_ref_lookup, path, level):
     parent_level = -1 if level is None else level
     label_parents = labels_to_parent(labels_ref_lookup, parent_level)
     
-    cols = ("Region", "RegionName", "Parent")
+    cols = ("Region", "RegionAbbr", "RegionName", "Parent")
     data = OrderedDict()
     label_ids = _find_atlas_labels(
         config.load_labels, level, labels_ref_lookup)
@@ -3614,7 +3614,8 @@ def export_region_ids(labels_ref_lookup, path, level):
         label = labels_ref_lookup[key]
         # ID of parent at label_parents' level
         parent = label_parents[key]
-        vals = (key, label[NODE][config.ABAKeys.NAME.value], parent)
+        vals = (key, label[NODE][config.ABAKeys.ACRONYM.value], 
+                label[NODE][config.ABAKeys.NAME.value], parent)
         for col, val in zip(cols, vals):
             data.setdefault(col, []).append(val)
     data_frame = stats.dict_to_data_frame(data, path)

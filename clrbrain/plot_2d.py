@@ -1594,7 +1594,7 @@ if __name__ == "__main__":
             path, "filter", 
             ("compacted", "displaced", "smoothing_quality", "SA_to_vol", 
              "label_loss"), 
-            (":", "--", "--", "-", "-", "-"), "Smoothing Filter Size", 
+            ("--", "--", "-", ":", ":"), "Smoothing Filter Size", 
             "Fractional Change", title, not config.no_show)
     
     elif config.plot_2d == config.PLOT_2D_TYPES[1]:

@@ -885,7 +885,6 @@ reg_suffixes = None
 REG_SUFFIX_ATLAS = "atlas"
 REG_SUFFIX_ANNOTATION = "annotation"
 REG_SUFFIX_BORDERS = "borders"
-ABA_NAME = "name"
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
 VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
@@ -893,6 +892,14 @@ VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
 SIDE_KEY = "Side"
 GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
+
+class ABAKeys(Enum):
+    """Allen Brain Atlas ontology hierarchy keys.
+    
+    Values of each enumeration maps to key values in the ABA ontology 
+    specification.
+    """
+    NAME = "name"
 
 # register module modes when called from command-line
 RegisterTypes = Enum(

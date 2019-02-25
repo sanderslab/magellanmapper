@@ -170,7 +170,7 @@ def volume_stats(volumes_dict, densities, groups=[""], unit_factor=1.0,
                         blobs_group[MIR].append(blobs_mirrored)
                         dens_group[SIDE].append(density_side)
                         dens_group[MIR].append(density_mirrored)
-    names = [volumes_dict[key][config.ABA_NAME] 
+    names = [volumes_dict[key][config.ABAKeys.NAME.value] 
              for key in volumes_dict.keys() if key >= 0]
     return groups_dict, names, (MIR, SIDE), (MIR_ERR, SIDE_ERR), \
            (VOL, BLOBS, DENS), \

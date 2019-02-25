@@ -2519,7 +2519,7 @@ def mirror_reverse_lookup(labels_ref, offset, name_modifier):
         mirrored_val = copy.deepcopy(labels_ref[key])
         node = mirrored_val[NODE]
         node[ABA_ID] = mirrored_key
-        node[config.ABA_NAME] += name_modifier
+        node[config.ABAKeys.NAME.value] += name_modifier
         parent = node[ABA_PARENT]
         if parent is not None:
             node[ABA_PARENT] += offset
@@ -2693,7 +2693,7 @@ def get_label_name(label):
         if label is not None:
             node = label[NODE]
             if node is not None:
-                name = node[config.ABA_NAME]
+                name = node[config.ABAKeys.NAME.value]
                 print("name: {}".format(name))
                 if label[MIRRORED]:
                     name += LEFT_SUFFIX
@@ -2892,7 +2892,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             the labels themselves.
     
     Returns:
-        Nested dictionary of {ID: {:attr:`config.ABA_NAME`: name, 
+        Nested dictionary of {ID: {:attr:`config.ABAKeys.NAME.value`: name, 
         :attr:`config.VOL_KEY`: volume, 
         :attr:`config.BLOBS_KEY`: number of blobs}}, where volume is in the 
         cubed units of :attr:`detector.resolutions`.
@@ -2978,12 +2978,12 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             
             # insert a regional dict for the given label
             label_level = label[NODE][ABA_LEVEL]
-            name = label[NODE][config.ABA_NAME]
+            name = label[NODE][config.ABAKeys.NAME.value]
             if level is None or label_level == level:
                 # include region in volumes dict if at the given level, no 
                 # level specified (to build a master dict)
                 region_dict = {
-                    config.ABA_NAME: label[NODE][config.ABA_NAME],
+                    config.ABAKeys.NAME.value: label[NODE][config.ABAKeys.NAME.value],
                     config.VOL_KEY: vol,
                     config.BLOBS_KEY: blobs_len
                 }
@@ -3010,7 +3010,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
                             region_dict[config.BLOBS_KEY] += blobs_len
                             print("added {} vol and {} blobs from {} (id {}) "
                                   "to {}".format(vol, blobs_len, name, 
-                                  label_id, region_dict[config.ABA_NAME]))
+                                  label_id, region_dict[config.ABAKeys.NAME.value]))
                             found_parent = True
                             break
                     if not found_parent:
@@ -3027,7 +3027,7 @@ def volumes_by_id(labels_img, labels_ref_lookup, resolution, level=None,
             blobs_side = volumes_dict[key][config.BLOBS_KEY]
             blobs_mirrored = volumes_dict[-1 * key][config.BLOBS_KEY]
             print("{} (id {}), {}: volume {}, blobs {}; {}: volume {}, blobs {}"
-                  .format(volumes_dict[key][config.ABA_NAME], key, 
+                  .format(volumes_dict[key][config.ABAKeys.NAME.value], key, 
                           RIGHT_SUFFIX, volumes_dict[key][config.VOL_KEY], 
                           blobs_side, LEFT_SUFFIX, 
                           volumes_dict[-1 * key][config.VOL_KEY], 
@@ -3111,7 +3111,7 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map,
         for label_id in label_ids:
             label = labels_ref_lookup[key] # always use pos val
             label_level = label[NODE][ABA_LEVEL]
-            name = label[NODE][config.ABA_NAME]
+            name = label[NODE][config.ABAKeys.NAME.value]
             blobs_tot += volumes_dict.get(label_id)[config.BLOBS_KEY]
             if label_level == level:
                 # take values directly from the given level
@@ -3161,7 +3161,7 @@ def volumes_dict_level_grouping(volumes_dict, level, labels_img, heat_map,
                             blobs_tot_level += blobs_len
                             print("added {} vol and {} blobs from {} (id {}) "
                                   "to {}".format(vol, blobs_len, name, 
-                                  label_id, region_dict[config.ABA_NAME]))
+                                  label_id, region_dict[config.ABAKeys.NAME.value]))
                             found_parent = True
                             break
                     if not found_parent:
@@ -3635,7 +3635,7 @@ def export_region_ids(labels_ref_lookup, path, level):
         label = labels_ref_lookup[key]
         # ID of parent at label_parents' level
         parent = label_parents[key]
-        vals = (key, label[NODE][config.ABA_NAME], parent)
+        vals = (key, label[NODE][config.ABAKeys.NAME.value], parent)
         for col, val in zip(cols, vals):
             data.setdefault(col, []).append(val)
     data_frame = stats.dict_to_data_frame(data, path)

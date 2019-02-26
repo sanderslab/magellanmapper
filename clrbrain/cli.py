@@ -1156,8 +1156,9 @@ def process_file(filename_base, offset, roi_size):
                     print("===============================================\n"
                           "Processing stack {} of {}"
                           .format(coord, np.add(super_rois.shape, -1)))
+                    off = super_rois_offsets[coord]
                     merged, segs, df = process_stack(
-                        roi, overlap, tol, channels, super_rois_offsets[coord])
+                        roi, overlap, tol, channels, off)
                     del merged # TODO: check if helps reduce memory buildup
                     '''
                     if segs is not None:
@@ -1166,6 +1167,16 @@ def process_file(filename_base, offset, roi_size):
                         detector.shift_blob_rel_coords(segs, off)
                         detector.shift_blob_abs_coords(segs, off)
                     '''
+                    blobs_in = []
+                    for axis in range(3):
+                        if coord[axis] < super_rois.shape[axis] - 1:
+                            # remove overlapping region at far edges of 
+                            # stack except edges of full ROI
+                            blobs_in.append(
+                                segs[:, axis] < 
+                                    off[axis] + roi.shape[axis] - overlap[axis])
+                    if len(blobs_in) > 0:
+                        segs = segs[np.all(blobs_in, axis=0)]
                     seg_rois[coord] = segs
                     dfs.append(df)
         

@@ -183,9 +183,6 @@ def segment_sub_roi(sub_rois_offsets, coord, roi_offset, overlap):
         if coord[axis] < sub_rois.shape[axis] - 1:
             # all regions but last one have overlap
             end -= overlap[axis]
-        else:
-            # include final pixel
-            end += 1
         lib_clrbrain.printv(
             "including blobs between {} and {} along axis {}"
             .format(start, end, axis))
@@ -418,7 +415,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 else:
                     # last non-overlapping region extends to end of region
                     blobs_in_non_ol.append(
-                        blobs[:, axis] < offset_axis + size[axis] + 1)
+                        blobs[:, axis] < offset_axis + size[axis])
                 
                 # get non-overlapping area
                 start = offset_axis

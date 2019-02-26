@@ -1109,6 +1109,7 @@ def process_file(filename_base, offset, roi_size):
             detector.shift_blob_rel_coords(
                 segments_proc, np.multiply(offset[::-1], -1))
         print("loaded {} blobs".format(len(segments_proc)))
+        print("maxes:", np.amax(segments_proc, axis=0))
         
         if roi_size is None or offset is None:
             # uses the entire stack if no size or offset specified
@@ -1124,7 +1125,15 @@ def process_file(filename_base, offset, roi_size):
         # get ROI for given region, including all channels
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
         _, channels = plot_3d.setup_channels(roi, config.channel, 3)
-        
+        blobs_in = []
+        for axis in range(3):
+            blobs_in.append(segments_proc[:, axis] >= 0)
+            blobs_in.append(
+                segments_proc[:, axis] < shape[::-1][axis])
+        blobs_roi = segments_proc[np.all(blobs_in, axis=0)]
+        print("{} blobs in ROI".format(len(blobs_roi)))
+        print("maxes:", np.amax(blobs_roi, axis=0))
+                
         # chunk into super-ROIs, which will each be further chunked into 
         # sub-ROIs for multi-processing
         overlap = chunking.calc_overlap()

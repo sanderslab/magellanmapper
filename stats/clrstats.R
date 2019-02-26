@@ -457,6 +457,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   num.groups <- length(genos.unique) * num.sides
   names.groups <- vector(length=num.groups)
   vals <- df.region[[col]]
+  int.digits <- nchar(trunc(max(vals)))
   vals.groups <- list() # list of vals for each geno-side group
   vals.means <- vector(length=num.groups)
   vals.cis <-vector(length=num.groups)
@@ -490,13 +491,23 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     }
   }
   
-  # max y-val or error bar, whichever is higher
-  maxes <- c(num.groups, max(max(vals), max(max.errs)))
+  # adjust y-axis to use any replacement label and rescale to avoid 
+  # scientific notation in labels
   if (is.element(col, names(kMeasNames))) {
     ylab <- kMeasNames[[col]]
   } else {
     ylab <- gsub("_", " ", col)
   }
+  if (int.digits >= 6) {
+    power <- int.digits - 1
+    denom <- 10 ^ power
+    ylab <- paste0(ylab, " (10^", power, ")")
+  } else {
+    denom <- 1
+  }
+  
+  # max y-val or error bar, whichever is higher
+  maxes <- c(num.groups, max(max(vals) / denom, max(max.errs) / denom))
   
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots
@@ -548,8 +559,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       points(x.vals, vals.group / denom, pch=i+14, col=col)
       
       # plot error bars unless CI is NA, such as infinitely large CI when n = 1
-      mean <- vals.means[[i]]
-      ci <- vals.cis[[i]]
+      mean <- vals.means[[i]] / denom
+      ci <- vals.cis[[i]] / denom
       if (!is.na(ci)) {
         if (i %% 2 == 0) {
           x.mean <- x + 0.25
@@ -570,8 +581,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       vals.group <- vals.geno[[1]]
       for (j in seq_along(vals.group)) {
         col <- if(show.sample.legend) colors[j] else 1
-        segments(x.pos[1], vals.group[j], x.pos[2], 
-                 vals.geno[[2]][j], col=col)
+        segments(x.pos[1], vals.group[j] / denom, x.pos[2], 
+                 vals.geno[[2]][j] / denom, col=col)
       }
     }
     if (show.sample.legend) {

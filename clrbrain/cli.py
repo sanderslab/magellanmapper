@@ -163,16 +163,6 @@ def segment_sub_roi(sub_rois_offsets, coord, roi_offset, overlap):
           .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
     '''
     segments = detector.detect_blobs(sub_roi, config.channel)
-    offset = sub_rois_offsets[coord]
-    #print("segs before (offset: {}):\n{}".format(offset, segments))
-    if segments is not None:
-        # shift both coordinate sets (at beginning and end of array) to 
-        # absolute positioning, using the latter set to store shifted 
-        # coordinates based on duplicates and the former for initial 
-        # positions to check for multiple duplicates
-        detector.shift_blob_rel_coords(segments, offset)
-        detector.shift_blob_abs_coords(segments, offset)
-        #print("segs after:\n{}".format(segments))
     '''
     offset = sub_rois_offsets[coord]
     blobs_in = []
@@ -190,6 +180,16 @@ def segment_sub_roi(sub_rois_offsets, coord, roi_offset, overlap):
         blobs_in.append(segments_proc[:, axis] < end)
     blobs = segments_proc[np.all(blobs_in, axis=0)]
     blobs = detector.format_blobs(blobs)
+    #print("segs before (offset: {}):\n{}".format(offset, segments))
+    if blobs is not None:
+        # shift both coordinate sets (at beginning and end of array) 
+        # relative to full stack, using the latter set to store shifted 
+        # coordinates based on duplicates and the former for initial 
+        # positions to check for multiple duplicates
+        off = np.multiply(roi_offset, -1)
+        detector.shift_blob_rel_coords(blobs, off)
+        detector.shift_blob_abs_coords(blobs, off)
+        #print("segs after:\n{}".format(segments))
     return coord, blobs
 
 def collect_segments(segments_all, segments, region, tol):
@@ -324,7 +324,7 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     return segments_all, duration
 
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
-                    channels, roi_offset=None):
+                    channels):
     """Prune close blobs within overlapping regions by checking within
     entire planes across the ROI in parallel with multiprocessing.
     
@@ -388,8 +388,6 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 blobs_in_non_ol = []
                 shift = overlap[axis] + tol[axis]
                 offset_axis = offset[axis]
-                if roi_offset is not None:
-                    offset_axis += roi_offset[axis]
                 if i < num_sections - 1:
                     bounds = [offset_axis + size[axis] - shift,
                               offset_axis + size[axis] + tol[axis]]
@@ -1160,13 +1158,6 @@ def process_file(filename_base, offset, roi_size):
                     merged, segs, df = process_stack(
                         roi, overlap, tol, channels, off)
                     del merged # TODO: check if helps reduce memory buildup
-                    '''
-                    if segs is not None:
-                        # transpose seg coords since part of larger stack
-                        off = super_rois_offsets[coord]
-                        detector.shift_blob_rel_coords(segs, off)
-                        detector.shift_blob_abs_coords(segs, off)
-                    '''
                     blobs_in = []
                     for axis in range(3):
                         if coord[axis] < super_rois.shape[axis] - 1:
@@ -1174,9 +1165,13 @@ def process_file(filename_base, offset, roi_size):
                             # stack except edges of full ROI
                             blobs_in.append(
                                 segs[:, axis] < 
-                                    off[axis] + roi.shape[axis] - overlap[axis])
+                                    roi.shape[axis] - overlap[axis])
                     if len(blobs_in) > 0:
                         segs = segs[np.all(blobs_in, axis=0)]
+                    if segs is not None:
+                        # transpose seg coords since part of larger stack
+                        detector.shift_blob_rel_coords(segs, off)
+                        detector.shift_blob_abs_coords(segs, off)
                     seg_rois[coord] = segs
                     dfs.append(df)
         
@@ -1400,7 +1395,7 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
         # prune segments
         time_pruning_start = time()
         segments_all, df = _prune_blobs_mp(
-            seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels, roi_offset)
+            seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
         # copy shifted coordinates to final coordinates
         #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
         if segments_all is not None:

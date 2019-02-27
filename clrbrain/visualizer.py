@@ -815,7 +815,8 @@ class Visualization(HasTraits):
             "max_intens_proj": max_intens_proj}
         if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
             # layout for square ROIs with 3D screenshot for square-ish fig
-            screenshot = self.scene.mlab.screenshot(antialiased=True)
+            screenshot = self.scene.mlab.screenshot(
+                mode="rgba", antialiased=True)
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[2]:

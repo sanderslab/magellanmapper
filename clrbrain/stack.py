@@ -166,7 +166,7 @@ def fit_frame_to_image(fig, shape, aspect):
         shape: Shape of image to which the figure will be fit.
         aspect: Aspect ratio of image.
     """
-    fig.tight_layout(pad=-0.2) # neg padding to remove thin left border
+    fig.tight_layout(pad=-0.4) # neg padding to remove thin left border
     if aspect is None:
         aspect = 1
     img_size_inches = np.divide(shape, fig.dpi) # convert to inches

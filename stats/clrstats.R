@@ -4,6 +4,7 @@
 library("MASS")
 library("gee")
 library("viridis")
+library("RColorBrewer")
 
 # library to avoid overlapping text labels
 #install.packages("devtools")
@@ -543,7 +544,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of
       # colors for each set of points
-      if (num.sides > 0) colors <- rainbow(length(vals.groups[[1]]), end=0.8)
+      if (num.sides > 0) colors <- brewer.pal(length(vals.groups[[1]]), "Paired")
     }
     for (side in sides.unique) {
       # plot points, adding jitter in x-direction unless paired

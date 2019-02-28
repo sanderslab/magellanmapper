@@ -1054,6 +1054,8 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         surface = pipeline.scalar_field(roi_show)
         
         '''
+        # contour -> surface pipeline
+        
         # create the surface
         surface = pipeline.contour(surface)
         
@@ -1061,24 +1063,24 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         surface = pipeline.user_defined(surface, filter="SmoothPolyDataFilter")
         surface.filter.number_of_iterations = 400
         surface.filter.relaxation_factor = 0.015
-        # holes within cells?
+        # distinguishing pos vs neg curvatures?
         surface = pipeline.user_defined(surface, filter="Curvatures")
-        scene_mlab.pipeline.surface(surface)
-        
-        # colorizes
-        module_manager = surface.children[0]
+        surface = scene_mlab.pipeline.surface(surface)
+        module_manager = surface.module_manager
         module_manager.scalar_lut_manager.data_range = np.array([-0.6, 0.5])
         module_manager.scalar_lut_manager.lut_mode = "Greens"
         '''
         
-        # based on Surface with contours enabled
         '''
+        # Surface pipleline with contours enabled (similar to above?)
         surface = pipeline.contour_surface(
             surface, color=(0.7, 1, 0.7), line_width=6.0)
         surface.actor.property.representation = 'wireframe'
         #surface.actor.property.line_width = 6.0
         surface.actor.mapper.scalar_visibility = False
         '''
+        
+        # IsoSurface pipeline
         
         # uses unique IsoSurface module but appears to have 
         # similar output to contour_surface

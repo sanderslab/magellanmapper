@@ -348,12 +348,18 @@ class PlotEditor:
     
     def on_key_press(self, event):
         """Change pen radius with bracket ([/]) buttons.
+        
+        The "ctrl" modifier will have the increment.
+        
+        Args:
+            event: Key press event.
         """
         rad_orig = self.radius
-        if event.key == "[" and self.radius > 1:
-            self.radius -= 1
-        elif event.key == "]":
-            self.radius += 1
+        increment = 0.5 if "ctrl" in event.key else 1
+        if "[" in event.key and self.radius > 1:
+            self.radius -= increment
+        elif "]" in event.key:
+            self.radius += increment
         #print("radius: {}".format(self.radius))
         if rad_orig != self.radius and self.circle:
             self.circle.radius = self.radius

@@ -644,8 +644,8 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     if circles is not None:
         circles = circles.lower()
     # filename for export
-    filename = "{}_offset{}x{}".format(
-        os.path.basename(filename), offset, tuple(roi_size)).replace(" ", "")
+    filename = plot_support.get_roi_path(
+        os.path.basename(filename), offset, roi_size)
     
     # adjust array order based on which plane to show
     border_full = np.copy(border)

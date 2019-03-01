@@ -4,6 +4,8 @@
 """Shared plotting functions with the Clrbrain package.
 """
 
+import os
+
 import numpy as np
 import matplotlib.backend_bases as backend_bases
 from matplotlib_scalebar.scalebar import ScaleBar
@@ -353,6 +355,22 @@ def get_plane_axis(plane):
     elif plane == config.PLANE[2]:
         plane_axis = "x"
     return plane_axis
+
+def get_roi_path(path, offset, roi_size):
+    """Get a string describing an ROI for an image at a given path.
+    
+    Args:
+        path: Path to include in string, without extension.
+        offset: Offset of ROI.
+        roi_size: Shape of ROI.
+    
+    Returns:
+        String with ``path`` without extension followed immediately by 
+        ``offset`` and ``roi_size`` as tuples, with all spaces removed.
+    """
+    return "{}_offset{}x{}".format(
+        os.path.splitext(path)[0], tuple(offset), 
+        tuple(roi_size)).replace(" ", "")
 
 if __name__ == "__main__":
     print("Starting plot support")

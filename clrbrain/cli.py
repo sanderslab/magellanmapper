@@ -401,7 +401,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                     # size as that of the overlapping region
                     bounds_next = [
                         offset_axis + size[axis] + tol[axis],
-                        offset_axis + size[axis] + overlap[axis] + 2 * tol[axis]]
+                        offset_axis + size[axis] + overlap[axis] + 3 * tol[axis]]
                     lib_clrbrain.printv(
                         "axis {}, boundaries (next): {}".format(axis, bounds_next))
                     if np.all(np.less(bounds_next, image5d.shape[axis + 1])):

@@ -48,6 +48,7 @@ from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import plot_2d
+from clrbrain import plot_support
 from clrbrain import register
 from clrbrain import segmenter
 from clrbrain import sqlite
@@ -145,7 +146,8 @@ class Visualization(HasTraits):
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Detect")
     btn_2d_trait = Button("2D Plots")
-    btn_save_segments = Button("Save")
+    btn_save_3d = Button("Save 3D Screenshot")
+    btn_save_segments = Button("Save Blobs")
     roi = None # combine with roi_array?
     rois_selections_class = Instance(ListSelections)
     rois_check_list = Str
@@ -821,7 +823,8 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[2]:
             # single row
-            screenshot = self.scene.mlab.screenshot(antialiased=True)
+            screenshot = self.scene.mlab.screenshot(
+                mode="rgba", antialiased=True)
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, 
                 single_zoom_row=True, 
@@ -850,6 +853,13 @@ class Visualization(HasTraits):
             # defaults to Square style without oblique view
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3)
+    
+    def _btn_save_3d_fired(self):
+        # save 3D image with the currently set extension in config
+        screenshot = self.scene.mlab.screenshot(mode="rgba", antialiased=True)
+        path = plot_support.get_roi_path(
+            config.filename, self._curr_offset(), self.roi_array[0].astype(int))
+        plot_2d.plot_image(screenshot, path)
     
     def _btn_save_segments_fired(self):
         if self._opened_window_style == self._DEFAULTS_STYLES_2D[6]:
@@ -1227,8 +1237,11 @@ class Visualization(HasTraits):
                         show_label=False
                     ),
                     Item("segs_feedback", style="custom", show_label=False),
+                ),
+                HGroup(
+                    Item("btn_save_3d", show_label=False), 
                     Item("btn_save_segments", show_label=False)
-                )
+                ),
             )
         ),
         handler=VisHandler(),

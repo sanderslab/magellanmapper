@@ -1053,13 +1053,11 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         roi_show = np.transpose(roi_show)
         surface = pipeline.scalar_field(roi_show)
         
-        '''
-        # contour -> surface pipeline
+        # Contour -> Surface pipeline
         
         # create the surface
         surface = pipeline.contour(surface)
-        
-        # removes many more extraneous points
+        # remove many more extraneous points
         surface = pipeline.user_defined(surface, filter="SmoothPolyDataFilter")
         surface.filter.number_of_iterations = 400
         surface.filter.relaxation_factor = 0.015
@@ -1067,9 +1065,8 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         surface = pipeline.user_defined(surface, filter="Curvatures")
         surface = scene_mlab.pipeline.surface(surface)
         module_manager = surface.module_manager
-        module_manager.scalar_lut_manager.data_range = np.array([-0.6, 0.5])
-        module_manager.scalar_lut_manager.lut_mode = "Greens"
-        '''
+        module_manager.scalar_lut_manager.data_range = np.array([-2, 0])
+        module_manager.scalar_lut_manager.lut_mode = "gray"
         
         '''
         # Surface pipleline with contours enabled (similar to above?)
@@ -1080,6 +1077,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         surface.actor.mapper.scalar_visibility = False
         '''
         
+        '''
         # IsoSurface pipeline
         
         # uses unique IsoSurface module but appears to have 
@@ -1096,8 +1094,11 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         except Exception as e:
             print(e)
             print("ignoring min/max contour for now")
+        '''
+        
         isotropic = settings["isotropic_vis"]
         if isotropic is not None:
+            # adjust for anisotropy
             surface.actor.actor.scale = isotropic[::-1]
     
     print("time to render 3D surface: {}".format(time() - time_start))

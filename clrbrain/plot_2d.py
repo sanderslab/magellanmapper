@@ -1557,6 +1557,34 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
     save_fig(path_to_df, config.savefig)
     if show: plt.show()
 
+def plot_image(img, path=None, show=False):
+    """Plot a single image in a borderless figure, with option to export 
+    directly to file.
+    
+    Args:
+        img: Image as a Numpy array to display.
+        path: Path to save image. Defaults to None to not save. The 
+    """
+    # plot figure without frame, axes, or border space
+    fig = plt.figure(frameon=False)
+    gs = gridspec.GridSpec(1, 1)
+    ax = plt.subplot(gs[0, 0])
+    plot_support.hide_axes(ax)
+    ax.imshow(img)
+    plot_support.fit_frame_to_image(fig, img.shape, None)
+    
+    if path:
+        # use user-supplied ext if given
+        ext = config.savefig
+        if not ext:
+            # use path extension if available, or default to png
+            path_split = os.path.splitext(path)
+            ext = path_split[1][1:] if path_split[1] else "png"
+            print(path_split, ext)
+        save_fig(path, ext)
+    if show: plt.show()
+    plt.close() # prevent display during next show call
+
 def save_fig(path, ext):
     """Save figure, swapping in the given extension for the extension 
     in the given path.

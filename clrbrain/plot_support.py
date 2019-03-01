@@ -1,6 +1,6 @@
 #!/bin/bash
 # Plot Support for Clrbrain
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Shared plotting functions with the Clrbrain package.
 """
 
@@ -292,6 +292,27 @@ def hide_axes(ax):
     """
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
+
+def fit_frame_to_image(fig, shape, aspect):
+    """Compress figure to fit image only.
+    
+    Args:
+        fig: Figure to compress.
+        shape: Shape of image to which the figure will be fit.
+        aspect: Aspect ratio of image.
+    """
+    fig.tight_layout(pad=-0.4) # neg padding to remove thin left border
+    if aspect is None:
+        aspect = 1
+    img_size_inches = np.divide(shape, fig.dpi) # convert to inches
+    print("image shape: {}, img_size_inches: {}"
+          .format(shape, img_size_inches))
+    if aspect > 1:
+        fig.set_size_inches(img_size_inches[1], img_size_inches[0] * aspect)
+    else:
+        # multiply both sides by 1 / aspect => number > 1 to enlarge
+        fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
+    print("fig size: {}".format(fig.get_size_inches()))
 
 def set_overview_title(ax, plane, z_overview, zoom=1, level=0, 
                         max_intens_proj=False):

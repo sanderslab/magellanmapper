@@ -135,7 +135,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     pool.join()
     
     # remove borders and add scale bar
-    fit_frame_to_image(fig, img_size, aspect)
+    plot_support.fit_frame_to_image(fig, img_size, aspect)
     if scale_bar:
         plot_support.add_scale_bar(ax, 1 / rescale, config.plane)
     
@@ -157,27 +157,6 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         # and requires formats supporting transparency (eg png)
         print("extracting plane as {}".format(out_path))
         fig.savefig(out_path, transparent=True)
-
-def fit_frame_to_image(fig, shape, aspect):
-    """Compress figure to fit image only.
-    
-    Args:
-        fig: Figure to compress.
-        shape: Shape of image to which the figure will be fit.
-        aspect: Aspect ratio of image.
-    """
-    fig.tight_layout(pad=-0.4) # neg padding to remove thin left border
-    if aspect is None:
-        aspect = 1
-    img_size_inches = np.divide(shape, fig.dpi) # convert to inches
-    print("image shape: {}, img_size_inches: {}"
-          .format(shape, img_size_inches))
-    if aspect > 1:
-        fig.set_size_inches(img_size_inches[1], img_size_inches[0] * aspect)
-    else:
-        # multiply both sides by 1 / aspect => number > 1 to enlarge
-        fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
-    print("fig size: {}".format(fig.get_size_inches()))
 
 def stack_to_img_file(image5d, path, offset=None, roi_size=None, 
                       slice_vals=None, rescale=None, delay=None, 

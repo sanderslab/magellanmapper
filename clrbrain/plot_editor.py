@@ -56,6 +56,7 @@ class PlotEditor:
         self.xlim = None
         self.ylim = None
         self.ax_img = None
+        self.edited = False # labels edited during mouse movement
     
     def connect(self):
         """Connect events to functions.
@@ -186,9 +187,11 @@ class PlotEditor:
                 # corresponding planes
                 self.coord[1:] = y, x
                 self.fn_update_coords(self.coord, self.plane)
-            elif event.key == "alt":
-               if self.img3d_labels is not None:
-                   # get intensity under cursor in prep to paint it
+            elif ("alt" in event.key and "z" not in event.key 
+                  and self.img3d_labels is not None):
+                   # "alt"-click to get intensity under cursor; "alt-z" to 
+                   # avoid picking intensity, using previously picked 
+                   # intensity to start painting
                    self.intensity = self.img3d_labels[self.coord[0], y, x]
                    print("got intensity {} at x,y,z = {},{},{}"
                          .format(self.intensity, x, y, self.coord[0]))
@@ -291,7 +294,8 @@ class PlotEditor:
                 
                 coord = [self.coord[0], y, x]
                 if event.button == 1:
-                    if event.key == "alt" and self.intensity is not None:
+                    if (event.key and "alt" in event.key 
+                        and self.intensity is not None):
                         # alt+click to use the chosen intensity value to 
                         # overwrite the image with a pen of the chosen radius
                         if self.ax_img is not None:
@@ -305,6 +309,7 @@ class PlotEditor:
                             self.ax_img.set_data(
                                 self.img3d_labels[self.coord[0]])
                             self.fn_refresh_images(self)
+                            self.edited = True
                     else:
                         # click and mouseover otherwise moves crosshairs
                         self.coord = coord
@@ -335,16 +340,17 @@ class PlotEditor:
         self.last_loc_data = loc_data
     
     def on_release(self, event):
-        """On mouse click release, reset the intensity value to prevent 
-        further edits and update plane interpolation values if intensity 
-        value was set.
+        """If labels were edited during the current mouse press, update 
+        plane interpolation values.
+        
+        Args:
+            event: Key press event.
         """
-        if self.intensity is not None:
+        if self.edited:
             if self.interp_planes is not None:
                 self.interp_planes.update_plane(
                     self.plane, self.coord[0], self.intensity)
-            self.intensity = None
-        print("released!")
+            self.edited = False
     
     def on_key_press(self, event):
         """Change pen radius with bracket ([/]) buttons.

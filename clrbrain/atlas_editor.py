@@ -1,8 +1,10 @@
 #!/bin/bash
 # Atlas Editor with orthogonal viewing
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Atlas editing GUI in the Clrbrain package.
 """
+
+import datetime
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -15,6 +17,7 @@ from clrbrain import lib_clrbrain
 from clrbrain import plot_editor
 from clrbrain import plot_support
 from clrbrain import plot_3d
+from clrbrain import register
 
 class AtlasEditor:
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
@@ -66,9 +69,10 @@ class AtlasEditor:
             self.borders_img, self.labels_img, cmap_labels)
         coord = list(self.offset[::-1])
         
-        # transparency controls
+        # transparency controls; increase width space to prevent overlap of 
+        # slider value label with reset button
         gs_controls = gridspec.GridSpecFromSubplotSpec(
-            1, 3, subplot_spec=gs[1, 0], width_ratios=(4, 1, 1))
+            1, 4, subplot_spec=gs[1, 0], width_ratios=(5, 1, 1, 1), wspace=0.3)
         ax_alpha = plt.subplot(gs_controls[0, 0])
         self.alpha_slider = Slider(
             ax_alpha, "Opacity", 0.0, 1.0, 
@@ -79,6 +83,8 @@ class AtlasEditor:
         self.interp_btn = Button(ax_interp, "Fill Label")
         self.interp_planes = InterpolatePlanes(self.interp_btn)
         self.interp_planes.update_btn()
+        ax_save = plt.subplot(gs_controls[0, 3])
+        self.save_btn = Button(ax_save, "Save")
     
         def setup_plot_ed(plane, gs_spec):
             # subplot grid, with larger height preference for plot for 
@@ -149,6 +155,7 @@ class AtlasEditor:
         self.alpha_slider.on_changed(self.alpha_update)
         self.alpha_reset_btn.on_clicked(self.alpha_reset)
         self.interp_btn.on_clicked(self.interpolate)
+        self.save_btn.on_clicked(self.save_atlas)
         
         # initialize planes in all plot editors
         self.update_coords(coord, config.PLANE[0])
@@ -225,6 +232,18 @@ class AtlasEditor:
             self.refresh_images(None)
         except ValueError as e:
             print(e)
+    
+    def save_atlas(self, event):
+        """Save atlas labels.
+        
+        Args:
+            event: Button event, currently not used.
+        """
+        register.load_registered_img(
+            config.filename, reg_name=register.IMG_LABELS, 
+            replace=config.labels_img)
+        self.segs_feedback = "Saved labels image at {}".format(
+            datetime.datetime.now())
 
 class InterpolatePlanes:
     """Track manually edited planes between which to interpolate changes 

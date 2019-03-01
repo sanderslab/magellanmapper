@@ -24,7 +24,6 @@ Attributes:
 import os
 import sys
 from time import time
-import datetime
 
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float, 
@@ -323,13 +322,6 @@ class Visualization(HasTraits):
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str
-    
-    def save_atlas(self):
-        register.load_registered_img(
-            config.filename, reg_name=register.IMG_LABELS, 
-            replace=config.labels_img)
-        self.segs_feedback = "Saved labels image at {}".format(
-            datetime.datetime.now())
     
     def _reset_segments(self):
         """Resets the saved segments.
@@ -872,10 +864,8 @@ class Visualization(HasTraits):
         plot_2d.plot_image(screenshot, path)
     
     def _btn_save_segments_fired(self):
-        if self._opened_window_style == self._DEFAULTS_STYLES_2D[6]:
-            self.save_atlas()
-        else:
-            self.save_segs()
+        # save blobs to database
+        self.save_segs()
     
     @on_trait_change('rois_check_list')
     def update_roi(self):

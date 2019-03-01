@@ -199,6 +199,7 @@ class Visualization(HasTraits):
     _channel_high = 0
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
+    _camera_pos = None
     
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
@@ -644,6 +645,15 @@ class Visualization(HasTraits):
         print("view: {}\nroll: {}".format(
             self.scene.mlab.view(), self.scene.mlab.roll()))
     
+    @on_trait_change("scene.busy")
+    def _scene_changed(self):
+        # show camera position after roll changes; only use roll for 
+        # simplification since almost any movement involves a roll change
+        roll = self.scene.mlab.roll()
+        if self._camera_pos is None or self._camera_pos["roll"] != roll:
+            self._camera_pos = {"view": self.scene.mlab.view(), "roll": roll}
+            print("camera:", self._camera_pos)
+        
     def _is_segs_none(self, segs):
         """Checks if segs is equivalent to None.
         """

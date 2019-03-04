@@ -250,16 +250,14 @@ class PlotEditor:
             # use figure coordinates since data pixels will scale 
             # during zoom
             zoom_speed = (y_fig - self.last_loc[1]) * 0.01
-            zoom_x = self.scaling[2] * zoom_speed
             xlim = self.axes.get_xlim()
             xlim_update = (
-                xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_x, 
-                xlim[1] + (self.press_loc_data[0] - xlim[1]) * zoom_x)
-            zoom_y = self.scaling[1] * zoom_speed
+                xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_speed, 
+                xlim[1] + (self.press_loc_data[0] - xlim[1]) * zoom_speed)
             ylim = self.axes.get_ylim()
             ylim_update = (
-                ylim[0] + (self.press_loc_data[1] - ylim[0]) * zoom_y, 
-                ylim[1] + (self.press_loc_data[1] - ylim[1]) * zoom_y)
+                ylim[0] + (self.press_loc_data[1] - ylim[0]) * zoom_speed, 
+                ylim[1] + (self.press_loc_data[1] - ylim[1]) * zoom_speed)
             
             # avoid flip by checking that relationship between high and 
             # low values in updated limits is in the same order as in the 

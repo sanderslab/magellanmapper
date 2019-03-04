@@ -815,6 +815,20 @@ def update_register_settings(settings, settings_type):
              "truncate_labels": None}, 
             profile)
     
+        # smoothing by Gaussian blur
+        settings.add_modifier(
+            "smoothgaus", 
+            {"smoothing_mode": SmoothingModes.gaussian, 
+             "smooth": 0.25}, 
+            profile)
+    
+        # smoothing by Gaussian blur
+        settings.add_modifier(
+            "smoothgaustest", 
+            {"smoothing_mode": SmoothingModes.gaussian, 
+             "smooth": (0, 0.25, 0.5, 0.75, 1, 1.25)}, 
+            profile)
+    
     if verbose:
         print("process settings for {}:\n{}"
               .format(settings["settings_name"], settings))

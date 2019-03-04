@@ -486,13 +486,13 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         img_smoothed = img_np[:mirrori]
         img_smoothed_orig = np.copy(img_smoothed)
         borders = None
-        if isinstance(smooth, int):
-            # single filter size
-            _, _, borders = _smoothing(img_smoothed, img_smoothed_orig, smooth)
-        else:
+        if lib_clrbrain.is_seq(smooth):
             # test sequence of filter sizes via multiprocessing, in which 
             # case the original array will be left unchanged
             _ = _smoothing_mp(img_smoothed, img_smoothed_orig, smooth)
+        else:
+            # single filter size
+            _, _, borders = _smoothing(img_smoothed, img_smoothed_orig, smooth)
         if borders is not None:
             # mirror borders image
             shape = list(borders.shape)

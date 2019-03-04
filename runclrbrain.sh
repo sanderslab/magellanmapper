@@ -20,6 +20,7 @@ Arguments:
         pathways.
     -r [profile]: Set microscope profile. Give multiple times for each 
         desired channel.
+    -l [channel]: Set channel.
     -s [pathway]: Set stitching pathway.
     -t [pathway]: Set transposition pathway.
     -w [pathway]: Set whole image processing pathway.
@@ -260,7 +261,7 @@ upload_images() {
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w:o:n:cz:m:j:r: opt; do
+while getopts hi:a:p:s:t:w:o:n:cz:m:j:r:l: opt; do
     case $opt in
         h)  echo "$HELP"
             exit 0
@@ -304,6 +305,9 @@ while getopts hi:a:p:s:t:w:o:n:cz:m:j:r: opt; do
         r)  microscope+=("$OPTARG")
             echo "Added $OPTARG to microscope profile"
             ;;
+        l)  channel="$OPTARG"
+            echo "Set channel to $channel"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -331,7 +335,9 @@ if [[ $num_mic_profiles -eq 0 ]]; then
     # default to single lightsheet profile
     microscope=("lightsheet")
 elif [[ $num_mic_profiles -gt 1 ]]; then
-    # if multiple profiles are given, include all channels for detections
+    # if multiple profiles are given, include all channels for detections, 
+    # overwriting any command-line arg
+    echo "Changing channels to all since multiple microscope profiles are set"
     channel=-1
 fi
 

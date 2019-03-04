@@ -18,6 +18,8 @@ Arguments:
     -a [path]: Set AWS S3 path (excluding s://)
     -p [pipeline]: Set pipeline, which takes precedence over individual 
         pathways.
+    -r [profile]: Set microscope profile. Give multiple times for each 
+        desired channel.
     -s [pathway]: Set stitching pathway.
     -t [pathway]: Set transposition pathway.
     -w [pathway]: Set whole image processing pathway.
@@ -45,13 +47,13 @@ IMG="/path/to/your/image"
 # s3://$S3_DIR/exp_yyyy-mm-dd
 S3_DIR=""
 
-# Replace microscope type with available profiles, such as "lightsheet", 
-# "2p_20x", or "lightsheet_v02", or with modifiers, such as 
-# "lightsheet_contrast" or "lightsheet_contrast_cytoplasm". Multiple 
+# Microscope profiles such as "lightsheet", "2p20x", or "lightsheetv02", 
+# including modifiers such as "lightsheet_contrast" or 
+# "lightsheet_contrast_cytoplasm" affect detections and visualization. Multiple 
 # profiles can also be given for multiple channels, such as 
 # "lightsheet lightsheet_cytoplasm" for a nuclear marker in channel 0 
-# and cytoplasmic marker in channel 1
-MICROSCOPE="lightsheet"
+# and cytoplasmic marker in channel 1.
+microscope=()
 
 # Grouped pathways to follow typical pipelines
 PIPELINES=("gui" "full" "detection" "transposition" "download" "stitching")
@@ -105,6 +107,10 @@ java_home=""
 # Supported compression formats
 COMPRESSION_EXTS=("tar.zst" "zip")
 compression="${COMPRESSION_EXTS[0]}"
+
+# Image channels to process, defaulting to 0 but including all channels 
+# if multiple microscope profiles are given
+channel=0
 
 # Clrbrain filenames
 image5d_npz=""
@@ -254,7 +260,7 @@ upload_images() {
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w:o:n:cz:m:j: opt; do
+while getopts hi:a:p:s:t:w:o:n:cz:m:j:r: opt; do
     case $opt in
         h)  echo "$HELP"
             exit 0
@@ -295,6 +301,9 @@ while getopts hi:a:p:s:t:w:o:n:cz:m:j: opt; do
         j)  java_home="$OPTARG"
             echo "Set JAVA_HOME for ImageJ/Fiji to $java_home"
             ;;
+        r)  microscope+=("$OPTARG")
+            echo "Added $OPTARG to microscope profile"
+            ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
             ;;
@@ -316,6 +325,15 @@ NAME="`basename $IMG`"
 IMG_PATH_BASE="${OUT_DIR}/${NAME%.*}"
 EXT="${IMG##*.}"
 s3_exp_path=s3://"${S3_DIR}/${EXP}"
+
+num_mic_profiles="${#microscope[@]}"
+if [[ $num_mic_profiles -eq 0 ]]; then
+    # default to single lightsheet profile
+    microscope=("lightsheet")
+elif [[ $num_mic_profiles -gt 1 ]]; then
+    # if multiple profiles are given, include all channels for detections
+    channel=-1
+fi
 
 # run from script's directory
 BASE_DIR="`dirname $0`"
@@ -378,7 +396,7 @@ if [[ $gui -eq 1 ]]; then
     #python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
     
     # Load ROI, starting at the given offset and ROI size
-    ./run --img "$IMG" --channel 0 --offset $offset --size $size --savefig pdf --microscope "$MICROSCOPE"
+    ./run --img "$IMG" --offset $offset --size $size --savefig pdf --microscope ${microscope[@]}
     
     # Extract a single z-plane
     #python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"
@@ -544,7 +562,7 @@ fi
 if [[ "$whole_img_proc" != "" ]]; then
     # Process an entire image locally on 1st channel, chunked into multiple 
     # smaller stacks to minimize RAM usage and multiprocessed for efficiency
-    python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp --channel 0 --microscope "$MICROSCOPE"
+    python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp --channel $channel --microscope ${microscope[@]}
     
     if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
         # upload processed fils to S3

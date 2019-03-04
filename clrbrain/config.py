@@ -50,6 +50,7 @@ plot_2d_type = None
 FORMATS_3D = ("obj", "x3d") # save 3D renderings
 savefig = None # save files using this extension
 
+
 # IMAGE VIEWING
 
 no_show = False
@@ -67,7 +68,108 @@ delay = None # delay time between images
 sub_stack_max_pixels = None
 
 
-# PROCESSING SETTINGS
+# IMAGE EXPORT
+
+# flag to save ROI to file
+saveroi = False
+
+# alpha levels for overlaid images, defaulting to main image, labels image
+alphas = [1, 0.9, 0.9]
+
+# show scale bars
+scale_bar = True
+
+
+# IMAGE REGISTRATION
+
+# reference atlas labels
+load_labels = None
+labels_img = None # in Numpy format
+labels_scaling = None
+labels_ref = None
+labels_ref_lookup = None
+labels_level = None
+labels_mirror = True
+borders_img = None
+reg_suffixes = None
+REG_SUFFIX_ATLAS = "atlas"
+REG_SUFFIX_ANNOTATION = "annotation"
+REG_SUFFIX_BORDERS = "borders"
+VOL_KEY = "volume"
+BLOBS_KEY = "blobs"
+VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
+VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
+SIDE_KEY = "Side"
+GENOTYPE_KEY = "Geno"
+SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
+
+class ABAKeys(Enum):
+    """Allen Brain Atlas ontology hierarchy keys.
+    
+    Values of each enumeration maps to key values in the ABA ontology 
+    specification.
+    """
+    NAME = "name"
+    ABA_ID = "id"
+    LEVEL = "st_level"
+    CHILDREN = "children"
+    ACRONYM = "acronym"
+
+# register module modes when called from command-line
+RegisterTypes = Enum(
+    "RegisterTypes", [
+        "single", "group", "overlays", "volumes", "densities", "export_vols", 
+        "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
+        "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
+        "make_edge_images_exp", "vol_stats", "make_density_images", 
+        "merge_atlas_segs_exp", "make_subsegs"
+    ]
+)
+register_type = None
+
+# label smoothing modes
+SmoothingModes = Enum(
+    "SmoothingModes", [
+        "opening", "gaussian", "closing"
+    ]
+)
+
+# flip/rotate the image; the direction of change can be variable
+flip = None
+
+# groups, such as genotypes and sex or combos
+GROUPS_NUMERIC = {"WT": 0.0, "het": 0.5, "null":1.0}
+groups = None
+
+# smoothing metrics
+PATH_SMOOTHING_METRICS = "smoothing.csv"
+
+# common labels
+PATH_COMMON_LABELS = "labels_common.csv"
+
+
+# STATS
+
+STATS_TYPES = ("merge_csvs", "exps_by_regions")
+stats_type = None
+seed = 0 # random number generator seed
+
+
+# AWS
+
+ec2_start = None
+ec2_list = None
+ec2_terminate = None
+
+
+# SLACK NOTIFICATIONS
+
+notify_url = None
+notify_msg = None
+notify_attach = None
+
+
+# MICROSCOPE SETTINGS FOR DETECTIONS
 
 class SettingsDict(dict):
     def __init__(self, *args, **kwargs):
@@ -409,6 +511,8 @@ class RegisterSettings(SettingsDict):
         # size used to open up the backgound before cropping, 0 to use 
         # the original background as-is, or False not to crop
         self["crop_to_orig"] = 1
+        
+        self["smoothing_mode"] = SmoothingModes.opening
 
 def update_register_settings(settings, settings_type):
     
@@ -856,98 +960,3 @@ rc_params_mpl2_img_interp = {
 }
 
 
-
-# IMAGE EXPORT
-
-# flag to save ROI to file
-saveroi = False
-
-# alpha levels for overlaid images, defaulting to main image, labels image
-alphas = [1, 0.9, 0.9]
-
-# show scale bars
-scale_bar = True
-
-
-
-# IMAGE REGISTRATION
-
-# reference atlas labels
-load_labels = None
-labels_img = None # in Numpy format
-labels_scaling = None
-labels_ref = None
-labels_ref_lookup = None
-labels_level = None
-labels_mirror = True
-borders_img = None
-reg_suffixes = None
-REG_SUFFIX_ATLAS = "atlas"
-REG_SUFFIX_ANNOTATION = "annotation"
-REG_SUFFIX_BORDERS = "borders"
-VOL_KEY = "volume"
-BLOBS_KEY = "blobs"
-VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
-VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
-SIDE_KEY = "Side"
-GENOTYPE_KEY = "Geno"
-SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
-
-class ABAKeys(Enum):
-    """Allen Brain Atlas ontology hierarchy keys.
-    
-    Values of each enumeration maps to key values in the ABA ontology 
-    specification.
-    """
-    NAME = "name"
-    ABA_ID = "id"
-    LEVEL = "st_level"
-    CHILDREN = "children"
-    ACRONYM = "acronym"
-
-# register module modes when called from command-line
-RegisterTypes = Enum(
-    "RegisterTypes", [
-        "single", "group", "overlays", "volumes", "densities", "export_vols", 
-        "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
-        "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
-        "make_edge_images_exp", "vol_stats", "make_density_images", 
-        "merge_atlas_segs_exp", "make_subsegs"
-    ]
-)
-register_type = None
-
-# flip/rotate the image; the direction of change can be variable
-flip = None
-
-# groups, such as genotypes and sex or combos
-GROUPS_NUMERIC = {"WT": 0.0, "het": 0.5, "null":1.0}
-groups = None
-
-# smoothing metrics
-PATH_SMOOTHING_METRICS = "smoothing.csv"
-
-# common labels
-PATH_COMMON_LABELS = "labels_common.csv"
-
-
-
-# STATS
-
-STATS_TYPES = ("merge_csvs", "exps_by_regions")
-stats_type = None
-seed = 0 # random number generator seed
-
-
-
-# AWS
-
-ec2_start = None
-ec2_list = None
-ec2_terminate = None
-
-# SLACK NOTIFICATIONS
-
-notify_url = None
-notify_msg = None
-notify_attach = None

@@ -95,7 +95,6 @@ MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
 
-SMOOTHING_MODES = ("opening", "gaussian", "closing")
 SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "area_displvol")
 _SIGNAL_THRESHOLD = 0.01
 
@@ -541,7 +540,8 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
         a dictionary of smoothing metrices; and ``borders``, the borders 
         image.
     """
-    smooth_labels(img_np, filter_size)
+    smoothing_mode = config.register_settings["smoothing_mode"]
+    smooth_labels(img_np, filter_size, smoothing_mode)
     borders, metric, df_raw = label_smoothing_metric(
         img_np_orig, img_np, save_borders=save_borders)
     # curate back to lightly smoothed foreground of original labels
@@ -623,7 +623,7 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     img_sitk_back.SetOrigin(origin)
     return img_sitk_back
 
-def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
+def smooth_labels(labels_img_np, filter_size=3, mode=None):
     """Smooth each label within labels annotation image.
     
     Labels images created in one orthogonal direction may have ragged, 
@@ -633,11 +633,13 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
     Args:
         labels_img_np: Labels image as a Numpy array.
         filter_size: Structuring element or kernel size; defaults to 3.
-        mode: One of :const:``SMOOTHING_MODES``, where ``opening`` applies 
+        mode: One of :attr:``config.SmoothingModes``, where ``opening`` applies 
             a morphological opening filter unless the size is severely 
-            reduced, in which case a closing filter is applied instead; and 
-            ``gaussian`` applies a Gaussian blur.
+            reduced, in which case a closing filter is applied instead;  
+            ``gaussian`` applies a Gaussian blur; and ``closing`` applies 
+            a closing filter only.
     """
+    if mode is None: mode = config.SmoothingModes.opening
     print("Smoothing labels with filter size of {}, mode {}"
           .format(filter_size, mode))
     if filter_size == 0:
@@ -676,7 +678,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
         
         # smoothing based on mode
         region_size_smoothed = 0
-        if mode == SMOOTHING_MODES[0]:
+        if mode is config.SmoothingModes.opening:
             # smooth region with opening filter, reducing filter size for 
             # small volumes and changing to closing filter 
             # if region would be lost or severely reduced
@@ -699,14 +701,14 @@ def smooth_labels(labels_img_np, filter_size=3, mode=SMOOTHING_MODES[0]):
             # fill empty spaces with closest surrounding labels
             region = plot_3d.in_paint(region, label_mask_region)
             
-        elif mode == SMOOTHING_MODES[1]:
+        elif mode is config.SmoothingModes.gaussian:
             # smoothing with gaussian blur
             smoothed = filters.gaussian(
                 label_mask_region, filter_size, mode="nearest", 
                 multichannel=False).astype(bool)
             region_size_smoothed = np.sum(smoothed)
             
-        elif mode == SMOOTHING_MODES[2]:
+        elif mode is config.SmoothingModes.closing:
             # smooth region with closing filter
             smoothed = morphology.binary_closing(
                 label_mask_region, morphology.ball(filter_size))
@@ -2097,7 +2099,7 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     smoothing = config.register_settings["smooth"]
     if smoothing is not None:
         # smoothing by opening operation based on profile setting
-        smooth_labels(labels_seg, smoothing, SMOOTHING_MODES[0])
+        smooth_labels(labels_seg, smoothing, config.SmoothingModes.opening)
     
     if atlas:
         # mirror back to other half

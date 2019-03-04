@@ -460,7 +460,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     for f in ${OUT_DIR}/${FUSED}*.tif; do mv $f ${f/$FUSED/$OUT_NAME_BASE}; done
     
     # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
-    python -u -m clrbrain.cli --img ""${OUT_DIR}/${OUT_NAME_BASE}.tiff"" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --proc importonly
+    python -u -m clrbrain.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --proc importonly
     clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi
 clr_img_base="${clr_img%.*}"

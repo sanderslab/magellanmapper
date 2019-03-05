@@ -212,7 +212,7 @@ compress_upload() {
        zip -R "$out_path" "${paths[@]}"
        ;;
   esac
-  echo "Uploading to $out_path..."
+  echo "Uploading ${out_path} to ${s3_exp_path}/..."
   aws s3 cp "$out_path" "${s3_exp_path}/"
   cd -
   return 1

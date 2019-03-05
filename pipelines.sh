@@ -1,11 +1,10 @@
 #!/bin/bash
-# Clrbrain pipelines and sample run commands
+# Clrbrain pipelines script
 # Author: David Young 2017, 2019
 
 HELP="
-Run Clrbrain pipelines. Choose various pathways from command-line, 
-or copy this script to select the commands you desire. You can 
-also find examples of various commands to call directly.
+Run Clrbrain pipelines. Choose various pathways from simple viewing to 
+stitching and full volumetric image detection.
 
 Note that currently not all options are settable through at 
 command-line and will need to be set manually in the script 
@@ -390,7 +389,7 @@ if [[ "$S3_DIR" = "" ]]; then
 fi
 
 ####################################
-# Graphical display
+# Display region of interest in main GUI and exit when GUI is closed
 
 if [[ $gui -eq 1 ]]; then
   # Run Clrbrain GUI, importing the image into Numpy-based format that 
@@ -402,24 +401,32 @@ if [[ $gui -eq 1 ]]; then
   #python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
   
   # Load ROI, starting at the given offset and ROI size
-  ./run --img "$IMG" --offset $offset --size $size --savefig pdf --microscope ${microscope[@]}
+  ./run --img "$IMG" --offset $offset --size $size --savefig pdf \
+    --microscope ${microscope[@]}
   
+  : '
   # Extract a single z-plane
-  #python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 --offset 0,0,0 -v --savefig jpeg --microscope "$MICROSCOPE"
+  python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 \
+    --offset 0,0,0 -v --savefig jpeg --microscope ${microscope[@]}
   
   # Process a sub-stack and load it
   substack_offset=100,800,410
   substack_size=800,100,48
-  #python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v --offset $substack_offset --size $substack_size --microscope "$MICROSCOPE"
+  python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v \
+    --offset $substack_offset --size $substack_size \
+    --microscope ${microscope[@]}
   IMG_ROI="${IMG_PATH_BASE}_(${substack_offset})x(${substack_size}).${EXT}"
-  #./run --img "$IMG_ROI" -v --channel 0 -v --proc load --offset $substack_offset --size $substack_size --savefig pdf --microscope "$MICROSCOPE"
+  ./run --img "$IMG_ROI" -v --channel 0 -v --proc load \
+    --offset $substack_offset --size $substack_size --savefig pdf \
+    --microscope ${microscope[@]}
+  '
   
   exit 0
 fi
 
 
 ####################################
-# Stitching Workflow
+# Stitching Pipeline
 
 # Replace with your lens objective settings
 # TODO: option to gather automatically by importing metadata from 
@@ -447,13 +454,17 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   
   # Replace the tile parameters with your image's setup; set up tile 
   # configuration manually and compute alignment refinement
-  python -m stitch.tile_config --img "$NAME" --target_dir "$OUT_DIR" --cols 6 --rows 7 --size 1920,1920,1000 --overlap 0.1 --directionality bi --start_direction right
+  python -m stitch.tile_config --img "$NAME" --target_dir "$OUT_DIR" \
+    --cols 6 --rows 7 --size 1920,1920,1000 --overlap 0.1 \
+    --directionality bi --start_direction right
   ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 0 -j "$java_home"
   
   # Before the next steps, please manually check alignments to ensure that they 
-  # fit properly, especially since unregistered tiles may be shifted to (0, 0, 0)
+  # fit properly, especially since unregistered tiles may be shifted to 
+  # (0, 0, 0)
   ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1 -j "$java_home"
-  python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
+  python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" \
+    --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
   
 elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
@@ -484,7 +495,9 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   for f in ${OUT_DIR}/${FUSED}*.tif; do mv $f ${f/$FUSED/$OUT_NAME_BASE}; done
   
   # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
-  python -u -m clrbrain.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --proc importonly
+  python -u -m clrbrain.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
+    --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v \
+    --proc importonly
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi
 clr_img_base="${clr_img%.*}"
@@ -525,7 +538,7 @@ fi
 
 
 ####################################
-# Transpose/Resize Image Workflow
+# Transpose/Resize Image Pipeline
 
 if [[ "$transpose_pathway" != "" ]]; then
   img_transposed=""
@@ -533,11 +546,13 @@ if [[ "$transpose_pathway" != "" ]]; then
     if [[ "$plane" != "" ]]; then
       # Both rescale and transpose an image from z-axis (xy plane) 
       # to x-axis (yz plane) orientation
-      python -u -m clrbrain.cli --img "$clr_img" --proc transpose --rescale ${scale} --plane "$plane"
+      python -u -m clrbrain.cli --img "$clr_img" --proc transpose \
+        --rescale ${scale} --plane "$plane"
       img_transposed="${clr_img_base}_plane${plane}_scale${scale}.${EXT}"
     else
       # Rescale an image to downsample by the scale factor only
-      python -u -m clrbrain.cli --img "$clr_img" --proc transpose --rescale ${scale}
+      python -u -m clrbrain.cli --img "$clr_img" --proc transpose \
+        --rescale ${scale}
       img_transposed="${clr_img_base}_scale${scale}.${EXT}"
     fi
   elif [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[1]}" ]]; then
@@ -549,8 +564,10 @@ if [[ "$transpose_pathway" != "" ]]; then
   fi
   
   if [[ "$animation" != "" ]]; then
-    # Export transposed image to an animated GIF or MP4 video (requires ImageMagick)
-    python -u -m clrbrain.cli --img "$img_transposed" --proc animated --interval 5 --rescale 1.0 --savefig "$animation"
+    # Export transposed image to an animated GIF or MP4 video 
+    # (requires ImageMagick)
+    python -u -m clrbrain.cli --img "$img_transposed" --proc animated \
+      --interval 5 --rescale 1.0 --savefig "$animation"
   fi
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
@@ -563,12 +580,14 @@ fi
 
 
 ####################################
-# Whole Image Processing Workflow
+# Whole Image Blob Detections Pipeline
 
 if [[ "$whole_img_proc" != "" ]]; then
-  # Process an entire image locally on 1st channel, chunked into multiple 
-  # smaller stacks to minimize RAM usage and multiprocessed for efficiency
-  python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp --channel $channel --microscope ${microscope[@]}
+  # Process an entire image locally the given channel(s), chunking the 
+  # image into multiple smaller stacks to minimize RAM usage and 
+  # further chunking to run by multiprocessing for efficiency
+  python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp \
+    --channel $channel --microscope ${microscope[@]}
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
     # upload processed fils to S3

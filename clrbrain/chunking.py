@@ -460,7 +460,7 @@ def merge_blobs(blob_rois):
                     blobs_all = np.concatenate((blobs_all, blobs))
     return blobs_all
 
-def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois, 
+def prune_overlapping_blobs2(blob_rois, overlap, tol, sub_rois, 
                              sub_rois_offsets):
     """Removes overlapping blobs, which are blobs that are within a certain 
     tolerance of one another, by comparing a given sub-ROI with the 
@@ -474,8 +474,6 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
         blob_rois: An array of blob arrays, where each element contains the 
             blobs that were detected within the corresponding sub region within 
             the image stack.
-        region: Slice within each blob to check, such as slice(0, 2) to check
-            for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be pruned in
@@ -527,7 +525,7 @@ def prune_overlapping_blobs2(blob_rois, region, overlap, tol, sub_rois,
                         blobs_ol = blobs_all[mask_blobs_ol]
                         #print("len before before: {}".format(len(blobs_all)))
                         blobs_ol_pruned = detector.remove_close_blobs_within_sorted_array(
-                            blobs_ol, region, tol)
+                            blobs_ol, tol)
                         lib_clrbrain.printv(
                             "blobs without close duplicates:\n{}"
                             .format(blobs_ol_pruned))

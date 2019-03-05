@@ -452,15 +452,13 @@ def remove_close_blobs_within_array(blobs, region, tol):
                 blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
-def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
+def remove_close_blobs_within_sorted_array(blobs, tol, blobs_next=None):
     """Removes close blobs within a given array, first sorting the array by
     z, y, x.
     
     Args:
         blobs: The blobs to add, given as 2D array of [n, [z, row, column, 
             radius]].
-        region: Slice within each blob to check, such as slice(0, 2) to check
-            for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be pruned in
@@ -493,7 +491,7 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
             i = len(blobs_all) - 1
             while i >= 0:
                 blobs_diff = np.abs(np.subtract(
-                    blob[region], blobs_all[i, region]))
+                    blob[:3], blobs_all[i, :3]))
                 #print(blobs_diff)
                 if (blobs_diff <= tol).all():
                     # remove duplicate blob and shift to mean of coords, 
@@ -738,7 +736,7 @@ def _test_blob_close_sorted():
     blobs = np.concatenate((a, b))
     sort = np.lexsort((blobs[:, 2], blobs[:, 1], blobs[:, 0]))
     blobs = blobs[sort]
-    blobs = remove_close_blobs_within_sorted_array(blobs, slice(0, 3), (1, 2, 2))
+    blobs = remove_close_blobs_within_sorted_array(blobs, (1, 2, 2))
     print("pruned:\n{}".format(blobs))
 
 if __name__ == "__main__":

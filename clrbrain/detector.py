@@ -493,9 +493,10 @@ def remove_close_blobs_within_sorted_array(blobs, region, tol, blobs_next=None):
                     blob[region], blobs_all[i, region]))
                 #print(blobs_diff)
                 if (blobs_diff <= tol).all():
-                    # duplicate blob to be removed;
-                    # shift close blobs to their mean values, storing values in 
-                    # the duplicated coordinates and radius of the blob array
+                    # remove duplicate blob and shift to mean of coords, 
+                    # storing values in saved blob's abs coords; note that 
+                    # this shift means that re-pruning the same region 
+                    # may lead to further pruning
                     abs_between = np.around(
                         np.divide(
                             np.add(get_blob_abs_coords(blobs_all[i, None]), 

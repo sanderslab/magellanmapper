@@ -295,15 +295,13 @@ def _check_np_none(val):
     """
     return None if val is None or np.all(np.equal(val, None)) else val
 
-def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
+def _prune_blobs(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
     """Prune close blobs within overlapping regions.
     
     Args:
         segs_roi: Segments from each sub-region.
         overlap: 1D array of size 3 with the number of overlapping pixels 
             for each image axis.
-        region: The region of each segment array to compare for closeness,
-            given as a slice.
         tol: Tolerance as (z, y, x), within which a segment will be 
             considered a duplicate of a segment in the master array and
             removed.
@@ -316,7 +314,7 @@ def _prune_blobs(seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets):
     """
     time_pruning_start = time()
     segments_all = chunking.prune_overlapping_blobs2(
-        seg_rois, region, overlap, tol, sub_rois, sub_rois_offsets)
+        seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
     if segments_all is not None:
         print("total segments found: {}".format(segments_all.shape[0]))
     time_pruning_end = time()
@@ -432,7 +430,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 # prune blobs from overlapping regions via multiprocessing
                 pool_results.append(pool.apply_async(
                     detector.remove_close_blobs_within_sorted_array, 
-                    args=(blobs_ol, BLOB_COORD_SLICE, tol, blobs_ol_next)))
+                    args=(blobs_ol, tol, blobs_ol_next)))
             
             # collect all the pruned blob lists
             blobs_all_ol = None
@@ -1429,8 +1427,7 @@ def process_stack(roi, overlap, tol, channels, roi_offset):
         
         # older pruning method than multiprocessing version
         segments_all, pruning_time = _prune_blobs(
-            seg_rois, BLOB_COORD_SLICE, overlap, tol, sub_rois, 
-            sub_rois_offsets)
+            seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
     
     # benchmarking time
     print("total denoising time (s): {}"

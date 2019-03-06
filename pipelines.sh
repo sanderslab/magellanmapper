@@ -257,6 +257,7 @@ upload_images() {
 
 ####################################
 # Script setup
+START_TIME=$SECONDS
 
 # override pathway settings with user arguments
 OPTIND=1
@@ -625,5 +626,8 @@ if [[ $clean_up -eq 1 ]]; then
   echo "Finishing clean-up tasks, shutting down..."
   sudo poweroff
 fi
+
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+echo "Time elapsed for Clrbrain pipelines script: ${ELAPSED_TIME}s"
 
 exit 0

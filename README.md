@@ -103,13 +103,12 @@ The multi-planar image plotter allows simplified viewing and editing of annotati
 The atlas image must have an associated annotation image. Use the `--labels` flage to specify a labels `.json` file. Change the `2D plot styles` dropdown to `Atlas editor` and press `Plot 2D` to open the editor.
 
 - Mouseover over any label to see the region name
-- `Shift+mouseover` to move the crosshairs and the corresponding planes
+- `Left-click` to move the crosshairs and the corresponding planes
 - Scroll or arrow `up`/`down` to move planes in the current plot
-- `Right-click` or `Ctrl+click` + mouse-up/down to zoom
-- `Middle-click` or `Alt+click` + mouse drag to pan
-- Click on the color you want to extend, then drag onto the area you want to paint with that color
-- `[` (left bracket) to make the paintbrush smaller
-- `]` (right bracket) to make it bigger
+- `Right-click` or `Ctrl+left-click` + mouse-up/down to zoom
+- `Middle-click` or `Shift+left-click` + mouse drag to pan
+- `Alt+left-click` to pick a color, then drag to paint over a new area; add `z` to use the last picked color instead
+- `[`/`]` (brackets) to make the paintbrush smaller/bigger; add `shift` to halve the increment
 - `a` to toggle between 0 and full labels alpha (opacity)
 - `shift+a` to halve alpha (press `a` twice to return to original alpha)
 - Use the save button in the main window with the atlas window still open to resave

@@ -266,30 +266,18 @@ Building SimpleElastix on Windows is more complicated, however, requiring the fo
 
 Clrbrain will default to installing SimpleITK, which may be sufficient if registration tasks are not required.
 
-### International setup
-- If you get a Python locale error, add these lines to your `~/.bash_profile` file:
-```
-export LC_ALL=en_US.UTF-8
-export LANG=en_US.UTF-8
-```
+### Linux
 
-### Sciki-image installation
+#### RHEL
 
-- By default, Clrbrain will use a precompiled Scikit-image package from Pip
-- Clrbrain < v0.6.8 or use of the `scale_factor` microscope profile setting required a custom Scikit-image installation (see [develop branch of fork](https://github.com/the4thchild/scikit-image/tree/develop)) with compilation:
-  - If you continue getting errors during Scikit-image compilation, delete the folder and restart its compilation from scratch
-  - After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
+- An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04
+- PyQt5 5.12 gives an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
+
 
 ### Mayavi installation
 
 - As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error; use RDP or an X11 forwarding instead
 - As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
-
-### Windowing responsiveness
-
-- Controls (eg buttons, dropdowns) fail to update on PyQt5 5.10.1 on MacOS 10.10 until switching to another window and back again
-- Workaround is to `pip uninstall PyQT5` and `conda install pyqt` to get PyQt 5.6.0 instead
-- Some text may not update in PyQT 5.10.1 on later Mac versions until switching windows
 
 ### Image Stitching
 
@@ -312,6 +300,28 @@ export LANG=en_US.UTF-8
  - Run the global optimizer again with two round and metadata fallback
  - If necessary, right-click in the Stitching Explorer to access the `Arrange views > Manually translate views` tool to move specific tiles
 
+### International setup
+- If you get a Python locale error, add these lines to your `~/.bash_profile` file:
+```
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+```
+
 ### Additional tips
 
 - If you get an `syntax error near unexpected token (` error, the run script may have been formatted incorrectly, eg through the Mac Text Editor program. Try `dos2unix [runclrbrain.sh]` (replace with your run script filename) or re-copying from `runclrbrain.sh`.
+
+## Obsolete Issues
+
+### Sciki-image installation
+
+- By default, Clrbrain will use a precompiled Scikit-image package from Pip
+- Clrbrain < v0.6.8 or use of the `scale_factor` microscope profile setting required a custom Scikit-image installation (see [develop branch of fork](https://github.com/the4thchild/scikit-image/tree/develop)) with compilation:
+  - If you continue getting errors during Scikit-image compilation, delete the folder and restart its compilation from scratch
+  - After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
+
+### Windowing responsiveness
+
+- Controls (eg buttons, dropdowns) fail to update on PyQt5 5.10.1 on MacOS 10.10 until switching to another window and back again
+- Workaround was to `pip uninstall PyQT5` and `conda install pyqt` to get the previously tested working PyQt version, 5.6.0, instead; newer versions such as 5.11.3 also work
+- Some text may not update in PyQT 5.10.1 on later Mac versions until switching windows

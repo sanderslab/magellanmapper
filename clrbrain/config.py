@@ -426,6 +426,15 @@ process_settings = ProcessSettings()
 process_settings_list = [process_settings]
 
 def get_process_settings(i):
+    """Get the microscope profile for the given channel.
+    
+    Args:
+        i: Index, typically a channel number.
+    
+    Returns:
+        The profile settings for corresponding to the given channel number, 
+        or the default profile if only one is available.
+    """
     settings = process_settings
     if len(process_settings_list) > i:
         settings = process_settings_list[i]

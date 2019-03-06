@@ -502,18 +502,23 @@ def main(process_args_only=False):
     parser.add_argument("--no_scale_bar", action="store_true")
     args = parser.parse_args()
     
-    # set image file path and convert to basis for additional paths
     if args.img is not None:
+        # set image file path and convert to basis for additional paths
         config.filenames = args.img
         config.filename = config.filenames[0]
         print("Set filenames to {}, current filename {}"
               .format(config.filenames, config.filename))
     
     if args.channel is not None:
+        # set the channel; currently supports a single channel or -1 for all
+        # TODO: consider allowing array to support multiple but not 
+        # necessarily all channels; would need to match num of profiles and 
+        # index based on order channels
         config.channel = args.channel
         if config.channel == -1:
             config.channel = None
         print("Set channel to {}".format(config.channel))
+    
     series_list = [config.series] # list of series
     if args.series is not None:
         series_split = args.series.split(",")

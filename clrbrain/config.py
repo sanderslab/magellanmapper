@@ -659,7 +659,7 @@ def update_register_settings(settings, settings_type):
             {"target_size": (278, 581, 370),
              "resize_factor": None, # turn off resizing
              "labels_mirror": 0.525, 
-             "labels_edge": 0.137, 
+             "labels_edge": 0.137, # to use the smallest BG
              "expand_labels": (((None, ), (0, 279), (103, 108)),), 
              "rotate": ((1.5, 1), (2, 2)),
              "smooth": 4

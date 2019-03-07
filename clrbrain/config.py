@@ -766,7 +766,8 @@ def update_register_settings(settings, settings_type):
              "expand_labels": None, 
              "rotate": None, 
              "affine": None,
-             "smooth": None
+             "smooth": None, 
+             "crop_to_labels": False, 
             }, 
             profile)
         

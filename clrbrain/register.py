@@ -860,6 +860,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     tot_pxs_reduced = 0
     tot_pxs_expanded = 0
     tot_size = 0
+    tot_sa_to_vol_abs = 0
     tot_sa_to_vol_ratio = 0
     padding = 2 if filter_size is None else 2 * filter_size
     pxs = {}
@@ -956,6 +957,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             sa_to_vol_smoothed = 0
             if vol_smoothed > 0:
                 sa_to_vol_smoothed = np.sum(borders_smoothed) / vol_smoothed
+            tot_sa_to_vol_abs += sa_to_vol_smoothed * size_orig
             sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
             tot_sa_to_vol_ratio += sa_to_vol_ratio * size_orig
             pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
@@ -967,11 +969,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         vals = (label_id, pxs_reduced, pxs_expanded, size_orig)
         for col, val in zip(cols, vals):
             pxs.setdefault(col, []).append(val)
-        print("pxs_reduced: {}, pxs_expanded: {}, metric: {}"
+        print("pxs_reduced: {}, pxs_expanded: {}, smoothing quality: {}"
               .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
     metrics = {"compacted": 0, "displaced": 0, "smoothing_quality": 0, 
-               "roughness": 0, "roughness_sm": 0, "SA_to_vol": 0, 
-               "label_loss": 0}
+               "roughness": 0, "roughness_sm": 0, "SA_to_vol_abs": 0, 
+               "SA_to_vol": 0, "label_loss": 0}
     if tot_size > 0:
         # normalize to total original label foreground
         frac_reduced = tot_pxs_reduced / tot_size
@@ -983,6 +985,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
+        tot_sa_to_vol_abs /= tot_size
+        metrics["SA_to_vol_abs"] = tot_sa_to_vol_abs
         tot_sa_to_vol_ratio /= tot_size
         metrics["SA_to_vol"] = tot_sa_to_vol_ratio
         metrics["roughness"] = roughs_metric[0]

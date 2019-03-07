@@ -77,7 +77,8 @@ fi
 build_dir="$BUILD_DIR_BASE"
 if [[ $install_wrapper -ne 1 ]] || [[ ! -e "${build_dir}/${PKG}" ]]; then
     # backup old build directory if necessary and create a new one
-    backup_dir "$build_dir"
+    backup_file "$build_dir"
+    mkdir "$build_dir"
     cd "$build_dir"
     pwd
     

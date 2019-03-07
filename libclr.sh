@@ -4,31 +4,40 @@
 
 
 ############################################
-# Backup old directory if necessary and create a new one.
+# Backup a file or directory if necessary.
 # Globals:
 #   NONE
 # Arguments:
-#   1: Path of directory to back up. The backed up directory will have the 
-#      same name with the next available integer in parentheses appended. 
-#      After backup, an emptry directory at the original location will be made.
+#   1: Path of file/directory to back up. The backed up file will have the 
+#      same name with the next available integer in parentheses appended, 
+#      either at the end of the filename for directories or before the 
+#      extension otherwise.
 # Returns:
 #   NONE
 ############################################
-backup_dir() {
-  curr_dir="$1"
-  if [[ -e "$curr_dir" ]]; then
-    curr_dir_last="${1}(1)"
-    i=2
-    while [ -e "$curr_dir_last" ]; do
+backup_file() {
+  local curr_path="$1"
+  local base="$curr_path"
+  local ext=""
+  if [[ ! -d "$curr_path" ]]; then
+    # split into before and after extension
+    base="${curr_path%.*}"
+    if [[ "$base" != "$curr_path" ]]; then
+      ext=".${curr_path##*.}"
+    fi
+  fi
+  echo "$base $ext"
+  if [[ -e "$curr_path" ]]; then
+    local curr_path_last="${base}(1)${ext}"
+    local i=2
+    while [ -e "$curr_path_last" ]; do
       # increment 
-      curr_dir_last="$1("$i")"
+      curr_path_last="${base}("$i")${ext}"
       let i++
     done
-    mv "$curr_dir" "$curr_dir_last"
-    echo "Backed up directory to $curr_dir_last"
+    mv "$curr_path" "$curr_path_last"
+    echo "Backed up directory to $curr_path_last"
   fi
-  mkdir "$curr_dir"
-  echo "Created directory: $curr_dir"
 }
 
 ############################################

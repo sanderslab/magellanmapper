@@ -783,9 +783,15 @@ def update_register_settings(settings, settings_type):
             {"marker_erosion": None}, 
             profile)
         
+        # turn off cropping atlas to extent of labels
+        settings.add_modifier(
+            "nocropatlas", 
+            {"crop_to_labels": False}, 
+            profile)
+        
         # turn off cropping labels to original size
         settings.add_modifier(
-            "nocrop", 
+            "nocroplabels", 
             {"crop_to_orig": False}, 
             profile)
         

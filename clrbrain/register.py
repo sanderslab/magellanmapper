@@ -96,15 +96,15 @@ MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
 
-SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "area_displvol")
+SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "compactness")
 _SIGNAL_THRESHOLD = 0.01
 
 # smoothing metrics
 SmoothingMetrics = Enum(
     "SmoothingMetrics", [
-        "compacted", "displaced", "smoothing_quality", "roughness", 
-        "roughness_sm", "SA_to_vol_abs", "SA_to_vol", "label_loss", 
-        "filter_size", 
+        "compacted", "displaced", "smoothing_quality", "compactness", 
+        "displacement", "roughness", "roughness_sm", "SA_to_vol_abs", 
+        "SA_to_vol", "label_loss", "filter_size", 
     ]
 )
 
@@ -781,6 +781,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     while the displacement penalty is measured by the distance transform 
     of the smoothed border from the original border.
     
+    ``compactness``: Similar to ``area``, but use the formal compactness 
+    measurement.
+    
     Args:
         original_img_np: Unsmoothed labels image as Numpy array.
         smoothing_img_np: Smoothed labels image as Numpy array, which 
@@ -800,13 +803,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             in a separate, multichannel image; defaults to False.
     
     Returns:
-        Tuple of ``borders_img_np``, a Numpy array of the same same as 
+        Tuple of a borders image, a Numpy array of the same same as 
         ``original_img_np`` except with an additional channel dimension at 
         the end, where channel 0 contains the broad borders of the 
         original image's labels, and channel 1 is that of the smoothed image, 
-        or None if ``save_borders`` is False; 
-        ``tot_metric``, the smoothing metric as a float value; and 
-        ``pd``, the metric components as a Pandas data frame.
+        or None if ``save_borders`` is False; a data frame of the 
+        smoothing metrics; and another data frame of the raw metric 
+        components.
     """
     start_time = time()
     
@@ -868,8 +871,10 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             rough_img_np[tuple(slices)], borders.astype(np.int8))
         return label_mask_region, borders
     
-    tot_pxs_reduced = 0 # compaction
-    tot_pxs_expanded = 0 # displacement
+    tot_compactness = 0 # absolute compactness
+    tot_displacement = 0 # absolute displacement
+    tot_pxs_reduced = 0 # weighted frac compacted by smoothing
+    tot_pxs_expanded = 0 # weighted displacement by smoothing
     tot_size = 0
     tot_sa_to_vol_abs = 0
     tot_sa_to_vol_ratio = 0
@@ -878,6 +883,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     cols = ("label_id", "pxs_reduced", "pxs_expanded", "size_orig")
     for label_id in label_ids:
         # calculate metric for each label
+        if label_id == 0: continue
         print("finding border for {}".format(label_id))
         
         # use bounding box that fits around label in both original and 
@@ -914,12 +920,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             mask_smoothed, borders_smoothed = surface_area(
                 smoothed_img_np, slices, label_id, roughs[1])
             
-            # reduction in compactness, multiplied by orig SA for wt avg
-            size_orig = np.sum(borders_orig)
+            # reduction in compactness, multiplied by orig vol for wt avg
+            size_orig = np.sum(mask_orig)
             tot_size += size_orig
             compactness_orig = plot_3d.compactness(borders_orig, mask_orig)
             compactness_smoothed = plot_3d.compactness(
                 borders_smoothed, mask_smoothed)
+            tot_compactness += compactness_smoothed * size_orig
             pxs.setdefault("compactness_orig", []).append(compactness_orig)
             pxs.setdefault("compactness_smoothed", []).append(
                 compactness_smoothed)
@@ -960,9 +967,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 # SA, so this sum can be treated as a vol
                 dist_wt = np.sum(dist_to_orig)
             
-            # normalize displacement by tot vol for a unitless frac, also 
-            # multiplying by orig SA for wt avg
-            pxs_expanded = dist_wt / np.sum(mask_orig) * size_orig
+            # displacement: for pxs_expanded to compare with pxs_reduced, 
+            # would normalize by vol to make unitless and weight by vol, 
+            # but vols cancel
+            pxs_expanded = dist_wt
+            tot_displacement += pxs_expanded * size_orig
             
             # SA:vol metrics, including ratio of SA:vol ratios
             sa_to_vol_orig = np.sum(borders_orig) / np.sum(mask_orig)
@@ -994,6 +1003,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         metrics[SmoothingMetrics.displaced] = [frac_expanded]
         metrics[SmoothingMetrics.smoothing_quality] = [
             frac_reduced - frac_expanded]
+        metrics[SmoothingMetrics.compactness] = [tot_compactness / tot_size]
+        metrics[SmoothingMetrics.displacement] = [tot_displacement / tot_size]
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]

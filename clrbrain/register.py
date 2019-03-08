@@ -936,14 +936,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                     radial_diff = plot_3d.radial_dist_diff(
                         radial_dist_orig, radial_dist_smoothed, indices)
                     dist_to_orig = np.abs(radial_diff)
-                '''
-                # take square root of distances, first rounding numbers between 
-                # 0-1 in case of Gaussian filtering to avoid inflating numbers
-                mask = np.logical_and(
-                    np.greater(dist_to_orig, 0), np.less(dist_to_orig, 1))
-                dist_to_orig[mask] = np.round(dist_to_orig[mask])
-                dist_to_orig = np.sqrt(dist_to_orig)
-                '''
                 # SA weighted by distance is essentially the integral of the 
                 # SA, so this sum can be treated as a vol
                 dist_wt = np.sum(dist_to_orig)
@@ -1311,6 +1303,7 @@ def import_atlas(atlas_dir, show=True):
         # defer DSC until after processing
         cond = "extended" 
     
+    # match atlas and labels to one another
     img_atlas, img_labels, img_borders = match_atlas_labels(
         img_atlas, img_labels)
     

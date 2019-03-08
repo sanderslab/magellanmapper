@@ -8,6 +8,7 @@ Attributes:
 import copy
 import csv
 from collections import OrderedDict
+from enum import Enum
 import os
 import numpy as np
 import pandas as pd
@@ -460,7 +461,8 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None):
     """Import dictionary to data frame, with option to export to CSV.
     
     Args:
-        dict_import: Dictionary to import.
+        dict_import: Dictionary to import. If dictionary keys are enums, 
+            their names will be used instead to shorten column names.
         path: Output path to export data frame to CSV file; defaults to 
             None for no export.
         sort_cols: Column as a string of list of columns by which to sort; 
@@ -470,9 +472,19 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None):
         The imported data frame.
     """
     df = pd.DataFrame(dict_import)
+    
+    keys = dict_import.keys()
+    if len(keys) > 0 and isinstance(next(iter(keys)), Enum):
+        # convert enum keys to names of enums
+        cols = {}
+        for key in keys: cols[key] = key.name
+        df.rename(dict_import, columns=cols, inplace=True)
+    
     if sort_cols is not None:
         df = df.sort_values(sort_cols)
+    
     if path:
+        # backup and export to CSV
         lib_clrbrain.backup_file(path)
         df.to_csv(path, index=False, na_rep="NaN")
         print("data frame saved to {}".format(path))

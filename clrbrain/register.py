@@ -41,6 +41,7 @@ outlined here. Each type can be coupled with additional arguments in ``cli``.
 import os
 import copy
 import csv
+from enum import Enum
 import json
 import multiprocessing as mp
 from collections import OrderedDict
@@ -97,6 +98,15 @@ LEFT_SUFFIX = " (L)"
 
 SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "area_displvol")
 _SIGNAL_THRESHOLD = 0.01
+
+# smoothing metrics
+SmoothingMetrics = Enum(
+    "SmoothingMetrics", [
+        "compacted", "displaced", "smoothing_quality", "roughness", 
+        "roughness_sm", "SA_to_vol_abs", "SA_to_vol", "label_loss", 
+        "filter_size", 
+    ]
+)
 
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
@@ -536,23 +546,25 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
         save_borders: True to save borders; defaults to False
     
     Returns:
-        Tuple of ``filter_size``, same as given for reference; ``metric``, 
-        a dictionary of smoothing metrices; and ``borders``, the borders 
-        image.
+        Tuple of ``filter_size``; a data frame of smoothing metrices; 
+        and the borders image.
     """
     smoothing_mode = config.register_settings["smoothing_mode"]
     smooth_labels(img_np, filter_size, smoothing_mode)
-    borders, metric, df_raw = label_smoothing_metric(
+    borders, df_metrics, df_raw = label_smoothing_metric(
         img_np_orig, img_np, save_borders=save_borders)
+    df_metrics[SmoothingMetrics.filter_size.name] = [filter_size]
+    
     # curate back to lightly smoothed foreground of original labels
     crop = config.register_settings["crop_to_orig"]
     _crop_to_orig(img_np_orig, img_np, crop)
+    
     print("\nMeasuring foreground overlap of labels after smoothing:")
     measure_overlap_labels(
         make_labels_fg(sitk.GetImageFromArray(img_np)), 
         make_labels_fg(sitk.GetImageFromArray(img_np_orig)))
     
-    return filter_size, metric, borders
+    return filter_size, df_metrics, borders
 
 def _smoothing_mp(img_np, img_np_orig, filter_sizes, 
                   output_path=None):
@@ -591,15 +603,14 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes,
         pool_results.append(pool.apply_async(
             _smoothing, 
             args=(img_np, img_np_orig, n)))
-    metrics = []
+    dfs = []
     for result in pool_results:
-        filter_size, metric, _ = result.get()
-        metric["filter"] = filter_size
-        metrics.append(metric)
+        filter_size, df_metrics, _ = result.get()
+        dfs.append(df_metrics)
         print("finished smoothing with filter size {}".format(filter_size))
     pool.close()
     pool.join()
-    df = stats.dict_to_data_frame(metrics, output_path, sort_cols="filter")
+    df = stats.data_frames_to_csv(dfs, output_path, sort_cols="filter_size")
     return df
 
 def labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
@@ -973,29 +984,30 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             pxs.setdefault(col, []).append(val)
         print("pxs_reduced: {}, pxs_expanded: {}, smoothing quality: {}"
               .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
-    metrics = {"compacted": 0, "displaced": 0, "smoothing_quality": 0, 
-               "roughness": 0, "roughness_sm": 0, "SA_to_vol_abs": 0, 
-               "SA_to_vol": 0, "label_loss": 0}
+    
+    metrics = dict.fromkeys(SmoothingMetrics, 0)
     if tot_size > 0:
         # normalize to total original label foreground
         frac_reduced = tot_pxs_reduced / tot_size
         frac_expanded = tot_pxs_expanded / tot_size
-        metrics["compacted"] = frac_reduced
-        metrics["displaced"] = frac_expanded
-        metrics["smoothing_quality"] = frac_reduced - frac_expanded
+        metrics[SmoothingMetrics.compacted] = [frac_reduced]
+        metrics[SmoothingMetrics.displaced] = [frac_expanded]
+        metrics[SmoothingMetrics.smoothing_quality] = [
+            frac_reduced - frac_expanded]
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
         tot_sa_to_vol_abs /= tot_size
-        metrics["SA_to_vol_abs"] = tot_sa_to_vol_abs
+        metrics[SmoothingMetrics.SA_to_vol_abs] = [tot_sa_to_vol_abs]
         tot_sa_to_vol_ratio /= tot_size
-        metrics["SA_to_vol"] = tot_sa_to_vol_ratio
-        metrics["roughness"] = roughs_metric[0]
-        metrics["roughness_sm"] = roughs_metric[1]
+        metrics[SmoothingMetrics.SA_to_vol] = [tot_sa_to_vol_ratio]
+        metrics[SmoothingMetrics.roughness] = [roughs_metric[0]]
+        metrics[SmoothingMetrics.roughness_sm] = [roughs_metric[1]]
         num_labels_orig = len(label_ids)
-        metrics["label_loss"] = (
-            num_labels_orig - len(np.unique(smoothed_img_np))) / num_labels_orig
+        metrics[SmoothingMetrics.label_loss] = [
+            (num_labels_orig - len(np.unique(smoothed_img_np))) 
+            / num_labels_orig]
     
     # raw stats
     print()
@@ -1005,11 +1017,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     
     # data frame just for aligned printing but return metrics dict for 
     # concatenating multiple runs
-    df_metrics = pd.DataFrame(metrics, index=[0])
+    df_metrics = stats.dict_to_data_frame(metrics)
     print(df_metrics.to_string(index=False))
     print("\ntime elapsed for smoothing metric (s): {}"
           .format(time() - start_time))
-    return borders_img_np, metrics, df_pxs
+    return borders_img_np, df_metrics, df_pxs
 
 def transpose_img(img_sitk, plane, rotate=False, target_size=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.

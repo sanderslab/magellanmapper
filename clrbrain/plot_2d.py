@@ -1619,7 +1619,7 @@ if __name__ == "__main__":
         title = "{} Label Smoothing".format(
             lib_clrbrain.get_filename_without_ext(config.prefix))
         plot_lines(
-            path, "filter", 
+            path, "filter_size", 
             ("compacted", "displaced", "smoothing_quality", "SA_to_vol", 
              "label_loss"), 
             ("--", "--", "-", ":", ":"), "Smoothing Filter Size", 

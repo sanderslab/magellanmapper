@@ -857,8 +857,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             rough_img_np[tuple(slices)], borders.astype(np.int8))
         return label_mask_region, borders
     
-    tot_pxs_reduced = 0
-    tot_pxs_expanded = 0
+    tot_pxs_reduced = 0 # compaction
+    tot_pxs_expanded = 0 # displacement
     tot_size = 0
     tot_sa_to_vol_abs = 0
     tot_sa_to_vol_ratio = 0
@@ -895,16 +895,25 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             size_orig = np.sum(mask_orig)
             if label_id != 0: tot_size += size_orig
         elif mode in SMOOTHING_METRIC_MODES[1:]:
+            
             # "area": measure surface area
             mask_orig, borders_orig = surface_area(
                 orig_img_np, slices, label_id, roughs[0])
             update_borders_img(borders_orig, slices, label_id, 0)
             mask_smoothed, borders_smoothed = surface_area(
                 smoothed_img_np, slices, label_id, roughs[1])
-            # reduction in surface area (compaction), normalized to orig SA
-            pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
+            
+            # reduction in compactness, multiplied by orig SA for wt avg
             size_orig = np.sum(borders_orig)
             tot_size += size_orig
+            compactness_orig = plot_3d.compactness(borders_orig, mask_orig)
+            compactness_smoothed = plot_3d.compactness(
+                borders_smoothed, mask_smoothed)
+            pxs.setdefault("compactness_orig", []).append(compactness_orig)
+            pxs.setdefault("compactness_smoothed", []).append(
+                compactness_smoothed)
+            pxs_reduced = ((compactness_orig - compactness_smoothed) 
+                           / compactness_orig * size_orig)
             
             if mode == SMOOTHING_METRIC_MODES[3]:
                 # "area_displvol": measure displacement by simple vol expansion
@@ -939,8 +948,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 # SA weighted by distance is essentially the integral of the 
                 # SA, so this sum can be treated as a vol
                 dist_wt = np.sum(dist_to_orig)
-            # normalize weighted displacement by tot vol for a unitless 
-            # fraction and multiply by orig SA to bring back compaction units
+            
+            # normalize displacement by tot vol for a unitless frac, also 
+            # multiplying by orig SA for wt avg
             pxs_expanded = dist_wt / np.sum(mask_orig) * size_orig
             
             # SA:vol metrics, including ratio of SA:vol ratios

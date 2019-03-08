@@ -439,6 +439,27 @@ def exterior_nd(img_np):
     exterior = np.logical_xor(dilated, img_np)
     return exterior
 
+def compactness(mask_borders, mask_object):
+    """Compute the classical compactness, currently supported for 2D or 3D.
+    
+    For 2D, the equation is given by: perimeter^2 / area. 
+    For 3D: area^3 / vol^2.
+    
+    Args:
+        mask_borders: Mask of the borders to find the perimeter (2D) or 
+            surface area (3D).
+        mask_object: Mask of the object to find the area (2D) or 
+            volume (3D). The dimensions of this mask will be used to 
+            determine whether to use the 2D or 3D compactness formula.
+    
+    Returns:
+        Compactness metric value.
+    """
+    # TODO: consider supporting higher dimensions, if available
+    n = 1 if mask_object.ndim == 2 else 2
+    compactness = np.sum(mask_borders) ** (n + 1) / np.sum(mask_object) ** n
+    return compactness
+
 def signed_distance_transform(borders, mask=None, return_indices=False):
     """Signed version of Euclidean distance transform where values within a 
     given mask are considered negative.

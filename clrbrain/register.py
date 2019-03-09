@@ -99,14 +99,19 @@ LEFT_SUFFIX = " (L)"
 SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "compactness")
 _SIGNAL_THRESHOLD = 0.01
 
-# smoothing metrics
-SmoothingMetrics = Enum(
-    "SmoothingMetrics", [
-        "compacted", "displaced", "smoothing_quality", "compactness", 
-        "displacement", "roughness", "roughness_sm", "SA_to_vol_abs", 
-        "SA_to_vol", "label_loss", "filter_size", 
-    ]
-)
+class SmoothingMetrics(Enum):
+    """Smoothing metric enumerations."""
+    COMPACTED = "Compacted"
+    DISPLACED = "Displaced"
+    SM_QUALITY = "Smoothing_quality"
+    COMPACTNESS = "Compactness"
+    DISPLACEMENT = "Displacement"
+    ROUGHNESS = "Roughness"
+    ROUGHNESS_SM = "Roughness_sm"
+    SA_VOL_ABS = "SA_to_vol_abs"
+    SA_VOL = "SA_to_vol"
+    LABEL_LOSS = "Label_loss"
+    FILTER_SIZE = "Filter_size"
 
 def _reg_out_path(file_path, reg_name):
     """Generate a path for a file registered to another file.
@@ -999,24 +1004,23 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         # normalize to total original label foreground
         frac_reduced = tot_pxs_reduced / tot_size
         frac_expanded = tot_pxs_expanded / tot_size
-        metrics[SmoothingMetrics.compacted] = [frac_reduced]
-        metrics[SmoothingMetrics.displaced] = [frac_expanded]
-        metrics[SmoothingMetrics.smoothing_quality] = [
-            frac_reduced - frac_expanded]
-        metrics[SmoothingMetrics.compactness] = [tot_compactness / tot_size]
-        metrics[SmoothingMetrics.displacement] = [tot_displacement / tot_size]
+        metrics[SmoothingMetrics.COMPACTED] = [frac_reduced]
+        metrics[SmoothingMetrics.DISPLACED] = [frac_expanded]
+        metrics[SmoothingMetrics.SM_QUALITY] = [frac_reduced - frac_expanded]
+        metrics[SmoothingMetrics.COMPACTNESS] = [tot_compactness / tot_size]
+        metrics[SmoothingMetrics.DISPLACEMENT] = [tot_displacement / tot_size]
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
         tot_sa_to_vol_abs /= tot_size
-        metrics[SmoothingMetrics.SA_to_vol_abs] = [tot_sa_to_vol_abs]
+        metrics[SmoothingMetrics.SA_VOL_ABS] = [tot_sa_to_vol_abs]
         tot_sa_to_vol_ratio /= tot_size
-        metrics[SmoothingMetrics.SA_to_vol] = [tot_sa_to_vol_ratio]
-        metrics[SmoothingMetrics.roughness] = [roughs_metric[0]]
-        metrics[SmoothingMetrics.roughness_sm] = [roughs_metric[1]]
+        metrics[SmoothingMetrics.SA_VOL] = [tot_sa_to_vol_ratio]
+        metrics[SmoothingMetrics.ROUGHNESS] = [roughs_metric[0]]
+        metrics[SmoothingMetrics.ROUGHNESS_SM] = [roughs_metric[1]]
         num_labels_orig = len(label_ids)
-        metrics[SmoothingMetrics.label_loss] = [
+        metrics[SmoothingMetrics.LABEL_LOSS] = [
             (num_labels_orig - len(np.unique(smoothed_img_np))) 
             / num_labels_orig]
     

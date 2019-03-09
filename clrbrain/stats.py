@@ -477,7 +477,7 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None):
     if len(keys) > 0 and isinstance(next(iter(keys)), Enum):
         # convert enum keys to names of enums
         cols = {}
-        for key in keys: cols[key] = key.name
+        for key in keys: cols[key] = key.value
         df.rename(dict_import, columns=cols, inplace=True)
     
     if sort_cols is not None:

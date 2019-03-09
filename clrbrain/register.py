@@ -1374,11 +1374,16 @@ def import_atlas(atlas_dir, show=True):
     if not orig:
         # measure DSC if processed and prep dict for data frame
         dsc = _measure_overlap_combined_labels(img_atlas, img_labels)
+    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+    thresh_atlas = img_atlas_np > filters.threshold_mean(img_atlas_np)
+    compactness = plot_3d.compactness(
+        plot_3d.perimeter_nd(thresh_atlas), thresh_atlas)
     metrics = {
         AtlasMetrics.SAMPLE: [basename], 
         AtlasMetrics.REGION: "all", 
         AtlasMetrics.CONDITION: cond, 
         AtlasMetrics.DSC_ATLAS_LABELS: [dsc], 
+        SmoothingMetrics.COMPACTNESS: [compactness]
     }
     
     if show:

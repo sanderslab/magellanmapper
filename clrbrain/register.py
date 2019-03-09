@@ -1394,7 +1394,9 @@ def import_atlas(atlas_dir, show=True):
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
     importer.save_np_image(img_ref_np, name_prefix, 0)
-    stats.dict_to_data_frame(metrics, df_path)
+    
+    print("\nImported {} whole atlas stats:".format(basename))
+    stats.dict_to_data_frame(metrics, df_path, show=True)
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 

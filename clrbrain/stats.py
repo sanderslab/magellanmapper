@@ -457,7 +457,7 @@ def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
         df_pivoted.to_csv(df_path, na_rep="NaN")
     return dfs
 
-def dict_to_data_frame(dict_import, path=None, sort_cols=None):
+def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=False):
     """Import dictionary to data frame, with option to export to CSV.
     
     Args:
@@ -467,6 +467,7 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None):
             None for no export.
         sort_cols: Column as a string of list of columns by which to sort; 
             defaults to None for no sorting.
+        show: True to print the data frame; defaults to False.
     
     Returns:
         The imported data frame.
@@ -482,6 +483,9 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None):
     
     if sort_cols is not None:
         df = df.sort_values(sort_cols)
+    
+    if show:
+        print(df.to_csv(sep="\t", index=False, na_rep="NaN"))
     
     if path:
         # backup and export to CSV

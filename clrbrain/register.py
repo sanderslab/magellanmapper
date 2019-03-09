@@ -99,6 +99,13 @@ LEFT_SUFFIX = " (L)"
 SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "compactness")
 _SIGNAL_THRESHOLD = 0.01
 
+class AtlasMetrics(Enum):
+    """General atlas metric enumerations."""
+    SAMPLE = "Sample"
+    REGION = "Region"
+    CONDITION = "Condition"
+    DSC_ATLAS_LABELS = "DSC_atlas_labels"
+
 class SmoothingMetrics(Enum):
     """Smoothing metric enumerations."""
     COMPACTED = "Compacted"
@@ -1363,11 +1370,16 @@ def import_atlas(atlas_dir, show=True):
     df_path = os.path.join(target_dir, basename) + "_stats_dsc.csv"
     name_prefix = os.path.join(target_dir, basename) + ".czi"
     
-    # measure DSC if processed and prep dict for data frame
+    # whole atlas stats
     if not orig:
+        # measure DSC if processed and prep dict for data frame
         dsc = _measure_overlap_combined_labels(img_atlas, img_labels)
-    metrics = {"Sample": [basename], "Region": "all", "Condition": cond, 
-               "DSC_atlas_labels": [dsc]}
+    metrics = {
+        AtlasMetrics.SAMPLE: [basename], 
+        AtlasMetrics.REGION: "all", 
+        AtlasMetrics.CONDITION: cond, 
+        AtlasMetrics.DSC_ATLAS_LABELS: [dsc], 
+    }
     
     if show:
        sitk.Show(img_atlas)

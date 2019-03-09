@@ -578,8 +578,7 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     
     return filter_size, df_metrics, borders
 
-def _smoothing_mp(img_np, img_np_orig, filter_sizes, 
-                  output_path=None):
+def _smoothing_mp(img_np, img_np_orig, filter_sizes, output_path=None):
     """Smooth image and calculate smoothing metric for a list of smoothing 
     strengths.
     

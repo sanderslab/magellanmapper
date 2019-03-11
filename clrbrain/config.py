@@ -237,7 +237,7 @@ def update_process_settings(settings, settings_type):
         settings["num_sigma"] = 10
         settings["overlap"] = 0.55
         settings["segment_size"] = 200
-        settings["prune_tol_factor"] = (1, 0.9, 0.9)
+        settings["prune_tol_factor"] = (1, 0.7, 0.7)
         settings["segmenting_mean_thresh"] = -10 # unused since scale factor off
         settings["scale_factor"] = None
         settings["isotropic"] = (0.96, 1, 1)

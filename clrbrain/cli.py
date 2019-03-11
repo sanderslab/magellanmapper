@@ -896,6 +896,13 @@ def process_file(filename_base, offset, roi_size):
             output_info = np.load(filename_info_proc)
             segments_proc = output_info["segments"]
             print("{} segments loaded".format(len(segments_proc)))
+            if config.verbose:
+                # show number of blobs per channel
+                channels = np.unique(detector.get_blobs_channel(segments_proc))
+                for channel in channels:
+                    num_blobs = len(
+                        detector.blobs_in_channel(segments_proc, channel))
+                    print("{} from channel {}".format(num_blobs, int(channel)))
             #print("segments range:\n{}".format(np.max(segments_proc, axis=0)))
             #print("segments:\n{}".format(segments_proc))
             detector.resolutions = output_info["resolutions"]

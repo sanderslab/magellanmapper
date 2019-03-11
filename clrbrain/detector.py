@@ -241,6 +241,9 @@ def update_blob_confirmed(blob, confirmed):
 def get_blob_channel(blob):
     return blob[6]
 
+def get_blobs_channel(blobs):
+    return blobs[:, 6]
+
 def replace_rel_with_abs_blob_coords(blobs):
     blobs[:, :3] = blobs[:, 7:]
     return blobs
@@ -248,7 +251,7 @@ def replace_rel_with_abs_blob_coords(blobs):
 def blobs_in_channel(blobs, channel):
     if channel is None:
         return blobs
-    return blobs[blobs[:, 6] == channel]
+    return blobs[get_blobs_channel(blobs) == channel]
 
 def blob_for_db(blob):
     """Convert segment output from the format used within this module 

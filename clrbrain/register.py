@@ -1379,7 +1379,7 @@ def import_atlas(atlas_dir, show=True):
         plot_3d.perimeter_nd(thresh_atlas), thresh_atlas)
     metrics = {
         AtlasMetrics.SAMPLE: [basename], 
-        AtlasMetrics.REGION: "all", 
+        AtlasMetrics.REGION: config.REGION_ALL, 
         AtlasMetrics.CONDITION: cond, 
         AtlasMetrics.DSC_ATLAS_LABELS: [dsc], 
         SmoothingMetrics.COMPACTNESS: [compactness]
@@ -3215,14 +3215,14 @@ def get_volumes_dict_path(img_path, level):
     
     Args:
         img_path: Path to image file.
-        level: Level; if None, "All" will be substituted.
+        level: Level; if None, :const:``config.REGION_ALL`` will be substituted.
     
     Returns:
         Path to volumes dictionary corresponding to the image at the given 
         level.
     """
     if level is None:
-        level = "All"
+        level = config.REGION_ALL
     return "{}_volumes_level{}.json".format(os.path.splitext(img_path)[0], level)
 
 def open_json(json_path):

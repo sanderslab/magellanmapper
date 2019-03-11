@@ -102,6 +102,7 @@ VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
 SIDE_KEY = "Side"
 GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
+REGION_ALL = "all"
 
 class ABAKeys(Enum):
     """Allen Brain Atlas ontology hierarchy keys.

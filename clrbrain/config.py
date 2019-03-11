@@ -145,6 +145,9 @@ groups = None
 # smoothing metrics
 PATH_SMOOTHING_METRICS = "smoothing.csv"
 
+# whole atlas image import metrics
+PATH_ATLAS_IMPORT_METRICS = "stats.csv"
+
 # common labels
 PATH_COMMON_LABELS = "labels_common.csv"
 

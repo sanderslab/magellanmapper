@@ -123,7 +123,7 @@ RegisterTypes = Enum(
         "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
         "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
         "make_edge_images_exp", "vol_stats", "make_density_images", 
-        "merge_atlas_segs_exp", "make_subsegs"
+        "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
     ]
 )
 register_type = None

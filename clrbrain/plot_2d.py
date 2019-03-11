@@ -55,6 +55,7 @@ _circle_last_picked = []
 _CUT = "cut"
 _COPY = "copy"
 
+# segment colors based on confirmation status
 segs_color_dict = {
     -1: "none",
     0: "r",
@@ -62,18 +63,29 @@ segs_color_dict = {
     2: "y"
 }
 
+# face colors for truth flags
 truth_color_dict = {
     -1: None,
     0: "m",
     1: "b"
 }
 
+# edge colors based on channel
 edgecolor_dict = {
     0: "w",
     1: "c",
     2: "y",
     3: "m",
     4: "g"
+}
+
+# segment line styles based on channel
+_SEG_LINESTYLES = {
+    0: ":",
+    1: "-.",
+    2: "--",
+    3: (0, (3, 5, 1, 5, 1, 5)), 
+    4: "-",
 }
 
 class DraggableCircle:
@@ -286,8 +298,11 @@ def _plot_circle(ax, segment, linewidth, linestyle, fn_update_seg,
     Returns:
         The DraggableCircle object.
     """
+    channel = detector.get_blob_channel(segment)
     facecolor = segs_color_dict[detector.get_blob_confirmed(segment)]
-    edgecolor = edgecolor_dict[detector.get_blob_channel(segment)]
+    edgecolor = edgecolor_dict[channel]
+    if linestyle is None:
+        linestyle = _SEG_LINESTYLES[channel]
     circle = patches.Circle(
         (segment[2], segment[1]), radius=_get_radius(segment), 
         edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth, 
@@ -503,7 +518,7 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
                     # show pickable circles
                     for seg in segments_z:
                         _plot_circle(
-                            ax, seg, SEG_LINEWIDTH, ":", fn_update_seg)
+                            ax, seg, SEG_LINEWIDTH, None, fn_update_seg)
             
             # shows truth blobs as small, solid circles
             if blobs_truth is not None:
@@ -1025,7 +1040,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
                     detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
                     seg_new = fn_update_seg(seg_new)
                 _plot_circle(
-                    ax, seg_new, SEG_LINEWIDTH, ":", fn_update_seg)
+                    ax, seg_new, SEG_LINEWIDTH, None, fn_update_seg)
            
         fig.canvas.mpl_connect("button_release_event", on_btn_release)
         # reset circles window flag

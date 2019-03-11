@@ -4090,6 +4090,22 @@ if __name__ == "__main__":
             config.filenames[1], "smcompactness", ext="csv")
         stats.data_frames_to_csv(df_smoothing_sm, output_path)
     
+    elif reg is config.RegisterTypes.plot_smoothing_metrics:
+        # plot smoothing metrics
+        path = lib_clrbrain.combine_paths(
+            config.filename, config.PATH_SMOOTHING_METRICS)
+        title = "{} Label Smoothing".format(
+            lib_clrbrain.get_filename_without_ext(config.filename))
+        plot_2d.plot_lines(
+            path, SmoothingMetrics.FILTER_SIZE.value, 
+            (SmoothingMetrics.COMPACTED.value, 
+             SmoothingMetrics.DISPLACED.value, 
+             SmoothingMetrics.SM_QUALITY.value, 
+             SmoothingMetrics.SA_VOL.value, 
+             SmoothingMetrics.LABEL_LOSS.value), 
+            ("--", "--", "-", ":", ":"), "Smoothing Filter Size", 
+            "Fractional Change", title, not config.no_show)
+    
     elif reg in (
         config.RegisterTypes.make_edge_images, 
         config.RegisterTypes.make_edge_images_exp):

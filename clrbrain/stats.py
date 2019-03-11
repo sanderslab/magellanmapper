@@ -498,7 +498,8 @@ def data_frames_to_csv(data_frames, path, sort_cols=None):
     """Combine and export multiple data frames to CSV file.
     
     Args:
-        data_frames: List of data frames to concatenate.
+        data_frames: List of data frames to concatenate, or a single 
+            ``DataFrame``.
         path: Output path.
         sort_cols: Column as a string of list of columns by which to sort; 
             defaults to None for no sorting.
@@ -508,7 +509,9 @@ def data_frames_to_csv(data_frames, path, sort_cols=None):
     """
     ext = ".csv"
     if not path.endswith(ext): path += ext
-    combined = pd.concat(data_frames)
+    combined = data_frames
+    if not isinstance(data_frames, pd.DataFrame):
+        combined = pd.concat(combined)
     if sort_cols is not None:
         combined = combined.sort_values(sort_cols)
     lib_clrbrain.backup_file(path)

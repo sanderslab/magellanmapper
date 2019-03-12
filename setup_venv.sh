@@ -101,6 +101,7 @@ check="$(check_python python 3 8)"
 
 
 # check for Python availability
+py_ver_min=(3 6)
 py_vers=(3.7 3.6)
 for ver in ${py_vers[@]}; do
   # prioritize specific versions in case "python" points to lower version
@@ -112,15 +113,14 @@ done
 if [[ -z "$python" ]]; then
   # fallback to checking "python" along with version number
   if command -v python &> /dev/null; then
-    if $(check_python python 3 6); then
+    if $(check_python python ${py_ver_min[@]}); then
       python=python
-    else
-      echo "Python is below required version (3.6)"
     fi
-  else
-    echo "Please install Python (version 3.6+)"
   fi
-  exit 1
+  if [[ -z "$python" ]]; then
+    echo "Please install Python >= version ${py_ver_min[0]}.${py_ver_min[1]}"
+    exit 1
+  fi
 fi
 echo "Found $python"
 

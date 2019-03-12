@@ -870,13 +870,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             rough_img_np[tuple(slices)], borders.astype(np.int8))
         return label_mask_region, borders
     
-    tot_compactness = 0 # absolute compactness
-    tot_displacement = 0 # absolute displacement
-    tot_pxs_reduced = 0 # weighted frac compacted by smoothing
-    tot_pxs_expanded = 0 # weighted displacement by smoothing
-    tot_size = 0
-    tot_sa_to_vol_abs = 0
-    tot_sa_to_vol_ratio = 0
     padding = 2 if filter_size is None else 2 * filter_size
     pxs = {}
     cols = ("label_id", "pxs_reduced", "pxs_expanded", "size_orig")
@@ -932,13 +925,11 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 compactness_orig = plot_3d.compactness(borders_orig, mask_orig)
                 compactness_smoothed = plot_3d.compactness(
                     borders_smoothed, mask_smoothed)
-                tot_compactness += compactness_smoothed * size_orig
                 pxs.setdefault("compactness_orig", []).append(compactness_orig)
                 pxs.setdefault("compactness_smoothed", []).append(
                     compactness_smoothed)
                 pxs_reduced = ((compactness_orig - compactness_smoothed) 
-                               / compactness_orig * size_orig)
-            tot_size += size_orig
+                               / compactness_orig)
             
             # displacement
             if mode in SMOOTHING_METRIC_MODES[3:]:
@@ -975,15 +966,15 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 # SA, so this sum can be treated as a vol
                 displ = np.sum(dist_to_orig)
             
+            pxs.setdefault("displacement", []).append(displ)
             if mode == SMOOTHING_METRIC_MODES[1:4]:
                 # normalize weighted displacement by tot vol for a unitless 
-                # fraction and multiply by orig SA to bring back compaction units
-                pxs_expanded = displ / np.sum(mask_orig) * size_orig
+                # fraction; will later multiply by orig SA to bring back 
+                # to compaction units
+                pxs_expanded = displ / np.sum(mask_orig)
             elif mode == SMOOTHING_METRIC_MODES[4]:
-                # for pxs_expanded to compare with pxs_reduced, would normalize 
-                # by vol to make unitless and weight by vol, but vols cancel
-                pxs_expanded = displ
-            tot_displacement += pxs_expanded * size_orig
+                # fraction of displaced volume
+                pxs_expanded = displ / size_orig
             
             # SA:vol metrics, including ratio of SA:vol ratios
             sa_to_vol_orig = np.sum(borders_orig) / np.sum(mask_orig)
@@ -991,46 +982,50 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             sa_to_vol_smoothed = 0
             if vol_smoothed > 0:
                 sa_to_vol_smoothed = np.sum(borders_smoothed) / vol_smoothed
-            tot_sa_to_vol_abs += sa_to_vol_smoothed * size_orig
             sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
-            tot_sa_to_vol_ratio += sa_to_vol_ratio * size_orig
             pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
             pxs.setdefault("SA_to_vol_smoothed", []).append(sa_to_vol_smoothed)
             pxs.setdefault("SA_to_vol_ratio", []).append(sa_to_vol_ratio)
         
-        tot_pxs_reduced += pxs_reduced
-        tot_pxs_expanded += pxs_expanded
         vals = (label_id, pxs_reduced, pxs_expanded, size_orig)
         for col, val in zip(cols, vals):
             pxs.setdefault(col, []).append(val)
         print("pxs_reduced: {}, pxs_expanded: {}, smoothing quality: {}"
               .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
     
-    metrics = dict.fromkeys(SmoothingMetrics, 0)
+    totals = {}
+    for key in pxs.keys():
+        if key == "label_id": continue
+        vals = pxs[key]
+        if key != "size_orig": vals = np.multiply(vals, pxs["size_orig"])
+        totals[key] = np.nansum(vals)
+    
+    metrics = dict.fromkeys(SmoothingMetrics, np.nan)
+    tot_size = totals["size_orig"]
     if tot_size > 0:
-        # normalize to total original label foreground
-        frac_reduced = tot_pxs_reduced / tot_size
-        frac_expanded = tot_pxs_expanded / tot_size
+        frac_reduced =  totals["pxs_reduced"] / tot_size
+        frac_expanded =  totals["pxs_expanded"] / tot_size
         metrics[SmoothingMetrics.COMPACTED] = [frac_reduced]
         metrics[SmoothingMetrics.DISPLACED] = [frac_expanded]
         metrics[SmoothingMetrics.SM_QUALITY] = [frac_reduced - frac_expanded]
-        metrics[SmoothingMetrics.COMPACTNESS] = [tot_compactness / tot_size]
-        metrics[SmoothingMetrics.DISPLACEMENT] = [tot_displacement / tot_size]
+        metrics[SmoothingMetrics.COMPACTNESS] = [
+            totals["compactness_smoothed"] / tot_size]
+        metrics[SmoothingMetrics.DISPLACEMENT] = [
+            totals["displacement"] / tot_size]
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
-        tot_sa_to_vol_abs /= tot_size
-        metrics[SmoothingMetrics.SA_VOL_ABS] = [tot_sa_to_vol_abs]
-        tot_sa_to_vol_ratio /= tot_size
-        metrics[SmoothingMetrics.SA_VOL] = [tot_sa_to_vol_ratio]
+        metrics[SmoothingMetrics.SA_VOL_ABS] = [
+            totals["SA_to_vol_smoothed"] / tot_size]
+        metrics[SmoothingMetrics.SA_VOL] = [
+            totals["SA_to_vol_ratio"] / tot_size]
         metrics[SmoothingMetrics.ROUGHNESS] = [roughs_metric[0]]
         metrics[SmoothingMetrics.ROUGHNESS_SM] = [roughs_metric[1]]
         num_labels_orig = len(label_ids)
         metrics[SmoothingMetrics.LABEL_LOSS] = [
             (num_labels_orig - len(np.unique(smoothed_img_np))) 
             / num_labels_orig]
-    
     # raw stats
     print()
     df_pxs = pd.DataFrame(pxs)
@@ -1039,8 +1034,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     
     # data frame just for aligned printing but return metrics dict for 
     # concatenating multiple runs
-    df_metrics = stats.dict_to_data_frame(metrics)
-    print(df_metrics.to_string(index=False))
+    df_metrics = stats.dict_to_data_frame(metrics, show=True)
     print("\ntime elapsed for smoothing metric (s): {}"
           .format(time() - start_time))
     return borders_img_np, df_metrics, df_pxs

@@ -457,7 +457,10 @@ def compactness(mask_borders, mask_object):
     """
     # TODO: consider supporting higher dimensions, if available
     n = 1 if mask_object.ndim == 2 else 2
-    compactness = np.sum(mask_borders) ** (n + 1) / np.sum(mask_object) ** n
+    # convert to native Python scalars since default Numpy int appears to 
+    # overflow for large sums
+    compactness = (np.sum(mask_borders).item() ** (n + 1) 
+                   / np.sum(mask_object).item() ** n)
     return compactness
 
 def signed_distance_transform(borders, mask=None, return_indices=False):

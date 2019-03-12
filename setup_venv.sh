@@ -17,7 +17,6 @@ Arguments:
 CLR_ENV="clr"
 env_name="$CLR_ENV"
 venv_dir="../venvs"
-python="python"
 
 build_simple_elastix=0
 deps_check=1
@@ -98,28 +97,33 @@ if [[ $deps_check -eq 1 ]]; then
     fi
   fi
 fi
+check="$(check_python python 3 8)"
+
 
 # check for Python availability
-if command -v "python" &> /dev/null; then
-  echo "Python found..."
-elif command -v "python3" &> /dev/null; then
-  echo "Python found at python3..."
-  python="python3"
-else
-  echo "Please install Python (version 3.6+)"
+py_vers=(3.7 3.6)
+for ver in ${py_vers[@]}; do
+  # prioritize specific versions in case "python" points to lower version
+  if command -v python$ver &> /dev/null; then
+    python=python$ver
+    break
+  fi
+done
+if [[ -z "$python" ]]; then
+  # fallback to checking "python" along with version number
+  if command -v python &> /dev/null; then
+    if $(check_python python 3 6); then
+      python=python
+    else
+      echo "Python is below required version (3.6)"
+    fi
+  else
+    echo "Please install Python (version 3.6+)"
+  fi
   exit 1
 fi
+echo "Found $python"
 
-py_ver="$("$python" -V 2>&1)"
-py_ver="${py_ver#* }"
-py_ver_maj="${py_ver%%.*}"
-py_ver_rest="${py_ver#*.}"
-py_ver_min="${py_ver_rest%%.*}"
-
-if [[ $py_ver_maj -lt 3 || $py_ver_min -lt 6 ]]; then
-  echo "Please install Python >= 3.6"
-  exit 1
-fi
 
 if [[ ! -d "$venv_dir" ]]; then
   mkdir "$venv_dir"

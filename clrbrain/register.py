@@ -96,7 +96,8 @@ MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
 
-SMOOTHING_METRIC_MODES = ("vol", "area_edt", "area_radial", "compactness")
+SMOOTHING_METRIC_MODES = (
+    "vol", "area_edt", "area_radial", "area_displvol", "compactness")
 _SIGNAL_THRESHOLD = 0.01
 
 class AtlasMetrics(Enum):
@@ -759,7 +760,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
           .format(weighted_size_ratio))
 
 def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None, 
-                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[3], 
+                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[4], 
                            save_borders=False):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
@@ -796,7 +797,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             tolerate more displacement. Defaults to None.
         mode: One of :const:``SMOOTHING_METRIC_MODES`` (see above for 
             description of the modes). Defaults to 
-            :const:``SMOOTHING_METRIC_MODES[3]``
+            :const:``SMOOTHING_METRIC_MODES[4]``
         save_borders: True to save borders of original and smoothed images 
             in a separate, multichannel image; defaults to False.
     
@@ -911,29 +912,38 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             if label_id != 0: tot_size += size_orig
         elif mode in SMOOTHING_METRIC_MODES[1:]:
             
-            # "area": measure surface area
+            # measure surface area for SA:vol and to get vol mask
             mask_orig, borders_orig = surface_area(
                 orig_img_np, slices, label_id, roughs[0])
             update_borders_img(borders_orig, slices, label_id, 0)
             mask_smoothed, borders_smoothed = surface_area(
                 smoothed_img_np, slices, label_id, roughs[1])
             
-            # reduction in compactness, multiplied by orig vol for wt avg
-            size_orig = np.sum(mask_orig)
+            # compaction
+            if mode in SMOOTHING_METRIC_MODES[1:4]:
+                # "area"-based: reduction in surface area (compaction), 
+                # normalized to orig SA
+                pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
+                size_orig = np.sum(borders_orig)
+            elif mode == SMOOTHING_METRIC_MODES[4]:
+                # "compactness": reduction in compactness, multiplied by 
+                # orig vol for wt avg
+                size_orig = np.sum(mask_orig)
+                compactness_orig = plot_3d.compactness(borders_orig, mask_orig)
+                compactness_smoothed = plot_3d.compactness(
+                    borders_smoothed, mask_smoothed)
+                tot_compactness += compactness_smoothed * size_orig
+                pxs.setdefault("compactness_orig", []).append(compactness_orig)
+                pxs.setdefault("compactness_smoothed", []).append(
+                    compactness_smoothed)
+                pxs_reduced = ((compactness_orig - compactness_smoothed) 
+                               / compactness_orig * size_orig)
             tot_size += size_orig
-            compactness_orig = plot_3d.compactness(borders_orig, mask_orig)
-            compactness_smoothed = plot_3d.compactness(
-                borders_smoothed, mask_smoothed)
-            tot_compactness += compactness_smoothed * size_orig
-            pxs.setdefault("compactness_orig", []).append(compactness_orig)
-            pxs.setdefault("compactness_smoothed", []).append(
-                compactness_smoothed)
-            pxs_reduced = ((compactness_orig - compactness_smoothed) 
-                           / compactness_orig * size_orig)
             
-            if mode == SMOOTHING_METRIC_MODES[3]:
-                # "area_displvol": measure displacement by simple vol expansion
-                dist_wt = np.sum(np.logical_and(mask_smoothed, ~mask_orig))
+            # displacement
+            if mode in SMOOTHING_METRIC_MODES[3:]:
+                # measure displacement by simple vol expansion
+                displ = np.sum(np.logical_and(mask_smoothed, ~mask_orig))
             else:
                 # signed distance between borders; option to use filter for 
                 # buffer around irregular borders to offset distances there
@@ -963,12 +973,16 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                     dist_to_orig = np.abs(radial_diff)
                 # SA weighted by distance is essentially the integral of the 
                 # SA, so this sum can be treated as a vol
-                dist_wt = np.sum(dist_to_orig)
+                displ = np.sum(dist_to_orig)
             
-            # displacement: for pxs_expanded to compare with pxs_reduced, 
-            # would normalize by vol to make unitless and weight by vol, 
-            # but vols cancel
-            pxs_expanded = dist_wt
+            if mode == SMOOTHING_METRIC_MODES[1:4]:
+                # normalize weighted displacement by tot vol for a unitless 
+                # fraction and multiply by orig SA to bring back compaction units
+                pxs_expanded = displ / np.sum(mask_orig) * size_orig
+            elif mode == SMOOTHING_METRIC_MODES[4]:
+                # for pxs_expanded to compare with pxs_reduced, would normalize 
+                # by vol to make unitless and weight by vol, but vols cancel
+                pxs_expanded = displ
             tot_displacement += pxs_expanded * size_orig
             
             # SA:vol metrics, including ratio of SA:vol ratios

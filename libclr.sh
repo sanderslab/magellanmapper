@@ -79,7 +79,7 @@ detect_platform() {
     bit="x86_64"
   fi
   readonly bit
-  echo "Found $os platform with $bit bit"
+  echo "found $os platform with $bit bit"
 }
 
 ############################################

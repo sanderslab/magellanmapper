@@ -2279,7 +2279,7 @@ def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
         suffix: Modifier to append to end of ``img_path`` basename for 
             registered image files that were output to a modified name; 
             defaults to None.
-        labels_img_sitk: Lables image as a SimpleITK ``Image`` object; 
+        labels_img_sitk: Labels image as a SimpleITK ``Image`` object; 
             defaults to None, in which case the registered labels image file 
             corresponding to ``img_path`` with any ``suffix`` modifier 
             will be opened.
@@ -2302,7 +2302,6 @@ def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
     info = np.load(filename_base + config.SUFFIX_INFO_PROC)
     blobs = info["segments"]
     print("loading {} blobs".format(len(blobs)))
-    #print("blobs range:\n{}".format(np.max(blobs, axis=0)))
     target_size = config.register_settings["target_size"]
     img_path_transposed = importer.get_transposed_image_path(
         img_path, scale, target_size)
@@ -2311,8 +2310,7 @@ def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
             img_path_transposed, config.series, return_info=True)
         scaling = img_info["scaling"]
     else:
-        # fall back to pixel comparison based on original image, 
-        # but **very slow**
+        # fall back to scaling based on comparison to original image
         image5d = importer.read_file(
             img_path_transposed, config.series)
         scaling = importer.calc_scaling(image5d, labels_img)

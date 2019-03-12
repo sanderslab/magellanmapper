@@ -100,7 +100,7 @@ fi
 check="$(check_python python 3 8)"
 
 
-# check for Python availability
+# check for Python availability and version requirement
 py_ver_min=(3 6)
 py_vers=(3.7 3.6)
 for ver in ${py_vers[@]}; do
@@ -124,18 +124,21 @@ if [[ -z "$python" ]]; then
 fi
 echo "Found $python"
 
-
-if [[ ! -d "$venv_dir" ]]; then
-  mkdir "$venv_dir"
-fi
+# create new virtual environment
 env_path="${venv_dir}/${env_name}"
 if [[ -e "$env_path" ]]; then
+  # prevent environment directory conflict
   echo "$env_path already exists. Please give a different venv directory name."
   exit 1
+fi
+if [[ ! -d "$venv_dir" ]]; then
+  # create directory structure to hold new environment folder
+  mkdir -p "$venv_dir"
 fi
 "$python" -m venv "$env_path"
 env_act="${env_path}/bin/activate"
 if [[ ! -e "$env_act" ]]; then
+  # check to ensure that the environment was actually created
   echo "Could not create new venv environment at $env_path"
   exit 1
 fi

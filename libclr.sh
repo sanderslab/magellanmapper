@@ -1,6 +1,6 @@
 #!/bin/bash
 # Bash library functions for Clrbrain
-# Author: David Young 2018
+# Author: David Young 2018, 2019
 
 
 ############################################
@@ -82,6 +82,25 @@ detect_platform() {
   echo "Found $os platform with $bit bit"
 }
 
+############################################
+# Check Python version.
+# Globals:
+#   NONE
+# Arguments:
+#   1: Python command to get version.
+#   2: Python minimum major version number.
+#   3: Python minimum minor version number.
+# Returns:
+#   True if the Python version meets or excceds the version requirement.
+############################################
+check_python() {
+  local py_ver="$("$1" -V 2>&1)"
+  local py_ver="${py_ver#* }"
+  local py_ver_maj="${py_ver%%.*}"
+  local py_ver_rest="${py_ver#*.}"
+  local py_ver_min="${py_ver_rest%%.*}"
+  [[ $py_ver_maj -ge "$2" && $py_ver_min -ge "$3" ]]
+}
 
 ############################################
 # Suppress all output.

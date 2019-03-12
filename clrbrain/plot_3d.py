@@ -453,14 +453,19 @@ def compactness(mask_borders, mask_object):
             determine whether to use the 2D or 3D compactness formula.
     
     Returns:
-        Compactness metric value.
+        Compactness metric value. If the sum of ``mask_object`` is 0, 
+        return NaN instead.
     """
     # TODO: consider supporting higher dimensions, if available
     n = 1 if mask_object.ndim == 2 else 2
-    # convert to native Python scalars since default Numpy int appears to 
-    # overflow for large sums
-    compactness = (np.sum(mask_borders).item() ** (n + 1) 
-                   / np.sum(mask_object).item() ** n)
+    size_object = np.sum(mask_object).item()
+    if size_object > 0:
+        # convert to native Python scalars since default Numpy int appears to 
+        # overflow for large sums
+        compactness = (np.sum(mask_borders).item() ** (n + 1) 
+                       / size_object ** n)
+    else:
+        compactness = np.nan
     return compactness
 
 def signed_distance_transform(borders, mask=None, return_indices=False):

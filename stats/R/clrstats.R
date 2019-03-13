@@ -1,16 +1,10 @@
 # Clrbrain stats in R
-# Author: David Young, 2018
-
-library("MASS")
-library("gee")
-library("viridis")
-library("RColorBrewer")
+# Author: David Young, 2018, 2019
 
 # library to avoid overlapping text labels
 #install.packages("devtools")
 #library("devtools")
 #install_github("JosephCrispell/addTextLabels")
-library("addTextLabels")
 
 # alternatives for labels overlap, but both still leave some overlap
 #library("plotrix")
@@ -86,7 +80,7 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   } else if (model == kModel[3]) {
     # generalized estimating equations
     # TODO: fix model prob "fitted value very close to 1" error
-    fit <- gee(
+    fit <- gee::gee(
       genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
     coef.tab <- summary(fit)$coefficients
   } else if (model == kModel[4]) {
@@ -94,7 +88,7 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
     vals <- scale(vals)
     genos <- factor(genos, levels=kGenoLevels)
     fit <- tryCatch({
-      fit <- polr(genos ~ vals * sides, Hess=TRUE)
+      fit <- MASS::polr(genos ~ vals * sides, Hess=TRUE)
       coef.tab <- coef(summary(fit))
       # calculate p-vals and incorporate into coefficients
       p.vals <- pnorm(abs(coef.tab[, "t value"]), lower.tail=FALSE) * 2
@@ -537,7 +531,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   plot(NULL, frame.plot=TRUE, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
-  colors <- viridis(num.sides, begin=0.2, end=0.8)
+  colors <- viridis::viridis(num.sides, begin=0.2, end=0.8)
   i <- 1
   for (geno in genos.unique) {
     # plot each group of points
@@ -550,7 +544,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of
       # colors for each set of points
-      if (num.sides > 0) colors <- brewer.pal(length(vals.groups[[1]]), "Paired")
+      if (num.sides > 0) colors <- RColorBrewer::brewer.pal(length(vals.groups[[1]]), "Paired")
     }
     for (side in sides.unique) {
       # plot points, adding jitter in x-direction unless paired
@@ -728,7 +722,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   parents <- stats$Parent
   parents.unique <- unique(parents)
   parents.indices <- match(parents, parents.unique)
-  colors <- viridis(length(parents.unique))
+  colors <- viridis::viridis(length(parents.unique))
   colors_parents <- colors[parents.indices]
   
   # base plot -log p vs effect size
@@ -775,7 +769,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     #text(x.lbl, y.lbl, label=lbls, cex=0.2)
     #thigmophobe.labels(x.lbl, y.lbl, label=lbls, cex=0.2)
     #pointLabel(x.lbl, y.lbl, label=lbls, cex=0.2)
-    addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.5, lwd=0.2)
+    addTextLabels::addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.5, lwd=0.2)
   }
   
   # write to PDF file

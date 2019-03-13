@@ -1,0 +1,14 @@
+Package: clrstats
+Title: Clrbrain R Statistics
+Version: 0.1
+Authors@R: person("David", "Young", email = "dave.young@ucsf.edu",
+                  role = c("aut", "cre"))
+Description: Measure and plot statistics for atlasing.
+Depends: R (>= 3.5.0)
+LazyData: true
+Imports:
+  MASS, 
+  gee, 
+  viridis, 
+  RColorBrewer
+RoxygenNote: 6.1.1

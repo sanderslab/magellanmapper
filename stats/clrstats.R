@@ -22,7 +22,7 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 
 # measurements, which correspond to columns in main data frame
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
-          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels")
+          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness")
 
 # named vector to convert measurement columns to display names
 kMeasNames <- setNames(
@@ -44,7 +44,8 @@ kRegionsIgnore <- c(15564)
 
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
-                   "vols_by_sample_summary.csv", "dsc_summary.csv")
+                   "vols_by_sample_summary.csv", "dsc_summary.csv", 
+                   "compactness_summary.csv")
 kStatsPathOut <- "../vols_stats.csv" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 

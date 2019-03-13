@@ -51,9 +51,6 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   num.groups <- length(genos.unique) * num.sides
   names.groups <- vector(length=num.groups)
   vals <- df.region[[col]]
-  print("vals")
-  print(vals)
-  print(max(vals))
   int.digits <- nchar(trunc(max(vals)))
   vals.groups <- list() # list of vals for each geno-side group
   vals.means <- vector(length=num.groups)

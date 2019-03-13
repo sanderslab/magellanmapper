@@ -561,12 +561,12 @@ runStats <- function() {
   
   # setup configuration environment
   setupConfig()
-  setupConfig("aba")
+  #setupConfig("aba")
   #setupConfig("wide")
   
   # setup measurement and model types
   kStatsPathIn <- file.path("..", kStatsFilesIn[2])
-  meas <- kMeas[4]
+  measurements <- kMeas[6:7]
   model <- kModel[8]
   split.by.side <- TRUE # false to combine sides
   load.stats <- FALSE # true to load saved stats and only regenerate volcano plots
@@ -576,21 +576,24 @@ runStats <- function() {
   if (model == kModel[2]) {
     stat <- "genos"
   }
-  
-  # calculate stats or retrieve from file
   region.ids <- read.csv(kRegionIDsPath)
-  path.out <- paste0(kStatsPathOut, "_", meas, ".csv")
-  if (load.stats && file.exists(kStatsPathOut)) {
-    stats <- read.csv(kStatsPathOut)
-  } else {
-    stats <- calcVolStats(
-      kStatsPathIn, path.out, meas, model, region.ids, 
-      split.by.side=split.by.side, corr="bonferroni")
-  }
   
-  # plot effects and p's
-  volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3))
-  volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
-  # ":" special character automatically changed to "."
-  volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25))
+  for (meas in measurements) {
+    print(paste("Calculating stats for", meas))
+    # calculate stats or retrieve from file
+    path.out <- paste0(kStatsPathOut, "_", meas, ".csv")
+    if (load.stats && file.exists(path.out)) {
+      stats <- read.csv(path.out)
+    } else {
+      stats <- calcVolStats(
+        kStatsPathIn, path.out, meas, model, region.ids, 
+        split.by.side=split.by.side, corr="bonferroni")
+    }
+    
+    # plot effects and p's
+    volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3))
+    volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
+    # ":" special character automatically changed to "."
+    volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25))
+  }
 }

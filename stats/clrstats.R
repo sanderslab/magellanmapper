@@ -310,7 +310,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
     # NaNs and 0's as they indicate that the label for the region was suppressed
     df.region <- df[df$Region == region, ]
     nonzero <- df.region[[col]] > 0 & !is.nan(df.region[[col]])
-    stats$Region[i] <- region
+    stats$Region[i] <- as.character(region)
     
     if (any(nonzero)) {
       cat("\nRegion", region, "\n")
@@ -366,7 +366,12 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       
       # plot individual values grouped by genotype and selected column
       df.jitter <- df.region.nonzero
-      title <- paste0(df.region.nonzero$RegionName[1], " (", region, ")")
+      region.name <- df.region.nonzero$RegionName[1]
+      if (is.na(region.name)) {
+        title <- region
+      } else {
+        title <- paste0(region.name, " (", region, ")")
+      }
       if (!split.by.side) {
         df.jitter <- aggregate(
           cbind(Volume, Nuclei) ~ Sample + Geno, df.jitter, sum)
@@ -808,7 +813,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   }
   
   # merge in region names based on matching IDs
-  df <- merge(df, region.ids, by="Region")
+  df <- merge(df, region.ids, by="Region", all.x=TRUE)
   print.data.frame(df)
   print(str(df)) # show data frame structure
   cat("\n\n")
@@ -822,7 +827,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   stats <- statsByRegion(
     df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore)
   stats.filtered <- filterStats(stats, corr=corr)
-  stats.filtered <- merge(stats.filtered, region.ids, by="Region")
+  stats.filtered <- merge(stats.filtered, region.ids, by="Region", all.x=TRUE)
   print(stats.filtered)
   write.csv(stats.filtered, path.out)
   return(stats.filtered)

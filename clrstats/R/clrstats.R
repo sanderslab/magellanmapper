@@ -36,7 +36,7 @@ kRegionsIgnore <- c(15564)
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
                    "compactness_summary.csv")
-kStatsPathOut <- "../vols_stats.csv" # output stats
+kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
 # hierarchical/ontological ones
@@ -579,11 +579,12 @@ runStats <- function() {
   
   # calculate stats or retrieve from file
   region.ids <- read.csv(kRegionIDsPath)
+  path.out <- paste0(kStatsPathOut, "_", meas, ".csv")
   if (load.stats && file.exists(kStatsPathOut)) {
     stats <- read.csv(kStatsPathOut)
   } else {
     stats <- calcVolStats(
-      kStatsPathIn, kStatsPathOut, meas, model, region.ids, 
+      kStatsPathIn, path.out, meas, model, region.ids, 
       split.by.side=split.by.side, corr="bonferroni")
   }
   

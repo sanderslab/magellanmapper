@@ -505,7 +505,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   } else {
     ylab <- gsub("_", " ", col)
   }
-  if (int.digits >= 6) {
+  if (int.digits >= 5) {
     power <- int.digits - 1
     denom <- 10 ^ power
     ylab <- paste0(ylab, " (10^", power, ")")

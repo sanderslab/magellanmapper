@@ -42,6 +42,9 @@ kStatsPathOut <- "../vols_stats.csv" # output stats
 # hierarchical/ontological ones
 kRegionIDsPath <- "../region_ids.csv"
 
+# configurable environment
+config.env <- new.env()
+
 
 fitModel <- function(model, vals, genos, sides, ids=NULL) {
   # Fit data with the given regression model.
@@ -370,7 +373,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         print(df.jitter)
       }
       stats.group <- jitterPlot(
-        df.jitter, col, title, split.by.side, split.col, paired)
+        df.jitter, col, title, split.by.side, split.col, paired, 
+        config.env$SampleLegend, config.env$PlotSize)
       
       # add mean and CI for each group to stats data frame
       names <- stats.group[[1]]
@@ -530,8 +534,35 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   return(stats.filtered)
 }
 
+setupConfig <- function(name=NULL) {
+  # Setup configuration environment for the given profile.
+  #
+  # Args:
+  #   name: Name of profile to load. Defaults to NULL, which will initialize  
+  #     the environment with default settings.
+  
+  if (is.null(name)) {
+    # initialize environment
+    config.env$PlotSize <- c(5, 7)
+    config.env$SampleLegend <- FALSE
+    
+  } else if (name == "aba") {
+    # multiple distinct atlases
+    config.env$SampleLegend <- TRUE
+    
+  } else if (name == "wide") {
+    # wide plots
+    config.env$PlotSize <- c(7, 7)
+  }
+}
+
 runStats <- function() {
   # Load data and run full stats.
+  
+  # setup configuration environment
+  setupConfig()
+  setupConfig("aba")
+  #setupConfig("wide")
   
   # setup measurement and model types
   kStatsPathIn <- file.path("..", kStatsFilesIn[2])

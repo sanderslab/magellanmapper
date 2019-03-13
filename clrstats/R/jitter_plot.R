@@ -2,7 +2,8 @@
 # Author: David Young, 2018, 2019
 
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
-                       split.col=NULL, paired=FALSE, show.sample.legend=FALSE) {
+                       split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
+                       plot.size=c(5, 7)) {
   # Plot jitter/scatter plots of values by genotype with mean and 95% CI.
   #
   # Args:
@@ -21,6 +22,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #   show.sample.legend: True to show a separate legend of samples for 
   #     each genotype group. Assumes that the number of samples in each 
   #     split group is the same within each genotype. Defaults to FALSE.
+  #   plot.size: Vector of width, height for exported plot; defaults to 
+  #     c(5, 7).
   #
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
@@ -194,7 +197,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   
   # save figure to PDF
   dev.print(
-    pdf, width=7, height=7, 
+    pdf, width=plot.size[1], height=plot.size[2], 
     file=paste0(
       "../plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
   par(par.old)

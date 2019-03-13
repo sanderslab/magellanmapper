@@ -797,7 +797,7 @@ def crop_to_labels(img_labels, img_ref):
     
     Both labels and reference images will be cropped to match the extent of 
     labels with a small padding region. Reference image pixels outside 
-    of a small dilation of the labels maks will be turned to zero.
+    of a small dilation of the labels mask will be turned to zero.
     
     Args:
         img_labels: Labels image as Numpy array.

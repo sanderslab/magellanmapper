@@ -487,7 +487,10 @@ class RegisterSettings(SettingsDict):
         # avoid rotation
         self["rotate"] = None
         
-        self["atlas_threshold"] = 10.0
+        # atlas thresholds for microscopy images
+        self["atlas_threshold"] = 10.0 # raise for finer segmentation
+        self["atlas_threshold_all"] = 10.0 # keep low to include all signal
+        
         self["target_size"] = None # x,y,z in exp orientation
         
         # carving and max size of small holes for removal, respectively
@@ -606,7 +609,8 @@ def update_register_settings(settings, settings_type):
              "labels_mirror": 0.52, 
              "labels_edge": None, 
              "log_atlas_thresh": True, 
-             "atlas_threshold": 75, # to avoid over-extension into ventricles
+             "atlas_threshold": 75, # avoid over-extension into ventricles
+             "atlas_threshold_all": 5, # include ventricles since labeled
              # rotate axis 0 to open vertical gap for affines (esp 2nd)
              "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
              "affine": ({

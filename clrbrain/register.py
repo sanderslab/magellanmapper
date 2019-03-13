@@ -4070,31 +4070,38 @@ if __name__ == "__main__":
         export_common_labels(config.filenames, config.PATH_COMMON_LABELS)
     
     elif reg is config.RegisterTypes.export_metrics_compactness:
-        # export data frame with compactness only for whole histology image 
-        # and unsmoothed labels; 1st config.filenames element should be 
-        # atlas import stats, nad 2nd element should be smoothing stats
+        # export data frame with compactness to compare:
+        # 1) whole histology image and unsmoothed labels
+        # 2) unsmoothed and selected smoothed labels
+        # 1st config.filenames element should be atlas import stats, 
+        # and 2nd element should be smoothing stats
+        
+        # load data frames
         df_stats = pd.read_csv(config.filename) # atlas import stats
-        df_stats_sm = extract_sample_metrics(
-            df_stats, [SmoothingMetrics.COMPACTNESS.value])
         df_smoothing = pd.read_csv(config.filenames[1]) # smoothing stats
-        df_smoothing_sm = df_smoothing.loc[
+        
+        # compare baseline histo vs unsmoothed labels
+        df_stats_base = extract_sample_metrics(
+            df_stats, [SmoothingMetrics.COMPACTNESS.value])
+        df_smoothing_base = df_smoothing.loc[
             df_smoothing[SmoothingMetrics.FILTER_SIZE.value] == 0]
-        df_smoothing_sm = extract_sample_metrics(
-            df_smoothing_sm, [SmoothingMetrics.COMPACTNESS.value])
-        output_path = lib_clrbrain.combine_paths(
-            config.filename, "compactness", ext="csv")
-        stats.data_frames_to_csv([df_stats_sm, df_smoothing_sm], output_path)
-    
-        # export data frame with smoothing qualities only for unsmoothed 
-        # and selected smoothing sizes for the given atlas
+        df_smoothing_base = extract_sample_metrics(
+            df_smoothing_base, [SmoothingMetrics.COMPACTNESS.value])
+        df_baseline = pd.concat([df_stats_base, df_smoothing_base])
+        df_baseline[AtlasMetrics.REGION.value] = "baseline"
+        
+        # compare unsmoothed vs smoothed labels
         smooth = config.register_settings["smooth"]
         df_smoothing_sm = df_smoothing.loc[
             df_smoothing[SmoothingMetrics.FILTER_SIZE.value].isin([0, smooth])]
         df_smoothing_sm = extract_sample_metrics(
             df_smoothing_sm, [SmoothingMetrics.COMPACTNESS.value])
+        df_smoothing_sm[AtlasMetrics.REGION.value] = "smoothing"
+        
+        # export data frames
         output_path = lib_clrbrain.combine_paths(
-            config.filenames[1], "smcompactness", ext="csv")
-        stats.data_frames_to_csv(df_smoothing_sm, output_path)
+            config.filename, "compactness", ext="csv")
+        stats.data_frames_to_csv([df_baseline, df_smoothing_sm], output_path)
     
     elif reg is config.RegisterTypes.plot_smoothing_metrics:
         # plot smoothing metrics

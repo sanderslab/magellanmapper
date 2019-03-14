@@ -1153,6 +1153,7 @@ def process_file(filename_base, offset, roi_size):
         time_pruning_start = time()
         segments_all, df = _prune_blobs_mp(
             seg_rois, overlap, tol, super_rois, super_rois_offsets, channels)
+        print("maxes:", np.amax(segments_all, axis=0))
         
         # combine pruning data frames and get weighted mean of ratios
         dfs.append(df)

@@ -1127,9 +1127,8 @@ def process_file(filename_base, offset, roi_size):
                     print("===============================================\n"
                           "Processing stack {} of {}"
                           .format(coord, np.add(super_rois.shape, -1)))
-                    off = super_rois_offsets[coord]
                     merged, segs, df = process_stack(
-                        roi, overlap, tol, channels, off)
+                        roi, overlap, tol, channels)
                     del merged # TODO: check if helps reduce memory buildup
                     blobs_in = []
                     for axis in range(3):

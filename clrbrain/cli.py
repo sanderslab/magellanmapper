@@ -394,7 +394,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 else:
                     # last non-overlapping region extends to end of region
                     blobs_in_non_ol.append(
-                        blobs[:, axis] < offset_axis + size[axis] + 1)
+                        blobs[:, axis] < offset_axis + size[axis])
                 
                 # get non-overlapping area
                 start = offset_axis

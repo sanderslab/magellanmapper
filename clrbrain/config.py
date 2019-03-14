@@ -221,6 +221,7 @@ class ProcessSettings(SettingsDict):
         self["denoise_size"] = 25 # None turns off preprocessing in stack proc
         self["segment_size"] = 500
         self["prune_tol_factor"] = (1, 1, 1)
+        self["verify_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
         self["scale_factor"] = (1, 1, 1)
         self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
@@ -343,6 +344,7 @@ def update_process_settings(settings, settings_type):
         settings["overlap"] = 0.55
         settings["segment_size"] = 200
         settings["prune_tol_factor"] = (1, 0.9, 0.9)
+        settings["verify_tol_factor"] = (3, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -10 # unused since scale factor off
         settings["scale_factor"] = None
         settings["isotropic"] = (0.96, 1, 1)

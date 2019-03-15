@@ -1,6 +1,6 @@
 #!/bin/bash
 # Colormaps for Clrbrain
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Custom colormaps for Clrbrain.
 """
 
@@ -16,7 +16,7 @@ CMAP_RDBK = colors.LinearSegmentedColormap.from_list(
     config.CMAP_RDBK_NAME, ["black", "red"])
 
 class DiscreteColormap(colors.ListedColormap):
-    '''Extends :class:``matplotlib.colors.ListedColormap`` to generate a 
+    """Extends :class:``matplotlib.colors.ListedColormap`` to generate a 
     discrete colormap and associated normalization object.
     
     Attributes:
@@ -26,10 +26,10 @@ class DiscreteColormap(colors.ListedColormap):
         norm: Normalization object, which is of type 
             :class:``matplotlib.colors.NoNorm`` if indexing directly or 
             :class:``matplotlib.colors.BoundaryNorm`` if otherwise.
-    '''
+    """
     def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
                  multiplier=255, offset=0, background=None):
-        '''Generate discrete colormap for labels using 
+        """Generate discrete colormap for labels using 
         :func:``discrete_colormap``.
         
         Args:
@@ -52,7 +52,7 @@ class DiscreteColormap(colors.ListedColormap):
                 background_label is the label value specifying the background, 
                 and RGBA value will replace the color corresponding to that 
                 label. Defaults to None.
-        '''
+        """
         if labels is None: return
         self.norm = None
         labels_unique = np.unique(labels).astype(np.float32)

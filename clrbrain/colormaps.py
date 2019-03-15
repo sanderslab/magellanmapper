@@ -19,6 +19,10 @@ class DiscreteColormap(colors.ListedColormap):
     """Extends :class:``matplotlib.colors.ListedColormap`` to generate a 
     discrete colormap and associated normalization object.
     
+    Extend ``ListedColormap`` rather than linear colormap since the 
+    number of colors should equal the number of possible vals, without 
+    requiring interpolation.
+    
     Attributes:
         cmap_labels: Tuple of N lists of RGBA values, where N is equal 
             to the number of colors, with a discrete color for each 
@@ -85,8 +89,7 @@ class DiscreteColormap(colors.ListedColormap):
         self.make_cmap()
     
     def make_cmap(self):
-        # listed rather than linear cmap since num of colors should equal num 
-        # of possible vals, without requiring interpolation
+        """Initialize ``ListedColormap`` with stored labels rescaled to 0-1."""
         super(DiscreteColormap, self).__init__(
             self.cmap_labels / 255.0, "discrete_cmap")
     

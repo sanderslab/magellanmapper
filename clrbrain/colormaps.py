@@ -32,7 +32,7 @@ class DiscreteColormap(colors.ListedColormap):
             :class:``matplotlib.colors.BoundaryNorm`` if otherwise.
     """
     def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
-                 multiplier=255, offset=0, background=None):
+                 multiplier=255, offset=0, background=None, dup_for_neg=False):
         """Generate discrete colormap for labels using 
         :func:``discrete_colormap``.
         
@@ -56,15 +56,25 @@ class DiscreteColormap(colors.ListedColormap):
                 background_label is the label value specifying the background, 
                 and RGBA value will replace the color corresponding to that 
                 label. Defaults to None.
+            dup_for_neg: True to duplicate positive labels as negative 
+                labels to recreate the same set of labels as for a 
+                mirrored labels map. Defaults to False.
         """
         if labels is None: return
         self.norm = None
-        labels_unique = np.unique(labels).astype(np.float32)
-        num_colors = len(np.unique(labels))
+        labels_unique = np.unique(labels)
+        if dup_for_neg and len(labels_unique[labels_unique < 0]) == 0:
+            # for labels that are only pos or 0, duplicate the pos portion 
+            # and make neg so that images with or without negs use the 
+            # same colors
+            labels_unique = np.append(
+                -1 * labels_unique[labels_unique > 0][::-1], labels_unique)
+        num_colors = len(labels_unique)
         # make first boundary slightly below first label to encompass it 
         # to avoid off-by-one errors that appear to occur when viewing an 
         # image with an additional extreme label
         labels_offset = 0.5
+        labels_unique = labels_unique.astype(np.float32)
         labels_unique -= labels_offset
         # number of boundaries should be one more than number of labels to 
         # avoid need for interpolation of boundary bin numbers and 
@@ -153,7 +163,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             cmap[i, :3] = config.colors[i]
     return cmap
 
-def get_labels_discrete_colormap(labels_img, alpha_bkgd=255):
+def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False):
     """Get a default discrete colormap for a labels image, assuming that 
     background is 0, and the seed is determined by :attr:``config.seed``.
     
@@ -161,6 +171,8 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255):
         labels_img: Labels image as a Numpy array.
         alpha_bkgd: Background alpha level from 0 to 255; defaults to 255 
             to turn on background fully.
+        dup_for_neg: True to duplicate positive labels as negative 
+            labels; defaults to False.
     
     Returns:
         :class:``DiscreteColormap`` object with a separate color for 
@@ -168,7 +180,7 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255):
     """
     return DiscreteColormap(
         labels_img, config.seed, 255, False, 150, 50, 
-        (0, (0, 0, 0, alpha_bkgd)))
+        (0, (0, 0, 0, alpha_bkgd)), dup_for_neg)
 
 def get_borders_colormap(borders_img, labels_img, cmap_labels):
     """Get a colormap for borders, using corresponding labels with 

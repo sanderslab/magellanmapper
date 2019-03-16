@@ -250,7 +250,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
             if num_imgs > 1:
                 # 2nd image is main labels
                 cmaps_labels.append(
-                    colormaps.get_labels_discrete_colormap(imgs[1], 0))
+                    colormaps.get_labels_discrete_colormap(imgs[1], 0, True))
                 lbl_suffix = "_label"
             if num_imgs > 2:
                 # subsequent images' colormaps are based on first labels 

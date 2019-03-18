@@ -358,7 +358,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       # show histogram to check for parametric distribution
       #histogramPlot(vals, title, meas)
       
-      # plot individual values grouped by genotype and selected column
+      # construct title from region identifiers and capitalize first letter
       df.jitter <- df.region.nonzero
       region.name <- df.region.nonzero$RegionName[1]
       if (is.na(region.name)) {
@@ -366,6 +366,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       } else {
         title <- paste0(region.name, " (", region, ")")
       }
+      substring(title, 1, 1) <- toupper(substring(title, 1, 1))
+      
+      # plot individual values grouped by genotype and selected column
       if (!split.by.side) {
         df.jitter <- aggregate(
           cbind(Volume, Nuclei) ~ Sample + Geno, df.jitter, sum)

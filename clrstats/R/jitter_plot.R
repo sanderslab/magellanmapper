@@ -154,7 +154,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         x.vals <- jitter(x.vals, amount=0.2)
       }
       colors.group <- if (show.sample.legend) colors else colors[i]
-      points(x.vals, vals.group / denom, pch=i+14, col=colors.group)
+      points(x.vals, vals.group / denom, pch=i+14, col=colors.group, cex=1.5)
       
       # plot summary stats on outer sides of scatter plots
       x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25

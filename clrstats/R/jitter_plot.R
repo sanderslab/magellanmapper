@@ -3,7 +3,7 @@
 
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
                        split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
-                       plot.size=c(5, 7)) {
+                       plot.size=c(5, 7), boxplot=TRUE) {
   # Plot jitter/scatter plots of values by genotype with mean and 95% CI.
   #
   # Args:
@@ -24,6 +24,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #     split group is the same within each genotype. Defaults to FALSE.
   #   plot.size: Vector of width, height for exported plot; defaults to 
   #     c(5, 7).
+  #   boxplot: True to show box plot in place of mean and CIs; defaults to 
+  #     TRUE.
   #
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
@@ -100,8 +102,10 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     denom <- 1
   }
   
-  # max y-val or error bar, whichever is higher
-  maxes <- c(num.groups, max(max(vals) / denom, max(max.errs) / denom))
+  # define graph limits, with x from 0 to number of groups, and y from 
+  # 0 to highest y-val, or highest absolute error bar if not boxplot
+  maxes <- c(num.groups, max(vals) / denom)
+  if (boxplot) maxes[2] <- max(maxes[2], max(max.errs) / denom)
   
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots
@@ -152,19 +156,22 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       colors.group <- if (show.sample.legend) colors else colors[i]
       points(x.vals, vals.group / denom, pch=i+14, col=colors.group)
       
-      # plot error bars unless CI is NA, such as infinitely large CI when n = 1
-      mean <- vals.means[[i]] / denom
-      ci <- vals.cis[[i]] / denom
-      if (!is.na(ci)) {
-        if (i %% 2 == 0) {
-          x.mean <- x + 0.25
-        } else {
-          x.mean <- x - 0.25
+      # plot summary stats on outer sides of scatter plots
+      x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25
+      if (boxplot) {
+        # overlay boxplot
+        boxplot(vals.group, at=x.summary, add=TRUE, boxwex=0.2, yaxt="n")
+      } else {
+        # plot error bars unless CI is NA, such as infinitely large CI (n = 1)
+        mean <- vals.means[[i]] / denom
+        ci <- vals.cis[[i]] / denom
+        if (!is.na(ci)) {
+          points(x.summary, mean, pch=16, cex=2)
+          arrows(x.summary, mean + ci, x.summary, mean - ci, length=0.05, 
+                 angle=90, code=3)
         }
-        points(x.mean, mean, pch=16, cex=2)
-        arrows(x.mean, mean + ci, x.mean, mean - ci, length=0.05, angle=90, 
-               code=3)
       }
+      
       x.pos[i] <- x # store x for connecting paired points
       x.adj <- x.adj + 0.05
       i <- i + 1

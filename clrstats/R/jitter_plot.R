@@ -4,7 +4,10 @@
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
                        split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
                        plot.size=c(5, 7), boxplot=TRUE) {
-  # Plot jitter/scatter plots of values by genotype with mean and 95% CI.
+  # Plot jitter/scatter plots of values by genotype with summary stats.
+  # 
+  # Also generates mean and 95% CI for each group, which will be plotted 
+  # unless boxplot is specified.
   #
   # Args:
   #   df.region: Date frame sliced by region, assumed to be filtered for 
@@ -141,11 +144,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of
       # colors for each set of points
-      if (num.sides > 0) colors <- RColorBrewer::brewer.pal(length(vals.groups[[1]]), "Paired")
+      if (num.sides > 0) {
+        colors <- RColorBrewer::brewer.pal(length(vals.groups[[1]]), "Paired")
+      }
     }
     for (side in sides.unique) {
       # plot points, adding jitter in x-direction unless paired
-      vals.group <- vals.groups[[i]]
+      vals.group <- vals.groups[[i]] / denom
       vals.geno <- append(vals.geno, vals.groups[i])
       x <- i + x.adj - 1
       x.vals <- rep(x, length(vals.group))
@@ -154,7 +159,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         x.vals <- jitter(x.vals, amount=0.2)
       }
       colors.group <- if (show.sample.legend) colors else colors[i]
-      points(x.vals, vals.group / denom, pch=i+14, col=colors.group, cex=1.5)
+      points(x.vals, vals.group, pch=i+14, col=colors.group, cex=1.5)
       
       # plot summary stats on outer sides of scatter plots
       x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25

@@ -16,11 +16,11 @@ kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity",
 
 # named vector to convert measurement columns to display names
 kMeasNames <- setNames(
-  c("Edge Match (Within-Region Nuclei Variation)", 
-    "Edge Match (Within-Region Intensity Variation)", 
-    "Edge Distances to Anatomical Boundaries", 
-    "Edge Distances to Anatomical Boundaries (Mean)", 
-    "Atlas and Labels Overlay (Dice Similarity Coefficient)"), 
+  list(c("Edge Match (Within-Region Nuclei Variation)", "SD"), 
+       c("Edge Match (Within-Region Intensity Variation)", "SD"),
+       c("Edge Distances to Anatomical Boundaries", "px"), 
+       c("Edge Distances to Anatomical Boundaries (Mean)", "px"), 
+       c("Atlas and Labels Overlay (Dice Similarity Coefficient)", "")), 
   c(kMeas[4:8]))
 
 # ordered genotype levels

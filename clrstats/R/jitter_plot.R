@@ -90,31 +90,37 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     }
   }
   
-  # adjust y-axis to use any replacement label and rescale to avoid 
+  # adjust y-axis to use any replacement label and unit, rescaling to avoid 
   # scientific notation in labels
   if (is.element(col, names(kMeasNames))) {
-    ylab <- kMeasNames[[col]]
+    meas <- kMeasNames[[col]]
+    ylab <- meas[1]
+    unit <- meas[2]
   } else {
     ylab <- gsub("_", " ", col)
+    unit <- ""
   }
   if (int.digits >= 5) {
     power <- int.digits - 1
     denom <- 10 ^ power
-    # use single-character unit abbreviations if possible
+    # use single-character numeral prefix abbreviations if possible
     if (power >= 15 | power < 6) {
-      unit <- c("10^", power)
+      prefix <- c("10^", power)
     } else if (power >= 6) {
       if (power >= 12) {
-        unit <- c(denom / 10 ^ 12, "T")
+        prefix <- c(denom / 10 ^ 12, "T")
       } else if (power >= 9) {
-        unit <- c(denom / 10 ^ 9, "B")
+        prefix <- c(denom / 10 ^ 9, "B")
       } else {
-        unit <- c(denom / 10 ^ 6, "M")
+        prefix <- c(denom / 10 ^ 6, "M")
       }
-    } 
-    ylab <- paste0(ylab, " (", paste0(unit, collapse=""), ")")
+    }
+    if (unit != "") unit <- paste0(" ", unit)
+    ylab <- paste0(ylab, " (", paste0(prefix, collapse=""), unit, ")")
   } else {
     denom <- 1
+    print(unit)
+    if (unit != "") ylab <- paste0(ylab, " (", unit, ")")
   }
   
   # define graph limits, with x from 0 to number of groups, and y from 

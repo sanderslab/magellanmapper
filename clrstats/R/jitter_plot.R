@@ -128,7 +128,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   
   # plot values with means and error bars
   
-  plot(NULL, frame.plot=TRUE, main=title, xlab="", ylab=ylab, xaxt="n", 
+  plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
   colors <- viridis::viridis(num.sides, begin=0.2, end=0.8)
@@ -165,7 +165,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25
       if (boxplot) {
         # overlay boxplot
-        boxplot(vals.group, at=x.summary, add=TRUE, boxwex=0.2, yaxt="n")
+        boxplot(vals.group, at=x.summary, add=TRUE, boxwex=0.2, yaxt="n", 
+                frame.plot=FALSE)
       } else {
         # plot error bars unless CI is NA, such as infinitely large CI (n = 1)
         mean <- vals.means[[i]] / denom

@@ -144,6 +144,11 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     par(mar=margin)
     par(xpd=NA) # for custom legend rect outside of plot
   }
+  legend.text.width <- NULL
+  if (plot.size[1] < plot.size[2]) {
+    # make legend width larger for narrow plots to avoid overlap
+    legend.text.width <- 1 - 0.5 * plot.size[1] / plot.size[2]
+  }
   
   # plot values with means and error bars
   
@@ -216,7 +221,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       # drawn rectangle to enclose group legend as well
       legend.sample <- legend(
         "topleft", legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
-        inset=c(0, 1.05), ncol=ncol)
+        inset=c(0, 1.05), ncol=ncol, text.width=legend.text.width)
       sample.rect <- legend.sample$rect
       # top and height vary by plot to same dev, but proportion to dev 
       # appears to be constant so can use fraction of vertical positions
@@ -228,8 +233,9 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # group legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
   color <- if(show.sample.legend) 1 else colors
-  legend("topright", legend=names.groups, pch=15:(14+length(names.groups)), 
-         xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n", col=color)
+  legend("topleft", legend=names.groups, pch=15:(14+length(names.groups)), 
+         xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n", col=color, 
+         text.width=legend.text.width)
   
   # save figure to PDF
   dev.print(

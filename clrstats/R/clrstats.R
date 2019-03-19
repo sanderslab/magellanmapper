@@ -287,7 +287,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   
   # find all regions
   regions <- unique(df$Region)
-  #regions <- c() # TESTING: insert single region
+  #regions <- c(15565) # TESTING: insert single region
   cols <- c("Region", "Stats", "Volume")
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols
@@ -546,15 +546,15 @@ setupConfig <- function(name=NULL) {
   
   if (is.null(name)) {
     # initialize environment
-    config.env$PlotSize <- c(5, 7)
+    config.env$PlotSize <- c(3.5, 7)
     config.env$SampleLegend <- FALSE
     
   } else if (name == "aba") {
     # multiple distinct atlases
     config.env$SampleLegend <- TRUE
     
-  } else if (name == "wide") {
-    # wide plots
+  } else if (name == "square") {
+    # square plots
     config.env$PlotSize <- c(7, 7)
   }
 }
@@ -565,7 +565,7 @@ runStats <- function() {
   # setup configuration environment
   setupConfig()
   #setupConfig("aba")
-  #setupConfig("wide")
+  #setupConfig("square")
   
   # setup measurement and model types
   kStatsPathIn <- file.path("..", kStatsFilesIn[2])

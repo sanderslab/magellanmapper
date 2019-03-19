@@ -55,7 +55,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   }
   x.max <- max(abs(x))
   if (is.element(meas, names(kMeasNames))) {
-    title <- kMeasNames[[meas]]
+    title <- kMeasNames[[meas]][1]
   } else {
     title <- paste(meas, "Differences for", interaction)
   }

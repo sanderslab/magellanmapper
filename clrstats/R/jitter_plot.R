@@ -142,6 +142,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     margin <- par()$mar
     margin[1] <- margin[1] + length(names.samples) / (1.3 * ncol)
     par(mar=margin)
+    par(xpd=NA) # for custom legend rect outside of plot
   }
   
   # plot values with means and error bars
@@ -211,9 +212,16 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       }
     }
     if (show.sample.legend) {
-      # add sample legend below group legend to label colors
-      legend("topright", legend=names.samples, lty=1, 
-             col=colors, xpd=TRUE, inset=c(x.pos[1], 1.05), ncol=ncol, bty="n")
+      # add sample legend below group legend to label colors, with manually 
+      # drawn rectangle to enclose group legend as well
+      legend.sample <- legend(
+        "topleft", legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
+        inset=c(0, 1.05), ncol=ncol)
+      sample.rect <- legend.sample$rect
+      # top and height vary by plot to same dev, but proportion to dev 
+      # appears to be constant so can use fraction of vertical positions
+      rect(sample.rect$left, sample.rect$top - sample.rect$h,
+           sample.rect$left + sample.rect$w, 0.3 * sample.rect$top)
     }
   }
   

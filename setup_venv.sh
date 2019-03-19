@@ -138,14 +138,19 @@ fi
 "$python" -m venv "$env_path"
 env_act="${env_path}/bin/activate"
 if [[ ! -e "$env_act" ]]; then
-  # check to ensure that the environment was actually created
-  echo "Could not create new venv environment at $env_path"
-  exit 1
+  # env generated in Windows does not contain bin folder; will need to 
+  # change line endings if running in Cygwin (works as-is in MSYS2)
+  env_act="${env_path}/Scripts/activate"
+  if [[ ! -e "$env_act" ]]; then
+    # check to ensure that the environment was actually created
+    echo "Could not create new venv environment at $env_path"
+    exit 1
+  fi
 fi
 source "$env_act"
 
 # update pip and install all dependencies for Clrbrain
-pip install -U pip
+"$python" -m pip install -U pip
 pip install -r requirements.txt
 
 
@@ -159,5 +164,5 @@ else
 fi
 
 echo "Clrbrain environment setup complete!"
-echo "** Please run \"$env_act\" to enter your new environment **"
+echo "** Please run \"source $env_act\" to enter your new environment **"
 

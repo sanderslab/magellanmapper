@@ -150,12 +150,25 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     legend.text.width <- 1 - 0.5 * plot.size[1] / plot.size[2]
   }
   
-  # plot values with means and error bars
-  
+  # draw main plot and group legends
   plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
   colors <- viridis::viridis(num.sides, begin=0.2, end=0.8)
+  # group legend, moved outside of plot and positioned at top right 
+  # before shifting a full plot unit to sit below the plot
+  if (show.sample.legend) {
+    color <- 1
+    bty <- "n"
+  } else {
+    color <- colors
+    bty <- "o"
+  }
+  legend.group <- legend(
+    "topleft", legend=names.groups, pch=15:(14+length(names.groups)), 
+    xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty=bty, col=color, 
+    text.width=legend.text.width)
+  
   i <- 1
   for (geno in genos.unique) {
     # plot each group of points
@@ -219,23 +232,17 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     if (show.sample.legend) {
       # add sample legend below group legend to label colors, with manually 
       # drawn rectangle to enclose group legend as well
+      group.rect <- legend.group$rect
+      print(group.rect)
       legend.sample <- legend(
-        "topleft", legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
-        inset=c(0, 1.05), ncol=ncol, text.width=legend.text.width)
+        x=group.rect$left, y=(0.7*(group.rect$top-group.rect$h)), 
+        legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
+        ncol=ncol, text.width=legend.text.width)
       sample.rect <- legend.sample$rect
-      # top and height vary by plot to same dev, but proportion to dev 
-      # appears to be constant so can use fraction of vertical positions
       rect(sample.rect$left, sample.rect$top - sample.rect$h,
-           sample.rect$left + sample.rect$w, 0.3 * sample.rect$top)
+           sample.rect$left + sample.rect$w, group.rect$top)
     }
   }
-  
-  # group legend, moved outside of plot and positioned at top right 
-  # before shifting a full plot unit to sit below the plot
-  color <- if(show.sample.legend) 1 else colors
-  legend("topleft", legend=names.groups, pch=15:(14+length(names.groups)), 
-         xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty="n", col=color, 
-         text.width=legend.text.width)
   
   # save figure to PDF
   dev.print(

@@ -100,7 +100,19 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   if (int.digits >= 5) {
     power <- int.digits - 1
     denom <- 10 ^ power
-    ylab <- paste0(ylab, " (10^", power, ")")
+    # use single-character unit abbreviations if possible
+    if (power >= 15 | power < 6) {
+      unit <- c("10^", power)
+    } else if (power >= 6) {
+      if (power >= 12) {
+        unit <- c(denom / 10 ^ 12, "T")
+      } else if (power >= 9) {
+        unit <- c(denom / 10 ^ 9, "B")
+      } else {
+        unit <- c(denom / 10 ^ 6, "M")
+      }
+    } 
+    ylab <- paste0(ylab, " (", paste0(unit, collapse=""), ")")
   } else {
     denom <- 1
   }

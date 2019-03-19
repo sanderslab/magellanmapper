@@ -39,7 +39,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   parents <- stats$Parent
   parents.unique <- unique(parents)
   parents.indices <- match(parents, parents.unique)
-  colors <- viridis::viridis(length(parents.unique))
+  colors <- RColorBrewer::brewer.pal(length(parents.unique), "Paired")
   colors_parents <- colors[parents.indices]
   
   # base plot -log p vs effect size

@@ -154,7 +154,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
        las=1)
-  colors <- viridis::viridis(num.sides, begin=0.2, end=0.8)
+  colors <- RColorBrewer::brewer.pal(num.sides, "Dark2")
   # group legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
   if (show.sample.legend) {

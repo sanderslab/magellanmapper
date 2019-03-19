@@ -9,6 +9,5 @@ LazyData: true
 Imports:
   MASS, 
   gee, 
-  viridis, 
   RColorBrewer
 RoxygenNote: 6.1.1

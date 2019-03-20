@@ -4104,7 +4104,7 @@ if __name__ == "__main__":
         
         # export data frames
         output_path = lib_clrbrain.combine_paths(
-            config.filename, "compactness", ext="csv")
+            config.filename, "compactness.csv")
         stats.data_frames_to_csv([df_baseline, df_smoothing_sm], output_path)
     
     elif reg is config.RegisterTypes.plot_smoothing_metrics:

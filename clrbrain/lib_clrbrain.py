@@ -93,17 +93,23 @@ def roll_elements(arr, shift, axis=None):
     #print("after moving: {}".format(arr))
     return arr
 
-def insert_before_ext(name, insert):
-    """Inserts a string before an extension.
+def insert_before_ext(name, insert, sep=""):
+    """Merge two paths by splicing in ``insert`` just before the extention 
+    in ``base_path``.
     
     Args:
         name: Path.
         insert: String to insert before the extension in the name.
+        sep: Separator between ``name`` and ``insert``; default to an 
+           empty string.
     
     Returns:
         Modified path.
+    
+    See Also:
+        :func:``combine_paths`` to use the extension from ``insert``.
     """
-    return "{0}{2}.{1}".format(*name.rsplit(".", 1) + [insert])
+    return "{0}{2}{3}.{1}".format(*name.rsplit(".", 1), sep, insert)
 
 def get_filename_ext(filename):
     ext = ""
@@ -128,7 +134,7 @@ def get_filename_without_ext(path):
     return name
 
 def combine_paths(base_path, suffix, sep="_", ext=None):
-    """Merge two paths by splicing ``suffix`` just before the extention 
+    """Merge two paths by appending ``suffix``, replacing the extention 
     in ``base_path``.
     
     Args:
@@ -138,10 +144,13 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
         suffix: Replacement including new extension.
         sep: Separator between ``base_path`` and ``suffix``.
         ext: Extension to add or substitute; defaults to None to use 
-            the current extension.
+            the extension in ``suffix``.
     
     Returns:
         Merged path.
+    
+    See Also:
+        :func:``insert_before_ext`` to splice in ``suffix`` instead.
     """
     if not base_path: return suffix
     if os.path.isdir(base_path):

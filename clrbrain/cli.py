@@ -319,12 +319,13 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
         sub_rois_offset: Offsets of each sub-region.
     
     Returns:
-        All segments as a Numpy array, or None if no segments.
+        Tuple of all blobs as a Numpy array and a data frame of 
+        pruning stats, or None for both if no blobs are in the ``seg_rois``.
     """
     # collects all blobs in master array to group all overlapping regions
     blobs_merged = chunking.merge_blobs(seg_rois)
     if blobs_merged is None:
-        return None
+        return None, None
     
     blobs_all = []
     blob_ratios = {}

@@ -95,6 +95,7 @@ PARENT_IDS = "parent_ids"
 MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
+COMBINED_SUFFIX = "combined"
 
 SMOOTHING_METRIC_MODES = (
     "vol", "area_edt", "area_radial", "area_displvol", "compactness")
@@ -2406,6 +2407,62 @@ def make_sub_segmented_labels(img_path, suffix=None):
     write_reg_images({IMG_LABELS_SUBSEG: labels_subseg_sitk}, mod_path)
     return labels_subseg
 
+def merge_images(img_paths, reg_name, prefix=None, suffix=None):
+    """Merge images from multiple paths.
+    
+    Assumes that the images are relatively similar in size, but will resize 
+    them to the size of the first image to combine the images.
+    
+    Args:
+        img_paths: Paths from which registered paths will be found.
+        reg_name: Registration suffix to load for the given paths 
+            in ``img_paths``.
+        prefix: Start of output path; defaults to None to use the first 
+           path in ``img_paths`` instead.
+        suffix: Portion of path to be combined with each path 
+            in ``img_paths``; defaults to None.
+    
+    Returns:
+        The combined image in SimpleITK format.
+    """
+    if len(img_paths) < 1: return None
+    
+    img_sitk = None
+    img_np_base = None
+    img_nps = []
+    for img_path in img_paths:
+        mod_path = img_path
+        if suffix is not None:
+            # adjust image path with suffix
+            mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+        print("loading", mod_path)
+        get_sitk = img_sitk is None
+        img = load_registered_img(
+            mod_path, get_sitk=get_sitk, reg_name=reg_name)
+        if get_sitk:
+            # use the first image as template
+            img_np = sitk.GetArrayFromImage(img)
+            img_np_base = img_np
+            img_sitk = img
+        else:
+            # resize to first image
+            img_np = transform.resize(
+                img, img_np_base.shape, preserve_range=True, 
+                anti_aliasing=True, mode="reflect")
+        img_nps.append(img_np)
+    
+    # combine images and write single combo image
+    img_combo = np.sum(img_nps, axis=0)
+    combined_sitk = replace_sitk_with_numpy(img_sitk, img_combo)
+    output_base = prefix
+    if output_base is None:
+        # fallback to using first image's name as base
+        output_base = lib_clrbrain.insert_before_ext(img_paths[0], suffix)
+    output_reg = lib_clrbrain.insert_before_ext(
+        reg_name, COMBINED_SUFFIX, "_")
+    write_reg_images({output_reg: combined_sitk}, output_base)
+    return combined_sitk
+
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.
@@ -4175,3 +4232,8 @@ if __name__ == "__main__":
         # make sub-segmentations for all images
         for img_path in config.filenames:
             make_sub_segmented_labels(img_path, config.suffix)
+
+    elif reg is config.RegisterTypes.merge_images:
+        # combine labels edges from all paths
+        merge_images(
+            config.filenames, IMG_LABELS_EDGE, config.prefix, config.suffix)

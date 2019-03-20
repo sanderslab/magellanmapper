@@ -1418,10 +1418,89 @@ def import_atlas(atlas_dir, show=True):
     print("\nImported {} whole atlas stats:".format(basename))
     stats.dict_to_data_frame(metrics, df_metrics_path, show=True)
 
+def register_duo(fixed_img, moving_img):
+    """Register two images to one another using ``SimpleElastix``.
+    
+    Args:
+        fixed_img: The image to be registered to in :class``SimpleITK.Image`` 
+            format.
+        moving_img: The image to register to ``fixed_img`` in 
+            :class``SimpleITK.Image`` format.
+    
+    Returns:
+        Tuple of the registered image in SimpleITK Image format and a 
+        Transformix filter with the registration's parameters to 
+        reapply them on other images.
+    """
+    # basic info from images just prior to SimpleElastix filtering for 
+    # registration; to view raw images, show these images rather than merely 
+    # turning all iterations to 0 since simply running through the filter 
+    # will alter images
+    print("fixed image (type {}):\n{}".format(
+        fixed_img.GetPixelIDTypeAsString(), fixed_img))
+    print("moving image (type {}):\n{}".format(
+        moving_img.GetPixelIDTypeAsString(), moving_img))
+    
+    # set up SimpleElastix filter
+    elastix_img_filter = sitk.ElastixImageFilter()
+    elastix_img_filter.SetFixedImage(fixed_img)
+    elastix_img_filter.SetMovingImage(moving_img)
+    
+    settings = config.register_settings
+    param_map_vector = sitk.VectorOfParameterMap()
+    # translation to shift and rotate
+    param_map = sitk.GetDefaultParameterMap("translation")
+    param_map["MaximumNumberOfIterations"] = [settings["translation_iter_max"]]
+    '''
+    # TESTING: minimal registration
+    param_map["MaximumNumberOfIterations"] = ["0"]
+    '''
+    param_map_vector.append(param_map)
+    # affine to sheer and scale
+    param_map = sitk.GetDefaultParameterMap("affine")
+    param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
+    param_map_vector.append(param_map)
+    # bspline for non-rigid deformation
+    param_map = sitk.GetDefaultParameterMap("bspline")
+    param_map["FinalGridSpacingInVoxels"] = [
+        settings["bspline_grid_space_voxels"]]
+    del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
+    param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
+    _config_reg_resolutions(
+        settings["grid_spacing_schedule"], param_map, fixed_img.GetDimension())
+    if settings["point_based"]:
+        # point-based registration added to b-spline, which takes point sets 
+        # found in name_prefix's folder; note that coordinates are from the 
+        # originally set fixed and moving images, not after transformation up 
+        # to this point
+        fix_pts_path = os.path.join(os.path.dirname(name_prefix), "fix_pts.txt")
+        move_pts_path = os.path.join(os.path.dirname(name_prefix), "mov_pts.txt")
+        if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
+            metric = list(param_map["Metric"])
+            metric.append("CorrespondingPointsEuclideanDistanceMetric")
+            param_map["Metric"] = metric
+            #param_map["Metric2Weight"] = ["0.5"]
+            elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
+            elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
+    
+    param_map_vector.append(param_map)
+    elastix_img_filter.SetParameterMap(param_map_vector)
+    elastix_img_filter.PrintParameterMap()
+    transform = elastix_img_filter.Execute()
+    transformed_img = elastix_img_filter.GetResultImage()
+    
+    # prep filter to apply transformation to label files
+    transform_param_map = elastix_img_filter.GetTransformParameterMap()
+    transformix_img_filter = sitk.TransformixImageFilter()
+    transformix_img_filter.SetTransformParameterMap(transform_param_map)
+    
+    return transformed_img, transformix_img_filter
+
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
              new_atlas=False):
-    """Registers two images to one another using the SimpleElastix library.
+    """Register an atlas and associated labels to a sample image 
+    using the SimpleElastix library.
     
     Args:
         fixed_file: The image to register, given as a Numpy archive file to 
@@ -1468,68 +1547,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     moving_img, labels_img, _, _ = match_atlas_labels(
         moving_img, labels_img, flip)
     
-    # basic info from images just prior to SimpleElastix filtering for 
-    # registration; to view raw images, show these images rather than merely 
-    # turning all iterations to 0 since simply running through the filter 
-    # will alter images
-    print("fixed image from {} (type {}):\n{}".format(
-        fixed_file, fixed_img.GetPixelIDTypeAsString(), fixed_img))
-    print("moving image from {} (type {}):\n{}".format(
-        moving_file, moving_img.GetPixelIDTypeAsString(), moving_img))
-    
-    # set up SimpleElastix filter
-    elastix_img_filter = sitk.ElastixImageFilter()
-    elastix_img_filter.SetFixedImage(fixed_img)
-    elastix_img_filter.SetMovingImage(moving_img)
-    
-    param_map_vector = sitk.VectorOfParameterMap()
-    # translation to shift and rotate
-    param_map = sitk.GetDefaultParameterMap("translation")
-    param_map["MaximumNumberOfIterations"] = [settings["translation_iter_max"]]
-    '''
-    # TESTING: minimal registration
-    param_map["MaximumNumberOfIterations"] = ["0"]
-    '''
-    param_map_vector.append(param_map)
-    # affine to sheer and scale
-    param_map = sitk.GetDefaultParameterMap("affine")
-    param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
-    param_map_vector.append(param_map)
-    # bspline for non-rigid deformation
-    param_map = sitk.GetDefaultParameterMap("bspline")
-    param_map["FinalGridSpacingInVoxels"] = [
-        settings["bspline_grid_space_voxels"]]
-    del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
-    param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
-    _config_reg_resolutions(
-        settings["grid_spacing_schedule"], param_map, fixed_img.GetDimension())
-    if settings["point_based"]:
-        # point-based registration added to b-spline, which takes point sets 
-        # found in name_prefix's folder; note that coordinates are from the 
-        # originally set fixed and moving images, not after transformation up 
-        # to this point
-        fix_pts_path = os.path.join(os.path.dirname(name_prefix), "fix_pts.txt")
-        move_pts_path = os.path.join(os.path.dirname(name_prefix), "mov_pts.txt")
-        if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
-            metric = list(param_map["Metric"])
-            metric.append("CorrespondingPointsEuclideanDistanceMetric")
-            param_map["Metric"] = metric
-            #param_map["Metric2Weight"] = ["0.5"]
-            elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
-            elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
-    
-    param_map_vector.append(param_map)
-    elastix_img_filter.SetParameterMap(param_map_vector)
-    elastix_img_filter.PrintParameterMap()
-    transform = elastix_img_filter.Execute()
-    transformed_img = elastix_img_filter.GetResultImage()
-    
-    # prep filter to apply transformation to label files
-    transform_param_map = elastix_img_filter.GetTransformParameterMap()
+    transformed_img, transformix_img_filter = register_duo(
+        fixed_img, moving_img)
     # turn off to avoid overshooting the interpolation for the labels image 
     # (see Elastix manual section 4.3)
+    transform_param_map = transformix_img_filter.GetTransformParameterMap()
     transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
-    transformix_img_filter = sitk.TransformixImageFilter()
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     
     def make_labels(truncate):

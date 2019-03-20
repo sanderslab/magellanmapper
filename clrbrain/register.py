@@ -96,6 +96,7 @@ MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
 COMBINED_SUFFIX = "combined"
+REREG_SUFFIX = "rereg"
 
 SMOOTHING_METRIC_MODES = (
     "vol", "area_edt", "area_radial", "area_displvol", "compactness")
@@ -1624,6 +1625,69 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     print("time elapsed for single registration (s): {}"
           .format(time() - start_time))
 
+def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None, 
+                 prefix=None, suffix=None, show=True):
+    """Using registered images, register them to another image.
+    
+    For example, registered images can be registered back to the atlas.
+    
+    Args:
+        fixed_path: Path to he image to be registered to in 
+            :class``SimpleITK.Image`` format.
+        moving_path: Path to the image in :class``SimpleITK.Image`` format 
+            to register to the image at ``fixed_path``.
+        reg_base: Registration suffix to combine with ``moving_path``. 
+            Defaults to None to use ``moving_path`` as-is, with 
+            output name based on :const:``IMG_EXP``.
+        reg_names: List of additional registration suffixes associated 
+            with ``moving_path`` to be registered using the same 
+            transformation. Defaults to None.
+        prefix: Base path to use for output; defaults to None to 
+            use ``moving_path`` instead.
+        suffix: String to combine with ``moving_path`` to load images; 
+            defaults to None.
+        show: True to show images after registration; defaults to True.
+    """
+    fixed_img = sitk.ReadImage(fixed_path)
+    mod_path = moving_path
+    if suffix is not None:
+        # adjust image path to load with suffix
+        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+    if reg_base is None:
+        # load the image directly from given path
+        moving_img = sitk.ReadImage(mod_path)
+    else:
+        # treat the path as a base path to which a reg suffix will be combined
+        moving_img = load_registered_img(
+            moving_path, get_sitk=True, reg_name=reg_base)
+    
+    # register the images and apply the transformation to any 
+    # additional images previously registered to the moving path
+    transformed_img, transformix_img_filter = register_duo(
+        fixed_img, moving_img)
+    reg_imgs = [transformed_img]
+    names = [IMG_EXP if reg_base is None else reg_base]
+    if reg_names is not None:
+        for reg_name in reg_names:
+            img = load_registered_img(
+                mod_path, get_sitk=True, reg_name=reg_name)
+            transformix_img_filter.SetMovingImage(img)
+            transformix_img_filter.Execute()
+            img_result = transformix_img_filter.GetResultImage()
+            reg_imgs.append(img_result)
+            names.append(reg_name)
+    
+    # use prefix as base output path if given
+    output_base = mod_path if prefix is None else prefix
+    imgs_write = {}
+    for name, img in zip(names, reg_imgs):
+        # use the same reg suffixes but append a rereg designator
+        output_reg = lib_clrbrain.insert_before_ext(name, REREG_SUFFIX, "_")
+        imgs_write[output_reg] = img
+    write_reg_images(imgs_write, output_base)
+    if show:
+        for img in imgs_write.values(): sitk.Show(img)
+    
 def measure_overlap(fixed_img, transformed_img, fixed_thresh=None, 
                     transformed_thresh=None):
     """Measure the Dice Similarity Coefficient (DSC) between two foreground 
@@ -4260,3 +4324,12 @@ if __name__ == "__main__":
         # combine labels edges from all paths
         merge_images(
             config.filenames, IMG_LABELS_EDGE, config.prefix, config.suffix)
+
+    elif reg is config.RegisterTypes.register_reg:
+        # register a group of registered images to another image, 
+        # such as the atlas to which the images were originally registered
+        suffixes = (None if config.reg_suffixes is None 
+                    else config.reg_suffixes[:-1])
+        register_reg(
+            *config.filenames[:2], IMG_EXP, suffixes, 
+            config.prefix, config.suffix, not config.no_show)

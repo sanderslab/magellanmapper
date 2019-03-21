@@ -988,6 +988,9 @@ colors = np.array(
 
 # RC PARAMETERS FOR MATPLOTLIB
 
+# style sheet
+matplotlib_style = "seaborn-colorblind"
+
 # global setting changes
 rc_params = {
     "image.interpolation": "bilinear",

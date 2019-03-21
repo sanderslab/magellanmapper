@@ -1618,7 +1618,7 @@ def save_fig(path, ext):
 def setup_style():
     # setup Matplotlib parameters/styles
     #print(plt.style.available)
-    plt.style.use("seaborn")
+    plt.style.use(config.matplotlib_style)
     pylab.rcParams.update(config.rc_params)
 
 if __name__ == "__main__":

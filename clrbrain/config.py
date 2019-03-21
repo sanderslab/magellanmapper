@@ -36,6 +36,28 @@ from enum import Enum
 verbose = False
 POS_THRESH = 0.001 # threshold for positive values for float comparison
 
+
+# IMAGE FILES
+
+SUFFIX_IMG_PROC = "_image5d_proc.npz"
+SUFFIX_INFO_PROC = "_info_proc.npz"
+
+filename = None # current image file path
+filenames = None # list of multiple image paths
+series = 0 # series for multi-stack files
+channel = None # channel of interest, where None specifies all channels
+
+prefix = None # alternate path
+suffix = None # modifier to existing base path
+
+PLANE = ("xy", "xz", "yz")
+plane = None
+vmax_overview = [None]
+border = None # clip ROI to border (x,y,z order)
+near_max = [-1.0]
+near_min = [0.0]
+
+
 # 2D PLOTTING
 
 # custom colormaps in plot_2d
@@ -49,6 +71,21 @@ plot_2d_type = None
 # extensions for saving figures
 FORMATS_3D = ("obj", "x3d") # save 3D renderings
 savefig = None # save files using this extension
+
+# style sheet
+matplotlib_style = "seaborn-colorblind"
+
+# global setting changes
+rc_params = {
+    "image.interpolation": "bilinear",
+    "image.resample": False
+}
+
+# Matplotlib2 default image interpoloation
+rc_params_mpl2_img_interp = {
+    "image.interpolation": "nearest",
+    "image.resample": True
+}
 
 
 # IMAGE VIEWING
@@ -78,6 +115,16 @@ alphas = [1, 0.9, 0.9]
 
 # show scale bars
 scale_bar = True
+
+
+# DATABASE
+
+DB_NAME = "clrbrain.db"
+db_name = DB_NAME # path to main DB
+db = None # main DB
+truth_db_name = None # path to truth DB
+truth_db = None # truth blobs DB
+verified_db = None # automated verifications DB
 
 
 # IMAGE REGISTRATION
@@ -864,35 +911,6 @@ def update_register_settings(settings, settings_type):
 register_settings = RegisterSettings()
 
 
-# IMAGE FILES
-
-SUFFIX_IMG_PROC = "_image5d_proc.npz"
-SUFFIX_INFO_PROC = "_info_proc.npz"
-
-filename = None # current image file path
-filenames = None # list of multiple image paths
-series = 0 # series for multi-stack files
-channel = None # channel of interest, where None specifies all channels
-
-prefix = None # alternate path
-suffix = None # modifier to existing base path
-
-PLANE = ("xy", "xz", "yz")
-plane = None
-vmax_overview = [None]
-border = None # clip ROI to border (x,y,z order)
-near_max = [-1.0]
-near_min = [0.0]
-
-# DATABASE
-
-DB_NAME = "clrbrain.db"
-db_name = DB_NAME # path to main DB
-db = None # main DB
-truth_db_name = None # path to truth DB
-truth_db = None # truth blobs DB
-verified_db = None # automated verifications DB
-
 # receiver operating characteristic
 roc = False
 '''
@@ -983,24 +1001,3 @@ colors = np.array(
      [240, 228, 66], # yellow
      [0, 0, 0]] # black
 )
-
-
-
-# RC PARAMETERS FOR MATPLOTLIB
-
-# style sheet
-matplotlib_style = "seaborn-colorblind"
-
-# global setting changes
-rc_params = {
-    "image.interpolation": "bilinear",
-    "image.resample": False
-}
-
-# Matplotlib2 default image interpoloation
-rc_params_mpl2_img_interp = {
-    "image.interpolation": "nearest",
-    "image.resample": True
-}
-
-

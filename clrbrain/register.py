@@ -1510,7 +1510,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
             main image and labels. The atlas was chosen as the moving file
             since it is likely to be lower resolution than the Numpy file.
         plane: Planar orientation to which the atlas will be transposed, 
-            considering the atlas' original plane as "xy".
+            considering the atlas' original plane as "xy". Defaults to 
+            None to avoid planar transposition.
         flip: True if the moving files (does not apply to fixed file) should 
             be flipped/rotated; defaults to False.
         show_imgs: True if the output images should be displayed; defaults to 
@@ -1626,7 +1627,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
           .format(time() - start_time))
 
 def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None, 
-                 prefix=None, suffix=None, show=True):
+                 plane=None, flip=False, prefix=None, suffix=None, show=True):
     """Using registered images, register them to another image.
     
     For example, registered images can be registered back to the atlas.
@@ -1642,6 +1643,11 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
         reg_names: List of additional registration suffixes associated 
             with ``moving_path`` to be registered using the same 
             transformation. Defaults to None.
+        plane: Planar orientation to which the atlas will be transposed, 
+            considering the atlas' original plane as "xy". Defaults to 
+            None to avoid planar transposition.
+        flip: True if the moving files (does not apply to fixed file) should 
+            be flipped/rotated; defaults to False.
         prefix: Base path to use for output; defaults to None to 
             use ``moving_path`` instead.
         suffix: String to combine with ``moving_path`` to load images; 
@@ -1663,6 +1669,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     
     # register the images and apply the transformation to any 
     # additional images previously registered to the moving path
+    moving_img = transpose_img(moving_img, plane, flip)
     transformed_img, transformix_img_filter = register_duo(
         fixed_img, moving_img)
     reg_imgs = [transformed_img]
@@ -1671,6 +1678,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
         for reg_name in reg_names:
             img = load_registered_img(
                 mod_path, get_sitk=True, reg_name=reg_name)
+            img = transpose_img(img, plane, flip)
             transformix_img_filter.SetMovingImage(img)
             transformix_img_filter.Execute()
             img_result = transformix_img_filter.GetResultImage()
@@ -4334,5 +4342,5 @@ if __name__ == "__main__":
         suffixes = (None if config.reg_suffixes is None 
                     else config.reg_suffixes[:-1])
         register_reg(
-            *config.filenames[:2], IMG_EXP, suffixes, 
-            config.prefix, config.suffix, not config.no_show)
+            *config.filenames[:2], IMG_EXP, suffixes, config.plane, 
+            config.flip, config.prefix, config.suffix, not config.no_show)

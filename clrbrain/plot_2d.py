@@ -1615,10 +1615,19 @@ def save_fig(path, ext):
         plt.savefig(plot_path)
         print("exported figure to", plot_path)
 
-def setup_style():
-    # setup Matplotlib parameters/styles
+def setup_style(style=None):
+    """Setup Matplotlib styles and RC parameters.
+    
+    Both style and parameters default to those specified in config.
+    
+    Args:
+        style: Name of Matplotlib style to apply. Defaults to None to 
+            use the style specified in :attr:``config.matplotlib_style``.
+    """
     #print(plt.style.available)
-    plt.style.use(config.matplotlib_style)
+    plt_style = config.matplotlib_style if style is None else style
+    print("setting up Matplotlib style", plt_style)
+    plt.style.use(plt_style)
     pylab.rcParams.update(config.rc_params)
 
 if __name__ == "__main__":

@@ -4078,7 +4078,7 @@ if __name__ == "__main__":
     print("Clrbrain image registration")
     from clrbrain import cli
     cli.main(True)
-    plot_2d.setup_style()
+    plot_2d.setup_style("seaborn-colorblind")
     unit_factor = np.power(1000.0, 3)
     
     # name prefix to use a different name from the input files, such as when 

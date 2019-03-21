@@ -73,7 +73,7 @@ FORMATS_3D = ("obj", "x3d") # save 3D renderings
 savefig = None # save files using this extension
 
 # style sheet
-matplotlib_style = "seaborn-colorblind"
+matplotlib_style = "seaborn"
 
 # global setting changes
 rc_params = {

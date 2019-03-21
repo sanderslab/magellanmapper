@@ -2620,10 +2620,13 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False):
         if img is None: continue
         out_path = _reg_out_path(prefix, suffix)
         sitk.WriteImage(img, out_path, False)
+        print("wrote registered image to", out_path)
         if copy_to_suffix:
             # copy metadata file to allow opening images from bare suffix name, 
             # such as when this atlas becomes the new atlas for registration
-            shutil.copy(out_path, os.path.join(target_dir, suffix))
+            out_path_copy = os.path.join(target_dir, suffix)
+            shutil.copy(out_path, out_path_copy)
+            print("also copied to", out_path_copy)
 
 def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS, 
                         replace=None):

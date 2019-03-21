@@ -2515,7 +2515,7 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None):
         prefix: Start of output path; defaults to None to use the first 
            path in ``img_paths`` instead.
         suffix: Portion of path to be combined with each path 
-            in ``img_paths``; defaults to None.
+            in ``img_paths`` and output path; defaults to None.
     
     Returns:
         The combined image in SimpleITK format.
@@ -2549,10 +2549,10 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None):
     # combine images and write single combo image
     img_combo = np.sum(img_nps, axis=0)
     combined_sitk = replace_sitk_with_numpy(img_sitk, img_combo)
-    output_base = prefix
-    if output_base is None:
-        # fallback to using first image's name as base
-        output_base = lib_clrbrain.insert_before_ext(img_paths[0], suffix)
+    # fallback to using first image's name as base
+    output_base = img_paths[0] if prefix is None else prefix
+    if suffix is not None:
+        output_base = lib_clrbrain.insert_before_ext(output_base, suffix)
     output_reg = lib_clrbrain.insert_before_ext(
         reg_name, COMBINED_SUFFIX, "_")
     write_reg_images({output_reg: combined_sitk}, output_base)

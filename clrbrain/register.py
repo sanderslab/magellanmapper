@@ -4333,8 +4333,10 @@ if __name__ == "__main__":
 
     elif reg is config.RegisterTypes.merge_images:
         # combine labels edges from all paths
+        reg_name = lib_clrbrain.insert_before_ext(
+            IMG_LABELS_DIST, REREG_SUFFIX, sep="_")
         merge_images(
-            config.filenames, IMG_LABELS_EDGE, config.prefix, config.suffix)
+            config.filenames, reg_name, config.prefix, config.suffix)
 
     elif reg is config.RegisterTypes.register_reg:
         # register a group of registered images to another image, 

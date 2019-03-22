@@ -4345,4 +4345,4 @@ if __name__ == "__main__":
                     else config.reg_suffixes[:-1])
         register_reg(
             *config.filenames[:2], IMG_EXP, suffixes, config.plane, 
-            config.flip, config.prefix, config.suffix, not config.no_show)
+            flip, config.prefix, config.suffix, not config.no_show)

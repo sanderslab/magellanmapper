@@ -4267,14 +4267,14 @@ if __name__ == "__main__":
     
     elif reg is config.RegisterTypes.plot_smoothing_metrics:
         # plot smoothing metrics
-        path = lib_clrbrain.combine_paths(
-            config.filename, config.PATH_SMOOTHING_METRICS)
         title = "{} Label Smoothing".format(
-            lib_clrbrain.get_filename_without_ext(config.filename))
+            lib_clrbrain.str_to_disp(
+                os.path.basename(config.filename).replace(
+                    config.PATH_SMOOTHING_METRICS, "")))
         size = config.roi_sizes
         if size: size = size[0][:2]
         plot_2d.plot_lines(
-            path, SmoothingMetrics.FILTER_SIZE.value, 
+            config.filename, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.COMPACTED.value, 
              SmoothingMetrics.DISPLACED.value, 
              SmoothingMetrics.SM_QUALITY.value, 

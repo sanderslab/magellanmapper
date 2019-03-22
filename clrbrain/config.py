@@ -543,7 +543,7 @@ def update_register_settings(settings, settings_type):
         settings["bspline_iter_max"] = "512"
         settings["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
         settings["holes_area"] = 5000
-        settings["bspline_grid_space_voxels"] = "130"
+        settings["bspline_grid_space_voxels"] = "30"
     
     elif settings_type.startswith("groupwise"):
         # groupwise registration

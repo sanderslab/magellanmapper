@@ -188,6 +188,18 @@ def printv(s):
     if config.verbose:
         print(s)
 
+def str_to_disp(s):
+    """Convert a string to a user-friendly, displayable string by replacing 
+    underscores with spaces and trimming outer whitespace.
+    
+    Args:
+        s: String to make displayable.
+    
+    Returns:
+        New, converted string.
+    """
+    return s.replace("_", " ").strip()
+
 def get_int(val):
     """Cast a value as an integer, returning the value if any error.
     

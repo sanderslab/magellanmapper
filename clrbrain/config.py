@@ -545,7 +545,7 @@ def update_register_settings(settings, settings_type):
         settings["holes_area"] = 5000
         settings["grid_spacing_schedule"] = [
             "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"]
-        settings["bspline_grid_space_voxels"] = "130"
+        settings["bspline_grid_space_voxels"] = "30"
     
     elif settings_type.startswith("groupwise"):
         # groupwise registration

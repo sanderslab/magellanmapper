@@ -1460,7 +1460,7 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         plt.show()
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
-               y_label=None, title=None, show=True):
+               y_label=None, title=None, size=None, show=True):
     """Plot line graph from Pandas data frame.
     
     Args:
@@ -1474,13 +1474,15 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         x_label: Name of x-axis; defaults to None.
         y_label: Name of y-axis; defaults to None.
         title: Title of figure; defaults to None.
+        size: Sequence of ``width, height`` to size the figure; defaults 
+            to None.
         show: True to display the image; otherwise, the figure will only 
             be saved to file, if :attr:``config.savefig`` is set.  
             Defaults to True.
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
-    fig = plt.figure()
+    fig = plt.figure(figsize=size)
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
     

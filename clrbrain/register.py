@@ -4271,6 +4271,8 @@ if __name__ == "__main__":
             config.filename, config.PATH_SMOOTHING_METRICS)
         title = "{} Label Smoothing".format(
             lib_clrbrain.get_filename_without_ext(config.filename))
+        size = config.roi_sizes
+        if size: size = size[0][:2]
         plot_2d.plot_lines(
             path, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.COMPACTED.value, 
@@ -4279,7 +4281,7 @@ if __name__ == "__main__":
              SmoothingMetrics.SA_VOL.value, 
              SmoothingMetrics.LABEL_LOSS.value), 
             ("--", "--", "-", ":", ":"), "Smoothing Filter Size", 
-            "Fractional Change", title, not config.no_show)
+            "Fractional Change", title, size, not config.no_show)
     
     elif reg in (
         config.RegisterTypes.make_edge_images, 

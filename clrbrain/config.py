@@ -46,6 +46,8 @@ filename = None # current image file path
 filenames = None # list of multiple image paths
 series = 0 # series for multi-stack files
 channel = None # channel of interest, where None specifies all channels
+roi_sizes = None # list of regions of interest
+offsets = None # list of offsets
 
 prefix = None # alternate path
 suffix = None # modifier to existing base path

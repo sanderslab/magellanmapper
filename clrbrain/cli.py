@@ -101,9 +101,7 @@ from clrbrain import mlearn
 from clrbrain import stats
 
 roi_size = None # current region of interest
-roi_sizes = None # list of regions of interest
 offset = None # current offset
-offsets = None # list of offsets
 
 image5d = None # numpy image array
 image5d_proc = None
@@ -494,8 +492,7 @@ def main(process_args_only=False):
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for Clrbrain")
-    global roi_size, \
-            rois_sizes, offset, offsets, proc_type, mlab_3d, truth_db_type
+    global roi_size, offset, proc_type, mlab_3d, truth_db_type
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series")
@@ -581,14 +578,15 @@ def main(process_args_only=False):
         config.roc = args.roc
         print("Set ROC to {}".format(config.roc))
     if args.offset is not None:
-        offsets = _parse_coords(args.offset)
-        offset = offsets[0]
-        print("Set offsets to {}, current offset {}".format(offsets, offset))
+        config.offsets = _parse_coords(args.offset)
+        offset = config.offsets[0]
+        print("Set offsets to {}, current offset {}"
+              .format(config.offsets, offset))
     if args.size is not None:
-        roi_sizes = _parse_coords(args.size)
-        roi_size = roi_sizes[0]
+        config.roi_sizes = _parse_coords(args.size)
+        roi_size = config.roi_sizes[0]
         print("Set ROI sizes to {}, current size {}"
-              .format(roi_sizes, roi_size))
+              .format(config.roi_sizes, roi_size))
     if args.padding_2d is not None:
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
@@ -850,7 +848,8 @@ def main(process_args_only=False):
         if config.roc:
             # grid search with ROC curve
             stats_dict = mlearn.grid_search(
-                _iterate_file_processing, filename_base, offsets, roi_sizes)
+                _iterate_file_processing, filename_base, config.offsets, 
+                config.roi_sizes)
             parsed_dict = mlearn.parse_grid_stats(stats_dict)
             # plot ROC curve
             from clrbrain import plot_2d

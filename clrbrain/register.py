@@ -2100,29 +2100,35 @@ def _mirror_imported_labels(labels_img_np, start):
     labels_img_np = np.swapaxes(labels_img_np, 0, 2)
     return labels_img_np
 
-def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
+def make_edge_images(path_img, show=True, atlas=True, suffix=None, 
+                     path_atlas_dir=None):
     """Make edge-detected atlas and associated labels images.
     
     The atlas is assumed to be a sample (eg microscopy) image on which 
     an edge-detection filter will be applied. The labels image is 
     assumed to be an annotated image whose edges will be found by 
-    obtaining the borders of all annotations.
+    obtaining the borders of all separate labels.
     
     Args:
-        path_atlas: Path to the image atlas. The labels image will be 
-            found as a corresponding, registered image.
+        path_img: Path to the image atlas. The labels image will be 
+            found as a corresponding, registered image, unless 
+            ``path_atlas_dir`` is given.
         show_imgs: True if the output images should be displayed; defaults 
             to True.
         atlas: True if the primary image is an atlas, which is assumed 
             to be symmetrical. False if the image is an experimental/sample 
             image, in which case erosion will be performed on the full 
             images, and stats will not be performed.
-        suffix: Modifier to append to end of ``path_atlas`` basename for 
+        suffix: Modifier to append to end of ``path_img`` basename for 
             registered image files that were output to a modified name; 
             defaults to None.
+        path_atlas_dir: Path to atlas directory to use labels from that 
+            directory rather than from labels image registered to 
+            ``path_img``, such as when the sample image is registered 
+            to an atlas rather than the other way around. Defaults to None.
     """
     
-    # load atlas image, assumed to be experimental image
+    # load atlas image, assumed to be a histology image
     if atlas:
         print("generating edge images for atlas")
         atlas_suffix = IMG_ATLAS
@@ -2131,7 +2137,7 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
         atlas_suffix = IMG_EXP
     
     # adjust image path with suffix
-    mod_path = path_atlas
+    mod_path = path_img
     if suffix is not None:
         mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
     
@@ -2142,8 +2148,15 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
     atlas_np = sitk.GetArrayFromImage(atlas_sitk)
     
     # load associated labels image
-    labels_sitk = load_registered_img(
-        mod_path, get_sitk=True, reg_name=IMG_LABELS)
+    if path_atlas_dir and os.path.isdir(path_atlas_dir):
+        # labels from atlas directory
+        path_labels = os.path.join(path_atlas_dir, IMG_LABELS)
+        print("loading labels from", path_labels)
+        labels_sitk = sitk.ReadImage(path_labels)
+    else:
+        # labels registered to sample image
+        labels_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     
     # output images
@@ -2166,7 +2179,7 @@ def make_edge_images(path_atlas, show=True, atlas=True, suffix=None):
         atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     else:
         # if modified path or sigma not set, load from original image instead
-        atlas_edge = load_registered_img(path_atlas, reg_name=IMG_ATLAS_EDGE)
+        atlas_edge = load_registered_img(path_img, reg_name=IMG_ATLAS_EDGE)
     
     if erosion is not None:
         # convert labels image into markers
@@ -4293,11 +4306,12 @@ if __name__ == "__main__":
         config.RegisterTypes.make_edge_images_exp):
         
         # convert atlas or experiment image and associated labels 
-        # to edge-detected images
+        # to edge-detected images; labels can be given as atlas dir from 
+        # which labels will be extracted (eg import dir)
         atlas = reg is config.RegisterTypes.make_edge_images
         for img_path in config.filenames:
             make_edge_images(
-                img_path, show=show, atlas=atlas, suffix=config.suffix)
+                img_path, show, atlas, config.suffix, config.load_labels)
     
     elif reg is config.RegisterTypes.reg_labels_to_atlas:
         # register labels to its underlying atlas

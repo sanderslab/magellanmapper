@@ -2502,7 +2502,8 @@ def make_sub_segmented_labels(img_path, suffix=None):
     write_reg_images({IMG_LABELS_SUBSEG: labels_subseg_sitk}, mod_path)
     return labels_subseg
 
-def merge_images(img_paths, reg_name, prefix=None, suffix=None):
+def merge_images(img_paths, reg_name, prefix=None, suffix=None, 
+                 fn_combine=np.sum):
     """Merge images from multiple paths.
     
     Assumes that the images are relatively similar in size, but will resize 
@@ -2516,6 +2517,8 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None):
            path in ``img_paths`` instead.
         suffix: Portion of path to be combined with each path 
             in ``img_paths`` and output path; defaults to None.
+        fn_combine: Function to apply to combine images with ``axis=0``. 
+            Defaults to :func:``np.sum``.
     
     Returns:
         The combined image in SimpleITK format.
@@ -2547,7 +2550,7 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None):
         img_nps.append(img_np)
     
     # combine images and write single combo image
-    img_combo = np.sum(img_nps, axis=0)
+    img_combo = fn_combine(img_nps, axis=0)
     combined_sitk = replace_sitk_with_numpy(img_sitk, img_combo)
     # fallback to using first image's name as base
     output_base = img_paths[0] if prefix is None else prefix

@@ -4335,11 +4335,16 @@ if __name__ == "__main__":
             make_sub_segmented_labels(img_path, config.suffix)
 
     elif reg is config.RegisterTypes.merge_images:
-        # combine labels edges from all paths
-        reg_name = lib_clrbrain.insert_before_ext(
+        # combine separate experiment and labels distance images from all paths
+        reg_name_exp = lib_clrbrain.insert_before_ext(
+            IMG_EXP, REREG_SUFFIX, sep="_")
+        merge_images(
+            config.filenames, reg_name_exp, config.prefix, config.suffix)
+        reg_name_dist = lib_clrbrain.insert_before_ext(
             IMG_LABELS_DIST, REREG_SUFFIX, sep="_")
         merge_images(
-            config.filenames, reg_name, config.prefix, config.suffix)
+            config.filenames, reg_name_dist, config.prefix, config.suffix, 
+            np.sum)
 
     elif reg is config.RegisterTypes.register_reg:
         # register a group of registered images to another image, 

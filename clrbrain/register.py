@@ -1686,13 +1686,17 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
             reg_imgs.append(img_result)
             names.append(reg_name)
     
-    # use prefix as base output path if given
-    output_base = mod_path if prefix is None else prefix
+    # use prefix as base output path if given and append distiguishing string 
+    # to differentiate from original files
+    output_base = lib_clrbrain.insert_before_ext(
+        moving_path if prefix is None else prefix, REREG_SUFFIX, "_")
+    if suffix is not None:
+        output_base = lib_clrbrain.insert_before_ext(output_base, suffix)
     imgs_write = {}
     for name, img in zip(names, reg_imgs):
-        # use the same reg suffixes but append a rereg designator
-        output_reg = lib_clrbrain.insert_before_ext(name, REREG_SUFFIX, "_")
-        imgs_write[output_reg] = img
+        # use the same reg suffixes, assuming that output_base will give a 
+        # distinct name to avoid overwriting previously registered images
+        imgs_write[name] = img
     write_reg_images(imgs_write, output_base)
     if show:
         for img in imgs_write.values(): sitk.Show(img)

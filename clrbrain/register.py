@@ -2125,7 +2125,9 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         path_atlas_dir: Path to atlas directory to use labels from that 
             directory rather than from labels image registered to 
             ``path_img``, such as when the sample image is registered 
-            to an atlas rather than the other way around. Defaults to None.
+            to an atlas rather than the other way around. Typically 
+            coupled with ``suffix`` to compare same sample against 
+            different labels. Defaults to None.
     """
     
     # load atlas image, assumed to be a histology image
@@ -2141,23 +2143,26 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     if suffix is not None:
         mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
     
-    # load atlas image and set resolution from it
-    atlas_sitk = load_registered_img(
-        mod_path, get_sitk=True, reg_name=atlas_suffix)
-    detector.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
-    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
-    
-    # load associated labels image
-    if path_atlas_dir and os.path.isdir(path_atlas_dir):
-        # labels from atlas directory
+    labels_from_atlas_dir = path_atlas_dir and os.path.isdir(path_atlas_dir)
+    if labels_from_atlas_dir:
+        # load labels from atlas directory
+        # TODO: consider applying suffix to labels dir
+        path_atlas = path_img
         path_labels = os.path.join(path_atlas_dir, IMG_LABELS)
         print("loading labels from", path_labels)
         labels_sitk = sitk.ReadImage(path_labels)
     else:
-        # labels registered to sample image
+        # load labels registered to sample image
+        path_atlas = mod_path
         labels_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_LABELS)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    
+    # load atlas image, set resolution from it
+    atlas_sitk = load_registered_img(
+        path_atlas, get_sitk=True, reg_name=atlas_suffix)
+    detector.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
+    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
     
     # output images
     atlas_sitk_log = None
@@ -2178,7 +2183,8 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
         atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     else:
-        # if modified path or sigma not set, load from original image instead
+        # if sigma not set or if using suffix to compare two images, 
+        # load from original image to copmare against common image
         atlas_edge = load_registered_img(path_img, reg_name=IMG_ATLAS_EDGE)
     
     if erosion is not None:

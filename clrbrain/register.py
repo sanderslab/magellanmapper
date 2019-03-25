@@ -4363,14 +4363,10 @@ if __name__ == "__main__":
 
     elif reg is config.RegisterTypes.merge_images:
         # combine separate experiment and labels distance images from all paths
-        reg_name_exp = lib_clrbrain.insert_before_ext(
-            IMG_EXP, REREG_SUFFIX, sep="_")
+        if not config.suffix:
+            merge_images(config.filenames, IMG_EXP, config.prefix)
         merge_images(
-            config.filenames, reg_name_exp, config.prefix, config.suffix)
-        reg_name_dist = lib_clrbrain.insert_before_ext(
-            IMG_LABELS_DIST, REREG_SUFFIX, sep="_")
-        merge_images(
-            config.filenames, reg_name_dist, config.prefix, config.suffix, 
+            config.filenames, IMG_LABELS_DIST, config.prefix, config.suffix, 
             np.sum)
 
     elif reg is config.RegisterTypes.register_reg:

@@ -1475,7 +1475,8 @@ def register_duo(fixed_img, moving_img):
         # originally set fixed and moving images, not after transformation up 
         # to this point
         fix_pts_path = os.path.join(os.path.dirname(name_prefix), "fix_pts.txt")
-        move_pts_path = os.path.join(os.path.dirname(name_prefix), "mov_pts.txt")
+        move_pts_path = os.path.join(
+            os.path.dirname(name_prefix), "mov_pts.txt")
         if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
             metric = list(param_map["Metric"])
             metric.append("CorrespondingPointsEuclideanDistanceMetric")
@@ -1665,7 +1666,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     else:
         # treat the path as a base path to which a reg suffix will be combined
         moving_img = load_registered_img(
-            moving_path, get_sitk=True, reg_name=reg_base)
+            mod_path, get_sitk=True, reg_name=reg_base)
     
     # register the images and apply the transformation to any 
     # additional images previously registered to the moving path

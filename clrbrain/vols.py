@@ -523,7 +523,9 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
-    of the chosen measurement, such as the mean of the densities.
+    of the chosen measurement, such as the mean of the densities. If 
+    multiple conditions exist, the difference of metrics for the first 
+    two conditions will be taken.
     
     Args:
         labels_img: Labels image as a Numpy array in x,y,z.
@@ -538,18 +540,22 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
     """
     # ensure that at least 2 conditions exist to compare
     conds = np.unique(df["Condition"])
-    if len(conds) < 2: return None
     labels_diff = np.zeros_like(labels_img, dtype=np.float)
     regions = np.unique(df[LabelMetrics.Region.name])
     for region in regions:
         df_region = df[df[LabelMetrics.Region.name] == region]
-        avgs = []
-        for cond in conds:
-            # gather separate metrics for each condition
-            df_region_cond = df_region[df_region["Condition"] == cond]
-            #print(df_region_cond.to_csv())
-            print(region, cond, fn_avg(df_region_cond[meas]))
-            avgs.append(fn_avg(df_region_cond[meas]))
-        # compare the metrics for the first two conditions
-        labels_diff[np.abs(labels_img) == region] = avgs[0] - avgs[1]
+        labels_region = np.abs(labels_img) == region
+        if len(conds) >= 2:
+            # compare the metrics for the first two conditions
+            avgs = []
+            for cond in conds:
+                # gather separate metrics for each condition
+                df_region_cond = df_region[df_region["Condition"] == cond]
+                #print(df_region_cond.to_csv())
+                print(region, cond, fn_avg(df_region_cond[meas]))
+                avgs.append(fn_avg(df_region_cond[meas]))
+            labels_diff[labels_region] = avgs[0] - avgs[1]
+        else:
+            # take the metric for the single condition
+            labels_diff[labels_region] = fn_avg(df_region[meas])
     return labels_diff

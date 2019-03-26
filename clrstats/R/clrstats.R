@@ -546,12 +546,16 @@ setupConfig <- function(name=NULL) {
   
   if (is.null(name)) {
     # initialize environment
-    config.env$PlotSize <- c(3.5, 7)
+    config.env$PlotSize <- c(5, 7)
     config.env$SampleLegend <- FALSE
     
   } else if (name == "aba") {
     # multiple distinct atlases
     config.env$SampleLegend <- TRUE
+    
+  } else if (name == "skinny") {
+    # very narrow plots
+    config.env$PlotSize <- c(3.5, 7)
     
   } else if (name == "square") {
     # square plots

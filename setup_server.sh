@@ -123,7 +123,7 @@ lsblk -p
 
 if [[ $setup -eq 1 && -e "$DIR_DATA" ]]; then
     # change ownership if new drive attached
-    sudo chown -R "${username}.${username} "$DIR_DATA"
+    sudo chown -R "${username}.${username}" "$DIR_DATA"
 fi
 
 exit 0

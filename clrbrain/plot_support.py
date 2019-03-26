@@ -30,8 +30,8 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
             can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
         alpha: Default alpha transparency level.
-        vim: Imshow vmin level; defaults to None.
-        vmax: Imshow vmax level; defaults to None.
+        vim: Sequence of vmin levels for each channel; defaults to None.
+        vmax: Sequence of vmax levels for each channel; defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
@@ -75,25 +75,29 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     """Show multiple, overlaid images.
     
     Wrapper function calling :func:``imshow_multichannel`` for multiple 
-    images.
+    images. The first image is treated as a sample image with potential 
+    for multiple channels. Subsequent images are typically label images, 
+    which may or may not have multple channels.
     
     Args:
         ax: Axes.
         aspect: Aspect ratio.
         origin: Image origin.
         imgs2d: List of 2D images to display.
-        channels: Either a single channel for all images or a list of 
-            channels corresponding to each image.
+        channels: A list of channels designators for each image, or None 
+            to use :attr:``config.channel`` for the first image and 0 
+            for all subsequent images.
         cmaps: Either a single colormap for all images or a list of 
             colormaps corresponding to each image. Colormaps of type 
             :class:``colormaps.DiscreteColormap`` will have their 
             normalization object applied as well.
         alphas: Either a single alpha for all images or a list of 
             alphas corresponding to each image.
-        vmins: Either a single vmin for all images or a list of 
-            vmins corresponding to each image; defaults to None.
-        vmaxs: Either a single vmax for all images or a list of 
-            vmaxs corresponding to each image; defaults to None.
+        vmins: A list of vmins for each image; defaults to None to use 
+            :attr:``config.vmins`` for the first image and None for all others.
+        vmaxs: A list of vmaxs for each image; defaults to None to use 
+            :attr:``config.vmax_overview`` for the first image and None 
+            for all others.
     
     Returns:
         Nested list containing a list of ``AxesImage`` objects 
@@ -101,18 +105,34 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     """
     ax_imgs = []
     num_imgs2d = len(imgs2d)
+    if num_imgs2d < 1: return None
     
-    def ensure_list(val):
-        # convert scalars to lists of repeated vals
-        return [val] * num_imgs2d if not isinstance(val, (tuple, list)) else val
+    def fill(fill_with, chls):
+        # make a sequence with vals corresponding to each 2D image, with 
+        # the first val as another seq corresponding to the given number 
+        # of channels
+        filled = [None] * num_imgs2d
+        if fill_with:
+            filled[0] = lib_clrbrain.pad_seq(list(fill_with), len(chls))
+        return filled
     
-    # convert args that accept scalars but require lists
-    channels = ensure_list(channels)
-    alphas = ensure_list(alphas)
-    vmins = ensure_list(vmins)
-    vmaxs = ensure_list(vmaxs)
+    if channels is None:
+        # channels are designators rather than lists of specific channels
+        channels = [0] * num_imgs2d
+        channels[0] = config.channel
+    if vmins is None or vmaxs is None:
+        # fill vmin/vmax with None for each 2D image and config vals for 
+        # each channel for the first image
+        _, channels_main = plot_3d.setup_channels(imgs2d[0], config.channel, 2)
+        if vmins is None:
+            fill_with = (config.near_min if config.vmins is None 
+                         else config.vmins)
+            vmins = fill(config.vmins, channels_main)
+        if vmaxs is None:
+            vmaxs = fill(config.vmax_overview, channels_main)
     
     for i in range(num_imgs2d):
+        # generate a multichannel display image for each 2D image
         cmap = cmaps[i]
         norm = None
         if isinstance(cmap, colormaps.DiscreteColormap):

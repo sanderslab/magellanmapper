@@ -1,6 +1,9 @@
-# 2D plot editor
-# Author: David Young, 2018
-"""2D plot editor.
+# 2D overlaid plot editor
+# Author: David Young, 2018, 2019
+"""Editor for 2D plot with overlaid planes.
+
+Integrates with :class:``atlas_editor.AtlasEditor`` for synchronized 3D 
+view of orthogonal planes.
 """
 
 import matplotlib.patches as patches
@@ -125,9 +128,8 @@ class PlotEditor:
                 alphas.append(1)
         
         # overlay all images and set labels for footer value on mouseover
-        # TODO: make main image's vmax adjustable
         ax_imgs = plot_support.overlay_images(
-            self.axes, self.aspect, self.origin, imgs2d, 0, cmaps, alphas)
+            self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas)
         self.axes.format_coord = PixelDisplay(imgs2d)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]

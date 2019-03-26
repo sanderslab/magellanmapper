@@ -1186,8 +1186,13 @@ def plot_3d_points(roi, scene_mlab, channel):
         thresh = 0
         if len(np.unique(roi_show)) > 1:
             # need > 1 val to threshold
-            thresh = (filters.threshold_otsu(roi_show, 64) 
-                      * settings["points_3d_thresh"])
+            try:
+                thresh = filters.threshold_otsu(roi_show, 64)
+            except ValueError as e:
+                thresh = np.median(roi_show)
+                print("could not determine Otsu threshold, taking median "
+                      "({}) instead".format(thresh))
+            thresh *= settings["points_3d_thresh"]
         print("removing 3D points below threshold of {}".format(thresh))
         remove = np.where(roi_show_1d < thresh)
         roi_show_1d = np.delete(roi_show_1d, remove)

@@ -183,7 +183,9 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
 def add_scale_bar(ax, downsample=None, plane=None):
     """Adds a scale bar to the plot.
     
-    Uses the x resolution value and assumes that it is in microns per pixel.
+    Uses the x resolution value and assumes that it is in microns per pixel. 
+    The bar's color is taken from the setting in 
+    :attr:``config.process_settings``.
     
     Args:
         ax: The plot that will show the bar.
@@ -201,8 +203,9 @@ def add_scale_bar(ax, downsample=None, plane=None):
     res = resolutions[2] # assume scale bar is along x-axis
     if downsample:
         res *= downsample
-    scale_bar = ScaleBar(res, u'\u00b5m', SI_LENGTH, 
-                         box_alpha=0, color="w", location=3)
+    scale_bar = ScaleBar(
+        res, u'\u00b5m', SI_LENGTH, box_alpha=0, 
+        color=config.process_settings["scale_bar_color"], location=3)
     ax.add_artist(scale_bar)
 
 def max_plane(img3d, plane):

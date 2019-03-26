@@ -1,6 +1,6 @@
 #!/bin/bash
 # Prepare a server the Clrbrain pipeline
-# Author: David Young 2018
+# Author: David Young 2018, 2019
 
 HELP="
 Sets up a server for processing files in the Clrbrain 
@@ -15,6 +15,7 @@ Arguments:
    -w [/dev/path]: Set swap device path. If an empty 
        string, data drive will not be set up.
    -l: Use legacy drive specifications.
+   -u [username]: Username on server. Defaults to ec2-user.
 
 Assumptions:
 - Two additional drives are attached:
@@ -31,9 +32,10 @@ DIR_DATA="/data"
 setup=0
 swap="/dev/nvme1n1"
 data="/dev/nvme2n1"
+username="ec2-user" # default on many EC2 distros
 
 OPTIND=1
-while getopts hslw:d: opt; do
+while getopts hslw:d:u: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -52,6 +54,9 @@ while getopts hslw:d: opt; do
             ;;
         d)  data="$OPTARG"
             echo "Set data directory to $data"
+            ;;
+        u)  username="$OPTARG"
+            echo "Changing username to $username"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -118,7 +123,7 @@ lsblk -p
 
 if [[ $setup -eq 1 && -e "$DIR_DATA" ]]; then
     # change ownership if new drive attached
-    sudo chown -R ec2-user.ec2-user "$DIR_DATA"
+    sudo chown -R "${username}.${username} "$DIR_DATA"
 fi
 
 exit 0

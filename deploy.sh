@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy Clrbrain to AWS
-# Author: David Young 2017, 2018
+# Author: David Young 2017, 2019
 
 HELP="
 Deploy Clrbrain and related files to AWS.
@@ -20,6 +20,7 @@ Arguments:
       script to return immediately.
   -r [path]: Path to the run script that will be uploaded and 
       excecuted as the last server command.
+  -n [username]: Username on server. Defaults to ec2-user.
 "
 
 FIJI="http://downloads.imagej.net/fiji/latest/fiji-nojre.zip"
@@ -29,6 +30,7 @@ run_script="" # run script, which will be executed as last cmd
 deploy_files=() # files to deploy
 git_hash="" # git commit, including short hashes
 quiet=0
+username="ec2-user" # default on many EC2 distros
 
 # run from parent directory
 base_dir="`dirname $0`"
@@ -36,7 +38,7 @@ cd "$base_dir"
 echo $PWD
 
 OPTIND=1
-while getopts hi:p:ufr:d:g:q opt; do
+while getopts hi:p:ufr:d:g:qn: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
@@ -64,6 +66,9 @@ while getopts hi:p:ufr:d:g:q opt; do
             ;;
         q)  quiet=1
             echo "Set to be quiet"
+            ;;
+        n)  username="$OPTARG"
+            echo "Changing username to $username"
             ;;
         :)  echo "Option -$OPTARG requires an argument"
             exit 1
@@ -118,11 +123,11 @@ echo ""
 
 # run remote command on server
 run_remote() {
-    ssh -i "$pem" ec2-user@"$ip" "$server_cmd"
+    ssh -i "$pem" "${username}@${ip}" "$server_cmd"
 }
 
 # execute upload and server commands
-scp -i "$pem" -r ${deploy_files[@]} ec2-user@"$ip":~
+scp -i "$pem" -r ${deploy_files[@]} "${username}@${ip}":~
 if [[ $quiet -eq 0 ]]; then
     run_remote
 else

@@ -93,6 +93,26 @@ def roll_elements(arr, shift, axis=None):
     #print("after moving: {}".format(arr))
     return arr
 
+def pad_seq(seq, n, pad=None):
+    """Pad a sequence with a given value or truncate the sequence to fit 
+    a given length.
+    
+    Args:
+        seq: Tuple or list to fill in-place.
+        n: Target length.
+        pad: Value with which to fill.
+    
+    Returns:
+        A truncated view of ``seq`` if the sequence is longer than ``n`` 
+        or ``seq`` filled with ``pad`` to reach a length of ``n``.
+    """
+    len_seq = len(seq)
+    if len_seq >= n:
+        seq = seq[:n]
+    else:
+        seq += [pad] * (n - len_seq)
+    return seq
+
 def insert_before_ext(name, insert, sep=""):
     """Merge two paths by splicing in ``insert`` just before the extention 
     in ``base_path``.

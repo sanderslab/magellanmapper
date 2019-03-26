@@ -54,9 +54,10 @@ suffix = None # modifier to existing base path
 
 PLANE = ("xy", "xz", "yz")
 plane = None
-vmax_overview = [None]
+vmins = None # cmd-line specified
+vmax_overview = [None] # generated from near_max; overwritten at cmd-line
 border = None # clip ROI to border (x,y,z order)
-near_max = [-1.0]
+near_max = [-1.0] # auto-detected, max of clipped intensities of whole img
 near_min = [0.0]
 
 

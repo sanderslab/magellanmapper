@@ -531,6 +531,7 @@ def main(process_args_only=False):
     parser.add_argument("--prefix")
     parser.add_argument("--suffix")
     parser.add_argument("--alphas")
+    parser.add_argument("--vmin")
     parser.add_argument("--vmax")
     parser.add_argument("--seed")
     parser.add_argument("--reg_suffixes", nargs="*")
@@ -743,8 +744,14 @@ def main(process_args_only=False):
         config.alphas = [float(val) for val in args.alphas.split(",")]
         print("Set alphas to", config.alphas)
     
+    if args.vmin:
+        # specify vmin levels
+        config.vmins = [float(val) for val in args.vmin.split(",")]
+        print("Set vmins to", config.vmins)
+    
     if args.vmax:
         # specify vmax levels
+        # TODO: consider saving as separate var
         config.vmax_overview = [float(val) for val in args.vmax.split(",")]
         print("Set vmax to", config.vmax_overview)
     

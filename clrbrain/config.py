@@ -281,6 +281,7 @@ class ProcessSettings(SettingsDict):
         self["resize_blobs"] = None
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
+        self["scale_bar_color"] = "w"
     
 def update_process_settings(settings, settings_type):
     """Update processing profiles, including layering modifications upon 
@@ -421,7 +422,8 @@ def update_process_settings(settings, settings_type):
         
         settings.add_modifier(
             "diverging", 
-            {"channel_colors": ("BrBG", "RdBu")}, 
+            {"channel_colors": ("BrBG", "RdBu"), 
+             "scale_bar_color": "k"}, 
             profile)
         
         settings.add_modifier(

@@ -85,6 +85,7 @@ IMG_LABELS_EDGE = "annotationEdge.mhd"
 IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
 IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
+IMG_LABELS_DIFF = "annotationDiff.mhd"
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
@@ -3775,7 +3776,8 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, reg_name=IMG_LABELS_TRUNC)
             
             # load labels edge and edge distances images
-            labels_edge = load_registered_img(mod_path,reg_name=IMG_LABELS_EDGE)
+            labels_edge = load_registered_img(
+                mod_path, reg_name=IMG_LABELS_EDGE)
             dist_to_orig = load_registered_img(
                 mod_path,reg_name=IMG_LABELS_DIST)
             
@@ -3827,6 +3829,40 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             dfs_all, out_path_summary)
     print("time elapsed for volumes by ID: {}".format(time() - start_time))
     return df_combined, df_combined_all
+
+def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None, 
+                         show=False):
+    """Replace labels in an image with the differences in metrics for 
+    each given region between two conditions.
+    
+    Args:
+        img_path: Path to the base image from which the corresponding 
+            registered image will be found.
+        df_path: Path to data frame with metrics for the labels.
+        meas: Name of colum in data frame with the chosen measurement.
+        fn_avg: Function to apply to the set of measurements, such as a mean.
+        prefix: Start of path for output image; defaults to None to 
+            use ``img_path`` instead.
+        show: True to show the images after generating them; defaults to False.
+    """
+    # load labels image and data frame before generating map for the 
+    # given metric of the chosen measurement
+    labels_sitk = load_registered_img(
+        img_path, reg_name=IMG_LABELS, get_sitk=True)
+    labels_np = sitk.GetArrayFromImage(labels_sitk)
+    df = pd.read_csv(df_path)
+    labels_diff = vols.map_meas_to_labels(labels_np, df, meas, fn_avg)
+    labels_diff_sitk = replace_sitk_with_numpy(labels_sitk, labels_diff)
+    
+    # save and show labels difference image
+    reg_diff = lib_clrbrain.insert_before_ext(IMG_LABELS_DIFF, meas, "_")
+    reg_diff = lib_clrbrain.insert_before_ext(reg_diff, fn_avg.__name__, "_")
+    imgs_write = {reg_diff: labels_diff_sitk}
+    out_path = prefix if prefix else img_path
+    write_reg_images(imgs_write, out_path)
+    if show:
+        for img in imgs_write.values():
+            if img: sitk.Show(img)
 
 def export_region_ids(labels_ref_lookup, path, level):
     """Export region IDs from annotation reference reverse mapped dictionary 
@@ -4377,3 +4413,18 @@ if __name__ == "__main__":
         register_reg(
             *config.filenames[:2], IMG_EXP, suffixes, config.plane, 
             flip, config.prefix, config.suffix, not config.no_show)
+    
+    elif reg is config.RegisterTypes.labels_diff:
+        # generate labels difference images for various measurements 
+        # and metrics, using the output from volumes measurements for 
+        # drawn labels
+        path_df = SAMPLE_VOLS + ".csv"
+        metrics = [
+            (vols.LabelMetrics.VarNuclei.name, np.nanmean), 
+            (vols.LabelMetrics.VarNuclei.name, np.nanmedian), 
+            (vols.LabelMetrics.VarIntensity.name, np.nanmean), 
+            (vols.LabelMetrics.VarIntensity.name, np.nanmedian), 
+        ]
+        for metric in metrics:
+            make_labels_diff_img(
+                config.filename, path_df, *metric, config.prefix, show)

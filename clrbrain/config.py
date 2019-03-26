@@ -420,6 +420,11 @@ def update_process_settings(settings, settings_type):
             profile)
         
         settings.add_modifier(
+            "diverging", 
+            {"channel_colors": ("BrBG", "RdBu")}, 
+            profile)
+        
+        settings.add_modifier(
             "cytoplasm", 
             {"clip_min": 0.3,
              "clip_max": 0.8,

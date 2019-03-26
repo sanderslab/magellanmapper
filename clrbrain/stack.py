@@ -108,16 +108,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     # setup imshow parameters
     cmaps = config.process_settings["channel_colors"]
     cmaps_all = [cmaps, *cmaps_labels]
-    imgs_ordered = [None] * len(pool_results)
-    channels = [0] * num_image_types
-    channels[0] = config.channel
-    near_mins = [None] * num_image_types
-    near_mins[0] = config.near_min
-    vmaxs = [None] * num_image_types
-    vmaxs[0] = config.vmax_overview
-    num_alphas = len(config.alphas)
-    alphas = [config.alphas[i] if num_alphas > i else 0.9 
-              for i in range(num_image_types)]
+    alphas = lib_clrbrain.pad_seq(config.alphas, num_image_types, 0.9)
     
     for result in pool_results:
         i, imgs = result.get()
@@ -128,8 +119,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         # a nested list containing a list for each image, which in turn 
         # contains a list of artists for each channel
         ax_imgs = plot_support.overlay_images(
-            ax, aspect, origin, imgs, channels, cmaps_all, alphas, 
-            near_mins, vmaxs)
+            ax, aspect, origin, imgs, None, cmaps_all, alphas)
         plotted_imgs[i] = np.array(ax_imgs).flatten()
     pool.close()
     pool.join()

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build script to compile SimpleElastix
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 
 ################################################
 # Compiles SimpleElastix in a clean build directory on Mac
@@ -17,15 +17,18 @@
 #  a fresh clone or update them manually
 ################################################
 
-BUILD_DIR_BASE="build_se"
+build_dir_base="build_se"
 PKG="SimpleITK-build/Wrapping/Python"
 install_wrapper=0
 
 OPTIND=1
-while getopts hi opt; do
+while getopts hid: opt; do
     case $opt in
         h)  echo $HELP
             exit 0
+            ;;
+        d)  build_dir_base="$OPTARG"
+            echo "Changed build directory to $build_dir_base"
             ;;
         i)  install_wrapper=1
             echo "Set to install Python wrapper"
@@ -63,6 +66,9 @@ fi
 echo "will use $compiler_c C compiler and $compiler_cpp C++ compiler"
 echo "for $os platform"
 
+build_dir_parent="$(dirname "$build_dir_base")"
+cd "$build_dir_parent"
+
 # get SimpleElastix git repo if not already present
 if [[ ! -e SimpleElastix ]]
 then
@@ -74,7 +80,7 @@ fi
 # build SimpleElastix if install flag is false, in which case 
 # the package will only be installed if possible, or if the 
 # package folder doesn't exist
-build_dir="$BUILD_DIR_BASE"
+build_dir="$(basename "$build_dir_base")"
 if [[ $install_wrapper -ne 1 ]] || [[ ! -e "${build_dir}/${PKG}" ]]; then
     # backup old build directory if necessary and create a new one
     backup_file "$build_dir"

@@ -324,9 +324,9 @@ EXTRA_ARGS="$@"
 
 
 # Parsing names from your image path
-OUT_DIR="`dirname $IMG`"
-EXP="`basename $OUT_DIR`"
-NAME="`basename $IMG`"
+OUT_DIR="$(dirname "$IMG")"
+EXP="$(basename "$OUT_DIR")"
+NAME="$(basename "$IMG")"
 IMG_PATH_BASE="${OUT_DIR}/${NAME%.*}"
 EXT="${IMG##*.}"
 s3_exp_path=s3://"${S3_DIR}/${EXP}"
@@ -486,7 +486,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   # notify user via Slack and open ImageJ/Fiji for review, which will 
   # also keep script from continuing until user closes ImageJ/Fiji 
   # after review
-  msg="Stitching completed for $IMG, now awaiting your alignment review"
+  msg="Stitching completed for $NAME, now awaiting your alignment review"
   if [[ "$url_notify" != "" ]]; then
     python -u -m clrbrain.notify --notify "$url_notify" "$msg"
   fi
@@ -632,7 +632,7 @@ echo "$msg"
 if [[ "$url_notify" != "" ]]; then
   # post-processing notification to Slack
   summary_msg=(
-    "Clrbrain \"$pipeline\" pipeline for $IMG completed" "${summary_msg[@]}")
+    "Clrbrain \"$pipeline\" pipeline for $NAME completed" "${summary_msg[@]}")
   msg=$(printf "%s\n" "${summary_msg[@]}")
   attach=""
   if [[ "$output_path" != "" ]]; then

@@ -415,6 +415,40 @@ def detect_blobs_stack(roi, overlap, tol, channels):
     
     return merged, segments_all, df
 
+class StackPruner(object):
+    """Prune blobs within a stack in a way that allows multiprocessing 
+    without global variables.
+    
+    Attributes:
+        blobs_to_prune: List of tuples to be passed to 
+            :meth:``detector.remove_close_blobs_within_sorted_array``.
+    """
+    blobs_to_prune = None
+    
+    @classmethod
+    def set_data(cls, blobs_to_prune):
+        """Set the data to be shared during multiprocessing.
+        
+        Args:
+            blobs_to_prune: List of tuples as specified for 
+                :attr:``blobs_to_prune``.
+        """
+        cls.blobs_to_prune = blobs_to_prune
+    
+    @classmethod
+    def prune_overlap(cls, i):
+        """Prune an overlapping region.
+        
+        Args:
+            i: Index in :attr:``blobs_to_prune``.
+        
+        Returns:
+            The results from 
+            :meth:``detector.remove_close_blobs_within_sorted_array``.
+        """
+        return detector.remove_close_blobs_within_sorted_array(
+            *cls.blobs_to_prune[i])
+        
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
                     channels):
     """Prune close blobs within overlapping regions by checking within
@@ -446,6 +480,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
         # prune blobs from each channel separately to avoid pruning based on 
         # co-localized channel signals
         blobs = detector.blobs_in_channel(blobs_merged, i)
+        for j in range(7):
+            blobs = np.concatenate((blobs, blobs), axis=0)
         for axis in range(3):
             # prune planes with all the overlapping regions within a given axis,
             # skipping if this axis has no overlapping sub-regions
@@ -454,9 +490,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 continue
             
             # multiprocess pruning by overlapping planes
-            pool = mp.Pool()
-            pool_results = []
             blobs_all_non_ol = None # all blobs from non-overlapping regions
+            blobs_to_prune = []
             for i in range(num_sections):
                 # build overlapping region dimensions based on size of 
                 # sub-region in the given axis
@@ -528,10 +563,16 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                     blobs_all_non_ol = np.concatenate(
                         (blobs_all_non_ol, blobs_non_ol))
                 
-                # prune blobs from overlapping regions via multiprocessing
+                blobs_to_prune.append((blobs_ol, tol, blobs_ol_next))
+            
+            StackPruner.set_data(blobs_to_prune)
+            pool = mp.Pool()
+            pool_results = []
+            for i in range(len(blobs_to_prune)):
+                # prune blobs from overlapping regions via multiprocessing, 
+                # using a separate class to avoid pickling input blobs
                 pool_results.append(pool.apply_async(
-                    detector.remove_close_blobs_within_sorted_array, 
-                    args=(blobs_ol, tol, blobs_ol_next)))
+                    StackPruner.prune_overlap, args=(i, )))
             
             # collect all the pruned blob lists
             blobs_all_ol = None

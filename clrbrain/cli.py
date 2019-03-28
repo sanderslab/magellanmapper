@@ -172,35 +172,6 @@ def segment_sub_roi(sub_rois_offsets, coord):
         #print("segs after:\n{}".format(segments))
     return (coord, segments)
 
-def collect_segments(segments_all, segments, region, tol):
-    """Adds an array of segments into a master array, removing any close
-    segments before adding them.
-    
-    Args:
-        segments_all: Master array of segments against which the array to
-            add will be compared for close segments.
-        segments: Array of segments to add.
-        region: The region of each segment array to compare for closeness,
-            given as a slice.
-        tol: Tolerance as (z, y, x), within which a segment will be 
-            considered a duplicate of a segment in the master array and
-            removed.
-    
-    Returns:
-        The master array.
-    """
-    # join segments
-    if segments_all is None:
-        # TODO: don't really need since should already be checking for 
-        # closeness in the blob detection algorithm
-        segments_all = chunking.remove_close_blobs_within_array(segments,
-                                                                region, tol)
-    elif segments is not None:
-        segments = chunking.remove_close_blobs(segments, segments_all, 
-                                               region, tol)
-        segments_all = np.concatenate((segments_all, segments))
-    return segments_all
-
 def _splice_before(base, search, splice, post_splice="_"):
     i = base.rfind(search)
     if i == -1:
@@ -274,32 +245,6 @@ def _check_np_none(val):
         The value if not a type of None, or a NoneType.
     """
     return None if val is None or np.all(np.equal(val, None)) else val
-
-def _prune_blobs(seg_rois, overlap, tol, sub_rois, sub_rois_offsets):
-    """Prune close blobs within overlapping regions.
-    
-    Args:
-        segs_roi: Segments from each sub-region.
-        overlap: 1D array of size 3 with the number of overlapping pixels 
-            for each image axis.
-        tol: Tolerance as (z, y, x), within which a segment will be 
-            considered a duplicate of a segment in the master array and
-            removed.
-        sub_rois: Sub-regions, used to check size.
-        sub_rois_offset: Offsets of each sub-region.
-    
-    Returns:
-        segments_all: All segments as a Numpy array.
-        duration: Time to prune, in seconds.
-    """
-    time_pruning_start = time()
-    segments_all = chunking.prune_overlapping_blobs2(
-        seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
-    if segments_all is not None:
-        print("total segments found: {}".format(segments_all.shape[0]))
-    time_pruning_end = time()
-    duration = time_pruning_end - time_pruning_start
-    return segments_all, duration
 
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
                     channels):
@@ -1369,34 +1314,6 @@ def process_stack(roi, overlap, tol, channels):
             detector.replace_rel_with_abs_blob_coords(segments_all)
         pruning_time = time() - time_pruning_start
         
-    else:
-        # Non-multiprocessing
-        
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    coord, sub_roi = denoise_sub_roi(coord)
-                    sub_rois[coord] = sub_roi
-        merged = chunking.merge_split_stack(sub_rois, overlap)
-        time_denoising_end = time()
-        
-        time_segmenting_start = time()
-        max_factor = config.process_settings["segment_size"]
-        sub_rois, overlap, sub_rois_offsets = chunking.stack_splitter(
-            merged, max_factor)
-        seg_rois = np.zeros(sub_rois.shape, dtype=object)
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    coord, segments = segment_sub_roi(sub_rois_offsets, coord)
-                    seg_rois[coord] = segments
-        time_segmenting_end = time()
-        
-        # older pruning method than multiprocessing version
-        segments_all, pruning_time = _prune_blobs(
-            seg_rois, overlap, tol, sub_rois, sub_rois_offsets)
     
     # benchmarking time
     print("total denoising time (s): {}"

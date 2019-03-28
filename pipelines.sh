@@ -96,6 +96,7 @@ output_path=""
 
 # Slack notification URL, to post when done
 url_notify=""
+summary_msg=()
 
 # Server clean-up, to perform post-processing tasks including 
 # upload and shutdown
@@ -440,13 +441,17 @@ if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
   # Get large, unstitched image file from cloud, where the fused (all 
   # illuminators merged) image is used for the Stitching pathway, and 
   # the unfused, original image is used for the BigStitcher pathway
+  start=$SECONDS
   mkdir "$OUT_DIR"
   echo "Downloading original image from S3..."
   get_compressed_file "${s3_exp_path}/${NAME}" "$OUT_DIR"
+  summary_msg+=(
+    "Original image download and decompression time: $(($SECONDS - $start))s")
 fi
 
 out_name_base=""
 clr_img="$IMG"
+start_stitching=$SECONDS
 if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   # ALTERNATIVE 1: Stitching plugin (old)
   
@@ -472,6 +477,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   # ALTERNATIVE 2: BigStitcher plugin
   
   OUT_NAME_BASE="${NAME%.*}_bigstitched"
+  start=$SECONDS
   
   # Import file into BigStitcher HDF5 format (warning: large file, just 
   # under size of original file) and find alignments
@@ -486,28 +492,38 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   fi
   echo "=================================="
   echo "$msg"
+  summary_msg+=("Stitching import and alignment time: $(($SECONDS - $start))s")
   ./stitch.sh -s "none" -j "$java_home"
   
   # Fuse image for each channel
+  start=$SECONDS
   ./stitch.sh -f "$IMG" -s "bigstitcher" -w 1 -j "$java_home"
+  summary_msg+=("Stitching fusion time: $(($SECONDS - $start))s")
   
   # Rename output file(s)
   FUSED="fused_tp_0"
   for f in ${OUT_DIR}/${FUSED}*.tif; do mv $f ${f/$FUSED/$OUT_NAME_BASE}; done
   
   # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
+  start=$SECONDS
   python -u -m clrbrain.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
     --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v \
     --proc importonly
+  summary_msg+=("Stitched file import time: $(($SECONDS - $start))s")
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi
+summary_msg+=(
+  "Total stitching time (including waiting): $(($SECONDS - $start_stitching))s")
 clr_img_base="${clr_img%.*}"
 
 if [[ "$pipeline" = "${PIPELINES[1]}" \
   || "$pipeline" = "${PIPELINES[5]}" ]]; then
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
     # upload stitched image for full and stitching pipelines
+    start=$SECONDS
     upload_images "$clr_img_base"
+    summary_msg+=(
+      "Stitched image compression and upload time: $(($SECONDS - $start))s")
   fi
 fi
 
@@ -519,6 +535,7 @@ setup_clrbrain_filenames "$clr_img_base"
 echo -n "Looking for ${image5d_npz}..."
 if [[ ! -e "$image5d_npz" ]]; then
   # Get stitched image files from S3
+  start=$SECONDS
   name="${image5d_npz%.*}"
   name="$(basename $name).${compression}"
   echo "downloading $name from S3..."
@@ -533,6 +550,8 @@ if [[ ! -e "$image5d_npz" ]]; then
       aws s3 cp "${s3_exp_path}/$(basename $npz)" "$OUT_DIR"
     done
   fi
+  summary_msg+=(
+    "Clrbrain image download and decompression time: $(($SECONDS - $start))s")
 else
   echo "found"
 fi
@@ -542,6 +561,7 @@ fi
 # Transpose/Resize Image Pipeline
 
 if [[ "$transpose_pathway" != "" ]]; then
+  start=$SECONDS
   img_transposed=""
   if [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[0]}" ]]; then
     if [[ "$plane" != "" ]]; then
@@ -577,6 +597,7 @@ if [[ "$transpose_pathway" != "" ]]; then
     upload_images "$base_path"
   fi
   
+  summary_msg+=("Transposition time: $(($SECONDS - $start))s")
 fi
 
 
@@ -584,6 +605,7 @@ fi
 # Whole Image Blob Detections Pipeline
 
 if [[ "$whole_img_proc" != "" ]]; then
+  start=$SECONDS
   # Process an entire image locally the given channel(s), chunking the 
   # image into multiple smaller stacks to minimize RAM usage and 
   # further chunking to run by multiprocessing for efficiency
@@ -596,16 +618,22 @@ if [[ "$whole_img_proc" != "" ]]; then
     args=("${proc_npz%.*}" "$compression" "$proc_npz")
     compress_upload "${args[@]}"
   fi
-  
+  summary_msg+=("Detections and upload time: $(($SECONDS - $start))s")
 fi
 
 
 ####################################
 # Post-Processing
 
+msg="Total time elapsed for Clrbrain pipeline: $(($SECONDS - $START_TIME))s"
+summary_msg+=("$msg")
+echo "$msg"
+
 if [[ "$url_notify" != "" ]]; then
   # post-processing notification to Slack
-  msg="Clrbrain \"$pipeline\" pipeline for $IMG completed"
+  summary_msg=(
+    "Clrbrain \"$pipeline\" pipeline for $IMG completed" "${summary_msg[@]}")
+  msg=$(printf "%s\n" "${summary_msg[@]}")
   attach=""
   if [[ "$output_path" != "" ]]; then
     attach="$output_path"
@@ -615,6 +643,7 @@ fi
 
 if [[ $clean_up -eq 1 ]]; then
   # Server Clean-Up
+  echo "Initiating clean-up tasks"
   
   if [[ "$output_path" != "" ]]; then
     # prepare tail of output file for notification and upload full file to S3
@@ -626,8 +655,5 @@ if [[ $clean_up -eq 1 ]]; then
   echo "Finishing clean-up tasks, shutting down..."
   sudo poweroff
 fi
-
-ELAPSED_TIME=$(($SECONDS - $START_TIME))
-echo "Time elapsed for Clrbrain pipelines script: ${ELAPSED_TIME}s"
 
 exit 0

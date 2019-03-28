@@ -306,7 +306,7 @@ def _find_close_blobs(blobs, blobs_master, region, tol):
     #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
     return close_master, close
 
-def _find_closest_blobs(blobs, blobs_master, region, tol):
+def _find_closest_blobs(blobs, blobs_master, tol):
     """Finds the closest matching blobs between two arrays. Each entry will 
     have no more than one match, and the total number of matches will be 
     the size of the shortest list.
@@ -316,8 +316,6 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
             array of at least [n, [z, row, column, ...]].
         blobs_master: The list by which to check for close blobs, in the same
             format as blobs.
-        region: Slice within each blob to check, such as slice(0, 2) to check
-            for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be considered
@@ -335,7 +333,7 @@ def _find_closest_blobs(blobs, blobs_master, region, tol):
     # compare each element for differences, weighting based on tolerance; 
     # TODO: incorporate radius
     blobs_diffs_init = np.abs(
-        blobs_master[:, region][:, None] - blobs[:, region])
+        blobs_master[:, :3][:, None] - blobs[:, :3])
     normalize_factor = np.divide(np.max(tol), tol)
     tol = np.multiply(tol, normalize_factor)
     #print("weighted tol: {}".format(tol))
@@ -617,7 +615,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
         # compare inner region of detected cells with all truth ROIs, where
         # closest blob detector prioritizes the closest matches
         found_truth, detected = _find_closest_blobs(
-            blobs_inner, blobs_truth_roi, region, tol)
+            blobs_inner, blobs_truth_roi, tol)
         blobs_inner[: , 4] = 0
         blobs_inner[detected, 4] = 1
         blobs_truth_roi[blobs_truth_inner_mask, 5] = 0
@@ -635,7 +633,7 @@ def verify_rois(rois, blobs, blobs_truth, region, tol, output_db,
         lib_clrbrain.printv(
             "blobs_truth_inner_missed:\n{}".format(blobs_truth_inner_missed))
         found_truth_out, detected = _find_closest_blobs(
-            blobs_outer, blobs_truth_inner_missed, region, tol)
+            blobs_outer, blobs_truth_inner_missed, tol)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
         blobs_truth_inner_plus = np.concatenate(
             (blobs_truth_roi[blobs_truth_roi[:, 5] == 1], 

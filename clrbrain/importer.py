@@ -192,19 +192,27 @@ def find_sizes(filename):
     print('time for finding sizes: %f' %(time() - time_start))
     return sizes, dtype
 
-def _make_filenames(filename, series, modifier="", ext="czi"):
+def _make_filenames(filename, series, modifier=""):
+    # make Clrbrain-oriented image and image metadata filenames
     print("filename: {}".format(filename))
-    filename_base = filename_to_base(filename, series, modifier, ext)
+    filename_base = filename_to_base(filename, series, modifier)
     print("filename_base: {}".format(filename_base))
     filename_image5d_npz = filename_base + SUFFIX_IMAGE5D
     filename_info_npz = filename_base + SUFFIX_INFO
     return filename_image5d_npz, filename_info_npz
 
-def series_as_str(series):
-    return str(series).zfill(5)
-
-def filename_to_base(filename, series, modifier="", ext="czi"):
-    return filename.replace("." + ext, "_") + modifier + series_as_str(series)
+def filename_to_base(filename, series, modifier=""):
+    """Convert an image path to a base path including series information 
+    for use within Clrbrain.
+    
+    Args:
+        filename: Path to original image.
+        series: Series (eg tile) within image.
+        modifier: Modifier string prior to series; default to empty string.
+    """
+    return "{}_{}{}".format(
+        os.path.splitext(filename)[0], modifier, 
+        lib_clrbrain.series_as_str(series))
 
 def deconstruct_np_filename(np_filename, ext="czi"):
     """Deconstruct Numpy image filename to the appropriate image components.
@@ -225,8 +233,6 @@ def deconstruct_np_filename(np_filename, ext="czi"):
     if series_fill:
         series = int(series_fill[0][1:])
         filename = series_reg.split(np_filename)[0] + "." + ext
-    #series_fill = "_{}".format(series_as_str(series))
-    #return np_filename.split(series_fill)[0]
     return filename, series
 
 def _save_image_info(filename_info_npz, names, sizes, resolutions, 
@@ -438,7 +444,7 @@ def read_file(filename, series, load=True, z_max=-1,
     """
     ext = lib_clrbrain.get_filename_ext(filename)
     filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename, series, ext=ext)
+        filename, series)
     if load:
         try:
             time_start = time()
@@ -600,7 +606,7 @@ def read_file_sitk(filename_sitk, filename_np, series=0, rotate=False):
     """
     # get metadata from Numpy archive
     filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename_np, series, ext=lib_clrbrain.get_filename_ext(filename_np))
+        filename_np, series)
     if os.path.exists(filename_info_npz):
         output, image5d_ver_num = read_info(filename_info_npz)
     
@@ -820,7 +826,6 @@ def transpose_npy(filename, series, plane=None, rescale=None):
     sizes = info["sizes"]
     
     # make filenames based on transpositions
-    ext = lib_clrbrain.get_filename_ext(filename)
     modifier = ""
     if plane is not None:
         modifier = make_modifier_plane(plane) + "_"
@@ -832,7 +837,7 @@ def transpose_npy(filename, series, plane=None, rescale=None):
         # size to be used for finding the file later
         modifier += make_modifier_resized(target_size) + "_"
     filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename, series, modifier=modifier, ext=ext)
+        filename, series, modifier=modifier)
     
     # TODO: image5d should assume 4/5 dimensions
     offset = 0 if image5d.ndim <= 3 else 1
@@ -960,7 +965,7 @@ def save_np_image(image, filename, series):
         series: Image series.
     """
     filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename, series, ext=lib_clrbrain.get_filename_ext(filename))
+        filename, series)
     out_file = open(filename_image5d_npz, "wb")
     np.save(out_file, image)
     out_file.close()

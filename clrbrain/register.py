@@ -134,9 +134,8 @@ def _reg_out_path(file_path, reg_name):
     Returns:
         Full path with the registered filename including extension at the end.
     """
-    ext = lib_clrbrain.get_filename_ext(file_path)
     file_path_base = importer.filename_to_base(
-        file_path, config.series, ext=ext)
+        file_path, config.series)
     return file_path_base + "_" + reg_name
 
 def _translation_adjust(orig, transformed, translation, flip=False):

@@ -720,9 +720,8 @@ def main(process_args_only=False):
         # unable to parse anymore args without filename
         print("filename not specified, stopping argparsing")
         return
-    ext = lib_clrbrain.get_filename_ext(config.filename)
     filename_base = importer.filename_to_base(
-        config.filename, config.series, ext=ext)
+        config.filename, config.series)
     
     
     # Database prep
@@ -796,7 +795,7 @@ def main(process_args_only=False):
     # process the image stack for each series
     for series in series_list:
         filename_base = importer.filename_to_base(
-            config.filename, series, ext=ext)
+            config.filename, series)
         if config.roc:
             # grid search with ROC curve
             stats_dict = mlearn.grid_search(

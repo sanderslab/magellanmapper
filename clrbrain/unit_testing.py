@@ -29,9 +29,8 @@ class TestImageStackProcessing(unittest.TestCase):
         self.assertEqual(image5d.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):
-        ext = lib_clrbrain.get_filename_ext(config.filename)
         filename_base = importer.filename_to_base(
-            config.filename, config.series, ext=ext)
+            config.filename, config.series)
         #stats, fdbk, blobs = cli.process_file(filename_base, None, None)
         #self.assertEqual(len(blobs), 4766)
         _, _, blobs = cli.process_file(filename_base, (30, 30, 8), (70, 70, 10))

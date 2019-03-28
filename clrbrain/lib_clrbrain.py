@@ -208,6 +208,17 @@ def printv(s):
     if config.verbose:
         print(s)
 
+def series_as_str(series):
+    """Get the series as a string for Clrbrain filenames, ensuring 5 
+    characters to allow for a large number of series.
+    
+    Args:
+        series: Series number, to be padded to 5 characters.
+    
+    Returns:
+        Padded series.
+    """
+    return str(series).zfill(5)
 def str_to_disp(s):
     """Convert a string to a user-friendly, displayable string by replacing 
     underscores with spaces and trimming outer whitespace.

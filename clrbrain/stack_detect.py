@@ -480,8 +480,6 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
         # prune blobs from each channel separately to avoid pruning based on 
         # co-localized channel signals
         blobs = detector.blobs_in_channel(blobs_merged, i)
-        for j in range(7):
-            blobs = np.concatenate((blobs, blobs), axis=0)
         for axis in range(3):
             # prune planes with all the overlapping regions within a given axis,
             # skipping if this axis has no overlapping sub-regions

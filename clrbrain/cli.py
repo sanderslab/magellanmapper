@@ -98,6 +98,7 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 from clrbrain import mlearn
+from clrbrain import stack_detect
 from clrbrain import stats
 
 roi_size = None # current region of interest
@@ -106,7 +107,6 @@ offset = None # current offset
 image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
-sub_rois = None
 
 PROC_TYPES = (
     "importonly", "processing", "processing_mp", "load", "extract", 
@@ -116,109 +116,6 @@ proc_type = None
 
 TRUTH_DB_TYPES = ("view", "verify", "verified", "edit")
 truth_db_type = None
-
-BLOB_COORD_SLICE = slice(0, 3)
-
-def denoise_sub_roi(coord):
-    """Denoises the ROI within an array of ROIs.
-    
-    The array of ROIs is assumed to be cli.sub_rois.
-    
-    Args:
-        coord: Coordinate of the sub-ROI in the order (z, y, x).
-    
-    Returns:
-        Tuple of coord, which is the coordinate given back again to 
-            identify the sub-ROI, and the denoised sub-ROI.
-    """
-    sub_roi = sub_rois[coord]
-    lib_clrbrain.printv("denoising sub_roi at {} of {}, with shape {}..."
-          .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    sub_roi = plot_3d.saturate_roi(sub_roi, channel=config.channel)
-    sub_roi = plot_3d.denoise_roi(sub_roi, channel=config.channel)
-    #sub_roi = plot_3d.deconvolve(sub_roi)
-    if config.process_settings["thresholding"]:
-        sub_roi = plot_3d.threshold(sub_roi)
-    return (coord, sub_roi)
-
-def segment_sub_roi(sub_rois_offsets, coord):
-    """Segments the ROI within an array of ROIs.
-    
-    The array of ROIs is assumed to be cli.sub_rois.
-    
-    Args:
-        sub_rois_offsets: Array of offsets each given as (z, y, x) 
-            for each sub_roi in the larger array, used to transpose the 
-            segments into absolute coordinates.
-        coord: Coordinate of the sub-ROI in the order (z, y, x).
-    
-    Returns:
-        Tuple of coord, which is the coordinate given back again to 
-            identify the sub-ROI, and the denoised sub-ROI.
-    """
-    sub_roi = sub_rois[coord]
-    lib_clrbrain.printv("segmenting sub_roi at {} of {}, with shape {}..."
-          .format(coord, np.add(sub_rois.shape, -1), sub_roi.shape))
-    segments = detector.detect_blobs(sub_roi, config.channel)
-    offset = sub_rois_offsets[coord]
-    #print("segs before (offset: {}):\n{}".format(offset, segments))
-    if segments is not None:
-        # shift both coordinate sets (at beginning and end of array) to 
-        # absolute positioning, using the latter set to store shifted 
-        # coordinates based on duplicates and the former for initial 
-        # positions to check for multiple duplicates
-        detector.shift_blob_rel_coords(segments, offset)
-        detector.shift_blob_abs_coords(segments, offset)
-        #print("segs after:\n{}".format(segments))
-    return (coord, segments)
-
-def _splice_before(base, search, splice, post_splice="_"):
-    i = base.rfind(search)
-    if i == -1:
-        # fallback to splicing before extension
-        i = base.rfind(".")
-        if i == -1:
-            return base
-        else:
-            # turn post-splice into pre-splice delimiter, assuming that the 
-            # absence of search string means delimiter is not before the ext
-            splice = post_splice + splice
-            post_splice = ""
-    return base[0:i] + splice + post_splice + base[i:]
-
-def make_subimage_name(base, offset, shape):
-    """Make name of subimage for a given offset and shape.
-    
-    Args:
-        base: Start of name, which can include full parent path.
-        offset: Offset, generally given as a tuple.
-        shape: Shape, generally given as a tuple.
-    
-    Returns:
-        Name (or path) to subimage.
-    """
-    roi_site = "{}x{}".format(offset, shape).replace(" ", "")
-    series_fill = importer.series_as_str(config.series)
-    name = _splice_before(base, series_fill, roi_site)
-    print("subimage name: {}".format(name))
-    return name
-
-def _load_db(path):
-    if not os.path.exists(path):
-        raise FileNotFoundError("{} not found for DB".format(path))
-    print("loading DB from {}".format(path))
-    db = sqlite.ClrDB()
-    db.load_db(path, False)
-    return db
-
-def _load_truth_db(filename_base):
-    path = filename_base
-    if not filename_base.endswith(sqlite.DB_SUFFIX_TRUTH):
-        path = os.path.basename(filename_base + sqlite.DB_SUFFIX_TRUTH)
-    truth_db = _load_db(path)
-    truth_db.load_truth_blobs()
-    config.truth_db = truth_db
-    return truth_db
 
 def _parse_coords(arg):
     coords = list(arg) # copy list to avoid altering the arg itself
@@ -245,151 +142,6 @@ def _check_np_none(val):
         The value if not a type of None, or a NoneType.
     """
     return None if val is None or np.all(np.equal(val, None)) else val
-
-def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
-                    channels):
-    """Prune close blobs within overlapping regions by checking within
-    entire planes across the ROI in parallel with multiprocessing.
-    
-    Args:
-        segs_roi: Segments from each sub-region.
-        overlap: 1D array of size 3 with the number of overlapping pixels 
-            for each image axis.
-        tol: Tolerance as (z, y, x), within which a segment will be 
-            considered a duplicate of a segment in the master array and
-            removed.
-        sub_rois: Sub-regions, used to check size.
-        sub_rois_offset: Offsets of each sub-region.
-    
-    Returns:
-        Tuple of all blobs as a Numpy array and a data frame of 
-        pruning stats, or None for both if no blobs are in the ``seg_rois``.
-    """
-    # collects all blobs in master array to group all overlapping regions
-    blobs_merged = chunking.merge_blobs(seg_rois)
-    if blobs_merged is None:
-        return None, None
-    
-    blobs_all = []
-    blob_ratios = {}
-    cols = ("blobs", "ratio_pruning", "ratio_adjacent")
-    for i in channels:
-        # prune blobs from each channel separately to avoid pruning based on 
-        # co-localized channel signals
-        blobs = detector.blobs_in_channel(blobs_merged, i)
-        for axis in range(3):
-            # prune planes with all the overlapping regions within a given axis,
-            # skipping if this axis has no overlapping sub-regions
-            num_sections = sub_rois_offsets.shape[axis]
-            if num_sections <= 1:
-                continue
-            
-            # multiprocess pruning by overlapping planes
-            pool = mp.Pool()
-            pool_results = []
-            blobs_all_non_ol = None # all blobs from non-overlapping regions
-            for i in range(num_sections):
-                # build overlapping region dimensions based on size of 
-                # sub-region in the given axis
-                coord = np.zeros(3).astype(np.int)
-                coord[axis] = i
-                lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
-                offset = sub_rois_offsets[tuple(coord)]
-                size = sub_rois[tuple(coord)].shape
-                lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"
-                                    .format(offset, size, overlap, tol))
-                
-                # overlapping region: each region but the last extends 
-                # into the next region, with the overlapping volume from 
-                # the end of the region, minus the overlap and a tolerance 
-                # space, to the region's end plus this tolerance space; 
-                # non-overlapping region: the region before the overlap, 
-                # after any overlap with the prior region (n > 1) 
-                # to the start of the overlap (n < last region)
-                blobs_ol = None
-                blobs_ol_next = None
-                blobs_in_non_ol = []
-                shift = overlap[axis] + tol[axis]
-                offset_axis = offset[axis]
-                if i < num_sections - 1:
-                    bounds = [offset_axis + size[axis] - shift,
-                              offset_axis + size[axis] + tol[axis]]
-                    lib_clrbrain.printv(
-                        "axis {}, boundaries: {}".format(axis, bounds))
-                    blobs_ol = blobs[np.all([
-                        blobs[:, axis] >= bounds[0], 
-                        blobs[:, axis] < bounds[1]], axis=0)]
-                    
-                    # get blobs from immediatley adjacent region of the same 
-                    # size as that of the overlapping region
-                    bounds_next = [
-                        offset_axis + size[axis] + tol[axis],
-                        offset_axis + size[axis] + overlap[axis] + 3 * tol[axis]]
-                    lib_clrbrain.printv(
-                        "axis {}, boundaries (next): {}".format(axis, bounds_next))
-                    if np.all(np.less(bounds_next, image5d.shape[axis + 1])):
-                        blobs_ol_next = blobs[np.all([
-                            blobs[:, axis] >= bounds_next[0], 
-                            blobs[:, axis] < bounds_next[1]], axis=0)]
-                    # non-overlapping region extends up this overlap
-                    blobs_in_non_ol.append(blobs[:, axis] < bounds[0])
-                else:
-                    # last non-overlapping region extends to end of region
-                    blobs_in_non_ol.append(
-                        blobs[:, axis] < offset_axis + size[axis])
-                
-                # get non-overlapping area
-                start = offset_axis
-                if i > 0:
-                    # shift past overlapping part at start of region
-                    start += shift
-                blobs_in_non_ol.append(blobs[:, axis] >= start)
-                blobs_non_ol = blobs[np.all(blobs_in_non_ol, axis=0)]
-                # collect all non-overlapping region blobs
-                if blobs_all_non_ol is None:
-                    blobs_all_non_ol = blobs_non_ol
-                elif blobs_non_ol is not None:
-                    blobs_all_non_ol = np.concatenate(
-                        (blobs_all_non_ol, blobs_non_ol))
-                
-                # prune blobs from overlapping regions via multiprocessing
-                pool_results.append(pool.apply_async(
-                    detector.remove_close_blobs_within_sorted_array, 
-                    args=(blobs_ol, tol, blobs_ol_next)))
-            
-            # collect all the pruned blob lists
-            blobs_all_ol = None
-            for result in pool_results:
-                blobs_ol_pruned, ratios = result.get()
-                if blobs_all_ol is None:
-                    blobs_all_ol = blobs_ol_pruned
-                elif blobs_ol_pruned is not None:
-                    blobs_all_ol = np.concatenate(
-                        (blobs_all_ol, blobs_ol_pruned))
-                if ratios:
-                    for col, val in zip(cols, ratios):
-                        blob_ratios.setdefault(col, []).append(val)
-            
-            # recombine blobs from the non-overlapping with the pruned  
-            # overlapping regions from the entire stack to re-prune along 
-            # any remaining axes
-            pool.close()
-            pool.join()
-            if blobs_all_ol is None:
-                blobs = blobs_all_non_ol
-            elif blobs_all_non_ol is None:
-                blobs = blobs_all_ol
-            else:
-                blobs = np.concatenate((blobs_all_non_ol, blobs_all_ol))
-        # build up list from each channel
-        blobs_all.append(blobs)
-    blobs_all = np.vstack(blobs_all)
-    print("total blobs after pruning:", len(blobs_all))
-    
-    # export blob ratios as data frame
-    df = pd.DataFrame(blob_ratios)
-    
-    return blobs_all, df
 
 def _is_arg_true(arg):
     return arg.lower() == "true" or arg == "1"
@@ -743,7 +495,7 @@ def main(process_args_only=False):
         # truth DB name explicitly given
         path = config.truth_db_name if config.truth_db_name else filename_base
         try:
-            _load_truth_db(path)
+            sqlite.load_truth_db(path)
         except FileNotFoundError as e:
             print(e)
             print("Could not load truth DB from current image path")
@@ -754,7 +506,7 @@ def main(process_args_only=False):
         if config.truth_db_name:
             # load truth DB path to verify against if explicitly given
             try:
-                _load_truth_db(config.truth_db_name)
+                sqlite.load_truth_db(config.truth_db_name)
             except FileNotFoundError as e:
                 print(e)
                 print("Could not load truth DB from {}"
@@ -765,7 +517,7 @@ def main(process_args_only=False):
         path = sqlite.DB_NAME_VERIFIED
         if config.truth_db_name: path = config.truth_db_name
         try:
-            config.db = _load_db(path)
+            config.db = sqlite.load_db(path)
             config.verified_db = config.db
         except FileNotFoundError as e:
             print(e)
@@ -833,7 +585,7 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
     for i in range(len(offsets)):
         size = (roi_sizes[i] if roi_sizes_len > 1 
                 else roi_sizes[0])
-        stat_roi, fdbk, _ = process_file(filename_base, offsets[i], size)
+        stat_roi, fdbk = process_file(filename_base, offsets[i], size)
         if stat_roi is not None:
             stat = np.add(stat, stat_roi)
         summaries.append(
@@ -850,8 +602,8 @@ def process_file(filename_base, offset, roi_size):
         roi_size: Size of region to process, given as (x, y, z).
     
     Returns:
-        stats: Stats from processing, or None if no stats.
-        fdbk: Text feedback from the processing, or None if no feedback.
+        Tuple of stats from processing, or None if no stats, and 
+        text feedback from the processing, or None if no feedback.
     """
     # print longer Numpy arrays to assist debugging
     np.set_printoptions(linewidth=200, threshold=10000)
@@ -992,7 +744,8 @@ def process_file(filename_base, offset, roi_size):
     
     
     # PROCESS BY TYPE
-    
+    stats = None
+    fdbk = None
     if proc_type == PROC_TYPES[3]:
         # loading completed
         return None, None
@@ -1033,298 +786,13 @@ def process_file(filename_base, offset, roi_size):
         exporter.blobs_to_csv(segments_proc, filename_info_proc)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
-        # denoises and segments the region, saving processed image
-        # and segments to file
-        time_start = time()
-        roi_offset = offset
-        shape = roi_size
-        if roi_size is None or offset is None:
-            # uses the entire stack if no size or offset specified
-            shape = image5d.shape[3:0:-1]
-            roi_offset = (0, 0, 0)
-        else:
-            # sets up processing for partial stack
-            filename_image5d_proc = make_subimage_name(
-                filename_image5d_proc, offset, roi_size)
-            filename_info_proc = make_subimage_name(
-                filename_info_proc, offset, roi_size)
-        
-        # get ROI for given region, including all channels
-        roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
-        _, channels = plot_3d.setup_channels(roi, config.channel, 3)
-        
-        # chunk into super-ROIs, which will each be further chunked into 
-        # sub-ROIs for multi-processing
-        overlap = chunking.calc_overlap()
-        settings = config.process_settings # use default settings
-        tol = (np.multiply(overlap, settings["prune_tol_factor"])
-               .astype(int))
-        max_pixels = config.sub_stack_max_pixels
-        if max_pixels is None:
-            # command-line set max takes precedence, but if not set, take 
-            # from process settings
-            max_pixels = settings["sub_stack_max_pixels"]
-        print("overlap: {}, max_pixels: {}, tol: {}"
-              .format(overlap, max_pixels, tol))
-        super_rois, super_rois_offsets = chunking.stack_splitter(
-            roi, max_pixels, overlap)
-        seg_rois = np.zeros(super_rois.shape, dtype=object)
-        dfs = []
-        for z in range(super_rois.shape[0]):
-            for y in range(super_rois.shape[1]):
-                for x in range(super_rois.shape[2]):
-                    coord = (z, y, x)
-                    roi = super_rois[coord]
-                    print("===============================================\n"
-                          "Processing stack {} of {}"
-                          .format(coord, np.add(super_rois.shape, -1)))
-                    merged, segs, df = process_stack(
-                        roi, overlap, tol, channels)
-                    del merged # TODO: check if helps reduce memory buildup
-                    if segs is not None:
-                        # transpose seg coords since part of larger stack
-                        off = super_rois_offsets[coord]
-                        detector.shift_blob_rel_coords(segs, off)
-                        detector.shift_blob_abs_coords(segs, off)
-                        dfs.append(df)
-                    seg_rois[coord] = segs
-        
-        # prune segments in overlapping region between super-ROIs
-        print("===============================================\n"
-              "Pruning super-ROIs")
-        time_pruning_start = time()
-        segments_all, df = _prune_blobs_mp(
-            seg_rois, overlap, tol, super_rois, super_rois_offsets, channels)
-        print("maxes:", np.amax(segments_all, axis=0))
-        
-        # combine pruning data frames and get weighted mean of ratios
-        dfs.append(df)
-        df_all = stats.data_frames_to_csv(dfs, "blob_ratios.csv")
-        cols = df_all.columns.tolist()
-        blob_pruning_means = {}
-        if "blobs" in cols:
-            blobs_unpruned = df_all["blobs"]
-            num_blobs_unpruned = np.sum(blobs_unpruned)
-            for col in cols[1:]:
-                blob_pruning_means["mean_{}".format(col)] = [
-                    np.sum(np.multiply(df_all[col], blobs_unpruned)) 
-                    / num_blobs_unpruned]
-            df_means = stats.dict_to_data_frame(
-                blob_pruning_means, "blob_ratios_means.csv")
-            print(df_all.to_csv())
-            print(df_means.to_csv())
-        else:
-            print("no blob ratios found")
-        pruning_time = time() - time_pruning_start
-        
-        '''# report any remaining duplicates
-        np.set_printoptions(linewidth=500, threshold=10000000)
-        print("all blobs (len {}):".format(len(segments_all)))
-        sort = np.lexsort((segments_all[:, 2], segments_all[:, 1], segments_all[:, 0]))
-        blobs = segments_all[sort]
-        print(blobs)
-        print("checking for duplicates in all:")
-        print(detector.remove_duplicate_blobs(blobs, BLOB_COORD_SLICE))
-        '''
-        
-        stats_detection = None
-        fdbk = None
-        if segments_all is not None:
-            # remove the duplicated elements that were used for pruning
-            detector.replace_rel_with_abs_blob_coords(segments_all)
-            segments_all = detector.remove_abs_blob_coords(segments_all)
-            
-            # compared detected blobs with truth blobs
-            if truth_db_type == TRUTH_DB_TYPES[1]:
-                db_path_base = None
-                try:
-                    if config.truth_db_name and config.truth_db:
-                        # use explicitly given truth DB if given, which can 
-                        # containg multiple experiments for different subimages
-                        print("using truth DB from {}"
-                              .format(config.truth_db_name))
-                        exp_name = importer.deconstruct_np_filename(
-                            config.truth_db_name)[0]
-                    else:
-                        # find truth DB based on filename and subimage
-                        db_path_base = os.path.basename(
-                            make_subimage_name(filename_base, offset, roi_size))
-                        print("about to verify with truth db from {}"
-                              .format(db_path_base))
-                        _load_truth_db(db_path_base)
-                        exp_name = make_subimage_name(
-                            os.path.basename(config.filename), roi_offset, 
-                            shape)
-                    print("exp name: {}".format(exp_name))
-                    if config.truth_db is not None:
-                        # series not included in exp name since in ROI
-                        exp_id = sqlite.insert_experiment(
-                            config.verified_db.conn, config.verified_db.cur, 
-                            exp_name, None)
-                        rois = config.truth_db.get_rois(exp_name)
-                        verify_tol = np.multiply(
-                            overlap, settings["verify_tol_factor"]).astype(int)
-                        stats_detection, fdbk = detector.verify_rois(
-                            rois, segments_all, config.truth_db.blobs_truth, 
-                            BLOB_COORD_SLICE, verify_tol, config.verified_db, 
-                            exp_id, config.channel)
-                except FileNotFoundError as e:
-                    print("Could not load truth DB from {}; "
-                          "will not verify ROIs".format(db_path_base))
-        
-        file_time_start = time()
-        if config.saveroi:
-            '''
-            # write the merged, denoised file (old behavior, <0.4.3)
-            # TODO: write files to memmap array to release RAM?
-            outfile_image5d_proc = open(filename_image5d_proc, "wb")
-            np.save(outfile_image5d_proc, merged)
-            outfile_image5d_proc.close()
-            '''
-            # write the original, raw ROI
-            outfile_image5d_proc = open(filename_image5d_proc, "wb")
-            np.save(outfile_image5d_proc, roi)
-            outfile_image5d_proc.close()
-        
-        outfile_info_proc = open(filename_info_proc, "wb")
-        #print("merged shape: {}".format(merged.shape))
-        np.savez(outfile_info_proc, segments=segments_all, 
-                 resolutions=detector.resolutions, 
-                 basename=os.path.basename(config.filename), # only save name
-                 offset=offset, roi_size=roi_size) # None unless explicitly set
-        outfile_info_proc.close()
-        
-        segs_len = 0 if segments_all is None else len(segments_all)
-        print("super ROI pruning time (s): {}".format(pruning_time))
-        print("total segments found: {}".format(segs_len))
-        print("file save time: {}".format(time() - file_time_start))
-        print("total file processing time (s): {}".format(time() - time_start))
-        return stats_detection, fdbk, segments_all
-    return None, None, None
+        # detect blobs in the full image
+        stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
+            filename_base, image5d, offset, roi_size, 
+            truth_db_type == TRUTH_DB_TYPES[1])
     
-def process_stack(roi, overlap, tol, channels):
-    """Processes a stack, whcih can be a sub-region within an ROI.
+    return stats, fdbk
     
-    Args:
-        roi: The ROI to process.
-        overlap: The amount of overlap to use between chunks within the stack.
-        tol: Tolerance as (z, y, x), within which a segment will be 
-            considered a duplicate of a segment in the master array and
-            removed.
-    
-    Returns:
-        merged: The merged, processed image stack.
-        segments_all: All the segments found within the stack, given as a
-            [n, [z, row, column, radius, ...]], including additional elements 
-            as given in :meth:`segment_sub_roi`.
-    """
-    time_start = time()
-    # prepare ROI for processing;
-    # need to make module-level to allow shared memory of this large array
-    global sub_rois
-    scaling_factor = detector.calc_scaling_factor()
-    denoise_size = config.process_settings["denoise_size"]
-    # no overlap for denoising
-    overlap_denoise = np.zeros(3).astype(np.int)
-    if denoise_size:
-        max_pixels = np.ceil(
-            np.multiply(scaling_factor, denoise_size)).astype(int)
-        sub_rois, _ = chunking.stack_splitter(roi, max_pixels, overlap_denoise)
-    segments_all = None
-    merged = roi
-    
-    # process ROI
-    time_denoising_start = time()
-    df = None
-    if proc_type == PROC_TYPES[2]:
-        # Multiprocessing
-        
-        # denoise all sub-ROIs and re-merge
-        if denoise_size:
-            pool = mp.Pool()
-            pool_results = []
-            # asynchronously denoise since denoising is independent of adjacent
-            # sub-ROIs
-            for z in range(sub_rois.shape[0]):
-                for y in range(sub_rois.shape[1]):
-                    for x in range(sub_rois.shape[2]):
-                        coord = (z, y, x)
-                        pool_results.append(pool.apply_async(denoise_sub_roi, 
-                                         args=(coord, )))
-            for result in pool_results:
-                coord, sub_roi = result.get()
-                lib_clrbrain.printv(
-                    "replacing sub_roi at {} of {}"
-                    .format(coord, np.add(sub_rois.shape, -1)))
-                sub_rois[coord] = sub_roi
-            
-            pool.close()
-            pool.join()
-            
-            # re-merge into one large ROI (the image stack) in preparation for 
-            # segmenting with differently sized chunks
-            merged_shape = chunking.get_split_stack_total_shape(
-                sub_rois, overlap_denoise)
-            merged = np.zeros(tuple(merged_shape), dtype=sub_rois[0, 0, 0].dtype)
-            chunking.merge_split_stack2(sub_rois, overlap_denoise, 0, merged)
-        else:
-            lib_clrbrain.printv(
-                "no denoise size specified, will not preprocess")
-        
-        time_denoising_end = time()
-        
-        # detect blobs, using larger sub-ROI size to minimize the number 
-        # of sub-ROIs and thus the number of edge overlaps
-        time_segmenting_start = time()
-        max_pixels = np.ceil(np.multiply(
-            scaling_factor, 
-            config.process_settings["segment_size"])).astype(int)
-        #print("max_factor: {}".format(max_factor))
-        sub_rois, sub_rois_offsets = chunking.stack_splitter(
-            merged, max_pixels, overlap)
-        pool = mp.Pool()
-        pool_results = []
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    pool_results.append(pool.apply_async(segment_sub_roi, 
-                                     args=(sub_rois_offsets, coord)))
-        
-        seg_rois = np.zeros(sub_rois.shape, dtype=object)
-        for result in pool_results:
-            coord, segments = result.get()
-            lib_clrbrain.printv(
-                "adding segments from sub_roi at {} of {}"
-                .format(coord, np.add(sub_rois.shape, -1)))
-            seg_rois[coord] = segments
-        
-        pool.close()
-        pool.join()
-        time_segmenting_end = time()
-        
-        # prune segments
-        time_pruning_start = time()
-        segments_all, df = _prune_blobs_mp(
-            seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
-        # copy shifted coordinates to final coordinates
-        #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
-        if segments_all is not None:
-            detector.replace_rel_with_abs_blob_coords(segments_all)
-        pruning_time = time() - time_pruning_start
-        
-    
-    # benchmarking time
-    print("total denoising time (s): {}"
-          .format(time_denoising_end - time_denoising_start))
-    print("total segmenting time (s): {}"
-          .format(time_segmenting_end - time_segmenting_start))
-    print("total pruning time (s): {}".format(pruning_time))
-    print("total stack processing time (s): {}".format(time() - time_start))
-    
-    return merged, segments_all, df
-
 if __name__ == "__main__":
     print("Starting clrbrain command-line interface...")
     main()
-    

@@ -585,6 +585,46 @@ def _test_db():
     conn.commit()
     conn.close()
 
+def load_db(path):
+    """Load a database from an existing path, raising an exception if 
+    the path does not exist.
+    
+    Args:
+        path: Path from which to load a database.
+    
+    Returns:
+        The :class:``ClrDB`` database at the given location.
+    
+    Raises:
+        :class:``FileNoutFoundError`` if ``path`` is not found.
+    """
+    # TODO: consider integrating with ClrDB directly
+    if not os.path.exists(path):
+        raise FileNotFoundError("{} not found for DB".format(path))
+    print("loading DB from {}".format(path))
+    db = ClrDB()
+    db.load_db(path, False)
+    return db
+
+def load_truth_db(filename_base):
+    """Convenience function to load a truth database associated with an 
+    image.
+    
+    Args:
+        filename_base: Clrbrain-oriented base name associated with an 
+            image path.
+    
+    Returns:
+        The :class:``ClrDB`` truth database associated with the image.
+    """
+    path = filename_base
+    if not filename_base.endswith(DB_SUFFIX_TRUTH):
+        path = os.path.basename(filename_base + DB_SUFFIX_TRUTH)
+    truth_db = load_db(path)
+    truth_db.load_truth_blobs()
+    config.truth_db = truth_db
+    return truth_db
+
 class ClrDB():
     conn = None
     cur = None

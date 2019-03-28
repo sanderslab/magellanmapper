@@ -219,6 +219,38 @@ def series_as_str(series):
         Padded series.
     """
     return str(series).zfill(5)
+
+def splice_before(base, search, splice, post_splice="_"):
+    """Splice in a string before a given substring.
+    
+    Args:
+        base: String in which to splice.
+        search: Splice before this substring.
+        splice: Splice in this string; falls back to a "." if not found.
+        post_splice: String to add after the spliced string if found. If 
+            only a "." is found, ``post_splice`` will be added before 
+            ``splice`` instead. Defaults to "_".
+    
+    Returns:
+        ``base`` with ``splice`` spliced in before ``search`` if found, 
+        separated by ``post_splice``, falling back to splicing before 
+        the first "." with ``post_splice`` placed in front of ``splice`` 
+        instead. If neither ``search`` nor ``.`` are found, simply 
+        returns ``base``.
+    """
+    i = base.rfind(search)
+    if i == -1:
+        # fallback to splicing before extension
+        i = base.rfind(".")
+        if i == -1:
+            return base
+        else:
+            # turn post-splice into pre-splice delimiter, assuming that the 
+            # absence of search string means delimiter is not before the ext
+            splice = post_splice + splice
+            post_splice = ""
+    return base[0:i] + splice + post_splice + base[i:]
+
 def str_to_disp(s):
     """Convert a string to a user-friendly, displayable string by replacing 
     underscores with spaces and trimming outer whitespace.

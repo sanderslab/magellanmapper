@@ -1036,7 +1036,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     
     # data frame just for aligned printing but return metrics dict for 
     # concatenating multiple runs
-    df_metrics = stats.dict_to_data_frame(metrics, show=True)
+    df_metrics = stats.dict_to_data_frame(metrics, show="\t")
     print("\ntime elapsed for smoothing metric (s): {}"
           .format(time() - start_time))
     return borders_img_np, df_metrics, df_pxs
@@ -1417,7 +1417,7 @@ def import_atlas(atlas_dir, show=True):
             sort_cols=SmoothingMetrics.FILTER_SIZE.value)
 
     print("\nImported {} whole atlas stats:".format(basename))
-    stats.dict_to_data_frame(metrics, df_metrics_path, show=True)
+    stats.dict_to_data_frame(metrics, df_metrics_path, show="\t")
 
 def register_duo(fixed_img, moving_img):
     """Register two images to one another using ``SimpleElastix``.

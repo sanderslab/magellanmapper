@@ -457,7 +457,21 @@ def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
         df_pivoted.to_csv(df_path, na_rep="NaN")
     return dfs
 
-def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=False):
+def print_data_frame(df, sep=" "):
+    """Print formatted data frame.
+    
+    Args:
+        df: Data frame to print.
+        sep: Separator for columns. True or " " to print the data 
+            frame with a space-separated table, or can provide an 
+            alternate separator. Defaults to " ".
+    """
+    if sep is True or sep == " ":
+        print(df.to_string(index=False, na_rep="NaN"))
+    else:
+        print(df.to_csv(sep=sep, index=False, na_rep="NaN"))
+
+def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=None):
     """Import dictionary to data frame, with option to export to CSV.
     
     Args:
@@ -467,7 +481,9 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=False):
             None for no export.
         sort_cols: Column as a string of list of columns by which to sort; 
             defaults to None for no sorting.
-        show: True to print the data frame; defaults to False.
+        show: True or " " to print the data frame with a space-separated 
+            table, or can provide an alternate separator. Defaults to None 
+            to not print the data frame.
     
     Returns:
         The imported data frame.
@@ -484,8 +500,8 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=False):
     if sort_cols is not None:
         df = df.sort_values(sort_cols)
     
-    if show:
-        print(df.to_csv(sep="\t", index=False, na_rep="NaN"))
+    if show is not None:
+        print_data_frame(df, show)
     
     if path:
         # backup and export to CSV
@@ -494,7 +510,7 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=False):
         print("data frame saved to {}".format(path))
     return df
 
-def data_frames_to_csv(data_frames, path, sort_cols=None):
+def data_frames_to_csv(data_frames, path, sort_cols=None, show=None):
     """Combine and export multiple data frames to CSV file.
     
     Args:
@@ -503,6 +519,9 @@ def data_frames_to_csv(data_frames, path, sort_cols=None):
         path: Output path.
         sort_cols: Column as a string of list of columns by which to sort; 
             defaults to None for no sorting.
+        show: True or " " to print the data frame with a space-separated 
+            table, or can provide an alternate separator. Defaults to None 
+            to not print the data frame.
     
     Returns:
         The combined data frame.
@@ -516,6 +535,8 @@ def data_frames_to_csv(data_frames, path, sort_cols=None):
         combined = combined.sort_values(sort_cols)
     lib_clrbrain.backup_file(path)
     combined.to_csv(path, index=False, na_rep="NaN")
+    if show is not None:
+        print_data_frame(combined, show)
     print("exported volume data per sample to CSV file: \"{}\"".format(path))
     return combined
 

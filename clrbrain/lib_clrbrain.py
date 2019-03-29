@@ -204,9 +204,26 @@ def normalize(array, minimum, maximum, background=None):
         array[array < minimum] = minimum
     return array
 
-def printv(s):
+def printv(*s):
+    """Print to console only if verbose.
+    
+    Args:
+        s: Variable number of strings to be printed 
+            if :attr:``config.verbose`` is true.
+    """
     if config.verbose:
-        print(s)
+        print(*s)
+
+def printv_format(s, form):
+    """Print a formatted string to console only if verbose.
+    
+    Args:
+        s: String to be formatted and printed if :attr:``config.verbose`` 
+            is true.
+        form: String by which to format ``s``.
+    """
+    if config.verbose:
+        print(s.format(*form))
 
 def series_as_str(series):
     """Get the series as a string for Clrbrain filenames, ensuring 5 

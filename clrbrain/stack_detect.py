@@ -63,8 +63,9 @@ class StackDetector(object):
             sub-ROI and the denoised sub-ROI.
         """
         sub_roi = cls.sub_rois[coord]
-        lib_clrbrain.printv("denoising sub_roi at {} of {}, with shape {}..."
-              .format(coord, np.add(cls.sub_rois.shape, -1), sub_roi.shape))
+        lib_clrbrain.printv_format(
+            "denoising sub_roi at {} of {}, with shape {}...", 
+            (coord, np.add(cls.sub_rois.shape, -1), sub_roi.shape))
         sub_roi = plot_3d.saturate_roi(sub_roi, channel=config.channel)
         sub_roi = plot_3d.denoise_roi(sub_roi, channel=config.channel)
         if config.process_settings["thresholding"]:
@@ -86,8 +87,9 @@ class StackDetector(object):
             sub-ROI and an array of detected blobs.
         """
         sub_roi = cls.sub_rois[coord]
-        lib_clrbrain.printv("segmenting sub_roi at {} of {}, with shape {}..."
-              .format(coord, np.add(cls.sub_rois.shape, -1), sub_roi.shape))
+        lib_clrbrain.printv_format(
+            "segmenting sub_roi at {} of {}, with shape {}...", 
+            (coord, np.add(cls.sub_rois.shape, -1), sub_roi.shape))
         segments = detector.detect_blobs(sub_roi, config.channel)
         offset = sub_rois_offsets[coord]
         #print("segs before (offset: {}):\n{}".format(offset, segments))

@@ -519,6 +519,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
             # multiprocess pruning by overlapping planes
             blobs_all_non_ol = None # all blobs from non-overlapping regions
             blobs_to_prune = []
+            coord_last = tuple(np.subtract(sub_rois.shape, 1))
             for i in range(num_sections):
                 # build overlapping region dimensions based on size of 
                 # sub-region in the given axis
@@ -557,13 +558,12 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                         offset_axis + size[axis] + tol[axis],
                         offset_axis + size[axis] + overlap[axis] + 3 * tol[axis]
                     ]
-                    lib_clrbrain.printv(
-                        "axis {}, boundaries (next): {}"
-                        .format(axis, bounds_next))
-                    coord_last = tuple(np.subtract(sub_rois.shape, 1))
                     shape = np.add(
                         sub_rois_offsets[coord_last], 
                         sub_rois[coord_last].shape[:3])
+                    lib_clrbrain.printv(
+                        "axis {}, boundaries (next): {}, max bounds: {}"
+                        .format(axis, bounds_next, shape[axis]))
                     if np.all(np.less(bounds_next, shape[axis])):
                         # ensure that next overlapping region is within ROI
                         blobs_ol_next = blobs[np.all([

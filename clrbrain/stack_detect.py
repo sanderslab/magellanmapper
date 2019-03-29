@@ -7,9 +7,10 @@ Detect blobs within a stack that has been chunked to allow parallel
 processing.
 """
 
+from enum import Enum
+import multiprocessing as mp
 import os
 from time import time
-import multiprocessing as mp
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,13 @@ from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import sqlite
 from clrbrain import stats
+
+class StackTimes(Enum):
+    """Stack processing durations."""
+    PREPROC = "Pre_processing"
+    DETECTION = "Detection"
+    PRUNING = "Pruning"
+    TOTAL = "Total_stack"
 
 class StackDetector(object):
     """Detect blobs within a stack in a way that allows multiprocessing 
@@ -159,7 +167,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     super_rois, super_rois_offsets = chunking.stack_splitter(
         roi, max_pixels, overlap)
     seg_rois = np.zeros(super_rois.shape, dtype=object)
-    dfs = []
+    dfs_times = []
+    dfs_pruning = []
     for z in range(super_rois.shape[0]):
         for y in range(super_rois.shape[1]):
             for x in range(super_rois.shape[2]):
@@ -168,44 +177,46 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
                 print("===============================================\n"
                       "Processing stack {} of {}"
                       .format(coord, np.add(super_rois.shape, -1)))
-                merged, segs, df = detect_blobs_stack(
+                merged, segs, df_times, df_pruning = detect_blobs_stack(
                     roi, overlap, tol, channels)
                 del merged # TODO: check if helps reduce memory buildup
+                dfs_times.append(df_times)
                 if segs is not None:
                     # transpose seg coords since part of larger stack
                     off = super_rois_offsets[coord]
                     detector.shift_blob_rel_coords(segs, off)
                     detector.shift_blob_abs_coords(segs, off)
-                    dfs.append(df)
+                    dfs_pruning.append(df_pruning)
                 seg_rois[coord] = segs
     
     # prune segments in overlapping region between super-ROIs
     print("===============================================\n"
           "Pruning super-ROIs")
     time_pruning_start = time()
-    segments_all, df = _prune_blobs_mp(
+    segments_all, df_pruning = _prune_blobs_mp(
         seg_rois, overlap, tol, super_rois, super_rois_offsets, channels)
-    print("maxes:", np.amax(segments_all, axis=0))
+    pruning_time = time() - time_pruning_start
+    print("super ROI pruning time (s)", pruning_time)
+    #print("maxes:", np.amax(segments_all, axis=0))
     
     # combine pruning data frames and get weighted mean of ratios
-    dfs.append(df)
-    df_all = stats.data_frames_to_csv(dfs, "blob_ratios.csv")
-    cols = df_all.columns.tolist()
+    dfs_pruning.append(df_pruning)
+    print("\nBlob pruning ratios:")
+    df_pruning_all = stats.data_frames_to_csv(
+        dfs_pruning, "blob_ratios.csv", show=True)
+    cols = df_pruning_all.columns.tolist()
     blob_pruning_means = {}
     if "blobs" in cols:
-        blobs_unpruned = df_all["blobs"]
+        blobs_unpruned = df_pruning_all["blobs"]
         num_blobs_unpruned = np.sum(blobs_unpruned)
         for col in cols[1:]:
             blob_pruning_means["mean_{}".format(col)] = [
-                np.sum(np.multiply(df_all[col], blobs_unpruned)) 
+                np.sum(np.multiply(df_pruning_all[col], blobs_unpruned)) 
                 / num_blobs_unpruned]
-        df_means = stats.dict_to_data_frame(
-            blob_pruning_means, "blob_ratios_means.csv")
-        print(df_all.to_csv())
-        print(df_means.to_csv())
+        df_pruning_means = stats.dict_to_data_frame(
+            blob_pruning_means, "blob_ratios_means.csv", show=" ")
     else:
         print("no blob ratios found")
-    pruning_time = time() - time_pruning_start
     
     '''# report any remaining duplicates
     np.set_printoptions(linewidth=500, threshold=10000000)
@@ -277,18 +288,31 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         outfile_image5d_proc.close()
     
     outfile_info_proc = open(filename_info_proc, "wb")
-    #print("merged shape: {}".format(merged.shape))
     np.savez(outfile_info_proc, segments=segments_all, 
              resolutions=detector.resolutions, 
              basename=os.path.basename(config.filename), # only save name
              offset=offset, roi_size=roi_size) # None unless explicitly set
     outfile_info_proc.close()
+    file_save_time = time() - file_time_start
     
-    segs_len = 0 if segments_all is None else len(segments_all)
-    print("super ROI pruning time (s): {}".format(pruning_time))
-    print("total segments found: {}".format(segs_len))
-    print("file save time: {}".format(time() - file_time_start))
-    print("total file processing time (s): {}".format(time() - time_start))
+    # whole image benchmarking time
+    df_times_all = stats.data_frames_to_csv(
+        dfs_times, "stack_detection_times.csv")
+    times = (
+        [np.sum(df_times_all[StackTimes.PREPROC.value])], 
+        [np.sum(df_times_all[StackTimes.DETECTION.value])], 
+        [np.sum(df_times_all[StackTimes.PRUNING.value]) + pruning_time], 
+        time() - time_start)
+    times_dict = {}
+    for key, val in zip(StackTimes, times):
+        times_dict[key] = val
+    print("\ntotal segments found:", 
+          0 if segments_all is None else len(segments_all))
+    print("file save time:", file_save_time)
+    print("\nTotal detection processing times (s):")
+    df_times_sum = stats.dict_to_data_frame(
+        times_dict, "stacks_detection_times.csv", show=" ")
+    
     return stats_detection, fdbk, segments_all
 
 def detect_blobs_stack(roi, overlap, tol, channels):
@@ -302,10 +326,12 @@ def detect_blobs_stack(roi, overlap, tol, channels):
             removed.
     
     Returns:
-        Tupe of the merged, processed image stack and all the blobs 
+        Tuple of the merged, processed image stack; all the blobs 
         found within the stack, given as a Numpy array in the format, 
         ``[n, [z, row, column, radius, ...]]``, including additional 
-        elements as given in :meth:``StackDetect.detect_sub_roi``.
+        elements as given in :meth:``StackDetect.detect_sub_roi``; a 
+        Pandas data frame of durations for each component of blob 
+        detections; and a Pandas data frame of blob pruning ratios.
     """
     time_start = time()
     scaling_factor = detector.calc_scaling_factor()
@@ -395,8 +421,7 @@ def detect_blobs_stack(roi, overlap, tol, channels):
     
     # prune segments
     time_pruning_start = time()
-    print("roi shape", roi.shape)
-    segments_all, df = _prune_blobs_mp(
+    segments_all, df_pruning = _prune_blobs_mp(
         seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
     # copy shifted coordinates to final coordinates
     #print("blobs_all:\n{}".format(blobs_all[:, 0:4] == blobs_all[:, 5:9]))
@@ -406,14 +431,18 @@ def detect_blobs_stack(roi, overlap, tol, channels):
     
     
     # benchmarking time
-    print("total denoising time (s): {}"
-          .format(time_denoising_end - time_denoising_start))
-    print("total segmenting time (s): {}"
-          .format(time_segmenting_end - time_segmenting_start))
-    print("total pruning time (s): {}".format(pruning_time))
-    print("total stack processing time (s): {}".format(time() - time_start))
+    times = (
+        [time_denoising_end - time_denoising_start], 
+        [time_segmenting_end - time_segmenting_start], 
+        [pruning_time], 
+        [time() - time_start])
+    times_dict = {}
+    for key, val in zip(StackTimes, times):
+        times_dict[key] = val
+    print("Stack processing times (s):")
+    df_times = stats.dict_to_data_frame(times_dict, show=" ")
     
-    return merged, segments_all, df
+    return merged, segments_all, df_times, df_pruning
 
 class StackPruner(object):
     """Prune blobs within a stack in a way that allows multiprocessing 

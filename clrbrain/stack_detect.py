@@ -337,7 +337,7 @@ def detect_blobs_stack(roi, overlap, tol, channels):
     scaling_factor = detector.calc_scaling_factor()
     denoise_size = config.process_settings["denoise_size"]
     # no overlap for denoising
-    overlap_denoise = np.zeros(3).astype(np.int)
+    overlap_denoise = np.zeros(3, dtype=np.int)
     if denoise_size:
         max_pixels = np.ceil(
             np.multiply(scaling_factor, denoise_size)).astype(int)
@@ -523,7 +523,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
             for i in range(num_sections):
                 # build overlapping region dimensions based on size of 
                 # sub-region in the given axis
-                coord = np.zeros(3).astype(np.int)
+                coord = np.zeros(3, dtype=np.int)
                 coord[axis] = i
                 lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
                 offset = sub_rois_offsets[tuple(coord)]

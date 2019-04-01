@@ -32,8 +32,9 @@ def _import_img(i, paths, rescale, multichannel):
     return i, img
 
 def _process_plane(i, img3ds, rescale, multichannel, rotate=None):
-    # process corresponding planes from related images, where first 
-    # image in img3ds is assumed to be atlas, and subsequent images 
+    # process corresponding planes from related images, where img3ds is 
+    # a list of nested 2D image lists, and the first 2D image in each 
+    # nested list is assumed to be histology image, while subsequent images 
     # are labels-based images
     print("processing plane {}".format(i))
     imgs = []
@@ -48,6 +49,8 @@ def _process_plane(i, img3ds, rescale, multichannel, rotate=None):
             img = transform.rescale(
                 img3d[i], rescale, mode="reflect", multichannel=False, 
                 preserve_range=True, anti_aliasing=False, order=0)
+        if config.flip:
+            img = np.rot90(img, 2, (0, 1))
         imgs.append(img)
     if rotate:
         # rotate, filling background with edge color

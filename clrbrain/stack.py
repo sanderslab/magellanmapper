@@ -20,48 +20,92 @@ from clrbrain import lib_clrbrain
 from clrbrain import plot_support
 from clrbrain import importer
 
-def _import_img(i, paths, rescale, multichannel):
-    # simply import and rescale an image; labels_img is unused, included 
-    # only for consistency
-    path = paths[i]
-    print("importing {}".format(path))
-    img = io.imread(path)
-    img = transform.rescale(
-        img, rescale, mode="reflect", multichannel=multichannel, 
-        preserve_range=True, anti_aliasing=True)
-    return i, img
-
-def _process_plane(i, img3ds, rescale, multichannel, rotate=None):
-    # process corresponding planes from related images, where img3ds is 
-    # a list of nested 2D image lists, and the first 2D image in each 
-    # nested list is assumed to be histology image, while subsequent images 
-    # are labels-based images
-    print("processing plane {}".format(i))
-    imgs = []
-    for j, img3d in enumerate(img3ds):
-        if j == 0:
-            # atlas image
-            img = transform.rescale(
-                img3d[i], rescale, mode="reflect", multichannel=multichannel, 
-                preserve_range=True, anti_aliasing=True)
-        else:
-            # labels-based image, using nearest-neighbor interpolation
-            img = transform.rescale(
-                img3d[i], rescale, mode="reflect", multichannel=False, 
-                preserve_range=True, anti_aliasing=False, order=0)
-        if config.flip:
-            img = np.rot90(img, 2, (0, 1))
-        imgs.append(img)
-    if rotate:
-        # rotate, filling background with edge color
-        for j, img in enumerate(imgs):
-            #img = img[10:-100, 10:-80] # manually crop out any border
-            cval = np.mean(img[0, 0])
-            img = ndimage.rotate(img, rotate, cval=cval)
-            # additional cropping for oblique bottom edge after rotation
-            #img = img[:-50]
-            imgs[j] = img
-    return i, imgs
+class StackPlaneIO(object):
+    """Worker class to export planes from a stack with support for 
+    multiprocessing.
+    
+    Attributes:
+        imgs: A list of images, with exact specification determined by 
+            the calling function.
+    """
+    imgs = None
+    
+    @classmethod
+    def set_data(cls, imgs):
+        """Set data to be accessed by worker functions."""
+        cls.imgs = imgs
+    
+    @classmethod
+    def import_img(cls, i, rescale, multichannel):
+        """Import and rescale an image.
+        
+        Assumes that :attr:``imgs`` is a list of paths to 2D images.
+        
+        Args:
+            i: Index within :attr:``imgs`` to plot.
+            rescale: Rescaling multiplier.
+            multichannel: True if the images are multichannel.
+        
+        Returns:
+            A tuple of ``i`` and a list of the processed images. The 
+            processed image list has the same length as :attr:``imgs``, 
+            or the number of image paths.
+        """
+        path = paths[i]
+        print("importing {}".format(path))
+        img = io.imread(path)
+        img = transform.rescale(
+            img, rescale, mode="reflect", multichannel=multichannel, 
+            preserve_range=True, anti_aliasing=True)
+        return i, img
+    
+    @classmethod
+    def process_plane(cls, i, rescale, multichannel, rotate=None):
+        """Process corresponding planes from related images.
+        
+        Assumes that :attr:``imgs`` is a list of nested 2D image lists, 
+        where the first nested list is assumed to be a sequence of 
+        histology image planes, while subsequent images are 
+        labels-based images.
+        
+        Args:
+            i: Index within nested lists of :attr:``imgs`` to plot.
+            rescale: Rescaling multiplier.
+            multichannel: True if the images are multichannel.
+            rotate: Degrees by which to rotate; defaults to None.
+        
+        Returns:
+            A tuple of ``i`` and a list of the processed images. The 
+            processed image list has the same length as :attr:``imgs``, 
+            or the number of nested lists.
+        """
+        print("processing plane {}".format(i))
+        imgs_proc = []
+        for j, img_stack in enumerate(cls.imgs):
+            if j == 0:
+                # atlas image
+                img = transform.rescale(
+                    img_stack[i], rescale, mode="reflect", 
+                    multichannel=multichannel, 
+                    preserve_range=True, anti_aliasing=True)
+            else:
+                # labels-based image, using nearest-neighbor interpolation
+                img = transform.rescale(
+                    img_stack[i], rescale, mode="reflect", multichannel=False, 
+                    preserve_range=True, anti_aliasing=False, order=0)
+            if config.flip:
+                img = np.rot90(img, 2, (0, 1))
+            imgs_proc.append(img)
+        if rotate:
+            # rotate, filling background with edge color
+            for j, img in enumerate(imgs_proc):
+                #img = img[10:-100, 10:-80] # manually crop out any border
+                cval = np.mean(img[0, 0])
+                img = ndimage.rotate(img, rotate, cval=cval)
+                # additional cropping for oblique bottom edge after rotation
+                #img = img[:-50]
+                imgs_proc[j] = img
+        return i, imgs_proc
 
 def _build_stack(images, out_path, process_fnc, rescale, aspect=None, 
                  origin=None, delay=None, cmaps_labels=None, scale_bar=True):
@@ -100,13 +144,14 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     img_size = None
     multichannel = images[0][0].ndim >= 3
     print("building stack for channel: {}".format(config.channel))
+    StackPlaneIO.set_data(images)
     pool = mp.Pool()
     pool_results = []
     for i in range(num_images):
         # add rotation argument if necessary
         pool_results.append(pool.apply_async(
             process_fnc, 
-            args=(i, images, rescale, multichannel)))
+            args=(i, rescale, multichannel)))
     
     # setup imshow parameters
     cmaps = config.process_settings["channel_colors"]
@@ -230,7 +275,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
         # builds animations from all files in a directory
         planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
         print(planes)
-        fnc = _import_img
+        fnc = StackPlaneIO.import_img
         extracted_planes.append(planes)
     else:
         # load images from path and extract ROI based on slice parameters, 
@@ -261,7 +306,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
                     :, offset[1]:offset[1]+roi_size[1], 
                     offset[0]:offset[0]+roi_size[0]]
             extracted_planes.append(planes)
-        fnc = _process_plane
+        fnc = StackPlaneIO.process_plane
     
     # name file based on animation vs single plane extraction
     ext = config.savefig

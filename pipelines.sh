@@ -91,8 +91,11 @@ whole_img_proc=""
 UPLOAD_TYPES=("none", "all", "pathways_specific")
 upload="${UPLOAD_TYPES[0]}"
 
-# Path to output file, to upload if specified
+# Path to file with nohup output, to upload if specified
 output_path=""
+
+# Paths to stats output files
+output_stats_paths=()
 
 # Slack notification URL, to post when done
 url_notify=""
@@ -194,7 +197,7 @@ compress_upload() {
   local args=("$@")
   local dir_path="$(dirname "${args[0]}")"
   local base_path="$(basename "${args[0]}")"
-  echo "${args[@]}, $base_path"
+  echo "$dir_path $base_path ${args[@]:2}"
   local compression="${args[1]}"
   local paths=()
   for path in "${args[@]:2}"; do
@@ -619,11 +622,26 @@ if [[ "$whole_img_proc" != "" ]]; then
     compress_upload "${args[@]}"
   fi
   summary_msg+=("Detections and upload time: $(($SECONDS - $start))s")
+  output_stats_paths+=(
+    "blob_ratios_means.csv" "blob_ratios.csv" "stack_detection_times.csv"
+    "stacks_detection_times.csv")
 fi
 
 
 ####################################
 # Post-Processing
+
+if [[ ! -z "$output_path" ]]; then
+  # include nohup output script for upload
+  #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
+  output_stats_paths+=("$output_path")
+fi
+
+if [[ ! -z "$s3_exp_path" && "${#output_stats_paths[@]}" -gt 0 ]]; then
+  # compress and upload output stat files
+  compress_upload "$(basename "${clr_img_base}"_stats)" \
+    "zip" "${output_stats_paths[@]}"
+fi
 
 msg="Total time elapsed for Clrbrain pipeline: $(($SECONDS - $START_TIME))s"
 summary_msg+=("$msg")
@@ -643,16 +661,7 @@ fi
 
 if [[ $clean_up -eq 1 ]]; then
   # Server Clean-Up
-  echo "Initiating clean-up tasks"
-  
-  if [[ "$output_path" != "" ]]; then
-    # prepare tail of output file for notification and upload full file to S3
-    #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
-    name="`basename $output_path`"
-    aws s3 cp "$output_path" "${s3_exp_path}/${name}"
-  fi
-  
-  echo "Finishing clean-up tasks, shutting down..."
+  echo "Completed Clrbrain pipelines, shutting down server..."
   sudo poweroff
 fi
 

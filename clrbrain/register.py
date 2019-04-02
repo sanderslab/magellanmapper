@@ -4388,10 +4388,9 @@ if __name__ == "__main__":
         if config.groups is not None:
             groups[config.GENOTYPE_KEY] = [
                 config.GROUPS_NUMERIC[geno] for geno in config.groups]
-        # get raw values for each label for each side when measuring 
-        # only drawn labels to generate a data frame that can be 
-        # used for fast aggregation when grouping into levels
-        combine_sides = config.labels_level is not None
+        # should generally leave uncombined for drawn labels to allow 
+        # faster level building, where can combine sides
+        combine_sides = config.register_settings["combine_sides"]
         volumes_by_id2(
             config.filenames, labels_ref_lookup, suffix=config.suffix, 
             unit_factor=unit_factor, groups=groups, 

@@ -589,7 +589,14 @@ class RegisterSettings(SettingsDict):
         # the original background as-is, or False not to crop
         self["crop_to_orig"] = 1
         
+        # type of label smoothing
         self["smoothing_mode"] = SmoothingModes.opening
+        
+        # combine values from opposite sides when measuring volume stats; 
+        # default to use raw values for each label and side to generate 
+        # a data frame that can be used for fast aggregation when 
+        # grouping into levels
+        self["combine_sides"] = False
 
 def update_register_settings(settings, settings_type):
     
@@ -912,6 +919,12 @@ def update_register_settings(settings, settings_type):
             "smoothgaustest", 
             {"smoothing_mode": SmoothingModes.gaussian, 
              "smooth": (0, 0.25, 0.5, 0.75, 1, 1.25)}, 
+            profile)
+        
+        # combine sides for volume stats
+        settings.add_modifier(
+            "combinesides", 
+            {"combine_sides": True}, 
             profile)
     
     if verbose:

@@ -3723,8 +3723,9 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             label_level = label[NODE][config.ABAKeys.LEVEL.value]
             if label_level <= max_level:
                 # get children (including parent first) if up through level
-                ids_with_children.append(get_children_from_id(
-                    labels_ref_lookup, label_id, both_sides=combine_sides))
+                ids_with_children.append(
+                    get_children_from_id(
+                        labels_ref_lookup, label_id, both_sides=combine_sides))
         label_ids = ids_with_children
     
     dfs = []
@@ -3837,7 +3838,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     return df_combined, df_combined_all
 
 def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None, 
-                         show=False):
+                         show=False, level=None):
     """Replace labels in an image with the differences in metrics for 
     each given region between two conditions.
     
@@ -3852,6 +3853,8 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
         prefix: Start of path for output image; defaults to None to 
             use ``img_path`` instead.
         show: True to show the images after generating them; defaults to False.
+        level: Ontological level at which to look up and show labels. 
+            Defaults to None to use only drawn labels.
     """
     # load labels image and data frame before generating map for the 
     # given metric of the chosen measurement
@@ -3859,7 +3862,12 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
         img_path, reg_name=IMG_LABELS, get_sitk=True)
     labels_np = sitk.GetArrayFromImage(labels_sitk)
     df = pd.read_csv(df_path)
-    labels_diff = vols.map_meas_to_labels(labels_np, df, meas, fn_avg)
+    labels_ref_lookup = None
+    if level is not None:
+        ref = load_labels_ref(config.load_labels)
+        labels_ref_lookup = create_aba_reverse_lookup(ref)
+    labels_diff = vols.map_meas_to_labels(
+        labels_np, df, meas, fn_avg, level, labels_ref_lookup)
     labels_diff_sitk = replace_sitk_with_numpy(labels_sitk, labels_diff)
     
     # save and show labels difference image
@@ -4427,7 +4435,8 @@ if __name__ == "__main__":
         # generate labels difference images for various measurements 
         # and metrics, using the output from volumes measurements for 
         # drawn labels
-        path_df = SAMPLE_VOLS + ".csv"
+        path_df = (SAMPLE_VOLS if config.labels_level is None 
+                   else SAMPLE_VOLS_LEVELS) + ".csv"
         metrics = [
             (vols.LabelMetrics.VarNuclei.name, np.nanmean), 
             (vols.LabelMetrics.VarNuclei.name, np.nanmedian), 
@@ -4436,7 +4445,8 @@ if __name__ == "__main__":
         ]
         for metric in metrics:
             make_labels_diff_img(
-                config.filename, path_df, *metric, config.prefix, show)
+                config.filename, path_df, *metric, config.prefix, show, 
+                config.labels_level)
 
     elif reg is config.RegisterTypes.labels_diff_stats:
         # generate labels difference images for various measurements 

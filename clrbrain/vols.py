@@ -15,6 +15,7 @@ from skimage import measure
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+from clrbrain import register
 
 # metric keys and column names
 LabelMetrics = Enum(
@@ -519,7 +520,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     print("time elapsed to measure variation:", time() - start_time)
     return df, df_all
 
-def map_meas_to_labels(labels_img, df, meas, fn_avg):
+def map_meas_to_labels(labels_img, df, meas, fn_avg, level=None, 
+                       labels_ref_lookup=None):
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
@@ -535,6 +537,9 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
         fn_avg: Function to apply to the column for each region. If None, 
             ``df`` is assumed to already contain statistics generated from 
             the ``clrstats`` R package, which will be extracted directly.
+        level: Ontological level at which to look up and show labels. 
+            Defaults to None to use only drawn labels.
+        labels_ref_lookup: Labels lookup dictionary; defaults to None.
     
     Retunrs:
         A map of the measurements as an image of the same shape as 
@@ -546,7 +551,19 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
     regions = np.unique(df[LabelMetrics.Region.name])
     for region in regions:
         df_region = df[df[LabelMetrics.Region.name] == region]
-        labels_region = np.abs(labels_img) == region
+        if level is not None:
+            # setup ontological labels
+            label = labels_ref_lookup[abs(region)]
+            label_level = label[register.NODE][config.ABAKeys.LEVEL.value]
+            if label_level == level:
+                # get children (including parent first) if up through level
+                label_ids = register.get_children_from_id(
+                    labels_ref_lookup, region, both_sides=True)
+                labels_region = np.isin(labels_img, label_ids)
+            else:
+                continue
+        else:
+            labels_region = np.abs(labels_img) == region
         if fn_avg is None:
             # assume that df was output by R clrstats package; take  
             # effect size and weight by -logp

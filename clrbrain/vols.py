@@ -532,30 +532,38 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
         df: Pandas data frame with measurements by regions corresponding 
             to that of ``labels_img``.
         meas: Name of column in ``df`` from which to extract measurements.
-        fn_avg: Function to apply to the column for each region.
+        fn_avg: Function to apply to the column for each region. If None, 
+            ``df`` is assumed to already contain statistics generated from 
+            the ``clrstats`` R package, which will be extracted directly.
     
     Retunrs:
         A map of the measurements as an image of the same shape as 
         ``labels_img`` of float data type.
     """
     # ensure that at least 2 conditions exist to compare
-    conds = np.unique(df["Condition"])
+    conds = np.unique(df["Condition"]) if "Condition" in df else []
     labels_diff = np.zeros_like(labels_img, dtype=np.float)
     regions = np.unique(df[LabelMetrics.Region.name])
     for region in regions:
         df_region = df[df[LabelMetrics.Region.name] == region]
         labels_region = np.abs(labels_img) == region
-        if len(conds) >= 2:
-            # compare the metrics for the first two conditions
-            avgs = []
-            for cond in conds:
-                # gather separate metrics for each condition
-                df_region_cond = df_region[df_region["Condition"] == cond]
-                #print(df_region_cond.to_csv())
-                print(region, cond, fn_avg(df_region_cond[meas]))
-                avgs.append(fn_avg(df_region_cond[meas]))
-            labels_diff[labels_region] = avgs[0] - avgs[1]
+        if fn_avg is None:
+            # assume that df was output by R clrstats package; take  
+            # effect size and weight by -logp
+            labels_diff[labels_region] = (
+                df_region["vals.effect"] * df_region["vals.logp"])
         else:
-            # take the metric for the single condition
-            labels_diff[labels_region] = fn_avg(df_region[meas])
+            if len(conds) >= 2:
+                # compare the metrics for the first two conditions
+                avgs = []
+                for cond in conds:
+                    # gather separate metrics for each condition
+                    df_region_cond = df_region[df_region["Condition"] == cond]
+                    #print(df_region_cond.to_csv())
+                    print(region, cond, fn_avg(df_region_cond[meas]))
+                    avgs.append(fn_avg(df_region_cond[meas]))
+                labels_diff[labels_region] = avgs[0] - avgs[1]
+            else:
+                # take the metric for the single condition
+                labels_diff[labels_region] = fn_avg(df_region[meas])
     return labels_diff

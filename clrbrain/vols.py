@@ -14,8 +14,8 @@ from skimage import measure
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
+from clrbrain import ontology
 from clrbrain import plot_3d
-from clrbrain import register
 
 # metric keys and column names
 LabelMetrics = Enum(
@@ -554,10 +554,10 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, level=None,
         if level is not None:
             # setup ontological labels
             label = labels_ref_lookup[abs(region)]
-            label_level = label[register.NODE][config.ABAKeys.LEVEL.value]
+            label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
             if label_level == level:
                 # get children (including parent first) if up through level
-                label_ids = register.get_children_from_id(
+                label_ids = ontology.get_children_from_id(
                     labels_ref_lookup, region, both_sides=True)
                 labels_region = np.isin(labels_img, label_ids)
             else:

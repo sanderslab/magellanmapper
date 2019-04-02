@@ -2707,58 +2707,6 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS,
         return reg_img
     return sitk.GetArrayFromImage(reg_img)
 
-def load_labels_ref(path):
-    labels_ref = None
-    with open(path, "r") as f:
-        labels_ref = json.load(f)
-        #pprint(labels_ref)
-    return labels_ref
-
-def get_node(nested_dict, key, value, key_children):
-    """Get a node from a nested dictionary by iterating through all 
-    dictionaries until the specified value is found.
-    
-    Args:
-        nested_dict: A dictionary that contains a list of dictionaries in
-            the key_children entry.
-        key: Key to check for the value.
-        value: Value to find, assumed to be unique for the given key.
-        key_children: Name of the children key, which contains a list of 
-            further dictionaries but can be empty.
-    
-    Returns:
-        The node matching the key-value pair, or None if not found.
-    """
-    try:
-        #print("checking for key {}...".format(key), end="")
-        found_val = nested_dict[key]
-        #print("found {}".format(found_val))
-        if found_val == value:
-            return nested_dict
-        children = nested_dict[key_children]
-        for child in children:
-            result = get_node(child, key, value, key_children)
-            if result is not None:
-                return result
-    except KeyError as e:
-        print(e)
-    return None
-
-def create_aba_reverse_lookup(labels_ref):
-    """Create a reverse lookup dictionary for Allen Brain Atlas style
-    ontology files.
-    
-    Args:
-        labels_ref: The ontology file as a parsed JSON dictionary.
-    
-    Returns:
-        Reverse lookup dictionary as output by 
-        :func:`ontology.create_reverse_lookup`.
-    """
-    return ontology.create_reverse_lookup(
-        labels_ref["msg"][0], config.ABAKeys.ABA_ID.value, 
-        config.ABAKeys.CHILDREN.value)
-
 def get_label_ids_from_position(coord, labels_img, scaling, rounding=False, 
                                 return_coord_scaled=False):
     """Get the atlas label IDs for the given coordinates.
@@ -3766,8 +3714,8 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     df = pd.read_csv(df_path)
     labels_ref_lookup = None
     if level is not None:
-        ref = load_labels_ref(config.load_labels)
-        labels_ref_lookup = create_aba_reverse_lookup(ref)
+        ref = ontology.load_labels_ref(config.load_labels)
+        labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
     labels_diff = vols.map_meas_to_labels(
         labels_np, df, meas, fn_avg, level, labels_ref_lookup)
     labels_diff_sitk = replace_sitk_with_numpy(labels_sitk, labels_diff)
@@ -3944,12 +3892,12 @@ def _test_labels_lookup():
     """
     
     # create reverse lookup dictionary
-    ref = load_labels_ref(config.load_labels)
+    ref = ontology.load_labels_ref(config.load_labels)
     #pprint(ref)
     lookup_id = 15565 # short search path
     #lookup_id = 126652058 # last item
     time_dict_start = time()
-    id_dict = create_aba_reverse_lookup(ref)
+    id_dict = ontology.create_aba_reverse_lookup(ref)
     labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
     max_labels = np.max(labels_img)
     print("max_labels: {}".format(max_labels))
@@ -3966,7 +3914,7 @@ def _test_labels_lookup():
     
     # brute-force query
     time_direct_start = time()
-    node = get_node(ref["msg"][0], "id", lookup_id, "children")
+    node = ontology.get_node(ref["msg"][0], "id", lookup_id, "children")
     time_direct_end = time()
     #print(node)
     
@@ -3988,8 +3936,8 @@ def _test_volumes_by_id():
     labels_img[:2, :3, :4] = 15565
     labels_img[2:, :3, :4] = 15566
     print(labels_img)
-    ref = load_labels_ref(config.load_labels)
-    labels_ref_lookup = create_aba_reverse_lookup(ref)
+    ref = ontology.load_labels_ref(config.load_labels)
+    labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
     img_shape = (12, 10, 10)
     resolution = np.divide(labels_img.shape, img_shape)
     blobs = np.multiply(
@@ -4026,8 +3974,8 @@ def _test_region_from_id():
             image5d = importer.read_file(config.filename, config.series)
         scaling = importer.calc_scaling(image5d, labels_img)
         print("loaded experiment image from {}".format(config.filename))
-    ref = load_labels_ref(config.load_labels)
-    id_dict = create_aba_reverse_lookup(ref)
+    ref = ontology.load_labels_ref(config.load_labels)
+    id_dict = ontology.create_aba_reverse_lookup(ref)
     middle, img_region, region_ids = get_region_middle(
         id_dict, 16652, labels_img, scaling)
     atlas_label = get_label(middle, labels_img, id_dict, scaling, None, True)
@@ -4120,8 +4068,8 @@ if __name__ == "__main__":
         
         # compute grouped volumes/densities by ontology level
         densities = reg is config.RegisterTypes.densities
-        ref = load_labels_ref(config.load_labels)
-        labels_ref_lookup = create_aba_reverse_lookup(ref)
+        ref = ontology.load_labels_ref(config.load_labels)
+        labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
         vol_dicts, json_paths = register_volumes_mp(
             config.filenames, labels_ref_lookup, 
             config.labels_level, config.rescale, densities, 
@@ -4165,8 +4113,8 @@ if __name__ == "__main__":
             levels = [None]
         else:
             levels = list(range(config.labels_level + 1))
-        ref = load_labels_ref(config.load_labels)
-        labels_ref_lookup = create_aba_reverse_lookup(ref)
+        ref = ontology.load_labels_ref(config.load_labels)
+        labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
         
         if reg is config.RegisterTypes.export_vols:
             # export volumes to CSV
@@ -4293,8 +4241,8 @@ if __name__ == "__main__":
     elif reg is config.RegisterTypes.vol_stats:
         # volumes stats
         # TODO: replace volumes/densities function
-        ref = load_labels_ref(config.load_labels)
-        labels_ref_lookup = create_aba_reverse_lookup(ref)
+        ref = ontology.load_labels_ref(config.load_labels)
+        labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
         groups_numeric = None
         groups = {}
         if config.groups is not None:

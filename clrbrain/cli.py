@@ -98,6 +98,7 @@ from clrbrain import plot_3d
 from clrbrain import detector
 from clrbrain import chunking
 from clrbrain import mlearn
+from clrbrain import ontology
 from clrbrain import stack_detect
 from clrbrain import stats
 
@@ -715,7 +716,7 @@ def process_file(filename_base, offset, roi_size):
             suffixes = register.get_reg_suffixes_dict(
                 *config.reg_suffixes[:-1], **config.reg_suffixes[-1])
         else:
-            # use default registere images
+            # use default register images
             suffixes = register.get_reg_suffixes_dict()
         
         if suffixes[config.REG_SUFFIX_ATLAS] is not None:
@@ -731,8 +732,8 @@ def process_file(filename_base, offset, roi_size):
             reg_name=suffixes[config.REG_SUFFIX_ANNOTATION])
         config.labels_scaling = importer.calc_scaling(
             image5d, config.labels_img)
-        config.labels_ref = register.load_labels_ref(config.load_labels)
-        config.labels_ref_lookup = register.create_aba_reverse_lookup(
+        config.labels_ref = ontology.load_labels_ref(config.load_labels)
+        config.labels_ref_lookup = ontology.create_aba_reverse_lookup(
             config.labels_ref)
         
         try:

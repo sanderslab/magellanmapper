@@ -5,11 +5,64 @@
 """
 
 from collections import OrderedDict
+import json
 
 from clrbrain import config
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
+
+def load_labels_ref(path):
+    labels_ref = None
+    with open(path, "r") as f:
+        labels_ref = json.load(f)
+        #pprint(labels_ref)
+    return labels_ref
+
+def get_node(nested_dict, key, value, key_children):
+    """Get a node from a nested dictionary by iterating through all 
+    dictionaries until the specified value is found.
+    
+    Args:
+        nested_dict: A dictionary that contains a list of dictionaries in
+            the key_children entry.
+        key: Key to check for the value.
+        value: Value to find, assumed to be unique for the given key.
+        key_children: Name of the children key, which contains a list of 
+            further dictionaries but can be empty.
+    
+    Returns:
+        The node matching the key-value pair, or None if not found.
+    """
+    try:
+        #print("checking for key {}...".format(key), end="")
+        found_val = nested_dict[key]
+        #print("found {}".format(found_val))
+        if found_val == value:
+            return nested_dict
+        children = nested_dict[key_children]
+        for child in children:
+            result = get_node(child, key, value, key_children)
+            if result is not None:
+                return result
+    except KeyError as e:
+        print(e)
+    return None
+
+def create_aba_reverse_lookup(labels_ref):
+    """Create a reverse lookup dictionary for Allen Brain Atlas style
+    ontology files.
+    
+    Args:
+        labels_ref: The ontology file as a parsed JSON dictionary.
+    
+    Returns:
+        Reverse lookup dictionary as output by 
+        :func:`ontology.create_reverse_lookup`.
+    """
+    return create_reverse_lookup(
+        labels_ref["msg"][0], config.ABAKeys.ABA_ID.value, 
+        config.ABAKeys.CHILDREN.value)
 
 def create_reverse_lookup(nested_dict, key, key_children, id_dict=OrderedDict(), 
                           parent_list=None):

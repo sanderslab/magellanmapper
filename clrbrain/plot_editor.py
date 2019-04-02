@@ -10,7 +10,7 @@ import matplotlib.patches as patches
 from skimage import draw
 
 from clrbrain import config
-from clrbrain import register
+from clrbrain import ontology
 from clrbrain import plot_support
 
 class PlotEditor:
@@ -317,12 +317,12 @@ class PlotEditor:
                 
                 if self.img3d_labels is not None:
                     # show atlas label name
-                    atlas_label = register.get_label(
+                    atlas_label = ontology.get_label(
                         coord, self.img3d_labels, config.labels_ref_lookup, 
                         self.scaling)
                     name = ""
                     if atlas_label is not None:
-                        name = register.get_label_name(atlas_label)
+                        name = ontology.get_label_name(atlas_label)
                     self.region_label.set_text(name)
                     # minimize chance of text overflowing out of axes by 
                     # switching alignment at midline horizontally

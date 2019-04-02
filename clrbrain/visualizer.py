@@ -45,10 +45,10 @@ from clrbrain import config
 from clrbrain import detector
 from clrbrain import importer
 from clrbrain import lib_clrbrain
+from clrbrain import ontology
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 from clrbrain import plot_support
-from clrbrain import register
 from clrbrain import segmenter
 from clrbrain import sqlite
 
@@ -348,11 +348,11 @@ class Visualization(HasTraits):
             level = self._structure_scale
             if level == self._structure_scale_high:
                 level = None
-            self._atlas_label = register.get_label(
+            self._atlas_label = ontology.get_label(
                 center[::-1], config.labels_img, config.labels_ref_lookup, 
                 config.labels_scaling, level, rounding=True)
             if self._atlas_label is not None:
-                title = register.get_label_name(self._atlas_label)
+                title = ontology.get_label_name(self._atlas_label)
                 if title is not None:
                     self._mlab_title = self.scene.mlab.title(title)
     
@@ -801,7 +801,7 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
-        title = _fig_title(register.get_label_name(self._atlas_label), 
+        title = _fig_title(ontology.get_label_name(self._atlas_label), 
                            curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(
             config.filename, config.series)
@@ -938,7 +938,7 @@ class Visualization(HasTraits):
                 "Region ID must be an integer n, or \"+/-n\" to get both sides"
             )
             return
-        centroid, self._img_region, region_ids = register.get_region_middle(
+        centroid, self._img_region, region_ids = ontology.get_region_middle(
             config. labels_ref_lookup, region_id, config.labels_img, 
             config.labels_scaling, both_sides=both_sides)
         if centroid is None:

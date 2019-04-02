@@ -2250,22 +2250,26 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
             images, and stats will not be performed.
         suffix: Modifier to append to end of ``path_atlas`` basename for 
             registered image files that were output to a modified name; 
-            defaults to None.
+            defaults to None. If ``atlas`` is True, ``suffix`` will only 
+            be applied to saved files, with files still loaded based on the 
+            original path.
     """
     # adjust image path with suffix
+    load_path = path_atlas
     mod_path = path_atlas
     if suffix is not None:
         mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+        if atlas: load_path = mod_path
     
     # load corresponding files via SimpleITK
     atlas_sitk = load_registered_img(
-        mod_path, get_sitk=True, reg_name=IMG_ATLAS)
+        load_path, get_sitk=True, reg_name=IMG_ATLAS)
     atlas_sitk_edge = load_registered_img(
-        mod_path, get_sitk=True, reg_name=IMG_ATLAS_EDGE)
+        load_path, get_sitk=True, reg_name=IMG_ATLAS_EDGE)
     labels_sitk = load_registered_img(
-        mod_path, get_sitk=True, reg_name=IMG_LABELS)
+        load_path, get_sitk=True, reg_name=IMG_LABELS)
     labels_sitk_markers = load_registered_img(
-        mod_path, get_sitk=True, reg_name=IMG_LABELS_MARKERS)
+        load_path, get_sitk=True, reg_name=IMG_LABELS_MARKERS)
     
     # get Numpy arrays of images
     atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
@@ -2312,9 +2316,9 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
         make_labels_fg(labels_sitk), make_labels_fg(labels_sitk_seg))
     
     # show and write image to same directory as atlas with appropriate suffix
-    if show: sitk.Show(labels_sitk_seg)
     write_reg_images({IMG_LABELS: labels_sitk_seg}, mod_path)
-    return mod_path
+    if show: sitk.Show(labels_sitk_seg)
+    return path_atlas
 
 def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
     """Merge atlas segmentations for a list of files as a multiprocessing 
@@ -2353,14 +2357,17 @@ def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
         labels_sitk_edge = replace_sitk_with_numpy(atlas_sitk, labels_edge)
         
         # write images to same directory as atlas
+        mod_path = path
+        if suffix is not None:
+            mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
         imgs_write = {
             IMG_LABELS_DIST: dist_sitk, 
             IMG_LABELS_EDGE: labels_sitk_edge, 
         }
+        write_reg_images(imgs_write, mod_path)
         if show:
             for img in imgs_write.values():
                 if img: sitk.Show(img)
-        write_reg_images(imgs_write, path)
         print("finished {}".format(path))
     pool.close()
     pool.join()

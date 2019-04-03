@@ -14,7 +14,6 @@ from skimage import measure
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
-from clrbrain import ontology
 from clrbrain import plot_3d
 
 # metric keys and column names
@@ -520,8 +519,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     print("time elapsed to measure variation:", time() - start_time)
     return df, df_all
 
-def map_meas_to_labels(labels_img, df, meas, fn_avg, level=None, 
-                       labels_ref_lookup=None):
+def map_meas_to_labels(labels_img, df, meas, fn_avg):
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
@@ -537,9 +535,6 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, level=None,
         fn_avg: Function to apply to the column for each region. If None, 
             ``df`` is assumed to already contain statistics generated from 
             the ``clrstats`` R package, which will be extracted directly.
-        level: Ontological level at which to look up and show labels. 
-            Defaults to None to use only drawn labels.
-        labels_ref_lookup: Labels lookup dictionary; defaults to None.
     
     Retunrs:
         A map of the measurements as an image of the same shape as 
@@ -548,22 +543,11 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, level=None,
     # ensure that at least 2 conditions exist to compare
     conds = np.unique(df["Condition"]) if "Condition" in df else []
     labels_diff = np.zeros_like(labels_img, dtype=np.float)
-    regions = np.unique(df[LabelMetrics.Region.name])
+    labels_img_abs = np.abs(labels_img)
+    regions = np.unique(labels_img_abs)
     for region in regions:
         df_region = df[df[LabelMetrics.Region.name] == region]
-        if level is not None:
-            # setup ontological labels
-            label = labels_ref_lookup[abs(region)]
-            label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
-            if label_level == level:
-                # get children (including parent first) if up through level
-                label_ids = ontology.get_children_from_id(
-                    labels_ref_lookup, region, both_sides=True)
-                labels_region = np.isin(labels_img, label_ids)
-            else:
-                continue
-        else:
-            labels_region = np.abs(labels_img) == region
+        labels_region = labels_img_abs == region
         if fn_avg is None:
             # assume that df was output by R clrstats package; take  
             # effect size and weight by -logp

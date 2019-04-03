@@ -563,6 +563,15 @@ setupConfig <- function(name=NULL) {
   } else if (name == "square") {
     # square plots
     config.env$PlotSize <- c(7, 7)
+    
+  } else if (name == "dsc") {
+    # very narrow plots
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
+    config.env$Measurements <- kMeas[8]
+    config.env$PlotVolcano <- FALSE
+    setupConfig("aba")
+    setupConfig("square")
+    
   }
 }
 
@@ -571,6 +580,7 @@ runStats <- function() {
   
   # setup configuration environment
   setupConfig()
+  setupConfig("dsc")
   #setupConfig("aba")
   #setupConfig("square")
   

@@ -160,14 +160,17 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   if (show.sample.legend) {
     color <- 1
     bty <- "n"
+    pt.bg <- "gray"
   } else {
     color <- colors
     bty <- "o"
+    pt.bg <- NA
   }
+  pt.cex <- 1.5
   legend.group <- legend(
-    "topleft", legend=names.groups, pch=15:(14+length(names.groups)), 
-    xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty=bty, col=color, 
-    text.width=legend.text.width)
+    "topleft", legend=names.groups, pch=21:(21+length(names.groups)), 
+    xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty=bty, col=color, pt.bg=pt.bg, 
+    text.width=legend.text.width, pt.cex=pt.cex)
   
   i <- 1
   for (geno in genos.unique) {
@@ -196,7 +199,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         x.vals <- jitter(x.vals, amount=0.2)
       }
       colors.group <- if (show.sample.legend) colors else colors[i]
-      points(x.vals, vals.group, pch=i+14, col=colors.group, cex=1.5)
+      points(x.vals, vals.group, pch=i+20, col=colors.group, bg=colors.group, 
+             cex=pt.cex)
       
       # plot summary stats on outer sides of scatter plots
       x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25

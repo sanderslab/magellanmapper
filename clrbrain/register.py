@@ -87,6 +87,7 @@ IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
 IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
 IMG_LABELS_DIFF = "annotationDiff.mhd"
+IMG_LABELS_LEVEL = "annotationLevel{}.mhd"
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
@@ -3491,6 +3492,52 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
         for img in imgs_write.values():
             if img: sitk.Show(img)
 
+def make_labels_level_img(img_path, level, prefix=None, show=False):
+    """Replace labels in an image with their parents at the given level.
+    
+    Labels that do not fall within a parent at that level will remain in place.
+    
+    Args:
+        img_path: Path to the base image from which the corresponding 
+            registered image will be found.
+        level: Ontological level at which to group child labels. 
+        prefix: Start of path for output image; defaults to None to 
+            use ``img_path`` instead.
+        show: True to show the images after generating them; defaults to False.
+    """
+    # load original labels image and setup ontology dictionary
+    labels_sitk = load_registered_img(
+        img_path, reg_name=IMG_LABELS, get_sitk=True)
+    labels_np = sitk.GetArrayFromImage(labels_sitk)
+    ref = ontology.load_labels_ref(config.load_labels)
+    labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
+    
+    ids = list(labels_ref_lookup.keys())
+    for key in ids:
+        keys = [key, -1 * key]
+        for region in keys:
+            if region == 0: continue
+            # get ontological label
+            label = labels_ref_lookup[abs(region)]
+            label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
+            if label_level == level:
+                # get children (including parent first) at given level 
+                # and replace them with parent
+                label_ids = ontology.get_children_from_id(
+                    labels_ref_lookup, region)
+                labels_region = np.isin(labels_np, label_ids)
+                print("replacing labels within", region)
+                labels_np[labels_region] = region
+    
+    # write and optionally display labels level image
+    labels_level_sitk = replace_sitk_with_numpy(labels_sitk, labels_np)
+    imgs_write = {IMG_LABELS_LEVEL.format(level): labels_level_sitk}
+    out_path = prefix if prefix else img_path
+    write_reg_images(imgs_write, out_path)
+    if show:
+        for img in imgs_write.values():
+            if img: sitk.Show(img)
+
 def export_region_ids(labels_ref_lookup, path, level):
     """Export region IDs from annotation reference reverse mapped dictionary 
     to CSV file.
@@ -4042,6 +4089,11 @@ if __name__ == "__main__":
         register_reg(
             *config.filenames[:2], IMG_EXP, suffixes, config.plane, 
             flip, config.prefix, config.suffix, not config.no_show)
+
+    elif reg is config.RegisterTypes.make_labels_level:
+        # make a labels image grouped at the given level
+        make_labels_level_img(
+            config.filename, config.labels_level, config.prefix, show)
     
     elif reg is config.RegisterTypes.labels_diff:
         # generate labels difference images for various measurements 

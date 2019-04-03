@@ -88,6 +88,7 @@ IMG_LABELS_MARKERS = "annotationMarkers.mhd"
 IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
 IMG_LABELS_DIFF = "annotationDiff.mhd"
 IMG_LABELS_LEVEL = "annotationLevel{}.mhd"
+IMG_LABELS_EDGE_LEVEL = "annotationEdgeLevel{}.mhd"
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
@@ -3526,10 +3527,17 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
                 labels_region = np.isin(labels_np, label_ids)
                 print("replacing labels within", region)
                 labels_np[labels_region] = region
+    labels_level_sitk = replace_sitk_with_numpy(labels_sitk, labels_np)
+    
+    # generate an edge image at this level
+    labels_edge = vols.make_labels_edge(labels_np)
+    labels_edge_sikt = replace_sitk_with_numpy(labels_sitk, labels_edge)
     
     # write and optionally display labels level image
-    labels_level_sitk = replace_sitk_with_numpy(labels_sitk, labels_np)
-    imgs_write = {IMG_LABELS_LEVEL.format(level): labels_level_sitk}
+    imgs_write = {
+        IMG_LABELS_LEVEL.format(level): labels_level_sitk, 
+        IMG_LABELS_EDGE_LEVEL.format(level): labels_edge_sikt, 
+    }
     out_path = prefix if prefix else img_path
     write_reg_images(imgs_write, out_path)
     if show:

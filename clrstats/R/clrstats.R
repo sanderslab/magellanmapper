@@ -548,6 +548,8 @@ setupConfig <- function(name=NULL) {
     # initialize environment
     config.env$PlotSize <- c(5, 7)
     config.env$SampleLegend <- FALSE
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
+    config.env$Measurements <- kMeas[6]
     
   } else if (name == "aba") {
     # multiple distinct atlases
@@ -572,11 +574,9 @@ runStats <- function() {
   #setupConfig("square")
   
   # setup measurement and model types
-  kStatsPathIn <- file.path("..", kStatsFilesIn[2])
-  measurements <- kMeas[6:7]
   model <- kModel[8]
   split.by.side <- TRUE # false to combine sides
-  load.stats <- FALSE # true to load saved stats and only regenerate volcano plots
+  load.stats <- FALSE # true to load saved stats, only regenerate volcano plots
   
   # set up paramters based on chosen model
   stat <- "vals"
@@ -585,7 +585,7 @@ runStats <- function() {
   }
   region.ids <- read.csv(kRegionIDsPath)
   
-  for (meas in measurements) {
+  for (meas in config.env$Measurements) {
     print(paste("Calculating stats for", meas))
     # calculate stats or retrieve from file
     path.out <- paste0(kStatsPathOut, "_", meas, ".csv")
@@ -593,7 +593,7 @@ runStats <- function() {
       stats <- read.csv(path.out)
     } else {
       stats <- calcVolStats(
-        kStatsPathIn, path.out, meas, model, region.ids, 
+        config.env$StatsPathIn, path.out, meas, model, region.ids, 
         split.by.side=split.by.side, corr="bonferroni")
     }
     

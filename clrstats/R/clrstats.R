@@ -550,6 +550,7 @@ setupConfig <- function(name=NULL) {
     config.env$SampleLegend <- FALSE
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
     config.env$Measurements <- kMeas[6]
+    config.env$PlotVolcano <- TRUE
     
   } else if (name == "aba") {
     # multiple distinct atlases
@@ -597,10 +598,12 @@ runStats <- function() {
         split.by.side=split.by.side, corr="bonferroni")
     }
     
-    # plot effects and p's
-    volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3))
-    volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
-    # ":" special character automatically changed to "."
-    volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25))
+    if (config.env$PlotVolcano) {
+      # plot effects and p's
+      volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3))
+      volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
+      # ":" special character automatically changed to "."
+      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25))
+    }
   }
 }

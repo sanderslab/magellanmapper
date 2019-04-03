@@ -178,8 +178,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     
     # add group label for genotypes if more than one total
     if (length(genos.unique) > 1) mtext(geno, side=1, at=i-0.5)
-    x.adj <- 0
-    x.pos <- vector(length=num.sides) # group base x-positions
+    x.pos <- 0:(num.sides-1) # group starting x-positions
     vals.geno <- list() # vals within genotype, for paired points
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of
@@ -192,7 +191,19 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       # plot points, adding jitter in x-direction unless paired
       vals.group <- vals.groups[[i]] / denom
       vals.geno <- append(vals.geno, vals.groups[i])
-      x <- i + x.adj - 1
+      x <- x.pos[i]
+      if (x %% 2 != 0) {
+        # shift even groups left slightly and connect if paired
+        x <- x - 0.05
+        if (paired) {
+          # assume same order within each group
+          for (j in seq_along(vals.group)) {
+            color <- if(show.sample.legend) colors[j] else 1
+            segments(x.pos[i - 1], vals.geno[[i - 1]][j] / denom, x, 
+                     vals.group[j] / denom, col=color)
+          }
+        }
+      }
       x.vals <- rep(x, length(vals.group))
       if (!paired) {
         # add jitter to distinguish points
@@ -218,26 +229,12 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
                  angle=90, code=3)
         }
       }
-      
-      x.pos[i] <- x # store x for connecting paired points
-      x.adj <- x.adj + 0.05
       i <- i + 1
-    }
-    if (paired) {
-      # connect pairs of points with segments, assuming same order for each 
-      # vector of values
-      vals.group <- vals.geno[[1]]
-      for (j in seq_along(vals.group)) {
-        color <- if(show.sample.legend) colors[j] else 1
-        segments(x.pos[1], vals.group[j] / denom, x.pos[2], 
-                 vals.geno[[2]][j] / denom, col=color)
-      }
     }
     if (show.sample.legend) {
       # add sample legend below group legend to label colors, with manually 
       # drawn rectangle to enclose group legend as well
       group.rect <- legend.group$rect
-      print(group.rect)
       legend.sample <- legend(
         x=group.rect$left, y=(0.7*(group.rect$top-group.rect$h)), 
         legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 

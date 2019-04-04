@@ -468,7 +468,8 @@ def compactness(mask_borders, mask_object):
         compactness = np.nan
     return compactness
 
-def signed_distance_transform(borders, mask=None, return_indices=False):
+def signed_distance_transform(borders, mask=None, return_indices=False, 
+                              spacing=None):
     """Signed version of Euclidean distance transform where values within a 
     given mask are considered negative.
     
@@ -484,24 +485,27 @@ def signed_distance_transform(borders, mask=None, return_indices=False):
             which case distances will be given as-is.
         return_indices: True if distance transform indices should be given; 
             defaults to False.
+        spacing: Grid spacing sequence of same length as number of image 
+            axis dimensions; defaults to None.
     
     Returns:
         ``transform`` as the signed distances. If ``return_indices`` is True, 
-        ``indices`` is also returned.
+        ``indices`` is also returned. If no ``mask`` is given, returns 
+        the same output as from :meth:``ndimage.distance_transform_edt``.
     """
     if borders is None and mask is not None:
         borders = (1 - perimeter_nd(mask)).astype(bool)
     if return_indices:
         transform, indices = ndimage.distance_transform_edt(
-            borders, return_indices=return_indices)
+            borders, return_indices=return_indices, sampling=spacing)
     else:
-        transform = ndimage.distance_transform_edt(borders)
+        transform = ndimage.distance_transform_edt(borders, sampling=spacing)
     if mask is not None: transform[mask] *= -1
     if return_indices: return transform, indices
     return transform
 
 def borders_distance(borders_orig, borders_shifted, mask_orig=None, 
-                     filter_size=None, gaus_sigma=None):
+                     filter_size=None, gaus_sigma=None, spacing=None):
     """Measure distance between borders.
     
     Args:
@@ -516,6 +520,8 @@ def borders_distance(borders_orig, borders_shifted, mask_orig=None,
             will be applied.
         gaus_sigma: Low-pass filter distances with Gaussian kernel; defaults 
             to None.
+        spacing: Grid spacing sequence of same length as number of image 
+            axis dimensions; defaults to None.
     
     Returns:
         Tuple of ``dist_to_orig``, a Numpy array the same shape as 
@@ -531,9 +537,9 @@ def borders_distance(borders_orig, borders_shifted, mask_orig=None,
         borders_orig = morphology.binary_closing(
             borders_orig, morphology.ball(filter_size))
     # find distances to the original borders, inverted to become background, 
-    # where neg dists are within orig image
+    # where neg dists are within mask_orig (or >= 0 if no mask_orig given)
     borders_dist, indices = signed_distance_transform(
-        ~borders_orig, mask=mask_orig, return_indices=True)
+        ~borders_orig, mask=mask_orig, return_indices=True, spacing=spacing)
     if gaus_sigma is not None:
         # low-pass filter the distances between borders to remove shifts 
         # likely resulting from appropriate compaction

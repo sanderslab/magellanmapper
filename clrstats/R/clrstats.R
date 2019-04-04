@@ -565,12 +565,16 @@ setupConfig <- function(name=NULL) {
     config.env$PlotSize <- c(7, 7)
     
   } else if (name == "dsc") {
-    # very narrow plots
+    # Dise Similarity Coefficient stats for ABA series
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
     config.env$Measurements <- kMeas[8]
     config.env$PlotVolcano <- FALSE
     setupConfig("aba")
     setupConfig("square")
+    
+  } else if (name == "wt") {
+    # WT samples
+    config.env$Measurements <- kMeas[4:7]
     
   }
 }
@@ -580,7 +584,8 @@ runStats <- function() {
   
   # setup configuration environment
   setupConfig()
-  setupConfig("dsc")
+  #setupConfig("dsc")
+  setupConfig("wt")
   #setupConfig("aba")
   #setupConfig("square")
   

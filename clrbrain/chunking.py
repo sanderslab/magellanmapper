@@ -60,18 +60,20 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
     """
     pixels = max_pixels[axis]
     start = coord[axis] * pixels
-    end = start + pixels + overlap[axis]
+    end = start + pixels
+    if overlap is not None:
+        end += overlap[axis]
     if end > size[axis]:
         end = size[axis]
     return (int(start), int(end))
 
-def stack_splitter(roi, max_pixels, overlap):
+def stack_splitter(roi, max_pixels, overlap=None):
     """Splits a stack into multiple sub regions.
     
     Args:
         roi: The region of interest, a stack in (z, y, x, ...) dimensions.
         max_pixels: Max pixels for each side in (z, y, x) order.
-        overlap: Overlap size between sub-ROIs.
+        overlap: Overlap size between sub-ROIs. Defaults to None for no overlap.
     
     Return:
         Tuple of (sub_rois, sub_rois_offsets), where 
@@ -91,18 +93,22 @@ def stack_splitter(roi, max_pixels, overlap):
     #print("num_units: {}".format(num_units))
     sub_rois = np.zeros(num_units, dtype=object)
     sub_rois_offsets = np.zeros(np.append(num_units, 3))
-    lib_clrbrain.printv("sub_rois_offsets shape: {}".format(sub_rois_offsets.shape))
+    lib_clrbrain.printv(
+        "sub_rois_offsets shape: {}".format(sub_rois_offsets.shape))
     
-    # fill with sub ROIs including overlap extending into next sub ROI except for 
-    # the last one in each dimension
+    # fill with sub ROIs including overlap extending into next sub ROI 
+    # except for the last one in each dimension
     for z in range(num_units[0]):
         for y in range(num_units[1]):
             for x in range(num_units[2]):
                 coord = (z, y, x)
-                bounds = [_bounds_side(size, max_pixels, overlap, coord, axis) for axis in range(3)]
+                bounds = [_bounds_side(size, max_pixels, overlap, coord, axis) 
+                          for axis in range(3)]
                 #print("bounds: {}".format(bounds))
-                sub_rois[coord] = roi[slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
-                sub_rois_offsets[coord] = (bounds[0][0], bounds[1][0], bounds[2][0])
+                sub_rois[coord] = roi[
+                    slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
+                sub_rois_offsets[coord] = (
+                    bounds[0][0], bounds[1][0], bounds[2][0])
     return sub_rois, sub_rois_offsets
 
 def merge_split_stack(sub_rois, overlap):
@@ -155,7 +161,7 @@ def merge_split_stack(sub_rois, overlap):
             merged = np.concatenate((merged, merged_y), axis=0)
     return merged
 
-def get_split_stack_total_shape(sub_rois, overlap):
+def get_split_stack_total_shape(sub_rois, overlap=None):
     """Get the shape of a chunked stack.
     
     Useful for determining the final shape of a stack that has been 
@@ -164,7 +170,7 @@ def get_split_stack_total_shape(sub_rois, overlap):
     
     Attributes:
         sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
-        overlap: Overlap size between sub-ROIs.
+        overlap: Overlap size between sub-ROIs. Defaults to None for no overlap.
     
     Returns:
         The shape of the chunked stack after it would be merged.
@@ -181,10 +187,11 @@ def get_split_stack_total_shape(sub_rois, overlap):
                 sub_roi = sub_rois[coord]
                 edges = list(sub_roi.shape[0:3])
                 
-                # remove overlap if not at last sub_roi or row or column
-                for n in range(len(edges)):
-                    if coord[n] != size[n] - 1:
-                        edges[n] -= overlap[n]
+                if overlap is not None:
+                    # remove overlap if not at last sub_roi or row or column
+                    for n in range(len(edges)):
+                        if coord[n] != size[n] - 1:
+                            edges[n] -= overlap[n]
                 #print("edges: {}".format(edges))
                 merged_shape[2] += edges[2]
             if final_shape[2] <= 0:
@@ -205,7 +212,8 @@ def merge_split_stack2(sub_rois, overlap, offset, output):
     
     Args:
         sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
-        overlap: Overlap size between sub-ROIs.
+        overlap: Overlap size between sub-ROIs given as an int seq in 
+            z,y,x. Can be None for no overlap.
         offset: Axis offset for output array.
         output: Output array, such as a memmapped array to bypass 
             storing the merged array in RAM.
@@ -214,9 +222,7 @@ def merge_split_stack2(sub_rois, overlap, offset, output):
         The merged stack.
     """
     size = sub_rois.shape
-    if overlap.dtype != np.int:
-        overlap = overlap.astype(np.int)
-    merged_coord = np.zeros(3).astype(np.int)
+    merged_coord = np.zeros(3, dtype=np.int)
     sub_roi_shape = sub_rois[0, 0, 0].shape
     if offset > 0:
         # axis offset, such as skipping the time axis
@@ -230,10 +236,11 @@ def merge_split_stack2(sub_rois, overlap, offset, output):
                 sub_roi = sub_rois[coord]
                 edges = list(sub_roi.shape[0:3])
                 
-                # remove overlap if not at last sub_roi or row or column
-                for n in range(len(edges)):
-                    if coord[n] != size[n] - 1:
-                        edges[n] -= overlap[n]
+                if overlap is not None:
+                    # remove overlap if not at last sub_roi or row or column
+                    for n in range(len(edges)):
+                        if coord[n] != size[n] - 1:
+                            edges[n] -= overlap[n]
                 sub_roi = sub_roi[:edges[0], :edges[1], :edges[2]]
                 output[merged_coord[0]:merged_coord[0]+edges[0], 
                        merged_coord[1]:merged_coord[1]+edges[1], 

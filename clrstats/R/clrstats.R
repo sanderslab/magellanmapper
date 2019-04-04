@@ -596,6 +596,9 @@ runStats <- function() {
   }
   region.ids <- read.csv(kRegionIDsPath)
   
+  # reset graphics to ensure consistent layout
+  dev.off()
+  
   for (meas in config.env$Measurements) {
     print(paste("Calculating stats for", meas))
     # calculate stats or retrieve from file

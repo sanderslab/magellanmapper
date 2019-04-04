@@ -25,7 +25,6 @@ from clrbrain import stats
 
 class StackTimes(Enum):
     """Stack processing durations."""
-    PREPROC = "Pre_processing"
     DETECTION = "Detection"
     PRUNING = "Pruning"
     TOTAL = "Total_stack"
@@ -37,49 +36,29 @@ class StackDetector(object):
     Attributes:
         sub_rois: Numpy object array containing chunked sub-ROIs within a 
             stack.
+        sub_rois_offsets: Numpy object array of the same shape as 
+            ``sub_rois`` with offsets in z,y,x corresponding to each 
+            sub-ROI. Offets are used to transpose blobs into 
+            absolute coordinates.
+        denoise_max_shape: Maximum shape of each unit within each sub-ROI 
+            for denoising.
     """
     sub_rois = None
+    sub_rois_offsets = None
+    denoise_max_shape = None
     
     @classmethod
-    def set_data(cls, sub_rois):
-        """Set the data to be shared during multiprocessing.
-        
-        Args:
-            sub_rois: Numpy object array of sub-ROIs.
-        """
+    def set_data(cls, sub_rois, sub_rois_offsets, denoise_max_shape):
+        """Set the class attributes to be shared during multiprocessing."""
         cls.sub_rois = sub_rois
+        cls.sub_rois_offsets = sub_rois_offsets
+        cls.denoise_max_shape = denoise_max_shape
     
     @classmethod
-    def denoise_sub_roi(cls, coord):
-        """Denoise the ROI within an array of ROIs.
-        
-        The array of ROIs is assumed to be cli.sub_rois.
-        
-        Args:
-            coord: Coordinate of the sub-ROI in the order (z, y, x).
-        
-        Returns:
-            Tuple of the coordinate given back again to identify the 
-            sub-ROI and the denoised sub-ROI.
-        """
-        sub_roi = cls.sub_rois[coord]
-        lib_clrbrain.printv_format(
-            "denoising sub_roi at {} of {}, with shape {}...", 
-            (coord, np.add(cls.sub_rois.shape, -1), sub_roi.shape))
-        sub_roi = plot_3d.saturate_roi(sub_roi, channel=config.channel)
-        sub_roi = plot_3d.denoise_roi(sub_roi, channel=config.channel)
-        if config.process_settings["thresholding"]:
-            sub_roi = plot_3d.threshold(sub_roi)
-        return coord, sub_roi
-    
-    @classmethod
-    def detect_sub_roi(cls, sub_rois_offsets, coord):
+    def detect_sub_roi(cls, coord):
         """Segment the ROI within an array of ROIs.
         
         Args:
-            sub_rois_offsets: Array of offsets each given as (z, y, x) 
-                for each sub_roi in the larger array, used to transpose the 
-                segments into absolute coordinates.
             coord: Coordinate of the sub-ROI in the order (z, y, x).
         
         Returns:
@@ -88,10 +67,33 @@ class StackDetector(object):
         """
         sub_roi = cls.sub_rois[coord]
         lib_clrbrain.printv_format(
-            "segmenting sub_roi at {} of {}, with shape {}...", 
+            "detecting blobs in sub-ROI at {} of {}, with shape {}...", 
             (coord, np.add(cls.sub_rois.shape, -1), sub_roi.shape))
+        
+        if cls.denoise_max_shape is not None:
+            # further split sub-ROI for preprocessing locally
+            denoise_rois, _ = chunking.stack_splitter(
+                sub_roi, cls.denoise_max_shape)
+            for z in range(denoise_rois.shape[0]):
+                for y in range(denoise_rois.shape[1]):
+                    for x in range(denoise_rois.shape[2]):
+                        denoise_coord = (z, y, x)
+                        denoise_roi = plot_3d.saturate_roi(
+                            denoise_rois[denoise_coord], channel=config.channel)
+                        denoise_roi = plot_3d.denoise_roi(
+                            denoise_roi, channel=config.channel)
+                        denoise_rois[denoise_coord] = denoise_roi
+            
+            # re-merge into one large ROI (the image stack) in preparation for 
+            # segmenting with differently sized chunks
+            merged_shape = chunking.get_split_stack_total_shape(denoise_rois)
+            merged = np.zeros(
+                tuple(merged_shape), dtype=denoise_rois[0, 0, 0].dtype)
+            chunking.merge_split_stack2(denoise_rois, None, 0, merged)
+            sub_roi = merged
+        
         segments = detector.detect_blobs(sub_roi, config.channel)
-        offset = sub_rois_offsets[coord]
+        offset = cls.sub_rois_offsets[coord]
         #print("segs before (offset: {}):\n{}".format(offset, segments))
         if segments is not None:
             # shift both coordinate sets (at beginning and end of array) to 
@@ -301,7 +303,6 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     df_times_all = stats.data_frames_to_csv(
         dfs_times, "stack_detection_times.csv")
     times = (
-        [np.sum(df_times_all[StackTimes.PREPROC.value])], 
         [np.sum(df_times_all[StackTimes.DETECTION.value])], 
         [np.sum(df_times_all[StackTimes.PRUNING.value]) + pruning_time], 
         time() - time_start)
@@ -337,68 +338,24 @@ def detect_blobs_stack(roi, overlap, tol, channels):
     """
     time_start = time()
     scaling_factor = detector.calc_scaling_factor()
-    denoise_size = config.process_settings["denoise_size"]
-    # no overlap for denoising
-    overlap_denoise = np.zeros(3, dtype=np.int)
-    if denoise_size:
-        max_pixels = np.ceil(
-            np.multiply(scaling_factor, denoise_size)).astype(int)
-        sub_rois, _ = chunking.stack_splitter(roi, max_pixels, overlap_denoise)
     segments_all = None
     merged = roi
-    
-    # process ROI
-    time_denoising_start = time()
-    df = None
-    StackDetector.set_data(sub_rois)
-    
-    # Multiprocessing
-    
-    # denoise all sub-ROIs and re-merge
-    if denoise_size:
-        pool = mp.Pool()
-        pool_results = []
-        # asynchronously denoise since denoising is independent of adjacent
-        # sub-ROIs
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    pool_results.append(
-                        pool.apply_async(StackDetector.denoise_sub_roi, 
-                                         args=(coord, )))
-        for result in pool_results:
-            coord, sub_roi = result.get()
-            lib_clrbrain.printv(
-                "replacing sub_roi at {} of {}"
-                .format(coord, np.add(sub_rois.shape, -1)))
-            sub_rois[coord] = sub_roi
-        
-        pool.close()
-        pool.join()
-        
-        # re-merge into one large ROI (the image stack) in preparation for 
-        # segmenting with differently sized chunks
-        merged_shape = chunking.get_split_stack_total_shape(
-            sub_rois, overlap_denoise)
-        merged = np.zeros(tuple(merged_shape), dtype=sub_rois[0, 0, 0].dtype)
-        chunking.merge_split_stack2(sub_rois, overlap_denoise, 0, merged)
-    else:
-        lib_clrbrain.printv(
-            "no denoise size specified, will not preprocess")
-    
-    time_denoising_end = time()
     
     # detect blobs, using larger sub-ROI size to minimize the number 
     # of sub-ROIs and thus the number of edge overlaps
     time_segmenting_start = time()
+    denoise_size = config.process_settings["denoise_size"]
+    denoise_max_shape = None
+    if denoise_size:
+        denoise_max_shape = np.ceil(
+            np.multiply(scaling_factor, denoise_size)).astype(int)
     max_pixels = np.ceil(np.multiply(
         scaling_factor, 
         config.process_settings["segment_size"])).astype(int)
     #print("max_factor: {}".format(max_factor))
     sub_rois, sub_rois_offsets = chunking.stack_splitter(
         merged, max_pixels, overlap)
-    StackDetector.set_data(sub_rois)
+    StackDetector.set_data(sub_rois, sub_rois_offsets, denoise_max_shape)
     pool = mp.Pool()
     pool_results = []
     for z in range(sub_rois.shape[0]):
@@ -407,7 +364,7 @@ def detect_blobs_stack(roi, overlap, tol, channels):
                 coord = (z, y, x)
                 pool_results.append(
                     pool.apply_async(StackDetector.detect_sub_roi, 
-                                     args=(sub_rois_offsets, coord)))
+                                     args=(coord, )))
     
     seg_rois = np.zeros(sub_rois.shape, dtype=object)
     for result in pool_results:
@@ -434,7 +391,6 @@ def detect_blobs_stack(roi, overlap, tol, channels):
     
     # benchmarking time
     times = (
-        [time_denoising_end - time_denoising_start], 
         [time_segmenting_end - time_segmenting_start], 
         [pruning_time], 
         [time() - time_start])

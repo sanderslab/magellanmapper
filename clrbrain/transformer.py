@@ -17,32 +17,48 @@ from clrbrain import detector
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 
-def _rescale_sub_roi(coord, sub_roi, rescale, target_size, multichannel):
-    """Rescale a sub-ROI.
+class Downsampler(object):
+    """Downsample (or theoretically upsample) a large image in a way 
+    that allows multiprocessing without global variables.
     
-    Args:
-        coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
-            chunked ROI.
-        sub_roi: The sub-ROI as an image array in (z, y, x).
-        rescale: Rescaling factor. Can be None, in which case ``target_size`` 
-            will be used instead.
-        target_size: Target rescaling size for the given sub-ROI in (z, y, x). 
-           If ``rescale`` is not None, ``target_size`` will be ignored.
-        multichannel: True if the final dimension is for channels.
-    
-    Return:
-        Tuple of ``coord`` and ``rescaled``, where ``coord`` is the same as 
-        the given parameter to identify where the sub-ROI is located during  
-        multiprocessing tasks.
+    Attributes:
+        sub_rois: Numpy object array containing chunked sub-ROIs.
     """
-    rescaled = None
-    if rescale is not None:
-        rescaled = transform.rescale(
-            sub_roi, rescale, mode="reflect", multichannel=multichannel)
-    elif target_size is not None:
-        rescaled = transform.resize(
-            sub_roi, target_size, mode="reflect", anti_aliasing=True)
-    return coord, rescaled
+    sub_rois = None
+    
+    @classmethod
+    def set_data(cls, sub_rois):
+        """Set the class attributes to be shared during multiprocessing."""
+        cls.sub_rois = sub_rois
+    
+    @classmethod
+    def rescale_sub_roi(cls, coord, rescale, target_size, multichannel):
+        """Rescale a sub-ROI.
+        
+        Args:
+            coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
+                chunked ROI.
+            rescale: Rescaling factor. Can be None, in which case 
+                ``target_size`` will be used instead.
+            target_size: Target rescaling size for the given sub-ROI in 
+               (z, y, x). If ``rescale`` is not None, ``target_size`` 
+               will be ignored.
+            multichannel: True if the final dimension is for channels.
+        
+        Return:
+            Tuple of ``coord`` and the rescaled sub-ROI, where 
+            ``coord`` is the same as the given parameter to identify 
+            where the sub-ROI is located during multiprocessing tasks.
+        """
+        sub_roi = cls.sub_rois[coord]
+        rescaled = None
+        if rescale is not None:
+            rescaled = transform.rescale(
+                sub_roi, rescale, mode="reflect", multichannel=multichannel)
+        elif target_size is not None:
+            rescaled = transform.resize(
+                sub_roi, target_size, mode="reflect", anti_aliasing=True)
+        return coord, rescaled
 
 def make_modifier_plane(plane):
     """Make a string designating a plane orthogonal transformation.
@@ -200,6 +216,7 @@ def transpose_img(filename, series, plane=None, rescale=None):
         # rescale in chunks with multiprocessing
         overlap = np.zeros(3).astype(np.int)
         sub_rois, _ = chunking.stack_splitter(rescaled, max_pixels, overlap)
+        Downsampler.set_data(sub_rois)
         pool = mp.Pool()
         pool_results = []
         for z in range(sub_rois.shape[0]):
@@ -208,9 +225,8 @@ def transpose_img(filename, series, plane=None, rescale=None):
                     coord = (z, y, x)
                     pool_results.append(
                         pool.apply_async(
-                            _rescale_sub_roi, 
-                            args=(coord, sub_rois[coord], rescale, 
-                                  sub_roi_size, multichannel)))
+                            Downsampler.rescale_sub_roi, 
+                            args=(coord, rescale, sub_roi_size, multichannel)))
         for result in pool_results:
             coord, sub_roi = result.get()
             print("replacing sub_roi at {} of {}"

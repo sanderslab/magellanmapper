@@ -214,8 +214,7 @@ def transpose_img(filename, series, plane=None, rescale=None):
                   .format(target_size, num_chunks, max_pixels, sub_roi_size))
         
         # rescale in chunks with multiprocessing
-        overlap = np.zeros(3).astype(np.int)
-        sub_rois, _ = chunking.stack_splitter(rescaled, max_pixels, overlap)
+        sub_rois, _ = chunking.stack_splitter(rescaled, max_pixels)
         Downsampler.set_data(sub_rois)
         pool = mp.Pool()
         pool_results = []
@@ -235,7 +234,7 @@ def transpose_img(filename, series, plane=None, rescale=None):
         
         pool.close()
         pool.join()
-        rescaled_shape = chunking.get_split_stack_total_shape(sub_rois, overlap)
+        rescaled_shape = chunking.get_split_stack_total_shape(sub_rois)
         if offset > 0:
             rescaled_shape = np.concatenate(([1], rescaled_shape))
         print("rescaled_shape: {}".format(rescaled_shape))
@@ -243,7 +242,7 @@ def transpose_img(filename, series, plane=None, rescale=None):
         image5d_transposed = np.lib.format.open_memmap(
             filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype, 
             shape=tuple(rescaled_shape))
-        chunking.merge_split_stack2(sub_rois, overlap, offset, image5d_transposed)
+        chunking.merge_split_stack2(sub_rois, None, offset, image5d_transposed)
         
         if rescale is not None:
             # scale resolutions based on single rescaling factor

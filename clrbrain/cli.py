@@ -101,6 +101,7 @@ from clrbrain import mlearn
 from clrbrain import ontology
 from clrbrain import stack_detect
 from clrbrain import stats
+from clrbrain import transformer
 
 roi_size = None # current region of interest
 offset = None # current offset
@@ -765,8 +766,8 @@ def process_file(filename_base, offset, roi_size):
             db, image5d, config.channel, filename_base, config.border)
         
     elif proc_type == PROC_TYPES[6]:
-        # transpose Numpy array
-        importer.transpose_npy(
+        # transpose and/or rescale whole large image
+        transformer.transpose_img(
             config.filename, config.series, plane=config.plane, 
             rescale=config.rescale)
         

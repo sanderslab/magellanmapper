@@ -29,7 +29,6 @@ import numpy as np
 import javabridge as jb
 import bioformats as bf
 from skimage import io
-from skimage import transform
 try:
     import SimpleITK as sitk
 except ImportError as e:
@@ -192,8 +191,18 @@ def find_sizes(filename):
     print('time for finding sizes: %f' %(time() - time_start))
     return sizes, dtype
 
-def _make_filenames(filename, series, modifier=""):
-    # make Clrbrain-oriented image and image metadata filenames
+def make_filenames(filename, series, modifier=""):
+    """Make Clrbrain-oriented image and image metadata filenames.
+    
+    Args:
+        filename: Original path from which Clrbrain-oriented filenames 
+            will be derived.
+        series: Image series.
+        modifier: Separator for image series; defaults to "_"
+    
+    Returns:
+        Tuple of path to the main image and path to metadata.
+    """
     print("filename: {}".format(filename))
     filename_base = filename_to_base(filename, series, modifier)
     print("filename_base: {}".format(filename_base))
@@ -235,9 +244,28 @@ def deconstruct_np_filename(np_filename, ext="czi"):
         filename = series_reg.split(np_filename)[0] + "." + ext
     return filename, series
 
-def _save_image_info(filename_info_npz, names, sizes, resolutions, 
-                     magnification, zoom, pixel_type, near_min, near_max, 
-                     scaling=None, plane=None):
+def save_image_info(filename_info_npz, names, sizes, resolutions, 
+                    magnification, zoom, pixel_type, near_min, near_max, 
+                    scaling=None, plane=None):
+    """Save image metadata.
+    
+    Args:
+        filename_info_npz: Output path.
+        names: Sequence of names for each series.
+        sizes: Sequence of sizes for each series.
+        resolutions: Sequence of resolutions for each series.
+        magnification: Objective magnification.
+        zoom: Objective zoom.
+        pixel_type: Image data type.
+        near_min: Sequence of near minimum intensities, with each element 
+            in turn holding a sequence with values for each channel.
+        near_max: Sequence of near maximum intensities, with each element 
+            in turn holding a sequence with values for each channel.
+        scaling: Rescaling value for up/downsampled images; defaults 
+            to None.
+        plane: Planar orientation compared with original for transposed 
+            images; defaults to None.
+    """
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
     np.savez(outfile_info, ver=IMAGE5D_NP_VER, names=names, sizes=sizes, 
@@ -298,14 +326,14 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
             # image5d is a scaled, smaller image, so bounds will be 
             # calculated since the calculation requires loading full image 
             # into memory; otherwise, defer to re-importing the image
-            lows, highs = _calc_intensity_bounds(image5d)
+            lows, highs = calc_intensity_bounds(image5d)
         elif image5d.ndim >= 5:
             # recalculate near min/max for multichannel
             print("updating near min/max (this may take awhile)")
             lows = []
             highs = []
             for i in range(len(image5d[0])):
-                low, high = _calc_intensity_bounds(image5d[0, i], dim_channel=2)
+                low, high = calc_intensity_bounds(image5d[0, i], dim_channel=2)
                 print("bounds for plane {}: {}, {}".format(i, low, high))
                 lows.append(low)
                 highs.append(high)
@@ -405,7 +433,7 @@ def read_file(filename, series, load=True, z_max=-1,
     """Reads in an imaging file.
     
     Loads a Numpy image if available as determined by 
-    :func:``_make_filenames``. An offset and size can be given to load an 
+    :func:``make_filenames``. An offset and size can be given to load an 
     only an ROI of the image. If the corresponding Numpy image cannot be 
     found, one will be generated from the given source image. For TIFF images, 
     multiple channels will assume to be stored in separate files with 
@@ -443,7 +471,7 @@ def read_file(filename, series, load=True, z_max=-1,
         second value a dictionary of image properties will be returned.
     """
     ext = lib_clrbrain.get_filename_ext(filename)
-    filename_image5d_npz, filename_info_npz = _make_filenames(
+    filename_image5d_npz, filename_info_npz = make_filenames(
         filename, series)
     if load:
         try:
@@ -558,7 +586,7 @@ def read_file(filename, series, load=True, z_max=-1,
                     print("setting image5d array for series {} with shape: {}"
                           .format(series, image5d.shape))
                 # near max/min bounds per channel for the given plane
-                low, high = _calc_intensity_bounds(img, dim_channel=2)
+                low, high = calc_intensity_bounds(img, dim_channel=2)
                 lows.append(low)
                 highs.append(high)
                 if num_files > 1:
@@ -575,10 +603,10 @@ def read_file(filename, series, load=True, z_max=-1,
     #print("lows: {}, highs: {}".format(lows, highs))
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
-    _save_image_info(filename_info_npz, [name], 
-                     [shape], [detector.resolutions[series]], 
-                     detector.magnification, detector.zoom, 
-                     image5d.dtype, near_mins, near_maxs)
+    save_image_info(
+        filename_info_npz, [name], [shape], [detector.resolutions[series]], 
+        detector.magnification, detector.zoom, image5d.dtype, near_mins, 
+        near_maxs)
     return image5d
 
 def read_file_sitk(filename_sitk, filename_np, series=0, rotate=False):
@@ -605,7 +633,7 @@ def read_file_sitk(filename_sitk, filename_np, series=0, rotate=False):
         attempting to load metadata from ``filename_np``.
     """
     # get metadata from Numpy archive
-    filename_image5d_npz, filename_info_npz = _make_filenames(
+    filename_image5d_npz, filename_info_npz = make_filenames(
         filename_np, series)
     if os.path.exists(filename_info_npz):
         output, image5d_ver_num = read_info(filename_info_npz)
@@ -637,7 +665,7 @@ def import_dir(path):
     if num_files < 1:
         return None
     name = os.path.dirname(files[0])
-    filename_image5d_npz, filename_info_npz = _make_filenames(name + ".czi", 0)
+    filename_image5d_npz, filename_info_npz = make_filenames(name + ".czi", 0)
     image5d = None
     lows = []
     highs = []
@@ -655,107 +683,13 @@ def import_dir(path):
         lows.append(low)
         highs.append(high)
         i += 1
-    _save_image_info(filename_info_npz, [name], 
-                     [image5d.shape], detector.resolutions, 
-                     detector.magnification, detector.zoom, image5d.dtype,
-                     [min(lows)], [max(highs)])
+    save_image_info(
+        filename_info_npz, [name], [image5d.shape], detector.resolutions, 
+        detector.magnification, detector.zoom, image5d.dtype, [min(lows)], 
+        [max(highs)])
     return image5d
 
-def _rescale_sub_roi(coord, sub_roi, rescale, target_size, multichannel):
-    """Rescale a sub-ROI.
-    
-    Args:
-        coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
-            chunked ROI.
-        sub_roi: The sub-ROI as an image array in (z, y, x).
-        rescale: Rescaling factor. Can be None, in which case ``target_size`` 
-            will be used instead.
-        target_size: Target rescaling size for the given sub-ROI in (z, y, x). 
-           If ``rescale`` is not None, ``target_size`` will be ignored.
-        multichannel: True if the final dimension is for channels.
-    
-    Return:
-        Tuple of ``coord`` and ``rescaled``, where ``coord`` is the same as 
-        the given parameter to identify where the sub-ROI is located during  
-        multiprocessing tasks.
-    """
-    rescaled = None
-    if rescale is not None:
-        rescaled = transform.rescale(
-            sub_roi, rescale, mode="reflect", multichannel=multichannel)
-    elif target_size is not None:
-        rescaled = transform.resize(
-            sub_roi, target_size, mode="reflect", anti_aliasing=True)
-    return coord, rescaled
-
-def make_modifier_plane(plane):
-    """Make a string designating a plane orthogonal transformation.
-    
-    Args:
-        plane: Plane to which the image was transposed.
-    
-    Returns:
-        String designating the orthogonal plane transformation.
-    """
-    return "plane{}".format(plane.upper())
-
-def make_modifier_scale(scale):
-    """Make a string designating a scaling transformation.
-    
-    Args:
-        scale: Scale to which the image was rescaled.
-    
-    Returns:
-        String designating the scaling transformation.
-    """
-    return "scale{}".format(scale)
-
-def make_modifier_resized(target_size):
-    """Make a string designating a resize transformation.
-    
-    Note that the final image size may differ slightly from this size as 
-    it only reflects the size targeted.
-    
-    Args:
-        target_size: Target size of rescaling in x,y,z.
-    
-    Returns:
-        String designating the resize transformation.
-    """
-    return "resized({},{},{})".format(*target_size)
-
-def get_transposed_image_path(img_path, scale=None, target_size=None):
-    """Get path, modified for any transposition by :func:``transpose_npy`` 
-    naming conventions.
-    
-    Args:
-        img_path: Unmodified image path.
-        scale: Scaling factor; defaults to None, which ignores scaling.
-        target_size: Target size, typically given by a register profile; 
-            defaults to None, which ignores target size.
-    
-    Returns:
-        Modified path for the given transposition, or ``img_path`` unmodified 
-        if all transposition factors are None.
-    """
-    img_path_modified = img_path
-    if scale is not None or target_size is not None:
-        # use scaled image for pixel comparison, retrieving 
-        # saved scaling as of v.0.6.0
-        modifier = None
-        if scale is not None:
-            # scale takes priority as command-line argument
-            modifier = make_modifier_scale(scale)
-            print("loading scaled file with {} modifier".format(modifier))
-        else:
-            # otherwise assume set target size
-            modifier = make_modifier_resized(target_size)
-            print("loading resized file with {} modifier".format(modifier))
-        img_path_modified = lib_clrbrain.insert_before_ext(
-            img_path, "_" + modifier)
-    return img_path_modified
-
-def _calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
+def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     """Calculate image intensity boundaries for the given percentiles, 
     including boundaries for each channel in multichannel images.
     
@@ -794,162 +728,6 @@ def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows, highs)
         near_maxs = np.amax(np.array(highs), 0)
     return near_mins, near_maxs
 
-def transpose_npy(filename, series, plane=None, rescale=None):
-    """Transpose Numpy NPY saved arrays into new planar orientations and 
-    rescaling or resizing.
-    
-    Saves file to a new NPY archive with "transposed" inserted just prior
-    to the series name so that "transposed" can be appended to the original
-    filename for future loading within Clrbrain. Files are saved through 
-    memmap-based arrays to minimize RAM usage. Currently transposes all 
-    channels, ignoring :attr:``config.channel`` parameter.
-    
-    Args:
-        filename: Full file path in :attribute:cli:`filename` format.
-        series: Series within multi-series file.
-        plane: Planar orientation (see :attribute:plot_2d:`PLANES`). Defaults 
-            to None, in which case no planar transformation will occur.
-        rescale: Rescaling factor. Defaults to None, in which case no 
-            rescaling will occur, and resizing based on register profile 
-            setting will be used instead if available. Rescaling takes place 
-            in multiprocessing.
-    """
-    target_size = config.register_settings["target_size"]
-    if plane is None and rescale is None and target_size is None:
-        print("No transposition to perform, skipping")
-        return
-    
-    time_start = time()
-    # even if loaded already, reread to get image metadata
-    # TODO: consider saving metadata in config and retrieving from there
-    image5d, info = read_file(filename, series, return_info=True)
-    sizes = info["sizes"]
-    
-    # make filenames based on transpositions
-    modifier = ""
-    if plane is not None:
-        modifier = make_modifier_plane(plane) + "_"
-    # either rescaling or resizing
-    if rescale is not None:
-        modifier += make_modifier_scale(rescale) + "_"
-    elif target_size:
-        # target size may differ from final output size but allows a known 
-        # size to be used for finding the file later
-        modifier += make_modifier_resized(target_size) + "_"
-    filename_image5d_npz, filename_info_npz = _make_filenames(
-        filename, series, modifier=modifier)
-    
-    # TODO: image5d should assume 4/5 dimensions
-    offset = 0 if image5d.ndim <= 3 else 1
-    multichannel = image5d.ndim >=5
-    image5d_swapped = image5d
-    
-    if plane is not None and plane != config.PLANE[0]:
-        # swap z-y to get (y, z, x) order for xz orientation
-        image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 1)
-        detector.resolutions[0] = lib_clrbrain.swap_elements(
-            detector.resolutions[0], 0, 1)
-        if plane == config.PLANE[2]:
-            # swap new y-x to get (x, z, y) order for yz orientation
-            image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
-            detector.resolutions[0] = lib_clrbrain.swap_elements(
-                detector.resolutions[0], 0, 2)
-    
-    scaling = None
-    if rescale is not None or target_size is not None:
-        # rescale based on scaling factor or target specific size
-        rescaled = image5d_swapped
-        # TODO: generalize for more than 1 preceding dimension?
-        if offset > 0:
-            rescaled = rescaled[0]
-        #max_pixels = np.multiply(np.ones(3), 10)
-        max_pixels = [100, 500, 500]
-        sub_roi_size = None
-        if target_size:
-            # fit image into even number of pixels per chunk by rounding up 
-            # number of chunks and resize each chunk by ratio of total 
-            # target size to chunk number
-            target_size = target_size[::-1] # change to z,y,x
-            shape = rescaled.shape[:3]
-            num_chunks = np.ceil(np.divide(shape, max_pixels))
-            max_pixels = np.ceil(
-                np.divide(shape, num_chunks)).astype(np.int)
-            sub_roi_size = np.floor(
-                np.divide(target_size, num_chunks)).astype(np.int)
-            print("target_size: {}, num_chunks: {}, max_pixels: {}, "
-                  "sub_roi_size: {}"
-                  .format(target_size, num_chunks, max_pixels, sub_roi_size))
-        
-        # rescale in chunks with multiprocessing
-        overlap = np.zeros(3).astype(np.int)
-        sub_rois, _ = chunking.stack_splitter(rescaled, max_pixels, overlap)
-        pool = mp.Pool()
-        pool_results = []
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
-                    coord = (z, y, x)
-                    pool_results.append(
-                        pool.apply_async(
-                            _rescale_sub_roi, 
-                            args=(coord, sub_rois[coord], rescale, 
-                                  sub_roi_size, multichannel)))
-        for result in pool_results:
-            coord, sub_roi = result.get()
-            print("replacing sub_roi at {} of {}"
-                  .format(coord, np.add(sub_rois.shape, -1)))
-            sub_rois[coord] = sub_roi
-        
-        pool.close()
-        pool.join()
-        rescaled_shape = chunking.get_split_stack_total_shape(sub_rois, overlap)
-        if offset > 0:
-            rescaled_shape = np.concatenate(([1], rescaled_shape))
-        print("rescaled_shape: {}".format(rescaled_shape))
-        # rescale chunks directly into memmap-backed array to minimize RAM usage
-        image5d_transposed = np.lib.format.open_memmap(
-            filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype, 
-            shape=tuple(rescaled_shape))
-        chunking.merge_split_stack2(sub_rois, overlap, offset, image5d_transposed)
-        
-        if rescale is not None:
-            # scale resolutions based on single rescaling factor
-            detector.resolutions = np.multiply(
-                detector.resolutions, 1 / rescale)
-        else:
-            # scale resolutions based on size ratio for each dimension
-            detector.resolutions = np.multiply(
-                detector.resolutions, 
-                (image5d_swapped.shape / rescaled_shape)[1:4])
-        sizes[0] = rescaled_shape
-        scaling = calc_scaling(image5d_swapped, image5d_transposed)
-    else:
-        # transfer directly to memmap-backed array
-        image5d_transposed = np.lib.format.open_memmap(
-            filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
-            shape=image5d_swapped.shape)
-        if plane == config.PLANE[1] or plane == config.PLANE[2]:
-            # flip upside-down if re-orienting planes
-            if offset:
-                image5d_transposed[0, :] = np.fliplr(image5d_swapped[0, :])
-            else:
-                image5d_transposed[:] = np.fliplr(image5d_swapped[:])
-        else:
-            image5d_transposed[:] = image5d_swapped[:]
-        sizes[0] = image5d_swapped.shape
-    
-    # save image metadata
-    print("detector.resolutions: {}".format(detector.resolutions))
-    print("sizes: {}".format(sizes))
-    image5d.flush()
-    _save_image_info(
-        filename_info_npz, info["names"], sizes, detector.resolutions, 
-        info["magnification"], info["zoom"], image5d_transposed.dtype, 
-        *_calc_intensity_bounds(image5d_transposed), scaling, plane)
-    print("saved transposed file to {} with shape {}".format(
-        filename_image5d_npz, image5d_transposed.shape))
-    print("time elapsed (s): {}".format(time() - time_start))
-
 def save_np_image(image, filename, series):
     """Save Numpy image to file.
     
@@ -961,16 +739,16 @@ def save_np_image(image, filename, series):
     Args:
         image: Numpy array.
         filename: Filename of original file, which will be passed to 
-            :func:``_make_filenames`` to create output filenames.
+            :func:``make_filenames`` to create output filenames.
         series: Image series.
     """
-    filename_image5d_npz, filename_info_npz = _make_filenames(
+    filename_image5d_npz, filename_info_npz = make_filenames(
         filename, series)
     out_file = open(filename_image5d_npz, "wb")
     np.save(out_file, image)
     out_file.close()
-    lows, highs = _calc_intensity_bounds(image)
-    _save_image_info(
+    lows, highs = calc_intensity_bounds(image)
+    save_image_info(
         filename_info_npz, [os.path.basename(filename)], [image.shape], 
         detector.resolutions, detector.magnification, detector.zoom, 
         image.dtype, lows, highs)

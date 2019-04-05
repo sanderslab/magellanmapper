@@ -71,6 +71,7 @@ from clrbrain import plot_2d
 from clrbrain import plot_3d
 from clrbrain import segmenter
 from clrbrain import stats
+from clrbrain import transformer
 from clrbrain import vols
 
 IMG_ATLAS = "atlasVolume.mhd"
@@ -1876,7 +1877,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     for i in range(len(img_files)):
         # load image, fipping if necessary and using tranpsosed img if specified
         img_file = img_files[i]
-        img_file = importer.get_transposed_image_path(
+        img_file = transformer.get_transposed_image_path(
             img_file, scale, target_size)
         if flip is not None:
             flip_img = flip[i]
@@ -2437,7 +2438,7 @@ def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
     blobs = info["segments"]
     print("loading {} blobs".format(len(blobs)))
     target_size = config.register_settings["target_size"]
-    img_path_transposed = importer.get_transposed_image_path(
+    img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, target_size)
     if scale is not None or target_size is not None:
         image5d, img_info = importer.read_file(

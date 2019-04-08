@@ -537,9 +537,14 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
             the ``clrstats`` R package, which will be extracted directly.
     
     Retunrs:
-        A map of the measurements as an image of the same shape as 
-        ``labels_img`` of float data type.
+        A map of averages for the given measurement as an image of the 
+        same shape as ``labels_img`` of float data type, or None if no 
+        values for ``meas`` are found.
     """
+    if meas not in df or np.all(np.isnan(df[meas])):
+        print("{} not in data frame or all NaNs, no image to generate"
+              .format(meas))
+        return None
     # ensure that at least 2 conditions exist to compare
     conds = np.unique(df["Condition"]) if "Condition" in df else []
     labels_diff = np.zeros_like(labels_img, dtype=np.float)
@@ -563,6 +568,11 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
                     #print(df_region_cond.to_csv())
                     print(region, cond, fn_avg(df_region_cond[meas]))
                     avgs.append(fn_avg(df_region_cond[meas]))
+                if np.any(np.isnan(avgs[:2])):
+                    # will get NaNs if no row for region or if rows contain 
+                    # NaNs; skip if get NaN avgs for first 2 conditions
+                    print("region {} has NaNs, skipping".format(region))
+                    continue
                 labels_diff[labels_region] = avgs[0] - avgs[1]
             else:
                 # take the metric for the single condition

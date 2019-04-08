@@ -3475,6 +3475,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     labels_np = sitk.GetArrayFromImage(labels_sitk)
     df = pd.read_csv(df_path)
     labels_diff = vols.map_meas_to_labels(labels_np, df, meas, fn_avg)
+    if labels_diff is None: return
     labels_diff_sitk = replace_sitk_with_numpy(labels_sitk, labels_diff)
     
     # save and show labels difference image

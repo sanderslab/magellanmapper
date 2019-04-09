@@ -689,7 +689,6 @@ def process_file(filename_base, offset, roi_size):
               or config.filename.endswith(".mhd")):
             # load formats supported by SimpleITK, using metadata from 
             # Numpy archive
-            rotate = config.flip is not None and config.flip[0]
             filename_np = config.filename # default to same basic name
             if len(config.filenames) > 1:
                 # load metadata from 2nd filename argument if given
@@ -698,7 +697,7 @@ def process_file(filename_base, offset, roi_size):
                 # load metadata based on filename_np, then attempt to 
                 # load the images from config.filename
                 image5d = importer.read_file_sitk(
-                    config.filename, filename_np, config.series, rotate)
+                    config.filename, filename_np, config.series)
             except FileNotFoundError as e:
                 print(e)
         else:
@@ -743,6 +742,12 @@ def process_file(filename_base, offset, roi_size):
                 config.filename, reg_name=suffixes[config.REG_SUFFIX_BORDERS])
         except FileNotFoundError as e:
             print(e)
+    
+    load_rot90 = config.process_settings["load_rot90"]
+    if load_rot90:
+        # rotate main image specified num of times x90deg after loading since 
+        # need to rotate images output by deep learning toolkit
+        image5d = np.rot90(image5d, load_rot90, (2, 3))
     
     
     # PROCESS BY TYPE

@@ -609,7 +609,7 @@ def read_file(filename, series, load=True, z_max=-1,
         near_maxs)
     return image5d
 
-def read_file_sitk(filename_sitk, filename_np, series=0, rotate=False):
+def read_file_sitk(filename_sitk, filename_np, series=0):
     """Read file through SimpleITK and export to Numpy array format, 
     loading associated metadata and formatting array into Clrbrain image5d 
     format.
@@ -622,7 +622,6 @@ def read_file_sitk(filename_sitk, filename_np, series=0, rotate=False):
             as much as possible.
         series: Image series number used to find the associated Numpy 
             archive; defaults to 0.
-        rotate: True if the image should be rotated 90 deg; defaults to False.
     
     Returns:
         Image array in Clrbrain image5d format. Associated metadata will 
@@ -652,9 +651,6 @@ def read_file_sitk(filename_sitk, filename_np, series=0, rotate=False):
         detector.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(detector.resolutions))
     
-    if rotate:
-        # apparently need to rotate images output by deep learning toolkit
-        img_np = np.rot90(img_np, 2, (1, 2))
     image5d = img_np[None] # insert time axis as first dim
     return image5d
 

@@ -287,6 +287,8 @@ class ProcessSettings(SettingsDict):
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
         self["scale_bar_color"] = "w"
+        # num of times to rotate image by 90deg after loading
+        self["load_rot90"] = 0
     
 def update_process_settings(settings, settings_type):
     """Update processing profiles, including layering modifications upon 
@@ -472,7 +474,8 @@ def update_process_settings(settings, settings_type):
         settings.add_modifier(
             "importdl", 
             {"isotropic": None, # assume already isotropic
-             "resize_blobs": (.2, 1, 1)}, 
+             "resize_blobs": (.2, 1, 1), 
+             "load_rot90": 2}, # rotation by 180deg
             profile)
         
         # denoise settings when performing registration

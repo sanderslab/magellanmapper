@@ -1460,7 +1460,8 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         plt.show()
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
-               y_label=None, title=None, size=None, show=True, suffix=None):
+               y_label=None, title=None, size=None, show=True, suffix=None, 
+               colors=None):
     """Plot line graph from Pandas data frame.
     
     Args:
@@ -1481,6 +1482,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
             Defaults to True.
         suffix: String to append to output path before extension; 
             defaults to None to ignore.
+        colors: Sequence of colors for plot lines; defaults to None to use 
+            the default plot cycler (``C0``, ``C1``, etc).
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
@@ -1492,8 +1495,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     x = df[x_col]
     for i, col in enumerate(data_cols):
         linestyle = linestyles[i] if linestyles else "-"
+        color = "C{}".format(i) if colors is None else colors[i]
         ax.plot(
-            x, df[col], color="C{}".format(i), linestyle=linestyles[i], 
+            x, df[col], color=color, linestyle=linestyles[i], 
             label=col.replace("_", " "))
     
     # add supporting plot components

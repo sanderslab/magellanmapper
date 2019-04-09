@@ -519,7 +519,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     print("time elapsed to measure variation:", time() - start_time)
     return df, df_all
 
-def map_meas_to_labels(labels_img, df, meas, fn_avg):
+def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False):
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
@@ -535,6 +535,10 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
         fn_avg: Function to apply to the column for each region. If None, 
             ``df`` is assumed to already contain statistics generated from 
             the ``clrstats`` R package, which will be extracted directly.
+        skip_nans: True to skip any region with NaNs, leaving 0 instead; 
+            defaults to False to allow NaNs in resulting image. Some 
+            applications may not be able to read NaNs, so this parameter 
+            allows giving a neutral value instead.
     
     Retunrs:
         A map of averages for the given measurement as an image of the 
@@ -568,7 +572,7 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg):
                     #print(df_region_cond.to_csv())
                     print(region, cond, fn_avg(df_region_cond[meas]))
                     avgs.append(fn_avg(df_region_cond[meas]))
-                if np.any(np.isnan(avgs[:2])):
+                if skip_nans and np.any(np.isnan(avgs[:2])):
                     # will get NaNs if no row for region or if rows contain 
                     # NaNs; skip if get NaN avgs for first 2 conditions
                     print("region {} has NaNs, skipping".format(region))

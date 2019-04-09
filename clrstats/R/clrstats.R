@@ -555,6 +555,20 @@ setupConfig <- function(name=NULL) {
   } else if (name == "aba") {
     # multiple distinct atlases
     config.env$SampleLegend <- TRUE
+    config.env$Measurements <- kMeas[5:7]
+    config.env$PlotVolcano <- FALSE
+    setupConfig("skinny")
+    
+  } else if (name == "dsc") {
+    # Dise Similarity Coefficient stats for ABA series
+    setupConfig("aba")
+    setupConfig("square")
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
+    config.env$Measurements <- kMeas[8]
+    
+  } else if (name == "wt") {
+    # WT samples
+    config.env$Measurements <- kMeas[4:7]
     
   } else if (name == "skinny") {
     # very narrow plots
@@ -564,18 +578,6 @@ setupConfig <- function(name=NULL) {
     # square plots
     config.env$PlotSize <- c(7, 7)
     
-  } else if (name == "dsc") {
-    # Dise Similarity Coefficient stats for ABA series
-    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
-    config.env$Measurements <- kMeas[8]
-    config.env$PlotVolcano <- FALSE
-    setupConfig("aba")
-    setupConfig("square")
-    
-  } else if (name == "wt") {
-    # WT samples
-    config.env$Measurements <- kMeas[4:7]
-    
   }
 }
 
@@ -584,9 +586,9 @@ runStats <- function() {
   
   # setup configuration environment
   setupConfig()
+  setupConfig("aba")
   #setupConfig("dsc")
-  setupConfig("wt")
-  #setupConfig("aba")
+  #setupConfig("wt")
   #setupConfig("square")
   
   # setup measurement and model types
@@ -602,7 +604,7 @@ runStats <- function() {
   region.ids <- read.csv(kRegionIDsPath)
   
   # reset graphics to ensure consistent layout
-  dev.off()
+  while (!is.null(dev.list())) dev.off()
   
   for (meas in config.env$Measurements) {
     print(paste("Calculating stats for", meas))

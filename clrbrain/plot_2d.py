@@ -1460,7 +1460,7 @@ def plot_volumes(vol_stats, title=None, densities=False, show=True,
         plt.show()
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
-               y_label=None, title=None, size=None, show=True):
+               y_label=None, title=None, size=None, show=True, suffix=None):
     """Plot line graph from Pandas data frame.
     
     Args:
@@ -1479,6 +1479,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         show: True to display the image; otherwise, the figure will only 
             be saved to file, if :attr:``config.savefig`` is set.  
             Defaults to True.
+        suffix: String to append to output path before extension; 
+            defaults to None to ignore.
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
@@ -1502,7 +1504,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     gs.tight_layout(fig)
     
     # save and display
-    save_fig(path_to_df, config.savefig)
+    out_path = path_to_df
+    if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
+    save_fig(out_path, config.savefig)
     if show: plt.show()
 
 def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None, 

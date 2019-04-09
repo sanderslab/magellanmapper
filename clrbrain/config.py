@@ -81,7 +81,12 @@ matplotlib_style = "seaborn"
 # global setting changes
 rc_params = {
     "image.interpolation": "bilinear",
-    "image.resample": False
+    "image.resample": False, 
+    "font.family": "sans-serif", 
+    # dejavusans is Matplotlib default but not on Mac by default, so 
+    # need to change for PDF export; still falls back to DejaVuSans if 
+    # none else found for display
+    "font.sans-serif": ["Arial", "Helvetica", "Tahoma"], 
 }
 
 # Matplotlib2 default image interpoloation

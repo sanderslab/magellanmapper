@@ -4019,11 +4019,16 @@ if __name__ == "__main__":
             config.filename, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.COMPACTED.value, 
              SmoothingMetrics.DISPLACED.value, 
-             SmoothingMetrics.SM_QUALITY.value, 
-             SmoothingMetrics.SA_VOL.value, 
+             SmoothingMetrics.SM_QUALITY.value), 
+            ("--", "--", "-"), "Smoothing Filter Size", 
+            "Fractional Change", title, size, not config.no_show, "_quality")
+        plot_2d.plot_lines(
+            config.filename, SmoothingMetrics.FILTER_SIZE.value, 
+            (SmoothingMetrics.SA_VOL.value, 
              SmoothingMetrics.LABEL_LOSS.value), 
-            ("--", "--", "-", ":", ":"), "Smoothing Filter Size", 
-            "Fractional Change", title, size, not config.no_show)
+            ("-", "-"), "Smoothing Filter Size", 
+            "Fractional Change", None, size, not config.no_show, "_extras", 
+            ("C3", "C4"))
     
     elif reg in (
         config.RegisterTypes.make_edge_images, 

@@ -378,7 +378,7 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling,
         intermixed with coordinates not part of the region.
     """
     # gather IDs for label and all its children
-    region_ids = ontology.get_children_from_id(
+    region_ids = get_children_from_id(
         labels_ref_lookup, label_id, incl_parent=True, both_sides=both_sides)
     
     # get a list of all the region's coordinates to sort

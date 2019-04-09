@@ -145,6 +145,7 @@ class Visualization(HasTraits):
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Detect")
     btn_2d_trait = Button("2D Plots")
+    btn_atlas_editor_trait = Button("Atlas Editor")
     btn_save_3d = Button("Save 3D Screenshot")
     btn_save_segments = Button("Save Blobs")
     roi = None # combine with roi_array?
@@ -182,7 +183,7 @@ class Visualization(HasTraits):
     _styles_2d = List
     _DEFAULTS_STYLES_2D = [
         "Square ROI", "Square ROI with 3D", "Single row", "Wide ROI", 
-        "Multi-zoom", "Thin rows", "Atlas editor"]
+        "Multi-zoom", "Thin rows"]
     _atlas_label = None
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
@@ -755,8 +756,7 @@ class Visualization(HasTraits):
     
     def _btn_2d_trait_fired(self):
         if (self._circles_opened_type 
-            and self._circles_opened_type != plot_2d.CIRCLES[2].lower()
-            or self._opened_window_style == self._DEFAULTS_STYLES_2D[6]):
+            and self._circles_opened_type != plot_2d.CIRCLES[2].lower()):
             # prevent multiple editable windows from being opened 
             # simultaneously to avoid unsynchronized state
             self.segs_feedback = (
@@ -843,18 +843,19 @@ class Visualization(HasTraits):
             # layout for square ROIs with thin rows to create a tall fig
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
-        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[6]:
-            # atlas editor; need to retain ref or else instance callbacks 
-            # created within AtlasEditor will be garbage collected
-            self.atlas_ed = atlas_editor.AtlasEditor(
-                cli.image5d, config.labels_img, config.channel, curr_offset, 
-                self._fig_close_listener, borders_img=config.borders_img, 
-                fn_show_label_3d=self.show_label_3d)
-            self.atlas_ed.show_atlas()
         else:
             # defaults to Square style without oblique view
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3)
+    
+    def _btn_atlas_editor_trait_fired(self):
+        # atlas editor; need to retain ref or else instance callbacks 
+        # created within AtlasEditor will be garbage collected
+        self.atlas_ed = atlas_editor.AtlasEditor(
+            cli.image5d, config.labels_img, config.channel, 
+            self._curr_offset(), self._fig_close_listener, 
+            borders_img=config.borders_img, fn_show_label_3d=self.show_label_3d)
+        self.atlas_ed.show_atlas()
     
     def _btn_save_3d_fired(self):
         # save 3D image with the currently set extension in config
@@ -1205,7 +1206,8 @@ class Visualization(HasTraits):
                 HGroup(
                     Item("btn_redraw_trait", show_label=False), 
                     Item("btn_segment_trait", show_label=False), 
-                    Item("btn_2d_trait", show_label=False)
+                    Item("btn_2d_trait", show_label=False), 
+                    Item("btn_atlas_editor_trait", show_label=False)
                 ),
                 Item(
                     "segs_scale",

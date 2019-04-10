@@ -555,7 +555,7 @@ class Visualization(HasTraits):
         self._circles_2d = [plot_2d.CIRCLES[0]]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [Styles2D.SQUARE_ROI.value]
-        self._check_list_2d = [self._DEFAULTS_2D[1]]
+        #self._check_list_2d = [self._DEFAULTS_2D[1]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
         if (config.process_settings["vis_3d"].lower() 
             == self._DEFAULTS_3D[3].lower()):

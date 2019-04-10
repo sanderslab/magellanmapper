@@ -353,6 +353,25 @@ def print_compact(arr, msg=None, mid=False):
         print(compact)
     return compact
 
+def compact_float(n, max_decimals=None):
+    """Reduce a float to a more compact value.
+    
+    Args:
+        n: Floating point number.
+        max_decimals: Maximum decimals to keep; defaults to None.
+    
+    Returns:
+        An integer if `n` is essentially an integer, or a string 
+        representation of `n` reduced to `max_decimals` numbers after 
+        the decimal point. Otherwise, simply returns `n`.
+    """
+    compact = n
+    if float(n).is_integer():
+        compact = int(n)
+    elif max_decimals is not None:
+        compact = "{0:.{1}f}".format(n, max_decimals)
+    return compact
+
 def backup_file(path, modifier="", i=None):
     """Backup a file to the next given available path with an index number 
     before the extension.

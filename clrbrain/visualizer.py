@@ -21,6 +21,7 @@ Attributes:
     params: Additional Matplotlib rc parameters.
 """
 
+from enum import Enum
 import os
 import sys
 from time import time
@@ -111,6 +112,16 @@ class SegmentsArrayAdapter(TabularAdapter):
     def _get_index_text(self):
         return str(self.row)
 
+class Styles2D(Enum):
+    """Enumerations for 2D ROI GUI styles.
+    """
+    SQUARE_ROI = "Square ROI"
+    SQUARE_ROI_3D = "Square ROI with 3D"
+    SINGLE_ROW = "Single row"
+    WIDE_ROI = "Wide ROI"
+    MULTI_ZOOM = "Multi-zoom"
+    THIN_ROWS = "Thin rows"
+
 class Visualization(HasTraits):
     """GUI for choosing a region of interest and segmenting it.
     
@@ -181,9 +192,6 @@ class Visualization(HasTraits):
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List
     _styles_2d = List
-    _DEFAULTS_STYLES_2D = [
-        "Square ROI", "Square ROI with 3D", "Single row", "Wide ROI", 
-        "Multi-zoom", "Thin rows"]
     _atlas_label = None
     _structure_scale = Int # ontology structure levels
     _structure_scale_low = -1
@@ -546,7 +554,7 @@ class Visualization(HasTraits):
         self._set_border()
         self._circles_2d = [plot_2d.CIRCLES[0]]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
-        self._styles_2d = [self._DEFAULTS_STYLES_2D[0]]
+        self._styles_2d = [Styles2D.SQUARE_ROI.value]
         self._check_list_2d = [self._DEFAULTS_2D[1]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
         if (config.process_settings["vis_3d"].lower() 
@@ -817,13 +825,13 @@ class Visualization(HasTraits):
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
             "circles": circles, "grid": grid, "img_region": self._img_region, 
             "max_intens_proj": max_intens_proj}
-        if self._styles_2d[0] == self._DEFAULTS_STYLES_2D[1]:
+        if self._styles_2d[0] == Styles2D.SQUARE_ROI_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(
                 mode="rgba", antialiased=True)
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, mlab_screenshot=screenshot)
-        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[2]:
+        elif self._styles_2d[0] == Styles2D.SINGLE_ROW.value:
             # single row
             screenshot = self.scene.mlab.screenshot(
                 mode="rgba", antialiased=True)
@@ -831,15 +839,15 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=3, 
                 single_zoom_row=True, 
                 z_level=plot_2d.Z_LEVELS[1], mlab_screenshot=screenshot)
-        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[3]:
+        elif self._styles_2d[0] == Styles2D.WIDE_ROI.value:
             # layout for wide ROIs to maximize real estate on widescreen
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2, zoom_cols=7)
-        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[4]:
+        elif self._styles_2d[0] == Styles2D.MULTI_ZOOM.value:
             # multi-zoom overview plots
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=5)
-        elif self._styles_2d[0] == self._DEFAULTS_STYLES_2D[5]:
+        elif self._styles_2d[0] == Styles2D.THIN_ROWS.value:
             # layout for square ROIs with thin rows to create a tall fig
             plot_2d.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
@@ -1197,7 +1205,8 @@ class Visualization(HasTraits):
                         ),
                         Item(
                              "_styles_2d", 
-                             editor=CheckListEditor(values=_DEFAULTS_STYLES_2D), 
+                             editor=CheckListEditor(
+                                 values=[e.value for e in Styles2D]), 
                              style="simple",
                              label="2D styles"
                         ),

@@ -840,7 +840,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
         ax.add_patch(patches.Rectangle(
             np.divide(patch_offset, downsample), 
             *np.divide(roi_size[0:2], downsample), 
-            fill=False, edgecolor="yellow"))
+            fill=False, edgecolor="yellow", linewidth=2))
         if config.scale_bar: plot_support.add_scale_bar(ax, downsample, plane)
         
         # set title with total zoom including objective and plane number

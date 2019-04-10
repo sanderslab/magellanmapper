@@ -123,18 +123,25 @@ class SmoothingMetrics(Enum):
     LABEL_LOSS = "Label_loss"
     FILTER_SIZE = "Filter_size"
 
-def _reg_out_path(file_path, reg_name):
+def _reg_out_path(file_path, reg_name, match_ext=False):
     """Generate a path for a file registered to another file.
     
     Args:
-        file_name: Full path of file registered to.
+        file_path: Full path of file registered to.
         reg_name: Suffix for type of registration, eg :const:``IMG_LABELS``.
+        match_ext: True to change the extension of ``reg_name`` to match 
+            that of ``file_path``.
     
     Returns:
-        Full path with the registered filename including extension at the end.
+        Full path with the registered filename including appropriate 
+        extension at the end.
     """
     file_path_base = importer.filename_to_base(
         file_path, config.series)
+    if match_ext:
+        path_split = lib_clrbrain.splitext(file_path)
+        if path_split[1] and not reg_name.endswith(path_split[1]):
+            reg_name = os.path.splitext(reg_name)[0] + path_split[1]
     return file_path_base + "_" + reg_name
 
 def _translation_adjust(orig, transformed, translation, flip=False):
@@ -2691,10 +2698,13 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS,
         ``FileNotFoundError`` if the path cannot be found.
     """
     reg_img_path = _reg_out_path(img_path, reg_name)
-    print("loading registered image from {}".format(reg_img_path))
     if not os.path.exists(reg_img_path):
-        raise FileNotFoundError(
-            "{} registered image file not found".format(reg_img_path))
+        # attempt to match registered image extension to that of main image
+        reg_img_path = _reg_out_path(img_path, reg_name, True)
+        if not os.path.exists(reg_img_path):
+            raise FileNotFoundError(
+                "{} registered image file not found".format(reg_img_path))
+    print("loading registered image from {}".format(reg_img_path))
     reg_img = sitk.ReadImage(reg_img_path)
     if replace is not None:
         reg_img = replace_sitk_with_numpy(reg_img, replace)

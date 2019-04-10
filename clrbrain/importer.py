@@ -220,7 +220,7 @@ def filename_to_base(filename, series, modifier=""):
         modifier: Modifier string prior to series; default to empty string.
     """
     return "{}_{}{}".format(
-        os.path.splitext(filename)[0], modifier, 
+        lib_clrbrain.splitext(filename)[0], modifier, 
         lib_clrbrain.series_as_str(series))
 
 def deconstruct_np_filename(np_filename, ext="czi"):

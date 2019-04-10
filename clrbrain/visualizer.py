@@ -155,7 +155,7 @@ class Visualization(HasTraits):
     scene = Instance(MlabSceneModel, ())
     btn_redraw_trait = Button("Redraw")
     btn_segment_trait = Button("Detect")
-    btn_2d_trait = Button("2D Plots")
+    btn_2d_trait = Button("ROI Editor")
     btn_atlas_editor_trait = Button("Atlas Editor")
     btn_save_3d = Button("Save 3D Screenshot")
     btn_save_segments = Button("Save Blobs")

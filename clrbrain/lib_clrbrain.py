@@ -23,6 +23,9 @@ _DTYPES = {
     "float": [np.float16, np.float32, np.float64]
 }
 
+# the start of extensions that may have multiple periods
+_EXTENSIONS_MULTIPLE = (".tar", ".nii")
+
 def swap_elements(arr, axis0, axis1, offset=0):
     """Swap elements within an list or tuple.
     
@@ -131,12 +134,28 @@ def insert_before_ext(name, insert, sep=""):
     """
     return "{0}{2}{3}.{1}".format(*name.rsplit(".", 1), sep, insert)
 
-def get_filename_ext(filename):
-    ext = ""
-    filename_split = filename.rsplit(".", 1)
-    if len(filename_split) > 1:
-        ext = filename_split[1]
-    return ext
+def splitext(path):
+    """Split a path at its extension in a way that supports extensions 
+    with multiple periods as identified in :const:``_EXTENSIONS_MULTIPLE``.
+    
+    Args:
+        path: Path to split.
+    
+    Returns:
+        Tuple of path prior to extension and the extension, including 
+        leading period. If an extension start is not found in 
+        :const:``_EXTENSIONS_MULTIPLE``, the path will simply be split 
+        by :meth:``os.path.splitext``.
+    """
+    i = -1
+    for ext in _EXTENSIONS_MULTIPLE:
+        i = path.rfind(ext)
+        if i != -1: break
+    if i == -1:
+        path_split = os.path.splitext(path)
+    else:
+        path_split = (path[:i], path[i:])
+    return path_split
 
 def get_filename_without_ext(path):
     """Get filename without extension.

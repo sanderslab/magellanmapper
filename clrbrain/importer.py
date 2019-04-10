@@ -470,7 +470,8 @@ def read_file(filename, series, load=True, z_max=-1,
         image5d, the array of image data. If ``return_info`` is True, a 
         second value a dictionary of image properties will be returned.
     """
-    ext = lib_clrbrain.get_filename_ext(filename)
+    path_split = lib_clrbrain.splitext(filename)
+    ext = path_split[1]
     filename_image5d_npz, filename_info_npz = make_filenames(
         filename, series)
     if load:

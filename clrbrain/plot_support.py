@@ -339,7 +339,7 @@ def fit_frame_to_image(fig, shape, aspect):
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
     print("fig size: {}".format(fig.get_size_inches()))
 
-def set_overview_title(ax, plane, z_overview, zoom=1, level=0, 
+def set_overview_title(ax, plane, z_overview, zoom="", level=0, 
                         max_intens_proj=False):
     """Set the overview image title.
     
@@ -347,20 +347,22 @@ def set_overview_title(ax, plane, z_overview, zoom=1, level=0,
         ax: Matplotlib axes on which to display the title.
         plane: Plane string.
         z_overview: Value along the axis corresponding to that plane.
-        zoom: Amount of zoom for the overview image.
+        zoom: String showing zoom information; defaults to "".
         level: Overview view image level, where 0 is unzoomed, 1 is the 
-            next zoom, etc.
+            next zoom, etc; defaults to 0.
+        max_intens_proj: True to add maximum intensity projection 
+            information to the first overview subplot; defaults to False.
     """
     plane_axis = get_plane_axis(plane)
     if level == 0:
+        # show the axis and axis value for unzoomed overview
+        title = "{}={} at {}".format(plane_axis, z_overview, zoom)
         if max_intens_proj:
-            title = "Max Intensity Projection"
-        else:
-            # show the axis and axis value for unzoomed overview
-            title = "{}={}".format(plane_axis, z_overview)
+            title = "Max Intensity Projection of ROI\nstarting from {}".format(
+                title)
     else:
         # show zoom for subsequent overviews
-        title = "{}x".format(int(zoom))
+        title = zoom
     ax.set_title(title)
 
 def get_plane_axis(plane):

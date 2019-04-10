@@ -842,8 +842,19 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
             *np.divide(roi_size[0:2], downsample), 
             fill=False, edgecolor="yellow"))
         if config.scale_bar: plot_support.add_scale_bar(ax, downsample, plane)
+        
+        # set title with total zoom including objective and plane number
+        if detector.zoom and detector.magnification:
+            zoom_components = np.array(
+                [detector.zoom, detector.magnification, zoom]).astype(np.float)
+            tot_zoom = "{}x".format(
+                lib_clrbrain.compact_float(np.prod(zoom_components), 1))
+        elif level == 0:
+            tot_zoom = "original magnification"
+        else:
+            tot_zoom = "{}x of original".format(zoom)
         plot_support.set_overview_title(
-            ax, plane, z_overview, zoom, level, max_intens_proj)
+            ax, plane, z_overview, tot_zoom, level, max_intens_proj)
         return zoom
     
     def jump(event):

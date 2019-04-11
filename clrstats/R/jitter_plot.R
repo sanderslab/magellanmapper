@@ -175,6 +175,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     text.width=legend.text.width, pt.cex=pt.cex)
   
   i <- 1
+  group.last <- NULL
   for (geno in genos.unique) {
     # plot each group of points
     
@@ -192,17 +193,15 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     for (side in sides.unique) {
       # plot points, adding jitter in x-direction unless paired
       vals.group <- vals.groups[[i]] / denom
-      vals.geno <- append(vals.geno, vals.groups[i])
       x <- x.pos[i]
-      if (x %% 2 != 0) {
+      if (i %% 2 == 0) {
         # shift even groups left slightly and connect if paired
         x <- x - 0.05
         if (paired) {
           # assume same order within each group
           for (j in seq_along(vals.group)) {
             color <- if(show.sample.legend) colors[j] else 1
-            segments(x.pos[i - 1], vals.geno[[i - 1]][j] / denom, x, 
-                     vals.group[j] / denom, col=color)
+            segments(x.pos[i - 1], group.last[j], x, vals.group[j], col=color)
           }
         }
       }
@@ -231,6 +230,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
                  angle=90, code=3)
         }
       }
+      group.last <- vals.group
       i <- i + 1
     }
     if (show.sample.legend) {

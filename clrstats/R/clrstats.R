@@ -14,13 +14,15 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness")
 
-# named vector to convert measurement columns to display names
+# named list to convert measurement columns to display names, consisting 
+# of lists of titles/labels and measurement units
 kMeasNames <- setNames(
-  list(c("Edge Match (Within-Region Nuclei Variation)", "SD"), 
-       c("Edge Match (Within-Region Intensity Variation)", "SD"),
-       c("Edge Distances to Anatomical Boundaries", "px"), 
-       c("Edge Distances to Anatomical Boundaries (Mean)", "px"), 
-       c("Atlas and Labels Overlay (Dice Similarity Coefficient)", "")), 
+  list(list("Edge Match (Within-Region Nuclei Variation)", "SD"), 
+       list("Edge Match (Within-Region Intensity Variation)", "SD"),
+       list("Edge Distances to Anatomical Boundaries", bquote(list(mu*"m"))), 
+       list("Edge Distances to Anatomical Boundaries (Mean)", 
+            bquote(list(mu*"m"))), 
+       list("Atlas and Labels Overlay (Dice Similarity Coefficient)", NULL)), 
   c(kMeas[4:8]))
 
 # ordered genotype levels

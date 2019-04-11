@@ -94,11 +94,11 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # scientific notation in labels
   if (is.element(col, names(kMeasNames))) {
     meas <- kMeasNames[[col]]
-    ylab <- meas[1]
-    unit <- meas[2]
+    ylab <- meas[[1]]
+    unit <- meas[[2]]
   } else {
     ylab <- gsub("_", " ", col)
-    unit <- ""
+    unit <- NULL
   }
   if (int.digits >= 5) {
     power <- int.digits - 1
@@ -115,12 +115,14 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         prefix <- c(denom / 10 ^ 6, "M")
       }
     }
-    if (unit != "") unit <- paste0(" ", unit)
-    ylab <- paste0(ylab, " (", paste0(prefix, collapse=""), unit, ")")
+    if (is.null(unit)) {
+      ylab <- paste0(ylab, " (", paste0(prefix, collapse=""))
+    } else {
+      ylab <- bquote(list(.(ylab)~(.(paste0(prefix, collapse=""))~.(unit))))
+    }
   } else {
     denom <- 1
-    print(unit)
-    if (unit != "") ylab <- paste0(ylab, " (", unit, ")")
+    if (!is.null(unit)) ylab <- bquote(list(.(ylab)~(.(unit))))
   }
   
   # define graph limits, with x from 0 to number of groups, and y from 

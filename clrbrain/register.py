@@ -1276,6 +1276,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         as given by :func:``_curate_labels``; and ``df_smoothing``, a 
         data frame of smoothing stats, or None if smoothing was not performed.
     """
+    pre_plane = config.register_settings["pre_plane"]
     mirror = config.register_settings["labels_mirror"]
     edge = config.register_settings["labels_edge"]
     expand = config.register_settings["expand_labels"]
@@ -1284,12 +1285,24 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
     crop = config.register_settings["crop_to_labels"]
     affine = config.register_settings["affine"]
     
+    if pre_plane:
+        # images in the correct desired orientation may need to be 
+        # transposed prior to label curation since mirroring assumes 
+        # a sagittal orientation
+        img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+        img_labels_np = sitk.GetArrayFromImage(img_labels)
+        arrs_3d, _ = plot_support.transpose_images(
+            pre_plane, [img_atlas_np, img_labels_np])
+        img_atlas_np = arrs_3d[0]
+        img_labels_np = arrs_3d[1]
+        img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
+        img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
+    
     # curate labels
     img_labels_np, mirror_indices, borders_img_np, df_smoothing = (
         _curate_labels(
             img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
             affine))
-    img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
     
     # adjust atlas with same settings
@@ -1304,25 +1317,36 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         dup = config.register_settings["labels_dup"]
         img_atlas_np = _mirror_planes(
             img_atlas_np, mirror_indices[1], start_dup=dup)
-    img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
     
-    img_borders = None
-    if borders_img_np is not None:
-        # smoothing generates a borders image
-        img_borders = replace_sitk_with_numpy(img_labels, borders_img_np)
-        img_borders = transpose_img(img_borders, config.plane, False)
+    imgs_np = (img_atlas_np, img_labels_np, borders_img_np)
+    if pre_plane:
+        # transpose back to original orientation
+        imgs_np, _ = plot_support.transpose_images(
+            pre_plane, imgs_np, rev=True)
+    
+    # convert back to sitk img and transpose if necessary
+    img_borders = None if borders_img_np is None else img_labels
+    imgs_sitk = (img_atlas, img_labels, img_borders)
+    imgs_sitk_replaced = []
+    for img_np, img_sitk in zip(imgs_np, imgs_sitk):
+        if img_np is not None:
+            img_sitk = replace_sitk_with_numpy(img_sitk, img_np)
+            if pre_plane is None:
+                # plane settings is for post-processing
+                img_sitk = transpose_img(
+                    img_sitk, config.plane, True, flipud=True)
+        imgs_sitk_replaced.append(img_sitk)
+    img_atlas, img_labels, img_borders = imgs_sitk_replaced
     
     if crop:
-        # crop atlas to the mask of the labels with some padding
+        # crop atlas to the mask of the labels with some padding; 
+        # TODO: crop or deprecate borders image
         img_labels_np, img_atlas_np = plot_3d.crop_to_labels(
             sitk.GetArrayFromImage(img_labels), 
             sitk.GetArrayFromImage(img_atlas))
         img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
-    # transpose to given plane
-    img_atlas = transpose_img(img_atlas, config.plane, flip)
-    img_labels = transpose_img(img_labels, config.plane, flip)
     return img_atlas, img_labels, img_borders, df_smoothing
 
 def import_atlas(atlas_dir, show=True):

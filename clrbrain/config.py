@@ -604,6 +604,9 @@ class RegisterSettings(SettingsDict):
         # a data frame that can be used for fast aggregation when 
         # grouping into levels
         self["combine_sides"] = False
+        
+        # planar orientation for transposition prior rather than after import
+        self["pre_plane"] = None
 
 def update_register_settings(settings, settings_type):
     

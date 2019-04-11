@@ -112,8 +112,9 @@ class AtlasEditor:
                 arrs_3d.append(self.borders_img)
             scaling = config.labels_scaling
             if scaling is not None: scaling = [scaling]
-            arrs_3d, arrs_1d, aspect, origin = plot_support.transpose_images(
+            arrs_3d, arrs_1d = plot_support.transpose_images(
                 plane, arrs_3d, scaling)
+            aspect, origin = plot_support.get_aspect_ratio(plane)
             img3d_transposed = arrs_3d[0]
             labels_img_transposed = None
             if len(arrs_3d) >= 2:

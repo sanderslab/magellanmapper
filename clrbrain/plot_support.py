@@ -171,7 +171,8 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
         img3d = image5d[0]
     else:
         img3d = image5d[:]
-    arrs_3d, _, aspect, origin = transpose_images(plane, [img3d])
+    arrs_3d, _ = transpose_images(plane, [img3d])
+    aspect, origin = plot_support.get_aspect_ratio(plane)
     img3d = arrs_3d[0]
     img2d = img3d[plane_n]
     if max_intens_proj:
@@ -198,7 +199,7 @@ def add_scale_bar(ax, downsample=None, plane=None):
     resolutions = detector.resolutions[0]
     if plane:
         # transpose resolutions to the given plane
-        _, arrs_1d, _, _ = transpose_images(plane, arrs_1d=[resolutions])
+        _, arrs_1d = transpose_images(plane, arrs_1d=[resolutions])
         resolutions = arrs_1d[0]
     res = resolutions[2] # assume scale bar is along x-axis
     if downsample:
@@ -226,52 +227,84 @@ def max_plane(img3d, plane):
     else:
         return shape[0]
 
-def transpose_images(plane, arrs_3d=None, arrs_1d=None):
+def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
     """Transpose images and associated coorinates to the given plane.
     
     Args:
-        plane: Target plane, which should be one of :const:``config.PLANE``.
+        plane: Target plane, which should be one of :const:``config.PLANE``. 
+            If ``rev`` is True, the array will be assumed to have been 
+            transposed from ``plane``.
         arrs_3d: Sequence of 3D arrays to transpose; defaults to None.
         arrs_1d: Sequence of 1D arrays to transpose, typically coordinates 
             associated with the 3D arrays; defaults to None.
+        rev: True to transpose in reverse, from ``plane`` to "xy".
     
     Returns:
         Tuple of a list of transposed 3D arrays, or None if no 3D arrays 
-        are given; list of transposed 1D arrays, or None if no 1D arrays 
-        are given; aspect ratio as a float; and origin as a string, or 
-        None for default origin.
+        are given; and a list of transposed 1D arrays, or None if no 1D 
+        arrays are given.
     """
-    origin = None
-    aspect = None # aspect ratio
     
     def swap(indices):
         arrs_3d_swapped = None
         arrs_1d_swapped = None
         if arrs_3d is not None:
-            arrs_3d_swapped = [np.swapaxes(arr, *indices) for arr in arrs_3d]
+            arrs_3d_swapped = [
+                None if arr is None else np.swapaxes(arr, *indices) 
+                for arr in arrs_3d]
         if arrs_1d is not None:
             arrs_1d_swapped = [
-                lib_clrbrain.swap_elements(np.copy(arr), *indices) 
+                None if arr is None else 
+                    lib_clrbrain.swap_elements(np.copy(arr), *indices) 
                 for arr in arrs_1d]
         return arrs_3d_swapped, arrs_1d_swapped
     
     if plane == config.PLANE[1]:
+        # xz plane: make y the "z" axis
+        if rev:
+            arrs_3d, arrs_1d = swap((0, 1))
+        else:
+            arrs_3d, arrs_1d = swap((0, 1))
+    elif plane == config.PLANE[2]:
+        # yz plane: make x the "z" axis for stack of 2D plots, eg animations
+        if rev:
+            arrs_3d, arrs_1d = swap((1, 2))
+            arrs_3d, arrs_1d = swap((0, 2))
+        else:
+            arrs_3d, arrs_1d = swap((0, 2))
+            arrs_3d, arrs_1d = swap((1, 2))
+    # no changes for xy, the default plane
+    return arrs_3d, arrs_1d
+
+def get_aspect_ratio(plane):
+    """Get the aspect ratio and origin for the given plane
+    
+    Args:
+        plane: Planar orientation, which should be one of 
+            :const:``config.PLANE``.
+    
+    Returns:
+        Tuple of the aspect ratio as a float, or None if 
+        :attr:``detector.resolutions`` has not been set; and origin as a 
+        string, or None for default origin.
+    """
+    origin = None
+    aspect = None
+    if plane == config.PLANE[1]:
         # xz plane
-        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
         origin = "lower"
-        # make y the "z" axis
-        arrs_3d, arrs_1d = swap((0, 1))
+        if detector.resolutions is not None:
+            aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
     elif plane == config.PLANE[2]:
         # yz plane
-        aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
         origin = "lower"
-        # make x the "z" axis for stack of 2D plots, such as animations
-        arrs_3d, arrs_1d = swap((0, 2))
-        arrs_3d, arrs_1d = swap((1, 2))
+        if detector.resolutions is not None:
+            aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
     else:
         # defaults to "xy"
-        aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
-    return arrs_3d, arrs_1d, aspect, origin
+        if detector.resolutions is not None:
+            aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
+    return aspect, origin
 
 def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
     """Scroll through overview images along their orthogonal axis.

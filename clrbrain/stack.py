@@ -236,7 +236,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     # reduce image to 1 plane if in single mode
     if offset is not None and roi_size is not None:
         # tranpose coordinates to given plane
-        _, arrs_1d, _, _ = plot_support.transpose_images(
+        _, arrs_1d = plot_support.transpose_images(
             config.plane, arrs_1d=[offset[::-1], roi_size[::-1]])
         offset = arrs_1d[0][::-1]
         roi_size = arrs_1d[1][::-1]

@@ -157,6 +157,12 @@ def splitext(path):
         path_split = (path[:i], path[i:])
     return path_split
 
+def match_ext(path, path_to_match):
+    path_split = splitext(path)
+    if path_split[1] and not path_to_match.endswith(path_split[1]):
+        path_to_match = os.path.splitext(path_to_match)[0] + path_split[1]
+    return path_to_match
+
 def get_filename_without_ext(path):
     """Get filename without extension.
     

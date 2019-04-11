@@ -139,9 +139,7 @@ def _reg_out_path(file_path, reg_name, match_ext=False):
     file_path_base = importer.filename_to_base(
         file_path, config.series)
     if match_ext:
-        path_split = lib_clrbrain.splitext(file_path)
-        if path_split[1] and not reg_name.endswith(path_split[1]):
-            reg_name = os.path.splitext(reg_name)[0] + path_split[1]
+        reg_name = lib_clrbrain.match_ext(file_path, reg_name)
     return file_path_base + "_" + reg_name
 
 def _translation_adjust(orig, transformed, translation, flip=False):
@@ -2697,13 +2695,19 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS,
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
     """
-    reg_img_path = _reg_out_path(img_path, reg_name)
+    # attempt to match registered image extension to that of main image
+    reg_img_path = _reg_out_path(img_path, reg_name, True)
     if not os.path.exists(reg_img_path):
-        # attempt to match registered image extension to that of main image
-        reg_img_path = _reg_out_path(img_path, reg_name, True)
+        # fallback to loading extension in reg suffix
+        reg_img_path = _reg_out_path(img_path, reg_name)
         if not os.path.exists(reg_img_path):
-            raise FileNotFoundError(
-                "{} registered image file not found".format(reg_img_path))
+            # fallback to loading barren reg_name from img_path's dir
+            reg_img_path = os.path.join(
+                os.path.dirname(img_path), 
+                lib_clrbrain.match_ext(img_path, reg_name))
+            if not os.path.exists(reg_img_path):
+                raise FileNotFoundError(
+                    "{} registered image file not found".format(reg_img_path))
     print("loading registered image from {}".format(reg_img_path))
     reg_img = sitk.ReadImage(reg_img_path)
     if replace is not None:

@@ -732,9 +732,9 @@ def process_file(filename_base, offset, roi_size):
             reg_name=suffixes[config.REG_SUFFIX_ANNOTATION])
         config.labels_scaling = importer.calc_scaling(
             image5d, config.labels_img)
-        config.labels_ref = ontology.load_labels_ref(config.load_labels)
+        labels_ref = ontology.load_labels_ref(config.load_labels)
         config.labels_ref_lookup = ontology.create_aba_reverse_lookup(
-            config.labels_ref)
+            labels_ref)
         
         try:
             # attempt to load borders image if present

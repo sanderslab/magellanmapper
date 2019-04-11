@@ -141,7 +141,6 @@ verified_db = None # automated verifications DB
 load_labels = None
 labels_img = None # in Numpy format
 labels_scaling = None
-labels_ref = None
 labels_ref_lookup = None
 labels_level = None
 labels_mirror = True

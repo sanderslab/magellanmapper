@@ -4,10 +4,12 @@
 """Handle ontology lookup.
 """
 
+import os
 from collections import OrderedDict
 import json
 
 import numpy as np
+import pandas as pd
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
@@ -19,10 +21,23 @@ RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
 
 def load_labels_ref(path):
+    """Load labels from a reference JSON or CSV file.
+    
+    Args:
+        path: Path to labels reference.
+    
+    Returns:
+        A JSON decoded object (eg dictionary) if the path has a JSON 
+        extension, or a ``Pandas`` object otherwise.
+    """
     labels_ref = None
-    with open(path, "r") as f:
-        labels_ref = json.load(f)
-        #pprint(labels_ref)
+    path_split = os.path.splitext(path)
+    if path_split[1] == ".json":
+        with open(path, "r") as f:
+            labels_ref = json.load(f)
+            #pprint(labels_ref)
+    else:
+        labels_ref = pd.read_csv(path)
     return labels_ref
 
 def get_node(nested_dict, key, value, key_children):

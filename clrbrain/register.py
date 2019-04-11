@@ -69,11 +69,13 @@ from clrbrain import lib_clrbrain
 from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import plot_3d
+from clrbrain import plot_support
 from clrbrain import segmenter
 from clrbrain import stats
 from clrbrain import transformer
 from clrbrain import vols
 
+# registered image suffixes
 IMG_ATLAS = "atlasVolume.mhd"
 IMG_LABELS = "annotation.mhd"
 IMG_EXP = "exp.mhd"
@@ -100,6 +102,8 @@ REREG_SUFFIX = "rereg"
 
 SMOOTHING_METRIC_MODES = (
     "vol", "area_edt", "area_radial", "area_displvol", "compactness")
+# 3D format extensions to check when finding registered files
+EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
 _SIGNAL_THRESHOLD = 0.01
 
 class AtlasMetrics(Enum):
@@ -2671,6 +2675,40 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False):
             shutil.copy(out_path, out_path_copy)
             print("also copied to", out_path_copy)
 
+def read_sitk(path):
+    """Read an image into :class:``sitk.Image`` format, checking for 
+    alternative supported extensions if necessary.
+    
+    Args:
+        path: Path, including prioritized extension to check first.
+    
+    Returns:
+        Tuple of the :class:``sitk.Image`` object located at ``path`` 
+        and the found extension. If a file at ``path`` cannot be found, 
+        its extension is replaced successively with remaining extensions 
+        in :const:``EXTS_3D`` until a file is found.
+    """
+    # prioritize given extension
+    path_split = lib_clrbrain.splitext(path)
+    exts = list(EXTS_3D)
+    if path_split[1] in exts: exts.remove(path_split[1])
+    exts.insert(0, path_split[1])
+    
+    # attempt to load using each extension until found
+    img_sitk = None
+    img_ext = None
+    for ext in exts:
+        img_path = path_split[0] + ext
+        if os.path.exists(img_path):
+            print("loading image from {}".format(img_path))
+            img_sitk = sitk.ReadImage(img_path)
+            img_ext = ext
+            break
+    if img_sitk is None:
+        print("could not find image from {} and extensions {}"
+              .format(path_split[0], exts))
+    return img_sitk, ext
+
 def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS, 
                         replace=None):
     """Load atlas-based image that has been registered to another image.
@@ -2695,21 +2733,19 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS,
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
     """
-    # attempt to match registered image extension to that of main image
+    # prioritize registered image extension matched to that of main image
     reg_img_path = _reg_out_path(img_path, reg_name, True)
-    if not os.path.exists(reg_img_path):
-        # fallback to loading extension in reg suffix
-        reg_img_path = _reg_out_path(img_path, reg_name)
-        if not os.path.exists(reg_img_path):
-            # fallback to loading barren reg_name from img_path's dir
-            reg_img_path = os.path.join(
-                os.path.dirname(img_path), 
-                lib_clrbrain.match_ext(img_path, reg_name))
-            if not os.path.exists(reg_img_path):
-                raise FileNotFoundError(
-                    "{} registered image file not found".format(reg_img_path))
-    print("loading registered image from {}".format(reg_img_path))
-    reg_img = sitk.ReadImage(reg_img_path)
+    reg_img, _ = read_sitk(reg_img_path)
+    if reg_img is None:
+        # fallback to loading barren reg_name from img_path's dir
+        reg_img_path = os.path.join(
+            os.path.dirname(img_path), 
+            lib_clrbrain.match_ext(img_path, reg_name))
+        reg_img, _ = read_sitk(reg_img_path)
+        if reg_img is None:
+            raise FileNotFoundError(
+                "could not find registered image from {} and {}"
+                .format(img_path, os.path.splitext(reg_name)[0]))
     if replace is not None:
         reg_img = replace_sitk_with_numpy(reg_img, replace)
         sitk.WriteImage(reg_img, reg_img_path, False)

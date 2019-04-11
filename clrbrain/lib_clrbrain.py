@@ -158,6 +158,18 @@ def splitext(path):
     return path_split
 
 def match_ext(path, path_to_match):
+    """Match extensions for two paths.
+    
+    Args:
+        path: Path with extension that will be kept; can even be just 
+            an extension including dot.
+        path_to_match: Path whose extension will be replaced with that of 
+            ``path``.
+    
+    Returns:
+        ``path_to_match`` with extension replaced by that of ``path`` if 
+        it has an extension; otherwise, ``path_to_match`` is simply returned.
+    """
     path_split = splitext(path)
     if path_split[1] and not path_to_match.endswith(path_split[1]):
         path_to_match = os.path.splitext(path_to_match)[0] + path_split[1]

@@ -826,6 +826,19 @@ def update_register_settings(settings, settings_type):
             }, 
             profile)
         
+        # Waxholm rat atlas specific settings
+        settings.add_modifier(
+            "whsrat", 
+            {"target_size": (441, 1017, 383),
+             "pre_plane": PLANE[2], 
+             "resize_factor": None, # turn off resizing
+             "labels_mirror": 0.48, 
+             "labels_edge": None, 
+             "crop_to_labels": True, # much extraneous, unlabeled tissue
+             "smooth": 4, 
+            }, 
+            profile)
+        
         # turn off edge extension along with smoothing
         settings.add_modifier(
             "noedge", 

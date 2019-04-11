@@ -1061,7 +1061,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
           .format(time() - start_time))
     return borders_img_np, df_metrics, df_pxs
 
-def transpose_img(img_sitk, plane, rotate=False, target_size=None):
+def transpose_img(img_sitk, plane, rotate=False, target_size=None, 
+                  flipud=False):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
     
     Args:
@@ -1069,51 +1070,33 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
         plane: One of :attr:``config.PLANES`` elements, specifying the 
             planar orientation in which to transpose the image. The current 
             orientation is taken to be "xy".
-        rotate: Rotate the final output image by 180 degrees; defaults to False.
+        rotate: Rotate the final output image by 90 degrees; defaults to False.
         target_size: Size of target image, typically one to which ``img_sitk`` 
             will be registered, in (x,y,z, SimpleITK standard) ordering.
+        flipud: Flip along the final z-axis; defaults to False.
     
     Returns:
         Transposed image in SimpleITK format.
     """
     img = sitk.GetArrayFromImage(img_sitk)
     img_dtype = img.dtype
-    spacing = img_sitk.GetSpacing()
-    origin = img_sitk.GetOrigin()
+    spacing = img_sitk.GetSpacing()[::-1]
+    origin = img_sitk.GetOrigin()[::-1]
     transposed = img
     if plane is not None and plane != config.PLANE[0]:
-        # swap z-y to get (y, z, x) order for xz orientation
-        transposed = np.swapaxes(transposed, 0, 1)
-        # sitk convention is opposite of numpy with (x, y, z) order
-        spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
-        origin = lib_clrbrain.swap_elements(origin, 1, 2)
-        if plane == config.PLANE[1]:
-            # rotate
-            if transposed.ndim >=4: # multichannel
-                transposed = transposed[..., ::-1, :]
-            else:
-                transposed = transposed[..., ::-1]
-            transposed = np.swapaxes(transposed, 1, 2)
-            spacing = lib_clrbrain.swap_elements(spacing, 0, 1)
-            origin = lib_clrbrain.swap_elements(origin, 0, 1)
-        elif plane == config.PLANE[2]:
-            # swap new y-x to get (x, z, y) order for yz orientation
-            transposed = np.swapaxes(transposed, 0, 2)
-            spacing = lib_clrbrain.swap_elements(spacing, 0, 2)
-            origin = lib_clrbrain.swap_elements(origin, 0, 2)
-            # rotate
-            transposed = np.swapaxes(transposed, 1, 2)
-            spacing = lib_clrbrain.swap_elements(spacing, 0, 1)
-        if plane == config.PLANE[1] or plane == config.PLANE[2]:
-            # flip upside-down
-            transposed[:] = np.flipud(transposed[:])
-        else:
-            transposed[:] = transposed[:]
+        # transpose planes and metadata
+        arrs_3d, arrs_1d = plot_support.transpose_images(
+            plane, [transposed], [spacing, origin])
+        transposed = arrs_3d[0]
+        spacing, origin = arrs_1d
+        if flipud: transposed = np.flipud(transposed)
     if rotate:
-        # rotate the final output image by 180 deg
+        # rotate the final output image by 90 deg
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 
         # horizontal rotation)
-        transposed = np.rot90(transposed, 2, (1, 2))
+        transposed = np.rot90(transposed, 1, (1, 2))
+        spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
+        origin = lib_clrbrain.swap_elements(origin, 1, 2)
     resize_factor = config.register_settings["resize_factor"]
     if target_size is not None and resize_factor:
         # rescale based on xy dimensions of given and target image so that
@@ -1134,8 +1117,8 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None):
         # preserving range
         print(transposed.dtype, np.min(transposed), np.max(transposed))
     transposed = sitk.GetImageFromArray(transposed)
-    transposed.SetSpacing(spacing)
-    transposed.SetOrigin(origin)
+    transposed.SetSpacing(spacing[::-1])
+    transposed.SetOrigin(origin[::-1])
     return transposed
 
 def _load_numpy_to_sitk(numpy_file, rotate=False):

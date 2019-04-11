@@ -1355,8 +1355,8 @@ def import_atlas(atlas_dir, show=True):
         show: True to show the imported atlas.
     """
     # load atlas and corresponding labels
-    img_atlas = sitk.ReadImage(os.path.join(atlas_dir, IMG_ATLAS))
-    img_labels = sitk.ReadImage(os.path.join(atlas_dir, IMG_LABELS))
+    img_atlas, ext = read_sitk(os.path.join(atlas_dir, IMG_ATLAS))
+    img_labels, _ = read_sitk(os.path.join(atlas_dir, IMG_LABELS))
     orig = "_raw" in config.register_settings["settings_name"]
     if orig:
         # baseline DSC of atlas to labels before any processing
@@ -1409,15 +1409,11 @@ def import_atlas(atlas_dir, show=True):
         SmoothingMetrics.COMPACTNESS: [compactness]
     }
     
-    if show:
-       sitk.Show(img_atlas)
-       sitk.Show(img_labels)
-    
     # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
     imgs_write = {
         IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}
-    write_reg_images(imgs_write, name_prefix, copy_to_suffix=True)
+    write_reg_images(imgs_write, name_prefix, copy_to_suffix=True, ext=ext)
     detector.resolutions = [img_atlas.GetSpacing()[::-1]]
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
@@ -1438,7 +1434,11 @@ def import_atlas(atlas_dir, show=True):
 
     print("\nImported {} whole atlas stats:".format(basename))
     stats.dict_to_data_frame(metrics, df_metrics_path, show="\t")
-
+    
+    if show:
+       sitk.Show(img_atlas)
+       sitk.Show(img_labels)
+    
 def register_duo(fixed_img, moving_img):
     """Register two images to one another using ``SimpleElastix``.
     
@@ -2663,7 +2663,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
         moving_sitk, transformed_sitk, translation, flip=True)
     _show_overlays(imgs, translation, fixed_file, out_plane)
 
-def write_reg_images(imgs_write, prefix, copy_to_suffix=False):
+def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None):
     """Write registered images to file.
     
     Args:
@@ -2676,6 +2676,7 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False):
             same directory with ``suffix`` as the filename, which may 
             be useful when setting the registered images as the 
             main images in the directory. Defaults to False.
+        ext: Replace extension with this value if given; defaults to None.
     """
     target_dir = os.path.dirname(prefix)
     if not os.path.exists(target_dir):
@@ -2683,6 +2684,7 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False):
     for suffix in imgs_write.keys():
         img = imgs_write[suffix]
         if img is None: continue
+        if ext: suffix = lib_clrbrain.match_ext(ext, suffix)
         out_path = _reg_out_path(prefix, suffix)
         sitk.WriteImage(img, out_path, False)
         print("wrote registered image to", out_path)

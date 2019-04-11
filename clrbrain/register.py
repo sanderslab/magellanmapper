@@ -1738,20 +1738,26 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
     Returns:
         The DSC of the foreground of the two given images.
     """
-    # use threshold mean if thresholds not given
+    # upper threshold does not seem be set with max despite docs for 
+    # sitk.BinaryThreshold, so need to set with max explicitly
+    fixed_img_np = sitk.GetArrayFromImage(fixed_img)
+    fixed_thresh_up = float(np.amax(fixed_img_np))
+    transformed_img_np = sitk.GetArrayFromImage(transformed_img)
+    transformed_thresh_up = float(np.amax(transformed_img_np))
+    
+    # use threshold mean if lower thresholds not given
     if not fixed_thresh:
-        fixed_thresh = float(
-            filters.threshold_mean(sitk.GetArrayFromImage(fixed_img)))
+        fixed_thresh = float(filters.threshold_mean(fixed_img_np))
     if not transformed_thresh:
-        transformed_thresh = float(
-            filters.threshold_mean(sitk.GetArrayFromImage(transformed_img)))
+        transformed_thresh = float(filters.threshold_mean(transformed_img_np))
     print("measuring overlap with thresholds of {} (fixed) and {} (transformed)"
           .format(fixed_thresh, transformed_thresh))
     
     # similar to simple binary thresholding via Numpy
-    fixed_binary_img = sitk.BinaryThreshold(fixed_img, fixed_thresh)
+    fixed_binary_img = sitk.BinaryThreshold(
+        fixed_img, fixed_thresh, fixed_thresh_up)
     transformed_binary_img = sitk.BinaryThreshold(
-        transformed_img, transformed_thresh)
+        transformed_img, transformed_thresh, transformed_thresh_up)
     overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     total_dsc = overlap_filter.GetDiceCoefficient()

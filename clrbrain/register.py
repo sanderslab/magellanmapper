@@ -636,11 +636,23 @@ def labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
     return labels_lost
 
 def replace_sitk_with_numpy(img_sitk, img_np):
+    """Replace Numpy array in :class:``sitk.Image`` object with a new array.
+    
+    Args:
+        img_sitk: Image object to use as template.
+        img_np: Numpy array to swap in.
+    
+    Returns:
+        New :class:``sitk.Image`` object with same spacing, origin, and 
+        direction as that of ``img_sitk`` and array replaced with ``img_np``.
+    """
     spacing = img_sitk.GetSpacing()
     origin = img_sitk.GetOrigin()
+    direction = img_sitk.GetDirection()
     img_sitk_back = sitk.GetImageFromArray(img_np)
     img_sitk_back.SetSpacing(spacing)
     img_sitk_back.SetOrigin(origin)
+    img_sitk_back.SetDirection(direction)
     return img_sitk_back
 
 def smooth_labels(labels_img_np, filter_size=3, mode=None):

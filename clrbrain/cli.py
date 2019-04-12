@@ -726,15 +726,21 @@ def process_file(filename_base, offset, roi_size):
                 config.filename, reg_name=suffixes[config.REG_SUFFIX_ATLAS])
             image5d = image5d[None]
         
-        # load labels image, set up scaling, and load labels JSON file
+        # load labels image, set up scaling, and load labels file
         config.labels_img = register.load_registered_img(
             config.filename, 
             reg_name=suffixes[config.REG_SUFFIX_ANNOTATION])
         config.labels_scaling = importer.calc_scaling(
             image5d, config.labels_img)
         labels_ref = ontology.load_labels_ref(config.load_labels)
-        config.labels_ref_lookup = ontology.create_aba_reverse_lookup(
-            labels_ref)
+        if isinstance(labels_ref, pd.DataFrame):
+            # parse CSV files loaded into data frame
+            config.labels_ref_lookup = ontology.create_lookup_pd(
+                labels_ref)
+        else:
+            # parse dict from ABA JSON file
+            config.labels_ref_lookup = ontology.create_aba_reverse_lookup(
+                labels_ref)
         
         try:
             # attempt to load borders image if present

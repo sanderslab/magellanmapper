@@ -45,7 +45,6 @@ from enum import Enum
 import json
 import multiprocessing as mp
 from collections import OrderedDict
-from pprint import pprint
 import shutil
 from time import time
 import warnings
@@ -3781,7 +3780,6 @@ def _test_labels_lookup():
     
     # create reverse lookup dictionary
     ref = ontology.load_labels_ref(config.load_labels)
-    #pprint(ref)
     lookup_id = 15565 # short search path
     #lookup_id = 126652058 # last item
     time_dict_start = time()
@@ -3789,7 +3787,6 @@ def _test_labels_lookup():
     labels_img = load_registered_img(config.filename, reg_name=IMG_LABELS)
     max_labels = np.max(labels_img)
     print("max_labels: {}".format(max_labels))
-    #pprint(id_dict)
     time_dict_end = time()
     
     # look up a single ID
@@ -3838,7 +3835,6 @@ def _test_volumes_by_id():
     print("coord_scaled:\n{}".format(coord_scaled))
     vols_dict = volumes_by_id(
         labels_img, labels_ref_lookup, 1 / resolution, blobs_ids=blobs_ids)
-    pprint(vols_dict)
 
 def _test_region_from_id():
     """Test finding a region by ID in a labels image.

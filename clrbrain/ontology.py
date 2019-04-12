@@ -35,7 +35,6 @@ def load_labels_ref(path):
     if path_split[1] == ".json":
         with open(path, "r") as f:
             labels_ref = json.load(f)
-            #pprint(labels_ref)
     else:
         labels_ref = pd.read_csv(path)
     return labels_ref
@@ -132,6 +131,36 @@ def create_reverse_lookup(nested_dict, key, key_children, id_dict=OrderedDict(),
                 child, key, key_children, id_dict, parent_list)
     except KeyError as e:
         print(e)
+    return id_dict
+
+def create_lookup_pd(df):
+    """Create a lookup dictionary from a Pandas data frame.
+    
+    Args:
+        df: Pandas data frame, assumed to have at least columns 
+            corresponding to :const:``config.ABAKeys.ABA_ID`` and 
+            :const:``config.ABAKeys.ABA_NAME``.
+    
+    Returns:
+        Dictionary similar to that generated from 
+        :meth:``create_reverse_lookup``, with IDs as keys and values 
+        corresponding of another dictionary with :const:``NODE`` and 
+        :const:``PARENT_IDS`` as keys. :const:``NODE`` in turn 
+        contains a dictionary with entries for each Enum in 
+        :const:``config.ABAKeys``.
+    """
+    id_dict = OrderedDict()
+    ids = df[config.ABAKeys.ABA_ID.value]
+    for region_id in ids:
+        region = df[df[config.ABAKeys.ABA_ID.value] == region_id]
+        region_dict = region.to_dict("records")[0]
+        if config.ABAKeys.NAME.value not in region_dict:
+            region_dict[config.ABAKeys.NAME.value] = str(region_id)
+        region_dict[config.ABAKeys.LEVEL.value] = 1
+        region_dict[config.ABAKeys.CHILDREN.value] = []
+        region_dict[config.ABAKeys.ACRONYM.value] = ""
+        sub_dict = {NODE: region_dict, PARENT_IDS: []}
+        id_dict[region_id] = sub_dict
     return id_dict
 
 def _get_children(labels_ref_lookup, label_id, children_all=[]):

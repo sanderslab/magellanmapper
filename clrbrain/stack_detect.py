@@ -309,8 +309,11 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     times_dict = {}
     for key, val in zip(StackTimes, times):
         times_dict[key] = val
-    print("\ntotal segments found:", 
-          0 if segments_all is None else len(segments_all))
+    if segments_all is None:
+        print("\nNo blobs detected")
+    else:
+        print("\nTotal blobs found:", len(segments_all))
+        detector.show_blobs_per_channel(segments_all)
     print("file save time:", file_save_time)
     print("\nTotal detection processing times (s):")
     df_times_sum = stats.dict_to_data_frame(

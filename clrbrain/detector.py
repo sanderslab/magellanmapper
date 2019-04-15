@@ -686,6 +686,17 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
     return (pos, true_pos, false_pos), fdbk
 
+def show_blobs_per_channel(blobs):
+    """Show the number of blobs in each channel.
+    
+    Args:
+        blobs: Blobs as 2D array of [n, [z, row, column, radius, ...]].
+    """
+    channels = np.unique(get_blobs_channel(blobs))
+    for channel in channels:
+        num_blobs = len(blobs_in_channel(blobs, channel))
+        print("- blobs in channel {}: {}".format(int(channel), num_blobs))
+
 def _test_blob_duplicates():
     # tests blob duplication removal
     blobs = np.array([[1, 3, 4, 2.2342], [1, 8, 5, 3.13452], [1, 3, 4, 5.1234],

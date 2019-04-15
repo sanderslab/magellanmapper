@@ -3441,6 +3441,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         labels_img_np = None
         labels_edge = None
         dist_to_orig = None
+        labels_markers = None
         heat_map = None
         subseg = None
         if df is None:
@@ -3473,6 +3474,14 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             dist_to_orig = load_registered_img(
                 mod_path,reg_name=IMG_LABELS_DIST)
             
+            # load labels marker image
+            try:
+                labels_markers = load_registered_img(
+                    mod_path, reg_name=IMG_LABELS_MARKERS)
+            except FileNotFoundError as e:
+                print(e)
+                print("will ignore label markers")
+            
             # load heat map of nuclei per voxel if available
             try:
                 heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
@@ -3500,7 +3509,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # takes care of combining sides
         df, df_all = vols.measure_labels_metrics(
             sample, img_np, labels_img_np, 
-            labels_edge, dist_to_orig, heat_map, subseg, 
+            labels_edge, dist_to_orig, labels_markers, heat_map, subseg, 
             spacing, unit_factor, 
             combine_sides and max_level is None, 
             label_ids, grouping, df)

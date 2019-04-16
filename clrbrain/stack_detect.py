@@ -23,6 +23,16 @@ from clrbrain import plot_3d
 from clrbrain import sqlite
 from clrbrain import stats
 
+# Numpy archive for blobs versions:
+# 0: pre-v01
+# 1: v1 (Clrbrain v0.6.1)
+# 2: v2 (Clrbrain v0.6.2) with isotropy (no anisotropic detection), dec 
+#    clip_max, use default sub_stack_max_pixels
+# 3: v2.1 (Clrbrain v0.6.4) with erosion_threshold
+# 4: v2.2 (Clrbrain v0.6.6) with narrower and taller stack shape
+# 5: include archive version number
+BLOBS_NP_VER = 5
+
 class StackTimes(Enum):
     """Stack processing durations."""
     DETECTION = "Detection"
@@ -278,7 +288,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         outfile_image5d_proc.close()
     
     outfile_info_proc = open(filename_info_proc, "wb")
-    np.savez(outfile_info_proc, segments=segments_all, 
+    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all, 
              resolutions=detector.resolutions, 
              basename=os.path.basename(config.filename), # only save name
              offset=offset, roi_size=roi_size) # None unless explicitly set

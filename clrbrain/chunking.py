@@ -83,7 +83,6 @@ def stack_splitter(roi, max_pixels, overlap=None):
         from the master ``roi`` array in (z, y, x) order coordinates.
     """
     size = roi.shape
-    lib_clrbrain.printv("total stack size: {}".format(size))
     
     # prepare the array containing sub ROI slices with type object so that it
     # can contain an arbitrary object of any size and channels, accessible by
@@ -93,8 +92,6 @@ def stack_splitter(roi, max_pixels, overlap=None):
     #print("num_units: {}".format(num_units))
     sub_rois = np.zeros(num_units, dtype=object)
     sub_rois_offsets = np.zeros(np.append(num_units, 3))
-    lib_clrbrain.printv(
-        "sub_rois_offsets shape: {}".format(sub_rois_offsets.shape))
     
     # fill with sub ROIs including overlap extending into next sub ROI 
     # except for the last one in each dimension

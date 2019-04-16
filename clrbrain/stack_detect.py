@@ -163,6 +163,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     tol = (np.multiply(overlap, settings["prune_tol_factor"])
            .astype(int))
     scaling_factor = detector.calc_scaling_factor()
+    print("microsope scaling factor based on resolutions: {}"
+          .format(scaling_factor))
     denoise_size = config.process_settings["denoise_size"]
     denoise_max_shape = None
     if denoise_size:

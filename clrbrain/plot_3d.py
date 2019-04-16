@@ -77,9 +77,9 @@ def saturate_roi(roi, clip_vmax=-1, channel=None):
             clip_vmax = settings["clip_vmax"]
         # enhance contrast and normalize to 0-1 scale
         vmin, vmax = np.percentile(roi_show, (5, clip_vmax))
-        lib_clrbrain.printv("vmin: {}, vmax: {}".format(vmin, vmax))
+        lib_clrbrain.printv(
+            "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[i])
         # ensures that vmax is at least 50% of near max value of image5d
-        lib_clrbrain.printv("near_max: {}".format(config.near_max[i]))
         max_thresh = config.near_max[i] * 0.5
         if vmax < max_thresh:
             vmax = max_thresh
@@ -112,7 +112,6 @@ def denoise_roi(roi, channel=None):
         settings = config.get_process_settings(i)
         # find gross density
         saturated_mean = np.mean(roi_show)
-        lib_clrbrain.printv("saturated_mean: {}".format(saturated_mean))
         
         # additional simple thresholding
         denoised = np.clip(roi_show, settings["clip_min"], settings["clip_max"])

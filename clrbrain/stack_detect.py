@@ -68,7 +68,7 @@ class StackDetector(object):
         sub_roi = cls.sub_rois[coord]
         print(
             "detecting blobs in sub-ROI at {} of {}, with shape {}..."
-            .format(coord, np.add(cls.sub_rois.shape, -1), sub_roi.shape))
+            .format(coord, np.subtract(cls.sub_rois.shape, 1), sub_roi.shape))
         
         if cls.denoise_max_shape is not None:
             # further split sub-ROI for preprocessing locally
@@ -78,6 +78,12 @@ class StackDetector(object):
                 for y in range(denoise_rois.shape[1]):
                     for x in range(denoise_rois.shape[2]):
                         denoise_coord = (z, y, x)
+                        lib_clrbrain.printv_format(
+                            "preprocessing sub-sub-ROI {} of {} (shape {}"
+                            " within sub-ROI shape {})", 
+                            (denoise_coord, np.subtract(denoise_rois.shape, 1), 
+                             denoise_rois[denoise_coord].shape, 
+                             sub_roi.shape))
                         denoise_roi = plot_3d.saturate_roi(
                             denoise_rois[denoise_coord], channel=config.channel)
                         denoise_roi = plot_3d.denoise_roi(
@@ -173,6 +179,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     max_pixels = np.ceil(np.multiply(
         scaling_factor, 
         config.process_settings["segment_size"])).astype(int)
+    print("preprocessing max shape: {}, detection max pixels: {}"
+          .format(denoise_max_shape, max_pixels))
     sub_rois, sub_rois_offsets = chunking.stack_splitter(
         roi, max_pixels, overlap)
     # TODO: option to distribute groups of sub-ROIs to different servers 

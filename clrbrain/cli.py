@@ -559,7 +559,15 @@ def main(process_args_only=False):
             # plot ROC curve
             from clrbrain import plot_2d
             plot_2d.setup_style()
-            plot_2d.plot_roc(parsed_dict, config.filename)
+            cols_group = [col for col in stats_df 
+                          if col.startswith(
+                              mlearn.GridSearchStats.PARAM.value)]
+            plot_2d.plot_scatter(
+                "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
+                mlearn.GridSearchStats.SENS.value, 
+                cols_group[-1], cols_group, 
+                "False Discovery Rate", "Sensitivity", (0, 1), 
+                (0, 1), "Nuclei Detection ROC", df=stats_df)
         else:
             # processes file with default settings
             process_file(filename_base, offset, roi_size)

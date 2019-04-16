@@ -1090,48 +1090,6 @@ def cycle_colors(i):
             color[0] -= upper * (color[0] // upper)
     return np.divide(color, upper)
 
-def plot_roc(stats_dict, name):
-    """Plot ROC curve.
-    
-    Args:
-        stats_dict: Dictionary of statistics to plot as given by 
-            :func:``mlearn.parse_grid_stats``.
-        name: String to display as title.
-    """
-    fig = plt.figure()
-    posi = 1 # position of legend
-    for group, iterable_dicts in stats_dict.items():
-        lines = []
-        colori = 0
-        for key, value in iterable_dicts.items():
-            fdr = value[0]
-            sens = value[1]
-            params = value[2]
-            line, = plt.plot(
-                fdr, sens, label=key, lw=2, color=cycle_colors(colori), 
-                linestyle="", marker=".")
-            lines.append(line)
-            colori += 1
-            for i, n in enumerate(params):
-                annotation = n
-                if isinstance(n, float):
-                    # limit max decimal points while avoiding trailing zeros
-                    annotation = "{:.3g}".format(n)
-                plt.annotate(annotation, (fdr[i], sens[i]))
-        # iterated legend position to avoid overlap from multiple legends
-        legend = plt.legend(
-            handles=lines, loc=posi, title=group, fancybox=True, 
-            framealpha=0.5)
-        plt.gca().add_artist(legend)
-        posi += 1
-    plt.plot([0, 1], [0, 1], color="navy", lw=2, linestyle="--")
-    plt.xlim([0.0, 1.2])
-    plt.ylim([0.0, 1.0])
-    plt.xlabel("False Discovery Rate")
-    plt.ylabel("Sensitivity")
-    plt.title("ROC for {}".format(name))
-    plt.show()
-
 def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0, 
                   title=None):
     """Shows an image for overlays in the orthogonal plane specified by 
@@ -1592,6 +1550,72 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
     # save and display
     save_fig(path_to_df, config.savefig)
     if show: plt.show()
+
+def plot_scatter(path, col_x, col_y, col_annot, cols_group, x_label=None, 
+                 y_label=None, xlim=None, ylim=None, title=None, size=None, 
+                 show=True, suffix=None, df=None):
+    """Generate a scatter plot from a data frame or CSV file.
+    
+    Args:
+        path: Path from which to read a saved Pandas data frame and the 
+            path basis to save the figure if :attr:``config.savefig`` is set.
+        col_x: Name of column to plot as x-values.
+        col_y: Name of column to plot as corresponding y-values.
+        cols_group: Names of columns specifying the group to include in 
+            the legend.
+        x_label: Name of x-axis; defaults to None.
+        y_label: Name of y-axis; defaults to None.
+        xlim: Sequence of min and max boundaries for the x-axis; 
+            defaults to None.
+        xlim: Sequence of min and max boundaries for the y-axis; 
+            defaults to None.
+        title: Title of figure; defaults to None.
+        size: Sequence of ``width, height`` to size the figure; defaults 
+            to None.
+        show: True to display the image; otherwise, the figure will only 
+            be saved to file, if :attr:``config.savefig`` is set.  
+            Defaults to True.
+        suffix: String to append to output path before extension; 
+            defaults to None to ignore.
+        df: Data frame to use; defaults to None. If set, this data frame 
+            will be used instead of loading from ``path``.
+    """
+    # load data frame from CSV and setup figure
+    if df is None:
+        df = pd.read_csv(df)
+    fig = plt.figure(figsize=size)
+    gs = gridspec.GridSpec(1, 1)
+    ax = plt.subplot(gs[0, 0])
+    
+    # plot selected columns
+    xs = df[col_x]
+    ys = df[col_y]
+    annots = df[col_annot]
+    grouping = df[cols_group]
+    for i, (x, y, annot) in enumerate(zip(xs, ys, annots)):
+        group = grouping.iloc[i]
+        label = ["{} {:.3g}".format(col, val)
+                 for col, val in zip(cols_group, group)]
+        ax.plot(
+            x, y, label=", ".join(label), lw=2, color="C{}".format(i), 
+            linestyle="", marker=".")
+        plt.annotate("{:.3g}".format(annot), (x, y))
+    
+    # add supporting plot components
+    ax.legend(loc="best", fancybox=True, framealpha=0.5)
+    if xlim: ax.set_xlim(xlim)
+    if ylim: ax.set_ylim(ylim)
+    if x_label: ax.set_xlabel(x_label)
+    if y_label: ax.set_ylabel(y_label)
+    if title: ax.set_title(title)
+    gs.tight_layout(fig)
+    
+    # save and display
+    out_path = path
+    if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
+    save_fig(out_path, config.savefig)
+    if show: plt.show()
+    return
 
 def plot_image(img, path=None, show=False):
     """Plot a single image in a borderless figure, with option to export 

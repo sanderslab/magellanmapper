@@ -113,8 +113,8 @@ def parse_grid_stats(stats_dict):
                 param_keys.append(last_param_key)
             # false discovery rate, inverse of PPV, since don't have true negs
             fdr = np.subtract(
-                1, np.divide(grid_stats[:, 1], np.add(grid_stats[:, 1], 
-                grid_stats[:, 2])))
+                1, np.divide(grid_stats[:, 1], 
+                             np.add(grid_stats[:, 1], grid_stats[:, 2])))
             sens = np.divide(grid_stats[:, 1], grid_stats[:, 0])
             #print(fdr, sens)
             print("{}:".format(key))
@@ -125,10 +125,10 @@ def parse_grid_stats(stats_dict):
             for i, n in enumerate(last_param_vals):
                 stat_list = []
                 for parent_val in parent_params.values():
-                    stat.append(parent_val)
+                    stat_list.append(parent_val)
                 stat_list.extend(
                     (last_param_vals[i], 1 - fdr[i], sens[i], 
-                     *grid_stats[i].astype(int), fdr))
+                     *grid_stats[i].astype(int), fdr[i]))
                 for header, stat in zip(headers, stat_list):
                     stats_for_df.setdefault(header, []).append(stat)
             group_dict[key] = (fdr, sens, last_param_vals)

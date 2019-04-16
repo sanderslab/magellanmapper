@@ -331,60 +331,6 @@ def update_process_settings(settings, settings_type):
         settings["segment_size"] = 100
         settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
         settings["segmenting_mean_thresh"] = -0.25
-        
-    elif settings_type.startswith("lightsheetv01"):
-        # detection settings up through v.0.6.1
-        settings["settings_name"] = "lightsheet_v01"
-        settings["points_3d_thresh"] = 0.7
-        settings["clip_vmax"] = 98.5
-        settings["clip_min"] = 0
-        settings["clip_max"] = 0.6
-        settings["unsharp_strength"] = 0.3
-        settings["min_sigma_factor"] = 3
-        settings["max_sigma_factor"] = 4
-        settings["num_sigma"] = 10
-        settings["overlap"] = 0.5
-        settings["segment_size"] = 200
-        settings["prune_tol_factor"] = (3, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = 0.5
-        settings["scale_factor"] = (0.63, 1, 1)
-        settings["isotropic_vis"] = (1, 3, 3)
-        # mimic absence of z-limit
-        settings["sub_stack_max_pixels"] = (100000, 1000, 1000)
-        
-    elif settings_type.startswith("lightsheetv02"):
-        # detection settings from v.0.6.2
-        settings["settings_name"] = "lightsheet_v02"
-        settings["points_3d_thresh"] = 0.7
-        settings["clip_vmax"] = 98.5
-        settings["clip_min"] = 0
-        settings["clip_max"] = 0.5
-        settings["unsharp_strength"] = 0.3
-        settings["min_sigma_factor"] = 3
-        settings["max_sigma_factor"] = 4
-        settings["num_sigma"] = 10
-        settings["overlap"] = 0.55
-        settings["segment_size"] = 200
-        settings["prune_tol_factor"] = (3, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = -10 # unused since scale factor off
-        settings["scale_factor"] = None
-        settings["isotropic"] = (0.96, 1, 1)
-        
-        ver_split = settings_type.split(".")
-        if len(ver_split) >= 2:
-            # minor versioning to allow slight modifications to profile
-            minor_ver = int(ver_split[-1])
-        
-            if minor_ver >= 1:
-                # detection settings from v.0.6.4
-                settings["settings_name"] += ".1"
-                settings["erosion_threshold"] = 0.3
-                settings["sub_stack_max_pixels"] = (1000, 1000, 1000)
-        
-            if minor_ver >= 2:
-                # detection settings from v.0.6.6
-                settings["settings_name"] += ".2"
-                settings["sub_stack_max_pixels"] = (1200, 800, 800)
     
     elif settings_type.startswith("lightsheet"):
         # detection settings optimized for lightsheet

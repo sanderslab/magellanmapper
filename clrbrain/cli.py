@@ -797,7 +797,7 @@ def process_file(filename_base, offset, roi_size):
         # detect blobs in the full image
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, image5d, offset, roi_size, 
-            truth_db_type == TRUTH_DB_TYPES[1])
+            truth_db_type == TRUTH_DB_TYPES[1], not config.roc)
     
     return stats, fdbk
     

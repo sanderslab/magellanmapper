@@ -516,7 +516,7 @@ def data_frames_to_csv(data_frames, path, sort_cols=None, show=None):
     Args:
         data_frames: List of data frames to concatenate, or a single 
             ``DataFrame``.
-        path: Output path.
+        path: Output path. If None, the data frame will not be saved.
         sort_cols: Column as a string of list of columns by which to sort; 
             defaults to None for no sorting.
         show: True or " " to print the data frame with a space-separated 
@@ -527,13 +527,14 @@ def data_frames_to_csv(data_frames, path, sort_cols=None, show=None):
         The combined data frame.
     """
     ext = ".csv"
-    if not path.endswith(ext): path += ext
+    if path:
+        if not path.endswith(ext): path += ext
+        lib_clrbrain.backup_file(path)
     combined = data_frames
     if not isinstance(data_frames, pd.DataFrame):
         combined = pd.concat(combined)
     if sort_cols is not None:
         combined = combined.sort_values(sort_cols)
-    lib_clrbrain.backup_file(path)
     combined.to_csv(path, index=False, na_rep="NaN")
     if show is not None:
         print_data_frame(combined, show)

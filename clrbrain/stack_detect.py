@@ -140,7 +140,7 @@ def make_subimage_name(base, offset, shape):
     return name
 
 def detect_blobs_large_image(filename_base, image5d, offset, roi_size, 
-                             verify=False):
+                             verify=False, save_dfs=True):
     """Detect blobs within a large image through parallel processing of 
     smaller chunks.
     
@@ -151,6 +151,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         roi_size: ROI shape given in x,y,z.
         verify: True to verify detections against truth database; defaults 
             to False.
+        save_dfs: True to save data frames to file; defaults to True.
     """
     time_start = time()
     filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
@@ -209,8 +210,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     
     # get weighted mean of ratios
     print("\nBlob pruning ratios:")
+    path_pruning = "blob_ratios.csv" if save_dfs else None
     df_pruning_all = stats.data_frames_to_csv(
-        df_pruning, "blob_ratios.csv", show=True)
+        df_pruning, path_pruning, show=" ")
     cols = df_pruning_all.columns.tolist()
     blob_pruning_means = {}
     if "blobs" in cols:
@@ -220,8 +222,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             blob_pruning_means["mean_{}".format(col)] = [
                 np.sum(np.multiply(df_pruning_all[col], blobs_unpruned)) 
                 / num_blobs_unpruned]
+        path_pruning_means = "blob_ratios_means.csv" if save_dfs else None
         df_pruning_means = stats.dict_to_data_frame(
-            blob_pruning_means, "blob_ratios_means.csv", show=" ")
+            blob_pruning_means, path_pruning_means, show=" ")
     else:
         print("no blob ratios found")
     
@@ -310,8 +313,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         detector.show_blobs_per_channel(segments_all)
     print("file save time:", file_save_time)
     print("\nTotal detection processing times (s):")
+    path_times = "stack_detection_times.csv" if save_dfs else None
     df_times_sum = stats.dict_to_data_frame(
-        times_dict, "stack_detection_times.csv", show=" ")
+        times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, segments_all
 

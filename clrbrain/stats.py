@@ -510,13 +510,14 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=None):
         print("data frame saved to {}".format(path))
     return df
 
-def data_frames_to_csv(data_frames, path, sort_cols=None, show=None):
+def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
     """Combine and export multiple data frames to CSV file.
     
     Args:
         data_frames: List of data frames to concatenate, or a single 
             ``DataFrame``.
-        path: Output path. If None, the data frame will not be saved.
+        path: Output path; defaults to None, in which case the data frame 
+            will not be saved.
         sort_cols: Column as a string of list of columns by which to sort; 
             defaults to None for no sorting.
         show: True or " " to print the data frame with a space-separated 

@@ -278,7 +278,7 @@ class ProcessSettings(SettingsDict):
         self["prune_tol_factor"] = (1, 1, 1)
         self["verify_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
-        self["scale_factor"] = (1, 1, 1)
+        self["scale_factor"] = None # z,y,x; req custom skimage
         self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
         self["isotropic"] = None
         self["isotropic_vis"] = None

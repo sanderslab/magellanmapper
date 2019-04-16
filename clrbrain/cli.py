@@ -555,7 +555,7 @@ def main(process_args_only=False):
             stats_dict = mlearn.grid_search(
                 _iterate_file_processing, filename_base, config.offsets, 
                 config.roi_sizes)
-            parsed_dict = mlearn.parse_grid_stats(stats_dict)
+            parsed_dict, stats_df = mlearn.parse_grid_stats(stats_dict)
             # plot ROC curve
             from clrbrain import plot_2d
             plot_2d.setup_style()

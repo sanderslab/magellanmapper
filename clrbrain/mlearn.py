@@ -1,13 +1,26 @@
 #!/bin/bash
 # Machine learning for Clrbrain
-# Author: David Young, 2017
+# Author: David Young, 2017, 2019
 """Machine learning and output for Clrbrain.
 """
 
-import numpy as np
 from collections import OrderedDict
+from enum import Enum
+
+import numpy as np
 
 from clrbrain import config
+from clrbrain import stats
+
+class GridSearchStats(Enum):
+    """Grid search statistics categories."""
+    PARAM = "Par"
+    PPV = "PPV"
+    SENS = "Sens"
+    POS = "Pos"
+    TP = "TP"
+    FP = "FP"
+    FDR = "FDR"
 
 def grid_search(fnc, *fnc_args):
     # gets the ROC settings
@@ -29,7 +42,7 @@ def grid_search(fnc, *fnc_args):
                 print("adding iterable setting {}".format(key2))
                 iterable_keys.append(key2)
                 
-        def grid_iterate(i, iterable_keys, grid_dict, name):
+        def grid_iterate(i, iterable_keys, grid_dict, name, parent_params):
             key = iterable_keys[i]
             name = key if name is None else name + "-" + key
             print("name: {}".format(name))
@@ -38,16 +51,18 @@ def grid_search(fnc, *fnc_args):
                 name += "("
                 for j in grid_dict[key]:
                     settings[key] = j
+                    parent_params[key] = j # track parent values
                     paren_i = name.rfind("(")
                     if paren_i != -1:
                         name = name[:paren_i]
                     name += "(" + str(j) + ")"
-                    grid_iterate(i + 1, iterable_keys, grid_dict, name)
+                    grid_iterate(
+                        i + 1, iterable_keys, grid_dict, name, parent_params)
             else:
                 # process each value in parameter array
                 stats = []
-                params = grid_dict[key]
-                for param in params:
+                last_param_vals = grid_dict[key]
+                for param in last_param_vals:
                     print("===============================================\n"
                           "Grid search hyperparameters {} for {}"
                           .format(name, param))
@@ -55,9 +70,10 @@ def grid_search(fnc, *fnc_args):
                     stat, summaries = fnc(*fnc_args)
                     stats.append(stat)
                     file_summaries.extend(summaries)
-                iterable_dict[name] = (stats, params)
+                iterable_dict[name] = (
+                    stats, last_param_vals, key, parent_params)
         
-        grid_iterate(0, iterable_keys, value, None)
+        grid_iterate(0, iterable_keys, value, None, OrderedDict())
     # summary of each file collected together
     for summary in file_summaries:
         print(summary)
@@ -69,46 +85,57 @@ def parse_grid_stats(stats_dict):
     Args:
         stats_dict: Dictionary where key is a string with the parameters
             up to the last parameter group, and each value is a tuple of 
-            the raw stats as (pos, true_pos, false_pos) and the array of
-            parameter values.
+            the raw stats as (pos, true_pos, false_pos); the array of
+            values for the last parameter; the last parameter key; and an 
+            ``OrderedDict`` of the parent parameters and their values for 
+            the given set of stats.
     """
     label = ""
-    colori = 0
     align = ">"
     parsed_stats = {}
+    stats_for_df = {}
+    headers = None
+    param_keys = []
     for group, iterable_dicts in stats_dict.items():
         print("{}:".format(group))
         group_dict = {}
         parsed_stats[group] = group_dict
         for key, value in iterable_dicts.items():
-            stats = np.array(value[0])
-            params = value[1]
-            # false discovery rate, the inverse of PPV, since don't have a true negs
-            fdr = np.subtract(1, np.divide(stats[:, 1], 
-                                           np.add(stats[:, 1], stats[:, 2])))
-            sens = np.divide(stats[:, 1], stats[:, 0])
+            grid_stats = np.array(value[0])
+            last_param_vals, last_param_key, parent_params = value[1:]
+            if not headers:
+                headers = [e.value for e in GridSearchStats]
+                headers[0] = "_".join((headers[0], last_param_key))
+                for parent in parent_params.keys():
+                    headers.insert(
+                        0, "_".join((GridSearchStats.PARAM.value, parent)))
+                    param_keys.append(parent)
+                param_keys.append(last_param_key)
+            # false discovery rate, inverse of PPV, since don't have true negs
+            fdr = np.subtract(
+                1, np.divide(grid_stats[:, 1], np.add(grid_stats[:, 1], 
+                grid_stats[:, 2])))
+            sens = np.divide(grid_stats[:, 1], grid_stats[:, 0])
             #print(fdr, sens)
-            colori += 1
             print("{}:".format(key))
-            headers = ("Param", "PPV", "Sens", "Pos", "TP", "FP")
             for header in headers:
                 print("{:{align}{fill}}".format(header, fill=8, align=align), 
                       end=" ")
             print()
-            for i, n in enumerate(params):
-                stat = (params[i], 1 - fdr[i], sens[i], *stats[i].astype(int))
-                for val in stat:
-                    is_array = isinstance(val, np.ndarray)
-                    if is_array or isinstance(val, (int, np.integer)):
-                        print("{:{align}8}"
-                              .format(str(val), align=align), end=" ")
-                    else:
-                        print("{:{align}{fill}}"
-                              .format(val, fill="8.3f", align=align), end=" ")
-                print()
-            group_dict[key] = (fdr, sens, params)
+            for i, n in enumerate(last_param_vals):
+                stat_list = []
+                for parent_val in parent_params.values():
+                    stat.append(parent_val)
+                stat_list.extend(
+                    (last_param_vals[i], 1 - fdr[i], sens[i], 
+                     *grid_stats[i].astype(int), fdr))
+                for header, stat in zip(headers, stat_list):
+                    stats_for_df.setdefault(header, []).append(stat)
+            group_dict[key] = (fdr, sens, last_param_vals)
         print()
-    return parsed_stats
+    path_df = "gridsearch_{}.csv".format("_".join(param_keys))
+    df = stats.dict_to_data_frame(stats_for_df, path_df, show=" ")
+    return parsed_stats, df
 
     
 if __name__ == "__main__":

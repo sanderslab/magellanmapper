@@ -430,25 +430,24 @@ def backup_file(path, modifier="", i=None):
             # original path does not exist, so no need to back up
             return
         i = 1
-    backup_path = None
-    suffix = "{}({})".format(modifier, i)
-    backup_path = insert_before_ext(path, suffix)
-    if not os.path.exists(backup_path):
-        # backup file to currently non-existent path
-        shutil.move(path, backup_path)
-        print("Backed up {} to {}".format(path, backup_path))
-        path_split = os.path.splitext(path)
-        if len(path_split) > 1:
-            # remove ".", which should exist if path was split, and get 
-            # any associated file to backup as well
-            ext_associated = _FILE_TYPE_GROUPS.get(path_split[1][1:])
-            if ext_associated:
-                # back up associated file, using the corresponding i if possible
-                backup_file(
-                    "{}.{}".format(path_split[0], ext_associated), modifier, i)
-    else:
-        # recursively try backing up with next index
-        backup_file(path, modifier, i + 1)
+    while True:
+        backup_path = insert_before_ext(path, "{}({})".format(modifier, i))
+        if not os.path.exists(backup_path):
+            # backup file to currently non-existent path
+            shutil.move(path, backup_path)
+            print("Backed up {} to {}".format(path, backup_path))
+            path_split = os.path.splitext(path)
+            if len(path_split) > 1:
+                # remove ".", which should exist if path was split, and get 
+                # any associated file to backup as well
+                ext_associated = _FILE_TYPE_GROUPS.get(path_split[1][1:])
+                if ext_associated:
+                    # back up associated file with i
+                    backup_file(
+                        "{}.{}".format(path_split[0], ext_associated), 
+                        modifier, i)
+            break
+        i += 1
 
 def is_binary(img):
     """Check if image is binary.

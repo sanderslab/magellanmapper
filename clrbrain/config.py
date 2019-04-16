@@ -303,63 +303,57 @@ def update_process_settings(settings, settings_type):
             will be matched by the start of the settings name, with 
             additional modifications made by matching ends of names.
     """
-    # MAIN PROFILES
-    
     profiles = settings_type.split("_")
     
-    # TODO: consider treating main profiles simply as modifiers
-    
-    if settings_type.startswith("2p20x"):
-        settings["settings_name"] = "2p20x"
-        settings["vis_3d"] = "surface"
-        settings["clip_vmax"] = 97
-        settings["clip_min"] = 0
-        settings["clip_max"] = 0.7
-        settings["tot_var_denoise"] = True
-        settings["unsharp_strength"] = 2.5
-        # smaller threhsold since total var denoising
-        #settings["points_3d_thresh"] = 1.1
-        settings["min_sigma_factor"] = 2.6
-        settings["max_sigma_factor"] = 4
-        settings["num_sigma"] = 20
-        settings["overlap"] = 0.1
-        settings["thresholding"] = None#"otsu"
-        #settings["thresholding_size"] = 41
-        settings["thresholding_size"] = 64 # for otsu
-        #settings["thresholding_size"] = 50.0 # for random_walker
-        settings["denoise_size"] = 25
-        settings["segment_size"] = 100
-        settings["prune_tol_factor"] = (1.5, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = -0.25
-    
-    elif settings_type.startswith("lightsheet"):
-        # detection settings optimized for lightsheet
-        settings["settings_name"] = "lightsheet"
-        #settings["vis_3d"] = "surface"
-        settings["points_3d_thresh"] = 0.7
-        settings["clip_vmax"] = 98.5
-        settings["clip_min"] = 0
-        settings["clip_max"] = 0.5
-        settings["unsharp_strength"] = 0.3
-        settings["erosion_threshold"] = 0.3
-        settings["min_sigma_factor"] = 3
-        settings["max_sigma_factor"] = 4
-        settings["num_sigma"] = 10
-        settings["overlap"] = 0.55
-        settings["segment_size"] = 200
-        settings["prune_tol_factor"] = (1, 0.9, 0.9)
-        settings["verify_tol_factor"] = (3, 1.3, 1.3)
-        settings["segmenting_mean_thresh"] = -10 # unused since scale factor off
-        settings["scale_factor"] = None
-        settings["isotropic"] = (0.96, 1, 1)
-        settings["isotropic_vis"] = (1.3, 1, 1)
-        settings["sub_stack_max_pixels"] = (1200, 800, 800)
-    
-    
     for profile in profiles:
-        # PROFILE MODIFIERS
-        # any/all/none can be combined with any main profile, modifiers lower in 
-        # this listing taking precedence over prior ones and the main profile
+        # update default profile with any combo of modifiers, where the 
+        # order of the profile listing determines the precedence of settings
+        
+        settings.add_modifier(
+            "lightsheet", 
+            {"points_3d_thresh": 0.7, 
+            "clip_vmax": 98.5, 
+            "clip_min": 0, 
+            "clip_max": 0.5, 
+            "unsharp_strength": 0.3, 
+            "erosion_threshold": 0.3, 
+            "min_sigma_factor": 3, 
+            "max_sigma_factor": 4, 
+            "num_sigma": 10, 
+            "overlap": 0.55, 
+            "segment_size": 200, 
+            "prune_tol_factor": (1, 0.9, 0.9), 
+            "verify_tol_factor": (3, 1.3, 1.3), 
+            "segmenting_mean_thresh": -10, # unused since scale factor off
+            "scale_factor": None, 
+            "isotropic": (0.96, 1, 1), 
+            "isotropic_vis": (1.3, 1, 1), 
+            "sub_stack_max_pixels": (1200, 800, 800)}, 
+            profile)
+        
+        settings.add_modifier(
+            "2p20x", 
+            {"vis_3d": "surface", 
+            "clip_vmax": 97, 
+            "clip_min": 0, 
+            "clip_max": 0.7, 
+            "tot_var_denoise": True, 
+            "unsharp_strength": 2.5, 
+            # smaller threhsold since total var denoising 
+            #"points_3d_thresh": 1.1
+            "min_sigma_factor": 2.6, 
+            "max_sigma_factor": 4, 
+            "num_sigma": 20, 
+            "overlap": 0.1, 
+            "thresholding": None,#"otsu"
+            #"thresholding_size": 41, 
+            "thresholding_size": 64, # for otsu
+            #"thresholding_size": 50.0, # for random_walker
+            "denoise_size": 25, 
+            "segment_size": 100, 
+            "prune_tol_factor": (1.5, 1.3, 1.3), 
+            "segmenting_mean_thresh": -0.25}, 
+            profile)
         
         settings.add_modifier(
             "zebrafish", 

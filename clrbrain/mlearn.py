@@ -28,11 +28,10 @@ def grid_search(fnc, *fnc_args):
     stats_dict = OrderedDict()
     file_summaries = []
     for key, value in config.roc_dict.items():
-        # group of settings, where key is the name of the group, and 
-        # value is another dictionary with the group's settings
-        iterable_keys = []
-        iterable_dict = OrderedDict()
-        stats_dict[key] = iterable_dict
+        # iterate through groups of settings, where each value is 
+        # another dictionary with the group's settings
+        iterable_keys = [] # hyperparameters to iterate through
+        iterable_dict = OrderedDict() # group results
         for key2, value2 in value.items():
             if np.isscalar(value2):
                 # set scalar values rather than iterating and processing
@@ -57,7 +56,7 @@ def grid_search(fnc, *fnc_args):
                     paren_i = name.rfind("(")
                     if paren_i != -1:
                         name = name[:paren_i]
-                    name += "(" + str(j) + ")"
+                    name += "({:.3g})".format(j)
                     grid_iterate(
                         i + 1, iterable_keys, grid_dict, name, parent_params)
             else:
@@ -66,7 +65,7 @@ def grid_search(fnc, *fnc_args):
                 last_param_vals = grid_dict[key]
                 for param in last_param_vals:
                     print("===============================================\n"
-                          "Grid search hyperparameters {} for {}"
+                          "Grid search hyperparameters {} for {:.3g}"
                           .format(name, param))
                     settings[key] = param
                     stat, summaries = fnc(*fnc_args)
@@ -76,6 +75,7 @@ def grid_search(fnc, *fnc_args):
                     stats, last_param_vals, key, parent_params)
         
         grid_iterate(0, iterable_keys, value, None, OrderedDict())
+        stats_dict[key] = iterable_dict
     # summary of each file collected together
     for summary in file_summaries:
         print(summary)
@@ -118,12 +118,6 @@ def parse_grid_stats(stats_dict):
                 1, np.divide(grid_stats[:, 1], 
                              np.add(grid_stats[:, 1], grid_stats[:, 2])))
             sens = np.divide(grid_stats[:, 1], grid_stats[:, 0])
-            #print(fdr, sens)
-            print("{}:".format(key))
-            for header in headers:
-                print("{:{align}{fill}}".format(header, fill=8, align=align), 
-                      end=" ")
-            print()
             for i, n in enumerate(last_param_vals):
                 stat_list = []
                 for parent_val in parent_params.values():
@@ -134,7 +128,7 @@ def parse_grid_stats(stats_dict):
                 for header, stat in zip(headers, stat_list):
                     stats_for_df.setdefault(header, []).append(stat)
             group_dict[key] = (fdr, sens, last_param_vals)
-        print()
+    print()
     path_df = "gridsearch_{}.csv".format("_".join(param_keys))
     df = stats.dict_to_data_frame(stats_for_df, path_df, show=" ")
     return parsed_stats, df

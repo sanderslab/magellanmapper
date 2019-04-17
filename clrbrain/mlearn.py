@@ -51,7 +51,9 @@ def grid_search(fnc, *fnc_args):
                 name += "("
                 for j in grid_dict[key]:
                     settings[key] = j
-                    parent_params[key] = j # track parent values
+                    # track parents and their values for given run
+                    parent_params = parent_params.copy()
+                    parent_params[key] = j
                     paren_i = name.rfind("(")
                     if paren_i != -1:
                         name = name[:paren_i]

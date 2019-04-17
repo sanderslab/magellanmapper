@@ -1597,7 +1597,7 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, x_label=None,
         label = ["{} {:.3g}".format(col, val)
                  for col, val in zip(cols_group, group)]
         ax.plot(
-            x, y, label=", ".join(label), lw=2, color="C{}".format(i), 
+            x, y, label=", ".join(label), lw=2, color=cycle_colors(i), 
             linestyle="", marker=".")
         plt.annotate("{:.3g}".format(annot), (x, y))
     

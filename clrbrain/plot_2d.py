@@ -1602,13 +1602,16 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, x_label=None,
         plt.annotate("{:.3g}".format(annot), (x, y))
     
     # add supporting plot components
-    ax.legend(loc="best", fancybox=True, framealpha=0.5)
     if xlim: ax.set_xlim(xlim)
     if ylim: ax.set_ylim(ylim)
     if x_label: ax.set_xlabel(x_label)
     if y_label: ax.set_ylabel(y_label)
     if title: ax.set_title(title)
+    
+    # tighten layout before creating legend to avoid compressing the graph 
+    # for large legends
     gs.tight_layout(fig)
+    ax.legend(loc="best", fancybox=True, framealpha=0.5)
     
     # save and display
     out_path = path

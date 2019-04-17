@@ -32,6 +32,7 @@ from clrbrain import importer
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
+from clrbrain import mlearn
 from clrbrain import plot_3d
 from clrbrain import plot_support
 from clrbrain import stats
@@ -1624,6 +1625,26 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
     if show: plt.show()
     return
 
+def plot_roc(df):
+    """Plot ROC curve generated from :meth:``mlearn.grid_search``.
+    
+    Args:
+        df: Data frame generated from :meth:``mlearn.parse_grid_stats``.
+    """
+    # names of hyperparameters for each group name, with hyperparameters 
+    # identified by param prefix
+    cols_group = [col for col in df 
+                  if col.startswith(mlearn.GridSearchStats.PARAM.value)]
+    start = len(mlearn.GridSearchStats.PARAM.value)
+    names_group = [col[start+1:] for col in cols_group]
+    
+    # plot sensitivity by FDR, annotating with value of final hyperparameter
+    plot_scatter(
+        "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
+        mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group, 
+        names_group, "False Discovery Rate", "Sensitivity", (0, 1), (0, 1), 
+        "Nuclei Detection ROC", df=df)
+
 def plot_image(img, path=None, show=False):
     """Plot a single image in a borderless figure, with option to export 
     directly to file.
@@ -1692,3 +1713,7 @@ if __name__ == "__main__":
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
         plot_bars(config.filename, show=(not config.no_show))
+    
+    elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
+        # ROC curve
+        plot_roc(pd.read_csv(config.filename))

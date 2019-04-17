@@ -1551,9 +1551,9 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
     save_fig(path_to_df, config.savefig)
     if show: plt.show()
 
-def plot_scatter(path, col_x, col_y, col_annot, cols_group, x_label=None, 
-                 y_label=None, xlim=None, ylim=None, title=None, size=None, 
-                 show=True, suffix=None, df=None):
+def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None, 
+                 x_label=None, y_label=None, xlim=None, ylim=None, title=None, 
+                 size=None, show=True, suffix=None, df=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -1561,8 +1561,11 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, x_label=None,
             path basis to save the figure if :attr:``config.savefig`` is set.
         col_x: Name of column to plot as x-values.
         col_y: Name of column to plot as corresponding y-values.
-        cols_group: Names of columns specifying the group to include in 
+        cols_group: Sequence of column names specifying the group to include in 
             the legend.
+        names_group: Sequence of names to display in place of ``cols_group``; 
+            defaults to None, in which case ``cols_groups`` will be used 
+            instead. Length should equal that of ``cols_group``.
         x_label: Name of x-axis; defaults to None.
         y_label: Name of y-axis; defaults to None.
         xlim: Sequence of min and max boundaries for the x-axis; 
@@ -1594,8 +1597,9 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, x_label=None,
     grouping = df[cols_group]
     for i, (x, y, annot) in enumerate(zip(xs, ys, annots)):
         group = grouping.iloc[i]
-        label = ["{} {:.3g}".format(col, val)
-                 for col, val in zip(cols_group, group)]
+        names = cols_group if names_group is None else names_group
+        label = ["{} {:.3g}".format(name, val) 
+                 for name, val in zip(names, group)]
         ax.plot(
             x, y, label=", ".join(label), lw=2, color=cycle_colors(i), 
             linestyle="", marker=".")

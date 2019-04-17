@@ -321,6 +321,7 @@ def update_process_settings(settings, settings_type):
         # v2.1 (Clrbrain v0.6.4): erosion_threshold
         # v2.2 (Clrbrain v0.6.6): narrower and taller stack shape
         # v2.3 (Clrbrain 0.8.7): added prune_tol_factor
+        # v2.4 (Clrbrain 0.8.8): decreased min/max sigma
         settings.add_modifier(
             "lightsheet", 
             {"points_3d_thresh": 0.7, 
@@ -329,8 +330,8 @@ def update_process_settings(settings, settings_type):
             "clip_max": 0.5, 
             "unsharp_strength": 0.3, 
             "erosion_threshold": 0.3, 
-            "min_sigma_factor": 3, 
-            "max_sigma_factor": 4, 
+            "min_sigma_factor": 2.6, 
+            "max_sigma_factor": 2.8, 
             "num_sigma": 10, 
             "overlap": 0.55, 
             "segment_size": 200, 

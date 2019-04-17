@@ -68,7 +68,11 @@ CMAP_GRBK_NAME = "Green_black"
 CMAP_RDBK_NAME = "Red_black"
 
 # processing type directly in module
-PLOT_2D_TYPES = ("smoothing_metrics", "barplot")
+Plot2DTypes = Enum(
+    "plot_2d_types", (
+        "BAR_PLOT", "ROC_CURVE"
+    )
+)
 plot_2d_type = None
 
 # extensions for saving figures

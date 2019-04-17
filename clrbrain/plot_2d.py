@@ -1688,6 +1688,7 @@ if __name__ == "__main__":
     cli.main(True)
     setup_style()
     
-    if config.plot_2d == config.PLOT_2D_TYPES[0]:
+    plot_2d_type = config.Plot2DTypes[config.plot_2d.upper()]
+    if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
         plot_bars(config.filename, show=(not config.no_show))

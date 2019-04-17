@@ -313,6 +313,14 @@ def update_process_settings(settings, settings_type):
         # update default profile with any combo of modifiers, where the 
         # order of the profile listing determines the precedence of settings
         
+        # Lightsheet nuclei
+        # pre-v01
+        # v1 (Clrbrain v0.6.1)
+        # v2 (Clrbrain v0.6.2): isotropy (no anisotropic detection), dec 
+        #     clip_max, use default sub_stack_max_pixels
+        # v2.1 (Clrbrain v0.6.4): erosion_threshold
+        # v2.2 (Clrbrain v0.6.6): narrower and taller stack shape
+        # v2.3 (Clrbrain 0.8.7): added prune_tol_factor
         settings.add_modifier(
             "lightsheet", 
             {"points_3d_thresh": 0.7, 

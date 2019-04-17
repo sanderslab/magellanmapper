@@ -24,14 +24,10 @@ from clrbrain import sqlite
 from clrbrain import stats
 
 # Numpy archive for blobs versions:
-# 0: pre-v01
-# 1: v1 (Clrbrain v0.6.1)
-# 2: v2 (Clrbrain v0.6.2) with isotropy (no anisotropic detection), dec 
-#    clip_max, use default sub_stack_max_pixels
-# 3: v2.1 (Clrbrain v0.6.4) with erosion_threshold
-# 4: v2.2 (Clrbrain v0.6.6) with narrower and taller stack shape
-# 5: include archive version number
-BLOBS_NP_VER = 5
+# 0: initial version
+# 1: added resolutions, basene, offset, roi_size fields
+# 2: added archive version number
+BLOBS_NP_VER = 2
 
 class StackTimes(Enum):
     """Stack processing durations."""

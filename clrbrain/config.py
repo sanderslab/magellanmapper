@@ -952,7 +952,7 @@ roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         # test single value by iterating on value that should not affect 
         # detection ability
-        ("points_3d_thresh", [0.7]),
+        #("points_3d_thresh", [0.7]),
         
         # unfused baseline
         #("scale_factor", 0.59),
@@ -985,6 +985,7 @@ roc_dict = OrderedDict([
         #("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
         #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
+        ("segment_size", np.arange(100, 250, 10)),
     ]))
 ])
 

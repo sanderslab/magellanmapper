@@ -103,7 +103,7 @@ def pad_seq(seq, n, pad=None):
     Args:
         seq: Tuple or list to fill in-place.
         n: Target length.
-        pad: Value with which to fill.
+        pad: Value with which to fill; defaults to None.
     
     Returns:
         A truncated view of ``seq`` if the sequence is longer than ``n`` 

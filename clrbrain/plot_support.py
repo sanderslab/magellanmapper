@@ -108,11 +108,11 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     if num_imgs2d < 1: return None
     
     def fill(fill_with, chls):
-        # make a sequence with vals corresponding to each 2D image, with 
-        # the first val as another seq corresponding to the given number 
-        # of channels
+        # make a sequence with vals corresponding to each 2D image, where 
+        # the first val is another seq wholse values correspond to each of 
+        # the channels in that image, starting with fill_with
         filled = [None] * num_imgs2d
-        if fill_with:
+        if fill_with is not None:
             filled[0] = lib_clrbrain.pad_seq(list(fill_with), len(chls))
         return filled
     
@@ -123,7 +123,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     if vmins is None or vmaxs is None:
         # fill vmin/vmax with None for each 2D image and config vals for 
         # each channel for the first image
-        _, channels_main = plot_3d.setup_channels(imgs2d[0], config.channel, 2)
+        _, channels_main = plot_3d.setup_channels(imgs2d[0], None, 2)
         if vmins is None:
             fill_with = (config.near_min if config.vmins is None 
                          else config.vmins)

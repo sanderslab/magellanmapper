@@ -172,7 +172,7 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
     else:
         img3d = image5d[:]
     arrs_3d, _ = transpose_images(plane, [img3d])
-    aspect, origin = plot_support.get_aspect_ratio(plane)
+    aspect, origin = get_aspect_ratio(plane)
     img3d = arrs_3d[0]
     img2d = img3d[plane_n]
     if max_intens_proj:

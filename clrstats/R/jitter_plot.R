@@ -3,7 +3,7 @@
 
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
                        split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
-                       plot.size=c(5, 7), boxplot=TRUE) {
+                       plot.size=c(5, 7), boxplot=TRUE, axes.in.range=FALSE) {
   # Plot jitter/scatter plots of values by genotype with summary stats.
   # 
   # Also generates mean and 95% CI for each group, which will be plotted 
@@ -29,6 +29,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #     c(5, 7).
   #   boxplot: True to show box plot in place of mean and CIs; defaults to 
   #     TRUE.
+  #   axes.in.range: True to require x- and y-ranges to include axes; 
+  #     defaults to FALSE.
   #
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
@@ -126,10 +128,24 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   
   # define graph limits, with x from 0 to number of groups, and y from 
   # 0 to highest y-val, or highest absolute error bar if not boxplot
+  mins <- c(-0.5, min(vals) / denom)
   maxes <- c(num.groups, max(vals) / denom)
   if (!boxplot) {
+    mins[2] <- min(mins[2], min(vals.means - errs) / denom)
     maxes[2] <- max(maxes[2], max(vals.means + errs) / denom)
   }
+  if (axes.in.range) {
+    # ensure that y-axis remains within range; x-axis already within range
+    if (mins[2] < 0 & maxes[2] < 0) {
+      maxes[2] <- 0
+    } else if (mins[2] > 0 & maxes[2] > 0) {
+      mins[2] <- 0
+    }
+  }
+  # add 10% padding above and below y-range
+  y.pad <- 0.1 * (maxes[2] - mins[2])
+  mins[2] <- mins[2] - y.pad
+  maxes[2] <- maxes[2] + y.pad
   
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots
@@ -155,8 +171,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   
   # draw main plot and group legends
   plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n", 
-       xlim=range(-0.5, maxes[1] - 0.5), ylim=range(0, maxes[2]), bty="n", 
-       las=1)
+       xlim=range(mins[1], maxes[1] - 0.5), ylim=range(mins[2], maxes[2]), 
+       bty="n", las=1)
   colors <- RColorBrewer::brewer.pal(num.sides, "Dark2")
   # group legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
@@ -239,7 +255,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       # drawn rectangle to enclose group legend as well
       group.rect <- legend.group$rect
       legend.sample <- legend(
-        x=group.rect$left, y=(0.7*(group.rect$top-group.rect$h)), 
+        x=group.rect$left, y=(group.rect$top-0.7*group.rect$h), 
         legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
         ncol=ncol, text.width=legend.text.width)
       sample.rect <- legend.sample$rect

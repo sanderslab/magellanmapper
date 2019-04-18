@@ -551,7 +551,7 @@ class Visualization(HasTraits):
         HasTraits.__init__(self)
         
         # default options setup
-        self._set_border()
+        self._set_border(True)
         self._circles_2d = [plot_2d.CIRCLES[0]]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [Styles2D.SQUARE_ROI.value]
@@ -763,6 +763,7 @@ class Visualization(HasTraits):
             self.segs_feedback = "Reset circles after saving full annotations"
     
     def _btn_2d_trait_fired(self):
+        """Handle ROI Editor button events."""
         if (self._circles_opened_type 
             and self._circles_opened_type != plot_2d.CIRCLES[2].lower()):
             # prevent multiple editable windows from being opened 

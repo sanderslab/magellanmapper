@@ -278,7 +278,7 @@ class ProcessSettings(SettingsDict):
         self["thresholding"] = None
         self["thresholding_size"] = -1
         self["denoise_size"] = 25 # None turns off preprocessing in stack proc
-        self["segment_size"] = 500
+        self["segment_size"] = 500 # detection ROI max size along longest edge
         self["prune_tol_factor"] = (1, 1, 1)
         self["verify_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
@@ -321,7 +321,7 @@ def update_process_settings(settings, settings_type):
         # v2.1 (Clrbrain v0.6.4): erosion_threshold
         # v2.2 (Clrbrain v0.6.6): narrower and taller stack shape
         # v2.3 (Clrbrain 0.8.7): added prune_tol_factor
-        # v2.4 (Clrbrain 0.8.8): decreased min/max sigma
+        # v2.4 (Clrbrain 0.8.8): decreased min/max sigma, segment size
         settings.add_modifier(
             "lightsheet", 
             {"points_3d_thresh": 0.7, 
@@ -334,7 +334,7 @@ def update_process_settings(settings, settings_type):
             "max_sigma_factor": 2.8, 
             "num_sigma": 10, 
             "overlap": 0.55, 
-            "segment_size": 200, 
+            "segment_size": 150, 
             "prune_tol_factor": (1, 0.9, 0.9), 
             "verify_tol_factor": (3, 1.3, 1.3), 
             "segmenting_mean_thresh": -10, # unused since scale factor off
@@ -952,7 +952,7 @@ roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         # test single value by iterating on value that should not affect 
         # detection ability
-        #("points_3d_thresh", [0.7]),
+        ("points_3d_thresh", [0.7]),
         
         # unfused baseline
         #("scale_factor", 0.59),
@@ -985,7 +985,7 @@ roc_dict = OrderedDict([
         #("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
         #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
-        ("segment_size", np.arange(140, 160, 1)),
+        #("segment_size", np.arange(140, 160, 1)),
     ]))
 ])
 

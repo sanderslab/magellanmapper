@@ -60,7 +60,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   vals.groups <- list() # list of vals for each geno-side group
   vals.means <- vector(length=num.groups)
   vals.cis <-vector(length=num.groups)
-  max.errs <- vector(length=num.groups)
+  errs <- vector(length=num.groups) # based on CI but 0 if CI is NA
   i <- 1
   for (geno in genos.unique) {
     for (side in sides.unique) {
@@ -79,8 +79,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       # use 97.5th percentile for 2-tailed 95% confidence level
       vals.cis[i] <- qt(0.975, df=num.vals-1) * vals.sem
       # store max height of error bar setting axis limits
-      err <- if (is.na(vals.cis[i])) 0 else vals.cis[i]
-      max.errs[i] <- vals.means[i] + err
+      errs[i] <- if (is.na(vals.cis[i])) 0 else vals.cis[i]
       
       # main label
       name <- side
@@ -128,7 +127,9 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # define graph limits, with x from 0 to number of groups, and y from 
   # 0 to highest y-val, or highest absolute error bar if not boxplot
   maxes <- c(num.groups, max(vals) / denom)
-  if (boxplot) maxes[2] <- max(maxes[2], max(max.errs) / denom)
+  if (!boxplot) {
+    maxes[2] <- max(maxes[2], max(vals.means + errs) / denom)
+  }
   
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots

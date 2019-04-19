@@ -87,6 +87,7 @@ IMG_LABELS_TRUNC = "annotationTrunc.mhd"
 IMG_LABELS_EDGE = "annotationEdge.mhd"
 IMG_LABELS_DIST = "annotationDist.mhd"
 IMG_LABELS_MARKERS = "annotationMarkers.mhd"
+IMG_LABELS_INTERIOR = "annotationInterior.mhd"
 IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
 IMG_LABELS_DIFF = "annotationDiff.mhd"
 IMG_LABELS_LEVEL = "annotationLevel{}.mhd"
@@ -2201,9 +2202,11 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     atlas_sitk_edge = None
     labels_sitk_edge = None
     labels_sitk_markers = None
+    labels_sitk_interior = None
     
     log_sigma = config.register_settings["log_sigma"]
     erosion = config.register_settings["marker_erosion"]
+    erosion_frac = 0.7
     
     if log_sigma is not None and suffix is None:
         # generate LoG and edge-detected images for original image
@@ -2221,18 +2224,28 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     
     if erosion is not None:
         # convert labels image into markers
+        labels_to_erode = labels_img_np
+        labels_interior = None
         if atlas:
             # assume that labels image is symmetric across the x-axis
             len_half = labels_img_np.shape[2] // 2
-            labels_markers = segmenter.labels_to_markers_erosion(
-                labels_img_np[..., :len_half], erosion)
+            labels_to_erode = labels_img_np[..., :len_half]
+        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
+        labels_markers = segmenter.labels_to_markers_erosion(
+            labels_to_erode, erosion)
+        if erosion_frac:
+            labels_interior = segmenter.labels_to_markers_erosion(
+                labels_to_erode, erosion, erosion_frac)
+        if atlas:
             labels_markers = _mirror_imported_labels(labels_markers, len_half)
-        else:
-            #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
-            labels_markers = segmenter.labels_to_markers_erosion(
-                labels_img_np, erosion)
+            if erosion_frac:
+                labels_interior = _mirror_imported_labels(
+                    labels_interior, len_half)
         labels_sitk_markers = replace_sitk_with_numpy(
             labels_sitk, labels_markers)
+        if erosion_frac:
+            labels_sitk_interior = replace_sitk_with_numpy(
+                labels_sitk, labels_interior)
     
     # make labels edge and edge distance images
     dist_to_orig, labels_edge = edge_distances(
@@ -2247,7 +2260,116 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         IMG_ATLAS_EDGE: atlas_sitk_edge, 
         IMG_LABELS_EDGE: labels_sitk_edge, 
         IMG_LABELS_MARKERS: labels_sitk_markers, 
+        IMG_LABELS_INTERIOR: labels_sitk_interior, 
         IMG_LABELS_DIST: dist_sitk, 
+    }
+    if show:
+        for img in imgs_write.values():
+            if img: sitk.Show(img)
+    
+    # write images to same directory as atlas with appropriate suffix
+    write_reg_images(imgs_write, mod_path)
+
+def make_marker_images(path_img, show=True, atlas=True, suffix=None, 
+                       path_atlas_dir=None):
+    """Make edge-detected atlas and associated labels images.
+    
+    The atlas is assumed to be a sample (eg microscopy) image on which 
+    an edge-detection filter will be applied. The labels image is 
+    assumed to be an annotated image whose edges will be found by 
+    obtaining the borders of all separate labels.
+    
+    Args:
+        path_img: Path to the image atlas. The labels image will be 
+            found as a corresponding, registered image, unless 
+            ``path_atlas_dir`` is given.
+        show_imgs: True if the output images should be displayed; defaults 
+            to True.
+        atlas: True if the primary image is an atlas, which is assumed 
+            to be symmetrical. False if the image is an experimental/sample 
+            image, in which case erosion will be performed on the full 
+            images, and stats will not be performed.
+        suffix: Modifier to append to end of ``path_img`` basename for 
+            registered image files that were output to a modified name; 
+            defaults to None.
+        path_atlas_dir: Path to atlas directory to use labels from that 
+            directory rather than from labels image registered to 
+            ``path_img``, such as when the sample image is registered 
+            to an atlas rather than the other way around. Typically 
+            coupled with ``suffix`` to compare same sample against 
+            different labels. Defaults to None.
+    """
+    
+    # load atlas image, assumed to be a histology image
+    if atlas:
+        print("generating edge images for atlas")
+        atlas_suffix = IMG_ATLAS
+    else:
+        print("generating edge images for experiment/sample image")
+        atlas_suffix = IMG_EXP
+    
+    # adjust image path with suffix
+    mod_path = path_img
+    if suffix is not None:
+        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+    
+    labels_from_atlas_dir = path_atlas_dir and os.path.isdir(path_atlas_dir)
+    if labels_from_atlas_dir:
+        # load labels from atlas directory
+        # TODO: consider applying suffix to labels dir
+        path_atlas = path_img
+        path_labels = os.path.join(path_atlas_dir, IMG_LABELS)
+        print("loading labels from", path_labels)
+        labels_sitk = sitk.ReadImage(path_labels)
+    else:
+        # load labels registered to sample image
+        path_atlas = mod_path
+        labels_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS)
+    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    
+    # load atlas image, set resolution from it
+    atlas_sitk = load_registered_img(
+        path_atlas, get_sitk=True, reg_name=atlas_suffix)
+    detector.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
+    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
+    
+    # output images
+    labels_sitk_markers = None
+    labels_sitk_interior = None
+    
+    erosion = config.register_settings["marker_erosion"]
+    erosion_frac = 0.7
+    
+    if erosion is not None:
+        # convert labels image into markers
+        labels_to_erode = labels_img_np
+        labels_interior = None
+        if atlas:
+            # assume that labels image is symmetric across the x-axis
+            len_half = labels_img_np.shape[2] // 2
+            labels_to_erode = labels_img_np[..., :len_half]
+        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
+        labels_markers = segmenter.labels_to_markers_erosion(
+            labels_to_erode, erosion)
+        if erosion_frac:
+            labels_interior = segmenter.labels_to_markers_erosion(
+                labels_to_erode, erosion, erosion_frac)
+        if atlas:
+            labels_markers = _mirror_imported_labels(labels_markers, len_half)
+            if erosion_frac:
+                labels_interior = _mirror_imported_labels(
+                    labels_interior, len_half)
+        labels_sitk_markers = replace_sitk_with_numpy(
+            labels_sitk, labels_markers)
+        if erosion_frac:
+            labels_sitk_interior = replace_sitk_with_numpy(
+                labels_sitk, labels_interior)
+    
+    # show all images
+    imgs_write = {
+        IMG_LABELS_MARKERS: labels_sitk_markers, 
+        IMG_LABELS_INTERIOR: labels_sitk_interior, 
     }
     if show:
         for img in imgs_write.values():
@@ -3441,7 +3563,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         labels_img_np = None
         labels_edge = None
         dist_to_orig = None
-        labels_markers = None
+        labels_interior = None
         heat_map = None
         subseg = None
         if df is None:
@@ -3476,8 +3598,8 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             
             # load labels marker image
             try:
-                labels_markers = load_registered_img(
-                    mod_path, reg_name=IMG_LABELS_MARKERS)
+                labels_interior = load_registered_img(
+                    mod_path, reg_name=IMG_LABELS_INTERIOR)
             except FileNotFoundError as e:
                 print(e)
                 print("will ignore label markers")
@@ -3509,7 +3631,7 @@ def volumes_by_id2(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # takes care of combining sides
         df, df_all = vols.measure_labels_metrics(
             sample, img_np, labels_img_np, 
-            labels_edge, dist_to_orig, labels_markers, heat_map, subseg, 
+            labels_edge, dist_to_orig, labels_interior, heat_map, subseg, 
             spacing, unit_factor, 
             combine_sides and max_level is None, 
             label_ids, grouping, df)
@@ -4122,6 +4244,17 @@ if __name__ == "__main__":
         atlas = reg is config.RegisterTypes.make_edge_images
         for img_path in config.filenames:
             make_edge_images(
+                img_path, show, atlas, config.suffix, config.load_labels)
+    
+    elif reg in (
+        config.RegisterTypes.make_marker_images, ):
+        
+        # convert atlas or experiment image and associated labels 
+        # to edge-detected images; labels can be given as atlas dir from 
+        # which labels will be extracted (eg import dir)
+        atlas = reg is config.RegisterTypes.make_marker_images
+        for img_path in config.filenames:
+            make_marker_images(
                 img_path, show, atlas, config.suffix, config.load_labels)
     
     elif reg is config.RegisterTypes.reg_labels_to_atlas:

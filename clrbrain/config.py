@@ -179,8 +179,8 @@ RegisterTypes = Enum(
     "RegisterTypes", [
         "single", "group", "overlays", "volumes", "densities", "export_vols", 
         "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
-        "make_edge_images", "reg_labels_to_atlas", "merge_atlas_segs", 
-        "make_edge_images_exp", "vol_stats", "make_density_images", 
+        "make_edge_images", "make_edge_images_exp", "make_marker_images", 
+        "reg_labels_to_atlas", "merge_atlas_segs", "vol_stats", "make_density_images", 
         "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
         "plot_smoothing_metrics", "merge_images", "register_reg", 
         "labels_diff", "labels_diff_stats", "make_labels_level", 

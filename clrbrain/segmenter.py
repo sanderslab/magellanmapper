@@ -247,8 +247,6 @@ class LabelToMarkerErosion(object):
             sizes of labels; list of slices denoting where to insert 
             the eroded label; and the eroded label itself.
         """
-        print("eroding label ID {}".format(label_id))
-        
         # get region as mask; assume that label exists and will yield a 
         # bounding box since labels here are generally derived from the 
         # labels image itself
@@ -262,24 +260,28 @@ class LabelToMarkerErosion(object):
         # erode the labels, starting with the given filter size and 
         # decreasing if the resulting label size falls below a given 
         # threshold
+        chosen_selem_size = None
         for selem_size in range(filter_size, -1, -1):
             if selem_size == 0:
                 if size_ratio < 0.01:
-                    print("could not erode without losing region, skipping")
+                    print("label {}: could not erode without losing region "
+                          "of size {}, skipping".format(label_id, region_size))
                     filtered = label_mask_region
+                    chosen_selem_size = None
                 break
-            elif selem_size < filter_size:
-                print("size ratio of {} after erosion filter size of {}, "
-                      "will reduce filter size".format(size_ratio, selem_size))
             # erode check size ratio
             filtered = morphology.binary_erosion(
                 label_mask_region, morphology.ball(selem_size))
             region_size_filtered = np.sum(filtered)
             size_ratio = region_size_filtered / region_size
+            chosen_selem_size = selem_size
             if size_ratio > 0.2: break
         
-        print("changed num of pixels from {} to {}"
-              .format(region_size, region_size_filtered))
+        if chosen_selem_size is not None:
+            print("label {}: changed num of pixels from {} to {} "
+                  "(size ratio {}), chosen filter size {}"
+                  .format(label_id, region_size, region_size_filtered, 
+                          size_ratio, chosen_selem_size))
         stats = (label_id, region_size, region_size_filtered, selem_size)
         return stats, slices, filtered
 
@@ -322,7 +324,6 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
         markers[tuple(slices)][filtered] = stats[0]
         for col, stat in zip(cols, stats):
             sizes_dict.setdefault(col, []).append(stat)
-        print("finished eroding label ID {}".format(stats[0]))
     pool.close()
     pool.join()
     

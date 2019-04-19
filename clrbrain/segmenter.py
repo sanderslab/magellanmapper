@@ -235,12 +235,25 @@ class LabelToMarkerErosion(object):
         cls.labels_img = labels_img
     
     @classmethod
-    def erode_label(cls, label_id, filter_size):
+    def erode_label(cls, label_id, filter_size, target_frac=None):
         """Convert a label to a marker as an eroded version of the label.
+        
+        By default, labels will be eroded with the given ``filter_size`` 
+        as long as their final size is > 20% of the original volume. If 
+        the eroded volume is below threshold, ``filter_size`` will be 
+        progressively decreased until criteria is met or the filter 
+        cannot be reduced further. If the label at this final filter size 
+        would be essentially lost (ie < 1%), the label will not be eroded.
         
         Args:
             label_id: ID of label to erode.
-            filter_size: Size of structing element for erosion.
+            filter_size: Size of structing element to start erosion.
+            target_frac: Target fraction of original label to erode. 
+                Erosion will start with ``filter_size`` and use progressivel 
+                smaller filters until this target fraction is exceeded. If 
+                the fraction is not exceeded by a filter of size 1 
+                without essentially losing the label, this erosion will 
+                be allowed. Defaults to None.
         
         Returns:
             Tuple of stats, including ``label_id`` for reference and 
@@ -274,8 +287,9 @@ class LabelToMarkerErosion(object):
                 label_mask_region, morphology.ball(selem_size))
             region_size_filtered = np.sum(filtered)
             size_ratio = region_size_filtered / region_size
+            thresh = 0.2 if target_frac is None else target_frac
             chosen_selem_size = selem_size
-            if size_ratio > 0.2: break
+            if size_ratio > thresh: break
         
         if chosen_selem_size is not None:
             print("label {}: changed num of pixels from {} to {} "
@@ -317,7 +331,8 @@ def labels_to_markers_erosion(labels_img, filter_size=8):
         if label_id == 0: continue
         pool_results.append(
             pool.apply_async(
-                LabelToMarkerErosion.erode_label, args=(label_id, filter_size)))
+                LabelToMarkerErosion.erode_label, 
+                args=(label_id, filter_size, target_frac)))
     for result in pool_results:
         stats, slices, filtered = result.get()
         # can only mutate markers outside of mp for changes to persist

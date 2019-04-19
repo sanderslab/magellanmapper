@@ -21,7 +21,7 @@ LabelMetrics = Enum(
     "LabelMetrics", [
         "Region", "Volume", "Nuclei", "Density", 
         "VolMean", "NucMean", "DensityMean", 
-        "VarNuclei", "VarIntensity", "VarIntensBase", 
+        "VarNuclei", "VarIntensity", "VarIntensInterior", "VarIntensBorder", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean"
     ]
 )
@@ -136,7 +136,7 @@ class MeasureLabel(object):
     _VAR_METRICS = (
         LabelMetrics.VolMean, LabelMetrics.NucMean, 
         LabelMetrics.VarNuclei, LabelMetrics.VarIntensity, 
-        LabelMetrics.VarIntensBase)
+        LabelMetrics.VarIntensInterior, LabelMetrics.VarIntensBorder)
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
@@ -153,14 +153,14 @@ class MeasureLabel(object):
     
     @classmethod
     def set_data(cls, atlas_img_np, labels_img_np, labels_edge, 
-                 dist_to_orig, labels_markers=None, heat_map=None, 
+                 dist_to_orig, labels_interior=None, heat_map=None, 
                  subseg=None, df=None):
         """Set the images and data frame."""
         cls.atlas_img_np = atlas_img_np
         cls.labels_img_np = labels_img_np
         cls.labels_edge = labels_edge
         cls.dist_to_orig = dist_to_orig
-        cls.labels_markers = labels_markers
+        cls.labels_interior = labels_interior
         cls.heat_map = heat_map
         cls.subseg = subseg
         cls.df = df
@@ -265,8 +265,18 @@ class MeasureLabel(object):
                 if size > 0:
                     # variation in intensity of underlying atlas/sample region
                     var_inten = np.std(cls.atlas_img_np[seg_mask])
-                    seg_mask_base = cls.labels_markers == seg_id
-                    var_intens_base = np.std(cls.atlas_img_np[seg_mask_base])
+                    
+                    var_intens_interior = np.nan
+                    var_intens_border = np.nan
+                    if cls.labels_interior is not None:
+                        # inner vs border variability
+                        interior_mask = cls.labels_interior == seg_id
+                        var_intens_interior = np.std(
+                            cls.atlas_img_np[interior_mask])
+                        border_mask = np.logical_xor(seg_mask, interior_mask)
+                        var_intens_border = np.std(
+                            cls.atlas_img_np[border_mask])
+                    
                     var_dens = np.nan
                     blobs = np.nan
                     if cls.heat_map is not None:
@@ -274,7 +284,9 @@ class MeasureLabel(object):
                         blobs_per_px = cls.heat_map[seg_mask]
                         var_dens = np.std(blobs_per_px)
                         blobs = np.sum(blobs_per_px)
-                    vals = (size, blobs, var_dens, var_inten, var_intens_base)
+                    
+                    vals = (size, blobs, var_dens, var_inten, 
+                            var_intens_interior, var_intens_border)
                     for metric, val in zip(cls._VAR_METRICS, vals):
                         metrics[metric].append(val)
         else:
@@ -362,7 +374,7 @@ def get_single_label(label_id):
     return label_id
 
 def measure_labels_metrics(sample, atlas_img_np, labels_img_np, 
-                           labels_edge, dist_to_orig, labels_markers=None, 
+                           labels_edge, dist_to_orig, labels_interior=None, 
                            heat_map=None, 
                            subseg=None, spacing=None, unit_factor=None, 
                            combine_sides=True, label_ids=None, grouping={}, 
@@ -377,7 +389,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         labels_edge: Numpy array of labels reduced to their edges.
         dist_to_orig: Distance map of labels to edges, with intensity values 
             in the same placement as in ``labels_edge``.
-        labels_markers: Numpy array of labels eroded to markers.
+        labels_interior: Numpy array of labels eroded to interior region.
         heat_map: Numpy array as a density map; defaults to None to ignore 
             density measurements.
         sub_seg: Integer sub-segmentations labels image as Numpy array; 
@@ -410,8 +422,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
     MeasureLabel.set_data(
-        atlas_img_np, labels_img_np, labels_edge, dist_to_orig, labels_markers, 
-        heat_map, subseg, df)
+        atlas_img_np, labels_img_np, labels_edge, dist_to_orig, 
+        labels_interior, heat_map, subseg, df)
     
     metrics = {}
     grouping[config.SIDE_KEY] = None
@@ -442,7 +454,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         nuc_mean = label_metrics[LabelMetrics.NucMean]
         var_nuc = label_metrics[LabelMetrics.VarNuclei]
         var_inten = label_metrics[LabelMetrics.VarIntensity]
-        var_inten_base = label_metrics[LabelMetrics.VarIntensBase]
+        var_inten_interior = label_metrics[LabelMetrics.VarIntensInterior]
+        var_inten_border = label_metrics[LabelMetrics.VarIntensBorder]
         edge_dist_sum = label_metrics[LabelMetrics.EdgeDistSum]
         edge_dist_mean = label_metrics[LabelMetrics.EdgeDistMean]
         edge_size = label_metrics[LabelMetrics.EdgeSize]
@@ -475,7 +488,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         vals = (sample, *grouping.values(), abs(disp_id), 
                 vol_physical, nuc, density, 
                 vol_mean_physical, nuc_mean, dens_mean, 
-                var_nuc, var_inten, var_inten_base, 
+                var_nuc, var_inten, var_inten_interior, var_inten_border, 
                 edge_size, edge_dist_sum, edge_dist_mean)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)

@@ -2201,13 +2201,9 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     atlas_sitk_log = None
     atlas_sitk_edge = None
     labels_sitk_edge = None
-    labels_sitk_markers = None
     labels_sitk_interior = None
     
     log_sigma = config.register_settings["log_sigma"]
-    erosion = config.register_settings["marker_erosion"]
-    erosion_frac = 0.7
-    
     if log_sigma is not None and suffix is None:
         # generate LoG and edge-detected images for original image
         thresh = (config.register_settings["atlas_threshold"] 
@@ -2222,30 +2218,11 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         # load from original image to copmare against common image
         atlas_edge = load_registered_img(path_img, reg_name=IMG_ATLAS_EDGE)
     
-    if erosion is not None:
-        # convert labels image into markers
-        labels_to_erode = labels_img_np
-        labels_interior = None
-        if atlas:
-            # assume that labels image is symmetric across the x-axis
-            len_half = labels_img_np.shape[2] // 2
-            labels_to_erode = labels_img_np[..., :len_half]
-        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
-        labels_markers = segmenter.labels_to_markers_erosion(
-            labels_to_erode, erosion)
-        if erosion_frac:
-            labels_interior = segmenter.labels_to_markers_erosion(
-                labels_to_erode, erosion, erosion_frac)
-        if atlas:
-            labels_markers = _mirror_imported_labels(labels_markers, len_half)
-            if erosion_frac:
-                labels_interior = _mirror_imported_labels(
-                    labels_interior, len_half)
-        labels_sitk_markers = replace_sitk_with_numpy(
-            labels_sitk, labels_markers)
-        if erosion_frac:
-            labels_sitk_interior = replace_sitk_with_numpy(
-                labels_sitk, labels_interior)
+    # make map of label interiors for interior/border comparisons
+    erosion = config.register_settings["marker_erosion"]
+    erosion_frac = config.register_settings["erosion_frac"]
+    interior = erode_labels(labels_img_np, erosion, erosion_frac, atlas)
+    labels_sitk_interior = replace_sitk_with_numpy(labels_sitk, interior)
     
     # make labels edge and edge distance images
     dist_to_orig, labels_edge = edge_distances(
@@ -2259,7 +2236,6 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         IMG_ATLAS_LOG: atlas_sitk_log, 
         IMG_ATLAS_EDGE: atlas_sitk_edge, 
         IMG_LABELS_EDGE: labels_sitk_edge, 
-        IMG_LABELS_MARKERS: labels_sitk_markers, 
         IMG_LABELS_INTERIOR: labels_sitk_interior, 
         IMG_LABELS_DIST: dist_sitk, 
     }
@@ -2270,113 +2246,35 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     # write images to same directory as atlas with appropriate suffix
     write_reg_images(imgs_write, mod_path)
 
-def make_marker_images(path_img, show=True, atlas=True, suffix=None, 
-                       path_atlas_dir=None):
-    """Make edge-detected atlas and associated labels images.
-    
-    The atlas is assumed to be a sample (eg microscopy) image on which 
-    an edge-detection filter will be applied. The labels image is 
-    assumed to be an annotated image whose edges will be found by 
-    obtaining the borders of all separate labels.
+def erode_labels(labels_img_np, erosion, erosion_frac=None, atlas=True):
+    """Erode labels image for use as markers or a map of the interior.
     
     Args:
-        path_img: Path to the image atlas. The labels image will be 
-            found as a corresponding, registered image, unless 
-            ``path_atlas_dir`` is given.
-        show_imgs: True if the output images should be displayed; defaults 
-            to True.
+        labels_img_np: Numpy image array of labels in z,y,x format.
+        erosion: Filter size for erosion.
+        erosion_frac: Target erosion fraction; defaults to None.
         atlas: True if the primary image is an atlas, which is assumed 
             to be symmetrical. False if the image is an experimental/sample 
-            image, in which case erosion will be performed on the full 
-            images, and stats will not be performed.
-        suffix: Modifier to append to end of ``path_img`` basename for 
-            registered image files that were output to a modified name; 
-            defaults to None.
-        path_atlas_dir: Path to atlas directory to use labels from that 
-            directory rather than from labels image registered to 
-            ``path_img``, such as when the sample image is registered 
-            to an atlas rather than the other way around. Typically 
-            coupled with ``suffix`` to compare same sample against 
-            different labels. Defaults to None.
+            image, in which case erosion will be performed on the full image.
+    
+    Returns:
+        The eroded labels as a new array of same shape as that of 
+        ``labels_img_np``.
     """
-    
-    # load atlas image, assumed to be a histology image
+    labels_to_erode = labels_img_np
     if atlas:
-        print("generating edge images for atlas")
-        atlas_suffix = IMG_ATLAS
-    else:
-        print("generating edge images for experiment/sample image")
-        atlas_suffix = IMG_EXP
+        # for atlases, assume that labels image is symmetric across the x-axis
+        len_half = labels_img_np.shape[2] // 2
+        labels_to_erode = labels_img_np[..., :len_half]
     
-    # adjust image path with suffix
-    mod_path = path_img
-    if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+    # convert labels image into markers
+    #eroded = segmenter.labels_to_markers_blob(labels_img_np)
+    eroded = segmenter.labels_to_markers_erosion(
+        labels_to_erode, erosion, erosion_frac)
+    if atlas:
+        eroded = _mirror_imported_labels(eroded, len_half)
     
-    labels_from_atlas_dir = path_atlas_dir and os.path.isdir(path_atlas_dir)
-    if labels_from_atlas_dir:
-        # load labels from atlas directory
-        # TODO: consider applying suffix to labels dir
-        path_atlas = path_img
-        path_labels = os.path.join(path_atlas_dir, IMG_LABELS)
-        print("loading labels from", path_labels)
-        labels_sitk = sitk.ReadImage(path_labels)
-    else:
-        # load labels registered to sample image
-        path_atlas = mod_path
-        labels_sitk = load_registered_img(
-            mod_path, get_sitk=True, reg_name=IMG_LABELS)
-    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
-    
-    # load atlas image, set resolution from it
-    atlas_sitk = load_registered_img(
-        path_atlas, get_sitk=True, reg_name=atlas_suffix)
-    detector.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
-    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
-    
-    # output images
-    labels_sitk_markers = None
-    labels_sitk_interior = None
-    
-    erosion = config.register_settings["marker_erosion"]
-    erosion_frac = 0.7
-    
-    if erosion is not None:
-        # convert labels image into markers
-        labels_to_erode = labels_img_np
-        labels_interior = None
-        if atlas:
-            # assume that labels image is symmetric across the x-axis
-            len_half = labels_img_np.shape[2] // 2
-            labels_to_erode = labels_img_np[..., :len_half]
-        #labels_markers = segmenter.labels_to_markers_blob(labels_img_np)
-        labels_markers = segmenter.labels_to_markers_erosion(
-            labels_to_erode, erosion)
-        if erosion_frac:
-            labels_interior = segmenter.labels_to_markers_erosion(
-                labels_to_erode, erosion, erosion_frac)
-        if atlas:
-            labels_markers = _mirror_imported_labels(labels_markers, len_half)
-            if erosion_frac:
-                labels_interior = _mirror_imported_labels(
-                    labels_interior, len_half)
-        labels_sitk_markers = replace_sitk_with_numpy(
-            labels_sitk, labels_markers)
-        if erosion_frac:
-            labels_sitk_interior = replace_sitk_with_numpy(
-                labels_sitk, labels_interior)
-    
-    # show all images
-    imgs_write = {
-        IMG_LABELS_MARKERS: labels_sitk_markers, 
-        IMG_LABELS_INTERIOR: labels_sitk_interior, 
-    }
-    if show:
-        for img in imgs_write.values():
-            if img: sitk.Show(img)
-    
-    # write images to same directory as atlas with appropriate suffix
-    write_reg_images(imgs_write, mod_path)
+    return eroded
 
 def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     """Merge manual and automated segmentations of an atlas.
@@ -2491,6 +2389,22 @@ def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
             defaults to None.
     """
     start_time = time()
+    
+    # convert all labels images into markers
+    erosion = config.register_settings["marker_erosion"]
+    erosion_frac = config.register_settings["erosion_frac"]
+    for img_path in img_paths:
+        mod_path = img_path
+        if suffix is not None:
+            mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+        print("Generating label markers for", mod_path)
+        labels_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS)
+        markers = erode_labels(
+            sitk.GetArrayFromImage(labels_sitk), erosion, atlas=atlas)
+        labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, markers)
+        write_reg_images({IMG_LABELS_MARKERS: labels_sitk_markers}, mod_path)
+    
     pool = mp.Pool()
     pool_results = []
     for img_path in img_paths:
@@ -2499,27 +2413,38 @@ def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
             merge_atlas_segmentations, args=(img_path, show, atlas, suffix)))
     heat_maps = []
     for result in pool_results:
+        # edge distance calculation and labels interior image generation 
+        # are multiprocessed, so run them as post-processing tasks to 
+        # avoid nested multiprocessing
         path = result.get()
+        mod_path = path
+        if suffix is not None:
+            mod_path = lib_clrbrain.insert_before_ext(path, suffix)
         
         # make edge image and calculate metrics as post-processing 
         # to avoid nested multiprocessing
         atlas_sitk = load_registered_img(
             path, get_sitk=True, reg_name=IMG_ATLAS)
         atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
-        labels_np = load_registered_img(path, reg_name=IMG_LABELS)
+        labels_sitk = load_registered_img(
+            mod_path, get_sitk=True, reg_name=IMG_LABELS)
+        labels_np = sitk.GetArrayFromImage(labels_sitk)
         dist_to_orig, labels_edge = edge_distances(
             atlas_img_np, labels_np, path=path, 
             spacing=atlas_sitk.GetSpacing()[::-1])
         dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
         labels_sitk_edge = replace_sitk_with_numpy(atlas_sitk, labels_edge)
         
+        # make interior images from labels
+        interior = erode_labels(
+            labels_np, erosion, erosion_frac=erosion_frac, atlas=atlas)
+        labels_sitk_interior = replace_sitk_with_numpy(labels_sitk, interior)
+        
         # write images to same directory as atlas
-        mod_path = path
-        if suffix is not None:
-            mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
         imgs_write = {
             IMG_LABELS_DIST: dist_sitk, 
             IMG_LABELS_EDGE: labels_sitk_edge, 
+            IMG_LABELS_INTERIOR: labels_sitk_interior, 
         }
         write_reg_images(imgs_write, mod_path)
         if show:
@@ -4244,17 +4169,6 @@ if __name__ == "__main__":
         atlas = reg is config.RegisterTypes.make_edge_images
         for img_path in config.filenames:
             make_edge_images(
-                img_path, show, atlas, config.suffix, config.load_labels)
-    
-    elif reg in (
-        config.RegisterTypes.make_marker_images, ):
-        
-        # convert atlas or experiment image and associated labels 
-        # to edge-detected images; labels can be given as atlas dir from 
-        # which labels will be extracted (eg import dir)
-        atlas = reg is config.RegisterTypes.make_marker_images
-        for img_path in config.filenames:
-            make_marker_images(
                 img_path, show, atlas, config.suffix, config.load_labels)
     
     elif reg is config.RegisterTypes.reg_labels_to_atlas:

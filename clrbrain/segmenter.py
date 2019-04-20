@@ -299,7 +299,7 @@ class LabelToMarkerErosion(object):
         stats = (label_id, region_size, region_size_filtered, selem_size)
         return stats, slices, filtered
 
-def labels_to_markers_erosion(labels_img, filter_size=8):
+def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     """Convert a labels image to markers as eroded labels via multiprocessing.
     
     These markers can be used in segmentation algorithms such as 

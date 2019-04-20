@@ -2276,8 +2276,8 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, atlas=True):
     
     return eroded
 
-def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
-    """Merge manual and automated segmentations of an atlas.
+def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
+    """Segment an atlas using its previously generated edge map.
     
     Labels may not match their own underlying atlas image well, 
     particularly in the orthogonal directions in which the labels 
@@ -2373,7 +2373,7 @@ def merge_atlas_segmentations(path_atlas, show=True, atlas=True, suffix=None):
     if show: sitk.Show(labels_sitk_seg)
     return path_atlas
 
-def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
+def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     """Merge atlas segmentations for a list of files as a multiprocessing 
     wrapper for :func:``merge_atlas_segmentations``, after which 
     edge image post-processing is performed separately since it 
@@ -2408,10 +2408,10 @@ def merge_atlas_segmentations_mp(img_paths, show=True, atlas=True, suffix=None):
     pool = mp.Pool()
     pool_results = []
     for img_path in img_paths:
-        print("making image", img_path)
+        print("setting up atlas segmentation merge for", img_path)
+        # convert labels image into markers
         pool_results.append(pool.apply_async(
-            merge_atlas_segmentations, args=(img_path, show, atlas, suffix)))
-    heat_maps = []
+            edge_aware_segmentation, args=(img_path, show, atlas, suffix)))
     for result in pool_results:
         # edge distance calculation and labels interior image generation 
         # are multiprocessed, so run them as post-processing tasks to 
@@ -4181,7 +4181,7 @@ if __name__ == "__main__":
         
         # merge various forms of atlas segmentations
         atlas = reg is config.RegisterTypes.merge_atlas_segs
-        merge_atlas_segmentations_mp(
+        merge_atlas_segmentations(
             config.filenames, show=show, atlas=atlas, suffix=config.suffix)
     
     elif reg is config.RegisterTypes.vol_stats:

@@ -2226,8 +2226,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     
     # make labels edge and edge distance images
     dist_to_orig, labels_edge = edge_distances(
-        atlas_np, labels_img_np, atlas_edge, 
-        spacing=atlas_sitk.GetSpacing()[::-1])
+        labels_img_np, atlas_edge, spacing=atlas_sitk.GetSpacing()[::-1])
     dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
     labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
     
@@ -2421,19 +2420,14 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         if suffix is not None:
             mod_path = lib_clrbrain.insert_before_ext(path, suffix)
         
-        # make edge image and calculate metrics as post-processing 
-        # to avoid nested multiprocessing
-        atlas_sitk = load_registered_img(
-            path, get_sitk=True, reg_name=IMG_ATLAS)
-        atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
+        # make edge distance images and stats
         labels_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_LABELS)
         labels_np = sitk.GetArrayFromImage(labels_sitk)
         dist_to_orig, labels_edge = edge_distances(
-            atlas_img_np, labels_np, path=path, 
-            spacing=atlas_sitk.GetSpacing()[::-1])
-        dist_sitk = replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
-        labels_sitk_edge = replace_sitk_with_numpy(atlas_sitk, labels_edge)
+            labels_np, path=path, spacing=labels_sitk.GetSpacing()[::-1])
+        dist_sitk = replace_sitk_with_numpy(labels_sitk, dist_to_orig)
+        labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
         
         # make interior images from labels
         interior = erode_labels(
@@ -2455,12 +2449,10 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     pool.join()
     print("time elapsed for merging atlas segmentations:", time() - start_time)
 
-def edge_distances(atlas_img_np, labels, atlas_edge=None, path=None, 
-                   spacing=None):
+def edge_distances(labels, atlas_edge=None, path=None, spacing=None):
     """Measure the distance between edge images.
     
     Args:
-        atlas_img_np: Atlas image as a Numpy array.
         labels: Labels image as Numpy array.
         atlas_edge: Image as a Numpy array of the atlas reduced to its edges. 
             Defaults to None to load from the corresponding registered 

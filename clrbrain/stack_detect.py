@@ -197,6 +197,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     detection_time = time() - time_detection_start
     
     # prune blobs in overlapping portions of sub-ROIs
+    segments_all = None
+    pruning_time = None
+    '''
     time_pruning_start = time()
     segments_all, df_pruning = _prune_blobs_mp(
         seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels)
@@ -223,6 +226,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             blob_pruning_means, path_pruning_means, show=" ")
     else:
         print("no blob ratios found")
+    '''
     
     '''# report any remaining duplicates
     np.set_printoptions(linewidth=500, threshold=10000000)
@@ -287,7 +291,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         outfile_image5d_proc.close()
     
     outfile_info_proc = open(filename_info_proc, "wb")
-    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all, 
+    #np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all, 
+    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=seg_rois, 
              resolutions=detector.resolutions, 
              basename=os.path.basename(config.filename), # only save name
              offset=offset, roi_size=roi_size) # None unless explicitly set

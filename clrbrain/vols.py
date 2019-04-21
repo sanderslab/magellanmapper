@@ -21,7 +21,10 @@ LabelMetrics = Enum(
     "LabelMetrics", [
         "Region", "Volume", "Nuclei", "Density", 
         "VolMean", "NucMean", "DensityMean", 
-        "VarNuclei", "VarIntensity", "VarIntensInterior", "VarIntensBorder", 
+        "VarNuclei", 
+        "VarIntensity", "VarIntensInterior", "VarIntensBorder", 
+        "MedIntensity", "MedIntensInterior", "MedIntensBorder", 
+        "EntropyIntensity", "EntropyIntensInterior", "EntropyIntensBorder", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean"
     ]
 )
@@ -134,9 +137,13 @@ class MeasureLabel(object):
     # metric keys
     _COUNT_METRICS = (LabelMetrics.Volume, LabelMetrics.Nuclei)
     _VAR_METRICS = (
-        LabelMetrics.VolMean, LabelMetrics.NucMean, 
-        LabelMetrics.VarNuclei, LabelMetrics.VarIntensity, 
-        LabelMetrics.VarIntensInterior, LabelMetrics.VarIntensBorder)
+        LabelMetrics.VolMean, LabelMetrics.NucMean, LabelMetrics.VarNuclei, 
+        LabelMetrics.VarIntensity, LabelMetrics.VarIntensInterior, 
+        LabelMetrics.VarIntensBorder, 
+        LabelMetrics.MedIntensity, LabelMetrics.MedIntensInterior, 
+        LabelMetrics.MedIntensBorder, 
+        LabelMetrics.EntropyIntensity, LabelMetrics.EntropyIntensInterior, 
+        LabelMetrics.EntropyIntensBorder)
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
@@ -224,7 +231,21 @@ class MeasureLabel(object):
         print("counts within label {}: {}"
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
         return label_ids, metrics
-
+    
+    @classmethod
+    def region_props(cls, region, metrics, keys):
+        """Measure properties for a region and add to a dictionary.
+        
+        Args:
+            region: Region to measure, which can be a flattened array.
+            metrics: Dictionary to store metrics.
+            keys: Sequence of keys corresponding to standard deviation, 
+                median, and Shannon Entropy measurements.
+        """
+        metrics[keys[0]] = np.std(region)
+        metrics[keys[1]] = np.median(region)
+        metrics[keys[2]] = measure.shannon_entropy(region)
+    
     @classmethod
     def measure_variation(cls, label_ids):
         """Measure the variation in underlying atlas intensity.
@@ -264,31 +285,39 @@ class MeasureLabel(object):
                 size = np.sum(seg_mask)
                 if size > 0:
                     # variation in intensity of underlying atlas/sample region
-                    var_inten = np.std(cls.atlas_img_np[seg_mask])
+                    vals = dict((key, np.nan) for key in cls._VAR_METRICS)
+                    vals[LabelMetrics.VolMean] = size
+                    atlas_mask = cls.atlas_img_np[seg_mask]
+                    cls.region_props(
+                        atlas_mask, vals, 
+                        (LabelMetrics.VarIntensity, LabelMetrics.MedIntensity, 
+                         LabelMetrics.EntropyIntensity))
                     
-                    var_intens_interior = np.nan
-                    var_intens_border = np.nan
                     if cls.labels_interior is not None:
                         # inner vs border variability
                         interior_mask = cls.labels_interior == seg_id
-                        var_intens_interior = np.std(
-                            cls.atlas_img_np[interior_mask])
                         border_mask = np.logical_xor(seg_mask, interior_mask)
-                        var_intens_border = np.std(
-                            cls.atlas_img_np[border_mask])
+                        atlas_interior = cls.atlas_img_np[interior_mask]
+                        atlas_border = cls.atlas_img_np[border_mask]
+                        cls.region_props(
+                            atlas_interior, vals, 
+                            (LabelMetrics.VarIntensInterior, 
+                             LabelMetrics.MedIntensInterior, 
+                             LabelMetrics.EntropyIntensInterior))
+                        cls.region_props(
+                            atlas_border, vals, 
+                            (LabelMetrics.VarIntensBorder, 
+                             LabelMetrics.MedIntensBorder, 
+                             LabelMetrics.EntropyIntensBorder))
                     
-                    var_dens = np.nan
-                    blobs = np.nan
                     if cls.heat_map is not None:
                         # number of blob and variation in blob density
                         blobs_per_px = cls.heat_map[seg_mask]
-                        var_dens = np.std(blobs_per_px)
-                        blobs = np.sum(blobs_per_px)
+                        vals[LabelMetrics.VarNuclei] = np.std(blobs_per_px)
+                        vals[LabelMetrics.NucMean] = np.sum(blobs_per_px)
                     
-                    vals = (size, blobs, var_dens, var_inten, 
-                            var_intens_interior, var_intens_border)
-                    for metric, val in zip(cls._VAR_METRICS, vals):
-                        metrics[metric].append(val)
+                    for metric in cls._VAR_METRICS:
+                        metrics[metric].append(vals[metric])
         else:
             # get sub-region stats stored in data frame
             labels = cls.df.loc[cls.df[LabelMetrics.Region.name].isin(seg_ids)]
@@ -447,6 +476,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     totals = {}
     for result in pool_results:
         # get metrics by label
+        # TODO: convert to dict with LabelMetrics.name keys, replace 
+        # values converted to physical units, and add to metrics dict directly
         label_id, label_metrics = result.get()
         label_size = label_metrics[LabelMetrics.Volume]
         nuc = label_metrics[LabelMetrics.Nuclei]
@@ -456,6 +487,13 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         var_inten = label_metrics[LabelMetrics.VarIntensity]
         var_inten_interior = label_metrics[LabelMetrics.VarIntensInterior]
         var_inten_border = label_metrics[LabelMetrics.VarIntensBorder]
+        med_inten = label_metrics[LabelMetrics.MedIntensity]
+        med_inten_interior = label_metrics[LabelMetrics.MedIntensInterior]
+        med_inten_border = label_metrics[LabelMetrics.MedIntensBorder]
+        entropy_inten = label_metrics[LabelMetrics.EntropyIntensity]
+        entropy_inten_interior = label_metrics[
+            LabelMetrics.EntropyIntensInterior]
+        entropy_inten_border = label_metrics[LabelMetrics.EntropyIntensBorder]
         edge_dist_sum = label_metrics[LabelMetrics.EdgeDistSum]
         edge_dist_mean = label_metrics[LabelMetrics.EdgeDistMean]
         edge_size = label_metrics[LabelMetrics.EdgeSize]
@@ -489,6 +527,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
                 vol_physical, nuc, density, 
                 vol_mean_physical, nuc_mean, dens_mean, 
                 var_nuc, var_inten, var_inten_interior, var_inten_border, 
+                med_inten, med_inten_interior, med_inten_border, 
+                entropy_inten, entropy_inten_interior, entropy_inten_border, 
                 edge_size, edge_dist_sum, edge_dist_mean)
         for col, val in zip(cols, vals):
             metrics.setdefault(col, []).append(val)

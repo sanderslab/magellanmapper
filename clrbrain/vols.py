@@ -456,8 +456,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     
     metrics = {}
     grouping[config.SIDE_KEY] = None
-    cols = ("Sample", *grouping.keys(), 
-            *[member.name for member in LabelMetrics])
+    cols_metadata = ("Sample", *grouping.keys())
     pool = mp.Pool()
     pool_results = []
     if label_ids is None:
@@ -476,30 +475,21 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     totals = {}
     for result in pool_results:
         # get metrics by label
-        # TODO: convert to dict with LabelMetrics.name keys, replace 
-        # values converted to physical units, and add to metrics dict directly
         label_id, label_metrics = result.get()
         label_size = label_metrics[LabelMetrics.Volume]
         nuc = label_metrics[LabelMetrics.Nuclei]
-        vol_mean = label_metrics[LabelMetrics.VolMean]
         nuc_mean = label_metrics[LabelMetrics.NucMean]
-        var_nuc = label_metrics[LabelMetrics.VarNuclei]
-        var_inten = label_metrics[LabelMetrics.VarIntensity]
         var_inten_interior = label_metrics[LabelMetrics.VarIntensInterior]
         var_inten_border = label_metrics[LabelMetrics.VarIntensBorder]
-        med_inten = label_metrics[LabelMetrics.MedIntensity]
         med_inten_interior = label_metrics[LabelMetrics.MedIntensInterior]
         med_inten_border = label_metrics[LabelMetrics.MedIntensBorder]
-        entropy_inten = label_metrics[LabelMetrics.EntropyIntensity]
         entropy_inten_interior = label_metrics[
             LabelMetrics.EntropyIntensInterior]
         entropy_inten_border = label_metrics[LabelMetrics.EntropyIntensBorder]
-        edge_dist_sum = label_metrics[LabelMetrics.EdgeDistSum]
-        edge_dist_mean = label_metrics[LabelMetrics.EdgeDistMean]
         edge_size = label_metrics[LabelMetrics.EdgeSize]
         
         vol_physical = label_size
-        vol_mean_physical = vol_mean
+        vol_mean_physical = label_metrics[LabelMetrics.VolMean]
         if df is None:
             # convert to physical units at the given value unless 
             # using data frame, where values presumably already converted
@@ -513,6 +503,10 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         # calculate densities based on physical volumes
         density = nuc / vol_physical
         dens_mean = nuc_mean / vol_mean_physical
+        label_metrics[LabelMetrics.Volume] = vol_physical
+        label_metrics[LabelMetrics.Density] = density
+        label_metrics[LabelMetrics.VolMean] = vol_mean_physical
+        label_metrics[LabelMetrics.DensityMean] = dens_mean
         
         # set side, assuming that positive labels are left
         if np.all(np.greater(label_id, 0)):
@@ -523,28 +517,25 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
             side = "both"
         grouping[config.SIDE_KEY] = side
         disp_id = get_single_label(label_id)
-        vals = (sample, *grouping.values(), abs(disp_id), 
-                vol_physical, nuc, density, 
-                vol_mean_physical, nuc_mean, dens_mean, 
-                var_nuc, var_inten, var_inten_interior, var_inten_border, 
-                med_inten, med_inten_interior, med_inten_border, 
-                entropy_inten, entropy_inten_interior, entropy_inten_border, 
-                edge_size, edge_dist_sum, edge_dist_mean)
-        for col, val in zip(cols, vals):
+        label_metrics[LabelMetrics.Region] = abs(disp_id)
+        vals = (sample, *grouping.values())
+        for col, val in zip(cols_metadata, vals):
             metrics.setdefault(col, []).append(val)
+        for col in LabelMetrics:
+            metrics.setdefault(col.name, []).append(label_metrics[col])
         
         # weight and accumulate total metrics
         totals.setdefault(LabelMetrics.EdgeDistSum, []).append(
-            edge_dist_sum * edge_size)
+            label_metrics[LabelMetrics.EdgeDistSum] * edge_size)
         totals.setdefault(LabelMetrics.EdgeDistMean, []).append(
-            edge_dist_mean * edge_size)
+            label_metrics[LabelMetrics.EdgeDistMean] * edge_size)
         totals.setdefault(LabelMetrics.EdgeSize, []).append(edge_size)
         totals.setdefault(LabelMetrics.VarIntensity, []).append(
-            var_inten * label_size)
+            label_metrics[LabelMetrics.VarIntensity] * label_size)
         totals.setdefault("vol", []).append(label_size)
         totals.setdefault(LabelMetrics.Volume, []).append(vol_physical)
         totals.setdefault(LabelMetrics.VarNuclei, []).append(
-            var_nuc * label_size)
+            label_metrics[LabelMetrics.VarNuclei] * label_size)
         totals.setdefault(LabelMetrics.Nuclei, []).append(nuc)
         totals.setdefault(LabelMetrics.VolMean, []).append(
             vol_mean_physical * label_size)
@@ -555,26 +546,30 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     df = pd.DataFrame(metrics)
     print(df.to_csv())
     
-    # add row with total metrics from weighted means
+    # build data frame of total metrics from weighted means
     metrics_all = {}
     grouping[config.SIDE_KEY] = "both"
+    vals = (sample, *grouping.values())
+    for col, val in zip(cols_metadata, vals):
+        metrics_all.setdefault(col, []).append(val)
     for key in totals.keys():
         totals[key] = np.nansum(totals[key])
         if totals[key] == 0: totals[key] = np.nan
+    
     # divide weighted values by sum of corresponding weights
-    vals = (sample, *grouping.values(), "all", totals[LabelMetrics.Volume], 
-            totals[LabelMetrics.Nuclei], 
-            totals[LabelMetrics.Nuclei] / totals[LabelMetrics.Volume], 
-            totals[LabelMetrics.VolMean] / totals["vol"], 
-            totals[LabelMetrics.NucMean] / totals["vol"], 
-            totals[LabelMetrics.NucMean] / totals[LabelMetrics.VolMean],
-            totals[LabelMetrics.VarNuclei] / totals["vol"], 
-            totals[LabelMetrics.VarIntensity] / totals["vol"], 
-            totals[LabelMetrics.EdgeSize], 
-            totals[LabelMetrics.EdgeDistSum], 
-            totals[LabelMetrics.EdgeDistMean] / totals[LabelMetrics.EdgeSize])
-    for col, val in zip(cols, vals):
-        metrics_all.setdefault(col, []).append(val)
+    totals[LabelMetrics.Region] = "all"
+    totals[LabelMetrics.Density] = (
+        totals[LabelMetrics.Nuclei] / totals[LabelMetrics.Volume])
+    totals[LabelMetrics.VolMean] /= totals["vol"]
+    totals[LabelMetrics.NucMean] /= totals["vol"]
+    totals[LabelMetrics.DensityMean] = (
+        totals[LabelMetrics.NucMean] / totals[LabelMetrics.VolMean])
+    totals[LabelMetrics.VarNuclei] /= totals["vol"]
+    totals[LabelMetrics.VarIntensity] /= totals["vol"]
+    totals[LabelMetrics.EdgeDistMean] /= totals[LabelMetrics.EdgeSize]
+    for col in LabelMetrics:
+        if col in totals:
+            metrics_all.setdefault(col.name, []).append(totals[col])
     df_all = pd.DataFrame(metrics_all)
     print(df_all.to_csv())
     

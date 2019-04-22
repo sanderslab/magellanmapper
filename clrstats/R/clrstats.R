@@ -148,11 +148,11 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   col.effect <- "estimate"
   if (model == kModel[5] | model == kModel[7]) {
     # Student's t-test
-    result <- t.test(val.conds[[1]], val.conds[[2]], paired=paired)
+    result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
   } else if (model == kModel[6] | model == kModel[8]) {
     # Wilcoxon test (Mann-Whitney if not paired)
     result <- wilcox.test(
-      val.conds[[1]], val.conds[[2]], paired=paired, conf.int=TRUE)
+      val.conds[[2]], val.conds[[1]], paired=paired, conf.int=TRUE)
   } else if (model == kModel[9]) {
     # Fligner-Killen test of variance
     result <- fligner.test(vals, conditions)

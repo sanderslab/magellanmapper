@@ -43,6 +43,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   colors_parents <- colors[parents.indices]
   
   # base plot -log p vs effect size
+  xlab <- "Effects"
   if (log.scale.x) {
     # log scale x, rescaling so abs vals of x are >= 1 to get pos log vals 
     # and changing back to original sign
@@ -52,6 +53,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     x.log[x.neg] <- -1 * x.log[x.neg]
     print(data.frame(x, x.norm, x.neg, x.log, y))
     x <- x.log
+    xlab <- "log(normalized effects)"
   }
   x.max <- max(abs(x))
   if (is.element(meas, names(kMeasNames))) {
@@ -61,7 +63,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   }
   plot(
     x, y, xlim=c(-1 * x.max, x.max), 
-    main=title, xlab="Effects", 
+    main=title, xlab=xlab, 
     ylab="-log10(p)", type="p", las=1, pch=16, cex=size, col=colors_parents)
   # vertical line to denote x = 0
   abline(v=0, lty="dashed", col=gray(0.5, 0.5))

@@ -25,6 +25,7 @@ LabelMetrics = Enum(
         "VarIntensity", "VarIntensInterior", "VarIntensBorder", 
         "MedIntensity", "MedIntensInterior", "MedIntensBorder", 
         "EntropyIntensity", "EntropyIntensInterior", "EntropyIntensBorder", 
+        "VarIntensDiff", "MedIntensDiff", "EntropyIntensDiff", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean"
     ]
 )
@@ -143,7 +144,9 @@ class MeasureLabel(object):
         LabelMetrics.MedIntensity, LabelMetrics.MedIntensInterior, 
         LabelMetrics.MedIntensBorder, 
         LabelMetrics.EntropyIntensity, LabelMetrics.EntropyIntensInterior, 
-        LabelMetrics.EntropyIntensBorder)
+        LabelMetrics.EntropyIntensBorder,
+        LabelMetrics.VarIntensDiff, LabelMetrics.MedIntensDiff, 
+        LabelMetrics.EntropyIntensDiff)
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
@@ -309,6 +312,17 @@ class MeasureLabel(object):
                             (LabelMetrics.VarIntensBorder, 
                              LabelMetrics.MedIntensBorder, 
                              LabelMetrics.EntropyIntensBorder))
+                        
+                        # get abs diffs
+                        vals[LabelMetrics.VarIntensDiff] = abs(
+                            vals[LabelMetrics.VarIntensBorder] 
+                                - vals[LabelMetrics.VarIntensInterior])
+                        vals[LabelMetrics.MedIntensDiff] = abs(
+                            vals[LabelMetrics.MedIntensBorder] 
+                                - vals[LabelMetrics.MedIntensInterior])
+                        vals[LabelMetrics.EntropyIntensDiff] = abs(
+                            vals[LabelMetrics.EntropyIntensBorder] 
+                                - vals[LabelMetrics.EntropyIntensInterior])
                     
                     if cls.heat_map is not None:
                         # number of blob and variation in blob density
@@ -479,13 +493,6 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         label_size = label_metrics[LabelMetrics.Volume]
         nuc = label_metrics[LabelMetrics.Nuclei]
         nuc_mean = label_metrics[LabelMetrics.NucMean]
-        var_inten_interior = label_metrics[LabelMetrics.VarIntensInterior]
-        var_inten_border = label_metrics[LabelMetrics.VarIntensBorder]
-        med_inten_interior = label_metrics[LabelMetrics.MedIntensInterior]
-        med_inten_border = label_metrics[LabelMetrics.MedIntensBorder]
-        entropy_inten_interior = label_metrics[
-            LabelMetrics.EntropyIntensInterior]
-        entropy_inten_border = label_metrics[LabelMetrics.EntropyIntensBorder]
         edge_size = label_metrics[LabelMetrics.EdgeSize]
         
         vol_physical = label_size
@@ -501,12 +508,10 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
                 vol_mean_physical /= unit_factor
         
         # calculate densities based on physical volumes
-        density = nuc / vol_physical
-        dens_mean = nuc_mean / vol_mean_physical
         label_metrics[LabelMetrics.Volume] = vol_physical
-        label_metrics[LabelMetrics.Density] = density
+        label_metrics[LabelMetrics.Density] = nuc / vol_physical
         label_metrics[LabelMetrics.VolMean] = vol_mean_physical
-        label_metrics[LabelMetrics.DensityMean] = dens_mean
+        label_metrics[LabelMetrics.DensityMean] = nuc_mean / vol_mean_physical
         
         # set side, assuming that positive labels are left
         if np.all(np.greater(label_id, 0)):

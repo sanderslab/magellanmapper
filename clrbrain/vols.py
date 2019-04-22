@@ -23,9 +23,13 @@ LabelMetrics = Enum(
         "VolMean", "NucMean", "DensityMean", 
         "VarNuclei", 
         "VarIntensity", "VarIntensInterior", "VarIntensBorder", 
+        "MeanIntensity", "MeanIntensInterior", "MeanIntensBorder", 
         "MedIntensity", "MedIntensInterior", "MedIntensBorder", 
+        "LowIntensity", "LowIntensInterior", "LowIntensBorder", 
+        "HighIntensity", "HighIntensInterior", "HighIntensBorder", 
         "EntropyIntensity", "EntropyIntensInterior", "EntropyIntensBorder", 
-        "VarIntensDiff", "MedIntensDiff", "EntropyIntensDiff", 
+        "VarIntensDiff", "MeanIntensDiff", "MedIntensDiff", 
+        "LowIntensDiff", "HighIntensDiff", "EntropyIntensDiff", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean"
     ]
 )
@@ -141,12 +145,19 @@ class MeasureLabel(object):
         LabelMetrics.VolMean, LabelMetrics.NucMean, LabelMetrics.VarNuclei, 
         LabelMetrics.VarIntensity, LabelMetrics.VarIntensInterior, 
         LabelMetrics.VarIntensBorder, 
+        LabelMetrics.MeanIntensity, LabelMetrics.MeanIntensInterior, 
+        LabelMetrics.MeanIntensBorder, 
         LabelMetrics.MedIntensity, LabelMetrics.MedIntensInterior, 
         LabelMetrics.MedIntensBorder, 
+        LabelMetrics.LowIntensity, LabelMetrics.LowIntensInterior, 
+        LabelMetrics.LowIntensBorder, 
+        LabelMetrics.HighIntensity, LabelMetrics.HighIntensInterior, 
+        LabelMetrics.HighIntensBorder, 
         LabelMetrics.EntropyIntensity, LabelMetrics.EntropyIntensInterior, 
         LabelMetrics.EntropyIntensBorder,
-        LabelMetrics.VarIntensDiff, LabelMetrics.MedIntensDiff, 
-        LabelMetrics.EntropyIntensDiff)
+        LabelMetrics.VarIntensDiff, LabelMetrics.MeanIntensDiff, 
+        LabelMetrics.MedIntensDiff, LabelMetrics.LowIntensDiff, 
+        LabelMetrics.HighIntensDiff, LabelMetrics.EntropyIntensDiff)
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
@@ -245,9 +256,15 @@ class MeasureLabel(object):
             keys: Sequence of keys corresponding to standard deviation, 
                 median, and Shannon Entropy measurements.
         """
-        metrics[keys[0]] = np.std(region)
-        metrics[keys[1]] = np.median(region)
-        metrics[keys[2]] = measure.shannon_entropy(region)
+        if region.size < 1:
+            for key in keys: metrics[key] = np.nan
+        else:
+            print(region.size, len(region))
+            metrics[keys[0]] = np.std(region)
+            metrics[keys[1]] = np.mean(region)
+            metrics[keys[2]] = np.median(region)
+            metrics[keys[3]], metrics[keys[4]] = np.percentile(region, (5, 95))
+            metrics[keys[5]] = measure.shannon_entropy(region)
     
     @classmethod
     def measure_variation(cls, label_ids):
@@ -293,7 +310,11 @@ class MeasureLabel(object):
                     atlas_mask = cls.atlas_img_np[seg_mask]
                     cls.region_props(
                         atlas_mask, vals, 
-                        (LabelMetrics.VarIntensity, LabelMetrics.MedIntensity, 
+                        (LabelMetrics.VarIntensity, 
+                         LabelMetrics.MeanIntensity, 
+                         LabelMetrics.MedIntensity, 
+                         LabelMetrics.LowIntensity, 
+                         LabelMetrics.HighIntensity, 
                          LabelMetrics.EntropyIntensity))
                     
                     if cls.labels_interior is not None:
@@ -305,21 +326,36 @@ class MeasureLabel(object):
                         cls.region_props(
                             atlas_interior, vals, 
                             (LabelMetrics.VarIntensInterior, 
+                             LabelMetrics.MeanIntensInterior, 
                              LabelMetrics.MedIntensInterior, 
+                             LabelMetrics.LowIntensInterior, 
+                             LabelMetrics.HighIntensInterior, 
                              LabelMetrics.EntropyIntensInterior))
                         cls.region_props(
                             atlas_border, vals, 
                             (LabelMetrics.VarIntensBorder, 
+                             LabelMetrics.MeanIntensBorder, 
                              LabelMetrics.MedIntensBorder, 
+                             LabelMetrics.LowIntensBorder, 
+                             LabelMetrics.HighIntensBorder, 
                              LabelMetrics.EntropyIntensBorder))
                         
                         # get abs diffs
                         vals[LabelMetrics.VarIntensDiff] = abs(
                             vals[LabelMetrics.VarIntensBorder] 
                                 - vals[LabelMetrics.VarIntensInterior])
+                        vals[LabelMetrics.MeanIntensDiff] = abs(
+                            vals[LabelMetrics.MeanIntensBorder] 
+                                - vals[LabelMetrics.MeanIntensInterior])
                         vals[LabelMetrics.MedIntensDiff] = abs(
                             vals[LabelMetrics.MedIntensBorder] 
                                 - vals[LabelMetrics.MedIntensInterior])
+                        vals[LabelMetrics.LowIntensDiff] = abs(
+                            vals[LabelMetrics.LowIntensBorder] 
+                                - vals[LabelMetrics.LowIntensInterior])
+                        vals[LabelMetrics.HighIntensDiff] = abs(
+                            vals[LabelMetrics.HighIntensBorder] 
+                                - vals[LabelMetrics.HighIntensInterior])
                         vals[LabelMetrics.EntropyIntensDiff] = abs(
                             vals[LabelMetrics.EntropyIntensBorder] 
                                 - vals[LabelMetrics.EntropyIntensInterior])

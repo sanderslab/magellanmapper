@@ -555,6 +555,7 @@ setupConfig <- function(name=NULL) {
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
     config.env$Measurements <- kMeas[6]
     config.env$PlotVolcano <- TRUE
+    config.env$VolcanoLabels <- TRUE
     
   } else if (name == "aba") {
     # multiple distinct atlases
@@ -572,7 +573,8 @@ setupConfig <- function(name=NULL) {
     
   } else if (name == "wt") {
     # WT samples
-    config.env$Measurements <- kMeas[4:7]
+    config.env$Measurements <- kMeas[c(4:7, 10:15)]
+    config.env$VolcanoLabels <- FALSE
     
   } else if (name == "skinny") {
     # very narrow plots
@@ -590,9 +592,9 @@ runStats <- function() {
   
   # setup configuration environment
   setupConfig()
-  setupConfig("aba")
+  #setupConfig("aba")
   #setupConfig("dsc")
-  #setupConfig("wt")
+  setupConfig("wt")
   #setupConfig("square")
   
   # setup measurement and model types
@@ -624,10 +626,13 @@ runStats <- function() {
     
     if (config.env$PlotVolcano) {
       # plot effects and p's
-      volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3))
-      volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5))
+      volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3), 
+                  labels=config.env$VolcanoLabels)
+      volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5), 
+                  labels=config.env$VolcanoLabels)
       # ":" special character automatically changed to "."
-      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25))
+      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25), 
+                  labels=config.env$VolcanoLabels)
     }
   }
 }

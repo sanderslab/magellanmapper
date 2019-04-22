@@ -1,6 +1,6 @@
 
 volcanoPlot <- function(stats, meas, interaction, thresh=NULL, 
-                        log.scale.x=TRUE) {
+                        log.scale.x=TRUE, labels=TRUE) {
   # Generate a volcano plot.
   #
   # Args:
@@ -79,7 +79,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     y.lbl <- y[show.lbl]
     lbls <- lbls[show.lbl]
   }
-  if (length(lbls) > 0) {
+  if (labels & length(lbls) > 0) {
     # place text labels; "text" has full overlap, "thigmophobe.labels" and 
     # "pointLabels" have varying degrees of overlap, and "addTextLabels" has 
     # the least overlap

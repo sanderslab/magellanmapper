@@ -190,13 +190,22 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
           .format(denoise_max_shape, max_pixels))
     sub_rois, sub_rois_offsets = chunking.stack_splitter(
         roi, max_pixels, overlap)
-    # TODO: option to distribute groups of sub-ROIs to different servers 
-    # for blob detection
-    seg_rois = detect_blobs_sub_rois(
-        sub_rois, sub_rois_offsets, denoise_max_shape)
+    
+    filename_info_proc_unpruned = lib_clrbrain.insert_before_ext(
+        filename_info_proc, "_unpruned")
+    if os.path.exists(filename_info_proc_unpruned):
+        output_info = np.load(filename_info_proc_unpruned)
+        seg_rois = output_info["segments"]
+        print("loade saved seg ROIs of shape", seg_rois.shape)
+    else:
+        # TODO: option to distribute groups of sub-ROIs to different servers 
+        # for blob detection
+        seg_rois = detect_blobs_sub_rois(
+            sub_rois, sub_rois_offsets, denoise_max_shape)
     detection_time = time() - time_detection_start
     
     # prune blobs in overlapping portions of sub-ROIs
+    '''
     segments_all = None
     pruning_time = None
     '''
@@ -226,7 +235,6 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             blob_pruning_means, path_pruning_means, show=" ")
     else:
         print("no blob ratios found")
-    '''
     
     '''# report any remaining duplicates
     np.set_printoptions(linewidth=500, threshold=10000000)

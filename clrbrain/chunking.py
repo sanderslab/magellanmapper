@@ -257,19 +257,20 @@ def merge_blobs(blob_rois):
         for y in range(blob_rois.shape[1]):
             for x in range(blob_rois.shape[2]):
                 coord = (z, y, x)
-                # add temporary tag with sub-ROI coordinate
                 blobs = blob_rois[coord]
-                extras = np.zeros((blobs.shape[0], 3), dtype=int)
-                extras[:] = coord
-                blobs = np.concatenate((blobs, extras), axis=1)
                 #print("checking blobs in {}:\n{}".format(coord, blobs))
                 if blobs is None:
                     lib_clrbrain.printv("no blobs to add, skipping")
-                elif blobs_all is None:
-                    lib_clrbrain.printv("initializing master blobs list")
-                    blobs_all = blobs
                 else:
-                    blobs_all = np.concatenate((blobs_all, blobs))
+                    # add temporary tag with sub-ROI coordinate
+                    extras = np.zeros((blobs.shape[0], 3), dtype=int)
+                    extras[:] = coord
+                    blobs = np.concatenate((blobs, extras), axis=1)
+                    if blobs_all is None:
+                        lib_clrbrain.printv("initializing master blobs list")
+                        blobs_all = blobs
+                    else:
+                        blobs_all = np.concatenate((blobs_all, blobs))
     return blobs_all
 
 if __name__ == "__main__":

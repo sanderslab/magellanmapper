@@ -193,15 +193,17 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     
     filename_info_proc_unpruned = lib_clrbrain.insert_before_ext(
         filename_info_proc, "_unpruned")
+    save_unpruned = False
     if os.path.exists(filename_info_proc_unpruned):
         output_info = np.load(filename_info_proc_unpruned)
         seg_rois = output_info["segments"]
-        print("loade saved seg ROIs of shape", seg_rois.shape)
+        print("loaded saved seg ROIs of shape", seg_rois.shape)
     else:
         # TODO: option to distribute groups of sub-ROIs to different servers 
         # for blob detection
         seg_rois = detect_blobs_sub_rois(
             sub_rois, sub_rois_offsets, denoise_max_shape)
+        save_unpruned = True
     detection_time = time() - time_detection_start
     
     # prune blobs in overlapping portions of sub-ROIs
@@ -299,8 +301,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         outfile_image5d_proc.close()
     
     outfile_info_proc = open(filename_info_proc, "wb")
-    #np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all, 
-    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=seg_rois, 
+    blobs = seg_rois if save_unpruned else segments_all
+    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=blobs, 
              resolutions=detector.resolutions, 
              basename=os.path.basename(config.filename), # only save name
              offset=offset, roi_size=roi_size) # None unless explicitly set

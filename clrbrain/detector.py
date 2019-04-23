@@ -447,7 +447,30 @@ def remove_close_blobs_within_array(blobs, region, tol):
                 blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
-def remove_close_blobs_within_sorted_array(blobs, tol, blobs_next=None):
+def meas_pruning_ratio(num_blobs_orig, num_blobs_after_pruning, num_blobs_next):
+    """Measure blob pruning ratio.
+    
+    Args:
+        num_blobs_orig: Number of original blobs, before pruning.
+        num_blobs_after_pruning: Number of blobs after pruning.
+        num_blobs_next: Number of a blobs in an adjacent segment, presumably 
+            of similar size as that of the original blobs.
+    
+    Returns:
+        Pruning ratios as a tuple of the original number of blobs, 
+        blobs after pruning to original, and blobs after pruning to 
+        the next region.
+    """
+    ratios = None
+    if num_blobs_next > 0 and num_blobs_orig > 0:
+        # calculate pruned:original and pruned:adjacent blob ratios
+        print("num_blobs_orig: {}, blobs after pruning: {}, num_blobs_next: {}"
+              .format(num_blobs_orig, num_blobs_after_pruning, num_blobs_next))
+        ratios = (num_blobs_orig, num_blobs_after_pruning / num_blobs_orig, 
+                  num_blobs_after_pruning / num_blobs_next)
+    return ratios
+
+def remove_close_blobs_within_sorted_array(blobs, tol):
     """Removes close blobs within a given array, first sorting the array by
     z, y, x.
     
@@ -458,21 +481,16 @@ def remove_close_blobs_within_sorted_array(blobs, tol, blobs_next=None):
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be pruned in
             the returned array.
-        blobs_next: Array similar to ``blobs`` but from the immediately 
-           adjacent region; defaults to None.
     
     Return:
         Tuple of all blobs, a blobs array without blobs falling inside 
-        the tolerance range, and ratios, a tuple of pruned:original blobs 
-        and pruned:adjacent blobs, where adjacent blobs are the number of 
-        blobs in the region corresponding to ``blobs_next``.
+        the tolerance range.
     """
     if blobs is None:
-        return None, None
+        return None
     sort = np.lexsort((blobs[:, 2], blobs[:, 1], blobs[:, 0]))
     blobs = blobs[sort]
     #print("checking sorted blobs for close duplicates:\n{}".format(blobs))
-    num_blobs = len(blobs)
     blobs_all = None
     for blob in blobs:
         # check each blob against all blobs accepted thus far to ensure that
@@ -508,17 +526,7 @@ def remove_close_blobs_within_sorted_array(blobs, tol, blobs_next=None):
                     break
                 i -= 1
     #print("blobs without close duplicates:\n{}".format(blobs_all))
-    ratios = None
-    if blobs_next is not None and num_blobs > 0:
-        # calculate pruned:original and pruned:adjacent blob ratios
-        num_blobs_pruned = len(blobs_all)
-        num_blobs_next = len(blobs_next)
-        print("num_blobs: {}, blobs after pruning: {}, num_blobs_next: {}"
-              .format(num_blobs, num_blobs_pruned, num_blobs_next))
-        if num_blobs_next > 0:
-            ratios = (num_blobs, num_blobs_pruned / num_blobs, 
-                      num_blobs_pruned / num_blobs_next)
-    return blobs_all, ratios
+    return blobs_all
 
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     mask = np.all([

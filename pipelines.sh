@@ -613,7 +613,7 @@ if [[ "$whole_img_proc" != "" ]]; then
   # image into multiple smaller stacks to minimize RAM usage and 
   # further chunking to run by multiprocessing for efficiency
   python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp \
-    --channel $channel --microscope ${microscope[@]}
+    --channel $channel --microscope ${microscope[@]} $EXTRA_ARGS
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
     # upload processed fils to S3

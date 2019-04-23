@@ -395,17 +395,18 @@ def remove_close_blobs(blobs, blobs_master, tol):
     """
     close_master, close = _find_close_blobs(blobs, blobs_master, tol)
     pruned = np.delete(blobs, close, axis=0)
-    if (len(close) > 0):
-        print("{} removed".format(blobs[close][:, 0:4]))
+    #if (len(close) > 0): print("{} removed".format(blobs[close][:, 0:4]))
     
     # shift close blobs to their mean values, storing values in the duplicated
     # coordinates and radius of the blob array after the confirmation value;
     # use the duplicated coordinates to work from any prior shifting; 
     # further duplicate testing will still be based on initial position to
     # allow detection of duplicates that occur in multiple ROI pairs
-    blobs_master[close_master, 6:] = np.around(
-        np.divide(np.add(blobs_master[close_master, 6:], 
-                         blobs[close, 6:]), 2))
+    abs_between = np.around(
+        np.divide(
+            np.add(get_blob_abs_coords(blobs_master[close_master]), 
+                   get_blob_abs_coords(blobs[close])), 2))
+    set_blob_abs_coords(blobs_master[close_master], abs_between)
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
 

@@ -249,7 +249,7 @@ def get_blobs_channel(blobs):
     return blobs[:, 6]
 
 def replace_rel_with_abs_blob_coords(blobs):
-    blobs[:, :3] = blobs[:, 7:]
+    blobs[:, :3] = blobs[:, 7:10]
     return blobs
 
 def blobs_in_channel(blobs, channel):

@@ -392,8 +392,21 @@ class StackPruner(object):
             The results from 
             :meth:``detector.remove_close_blobs_within_sorted_array``.
         """
+        pruner = cls.blobs_to_prune[i]
+        blobs, axis, tol, blobs_next = pruner
+        axis_col = 10 + axis
+        #print("orig blobs in axis {}, i {}\n{}".format(axis, i, blobs))
+        if blobs is None: return None, None
+        blobs_master = blobs[blobs[:, axis_col] == i]
+        blobs = blobs[blobs[:, axis_col] == i + 1]
+        #print("blobs_master in axis {}, i {}\n{}".format(axis, i, blobs_master))
+        #print("blobs to check in axis {}, next i ({})\n{}".format(axis, i + 1, blobs))
+        pruned, blobs_master = detector.remove_close_blobs(blobs, blobs_master, tol)
+        return np.concatenate((blobs_master, pruned)), None
+        '''
         return detector.remove_close_blobs_within_sorted_array(
             *cls.blobs_to_prune[i])
+        '''
         
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
                     channels):
@@ -507,7 +520,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                     blobs_all_non_ol = np.concatenate(
                         (blobs_all_non_ol, blobs_non_ol))
                 
-                blobs_to_prune.append((blobs_ol, tol, blobs_ol_next))
+                #blobs_to_prune.append((blobs_ol, tol, blobs_ol_next))
+                blobs_to_prune.append((blobs_ol, axis, tol, blobs_ol_next))
             
             StackPruner.set_data(blobs_to_prune)
             pool = mp.Pool()

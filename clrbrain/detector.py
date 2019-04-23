@@ -296,10 +296,10 @@ def remove_duplicate_blobs(blobs, region):
           .format(blobs.shape[0] - unique_indices.size))
     return blobs[unique_indices]
 
-def _find_close_blobs(blobs, blobs_master, region, tol):
+def _find_close_blobs(blobs, blobs_master, tol):
     # creates a separate array for each blob in blobs_master to allow
     # comparison for each of its blobs with each blob to add
-    blobs_diffs = np.abs(blobs_master[:, region][:, None] - blobs[:, region])
+    blobs_diffs = np.abs(blobs_master[:, :3][:, None] - blobs[:, :3])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
     #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
     return close_master, close
@@ -377,7 +377,7 @@ def _find_closest_blobs(blobs, blobs_master, tol):
     #print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
-def remove_close_blobs(blobs, blobs_master, region, tol):
+def remove_close_blobs(blobs, blobs_master, tol):
     """Removes blobs that are close to one another.
     
     Args:
@@ -385,8 +385,6 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
             array of [n, [z, row, column, radius]].
         blobs_master: The list by which to check for close blobs, in the same
             format as blobs.
-        region: Slice within each blob to check, such as slice(0, 2) to check
-            for (z, row, column).
         tol: Tolerance to check for closeness, given in the same format
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be pruned in
@@ -395,7 +393,7 @@ def remove_close_blobs(blobs, blobs_master, region, tol):
     Return:
         The blobs array without blobs falling inside the tolerance range.
     """
-    close_master, close = _find_close_blobs(blobs, blobs_master, region, tol)
+    close_master, close = _find_close_blobs(blobs, blobs_master, tol)
     pruned = np.delete(blobs, close, axis=0)
     if (len(close) > 0):
         print("{} removed".format(blobs[close][:, 0:4]))

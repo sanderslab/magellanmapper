@@ -397,16 +397,20 @@ class StackPruner(object):
         axis_col = 10 + axis
         #print("orig blobs in axis {}, i {}\n{}".format(axis, i, blobs))
         if blobs is None: return None, None
+        num_blobs_orig = len(blobs)
         blobs_master = blobs[blobs[:, axis_col] == i]
         blobs = blobs[blobs[:, axis_col] == i + 1]
         #print("blobs_master in axis {}, i {}\n{}".format(axis, i, blobs_master))
         #print("blobs to check in axis {}, next i ({})\n{}".format(axis, i + 1, blobs))
-        pruned, blobs_master = detector.remove_close_blobs(blobs, blobs_master, tol)
-        return np.concatenate((blobs_master, pruned)), None
-        '''
-        return detector.remove_close_blobs_within_sorted_array(
-            *cls.blobs_to_prune[i])
-        '''
+        pruned, blobs_master = detector.remove_close_blobs(
+            blobs, blobs_master, tol)
+        blobs_after_pruning = np.concatenate((blobs_master, pruned))
+        #blobs_after_pruning = detector.remove_close_blobs_within_sorted_array(blobs, tol)
+        pruning_ratios = None
+        if blobs_next is not None:
+            pruning_ratios = detector.meas_pruning_ratio(
+                num_blobs_orig, len(blobs_after_pruning), len(blobs_next))
+        return blobs_after_pruning, pruning_ratios
         
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
                     channels):

@@ -14,7 +14,7 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
           "VarIntensDiff", "MeanIntensDiff", "MedIntensDiff", "LowIntensDiff", 
-          "HighIntensDiff", "EntropyIntensDiff")
+          "HighIntensDiff", "EntropyIntensDiff", "VarIntensBorder")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -573,7 +573,7 @@ setupConfig <- function(name=NULL) {
     
   } else if (name == "wt") {
     # WT samples
-    config.env$Measurements <- kMeas[c(4:7, 10:15)]
+    config.env$Measurements <- kMeas[c(4:7, 10:16)]
     config.env$VolcanoLabels <- FALSE
     
   } else if (name == "skinny") {

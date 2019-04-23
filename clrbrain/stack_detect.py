@@ -205,24 +205,25 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     #print("maxes:", np.amax(segments_all, axis=0))
     
     # get weighted mean of ratios
-    print("\nBlob pruning ratios:")
-    path_pruning = "blob_ratios.csv" if save_dfs else None
-    df_pruning_all = stats.data_frames_to_csv(
-        df_pruning, path_pruning, show=" ")
-    cols = df_pruning_all.columns.tolist()
-    blob_pruning_means = {}
-    if "blobs" in cols:
-        blobs_unpruned = df_pruning_all["blobs"]
-        num_blobs_unpruned = np.sum(blobs_unpruned)
-        for col in cols[1:]:
-            blob_pruning_means["mean_{}".format(col)] = [
-                np.sum(np.multiply(df_pruning_all[col], blobs_unpruned)) 
-                / num_blobs_unpruned]
-        path_pruning_means = "blob_ratios_means.csv" if save_dfs else None
-        df_pruning_means = stats.dict_to_data_frame(
-            blob_pruning_means, path_pruning_means, show=" ")
-    else:
-        print("no blob ratios found")
+    if df_pruning is not None:
+        print("\nBlob pruning ratios:")
+        path_pruning = "blob_ratios.csv" if save_dfs else None
+        df_pruning_all = stats.data_frames_to_csv(
+            df_pruning, path_pruning, show=" ")
+        cols = df_pruning_all.columns.tolist()
+        blob_pruning_means = {}
+        if "blobs" in cols:
+            blobs_unpruned = df_pruning_all["blobs"]
+            num_blobs_unpruned = np.sum(blobs_unpruned)
+            for col in cols[1:]:
+                blob_pruning_means["mean_{}".format(col)] = [
+                    np.sum(np.multiply(df_pruning_all[col], blobs_unpruned)) 
+                    / num_blobs_unpruned]
+            path_pruning_means = "blob_ratios_means.csv" if save_dfs else None
+            df_pruning_means = stats.dict_to_data_frame(
+                blob_pruning_means, path_pruning_means, show=" ")
+        else:
+            print("no blob ratios found")
     
     '''# report any remaining duplicates
     np.set_printoptions(linewidth=500, threshold=10000000)

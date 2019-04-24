@@ -461,6 +461,8 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
     """Normalize columns from various conditions to the corresponding 
     values in another condition.
     
+    Infinite values will be converted to NaNs.
+    
     Args:
         df: Pandas data frame.
         id_cols: Sequence of columns to serve as index/indices.
@@ -495,7 +497,10 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
         #print_data_frame(df_cond, " ")
         dfs.append(df_cond)
     
-    return pd.concat(dfs)
+    # combine and convert inf vals to NaNs
+    df_norm = pd.concat(dfs)
+    df_norm[np.isinf(df_norm.loc[:, metric_cols])] = np.nan
+    return df_norm
 
 def combine_cols(df, combos, fn_aggr):
     """Combine columns in a data frame with the given aggregation function.

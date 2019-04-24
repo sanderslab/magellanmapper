@@ -299,7 +299,7 @@ def remove_duplicate_blobs(blobs, region):
 def _find_close_blobs(blobs, blobs_master, tol):
     # creates a separate array for each blob in blobs_master to allow
     # comparison for each of its blobs with each blob to add
-    blobs_diffs = np.abs(blobs_master[:, :3][:, None] - blobs[:, :3])
+    blobs_diffs = np.abs(blobs_master[:, None, :3] - blobs[:, :3])
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
     #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
     return close_master, close

@@ -558,6 +558,7 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[6]
     config.env$PlotVolcano <- TRUE
     config.env$VolcanoLabels <- TRUE
+    config.env$VolcanoLogX <- TRUE
     
   } else if (name == "aba") {
     # multiple distinct atlases
@@ -635,13 +636,13 @@ runStats <- function() {
     
     if (config.env$PlotVolcano) {
       # plot effects and p's
-      volcanoPlot(stats, meas, stat, thresh=c(NA, 1.3), 
-                  labels=config.env$VolcanoLabels)
-      volcanoPlot(stats, meas, "sidesR", thresh=c(25, 2.5), 
-                  labels=config.env$VolcanoLabels)
+      volcanoPlot(stats, meas, stat, c(NA, 1.3), config.env$VolcanoLogX, 
+                  config.env$VolcanoLabels)
+      volcanoPlot(stats, meas, "sidesR", c(25, 2.5), config.env$VolcanoLogX, 
+                  config.env$VolcanoLabels)
       # ":" special character automatically changed to "."
-      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), thresh=c(1e-04, 25), 
-                  labels=config.env$VolcanoLabels)
+      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), c(1e-04, 25), 
+                  config.env$VolcanoLogX, config.env$VolcanoLabels)
     }
   }
 }

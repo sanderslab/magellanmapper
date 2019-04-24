@@ -184,6 +184,7 @@ RegisterTypes = Enum(
         "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
         "plot_smoothing_metrics", "merge_images", "register_reg", 
         "labels_diff", "labels_diff_stats", "make_labels_level", 
+        "combine_cols", 
     ]
 )
 register_type = None

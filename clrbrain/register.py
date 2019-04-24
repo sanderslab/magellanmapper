@@ -4254,3 +4254,18 @@ if __name__ == "__main__":
             path_df = "{}_{}.csv".format("vols_stats", metric)
             make_labels_diff_img(
                 config.filename, path_df, metric, None, config.prefix, show)
+    
+    elif reg is config.RegisterTypes.combine_cols:
+        # normalize the given columns to original values in a data frame 
+        # and combine columns for composite metrics
+        df = pd.read_csv(config.filename)
+        df = stats.normalize_df(
+            df, ["Sample", "Region"], "Condition", "original", 
+            (vols.LabelMetrics.VarIntensity.name, 
+             vols.LabelMetrics.VarIntensDiff.name, 
+             vols.LabelMetrics.EdgeDistSum.name), 
+            (vols.LabelMetrics.VarIntensity.Nuclei.name, ))
+        df = stats.combine_cols(
+            df, (vols.MetricCombos.HOMOGENEITY, ), np.nanmean)
+        stats.data_frames_to_csv(
+            df, lib_clrbrain.insert_before_ext(config.filename, "_norm"))

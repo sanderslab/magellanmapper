@@ -34,6 +34,17 @@ LabelMetrics = Enum(
     ]
 )
 
+class MetricCombos(Enum):
+    """Combinations of metrics.
+    
+    Each combination should be a tuple of combination name and a nested 
+    tuple of metric Enums.
+    """
+    HOMOGENEITY = (
+        "Homogeneity", 
+        (LabelMetrics.VarIntensity, LabelMetrics.VarIntensDiff, 
+         LabelMetrics.EdgeDistSum))
+
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 
     way to use in multiprocessing without requirement for global variables.

@@ -462,7 +462,7 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
     values in another condition.
     
     Args:
-        df: Data frame.
+        df: Pandas data frame.
         id_cols: Sequence of columns to serve as index/indices.
         cond_col: Name of the condition column.
         cond_base: Name of the condition to which all other conditions 
@@ -496,6 +496,26 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
         dfs.append(df_cond)
     
     return pd.concat(dfs)
+
+def combine_cols(df, combos, fn_aggr):
+    """Combine columns in a data frame with the given aggregation function.
+    
+    Args:
+        df: Pandas data frame.
+        combos: Tuple of combination column name and a nested tuple of 
+            the columns to combine as Enums.
+        fn_aggr: Function to use for aggregation, typically a Numpy 
+           function such as :meth:``np.nanmean`` or :meth:``np.nansum``, 
+           applied with ``axis=0``.
+    
+    Returns:
+       Data frame with the combinations each as a new column.
+    """
+    for combo in combos:
+        vals = combo.value
+        df.loc[:, vals[0]] = fn_aggr(
+            [df.loc[:, val.name] for val in vals[1]], axis=0)
+    return df
 
 def print_data_frame(df, sep=" "):
     """Print formatted data frame.

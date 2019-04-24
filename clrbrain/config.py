@@ -849,11 +849,17 @@ def update_register_settings(settings, settings_type):
             {"crop_to_orig": False}, 
             profile)
         
-        # enable label smoothing
+        # test label smoothing over range
         settings.add_modifier(
             "smoothtest", 
             {"smooth": (0, 1, 2, 3, 4, 5)},#, 10)}, 
             #{"smooth": (0, )}, # TESTING
+            profile)
+        
+        # test label smoothing over longer range
+        settings.add_modifier(
+            "smoothtestlong", 
+            {"smooth": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)}, 
             profile)
         
         # groupwise registration batch 02

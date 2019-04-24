@@ -377,7 +377,7 @@ def _find_closest_blobs(blobs, blobs_master, tol):
     #print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
-def remove_close_blobs(blobs, blobs_master, tol):
+def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
     """Removes blobs that are close to one another.
     
     Args:
@@ -389,12 +389,49 @@ def remove_close_blobs(blobs, blobs_master, tol):
             as region. Blobs that are equal to or less than the the absolute
             difference for all corresponding parameters will be pruned in
             the returned array.
+        chunk_size: Max size along first dimension for each blob array 
+            to minimize memory consumption; defaults to 10000.
     
     Return:
         The blobs array without blobs falling inside the tolerance range.
     """
-    close_master, close = _find_close_blobs(blobs, blobs_master, tol)
-    pruned = np.delete(blobs, close, axis=0)
+    '''
+    match_master, match_check = _find_close_blobs(blobs, blobs_master, tol)
+    '''
+    # smallest type to hold blob coordinates, signed to use fo diffs
+    dtype = lib_clrbrain.dtype_within_range(
+        0, np.amax((np.amax(blobs[:, :3]), np.amax(blobs_master[:, :3]))), 
+        True, True)
+    print("using {} for blob removal".format(dtype))
+    num_blobs_check = len(blobs)
+    num_blobs_master = len(blobs_master)
+    match_check = None
+    match_master = None
+    
+    # chunk both master and check array for consistent max array size; 
+    # compare each master chunk to each check chunk and save matches 
+    # to prune at end
+    i = 0
+    while i * chunk_size < num_blobs_master:
+        start_master = i * chunk_size
+        end_master = (i + 1) * chunk_size
+        blobs_ref = blobs_master[start_master:end_master, :3].astype(dtype)
+        j = 0
+        while j * chunk_size < num_blobs_check:
+            start_check = j * chunk_size
+            end_check = (j + 1) * chunk_size
+            blobs_check = blobs[start_check:end_check].astype(dtype)
+            close_master, close = _find_close_blobs(blobs_check, blobs_ref, tol)
+            # shift indices by offsets
+            close += start_check
+            close_master += start_master
+            match_check = (close if match_check is None 
+                           else np.concatenate((match_check, close)))
+            match_master = (close_master if match_master is None 
+                            else np.concatenate((match_master, close_master)))
+            j += 1
+        i += 1
+    pruned = np.delete(blobs, match_check, axis=0)
     #if (len(close) > 0): print("{} removed".format(blobs[close][:, 0:4]))
     
     # shift close blobs to their mean values, storing values in the duplicated
@@ -404,9 +441,9 @@ def remove_close_blobs(blobs, blobs_master, tol):
     # allow detection of duplicates that occur in multiple ROI pairs
     abs_between = np.around(
         np.divide(
-            np.add(get_blob_abs_coords(blobs_master[close_master]), 
-                   get_blob_abs_coords(blobs[close])), 2))
-    set_blob_abs_coords(blobs_master[close_master], abs_between)
+            np.add(get_blob_abs_coords(blobs_master[match_master]), 
+                   get_blob_abs_coords(blobs[match_check])), 2))
+    set_blob_abs_coords(blobs_master[match_master], abs_between)
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
 

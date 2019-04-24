@@ -14,7 +14,8 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
           "VarIntensDiff", "MeanIntensDiff", "MedIntensDiff", "LowIntensDiff", 
-          "HighIntensDiff", "EntropyIntensDiff", "VarIntensBorder")
+          "HighIntensDiff", "EntropyIntensDiff", "VarIntensBorder", 
+          "Homogeneity")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -24,8 +25,9 @@ kMeasNames <- setNames(
        list("Edge Distances to Anatomical Boundaries", bquote(list(mu*"m"))), 
        list("Edge Distances to Anatomical Boundaries (Mean)", 
             bquote(list(mu*"m"))), 
-       list("Atlas and Labels Overlay (Dice Similarity Coefficient)", NULL)), 
-  c(kMeas[4:8]))
+       list("Atlas and Labels Overlay (Dice Similarity Coefficient)", NULL), 
+       list("Region Homogeneity", NULL)), 
+  c(kMeas[c(4:8, 17)]))
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -39,7 +41,7 @@ kRegionsIgnore <- c(15564)
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
-                   "compactness_summary.csv")
+                   "compactness_summary.csv", "vols_by_sample_levels_norm.csv")
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -576,6 +578,12 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[c(4:7, 10:16)]
     config.env$VolcanoLabels <- FALSE
     
+  } else if (name == "homogeneity") {
+    # homogenity metric
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
+    config.env$Measurements <- kMeas[17]
+    config.env$VolcanoLabels <- FALSE
+    
   } else if (name == "skinny") {
     # very narrow plots
     config.env$PlotSize <- c(3.5, 7)
@@ -594,7 +602,8 @@ runStats <- function() {
   setupConfig()
   #setupConfig("aba")
   #setupConfig("dsc")
-  setupConfig("wt")
+  #setupConfig("wt")
+  setupConfig("homogeneity")
   #setupConfig("square")
   
   # setup measurement and model types

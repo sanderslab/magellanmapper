@@ -399,6 +399,8 @@ class StackPruner(object):
         #print("orig blobs in axis {}, i {}\n{}".format(axis, i, blobs))
         if blobs is None: return None, None
         num_blobs_orig = len(blobs)
+        print("num_blobs_orig in axis {}, i {}: {}"
+              .format(axis, i, num_blobs_orig))
         blobs_master = blobs[blobs[:, axis_col] == i]
         blobs = blobs[blobs[:, axis_col] == i + 1]
         #print("blobs_master in axis {}, i {}\n{}".format(axis, i, blobs_master))
@@ -436,6 +438,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
     blobs_merged = chunking.merge_blobs(seg_rois)
     if blobs_merged is None:
         return None, None
+    print("total blobs before pruning:", len(blobs_merged))
     
     blobs_all = []
     blob_ratios = {}
@@ -460,7 +463,8 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 # sub-region in the given axis
                 coord = np.zeros(3, dtype=np.int)
                 coord[axis] = i
-                lib_clrbrain.printv("** checking blobs in ROI {}".format(coord))
+                print("** setting up blob pruning in axis {}, section {} of {}"
+                      .format(axis, i, num_sections - 1))
                 offset = sub_rois_offsets[tuple(coord)]
                 size = sub_rois[tuple(coord)].shape
                 lib_clrbrain.printv("offset: {}, size: {}, overlap: {}, tol: {}"

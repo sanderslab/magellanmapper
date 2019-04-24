@@ -4264,7 +4264,7 @@ if __name__ == "__main__":
             (vols.LabelMetrics.VarIntensity.name, 
              vols.LabelMetrics.VarIntensDiff.name, 
              vols.LabelMetrics.EdgeDistSum.name), 
-            (vols.LabelMetrics.VarIntensity.Nuclei.name, ))
+            (vols.LabelMetrics.VarIntensity.Volume.name, ))
         df = stats.combine_cols(
             df, (vols.MetricCombos.HOMOGENEITY, ), np.nanmean)
         stats.data_frames_to_csv(

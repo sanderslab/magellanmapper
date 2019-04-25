@@ -4249,11 +4249,14 @@ if __name__ == "__main__":
         metrics = (
             vols.LabelMetrics.VarNuclei.name, 
             vols.LabelMetrics.VarIntensity.name, 
+            vols.MetricCombos.HOMOGENEITY.value[0], 
         )
         for metric in metrics:
             path_df = "{}_{}.csv".format("vols_stats", metric)
+            if not os.path.exists(path_df): continue
             make_labels_diff_img(
-                config.filename, path_df, metric, None, config.prefix, show)
+                config.filename, path_df, "vals.effect", None, config.prefix, 
+                show)
     
     elif reg is config.RegisterTypes.combine_cols:
         # normalize the given columns to original values in a data frame 

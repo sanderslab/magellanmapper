@@ -158,6 +158,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     
     # setup imshow parameters
     cmaps = config.process_settings["channel_colors"]
+    colorbar = config.process_settings["colorbar"]
     cmaps_all = [cmaps, *cmaps_labels]
     alphas = lib_clrbrain.pad_seq(config.alphas, num_image_types, 0.9)
     
@@ -171,6 +172,8 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         # contains a list of artists for each channel
         ax_imgs = plot_support.overlay_images(
             ax, aspect, origin, imgs, None, cmaps_all, alphas)
+        if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
+            ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.8)
         plotted_imgs[i] = np.array(ax_imgs).flatten()
     pool.close()
     pool.join()

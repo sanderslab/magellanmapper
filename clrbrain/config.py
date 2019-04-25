@@ -291,6 +291,7 @@ class ProcessSettings(SettingsDict):
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
         self["scale_bar_color"] = "w"
+        self["colorbar"] = False
         # num of times to rotate image by 90deg after loading
         self["load_rot90"] = 0
     
@@ -382,8 +383,9 @@ def update_process_settings(settings, settings_type):
         
         settings.add_modifier(
             "diverging", 
-            {"channel_colors": ("BrBG", "RdBu"), 
-             "scale_bar_color": "k"}, 
+            {"channel_colors": ("bwr", "BrBG"), 
+             "scale_bar_color": "k", 
+             "colorbar": True}, 
             profile)
         
         settings.add_modifier(

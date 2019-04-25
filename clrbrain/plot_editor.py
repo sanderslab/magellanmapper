@@ -130,6 +130,8 @@ class PlotEditor:
         # overlay all images and set labels for footer value on mouseover
         ax_imgs = plot_support.overlay_images(
             self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas)
+        if config.process_settings["colorbar"]:
+            self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = PixelDisplay(imgs2d)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]

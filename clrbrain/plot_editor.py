@@ -100,6 +100,9 @@ class PlotEditor:
             self.vline.set_xdata(self.coord[2])
     
     def show_overview(self):
+        # assume colorbar already shown if set and image previously displayed
+        colorbar = (config.process_settings["colorbar"] 
+                    and len(self.axes.images) < 1)
         self.axes.clear()
         self.hline = None
         self.vline = None
@@ -130,7 +133,7 @@ class PlotEditor:
         # overlay all images and set labels for footer value on mouseover
         ax_imgs = plot_support.overlay_images(
             self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas)
-        if config.process_settings["colorbar"]:
+        if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = PixelDisplay(imgs2d)
         self.plane_slider.set_val(self.coord[0])

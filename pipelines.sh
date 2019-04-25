@@ -623,8 +623,7 @@ if [[ "$whole_img_proc" != "" ]]; then
   fi
   summary_msg+=("Detections and upload time: $(($SECONDS - $start))s")
   output_stats_paths+=(
-    "blob_ratios_means.csv" "blob_ratios.csv" "stack_detection_times.csv"
-    "stacks_detection_times.csv")
+    "blob_ratios_means.csv" "blob_ratios.csv" "stack_detection_times.csv")
 fi
 
 

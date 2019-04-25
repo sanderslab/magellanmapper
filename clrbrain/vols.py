@@ -665,13 +665,15 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False):
     regions = np.unique(labels_img_abs)
     for region in regions:
         df_region = df[df[LabelMetrics.Region.name] == region]
-        if df_region.shape[0] < 1: continue
         labels_region = labels_img_abs == region
         if fn_avg is None:
-            # assume that df was output by R clrstats package; take  
-            # effect size and weight by -logp
-            labels_diff[labels_region] = (
-                df_region["vals.effect"])# * df_region["vals.logp"])
+            # assume that df was output by R clrstats package
+            if df_region.shape[0] < 1:
+                if not skip_nans:
+                    labels_diff[labels_region] = np.nan
+            else:
+                labels_diff[labels_region] = (
+                    df_region["vals.effect"])# * df_region["vals.logp"])
         else:
             if len(conds) >= 2:
                 # compare the metrics for the first two conditions

@@ -382,7 +382,7 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
     
     Args:
         blobs: The blobs to be checked for closeness and pruning, given as 2D 
-            array of [n, [z, row, column, radius]].
+            array of [n, [z, row, column, ...]].
         blobs_master: The list by which to check for close blobs, in the same
             format as blobs.
         tol: Tolerance to check for closeness, given in the same format
@@ -393,18 +393,24 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
             to minimize memory consumption; defaults to 10000.
     
     Return:
-        The blobs array without blobs falling inside the tolerance range.
+        Tuple of the blobs array after pruning and ``blobs_master`` with 
+        absolute coordinates updated with the average of any 
+        corresponding duplicates.
     """
     '''
     match_master, match_check = _find_close_blobs(blobs, blobs_master, tol)
     '''
-    # smallest type to hold blob coordinates, signed to use fo diffs
+    num_blobs_check = len(blobs)
+    num_blobs_master = len(blobs_master)
+    if num_blobs_check < 1 or num_blobs_master < 1:
+        # no blobs to remove if either array is empty
+        return blobs, blobs_master
+    
+    # smallest type to hold blob coordinates, signed to use for diffs
     dtype = lib_clrbrain.dtype_within_range(
         0, np.amax((np.amax(blobs[:, :3]), np.amax(blobs_master[:, :3]))), 
         True, True)
     print("using {} for blob removal".format(dtype))
-    num_blobs_check = len(blobs)
-    num_blobs_master = len(blobs_master)
     match_check = None
     match_master = None
     

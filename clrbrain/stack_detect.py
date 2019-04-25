@@ -399,7 +399,7 @@ class StackPruner(object):
         #print("orig blobs in axis {}, i {}\n{}".format(axis, i, blobs))
         if blobs is None: return None, None
         num_blobs_orig = len(blobs)
-        print("num_blobs_orig in axis {}, i {}: {}"
+        print("num_blobs_orig in axis {}, {}: {}"
               .format(axis, i, num_blobs_orig))
         blobs_master = blobs[blobs[:, axis_col] == i]
         blobs = blobs[blobs[:, axis_col] == i + 1]

@@ -1654,9 +1654,10 @@ def plot_image(img, path=None, show=False):
         path: Path to save image. Defaults to None to not save. The 
     """
     # plot figure without frame, axes, or border space
-    fig = plt.figure(frameon=False)
-    gs = gridspec.GridSpec(1, 1)
-    ax = plt.subplot(gs[0, 0])
+    fig = plt.figure(frameon=False, constrained_layout=True)
+    fig.set_constrained_layout_pads(w_pad=0, h_pad=0)
+    gs = gridspec.GridSpec(1, 1, figure=fig)
+    ax = fig.add_subplot(gs[0, 0])
     plot_support.hide_axes(ax)
     ax.imshow(img)
     plot_support.fit_frame_to_image(fig, img.shape, None)

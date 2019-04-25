@@ -13,6 +13,7 @@ from skimage import io
 import matplotlib.pyplot as plt
 from matplotlib import animation
 from scipy import ndimage
+import matplotlib.gridspec as gridspec
 
 from clrbrain import colormaps
 from clrbrain import config
@@ -135,8 +136,10 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     if num_images < 1: return None
     
     # Matplotlib figure for building the animation
-    fig = plt.figure(frameon=False)
-    ax = fig.add_subplot(111)
+    fig = plt.figure(frameon=False, constrained_layout=True)
+    fig.set_constrained_layout_pads(w_pad=0, h_pad=0)
+    gs = gridspec.GridSpec(1, 1, figure=fig)
+    ax = fig.add_subplot(gs[0, 0])
     plot_support.hide_axes(ax)
     
     # import the images as Matplotlib artists via multiprocessing

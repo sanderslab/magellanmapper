@@ -166,9 +166,16 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   
   # basic stats data frame in format for filterStats
   coef.tab <- data.frame(matrix(nrow=1, ncol=4))
-  names(coef.tab) <- c("Value", "col2", "col3", "P")
+  names(coef.tab) <- c("Value", "CI.low", "CI.hi", "P")
   rownames(coef.tab) <- c("vals")
-  coef.tab$Value <- c(result[[col.effect]])
+  effect <- result[[col.effect]]
+  coef.tab$Value <- c(effect)
+  # get relative confidence intervals as pos vals
+  if (is.element("conf.int", names(result))) {
+    ci <- result$conf.int
+    coef.tab$CI.low <- c(effect - ci[1])
+    coef.tab$CI.hi <- c(ci[2] - effect)
+  }
   coef.tab$P <- c(result$p.value)
   print(coef.tab)
   return(coef.tab)
@@ -454,6 +461,8 @@ filterStats <- function(stats, corr=NULL) {
       offset <- length(cols)
       for (interact in interactions) {
         cols <- append(cols, paste0(interact, ".effect"))
+        cols <- append(cols, paste0(interact, ".ci.low"))
+        cols <- append(cols, paste0(interact, ".ci.hi"))
         cols <- append(cols, paste0(interact, ".p"))
       }
       filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
@@ -466,7 +475,9 @@ filterStats <- function(stats, corr=NULL) {
       # main effect/interaction, ignoring missing rows
       if (nrow(stats.coef) >= j) {
         filtered[i, j * 3 - 2 + offset] <- stats.coef[j, 1]
-        filtered[i, j * 3 - 1 + offset] <- stats.coef[j, 4]
+        filtered[i, j * 3 - 1 + offset] <- stats.coef[j, 2]
+        filtered[i, j * 3 + offset] <- stats.coef[j, 3]
+        filtered[i, j * 3 + 1 + offset] <- stats.coef[j, 4]
       }
     }
     for (col in cols.means.cis) {

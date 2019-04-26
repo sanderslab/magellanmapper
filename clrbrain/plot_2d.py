@@ -1351,12 +1351,12 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     ax.set_ylabel(y_label)
     ax.set_xticks(indices + width * len(lists) / 2)
     
-    # scale font size of x-axis labels by a sigmoid function to rapidly 
-    # decrease size for larger numbers of labels so they don't overlap
     font_size = plt.rcParams["axes.titlesize"]
-    font_size *= (math.atan(len(x_labels) / 3 - 5) * -2 / math.pi + 1) / 2
+    if lib_clrbrain.is_number(font_size):
+        # scale font size of x-axis labels by a sigmoid function to rapidly 
+        # decrease size for larger numbers of labels so they don't overlap
+        font_size *= (math.atan(len(x_labels) / 3 - 5) * -2 / math.pi + 1) / 2
     font_dict = { "fontsize": font_size }
-    #print("======>", font_dict)
     ax.set_xticklabels(
         x_labels, rotation=80, horizontalalignment="right", fontdict=font_dict)
     
@@ -1713,7 +1713,7 @@ if __name__ == "__main__":
     # set up command-line args and plotting style
     from clrbrain import cli
     cli.main(True)
-    setup_style()
+    setup_style("default")
     
     plot_2d_type = config.Plot2DTypes[config.plot_2d.upper()]
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:

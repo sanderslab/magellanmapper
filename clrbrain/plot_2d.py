@@ -1350,6 +1350,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
     ax.set_title(title)
     ax.set_ylabel(y_label)
+    # TODO: consider making configurable
+    ax.ticklabel_format(style="sci", scilimits=(-3, 4))
     ax.set_xticks(indices + width * len(lists) / 2)
     
     font_size = plt.rcParams["axes.titlesize"]

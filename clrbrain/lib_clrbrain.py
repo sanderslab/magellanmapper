@@ -335,6 +335,21 @@ def get_int(val):
     except:
         return val
 
+def is_number(val):
+    """Check if a value is a number by attempting to cast to ``int``.
+    
+    Args:
+        val: Value to check.
+    
+    Returns:
+        True if the value was successfully cast to ``int``; False otherwise.
+    """
+    try:
+        int(val)
+        return True
+    except ValueError:
+        return False
+
 def convert_indices_to_int(dict_to_convert):
     """Convert indices of a dictionary to int if possible, including nested 
     indices.

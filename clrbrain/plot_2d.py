@@ -1552,7 +1552,7 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
     gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
     
     # save and display
-    save_fig(path_to_df, config.savefig)
+    save_fig(path_to_df, config.savefig, "_barplot")
     if show: plt.show()
 
 def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None, 
@@ -1677,7 +1677,7 @@ def plot_image(img, path=None, show=False):
     if show: plt.show()
     plt.close() # prevent display during next show call
 
-def save_fig(path, ext):
+def save_fig(path, ext, modifier=""):
     """Save figure, swapping in the given extension for the extension 
     in the given path.
     
@@ -1685,9 +1685,11 @@ def save_fig(path, ext):
         path: Base path to use.
         ext: Extension to swap into the extension in ``path``. If None, 
             the figure will not be saved.
+        modifier: Modifier string to append before the extension; 
+            defaults to an empty string.
     """
     if ext is not None and not ext in config.FORMATS_3D:
-        plot_path = os.path.splitext(path)[0] + "." + ext
+        plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
         lib_clrbrain.backup_file(plot_path)
         plt.savefig(plot_path)
         print("exported figure to", plot_path)

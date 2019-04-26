@@ -1268,7 +1268,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         plt.show()
 
 def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
-               title, padding=0.2):
+               title, padding=0.2, skip_all_zero=False):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
@@ -1302,6 +1302,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         title: Graph title.
         padding: Fraction of the border space between each bar group 
             that should be left unoccupied by bars. Defaults to 0.8.
+        skip_all_zero: True to skip any data list that contains only 
+            values below :attr:``config.POS_THRESH``; defaults to False.
     """
     bars = []
     if len(lists) < 1: return
@@ -1312,9 +1314,10 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     x_labels = np.array(x_labels)
     #print("lists: {}".format(lists))
     
-    # skip bar groups where all bars would be ~0; 
-    # TODO: allow this threshold to be ignored
-    mask = np.all(lists > config.POS_THRESH, axis=0)
+    mask = []
+    if skip_all_zero:
+        # skip bar groups where all bars would be ~0
+        mask = np.all(lists > config.POS_THRESH, axis=0)
     #print("mask: {}".format(mask))
     if np.all(mask):
         print("skip none")

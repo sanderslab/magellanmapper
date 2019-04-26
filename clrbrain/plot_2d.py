@@ -1279,25 +1279,26 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     
     Typically each sublist will represents an experimental set, such 
     as WT or het. Corresponding elements in each set are grouped together 
-    to compare sets, such as WT vs het at time point 0. Bars groups where 
-    all values would be below :attr:``config.POS_THRESH`` are not plotted.
+    to compare sets, such as WT vs het at time point 0.
     
     Args:
         ax: Axes.
-        lists: Tuple of mean lists to display, with each list getting a 
-            separate set of bar plots with a legend entry. All lists should 
-            be the same size as one another. The number of lists should equal 
-            the number of legend groups, and the number of entries in each list 
-            should equal the number of bar groups.
-        errs: Tuple of variance lists (eg standard deviation or error) to 
-            display, with each list getting a separate
-            set of bar plots. All lists should be the same size as one 
-            another and each list in ``lists``.
-        list_names: List of names of each list, where the list size should 
-            be the same size as the length of ``lists``. If None, legend will 
-            not be displayed.
-        x_labels: List of labels for each bar group, where the list size 
-            should be equal to the size of each list in ``lists``.
+        lists: Sequence of main value sequences to display, where each 
+            main value sequence will be displayed as separate set of 
+            bar plots with a legend entry. All main value sequences 
+            should be the same size as one another. The number of 
+            main value sequences will equal the number of legend groups, 
+            and the number of entries in each main value sequence 
+            will equal the number of bar groups.
+        errs: Sequence of error sequences (eg standard deviation or 
+            error), with a error sequence for each separate set of 
+            bar plots. All error sequences should be the same size as one 
+            another and each main value sequence in ``lists``.
+        list_names: Sequence of names to display in the legend. Length 
+            should be the same as that of ``lists``. If None, a legend 
+            will not be displayed.
+        x_labels: Sequence of labels for each bar group, where the length 
+            should be equal to that of each main value sequence in ``lists``.
         y_label: Y-axis label.
         title: Graph title.
         padding: Fraction of the border space between each bar group 
@@ -1324,10 +1325,10 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     else:
         print("skipping {}".format(x_labels[~mask]))
         x_labels = x_labels[mask]
-        lists = lists[:, mask]
-        # len(errs) may be > 0 when errs.size == 0
+        lists = lists[..., mask]
+        # len(errs) may be > 0 when errs.size == 0?
         if errs is not None and errs.size > 0:
-            errs = errs[:, mask]
+            errs = errs[..., mask]
     num_groups = len(lists[0])
     num_sets = len(lists) # num of bars per group
     indices = np.arange(num_groups)
@@ -1486,9 +1487,13 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     save_fig(out_path, config.savefig)
     if show: plt.show()
 
-def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None, 
-              y_label=None, title=None, show=True):
+def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
+              col_groups=None, groups=None, y_label=None, title=None, 
+              size=None, show=True):
     """Plot grouped bars from Pandas data frame.
+    
+    Each data frame row represents a group, and each chosen data column 
+    will be plotted as a separate bar within each group.
     
     Args:
         path_to_df: Path from which to read saved Pandas data frame.
@@ -1496,36 +1501,51 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
             set, using this same path except with the savefig extension.
         data_cols: Sequence of names of columns to plot as separate sets 
             of bars, where each row is part of a separate group. Defaults 
-            to None, which will use plot all columns after the first. 
-            Matching columns with "_err" as suffix will be used for 
-            error bars; if so, there should be an error column for 
-            each data column.
-        col_groups: Name of column specifying names of each group. 
-            Defaults to None, which will use the first column for names.
+            to None, which will use plot all columns but ``col_groups``.
+        err_cols: Sequence of column names with relative error values 
+            corresponding to ``data_cols``. Defaults to None, in which 
+            case matching columns with "_err" as suffix will be used for 
+            error bars if present.
         legend_names: Sequence of names for each set of bars. 
             Defaults to None, which will use ``data_cols`` for names.
+        col_groups: Name of column specifying names of each group. 
+            Defaults to None, which will use the first column for names.
         y_label: Name of y-axis; defaults to None.
         title: Title of figure; defaults to None, which will use  
             ``path_to_df`` to build the title.
+        size: Sequence of ``width, height`` to size the figure; defaults 
+            to None.
         show: True to display the image; otherwise, the figure will only 
             be saved to file, if :attr:``config.savefig`` is set.  
             Defaults to True.
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
-    fig = plt.figure()
+    fig = plt.figure(figsize=size)
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
     
+    if col_groups is None:
+        # default to using first col as group names
+        col_groups = df.columns.values.tolist()[0]
+    
     if data_cols is None:
-        # default to using first col as group names, rest of cols as data
-        cols = df.columns.values.tolist()
-        col_groups = cols[0]
-        data_cols = cols[1:]
-    elif col_groups is None:
-        # default to empty group
-        col_groups = [""] * len(data_cols)
-    if legend_names is None:
+        # default to using all but the group column as data cols
+        data_cols = df.columns.values.tolist()
+        data_cols.remove(col_groups)
+    
+    if groups is not None:
+        df = df.loc[df[col_groups].isin(groups)]
+    
+    if err_cols is None:
+        # default to columns corresponding to data cols with suffix appended 
+        # if those columns exist
+        err_cols = []
+        for col in data_cols:
+            col += "_err"
+            err_cols.append(col if col in df else None)
+    
+    if legend_names == "":
         # default to using data column names for names of each set of bars
         legend_names = [name.replace("_", " ") for name in data_cols]
     
@@ -1533,13 +1553,17 @@ def plot_bars(path_to_df, data_cols=None, col_groups=None, legend_names=None,
     lists = []
     errs = []
     bar_colors = []
-    for i, col in enumerate(data_cols):
+    for i, (col, col_err) in enumerate(zip(data_cols, err_cols)):
         # each column gives a set of bars, where each bar will be in a 
-        # separate group; find error columns by suffix
+        # separate bar group
         lists.append(df[col])
-        col_err = col + "_err"
-        if col_err in df:
-            errs.append(df[col_err])
+        errs_dfs = None
+        if lib_clrbrain.is_seq(col_err):
+            # asymmetric error bars
+            errs_dfs = [df[e] for e in col_err]
+        elif col_err is not None:
+            errs_dfs = df[col_err]
+        errs.append(errs_dfs)
         bar_colors.append("C{}".format(i))
     
     # plot bars
@@ -1714,6 +1738,8 @@ if __name__ == "__main__":
     from clrbrain import cli
     cli.main(True)
     setup_style("default")
+    size = config.roi_sizes
+    if size: size = size[0][:2]
     
     plot_2d_type = config.Plot2DTypes[config.plot_2d.upper()]
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:

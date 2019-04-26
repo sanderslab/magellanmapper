@@ -4266,7 +4266,8 @@ if __name__ == "__main__":
             df, ["Sample", "Region"], "Condition", "original", 
             (vols.LabelMetrics.VarIntensity.name, 
              vols.LabelMetrics.VarIntensDiff.name, 
-             vols.LabelMetrics.EdgeDistSum.name), 
+             vols.LabelMetrics.EdgeDistSum.name, 
+             vols.LabelMetrics.VarNuclei.name), 
             (vols.LabelMetrics.VarIntensity.Volume.name, ))
         df = stats.combine_cols(
             df, (vols.MetricCombos.HOMOGENEITY, ), np.nanmean)

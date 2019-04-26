@@ -43,7 +43,7 @@ class MetricCombos(Enum):
     HOMOGENEITY = (
         "Homogeneity", 
         (LabelMetrics.VarIntensity, LabelMetrics.VarIntensDiff, 
-         LabelMetrics.EdgeDistSum))
+         LabelMetrics.EdgeDistSum, LabelMetrics.VarNuclei))
 
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 

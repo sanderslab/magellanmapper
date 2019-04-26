@@ -1748,6 +1748,23 @@ if __name__ == "__main__":
         # generic barplot
         plot_bars(config.filename, show=(not config.no_show))
     
+    elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS:
+        # barplot for data frame from R stats from means/CIs
+        plot_bars(
+            config.filename, data_cols=("original.mean", "smoothed.mean"), 
+            err_cols=("original.ci", "smoothed.ci"), 
+            legend_names=("Original", "Smoothed"), col_groups="RegionAbbr", 
+            size=size, show=(not config.no_show), groups=config.groups)
+    
+    elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
+        # barplot for data frame from R stats test effect sizes and CIs
+        plot_bars(
+            config.filename, data_cols=("vals.effect", ), 
+            err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
+            legend_names=None, col_groups="RegionAbbr", 
+            y_label="Effect size (smoothed - original)", 
+            size=size, show=(not config.no_show), groups=config.groups)
+    
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve
         plot_roc(pd.read_csv(config.filename))

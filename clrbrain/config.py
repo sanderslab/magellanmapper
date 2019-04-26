@@ -70,7 +70,8 @@ CMAP_RDBK_NAME = "Red_black"
 # processing type directly in module
 Plot2DTypes = Enum(
     "plot_2d_types", (
-        "BAR_PLOT", "ROC_CURVE"
+        "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
+        "ROC_CURVE", 
     )
 )
 plot_2d_type = None

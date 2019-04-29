@@ -340,7 +340,7 @@ def update_process_settings(settings, settings_type):
             "num_sigma": 10, 
             "overlap": 0.55, 
             "segment_size": 150, 
-            "prune_tol_factor": (1.5, 0.9, 0.9), 
+            "prune_tol_factor": (1, 0.9, 0.9), 
             "verify_tol_factor": (3, 1.3, 1.3), 
             "segmenting_mean_thresh": -10, # unused since scale factor off
             "scale_factor": None, 

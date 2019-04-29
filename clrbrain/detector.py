@@ -211,6 +211,7 @@ def get_blob_abs_coords(blobs):
 
 def set_blob_abs_coords(blobs, coords):
     blobs[:, 7:10] = coords
+    return blobs
 
 def shift_blob_rel_coords(blobs, offset):
     blobs[..., :3] += offset
@@ -449,7 +450,8 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
         np.divide(
             np.add(get_blob_abs_coords(blobs_master[match_master]), 
                    get_blob_abs_coords(blobs[match_check])), 2))
-    set_blob_abs_coords(blobs_master[match_master], abs_between)
+    blobs_master[match_master] = set_blob_abs_coords(
+        blobs_master[match_master], abs_between)
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
 

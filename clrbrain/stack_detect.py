@@ -48,17 +48,22 @@ class StackDetector(object):
             absolute coordinates.
         denoise_max_shape: Maximum shape of each unit within each sub-ROI 
             for denoising.
+        exclude_borders: Sequence of border pixels in x,y,z to exclude; 
+            defaults to None.
     """
     sub_rois = None
     sub_rois_offsets = None
     denoise_max_shape = None
+    exclude_border = None
     
     @classmethod
-    def set_data(cls, sub_rois, sub_rois_offsets, denoise_max_shape):
+    def set_data(cls, sub_rois, sub_rois_offsets, denoise_max_shape, 
+                 exclude_border):
         """Set the class attributes to be shared during multiprocessing."""
         cls.sub_rois = sub_rois
         cls.sub_rois_offsets = sub_rois_offsets
         cls.denoise_max_shape = denoise_max_shape
+        cls.exclude_border = exclude_border
     
     @classmethod
     def detect_sub_roi(cls, coord):
@@ -105,8 +110,8 @@ class StackDetector(object):
             chunking.merge_split_stack2(denoise_rois, None, 0, merged)
             sub_roi = merged
         
-        segments = detector.detect_blobs(sub_roi, config.channel)
-        offset = cls.sub_rois_offsets[coord]
+        segments = detector.detect_blobs(
+            sub_roi, config.channel, cls.exclude_border)
         #print("segs before (offset: {}):\n{}".format(offset, segments))
         if segments is not None:
             # shift both coordinate sets (at beginning and end of array) to 
@@ -171,10 +176,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     
     # chunk ROI into sub-ROIs
     time_detection_start = time()
-    overlap = chunking.calc_overlap()
     settings = config.process_settings # use default settings
-    tol = (np.multiply(overlap, settings["prune_tol_factor"])
-           .astype(int))
     scaling_factor = detector.calc_scaling_factor()
     print("microsope scaling factor based on resolutions: {}"
           .format(scaling_factor))
@@ -183,6 +185,16 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     if denoise_size:
         denoise_max_shape = np.ceil(
             np.multiply(scaling_factor, denoise_size)).astype(int)
+    # ensure that overlap is greater than twice the border exclusion per 
+    # axis so that no plane will be excluded from both overlapping sub-ROIs
+    overlap = chunking.calc_overlap()
+    exclude_border = config.process_settings["exclude_border"]
+    exclude_border_thresh = np.multiply(2, exclude_border[::-1])
+    overlap_less = np.less(overlap, exclude_border_thresh)
+    overlap[overlap_less] = exclude_border_thresh[overlap_less]
+    tol = (np.multiply(overlap, settings["prune_tol_factor"])
+           .astype(int))
+    print("sub-ROI overlap: {}, pruning tolerance: {}".format(overlap, tol))
     max_pixels = np.ceil(np.multiply(
         scaling_factor, 
         config.process_settings["segment_size"])).astype(int)
@@ -193,7 +205,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     # TODO: option to distribute groups of sub-ROIs to different servers 
     # for blob detection
     seg_rois = detect_blobs_sub_rois(
-        sub_rois, sub_rois_offsets, denoise_max_shape)
+        sub_rois, sub_rois_offsets, denoise_max_shape, exclude_border)
     detection_time = time() - time_detection_start
     
     # prune blobs in overlapping portions of sub-ROIs
@@ -316,7 +328,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     
     return stats_detection, fdbk, segments_all
 
-def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape):
+def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape, 
+                          exclude_border):
     """Process blobs in an ROI chunked into multiple sub-ROIs via 
     multiprocessing.
     
@@ -329,6 +342,8 @@ def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape):
             absolute coordinates.
         denoise_max_shape: Maximum shape of each unit within each sub-ROI 
             for denoising.
+        exclude_borders: Sequence of border pixels in x,y,z to exclude; 
+            defaults to None.
     
     Returns:
         Numpy object array of blobs corresponding to ``sub_rois``, with 
@@ -338,7 +353,8 @@ def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape):
     """
     # detect nuclei in each sub-ROI, passing an index to access each 
     # sub-ROI to minimize pickling
-    StackDetector.set_data(sub_rois, sub_rois_offsets, denoise_max_shape)
+    StackDetector.set_data(
+        sub_rois, sub_rois_offsets, denoise_max_shape, exclude_border)
     pool = mp.Pool()
     pool_results = []
     for z in range(sub_rois.shape[0]):

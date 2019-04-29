@@ -81,11 +81,15 @@ def show_blob_surroundings(blobs, roi, padding=1):
         print("{}\n".format(surroundings))
     np.set_printoptions()
 
-def detect_blobs(roi, channel):
+def detect_blobs(roi, channel, exclude_border=None):
     """Detects objects using 3D blob detection technique.
     
     Args:
         roi: Region of interest to segment.
+        channel: Channel to select, which can be None to indicate all 
+            channels.
+        exclude_borders: Sequence of border pixels in x,y,z to exclude; 
+            defaults to None.
     
     Returns:
         Array of detected blobs, each given as 
@@ -93,6 +97,7 @@ def detect_blobs(roi, channel):
     """
     # use 3D blob detection from skimage fork
     time_start = time()
+    shape = list(roi.shape[:3])
     isotropic = config.process_settings["isotropic"]
     if isotropic is not None:
         # interpolate for (near) isotropy during detection, using only the 
@@ -136,7 +141,7 @@ def detect_blobs(roi, channel):
                 min_sigma=settings["min_sigma_factor"]*scaling_factor, 
                 max_sigma=settings["max_sigma_factor"]*scaling_factor, 
                 num_sigma=settings["num_sigma"], 
-                threshold=settings["detection_threshold"],
+                threshold=settings["detection_threshold"], 
                 overlap=overlap, **detect_dict)
         except TypeError as e:
             print(e)
@@ -165,6 +170,12 @@ def detect_blobs(roi, channel):
         isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
         blobs_all = multiply_blob_rel_coords(blobs_all, 1 / isotropic_factor)
         blobs_all = multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
+    
+    if exclude_border is not None:
+        # exclude blobs from the border in x,y,z
+        blobs_all, _ = get_blobs_in_roi(
+            blobs_all, (0, 0, 0), shape[::-1], np.multiply(-1, exclude_border))
+    
     return blobs_all
 
 def format_blobs(blobs, channel=None):

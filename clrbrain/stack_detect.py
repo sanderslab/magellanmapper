@@ -77,9 +77,11 @@ class StackDetector(object):
             sub-ROI and an array of detected blobs.
         """
         sub_roi = cls.sub_rois[coord]
+        offset = cls.sub_rois_offsets[coord]
         print(
-            "detecting blobs in sub-ROI at {} of {}, with shape {}..."
-            .format(coord, np.subtract(cls.sub_rois.shape, 1), sub_roi.shape))
+            "detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."
+            .format(coord, np.subtract(cls.sub_rois.shape, 1), tuple(offset), 
+                    sub_roi.shape))
         
         if cls.denoise_max_shape is not None:
             # further split sub-ROI for preprocessing locally

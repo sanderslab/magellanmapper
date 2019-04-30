@@ -97,7 +97,7 @@ def detect_blobs(roi, channel, exclude_border=None):
     """
     # use 3D blob detection from skimage fork
     time_start = time()
-    shape = list(roi.shape[:3])
+    shape = roi.shape
     isotropic = config.process_settings["isotropic"]
     if isotropic is not None:
         # interpolate for (near) isotropy during detection, using only the 
@@ -173,8 +173,7 @@ def detect_blobs(roi, channel, exclude_border=None):
     
     if exclude_border is not None:
         # exclude blobs from the border in x,y,z
-        blobs_all, _ = get_blobs_in_roi(
-            blobs_all, (0, 0, 0), shape[::-1], np.multiply(-1, exclude_border))
+        blobs_all = get_blobs_interior(blobs_all, shape, *exclude_border)
     
     return blobs_all
 
@@ -585,6 +584,22 @@ def remove_close_blobs_within_sorted_array(blobs, tol):
     return blobs_all
 
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
+    """Get blobs within an ROI based on offset and size.
+    
+    Note that dimensions are in x,y,z for natural ordering but may 
+    change for consistency with z,y,x ordering used throughout Clrbrain.
+    
+    Args:
+        blobs: The blobs to retrieve, given as 2D array of 
+            ``[n, [z, row, column, radius, ...]]``.
+        offset: Offset coordinates in x,y,z.
+        size: Size of ROI in x,y,z.
+        padding: Additional padding outside the ROI to include.
+    
+    Returns:
+        Tuple of blobs within the ROI and the mask used to retrieve 
+        these blobs.
+    """
     mask = np.all([
         blobs[:, 0] >= offset[2] - padding[2], 
         blobs[:, 0] < offset[2] + size[2] + padding[2],
@@ -594,6 +609,28 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
         blobs[:, 2] < offset[0] + size[0] + padding[0]], axis=0)
     segs_all = blobs[mask]
     return segs_all, mask
+
+def get_blobs_interior(blobs, shape, pad_start, pad_end):
+    """Get blobs within the interior of a region based on padding.
+    
+    Args:
+        blobs: The blobs to retrieve, given as 2D array of 
+            ``[n, [z, row, column, radius, ...]]``.
+        shape: Shape of the region in z,y,x.
+        pad_start: Offset of interior region in z,y,x to include blobs.
+        pad_end: End offset in z,y,x.
+    
+    Returns:
+        Blobs within the given interior.
+    """
+    return blobs[
+        np.all([
+            blobs[:, 0] >= pad_start[0], 
+            blobs[:, 0] < shape[0] - pad_end[0],
+            blobs[:, 1] >= pad_start[1], 
+            blobs[:, 1] < shape[1] - pad_end[1],
+            blobs[:, 2] >= pad_start[2], 
+            blobs[:, 2] < shape[2] - pad_end[2]], axis=0)]
 
 def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     """Compares blobs from detections with truth blobs, prioritizing the inner 

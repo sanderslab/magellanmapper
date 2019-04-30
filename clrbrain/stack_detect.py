@@ -78,10 +78,10 @@ class StackDetector(object):
         """
         sub_roi = cls.sub_rois[coord]
         offset = cls.sub_rois_offsets[coord]
-        print(
-            "detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."
-            .format(coord, np.subtract(cls.sub_rois.shape, 1), tuple(offset), 
-                    sub_roi.shape))
+        last_coord = np.subtract(cls.sub_rois.shape, 1)
+        print("detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."
+              .format(coord, last_coord, tuple(offset.astype(int)), 
+                      sub_roi.shape))
         
         if cls.denoise_max_shape is not None:
             # further split sub-ROI for preprocessing locally
@@ -112,8 +112,13 @@ class StackDetector(object):
             chunking.merge_split_stack2(denoise_rois, None, 0, merged)
             sub_roi = merged
         
-        segments = detector.detect_blobs(
-            sub_roi, config.channel, cls.exclude_border)
+        if cls.exclude_border is None:
+            exclude = None
+        else:
+            exclude = np.array([cls.exclude_border, cls.exclude_border])
+            exclude[0, np.equal(coord, 0)] = 0
+            exclude[1, np.equal(coord, last_coord)] = 0
+        segments = detector.detect_blobs(sub_roi, config.channel, exclude)
         #print("segs before (offset: {}):\n{}".format(offset, segments))
         if segments is not None:
             # shift both coordinate sets (at beginning and end of array) to 
@@ -192,7 +197,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     if exclude_border is not None:
         # ensure that overlap is greater than twice the border exclusion per 
         # axis so that no plane will be excluded from both overlapping sub-ROIs
-        exclude_border_thresh = np.multiply(2, exclude_border[::-1])
+        exclude_border_thresh = np.multiply(2, exclude_border)
         overlap_less = np.less(overlap, exclude_border_thresh)
         overlap[overlap_less] = exclude_border_thresh[overlap_less]
     tol = (np.multiply(overlap, settings["prune_tol_factor"])

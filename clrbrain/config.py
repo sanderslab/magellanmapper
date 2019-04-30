@@ -297,7 +297,7 @@ class ProcessSettings(SettingsDict):
         self["colorbar"] = False
         # num of times to rotate image by 90deg after loading
         self["load_rot90"] = 0
-        self["exclude_border"] = None # x,y,z; exclude blob detection border
+        self["exclude_border"] = None # z,y,x; exclude blob detection border
     
 def update_process_settings(settings, settings_type):
     """Update processing profiles, including layering modifications upon 
@@ -348,7 +348,7 @@ def update_process_settings(settings, settings_type):
             "isotropic": (0.96, 1, 1), 
             "isotropic_vis": (1.3, 1, 1), 
             "sub_stack_max_pixels": (1200, 800, 800), 
-            "exclude_border": (0, 0, 1)}, 
+            "exclude_border": (1, 0, 0)}, 
             profile)
         
         settings.add_modifier(

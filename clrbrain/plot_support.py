@@ -115,7 +115,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     
     def fill(fill_with, chls):
         # make a sequence with vals corresponding to each 2D image, where 
-        # the first val is another seq wholse values correspond to each of 
+        # the first val is another seq whose values correspond to each of 
         # the channels in that image, starting with fill_with
         filled = [None] * num_imgs2d
         if fill_with is not None:

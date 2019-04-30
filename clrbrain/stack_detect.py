@@ -187,13 +187,14 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     if denoise_size:
         denoise_max_shape = np.ceil(
             np.multiply(scaling_factor, denoise_size)).astype(int)
-    # ensure that overlap is greater than twice the border exclusion per 
-    # axis so that no plane will be excluded from both overlapping sub-ROIs
     overlap = chunking.calc_overlap()
     exclude_border = config.process_settings["exclude_border"]
-    exclude_border_thresh = np.multiply(2, exclude_border[::-1])
-    overlap_less = np.less(overlap, exclude_border_thresh)
-    overlap[overlap_less] = exclude_border_thresh[overlap_less]
+    if exclude_border is not None:
+        # ensure that overlap is greater than twice the border exclusion per 
+        # axis so that no plane will be excluded from both overlapping sub-ROIs
+        exclude_border_thresh = np.multiply(2, exclude_border[::-1])
+        overlap_less = np.less(overlap, exclude_border_thresh)
+        overlap[overlap_less] = exclude_border_thresh[overlap_less]
     tol = (np.multiply(overlap, settings["prune_tol_factor"])
            .astype(int))
     print("sub-ROI overlap: {}, pruning tolerance: {}".format(overlap, tol))

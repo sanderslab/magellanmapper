@@ -635,7 +635,7 @@ def process_file(filename_base, offset, roi_size):
                   .format(filename_image5d_proc))
         try:
             # processed segments and other image information
-            output_info = np.load(filename_info_proc)
+            output_info = importer.read_np_archive(np.load(filename_info_proc))
             segments_proc = output_info["segments"]
             print("{} segments loaded".format(len(segments_proc)))
             if config.verbose:
@@ -658,8 +658,8 @@ def process_file(filename_base, offset, roi_size):
                 path = os.path.join(os.path.dirname(filename_base), 
                                     str(basename))
             except KeyError as e:
-                print(e)
-                print("No information on portion of stack to load")
+                print("{} not found for portion of stack to load, will load"
+                      "full image".format(e))
             image5d = importer.read_file(
                 path, config.series, offset=roi_offset, size=shape, 
                 channel=config.channel, import_if_absent=False)

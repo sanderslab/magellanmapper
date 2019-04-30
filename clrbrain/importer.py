@@ -285,13 +285,15 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
     output.close()
 
 def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
+    # update image archive metadata using dictionary of values successfully 
+    # loaded from the archive
+    
     if curr_ver >= IMAGE5D_NP_VER:
         # no updates necessary
         return False
     
     print("Updating image metadata to version {}".format(IMAGE5D_NP_VER))
-    # update info
-    info_up = dict(info)
+    
     if curr_ver <= 10:
         # ver 10 -> 11
         # no change except ver since most likely won't encounter any difference
@@ -355,6 +357,26 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     
     return True
 
+def read_np_archive(archive):
+    """Load Numpy archive file into a dictionary, skipping any values 
+    that cannot be loaded.
+    
+    Args:
+        archive: Loaded Numpy archive.
+    
+    Returns:
+        Dictionary with keys and values corresponding to that of the 
+        Numpy archive, skipping any values that could not be loaded 
+        such as those that would require pickling when not allowed.
+    """
+    output = {}
+    for key in archive.keys():
+        try:
+            output[key] = archive[key]
+        except ValueError as e:
+            print("unable to load {} from archive, will ignore".format(key))
+    return output
+
 def read_info(filename_info_npz):
     """Load image info, such as saved microscopy data and image ranges, 
     storing some values into appropriate module level variables.
@@ -367,7 +389,8 @@ def read_info(filename_info_npz):
         ``image5d_ver_num``, the version number of the info file.
     """
     print("Reading image metadata from {}".format(filename_info_npz))
-    output = np.load(filename_info_npz)
+    archive = np.load(filename_info_npz)
+    output = read_np_archive(archive)
     image5d_ver_num = -1
     try:
         # find the info version number

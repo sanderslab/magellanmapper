@@ -276,7 +276,7 @@ def transpose_img(filename, series, plane=None, rescale=None):
     image5d.flush()
     importer.save_image_info(
         filename_info_npz, info["names"], sizes, detector.resolutions, 
-        info["magnification"], info["zoom"], image5d_transposed.dtype, 
+        info["magnification"], info["zoom"], 
         *importer.calc_intensity_bounds(image5d_transposed), scaling, plane)
     print("saved transposed file to {} with shape {}".format(
         filename_image5d_npz, image5d_transposed.shape))

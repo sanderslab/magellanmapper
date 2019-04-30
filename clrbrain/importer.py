@@ -64,7 +64,9 @@ PIXEL_DTYPE = {
 # 12: fixed replacing dtype, near_min/max when saving image in transpose_npy
 # 13: change near_min/max to array with element for each channel; add 
 #     "scaling" and "plane" fields for transposed images
-IMAGE5D_NP_VER = 13 # image5d Numpy saved array version number
+# 14: removed pixel_type since redundant with image5d.dtype; 
+#     avoids storing object array, which requires loading by pickling
+IMAGE5D_NP_VER = 14 # image5d Numpy saved array version number
 SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
 
@@ -245,7 +247,7 @@ def deconstruct_np_filename(np_filename, ext="czi"):
     return filename, series
 
 def save_image_info(filename_info_npz, names, sizes, resolutions, 
-                    magnification, zoom, pixel_type, near_min, near_max, 
+                    magnification, zoom, near_min, near_max, 
                     scaling=None, plane=None):
     """Save image metadata.
     
@@ -256,7 +258,6 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
         resolutions: Sequence of resolutions for each series.
         magnification: Objective magnification.
         zoom: Objective zoom.
-        pixel_type: Image data type.
         near_min: Sequence of near minimum intensities, with each element 
             in turn holding a sequence with values for each channel.
         near_max: Sequence of near maximum intensities, with each element 
@@ -347,6 +348,13 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         info_up["scaling"] = scaling
         info_up["plane"] = config.plane
     
+    if curr_ver <= 13:
+        # ver 13 -> 14
+        
+        # pixel_type no longer saved since redundant with image5d.dtype
+        if "pixel_type" in info_up:
+            del info_up["pixel_type"]
+        
     # backup and save updated info
     lib_clrbrain.backup_file(
         filename_info_npz, modifier="_v{}".format(curr_ver))
@@ -424,12 +432,6 @@ def read_info(filename_info_npz):
         print("zoom: {}".format(detector.zoom))
     except KeyError:
         print("could not find zoom")
-    # TODO: remove since stored in image5d?
-    try:
-        pixel_type = output["pixel_type"]
-        print("pixel type is {}".format(pixel_type))
-    except KeyError:
-        print("could not find pixel_type")
     try:
         config.near_min = output["near_min"]
         print("set near_min to {}".format(config.near_min))
@@ -629,8 +631,7 @@ def read_file(filename, series, load=True, z_max=-1,
     # with single resolution tuple
     save_image_info(
         filename_info_npz, [name], [shape], [detector.resolutions[series]], 
-        detector.magnification, detector.zoom, image5d.dtype, near_mins, 
-        near_maxs)
+        detector.magnification, detector.zoom, near_mins, near_maxs)
     return image5d
 
 def read_file_sitk(filename_sitk, filename_np, series=0):
@@ -705,8 +706,7 @@ def import_dir(path):
         i += 1
     save_image_info(
         filename_info_npz, [name], [image5d.shape], detector.resolutions, 
-        detector.magnification, detector.zoom, image5d.dtype, [min(lows)], 
-        [max(highs)])
+        detector.magnification, detector.zoom, [min(lows)], [max(highs)])
     return image5d
 
 def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
@@ -771,7 +771,7 @@ def save_np_image(image, filename, series):
     save_image_info(
         filename_info_npz, [os.path.basename(filename)], [image.shape], 
         detector.resolutions, detector.magnification, detector.zoom, 
-        image.dtype, lows, highs)
+        lows, highs)
 
 def calc_scaling(image5d, scaled):
     """Calculate the exact scaling between two images where one image had 

@@ -540,6 +540,47 @@ def zscore_df(df, group_col, metric_cols, extra_cols):
     df_zscore = df_zscore.drop(list(metric_cols), axis=1)
     return df_zscore
 
+def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
+    """Transpose metric columns from rows within each condition grouop 
+    to separate sets of columns.
+    
+    Args:
+        df: Pandas data frame.
+        id_cols: Sequence of columns to serve as index/indices.
+        cond_col: Name of the condition column.
+        cond_base: Name of the condition to which all other conditions 
+            will be normalized.
+        metric_cols: Sequence of metric columns to normalize.
+    
+    Returns:
+        New data frame with columns from ``id_cols``, ``cond_col``, 
+        ``metric_cols``, and ``extra_cols``. Values with condition equal 
+        to ``cond_base`` should be definition be 1 or NaN, while all 
+        other conditions should be normalized to the original ``cond_base`` 
+        values.
+    """
+    # set up conditions, output columns, and copy of base condition
+    conds = np.unique(df[cond_col])
+    if cond_base not in conds: return
+    cols = (*id_cols, *metric_cols)
+    df_base = df.loc[df[cond_col] == cond_base].set_index(id_cols)
+    dfs = []
+    
+    for cond in conds:
+        # copy metric cols from each condition to separate cols
+        cols_dict = {col: "{}_{}".format(col, cond) for col in metric_cols}
+        df_cond = df_base
+        if cond != cond_base:
+            df_cond = df.loc[df[cond_col] == cond, cols].set_index(id_cols)
+        df_cond.rename(columns=cols_dict, inplace=True)
+        dfs.append(df_cond)
+    
+    # combine cols and remove obsolete condition col
+    df_norm = pd.concat(dfs, axis=1)
+    df_norm = df_norm.reset_index()
+    df_norm = df_norm.drop(cond_col, axis=1)
+    return df_norm
+
 def combine_cols(df, combos, fn_aggr):
     """Combine columns in a data frame with the given aggregation function.
     

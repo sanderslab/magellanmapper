@@ -502,6 +502,44 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
     df_norm[np.isinf(df_norm.loc[:, metric_cols])] = np.nan
     return df_norm
 
+def zscore_df(df, group_col, metric_cols, extra_cols):
+    """Generate z-scores for each metric within each group.
+    
+    Args:
+        df: Pandas data frame.
+        group_col: Name of column specifying groups.
+        metric_cols: Sequence of metric columns to normalize.
+        extra_cols: Sequence of additional columns to include in the 
+            output data frame.
+    
+    Returns:
+        New data frame with columns from ``extra_cols`` 
+        and z-scores in columns corresponding to ``metric_cols``.
+    """
+    # set up groups, input cols and extra output cols
+    groups = np.unique(df[group_col])
+    cols = (*extra_cols, group_col, *metric_cols)
+    metric_z_cols = [col + "_z" for col in metric_cols]
+    dfs = []
+    
+    for group in groups:
+        # get rows within group and add columns 
+        df_group = df.loc[df[group_col] == group, cols]
+        df_group = df_group.reindex(columns=[*cols, *metric_z_cols])
+        for metric_z_col, metric_col in zip(metric_z_cols, metric_cols):
+            col_vals = df_group[metric_col]
+            mu = np.nanmean(col_vals)
+            std = np.nanstd(col_vals)
+            df_group.loc[:, metric_z_col] = (col_vals - mu) / std
+        dfs.append(df_group)
+    
+    # combine data frames from each group with z-scores and drop 
+    # cols with original metrics
+    df_zscore = pd.concat(dfs)
+    print(df_zscore.columns)
+    df_zscore = df_zscore.drop(list(metric_cols), axis=1)
+    return df_zscore
+
 def combine_cols(df, combos, fn_aggr):
     """Combine columns in a data frame with the given aggregation function.
     

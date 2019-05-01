@@ -1583,14 +1583,17 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 
 def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None, 
                  x_label=None, y_label=None, xlim=None, ylim=None, title=None, 
-                 size=None, show=True, suffix=None, df=None, xy_line=False)
+                 size=None, show=True, suffix=None, df=None, xy_line=False, 
+                 col_size=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
         path: Path from which to read a saved Pandas data frame and the 
             path basis to save the figure if :attr:``config.savefig`` is set.
-        col_x: Name of column to plot as x-values.
-        col_y: Name of column to plot as corresponding y-values.
+        col_x: Name of column to plot as x-values. Can also be a sequence 
+            of names to define groups with corresponding `col_y` values.
+        col_y: Name of column to plot as corresponding y-values. Can 
+            also be a sequence corresponding to that of `col_x`.
         cols_group: Sequence of column names specifying the group to include in 
             the legend.
         names_group: Sequence of names to display in place of ``cols_group``; 
@@ -1613,6 +1616,8 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
         df: Data frame to use; defaults to None. If set, this data frame 
             will be used instead of loading from ``path``.
         xy_line: Show an xy line; defaults to False.
+        col_size: Name of column from which to scale point sizes, where 
+            the max value in the column is 1; defaults to None.
     """
     # load data frame from CSV and setup figure
     if df is None:
@@ -1621,22 +1626,36 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
     
-    # plot selected columns
-    xs = df[col_x]
-    ys = df[col_y]
-    annots = df[col_annot]
-    grouping = df[cols_group]
-    for i, (x, y, annot) in enumerate(zip(xs, ys, annots)):
-        group = grouping.iloc[i]
-        names = cols_group if names_group is None else names_group
-        label = ["{} {:.3g}".format(name, val) 
-                 for name, val in zip(names, group)]
-        ax.plot(
-            x, y, label=", ".join(label), lw=2, color=cycle_colors(i), 
-            linestyle="", marker=".")
-        plt.annotate("{:.3g}".format(annot), (x, y))
+    sizes = None
+    if col_size is not None:
+        # scale point sizes based on max val in given col
+        sizes = df[col_size]
+        sizes /= np.amax(sizes)
     
-    # add supporting plot components
+    # plot selected columns
+    if lib_clrbrain.is_seq(col_x):
+        # treat each pair of col_y and col_y values as a group
+        for i, (x, y) in enumerate(zip(col_x, col_y)):
+            label = x if names_group is None else names_group[i]
+            ax.scatter(
+                df[x], df[y], s=sizes, label=label, color=cycle_colors(i), 
+                marker="o")
+    else:
+        # treat each row as a separate group
+        xs = df[col_x]
+        ys = df[col_y]
+        annots = df[col_annot]
+        grouping = df[cols_group]
+        for i, (x, y, annot) in enumerate(zip(xs, ys, annots)):
+            group = grouping.iloc[i]
+            names = cols_group if names_group is None else names_group
+            label = ["{} {:.3g}".format(name, val) 
+                     for name, val in zip(names, group)]
+            size = 2 if sizes is None else sizes[i]
+            ax.plot(
+                x, y, label=", ".join(label), lw=size, color=cycle_colors(i), 
+                linestyle="", marker=".")
+            plt.annotate("{:.3g}".format(annot), (x, y))
     
     # set x/y axis limits if given
     if xlim: ax.set_xlim(xlim)

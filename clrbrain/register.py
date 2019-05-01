@@ -3957,6 +3957,8 @@ if __name__ == "__main__":
     if config.flip is not None:
         flip = config.flip[0]
     show = not config.no_show
+    size = config.roi_sizes
+    if size: size = size[0][:2]
     
     #_test_labels_lookup()
     #_test_region_from_id()
@@ -4134,8 +4136,6 @@ if __name__ == "__main__":
             lib_clrbrain.str_to_disp(
                 os.path.basename(config.filename).replace(
                     config.PATH_SMOOTHING_METRICS, "")))
-        size = config.roi_sizes
-        if size: size = size[0][:2]
         plot_2d.plot_lines(
             config.filename, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.COMPACTED.value, 

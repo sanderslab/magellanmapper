@@ -1656,9 +1656,15 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
 
 def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None, 
                  plane=None, flip=False, prefix=None, suffix=None, show=True):
-    """Using registered images, register them to another image.
+    """Using registered images including the unregistered copies of 
+    the original image, register these images to another image.
     
-    For example, registered images can be registered back to the atlas.
+    For example, registered images can be registered back to the atlas. 
+    This method can also be used to move unregistered original images 
+    that have simply been copied as ``IMG_EXP`` during registration. 
+    This copy can be registered "back" to the atlas, reversing the 
+    fixed/moving images in :meth:``register`` to move all experimental 
+    images into the same space.
     
     Args:
         fixed_path: Path to he image to be registered to in 

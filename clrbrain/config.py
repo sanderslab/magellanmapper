@@ -546,7 +546,7 @@ class RegisterSettings(SettingsDict):
         
         # erosion filter sizes
         self["marker_erosion"] = 8 # for converting labels to markers
-        self["erosion_frac"] = 0.3 # target size as frac of orig; can be None
+        self["erosion_frac"] = 0.9 # target size as frac of orig; can be None
         
         # crop labels back to their original background after smoothing 
         # (ignored during atlas import if no smoothing), given as the filter 

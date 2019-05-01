@@ -1581,10 +1581,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     save_fig(path_to_df, config.savefig, "_barplot")
     if show: plt.show()
 
-def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None, 
-                 x_label=None, y_label=None, xlim=None, ylim=None, title=None, 
-                 size=None, show=True, suffix=None, df=None, xy_line=False, 
-                 col_size=None):
+def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 
+                 names_group=None, x_label=None, y_label=None, xlim=None, 
+                 ylim=None, title=None, size=None, show=True, suffix=None, 
+                 df=None, xy_line=False, col_size=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -1594,8 +1594,9 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
             of names to define groups with corresponding `col_y` values.
         col_y: Name of column to plot as corresponding y-values. Can 
             also be a sequence corresponding to that of `col_x`.
-        cols_group: Sequence of column names specifying the group to include in 
-            the legend.
+        col_annot: Name of column to annotate each point; defaults to None.
+        cols_group: Name of equence of column names specifying groups 
+            to plot separately; defaults to None.
         names_group: Sequence of names to display in place of ``cols_group``; 
             defaults to None, in which case ``cols_groups`` will be used 
             instead. Length should equal that of ``cols_group``.
@@ -1626,7 +1627,7 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
     
-    sizes = None
+    sizes = 5
     if col_size is not None:
         # scale point sizes based on max val in given col
         sizes = df[col_size]
@@ -1641,21 +1642,32 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
                 df[x], df[y], s=sizes, label=label, color=cycle_colors(i), 
                 marker="o")
     else:
-        # treat each row as a separate group
-        xs = df[col_x]
-        ys = df[col_y]
-        annots = df[col_annot]
-        grouping = df[cols_group]
-        for i, (x, y, annot) in enumerate(zip(xs, ys, annots)):
-            group = grouping.iloc[i]
-            names = cols_group if names_group is None else names_group
-            label = ["{} {:.3g}".format(name, val) 
-                     for name, val in zip(names, group)]
-            size = 2 if sizes is None else sizes[i]
-            ax.plot(
-                x, y, label=", ".join(label), lw=size, color=cycle_colors(i), 
-                linestyle="", marker=".")
-            plt.annotate("{:.3g}".format(annot), (x, y))
+        # treat each unique combination of cols_group values as 
+        # a separate group
+        groups = ([""] if cols_group is None 
+                  else np.unique(df[cols_group], axis=0))
+        names = cols_group if names_group is None else names_group
+        for i, group in enumerate(groups):
+            # plot all points in each group with same color
+            df_group = df
+            s = sizes
+            label = None
+            if group != "":
+                mask = np.all(df[cols_group] == group, axis=1)
+                df_group = df.loc[mask]
+                if col_size is not None: s = s[mask]
+                # make label from group names and values
+                label = ", ".join(
+                    ["{} {:.3g}".format(name, val) 
+                     for name, val in zip(names, group)])
+            xs = df_group[col_x]
+            ys = df_group[col_y]
+            ax.scatter(
+                xs, ys, s=s, label=label, color=cycle_colors(i), marker="o")
+            if col_annot:
+                # annote each point with val from annotation col
+                for x, y, annot in zip(xs, ys, df_group[col_annot]):
+                    ax.annotate("{:.3g}".format(annot), (x, y))
     
     # set x/y axis limits if given
     if xlim: ax.set_xlim(xlim)
@@ -1674,7 +1686,8 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
     # tighten layout before creating legend to avoid compressing the graph 
     # for large legends
     gs.tight_layout(fig)
-    ax.legend(loc="best", fancybox=True, framealpha=0.5)
+    if len(ax.get_legend_handles_labels()[1]) > 0:
+        ax.legend(loc="best", fancybox=True, framealpha=0.5)
     
     # save and display
     out_path = path

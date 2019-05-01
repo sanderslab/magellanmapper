@@ -12,7 +12,7 @@ from enum import Enum
 import os
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import stats as spstats
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
@@ -44,15 +44,15 @@ def _volumes_mean_err(group_dict, key_mean, key_sem, vals, mask, ci=None):
     vals = vals[vals != None] # TODO: check if actually encounter None vals
     vals = vals[vals > config.POS_THRESH]
     mean = np.mean(vals)
-    sem = stats.sem(vals)
+    sem = spstats.sem(vals)
     err = sem
     if ci:
         # use confidence interval instead of SEM if CI percentage given
-        confidence = stats.t.interval(ci, len(vals) - 1, loc=mean, scale=sem)
+        confidence = spstats.t.interval(ci, len(vals) - 1, loc=mean, scale=sem)
         err = confidence[1] - mean
         '''
         # alternative method, which appears to give same result
-        confidence = stats.t.ppf((1 + ci)/2., len(vals) - 1)
+        confidence = spstats.t.ppf((1 + ci)/2., len(vals) - 1)
         err = sem * confidence
         '''
     #print("mean: {}, err: {}, n after pruning: {}".format(mean, err, vals.size))

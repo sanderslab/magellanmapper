@@ -1583,7 +1583,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 
 def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None, 
                  x_label=None, y_label=None, xlim=None, ylim=None, title=None, 
-                 size=None, show=True, suffix=None, df=None):
+                 size=None, show=True, suffix=None, df=None, xy_line=False)
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -1612,6 +1612,7 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
             defaults to None to ignore.
         df: Data frame to use; defaults to None. If set, this data frame 
             will be used instead of loading from ``path``.
+        xy_line: Show an xy line; defaults to False.
     """
     # load data frame from CSV and setup figure
     if df is None:
@@ -1636,8 +1637,17 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
         plt.annotate("{:.3g}".format(annot), (x, y))
     
     # add supporting plot components
+    
+    # set x/y axis limits if given
     if xlim: ax.set_xlim(xlim)
     if ylim: ax.set_ylim(ylim)
+    
+    if xy_line:
+        # add xy line
+        xy_line = np.linspace(*ax.get_xlim())
+        ax.plot(xy_line, xy_line)
+    
+    # set labels and title if given
     if x_label: ax.set_xlabel(x_label)
     if y_label: ax.set_ylabel(y_label)
     if title: ax.set_title(title)
@@ -1652,7 +1662,6 @@ def plot_scatter(path, col_x, col_y, col_annot, cols_group, names_group=None,
     if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
     save_fig(out_path, config.savefig)
     if show: plt.show()
-    return
 
 def plot_roc(df):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.

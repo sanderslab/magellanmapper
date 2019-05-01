@@ -3943,10 +3943,10 @@ def _test_smoothing_metric():
     print("img_smoothed:\n{}".format(img_smoothed))
     label_smoothing_metric(img, img_smoothed)
 
-if __name__ == "__main__":
-    print("Clrbrain image registration")
-    from clrbrain import cli
-    cli.main(True)
+def main():
+    """Handle registration processing tasks as specified in 
+    :attr:``config.register_type``.
+    """
     plot_2d.setup_style("default")
     unit_factor = np.power(1000.0, 3)
     
@@ -4315,3 +4315,9 @@ if __name__ == "__main__":
             names_group=metric_cols, x_label=conds[0], y_label=conds[1], 
             xlim=(-3, 3), ylim=(-3, 3), title=None, size=size, show=show, 
             suffix=None, df=df, xy_line=True, col_size="Volume")
+
+if __name__ == "__main__":
+    print("Clrbrain image registration")
+    from clrbrain import cli
+    cli.main(True)
+    main()

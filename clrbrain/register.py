@@ -4273,3 +4273,39 @@ if __name__ == "__main__":
             df, (vols.MetricCombos.HOMOGENEITY, ), np.nanmean)
         stats.data_frames_to_csv(
             df, lib_clrbrain.insert_before_ext(config.filename, "_norm"))
+
+    elif reg is config.RegisterTypes.zscores:
+        # export z-scores for the given metrics to a new data frame 
+        # and display as a scatter plot
+        
+        # generate z-scores
+        df = pd.read_csv(config.filename)
+        metric_cols = (
+            vols.LabelMetrics.VarIntensity.name, 
+            #vols.LabelMetrics.VarIntensDiff.name, 
+            vols.LabelMetrics.EdgeDistSum.name, 
+            vols.LabelMetrics.VarNuclei.name, 
+        )
+        df = stats.zscore_df(
+            df, "Region", metric_cols, 
+            ("Sample", "Condition", 
+             vols.LabelMetrics.VarIntensity.Volume.name))
+        
+        # shift metrics from each condition to separate columns
+        conds = np.unique(df["Condition"])
+        metric_z_cols = [col + "_z" for col in metric_cols]
+        df = stats.cond_to_cols_df(
+            df, ["Sample", "Region"], "Condition", "original", metric_z_cols)
+        path = lib_clrbrain.insert_before_ext(config.filename, "_zscore")
+        stats.data_frames_to_csv(df, path)
+        
+        # display as scatter plot
+        metric_z_cond_cols = []
+        for cond in conds:
+            metric_z_cond_cols.append(
+                ["{}_{}".format(col, cond) for col in metric_z_cols])
+        plot_2d.plot_scatter(
+            path, metric_z_cond_cols[0], metric_z_cond_cols[1], None, None, 
+            names_group=metric_cols, x_label=conds[0], y_label=conds[1], 
+            xlim=(-3, 3), ylim=(-3, 3), title=None, size=size, show=show, 
+            suffix=None, df=df, xy_line=True, col_size="Volume")

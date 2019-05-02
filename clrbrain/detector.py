@@ -408,9 +408,6 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
         absolute coordinates updated with the average of any 
         corresponding duplicates.
     """
-    '''
-    match_master, match_check = _find_close_blobs(blobs, blobs_master, tol)
-    '''
     num_blobs_check = len(blobs)
     num_blobs_master = len(blobs_master)
     if num_blobs_check < 1 or num_blobs_master < 1:
@@ -421,7 +418,6 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
     dtype = lib_clrbrain.dtype_within_range(
         0, np.amax((np.amax(blobs[:, :3]), np.amax(blobs_master[:, :3]))), 
         True, True)
-    print("using {} for blob removal".format(dtype))
     match_check = None
     match_master = None
     

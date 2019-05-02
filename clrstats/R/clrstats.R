@@ -206,37 +206,37 @@ setupPairing <- function(df.region, col, split.col) {
   }
   vals <- df.region[[col]]
   
-  # build up nonzero mask to filter out any pairs with any zero vals
-  nonzero <- NULL
+  # build up nonnan mask to filter out any pairs with any zero vals
+  nonnan <- NULL
   num.per.cond <- NULL
   for (cond in conditions.unique) {
     val.cond <- vals[cond == conditions]
     # TODO: look for all non-zero, not just pos vals
-    nonzero.cond <- val.cond > 0 & !is.nan(val.cond)
-    if (is.null(nonzero)) {
-      nonzero <- nonzero.cond
+    nonnan.cond <- !is.nan(val.cond)
+    if (is.null(nonnan)) {
+      nonnan <- nonnan.cond
     } else if (num.per.cond != length(val.cond)) {
       cat("unequal number of values per conditions, cannot match pairs\n")
       return(NULL)
     } else {
-      nonzero <- nonzero & nonzero.cond
+      nonnan <- nonnan & nonnan.cond
     }
     num.per.cond <- length(val.cond)
   }
   
   df.filtered <- NULL
-  num.nonzero <- sum(nonzero)
-  if (num.nonzero == 0) {
+  num.nonnan <- sum(nonnan)
+  if (num.nonnan == 0) {
     cat("no non-zero values would remain after filtering\n")
     return(NULL)
-  } else if (num.nonzero < num.per.cond) {
+  } else if (num.nonnan < num.per.cond) {
     # build new data frame with each condition filtered by mask
     for (cond in conditions.unique) {
-      df.nonzero <- df.region[cond == conditions, ][nonzero, ]
+      df.nonnan <- df.region[cond == conditions, ][nonnan, ]
       if (is.null(df.filtered)) {
-        df.filtered <- df.nonzero
+        df.filtered <- df.nonnan
       } else {
-        df.filtered <- rbind(df.filtered, df.nonzero)
+        df.filtered <- rbind(df.filtered, df.nonnan)
       }
     }
   } else {
@@ -282,19 +282,19 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
     # filter data frame for the given region and get mask to filter out 
     # NaNs and 0's as they indicate that the label for the region was suppressed
     df.region <- df[df$Region == region, ]
-    nonzero <- df.region[[col]] > 0 & !is.nan(df.region[[col]])
+    nonnan <- !is.nan(df.region[[col]])
     stats$Region[i] <- as.character(region)
     
-    if (any(nonzero)) {
+    if (any(nonnan)) {
       cat("\nRegion", region, "\n")
-      df.region.nonzero <- df.region
+      df.region.nonnan <- df.region
       split.col <- NULL
       paired <- is.element(model, kModel[7:9])
       
       if (!paired) {
         # filter each column within region for rows with non-zero values
-        df.region.nonzero <- df.region.nonzero[nonzero, ]
-        if (is.null(df.region.nonzero)) next
+        df.region.nonnan <- df.region.nonnan[nonnan, ]
+        if (is.null(df.region.nonnan)) next
       }
       if (is.element(model, kModel[5:9])) {
         # filter for means tests, which split by "Condition" column; 
@@ -305,41 +305,41 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
           # sort by sample and condition, matching saved condition order, 
           # split by condition, and filter out pairs where either sample 
           # has a zero value
-          #print(df.region.nonzero)
-          df.region.nonzero <- df.region.nonzero[
-            order(df.region.nonzero$Sample, 
-                  match(df.region.nonzero$Condition, cond.unique)), ]
-          df.region.nonzero <- setupPairing(df.region.nonzero, col, split.col)
-          if (is.null(df.region.nonzero)) next
+          #print(df.region.nonnan)
+          df.region.nonnan <- df.region.nonnan[
+            order(df.region.nonnan$Sample, 
+                  match(df.region.nonnan$Condition, cond.unique)), ]
+          df.region.nonnan <- setupPairing(df.region.nonnan, col, split.col)
+          if (is.null(df.region.nonnan)) next
         }
       }
-      #print(df.region.nonzero)
-      vals <- df.region.nonzero[[col]]
+      #print(df.region.nonnan)
+      vals <- df.region.nonnan[[col]]
       
       # apply stats and store in stats data frame, using list to allow 
       # arbitrary size and storing mean volume as well
       if (is.element(model, kModel[5:9])) {
         # means tests
         coef.tab <- meansModel(
-          vals, df.region.nonzero$Condition, model, paired)
+          vals, df.region.nonnan$Condition, model, paired)
       } else {
         # regression tests
-        genos <- df.region.nonzero$Geno
-        sides <- df.region.nonzero$Side
-        ids <- df.region.nonzero$Sample
+        genos <- df.region.nonnan$Geno
+        sides <- df.region.nonnan$Side
+        ids <- df.region.nonnan$Sample
         coef.tab <- fitModel(model, vals, genos, sides, ids)
       }
       if (!is.null(coef.tab)) {
         stats$Stats[i] <- list(coef.tab)
-        stats$Volume[i] <- mean(df.region.nonzero$Volume)
+        stats$Volume[i] <- mean(df.region.nonnan$Volume)
       }
       
       # show histogram to check for parametric distribution
       #histogramPlot(vals, title, meas)
       
       # construct title from region identifiers and capitalize first letter
-      df.jitter <- df.region.nonzero
-      region.name <- df.region.nonzero$RegionName[1]
+      df.jitter <- df.region.nonnan
+      region.name <- df.region.nonnan$RegionName[1]
       if (is.na(region.name)) {
         title <- region
       } else {

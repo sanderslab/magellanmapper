@@ -1491,7 +1491,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
 
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
               col_groups=None, groups=None, y_label=None, title=None, 
-              size=None, show=True):
+              size=None, show=True, prefix=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -1520,6 +1520,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
         show: True to display the image; otherwise, the figure will only 
             be saved to file, if :attr:``config.savefig`` is set.  
             Defaults to True.
+        prefix: Base path for figure output if :attr:``config.savefig`` 
+            is set; defaults to None to use ``path_to_df``.
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
@@ -1578,7 +1580,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
     
     # save and display
-    save_fig(path_to_df, config.savefig, "_barplot")
+    outt_path = path_to_df if prefix is None else prefix
+    save_fig(outt_path, config.savefig, "_barplot")
     if show: plt.show()
 
 def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 
@@ -1787,7 +1790,8 @@ if __name__ == "__main__":
     plot_2d_type = config.Plot2DTypes[config.plot_2d.upper()]
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
-        plot_bars(config.filename, show=(not config.no_show))
+        plot_bars(
+            config.filename, show=(not config.no_show), prefix=config.prefix)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS:
         # barplot for data frame from R stats from means/CIs
@@ -1795,7 +1799,8 @@ if __name__ == "__main__":
             config.filename, data_cols=("original.mean", "smoothed.mean"), 
             err_cols=("original.ci", "smoothed.ci"), 
             legend_names=("Original", "Smoothed"), col_groups="RegionAbbr", 
-            size=size, show=(not config.no_show), groups=config.groups)
+            size=size, show=(not config.no_show), groups=config.groups, 
+            prefix=config.prefix)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
         # barplot for data frame from R stats test effect sizes and CIs
@@ -1804,7 +1809,8 @@ if __name__ == "__main__":
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
             legend_names=None, col_groups="RegionAbbr", 
             y_label="Effect size (smoothed - original)", 
-            size=size, show=(not config.no_show), groups=config.groups)
+            size=size, show=(not config.no_show), groups=config.groups, 
+            prefix=config.prefix)
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve

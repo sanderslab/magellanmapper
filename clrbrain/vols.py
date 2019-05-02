@@ -42,7 +42,7 @@ class MetricCombos(Enum):
     """
     HOMOGENEITY = (
         "Homogeneity", 
-        (LabelMetrics.VarIntensity, LabelMetrics.VarIntensDiff, 
+        (LabelMetrics.VarIntensity, #LabelMetrics.VarIntensDiff, 
          LabelMetrics.EdgeDistSum, LabelMetrics.VarNuclei))
 
 class LabelToEdge(object):

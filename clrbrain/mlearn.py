@@ -10,6 +10,7 @@ from enum import Enum
 import numpy as np
 
 from clrbrain import config
+from clrbrain import lib_clrbrain
 from clrbrain import stats
 
 class GridSearchStats(Enum):
@@ -56,7 +57,10 @@ def grid_search(fnc, *fnc_args):
                     paren_i = name.rfind("(")
                     if paren_i != -1:
                         name = name[:paren_i]
-                    name += "({:.3g})".format(j)
+                    if lib_clrbrain.is_number(j):
+                        name += "({:.3g})".format(j)
+                    else:
+                        name += " {}".format(j)
                     grid_iterate(
                         i + 1, iterable_keys, grid_dict, name, parent_params)
             else:

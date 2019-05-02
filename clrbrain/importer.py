@@ -304,20 +304,20 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         # ver 11 -> 12
         if info["pixel_type"] != image5d.dtype:
             # Numpy tranpositions did not update pixel type and min/max
-            info_up["pixel_type"] = image5d.dtype
-            info_up["near_min"], info_up["near_max"] = np.percentile(
+            info["pixel_type"] = image5d.dtype
+            info["near_min"], info["near_max"] = np.percentile(
                 image5d, (0.5, 99.5))
             print("updated pixel type to {}, near_min to {}, near_max to {}"
-                  .format(info_up["pixel_type"], info_up["near_min"], 
-                          info_up["near_max"]))
+                  .format(info["pixel_type"], info["near_min"], 
+                          info["near_max"]))
     
     if curr_ver <= 12:
         # ver 12 -> 13
         
         # default to simply converting the existing scalar to a one-element 
         # list of repeated existing value, assuming single-channel
-        near_mins = [info_up["near_min"]]
-        near_maxs = [info_up["near_max"]]
+        near_mins = [info["near_min"]]
+        near_maxs = [info["near_max"]]
         scaling = None
         
         # assumed that 2nd filename given is the original file from which to 
@@ -343,24 +343,24 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
             num_channels = image5d.shape[4]
             near_mins, near_maxs = _calc_near_intensity_bounds(
                 num_channels, near_mins, near_maxs, lows, highs)
-        info_up["near_min"] = near_mins
-        info_up["near_max"] = near_maxs
-        info_up["scaling"] = scaling
-        info_up["plane"] = config.plane
+        info["near_min"] = near_mins
+        info["near_max"] = near_maxs
+        info["scaling"] = scaling
+        info["plane"] = config.plane
     
     if curr_ver <= 13:
         # ver 13 -> 14
         
         # pixel_type no longer saved since redundant with image5d.dtype
-        if "pixel_type" in info_up:
-            del info_up["pixel_type"]
+        if "pixel_type" in info:
+            del info["pixel_type"]
         
     # backup and save updated info
     lib_clrbrain.backup_file(
         filename_info_npz, modifier="_v{}".format(curr_ver))
-    info_up["ver"] = IMAGE5D_NP_VER
+    info["ver"] = IMAGE5D_NP_VER
     outfile_info = open(filename_info_npz, "wb")
-    np.savez(outfile_info, **info_up)
+    np.savez(outfile_info, **info)
     outfile_info.close()
     
     return True

@@ -192,7 +192,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     if denoise_size:
         denoise_max_shape = np.ceil(
             np.multiply(scaling_factor, denoise_size)).astype(int)
-    overlap = chunking.calc_overlap()
+    overlap_base = chunking.calc_overlap()
+    overlap = np.copy(overlap_base)
     exclude_border = config.process_settings["exclude_border"]
     if exclude_border is not None:
         # ensure that overlap is greater than twice the border exclusion per 
@@ -200,7 +201,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         exclude_border_thresh = np.multiply(2, exclude_border)
         overlap_less = np.less(overlap, exclude_border_thresh)
         overlap[overlap_less] = exclude_border_thresh[overlap_less]
-    tol = (np.multiply(overlap, settings["prune_tol_factor"])
+    tol = (np.multiply(overlap_base, settings["prune_tol_factor"])
            .astype(int))
     print("sub-ROI overlap: {}, pruning tolerance: {}".format(overlap, tol))
     max_pixels = np.ceil(np.multiply(
@@ -292,7 +293,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
                         exp_name, None)
                     rois = config.truth_db.get_rois(exp_name)
                     verify_tol = np.multiply(
-                        overlap, settings["verify_tol_factor"]).astype(int)
+                        overlap_base, settings["verify_tol_factor"]).astype(int)
                     stats_detection, fdbk = detector.verify_rois(
                         rois, segments_all, config.truth_db.blobs_truth, 
                         verify_tol, config.verified_db, exp_id, config.channel)

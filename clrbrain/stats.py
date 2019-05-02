@@ -502,7 +502,7 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
     df_norm[np.isinf(df_norm.loc[:, metric_cols])] = np.nan
     return df_norm
 
-def zscore_df(df, group_col, metric_cols, extra_cols):
+def zscore_df(df, group_col, metric_cols, extra_cols, replace_metrics=False):
     """Generate z-scores for each metric within each group.
     
     Args:
@@ -511,6 +511,8 @@ def zscore_df(df, group_col, metric_cols, extra_cols):
         metric_cols: Sequence of metric columns to normalize.
         extra_cols: Sequence of additional columns to include in the 
             output data frame.
+        replace_metrics: True to replace ``metric_cols`` with z-scores 
+            rather than adding new columns; defaults to False.
     
     Returns:
         New data frame with columns from ``extra_cols`` 
@@ -533,11 +535,14 @@ def zscore_df(df, group_col, metric_cols, extra_cols):
             df_group.loc[:, metric_z_col] = (col_vals - mu) / std
         dfs.append(df_group)
     
-    # combine data frames from each group with z-scores and drop 
-    # cols with original metrics
+    # combine data frames from each group with z-scores
     df_zscore = pd.concat(dfs)
-    print(df_zscore.columns)
-    df_zscore = df_zscore.drop(list(metric_cols), axis=1)
+    if replace_metrics:
+        # replace original metric columns with z-scores
+        df_zscore = df_zscore.drop(list(metric_cols), axis=1)
+        col_dict = {z_col: col 
+                    for z_col, col in zip(metric_z_cols, metric_cols)}
+        df_zscore.rename(columns=col_dict, inplace=True)
     return df_zscore
 
 def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):

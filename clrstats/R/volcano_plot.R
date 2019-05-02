@@ -1,6 +1,6 @@
 
 volcanoPlot <- function(stats, meas, interaction, thresh=NULL, 
-                        log.scale.x=TRUE, labels=TRUE) {
+                        log.scale.x=TRUE, labels=TRUE, plot.size=c(5, 7)) {
   # Generate a volcano plot.
   #
   # Args:
@@ -16,6 +16,8 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   #   log.scale.x: True to scale x-axis by log10, first normalizing to 
   #     the minimum x-value before taking the log of the absolute value 
   #     to avoid negative log values, then returning to the original sign.
+  #   plot.size: Vector of width, height for exported plot; defaults to 
+  #     c(5, 7).
   
   x <- stats[[paste0(interaction, ".effect")]]
   num.x <- length(x)
@@ -93,6 +95,6 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   
   # write to PDF file
   dev.print(
-    pdf, file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), 
-                    sep="_"))
+    pdf, width=plot.size[1], height=plot.size[2], 
+    file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), sep="_"))
 }

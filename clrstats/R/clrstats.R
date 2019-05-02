@@ -181,40 +181,6 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   return(coef.tab)
 }
 
-statsByCols <- function(df, col.start, model) {
-  # Calculates statistics for columns starting with the given string using 
-  # the selected model.
-  #
-  # Values of 0 will be ignored. If all values for a given vector are 0, 
-  # statistics will not be computed.
-  #
-  # Args:
-  #   df: Data frame with columns for Genos, Sides, and names starting with 
-  #     col.start.
-  #   col.start: Columns starting with this string will be included.
-  #   model: Model to use, corresponding to one of kModel.
-  
-  .Deprecated("statsByRegion")
-  
-  # filter cols only starting with search string
-  cols <- names(df)[grepl(col.start, names(df))]
-  for (name in cols) {
-    # filter out values of 0, using as mask for corresponding columns
-    nonzero <- df[[name]] > 0
-    cat("---------------------------\n")
-    if (any(nonzero)) {
-      vals <- df[[name]][nonzero]
-      genos <- df$Geno[nonzero]
-      sides <- df$Side[nonzero]
-      cat(name, ": ", vals, "\n")
-      fit <- fitModel(model, vals, genos, sides, ids)
-      hist(vals)
-    } else {
-      cat(name, ": no non-zero samples found\n\n")
-    }
-  }
-}
-
 setupPairing <- function(df.region, col, split.col) {
   # Setup data frame for comparing paired groups.
   #

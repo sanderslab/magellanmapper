@@ -252,7 +252,7 @@ def merge_blobs(blob_rois):
     # combine all blobs into a master list so that each overlapping region
     # will contain all blobs from all sub-ROIs that had blobs in those regions,
     # obviating the need to pair sub-ROIs with one another
-    blobs_all = None
+    blobs_all = []
     for z in range(blob_rois.shape[0]):
         for y in range(blob_rois.shape[1]):
             for x in range(blob_rois.shape[2]):
@@ -266,11 +266,11 @@ def merge_blobs(blob_rois):
                     extras = np.zeros((blobs.shape[0], 3), dtype=int)
                     extras[:] = coord
                     blobs = np.concatenate((blobs, extras), axis=1)
-                    if blobs_all is None:
-                        lib_clrbrain.printv("initializing master blobs list")
-                        blobs_all = blobs
-                    else:
-                        blobs_all = np.concatenate((blobs_all, blobs))
+                    blobs_all.append(blobs)
+    if len(blobs_all) > 0:
+        blobs_all = np.vstack(blobs_all)
+    else:
+        blobs_all = None
     return blobs_all
 
 if __name__ == "__main__":

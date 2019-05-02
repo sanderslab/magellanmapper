@@ -92,6 +92,8 @@ rc_params = {
     # need to change for PDF export; still falls back to DejaVuSans if 
     # none else found for display
     "font.sans-serif": ["Arial", "Helvetica", "Tahoma"], 
+    # some styles use strings; change to num for numerical adjustments
+    "axes.titlesize": 12,
 }
 
 # Matplotlib2 default image interpoloation

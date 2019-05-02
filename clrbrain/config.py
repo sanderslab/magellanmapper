@@ -958,16 +958,16 @@ _isotropic_factors[:, 0] = _isotropic_zs
 #print(_isotropic_factors)
 
 # pruning tolerance factors
-_prune_tol_zs = np.arange(2.5, 4.6, 0.5)
-_prune_tol_factors = np.ones((len(_prune_tol_zs), 3)) * 1.3
+_prune_tol_zs = np.arange(0.5, 1.1, 0.5)
+_prune_tol_factors = np.ones((len(_prune_tol_zs), 3)) * 0.9
 _prune_tol_factors[:, 0] = _prune_tol_zs
-#print(_isotropic_factors)
+#print(_prune_tol_factors)
 
 roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         # test single value by iterating on value that should not affect 
         # detection ability
-        ("points_3d_thresh", [0.7]),
+        #("points_3d_thresh", [0.7]),
         
         # unfused baseline
         #("scale_factor", 0.59),
@@ -985,7 +985,7 @@ roc_dict = OrderedDict([
         #("isotropic", np.array([(0.96, 1, 1)])),
         #("overlap", np.arange(0.1, 1.0, 0.1)),
         #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
-        #("prune_tol_factor", _prune_tol_factors),
+        ("prune_tol_factor", _prune_tol_factors),
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
         #("clip_max", np.arange(0.3, 0.7, 0.1)),
@@ -1000,7 +1000,7 @@ roc_dict = OrderedDict([
         #("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
         #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
-        #("segment_size", np.arange(140, 160, 1)),
+        ("segment_size", np.arange(130, 160, 20)),
     ]))
 ])
 

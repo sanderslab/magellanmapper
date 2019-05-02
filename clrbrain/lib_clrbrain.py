@@ -347,7 +347,7 @@ def is_number(val):
     try:
         int(val)
         return True
-    except ValueError:
+    except (ValueError, TypeError):
         return False
 
 def convert_indices_to_int(dict_to_convert):

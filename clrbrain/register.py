@@ -4292,26 +4292,34 @@ def main():
             vols.LabelMetrics.EdgeDistSum.name, 
             vols.LabelMetrics.VarNuclei.name, 
         )
+        extra_cols = (
+            "Sample", "Condition", 
+            vols.LabelMetrics.VarIntensity.Volume.name, 
+        )
         df = stats.zscore_df(
-            df, "Region", metric_cols, 
-            ("Sample", "Condition", 
-             vols.LabelMetrics.VarIntensity.Volume.name))
+            df, "Region", metric_cols, extra_cols, True)
+        
+        # generate composite score column
+        df_comb = stats.combine_cols(
+            df, (vols.MetricCombos.HOMOGENEITY, ), np.sum)
+        stats.data_frames_to_csv(
+            df_comb, 
+            lib_clrbrain.insert_before_ext(config.filename, "_zhomogeneity"))
         
         # shift metrics from each condition to separate columns
         conds = np.unique(df["Condition"])
-        metric_z_cols = [col + "_z" for col in metric_cols]
         df = stats.cond_to_cols_df(
-            df, ["Sample", "Region"], "Condition", "original", metric_z_cols)
+            df, ["Sample", "Region"], "Condition", "original", metric_cols)
         path = lib_clrbrain.insert_before_ext(config.filename, "_zscore")
         stats.data_frames_to_csv(df, path)
         
         # display as scatter plot
-        metric_z_cond_cols = []
+        metric_cond_cols = []
         for cond in conds:
-            metric_z_cond_cols.append(
-                ["{}_{}".format(col, cond) for col in metric_z_cols])
+            metric_cond_cols.append(
+                ["{}_{}".format(col, cond) for col in metric_cols])
         plot_2d.plot_scatter(
-            path, metric_z_cond_cols[0], metric_z_cond_cols[1], None, None, 
+            path, metric_cond_cols[0], metric_cond_cols[1], None, None, 
             names_group=metric_cols, x_label=conds[0], y_label=conds[1], 
             xlim=(-3, 3), ylim=(-3, 3), title=None, size=size, show=show, 
             suffix=None, df=df, xy_line=True, col_size="Volume")

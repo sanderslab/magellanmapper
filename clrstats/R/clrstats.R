@@ -107,6 +107,7 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   } else {
     cat("Sorry, model", model, "not found\n")
   }
+  coef.tab <- cbind("N"=length(vals), coef.tab)
   print(coef.tab)
   return(coef.tab)
 }
@@ -165,8 +166,9 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
   print(result)
   
   # basic stats data frame in format for filterStats
-  coef.tab <- data.frame(matrix(nrow=1, ncol=4))
-  names(coef.tab) <- c("Value", "CI.low", "CI.hi", "P")
+  cols <- c("N", "Value", "CI.low", "CI.hi", "P")
+  coef.tab <- data.frame(matrix(nrow=1, ncol=length(cols)))
+  names(coef.tab) <- cols
   rownames(coef.tab) <- c("vals")
   effect <- result[[col.effect]]
   coef.tab$Value <- c(effect)
@@ -177,6 +179,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE) {
     coef.tab$CI.hi <- c(ci[2] - effect)
   }
   coef.tab$P <- c(result$p.value)
+  coef.tab$N <- c(num.per.cond)
   print(coef.tab)
   return(coef.tab)
 }
@@ -424,6 +427,7 @@ filterStats <- function(stats, corr=NULL) {
   cols <- list("Region", "Volume")
   offset <- length(cols)
   for (interact in interactions) {
+    cols <- append(cols, paste0(interact, ".n"))
     cols <- append(cols, paste0(interact, ".effect"))
     cols <- append(cols, paste0(interact, ".ci.low"))
     cols <- append(cols, paste0(interact, ".ci.hi"))

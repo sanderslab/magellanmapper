@@ -1345,9 +1345,9 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         #print("showing list: {}, err: {}".format(lists[i], err))
         num_bars = len(lists[i])
         err_dict = {"elinewidth": width * 20 / num_bars}
-        bars.append(ax.bar(
-            indices + width * i, lists[i], width=width, color=colors[i], 
-            linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
+        bars.append(
+            ax.bar(indices + width * i, lists[i], width=width, color=colors[i], 
+                   linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
     ax.set_title(title)
     ax.set_ylabel(y_label)
     # TODO: consider making configurable
@@ -1358,7 +1358,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     if lib_clrbrain.is_number(font_size):
         # scale font size of x-axis labels by a sigmoid function to rapidly 
         # decrease size for larger numbers of labels so they don't overlap
-        font_size *= (math.atan(len(x_labels) / 3 - 5) * -2 / math.pi + 1) / 2
+        font_size *= (math.atan(len(x_labels) / 5 - 5) * -2 / math.pi + 1) / 2
     font_dict = { "fontsize": font_size }
     ax.set_xticklabels(
         x_labels, rotation=80, horizontalalignment="right", fontdict=font_dict)

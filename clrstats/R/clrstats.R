@@ -405,6 +405,8 @@ filterStats <- function(stats, corr=NULL) {
   
   non.na <- !is.na(stats$Stats)
   stats.filt <- stats[non.na, ]
+  if (length(stats.filt$Stats) < 1) return(NULL)
+  
   filtered <- NULL
   interactions <- NULL
   offset <- 0 # number of columns ahead of coefficients
@@ -415,35 +417,36 @@ filterStats <- function(stats, corr=NULL) {
     cols.names[grepl(".mean", cols.names)], 
     cols.names[grepl(".ci", cols.names)])
   
+  # build data frame for pertinent coefficients from each type of main 
+  # effect or interaction
+  stats.coef <- stats.filt$Stats[1][[1]]
+  interactions <- gsub(":", ".", rownames(stats.coef))
+  cols <- list("Region", "Volume")
+  offset <- length(cols)
+  for (interact in interactions) {
+    cols <- append(cols, paste0(interact, ".effect"))
+    cols <- append(cols, paste0(interact, ".ci.low"))
+    cols <- append(cols, paste0(interact, ".ci.hi"))
+    cols <- append(cols, paste0(interact, ".p"))
+    cols <- append(cols, paste0(interact, ".pcorr"))
+    cols <- append(cols, paste0(interact, ".logp"))
+  }
+  filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
+  names(filtered) <- cols
+  filtered$Region <- stats.filt$Region
+  filtered$Volume <- stats.filt$Volume
+  num.stat.cols <- length(names(stats.coef))
+  
   for (i in 1:nrow(stats.filt)) {
     if (is.na(stats.filt$Stats[i])) next
     # get coefficients, stored in one-element list
     stats.coef <- stats.filt$Stats[i][[1]]
-    if (is.null(filtered)) {
-      # build data frame if not yet generated to store pertinent coefficients 
-      # from each type of main effect or interaction
-      interactions <- gsub(":", ".", rownames(stats.coef))
-      cols <- list("Region", "Volume")
-      offset <- length(cols)
-      for (interact in interactions) {
-        cols <- append(cols, paste0(interact, ".effect"))
-        cols <- append(cols, paste0(interact, ".ci.low"))
-        cols <- append(cols, paste0(interact, ".ci.hi"))
-        cols <- append(cols, paste0(interact, ".p"))
-      }
-      filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
-      names(filtered) <- cols
-      filtered$Region <- stats.filt$Region
-      filtered$Volume <- stats.filt$Volume
-    }
     for (j in seq_along(interactions)) {
       # insert effect, p-value, and -log(p) after region name for each 
       # main effect/interaction, ignoring missing rows
       if (nrow(stats.coef) >= j) {
-        filtered[i, j * 3 - 2 + offset] <- stats.coef[j, 1]
-        filtered[i, j * 3 - 1 + offset] <- stats.coef[j, 2]
-        filtered[i, j * 3 + offset] <- stats.coef[j, 3]
-        filtered[i, j * 3 + 1 + offset] <- stats.coef[j, 4]
+        start <- offset + 6 * (j - 1) + 1
+        filtered[i, start:(start+num.stat.cols)] <- stats.coef[j, ]
       }
     }
     for (col in cols.means.cis) {
@@ -456,13 +459,11 @@ filterStats <- function(stats, corr=NULL) {
     cat("correcting for", num.regions, "regions\n")
   }
   for (interact in interactions) {
-    col <- paste0(interact, ".p")
-    col.for.log <- col
+    col.for.log <- paste0(interact, ".pcorr")
     if (!is.null(corr)) {
       # apply correction based on number of comparisons
-      col.for.log <- paste0(col, "corr")
       filtered[[col.for.log]] <- p.adjust(
-        filtered[[col]], method="bonferroni", n=num.regions)
+        filtered[[paste0(interact, ".p")]], method="bonferroni", n=num.regions)
     }
     # calculate -log-p values
     filtered[[paste0(interact, ".logp")]] <- -1 * log10(filtered[[col.for.log]])

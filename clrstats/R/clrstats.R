@@ -41,7 +41,8 @@ kRegionsIgnore <- c(15564)
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
-                   "compactness_summary.csv", "vols_by_sample_levels_norm.csv")
+                   "compactness_summary.csv", 
+                   "vols_by_sample_levels_zhomogeneity.csv")
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 

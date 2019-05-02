@@ -1512,6 +1512,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             Defaults to None, which will use ``data_cols`` for names.
         col_groups: Name of column specifying names of each group. 
             Defaults to None, which will use the first column for names.
+        groups: Sequence of groups to include and by which to sort; 
+            defaults to None to include all groups.
         y_label: Name of y-axis; defaults to None.
         title: Title of figure; defaults to None, which will use  
             ``path_to_df`` to build the title.
@@ -1539,7 +1541,15 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
         data_cols.remove(col_groups)
     
     if groups is not None:
+        # get rows in groups and sort by groups that exist
+        groups = np.array(groups)
         df = df.loc[df[col_groups].isin(groups)]
+        groups_found = np.isin(groups, df[col_groups])
+        groups_missing = groups[~groups_found]
+        if len(groups_missing) > 0:
+            print("could not find these groups:", groups_missing)
+            groups = groups[groups_found]
+        df = df.set_index(col_groups).loc[groups].reset_index()
     
     if err_cols is None:
         # default to columns corresponding to data cols with suffix appended 

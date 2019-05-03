@@ -2481,14 +2481,21 @@ def edge_distances(labels, atlas_edge=None, path=None, spacing=None):
     
     return dist_to_orig, labels_edge
 
-def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
+def make_density_image(img_path, scale=None, shape=None, suffix=None, 
+                       labels_img_sitk=None):
     """Make a density image based on associated blobs.
+    
+    Uses the shape of the registered labels image by default to set 
+    the voxel sizes for the blobs.
     
     Args:
         img_path: Path to image, which will be used to indentify the blobs file.
-        scale: Rescaling factor as a scalar value. If set, the corresponding 
-            image for this factor will be opened. If None, the full size 
-            image will be used. Defaults to None.
+        scale: Rescaling factor as a scalar value to find the corresponding 
+            full-sized image. Defaults to None to use the register 
+            setting ``target_size`` instead if available, falling back 
+            to load the full size image to find its shape if necessary.
+        shape: Final shape size; defaults to None to use the shape of 
+            the labels image.
         suffix: Modifier to append to end of ``img_path`` basename for 
             registered image files that were output to a modified name; 
             defaults to None.
@@ -2515,10 +2522,12 @@ def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
     info = np.load(filename_base + config.SUFFIX_INFO_PROC)
     blobs = info["segments"]
     print("loading {} blobs".format(len(blobs)))
-    target_size = config.register_settings["target_size"]
+    # get scaling from source image, which can be rescaled/resized image 
+    # since contains scaling image
+    load_size = config.register_settings["target_size"]
     img_path_transposed = transformer.get_transposed_image_path(
-        img_path, scale, target_size)
-    if scale is not None or target_size is not None:
+        img_path, scale, load_size)
+    if scale is not None or load_size is not None:
         image5d, img_info = importer.read_file(
             img_path_transposed, config.series, return_info=True)
         scaling = img_info["scaling"]
@@ -2527,10 +2536,18 @@ def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
         image5d = importer.read_file(
             img_path_transposed, config.series)
         scaling = importer.calc_scaling(image5d, labels_img)
+    if shape is not None:
+        # scale blobs to an alternative final size
+        scaling = np.divide(shape, np.divide(labels_img.shape, scaling))
+        labels_spacing = np.multiply(
+            labels_img_sitk.GetSpacing()[::-1], 
+            np.divide(labels_img.shape, shape))
+        labels_img = np.zeros(shape, dtype=labels_img.dtype)
+        labels_img_sitk.SetSpacing(labels_spacing[::-1])
     print("using scaling: {}".format(scaling))
     # annotate blobs based on position
     blobs_ids, coord_scaled = ontology.get_label_ids_from_position(
-        blobs[:, 0:3], labels_img, scaling, 
+        blobs[:, :3], labels_img, scaling, 
         return_coord_scaled=True)
     print("blobs_ids: {}".format(blobs_ids))
     
@@ -2542,7 +2559,7 @@ def make_density_image(img_path, scale=None, suffix=None, labels_img_sitk=None):
     sitk.WriteImage(heat_map_sitk, out_path, False)
     return heat_map, blobs_ids, img_path
 
-def make_density_images_mp(img_paths, scale=None, suffix=None):
+def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
     """Make density images for a list of files as a multiprocessing 
     wrapper for :func:``make_density_image``
     
@@ -2561,7 +2578,7 @@ def make_density_images_mp(img_paths, scale=None, suffix=None):
     for img_path in img_paths:
         print("making image", img_path)
         pool_results.append(pool.apply_async(
-            make_density_image, args=(img_path, scale, suffix)))
+            make_density_image, args=(img_path, scale, shape, suffix)))
     heat_maps = []
     for result in pool_results:
         _, _, path = result.get()
@@ -3243,7 +3260,7 @@ def register_volumes(img_path, labels_ref_lookup, level, scale=None,
             if densities:
                 # get blob densities, saving as heat map
                 _, blobs_ids, _ = make_density_image(
-                    img_path, scale, suffix, labels_img_sitk)
+                    img_path, scale, None, suffix, labels_img_sitk)
             
             # calculate and plot volumes and densities; assume that labels 
             # images has already been thresholded, so no need to pass image5d
@@ -4203,8 +4220,10 @@ def main():
     
     elif reg is config.RegisterTypes.make_density_images:
         # make density images
+        size = config.roi_sizes
+        if size: size = size[0][::-1]
         make_density_images_mp(
-            config.filenames, config.rescale, config.suffix)
+            config.filenames, config.rescale, size, config.suffix)
     
     elif reg is config.RegisterTypes.make_subsegs:
         # make sub-segmentations for all images

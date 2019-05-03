@@ -220,6 +220,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     seg_rois = detect_blobs_sub_rois(
         sub_rois, sub_rois_offsets, denoise_max_shape, exclude_border)
     detection_time = time() - time_detection_start
+    print("blob detection time (s):", detection_time)
     
     # prune blobs in overlapping portions of sub-ROIs
     time_pruning_start = time()
@@ -227,7 +228,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels, 
         overlap_tol)
     pruning_time = time() - time_pruning_start
-    print("blob pruning time (s)", pruning_time)
+    print("blob pruning time (s):", pruning_time)
     #print("maxes:", np.amax(segments_all, axis=0))
     
     # get weighted mean of ratios

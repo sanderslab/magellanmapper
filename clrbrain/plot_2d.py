@@ -1708,11 +1708,13 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     save_fig(out_path, config.savefig)
     if show: plt.show()
 
-def plot_roc(df):
+def plot_roc(df, show=True):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     
     Args:
         df: Data frame generated from :meth:``mlearn.parse_grid_stats``.
+        show: True to display the plot in :meth:``plot_scatter``; 
+            defaults to True.
     """
     # names of hyperparameters for each group name, with hyperparameters 
     # identified by param prefix
@@ -1726,7 +1728,7 @@ def plot_roc(df):
         "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group, 
         names_group, "False Discovery Rate", "Sensitivity", (0, 1), (0, 1), 
-        "Nuclei Detection ROC", df=df)
+        "Nuclei Detection ROC", df=df, show=show)
 
 def plot_image(img, path=None, show=False):
     """Plot a single image in a borderless figure, with option to export 

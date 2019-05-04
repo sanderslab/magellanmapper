@@ -559,7 +559,7 @@ def main(process_args_only=False):
             # plot ROC curve
             from clrbrain import plot_2d
             plot_2d.setup_style()
-            plot_2d.plot_roc(stats_df)
+            plot_2d.plot_roc(stats_df, not config.no_show)
         else:
             # processes file with default settings
             process_file(filename_base, offset, roi_size)

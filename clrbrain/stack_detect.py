@@ -204,7 +204,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         overlap_less = np.less(overlap, exclude_border_thresh)
         overlap[overlap_less] = exclude_border_thresh[overlap_less]
         excluded = np.greater(exclude_border, 0)
-        overlap[excluded] += 2 # additional padding
+        overlap[excluded] += 1 # additional padding
         overlap_tol[excluded] = 0 # no need to prune past excluded border
     print("sub-ROI overlap: {}, pruning tolerance: {}, overlap_tol: {}"
           .format(overlap, tol, overlap_tol))

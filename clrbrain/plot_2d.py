@@ -1596,8 +1596,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 
 def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 
                  names_group=None, x_label=None, y_label=None, xlim=None, 
-                 ylim=None, title=None, size=None, show=True, suffix=None, 
-                 df=None, xy_line=False, col_size=None):
+                 ylim=None, title=None, fig_size=None, show=True, suffix=None, 
+                 df=None, xy_line=False, col_size=None, size_mult=5):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -1620,7 +1620,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         xlim: Sequence of min and max boundaries for the y-axis; 
             defaults to None.
         title: Title of figure; defaults to None.
-        size: Sequence of ``width, height`` to size the figure; defaults 
+        fig_size: Sequence of ``width, height`` to size the figure; defaults 
             to None.
         show: True to display the image; otherwise, the figure will only 
             be saved to file, if :attr:``config.savefig`` is set.  
@@ -1632,19 +1632,20 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         xy_line: Show an xy line; defaults to False.
         col_size: Name of column from which to scale point sizes, where 
             the max value in the column is 1; defaults to None.
+        size_mult: Point size multiplier; defaults to 5.
     """
     # load data frame from CSV and setup figure
     if df is None:
         df = pd.read_csv(df)
-    fig = plt.figure(figsize=size)
+    fig = plt.figure(figsize=fig_size)
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
     
-    sizes = 5
+    sizes = size_mult
     if col_size is not None:
         # scale point sizes based on max val in given col
         sizes = df[col_size]
-        sizes /= np.amax(sizes)
+        sizes *= size_mult / np.amax(sizes)
     
     # plot selected columns
     if lib_clrbrain.is_seq(col_x):

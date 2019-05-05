@@ -134,33 +134,40 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         alpha: Transparency level.
         prioritize_defaults: If True, the default colors from 
             :attr:``config.colors`` will replace the initial colormap elements; 
-            defaults to True.
+            defaults to True. Alternatively, `cn` can be given to use 
+            the "CN" color spec instead.
         seed: Random number seed; defaults to None, in which case no seed 
             will be set.
         multiplier: Multiplier for random values generated for RGB values; 
-            defaults to 255.
+            defaults to 255. Generally range from 1-255, with lower 
+            numbers skewing toward darker colors.
         offset: Offset to generated random numbers; defaults to 0. The 
             final numbers will be in the range from offset to offset+multiplier.
     
     Returns:
-        2D Numpy array in the format [[R, G, B, alpha], ...]. This colormap 
-        will need to be converted into a Matplotlib colormap using 
-        ``LinearSegmentedColormap.from_list`` to generate a map that can 
-        be used directly in functions such as ``imshow``.
+        2D Numpy array in the format [[R, G, B, alpha], ...] on a 
+        scale of 0-255. This colormap will need to be converted into a 
+        Matplotlib colormap using ``LinearSegmentedColormap.from_list`` 
+        to generate a map that can be used directly in functions such 
+        as ``imshow``.
     """
     # generate random combination of RGB values for each number of colors, 
-    # skewed by offset and limited by multiplier
+    # skewed by offset and limited by multiplier; 
+    # TODO: consider giving option to change to 0-1 scale
     if seed is not None:
         np.random.seed(seed)
     cmap = (np.random.random((num_colors, 4)) 
             * multiplier + offset).astype(np.uint8)
     cmap[:, -1] = alpha # make slightly transparent
-    if prioritize_default:
+    if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones
-        for i in range(len(config.colors)):
-            if i >= num_colors:
-                break
-            cmap[i, :3] = config.colors[i]
+        colors_default = config.colors
+        if prioritize_default == "cn":
+            # "CN" color spec
+            colors_default = np.multiply(
+                [colors.to_rgb("C{}".format(i)) for i in range(10)], 255)
+        end = min((num_colors, len(colors_default)))
+        cmap[:end, :3] = colors_default[:end]
     return cmap
 
 def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False):

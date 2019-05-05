@@ -1074,23 +1074,6 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     save_fig(filename, config.savefig)
     print("2D plot time: {}".format(time() - time_start))
 
-def cycle_colors(i):
-    num_colors = len(config.colors)
-    cycle = i // num_colors
-    colori = i % num_colors
-    color = config.colors[colori]
-    '''
-    print("num_colors: {}, cycle: {}, colori: {}, color: {}"
-          .format(num_colors, cycle, colori, color))
-    '''
-    upper = 255
-    if cycle > 0:
-        color = np.copy(color)
-        color[0] = color[0] + cycle * 5
-        if color[0] > upper:
-            color[0] -= upper * (color[0] // upper)
-    return np.divide(color, upper)
-
 def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0, 
                   title=None):
     """Shows an image for overlays in the orthogonal plane specified by 
@@ -1650,17 +1633,22 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     # plot selected columns
     if lib_clrbrain.is_seq(col_x):
         # treat each pair of col_y and col_y values as a group
+        colors = colormaps.discrete_colormap(
+            len(col_x), prioritize_default="cn", seed=config.seed) / 255
+        print(colors)
         for i, (x, y) in enumerate(zip(col_x, col_y)):
             label = x if names_group is None else names_group[i]
             ax.scatter(
-                df[x], df[y], s=sizes, label=label, color=cycle_colors(i), 
-                marker="o")
+                df[x], df[y], s=sizes, label=label, 
+                color=colors[i], marker="o")
     else:
         # treat each unique combination of cols_group values as 
         # a separate group
         groups = ([""] if cols_group is None 
                   else np.unique(df[cols_group], axis=0))
         names = cols_group if names_group is None else names_group
+        colors = colormaps.discrete_colormap(
+            len(groups), prioritize_default="cn", seed=config.seed) / 255
         for i, group in enumerate(groups):
             # plot all points in each group with same color
             df_group = df

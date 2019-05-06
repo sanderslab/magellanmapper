@@ -181,6 +181,48 @@ def args_with_dict(args):
     parsed.append(args_dict)
     return parsed
 
+def args_to_dict(args, keys_enum, args_dict={}):
+    """Parse arguments list with positional and keyword-based arguments 
+    into an enum-keyed dictionary.
+    
+    Args:
+        args: List of arguments with positional values followed by 
+            "=" delimited values. Positional values will be entered 
+            in the existing order of ``keys_enum`` based on member values, 
+            while keyword-based values will be entered if an enum 
+            member corresponding to the keyword exists.
+        keys_enum: Enum to use as keys for dictionary. Values are 
+            assumed to range from 1 to number of members as output 
+            by the default Enum functional API.
+        args_dict: Dictionary to be filled or updated with keys from 
+            ``keys_enum``; defaults to empty dict.
+    
+    Returns:
+        Dictionary filled with arguments. Values that contain commas 
+        will be split into comma-delimited lists. All values will be 
+        converted to ints if possible.
+    """
+    by_position = True
+    for i, arg in enumerate(args):
+        arg_split = arg.split("=")
+        # assume by position until any keywork given
+        by_position = by_position and len(arg_split) < 2
+        if by_position:
+            # positions are based on enum vals, assumed to range from 
+            # 1 to num of members
+            args_dict[keys_enum(i + 1)] = arg
+        else:
+            # assign based on keyword if its equivalent enum exists
+            vals = arg_split[1]
+            vals_split = vals.split(",")
+            if len(vals_split) > 1: vals = vals_split
+            key_str = arg_split[0].upper()
+            try:
+                args_dict[keys_enum[key_str]] = lib_clrbrain.get_int(vals)
+            except KeyError:
+                print("unable to find {} in {}".format(key_str, keys_enum))
+    return args_dict
+
 def main(process_args_only=False):
     """Starts the visualization GUI.
     

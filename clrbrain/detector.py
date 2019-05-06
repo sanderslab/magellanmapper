@@ -342,13 +342,13 @@ def _find_closest_blobs(blobs, blobs_master, tol):
     
     close_master = []
     close = []
-    far = np.max(tol) + 1
     # compare each element for differences, weighting based on tolerance; 
     # TODO: incorporate radius
     blobs_diffs_init = np.abs(
         blobs_master[:, :3][:, None] - blobs[:, :3])
     normalize_factor = np.divide(np.max(tol), tol)
     tol = np.multiply(tol, normalize_factor)
+    far = np.max(tol) + 1
     #print("weighted tol: {}".format(tol))
     
     # matches limited by length of smallest list
@@ -361,6 +361,8 @@ def _find_closest_blobs(blobs, blobs_master, tol):
         #print("blobs_diffs:\n{}".format(blobs_diffs))
         #print("diffs_sums:\n{}".format(diffs_sums))
         for j in range(len(diffs_sums)):
+            # iterate up to the number of master blobs
+            
             # get indices of minimum differences
             min_master, min_blob = np.where(diffs_sums == diffs_sums.min())
             #print("diffs_sums: {}, min: {}".format(diffs_sums, diffs_sums.min()))
@@ -382,7 +384,9 @@ def _find_closest_blobs(blobs, blobs_master, tol):
                     found = True
                     break
                 elif (diff <= tol).any():
-                    # set to distant value so can check next min diff
+                    # closest value still to far, so set to distant 
+                    # value to can check next min diff; 
+                    # TODO: add far rather than simply assigning to it?
                     diffs_sums[blob_master_closest] = far
                 else:
                     # no match if none of array dims within tolerance of min diff

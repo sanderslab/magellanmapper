@@ -328,6 +328,7 @@ def update_process_settings(settings, settings_type):
         # v2.2 (Clrbrain v0.6.6): narrower and taller stack shape
         # v2.3 (Clrbrain 0.8.7): added prune_tol_factor
         # v2.4 (Clrbrain 0.8.8): decreased min/max sigma, segment size
+        # v2.5 (Clrbrain 0.8.9): added exclude_border
         settings.add_modifier(
             "lightsheet", 
             {"points_3d_thresh": 0.7, 

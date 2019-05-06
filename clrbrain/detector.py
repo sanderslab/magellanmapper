@@ -393,7 +393,15 @@ def _find_closest_blobs(blobs, blobs_master, tol):
                     break
             if found:
                 break
-    #print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
+    if config.verbose:
+        # show sorted list of matches to compare between runs
+        found_master = blobs_master[close_master, :3]
+        found = blobs[close, :3]
+        sort = np.lexsort((found_master[:, 2], found_master[:, 1], found_master[:, 0]))
+        found_master = found_master[sort]
+        found = found[sort]
+        print("closest matches found (truth, detected):")
+        for fm, f in zip(found_master, found): print(fm, f)
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
 def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):

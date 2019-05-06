@@ -1665,7 +1665,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             xs = df_group[col_x]
             ys = df_group[col_y]
             ax.scatter(
-                xs, ys, s=s, label=label, color=cycle_colors(i), marker="o")
+                xs, ys, s=s, label=label, color=colors[i], marker="o")
             if col_annot:
                 # annote each point with val from annotation col
                 for x, y, annot in zip(xs, ys, df_group[col_annot]):

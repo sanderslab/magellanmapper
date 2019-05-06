@@ -572,6 +572,10 @@ setupConfig <- function(name=NULL) {
     # very narrow plots
     config.env$PlotSize <- c(3.5, 7)
     
+  } else if (name == "skinny.small") {
+    # narrow and short plots
+    config.env$PlotSize <- c(3.5, 5)
+    
   } else if (name == "square") {
     # square plots
     config.env$PlotSize <- c(7, 7)
@@ -588,6 +592,7 @@ runStats <- function() {
   #setupConfig("dsc")
   #setupConfig("wt")
   setupConfig("homogeneity")
+  #setupConfig("skinny.small")
   #setupConfig("square")
   
   # setup measurement and model types

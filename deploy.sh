@@ -18,8 +18,8 @@ Arguments:
       otherwise, defaults to HEAD.
   -q: Quiet mode, which will suppress ssh output and cause the 
       script to return immediately.
-  -r [path]: Path to the run script that will be uploaded and 
-      excecuted as the last server command.
+  -r [path]: Run script path to pipe and execute via SSH after all 
+      uploads and other commands.
   -n [username]: Username on server. Defaults to ec2-user.
 "
 
@@ -108,12 +108,6 @@ if [[ $update_fiji -eq 1 ]]; then
     server_cmd+=" && $cmd_fiji_update"
 fi
 
-# append customized run script and execute it
-if [[ "$run_script" != "" ]]; then
-    deploy_files+=("$run_script")
-    server_cmd+=" && ./$run_script"
-fi
-
 # summarize files and commands
 echo -e "\nFiles to deploy:"
 echo "${deploy_files[@]}"
@@ -121,16 +115,21 @@ echo -e "\nCommand to execute on server:"
 echo "$server_cmd"
 echo ""
 
-# run remote command on server
-run_remote() {
-    ssh -i "$pem" "${username}@${ip}" "$server_cmd"
+# run remote script on server
+run_remote_script() {
+    ssh -i "$pem" "${username}@${ip}" "bash -s" < "$run_script"
 }
 
 # execute upload and server commands
 scp -i "$pem" -r ${deploy_files[@]} "${username}@${ip}":~
-if [[ $quiet -eq 0 ]]; then
-    run_remote
-else
-    # suppress output and return immediately
-    run_remote >&- 2>&- <&- &
+ssh -i "$pem" "${username}@${ip}" "$server_cmd"
+
+if [[ "$run_script" != "" ]]; then
+    # pipe and execute custom script via SSH
+    if [[ $quiet -eq 0 ]]; then
+        run_remote_script
+    else
+        # suppress output and return immediately
+        run_remote_script >&- 2>&- <&- &
+    fi
 fi

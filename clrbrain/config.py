@@ -69,12 +69,19 @@ CMAP_RDBK_NAME = "Red_black"
 
 # processing type directly in module
 Plot2DTypes = Enum(
-    "plot_2d_types", (
+    "Plot2DTypes", (
         "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
         "ROC_CURVE", 
     )
 )
 plot_2d_type = None
+
+PlotLabels = Enum(
+    "PlotLabels", (
+        "TITLE", "X_LABEL", "Y_LABEL"
+    )
+)
+plot_labels = dict.fromkeys(PlotLabels, None)
 
 # extensions for saving figures
 FORMATS_3D = ("obj", "x3d") # save 3D renderings

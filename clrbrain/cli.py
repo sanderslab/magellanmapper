@@ -277,6 +277,7 @@ def main(process_args_only=False):
     parser.add_argument("--seed")
     parser.add_argument("--reg_suffixes", nargs="*")
     parser.add_argument("--no_scale_bar", action="store_true")
+    parser.add_argument("--plot_labels", nargs="*")
     args = parser.parse_args()
     
     if args.img is not None:
@@ -510,6 +511,12 @@ def main(process_args_only=False):
         # turn off scale bar display
         config.scale_bar = False
         print("Set scale bar display to {}".format(config.scale_bar))
+    
+    if args.plot_labels is not None:
+        # specify general plot labels
+        config.plot_labels = args_to_dict(
+            args.plot_labels, config.PlotLabels, config.plot_labels)
+        print("Set plot labels to {}".format(config.plot_labels))
     
     # prep filename
     if not config.filename:

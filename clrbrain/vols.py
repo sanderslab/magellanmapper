@@ -689,7 +689,8 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False):
                     # NaNs; skip if get NaN avgs for first 2 conditions
                     print("region {} has NaNs, skipping".format(region))
                     continue
-                labels_diff[labels_region] = avgs[0] - avgs[1]
+                # TODO: consider making order customizable
+                labels_diff[labels_region] = avgs[1] - avgs[0]
             else:
                 # take the metric for the single condition
                 labels_diff[labels_region] = fn_avg(df_region[meas])

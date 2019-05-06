@@ -13,7 +13,7 @@ from clrbrain import config
 # file types that are associated with other types
 _FILE_TYPE_GROUPS = {
     "obj": "mtl", 
-    "mhd": "raw"
+    "mhd": "raw", 
 }
 
 # Numpy numerical dtypes with various ranges
@@ -444,9 +444,15 @@ def backup_file(path, modifier="", i=None):
         if not os.path.exists(path):
             # original path does not exist, so no need to back up
             return
-        i = 1
+        i = 0
     while True:
-        backup_path = insert_before_ext(path, "{}({})".format(modifier, i))
+        if i == 0 and modifier != "":
+            # check modifier directly first
+            backup_path = insert_before_ext(path, modifier)
+        else:
+            # start incrementing from 1
+            if i == 0: i = 1
+            backup_path = insert_before_ext(path, "{}({})".format(modifier, i))
         if not os.path.exists(backup_path):
             # backup file to currently non-existent path
             shutil.move(path, backup_path)

@@ -385,12 +385,14 @@ def read_np_archive(archive):
             print("unable to load {} from archive, will ignore".format(key))
     return output
 
-def read_info(filename_info_npz):
+def read_info(filename_info_npz, check_ver=False):
     """Load image info, such as saved microscopy data and image ranges, 
     storing some values into appropriate module level variables.
     
     Args:
         filename_info_npz: Path to image info file.
+        check_ver: True to stop loading if the archive's version number  
+            is less than :const:``IMAGE5D_NP_VER``; defaults to False.
     
     Returns:
         Tuple of ``output``, the dictionary with image info, and 
@@ -403,53 +405,55 @@ def read_info(filename_info_npz):
     try:
         # find the info version number
         image5d_ver_num = output["ver"]
-        print("loaded image5d version number {}"
-              .format(image5d_ver_num))
+        print("loaded image5d version number {}".format(image5d_ver_num))
     except KeyError:
         print("could not find image5d version number")
-    try:
-        names = output["names"]
-        print("names: {}".format(names))
-    except KeyError:
-        print("could not find names")
-    try:
-        sizes = output["sizes"]
-        print("sizes {}".format(sizes))
-    except KeyError:
-        print("could not find sizes")
-    try:
-        detector.resolutions = output["resolutions"]
-        print("set resolutions to {}".format(detector.resolutions))
-    except KeyError:
-        print("could not find resolutions")
-    try:
-        detector.magnification = output["magnification"]
-        print("magnification: {}".format(detector.magnification))
-    except KeyError:
-        print("could not find magnification")
-    try:
-        detector.zoom = output["zoom"]
-        print("zoom: {}".format(detector.zoom))
-    except KeyError:
-        print("could not find zoom")
-    try:
-        config.near_min = output["near_min"]
-        print("set near_min to {}".format(config.near_min))
-    except KeyError:
-        print("could not find near_max")
-    try:
-        config.near_max = output["near_max"]
-        print("set near_max to {}".format(config.near_max))
-        vmax_orig = np.copy(config.vmax_overview)
-        config.vmax_overview = config.near_max * 1.1
-        len_vmax_overview = len(config.vmax_overview)
-        for i, val in enumerate(vmax_orig):
-            if i < len_vmax_overview and val is not None:
-                # replace with non-default vals, usually set at cmd-line
-                config.vmax_overview[i] = val
-        print("Set vmax_overview to {}".format(config.vmax_overview))
-    except KeyError:
-        print("could not find near_max")
+    if not check_ver or image5d_ver_num >= IMAGE5D_NP_VER:
+        # load into various module variables unless checking version 
+        # and below current version to avoid errors during loading
+        try:
+            names = output["names"]
+            print("names: {}".format(names))
+        except KeyError:
+            print("could not find names")
+        try:
+            sizes = output["sizes"]
+            print("sizes {}".format(sizes))
+        except KeyError:
+            print("could not find sizes")
+        try:
+            detector.resolutions = output["resolutions"]
+            print("set resolutions to {}".format(detector.resolutions))
+        except KeyError:
+            print("could not find resolutions")
+        try:
+            detector.magnification = output["magnification"]
+            print("magnification: {}".format(detector.magnification))
+        except KeyError:
+            print("could not find magnification")
+        try:
+            detector.zoom = output["zoom"]
+            print("zoom: {}".format(detector.zoom))
+        except KeyError:
+            print("could not find zoom")
+        try:
+            config.near_min = output["near_min"]
+            print("set near_min to {}".format(config.near_min))
+        except KeyError:
+            print("could not find near_max")
+        try:
+            config.near_max = output["near_max"]
+            print("set near_max to {}".format(config.near_max))
+            vmax_orig = np.copy(config.vmax_overview)
+            config.vmax_overview = config.near_max * 1.1
+            len_vmax_overview = len(config.vmax_overview)
+            for i, val in enumerate(vmax_orig):
+                if i < len_vmax_overview and val is not None:
+                    # replace with non-default vals, usually set at cmd-line
+                    config.vmax_overview[i] = val
+            print("Set vmax_overview to {}".format(config.vmax_overview))
+        except KeyError:
+            print("could not find near_max")
     return output, image5d_ver_num
 
 def read_file(filename, series, load=True, z_max=-1, 
@@ -502,23 +506,25 @@ def read_file(filename, series, load=True, z_max=-1,
     if load:
         try:
             time_start = time()
-            load_info = True
-            while load_info:
-                output, image5d_ver_num = read_info(filename_info_npz)
-                # load original image, using mem-mapped accessed for the image
-                # file to minimize memory requirement, only loading on-the-fly
-                image5d = np.load(filename_image5d_npz, mmap_mode="r")
-                print("image5d shape: {}".format(image5d.shape))
-                if offset is not None and size is not None:
-                    # simplifies to reducing the image to a subset as an ROI if 
-                    # offset and size given
-                    image5d = plot_3d.prepare_roi(image5d, size, offset)
-                    image5d = roi_to_image5d(image5d)
-                if update_info:
-                    load_info = _update_image5d_np_ver(
-                        image5d_ver_num, image5d, output, filename_info_npz)
-                else:
-                    load_info = False
+            # load original image, using mem-mapped accessed for the image
+            # file to minimize memory requirement, only loading on-the-fly
+            image5d = np.load(filename_image5d_npz, mmap_mode="r")
+            print("image5d shape: {}".format(image5d.shape))
+            if offset is not None and size is not None:
+                # simplifies to reducing the image to a subset as an ROI if 
+                # offset and size given
+                image5d = plot_3d.prepare_roi(image5d, size, offset)
+                image5d = roi_to_image5d(image5d)
+            
+            # load image5d metadata
+            output, image5d_ver_num = read_info(filename_info_npz, update_info)
+            if update_info:
+                # if < latest ver, update and load info
+                load_info = _update_image5d_np_ver(
+                    image5d_ver_num, image5d, output, filename_info_npz)
+                if load_info:
+                    # load updated archive
+                    output, image5d_ver_num = read_info(filename_info_npz)
             if return_info:
                 return image5d, output
             return image5d

@@ -4308,9 +4308,9 @@ def main():
         df = pd.read_csv(config.filename)
         metric_cols = (
             vols.LabelMetrics.VarIntensity.name, 
-            #vols.LabelMetrics.VarIntensDiff.name, 
+            #vols.LabelMetrics.VarIntensDiff.name,
+            vols.LabelMetrics.VarNuclei.name,  
             vols.LabelMetrics.EdgeDistSum.name, 
-            vols.LabelMetrics.VarNuclei.name, 
         )
         extra_cols = (
             "Sample", "Condition", 
@@ -4338,10 +4338,12 @@ def main():
         for cond in conds:
             metric_cond_cols.append(
                 ["{}_{}".format(col, cond) for col in metric_cols])
+        lims = (-3, 3)
         plot_2d.plot_scatter(
             path, metric_cond_cols[0], metric_cond_cols[1], None, None, 
-            names_group=metric_cols, x_label=conds[0], y_label=conds[1], 
-            xlim=(-3, 3), ylim=(-3, 3), title=None, size=size, show=show, 
+            names_group=metric_cols, x_label=conds[0].capitalize(), 
+            y_label=conds[1].capitalize(), xlim=lims, ylim=lims, 
+            title="Region Match Z-Scores", fig_size=size, show=show, 
             suffix=None, df=df, xy_line=True, col_size="Volume")
 
 if __name__ == "__main__":

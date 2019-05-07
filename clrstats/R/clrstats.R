@@ -6,6 +6,11 @@
 #library("devtools")
 #install_github("JosephCrispell/addTextLabels")
 
+# stat processing types
+kStatTypes <- c(
+  "default", "corr"
+)
+
 # statistical models
 kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
            "ttest.paired", "wilcoxon.paired", "fligner")
@@ -619,8 +624,12 @@ setupConfig <- function(name=NULL) {
   }
 }
 
-runStats <- function() {
+runStats <- function(stat.type=NULL) {
   # Load data and run full stats.
+  #
+  # Args:
+  #   stat.type: One of kStatTypes specifying stat processing typest. 
+  #     Defaults to NULL to use kStatTypes[1].
   
   # setup configuration environment
   setupConfig()
@@ -633,43 +642,51 @@ runStats <- function() {
   #setupConfig("skinny.small")
   #setupConfig("square")
   
-  # setup measurement and model types
-  model <- kModel[8]
-  split.by.side <- TRUE # false to combine sides
-  load.stats <- FALSE # true to load saved stats, only regenerate volcano plots
-  
-  # set up paramters based on chosen model
-  stat <- "vals"
-  if (model == kModel[2]) {
-    stat <- "genos"
-  }
-  region.ids <- read.csv(kRegionIDsPath)
-  
-  # reset graphics to ensure consistent layout
-  while (!is.null(dev.list())) dev.off()
-  
-  for (meas in config.env$Measurements) {
-    print(paste("Calculating stats for", meas))
-    # calculate stats or retrieve from file
-    path.out <- paste0(kStatsPathOut, "_", meas, ".csv")
-    if (load.stats && file.exists(path.out)) {
-      stats <- read.csv(path.out)
-    } else {
-      stats <- calcVolStats(
-        config.env$StatsPathIn, path.out, meas, model, region.ids, 
-        split.by.side=split.by.side, corr="bonferroni")
+  if (is.null(stat.type) || stat.type == kStatTypes[1]) {
+    # default, general stats
+    
+    # setup measurement and model types
+    model <- kModel[8]
+    split.by.side <- TRUE # false to combine sides
+    load.stats <- FALSE # true to load saved stats, only regenerate volcano plots
+    
+    # set up paramters based on chosen model
+    stat <- "vals"
+    if (model == kModel[2]) {
+      stat <- "genos"
+    }
+    region.ids <- read.csv(kRegionIDsPath)
+    
+    # reset graphics to ensure consistent layout
+    while (!is.null(dev.list())) dev.off()
+    
+    for (meas in config.env$Measurements) {
+      print(paste("Calculating stats for", meas))
+      # calculate stats or retrieve from file
+      path.out <- paste0(kStatsPathOut, "_", meas, ".csv")
+      if (load.stats && file.exists(path.out)) {
+        stats <- read.csv(path.out)
+      } else {
+        stats <- calcVolStats(
+          config.env$StatsPathIn, path.out, meas, model, region.ids, 
+          split.by.side=split.by.side, corr="bonferroni")
+      }
+      
+      if (config.env$PlotVolcano) {
+        # plot effects and p's
+        volcanoPlot(stats, meas, stat, c(NA, 1.3, 0.2), config.env$VolcanoLogX, 
+                    config.env$VolcanoLabels, config.env$PlotSize, meas.names=kMeasNames)
+        volcanoPlot(stats, meas, "sidesR", c(25, 2.5, 0.2), config.env$VolcanoLogX, 
+                    config.env$VolcanoLabels, config.env$PlotSize, meas.names=kMeasNames)
+        # ":" special character automatically changed to "."
+        volcanoPlot(stats, meas, paste0(stat, ".sidesR"), c(1e-04, 25, 0.2), 
+                    config.env$VolcanoLogX, config.env$VolcanoLabels, 
+                    config.env$PlotSize, meas.names=kMeasNames)
+      }
     }
     
-    if (config.env$PlotVolcano) {
-      # plot effects and p's
-      volcanoPlot(stats, meas, stat, c(NA, 1.3, 0.2), config.env$VolcanoLogX, 
-                  config.env$VolcanoLabels, config.env$PlotSize, meas.names=kMeasNames)
-      volcanoPlot(stats, meas, "sidesR", c(25, 2.5, 0.2), config.env$VolcanoLogX, 
-                  config.env$VolcanoLabels, config.env$PlotSize, meas.names=kMeasNames)
-      # ":" special character automatically changed to "."
-      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), c(1e-04, 25, 0.2), 
-                  config.env$VolcanoLogX, config.env$VolcanoLabels, 
-                  config.env$PlotSize, meas.names=kMeasNames)
-    }
+  } else if (stat.type == kStatTypes[2]) {
+    # correlation coefficient matrix
+    calcCorr(config.env$StatsPathIn, kMeas[c(4:6, 10)], config.env$PlotSize)
   }
 }

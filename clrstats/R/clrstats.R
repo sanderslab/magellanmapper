@@ -577,11 +577,15 @@ setupConfig <- function(name=NULL) {
     setupConfig("skinny")
     
   } else if (name == "dsc") {
-    # Dise Similarity Coefficient stats for ABA series
+    # Dice Similarity Coefficient stats for ABA series
     setupConfig("aba")
     setupConfig("square")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
     config.env$Measurements <- kMeas[8]
+    
+  } else if (name == "nolevels") {
+    # input file from drawn labels only, without levels
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[1])
     
   } else if (name == "wt") {
     # WT samples
@@ -625,6 +629,7 @@ runStats <- function() {
   #setupConfig("wt")
   setupConfig("homogeneity")
   #setupConfig("wt.test")
+  #setupConfig("nolevels")
   #setupConfig("skinny.small")
   #setupConfig("square")
   

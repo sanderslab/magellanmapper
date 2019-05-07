@@ -1,6 +1,7 @@
 
 volcanoPlot <- function(stats, meas, interaction, thresh=NULL, 
-                        log.scale.x=TRUE, labels=TRUE, plot.size=c(5, 7)) {
+                        log.scale.x=TRUE, labels=TRUE, plot.size=c(5, 7), 
+                        size.mult=3) {
   # Generate a volcano plot.
   #
   # Args:
@@ -18,6 +19,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   #     to avoid negative log values, then returning to the original sign.
   #   plot.size: Vector of width, height for exported plot; defaults to 
   #     c(5, 7).
+  #   size.mult: Point size multiplier; defaults to 3.
   
   x <- stats[[paste0(interaction, ".effect")]]
   num.x <- length(x)
@@ -32,7 +34,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     size <- rep(1, num.x)
   } else {
     vol[is.nan(vol) | vol == 0] <- 1
-    size <- sqrt(vol / max(vol)) * 3
+    size <- sqrt(vol / max(vol))
   }
   #print(data.frame(x, size))
   
@@ -63,11 +65,13 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   } else {
     title <- paste(meas, "Differences for", interaction)
   }
+  
+  # scatter plot with vertical line to denote x = 0
   plot(
     x, y, xlim=c(-1 * x.max, x.max), 
     main=title, xlab=xlab, 
-    ylab="-log10(p)", type="p", las=1, pch=16, cex=size, col=colors_parents)
-  # vertical line to denote x = 0
+    ylab="-log10(p)", type="p", las=1, pch=16, cex=(size*size.mult), 
+    col=colors_parents)
   abline(v=0, lty="dashed", col=gray(0.5, 0.5))
   
   # label points

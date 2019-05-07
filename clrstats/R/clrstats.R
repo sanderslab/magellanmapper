@@ -562,6 +562,12 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[c(4:7, 10:16)]
     config.env$VolcanoLabels <- FALSE
     
+  } else if (name == "wt.test") {
+    # WT test
+    setupConfig("wt")
+    config.env$Measurements <- kMeas[10]
+    config.env$VolcanoLogX <- FALSE
+    
   } else if (name == "homogeneity") {
     # homogenity metric
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
@@ -592,6 +598,7 @@ runStats <- function() {
   #setupConfig("dsc")
   #setupConfig("wt")
   setupConfig("homogeneity")
+  #setupConfig("wt.test")
   #setupConfig("skinny.small")
   #setupConfig("square")
   

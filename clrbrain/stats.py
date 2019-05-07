@@ -1,5 +1,5 @@
 # Stats for Clrbrain
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Stats calculations and text output for Clrbrain.
 
 Attributes:
@@ -10,6 +10,8 @@ import csv
 from collections import OrderedDict
 from enum import Enum
 import os
+import warnings
+
 import numpy as np
 import pandas as pd
 from scipy import stats as spstats
@@ -589,6 +591,8 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
 def combine_cols(df, combos, fn_aggr):
     """Combine columns in a data frame with the given aggregation function.
     
+    Missing columns from the combination metric will be ignored.
+    
     Args:
         df: Pandas data frame.
         combos: Tuple of combination column name and a nested tuple of 
@@ -601,9 +605,17 @@ def combine_cols(df, combos, fn_aggr):
        Data frame with the combinations each as a new column.
     """
     for combo in combos:
-        vals = combo.value
-        df.loc[:, vals[0]] = fn_aggr(
-            [df.loc[:, val.name] for val in vals[1]], axis=0)
+        print(combo.value)
+        combo_val = combo.value
+        # only include metrics that have a corresponding col
+        metrics = [val.name for val in combo_val[1] if val.name in df.columns]
+        if len(metrics) < len(combo_val[1]):
+            msg = ("Could not find all metrics in {}: {}\nWill combine columns "
+                   "from: {}".format(combo_val[0], combo_val[1], metrics))
+            warnings.warn(msg)
+        # aggregate columns by given function
+        df.loc[:, combo_val[0]] = fn_aggr(
+            [df.loc[:, val] for val in metrics], axis=0)
     return df
 
 def print_data_frame(df, sep=" "):

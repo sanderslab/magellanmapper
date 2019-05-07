@@ -270,10 +270,8 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
     np.savez(outfile_info, ver=IMAGE5D_NP_VER, names=names, sizes=sizes, 
-             resolutions=resolutions, 
-             magnification=magnification, zoom=zoom, 
-             pixel_type=pixel_type, near_min=near_min, 
-             near_max=near_max, scaling=scaling, plane=plane)
+             resolutions=resolutions, magnification=magnification, zoom=zoom, 
+             near_min=near_min, near_max=near_max, scaling=scaling, plane=plane)
     outfile_info.close()
     print("info file saved to {}".format(filename_info_npz))
     print("file save time: {}".format(time() - time_start))

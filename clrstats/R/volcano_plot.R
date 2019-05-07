@@ -9,9 +9,9 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   #   meas: Measurement to display in plot title.
   #   interaction: Interaction column name whose set of stats should be 
   #     displayed.
-  #   thresh: Threshold as a 2-element array corresponding to the x and y 
-  #     values, respectively, above which labels will be shown if both 
-  #     condition is met. NA for either value will cause the threshold to 
+  #   thresh: Threshold as a 3-element array corresponding to the x, y, and  
+  #     size (0-1 scale), respectively, above which labels will be shown if 
+  #     all conditions are met. NA for any value will cause the threshold to 
   #     be ignored, or NA for the entire argument will ignore thresholding 
   #     all together.
   #   log.scale.x: True to scale x-axis by log10, first normalizing to 
@@ -62,6 +62,16 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     x <- x.log
     xlab <- "log(normalized effects)"
   }
+  
+  # x-lims based on points above y-thresh and size thresh if each are given; 
+  # fall back to ignoring thresholds if no points meet criteria
+  x.threshed <- x
+  x.thresh <- NULL
+  if (!is.na(thresh[2])) x.thresh <- y > thresh[2]
+  if (!is.na(thresh[3])) x.thresh <- x.thresh & size > thresh[3]
+  if (!is.null(x.thresh)) x.threshed <- x[x.thresh]
+  x.max <- max(abs(x.threshed))
+  if (is.infinite(x.max)) x.max <- max(abs(x))
   
   # use custom title if available from named list
   if (!is.null(meas.names) & is.element(meas, names(meas.names))) {

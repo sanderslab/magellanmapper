@@ -631,14 +631,14 @@ runStats <- function() {
     
     if (config.env$PlotVolcano) {
       # plot effects and p's
-      volcanoPlot(stats, meas, stat, c(NA, 1.3), config.env$VolcanoLogX, 
-                  config.env$VolcanoLabels, config.env$PlotSize)
-      volcanoPlot(stats, meas, "sidesR", c(25, 2.5), config.env$VolcanoLogX, 
-                  config.env$VolcanoLabels, config.env$PlotSize)
+      volcanoPlot(stats, meas, stat, c(NA, 1.3, 0.2), config.env$VolcanoLogX, 
+                  config.env$VolcanoLabels, config.env$PlotSize, meas.names=kMeasNames)
+      volcanoPlot(stats, meas, "sidesR", c(25, 2.5, 0.2), config.env$VolcanoLogX, 
+                  config.env$VolcanoLabels, config.env$PlotSize, meas.names=kMeasNames)
       # ":" special character automatically changed to "."
-      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), c(1e-04, 25), 
+      volcanoPlot(stats, meas, paste0(stat, ".sidesR"), c(1e-04, 25, 0.2), 
                   config.env$VolcanoLogX, config.env$VolcanoLabels, 
-                  config.env$PlotSize)
+                  config.env$PlotSize, meas.names=kMeasNames)
     }
   }
 }

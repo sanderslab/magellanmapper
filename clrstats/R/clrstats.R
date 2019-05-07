@@ -526,6 +526,32 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   return(stats.filtered)
 }
 
+calcCorr <- function(path.in, cols, plot.size=c(5, 7)) {
+  # Calculate correlation coefficient matrix for columns in a data frame 
+  # and plot with significance.
+  #
+  # Args:
+  #   path.in: CSV input path for data frame.
+  #   cols: Vector of columns for which to build correlation matrix.
+  #   plot.size: Vector of width, height for exported plot; defaults to 
+  #     c(5, 7).
+  
+  # load CSV to data frame and calculate correlation coefficient matrix
+  cat("\nloading", path.in, "\n")
+  df <- read.csv(path.in)
+  corr <- Hmisc::rcorr(as.matrix(df[, cols]), type="spearman")
+  print(corr)
+  corrplot::corrplot(
+    corr$r, method="circle", order="hclust", p.mat=corr$p, 
+    sig.level=0.05, insig="p-value")
+  
+  # save figure to PDF
+  dev.print(
+    pdf, width=plot.size[1], height=plot.size[2], 
+    file=paste0(
+      "../plot_corr_", tools::file_path_sans_ext(basename(path.in)), ".pdf"))
+}
+
 setupConfig <- function(name=NULL) {
   # Setup configuration environment for the given profile.
   #

@@ -9,5 +9,7 @@ LazyData: true
 Imports:
   MASS, 
   gee, 
-  RColorBrewer
+  RColorBrewer, 
+  Hmisc, 
+  corrplot
 RoxygenNote: 6.1.1

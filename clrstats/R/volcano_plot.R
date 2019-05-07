@@ -1,7 +1,7 @@
 
 volcanoPlot <- function(stats, meas, interaction, thresh=NULL, 
                         log.scale.x=TRUE, labels=TRUE, plot.size=c(5, 7), 
-                        size.mult=3) {
+                        size.mult=3, meas.names=NULL) {
   # Generate a volcano plot.
   #
   # Args:
@@ -20,6 +20,9 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   #   plot.size: Vector of width, height for exported plot; defaults to 
   #     c(5, 7).
   #   size.mult: Point size multiplier; defaults to 3.
+  #   meas.names: Named nested list whose sublists' first element will 
+  #     specify the title, with names corresponding to meas. Defaults to 
+  #     NULL to use a default title.
   
   x <- stats[[paste0(interaction, ".effect")]]
   num.x <- length(x)
@@ -59,9 +62,11 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     x <- x.log
     xlab <- "log(normalized effects)"
   }
-  x.max <- max(abs(x))
-  if (is.element(meas, names(kMeasNames))) {
-    title <- kMeasNames[[meas]][1]
+  
+  # use custom title if available from named list
+  if (!is.null(meas.names) & is.element(meas, names(meas.names))) {
+    # assumed to contain a sublist with title listed first
+    title <- meas.names[[meas]][1]
   } else {
     title <- paste(meas, "Differences for", interaction)
   }

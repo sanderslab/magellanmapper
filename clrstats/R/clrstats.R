@@ -8,7 +8,7 @@
 
 # stat processing types
 kStatTypes <- c(
-  "default", "corr"
+  "default", "corr", "norm"
 )
 
 # statistical models
@@ -555,6 +555,23 @@ calcCorr <- function(path.in, cols, plot.size=c(5, 7)) {
     pdf, width=plot.size[1], height=plot.size[2], 
     file=paste0(
       "../plot_corr_", tools::file_path_sans_ext(basename(path.in)), ".pdf"))
+
+calcNormality <- function(path.in, cols) {
+  # Calculate normality statistic using the Shapiro test.
+  #
+  # Args:
+  #   path.in: CSV input path for data frame.
+  #   cols: Vector of columns to test normality for each column.
+  
+  cat("\nloading", path.in, "\n")
+  df <- read.csv(path.in)
+  for (col in cols) {
+    cat("\ntesting normality of col", col, "\n")
+    vals <- df[[col]]
+    vals <- vals[!is.nan(vals)]
+    nor <- shapiro.test(vals)
+    print(nor)
+  }
 }
 
 setupConfig <- function(name=NULL) {
@@ -688,5 +705,9 @@ runStats <- function(stat.type=NULL) {
   } else if (stat.type == kStatTypes[2]) {
     # correlation coefficient matrix
     calcCorr(config.env$StatsPathIn, kMeas[c(4:6, 10)], config.env$PlotSize)
+    
+  } else if (stat.type == kStatTypes[3]) {
+    # normality test
+    calcNormality(config.env$StatsPathIn, config.env$Measurements)
   }
 }

@@ -541,20 +541,25 @@ calcCorr <- function(path.in, cols, plot.size=c(5, 7)) {
   #   plot.size: Vector of width, height for exported plot; defaults to 
   #     c(5, 7).
   
-  # load CSV to data frame and calculate correlation coefficient matrix
+  # load CSV to data frame, calculate correlation coefficient matrix, 
+  # and save correlations and p-vals to CSV
   cat("\nloading", path.in, "\n")
   df <- read.csv(path.in)
+  base.path <- tools::file_path_sans_ext(basename(path.in))
   corr <- Hmisc::rcorr(as.matrix(df[, cols]), type="spearman")
   print(corr)
+  write.csv(corr$r, paste0("../", base.path, "_correlation_r.csv"))
+  write.csv(corr$p, paste0("../", base.path, "_correlation_p.csv"))
+  
+  # plot correlation matrix and save to PDF
   corrplot::corrplot(
     corr$r, method="circle", order="hclust", p.mat=corr$p, 
     sig.level=0.05, insig="p-value")
-  
-  # save figure to PDF
   dev.print(
     pdf, width=plot.size[1], height=plot.size[2], 
     file=paste0(
-      "../plot_corr_", tools::file_path_sans_ext(basename(path.in)), ".pdf"))
+      "../plot_corr_", base.path, ".pdf"))
+}
 
 calcNormality <- function(path.in, cols) {
   # Calculate normality statistic using the Shapiro test.

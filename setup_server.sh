@@ -9,8 +9,8 @@ is supported.
 
 Arguments:
    -h: Show help and exit.
-   -d [/dev/path]: Set data device path. If an empty 
-       string, swap will not be set up.
+   -d [/dev/path]: Set data device path to mount \"/data\". If an empty 
+       string, data mount will not be set up.
    -s: Set up a fresh server, including drive initiation.
    -w [/dev/path]: Set swap device path. If an empty 
        string, data drive will not be set up.
@@ -50,10 +50,10 @@ while getopts hslw:d:u: opt; do
             echo "data set to $data"
             ;;
         w)  swap="$OPTARG"
-            echo "Set swap directory to $swap"
+            echo "Set swap device/file path to $swap"
             ;;
         d)  data="$OPTARG"
-            echo "Set data directory to $data"
+            echo "Set data device path to $data"
             ;;
         u)  username="$OPTARG"
             echo "Changing username to $username"

@@ -614,8 +614,7 @@ def combine_cols(df, combos, fn_aggr):
                    "from: {}".format(combo_val[0], combo_val[1], metrics))
             warnings.warn(msg)
         # aggregate columns by given function
-        df.loc[:, combo_val[0]] = fn_aggr(
-            [df.loc[:, val] for val in metrics], axis=0)
+        df.loc[:, combo_val[0]] = fn_aggr(df.loc[:, metrics], axis=1)
     return df
 
 def print_data_frame(df, sep=" "):

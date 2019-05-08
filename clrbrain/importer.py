@@ -394,7 +394,8 @@ def read_info(filename_info_npz, check_ver=False):
     
     Returns:
         Tuple of ``output``, the dictionary with image info, and 
-        ``image5d_ver_num``, the version number of the info file.
+        ``image5d_ver_num``, the version number of the info file, 
+        which is -1 if the key could not be found.
     """
     print("Reading image metadata from {}".format(filename_info_npz))
     archive = np.load(filename_info_npz)
@@ -502,8 +503,12 @@ def read_file(filename, series, load=True, z_max=-1,
     filename_image5d_npz, filename_info_npz = make_filenames(
         filename, series)
     if load:
+        image5d_ver_num = -1
         try:
             time_start = time()
+            # load image5d metadata; if updating, only fully load if curr ver
+            output, image5d_ver_num = read_info(filename_info_npz, update_info)
+            
             # load original image, using mem-mapped accessed for the image
             # file to minimize memory requirement, only loading on-the-fly
             image5d = np.load(filename_image5d_npz, mmap_mode="r")
@@ -514,10 +519,8 @@ def read_file(filename, series, load=True, z_max=-1,
                 image5d = plot_3d.prepare_roi(image5d, size, offset)
                 image5d = roi_to_image5d(image5d)
             
-            # load image5d metadata
-            output, image5d_ver_num = read_info(filename_info_npz, update_info)
             if update_info:
-                # if < latest ver, update and load info
+                # if metadata < latest ver, update and load info
                 load_info = _update_image5d_np_ver(
                     image5d_ver_num, image5d, output, filename_info_npz)
                 if load_info:
@@ -531,6 +534,17 @@ def read_file(filename, series, load=True, z_max=-1,
             if import_if_absent:
                 print("will attempt to reload {}".format(filename))
             else:
+                if update_info and image5d_ver_num < IMAGE5D_NP_VER:
+                    # set to update metadata but could not because image5d 
+                    # was not available; 
+                    # TODO: override option since older metadata vers may 
+                    # still work, or image5d may not be necessary for upgrade
+                    raise IOError(
+                        "image5d metadata is from an older version ({}, "
+                        "current version {}) could not be loaded because "
+                        "the original image filedoes not exist. Please "
+                        "reopen with the original image file to update "
+                        "the metadata.".format(image5d_ver_num, IMAGE5D_NP_VER))
                 if return_info:
                     return None, output
                 return None

@@ -388,7 +388,7 @@ def _find_closest_blobs(blobs, blobs_master, tol):
     #print("closest:\n{}\nclosest_master:\n{}".format(close, close_master))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
-def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
+def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     """Removes blobs that are close to one another.
     
     Args:
@@ -401,7 +401,7 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=10000):
             difference for all corresponding parameters will be pruned in
             the returned array.
         chunk_size: Max size along first dimension for each blob array 
-            to minimize memory consumption; defaults to 10000.
+            to minimize memory consumption; defaults to 1000.
     
     Return:
         Tuple of the blobs array after pruning and ``blobs_master`` with 

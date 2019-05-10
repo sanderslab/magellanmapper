@@ -4308,7 +4308,7 @@ def main():
         df = pd.read_csv(config.filename)
         metric_cols = (
             vols.LabelMetrics.VarIntensity.name, 
-            #vols.LabelMetrics.VarIntensDiff.name,
+            vols.LabelMetrics.VarIntensDiff.name,
             vols.LabelMetrics.VarNuclei.name,  
             vols.LabelMetrics.EdgeDistSum.name, 
         )

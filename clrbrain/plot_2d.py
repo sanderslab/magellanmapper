@@ -1251,7 +1251,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         plt.show()
 
 def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
-               title, padding=0.2, skip_all_zero=False):
+               title, padding=0.2, skip_all_zero=False, rotation=80):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
@@ -1288,6 +1288,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             that should be left unoccupied by bars. Defaults to 0.8.
         skip_all_zero: True to skip any data list that contains only 
             values below :attr:``config.POS_THRESH``; defaults to False.
+        rotation: Degrees of x-tick label rotation; defaults to 80.
     """
     bars = []
     if len(lists) < 1: return
@@ -1344,7 +1345,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         font_size *= (math.atan(len(x_labels) / 5 - 5) * -2 / math.pi + 1) / 2
     font_dict = { "fontsize": font_size }
     ax.set_xticklabels(
-        x_labels, rotation=80, horizontalalignment="right", fontdict=font_dict)
+        x_labels, rotation=rotation, horizontalalignment="right", 
+        fontdict=font_dict)
     
     if list_names:
         ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)

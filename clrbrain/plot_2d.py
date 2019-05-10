@@ -22,6 +22,7 @@ from matplotlib.collections import PatchCollection
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import matplotlib.pylab as pylab
+import matplotlib.transforms as transforms
 from matplotlib.widgets import Slider, Button
 import pandas as pd
 from skimage import exposure
@@ -1334,19 +1335,29 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
                    linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
     ax.set_title(title)
     ax.set_ylabel(y_label)
+    
     # TODO: consider making configurable
     ax.ticklabel_format(style="sci", scilimits=(-3, 4))
-    ax.set_xticks(indices + width * len(lists) / 2)
-    
+    # draw x-tick labels with smaller font for increasing number of labels
     font_size = plt.rcParams["axes.titlesize"]
     if lib_clrbrain.is_number(font_size):
         # scale font size of x-axis labels by a sigmoid function to rapidly 
         # decrease size for larger numbers of labels so they don't overlap
         font_size *= (math.atan(len(x_labels) / 5 - 5) * -2 / math.pi + 1) / 2
-    font_dict = { "fontsize": font_size }
+    font_dict = {"fontsize": font_size}
+    # draw x-ticks based on number of bars per group and align to right 
+    # since center shifts the horiz middle of the label to the center; 
+    # rotation_mode in dict helps but still slightly off
+    ax.set_xticks(indices + width * len(lists) / 2)
     ax.set_xticklabels(
         x_labels, rotation=rotation, horizontalalignment="right", 
         fontdict=font_dict)
+    # translate to right since "right" alignment shift the right of labels 
+    # too far to the left of tick marks
+    offset = transforms.ScaledTranslation(
+        15 / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
+    for lbl in ax.xaxis.get_majorticklabels():
+        lbl.set_transform(lbl.get_transform() + offset)
     
     if list_names:
         ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)

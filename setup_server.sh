@@ -31,8 +31,8 @@ Assumptions:
 DIR_DATA="/data"
 
 setup=0
-swap="/dev/nvme1n1"
-data="/dev/nvme2n1"
+swap=""
+data=""
 username="ec2-user" # default on many EC2 distros
 swapfile_size=""
 

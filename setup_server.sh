@@ -10,11 +10,11 @@ is supported.
 Arguments:
    -h: Show help and exit.
    -d [/dev/path]: Set data device path to mount \"/data\". If an empty 
-       string, data mount will not be set up.
+     string, data mount will not be set up.
    -f [GB]: Size of swap file in GB.
    -s: Set up a fresh server, including drive initiation.
    -w [/dev/path]: Set swap device path. If an empty 
-       string, data drive will not be set up.
+     string, data drive will not be set up.
    -l: Use legacy drive specifications.
    -u [username]: Username on server. Defaults to ec2-user.
 
@@ -38,36 +38,36 @@ swapfile_size=""
 
 OPTIND=1
 while getopts hslw:d:u:f: opt; do
-    case $opt in
-        h)  echo $HELP
-            exit 0
-            ;;
-        s)  setup=1
-            echo "Set to prepare a new server instance"
-            ;;
-        l)  swap="/dev/xvdf"
-            data="/dev/xvdg"
-            echo "Set to use legacy device specifiers:"
-            echo "swap set to $swap"
-            echo "data set to $data"
-            ;;
-        w)  swap="$OPTARG"
-            echo "Set swap device/file path to $swap"
-            ;;
-        d)  data="$OPTARG"
-            echo "Set data device path to $data"
-            ;;
-        f)  swapfile_size="$OPTARG"
-            echo "Generate a swapfile with size of ${swapfile_size}GB"
-            ;;
-        u)  username="$OPTARG"
-            echo "Changing username to $username"
-            ;;
-        :)  echo "Option -$OPTARG requires an argument"
-            exit 1
-            ;;
-        --) ;;
-    esac
+  case $opt in
+    h)  echo $HELP
+      exit 0
+      ;;
+    s)  setup=1
+      echo "Set to prepare a new server instance"
+      ;;
+    l)  swap="/dev/xvdf"
+      data="/dev/xvdg"
+      echo "Set to use legacy device specifiers:"
+      echo "swap set to $swap"
+      echo "data set to $data"
+      ;;
+    w)  swap="$OPTARG"
+      echo "Set swap device/file path to $swap"
+      ;;
+    d)  data="$OPTARG"
+      echo "Set data device path to $data"
+      ;;
+    f)  swapfile_size="$OPTARG"
+      echo "Generate a swapfile with size of ${swapfile_size}GB"
+      ;;
+    u)  username="$OPTARG"
+      echo "Changing username to $username"
+      ;;
+    :)  echo "Option -$OPTARG requires an argument"
+      exit 1
+      ;;
+    --) ;;
+  esac
 done
 
 # pass arguments after "--" to another script if necessary
@@ -83,70 +83,70 @@ BASE_DIR="$PWD"
 lsblk -p
 
 is_formatted() {
-    local format="$(lsblk -o FSTYPE -n $1)"
-    if [[ -z "${format// }" ]]; then
-        return 0
-    else
-        echo "$1 is already formatted"
-        return 1
-    fi
+  local format="$(lsblk -o FSTYPE -n $1)"
+  if [[ -z "${format// }" ]]; then
+    return 0
+  else
+    echo "$1 is already formatted"
+    return 1
+  fi
 }
 
 mount_dev() {
-    if ! mountpoint -q "$DIR_DATA"; then
-        if [[ ! -d "$2" ]]; then
-            sudo mkdir "$2"
-        fi
-        sudo mount "$1" "$2"
+  if ! mountpoint -q "$DIR_DATA"; then
+    if [[ ! -d "$2" ]]; then
+      sudo mkdir "$2"
     fi
+    sudo mount "$1" "$2"
+  fi
 }
 
 if [[ $setup -eq 1 ]]; then
-    # initialize swap and storage drives if setting up a new server instance
-    if [[ "$data" != "" ]]; then
-        is_formatted "$data"
-        newly_formatted="$?"
-        if [[ $newly_formatted -eq 0 ]]; then
-            sudo mkfs -t ext4 "$data"
-        fi
-        mount_dev "$data" "$DIR_DATA"
-        if [[ $newly_formatted -eq 0 ]]; then
-            # need to change ownership if new drive attached
-            sudo chown -R "${username}.${username}" "$DIR_DATA"
-        fi
+  # initialize swap and storage drives if setting up a new server instance
+  if [[ "$data" != "" ]]; then
+    is_formatted "$data"
+    newly_formatted="$?"
+    if [[ $newly_formatted -eq 0 ]]; then
+      sudo mkfs -t ext4 "$data"
     fi
-    if [[ "$swap" != "" ]]; then
-        if [[ "$swapfile_size" != "" ]]; then
-            if [[ -e "$swap" ]]; then
-                echo "$swap already exists, will attempt to load as swap file"
-            else
-                # generate swapfile with given size in GB based on 
-                # block size * MB in GB * num GB
-                size=$((1024*1024*swapfile_size))
-                echo "Making ${swapfile_size}GB swap file at $swap"
-                dd if=/dev/zero of="$swap" bs=1024 count=$size
-                sudo chown root:root "$swap"
-                sudo chmod 0600 "$swap"
-                sudo mkswap "$swap"
-            fi
-        else
-            is_formatted "$swap"
-            if [[ "$?" -eq 0 ]]; then
-                sudo mkswap "$swap"
-            fi
-        fi
+    mount_dev "$data" "$DIR_DATA"
+    if [[ $newly_formatted -eq 0 ]]; then
+      # need to change ownership if new drive attached
+      sudo chown -R "${username}.${username}" "$DIR_DATA"
     fi
+  fi
+  if [[ "$swap" != "" ]]; then
+    if [[ "$swapfile_size" != "" ]]; then
+      if [[ -e "$swap" ]]; then
+        echo "$swap already exists, will attempt to load as swap file"
+      else
+        # generate swapfile with given size in GB based on 
+        # block size * MB in GB * num GB
+        size=$((1024*1024*swapfile_size))
+        echo "Making ${swapfile_size}GB swap file at $swap"
+        dd if=/dev/zero of="$swap" bs=1024 count=$size
+        sudo chown root:root "$swap"
+        sudo chmod 0600 "$swap"
+        sudo mkswap "$swap"
+      fi
+    else
+      is_formatted "$swap"
+      if [[ "$?" -eq 0 ]]; then
+        sudo mkswap "$swap"
+      fi
+    fi
+  fi
 fi
 
 
 # turn on swap and mount storage drive, which should fail if these 
 # drives were not initialized or attached
 if [[ "$swap" != "" ]]; then
-    sudo swapon "$swap"
-    swapon -s
+  sudo swapon "$swap"
+  swapon -s
 fi
 if [[ "$data" != "" ]]; then
-    mount_dev "$data" "$DIR_DATA"
+  mount_dev "$data" "$DIR_DATA"
 fi
 lsblk -p
 

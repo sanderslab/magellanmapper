@@ -203,6 +203,7 @@ def args_to_dict(args, keys_enum, args_dict={}):
         converted to ints if possible.
     """
     by_position = True
+    num_enums = len(keys_enum)
     for i, arg in enumerate(args):
         arg_split = arg.split("=")
         # assume by position until any keywork given
@@ -210,7 +211,12 @@ def args_to_dict(args, keys_enum, args_dict={}):
         if by_position:
             # positions are based on enum vals, assumed to range from 
             # 1 to num of members
-            args_dict[keys_enum(i + 1)] = arg
+            n = i + 1
+            if n > num_enums:
+                print("no further parameters in {} to assign \"{}\" by "
+                      "position, skipping".format(keys_enum, arg))
+            else:
+                args_dict[keys_enum(n)] = arg
         else:
             # assign based on keyword if its equivalent enum exists
             vals = arg_split[1]

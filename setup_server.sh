@@ -82,6 +82,15 @@ BASE_DIR="$PWD"
 # show current drive arrangement
 lsblk -p
 
+############################################
+# Check if a device is formatted.
+# Globals:
+#   NONE
+# Arguments:
+#   1: Device path.
+# Returns:
+#   1 if device is formatted; 0 otherwise.
+############################################
 is_formatted() {
   local format="$(lsblk -o FSTYPE -n $1)"
   if [[ -z "${format// }" ]]; then
@@ -92,6 +101,16 @@ is_formatted() {
   fi
 }
 
+############################################
+# Mount device.
+# Globals:
+#   DIR_DATA: Data mount point.
+# Arguments:
+#   1: Device path.
+#   2: Mount path.
+# Returns:
+#   NONE
+############################################
 mount_dev() {
   if ! mountpoint -q "$DIR_DATA"; then
     if [[ ! -d "$2" ]]; then
@@ -104,6 +123,7 @@ mount_dev() {
 if [[ $setup -eq 1 ]]; then
   # initialize swap and storage drives if setting up a new server instance
   if [[ "$data" != "" ]]; then
+    # format data device if not already formatted and mount
     is_formatted "$data"
     newly_formatted="$?"
     if [[ $newly_formatted -eq 0 ]]; then
@@ -117,19 +137,20 @@ if [[ $setup -eq 1 ]]; then
   fi
   if [[ "$swap" != "" ]]; then
     if [[ "$swapfile_size" != "" ]]; then
+      # generate swap file
       if [[ -e "$swap" ]]; then
         echo "$swap already exists, will attempt to load as swap file"
       else
-        # generate swapfile with given size in GB based on 
-        # block size * MB in GB * num GB
-        size=$((1024*1024*swapfile_size))
+        # generate swapfile with given size in GB; 
+        # TODO: consider fallback to dd with formats that don't support 
+        # fallocate for swap files
         echo "Making ${swapfile_size}GB swap file at $swap"
-        dd if=/dev/zero of="$swap" bs=1024 count=$size
-        sudo chown root:root "$swap"
+        sudo fallocate -l "${swapfile_size}G" "$swap"
         sudo chmod 0600 "$swap"
         sudo mkswap "$swap"
       fi
     else
+      # generate swap partition if device isn't already formatted
       is_formatted "$swap"
       if [[ "$?" -eq 0 ]]; then
         sudo mkswap "$swap"
@@ -146,6 +167,7 @@ if [[ "$swap" != "" ]]; then
   swapon -s
 fi
 if [[ "$data" != "" ]]; then
+  # mount if not previously mounted
   mount_dev "$data" "$DIR_DATA"
 fi
 lsblk -p

@@ -1648,7 +1648,6 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         # treat each pair of col_y and col_y values as a group
         colors = colormaps.discrete_colormap(
             len(col_x), prioritize_default="cn", seed=config.seed) / 255
-        print(colors)
         for i, (x, y) in enumerate(zip(col_x, col_y)):
             label = x if names_group is None else names_group[i]
             ax.scatter(
@@ -1818,11 +1817,14 @@ if __name__ == "__main__":
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
         # barplot for data frame from R stats test effect sizes and CIs
+        title = config.plot_labels[config.PlotLabels.TITLE]
+        y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
+        if y_lbl is None: y_lbl = "Effect size"
         plot_bars(
             config.filename, data_cols=("vals.effect", ), 
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
-            legend_names=None, col_groups="RegionName", 
-            y_label="Effect size (smoothed - original)", 
+            legend_names=None, col_groups="RegionName", title=title, 
+            y_label=y_lbl, 
             size=size, show=(not config.no_show), groups=config.groups, 
             prefix=config.prefix)
     

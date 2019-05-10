@@ -616,14 +616,14 @@ setupConfig <- function(name=NULL) {
     
   } else if (name == "wt") {
     # WT samples
-    config.env$Measurements <- kMeas[c(4:7, 10:16)]
+    config.env$Measurements <- kMeas[c(4:7, 10)]
     config.env$VolcanoLabels <- FALSE
+    config.env$VolcanoLogX <- FALSE
     
   } else if (name == "wt.test") {
     # WT test
     setupConfig("wt")
     config.env$Measurements <- kMeas[10]
-    config.env$VolcanoLogX <- FALSE
     
   } else if (name == "homogeneity") {
     # homogenity metric

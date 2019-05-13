@@ -150,9 +150,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots
   par.old <- par(no.readonly=TRUE)
-  if (show.sample.legend & paired) {
+  if (show.sample.legend) {
     # setup sample legend names and number of columns based on max name length
-    names.samples <- unique(levels(df.region$Sample))
+    samples <- df.region$Sample
+    if (is.factor(samples)) {
+      samples <- levels(samples)
+    }
+    names.samples <- unique(samples)
     name.max.len <- max(nchar(names.samples))
     ncol <- 1
     if (name.max.len <= 10) ncol <- 2

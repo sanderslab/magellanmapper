@@ -48,7 +48,6 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     genos <- c("")
   }
   genos.unique <- sort(unique(genos))
-  multiple.geno <- length(genos.unique) > 1
   sides <- df.region[[split.col]]
   sides.unique <- unique(sides)
   if (!split.by.side | length(sides.unique) == 0) {
@@ -64,6 +63,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   }
   
   # setup coordinates to plot and error ranges
+  num.genos <- length(genos.unique)
   num.sides <- length(sides.unique)
   num.groups <- length(genos.unique) * num.sides
   names.groups <- vector(length=num.groups)
@@ -94,8 +94,12 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       errs[i] <- if (is.na(vals.cis[i])) 0 else vals.cis[i]
       
       # main label
+      if (num.sides > 1) {
       name <- side
-      if (multiple.geno) name <- paste(geno, side)
+        if (num.genos > 1) name <- paste(geno, side)
+      } else {
+        name <- geno
+      }
       names.groups[i] <- name
       i <- i + 1
     }
@@ -285,8 +289,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # save figure to PDF
   dev.print(
     pdf, width=plot.size[1], height=plot.size[2], 
-    file=paste0(
-      "../plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
+    file=paste0("../plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
   par(par.old)
   
   return(list(names.groups, vals.means, vals.cis))

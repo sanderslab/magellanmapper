@@ -246,7 +246,10 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
              cex=pt.cex)
       
       # plot summary stats on outer sides of scatter plots
-      x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25
+      x.summary <- x
+      if (boxplot || paired) {
+        x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25
+      }
       if (boxplot) {
         # overlay boxplot
         boxplot(vals.group, at=x.summary, add=TRUE, boxwex=0.2, yaxt="n", 

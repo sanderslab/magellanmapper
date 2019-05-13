@@ -117,7 +117,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       }
     }
     if (is.null(unit)) {
-      ylab <- paste0(ylab, " (", paste0(prefix, collapse=""))
+      ylab <- paste0(ylab, " (", paste0(prefix, collapse=""), ")")
     } else {
       ylab <- bquote(list(.(ylab)~(.(paste0(prefix, collapse=""))~.(unit))))
     }

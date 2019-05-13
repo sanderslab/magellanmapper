@@ -196,9 +196,9 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   for (geno in genos.unique) {
     # plot each group of points
     
-    # add group label for genotypes if more than one total
-    if (length(genos.unique) > 1) mtext(geno, side=1, at=i-0.5)
-    x.pos <- 0:(num.sides-1) # group starting x-positions
+    # TODO: consider adding x-tick-label if > 1 genos and sides
+    #if (length(genos.unique) > 1) mtext(geno, side=1, at=i-0.5)
+    x.pos <- 0:(i*num.sides-1) # group starting x-positions
     vals.geno <- list() # vals within genotype, for paired points
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of

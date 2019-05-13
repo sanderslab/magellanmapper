@@ -112,6 +112,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     unit <- NULL
   }
   if (int.digits >= 5) {
+    # TODO: support scientific notation for decimal values
     power <- int.digits - 1
     denom <- 10 ^ power
     # use single-character numeral prefix abbreviations if possible
@@ -289,4 +290,17 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   par(par.old)
   
   return(list(names.groups, vals.means, vals.cis))
+}
+
+runJitter <- function(path.in) {
+  # Create a generic jitter plot.
+  #
+  # Arguments:
+  #   path.in: Input CSV path.
+  df <- read.csv(path.in)
+  print(df)
+  jitterPlot(df, "Response", "Cas response", split.by.side=FALSE, 
+             split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
+             plot.size=c(5, 7), summary.stats=kSummaryStats[1], 
+             axes.in.range=FALSE)
 }

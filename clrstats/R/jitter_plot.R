@@ -1,9 +1,12 @@
 # Plotter for paired and jitter group plots
 # Author: David Young, 2018, 2019
 
+kSummaryStats <- c("mean.ci", "boxplot")
+
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
                        split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
-                       plot.size=c(5, 7), boxplot=TRUE, axes.in.range=FALSE) {
+                       plot.size=c(5, 7), summary.stats=kSummaryStats[2], 
+                       axes.in.range=FALSE) {
   # Plot jitter/scatter plots of values by genotype with summary stats.
   # 
   # Also generates mean and 95% CI for each group, which will be plotted 
@@ -27,8 +30,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #     split group is the same within each genotype. Defaults to FALSE.
   #   plot.size: Vector of width, height for exported plot; defaults to 
   #     c(5, 7).
-  #   boxplot: True to show box plot in place of mean and CIs; defaults to 
-  #     TRUE.
+  #   summary.stats: One of kSummaryStats designating the type of stats 
+  #     to display, or NULL to show none. Defaults to "boxplot".
   #   axes.in.range: True to require x- and y-ranges to include axes; 
   #     defaults to FALSE.
   #
@@ -51,6 +54,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   if (!split.by.side | length(sides.unique) == 0) {
     # use a single side for one for-loop pass
     sides.unique = c("")
+  }
+  # summary stats to display
+  mean.ci <- FALSE
+  boxplot <- FALSE
+  if (!is.null(summary.stats)) {
+    mean.ci <- summary.stats == kSummaryStats[1]
+    boxplot <- summary.stats == kSummaryStats[2]
   }
   
   # setup coordinates to plot and error ranges
@@ -127,10 +137,10 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   }
   
   # define graph limits, with x from 0 to number of groups, and y from 
-  # 0 to highest y-val, or highest absolute error bar if not boxplot
+  # 0 to highest y-val, or highest absolute error bar
   mins <- c(-0.5, min(vals) / denom)
   maxes <- c(num.groups, max(vals) / denom)
-  if (!boxplot) {
+  if (mean.ci) {
     mins[2] <- min(mins[2], min(vals.means - errs) / denom)
     maxes[2] <- max(maxes[2], max(vals.means + errs) / denom)
   }
@@ -241,7 +251,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         # overlay boxplot
         boxplot(vals.group, at=x.summary, add=TRUE, boxwex=0.2, yaxt="n", 
                 frame.plot=FALSE)
-      } else {
+      } else if (mean.ci) {
         # plot error bars unless CI is NA, such as infinitely large CI (n = 1)
         mean <- vals.means[[i]] / denom
         ci <- vals.cis[[i]] / denom

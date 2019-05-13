@@ -246,7 +246,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         mean <- vals.means[[i]] / denom
         ci <- vals.cis[[i]] / denom
         if (!is.na(ci)) {
-          points(x.summary, mean, pch=16, cex=2)
+          segments(x.summary - 0.25, mean, x.summary + 0.25, mean)
           arrows(x.summary, mean + ci, x.summary, mean - ci, length=0.05, 
                  angle=90, code=3)
         }

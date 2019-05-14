@@ -1354,9 +1354,9 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         x_labels, rotation=rotation, horizontalalignment="right", 
         fontdict=font_dict)
     # translate to right since "right" alignment shift the right of labels 
-    # too far to the left of tick marks
+    # too far to the left of tick marks; shift less with more groups
     offset = transforms.ScaledTranslation(
-        15 / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
+        300 / num_groups / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
     for lbl in ax.xaxis.get_majorticklabels():
         lbl.set_transform(lbl.get_transform() + offset)
     

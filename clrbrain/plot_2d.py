@@ -1338,7 +1338,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     ax.set_title(title)
     
     # TODO: consider making configurable
-    ax.ticklabel_format(style="sci", scilimits=(-3, 4))
+    ax.ticklabel_format(style="sci", scilimits=(-3, 4), useMathText=True)
     # draw x-tick labels with smaller font for increasing number of labels
     font_size = plt.rcParams["axes.titlesize"]
     if lib_clrbrain.is_number(font_size):

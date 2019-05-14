@@ -555,7 +555,7 @@ def read_file(filename, series, load=True, z_max=-1,
     if offset is None:
         offset = (0, 0, 0) # (x, y, z)
     num_files = 1
-    if ext == "tiff" or ext == "tif":
+    if ext == ".tiff" or ext == ".tif":
         # import multipage TIFFs
         print("Loading multipage TIFF...")
         

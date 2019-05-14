@@ -160,15 +160,15 @@ if [[ $setup -eq 1 ]]; then
 fi
 
 
-# turn on swap and mount storage drive, which should fail if these 
+# mount storage drive and turn on swap, which should fail if these 
 # drives were not initialized or attached
-if [[ "$swap" != "" ]]; then
-  sudo swapon "$swap"
-  swapon -s
-fi
 if [[ "$data" != "" ]]; then
   # mount if not previously mounted
   mount_dev "$data" "$DIR_DATA"
+fi
+if [[ "$swap" != "" ]]; then
+  sudo swapon "$swap"
+  swapon -s
 fi
 lsblk -p
 

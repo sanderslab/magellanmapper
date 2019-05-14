@@ -1252,7 +1252,8 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         plt.show()
 
 def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
-               title, padding=0.2, skip_all_zero=False, rotation=80):
+               title, padding=0.2, skip_all_zero=False, rotation=80, 
+               y_unit=None):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
@@ -1290,6 +1291,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         skip_all_zero: True to skip any data list that contains only 
             values below :attr:``config.POS_THRESH``; defaults to False.
         rotation: Degrees of x-tick label rotation; defaults to 80.
+        y_unit: Measurement unit for y-axis; defaults to None.
     """
     bars = []
     if len(lists) < 1: return
@@ -1334,7 +1336,6 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             ax.bar(indices + width * i, lists[i], width=width, color=colors[i], 
                    linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
     ax.set_title(title)
-    ax.set_ylabel(y_label)
     
     # TODO: consider making configurable
     ax.ticklabel_format(style="sci", scilimits=(-3, 4))
@@ -1358,6 +1359,23 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         15 / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
     for lbl in ax.xaxis.get_majorticklabels():
         lbl.set_transform(lbl.get_transform() + offset)
+    
+    # show y-label with any unit in parentheses and any scientific 
+    # notation moved alongside unit; tighten layour first to populate exp text
+    ax.figure.tight_layout()
+    offset_text = ax.yaxis.get_offset_text().get_text()
+    ylbl = y_label
+    unit = []
+    if offset_text != "":
+        # prepend unit with any exponent
+        unit.append(offset_text)
+        ax.yaxis.offsetText.set_visible(False)
+    if y_unit is not None and y_unit != "":
+        unit.append(y_unit)
+    if len(unit) > 0:
+        # put unit in parentheses
+        ylbl = "{} ({})".format(ylbl, " ".join(unit))
+    ax.set_ylabel(ylbl)
     
     if list_names:
         ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
@@ -1486,8 +1504,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     if show: plt.show()
 
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
-              col_groups=None, groups=None, y_label=None, title=None, 
-              size=None, show=True, prefix=None):
+              col_groups=None, groups=None, y_label=None, y_unit=None, 
+              title=None, size=None, show=True, prefix=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -1511,6 +1529,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
         groups: Sequence of groups to include and by which to sort; 
             defaults to None to include all groups.
         y_label: Name of y-axis; defaults to None.
+        y_unit: Measurement unit for y-axis; defaults to None.
         title: Title of figure; defaults to None, which will use  
             ``path_to_df`` to build the title.
         size: Sequence of ``width, height`` to size the figure; defaults 
@@ -1582,7 +1601,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
         title = os.path.splitext(
             os.path.basename(path_to_df))[0].replace("_", " ")
     _bar_plots(ax, lists, errs, legend_names, df[col_groups], bar_colors, 
-               y_label, title)
+               y_label, title, y_unit=y_unit)
     gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
     
     # save and display
@@ -1819,12 +1838,13 @@ if __name__ == "__main__":
         # barplot for data frame from R stats test effect sizes and CIs
         title = config.plot_labels[config.PlotLabels.TITLE]
         y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
+        y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
         if y_lbl is None: y_lbl = "Effect size"
         plot_bars(
             config.filename, data_cols=("vals.effect", ), 
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
             legend_names=None, col_groups="RegionName", title=title, 
-            y_label=y_lbl, 
+            y_label=y_lbl, y_unit=y_unit, 
             size=size, show=(not config.no_show), groups=config.groups, 
             prefix=config.prefix)
     

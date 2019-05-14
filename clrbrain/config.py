@@ -78,7 +78,7 @@ plot_2d_type = None
 
 PlotLabels = Enum(
     "PlotLabels", (
-        "TITLE", "X_LABEL", "Y_LABEL"
+        "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT"
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)

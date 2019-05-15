@@ -187,7 +187,7 @@ class ABAKeys(Enum):
 # register module modes when called from command-line
 RegisterTypes = Enum(
     "RegisterTypes", [
-        "single", "group", "overlays", "volumes", "densities", "export_vols", 
+        "single", "group", "overlays", 
         "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
         "make_edge_images", "make_edge_images_exp", "merge_atlas_segs", 
         "reg_labels_to_atlas", "vol_stats", "make_density_images", 

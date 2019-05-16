@@ -1060,7 +1060,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
           .format(time() - start_time))
     return borders_img_np, df_metrics, df_pxs
 
-def transpose_img(img_sitk, plane, rotate=False, target_size=None, 
+def transpose_img(img_sitk, plane, rotate=None, target_size=None, 
                   flipud=False):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
     
@@ -1069,7 +1069,7 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None,
         plane: One of :attr:``config.PLANES`` elements, specifying the 
             planar orientation in which to transpose the image. The current 
             orientation is taken to be "xy".
-        rotate: Rotate the final output image by 90 degrees; defaults to False.
+        rotate: Number of times to rotate by 90 degrees; defaults to None.
         target_size: Size of target image, typically one to which ``img_sitk`` 
             will be registered, in (x,y,z, SimpleITK standard) ordering.
         flipud: Flip along the final z-axis; defaults to False.
@@ -1093,9 +1093,9 @@ def transpose_img(img_sitk, plane, rotate=False, target_size=None,
         # rotate the final output image by 90 deg
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 
         # horizontal rotation)
-        transposed = np.rot90(transposed, 1, (1, 2))
         spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
         origin = lib_clrbrain.swap_elements(origin, 1, 2)
+        transposed = np.rot90(transposed, rotate, (1, 2))
     resize_factor = config.register_settings["resize_factor"]
     if target_size is not None and resize_factor:
         # rescale based on xy dimensions of given and target image so that

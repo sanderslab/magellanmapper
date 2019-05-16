@@ -506,7 +506,8 @@ def main(process_args_only=False):
     
     if args.reg_suffixes is not None:
         # specify suffixes of registered images to load
-        config.reg_suffixes = args_with_dict(args.reg_suffixes)
+        config.reg_suffixes = args_to_dict(
+            args.reg_suffixes, config.RegSuffixes, config.reg_suffixes)
         print("Set registered image suffixes to {}".format(config.reg_suffixes))
     
     if args.seed:
@@ -762,43 +763,47 @@ def process_file(filename_base, offset, roi_size):
         # load registered files including labels
         from clrbrain import register
         
-        if config.reg_suffixes is not None:
-            # setup user-specified registered images
-            suffixes = register.get_reg_suffixes_dict(
-                *config.reg_suffixes[:-1], **config.reg_suffixes[-1])
-        else:
-            # use default register images
-            suffixes = register.get_reg_suffixes_dict()
+        suffixes = config.reg_suffixes
         
-        if suffixes[config.REG_SUFFIX_ATLAS] is not None:
-            # if specified, this image will take the place of any previously 
-            # loaded image5d
+        # main image is currently required since many parameters depend on it
+        atlas_suffix = suffixes[config.RegSuffixes.ATLAS]
+        if atlas_suffix is None and image5d is None:
+            # fallback to atlas if main image not already loaded
+            atlas_suffix = register.IMG_ATLAS
+        if atlas_suffix is not None:
+            # will take the place of any previously loaded image5d
             image5d = register.load_registered_img(
-                config.filename, reg_name=suffixes[config.REG_SUFFIX_ATLAS])
+                config.filename, reg_name=atlas_suffix)
             image5d = image5d[None]
         
-        # load labels image, set up scaling, and load labels file
-        config.labels_img = register.load_registered_img(
-            config.filename, 
-            reg_name=suffixes[config.REG_SUFFIX_ANNOTATION])
-        config.labels_scaling = importer.calc_scaling(
-            image5d, config.labels_img)
-        labels_ref = ontology.load_labels_ref(config.load_labels)
-        if isinstance(labels_ref, pd.DataFrame):
-            # parse CSV files loaded into data frame
-            config.labels_ref_lookup = ontology.create_lookup_pd(
-                labels_ref)
-        else:
-            # parse dict from ABA JSON file
-            config.labels_ref_lookup = ontology.create_aba_reverse_lookup(
-                labels_ref)
+        annotation_suffix = suffixes[config.RegSuffixes.ANNOTATION]
+        if annotation_suffix is not None:
+            # load labels image, set up scaling, and load labels file
+            try:
+                config.labels_img = register.load_registered_img(
+                    config.filename, reg_name=annotation_suffix)
+                config.labels_scaling = importer.calc_scaling(
+                    image5d, config.labels_img)
+                labels_ref = ontology.load_labels_ref(config.load_labels)
+                if isinstance(labels_ref, pd.DataFrame):
+                    # parse CSV files loaded into data frame
+                    config.labels_ref_lookup = ontology.create_lookup_pd(
+                        labels_ref)
+                else:
+                    # parse dict from ABA JSON file
+                    config.labels_ref_lookup = (
+                        ontology.create_aba_reverse_lookup(labels_ref))
+            except FileNotFoundError as e:
+                print(e)
         
-        try:
-            # attempt to load borders image if present
-            config.borders_img = register.load_registered_img(
-                config.filename, reg_name=suffixes[config.REG_SUFFIX_BORDERS])
-        except FileNotFoundError as e:
-            print(e)
+        borders_suffix = suffixes[config.RegSuffixes.BORDERS]
+        if borders_suffix is not None:
+            # load borders image, which can also be another labels image
+            try:
+                config.borders_img = register.load_registered_img(
+                    config.filename, reg_name=borders_suffix)
+            except FileNotFoundError as e:
+                print(e)
     
     load_rot90 = config.process_settings["load_rot90"]
     if load_rot90:

@@ -78,6 +78,7 @@ Plot2DTypes = Enum(
 )
 plot_2d_type = None
 
+# plot label keys for command-line parsing
 PlotLabels = Enum(
     "PlotLabels", (
         "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT"
@@ -161,10 +162,6 @@ labels_ref_lookup = None
 labels_level = None
 labels_mirror = True
 borders_img = None
-reg_suffixes = None
-REG_SUFFIX_ATLAS = "atlas"
-REG_SUFFIX_ANNOTATION = "annotation"
-REG_SUFFIX_BORDERS = "borders"
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
 VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
@@ -173,6 +170,14 @@ SIDE_KEY = "Side"
 GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
 REGION_ALL = "all"
+
+# registered image suffix keys for command-line parsing
+RegSuffixes = Enum(
+    "RegSuffixes", [
+        "ATLAS", "ANNOTATION", "BORDERS", 
+    ]
+)
+reg_suffixes = dict.fromkeys(RegSuffixes, None)
 
 class ABAKeys(Enum):
     """Allen Brain Atlas ontology hierarchy keys.

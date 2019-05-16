@@ -454,10 +454,17 @@ def update_process_settings(settings, settings_type):
             {"unsharp_strength": 1.5}, 
             profile)
         
+        # color and intensity geared toward histology atlas images
         settings.add_modifier(
             "atlas", 
             {"channel_colors": ("gray", ),
              "clip_vmax": 97}, 
+            profile)
+        
+        # colors for each channel based on randomly generated discrete colormaps
+        settings.add_modifier(
+            "randomcolors", 
+            {"channel_colors": []}, 
             profile)
     
     if verbose:

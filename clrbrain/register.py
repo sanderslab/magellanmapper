@@ -1332,9 +1332,11 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         if img_np is not None:
             img_sitk = replace_sitk_with_numpy(img_sitk, img_np)
             if pre_plane is None:
-                # plane settings is for post-processing
+                # plane settings is for post-processing; 
+                # TODO: check if 90deg rot is nec for yz
+                rotate = 0 if config.plane == config.PLANE[0] else 1
                 img_sitk = transpose_img(
-                    img_sitk, config.plane, True, flipud=True)
+                    img_sitk, config.plane, rotate, flipud=True)
         imgs_sitk_replaced.append(img_sitk)
     img_atlas, img_labels, img_borders = imgs_sitk_replaced
     

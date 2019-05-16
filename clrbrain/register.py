@@ -3658,12 +3658,8 @@ def main():
             make_sub_segmented_labels(img_path, config.suffix)
 
     elif reg is config.RegisterTypes.merge_images:
-        # combine separate experiment and labels distance images from all paths
-        if not config.suffix:
-            merge_images(config.filenames, IMG_EXP, config.prefix)
-        merge_images(
-            config.filenames, IMG_LABELS_DIST, config.prefix, config.suffix, 
-            np.sum)
+        # take mean of separate experiments from all paths
+        merge_images(config.filenames, IMG_EXP, config.prefix, config.suffix)
 
     elif reg is config.RegisterTypes.register_reg:
         # register a group of registered images to another image, 

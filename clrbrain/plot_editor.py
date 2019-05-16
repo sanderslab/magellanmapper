@@ -109,7 +109,7 @@ class PlotEditor:
         
         # prep main image in grayscale and labels with discrete colormap
         imgs2d = [self.img3d[self.coord[0]]]
-        cmaps = [config.process_settings["channel_colors"]]
+        cmaps = [config.cmaps]
         alphas = [1]
         
         if self.img3d_labels is not None:

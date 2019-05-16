@@ -806,7 +806,27 @@ def process_file(filename_base, offset, roi_size):
         # need to rotate images output by deep learning toolkit
         image5d = np.rot90(image5d, load_rot90, (2, 3))
     
+    # add any additional image5d thresholds for multichannel images, such 
+    # as those loaded without metadata for these settings
     colormaps.setup_cmaps()
+    num_channels = 1 if image5d.ndim <= 4 else image5d.shape[4]
+    config.near_max = lib_clrbrain.pad_seq(config.near_max, num_channels, -1)
+    config.near_min = lib_clrbrain.pad_seq(config.near_min, num_channels, 0)
+    config.vmax_overview = lib_clrbrain.pad_seq(
+        config.vmax_overview, num_channels)
+    config.cmaps = list(config.process_settings["channel_colors"])
+    num_cmaps = len(config.cmaps)
+    if num_cmaps < num_channels:
+        # add colormap for each remaining channel, purposely inducing 
+        # int wraparound for greater color contrast
+        chls_diff = num_channels - num_cmaps
+        colors = colormaps.discrete_colormap(
+            chls_diff, alpha=255, prioritize_default=False, seed=config.seed, 
+            multiplier=150, offset=150) / 255.0
+        print("generating colormaps from RGBA colors:\n", colors)
+        for color in colors:
+            config.cmaps.append(colormaps.make_dark_linear_cmap("", color))
+    
     
     # PROCESS BY TYPE
     stats = None

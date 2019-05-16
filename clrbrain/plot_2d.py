@@ -424,9 +424,8 @@ def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
             roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
         
         # show the ROI, which is now a 2D zoomed image
-        cmaps = config.process_settings["channel_colors"]
         plot_support.imshow_multichannel(
-            ax, roi, channel, cmaps, aspect, alpha)
+            ax, roi, channel, config.cmaps, aspect, alpha)
         #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
         
         # show labels if provided and within ROI
@@ -906,7 +905,7 @@ def plot_2d_stack(fn_update_seg, title, filename, image5d, channel, roi_size,
     # overview images taken from the bottom plane of the offset, with
     # progressively zoomed overview images if set for additional zoom levels
     overview_cols = zoom_plot_cols // zoom_levels
-    cmaps = config.process_settings["channel_colors"]
+    cmaps = config.cmaps
     for level in range(zoom_levels - 1):
         ax = plt.subplot(gs[0, level])
         ax_overviews.append(ax)

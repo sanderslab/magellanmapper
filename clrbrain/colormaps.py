@@ -5,15 +5,34 @@
 """
 
 import numpy as np
+from matplotlib import cm
 from matplotlib import colors
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
 
-CMAP_GRBK = colors.LinearSegmentedColormap.from_list(
-    config.CMAP_GRBK_NAME, ["black", "green"])
-CMAP_RDBK = colors.LinearSegmentedColormap.from_list(
-    config.CMAP_RDBK_NAME, ["black", "red"])
+# default colormaps, with keys backed by config.Cmaps enums
+CMAPS = {}
+
+def make_dark_linear_cmap(name, color):
+    """Make a linear colormap starting with black and ranging to 
+    ``color``.
+    
+    Args:
+        name: Name to give to colormap.
+        color: Colors will range from black to this color.
+    
+    Returns:
+        A `LinearSegmentedColormap` object.
+    """
+    return colors.LinearSegmentedColormap.from_list(name, ("black", color))
+
+def setup_cmaps():
+    """Setup default colormaps, storing them in :const:``CMAPS``."""
+    CMAPS[config.Cmaps.CMAP_GRBK_NAME] = make_dark_linear_cmap(
+        config.Cmaps.CMAP_GRBK_NAME.value, "green")
+    CMAPS[config.Cmaps.CMAP_RDBK_NAME] = make_dark_linear_cmap(
+        config.Cmaps.CMAP_RDBK_NAME.value, "red")
 
 class DiscreteColormap(colors.ListedColormap):
     """Extends :class:``matplotlib.colors.ListedColormap`` to generate a 
@@ -227,3 +246,32 @@ def get_borders_colormap(borders_img, labels_img, cmap_labels):
             # of labels while still ensuring a transparent background
             cmap_borders = [get_labels_discrete_colormap(borders_img, 0)]
     return cmap_borders
+
+def get_cmap(cmap, n=None):
+    """Get colormap from a list of colormaps, string, or enum.
+    
+    If ``n`` is given, ``cmap`` is assumed to be a list from which a colormap 
+    will be retrieved. Colormaps that are strings will be converted to 
+    the associated standard `Colormap` object, while enums in 
+    :class:``config.Cmaps`` will be used to retrieve a `Colormap` object 
+    from :const:``CMAPS``, which is assumed to have been initialized.
+    
+    Args:
+        cmap: Colormap given as a string of Enum or list of colormaps.
+        n: Index of `cmap` to retrieve a colormap, assuming that `cmap` 
+            is a sequence. Defaults to None to use `cmap` directly.
+    
+    Returns:
+        The ``Colormap`` object, or None if no corresponding colormap 
+        is found.
+    """
+    if n is not None:
+        # assume that cmap is a list
+        cmap = config.cmaps[n] if n < len(cmap) else None
+    if isinstance(cmap, str):
+        # cmap given as a standard Matplotlib colormap name
+        cmap = cm.get_cmap(cmap)
+    elif cmap in config.Cmaps:
+        # assume default colormaps have been initialized
+        cmap = CMAPS[cmap]
+    return cmap

@@ -90,6 +90,7 @@ import numpy as np
 import pandas as pd
 
 from clrbrain import chunking
+from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import importer
 from clrbrain import lib_clrbrain
@@ -805,6 +806,7 @@ def process_file(filename_base, offset, roi_size):
         # need to rotate images output by deep learning toolkit
         image5d = np.rot90(image5d, load_rot90, (2, 3))
     
+    colormaps.setup_cmaps()
     
     # PROCESS BY TYPE
     stats = None

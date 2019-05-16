@@ -59,13 +59,15 @@ vmax_overview = [None] # generated from near_max; overwritten at cmd-line
 border = None # clip ROI to border (x,y,z order)
 near_max = [-1.0] # auto-detected, max of clipped intensities of whole img
 near_min = [0.0]
+cmaps = None
 
 
 # 2D PLOTTING
 
 # custom colormaps in plot_2d
-CMAP_GRBK_NAME = "Green_black"
-CMAP_RDBK_NAME = "Red_black"
+class Cmaps(Enum):
+    CMAP_GRBK_NAME = "Green_black"
+    CMAP_RDBK_NAME = "Red_black"
 
 # processing type directly in module
 Plot2DTypes = Enum(
@@ -294,7 +296,7 @@ class ProcessSettings(SettingsDict):
         self["verify_tol_factor"] = (1, 1, 1)
         self["segmenting_mean_thresh"] = 0.4
         self["scale_factor"] = None # z,y,x; req custom skimage
-        self["channel_colors"] = (CMAP_GRBK_NAME, CMAP_RDBK_NAME)
+        self["channel_colors"] = (Cmaps.CMAP_GRBK_NAME, Cmaps.CMAP_RDBK_NAME)
         self["isotropic"] = None
         self["isotropic_vis"] = None
         self["resize_blobs"] = None

@@ -7,7 +7,6 @@
 import os
 
 import numpy as np
-from matplotlib import cm
 import matplotlib.backend_bases as backend_bases
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
@@ -53,14 +52,8 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
             alpha *= 0.3
         cmap = cmaps[chl]
         norm = None if norms is None else norms[chl]
-        # check for custom colormaps
-        if cmap == config.CMAP_GRBK_NAME:
-            cmap = colormaps.CMAP_GRBK
-        elif cmap == config.CMAP_RDBK_NAME:
-            cmap = colormaps.CMAP_RDBK
-        elif cmap is not None:
-            if isinstance(cmap, str):
-                cmap = cm.get_cmap(cmap)
+        cmap = colormaps.get_cmap(cmap)
+        if cmap is not None:
             # show masked values such as NaNs as black to distinguish from 0
             cmap.set_bad(color="black")
         if vmin is not None:

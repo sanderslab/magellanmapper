@@ -1093,9 +1093,10 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
         # rotate the final output image by 90 deg
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 
         # horizontal rotation)
-        spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
-        origin = lib_clrbrain.swap_elements(origin, 1, 2)
         transposed = np.rot90(transposed, rotate, (1, 2))
+        if rotate % 2 != 0:
+            spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
+            origin = lib_clrbrain.swap_elements(origin, 1, 2)
     resize_factor = config.register_settings["resize_factor"]
     if target_size is not None and resize_factor:
         # rescale based on xy dimensions of given and target image so that

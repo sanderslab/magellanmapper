@@ -1334,7 +1334,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
             if pre_plane is None:
                 # plane settings is for post-processing; 
                 # TODO: check if 90deg rot is nec for yz
-                rotate = 0 if config.plane == config.PLANE[0] else 1
+                rotate = 1 if config.plane in config.PLANE[1:] else 0
                 if flip: rotate += 2
                 img_sitk = transpose_img(
                     img_sitk, config.plane, rotate, flipud=True)

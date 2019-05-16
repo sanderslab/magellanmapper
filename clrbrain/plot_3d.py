@@ -8,9 +8,10 @@ Attributes:
     mask_dividend: Maximum number of points to show.
 """
 
-from time import time
-import numpy as np
 import math
+from time import time
+
+import numpy as np
 from scipy import interpolate
 from scipy import ndimage
 from skimage import draw
@@ -30,7 +31,6 @@ from clrbrain import plot_support
 from clrbrain import segmenter
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
-_MAYAVI_COLORMAPS = ("Greens", "Reds", "Blues", "Oranges")
 
 def setup_channels(roi, channel, dim_channel):
     """Setup channels array for the given ROI dimensions.
@@ -50,7 +50,8 @@ def setup_channels(roi, channel, dim_channel):
     multichannel = roi.ndim > dim_channel
     channels = [0]
     if multichannel:
-        channels = range(roi.shape[dim_channel]) if channel is None else [channel]
+        channels = (range(roi.shape[dim_channel]) 
+                    if channel is None else [channel])
     '''
     lib_clrbrain.printv(
         "multichannel: {}, channels: {}, roi shape: {}, channel: {}"
@@ -1116,7 +1117,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         
         # uses unique IsoSurface module but appears to have 
         # similar output to contour_surface
-        surface = pipeline.iso_surface(surface, colormap=_MAYAVI_COLORMAPS[i])
+        surface = pipeline.iso_surface(surface)
         
         # limit contours for simpler surfaces including smaller file sizes; 
         # TODO: consider making settable as arg or through profile
@@ -1215,9 +1216,13 @@ def plot_3d_points(roi, scene_mlab, channel):
         #roi_show_1d = roi_show_1d[::mask]
         pts = scene_mlab.points3d(
             np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
-            roi_show_1d, mode="sphere", colormap=_MAYAVI_COLORMAPS[i], 
+            roi_show_1d, mode="sphere", 
             scale_mode="scalar", mask_points=mask, line_width=1.0, vmax=1.0, 
             vmin=0.0, transparent=True)
+        cmap = colormaps.get_cmap(config.cmaps, i)
+        if cmap is not None:
+            pts.module_manager.scalar_lut_manager.lut.table = cmap(
+                range(0, 256)) * 255
         isotropic = settings["isotropic_vis"]
         if isotropic is not None:
             pts.actor.actor.scale = isotropic[::-1]

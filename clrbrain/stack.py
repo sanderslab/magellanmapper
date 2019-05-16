@@ -157,9 +157,8 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
             args=(i, rescale, multichannel)))
     
     # setup imshow parameters
-    cmaps = config.process_settings["channel_colors"]
     colorbar = config.process_settings["colorbar"]
-    cmaps_all = [cmaps, *cmaps_labels]
+    cmaps_all = [config.cmaps, *cmaps_labels]
     alphas = lib_clrbrain.pad_seq(config.alphas, num_image_types, 0.9)
     
     for result in pool_results:

@@ -194,9 +194,9 @@ RegisterTypes = Enum(
         "make_edge_images", "make_edge_images_exp", "merge_atlas_segs", 
         "reg_labels_to_atlas", "vol_stats", "make_density_images", 
         "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
-        "plot_smoothing_metrics", "merge_images", "register_reg", 
-        "labels_diff", "labels_diff_stats", "make_labels_level", 
-        "combine_cols", "zscores", 
+        "plot_smoothing_metrics", "merge_images", "merge_images_channels", 
+        "register_reg", "labels_diff", "labels_diff_stats", 
+        "make_labels_level", "combine_cols", "zscores", 
     ]
 )
 register_type = None

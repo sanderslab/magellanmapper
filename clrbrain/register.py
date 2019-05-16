@@ -2644,7 +2644,8 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
         suffix: Portion of path to be combined with each path 
             in ``img_paths`` and output path; defaults to None.
         fn_combine: Function to apply to combine images with ``axis=0``. 
-            Defaults to :func:``np.sum``.
+            Defaults to :func:``np.sum``. If None, each image will be 
+            inserted as a separate channel.
     
     Returns:
         The combined image in SimpleITK format.
@@ -2676,7 +2677,12 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
         img_nps.append(img_np)
     
     # combine images and write single combo image
-    img_combo = fn_combine(img_nps, axis=0)
+    if fn_combine is None:
+        # combine raw images into separate channels
+        img_combo = np.stack(img_nps, axis=img_nps[0].ndim)
+    else:
+        # merge by custom function
+        img_combo = fn_combine(img_nps, axis=0)
     combined_sitk = replace_sitk_with_numpy(img_sitk, img_combo)
     # fallback to using first image's name as base
     output_base = img_paths[0] if prefix is None else prefix
@@ -3661,6 +3667,12 @@ def main():
     elif reg is config.RegisterTypes.merge_images:
         # take mean of separate experiments from all paths
         merge_images(config.filenames, IMG_EXP, config.prefix, config.suffix)
+
+    elif reg is config.RegisterTypes.merge_images_channels:
+        # combine separate experiments from all paths into separate channels
+        merge_images(
+            config.filenames, IMG_EXP, config.prefix, config.suffix, 
+            fn_combine=None)
 
     elif reg is config.RegisterTypes.register_reg:
         # register a group of registered images to another image, 

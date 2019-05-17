@@ -165,6 +165,35 @@ def zscore_df(df, group_col, metric_cols, extra_cols, replace_metrics=False):
         df_zscore.rename(columns=col_dict, inplace=True)
     return df_zscore
 
+def coefvar_df(df, id_cols, metric_cols, size_col=None):
+    """Generate coefficient of variation for each metric within each group.
+    
+    Args:
+        df: Pandas data frame.
+        id_cols: List of column names by which to group.
+        metric_cols: Sequence of metric column names.
+        size_col: Name of size column, typically used for weighting; 
+            defaults to None.
+    
+    Returns:
+        New data frame with ``metric_cols`` replaced by coefficient of 
+        variation and ``size_col`` replaced by mean.
+    """
+    def coefvar(vals):
+        return np.nanstd(vals) / np.nanmean(vals)
+    
+    # setup aggregation by coefficient of variation for given metrics 
+    # and mean of sizes
+    fns_agg = {metric_col: coefvar for metric_col in metric_cols}
+    if size_col:
+        fns_agg[size_col] = np.nanmean
+    
+    # group, aggregate, and reinstate index columns
+    df_coef = df.groupby(id_cols).agg(fns_agg)
+    df_coef = df_coef.reset_index()
+    
+    return df_coef
+
 def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
     """Transpose metric columns from rows within each condition grouop 
     to separate sets of columns.

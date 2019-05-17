@@ -3752,6 +3752,35 @@ def main():
         plot_2d.plot_probability(path, conds, metric_cols, "Volume", 
             xlim=lims, ylim=lims, title="Region Match Z-Scores", 
             fig_size=size, show=show, suffix=None, df=df)
+    
+    elif reg is config.RegisterTypes.coefvar:
+        # export coefficient of variation for the given metrics to a 
+        # new data frame and display as a scatter plot
+        
+        # measure coefficient of variation
+        df = pd.read_csv(config.filename)
+        metric_cols = (
+            vols.LabelMetrics.VarIntensity.name, 
+            vols.LabelMetrics.VarIntensDiff.name,
+            vols.LabelMetrics.VarNuclei.name,  
+            vols.LabelMetrics.EdgeDistSum.name, 
+        )
+        df = stats.coefvar_df(
+            df, ["Region", "Condition"], metric_cols, 
+            vols.LabelMetrics.Volume.name)
+        
+        # shift metrics from each condition to separate columns
+        conds = np.unique(df["Condition"])
+        df = stats.cond_to_cols_df(
+            df, ["Region"], "Condition", "original", metric_cols)
+        path = lib_clrbrain.insert_before_ext(config.filename, "_coefvar")
+        stats.data_frames_to_csv(df, path)
+        
+        # display as probability plot
+        lims = (0, 0.7)
+        plot_2d.plot_probability(path, conds, metric_cols, "Volume", 
+            xlim=lims, ylim=lims, title="Coefficient of Variation", 
+            fig_size=size, show=show, suffix=None, df=df)
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

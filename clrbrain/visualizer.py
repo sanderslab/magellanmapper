@@ -181,6 +181,7 @@ class Visualization(HasTraits):
     segs_feedback = Str("Segments output")
     labels = None # segmentation labels
     atlas_ed = None # atlas editor
+    flipz = True # True to invert 3D vis along z-axis
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
     _check_list_2d = List
@@ -391,7 +392,7 @@ class Visualization(HasTraits):
                 # and have not found a way to turn them off easily, so 
                 # consider turning them off by default and deferring to the 
                 # GUI to turn them back on
-                self.scene.mlab.orientation_axes()
+                self.show_orientation_axes(self.flipz)
         # updates the GUI here even though it doesn't elsewhere for some reason
         self.rois_check_list = _ROI_DEFAULT
         self._img_region = None
@@ -441,12 +442,13 @@ class Visualization(HasTraits):
                 # if 2D segmentation option checked
                 segment = self._DEFAULTS_2D[2] in self._check_list_2d
                 plot_3d.plot_3d_surface(
-                    self.roi, self.scene.mlab, config.channel, segment=segment)
+                    self.roi, self.scene.mlab, config.channel, segment, 
+                    self.flipz)
                 self._scene_3d_shown = True
             else:
                 # 3D point rendering
                 self._scene_3d_shown = plot_3d.plot_3d_points(
-                    self.roi, self.scene.mlab, config.channel)
+                    self.roi, self.scene.mlab, config.channel, self.flipz)
             
             # process ROI in prep for showing filtered 2D view and segmenting
             if not lib_clrbrain.is_binary(self.roi):
@@ -494,7 +496,8 @@ class Visualization(HasTraits):
             label_mask = config.labels_img[tuple(slices)] == label_id
         self.roi = np.copy(cli.image5d[0][slices])
         self.roi[~label_mask] = 0
-        plot_3d.plot_3d_surface(self.roi, self.scene.mlab, config.channel)
+        plot_3d.plot_3d_surface(
+            self.roi, self.scene.mlab, config.channel, flipud=self.flipz)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
         name = os.path.splitext(os.path.basename(config.filename))[0]
         self._post_3d_display(
@@ -640,11 +643,25 @@ class Visualization(HasTraits):
             75, 140, np.max(self.roi_array[0]) * zoom_out)
         roll = self.scene.mlab.roll(-175)
         if self._scene_3d_shown:
-            self.scene.mlab.orientation_axes()
+            self.show_orientation_axes(self.flipz)
         #self.scene.mlab.outline() # affects zoom after segmenting
         #self.scene.mlab.axes() # need to adjust units to microns
         print("view: {}\nroll: {}".format(
             self.scene.mlab.view(), self.scene.mlab.roll()))
+    
+    def show_orientation_axes(self, flipud=False):
+        """Show orientation axes with option to flip z-axis to match 
+        handedness in Matplotlib images with z increasing upward.
+        
+        Args:
+            flipud: True to invert z-axis, which also turns off arrowheads; 
+                defaults to True.
+        """
+        orient = self.scene.mlab.orientation_axes()
+        if flipud:
+            # flip z-axis and turn off now upside-down arrowheads
+            orient.axes.total_length = [1, 1, -1]
+            orient.axes.cone_radius = 0
     
     @on_trait_change("scene.busy")
     def _scene_changed(self):
@@ -710,7 +727,7 @@ class Visualization(HasTraits):
                 roi_size, np.multiply(self.border, -1))
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self.scene.mlab, self.segs_in_mask, 
-                show_shadows)
+                show_shadows, self.flipz)
             self._segs_scale_high = scale * 2
             self.segs_scale = scale
         
@@ -898,7 +915,7 @@ class Visualization(HasTraits):
             # redraw the original ROI and prepare verify mode
             self.show_3d()
             if self._scene_3d_shown:
-                self.scene.mlab.orientation_axes()
+                self.show_orientation_axes(self.flipz)
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
             self._btn_segment_trait_fired(segs=blobs)
             plot_2d.verify = True

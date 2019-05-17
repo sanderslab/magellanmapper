@@ -1034,7 +1034,7 @@ def make_isotropic(roi, scale):
         roi, isotropic_shape, preserve_range=True, mode=mode, 
         anti_aliasing=True)
 
-def plot_3d_surface(roi, scene_mlab, channel, segment=False):
+def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
     """Plots areas with greater intensity as 3D surfaces.
     
     Args:
@@ -1044,6 +1044,8 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
         segment: True to denoise and segment ``roi`` before displaying, 
             which may remove artifacts that might otherwise lead to 
             spurious surfaces. Defaults to False.
+        flipud: True to invert blobs along z-axis to match handedness 
+            of Matplotlib with z progressing upward; defaults to False.
     """
     # Plot in Mayavi
     #mlab.figure()
@@ -1051,6 +1053,10 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
     pipeline = scene_mlab.pipeline
     scene_mlab.clf()
     settings = config.process_settings
+    if flipud:
+        # invert along z-axis to match handedness of Matplotlib with z up
+        roi = np.flipud(roi)
+    
     # saturate to remove noise and normalize values
     roi = saturate_roi(roi, settings["clip_vmax"], channel=channel)
     #roi = np.clip(roi, 0.2, 0.8)
@@ -1138,7 +1144,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False):
     
     print("time to render 3D surface: {}".format(time() - time_start))
     
-def plot_3d_points(roi, scene_mlab, channel):
+def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     """Plots all pixels as points in 3D space.
     
     Points falling below a given threshold will be
@@ -1152,6 +1158,8 @@ def plot_3d_points(roi, scene_mlab, channel):
             current image will be cleared first.
         channel: Channel to select, which can be None to indicate all 
             channels.
+        flipud: True to invert blobs along z-axis to match handedness 
+            of Matplotlib with z progressing upward; defaults to False.
     
     Returns:
         True if points were rendered, False if no points to render.
@@ -1170,6 +1178,9 @@ def plot_3d_points(roi, scene_mlab, channel):
     time_start = time()
     shape = roi.shape
     z = np.ones((shape[0], shape[1] * shape[2]))
+    if flipud:
+        # invert along z-axis to match handedness of Matplotlib with z up
+        z *= -1
     for i in range(shape[0]):
         z[i] = z[i] * i
     y = np.ones((shape[0] * shape[1], shape[2]))
@@ -1357,7 +1368,7 @@ def _shadow_blob(x, y, z, cmap_indices, cmap, scale, mlab):
     pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
     return pts_shadows
 
-def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
+def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
     """Shows 3D blob segments.
     
     Args:
@@ -1368,6 +1379,8 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
             surrounding the ROI.
         show_shadows: True if shadows of blobs should be depicted on planes 
             behind the blobs; defaults to False.
+        flipud: True to invert blobs along z-axis to match handedness 
+            of Matplotlib with z progressing upward; defaults to False.
     
     Returns:
         A 3-element tuple containing ``pts_in``, the 3D points within the 
@@ -1377,11 +1390,13 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     if segments.shape[0] <= 0:
         return None, None, 0
     settings = config.process_settings
-    segs = segments
+    segs = np.copy(segments)
+    if flipud:
+        # invert along z-axis to match handedness of Matplotlib with z up
+        segs[:, 0] *= -1
     isotropic = settings["isotropic_vis"]
     if isotropic is not None:
         # adjust position based on isotropic factor
-        segs = np.copy(segs)
         segs[:, :3] = np.multiply(segs[:, :3], isotropic)
     
     radii = segs[:, 3]
@@ -1390,7 +1405,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False):
     # colormap has to be at least 2 colors
     segs_in = segs[segs_in_mask]
     num_colors = segs_in.shape[0] if segs_in.shape[0] >= 2 else 2
-    cmap = colormaps.discrete_colormap(num_colors, alpha=170)
+    cmap = colormaps.discrete_colormap(num_colors, 170, True, config.seed)
     cmap_indices = np.arange(segs_in.shape[0])
     
     if show_shadows:

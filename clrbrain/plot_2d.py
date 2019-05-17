@@ -1622,7 +1622,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         col_y: Name of column to plot as corresponding y-values. Can 
             also be a sequence corresponding to that of `col_x`.
         col_annot: Name of column to annotate each point; defaults to None.
-        cols_group: Name of equence of column names specifying groups 
+        cols_group: Name of sequence of column names specifying groups 
             to plot separately; defaults to None.
         names_group: Sequence of names to display in place of ``cols_group``; 
             defaults to None, in which case ``cols_groups`` will be used 
@@ -1727,6 +1727,35 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     save_fig(out_path, config.savefig)
     if show: plt.show()
 
+def plot_probability(path, conds, metric_cols, col_size, **kwargs):
+    """Generate a probability plot such as that used in Q-Q or P-P plots.
+    
+    Serves as a wrapper for :meth:``plot_scatter`` with the assumption 
+    matching columns for each of two conditions describe each point.
+    
+    Args:
+        path: Path from which to read a saved Pandas data frame and the 
+            path basis to save the figure if :attr:``config.savefig`` is set.
+        conds: Sequence of conditions, the first of which will be used 
+            to find the x-values for each metric, and the second for y-values.
+        metric_cols: Sequence of column name prefixes for each metric to 
+            plot. Metric column names are assumed to have these values 
+            combined with a condition, separated by "_".
+        col_size: Name of column from which to scale point sizes, where 
+            the max value in the column is 1; defaults to None.
+        **kwargs: Additional keyword arguments to pass to 
+            :meth:``plot_scatter``.
+    """
+    metric_cond_cols = []
+    for cond in conds:
+        metric_cond_cols.append(
+            ["{}_{}".format(col, cond) for col in metric_cols])
+    plot_scatter(
+        path, metric_cond_cols[0], metric_cond_cols[1], None, None, 
+        names_group=metric_cols, x_label=conds[0].capitalize(), 
+        y_label=conds[1].capitalize(), xy_line=True, 
+        col_size=col_size, **kwargs)
+    
 def plot_roc(df, show=True):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     

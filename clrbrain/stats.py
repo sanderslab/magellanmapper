@@ -128,8 +128,8 @@ def zscore_df(df, group_col, metric_cols, extra_cols, replace_metrics=False):
     Args:
         df: Pandas data frame.
         group_col: Name of column specifying groups.
-        metric_cols: Sequence of metric columns to normalize.
-        extra_cols: Sequence of additional columns to include in the 
+        metric_cols: Sequence of metric column names.
+        extra_cols: Sequence of additional column names to include in the 
             output data frame.
         replace_metrics: True to replace ``metric_cols`` with z-scores 
             rather than adding new columns; defaults to False.

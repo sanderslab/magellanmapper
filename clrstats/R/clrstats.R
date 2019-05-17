@@ -629,7 +629,8 @@ setupConfig <- function(name=NULL) {
   } else if (name == "wt.test") {
     # WT test
     setupConfig("wt")
-    config.env$Measurements <- kMeas[10]
+    config.env$Measurements <- kMeas[5]
+    config.env$SampleLegend <- TRUE
     
   } else if (name == "homogeneity") {
     # homogenity metric

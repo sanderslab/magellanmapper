@@ -3656,8 +3656,12 @@ def main():
     elif reg is config.RegisterTypes.register_reg:
         # register a group of registered images to another image, 
         # such as the atlas to which the images were originally registered
-        suffixes = (None if config.reg_suffixes is None 
-                    else config.reg_suffixes[:-1])
+        suffixes = None
+        if config.reg_suffixes is not None:
+            # get additional suffixes to register the same as for exp img
+            suffixes = [config.reg_suffixes[key] 
+                        for key, val in config.reg_suffixes.items() 
+                        if config.reg_suffixes[key] is not None]
         register_reg(
             *config.filenames[:2], IMG_EXP, suffixes, config.plane, 
             flip, config.prefix, config.suffix, not config.no_show)

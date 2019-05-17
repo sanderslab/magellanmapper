@@ -45,9 +45,10 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
     i = 0
     vmin_plane = None
     vmax_plane = None
-    if len(channels) > 1:
-        # after the 1st channel, all subsequent channels are transluscent
-        alpha *= 0.5
+    num_chls = len(channels)
+    if num_chls > 1:
+        # increasing numbers of channels are each more transluscent
+        alpha /= np.sqrt(num_chls + 1)
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d
         cmap = cmaps[chl]

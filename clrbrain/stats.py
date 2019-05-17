@@ -235,18 +235,14 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
     df_norm = df_norm.drop(cond_col, axis=1)
     return df_norm
 
-def combine_cols(df, combos, fn_aggr):
-    """Combine columns in a data frame with the given aggregation function.
-    
-    Missing columns from the combination metric will be ignored.
+def combine_cols(df, combos):
+    """Combine columns in a data frame with the aggregation function 
+    specified in each combination.\
     
     Args:
         df: Pandas data frame.
         combos: Tuple of combination column name and a nested tuple of 
             the columns to combine as Enums.
-        fn_aggr: Function to use for aggregation, typically a Numpy 
-           function such as :meth:``np.nanmean`` or :meth:``np.nansum``, 
-           applied with ``axis=0``.
     
     Returns:
        Data frame with the combinations each as a new column.
@@ -260,8 +256,9 @@ def combine_cols(df, combos, fn_aggr):
             msg = ("Could not find all metrics in {}: {}\nWill combine columns "
                    "from: {}".format(combo_val[0], combo_val[1], metrics))
             warnings.warn(msg)
-        # aggregate columns by given function
-        df.loc[:, combo_val[0]] = fn_aggr(df.loc[:, metrics], axis=1)
+        # aggregate columns by specified combo function
+        fn_aggr = combo_val[2]
+        df.loc[:, combo_val[0]] = fn_aggr(df.loc[:, metrics])
     return df
 
 def print_data_frame(df, sep=" "):

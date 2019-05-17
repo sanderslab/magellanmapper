@@ -37,13 +37,17 @@ LabelMetrics = Enum(
 class MetricCombos(Enum):
     """Combinations of metrics.
     
-    Each combination should be a tuple of combination name and a nested 
-    tuple of metric Enums.
+    Each combination should be a tuple of combination name, a 
+    tuple of metric Enums, and a function to use for aggregation applied 
+    across colums to give a new metric value for each row.
     """
+    # sum of columns measuring regional homogeneity; missing columns 
+    # will be ignored
     HOMOGENEITY = (
         "Homogeneity", 
         (LabelMetrics.VarIntensity, #LabelMetrics.VarIntensDiff, 
-         LabelMetrics.EdgeDistSum, LabelMetrics.VarNuclei))
+         LabelMetrics.EdgeDistSum, LabelMetrics.VarNuclei), 
+        lambda x: np.nanmean(x, axis=1))
 
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 

@@ -3711,7 +3711,7 @@ def main():
              vols.LabelMetrics.VarNuclei.name), 
             (vols.LabelMetrics.VarIntensity.Volume.name, ))
         df = stats.combine_cols(
-            df, (vols.MetricCombos.HOMOGENEITY, ), np.nanmean)
+            df, (vols.MetricCombos.HOMOGENEITY, ))
         stats.data_frames_to_csv(
             df, lib_clrbrain.insert_before_ext(config.filename, "_norm"))
 

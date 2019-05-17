@@ -1706,7 +1706,8 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     
     # register the images and apply the transformation to any 
     # additional images previously registered to the moving path
-    moving_img = transpose_img(moving_img, plane, flip)
+    rotate = 2 if flip else 0
+    moving_img = transpose_img(moving_img, plane, rotate)
     transformed_img, transformix_img_filter = register_duo(
         fixed_img, moving_img)
     reg_imgs = [transformed_img]
@@ -1715,7 +1716,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
         for reg_name in reg_names:
             img = load_registered_img(
                 mod_path, get_sitk=True, reg_name=reg_name)
-            img = transpose_img(img, plane, flip)
+            img = transpose_img(img, plane, rotate)
             transformix_img_filter.SetMovingImage(img)
             transformix_img_filter.Execute()
             img_result = transformix_img_filter.GetResultImage()
@@ -2714,7 +2715,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     out_path = os.path.join(moving_file_dir, IMG_ATLAS)
     print("Reading in {}".format(out_path))
     moving_sitk = sitk.ReadImage(out_path)
-    moving_sitk = transpose_img(moving_sitk, plane, flip)
+    moving_sitk = transpose_img(moving_sitk, plane, 2 if flip else 0)
     moving_img = sitk.GetArrayFromImage(moving_sitk)
     
     # get the registered atlas file, which should already be transposed

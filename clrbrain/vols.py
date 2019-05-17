@@ -34,6 +34,11 @@ LabelMetrics = Enum(
     ]
 )
 
+def _coef_var(df):
+    # calculate coefficient of variation from data frame columns, 
+    # where first column is std and second is mean
+    return np.divide(df.iloc[:, 0], df.iloc[:, 1])
+
 class MetricCombos(Enum):
     """Combinations of metrics.
     
@@ -48,7 +53,19 @@ class MetricCombos(Enum):
         (LabelMetrics.VarIntensity, #LabelMetrics.VarIntensDiff, 
          LabelMetrics.EdgeDistSum, LabelMetrics.VarNuclei), 
         lambda x: np.nanmean(x, axis=1))
+    
+    # coefficient of variation of intensity values
+    COEFVAR_INTENS = (
+        "CoefVarIntensity", 
+        (LabelMetrics.VarIntensity, LabelMetrics.MeanIntensity), 
+        _coef_var)
 
+    # coefficient of variation of intensity values
+    COEFVAR_NUC = (
+        "CoefVarNuclei", 
+        (LabelMetrics.VarNuclei, LabelMetrics.NucMean), 
+        _coef_var)
+    
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 
     way to use in multiprocessing without requirement for global variables.

@@ -237,7 +237,7 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
 
 def combine_cols(df, combos):
     """Combine columns in a data frame with the aggregation function 
-    specified in each combination.\
+    specified in each combination.
     
     Args:
         df: Pandas data frame.

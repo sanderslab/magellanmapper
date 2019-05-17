@@ -3759,6 +3759,15 @@ def main():
         
         # measure coefficient of variation
         df = pd.read_csv(config.filename)
+        cols_orig = df.columns
+        combos = (
+            vols.MetricCombos.COEFVAR_INTENS, vols.MetricCombos.COEFVAR_NUC
+        )
+        df = stats.combine_cols(df, combos)
+        stats.data_frames_to_csv(
+            df, 
+            lib_clrbrain.insert_before_ext(config.filename, "_coefvar"))
+
         metric_cols = (
             vols.LabelMetrics.VarIntensity.name, 
             vols.LabelMetrics.VarIntensDiff.name,
@@ -3773,7 +3782,7 @@ def main():
         conds = np.unique(df["Condition"])
         df = stats.cond_to_cols_df(
             df, ["Region"], "Condition", "original", metric_cols)
-        path = lib_clrbrain.insert_before_ext(config.filename, "_coefvar")
+        path = lib_clrbrain.insert_before_ext(config.filename, "_coefvarhom")
         stats.data_frames_to_csv(df, path)
         
         # display as probability plot

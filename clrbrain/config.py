@@ -602,8 +602,6 @@ def update_register_settings(settings, settings_type):
         settings["bspline_iter_max"] = "512"
         settings["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
         settings["holes_area"] = 5000
-        settings["grid_spacing_schedule"] = [
-            "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"]
     
     elif settings_type.startswith("groupwise"):
         # groupwise registration

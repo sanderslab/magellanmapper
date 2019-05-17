@@ -365,7 +365,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       }
       stats.group <- jitterPlot(
         df.jitter, col, title, split.by.side, split.col, paired, 
-        config.env$SampleLegend, config.env$PlotSize)
+        config.env$SampleLegend, config.env$PlotSize, 
+        save=config.env$JitterPlotSave)
       
       # add mean and CI for each group to stats data frame
       names <- stats.group[[1]]
@@ -595,6 +596,7 @@ setupConfig <- function(name=NULL) {
     config.env$PlotVolcano <- TRUE
     config.env$VolcanoLabels <- TRUE
     config.env$VolcanoLogX <- TRUE
+    config.env$JitterPlotSave <- TRUE
     
   } else if (name == "aba") {
     # multiple distinct atlases
@@ -613,6 +615,10 @@ setupConfig <- function(name=NULL) {
   } else if (name == "nolevels") {
     # input file from drawn labels only, without levels
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[1])
+    
+  } else if (name == "nojittersave") {
+    # plot but don't save jitter plots
+    config.env$JitterPlotSave <- FALSE
     
   } else if (name == "wt") {
     # WT samples
@@ -661,6 +667,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("homogeneity")
   #setupConfig("wt.test")
   #setupConfig("nolevels")
+  setupConfig("nojittersave")
   #setupConfig("skinny.small")
   #setupConfig("square")
   

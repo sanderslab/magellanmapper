@@ -20,7 +20,7 @@ from clrbrain import plot_3d
 LabelMetrics = Enum(
     "LabelMetrics", [
         "Region", "Volume", "Nuclei", "Density", 
-        "VolMean", "NucMean", "DensityMean", # per region
+        "RegVolMean", "RegNucMean", "RegDensityMean", # per region
         "VarNuclei", "VarNucIn", "VarNucOut", 
         "VarIntensity", "VarIntensIn", "VarIntensOut", 
         "MeanIntensity", 
@@ -29,6 +29,7 @@ LabelMetrics = Enum(
         "HighIntensity", 
         "EntropyIntensity", 
         "VarIntensMatch", 
+        "MeanNuclei", 
         "VarNucMatch", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean", 
         "CoefVarIntens", "CoefVarNuc", 
@@ -64,7 +65,7 @@ class MetricCombos(Enum):
     # coefficient of variation of intensity values
     COEFVAR_NUC = (
         "CoefVarNuclei", 
-        (LabelMetrics.VarNuclei, LabelMetrics.NucMean), 
+        (LabelMetrics.VarNuclei, LabelMetrics.MeanNuclei), 
         _coef_var)
     
 class LabelToEdge(object):
@@ -175,7 +176,7 @@ class MeasureLabel(object):
     # metric keys
     _COUNT_METRICS = (LabelMetrics.Volume, LabelMetrics.Nuclei)
     _VAR_METRICS = (
-        LabelMetrics.VolMean, LabelMetrics.NucMean, 
+        LabelMetrics.RegVolMean, LabelMetrics.RegNucMean, 
         LabelMetrics.VarNuclei, LabelMetrics.VarNucIn, LabelMetrics.VarNucOut, 
         LabelMetrics.VarIntensity, LabelMetrics.VarIntensIn, 
         LabelMetrics.VarIntensOut, 
@@ -185,6 +186,7 @@ class MeasureLabel(object):
         LabelMetrics.HighIntensity, 
         LabelMetrics.EntropyIntensity, 
         LabelMetrics.VarIntensMatch, 
+        LabelMetrics.MeanNuclei, 
         LabelMetrics.VarNucMatch, 
         LabelMetrics.CoefVarIntens, LabelMetrics.CoefVarNuc, 
     )
@@ -326,7 +328,10 @@ class MeasureLabel(object):
                 seg_ids.append(label_id)
         
         if cls.df is None:
-            # calculate stats for each sub-region
+            # calculate stats for each sub-segmentation; regional ("reg") 
+            # means are weighted across regions and sub-segs, where the 
+            # mean for each region which should equal total of full region 
+            # if only one sub-seg
             for seg_id in seg_ids:
                 if cls.subseg is not None:
                     seg_mask = cls.subseg == seg_id
@@ -336,7 +341,7 @@ class MeasureLabel(object):
                 if size > 0:
                     # variation in intensity of underlying atlas/sample region
                     vals = dict((key, np.nan) for key in cls._VAR_METRICS)
-                    vals[LabelMetrics.VolMean] = size
+                    vals[LabelMetrics.RegVolMean] = size
                     atlas_mask = cls.atlas_img_np[seg_mask]
                     cls.region_props(
                         atlas_mask, vals, 
@@ -368,7 +373,8 @@ class MeasureLabel(object):
                         # number of blob and variation in blob density
                         blobs_per_px = cls.heat_map[seg_mask]
                         vals[LabelMetrics.VarNuclei] = np.std(blobs_per_px)
-                        vals[LabelMetrics.NucMean] = np.sum(blobs_per_px)
+                        vals[LabelMetrics.RegNucMean] = np.sum(blobs_per_px)
+                        vals[LabelMetrics.MeanNuclei] = np.mean(blobs_per_px)
                         heat_interior = cls.heat_map[interior_mask]
                         heat_border = cls.heat_map[border_mask]
                         vals[LabelMetrics.VarNucIn] = np.std(heat_interior)
@@ -378,7 +384,7 @@ class MeasureLabel(object):
                                 - vals[LabelMetrics.VarNucIn])
                         vals[LabelMetrics.CoefVarNuc] = (
                             vals[LabelMetrics.VarNuclei] 
-                            / vals[LabelMetrics.NucMean])
+                            / vals[LabelMetrics.MeanNuclei])
                     
                     for metric in cls._VAR_METRICS:
                         metrics[metric].append(vals[metric])
@@ -386,13 +392,13 @@ class MeasureLabel(object):
             # get sub-region stats stored in data frame
             labels = cls.df.loc[cls.df[LabelMetrics.Region.name].isin(seg_ids)]
             for i, row in labels.iterrows():
-                if row[LabelMetrics.VolMean.name] > 0:
+                if row[LabelMetrics.RegVolMean.name] > 0:
                     for metric in cls._VAR_METRICS:
                         metrics[metric].append(row[metric.name])
         
         # weight totals by sub-region size
         disp_id = get_single_label(label_ids)
-        vols = np.copy(metrics[LabelMetrics.VolMean])
+        vols = np.copy(metrics[LabelMetrics.RegVolMean])
         tot_size = np.sum(vols) # assume no nans
         for key in metrics.keys():
             #print("{} {}: {}".format(disp_id, key.name, metrics[key]))
@@ -542,11 +548,11 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         label_id, label_metrics = result.get()
         label_size = label_metrics[LabelMetrics.Volume]
         nuc = label_metrics[LabelMetrics.Nuclei]
-        nuc_mean = label_metrics[LabelMetrics.NucMean]
+        reg_nuc_mean = label_metrics[LabelMetrics.RegNucMean]
         edge_size = label_metrics[LabelMetrics.EdgeSize]
         
         vol_physical = label_size
-        vol_mean_physical = label_metrics[LabelMetrics.VolMean]
+        vol_mean_physical = label_metrics[LabelMetrics.RegVolMean]
         if df is None:
             # convert to physical units at the given value unless 
             # using data frame, where values presumably already converted
@@ -560,8 +566,9 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         # calculate densities based on physical volumes
         label_metrics[LabelMetrics.Volume] = vol_physical
         label_metrics[LabelMetrics.Density] = nuc / vol_physical
-        label_metrics[LabelMetrics.VolMean] = vol_mean_physical
-        label_metrics[LabelMetrics.DensityMean] = nuc_mean / vol_mean_physical
+        label_metrics[LabelMetrics.RegVolMean] = vol_mean_physical
+        label_metrics[LabelMetrics.RegDensityMean] = (
+            reg_nuc_mean / vol_mean_physical)
         
         # set side, assuming that positive labels are left
         if np.all(np.greater(label_id, 0)):
@@ -592,10 +599,10 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         totals.setdefault(LabelMetrics.VarNuclei, []).append(
             label_metrics[LabelMetrics.VarNuclei] * label_size)
         totals.setdefault(LabelMetrics.Nuclei, []).append(nuc)
-        totals.setdefault(LabelMetrics.VolMean, []).append(
+        totals.setdefault(LabelMetrics.RegVolMean, []).append(
             vol_mean_physical * label_size)
-        totals.setdefault(LabelMetrics.NucMean, []).append(
-            nuc_mean * label_size)
+        totals.setdefault(LabelMetrics.RegNucMean, []).append(
+            reg_nuc_mean * label_size)
     pool.close()
     pool.join()
     df = pd.DataFrame(metrics)
@@ -615,10 +622,10 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     totals[LabelMetrics.Region] = "all"
     totals[LabelMetrics.Density] = (
         totals[LabelMetrics.Nuclei] / totals[LabelMetrics.Volume])
-    totals[LabelMetrics.VolMean] /= totals["vol"]
-    totals[LabelMetrics.NucMean] /= totals["vol"]
-    totals[LabelMetrics.DensityMean] = (
-        totals[LabelMetrics.NucMean] / totals[LabelMetrics.VolMean])
+    totals[LabelMetrics.RegVolMean] /= totals["vol"]
+    totals[LabelMetrics.RegNucMean] /= totals["vol"]
+    totals[LabelMetrics.RegDensityMean] = (
+        totals[LabelMetrics.RegNucMean] / totals[LabelMetrics.RegVolMean])
     totals[LabelMetrics.VarNuclei] /= totals["vol"]
     totals[LabelMetrics.VarIntensity] /= totals["vol"]
     totals[LabelMetrics.EdgeDistMean] /= totals[LabelMetrics.EdgeSize]

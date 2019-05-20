@@ -31,6 +31,7 @@ LabelMetrics = Enum(
         "VarIntensMatch", 
         "VarNucMatch", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean", 
+        "CoefVarIntens", "CoefVarNuc", 
     ]
 )
 
@@ -185,6 +186,7 @@ class MeasureLabel(object):
         LabelMetrics.EntropyIntensity, 
         LabelMetrics.VarIntensMatch, 
         LabelMetrics.VarNucMatch, 
+        LabelMetrics.CoefVarIntens, LabelMetrics.CoefVarNuc, 
     )
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
@@ -344,6 +346,9 @@ class MeasureLabel(object):
                          LabelMetrics.LowIntensity, 
                          LabelMetrics.HighIntensity, 
                          LabelMetrics.EntropyIntensity))
+                    vals[LabelMetrics.CoefVarIntens] = (
+                        vals[LabelMetrics.VarIntensity] 
+                        / vals[LabelMetrics.MeanIntensity])
                     
                     if cls.labels_interior is not None:
                         # inner vs border variability
@@ -371,6 +376,9 @@ class MeasureLabel(object):
                         vals[LabelMetrics.VarNucMatch] = abs(
                             vals[LabelMetrics.VarNucOut] 
                                 - vals[LabelMetrics.VarNucIn])
+                        vals[LabelMetrics.CoefVarNuc] = (
+                            vals[LabelMetrics.VarNuclei] 
+                            / vals[LabelMetrics.NucMean])
                     
                     for metric in cls._VAR_METRICS:
                         metrics[metric].append(vals[metric])

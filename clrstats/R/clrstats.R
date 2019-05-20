@@ -20,7 +20,7 @@ kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity",
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
           "VarIntensDiff", "MeanIntensDiff", "MedIntensDiff", "LowIntensDiff", 
           "HighIntensDiff", "EntropyIntensDiff", "VarIntensBorder", 
-          "Homogeneity")
+          "Homogeneity", "CoefVarIntensity", "CoefVarNuclei")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -47,7 +47,8 @@ kRegionsIgnore <- c(15564)
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
                    "compactness_summary.csv", 
-                   "vols_by_sample_levels_zhomogeneity.csv")
+                   "vols_by_sample_levels_zhomogeneity.csv", 
+                   "vols_by_sample_levels_coefvar.csv")
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -636,6 +637,12 @@ setupConfig <- function(name=NULL) {
     # homogenity metric
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
     config.env$Measurements <- kMeas[17]
+    
+  } else if (name == "coefvar") {
+    # coefficient of variation metrics
+    setupConfig("wt")
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[7])
+    config.env$Measurements <- kMeas[18:19]
     config.env$VolcanoLabels <- FALSE
     
   } else if (name == "skinny") {
@@ -666,6 +673,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("dsc")
   setupConfig("wt")
   #setupConfig("homogeneity")
+  #setupConfig("coefvar")
   #setupConfig("wt.test")
   #setupConfig("nolevels")
   setupConfig("nojittersave")

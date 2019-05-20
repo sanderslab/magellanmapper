@@ -599,7 +599,7 @@ def update_register_settings(settings, settings_type):
     if settings_type.startswith("finer"):
         # more aggressive parameters for finer tuning
         settings["settings_name"] = "finer"
-        settings["bspline_iter_max"] = "512"
+        settings["bspline_iter_max"] = "1024"
         settings["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
         settings["holes_area"] = 5000
     

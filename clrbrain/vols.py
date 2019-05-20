@@ -20,17 +20,17 @@ from clrbrain import plot_3d
 LabelMetrics = Enum(
     "LabelMetrics", [
         "Region", "Volume", "Nuclei", "Density", 
-        "VolMean", "NucMean", "DensityMean", 
-        "VarNuclei", 
-        "VarIntensity", "VarIntensInterior", "VarIntensBorder", 
-        "MeanIntensity", "MeanIntensInterior", "MeanIntensBorder", 
-        "MedIntensity", "MedIntensInterior", "MedIntensBorder", 
-        "LowIntensity", "LowIntensInterior", "LowIntensBorder", 
-        "HighIntensity", "HighIntensInterior", "HighIntensBorder", 
-        "EntropyIntensity", "EntropyIntensInterior", "EntropyIntensBorder", 
-        "VarIntensDiff", "MeanIntensDiff", "MedIntensDiff", 
-        "LowIntensDiff", "HighIntensDiff", "EntropyIntensDiff", 
-        "EdgeSize", "EdgeDistSum", "EdgeDistMean"
+        "VolMean", "NucMean", "DensityMean", # per region
+        "VarNuclei", "VarNucIn", "VarNucOut", 
+        "VarIntensity", "VarIntensIn", "VarIntensOut", 
+        "MeanIntensity", 
+        "MedIntensity", 
+        "LowIntensity", 
+        "HighIntensity", 
+        "EntropyIntensity", 
+        "VarIntensMatch", 
+        "VarNucMatch", 
+        "EdgeSize", "EdgeDistSum", "EdgeDistMean", 
     ]
 )
 
@@ -174,22 +174,18 @@ class MeasureLabel(object):
     # metric keys
     _COUNT_METRICS = (LabelMetrics.Volume, LabelMetrics.Nuclei)
     _VAR_METRICS = (
-        LabelMetrics.VolMean, LabelMetrics.NucMean, LabelMetrics.VarNuclei, 
-        LabelMetrics.VarIntensity, LabelMetrics.VarIntensInterior, 
-        LabelMetrics.VarIntensBorder, 
-        LabelMetrics.MeanIntensity, LabelMetrics.MeanIntensInterior, 
-        LabelMetrics.MeanIntensBorder, 
-        LabelMetrics.MedIntensity, LabelMetrics.MedIntensInterior, 
-        LabelMetrics.MedIntensBorder, 
-        LabelMetrics.LowIntensity, LabelMetrics.LowIntensInterior, 
-        LabelMetrics.LowIntensBorder, 
-        LabelMetrics.HighIntensity, LabelMetrics.HighIntensInterior, 
-        LabelMetrics.HighIntensBorder, 
-        LabelMetrics.EntropyIntensity, LabelMetrics.EntropyIntensInterior, 
-        LabelMetrics.EntropyIntensBorder,
-        LabelMetrics.VarIntensDiff, LabelMetrics.MeanIntensDiff, 
-        LabelMetrics.MedIntensDiff, LabelMetrics.LowIntensDiff, 
-        LabelMetrics.HighIntensDiff, LabelMetrics.EntropyIntensDiff)
+        LabelMetrics.VolMean, LabelMetrics.NucMean, 
+        LabelMetrics.VarNuclei, LabelMetrics.VarNucIn, LabelMetrics.VarNucOut, 
+        LabelMetrics.VarIntensity, LabelMetrics.VarIntensIn, 
+        LabelMetrics.VarIntensOut, 
+        LabelMetrics.MeanIntensity, 
+        LabelMetrics.MedIntensity, 
+        LabelMetrics.LowIntensity, 
+        LabelMetrics.HighIntensity, 
+        LabelMetrics.EntropyIntensity, 
+        LabelMetrics.VarIntensMatch, 
+        LabelMetrics.VarNucMatch, 
+    )
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
@@ -291,7 +287,7 @@ class MeasureLabel(object):
         if region.size < 1:
             for key in keys: metrics[key] = np.nan
         else:
-            print(region.size, len(region))
+            #print(region.size, len(region))
             metrics[keys[0]] = np.std(region)
             metrics[keys[1]] = np.mean(region)
             metrics[keys[2]] = np.median(region)
@@ -355,48 +351,26 @@ class MeasureLabel(object):
                         border_mask = np.logical_xor(seg_mask, interior_mask)
                         atlas_interior = cls.atlas_img_np[interior_mask]
                         atlas_border = cls.atlas_img_np[border_mask]
-                        cls.region_props(
-                            atlas_interior, vals, 
-                            (LabelMetrics.VarIntensInterior, 
-                             LabelMetrics.MeanIntensInterior, 
-                             LabelMetrics.MedIntensInterior, 
-                             LabelMetrics.LowIntensInterior, 
-                             LabelMetrics.HighIntensInterior, 
-                             LabelMetrics.EntropyIntensInterior))
-                        cls.region_props(
-                            atlas_border, vals, 
-                            (LabelMetrics.VarIntensBorder, 
-                             LabelMetrics.MeanIntensBorder, 
-                             LabelMetrics.MedIntensBorder, 
-                             LabelMetrics.LowIntensBorder, 
-                             LabelMetrics.HighIntensBorder, 
-                             LabelMetrics.EntropyIntensBorder))
+                        vals[LabelMetrics.VarIntensIn] = np.std(atlas_interior)
+                        vals[LabelMetrics.VarIntensOut] = np.std(atlas_border)
                         
                         # get abs diffs
-                        vals[LabelMetrics.VarIntensDiff] = abs(
-                            vals[LabelMetrics.VarIntensBorder] 
-                                - vals[LabelMetrics.VarIntensInterior])
-                        vals[LabelMetrics.MeanIntensDiff] = abs(
-                            vals[LabelMetrics.MeanIntensBorder] 
-                                - vals[LabelMetrics.MeanIntensInterior])
-                        vals[LabelMetrics.MedIntensDiff] = abs(
-                            vals[LabelMetrics.MedIntensBorder] 
-                                - vals[LabelMetrics.MedIntensInterior])
-                        vals[LabelMetrics.LowIntensDiff] = abs(
-                            vals[LabelMetrics.LowIntensBorder] 
-                                - vals[LabelMetrics.LowIntensInterior])
-                        vals[LabelMetrics.HighIntensDiff] = abs(
-                            vals[LabelMetrics.HighIntensBorder] 
-                                - vals[LabelMetrics.HighIntensInterior])
-                        vals[LabelMetrics.EntropyIntensDiff] = abs(
-                            vals[LabelMetrics.EntropyIntensBorder] 
-                                - vals[LabelMetrics.EntropyIntensInterior])
+                        vals[LabelMetrics.VarIntensMatch] = abs(
+                            vals[LabelMetrics.VarIntensOut] 
+                                - vals[LabelMetrics.VarIntensIn])
                     
                     if cls.heat_map is not None:
                         # number of blob and variation in blob density
                         blobs_per_px = cls.heat_map[seg_mask]
                         vals[LabelMetrics.VarNuclei] = np.std(blobs_per_px)
                         vals[LabelMetrics.NucMean] = np.sum(blobs_per_px)
+                        heat_interior = cls.heat_map[interior_mask]
+                        heat_border = cls.heat_map[border_mask]
+                        vals[LabelMetrics.VarNucIn] = np.std(heat_interior)
+                        vals[LabelMetrics.VarNucOut] = np.std(heat_border)
+                        vals[LabelMetrics.VarNucMatch] = abs(
+                            vals[LabelMetrics.VarNucOut] 
+                                - vals[LabelMetrics.VarNucIn])
                     
                     for metric in cls._VAR_METRICS:
                         metrics[metric].append(vals[metric])

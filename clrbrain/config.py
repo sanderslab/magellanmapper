@@ -505,7 +505,7 @@ class RegisterSettings(SettingsDict):
         self["translation_iter_max"] = "2048"
         self["affine_iter_max"] = "1024"
         self["bspline_iter_max"] = "256"
-        self["bspline_grid_space_voxels"] = "50"
+        self["bspline_grid_space_voxels"] = "70"
         self["grid_spacing_schedule"] = None
         self["groupwise_iter_max"] = "1024"
         self["resize_factor"] = 0.7

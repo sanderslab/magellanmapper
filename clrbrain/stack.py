@@ -172,8 +172,8 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         ax_imgs = plot_support.overlay_images(
             ax, aspect, origin, imgs, None, cmaps_all, alphas)
         if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
-            cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.8)
             # add colorbar with scientific notation if outside limits
+            cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
             plot_support.set_scinot(cbar.ax, lbls=(None, ), units=(None, ))
         plotted_imgs[i] = np.array(ax_imgs).flatten()
     pool.close()

@@ -3644,8 +3644,14 @@ def main():
             make_sub_segmented_labels(img_path, config.suffix)
 
     elif reg is config.RegisterTypes.merge_images:
-        # take mean of separate experiments from all paths
-        merge_images(config.filenames, IMG_EXP, config.prefix, config.suffix)
+        # take mean of separate experiments from all paths using the 
+        # given registered image type, defaulting to experimental images
+        suffix = IMG_EXP
+        if config.reg_suffixes is not None:
+            # use suffix assigned to atlas
+            suffix_exp = config.reg_suffixes[config.RegSuffixes.ATLAS]
+            if suffix_exp: suffix = suffix_exp
+        merge_images(config.filenames, suffix, config.prefix, config.suffix)
 
     elif reg is config.RegisterTypes.merge_images_channels:
         # combine separate experiments from all paths into separate channels

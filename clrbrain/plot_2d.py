@@ -1343,7 +1343,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     if lib_clrbrain.is_number(font_size):
         # scale font size of x-axis labels by a sigmoid function to rapidly 
         # decrease size for larger numbers of labels so they don't overlap
-        font_size *= (math.atan(len(x_labels) / 5 - 5) * -2 / math.pi + 1) / 2
+        font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
     font_dict = {"fontsize": font_size}
     # draw x-ticks based on number of bars per group and align to right 
     # since center shifts the horiz middle of the label to the center; 

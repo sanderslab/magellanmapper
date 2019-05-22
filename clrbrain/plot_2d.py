@@ -1336,8 +1336,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
                    linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
     ax.set_title(title)
     
-    # TODO: consider making configurable
-    ax.ticklabel_format(style="sci", scilimits=(-3, 4), useMathText=True)
+    # show y-label with any unit in scientific notation
+    plot_support.set_scinot(ax, lbls=(None, ), units=(None, ))
     # draw x-tick labels with smaller font for increasing number of labels
     font_size = plt.rcParams["axes.titlesize"]
     if lib_clrbrain.is_number(font_size):
@@ -1358,23 +1358,6 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         300 / num_groups / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
     for lbl in ax.xaxis.get_majorticklabels():
         lbl.set_transform(lbl.get_transform() + offset)
-    
-    # show y-label with any unit in parentheses and any scientific 
-    # notation moved alongside unit; tighten layour first to populate exp text
-    ax.figure.tight_layout()
-    offset_text = ax.yaxis.get_offset_text().get_text()
-    ylbl = y_label
-    unit = []
-    if offset_text != "":
-        # prepend unit with any exponent
-        unit.append(offset_text)
-        ax.yaxis.offsetText.set_visible(False)
-    if y_unit is not None and y_unit != "":
-        unit.append(y_unit)
-    if len(unit) > 0:
-        # put unit in parentheses
-        ylbl = "{} ({})".format(ylbl, " ".join(unit))
-    ax.set_ylabel(ylbl)
     
     if list_names:
         ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)

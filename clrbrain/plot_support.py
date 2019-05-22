@@ -398,6 +398,65 @@ def set_overview_title(ax, plane, z_overview, zoom="", level=0,
         title = zoom
     ax.set_title(title)
 
+def set_scinot(ax, lims=(-2, 4), lbls=[], units=[]):
+    """Set scientific notation for tick labels and shift exponents from 
+    axes to their labels.
+    
+    Scientific notation in Matplotlib positions the exponent at the top 
+    of the y-axis and right of the x-axis, which may be missed or overlap 
+    with the title or other labels. This method sets scientific notation 
+    along with axis labels and units and moves any exponent to the 
+    unit labels.
+    
+    Args:
+        ax: Axis object.
+        lims: Scientific notation limits as a sequence of lower and 
+            upper bounds outside of which scientific notation will 
+            be used for each applicable axis. Defaults to ``(-3, 4)``.
+        lbls: Sequence of axis labels given in the order ``(y-axis, x-axis)``. 
+            No value for a given label will cause that label not to be set. 
+            None causes the corresponding value from ``config.plot_labels` 
+            to be used if avialable. Defaults to an empty list to set no labels.
+        units: Sequence of units given in the order ``(y-axis, x-axis)``. 
+            No value for a given unit will cause that unit not to be set. 
+            None causes the corresponding value from ``config.plot_labels` 
+            to be used if avialable. Defaults to an empty list to set no units.
+    """
+    # set scientific notation
+    ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
+    num_lbls = len(lbls)
+    num_units = len(units)
+    for i, axis in enumerate((ax.yaxis, ax.xaxis)):
+        # set labels and units for each axis unless the lable is not given
+        if i >= num_lbls: continue
+        lbl = lbls[i]
+        if not lbl:
+            # default to config setting
+            lbl = config.plot_labels[
+                config.PlotLabels.Y_LABEL 
+                if i == 0 else config.PlotLabels.X_LABEL]
+        if lbl:
+            # either tighten layout or draw first to populate exp text
+            ax.figure.canvas.draw()
+            offset_text = axis.get_offset_text().get_text()
+            unit_all = []
+            if offset_text != "":
+                # prepend unit with any exponent
+                unit_all.append(offset_text)
+                axis.offsetText.set_visible(False)
+            unit = units[i] if num_units > i else None
+            if not unit:
+                # default to config setting
+                unit = config.plot_labels[
+                    config.PlotLabels.Y_UNIT 
+                    if i == 0 else config.PlotLabels.X_UNIT]
+            if unit is not None and unit != "":
+                unit_all.append(unit)
+            if len(unit_all) > 0:
+                # put unit in parentheses
+                lbl = "{} ({})".format(lbl, " ".join(unit_all))
+            axis.set_label_text(lbl)
+
 def get_plane_axis(plane):
     """Gets the name of the plane corresponding to the given axis.
     

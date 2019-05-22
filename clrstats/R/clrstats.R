@@ -25,8 +25,8 @@ kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity",
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
 kMeasNames <- setNames(
-  list(list("Edge Match (Within-Region Nuclei Variation)", "SD"), 
-       list("Edge Match (Within-Region Intensity Variation)", "SD"),
+  list(list("Edge Match (Within-Region Nuclei Variation)", "SD size"), 
+       list("Edge Match (Within-Region Intensity Variation)", "SD size"),
        list("Edge Distances to Anatomical Boundaries", bquote(list(mu*"m"))), 
        list("Edge Distances to Anatomical Boundaries (Mean)", 
             bquote(list(mu*"m"))), 

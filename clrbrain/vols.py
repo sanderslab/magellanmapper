@@ -29,6 +29,7 @@ LabelMetrics = Enum(
         "HighIntensity", 
         "EntropyIntensity", 
         "VarIntensMatch", 
+        "VarIntensDiff", 
         "MeanNuclei", 
         "VarNucMatch", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean", 
@@ -186,6 +187,7 @@ class MeasureLabel(object):
         LabelMetrics.HighIntensity, 
         LabelMetrics.EntropyIntensity, 
         LabelMetrics.VarIntensMatch, 
+        LabelMetrics.VarIntensDiff, 
         LabelMetrics.MeanNuclei, 
         LabelMetrics.VarNucMatch, 
         LabelMetrics.CoefVarIntens, LabelMetrics.CoefVarNuc, 
@@ -364,8 +366,13 @@ class MeasureLabel(object):
                         vals[LabelMetrics.VarIntensIn] = np.std(atlas_interior)
                         vals[LabelMetrics.VarIntensOut] = np.std(atlas_border)
                         
-                        # get abs diffs
+                        # get variability interior-border match as abs diff
                         vals[LabelMetrics.VarIntensMatch] = abs(
+                            vals[LabelMetrics.VarIntensOut] 
+                                - vals[LabelMetrics.VarIntensIn])
+                    
+                        # get variability interior-border simple difference
+                        vals[LabelMetrics.VarIntensDiff] = (
                             vals[LabelMetrics.VarIntensOut] 
                                 - vals[LabelMetrics.VarIntensIn])
                     

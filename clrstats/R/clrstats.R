@@ -18,9 +18,8 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 # measurements, which correspond to columns in main data frame
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
-          "VarIntensDiff", "MeanIntensDiff", "MedIntensDiff", "LowIntensDiff", 
-          "HighIntensDiff", "EntropyIntensDiff", "VarIntensBorder", 
-          "Homogeneity", "CoefVarIntensity", "CoefVarNuclei")
+          "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
+          "CoefVarIntens", "CoefVarNuc")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -31,8 +30,11 @@ kMeasNames <- setNames(
        list("Edge Distances to Anatomical Boundaries (Mean)", 
             bquote(list(mu*"m"))), 
        list("Atlas and Labels Overlay (Dice Similarity Coefficient)", NULL), 
-       list("Region Homogeneity", NULL)), 
-  c(kMeas[c(4:8, 17)]))
+       list("Region Homogeneity (Core-Periphery Variation Match)", 
+            "SD size difference"), 
+       list("Edge Noise (Core-Periphery Variation Difference)", 
+            "SD size difference")), 
+  c(kMeas[c(4:8, 11:12)]))
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -46,9 +48,7 @@ kRegionsIgnore <- c(15564)
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
-                   "compactness_summary.csv", 
-                   "vols_by_sample_levels_zhomogeneity.csv", 
-                   "vols_by_sample_levels_coefvar.csv")
+                   "compactness_summary.csv")
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -623,27 +623,15 @@ setupConfig <- function(name=NULL) {
     
   } else if (name == "wt") {
     # WT samples
-    config.env$Measurements <- kMeas[c(4:7, 10)]
+    config.env$Measurements <- kMeas[c(4:7, 11:14)]
     config.env$VolcanoLabels <- FALSE
     config.env$VolcanoLogX <- FALSE
     
   } else if (name == "wt.test") {
     # WT test
     setupConfig("wt")
-    config.env$Measurements <- kMeas[5]
+    config.env$Measurements <- kMeas[19]
     config.env$SampleLegend <- TRUE
-    
-  } else if (name == "homogeneity") {
-    # homogenity metric
-    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
-    config.env$Measurements <- kMeas[17]
-    
-  } else if (name == "coefvar") {
-    # coefficient of variation metrics
-    setupConfig("wt")
-    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[7])
-    config.env$Measurements <- kMeas[18:19]
-    config.env$VolcanoLabels <- FALSE
     
   } else if (name == "skinny") {
     # very narrow plots
@@ -672,8 +660,6 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("aba")
   #setupConfig("dsc")
   setupConfig("wt")
-  #setupConfig("homogeneity")
-  #setupConfig("coefvar")
   #setupConfig("wt.test")
   #setupConfig("nolevels")
   setupConfig("nojittersave")

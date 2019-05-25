@@ -195,6 +195,16 @@ class MeasureLabel(object):
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
+    _NUC_METRICS = (
+        LabelMetrics.Nuclei, 
+        LabelMetrics.RegNucMean, 
+        LabelMetrics.MeanNuclei, 
+        LabelMetrics.VarNuclei, 
+        LabelMetrics.VarNucIn, 
+        LabelMetrics.VarNucOut, 
+        LabelMetrics.VarNucMatch, 
+        LabelMetrics.CoefVarNuc, 
+    )
     
     # images and data frame
     atlas_img_np = None
@@ -407,11 +417,20 @@ class MeasureLabel(object):
         disp_id = get_single_label(label_ids)
         vols = np.copy(metrics[LabelMetrics.RegVolMean])
         tot_size = np.sum(vols) # assume no nans
+        nucs = np.copy(metrics[LabelMetrics.RegNucMean])
+        tot_nucs = np.nansum(nucs)
         for key in metrics.keys():
             #print("{} {}: {}".format(disp_id, key.name, metrics[key]))
             if tot_size > 0:
-                metrics[key] = np.nansum(
-                    np.multiply(metrics[key], vols)) / tot_size
+                # take weighted mean
+                if key in cls._NUC_METRICS:
+                    # use weighting from nuclei for nuclei-oriented metrics
+                    metrics[key] = np.nansum(
+                        np.multiply(metrics[key], nucs)) / tot_nucs
+                else:
+                    # default to weighting by volume
+                    metrics[key] = np.nansum(
+                        np.multiply(metrics[key], vols)) / tot_size
             if tot_size <= 0 or metrics[key] == 0: metrics[key] = np.nan
         print("variation within label {}: {}"
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))

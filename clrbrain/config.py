@@ -403,7 +403,7 @@ def update_process_settings(settings, settings_type):
         
         settings.add_modifier(
             "diverging", 
-            {"channel_colors": ("bwr", "BrBG"), 
+            {"channel_colors": ("RdBu", "BrBG"), 
              "scale_bar_color": "k", 
              "colorbar": True}, 
             profile)

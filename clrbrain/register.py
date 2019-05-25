@@ -3781,7 +3781,7 @@ def main():
 
         metric_cols = (
             vols.LabelMetrics.VarIntensity.name, 
-            vols.LabelMetrics.VarIntensDiff.name,
+            vols.LabelMetrics.VarIntensMatch.name,
             vols.LabelMetrics.VarNuclei.name,  
             vols.LabelMetrics.EdgeDistSum.name, 
         )

@@ -1252,7 +1252,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
 
 def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
                title, padding=0.2, skip_all_zero=False, rotation=80, 
-               y_unit=None):
+               y_unit=None, vspans=None, vspan_lbls=None):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
@@ -1285,12 +1285,14 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             should be equal to that of each main value sequence in ``lists``.
         y_label: Y-axis label.
         title: Graph title.
-        padding: Fraction of the border space between each bar group 
-            that should be left unoccupied by bars. Defaults to 0.8.
+        padding: Fraction each bar group's widththat should be left 
+            unoccupied by bars. Defaults to 0.2.
         skip_all_zero: True to skip any data list that contains only 
             values below :attr:``config.POS_THRESH``; defaults to False.
         rotation: Degrees of x-tick label rotation; defaults to 80.
         y_unit: Measurement unit for y-axis; defaults to None.
+        vspans: Shade with vertical spans with indices of bar groups 
+            at which alternating colors; defaults to None.
     """
     bars = []
     if len(lists) < 1: return
@@ -1320,9 +1322,19 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     indices = np.arange(num_groups)
     #print("lists:\n{}".format(lists))
     if lists.size < 1: return
-    width = (1.0 - padding) / num_sets
+    width = (1.0 - padding) / num_sets # width of each bar
     #print("x_labels: {}".format(x_labels))
     
+    if vspans is not None:
+        # show vertical spans alternating in white and black; assume 
+        # background is already white, so simply skip white shading
+        xs = vspans - padding / 2
+        num_xs = len(xs)
+        for i, x in enumerate(xs):
+            if i % 2 == 0: continue
+            end = xs[i + 1] if i < num_xs - 1 else num_groups
+            ax.axvspan(x, end, facecolor="k", alpha=0.2)
+            
     # show each list as a set of bar plots so that corresponding elements in 
     # each list will be grouped together as bar groups
     for i in range(num_sets):
@@ -1358,6 +1370,21 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         30 / np.cbrt(num_groups) / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
     for lbl in ax.xaxis.get_majorticklabels():
         lbl.set_transform(lbl.get_transform() + offset)
+    
+    if vspans is not None and vspan_lbls is not None:
+        # show labels for vspans
+        ylims = ax.get_ylim()
+        print(ylims)
+        y_top = max(ax.get_ylim()) * 0.9
+        for i, x in enumerate(xs):
+            end = xs[i + 1] if i < num_xs - 1 else num_groups
+            x = (x + end) / 2
+            y = y_top
+            if i % 2 != 0:
+                # shift alternating labels down to avoid overlap
+                y -= 0.002
+            ax.text(
+                x, y, vspan_lbls[i], color="k", horizontalalignment="center")
     
     if list_names:
         ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
@@ -1487,7 +1514,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
 
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
-              title=None, size=None, show=True, prefix=None):
+              title=None, size=None, show=True, prefix=None, col_vspan=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -1509,7 +1536,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
         col_groups: Name of column specifying names of each group. 
             Defaults to None, which will use the first column for names.
         groups: Sequence of groups to include and by which to sort; 
-            defaults to None to include all groups.
+            defaults to None to include all groups found from ``col_groups``.
         y_label: Name of y-axis; defaults to None.
         y_unit: Measurement unit for y-axis; defaults to None.
         title: Title of figure; defaults to None, which will use  
@@ -1521,6 +1548,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             Defaults to True.
         prefix: Base path for figure output if :attr:``config.savefig`` 
             is set; defaults to None to use ``path_to_df``.
+        col_vspan: Name of column with values specifying groups demaracted 
+            by vertical spans. Each change in value when taken in sequence 
+            will specify a new span in alternating background colors. 
+            Defaults to None.
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
@@ -1547,6 +1578,17 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             print("could not find these groups:", groups_missing)
             groups = groups[groups_found]
         df = df.set_index(col_groups).loc[groups].reset_index()
+    
+    vspans = None
+    vspan_lbls = None
+    if col_vspan is not None:
+        # further group bar groups by vertical spans
+        # TODO: change .values to .to_numpy when Pandas req >= 0.24
+        vspan_vals = df[col_vspan].values
+        vspans = np.insert(
+            np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
+        vspan_lbls = [" ".join([col_vspan, str(val)]) 
+                      for val in vspan_vals[vspans]]
     
     if err_cols is None:
         # default to columns corresponding to data cols with suffix appended 
@@ -1582,8 +1624,9 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     if title is None:
         title = os.path.splitext(
             os.path.basename(path_to_df))[0].replace("_", " ")
-    _bar_plots(ax, lists, errs, legend_names, df[col_groups], bar_colors, 
-               y_label, title, y_unit=y_unit)
+    _bar_plots(
+        ax, lists, errs, legend_names, df[col_groups], bar_colors, y_label, 
+        title, y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls)
     gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
     
     # save and display
@@ -1857,7 +1900,7 @@ if __name__ == "__main__":
             legend_names=None, col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, 
             size=size, show=(not config.no_show), groups=config.groups, 
-            prefix=config.prefix)
+            prefix=config.prefix, col_vspan="Level")
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve

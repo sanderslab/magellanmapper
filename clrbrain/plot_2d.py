@@ -1375,15 +1375,16 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     if vspans is not None and vspan_lbls is not None:
         # show labels for vspans
         ylims = ax.get_ylim()
-        print(ylims)
-        y_top = max(ax.get_ylim()) * 0.9
+        y_span = abs(ylims[1] - ylims[0])
+        y_top = max(ylims)
         for i, x in enumerate(xs):
             end = xs[i + 1] if i < num_xs - 1 else num_groups
             x = (x + end) / 2
-            y = y_top
-            if i % 2 != 0:
-                # shift alternating labels down to avoid overlap
-                y -= 0.002
+            # position 8% down from top in data coordinates, shifting 
+            # alternating labels further down to avoid overlap
+            y_frac = 0.08
+            if i % 2 == 0: y_frac -= 0.03
+            y = y_top - y_span * y_frac
             ax.text(
                 x, y, vspan_lbls[i], color="k", horizontalalignment="center")
     

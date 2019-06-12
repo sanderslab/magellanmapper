@@ -3685,10 +3685,10 @@ def main():
         path_df = (SAMPLE_VOLS if config.labels_level is None 
                    else SAMPLE_VOLS_LEVELS) + ".csv"
         metrics = [
-            (vols.LabelMetrics.VarNuclei.name, np.nanmean), 
-            (vols.LabelMetrics.VarNuclei.name, np.nanmedian), 
-            (vols.LabelMetrics.VarIntensity.name, np.nanmean), 
-            (vols.LabelMetrics.VarIntensity.name, np.nanmedian), 
+            (vols.LabelMetrics.CoefVarNuc.name, np.nanmean), 
+            (vols.LabelMetrics.CoefVarNuc.name, np.nanmedian), 
+            (vols.LabelMetrics.CoefVarIntens.name, np.nanmean), 
+            (vols.LabelMetrics.CoefVarIntens.name, np.nanmedian), 
         ]
         for metric in metrics:
             make_labels_diff_img(

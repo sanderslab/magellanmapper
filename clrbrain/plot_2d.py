@@ -1437,8 +1437,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
-    fig = plt.figure(figsize=size)
-    gs = gridspec.GridSpec(1, 1)
+    fig = plt.figure(figsize=size, constrained_layout=True)
+    gs = gridspec.GridSpec(1, 1, figure=fig)
     ax = plt.subplot(gs[0, 0])
     
     if col_groups is None:
@@ -1515,11 +1515,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     _bar_plots(
         ax, lists, errs, legend_names, df[col_groups], bar_colors, y_label, 
         title, y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls)
-    gs.tight_layout(fig, rect=[0.1, 0, 0.9, 1])
     
     # save and display
-    outt_path = path_to_df if prefix is None else prefix
-    save_fig(outt_path, config.savefig, "_barplot")
+    out_path = path_to_df if prefix is None else prefix
+    save_fig(out_path, config.savefig, "_barplot")
     if show: plt.show()
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 

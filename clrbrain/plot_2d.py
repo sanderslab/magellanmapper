@@ -37,6 +37,7 @@ from clrbrain import mlearn
 from clrbrain import plot_3d
 from clrbrain import plot_support
 from clrbrain import stats
+from clrbrain import vols
 
 colormap_2d = cm.inferno
 #colormap_2d = cm.gray
@@ -1831,17 +1832,27 @@ if __name__ == "__main__":
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
         # barplot for data frame from R stats test effect sizes and CIs
+        
+        # setup labels
         title = config.plot_labels[config.PlotLabels.TITLE]
         y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
         y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
         if y_lbl is None: y_lbl = "Effect size"
+        
+        # assume stat is just before the extension in the filename, and 
+        # determine weighting column based on stat
+        stat = os.path.splitext(config.filename)[0].split("_")[-1]
+        col_wt = (vols.LabelMetrics.Nuclei.name if stat in vols.NUC_METRICS 
+                  else vols.LabelMetrics.Volume.name)
+        
+        # generate bar plot
         plot_bars(
             config.filename, data_cols=("vals.effect", ), 
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
             legend_names=None, col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, 
             size=size, show=(not config.no_show), groups=config.groups, 
-            prefix=config.prefix, col_vspan="Level")
+            prefix=config.prefix, col_vspan="Level", col_wt=col_wt)
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve

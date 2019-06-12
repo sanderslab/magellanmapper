@@ -641,7 +641,7 @@ setupConfig <- function(name=NULL) {
   } else if (name == "wt.test") {
     # WT test
     setupConfig("wt")
-    config.env$Measurements <- kMeas[19]
+    config.env$Measurements <- kMeas[14]
     config.env$SampleLegend <- TRUE
     
   } else if (name == "skinny") {

@@ -537,7 +537,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   stats <- statsByRegion(
     df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore)
   stats.filtered <- filterStats(stats, corr=corr)
-  stats.filtered <- merge(stats.filtered, region.ids, by="Region", all.x=TRUE)
+  stats.filtered <- merge(region.ids, stats.filtered, by="Region", all.y=TRUE)
   print(stats.filtered)
   write.csv(stats.filtered, path.out)
   return(stats.filtered)

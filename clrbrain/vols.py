@@ -664,7 +664,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     print("time elapsed to measure variation:", time() - start_time)
     return df, df_all
 
-def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False):
+def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False, 
+                       reverse=False):
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
@@ -684,6 +685,8 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False):
             defaults to False to allow NaNs in resulting image. Some 
             applications may not be able to read NaNs, so this parameter 
             allows giving a neutral value instead.
+        reverse: Reverse the order of sorted conditions when generating 
+            stats by ``fn_avg`` to compare conditions; defaults to False.
     
     Retunrs:
         A map of averages for the given measurement as an image of the 
@@ -695,7 +698,9 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False):
               .format(meas))
         return None
     # ensure that at least 2 conditions exist to compare
-    conds = np.unique(df["Condition"]) if "Condition" in df else []
+    conds = sorted(
+        np.unique(df["Condition"]) if "Condition" in df else [], 
+        reverse=reverse)
     labels_diff = np.zeros_like(labels_img, dtype=np.float)
     labels_img_abs = np.abs(labels_img)
     regions = np.unique(labels_img_abs)

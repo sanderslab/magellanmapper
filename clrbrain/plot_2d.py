@@ -1391,7 +1391,8 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
 
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
-              title=None, size=None, show=True, prefix=None, col_vspan=None):
+              title=None, size=None, show=True, prefix=None, col_vspan=None, 
+              col_wt=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -1429,6 +1430,9 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             by vertical spans. Each change in value when taken in sequence 
             will specify a new span in alternating background colors. 
             Defaults to None.
+        col_wt: Name of column to use for weighting, where the size of 
+            bars and error bars will be adjusted as fractions of the max 
+            value; defaults to None.
     """
     # load data frame from CSV and setup figure
     df = pd.read_csv(path_to_df)
@@ -1479,6 +1483,12 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
         # default to using data column names for names of each set of bars
         legend_names = [name.replace("_", " ") for name in data_cols]
     
+    wts = 1
+    if col_wt is not None:
+        # weight by fraction of weights with max weight
+        wts = df[col_wt]
+        wts /= max(wts)
+    
     # build lists to plot
     lists = []
     errs = []
@@ -1486,13 +1496,13 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     for i, (col, col_err) in enumerate(zip(data_cols, err_cols)):
         # each column gives a set of bars, where each bar will be in a 
         # separate bar group
-        lists.append(df[col])
+        lists.append(df[col] * wts)
         errs_dfs = None
         if lib_clrbrain.is_seq(col_err):
             # asymmetric error bars
-            errs_dfs = [df[e] for e in col_err]
+            errs_dfs = [df[e] * wts for e in col_err]
         elif col_err is not None:
-            errs_dfs = df[col_err]
+            errs_dfs = df[col_err] * wts
         errs.append(errs_dfs)
         bar_colors.append("C{}".format(i))
     

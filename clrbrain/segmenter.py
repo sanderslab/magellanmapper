@@ -323,7 +323,8 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     cols = ("Region", "SizeOrig", "SizeMarker", "FilterSize")
     
     # erode labels via multiprocessing
-    print("Eroding labels to markers with filter size of", filter_size)
+    print("Eroding labels to markers with filter size of", filter_size, 
+          "and target fraction of", target_frac)
     LabelToMarkerErosion.set_labels_img(labels_img)
     pool = mp.Pool()
     pool_results = []

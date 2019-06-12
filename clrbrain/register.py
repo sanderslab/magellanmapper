@@ -2216,6 +2216,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     log_sigma = config.register_settings["log_sigma"]
     if log_sigma is not None and suffix is None:
         # generate LoG and edge-detected images for original image
+        print("generating LoG edge-detected images with sigma", log_sigma)
         thresh = (config.register_settings["atlas_threshold"] 
                   if config.register_settings["log_atlas_thresh"] else None)
         atlas_log = plot_3d.laplacian_of_gaussian_img(
@@ -2399,7 +2400,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     """
     start_time = time()
     
-    # convert all labels images into markers
+    # erode all labels images into markers from which to grown via watershed
     erosion = config.register_settings["marker_erosion"]
     erosion_frac = config.register_settings["erosion_frac"]
     for img_path in img_paths:
@@ -2409,6 +2410,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         print("Generating label markers for", mod_path)
         labels_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_LABELS)
+        # use default minimal post-erosion size
         markers = erode_labels(
             sitk.GetArrayFromImage(labels_sitk), erosion, atlas=atlas)
         labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, markers)
@@ -2439,7 +2441,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         dist_sitk = replace_sitk_with_numpy(labels_sitk, dist_to_orig)
         labels_sitk_edge = replace_sitk_with_numpy(labels_sitk, labels_edge)
         
-        # make interior images from labels
+        # make interior images from labels using given target post-erosion frac
         interior = erode_labels(
             labels_np, erosion, erosion_frac=erosion_frac, atlas=atlas)
         labels_sitk_interior = replace_sitk_with_numpy(labels_sitk, interior)

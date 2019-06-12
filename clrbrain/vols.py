@@ -37,6 +37,17 @@ LabelMetrics = Enum(
     ]
 )
 
+NUC_METRICS = (
+    LabelMetrics.Nuclei, 
+    LabelMetrics.RegNucMean, 
+    LabelMetrics.MeanNuclei, 
+    LabelMetrics.VarNuclei, 
+    LabelMetrics.VarNucIn, 
+    LabelMetrics.VarNucOut, 
+    LabelMetrics.VarNucMatch, 
+    LabelMetrics.CoefVarNuc, 
+)
+
 def _coef_var(df):
     # calculate coefficient of variation from data frame columns, 
     # where first column is std and second is mean
@@ -195,16 +206,6 @@ class MeasureLabel(object):
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
-    _NUC_METRICS = (
-        LabelMetrics.Nuclei, 
-        LabelMetrics.RegNucMean, 
-        LabelMetrics.MeanNuclei, 
-        LabelMetrics.VarNuclei, 
-        LabelMetrics.VarNucIn, 
-        LabelMetrics.VarNucOut, 
-        LabelMetrics.VarNucMatch, 
-        LabelMetrics.CoefVarNuc, 
-    )
     
     # images and data frame
     atlas_img_np = None
@@ -423,7 +424,7 @@ class MeasureLabel(object):
             #print("{} {}: {}".format(disp_id, key.name, metrics[key]))
             if tot_size > 0:
                 # take weighted mean
-                if key in cls._NUC_METRICS:
+                if key in NUC_METRICS:
                     # use weighting from nuclei for nuclei-oriented metrics
                     metrics[key] = np.nansum(
                         np.multiply(metrics[key], nucs)) / tot_nucs

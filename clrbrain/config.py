@@ -564,7 +564,7 @@ class RegisterSettings(SettingsDict):
         self["affine"] = None
         
         # Laplacian of Gaussian
-        self["log_sigma"] = 5 # Gaussian sigma; use None to skip
+        self["log_sigma"] = 4.5 # Gaussian sigma; use None to skip
         # use atlas_threshold on atlas image to generate mask for finding 
         # background rather than using labels and thresholded LoG image, 
         # useful when ventricular spaces are labeled

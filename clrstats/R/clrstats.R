@@ -439,6 +439,7 @@ filterStats <- function(stats, corr=NULL) {
   stats.coef <- stats.filt$Stats[1][[1]]
   interactions <- gsub(":", ".", rownames(stats.coef))
   cols <- list("Region", "Volume")
+  cols.orig <- cols # points to original vector if it is mutated
   offset <- length(cols)
   for (interact in interactions) {
     cols <- append(cols, paste0(interact, ".n"))
@@ -451,8 +452,10 @@ filterStats <- function(stats, corr=NULL) {
   }
   filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
   names(filtered) <- cols
-  filtered$Region <- stats.filt$Region
-  filtered$Volume <- stats.filt$Volume
+  for (col in cols.orig) {
+    # copy base columns
+    filtered[[col]] <- stats.filt[[col]]
+  }
   num.stat.cols <- length(names(stats.coef))
   
   for (i in 1:nrow(stats.filt)) {

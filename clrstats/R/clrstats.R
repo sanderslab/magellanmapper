@@ -282,7 +282,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   # find all regions
   regions <- unique(df$Region)
   #regions <- c(15565) # TESTING: insert single region
-  cols <- c("Region", "Stats", "Volume")
+  cols <- c("Region", "Stats", "Volume", "Nuclei")
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols
   # use original order of appearance in Condition column to sort each 
@@ -348,6 +348,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       if (!is.null(coef.tab)) {
         stats$Stats[i] <- list(coef.tab)
         stats$Volume[i] <- mean(df.region.nonnan$Volume)
+        stats$Nuclei[i] <- mean(df.region.nonnan$Nuclei)
       }
       
       # show histogram to check for parametric distribution
@@ -438,7 +439,7 @@ filterStats <- function(stats, corr=NULL) {
   # effect or interaction
   stats.coef <- stats.filt$Stats[1][[1]]
   interactions <- gsub(":", ".", rownames(stats.coef))
-  cols <- list("Region", "Volume")
+  cols <- list("Region", "Volume", "Nuclei")
   cols.orig <- cols # points to original vector if it is mutated
   offset <- length(cols)
   for (interact in interactions) {

@@ -33,8 +33,12 @@ kMeasNames <- setNames(
        list("Region Homogeneity (Core-Periphery Variation Match)", 
             "SD size difference"), 
        list("Edge Noise (Core-Periphery Variation Difference)", 
-            "SD size difference")), 
-  c(kMeas[c(4:8, 11:12)]))
+            "SD size difference"), 
+       list("Edge Match (Within-Region Nuclei Variation)", 
+            "Coefficient of variation"), 
+       list("Edge Match (Within-Region Intensity Variation)", 
+            "Coefficient of variation")), 
+  c(kMeas[c(4:8, 11:14)]))
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)

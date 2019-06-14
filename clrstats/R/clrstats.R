@@ -617,7 +617,7 @@ setupConfig <- function(name=NULL) {
   } else if (name == "aba") {
     # multiple distinct atlases
     config.env$SampleLegend <- TRUE
-    config.env$Measurements <- kMeas[5:7]
+    config.env$Measurements <- kMeas[c(6, 13)]
     config.env$PlotVolcano <- FALSE
     setupConfig("skinny")
     

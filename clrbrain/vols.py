@@ -37,6 +37,25 @@ LabelMetrics = Enum(
     ]
 )
 
+# variation metrics
+VAR_METRICS = (
+    LabelMetrics.RegVolMean, LabelMetrics.RegNucMean, 
+    LabelMetrics.VarNuclei, LabelMetrics.VarNucIn, LabelMetrics.VarNucOut, 
+    LabelMetrics.VarIntensity, LabelMetrics.VarIntensIn, 
+    LabelMetrics.VarIntensOut, 
+    LabelMetrics.MeanIntensity, 
+    LabelMetrics.MedIntensity, 
+    LabelMetrics.LowIntensity, 
+    LabelMetrics.HighIntensity, 
+    LabelMetrics.EntropyIntensity, 
+    LabelMetrics.VarIntensMatch, 
+    LabelMetrics.VarIntensDiff, 
+    LabelMetrics.MeanNuclei, 
+    LabelMetrics.VarNucMatch, 
+    LabelMetrics.CoefVarIntens, LabelMetrics.CoefVarNuc, 
+)
+
+# nuclei metrics
 NUC_METRICS = (
     LabelMetrics.Nuclei, 
     LabelMetrics.RegNucMean, 
@@ -187,22 +206,6 @@ class MeasureLabel(object):
     """
     # metric keys
     _COUNT_METRICS = (LabelMetrics.Volume, LabelMetrics.Nuclei)
-    _VAR_METRICS = (
-        LabelMetrics.RegVolMean, LabelMetrics.RegNucMean, 
-        LabelMetrics.VarNuclei, LabelMetrics.VarNucIn, LabelMetrics.VarNucOut, 
-        LabelMetrics.VarIntensity, LabelMetrics.VarIntensIn, 
-        LabelMetrics.VarIntensOut, 
-        LabelMetrics.MeanIntensity, 
-        LabelMetrics.MedIntensity, 
-        LabelMetrics.LowIntensity, 
-        LabelMetrics.HighIntensity, 
-        LabelMetrics.EntropyIntensity, 
-        LabelMetrics.VarIntensMatch, 
-        LabelMetrics.VarIntensDiff, 
-        LabelMetrics.MeanNuclei, 
-        LabelMetrics.VarNucMatch, 
-        LabelMetrics.CoefVarIntens, LabelMetrics.CoefVarNuc, 
-    )
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
@@ -327,7 +330,7 @@ class MeasureLabel(object):
             pixels in the label, density variation, and number of blobs. 
             The metrics are NaN if the label size is 0.
         """
-        metrics = dict((key, []) for key in cls._VAR_METRICS)
+        metrics = dict((key, []) for key in VAR_METRICS)
         if not lib_clrbrain.is_seq(label_ids): label_ids = [label_ids]
         seg_ids = []
         
@@ -353,7 +356,7 @@ class MeasureLabel(object):
                 size = np.sum(seg_mask)
                 if size > 0:
                     # variation in intensity of underlying atlas/sample region
-                    vals = dict((key, np.nan) for key in cls._VAR_METRICS)
+                    vals = dict((key, np.nan) for key in VAR_METRICS)
                     vals[LabelMetrics.RegVolMean] = size
                     atlas_mask = cls.atlas_img_np[seg_mask]
                     cls.region_props(
@@ -404,17 +407,18 @@ class MeasureLabel(object):
                             vals[LabelMetrics.VarNuclei] 
                             / vals[LabelMetrics.MeanNuclei])
                     
-                    for metric in cls._VAR_METRICS:
+                    for metric in VAR_METRICS:
                         metrics[metric].append(vals[metric])
         else:
             # get sub-region stats stored in data frame
             labels = cls.df.loc[cls.df[LabelMetrics.Region.name].isin(seg_ids)]
             for i, row in labels.iterrows():
                 if row[LabelMetrics.RegVolMean.name] > 0:
-                    for metric in cls._VAR_METRICS:
+                    for metric in VAR_METRICS:
                         metrics[metric].append(row[metric.name])
         
-        # weight totals by sub-region size
+        # weighted average, with weights given by frac of region or 
+        # sub-region size from total size
         disp_id = get_single_label(label_ids)
         vols = np.copy(metrics[LabelMetrics.RegVolMean])
         tot_size = np.sum(vols) # assume no nans

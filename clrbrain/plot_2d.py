@@ -1842,8 +1842,11 @@ if __name__ == "__main__":
         # assume stat is just before the extension in the filename, and 
         # determine weighting column based on stat
         stat = os.path.splitext(config.filename)[0].split("_")[-1]
-        col_wt = (vols.LabelMetrics.Nuclei.name if stat in vols.NUC_METRICS 
-                  else vols.LabelMetrics.Volume.name)
+        col_wt = None
+        if stat in [metric.name for metric in vols.VAR_METRICS]:
+            col_wt = vols.LabelMetrics.Volume.name
+            if stat in [metric.name for metric in vols.NUC_METRICS]:
+                col_wt = vols.LabelMetrics.Nuclei.name
         
         # generate bar plot
         plot_bars(

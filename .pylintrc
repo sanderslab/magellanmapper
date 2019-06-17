@@ -13,4 +13,5 @@ disable =
     global-statement,
     no-member,
     too-many-arguments,
-    too-many-locals
+    too-many-locals,
+    multiple-statements

@@ -67,6 +67,12 @@ NUC_METRICS = (
     LabelMetrics.CoefVarNuc, 
 )
 
+# metrics computed from weighted averages
+WT_METRICS = (
+    *VAR_METRICS, 
+    LabelMetrics.EdgeDistMean, 
+)
+
 def _coef_var(df):
     # calculate coefficient of variation from data frame columns, 
     # where first column is std and second is mean
@@ -192,7 +198,13 @@ class MeasureLabel(object):
     """Measure metrics within image labels in a way that allows 
     multiprocessing without global variables.
     
-    All images should be of the same shape.
+    All images should be of the same shape. If :attr:``df`` is available, 
+    it will be used in place of underlying images. Typically this 
+    data frame contains metrics for labels only at the lowest level, 
+    such as drawn or non-overlapping labels. These labels can then be 
+    used to aggregate values through summation or weighted means to 
+    generate metrics for superseding labels that contains these 
+    individual labels.
     
     Attributes:
         atlas_img_np: Sample image as a Numpy array.
@@ -238,8 +250,8 @@ class MeasureLabel(object):
     def label_metrics(cls, label_id):
         """Calculate metrics for a given label or set of labels.
         
-        Wrapper to call :func:``measure_variation`` and 
-        :func:``measure_edge_dist``.
+        Wrapper to call :func:``measure_variation``, 
+        :func:``measure_variation``, and :func:``measure_edge_dist``.
         
         Args:
             label_id: Integer of the label or sequence of multiple labels 
@@ -261,6 +273,10 @@ class MeasureLabel(object):
     @classmethod
     def measure_counts(cls, label_ids):
         """Measure the distance between edge images.
+        
+        If :attr:``df`` is available, it will be used to sum values 
+        from labels in ``label_ids`` found in the data frame 
+        rather than re-measuring values from images.
         
         Args:
             label_ids: Integer of the label or sequence of multiple labels 
@@ -320,6 +336,10 @@ class MeasureLabel(object):
         
         Variation is measured by standard deviation of atlas intensity and, 
         if :attr:``heat_map`` is available, that of the blob density.
+        
+        If :attr:``df`` is available, it will be used to calculated 
+        weighted averages from labels in ``label_ids`` found in the 
+        data frame rather than re-measuring values from images.
         
         Args:
             label_ids: Integer of the label or sequence of multiple labels 
@@ -444,6 +464,11 @@ class MeasureLabel(object):
     @classmethod
     def measure_edge_dist(cls, label_ids):
         """Measure the distance between edge images.
+        
+        If :attr:``df`` is available, it will be used to calculated 
+        a sum from edge distance sum or weighted averages from edge 
+        distance mean values from labels in ``label_ids`` found in the 
+        data frame rather than re-measuring values from images.
         
         Args:
             label_ids: Integer of the label or sequence of multiple labels 

@@ -1843,7 +1843,8 @@ if __name__ == "__main__":
         # determine weighting column based on stat
         stat = os.path.splitext(config.filename)[0].split("_")[-1]
         col_wt = None
-        if stat in [metric.name for metric in vols.VAR_METRICS]:
+        if stat in [metric.name for metric in vols.WT_METRICS]:
+            print("weighting bars for", stat)
             col_wt = vols.LabelMetrics.Volume.name
             if stat in [metric.name for metric in vols.NUC_METRICS]:
                 col_wt = vols.LabelMetrics.Nuclei.name

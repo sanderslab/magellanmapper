@@ -1060,6 +1060,29 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
           .format(time() - start_time))
     return borders_img_np, df_metrics, df_pxs
 
+def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
+    """Extract the row of peak smoothing quality from the given data 
+    frame matching the given criteria.
+    
+    Args:
+        df: Data frame from which to extract.
+        thresh_label_loss: Only check rows below or equal to this 
+            fraction of label loss; defaults to None to ignore.
+        filter_size: Only rows with the given filter size; defaults 
+            to None to ignore.
+    
+    Returns:
+        New data frame with the row having the peak smoothing quality 
+        meeting criteria.
+    """
+    if thresh_label_loss is not None:
+        df = df.loc[df[SmoothingMetrics.LABEL_LOSS.value] <= thresh_label_loss]
+    if filter_size is not None:
+        df = df.loc[df[SmoothingMetrics.FILTER_SIZE.value] == filter_size]
+    sm_qual = df[SmoothingMetrics.SM_QUALITY.value]
+    df_peak = df.loc[sm_qual == sm_qual.max()]
+    return df_peak
+
 def transpose_img(img_sitk, plane, rotate=None, target_size=None, 
                   flipud=False):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
@@ -3592,6 +3615,15 @@ def main():
             ("-", "-"), "Smoothing Filter Size", 
             "Fractional Change", None, size, not config.no_show, "_extras", 
             ("C3", "C4"))
+    
+    elif reg is config.RegisterTypes.smoothing_peaks:
+        # find peak smoothing qualities without label loss for a set 
+        # of data frames and output to combined data frame
+        dfs = []
+        for path in config.filenames:
+            df = pd.read_csv(path)
+            dfs.append(smoothing_peak(df, 0, None))
+        stats.data_frames_to_csv(dfs, "smoothing_peaks.csv")
     
     elif reg in (
         config.RegisterTypes.make_edge_images, 

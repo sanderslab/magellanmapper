@@ -4,6 +4,10 @@
 [MASTER]
 # Pylint config
 
+[DESIGN]
+max-attributes=15
+max-statements=150
+
 [MESSAGES CONTROL]
 disable = 
     trailing-whitespace,
@@ -14,4 +18,5 @@ disable =
     no-member,
     too-many-arguments,
     too-many-locals,
-    multiple-statements
+    multiple-statements,
+    len-as-condition, # occasionally incorrect for Numpy arrays

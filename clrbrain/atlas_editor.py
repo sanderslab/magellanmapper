@@ -86,6 +86,7 @@ class AtlasEditor:
         self.interp_planes.update_btn()
         ax_save = plt.subplot(gs_controls[0, 3])
         self.save_btn = Button(ax_save, "Save")
+        enable_btn(self.save_btn, False)
     
         def setup_plot_ed(plane, gs_spec):
             # subplot grid, with larger height preference for plot for 
@@ -209,9 +210,12 @@ class AtlasEditor:
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed):
-        for key in self.plot_eds.keys():
+        for key in self.plot_eds:
             ed = self.plot_eds[key]
             if ed != plot_ed: ed.update_image()
+            if ed.edited:
+                # display save button as enabled if any editor has been edited
+                enable_btn(self.save_btn)
     
     def scroll_overview(self, event):
         for key in self.plot_eds.keys():
@@ -241,11 +245,34 @@ class AtlasEditor:
         Args:
             event: Button event, currently not used.
         """
+        # only save if at least one editor has been edited
+        if not any([ed.edited for ed in self.plot_eds.values()]): return
         register.load_registered_img(
             config.filename, reg_name=register.IMG_LABELS, 
             replace=config.labels_img)
-        self.segs_feedback = "Saved labels image at {}".format(
-            datetime.datetime.now())
+        # reset edited flag in all editors and show save button as disabled
+        for ed in self.plot_eds.values(): ed.edited = False
+        enable_btn(self.save_btn, False)
+        print("Saved labels image at {}".format(datetime.datetime.now()))
+
+def enable_btn(btn, enable=True):
+    """Display a button as enabled or disabled.
+    
+    Note that the button's active state will not change since doing so 
+    prevents the coloration from changing.
+    
+    Args:
+        btn: Button widget to change.
+        enable: True to enable (default), False to disable.
+    """
+    if enable:
+        # "enable" button by changing to default grayscale color intensities
+        btn.color = "0.85"
+        btn.hovercolor = "0.95"
+    else:
+        # "disable" button by making darker and no hover response
+        btn.color = "0.5"
+        btn.hovercolor = "0.5"
 
 class InterpolatePlanes:
     """Track manually edited planes between which to interpolate changes 
@@ -277,14 +304,7 @@ class InterpolatePlanes:
                 .format(plot_support.get_plane_axis(self.plane), self.bounds, 
                         self.label_id))
             self.btn.label.set_fontsize("xx-small")
-        if all(self.bounds):
-            # "enable" button by changing to default grayscale color intensities
-            self.btn.color = "0.85"
-            self.btn.hovercolor = "0.95"
-        else:
-            # "disable" button by making darker and no hover response
-            self.btn.color = "0.5"
-            self.btn.hovercolor = "0.5"
+        enable_btn(self.btn, all(self.bounds))
         
     def update_plane(self, plane, i, label_id):
         """Update the current plane.

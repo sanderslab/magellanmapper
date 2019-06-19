@@ -59,6 +59,8 @@ class PlotEditor:
         self.xlim = None
         self.ylim = None
         self.ax_img = None
+        self.edited = False
+        
         # track label editing during mouse click/movement for plane interp
         self._editing = False
     
@@ -315,6 +317,7 @@ class PlotEditor:
                             self.ax_img.set_data(
                                 self.img3d_labels[self.coord[0]])
                             self.fn_refresh_images(self)
+                            self.edited = True
                             self._editing = True
                     else:
                         # click and mouseover otherwise moves crosshairs

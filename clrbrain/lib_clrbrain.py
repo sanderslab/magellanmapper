@@ -161,8 +161,8 @@ def match_ext(path, path_to_match):
     """Match extensions for two paths.
     
     Args:
-        path: Path with extension that will be kept; can even be just 
-            an extension including dot.
+        path: Path with extension that will be kept; will be ignored if only 
+            an extension with dot.
         path_to_match: Path whose extension will be replaced with that of 
             ``path``.
     

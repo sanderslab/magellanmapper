@@ -1365,7 +1365,7 @@ def import_atlas(atlas_dir, show=True):
         show: True to show the imported atlas.
     """
     # load atlas and corresponding labels
-    img_atlas, ext = read_sitk(os.path.join(atlas_dir, IMG_ATLAS))
+    img_atlas, path_atlas = read_sitk(os.path.join(atlas_dir, IMG_ATLAS))
     img_labels, _ = read_sitk(os.path.join(atlas_dir, IMG_LABELS))
     orig = "_raw" in config.register_settings["settings_name"]
     if orig:
@@ -1423,7 +1423,9 @@ def import_atlas(atlas_dir, show=True):
     # allow opening as an image within Clrbrain alongside the labels image
     imgs_write = {
         IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}
-    write_reg_images(imgs_write, name_prefix, copy_to_suffix=True, ext=ext)
+    write_reg_images(
+        imgs_write, name_prefix, copy_to_suffix=True, 
+        ext=os.path.splitext(path_atlas)[1])
     detector.resolutions = [img_atlas.GetSpacing()[::-1]]
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
@@ -2796,18 +2798,18 @@ def read_sitk(path):
     
     # attempt to load using each extension until found
     img_sitk = None
-    img_ext = None
+    path_loaded = None
     for ext in exts:
         img_path = path_split[0] + ext
         if os.path.exists(img_path):
             print("loading image from {}".format(img_path))
             img_sitk = sitk.ReadImage(img_path)
-            img_ext = ext
+            path_loaded = img_path
             break
     if img_sitk is None:
         print("could not find image from {} and extensions {}"
               .format(path_split[0], exts))
-    return img_sitk, ext
+    return img_sitk, path_loaded
 
 def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS, 
                         replace=None):
@@ -2835,13 +2837,13 @@ def load_registered_img(img_path, get_sitk=False, reg_name=IMG_ATLAS,
     """
     # prioritize registered image extension matched to that of main image
     reg_img_path = _reg_out_path(img_path, reg_name, True)
-    reg_img, _ = read_sitk(reg_img_path)
+    reg_img, reg_img_path = read_sitk(reg_img_path)
     if reg_img is None:
         # fallback to loading barren reg_name from img_path's dir
         reg_img_path = os.path.join(
             os.path.dirname(img_path), 
             lib_clrbrain.match_ext(img_path, reg_name))
-        reg_img, _ = read_sitk(reg_img_path)
+        reg_img, reg_img_path = read_sitk(reg_img_path)
         if reg_img is None:
             raise FileNotFoundError(
                 "could not find registered image from {} and {}"

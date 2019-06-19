@@ -6,7 +6,6 @@
 
 import datetime
 
-import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Slider, Button
@@ -20,25 +19,36 @@ from clrbrain import plot_3d
 from clrbrain import register
 
 class AtlasEditor:
+    """Graphical interface to view an atlas in multiple orthogonal 
+    dimensions and edit atlas labels.
+    
+    Attributes:
+        image5d: Numpy image array in t,z,y,x,[c] format.
+        labels_img: Numpy image array in z,y,x format.
+        channel: Channel of the image to display.
+        offset: Index of plane at which to start viewing in x,y,z (user) 
+            order.
+        fn_close_listener: Handle figure close events.
+        borders_img: Numpy image array in z,y,x,[c] format to show label 
+            borders, such as that generated during label smoothing. 
+            Defaults to None. If this image has a different number of 
+            labels than that of ``labels_img``, a new colormap will 
+            be generated.
+        fn_show_label_3d: Function to call to show a label in a 
+            3D viewer. Defaults to None.
+        plot_eds: Dictionary of :class:``plot_editor.PlotEditor``s, with 
+            key specified by one of :const:``config.PLANE`` plane orientations.
+        alpha_slider: Matplotlib alpha slider control.
+        alpha_reset_btn: Maplotlib button for resetting alpha transparency.
+        alpha_last: Float specifying the previous alpha value.
+        interp_planes: Current :class:``InterpolatePlanes`` object.
+        interp_btn: Matplotlib button to initiate plane interpolation.
+        save_btn: Matplotlib button to save the atlas.
+    """
+    
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
                  borders_img=None, fn_show_label_3d=None):
-        """Plot ROI as sequence of z-planes containing only the ROI itself.
-        
-        Args:
-            image5d: Numpy image array in t,z,y,x,[c] format.
-            labels_img: Numpy image array in z,y,x format.
-            channel: Channel of the image to display.
-            offset: Index of plane at which to start viewing in x,y,z (user) 
-                order.
-            fn_close_listener: Handle figure close events.
-            borders_img: Numpy image array in z,y,x,[c] format to show label 
-                borders, such as that generated during label smoothing. 
-                Defaults to None. If this image has a different number of 
-                labels than that of ``labels_img``, a new colormap will 
-                be generated.
-            fn_show_label_3d: Function to call to show a label in a 
-                3D viewer. Defaults to None.
-        """
+        """Plot ROI as sequence of z-planes containing only the ROI itself."""
         self.image5d = image5d
         self.labels_img = labels_img
         self.channel = channel
@@ -53,8 +63,10 @@ class AtlasEditor:
         self.alpha_last = None
         self.interp_planes = None
         self.interp_btn = None
+        self.save_btn = None
         
     def show_atlas(self):
+        """Set up the atlas display with multiple orthogonal views."""
         # set up the figure
         fig = plt.figure()
         gs = gridspec.GridSpec(
@@ -103,7 +115,7 @@ class AtlasEditor:
             # orthogonal direction
             ax = plt.subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
-            max_size = plot_support.max_plane(self.image5d[0], plane)
+            plot_support.max_plane(self.image5d[0], plane)
             arrs_3d = [self.image5d[0]]
             if self.labels_img is not None:
                 # overlay borders if available
@@ -210,6 +222,12 @@ class AtlasEditor:
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed):
+        """Refresh images in a plot editor.
+        
+        Args:
+            plot_ed: :class:``plot_editor.PlotEditor`` whose images 
+                will be refreshed.
+        """
         for key in self.plot_eds:
             ed = self.plot_eds[key]
             if ed != plot_ed: ed.update_image()
@@ -218,21 +236,46 @@ class AtlasEditor:
                 enable_btn(self.save_btn)
     
     def scroll_overview(self, event):
-        for key in self.plot_eds.keys():
+        """Scroll images and crosshairs in all plot editors
+        
+        Args:
+            event: Scroll event.
+        """
+        for key in self.plot_eds:
             self.plot_eds[key].scroll_overview(event)
     
     def alpha_update(self, event):
-        for key in self.plot_eds.keys():
+        """Update the alpha transparency in all plot editors.
+        
+        Args:
+            event: Slider event.
+        """
+        for key in self.plot_eds:
             self.plot_eds[key].alpha_updater(event)
     
     def alpha_reset(self, event):
+        """Reset the alpha transparency in all plot editors.
+        
+        Args:
+            event: Button event, currently ignored.
+        """
         self.alpha_slider.reset()
     
     def axes_exit(self, event):
-        for key in self.plot_eds.keys():
+        """Trigger axes exit for all plot editors.
+        
+        Args:
+            event: Axes exit event.
+        """
+        for key in self.plot_eds:
             self.plot_eds[key].on_axes_exit(event)
     
     def interpolate(self, event):
+        """Interpolate planes using :attr:``interp_planes``.
+        
+        Args:
+            event: Button event, currently ignored.
+        """
         try:
             self.interp_planes.interpolate(self.labels_img)
             self.refresh_images(None)
@@ -345,10 +388,17 @@ class InterpolatePlanes:
     
     @property
     def bounds(self):
+        """Get the bounds property."""
         return self._bounds
     
     @bounds.setter
     def bounds(self, val):
+        """Set the bounds property.
+        
+        Args:
+            val: Integer to add as a bounds or a value to replace the 
+                current bounds value. None to reset.
+        """
         if val is None:
             self._bounds = [None, None]
         elif isinstance(val, int):

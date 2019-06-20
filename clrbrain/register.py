@@ -355,11 +355,11 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
     if check_equality:
         half_len = len(img_np) // 2
         half_before = img_np[:half_len]
-        half_after = img_np[:half_len-1:-1] * mirror_mult
-        print("Checking for baseline labels symmetry")
-        print("halves equal before mirroring?",
+        half_after = img_np[:half_len-1:-1] / mirror_mult
+        print("Checking labels symmetry after mirroring:")
+        print("halves equal?",
               np.array_equal(half_before, half_after))
-        print("same labels in each half before mirroring?", 
+        print("same labels in each half?", 
               np.array_equal(np.unique(half_before), np.unique(half_after)))
     return img_np
 

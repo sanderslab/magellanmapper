@@ -196,6 +196,7 @@ RegisterTypes = Enum(
     "RegisterTypes", [
         "single", "group", "overlays", 
         "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
+        "convert_itksnap_labels", 
         "make_edge_images", "make_edge_images_exp", "merge_atlas_segs", 
         "reg_labels_to_atlas", "vol_stats", "make_density_images", 
         "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
@@ -229,6 +230,20 @@ PATH_ATLAS_IMPORT_METRICS = "stats.csv"
 
 # common labels
 PATH_COMMON_LABELS = "labels_common.csv"
+
+class ItkSnapLabels(Enum):
+    """Column names to use for ITK-SNAP description labels.
+    
+    Labels description file is assumed to have this column ordering.
+    """
+    ID = ABAKeys.ABA_ID.value
+    R = "r"
+    G = "g"
+    B = "b"
+    A = "a"
+    VIS = "vis"
+    MESH = "mesh"
+    NAME = ABAKeys.NAME.value
 
 
 # STATS

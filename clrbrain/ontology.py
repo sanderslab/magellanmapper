@@ -39,6 +39,23 @@ def load_labels_ref(path):
         labels_ref = pd.read_csv(path)
     return labels_ref
 
+def convert_itksnap_to_df(path):
+    """Convert an ITK-SNAP labels description file to a CSV file 
+    compatible with Clrbrain.
+    
+    Args:
+        path: Path to description file.
+    
+    Returns:
+        Pandas data frame of the description file.
+    """
+    # load description file and convert contiguous spaces to separators, 
+    # remove comments, and add headers
+    df = pd.read_csv(
+        path, sep="\s+", comment="#", 
+        names=[e.value for e in config.ItkSnapLabels])
+    return df
+
 def get_node(nested_dict, key, value, key_children):
     """Get a node from a nested dictionary by iterating through all 
     dictionaries until the specified value is found.

@@ -3584,6 +3584,13 @@ def main():
         # export common labels
         export_common_labels(config.filenames, config.PATH_COMMON_LABELS)
     
+    elif reg is config.RegisterTypes.convert_itksnap_labels:
+        # convert labels from ITK-SNAP to CSV format
+        df = ontology.convert_itksnap_to_df(config.filename)
+        output_path = lib_clrbrain.combine_paths(
+            config.filename, ".csv", sep="")
+        stats.data_frames_to_csv([df], output_path)
+    
     elif reg is config.RegisterTypes.export_metrics_compactness:
         # export data frame with compactness to compare:
         # 1) whole histology image and unsmoothed labels

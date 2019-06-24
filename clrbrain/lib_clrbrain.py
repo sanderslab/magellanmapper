@@ -350,6 +350,23 @@ def is_number(val):
     except (ValueError, TypeError):
         return False
 
+def format_num(val, digits=1):
+    """Format a value to a given number of digits if the value is a number.
+    
+    Args:
+        val: The value to format.
+        digits: Maximum number of digits to keep; defaults to 3.
+    
+    Returns:
+        A formatted string with the number of digits reduced to ``digits`` 
+        if ``val`` is a number, or otherwise simply ``val``.
+    """
+    formatted = val
+    if is_number(val):
+        if isinstance(val, str): val = float(val)
+        formatted = ("{:." + str(digits) + "g}").format(float(val))
+    return formatted
+
 def convert_indices_to_int(dict_to_convert):
     """Convert indices of a dictionary to int if possible, including nested 
     indices.

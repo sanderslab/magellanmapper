@@ -353,15 +353,35 @@ def _mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
         # skip mirroring if no planes are empty or only first plane is empty
         print("nothing to mirror")
     if check_equality:
-        half_len = len(img_np) // 2
-        half_before = img_np[:half_len]
-        half_after = img_np[:half_len-1:-1] / mirror_mult
         print("Checking labels symmetry after mirroring:")
-        print("halves equal?",
-              np.array_equal(half_before, half_after))
-        print("same labels in each half?", 
-              np.array_equal(np.unique(half_before), np.unique(half_after)))
+        check_mirrorred(img_np, mirror_mult=mirror_mult)
     return img_np
+
+def check_mirrorred(img_np, mirror_mult=1):
+    """Check whether a given image, typically a labels image, is symmetric.
+    
+    Args:
+        img_np: Numpy array of image, typically a labels image, where 
+            symmetry will be detected based on equality of two halves 
+            split by the image's last dimension.
+        mirror_mult: Number by which to divide the 2nd half before 
+            checking for symmetry; defaults to 1. Typically a number 
+            used to generate the 2nd half when mirroring.
+    
+    Returns:
+        Tuple of ``(boolean, boolean)``, where the first value is True if 
+        the sides are equal, and the 2nd is True if the sides have equal 
+        sets of unique values.
+    """
+    half_len = len(img_np) // 2
+    half_before = img_np[:half_len]
+    half_after = img_np[:half_len-1:-1] / mirror_mult
+    equality_vals = np.array_equal(half_before, half_after)
+    print("halves equal?", equality_vals)
+    equality_lbls = np.array_equal(
+        np.unique(half_before), np.unique(half_after))
+    print("same labels in each half?", equality_lbls)
+    return equality_vals, equality_lbls
 
 def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None, 
                    rotate=None, smooth=None, affine=None):
@@ -543,8 +563,11 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         "type: {}, max: {}, max avail: {}".format(
             img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     
-    if mirror is not None:
-        # mirror and check for label loss
+    if mirror is None:
+        print("Checking baseline labels symmetry without mirroring:")
+        check_mirrorred(img_np)
+    else:
+        # mirror, check beforehand for labels that will be loss
         labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
         img_np = _mirror_planes(
             img_np, mirrori, mirror_mult=-1, check_equality=True)

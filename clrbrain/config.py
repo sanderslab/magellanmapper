@@ -73,7 +73,7 @@ class Cmaps(Enum):
 Plot2DTypes = Enum(
     "Plot2DTypes", (
         "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
-        "ROC_CURVE", 
+        "ROC_CURVE", "SCATTER_INTENS_NUC", 
     )
 )
 plot_2d_type = None

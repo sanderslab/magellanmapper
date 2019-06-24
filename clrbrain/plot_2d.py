@@ -1823,6 +1823,7 @@ if __name__ == "__main__":
     cli.main(True)
     setup_style("default")
     size = config.roi_sizes
+    show = not config.no_show
     if size: size = size[0][:2]
     
     plot_2d_type = config.Plot2DTypes[config.plot_2d.upper()]
@@ -1837,7 +1838,7 @@ if __name__ == "__main__":
             config.filename, data_cols=("original.mean", "smoothed.mean"), 
             err_cols=("original.ci", "smoothed.ci"), 
             legend_names=("Original", "Smoothed"), col_groups="RegionName", 
-            size=size, show=(not config.no_show), groups=config.groups, 
+            size=size, show=show, groups=config.groups, 
             prefix=config.prefix)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
@@ -1865,9 +1866,27 @@ if __name__ == "__main__":
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
             legend_names=None, col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, 
-            size=size, show=(not config.no_show), groups=config.groups, 
+            size=size, show=show, groups=config.groups, 
             prefix=config.prefix, col_vspan="Level", col_wt=col_wt)
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve
         plot_roc(pd.read_csv(config.filename))
+
+    elif plot_2d_type is config.Plot2DTypes.SCATTER_INTENS_NUC:
+        # scatter plot of intensity vs nuclei values
+        
+        # import CSV manually generated from intensity and nuclei R stats; 
+        # columns should have intensity and nuclei values followed by 
+        # condition (eg "original" and "smoothed")
+        df = pd.read_csv(config.filename)
+        col_x = [col for col in df.columns if col.lower().startswith("intens.")]
+        col_y = [col for col in df.columns if col.lower().startswith("nuc.")]
+        names_group=None
+        if len(col_x) >= 2:
+            names_group = [col.split(".")[1] for col in col_x[:2]]
+        plot_scatter(
+            config.filename, col_x, col_y, names_group=names_group, 
+            x_label="Intensity", y_label="Nuclei", 
+            title="Nuclei Vs. Intensity By Region", fig_size=size, show=show, 
+            suffix=config.suffix, df=df)

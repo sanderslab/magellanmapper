@@ -565,7 +565,7 @@ calcCorr <- function(path.in, cols, plot.size=c(5, 7)) {
   corr <- Hmisc::rcorr(as.matrix(df[, cols]), type="spearman")
   print(corr)
   write.csv(corr$r, paste0("../", base.path, "_correlation_r.csv"))
-  write.csv(corr$p, paste0("../", base.path, "_correlation_p.csv"))
+  write.csv(corr$P, paste0("../", base.path, "_correlation_p.csv"))
   
   # plot correlation matrix and save to PDF
   corrplot::corrplot(

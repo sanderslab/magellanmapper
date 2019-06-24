@@ -1640,10 +1640,20 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                 df[x], df[y], s=sizes, label=label, 
                 color=colors[i], marker="o")
     else:
-        # treat each unique combination of cols_group values as 
-        # a separate group
-        groups = ([""] if cols_group is None 
-                  else np.unique(df[cols_group], axis=0))
+        # set up groups
+        df_groups = None
+        if cols_group is None:
+            groups = [""] # default to single group of empty string
+        else:
+            # treat each unique combination of cols_group values as 
+            # a separate group
+            for col in cols_group:
+                df_col = df[col].astype(str)
+                if df_groups is None:
+                    df_groups = df_col
+                else:
+                    df_groups = df_groups.str.cat(df_col, sep=",")
+            groups = df_groups.unique()
         names = cols_group if names_group is None else names_group
         colors = colormaps.discrete_colormap(
             len(groups), prioritize_default="cn", seed=config.seed) / 255
@@ -1653,13 +1663,13 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             s = sizes
             label = None
             if group != "":
-                mask = np.all(df[cols_group] == group, axis=1)
+                mask = df_groups == group
                 df_group = df.loc[mask]
                 if col_size is not None: s = s[mask]
                 # make label from group names and values
                 label = ", ".join(
-                    ["{} {:.3g}".format(name, val) 
-                     for name, val in zip(names, group)])
+                    ["{} {}".format(name, lib_clrbrain.format_num(val, 3)) 
+                     for name, val in zip(names, group.split(","))])
             xs = df_group[col_x]
             ys = df_group[col_y]
             ax.scatter(

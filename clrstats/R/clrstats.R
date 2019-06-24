@@ -19,7 +19,7 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
-          "CoefVarIntens", "CoefVarNuc")
+          "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -730,8 +730,13 @@ runStats <- function(stat.type=NULL) {
     }
     
   } else if (stat.type == kStatTypes[2]) {
-    # correlation coefficient matrix
-    calcCorr(config.env$StatsPathIn, kMeas[c(4:6, 10)], config.env$PlotSize)
+    # correlation coefficient matrix; 
+    # TODO: generalize scenarios
+    #calcCorr(config.env$StatsPathIn, kMeas[c(4:6, 10)], config.env$PlotSize)
+    calcCorr("../vols_stats_IntensVsNuc.csv", 
+             c("Intens.original", "Intens.smoothed", 
+               "Nuc.original", "Nuc.smoothed"), 
+             config.env$PlotSize)
     
   } else if (stat.type == kStatTypes[3]) {
     # normality test

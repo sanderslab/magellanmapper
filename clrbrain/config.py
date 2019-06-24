@@ -449,6 +449,13 @@ def update_process_settings(settings, settings_type):
              "detection_threshold": 0.001}, 
             profile)
     
+        # adjust nuclei size for 4x magnification
+        settings.add_modifier(
+            "4xnuc", 
+            {"min_sigma_factor": 3, 
+             "max_sigma_factor": 4}, 
+            profile)
+    
         # fit into ~32GB RAM instance after isotropic interpolation
         settings.add_modifier(
             "20x", 
@@ -1005,7 +1012,7 @@ roc_dict = OrderedDict([
     ("hyperparameters", OrderedDict([
         # test single value by iterating on value that should not affect 
         # detection ability
-        #("points_3d_thresh", [0.7]),
+        ("points_3d_thresh", [0.7]),
         
         # unfused baseline
         #("scale_factor", 0.59),
@@ -1023,7 +1030,7 @@ roc_dict = OrderedDict([
         #("isotropic", np.array([(0.96, 1, 1)])),
         #("overlap", np.arange(0.1, 1.0, 0.1)),
         #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
-        ("prune_tol_factor", _prune_tol_factors),
+        #("prune_tol_factor", _prune_tol_factors),
         #("clip_min", np.arange(0.0, 0.2, 0.1)),
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
         #("clip_max", np.arange(0.3, 0.7, 0.1)),
@@ -1034,11 +1041,11 @@ roc_dict = OrderedDict([
         #"denoise_size", np.arange(5, 25, 2)
         #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
         #("tot_var_denoise", (False, True)),
-        #("min_sigma_factor", np.arange(2, 2.71, 0.1)),
+        ("min_sigma_factor", np.arange(2, 2.71, 0.1)),
         #("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
         #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
-        ("segment_size", np.arange(130, 160, 20)),
+        #("segment_size", np.arange(130, 160, 20)),
     ]))
 ])
 

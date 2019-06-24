@@ -336,16 +336,16 @@ def get_int(val):
         return val
 
 def is_number(val):
-    """Check if a value is a number by attempting to cast to ``int``.
+    """Check if a value is a number by attempting to cast to ``float``.
     
     Args:
         val: Value to check.
     
     Returns:
-        True if the value was successfully cast to ``int``; False otherwise.
+        True if the value was successfully cast to ``float``; False otherwise.
     """
     try:
-        int(val)
+        float(val)
         return True
     except (ValueError, TypeError):
         return False

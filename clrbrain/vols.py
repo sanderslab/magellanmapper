@@ -19,7 +19,7 @@ from clrbrain import plot_3d
 # metric keys and column names
 LabelMetrics = Enum(
     "LabelMetrics", [
-        "Region", "Volume", "Nuclei", "Density", 
+        "Region", "Volume", "Intensity", "Nuclei", "Density", 
         "RegVolMean", "RegNucMean", "RegDensityMean", # per region
         "VarNuclei", "VarNucIn", "VarNucOut", 
         "VarIntensity", "VarIntensIn", "VarIntensOut", 
@@ -217,7 +217,8 @@ class MeasureLabel(object):
         df: Pandas data frame with a row for each sub-region.
     """
     # metric keys
-    _COUNT_METRICS = (LabelMetrics.Volume, LabelMetrics.Nuclei)
+    _COUNT_METRICS = (
+        LabelMetrics.Volume, LabelMetrics.Intensity, LabelMetrics.Nuclei)
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
@@ -294,6 +295,7 @@ class MeasureLabel(object):
             # sum up counts within the collective region
             label_mask = np.isin(cls.labels_img_np, label_ids)
             label_size = np.sum(label_mask)
+            intens = np.sum(cls.atlas_img_np[label_mask]) # tot intensity
             if cls.heat_map is not None:
                 nuclei = np.sum(cls.heat_map[label_mask])
         else:
@@ -301,9 +303,11 @@ class MeasureLabel(object):
             labels = cls.df.loc[
                 cls.df[LabelMetrics.Region.name].isin(label_ids)]
             label_size = np.nansum(labels[LabelMetrics.Volume.name])
+            intens = np.nansum(labels[LabelMetrics.Intensity.name])
             nuclei = np.nansum(labels[LabelMetrics.Nuclei.name])
         if label_size > 0:
             metrics[LabelMetrics.Volume] = label_size
+            metrics[LabelMetrics.Intensity] = intens
             metrics[LabelMetrics.Nuclei] = nuclei
         disp_id = get_single_label(label_ids)
         print("counts within label {}: {}"

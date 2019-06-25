@@ -19,7 +19,8 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
-          "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei")
+          "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
+          "Intensity")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units

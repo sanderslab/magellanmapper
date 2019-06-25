@@ -1414,10 +1414,12 @@ def import_atlas(atlas_dir, show=True):
     img_atlas, path_atlas = read_sitk(os.path.join(atlas_dir, IMG_ATLAS))
     img_labels, _ = read_sitk(os.path.join(atlas_dir, IMG_LABELS))
     orig = "_raw" in config.register_settings["settings_name"]
+    overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]
     if orig:
         # baseline DSC of atlas to labels before any processing
         cond = "original"  
-        dsc = _measure_overlap_combined_labels(img_atlas, img_labels)
+        dsc = _measure_overlap_combined_labels(
+            img_atlas, img_labels, overlap_meas_add)
     else:
         # defer DSC until after processing
         cond = "extended" 
@@ -1449,7 +1451,8 @@ def import_atlas(atlas_dir, show=True):
     # whole atlas stats
     if not orig:
         # measure DSC if processed and prep dict for data frame
-        dsc = _measure_overlap_combined_labels(img_atlas, img_labels)
+        dsc = _measure_overlap_combined_labels(
+            img_atlas, img_labels, overlap_meas_add)
     # use lower threshold for compactness measurement to minimize noisy 
     # surface artifacts
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
@@ -1787,7 +1790,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
         for img in imgs_write.values(): sitk.Show(img)
     
 def measure_overlap(fixed_img, transformed_img, fixed_thresh=None, 
-                    transformed_thresh=None):
+                    transformed_thresh=None, add_fixed_mask=None):
     """Measure the Dice Similarity Coefficient (DSC) between two foreground 
     of two images.
     
@@ -1799,6 +1802,10 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
         transformed_thresh: Threshold to determine the foreground of 
             ``transformed_img``; defaults to None to determine by a mean 
             threshold.
+        add_fixed_mask: Boolean mask to add to fixed image, after 
+            thresholding; defaults to None. Useful to treat as foreground 
+            regions that would be thresholded as background but 
+            included in labels.
     
     Returns:
         The DSC of the foreground of the two given images.
@@ -1821,11 +1828,20 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
     # similar to simple binary thresholding via Numpy
     fixed_binary_img = sitk.BinaryThreshold(
         fixed_img, fixed_thresh, fixed_thresh_up)
+    if add_fixed_mask is not None:
+        # add mask to foreground of fixed image
+        fixed_binary_np = sitk.GetArrayFromImage(fixed_binary_img)
+        print(np.unique(fixed_binary_np), fixed_binary_np.dtype)
+        fixed_binary_np[add_fixed_mask] = True
+        fixed_binary_img = replace_sitk_with_numpy(
+            fixed_binary_img, fixed_binary_np)
     transformed_binary_img = sitk.BinaryThreshold(
         transformed_img, transformed_thresh, transformed_thresh_up)
     overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     total_dsc = overlap_filter.GetDiceCoefficient()
+    #sitk.Show(fixed_binary_img)
+    #sitk.Show(transformed_binary_img)
     print("Foreground DSC: {}".format(total_dsc))
     return total_dsc
 
@@ -1861,13 +1877,24 @@ def make_labels_fg(labels_sitk):
     fg_img_sitk = replace_sitk_with_numpy(labels_sitk, fg_img)
     return fg_img_sitk
 
-def _measure_overlap_combined_labels(fixed_img, labels_img):
+def _measure_overlap_combined_labels(fixed_img, labels_img, add_lbls=None):
     # check overlap based on combined labels images; should be 1.0 by def 
     # when using labels img to curate fixed img
-    result_img_for_overlap = make_labels_fg(labels_img)
+    lbls_fg = make_labels_fg(labels_img)
+    mask = None
+    if add_lbls is not None:
+        # build mask from labels to add to fixed image's foreground, such 
+        # as labeled ventricles; TODO: get children of labels rather than 
+        # taking all labels >= val, but would need to load labels reference, 
+        # or take a range of labels
+        labels_np = sitk.GetArrayFromImage(labels_img)
+        mask = np.zeros_like(labels_np, dtype=bool)
+        for lbl in add_lbls:
+            print("adding abs labels >=", lbl)
+            mask[np.absolute(labels_np) >= lbl] = True
     print("\nDSC of thresholded fixed image compared with combined labels:")
     return measure_overlap(
-        fixed_img, result_img_for_overlap, transformed_thresh=1)
+        fixed_img, lbls_fg, transformed_thresh=1, add_fixed_mask=mask)
 
 def _crop_image(img_np, labels_img, axis, eraser=None):
     """Crop image by removing the empty space at the start of the given axis.

@@ -111,6 +111,8 @@ class AtlasMetrics(Enum):
     REGION = "Region"
     CONDITION = "Condition"
     DSC_ATLAS_LABELS = "DSC_atlas_labels"
+    DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
+    DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
 
 class SmoothingMetrics(Enum):
     """Smoothing metric enumerations."""
@@ -1639,6 +1641,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     
+    # overlap stats comparing original and registered samples (eg histology)
+    print("DSC of original and registered sample images")
+    dsc_sample = measure_overlap(
+        fixed_img_orig, transformed_img, 
+        transformed_thresh=settings["atlas_threshold"])
+    
     def make_labels(truncate):
         nonlocal transformed_img
         truncation = settings["truncate_labels"] if truncate else None
@@ -1653,13 +1661,18 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         img.SetSpacing(transformed_img.GetSpacing())
         print(img.GetSpacing())
         print(fixed_img_orig.GetSpacing(), transformed_img.GetSpacing())
+        dsc = None
         if settings["curate"]:
             img, transformed_img = _curate_img(
                 fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
-        return img
+            print("DSC of original and registered sample images after curation")
+            dsc = measure_overlap(
+                fixed_img_orig, transformed_img, 
+                transformed_thresh=settings["atlas_threshold"])
+        return img, dsc
     
-    labels_img_full = make_labels(False)
-    labels_img = labels_img_full if new_atlas else make_labels(True)
+    labels_img_full, dsc_sample_curated = make_labels(False)
+    labels_img, _ = labels_img_full if new_atlas else make_labels(True)
     
     imgs_write = (fixed_img, transformed_img, labels_img_full, labels_img)
     if show_imgs:
@@ -1694,14 +1707,31 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     translation = _translation_adjust(
         moving_img, transformed_img, translation, flip=True)
     
-    # overlap stats comparing original and registered atlases
-    print("DSC compared with atlas")
-    measure_overlap(
-        fixed_img_orig, transformed_img, 
-        transformed_thresh=settings["atlas_threshold"])
-    
     # compare original atlas with registered labels taken as a whole
-    _measure_overlap_combined_labels(fixed_img_orig, labels_img_full)
+    dsc_labels = _measure_overlap_combined_labels(
+        fixed_img_orig, labels_img_full)
+    
+    # measure compactness of fixed image
+    fixed_img_orig_np = sitk.GetArrayFromImage(fixed_img_orig)
+    thresh_atlas = fixed_img_orig_np > filters.threshold_mean(fixed_img_orig_np)
+    compactness = plot_3d.compactness(
+        plot_3d.perimeter_nd(thresh_atlas), thresh_atlas)
+    
+    # save basic metrics in CSV file
+    basename = lib_clrbrain.get_filename_without_ext(fixed_file)
+    metrics = {
+        AtlasMetrics.SAMPLE: [basename], 
+        AtlasMetrics.REGION: config.REGION_ALL, 
+        AtlasMetrics.CONDITION: [np.nan], 
+        AtlasMetrics.DSC_ATLAS_SAMPLE: [dsc_sample], 
+        AtlasMetrics.DSC_ATLAS_SAMPLE_CUR: [dsc_sample_curated], 
+        AtlasMetrics.DSC_ATLAS_LABELS: [dsc_labels], 
+        SmoothingMetrics.COMPACTNESS: [compactness]
+    }
+    df_path = lib_clrbrain.combine_paths(
+        name_prefix, config.PATH_ATLAS_IMPORT_METRICS)
+    print("\nImported {} whole atlas stats:".format(basename))
+    stats.dict_to_data_frame(metrics, df_path, show="\t")
     
     # show overlays last since blocks until fig is closed
     #_show_overlays(imgs, translation, fixed_file, None)

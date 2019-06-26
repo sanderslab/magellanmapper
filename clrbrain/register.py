@@ -1885,7 +1885,10 @@ def _measure_overlap_combined_labels(fixed_img, labels_img, add_lbls=None):
     if add_lbls is not None:
         # build mask from labels to add to fixed image's foreground, such 
         # as labeled ventricles; TODO: get children of labels rather than 
-        # taking labels range, but would need to load labels reference
+        # taking labels range, but would need to load labels reference; 
+        # TODO: consider using "atlas_threshold_all" profile setting 
+        # instead, but would need to ensure that fixed thresholds work 
+        # for both atlas and sample histology
         labels_np_abs = np.absolute(sitk.GetArrayFromImage(labels_img))
         mask = np.zeros_like(labels_np_abs, dtype=bool)
         for lbl in add_lbls:

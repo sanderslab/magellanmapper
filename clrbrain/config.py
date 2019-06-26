@@ -615,9 +615,10 @@ class RegisterSettings(SettingsDict):
         # planar orientation for transposition prior rather than after import
         self["pre_plane"] = None
         
-        # tuple of labels thresholds where labels above or neg labels below 
-        # this value will to treat as foreground when measuring overlap, 
-        # eg labeled ventricles that would be background in histology image
+        # labels range given as ``((start0, end0), (start1, end1), ...), 
+        # where labels >= start and < end will be treated as foreground 
+        # when measuring overlap, eg labeled ventricles that would be 
+        # background in histology image
         self["overlap_meas_add_lbls"] = None
 
 def update_register_settings(settings, settings_type):
@@ -720,7 +721,7 @@ def update_register_settings(settings, settings_type):
              }), 
              "crop_to_labels": True, # req because of 2nd affine
              "smooth": 2, 
-             "overlap_meas_add_lbls": (100000000, )
+             "overlap_meas_add_lbls": ((126651558, 126652059), ), 
             }, 
             profile)
         

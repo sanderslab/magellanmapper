@@ -1885,13 +1885,13 @@ def _measure_overlap_combined_labels(fixed_img, labels_img, add_lbls=None):
     if add_lbls is not None:
         # build mask from labels to add to fixed image's foreground, such 
         # as labeled ventricles; TODO: get children of labels rather than 
-        # taking all labels >= val, but would need to load labels reference, 
-        # or take a range of labels
-        labels_np = sitk.GetArrayFromImage(labels_img)
-        mask = np.zeros_like(labels_np, dtype=bool)
+        # taking labels range, but would need to load labels reference
+        labels_np_abs = np.absolute(sitk.GetArrayFromImage(labels_img))
+        mask = np.zeros_like(labels_np_abs, dtype=bool)
         for lbl in add_lbls:
-            print("adding abs labels >=", lbl)
-            mask[np.absolute(labels_np) >= lbl] = True
+            print("adding abs labels within", lbl)
+            mask[np.all([labels_np_abs >= lbl[0], 
+                         labels_np_abs < lbl[1]], axis=0)] = True
     print("\nDSC of thresholded fixed image compared with combined labels:")
     return measure_overlap(
         fixed_img, lbls_fg, transformed_thresh=1, add_fixed_mask=mask)

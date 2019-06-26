@@ -16,7 +16,7 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
            "ttest.paired", "wilcoxon.paired", "fligner")
 
 # measurements, which correspond to columns in main data frame
-kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity", 
+kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei", 
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
           "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
@@ -25,8 +25,8 @@ kMeas <- c("Volume", "Density", "Nuclei", "VarNuclei", "VarIntensity",
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
 kMeasNames <- setNames(
-  list(list("Edge Match (Within-Region Nuclei Variation)", "SD size"), 
-       list("Edge Match (Within-Region Intensity Variation)", "SD size"),
+  list(list("Edge Match (Within-Region Intensity Variation)", "SD size"), 
+       list("Edge Match (Within-Region Nuclei Variation)", "SD size"),
        list("Edge Distances to Anatomical Boundaries", bquote(list(mu*"m"))), 
        list("Edge Distances to Anatomical Boundaries (Mean)", 
             bquote(list(mu*"m"))), 
@@ -35,9 +35,9 @@ kMeasNames <- setNames(
             "SD size difference"), 
        list("Edge Noise (Core-Periphery Variation Difference)", 
             "SD size difference"), 
-       list("Edge Match (Within-Region Nuclei Variation)", 
-            "Coefficient of variation"), 
        list("Edge Match (Within-Region Intensity Variation)", 
+            "Coefficient of variation"), 
+       list("Edge Match (Within-Region Nuclei Variation)", 
             "Coefficient of variation")), 
   c(kMeas[c(4:8, 11:14)]))
 

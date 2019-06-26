@@ -630,6 +630,12 @@ setupConfig <- function(name=NULL) {
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
     config.env$Measurements <- kMeas[8]
     
+  } else if (name == "compactness") {
+    # compactness stats for ABA series
+    setupConfig("aba")
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[5])
+    config.env$Measurements <- kMeas[9]
+    
   } else if (name == "nolevels") {
     # input file from drawn labels only, without levels
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[1])
@@ -681,6 +687,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("aba")
   #setupConfig("dsc")
   setupConfig("wt")
+  #setupConfig("compactness")
   #setupConfig("wt.test")
   #setupConfig("nolevels")
   setupConfig("nojittersave")

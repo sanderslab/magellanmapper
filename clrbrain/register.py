@@ -3938,6 +3938,18 @@ def main():
             xlim=lims, ylim=lims, title="Coefficient of Variation", 
             fig_size=size, show=show, suffix=None, df=df)
 
+    elif reg is config.RegisterTypes.melt_cols:
+        # melt columns specified in "groups" using ID columns from 
+        # standard atlas metrics
+        id_cols=[
+            AtlasMetrics.SAMPLE.value, AtlasMetrics.REGION.value, 
+            AtlasMetrics.CONDITION.value]
+        df = stats.melt_cols(
+            pd.read_csv(config.filename), id_cols, config.groups, 
+            config.GENOTYPE_KEY)
+        stats.data_frames_to_csv(
+            df, lib_clrbrain.insert_before_ext(config.filename, "_melted"))
+
 if __name__ == "__main__":
     print("Clrbrain image registration")
     from clrbrain import cli

@@ -261,6 +261,23 @@ def combine_cols(df, combos):
         df.loc[:, combo_val[0]] = fn_aggr(df.loc[:, metrics])
     return df
 
+def melt_cols(df, id_cols, melt_cols, var_name=None):
+    """Melt down a given set of columns to rows.
+    
+    Args:
+        df: Pandas data frame.
+        id_cols: List of column names to treat as IDs.
+        melt_cols: List of column names to pivot into separate rows.
+        var_name: Name of column with the melted column names; defaults 
+            to None to use the default name.
+    
+    Returns:
+       Data frame with columns melted into rows.
+    """
+    df_melted = df.melt(
+        id_vars=id_cols, value_vars=melt_cols, var_name=var_name)
+    return df_melted
+
 def print_data_frame(df, sep=" "):
     """Print formatted data frame.
     

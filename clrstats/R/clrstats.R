@@ -626,6 +626,7 @@ setupConfig <- function(name=NULL) {
     config.env$SampleLegend <- FALSE
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
     config.env$Measurements <- kMeas[6]
+    config.env$Model <- kModel[8]
     config.env$PlotVolcano <- TRUE
     config.env$VolcanoLabels <- TRUE
     config.env$VolcanoLogX <- TRUE
@@ -715,13 +716,12 @@ runStats <- function(stat.type=NULL) {
     # default, general stats
     
     # setup measurement and model types
-    model <- kModel[8]
     split.by.side <- TRUE # false to combine sides
     load.stats <- FALSE # true to load saved stats, only regenerate volcano plots
     
     # set up paramters based on chosen model
     stat <- "vals"
-    if (model == kModel[2]) {
+    if (config.env$Model == kModel[2]) {
       stat <- "genos"
     }
     region.ids <- read.csv(kRegionIDsPath)

@@ -20,7 +20,7 @@ kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei",
           "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
           "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
-          "Intensity")
+          "Intensity", "DSC")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -38,8 +38,9 @@ kMeasNames <- setNames(
        list("Edge Match (Within-Region Intensity Variation)", 
             "Coefficient of variation"), 
        list("Edge Match (Within-Region Nuclei Variation)", 
-            "Coefficient of variation")), 
-  c(kMeas[c(4:8, 11:14)]))
+            "Coefficient of variation"), 
+       list("Atlas and Labels Overlay (Dice Similarity Coefficient)", NULL)), 
+  c(kMeas[c(4:8, 11:14, 18)]))
 
 # ordered genotype levels
 kGenoLevels <- c(0, 0.5, 1)
@@ -53,7 +54,7 @@ kRegionsIgnore <- c(15564)
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
-                   "compactness_summary.csv")
+                   "compactness_summary.csv", "reg_stats_melted.csv")
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -658,6 +659,16 @@ setupConfig <- function(name=NULL) {
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[5])
     config.env$Measurements <- kMeas[9]
     
+  } else if (name == "reg") {
+    # WT registrations
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
+    config.env$Measurements <- kMeas[18]
+    config.env$Model <- kModel[10]
+    config.env$PlotVolcano <- FALSE
+    config.env$Axes.In.Range <- TRUE
+    config.env$SummaryStats <- kSummaryStats[1]
+    config.env$Sort.Groups <- FALSE
+    
   } else if (name == "nolevels") {
     # input file from drawn labels only, without levels
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[1])
@@ -710,6 +721,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("dsc")
   setupConfig("wt")
   #setupConfig("compactness")
+  #setupConfig("reg")
   #setupConfig("wt.test")
   #setupConfig("nolevels")
   setupConfig("nojittersave")

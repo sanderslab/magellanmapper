@@ -6,7 +6,7 @@ kSummaryStats <- c("mean.ci", "boxplot")
 jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
                        split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
                        plot.size=c(5, 7), summary.stats=kSummaryStats[2], 
-                       axes.in.range=FALSE, save=TRUE) {
+                       axes.in.range=FALSE, save=TRUE, sort.groups=TRUE) {
   # Plot jitter/scatter plots of values by genotype with summary stats.
   # 
   # Also generates mean and 95% CI for each group, which will be plotted 
@@ -34,7 +34,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #     to display, or NULL to show none. Defaults to "boxplot".
   #   axes.in.range: True to require x- and y-ranges to include axes; 
   #     defaults to FALSE.
-  #   save: True to save plot to file; defaults to TRUE
+  #   save: True to save plot to file; defaults to TRUE.
+  #   sort.groups: True to sort groups; defaults to TRUE.
   #
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
@@ -48,7 +49,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   } else {
     genos <- c("")
   }
-  genos.unique <- sort(unique(genos))
+  genos.unique <- unique(genos)
+  if (sort.groups) genos.unique <- sort(genos.unique)
   sides <- df.region[[split.col]]
   sides.unique <- unique(sides)
   if (!split.by.side | length(sides.unique) == 0) {

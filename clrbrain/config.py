@@ -248,7 +248,12 @@ class ItkSnapLabels(Enum):
 
 # STATS
 
-STATS_TYPES = ("merge_csvs", "exps_by_regions")
+# stats module processing types
+StatsTypes = Enum(
+    "StatsTypes", [
+        "MERGE_CSVS", "EXPS_BY_REGION", 
+    ]
+)
 stats_type = None
 seed = 0 # random number generator seed
 

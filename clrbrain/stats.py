@@ -195,7 +195,7 @@ def coefvar_df(df, id_cols, metric_cols, size_col=None):
     return df_coef
 
 def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
-    """Transpose metric columns from rows within each condition grouop 
+    """Transpose metric columns from rows within each condition group 
     to separate sets of columns.
     
     Args:
@@ -381,10 +381,11 @@ if __name__ == "__main__":
     
     # process stats based on command-line argument
     
-    if config.stats_type == config.STATS_TYPES[0]:
+    stats_type = config.StatsTypes[config.stats_type.upper()]
+    if stats_type is config.StatsTypes.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
         merge_csvs(config.filenames, config.prefix)
     
-    elif config.stats_type == config.STATS_TYPES[1]:
+    elif stats_type == config.StatsTypes.EXPS_BY_REGION:
         # convert volume stats data frame to experiments by region
         exps_by_regions(config.filename)

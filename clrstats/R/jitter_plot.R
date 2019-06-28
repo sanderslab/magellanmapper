@@ -53,7 +53,8 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   if (sort.groups) genos.unique <- sort(genos.unique)
   sides <- df.region[[split.col]]
   sides.unique <- unique(sides)
-  if (!split.by.side | length(sides.unique) == 0) {
+  single.side <- !split.by.side | length(sides.unique) == 0
+  if (single.side) {
     # use a single side for one for-loop pass
     sides.unique = c("")
   }
@@ -80,7 +81,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   for (geno in genos.unique) {
     for (side in sides.unique) {
       # vals for group based on whether to include side
-      if (split.by.side) {
+      if (split.by.side & !single.side) {
         vals.geno <- vals[genos == geno & sides == side]
       } else {
         vals.geno <- vals[genos == geno]

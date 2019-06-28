@@ -396,7 +396,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       stats.group <- jitterPlot(
         df.jitter, col, title, split.by.side, split.col, paired, 
         config.env$SampleLegend, config.env$PlotSize, 
-        save=config.env$JitterPlotSave)
+        axes.in.range=config.env$Axes.In.Range, 
+        summary.stats=config.env$SummaryStats, 
+        save=config.env$JitterPlotSave, sort.groups=config.env$Sort.Groups)
       
       # add mean and CI for each group to stats data frame
       names <- stats.group[[1]]
@@ -631,7 +633,10 @@ setupConfig <- function(name=NULL) {
     config.env$VolcanoLabels <- TRUE
     config.env$VolcanoLogX <- TRUE
     config.env$JitterPlotSave <- TRUE
+    config.env$Axes.In.Range <- FALSE
     config.env$ReversePairedStats <- FALSE
+    config.env$SummaryStats <- kSummaryStats[2]
+    config.env$Sort.Groups <- TRUE
     
   } else if (name == "aba") {
     # multiple distinct atlases
@@ -737,7 +742,7 @@ runStats <- function(stat.type=NULL) {
         stats <- read.csv(path.out)
       } else {
         stats <- calcVolStats(
-          config.env$StatsPathIn, path.out, meas, model, region.ids, 
+          config.env$StatsPathIn, path.out, meas, config.env$Model, region.ids, 
           split.by.side=split.by.side, corr="bonferroni")
       }
       

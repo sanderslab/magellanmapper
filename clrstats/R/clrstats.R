@@ -13,7 +13,7 @@ kStatTypes <- c(
 
 # statistical models
 kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
-           "ttest.paired", "wilcoxon.paired", "fligner")
+           "ttest.paired", "wilcoxon.paired", "fligner", "basic")
 
 # measurements, which correspond to columns in main data frame
 kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei", 
@@ -183,10 +183,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   print(result)
   
   # basic stats data frame in format for filterStats
-  cols <- c("N", "Value", "CI.low", "CI.hi", "P")
-  coef.tab <- data.frame(matrix(nrow=1, ncol=length(cols)))
-  names(coef.tab) <- cols
-  rownames(coef.tab) <- c("vals")
+  coef.tab <- setupBasicStats()
   effect <- result[[col.effect]]
   coef.tab$Value <- c(effect)
   # get relative confidence intervals as pos vals
@@ -198,6 +195,20 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   coef.tab$P <- c(result$p.value)
   coef.tab$N <- c(num.per.cond)
   print(coef.tab)
+  return(coef.tab)
+}
+
+setupBasicStats <- function() {
+  # Setup a data frame for basic stats.
+  #
+  # Returns:
+  #   Data frame with columns for basic statistics such as mean and 
+  #   confidence intervals and a single empty row.
+  
+  cols <- c("N", "Value", "CI.low", "CI.hi", "P")
+  coef.tab <- data.frame(matrix(nrow=1, ncol=length(cols)))
+  names(coef.tab) <- cols
+  rownames(coef.tab) <- c("vals")
   return(coef.tab)
 }
 
@@ -338,11 +349,19 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       
       # apply stats and store in stats data frame, using list to allow 
       # arbitrary size and storing mean volume as well
+      coef.tab <- NULL
       if (is.element(model, kModel[5:9])) {
         # means tests
         coef.tab <- meansModel(
           vals, df.region.nonnan$Condition, model, paired, 
           config.env$ReversePairedStats)
+      } else if (model == kModel[10]) {
+        # basic stats
+        coef.tab <- setupBasicStats()
+        
+        # show histogram to check for parametric distribution
+        #histogramPlot(vals, title, meas)
+        
       } else {
         # regression tests
         genos <- df.region.nonnan$Geno
@@ -355,9 +374,6 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         stats$Volume[i] <- mean(df.region.nonnan$Volume)
         stats$Nuclei[i] <- mean(df.region.nonnan$Nuclei)
       }
-      
-      # show histogram to check for parametric distribution
-      #histogramPlot(vals, title, meas)
       
       # construct title from region identifiers and capitalize first letter
       df.jitter <- df.region.nonnan

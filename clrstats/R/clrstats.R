@@ -54,7 +54,8 @@ kRegionsIgnore <- c(15564)
 # raw values from Clrbrain
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
-                   "compactness_summary.csv", "reg_stats_melted.csv")
+                   "compactness_summary.csv", "compactness_summary_stats.csv", 
+                   "reg_stats_melted.csv")
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -658,10 +659,11 @@ setupConfig <- function(name=NULL) {
     setupConfig("aba")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[5])
     config.env$Measurements <- kMeas[9]
+    config.env$Sort.Groups <- FALSE
     
   } else if (name == "reg") {
     # WT registrations
-    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[7])
     config.env$Measurements <- kMeas[18]
     config.env$Model <- kModel[10]
     config.env$PlotVolcano <- FALSE

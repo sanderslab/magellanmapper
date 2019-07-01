@@ -655,11 +655,16 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[8]
     
   } else if (name == "compactness") {
-    # compactness stats for ABA series
+    # compactness jitter plots for ABA series
     setupConfig("aba")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[5])
     config.env$Measurements <- kMeas[9]
     config.env$Sort.Groups <- FALSE
+    
+  } else if (name == "compactness.stats") {
+    # compactness stats for ABA series
+    setupConfig("compactness")
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
     
   } else if (name == "reg") {
     # WT registrations
@@ -723,6 +728,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("dsc")
   setupConfig("wt")
   #setupConfig("compactness")
+  #setupConfig("compactness.stats")
   #setupConfig("reg")
   #setupConfig("wt.test")
   #setupConfig("nolevels")

@@ -75,7 +75,7 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
     num.groups <- nrow(unique(df.region[, c(geno.col, split.col)]))
   }
   sides.by.geno <- list() # sets of sides within each main group
-  names.groups <- vector(length=num.groups)
+  names.groups <- vector(length=num.groups) # main and subgroup names combined
   
   # set up summary stats to display
   mean.ci <- FALSE
@@ -118,11 +118,11 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
       # store max height of error bar setting axis limits
       errs[i] <- if (is.na(vals.cis[i])) 0 else vals.cis[i]
       
-      # main label
+      # stats label
+      name <- geno
       if (num.sides > 1) {
         name <- side
-      } else {
-        name <- geno
+        if (num.genos > 1) name <- paste(geno, side)
       }
       names.groups[i] <- name
       i <- i + 1

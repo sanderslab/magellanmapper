@@ -8,6 +8,13 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
                        plot.size=c(5, 7), summary.stats=kSummaryStats[2], 
                        axes.in.range=FALSE, save=TRUE, sort.groups=TRUE) {
   # Plot jitter/scatter plots of values by genotype with summary stats.
+  #
+  # Groups specified in a "Group" or "Geno" column will have separate 
+  # x-tick labels. "split.col" can be used to divide groups further into 
+  # sub-groups with symbols and labels denoted in the main legend. Paired 
+  # plots are assumed to have corresponding samples in each pair of 
+  # "split.col" sub-groups. For unpaired plots, "split.col" can specify 
+  # an arbitrary number of sub-groups for each group.
   # 
   # Also generates mean and 95% CI for each group, which will be plotted 
   # unless boxplot is specified.
@@ -40,10 +47,6 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
   
-  if (is.null(split.col)) {
-    # default column name by which to split
-    split.col <- "Side"
-  }
   if (is.element("Geno", names(df.region))) {
     genos <- df.region$Geno
   } else {
@@ -51,14 +54,22 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   }
   genos.unique <- unique(genos)
   if (sort.groups) genos.unique <- sort(genos.unique)
-  sides <- df.region[[split.col]]
-  sides.unique <- unique(sides)
-  single.side <- !split.by.side | length(sides.unique) == 0
-  if (single.side) {
-    # use a single side for one for-loop pass
-    sides.unique = c("")
+  if (is.null(split.col)) {
+    # default column name by which to split
+    split.col <- "Side"
   }
-  # summary stats to display
+  sides <- df.region[[split.col]]
+  sides.unique <- getUniqueSides(sides, split.by.side)
+  num.genos <- length(genos.unique) # total main groups
+  num.sides <- length(sides.unique) # total unique subgroups
+  num.groups <- num.genos # total group-subgroup combos
+  if (is.element(split.col, df.region)) {
+    num.groups <- nrow(unique(df.region[, c(geno.col, split.col)]))
+  }
+  sides.by.geno <- list() # sets of sides within each main group
+  names.groups <- vector(length=num.groups)
+  
+  # set up summary stats to display
   mean.ci <- FALSE
   boxplot <- FALSE
   if (!is.null(summary.stats)) {
@@ -66,11 +77,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     boxplot <- summary.stats == kSummaryStats[2]
   }
   
-  # setup coordinates to plot and error ranges
-  num.genos <- length(genos.unique)
-  num.sides <- length(sides.unique)
-  num.groups <- length(genos.unique) * num.sides
-  names.groups <- vector(length=num.groups)
+  # set up coordinates to plot and error ranges
   vals <- df.region[[col]]
   int.digits <- nchar(trunc(max(vals)))
   vals.groups <- list() # list of vals for each geno-side group
@@ -79,9 +86,15 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   errs <- vector(length=num.groups) # based on CI but 0 if CI is NA
   i <- 1
   for (geno in genos.unique) {
-    for (side in sides.unique) {
+    sides.in.geno <- sides
+    if (geno != "") {
+      sides.in.geno <- df.region[df.region[[geno.col]] == geno, split.col]
+    }
+    sides.in.geno.unique <- getUniqueSides(sides.in.geno, split.by.side)
+    sides.by.geno <- append(sides.by.geno, list(sides.in.geno.unique))
+    for (side in sides.in.geno.unique) {
       # vals for group based on whether to include side
-      if (split.by.side & !single.side) {
+      if (side != "") {
         vals.geno <- vals[genos == geno & sides == side]
       } else {
         vals.geno <- vals[genos == geno]
@@ -99,8 +112,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
       
       # main label
       if (num.sides > 1) {
-      name <- side
-        if (num.genos > 1) name <- paste(geno, side)
+        name <- side
       } else {
         name <- geno
       }
@@ -192,13 +204,14 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     legend.text.width <- 1 - 0.5 * plot.size[1] / plot.size[2]
   }
   
-  # draw main plot and group legends
+  # draw main plot
   plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n", 
        xlim=range(mins[1], maxes[1] - 0.5), ylim=range(mins[2], maxes[2]), 
        bty="n", las=1)
-  colors <- RColorBrewer::brewer.pal(num.sides, "Dark2")
-  # group legend, moved outside of plot and positioned at top right 
+  
+  # subgroup legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
+  colors <- RColorBrewer::brewer.pal(num.sides, "Dark2")
   if (show.sample.legend) {
     color <- 1
     bty <- "n"
@@ -209,19 +222,28 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     pt.bg <- NA
   }
   pt.cex <- 1.5
-  legend.group <- legend(
-    "topleft", legend=names.groups, pch=21:(21+length(names.groups)), 
-    xpd=TRUE, inset=c(0, 1), horiz=TRUE, bty=bty, col=color, pt.bg=pt.bg, 
-    text.width=legend.text.width, pt.cex=pt.cex)
+  # use only solid pch symbols, starting with those that have a distinct 
+  # border; repeat symbols if run out
+  pch.offset <- 6
+  pchs <- rep(15:25, length.out=(num.sides+pch.offset))
+  legend.sides <- legend(
+    "topleft", legend=sides.unique, pch=pchs[pch.offset+1:length(pchs)], 
+    xpd=TRUE, inset=c(0, 1), bty=bty, col=color, pt.bg=pt.bg, 
+    text.width=legend.text.width, pt.cex=pt.cex, ncol=3)
   
   i <- 1
   group.last <- NULL
-  for (geno in genos.unique) {
+  x.pos <- 0:(num.groups-1)
+  for (j in seq_along(genos.unique)) {
+    geno <- genos.unique[j]
+    sides.in.geno.unique <- sides.by.geno[[j]]
     # plot each group of points
     
     # TODO: consider adding x-tick-label if > 1 genos and sides
-    #if (length(genos.unique) > 1) mtext(geno, side=1, at=i-0.5)
-    x.pos <- 0:(i*num.sides-1) # group starting x-positions
+    if (length(genos.unique) > 1) {
+      text(i + (length(sides.in.geno.unique) - 1) / 2 - 1, 
+           0, labels=geno, pos=1)
+    }
     vals.geno <- list() # vals within genotype, for paired points
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of
@@ -230,7 +252,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         colors <- RColorBrewer::brewer.pal(length(vals.groups[[1]]), "Paired")
       }
     }
-    for (side in sides.unique) {
+    for (side in sides.in.geno.unique) {
       # plot points, adding jitter in x-direction unless paired
       vals.group <- vals.groups[[i]] / denom
       x <- x.pos[i]
@@ -251,8 +273,10 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
         x.vals <- jitter(x.vals, amount=0.2)
       }
       colors.group <- if (show.sample.legend) colors else colors[i]
-      points(x.vals, vals.group, pch=i+20, col=colors.group, bg=colors.group, 
-             cex=pt.cex)
+      pch <- pchs[i + pch.offset]
+      pch <- pchs[match(side, sides.unique) + pch.offset]
+      points(x.vals, vals.group, pch=pch, col=colors.group, 
+             bg=colors.group, cex=pt.cex)
       
       # plot summary stats on outer sides of scatter plots
       x.summary <- x
@@ -279,7 +303,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
     if (show.sample.legend) {
       # add sample legend below group legend to label colors, with manually 
       # drawn rectangle to enclose group legend as well
-      group.rect <- legend.group$rect
+      group.rect <- legend.sides$rect
       legend.sample <- legend(
         x=group.rect$left, y=(group.rect$top-0.7*group.rect$h), 
         legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
@@ -299,6 +323,27 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   par(par.old)
   
   return(list(names.groups, vals.means, vals.cis))
+}
+
+getUniqueSides <- function(sides, split.by.side) {
+  # Get a vector of unique sides, defaulting to a vector of a single empty 
+  # string if the sides vectors is empty or side split flag is False.
+  #
+  # Args:
+  #   sides: Vector of sides.
+  #   split.by.side: False if the sides should be ignored.
+  #
+  # Returns:
+  #   A vector of sides or of only an empty string if no sides are found or 
+  #   split.by.side is False.
+  
+  sides.unique <- unique(sides)
+  single.side <- !split.by.side | length(sides.unique) == 0
+  if (single.side) {
+    # use a single side for one for-loop pass
+    sides.unique = c("")
+  }
+  return(sides.unique)
 }
 
 runJitter <- function(path.in) {

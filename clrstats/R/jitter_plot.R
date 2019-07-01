@@ -3,14 +3,14 @@
 
 kSummaryStats <- c("mean.ci", "boxplot")
 
-jitterPlot <- function(df.region, col, title, geno.col=NULL, 
-                       split.by.side=TRUE, split.col=NULL, 
+jitterPlot <- function(df.region, col, title, group.col=NULL, 
+                       split.by.subgroup=TRUE, split.col=NULL, 
                        paired=FALSE, show.sample.legend=FALSE, 
                        plot.size=c(5, 7), summary.stats=kSummaryStats[2], 
                        axes.in.range=FALSE, save=TRUE, sort.groups=TRUE) {
-  # Plot jitter/scatter plots of values by genotype with summary stats.
+  # Plot jitter/scatter plots of values by groups with summary stats.
   #
-  # Groups specified in a "Group" or "Geno" column will have separate 
+  # Groups specified in a main group column will have separate 
   # x-tick labels. "split.col" can be used to divide groups further into 
   # sub-groups with symbols and labels denoted in the main legend. Paired 
   # plots are assumed to have corresponding samples in each pair of 
@@ -25,18 +25,18 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   #     non-zero values.
   #   col: Name of column for values.
   #   title: Plot figure title.
-  #   geno.col: Name of column specifying main groups.
-  #   split.by.side: True to plot separate sub-scatter plots for each 
-  #     region by side; defaults to TRUE.
+  #   group.col: Name of column specifying main groups.
+  #   split.by.subgroup: True to plot separate sub-scatter plots for each 
+  #     region by subgroup; defaults to TRUE.
   #   split.col: Column name by which to split; defaults to NULL, in which 
   #     case "Side" will be used as the column name.
   #   paired: True to show pairing between values, which assumes that values 
   #     are in the same order when filtered by split.col. Jitter will be 
   #     turned off to ensure that start and end x-values are the same for 
   #     pairings. Defaults to FALSE.
-  #   show.sample.legend: True to show a separate legend of samples for 
-  #     each genotype group. Assumes that the number of samples in each 
-  #     split group is the same within each genotype. Defaults to FALSE.
+  #   show.sample.legend: True to show a separate legend of samples. 
+  #     Assumes that the number of samples in each split group is the 
+  #     same within each main group. Defaults to FALSE.
   #   plot.size: Vector of width, height for exported plot; defaults to 
   #     c(5, 7).
   #   summary.stats: One of kSummaryStats designating the type of stats 
@@ -49,32 +49,32 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
   
-  # set up grouping, where "geno/group" specifies the main group, and 
-  # "side/split.col" specifies sub-groups
-  if (is.null(geno.col)) {
+  # set up grouping, where "group" specifies the main group, and 
+  # "split.col" specifies subgroups
+  if (is.null(group.col)) {
     # default group name
-    geno.col <- "Group"
+    group.col <- "Group"
   }
-  if (is.element(geno.col, names(df.region))) {
-    genos <- df.region[[geno.col]]
+  if (is.element(group.col, names(df.region))) {
+    groups <- df.region[[group.col]]
   } else {
-    genos <- c("")
+    groups <- c("")
   }
-  genos.unique <- unique(genos)
-  if (sort.groups) genos.unique <- sort(genos.unique)
+  groups.unique <- unique(groups)
+  if (sort.groups) groups.unique <- sort(groups.unique)
   if (is.null(split.col)) {
     # default column name by which to split
     split.col <- "Side"
   }
-  sides <- df.region[[split.col]]
-  sides.unique <- getUniqueSides(sides, split.by.side)
-  num.genos <- length(genos.unique) # total main groups
-  num.sides <- length(sides.unique) # total unique subgroups
-  num.groups <- num.genos # total group-subgroup combos
+  subgroups <- df.region[[split.col]]
+  subgroups.unique <- getUniqueSubgroups(subgroups, split.by.subgroup)
+  num.groups <- length(groups.unique) # total main groups
+  num.subgroups <- length(subgroups.unique) # total unique subgroups
+  num.groups <- num.groups # total group-subgroup combos
   if (is.element(split.col, names(df.region))) {
-    num.groups <- nrow(unique(df.region[, c(geno.col, split.col)]))
+    num.groups <- nrow(unique(df.region[, c(group.col, split.col)]))
   }
-  sides.by.geno <- list() # sets of sides within each main group
+  subgroups.by.group <- list() # sets of subgroups within each main group
   names.groups <- vector(length=num.groups) # main and subgroup names combined
   
   # set up summary stats to display
@@ -88,41 +88,41 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   # set up coordinates to plot and error ranges
   vals <- df.region[[col]]
   int.digits <- nchar(trunc(max(vals)))
-  vals.groups <- list() # list of vals for each geno-side group
+  vals.groups <- list() # list of vals for each group-subgroup group
   vals.means <- vector(length=num.groups)
   vals.cis <-vector(length=num.groups)
   errs <- vector(length=num.groups) # based on CI but 0 if CI is NA
   i <- 1
-  for (geno in genos.unique) {
-    sides.in.geno <- sides
-    if (geno != "") {
-      sides.in.geno <- df.region[df.region[[geno.col]] == geno, split.col]
+  for (group in groups.unique) {
+    subgroups.in.group <- subgroups
+    if (group != "") {
+      subgroups.in.group <- df.region[df.region[[group.col]] == group, split.col]
     }
-    sides.in.geno.unique <- getUniqueSides(sides.in.geno, split.by.side)
-    sides.by.geno <- append(sides.by.geno, list(sides.in.geno.unique))
-    for (side in sides.in.geno.unique) {
-      # vals for group based on whether to include side
-      if (side != "") {
-        vals.geno <- vals[genos == geno & sides == side]
+    subgroups.in.group.unique <- getUniqueSubgroups(subgroups.in.group, split.by.subgroup)
+    subgroups.by.group <- append(subgroups.by.group, list(subgroups.in.group.unique))
+    for (subgroup in subgroups.in.group.unique) {
+      # vals for group based on whether to include subgroup
+      if (subgroup != "") {
+        vals.group <- vals[groups == group & subgroups == subgroup]
       } else {
-        vals.geno <- vals[genos == geno]
+        vals.group <- vals[groups == group]
       }
-      vals.groups <- append(vals.groups, list(vals.geno))
+      vals.groups <- append(vals.groups, list(vals.group))
       
       # error bars
-      vals.means[i] <- mean(vals.geno)
-      num.vals <- length(vals.geno)
-      vals.sem <- sd(vals.geno) / sqrt(num.vals)
+      vals.means[i] <- mean(vals.group)
+      num.vals <- length(vals.group)
+      vals.sem <- sd(vals.group) / sqrt(num.vals)
       # use 97.5th percentile for 2-tailed 95% confidence level
       vals.cis[i] <- qt(0.975, df=num.vals-1) * vals.sem
       # store max height of error bar setting axis limits
       errs[i] <- if (is.na(vals.cis[i])) 0 else vals.cis[i]
       
       # stats label
-      name <- geno
-      if (num.sides > 1) {
-        name <- side
-        if (num.genos > 1) name <- paste(geno, side)
+      name <- group
+      if (num.subgroups > 1) {
+        name <- subgroup
+        if (num.groups > 1) name <- paste(group, subgroup)
       }
       names.groups[i] <- name
       i <- i + 1
@@ -219,7 +219,7 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   
   # subgroup legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
-  colors <- RColorBrewer::brewer.pal(num.sides, "Dark2")
+  colors <- RColorBrewer::brewer.pal(num.subgroups, "Dark2")
   if (show.sample.legend) {
     color <- 1
     bty <- "n"
@@ -233,11 +233,11 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   # use only solid pch symbols, starting with those that have a distinct 
   # border; repeat symbols if run out
   pch.offset <- 6
-  pchs <- rep(15:25, length.out=(num.sides+pch.offset))
-  legend.sides <- NULL
-  if (num.sides > 1) {
-    legend.sides <- legend(
-      "topleft", legend=sides.unique, pch=pchs[pch.offset+1:length(pchs)], 
+  pchs <- rep(15:25, length.out=(num.subgroups+pch.offset))
+  legend.subgroups <- NULL
+  if (num.subgroups > 1) {
+    legend.subgroups <- legend(
+      "topleft", legend=subgroups.unique, pch=pchs[pch.offset+1:length(pchs)], 
       xpd=TRUE, inset=c(0, 1), bty=bty, col=color, pt.bg=pt.bg, 
       text.width=legend.text.width, pt.cex=pt.cex, ncol=3)
   }
@@ -245,25 +245,25 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   i <- 1
   group.last <- NULL
   x.pos <- 0:(num.groups-1)
-  for (j in seq_along(genos.unique)) {
-    geno <- genos.unique[j]
-    sides.in.geno.unique <- sides.by.geno[[j]]
+  for (j in seq_along(groups.unique)) {
+    group <- groups.unique[j]
+    subgroups.in.group.unique <- subgroups.by.group[[j]]
     # plot each group of points
     
-    if (length(genos.unique) > 1) {
+    if (length(groups.unique) > 1) {
       # place group label at center of group just below x-axis
-      text(i + (length(sides.in.geno.unique) - 1) / 2 - 1, 
-           0, labels=geno, pos=1)
+      text(i + (length(subgroups.in.group.unique) - 1) / 2 - 1, 
+           0, labels=group, pos=1)
     }
-    vals.geno <- list() # vals within genotype, for paired points
+    vals.group <- list() # vals within main group, for paired points
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of
       # colors for each set of points
-      if (num.sides > 0) {
+      if (num.subgroups > 0) {
         colors <- RColorBrewer::brewer.pal(length(vals.groups[[1]]), "Paired")
       }
     }
-    for (side in sides.in.geno.unique) {
+    for (subgroup in subgroups.in.group.unique) {
       # plot points, adding jitter in x-direction unless paired
       vals.group <- vals.groups[[i]] / denom
       x <- x.pos[i]
@@ -285,11 +285,11 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
       }
       colors.group <- if (show.sample.legend) colors else colors[i]
       pch <- pchs[i + pch.offset]
-      pch <- pchs[match(side, sides.unique) + pch.offset]
+      pch <- pchs[match(subgroup, subgroups.unique) + pch.offset]
       points(x.vals, vals.group, pch=pch, col=colors.group, 
              bg=colors.group, cex=pt.cex)
       
-      # plot summary stats on outer sides of scatter plots
+      # plot summary stats on outer subgroups of scatter plots
       x.summary <- x
       if (boxplot || paired) {
         x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25
@@ -313,14 +313,14 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
     }
     if (show.sample.legend) {
       # add sample legend
-      if (is.null(legend.sides)) {
+      if (is.null(legend.subgroups)) {
         legend.sample <- legend(
           "topleft", inset=c(0, 1), xpd=TRUE, legend=names.samples, lty=1, 
           col=colors, ncol=ncol, text.width=legend.text.width)
       } else {
         # place below group legend to label colors, with manually 
         # drawn rectangle to enclose group legend as well
-        group.rect <- legend.sides$rect
+        group.rect <- legend.subgroups$rect
         legend.sample <- legend(
           x=group.rect$left, y=(group.rect$top-0.7*group.rect$h), 
           legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
@@ -343,25 +343,25 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   return(list(names.groups, vals.means, vals.cis))
 }
 
-getUniqueSides <- function(sides, split.by.side) {
-  # Get a vector of unique sides, defaulting to a vector of a single empty 
-  # string if the sides vectors is empty or side split flag is False.
+getUniqueSubgroups <- function(subgroups, split.by.subgroup) {
+  # Get a vector of unique subgroups, defaulting to a vector of a single empty 
+  # string if the subgroups vectors is empty or subgroup split flag is False.
   #
   # Args:
-  #   sides: Vector of sides.
-  #   split.by.side: False if the sides should be ignored.
+  #   subgroups: Vector of subgroups.
+  #   split.by.subgroup: False if the subgroups should be ignored.
   #
   # Returns:
-  #   A vector of sides or of only an empty string if no sides are found or 
-  #   split.by.side is False.
+  #   A vector of subgroups or of only an empty string if no subgroups are found or 
+  #   split.by.subgroup is False.
   
-  sides.unique <- unique(sides)
-  single.side <- !split.by.side | length(sides.unique) == 0
-  if (single.side) {
-    # use a single side for one for-loop pass
-    sides.unique = c("")
+  subgroups.unique <- unique(subgroups)
+  single.subgroup <- !split.by.subgroup | length(subgroups.unique) == 0
+  if (single.subgroup) {
+    # use a single subgroup for one for-loop pass
+    subgroups.unique = c("")
   }
-  return(sides.unique)
+  return(subgroups.unique)
 }
 
 runJitter <- function(path.in) {
@@ -371,7 +371,7 @@ runJitter <- function(path.in) {
   #   path.in: Input CSV path.
   df <- read.csv(path.in)
   print(df)
-  jitterPlot(df, "Response", "Cas response", split.by.side=FALSE, 
+  jitterPlot(df, "Response", "Cas response", split.by.subgroup=FALSE, 
              split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
              plot.size=c(5, 7), summary.stats=kSummaryStats[1], 
              axes.in.range=FALSE)

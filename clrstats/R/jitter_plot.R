@@ -206,10 +206,10 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
     par(mar=margin)
     par(xpd=NA) # for custom legend rect outside of plot
   }
-  legend.text.width <- NULL
+  legend.text.width <- 0.7
   if (plot.size[1] < plot.size[2]) {
     # make legend width larger for narrow plots to avoid overlap
-    legend.text.width <- 1 - 0.5 * plot.size[1] / plot.size[2]
+    legend.text.width <- 0.6 + 0.1 * plot.size[2] / plot.size[1]
   }
   
   # draw main plot

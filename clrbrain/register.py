@@ -3670,8 +3670,8 @@ def main():
         df_smoothing_base = extract_sample_metrics(
             df_smoothing_base, [SmoothingMetrics.COMPACTNESS.value])
         df_baseline = pd.concat([df_stats_base, df_smoothing_base])
-        df_baseline[AtlasMetrics.REGION.value] = (
-            "Whole Brain Histology Vs Unsmoothed Labels Compactness")
+        df_baseline[config.GENOTYPE_KEY] = (
+            "Histo Vs Orig Labels")
         
         # compare unsmoothed vs smoothed labels
         smooth = config.register_settings["smooth"]
@@ -3680,19 +3680,20 @@ def main():
         df_smoothing_sm = extract_sample_metrics(
             df_smoothing_sm, [SmoothingMetrics.COMPACTNESS.value])
         df_smoothing_vs = pd.concat([df_smoothing_base, df_smoothing_sm])
-        df_smoothing_vs[AtlasMetrics.REGION.value] = (
-            "Whole Brain Unsmoothed Vs Smoothed Labels Compactness")
+        df_smoothing_vs[config.GENOTYPE_KEY] = (
+            "Smoothing")
         
         # compare histo vs smoothed labels
         df_histo_sm = pd.concat([df_stats_base, df_smoothing_sm])
-        df_histo_sm[AtlasMetrics.REGION.value] = (
-            "Whole Brain Histology Vs Smoothed Labels Compactness")
+        df_histo_sm[config.GENOTYPE_KEY] = (
+            "Vs Smoothed Labels")
         
         # export data frames
         output_path = lib_clrbrain.combine_paths(
             config.filename, "compactness.csv")
-        stats.data_frames_to_csv(
-            [df_baseline, df_smoothing_vs, df_histo_sm], output_path)
+        df = pd.concat([df_baseline, df_histo_sm, df_smoothing_vs])
+        df[AtlasMetrics.REGION.value] = "all"
+        stats.data_frames_to_csv(df, output_path)
     
     elif reg is config.RegisterTypes.plot_smoothing_metrics:
         # plot smoothing metrics

@@ -234,10 +234,13 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   # border; repeat symbols if run out
   pch.offset <- 6
   pchs <- rep(15:25, length.out=(num.sides+pch.offset))
-  legend.sides <- legend(
-    "topleft", legend=sides.unique, pch=pchs[pch.offset+1:length(pchs)], 
-    xpd=TRUE, inset=c(0, 1), bty=bty, col=color, pt.bg=pt.bg, 
-    text.width=legend.text.width, pt.cex=pt.cex, ncol=3)
+  legend.sides <- NULL
+  if (num.sides > 1) {
+    legend.sides <- legend(
+      "topleft", legend=sides.unique, pch=pchs[pch.offset+1:length(pchs)], 
+      xpd=TRUE, inset=c(0, 1), bty=bty, col=color, pt.bg=pt.bg, 
+      text.width=legend.text.width, pt.cex=pt.cex, ncol=3)
+  }
   
   i <- 1
   group.last <- NULL
@@ -247,8 +250,8 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
     sides.in.geno.unique <- sides.by.geno[[j]]
     # plot each group of points
     
-    # TODO: consider adding x-tick-label if > 1 genos and sides
     if (length(genos.unique) > 1) {
+      # place group label at center of group just below x-axis
       text(i + (length(sides.in.geno.unique) - 1) / 2 - 1, 
            0, labels=geno, pos=1)
     }
@@ -309,16 +312,23 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
       i <- i + 1
     }
     if (show.sample.legend) {
-      # add sample legend below group legend to label colors, with manually 
-      # drawn rectangle to enclose group legend as well
-      group.rect <- legend.sides$rect
-      legend.sample <- legend(
-        x=group.rect$left, y=(group.rect$top-0.7*group.rect$h), 
-        legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
-        ncol=ncol, text.width=legend.text.width)
-      sample.rect <- legend.sample$rect
-      rect(sample.rect$left, sample.rect$top - sample.rect$h,
-           sample.rect$left + sample.rect$w, group.rect$top)
+      # add sample legend
+      if (is.null(legend.sides)) {
+        legend.sample <- legend(
+          "topleft", inset=c(0, 1), xpd=TRUE, legend=names.samples, lty=1, 
+          col=colors, ncol=ncol, text.width=legend.text.width)
+      } else {
+        # place below group legend to label colors, with manually 
+        # drawn rectangle to enclose group legend as well
+        group.rect <- legend.sides$rect
+        legend.sample <- legend(
+          x=group.rect$left, y=(group.rect$top-0.7*group.rect$h), 
+          legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
+          ncol=ncol, text.width=legend.text.width)
+        sample.rect <- legend.sample$rect
+        rect(sample.rect$left, sample.rect$top - sample.rect$h,
+             sample.rect$left + sample.rect$w, group.rect$top)
+      }
     }
   }
   

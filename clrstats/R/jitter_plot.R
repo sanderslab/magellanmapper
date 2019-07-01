@@ -71,7 +71,7 @@ jitterPlot <- function(df.region, col, title, geno.col=NULL,
   num.genos <- length(genos.unique) # total main groups
   num.sides <- length(sides.unique) # total unique subgroups
   num.groups <- num.genos # total group-subgroup combos
-  if (is.element(split.col, df.region)) {
+  if (is.element(split.col, names(df.region))) {
     num.groups <- nrow(unique(df.region[, c(geno.col, split.col)]))
   }
   sides.by.geno <- list() # sets of sides within each main group

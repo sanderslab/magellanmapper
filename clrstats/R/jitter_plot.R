@@ -3,8 +3,9 @@
 
 kSummaryStats <- c("mean.ci", "boxplot")
 
-jitterPlot <- function(df.region, col, title, split.by.side=TRUE, 
-                       split.col=NULL, paired=FALSE, show.sample.legend=FALSE, 
+jitterPlot <- function(df.region, col, title, geno.col=NULL, 
+                       split.by.side=TRUE, split.col=NULL, 
+                       paired=FALSE, show.sample.legend=FALSE, 
                        plot.size=c(5, 7), summary.stats=kSummaryStats[2], 
                        axes.in.range=FALSE, save=TRUE, sort.groups=TRUE) {
   # Plot jitter/scatter plots of values by genotype with summary stats.
@@ -24,6 +25,7 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   #     non-zero values.
   #   col: Name of column for values.
   #   title: Plot figure title.
+  #   geno.col: Name of column specifying main groups.
   #   split.by.side: True to plot separate sub-scatter plots for each 
   #     region by side; defaults to TRUE.
   #   split.col: Column name by which to split; defaults to NULL, in which 
@@ -47,8 +49,14 @@ jitterPlot <- function(df.region, col, title, split.by.side=TRUE,
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
   
-  if (is.element("Geno", names(df.region))) {
-    genos <- df.region$Geno
+  # set up grouping, where "geno/group" specifies the main group, and 
+  # "side/split.col" specifies sub-groups
+  if (is.null(geno.col)) {
+    # default group name
+    geno.col <- "Group"
+  }
+  if (is.element(geno.col, names(df.region))) {
+    genos <- df.region[[geno.col]]
   } else {
     genos <- c("")
   }

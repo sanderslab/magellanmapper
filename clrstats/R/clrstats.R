@@ -395,7 +395,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         print(df.jitter)
       }
       stats.group <- jitterPlot(
-        df.jitter, col, title, split.by.side, split.col, paired, 
+        df.jitter, col, title, "Geno", split.by.side, split.col, paired, 
         config.env$SampleLegend, config.env$PlotSize, 
         axes.in.range=config.env$Axes.In.Range, 
         summary.stats=config.env$SummaryStats, 

@@ -1169,6 +1169,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     settings = config.process_settings
     
     # streamline the image
+    if roi is None or roi.size < 1: return False
     roi = saturate_roi(roi, 98.5, channel)
     roi = np.clip(roi, 0.2, 0.8)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)

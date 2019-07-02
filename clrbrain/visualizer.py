@@ -411,25 +411,30 @@ class Visualization(HasTraits):
         # ensure that cube dimensions don't exceed array
         curr_roi_size = self.roi_array[0].astype(int)
         roi_size_orig = np.copy(curr_roi_size)
-        if curr_roi_size[0] + self.x_offset > self.x_high:
-            curr_roi_size[0] = self.x_high - self.x_offset
+        curr_offset = list(self._curr_offset())
+        offset_orig = np.copy(curr_offset)
+        max_offset = (self.x_high, self.y_high, self.z_high)
+        # keep offset within bounds
+        for i, offset in enumerate(curr_offset):
+            if offset >= max_offset[i]:
+                curr_offset[i] = max_offset[i] - 1
+        feedback = []
+        if not np.all(np.equal(curr_offset, offset_orig)):
+            self.x_offset, self.y_offset, self.z_offset = curr_offset
+            feedback.append(
+                "Repositioned ROI from {} to {} to fit within max bounds of {}"
+                .format(offset_orig, curr_offset, max_offset))
+        # keep size + offset within bounds
+        for i, offset in enumerate(curr_offset):
+            if offset + curr_roi_size[i] > max_offset[i]:
+                curr_roi_size[i] = max_offset[i] - offset
+        if not np.all(np.equal(curr_roi_size, roi_size_orig)):
             self.roi_array = [curr_roi_size]
-        if curr_roi_size[1] + self.y_offset > self.y_high:
-            curr_roi_size[1] = self.y_high - self.y_offset
-            self.roi_array = [curr_roi_size]
-        if curr_roi_size[2] + self.z_offset > self.z_high:
-            curr_roi_size[2] = self.z_high - self.z_offset
-            self.roi_array = [curr_roi_size]
-        print("using ROI size of {}".format(self.roi_array[0].astype(int)))
-        curr_offset = self._curr_offset()
-        curr_roi_size = self.roi_array[0].astype(int)
-        if np.any(np.not_equal(curr_roi_size, roi_size_orig)):
-            feedback_str = (
-                "Unable to fit ROI of size {} at offset {} into "
-                "image of size ({}, {}, {}) (x, y, z) so resized ROI to {}"
-                .format(roi_size_orig, curr_offset, self.x_high, 
-                        self.y_high, self.z_high, curr_roi_size))
-            self.segs_feedback = feedback_str
+            feedback.append(
+                "Reposized ROI from {} to {} to fit within max bounds of {}"
+                .format(roi_size_orig, curr_roi_size, max_offset))
+        print("using ROI offset {}, size of {} (x,y,z)"
+              .format(curr_offset, curr_roi_size))
         
         # show raw 3D image unless selected not to
         if self._DEFAULTS_3D[2] in self._check_list_3d:
@@ -470,6 +475,9 @@ class Visualization(HasTraits):
         self._update_structure_level(curr_offset, curr_roi_size)
         
         self._reset_segments()
+        if feedback:
+            self.segs_feedback = " ".join(feedback)
+            print(self.segs_feedback)
     
     def show_label_3d(self, label_id):
         """Show 3D region of main image corresponding to label ID.

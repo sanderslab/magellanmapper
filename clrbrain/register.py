@@ -1432,16 +1432,16 @@ def import_atlas(atlas_dir, show=True):
     # load atlas and corresponding labels
     img_atlas, path_atlas = read_sitk(os.path.join(atlas_dir, IMG_ATLAS))
     img_labels, _ = read_sitk(os.path.join(atlas_dir, IMG_LABELS))
-    orig = "_raw" in config.register_settings["settings_name"]
     overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]
-    if orig:
-        # baseline DSC of atlas to labels before any processing
-        cond = "original"  
-        dsc = _measure_overlap_combined_labels(
-            img_atlas, img_labels, overlap_meas_add)
-    else:
-        # defer DSC until after processing
+    extend_atlas = config.register_settings["extend_atlas"]
+    if extend_atlas:
         cond = "extended" 
+    else:
+        # show baseline DSC of atlas to labels before any processing
+        cond = "original"
+        print("\nRaw DSC before import:")
+        _measure_overlap_combined_labels(
+            img_atlas, img_labels, overlap_meas_add)
     
     # match atlas and labels to one another
     img_atlas, img_labels, img_borders, df_smoothing = match_atlas_labels(
@@ -1467,11 +1467,10 @@ def import_atlas(atlas_dir, show=True):
     df_metrics_path = df_base_path.format(config.PATH_ATLAS_IMPORT_METRICS)
     name_prefix = os.path.join(target_dir, basename) + ".czi"
     
-    # whole atlas stats
-    if not orig:
-        # measure DSC if processed and prep dict for data frame
-        dsc = _measure_overlap_combined_labels(
-            img_atlas, img_labels, overlap_meas_add)
+    # whole atlas stats; measure DSC if processed and prep dict for data frame
+    print("\nDSC after import:")
+    dsc = _measure_overlap_combined_labels(
+        img_atlas, img_labels, overlap_meas_add)
     # use lower threshold for compactness measurement to minimize noisy 
     # surface artifacts
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)

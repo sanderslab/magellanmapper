@@ -552,6 +552,7 @@ class RegisterSettings(SettingsDict):
         # labels curation, given as fractions of the total planes; 
         # use None to ignore, -1 to set automatically (for mirror and edge), 
         # or give a fraction between 0 and 1
+        self["extend_atlas"] = True # False to turn off all extension/mirroring
         self["labels_mirror"] = None # reflect planes starting here
         self["labels_edge"] = None # extend edge labels from here
         self["labels_dup"] = None # start duplicating planes til last labels
@@ -866,11 +867,10 @@ def update_register_settings(settings, settings_type):
              },
             profile)
         
-        # turn off mirroring along with smoothing and edge extension
+        # turn off mirroring/extension along with smoothing
         settings.add_modifier(
             "nomirror", 
-            {"labels_mirror": None,
-             "labels_edge": None, 
+            {"extend_atlas": False, 
              "smooth": None
              },
             profile)
@@ -879,8 +879,7 @@ def update_register_settings(settings, settings_type):
         # while allowing transformations set as command-line arguments
         settings.add_modifier(
             "raw", 
-            {"labels_mirror": None,
-             "labels_edge": None, 
+            {"extend_atlas": False, 
              "expand_labels": None, 
              "rotate": None, 
              "affine": None,

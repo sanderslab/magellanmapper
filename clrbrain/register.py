@@ -1325,6 +1325,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         data frame of smoothing stats, or None if smoothing was not performed.
     """
     pre_plane = config.register_settings["pre_plane"]
+    extend_atlas = config.register_settings["extend_atlas"]
     mirror = config.register_settings["labels_mirror"]
     edge = config.register_settings["labels_edge"]
     expand = config.register_settings["expand_labels"]
@@ -1347,20 +1348,27 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # curate labels
-    img_labels_np, mirror_indices, borders_img_np, df_smoothing = (
-        _curate_labels(
-            img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
-            affine))
-    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+    if extend_atlas:
+        # include any lateral extension and mirroing
+        img_labels_np, mirror_indices, borders_img_np, df_smoothing = (
+            _curate_labels(
+                img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
+                affine))
+    else:
+        # turn off lateral extension and mirroing
+        img_labels_np, _, borders_img_np, df_smoothing = _curate_labels(
+            img_labels, img_atlas, None, None, expand, rotate, smooth, 
+            affine)
     
     # adjust atlas with same settings
+    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
     if rotate:
         for rot in rotate:
             img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
     if affine:
         for aff in affine:
             img_atlas_np = plot_3d.affine_nd(img_atlas_np, **aff)
-    if mirror is not None:
+    if extend_atlas and mirror is not None:
         # TODO: consider removing dup since not using
         dup = config.register_settings["labels_dup"]
         img_atlas_np = _mirror_planes(

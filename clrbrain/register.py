@@ -1888,7 +1888,7 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
     total_dsc = overlap_filter.GetDiceCoefficient()
     #sitk.Show(fixed_binary_img)
     #sitk.Show(transformed_binary_img)
-    print("Foreground DSC: {}".format(total_dsc))
+    print("foreground DSC: {}\n".format(total_dsc))
     return total_dsc
 
 def measure_overlap_labels(fixed_img, transformed_img):
@@ -1941,7 +1941,7 @@ def _measure_overlap_combined_labels(fixed_img, labels_img, add_lbls=None):
             print("adding abs labels within", lbl)
             mask[np.all([labels_np_abs >= lbl[0], 
                          labels_np_abs < lbl[1]], axis=0)] = True
-    print("\nDSC of thresholded fixed image compared with combined labels:")
+    print("DSC of thresholded fixed image compared with combined labels:")
     return measure_overlap(
         fixed_img, lbls_fg, transformed_thresh=1, add_fixed_mask=mask)
 
@@ -2495,12 +2495,14 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
     labels_sitk_seg = replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     # show DSCs for labels
+    print("\nMeasuring overlap of atlas and combined watershed labels:")
     _measure_overlap_combined_labels(atlas_sitk, labels_sitk_seg)
-    print("\nMeasuring overlap of individual labels:")
+    print("Measuring overlap of individual original and watershed labels:")
     measure_overlap_labels(labels_sitk, labels_sitk_seg)
-    print("\nMeasuring foreground overlap of labels:")
+    print("\nMeasuring overlap of combined original and watershed labels:")
     measure_overlap_labels(
         make_labels_fg(labels_sitk), make_labels_fg(labels_sitk_seg))
+    print()
     
     # show and write image to same directory as atlas with appropriate suffix
     write_reg_images({IMG_LABELS: labels_sitk_seg}, mod_path)

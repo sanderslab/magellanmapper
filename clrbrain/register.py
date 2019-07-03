@@ -386,7 +386,7 @@ def check_mirrorred(img_np, mirror_mult=1):
     return equality_vals, equality_lbls
 
 def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None, 
-                   rotate=None, smooth=None, affine=None):
+                   rotate=None, smooth=None, affine=None, resize=True):
     """Curate labels through extension, mirroring, and smoothing.
     
     Extension fills in missing edge labels by extrapolating edge planes 
@@ -425,6 +425,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         affine: Dictionary for selective affine transformation, passed 
             to :func:`plot_3d.affine_nd`. Defaults to None to not 
             affine transform.
+        resize: True to resize the image during mirroring; defaults to True.
     
     Returns:
         Tuple of the mirrored image in Numpy format; a tuple of the 
@@ -558,7 +559,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             shape[0] = img_np.shape[0]
             borders_img_np = np.zeros(shape, dtype=np.int32)
             borders_img_np[:mirrori] = borders
-            borders_img_np = _mirror_planes(borders_img_np, mirrori, -1)
+            borders_img_np = _mirror_planes(
+                borders_img_np, mirrori, -1, resize=resize)
     
     # check that labels will fit in integer type
     lib_clrbrain.printv(
@@ -572,7 +574,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # mirror, check beforehand for labels that will be loss
         labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
         img_np = _mirror_planes(
-            img_np, mirrori, mirror_mult=-1, check_equality=True)
+            img_np, mirrori, mirror_mult=-1, check_equality=True, resize=resize)
         print("total final labels: {}".format(np.unique(img_np).size))
     return img_np, (edgei, mirrori), borders_img_np, df_smoothing
 
@@ -1348,6 +1350,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # curate labels
+    mask_lbls = None
     if extend_atlas:
         # include any lateral extension and mirroing
         img_labels_np, mirror_indices, borders_img_np, df_smoothing = (
@@ -1359,6 +1362,15 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         img_labels_np, _, borders_img_np, df_smoothing = _curate_labels(
             img_labels, img_atlas, None, None, expand, rotate, smooth, 
             affine)
+        if crop and (mirror is not None or edge is not None):
+            # separately get mirrored labels only for cropping to labels
+            print("\nCurating labels with extension/mirroring only "
+                  "for cropping:")
+            lbls_np_mir, mirror_indices, _, _ = _curate_labels(
+                img_labels, img_atlas, mirror, edge, expand, rotate, None, 
+                affine, False)
+            mask_lbls = lbls_np_mir != 0
+            print()
     
     # adjust atlas with same settings
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
@@ -1373,6 +1385,12 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         dup = config.register_settings["labels_dup"]
         img_atlas_np = _mirror_planes(
             img_atlas_np, mirror_indices[1], start_dup=dup)
+    
+    if crop:
+        # crop atlas to the mask of the labels with some padding; 
+        # TODO: crop or deprecate borders image
+        img_labels_np, img_atlas_np = plot_3d.crop_to_labels(
+            img_labels_np, img_atlas_np, mask_lbls)
     
     imgs_np = (img_atlas_np, img_labels_np, borders_img_np)
     if pre_plane:
@@ -1396,15 +1414,6 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
                     img_sitk, config.plane, rotate, flipud=True)
         imgs_sitk_replaced.append(img_sitk)
     img_atlas, img_labels, img_borders = imgs_sitk_replaced
-    
-    if crop:
-        # crop atlas to the mask of the labels with some padding; 
-        # TODO: crop or deprecate borders image
-        img_labels_np, img_atlas_np = plot_3d.crop_to_labels(
-            sitk.GetArrayFromImage(img_labels), 
-            sitk.GetArrayFromImage(img_atlas))
-        img_atlas = replace_sitk_with_numpy(img_atlas, img_atlas_np)
-        img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     return img_atlas, img_labels, img_borders, df_smoothing
 

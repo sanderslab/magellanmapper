@@ -55,8 +55,10 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     # default group name
     group.col <- "Group"
   }
+  id.cols <- list() # group ID columns
   if (is.element(group.col, names(df.region))) {
     groups <- df.region[[group.col]]
+    id.cols <- append(group.col, id.cols)
   } else {
     groups <- c("")
   }
@@ -66,13 +68,24 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     # default column name by which to split
     split.col <- "Side"
   }
-  subgroups <- df.region[[split.col]]
+  if (is.element(split.col, names(df.region))) {
+    subgroups <- df.region[[split.col]]
+    id.cols <- append(split.col, id.cols)
+  } else {
+    subgroups <- c("")
+  }
   subgroups.unique <- getUniqueSubgroups(subgroups, split.by.subgroup)
-  num.groups <- length(groups.unique) # total main groups
+  num.groups <- length(groups.unique) # total groups
   num.subgroups <- length(subgroups.unique) # total unique subgroups
   num.groups <- num.groups # total group-subgroup combos
-  if (is.element(split.col, names(df.region))) {
-    num.groups <- nrow(unique(df.region[, c(group.col, split.col)]))
+  id.cols <- unlist(id.cols, use.names=FALSE)
+  if (length(id.cols) > 0) {
+    combos <- unique(df.region[, id.cols])
+    if (length(id.cols) >= 2) {
+      num.groups <- nrow(combos)
+    } else {
+      num.groups <- length(combos)
+    }
   }
   subgroups.by.group <- list() # sets of subgroups within each main group
   names.groups <- vector(length=num.groups) # main and subgroup names combined

@@ -798,7 +798,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             prop_region, prop_region_ref, threshold, prop_plane_region, 
             planei - 1, True)
 
-def crop_to_labels(img_labels, img_ref):
+def crop_to_labels(img_labels, img_ref, mask=None, padding=2):
     """Crop images to match labels volume.
     
     Both labels and reference images will be cropped to match the extent of 
@@ -807,26 +807,34 @@ def crop_to_labels(img_labels, img_ref):
     
     Args:
         img_labels: Labels image as Numpy array.
-        img_ref: Reference image as Numpy array.
+        img_ref: Reference image as Numpy array of same shape as that 
+            of ``img_labels``.
+        mask: Binary Numpy array of same shape as that of ``img_labels`` 
+            to use in place of it for determining the extent of cropping. 
+            Defaults to None.
+        padding: Int size of structuring element for padding the crop 
+            region; defaults to 2.
     
     Returns:
         Tuple of ``extracted_labels``, the cropped labels, and 
         ``extracted_ref``, the cropped reference image, extracting only 
         pixels corresponding to the labels.
     """
-    # get bounding box of all labels, assuming 0 is background
-    mask = img_labels != 0
+    if mask is None:
+        # default to get bounding box of all labels, assuming 0 is background
+        mask = img_labels != 0
     props = measure.regionprops(mask.astype(np.int))
     if not props or len(props) < 1: return
     shape, slices = get_bbox_region(
         props[0].bbox, padding=5, img_shape=img_labels.shape)
     
     # crop images to bbox and erase reference pixels just outside of 
-    # corresponding labels
+    # corresponding labels; dilate to include immediate neighborhood
     extracted_labels = img_labels[tuple(slices)]
     extracted_ref = img_ref[tuple(slices)]
+    extracted_mask = mask[tuple(slices)]
     mask_dil = morphology.binary_dilation(
-        extracted_labels != 0, morphology.ball(2))
+        extracted_mask, morphology.ball(padding))
     extracted_ref[~mask_dil] = 0
     return extracted_labels, extracted_ref
 

@@ -665,6 +665,7 @@ setupConfig <- function(name=NULL) {
     # compactness stats for ABA series
     setupConfig("compactness")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
+    config.env$JitterPlotSave <- FALSE
     
   } else if (name == "reg") {
     # WT registrations
@@ -689,6 +690,7 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[c(4:7, 11:14)]
     config.env$VolcanoLabels <- FALSE
     config.env$VolcanoLogX <- FALSE
+    config.env$JitterPlotSave <- FALSE
     
   } else if (name == "wt.test") {
     # WT test
@@ -732,7 +734,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("reg")
   #setupConfig("wt.test")
   #setupConfig("nolevels")
-  setupConfig("nojittersave")
+  #setupConfig("nojittersave")
   #setupConfig("skinny.small")
   #setupConfig("square")
   setupConfig("revpairedstats")

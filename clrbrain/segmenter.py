@@ -351,8 +351,13 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     return markers
 
 def mask_atlas(atlas, labels_img):
-    """Mask an atlas with its thresholded image filled in with an 
-    associated labels image.
+    """Generate a mask of an atlas by combining its thresholded image 
+    with its associated labels image.
+    
+    The labels image may be insufficient to find the whole atlas foreground 
+    if the labels have missing regions or around edges, while the 
+    thresholded atlas may have many holes. As a simple workaround, 
+    combine these foregrounds to obtain a more complete mask of the atlas.
     
     Args:
         img: Image as a Numpy array to segment.
@@ -385,27 +390,29 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None):
             is generally constructed from an array similar to ``labels_img``.
         labels_img: Labels image as Numpy array of same shape as ``img``, 
             used to generate a mask for the watershed. If None, a mask 
-            will be generated from a thresholded version of ``atlas_img``. 
-            If both ``labels_img`` and ``atlas_img`` are given, their 
-            combined volume will be used as a mask.
+            will be generated from a thresholded version of ``atlas_img``, 
+            so should only be None if ``atlas_img`` is not None. 
         atlas_img: Atlas image as a Numpy array to use for finding foreground; 
-            defaults to None.
+            defaults to None. If both ``labels_img`` and ``atlas_img`` 
+            are not None, their combined volume will be used as a mask.
     
     Returns:
         Segmented image of the same shape as ``img`` with the same 
         number of labels as in ``markers``.
     """
-    if atlas_img is None:
-        mask = morphology.binary_opening(labels_img != 0, morphology.ball(2))
-    elif labels_img is None:
+    if atlas_img is not None and labels_img is not None:
+        # broad mask from both atlas and labels
+        mask = mask_atlas(atlas_img, labels_img)
+    elif atlas_img is not None:
         # otsu seems to give more inclusive threshold for these atlases
         _, mask = plot_3d.carve(
             atlas_img, thresh=filters.threshold_otsu(atlas_img), 
             holes_area=5000)
     else:
-        # use labels if available; ideally should fully cover the atlas 
-        # with the atlas only used to identify outside borders
-        mask = mask_atlas(atlas_img, labels_img)
+        # default to using labels only, opening up small holes to prevent 
+        # spillover across artifacts that may bridge them
+        mask = morphology.binary_opening(labels_img != 0, morphology.ball(2))
+    
     watershed = watershed_distance(
         edges == 0, markers, compactness=0.005, mask=mask)
     return watershed

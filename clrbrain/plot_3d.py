@@ -330,7 +330,7 @@ def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None,
         bounds: Tuple given as ``((z_start, z_end), (y_start, ...) ...)``, 
             with each value given in pixels demarcating the bounds of the 
             ROI to transform.
-        axis_atttach: Axis along which the sheared region will remain 
+        axis_attach: Axis along which the sheared region will remain 
             attached to the original image to provide a smooth transition 
             in the case of selective affines. Another affine will be 
             performed to along this axis, starting with 0 shift at the 
@@ -338,6 +338,8 @@ def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None,
             the opposite side. The direction of shearing is based on 
             the corresponding ``bounds`` for this axis. Defaults to None, 
             in which case this affine will be ignored.
+        attach_far: True to attach from the opposite, farther side along 
+            ``axis_attach``, from higher to lower indices; defaults to False.
     
     Returns:
         The transformed image.
@@ -605,6 +607,21 @@ def radial_dist_diff(radial_orig, radial_shifted, indices):
     return radial_diff
 
 def get_bbox_region(bbox, padding=0, img_shape=None):
+    """Get slices from a bounding box from which to extract the ROI 
+    from the original image as a view and with an optional padding.
+    
+    Args:
+        bbox: Bounding box as given by :func:``get_label_bbox``.
+        padding: Int of padding in pixels outside of the box to include; 
+            defaults to 0.
+        img_shape: Sequence of maximum output coordinates, where any 
+            end coordinate will be truncated to the corresponding 
+            value. Defaults to None.
+    
+    Returns:
+        Tuple of the ROI shape and list of ROI slices containing the 
+        start and end indices of the ROI along each axis.
+    """
     dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes
     shape = [bbox[i + dims] - bbox[i] for i in range(dims)]
     slices = []

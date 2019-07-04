@@ -909,8 +909,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         return label_mask_region, filtered
     
     def surface_area(img_np, slices, label_id, rough_img_np):
-        # use closing filter to approximate volume encompassing rough edges
-        # get region, skipping if no region left
+        # get the borders of the label and add them to a rough image
         region = img_np[tuple(slices)]
         label_mask_region = region == label_id
         borders = plot_3d.perimeter_nd(label_mask_region)

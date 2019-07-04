@@ -723,7 +723,8 @@ def update_register_settings(settings, settings_type):
                  # a more gradual shearing along the y-axis to preserve the 
                  # cord along that axis
                  "axis_along": 2, "axis_shift": 0, "shift": (45, 0), 
-                 "bounds": ((None, None), (160, 200), (90, 150)), "axis_attach": 1
+                 "bounds": ((None, None), (160, 200), (90, 150)), 
+                 "axis_attach": 1
              }), 
              "crop_to_labels": True, # req because of 2nd affine
              "smooth": 2, 

@@ -563,7 +563,7 @@ class RegisterSettings(SettingsDict):
         self["expand_labels"] = None
         
         # atlas and labels rotation by ((angle0, axis0), ...), or None to 
-        # avoid rotation
+        # avoid rotation, with axis numbers in z,y,x ordering
         self["rotate"] = None
         
         # atlas thresholds for microscopy images
@@ -710,12 +710,11 @@ def update_register_settings(settings, settings_type):
              # rotate axis 0 to open vertical gap for affines (esp 2nd)
              "rotate": ((-5, 1), (-1, 2), (-30, 0)), 
              "affine": ({
-                 # shear tail opposite the brain back toward midline
+                 # shear cord opposite the brain back toward midline
                  "axis_along": 1, "axis_shift": 0, "shift": (25, 0), 
                  "bounds": ((None, None), (70, 250), (0, 150))
              },{
-                 # shear end of tail more distally, where the tail wraps 
-                 # back on itself
+                 # shear distal cord where the tail wraps back on itself
                  "axis_along": 2, "axis_shift": 0, "shift": (0, 50), 
                  "bounds": ((None, None), (0, 200), (50, 150))
              },{
@@ -858,6 +857,12 @@ def update_register_settings(settings, settings_type):
              "crop_to_labels": True, # much extraneous, unlabeled tissue
              "smooth": 4, 
             }, 
+            profile)
+        
+        # turn off atlas rotation
+        settings.add_modifier(
+            "norotate", 
+            {"rotate": None},
             profile)
         
         # turn off edge extension along with smoothing

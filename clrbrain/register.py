@@ -2353,6 +2353,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         atlas_edge = load_registered_img(path_img, reg_name=IMG_ATLAS_EDGE)
     
     # make map of label interiors for interior/border comparisons
+    print("Eroding labels to generate interior labels image")
     erosion = config.register_settings["marker_erosion"]
     erosion_frac = config.register_settings["erosion_frac"]
     interior = erode_labels(labels_img_np, erosion, erosion_frac, atlas)
@@ -2532,10 +2533,10 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         mod_path = img_path
         if suffix is not None:
             mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
-        print("Generating label markers for", mod_path)
         labels_sitk = load_registered_img(
             mod_path, get_sitk=True, reg_name=IMG_LABELS)
-        # use default minimal post-erosion size
+        print("Eroding labels to generate markers for atlas segmentation")
+        # use default minimal post-erosion size (not setting erosion frac)
         markers = erode_labels(
             sitk.GetArrayFromImage(labels_sitk), erosion, atlas=atlas)
         labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, markers)

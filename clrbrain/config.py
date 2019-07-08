@@ -229,7 +229,7 @@ PATH_SMOOTHING_METRICS = "smoothing.csv"
 PATH_ATLAS_IMPORT_METRICS = "stats.csv"
 
 # common labels
-PATH_COMMON_LABELS = "labels_common.csv"
+PATH_COMMON_LABELS = "regions_common.csv"
 
 class ItkSnapLabels(Enum):
     """Column names to use for ITK-SNAP description labels.

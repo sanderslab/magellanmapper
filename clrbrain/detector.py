@@ -336,6 +336,10 @@ def _find_closest_blobs(blobs, blobs_master, tol):
             match.
         close: Indices of the corresponding blobs in the "blobs" array.
     """
+    # NOTE: does not scale well with large numbers of blobs, presumably 
+    # because of the need to check blobs individually with a continually 
+    # increasing number of accepted blobs
+    
     close_master = []
     close = []
     far = np.max(tol) + 1

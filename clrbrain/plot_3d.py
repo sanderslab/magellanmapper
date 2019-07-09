@@ -859,8 +859,8 @@ def interpolate_contours(bottom, top, fracs):
     """Interpolate contours between two planes.
     
     Args:
-        bottom: bottom plane as an binary mask.
-        top: top plane as an binary mask.
+        bottom: Bottom plane as an binary mask.
+        top: Top plane as an binary mask.
         fracs: List of fractions between 0 and 1, inclusive, at which to 
             interpolate contours. 0 corresponds to the bottom plane, while 
             1 is the top.

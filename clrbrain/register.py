@@ -3581,6 +3581,7 @@ def main():
     :attr:``config.register_type``.
     """
     plot_2d.setup_style("default")
+    # convert volumes to next larger prefix (eg um^3 to mm^3)
     unit_factor = np.power(1000.0, 3)
     
     # name prefix to use a different name from the input files, such as when 
@@ -3770,7 +3771,6 @@ def main():
     
     elif reg is config.RegisterTypes.vol_stats:
         # volumes stats
-        # TODO: replace volumes/densities function
         ref = ontology.load_labels_ref(config.load_labels)
         labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
         groups_numeric = None

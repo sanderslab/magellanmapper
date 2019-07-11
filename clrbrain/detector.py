@@ -455,6 +455,10 @@ def find_closest_blobs_cdist(blobs, blobs_master, tol=None, scaling=None):
     if scaling is not None:
         # scale blobs and tolerance by given factor, eg for isotropy
         len_scaling = len(scaling)
+        '''
+        blobs_orig = blobs[:, :3]
+        blobs_master_orig = blobs_master[:, :3]
+        '''
         blobs = np.multiply(blobs[:, :len_scaling], scaling)
         blobs_master = np.multiply(blobs_master[:, :len_scaling], scaling)
         if tol is not None: tol = np.multiply(tol, scaling)
@@ -462,6 +466,11 @@ def find_closest_blobs_cdist(blobs, blobs_master, tol=None, scaling=None):
     # find Euclidean distances between each pair of points and determine 
     # the optimal assignments using the Hungarian algorithm
     dists = distance.cdist(blobs, blobs_master)
+    '''
+    for i, b in enumerate(blobs_orig):
+        for j, bm in enumerate(blobs_master_orig):
+            if np.array_equal(bm, (21, 16, 23)): print(bm, b, dists[i, j])
+    '''
     rowis, colis = optimize.linear_sum_assignment(dists)
     
     dists_closest = dists[rowis, colis]

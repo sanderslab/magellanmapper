@@ -25,6 +25,7 @@ from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import sqlite
+from clrbrain import stats
 
 resolutions = None # (z, y, x) order since given from microscope
 magnification = -1.0
@@ -918,19 +919,15 @@ def _test_blob_duplicates():
     blobs_to_add = remove_close_blobs(blobs_to_add, blobs, slice(0, end), tol)
     print("pruned blobs to add:\n{}".format(blobs_to_add))
 
-def _test_blob_verification():
-    a = np.ones((3, 3))
-    a[:, 0] = [0, 1, 2]
-    b = np.copy(a)
-    b[:, 0] += 1
+def _test_blob_verification(a, b, tol):
+    # test verifying blobs by checking for closest matches within a tolerance
     print("test (b):\n{}".format(b))
     print("master (a):\n{}".format(a))
-    _find_closest_blobs(b, a, slice(0, 3), (1, 2, 2))
-    a = np.array([[24, 52, 346], [20, 55, 252]])
-    b = np.array([[24, 54, 351]])
-    print("test (b):\n{}".format(b))
-    print("master (a):\n{}".format(a))
-    _find_closest_blobs(b, a, slice(0, 3), (3, 9, 9))
+    #found_truth, detected = _find_closest_blobs(b, a, tol)
+    #dists = np.zeros(len(blobs)
+    detected, found_truth, dists = find_closest_blobs_cdist(b, a, tol)
+    stats.dict_to_data_frame(
+        {"Testi": detected, "Masteri": found_truth, "Dist": dists}, show=True)
 
 def _test_blob_close_sorted():
     a = np.ones((3, 3))
@@ -948,4 +945,10 @@ def _test_blob_close_sorted():
 if __name__ == "__main__":
     print("Detector tests...")
     #_test_blob_close_sorted()
-    _test_blob_verification()
+    a = np.array([[0, 1, 1], [1, 1, 1], [2, 1, 1]])
+    b = np.array([[1, 1, 1], [2, 1, 1], [3, 1, 1], [4, 2, 0]])
+    _test_blob_verification(a, b, 1)
+    print()
+    a = np.array([[24, 52, 346], [20, 55, 252]])
+    b = np.array([[24, 54, 351]])
+    _test_blob_verification(a, b, 6)

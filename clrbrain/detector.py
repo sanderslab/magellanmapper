@@ -809,7 +809,6 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         '''
         found_truth, found = _find_closest_blobs(
             blobs_inner, blobs_truth_roi, tol)
-        '''
         found, found_truth, dists = find_closest_blobs_cdist(
             blobs_inner, blobs_truth_roi, tol, isotropic_factor)
         blobs_inner[: , 4] = 0
@@ -820,36 +819,54 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
               .format(blobs_inner[blobs_inner[:, 4] == 1]))
         lib_clrbrain.printv("truth found:\n{}"
               .format(blobs_truth_roi[blobs_truth_roi[:, 5] == 1]))
+        '''
+        found, found_truth, dists = find_closest_blobs_cdist(
+            blobs_roi, blobs_truth_roi, tol, isotropic_factor)
+        blobs_roi[: , 4] = 0
+        blobs_roi[found, 4] = 1
+        blobs_truth_roi[:, 5] = 0
+        blobs_truth_roi[found_truth, 5] = 1
         
         # add any truth blobs missed in the inner ROI by comparing with 
         # outer ROI of detected blobs
-        blobs_truth_inner_missed = blobs_truth_roi[blobs_truth_roi[:, 5] == 0]
+        blobs_inner_missed = blobs_roi[
+            np.logical_and(blobs_inner_mask, blobs_roi[:, 4] == 0)]
+        blobs_truth_inner_missed = blobs_truth_roi[
+            np.logical_and(blobs_truth_inner_mask, blobs_truth_roi[:, 5] == 0)]
+        '''
         blobs_outer = blobs_roi[np.invert(blobs_inner_mask)]
         lib_clrbrain.printv("blobs_outer:\n{}".format(blobs_outer))
         lib_clrbrain.printv(
             "blobs_truth_inner_missed:\n{}".format(blobs_truth_inner_missed))
-        '''
         found_truth_out, found_out = _find_closest_blobs(
             blobs_outer, blobs_truth_inner_missed, tol)
-        '''
         found_out, found_truth_out, dists_out = find_closest_blobs_cdist(
             blobs_outer, blobs_truth_inner_missed, tol, isotropic_factor)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
+        '''
+        blobs_inner_plus = np.concatenate(
+            (blobs_roi[blobs_roi[:, 4] == 1], 
+             blobs_inner_missed))
         blobs_truth_inner_plus = np.concatenate(
             (blobs_truth_roi[blobs_truth_roi[:, 5] == 1], 
              blobs_truth_inner_missed))
+        '''
         blobs_roi_extra = blobs_outer[found_out]
         blobs_roi_extra[:, 4] = 1
         blobs_inner_plus = np.concatenate((blobs_inner, blobs_roi_extra))
+        '''
         if config.verbose:
+            '''
             print("truth blobs detected by an outside blob:\n{}"
                   .format(blobs_truth_inner_missed[
                       blobs_truth_inner_missed[:, 5] == 1]))
             print("all those outside detection blobs:\n{}"
                   .format(blobs_roi_extra))
+            '''
             print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
             print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
             
+            '''
             print("\nInner ROI:")
             _show_blob_matches(
                 blobs_inner, blobs_truth_roi, found, found_truth, dists)
@@ -857,6 +874,9 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
             _show_blob_matches(
                 blobs_outer, blobs_truth_inner_missed, found_out, 
                 found_truth_out, dists_out)
+            '''
+            _show_blob_matches(
+                blobs_roi, blobs_truth_roi, found, found_truth, dists)
         
         # store blobs in separate verified DB
         roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id, 

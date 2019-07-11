@@ -378,7 +378,7 @@ def update_process_settings(settings, settings_type):
             "overlap": 0.55, 
             "segment_size": 150, 
             "prune_tol_factor": (1, 0.9, 0.9), 
-            "verify_tol_factor": (1, 0.9, 0.9), 
+            "verify_tol_factor": (3, 1.2, 1.2), 
             "segmenting_mean_thresh": -10, # unused since scale factor off
             "scale_factor": None, 
             "isotropic": (0.96, 1, 1), 

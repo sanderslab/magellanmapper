@@ -428,18 +428,15 @@ def _show_blob_matches(blobs, blobs_master, close, close_master, dists):
     print("closest matches found (truth, detected, distance):")
     for f, fm, d in zip(found, found_master, dists[sort]): print(fm, f, d)
 
-def find_closest_blobs_cdist(blobs, blobs_master, tol=None, scaling=None):
+def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
     """Find the closest blobs within a given tolerance using the 
     Hungarian algorithm to find blob matches.
     
     Args:
         blobs: Blobs as a 2D array of [n, [z, row, column, ...]].
         blobs_master: Array in same format as ``blobs``.
-        tol: Sequence of tolerance distances, typically maximum distances 
-            along each dimension given in the same order as for ``blobs``, 
-            from which a single maximum distance 
-            will be computed as the hypotenuse of the axis distances. 
-            Defaults to None to include all matches.
+        thresh: Threshold distance beyond which blob pairings are excluded; 
+            defaults to None to include all matches.
         scaling: Sequence of scaling factors by which to multiply the 
             blob coordinates before computing distances, used to 
             scale coordinates from an anisotropic to isotropic 
@@ -461,7 +458,6 @@ def find_closest_blobs_cdist(blobs, blobs_master, tol=None, scaling=None):
         '''
         blobs = np.multiply(blobs[:, :len_scaling], scaling)
         blobs_master = np.multiply(blobs_master[:, :len_scaling], scaling)
-        if tol is not None: tol = np.multiply(tol, scaling)
     
     # find Euclidean distances between each pair of points and determine 
     # the optimal assignments using the Hungarian algorithm
@@ -474,9 +470,8 @@ def find_closest_blobs_cdist(blobs, blobs_master, tol=None, scaling=None):
     rowis, colis = optimize.linear_sum_assignment(dists)
     
     dists_closest = dists[rowis, colis]
-    if tol is not None:
+    if thresh is not None:
         # filter out matches beyond the given threshold distance
-        thresh = np.sqrt(np.sum(np.square(tol)))
         print("only keeping blob matches within threshold distance of", thresh)
         dists_in = dists_closest < thresh
         rowis = rowis[dists_in]
@@ -760,15 +755,19 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     # average overlap and tolerance for padding    
     #tol[0] -= 1
     
+    # convert tolerance seq to scaling and single number distance 
+    # threshold for point distance map, which assumes isotropy; use 
+    # custom tol rather than calculating isotropy since may need to give 
+    # greater latitude along a given axis, such as poorer res in z
+    thresh = np.amax(tol) # similar to longest radius from the tol bounding box
+    scaling = thresh / tol
     # casting to int causes improper offset import into db
-    inner_padding = np.ceil(tol[::-1])
+    inner_padding = np.floor(tol[::-1])
     lib_clrbrain.printv(
-        "verifying blobs with tol {}, inner_padding {}"
-        .format(tol, inner_padding))
+        "verifying blobs with tol {} leading to thresh {}, scaling {}, "
+        "inner_padding {}".format(tol, thresh, scaling, inner_padding))
     
     settings = config.get_process_settings(channel)
-    isotropic = settings["isotropic"]
-    isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
     resize = settings["resize_blobs"]
     if resize:
         blobs = multiply_blob_rel_coords(blobs, resize)
@@ -811,7 +810,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
             blobs_inner, blobs_truth_roi, tol)
         '''
         found, found_truth, dists = find_closest_blobs_cdist(
-            blobs_inner, blobs_truth_roi, tol, isotropic_factor)
+            blobs_inner, blobs_truth_roi, thresh, scaling)
         blobs_inner[: , 4] = 0
         blobs_inner[found, 4] = 1
         blobs_truth_roi[blobs_truth_inner_mask, 5] = 0
@@ -833,7 +832,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
             blobs_outer, blobs_truth_inner_missed, tol)
         '''
         found_out, found_truth_out, dists_out = find_closest_blobs_cdist(
-            blobs_outer, blobs_truth_inner_missed, tol, isotropic_factor)
+            blobs_outer, blobs_truth_inner_missed, thresh, scaling)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
         blobs_truth_inner_plus = np.concatenate(
             (blobs_truth_roi[blobs_truth_roi[:, 5] == 1], 

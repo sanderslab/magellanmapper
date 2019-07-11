@@ -760,8 +760,8 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     # average overlap and tolerance for padding    
     #tol[0] -= 1
     
-    inner_padding = np.flipud(np.ceil(tol))
-    #tol = np.flipud(inner_padding)
+    # casting to int causes improper offset import into db
+    inner_padding = np.ceil(tol[::-1])
     lib_clrbrain.printv(
         "verifying blobs with tol {}, inner_padding {}"
         .format(tol, inner_padding))

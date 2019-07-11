@@ -299,7 +299,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
                         exp_name, None)
                     rois = config.truth_db.get_rois(exp_name)
                     verify_tol = np.multiply(
-                        overlap_base, settings["verify_tol_factor"]).astype(int)
+                        overlap_base, settings["verify_tol_factor"])
                     stats_detection, fdbk = detector.verify_rois(
                         rois, segments_all, config.truth_db.blobs_truth, 
                         verify_tol, config.verified_db, exp_id, config.channel)

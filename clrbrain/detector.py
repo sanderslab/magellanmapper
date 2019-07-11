@@ -307,6 +307,20 @@ def remove_duplicate_blobs(blobs, region):
           .format(blobs.shape[0] - unique_indices.size))
     return blobs[unique_indices]
 
+def sort_blobs(blobs):
+    """Sort blobs by their coordinates in priority of z,y,x.
+    
+    Args:
+        blobs: Blobs as a 2D array of [n, [z, row, column, ...]].
+    
+    Returns:
+        Tuple of the sorted blobs as a new array and an array of 
+        sorting indices.
+    """
+    sort = np.lexsort(tuple(blobs[:, i] for i in range(2, -1, -1)))
+    blobs = blobs[sort]
+    return blobs, sort
+
 def _find_close_blobs(blobs, blobs_master, tol):
     # creates a separate array for each blob in blobs_master to allow
     # comparison for each of its blobs with each blob to add
@@ -339,6 +353,10 @@ def _find_closest_blobs(blobs, blobs_master, tol):
     # NOTE: does not scale well with large numbers of blobs, presumably 
     # because of the need to check blobs individually with a continually 
     # increasing number of accepted blobs
+    
+    # TESTING: sorting changes blob matches; use find_closest_blobs_cdist 
+    # to avoid this issue
+    #blobs, sort = sort_blobs(blobs)
     
     close_master = []
     close = []
@@ -395,14 +413,17 @@ def _find_closest_blobs(blobs, blobs_master, tol):
                 break
     if config.verbose:
         # show sorted list of matches to compare between runs
-        found_master = blobs_master[close_master, :3]
-        found = blobs[close, :3]
-        sort = np.lexsort((found_master[:, 2], found_master[:, 1], found_master[:, 0]))
-        found_master = found_master[sort]
-        found = found[sort]
-        print("closest matches found (truth, detected):")
-        for fm, f in zip(found_master, found): print(fm, f)
+        _show_blob_matches(
+            blobs, blobs_master, close, close_master, np.zeros(len(blobs)))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
+
+def _show_blob_matches(blobs, blobs_master, close, close_master, dists):
+    # show sorted list of matches between blobs and master blobs
+    found_master = blobs_master[close_master, :3]
+    found_master, sort = sort_blobs(found_master)
+    found = blobs[close, :3][sort]
+    print("closest matches found (truth, detected, distance):")
+    for f, fm, d in zip(found, found_master, dists[sort]): print(fm, f, d)
 
 def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     """Removes blobs that are close to one another.

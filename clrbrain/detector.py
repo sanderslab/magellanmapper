@@ -13,6 +13,8 @@ from time import time
 import math
 import numpy as np
 from scipy import ndimage
+from scipy import optimize
+from scipy.spatial import distance
 from skimage import filters
 from skimage import segmentation
 from skimage import measure
@@ -425,6 +427,54 @@ def _show_blob_matches(blobs, blobs_master, close, close_master, dists):
     print("closest matches found (truth, detected, distance):")
     for f, fm, d in zip(found, found_master, dists[sort]): print(fm, f, d)
 
+def find_closest_blobs_cdist(blobs, blobs_master, tol=None, scaling=None):
+    """Find the closest blobs within a given tolerance using the 
+    Hungarian algorithm to find blob matches.
+    
+    Args:
+        blobs: Blobs as a 2D array of [n, [z, row, column, ...]].
+        blobs_master: Array in same format as ``blobs``.
+        tol: Sequence of tolerance distances, typically maximum distances 
+            along each dimension given in the same order as for ``blobs``, 
+            from which a single maximum distance 
+            will be computed as the hypotenuse of the axis distances. 
+            Defaults to None to include all matches.
+        scaling: Sequence of scaling factors by which to multiply the 
+            blob coordinates before computing distances, used to 
+            scale coordinates from an anisotropic to isotropic 
+            ROI before computing distances, which assumes isotropy. 
+            Defaults to None.
+    
+    Returns:
+        Tuple of ``rowis`` and ``colis``, arrays of row and corresponding 
+        column indices of the closest matches; and ``dists_closest``, an 
+        array of corresponding distances for these matches. Only matches 
+        within the given tolerance will be included.
+    """
+    if scaling is not None:
+        # scale blobs and tolerance by given factor, eg for isotropy
+        len_scaling = len(scaling)
+        blobs = np.multiply(blobs[:, :len_scaling], scaling)
+        blobs_master = np.multiply(blobs_master[:, :len_scaling], scaling)
+        if tol is not None: tol = np.multiply(tol, scaling)
+    
+    # find Euclidean distances between each pair of points and determine 
+    # the optimal assignments using the Hungarian algorithm
+    dists = distance.cdist(blobs, blobs_master)
+    rowis, colis = optimize.linear_sum_assignment(dists)
+    
+    dists_closest = dists[rowis, colis]
+    if tol is not None:
+        # filter out matches beyond the given threshold distance
+        thresh = np.sqrt(np.sum(np.square(tol)))
+        print("only keeping blob matches within threshold distance of", thresh)
+        dists_in = dists_closest < thresh
+        rowis = rowis[dists_in]
+        colis = colis[dists_in]
+        dists_closest = dists_closest[dists_in]
+    
+    return rowis, colis, dists_closest
+
 def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     """Removes blobs that are close to one another.
     
@@ -699,17 +749,22 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     rois_falsehood = []
     # average overlap and tolerance for padding    
     #tol[0] -= 1
+    
     inner_padding = np.flipud(np.ceil(tol))
     #tol = np.flipud(inner_padding)
     lib_clrbrain.printv(
         "verifying blobs with tol {}, inner_padding {}"
         .format(tol, inner_padding))
+    
     settings = config.get_process_settings(channel)
+    isotropic = settings["isotropic"]
+    isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
     resize = settings["resize_blobs"]
     if resize:
         blobs = multiply_blob_rel_coords(blobs, resize)
         #tol = np.multiply(resize, tol).astype(np.int)
         lib_clrbrain.printv("resized blobs by {}:\n{}".format(resize, blobs))
+    
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
         size = (roi["size_x"], roi["size_y"], roi["size_z"])
@@ -741,15 +796,19 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         
         # compare inner region of detected cells with all truth ROIs, where
         # closest blob detector prioritizes the closest matches
-        found_truth, detected = _find_closest_blobs(
+        '''
+        found_truth, found = _find_closest_blobs(
             blobs_inner, blobs_truth_roi, tol)
+        '''
+        found, found_truth, dists = find_closest_blobs_cdist(
+            blobs_inner, blobs_truth_roi, tol, isotropic_factor)
         blobs_inner[: , 4] = 0
-        blobs_inner[detected, 4] = 1
+        blobs_inner[found, 4] = 1
         blobs_truth_roi[blobs_truth_inner_mask, 5] = 0
         blobs_truth_roi[found_truth, 5] = 1
-        lib_clrbrain.printv("detected inner:\n{}"
+        lib_clrbrain.printv("found inner:\n{}"
               .format(blobs_inner[blobs_inner[:, 4] == 1]))
-        lib_clrbrain.printv("truth detected:\n{}"
+        lib_clrbrain.printv("truth found:\n{}"
               .format(blobs_truth_roi[blobs_truth_roi[:, 5] == 1]))
         
         # add any truth blobs missed in the inner ROI by comparing with 
@@ -759,28 +818,39 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         lib_clrbrain.printv("blobs_outer:\n{}".format(blobs_outer))
         lib_clrbrain.printv(
             "blobs_truth_inner_missed:\n{}".format(blobs_truth_inner_missed))
-        found_truth_out, detected = _find_closest_blobs(
+        '''
+        found_truth_out, found_out = _find_closest_blobs(
             blobs_outer, blobs_truth_inner_missed, tol)
+        '''
+        found_out, found_truth_out, dists_out = find_closest_blobs_cdist(
+            blobs_outer, blobs_truth_inner_missed, tol, isotropic_factor)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
         blobs_truth_inner_plus = np.concatenate(
             (blobs_truth_roi[blobs_truth_roi[:, 5] == 1], 
              blobs_truth_inner_missed))
-        blobs_roi_extra = blobs_outer[detected]
+        blobs_roi_extra = blobs_outer[found_out]
         blobs_roi_extra[:, 4] = 1
         blobs_inner_plus = np.concatenate((blobs_inner, blobs_roi_extra))
-        lib_clrbrain.printv(
-            "truth blobs detected by an outside blob:\n{}".format(
-            blobs_truth_inner_missed[blobs_truth_inner_missed[:, 5] == 1]))
-        lib_clrbrain.printv(
-            "all those outside detection blobs:\n{}".format(blobs_roi_extra))
-        lib_clrbrain.printv(
-            "blobs_inner_plus:\n{}".format(blobs_inner_plus))
-        lib_clrbrain.printv(
-            "blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
+        if config.verbose:
+            print("truth blobs detected by an outside blob:\n{}"
+                  .format(blobs_truth_inner_missed[
+                      blobs_truth_inner_missed[:, 5] == 1]))
+            print("all those outside detection blobs:\n{}"
+                  .format(blobs_roi_extra))
+            print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
+            print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
+            
+            print("\nInner ROI:")
+            _show_blob_matches(
+                blobs_inner, blobs_truth_roi, found, found_truth, dists)
+            print("\nOuter ROI:")
+            _show_blob_matches(
+                blobs_outer, blobs_truth_inner_missed, found_out, 
+                found_truth_out, dists_out)
         
         # store blobs in separate verified DB
         roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id, 
-                                      series, offset_inner,size_inner)
+                                      series, offset_inner, size_inner)
         sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id, 
                             blobs_inner_plus)
         sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id, 

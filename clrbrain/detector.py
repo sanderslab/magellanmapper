@@ -752,8 +752,6 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     blobs_truth_rois = None
     blobs_rois = None
     rois_falsehood = []
-    # average overlap and tolerance for padding    
-    #tol[0] -= 1
     
     # convert tolerance seq to scaling and single number distance 
     # threshold for point distance map, which assumes isotropy; use 
@@ -798,39 +796,20 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)
         blobs_truth_inner, blobs_truth_inner_mask = get_blobs_in_roi(
             blobs_truth_roi, offset_inner, size_inner)
-        lib_clrbrain.printv("blobs_roi:\n{}".format(blobs_roi))
-        lib_clrbrain.printv("blobs_inner:\n{}".format(blobs_inner))
-        lib_clrbrain.printv("blobs_truth_inner:\n{}".format(blobs_truth_inner))
-        lib_clrbrain.printv("blobs_truth_roi:\n{}".format(blobs_truth_roi))
         
         # compare inner region of detected cells with all truth ROIs, where
         # closest blob detector prioritizes the closest matches
-        '''
-        found_truth, found = _find_closest_blobs(
-            blobs_inner, blobs_truth_roi, tol)
-        '''
         found, found_truth, dists = find_closest_blobs_cdist(
             blobs_inner, blobs_truth_roi, thresh, scaling)
         blobs_inner[: , 4] = 0
         blobs_inner[found, 4] = 1
         blobs_truth_roi[blobs_truth_inner_mask, 5] = 0
         blobs_truth_roi[found_truth, 5] = 1
-        lib_clrbrain.printv("found inner:\n{}"
-              .format(blobs_inner[blobs_inner[:, 4] == 1]))
-        lib_clrbrain.printv("truth found:\n{}"
-              .format(blobs_truth_roi[blobs_truth_roi[:, 5] == 1]))
         
         # add any truth blobs missed in the inner ROI by comparing with 
         # outer ROI of detected blobs
         blobs_truth_inner_missed = blobs_truth_roi[blobs_truth_roi[:, 5] == 0]
         blobs_outer = blobs_roi[np.invert(blobs_inner_mask)]
-        lib_clrbrain.printv("blobs_outer:\n{}".format(blobs_outer))
-        lib_clrbrain.printv(
-            "blobs_truth_inner_missed:\n{}".format(blobs_truth_inner_missed))
-        '''
-        found_truth_out, found_out = _find_closest_blobs(
-            blobs_outer, blobs_truth_inner_missed, tol)
-        '''
         found_out, found_truth_out, dists_out = find_closest_blobs_cdist(
             blobs_outer, blobs_truth_inner_missed, thresh, scaling)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
@@ -841,13 +820,25 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         blobs_roi_extra[:, 4] = 1
         blobs_inner_plus = np.concatenate((blobs_inner, blobs_roi_extra))
         if config.verbose:
+            '''
+            print("blobs_roi:\n{}".format(blobs_roi))
+            print("blobs_inner:\n{}".format(blobs_inner))
+            print("blobs_truth_inner:\n{}".format(blobs_truth_inner))
+            print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
+            print("found inner:\n{}"
+                  .format(blobs_inner[found]))
+            print("truth found:\n{}"
+                  .format(blobs_truth_roi[found_truth]))
+            print("blobs_outer:\n{}".format(blobs_outer))
+            print("blobs_truth_inner_missed:\n{}"
+                  .format(blobs_truth_inner_missed))
             print("truth blobs detected by an outside blob:\n{}"
-                  .format(blobs_truth_inner_missed[
-                      blobs_truth_inner_missed[:, 5] == 1]))
+                  .format(blobs_truth_inner_missed[found_truth_out]))
             print("all those outside detection blobs:\n{}"
                   .format(blobs_roi_extra))
             print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
             print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
+            '''
             
             print("\nInner ROI:")
             _show_blob_matches(

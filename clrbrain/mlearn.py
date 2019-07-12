@@ -69,8 +69,8 @@ def grid_search(fnc, *fnc_args):
                 last_param_vals = grid_dict[key]
                 for param in last_param_vals:
                     print("===============================================\n"
-                          "Grid search hyperparameters {} for {:.3g}"
-                          .format(name, param))
+                          "Grid search hyperparameters {} for {}"
+                          .format(name, lib_clrbrain.format_num(param, 3)))
                     settings[key] = param
                     stat, summaries = fnc(*fnc_args)
                     stats.append(stat)

@@ -1677,7 +1677,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             if col_annot:
                 # annote each point with val from annotation col
                 for x, y, annot in zip(xs, ys, df_group[col_annot]):
-                    ax.annotate("{:.3g}".format(annot), (x, y))
+                    ax.annotate(
+                        "{}".format(lib_clrbrain.format_num(annot, 3)), (x, y))
     
     # set x/y axis limits if given
     if xlim: ax.set_xlim(xlim)

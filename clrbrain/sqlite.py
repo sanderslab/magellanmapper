@@ -644,8 +644,8 @@ class ClrDB():
             rois = select_rois(self.cur, exps[0]["id"])
         return rois
 
-if __name__ == "__main__":
-    print("Starting sqlite.py...")
+def main():
+    """Run main SQLite access commands after loading CLI."""
     # parses arguments and sets up the DB
     from clrbrain import cli
     cli.main(True)
@@ -654,9 +654,14 @@ if __name__ == "__main__":
     if config.verified_db is not None:
         conn = config.verified_db.conn
         cur = config.verified_db.cur
+    
     #verification_stats(conn, cur)
     #update_rois(cur, cli.offset, cli.roi_size)
     #merge_truth_dbs(config.filenames)
     #clean_up_blobs(config.truth_db)
-    _update_experiments(config.filename)
+    #_update_experiments(config.filename)
+
+if __name__ == "__main__":
+    print("Starting sqlite.py...")
+    main()
     

@@ -778,10 +778,12 @@ def process_file(filename_base, offset, roi_size):
         
         annotation_suffix = suffixes[config.RegSuffixes.ANNOTATION]
         if annotation_suffix is not None:
-            # load labels image, set up scaling, and load labels file
+            # load labels image, set up scaling, and load labels file, 
+            # using prefix for registered files if given
             try:
+                path = config.prefix if config.prefix else config.filename
                 config.labels_img = register.load_registered_img(
-                    config.filename, reg_name=annotation_suffix)
+                    path, reg_name=annotation_suffix)
                 config.labels_scaling = importer.calc_scaling(
                     image5d, config.labels_img)
                 labels_ref = ontology.load_labels_ref(config.load_labels)

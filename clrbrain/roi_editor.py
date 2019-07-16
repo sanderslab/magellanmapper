@@ -66,14 +66,6 @@ truth_color_dict = {
     0: "m",
     1: "b"
 }
-# edge colors based on channel
-edgecolor_dict = {
-    0: "w",
-    1: "c",
-    2: "y",
-    3: "m",
-    4: "g"
-}
 
 class DraggableCircle:
     def __init__(self, circle, segment, fn_update_seg, color="none"):
@@ -273,7 +265,7 @@ def _circle_collection(segments, edgecolor, facecolor, linewidth):
 
 
 def _plot_circle(ax, segment, linewidth, linestyle, fn_update_seg,
-                 alpha=0.5):
+                 alpha=0.5, edgecolor="w"):
     """Create and draw a DraggableCircle from the given segment.
 
     Args:
@@ -284,13 +276,13 @@ def _plot_circle(ax, segment, linewidth, linestyle, fn_update_seg,
         linestyle: Edge line style.
         fn_update_seg: Function to call from DraggableCircle.
         alpha: Alpha transparency level; defaults to 0.5.
+        edgecolor: String of circle edge color; defaults to "w" for white.
 
     Returns:
         The DraggableCircle object.
     """
     channel = detector.get_blob_channel(segment)
     facecolor = segs_color_dict[detector.get_blob_confirmed(segment)]
-    edgecolor = edgecolor_dict[channel]
     if linestyle is None:
         linestyle = _SEG_LINESTYLES[channel]
     circle = patches.Circle(

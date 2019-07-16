@@ -9,9 +9,10 @@ venv environment manager.
 Arguments:
   -h: Show help and exit.
   -d: Skip dependencies check before environment setup.
-  -e [path]: Path to folder where the new venv directory will be placed.
-  -n [name]: Set the Conda environment name; defaults to CONDA_ENV.
-  -s: Build and install SimpleElastix.
+  -e [path]: Path to folder where the new venv directory will be placed. 
+    Defaults to \"../venvs\".
+  -n [name]: Set the virtual environment name; defaults to CLR_ENV.
+  -s: Build and install SimpleElastix by running the \"build_se.sh\" script.
 "
 
 CLR_ENV="clr"
@@ -25,7 +26,7 @@ OPTIND=1
 while getopts hn:sde: opt; do
   case $opt in
     h)
-      echo $HELP
+      echo "$HELP"
       exit 0
       ;;
     n)

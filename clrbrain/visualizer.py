@@ -989,7 +989,6 @@ class Visualization(HasTraits):
                 centroid, 
                 np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
             self.z_offset, self.y_offset, self.x_offset = corner
-            roi = cli.image5d[0, self._img_region]
             self.show_3d()
         else:
             # in non-"raw" mode, show the full label including sub-labels 

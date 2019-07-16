@@ -8,6 +8,7 @@ import os
 
 import numpy as np
 import matplotlib.backend_bases as backend_bases
+from matplotlib import pyplot as plt
 from matplotlib_scalebar.scalebar import ScaleBar
 from matplotlib_scalebar.scalebar import SI_LENGTH
 
@@ -488,6 +489,24 @@ def get_roi_path(path, offset, roi_size):
     return "{}_offset{}x{}".format(
         os.path.splitext(path)[0], tuple(offset), 
         tuple(roi_size)).replace(" ", "")
+
+
+def save_fig(path, ext, modifier=""):
+    """Save figure, swapping in the given extension for the extension
+    in the given path.
+
+    Args:
+        path: Base path to use.
+        ext: Extension to swap into the extension in ``path``. If None,
+            the figure will not be saved.
+        modifier: Modifier string to append before the extension;
+            defaults to an empty string.
+    """
+    if ext is not None and not ext in config.FORMATS_3D:
+        plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
+        lib_clrbrain.backup_file(plot_path)
+        plt.savefig(plot_path)
+        print("exported figure to", plot_path)
 
 if __name__ == "__main__":
     print("Starting plot support")

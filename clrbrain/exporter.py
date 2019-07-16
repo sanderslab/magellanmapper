@@ -1,6 +1,6 @@
 #!/bin/bash
 # ROI exporter for Clrbrain
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 """ROI exporter for Clrbrain.
 
 Convert images and corresponding database entries into formats for 
@@ -26,6 +26,7 @@ from clrbrain import lib_clrbrain
 from clrbrain import sqlite
 from clrbrain import plot_2d
 from clrbrain import plot_3d
+from clrbrain import roi_editor
 
 def make_roi_paths(path, roi_id, channel, make_dirs=False):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
@@ -112,7 +113,7 @@ def export_rois(db, image5d, channel, path, border):
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
             sitk.WriteImage(img3d_sitk, path_img_nifti, False)
-            plot_2d.plot_roi(
+            roi_editor.plot_roi(
                 img3d, blobs, channel, show=False, 
                 title=os.path.splitext(path_img)[0])
             lib_clrbrain.show_full_arrays()
@@ -152,7 +153,7 @@ def export_rois(db, image5d, channel, path, border):
                 False)
             # avoid smoothing interpolation, using "nearest" instead
             with plt.style.context(config.rc_params_mpl2_img_interp):
-                plot_2d.plot_roi(
+                roi_editor.plot_roi(
                     img3d_truth, None, channel, show=False, 
                     title=os.path.splitext(path_img_annot)[0])
             
@@ -181,7 +182,7 @@ def _test_loading_rois(db, channel, path):
     path_base, imgs, img_blobs = load_roi_files(db, path)
     for img, blobs in zip(imgs, img_blobs):
         config.savefig = None
-        plot_2d.plot_roi(img, blobs, channel, show=True, title=path_base)
+        roi_editor.plot_roi(img, blobs, channel, show=True, title=path_base)
 
 def blobs_to_csv(blobs, path):
     """Exports blob coordinates and radius to CSV file, compressed with GZIP.

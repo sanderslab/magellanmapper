@@ -50,6 +50,7 @@ from clrbrain import ontology
 from clrbrain import plot_3d
 from clrbrain import plot_2d
 from clrbrain import plot_support
+from clrbrain import roi_editor
 from clrbrain import segmenter
 from clrbrain import sqlite
 
@@ -563,7 +564,7 @@ class Visualization(HasTraits):
         
         # default options setup
         self._set_border(True)
-        self._circles_2d = [plot_2d.CIRCLES[0]]
+        self._circles_2d = [roi_editor.CIRCLES[0]]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [Styles2D.SQUARE_ROI.value]
         #self._check_list_2d = [self._DEFAULTS_2D[1]]
@@ -778,19 +779,19 @@ class Visualization(HasTraits):
         self._circles_opened_type = None
         self._opened_window_style = None
         circles = self._circles_2d[0].lower()
-        if circles == plot_2d.CIRCLES[3].lower():
+        if circles == roi_editor.CIRCLES[3].lower():
             # reset if in full annotation mode to avoid further duplicating 
             # circles, saving beforehand to prevent loss from premature  
             # window closure
             self.save_segs()
             self._reset_segments()
-            self._circles_2d = [plot_2d.CIRCLES[0]]
+            self._circles_2d = [roi_editor.CIRCLES[0]]
             self.segs_feedback = "Reset circles after saving full annotations"
     
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
         if (self._circles_opened_type 
-            and self._circles_opened_type != plot_2d.CIRCLES[2].lower()):
+            and self._circles_opened_type != roi_editor.CIRCLES[2].lower()):
             # prevent multiple editable windows from being opened 
             # simultaneously to avoid unsynchronized state
             self.segs_feedback = (
@@ -799,7 +800,7 @@ class Visualization(HasTraits):
             return
         circles = self._circles_2d[0].lower()
         if (not self._circles_opened_type 
-            or self._circles_opened_type == plot_2d.CIRCLES[2].lower()):
+            or self._circles_opened_type == roi_editor.CIRCLES[2].lower()):
             # set opened window type if not already set or non-editable window
             self._circles_opened_type = circles
         self._opened_window_style = self._styles_2d[0]
@@ -809,7 +810,7 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         # update verify flag
-        plot_2d.verify = self._DEFAULTS_2D[1] in self._check_list_2d
+        roi_editor.verify = self._DEFAULTS_2D[1] in self._check_list_2d
         img = cli.image5d
         roi = None
         if self._DEFAULTS_2D[0] in self._check_list_2d:
@@ -855,31 +856,31 @@ class Visualization(HasTraits):
             # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(
                 mode="rgba", antialiased=True)
-            plot_2d.plot_2d_stack(
+            roi_editor.plot_2d_stack(
                 *stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.SINGLE_ROW.value:
             # single row
             screenshot = self.scene.mlab.screenshot(
                 mode="rgba", antialiased=True)
-            plot_2d.plot_2d_stack(
+            roi_editor.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, 
                 single_zoom_row=True, 
-                z_level=plot_2d.Z_LEVELS[1], mlab_screenshot=screenshot)
+                z_level=roi_editor.Z_LEVELS[1], mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.WIDE_ROI.value:
             # layout for wide ROIs to maximize real estate on widescreen
-            plot_2d.plot_2d_stack(
+            roi_editor.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2, zoom_cols=7)
         elif self._styles_2d[0] == Styles2D.MULTI_ZOOM.value:
             # multi-zoom overview plots
-            plot_2d.plot_2d_stack(
+            roi_editor.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=5)
         elif self._styles_2d[0] == Styles2D.THIN_ROWS.value:
             # layout for square ROIs with thin rows to create a tall fig
-            plot_2d.plot_2d_stack(
+            roi_editor.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
         else:
             # defaults to Square style without oblique view
-            plot_2d.plot_2d_stack(
+            roi_editor.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3)
     
     def _btn_atlas_editor_trait_fired(self):
@@ -926,10 +927,10 @@ class Visualization(HasTraits):
                 self.show_orientation_axes(self.flipz)
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
             self._btn_segment_trait_fired(segs=blobs)
-            plot_2d.verify = True
+            roi_editor.verify = True
         else:
             print("no roi found")
-            plot_2d.verify = False
+            roi_editor.verify = False
     
     @on_trait_change('_check_list_2d')
     def update_2d_options(self):
@@ -1218,7 +1219,7 @@ class Visualization(HasTraits):
                     VGroup(
                         Item(
                              "_circles_2d", 
-                             editor=CheckListEditor(values=plot_2d.CIRCLES), 
+                             editor=CheckListEditor(values=roi_editor.CIRCLES),
                              style="simple",
                              label="Circles"
                         ),

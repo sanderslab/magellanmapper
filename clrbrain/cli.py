@@ -89,6 +89,7 @@ import multiprocessing as mp
 import numpy as np
 import pandas as pd
 
+from clrbrain import roi_editor
 from clrbrain import chunking
 from clrbrain import colormaps
 from clrbrain import config
@@ -341,8 +342,9 @@ def main(process_args_only=False):
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
             from clrbrain import plot_2d
-            plot_2d.padding = tuple(int(i) for i in padding_split)
-            print("Set plot_2d.padding to {}".format(plot_2d.padding))
+            roi_editor.padding = tuple(int(i) for i in padding_split)
+            print("Set plot_2d.padding to {}".format(
+                roi_editor.padding))
         else:
             print("padding_2d ({}) should be given as 3 values (x, y, z)"
                   .format(args.padding_2d))

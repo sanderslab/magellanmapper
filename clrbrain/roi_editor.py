@@ -307,6 +307,7 @@ class ROIEditor:
                 Z_LEVELS[0].
             roi: A denoised region of interest for display in fully zoomed plots.
                 Defaults to None, in which case image5d will be used instead.
+            circles: :class:``CircleStyles`` enum member; defaults to None.
             zoom_cols: Number of columns per row to reserve for zoomed plots;
                 defaults to :attr:``ZOOM_COLS``.
             img_region: 3D boolean or binary array corresponding to a scaled
@@ -325,8 +326,6 @@ class ROIEditor:
         fig.suptitle(title, color="black",
                      bbox=dict(facecolor=fig.get_facecolor(), edgecolor="none",
                                alpha=0.5))
-        if circles is not None:
-            circles = circles.lower()
         # filename for export
         filename = plot_support.get_roi_path(
             os.path.basename(filename), offset, roi_size)
@@ -586,8 +585,8 @@ class ROIEditor:
         # zoomed-in views of z-planes spanning from just below to just above ROI
         segs_in = None
         segs_out = None
-        if (circles != self.CircleStyles.NO_CIRCLES.value.lower() and segments is not None
-            and len(segments) > 0):
+        if (circles != self.CircleStyles.NO_CIRCLES and segments is not None
+                and len(segments) > 0):
             # separate segments inside from outside the ROI
             if mask_in is not None:
                 segs_in = segments[mask_in]
@@ -663,7 +662,7 @@ class ROIEditor:
                     plot_support.add_scale_bar(ax_z, plane=plane)
                 ax_z_list.append(ax_z)
 
-        if not circles == self.CircleStyles.NO_CIRCLES.value.lower():
+        if not circles == self.CircleStyles.NO_CIRCLES:
             # add points that were not segmented by ctrl-clicking on zoom plots
             # as long as not in "no circles" mode
             def on_btn_release(event):
@@ -795,10 +794,8 @@ class ROIEditor:
                 # z-plane with all segments
                 ax_z = self.show_subplot(
                     fig, gs, i, j, image5d, channel, roi_size, zoom_offset,
-                    None,
-                    segments, None, None, 1.0, z,
-                    circles=self.CircleStyles.CIRCLES.value.lower(),
-                    roi=roi)
+                    None, segments, None, None, 1.0, z,
+                    circles=self.CircleStyles.CIRCLES, roi=roi)
                 if i == 0 and j == 0 and config.scale_bar:
                     plot_support.add_scale_bar(ax_z)
         gs.tight_layout(fig, pad=0.5)
@@ -845,8 +842,7 @@ class ROIEditor:
             labels: Segmentation labels; defaults to None.
             blobs_truth: Truth blobs formatted similarly to ``segs_in``;
                 defaults to None.
-            circles: Type of circles to display, which should be a value of
-                :const:``CIRCLES``; defaults to None.
+            circles: :class:``CircleStyles`` enum member; defaults to None.
             aspect: Image aspect; defauls to None.
             grid: True if a grid should be overlaid; defaults to False.
             cmap_labels: :class:``colormaps.DiscreteColormap`` for labels;
@@ -930,9 +926,9 @@ class ROIEditor:
                         #ax.imshow(label[z_relative]) # showing only threshold
 
             if ((segs_in is not None or segs_out is not None)
-                and not circles == self.CircleStyles.NO_CIRCLES.value.lower()):
+                    and not circles == self.CircleStyles.NO_CIRCLES):
                 segs_in = np.copy(segs_in)
-                if circles is None or circles == self.CircleStyles.CIRCLES.value.lower():
+                if circles is None or circles == self.CircleStyles.CIRCLES:
                     # show circles at detection point only mode:
                     # zero radius of all segments outside of current z to
                     # preservethe order of segments for the corresponding
@@ -940,8 +936,8 @@ class ROIEditor:
                     segs_in[segs_in[:, 0] != z_relative, 3] = 0
 
                 if segs_in is not None and segs_cmap is not None:
-                    if circles in (self.CircleStyles.REPEAT_CIRCLES.value.lower(),
-                                   self.CircleStyles.FULL_ANNOTATION.value.lower()):
+                    if circles in (self.CircleStyles.REPEAT_CIRCLES,
+                                   self.CircleStyles.FULL_ANNOTATION):
                         # repeat circles and full annotation:
                         # show segments from all z's as circles with colored
                         # outlines, gradually decreasing in size when moving
@@ -957,7 +953,7 @@ class ROIEditor:
                             segs_in[:, 3], np.multiply(r_orig, 0.9)), 3] = 0
                     # show colored, non-pickable circles
                     segs_color = segs_in
-                    if circles == self.CircleStyles.FULL_ANNOTATION.value.lower():
+                    if circles == self.CircleStyles.FULL_ANNOTATION:
                         # zero out circles from other z's in full annotation
                         # mode to minimize crowding and highlight center circle
                         segs_color = np.copy(segs_in)
@@ -980,7 +976,7 @@ class ROIEditor:
                 # for planes within ROI, overlay segments with dotted line
                 # patch and make pickable for verifying the segment
                 segments_z = segs_in[segs_in[:, 3] > 0] # full annotation
-                if circles == self.CircleStyles.FULL_ANNOTATION.value.lower():
+                if circles == self.CircleStyles.FULL_ANNOTATION:
                     # when showing full annotation, show all segments in the
                     # ROI with adjusted radii unless radius is <= 0
                     for i in range(len(segments_z)):

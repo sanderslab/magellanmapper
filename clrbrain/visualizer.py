@@ -192,7 +192,7 @@ class Visualization(HasTraits):
     _border_on = False # remembers last border selection
     _DEFAULT_BORDER = np.zeros(3) # default ROI border size
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
-    _circles_2d = List
+    _circles_2d = List  # ROI editor circle styles
     _styles_2d = List
     _atlas_label = None
     _structure_scale = Int # ontology structure levels
@@ -201,7 +201,7 @@ class Visualization(HasTraits):
     _region_id = Str
     _mlab_title = None
     _scene_3d_shown = False # 3D Mayavi display shown
-    _circles_opened_type = None # type of 2D plots windows curr open
+    _circles_opened_type = None  # enum of circle style for opened 2D plots
     _opened_window_style = None # 2D plots window style curr open
     _filename = File # file browser
     _channel = Int # channel number, 0-based
@@ -565,7 +565,7 @@ class Visualization(HasTraits):
         # default options setup
         self._set_border(True)
         self._circles_2d = [
-            roi_editor.ROIEditor.CircleStyles.CIRCLES.value.capitalize()]
+            roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [Styles2D.SQUARE_ROI.value]
         #self._check_list_2d = [self._DEFAULTS_2D[1]]
@@ -779,31 +779,33 @@ class Visualization(HasTraits):
         """
         self._circles_opened_type = None
         self._opened_window_style = None
-        circles = self._circles_2d[0].lower()
-        if circles == roi_editor.ROIEditor.CircleStyles.FULL_ANNOTATION.value.lower():
+        if (self._circles_2d[0] ==
+                roi_editor.ROIEditor.CircleStyles.FULL_ANNOTATION):
             # reset if in full annotation mode to avoid further duplicating 
             # circles, saving beforehand to prevent loss from premature  
             # window closure
             self.save_segs()
             self._reset_segments()
-            self._circles_2d = [roi_editor.ROIEditor.CircleStyles.CIRCLES.value.capitalize()]
+            self._circles_2d = [roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
             self.segs_feedback = "Reset circles after saving full annotations"
     
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
         if (self._circles_opened_type 
-            and self._circles_opened_type != roi_editor.ROIEditor.CircleStyles.NO_CIRCLES.value.lower()):
+                and self._circles_opened_type !=
+                roi_editor.ROIEditor.CircleStyles.NO_CIRCLES):
             # prevent multiple editable windows from being opened 
             # simultaneously to avoid unsynchronized state
             self.segs_feedback = (
                 "Cannot show 2D plots while another editable "
                 "plot is showing. Please redraw.")
             return
-        circles = self._circles_2d[0].lower()
         if (not self._circles_opened_type 
-            or self._circles_opened_type == roi_editor.ROIEditor.CircleStyles.NO_CIRCLES.value.lower()):
+                or self._circles_opened_type ==
+                roi_editor.ROIEditor.CircleStyles.NO_CIRCLES):
             # set opened window type if not already set or non-editable window
-            self._circles_opened_type = circles
+            self._circles_opened_type = roi_editor.ROIEditor.CircleStyles(
+                self._circles_2d[0])
         self._opened_window_style = self._styles_2d[0]
         self.segs_feedback = ""
         
@@ -831,7 +833,7 @@ class Visualization(HasTraits):
             # collect truth blobs from the truth DB if available
             blobs_truth_roi, _ = detector.get_blobs_in_roi(
                 config.truth_db.blobs_truth, curr_offset, curr_roi_size, 
-                plot_2d.padding)
+                roi_editor.padding)
             transpose = np.zeros(blobs_truth_roi.shape[1])
             transpose[0:3] = curr_offset[::-1]
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
@@ -852,7 +854,8 @@ class Visualization(HasTraits):
         roi_ed = roi_editor.ROIEditor()
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
-            "circles": circles, "grid": grid, "img_region": self._img_region, 
+            "circles": roi_editor.ROIEditor.CircleStyles(self._circles_2d[0]),
+            "grid": grid, "img_region": self._img_region,
             "max_intens_proj": max_intens_proj}
         if self._styles_2d[0] == Styles2D.SQUARE_ROI_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
@@ -1222,7 +1225,7 @@ class Visualization(HasTraits):
                         Item(
                              "_circles_2d", 
                              editor=CheckListEditor(values=[
-                                 e.value.capitalize()
+                                 e.value
                                  for e in roi_editor.ROIEditor.CircleStyles]),
                              style="simple",
                              label="Circles"

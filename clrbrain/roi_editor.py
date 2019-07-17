@@ -68,6 +68,7 @@ truth_color_dict = {
     1: "b"
 }
 
+
 class DraggableCircle:
     def __init__(self, circle, segment, fn_update_seg, color="none"):
         self.circle = circle
@@ -225,304 +226,6 @@ class DraggableCircle:
         self.circle.figure.canvas.mpl_disconnect(self.cidmotion)
 
 
-def _get_radius(seg):
-    """Gets the radius for a segments, defaulting to 5 if the segment's
-    radius is close to 0.
-
-    Args:
-        seg: The segments, where seg[3] is the radius.
-
-    Returns:
-        The radius, defaulting to 0 if the given radius value is close
-        to 0 by numpy.allclose.
-    """
-    radius = seg[3]
-    if radius < config.POS_THRESH:
-        radius *= -1
-    return radius
-
-
-def _circle_collection(segments, edgecolor, facecolor, linewidth):
-    """Draws a patch collection of circles for segments.
-
-    Args:
-        segments: Numpy array of segments, generally as an (n, 4)
-            dimension array, where each segment is in (z, y, x, radius).
-        edgecolor: Color of patch borders.
-        facecolor: Color of patch interior.
-        linewidth: Width of the border.
-
-    Returns:
-        The patch collection.
-    """
-    seg_patches = []
-    for seg in segments:
-        seg_patches.append(patches.Circle((seg[2], seg[1]), radius=_get_radius(seg)))
-    collection = PatchCollection(seg_patches)
-    collection.set_edgecolor(edgecolor)
-    collection.set_facecolor(facecolor)
-    collection.set_linewidth(linewidth)
-    return collection
-
-
-def _plot_circle(ax, segment, linewidth, linestyle, fn_update_seg,
-                 alpha=0.5, edgecolor="w"):
-    """Create and draw a DraggableCircle from the given segment.
-
-    Args:
-        ax: Matplotlib axes.
-        segment: Numpy array of segments, generally as an (n, 4)
-            dimension array, where each segment is in (z, y, x, radius).
-        linewidth: Edge line width.
-        linestyle: Edge line style.
-        fn_update_seg: Function to call from DraggableCircle.
-        alpha: Alpha transparency level; defaults to 0.5.
-        edgecolor: String of circle edge color; defaults to "w" for white.
-
-    Returns:
-        The DraggableCircle object.
-    """
-    channel = detector.get_blob_channel(segment)
-    facecolor = segs_color_dict[detector.get_blob_confirmed(segment)]
-    if linestyle is None:
-        linestyle = _SEG_LINESTYLES[channel]
-    circle = patches.Circle(
-        (segment[2], segment[1]), radius=_get_radius(segment),
-        edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth,
-        linestyle=linestyle, alpha=alpha)
-    ax.add_patch(circle)
-    #print("added circle: {}".format(circle))
-    draggable_circle = DraggableCircle(
-        circle, segment, fn_update_seg, facecolor)
-    draggable_circle.connect()
-    _draggable_circles.append(draggable_circle)
-    return draggable_circle
-
-
-def show_subplot(fig, gs, row, col, image5d, channel, roi_size, offset,
-                 fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
-                 z_relative, highlight=False, border=None, plane="xy",
-                 roi=None, labels=None, blobs_truth=None, circles=None,
-                 aspect=None, grid=False, cmap_labels=None):
-    """Shows subplots of the region of interest.
-
-    Args:
-        fig: Matplotlib figure.
-        gs: Gridspec layout.
-        row: Row number of the subplot in the layout.
-        col: Column number of the subplot in the layout.
-        image5d: Full Numpy array of the image stack.
-        channel: Channel of the image to display.
-        roi_size: List of x,y,z dimensions of the ROI.
-        offset: Tuple of x,y,z coordinates of the ROI.
-        segs_in: Numpy array of segments within the ROI to display in the
-            subplot, which can be None. Segments are generally given as an
-            (n, 4) dimension array, where each segment is in (z, y, x, radius).
-        segs_out: Subset of segments that are adjacent to rather than
-            inside the ROI, which will be drawn in a different style. Can be
-            None.
-        segs_cmap: Colormap for segments.
-        alpha: Opacity level.
-        z_relative: Index of the z-plane relative to the start of the ROI.
-        highlight: If true, the plot will be highlighted; defaults
-            to False.
-        border: Border dimensions in pixels given as (x, y, z); defaults
-            to None.
-        plane: The plane to show in each 2D plot, with "xy" to show the
-            XY plane (default) and "xz" to show XZ plane.
-        roi: A denoised region of interest, to show in place of image5d for the
-            zoomed images. Defaults to None, in which case image5d will be
-            used instead.
-        labels: Segmentation labels; defaults to None.
-        blobs_truth: Truth blobs formatted similarly to ``segs_in``; defaults
-            to None; defaults to None.
-        circles: Type of circles to display, which should be a value of
-            :const:``CIRCLES``; defaults to None.
-        aspect: Image aspect; defauls to None.
-        grid: True if a grid should be overlaid; defaults to False.
-        cmap_labels: :class:``colormaps.DiscreteColormap`` for labels;
-            defaults to None.
-    """
-    ax = plt.subplot(gs[row, col])
-    plot_support.hide_axes(ax)
-    size = image5d.shape
-    # swap columns if showing a different plane
-    plane_axis = plot_support.get_plane_axis(plane)
-    image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
-    if plane == config.PLANE[1]:
-        # "xz" planes
-        size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
-    elif plane == config.PLANE[2]:
-        # "yz" planes
-        size = lib_clrbrain.swap_elements(size, 0, 2, image5d_shape_offset)
-        size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
-    z = offset[2]
-    ax.set_title("{}={}".format(plane_axis, z))
-    if border is not None:
-        # boundaries of border region, with xy point of corner in first
-        # elements and [width, height] in 2nd, allowing flipping for yz plane
-        border_bounds = np.array(
-            [border[0:2],
-            [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
-    if z < 0 or z >= size[image5d_shape_offset]:
-        print("skipping z-plane {}".format(z))
-        plt.imshow(np.zeros(roi_size[0:2]))
-    else:
-        # show the zoomed in 2D region
-
-        # calculate the region depending on whether given ROI directly and
-        # remove time dimension since roi argument does not have it
-        if roi is None:
-            region = [offset[2],
-                      slice(offset[1], offset[1] + roi_size[1]),
-                      slice(offset[0], offset[0] + roi_size[0])]
-            roi = image5d[0]
-            #print("region: {}".format(region))
-        else:
-            region = [z_relative, slice(0, roi_size[1]),
-                      slice(0, roi_size[0])]
-        # swap columns if showing a different plane
-        if plane == config.PLANE[1]:
-            region = lib_clrbrain.swap_elements(region, 0, 1)
-        elif plane == config.PLANE[2]:
-            region = lib_clrbrain.swap_elements(region, 0, 2)
-            region = lib_clrbrain.swap_elements(region, 0, 1)
-        # get the zoomed region
-        if roi.ndim >= 4:
-            roi = roi[tuple(region + [slice(None)])]
-        else:
-            roi = roi[tuple(region)]
-        #print("roi shape: {}".format(roi.shape))
-
-        if highlight:
-            # highlight borders of z plane at bottom of ROI
-            for spine in ax.spines.values():
-                spine.set_edgecolor("yellow")
-        if grid:
-            # draw grid lines by directly editing copy of image
-            grid_intervals = (roi_size[0] // 4, roi_size[1] // 4)
-            roi = np.copy(roi)
-            roi[::grid_intervals[0], :] = roi[::grid_intervals[0], :] / 2
-            roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
-
-        # show the ROI, which is now a 2D zoomed image
-        plot_support.imshow_multichannel(
-            ax, roi, channel, config.cmaps, aspect, alpha)
-        #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
-
-        # show labels if provided and within ROI
-        if labels is not None:
-            for i in range(len(labels)):
-                label = labels[i]
-                if z_relative >= 0 and z_relative < label.shape[0]:
-                    ax.imshow(
-                        label[z_relative], cmap=cmap_labels,
-                        norm=cmap_labels.norm)
-                    #ax.imshow(label[z_relative]) # showing only threshold
-
-        if ((segs_in is not None or segs_out is not None)
-            and not circles == CIRCLES[2].lower()):
-            segs_in = np.copy(segs_in)
-            if circles is None or circles == CIRCLES[0].lower():
-                # show circles at detection point only mode:
-                # zero radius of all segments outside of current z to preserve
-                # the order of segments for the corresponding colormap order
-                # while hiding outside segments
-                segs_in[segs_in[:, 0] != z_relative, 3] = 0
-
-            if segs_in is not None and segs_cmap is not None:
-                if circles in (CIRCLES[1].lower(), CIRCLES[3].lower()):
-                    # repeat circles and full annotation:
-                    # show segments from all z's as circles with colored
-                    # outlines, gradually decreasing in size when moving away
-                    # from the blob's central z-plane
-                    z_diff = np.abs(np.subtract(segs_in[:, 0], z_relative))
-                    r_orig = np.abs(np.copy(segs_in[:, 3]))
-                    segs_in[:, 3] = np.subtract(
-                        r_orig, np.divide(z_diff, 3))
-                    # make circles below 90% of their original radius
-                    # invisible but not removed to preserve their corresponding
-                    # colormap index
-                    segs_in[np.less(
-                        segs_in[:, 3], np.multiply(r_orig, 0.9)), 3] = 0
-                # show colored, non-pickable circles
-                segs_color = segs_in
-                if circles == CIRCLES[3].lower():
-                    # zero out circles from other z's in full annotation mode
-                    # to minimize crowding and highlight center circle
-                    segs_color = np.copy(segs_in)
-                    segs_color[segs_color[:, 0] != z_relative, 3] = 0
-                collection = _circle_collection(
-                    segs_color, segs_cmap.astype(float) / 255.0, "none",
-                    SEG_LINEWIDTH)
-                ax.add_collection(collection)
-
-            # segments outside the ROI shown in black dotted line only for
-            # their corresponding z
-            segs_out_z = None
-            if segs_out is not None:
-                segs_out_z = segs_out[segs_out[:, 0] == z_relative]
-                collection_adj = _circle_collection(
-                    segs_out_z, "k", "none", SEG_LINEWIDTH)
-                collection_adj.set_linestyle("--")
-                ax.add_collection(collection_adj)
-
-            # for planes within ROI, overlay segments with dotted line
-            # patch and make pickable for verifying the segment
-            segments_z = segs_in[segs_in[:, 3] > 0] # full annotation
-            if circles == CIRCLES[3].lower():
-                # when showing full annotation, show all segments in the
-                # ROI with adjusted radii unless radius is <= 0
-                for i in range(len(segments_z)):
-                    seg = segments_z[i]
-                    if seg[0] != z_relative:
-                        # add segments outside of plane to Visualizer table
-                        # since they have been added to the plane,
-                        # adjusting rel and abs z coords to the given plane
-                        z_diff = z_relative - seg[0]
-                        seg[0] = z_relative
-                        detector.shift_blob_abs_coords(
-                            segments_z[i], (z_diff, 0, 0))
-                        segments_z[i] = fn_update_seg(seg)
-            else:
-                # apply only to segments in their current z
-                segments_z = segs_in[segs_in[:, 0] == z_relative]
-                if segs_out_z is not None:
-                    segs_out_z_confirmed = segs_out_z[
-                        detector.get_blob_confirmed(segs_out_z) == 1]
-                    if len(segs_out_z_confirmed) > 0:
-                        # include confirmed blobs; TODO: show contextual
-                        # circles in adjacent planes?
-                        segments_z = np.concatenate(
-                            (segments_z, segs_out_z_confirmed))
-                        print("segs_out_z_confirmed:\n{}"
-                              .format(segs_out_z_confirmed))
-            if segments_z is not None:
-                # show pickable circles
-                for seg in segments_z:
-                    _plot_circle(
-                        ax, seg, SEG_LINEWIDTH, None, fn_update_seg)
-
-            # shows truth blobs as small, solid circles
-            if blobs_truth is not None:
-                for blob in blobs_truth:
-                    ax.add_patch(patches.Circle(
-                        (blob[2], blob[1]), radius=3,
-                        facecolor=truth_color_dict[blob[5]], alpha=1))
-
-        # adds a simple border to highlight the border of the ROI
-        if border is not None:
-            #print("border: {}, roi_size: {}".format(border, roi_size))
-            ax.add_patch(patches.Rectangle(border_bounds[0],
-                                           border_bounds[1, 0],
-                                           border_bounds[1, 1],
-                                           fill=False, edgecolor="yellow",
-                                           linestyle="dashed",
-                                           linewidth=SEG_LINEWIDTH))
-
-    return ax
-
-
 class ROIEditor:
     """Graphical interface for viewing and annotating 3D ROIs through
     serial 2D planes.
@@ -556,7 +259,7 @@ class ROIEditor:
                       offset, segments, mask_in, segs_cmap, fn_close_listener,
                       border=None, plane="xy", padding_stack=None,
                       zoom_levels=2, single_zoom_row=False,
-                      z_level=ZLevels.BOTTOM, 
+                      z_level=ZLevels.BOTTOM,
                       roi=None, labels=None, blobs_truth=None, circles=None,
                       mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS,
                       img_region=None, max_intens_proj=False):
@@ -936,7 +639,7 @@ class ROIEditor:
                                and z_relative < roi_size[2] - border[2])
 
                 # shows the zoomed subplot with scale bar for the current z-plane
-                ax_z = show_subplot(
+                ax_z = self.show_subplot(
                     fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset,
                     fn_update_seg,
                     segs_in, segs_out, segs_cmap, alpha, z_relative,
@@ -978,7 +681,7 @@ class ROIEditor:
                             detector.update_blob_confirmed(seg, 1)
                             seg = fn_update_seg(seg[0])
                             # adds a circle to denote the new segment
-                            patch = _plot_circle(
+                            patch = self._plot_circle(
                                 ax, seg, SEG_LINEWIDTH, "-", fn_update_seg)
                     except ValueError as e:
                         print(e)
@@ -1004,7 +707,7 @@ class ROIEditor:
                         print("Pasting a copied in segment")
                         detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
                         seg_new = fn_update_seg(seg_new)
-                    _plot_circle(
+                    self._plot_circle(
                         ax, seg_new, SEG_LINEWIDTH, None, fn_update_seg)
 
             fig.canvas.mpl_connect("button_release_event", on_btn_release)
@@ -1070,13 +773,13 @@ class ROIEditor:
                 cols = col_remainder
             # show zoomed in plots and highlight one at offset z
             for j in range(cols):
-                # z relative to the start of the ROI, since segs are relative to ROI
+                # z relative to the start of the ROI, since segs relative to ROI
                 z = i * zoom_plot_cols + j
                 zoom_offset[2] = z
 
-                # shows the zoomed subplot with scale bar for the current z-plane
-                # with all segments
-                ax_z = show_subplot(
+                # shows the zoomed subplot with scale bar for the current
+                # z-plane with all segments
+                ax_z = self.show_subplot(
                     fig, gs, i, j, image5d, channel, roi_size, zoom_offset,
                     None,
                     segments, None, None, 1.0, z, circles=CIRCLES[0],
@@ -1087,4 +790,301 @@ class ROIEditor:
         if show:
             plt.show()
         plot_support.save_fig(title, config.savefig)
+
+    def show_subplot(self, fig, gs, row, col, image5d, channel, roi_size,
+                     offset,
+                     fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
+                     z_relative, highlight=False, border=None, plane="xy",
+                     roi=None, labels=None, blobs_truth=None, circles=None,
+                     aspect=None, grid=False, cmap_labels=None):
+        """Shows subplots of the region of interest.
+
+        Args:
+            fig: Matplotlib figure.
+            gs: Gridspec layout.
+            row: Row number of the subplot in the layout.
+            col: Column number of the subplot in the layout.
+            image5d: Full Numpy array of the image stack.
+            channel: Channel of the image to display.
+            roi_size: List of x,y,z dimensions of the ROI.
+            offset: Tuple of x,y,z coordinates of the ROI.
+            segs_in: Numpy array of segments within the ROI to display in the
+                subplot, which can be None. Segments are generally given as an
+                ``(n, 4)`` dimension array, where each segment is in
+                ``(z, y, x, radius)``.
+            segs_out: Subset of segments that are adjacent to rather than
+                inside the ROI, which will be drawn in a different style.
+                Can be None.
+            segs_cmap: Colormap for segments.
+            alpha: Opacity level.
+            z_relative: Index of the z-plane relative to the start of the ROI.
+            highlight: If true, the plot will be highlighted; defaults
+                to False.
+            border: Border dimensions in pixels given as (x, y, z); defaults
+                to None.
+            plane: The plane to show in each 2D plot, with "xy" to show the
+                XY plane (default) and "xz" to show XZ plane.
+            roi: A denoised region of interest, to show in place of image5d
+                for the zoomed images. Defaults to None, in which case
+                image5d will be used instead.
+            labels: Segmentation labels; defaults to None.
+            blobs_truth: Truth blobs formatted similarly to ``segs_in``;
+                defaults to None.
+            circles: Type of circles to display, which should be a value of
+                :const:``CIRCLES``; defaults to None.
+            aspect: Image aspect; defauls to None.
+            grid: True if a grid should be overlaid; defaults to False.
+            cmap_labels: :class:``colormaps.DiscreteColormap`` for labels;
+                defaults to None.
+        """
+        ax = plt.subplot(gs[row, col])
+        plot_support.hide_axes(ax)
+        size = image5d.shape
+        # swap columns if showing a different plane
+        plane_axis = plot_support.get_plane_axis(plane)
+        image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
+        if plane == config.PLANE[1]:
+            # "xz" planes
+            size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
+        elif plane == config.PLANE[2]:
+            # "yz" planes
+            size = lib_clrbrain.swap_elements(size, 0, 2, image5d_shape_offset)
+            size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
+        z = offset[2]
+        ax.set_title("{}={}".format(plane_axis, z))
+        if border is not None:
+            # boundaries of border region, with xy point of corner in first
+            # elements and [width, height] in 2nd, allowing flip for yz plane
+            border_bounds = np.array(
+                [border[0:2],
+                [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
+        if z < 0 or z >= size[image5d_shape_offset]:
+            print("skipping z-plane {}".format(z))
+            plt.imshow(np.zeros(roi_size[0:2]))
+        else:
+            # show the zoomed in 2D region
+
+            # calculate the region depending on whether given ROI directly and
+            # remove time dimension since roi argument does not have it
+            if roi is None:
+                region = [offset[2],
+                          slice(offset[1], offset[1] + roi_size[1]),
+                          slice(offset[0], offset[0] + roi_size[0])]
+                roi = image5d[0]
+                #print("region: {}".format(region))
+            else:
+                region = [z_relative, slice(0, roi_size[1]),
+                          slice(0, roi_size[0])]
+            # swap columns if showing a different plane
+            if plane == config.PLANE[1]:
+                region = lib_clrbrain.swap_elements(region, 0, 1)
+            elif plane == config.PLANE[2]:
+                region = lib_clrbrain.swap_elements(region, 0, 2)
+                region = lib_clrbrain.swap_elements(region, 0, 1)
+            # get the zoomed region
+            if roi.ndim >= 4:
+                roi = roi[tuple(region + [slice(None)])]
+            else:
+                roi = roi[tuple(region)]
+            #print("roi shape: {}".format(roi.shape))
+
+            if highlight:
+                # highlight borders of z plane at bottom of ROI
+                for spine in ax.spines.values():
+                    spine.set_edgecolor("yellow")
+            if grid:
+                # draw grid lines by directly editing copy of image
+                grid_intervals = (roi_size[0] // 4, roi_size[1] // 4)
+                roi = np.copy(roi)
+                roi[::grid_intervals[0], :] = roi[::grid_intervals[0], :] / 2
+                roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
+
+            # show the ROI, which is now a 2D zoomed image
+            plot_support.imshow_multichannel(
+                ax, roi, channel, config.cmaps, aspect, alpha)
+            #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
+
+            # show labels if provided and within ROI
+            if labels is not None:
+                for i in range(len(labels)):
+                    label = labels[i]
+                    if z_relative >= 0 and z_relative < label.shape[0]:
+                        ax.imshow(
+                            label[z_relative], cmap=cmap_labels,
+                            norm=cmap_labels.norm)
+                        #ax.imshow(label[z_relative]) # showing only threshold
+
+            if ((segs_in is not None or segs_out is not None)
+                and not circles == CIRCLES[2].lower()):
+                segs_in = np.copy(segs_in)
+                if circles is None or circles == CIRCLES[0].lower():
+                    # show circles at detection point only mode:
+                    # zero radius of all segments outside of current z to
+                    # preservethe order of segments for the corresponding
+                    # colormap order while hiding outside segments
+                    segs_in[segs_in[:, 0] != z_relative, 3] = 0
+
+                if segs_in is not None and segs_cmap is not None:
+                    if circles in (CIRCLES[1].lower(), CIRCLES[3].lower()):
+                        # repeat circles and full annotation:
+                        # show segments from all z's as circles with colored
+                        # outlines, gradually decreasing in size when moving
+                        # away from the blob's central z-plane
+                        z_diff = np.abs(np.subtract(segs_in[:, 0], z_relative))
+                        r_orig = np.abs(np.copy(segs_in[:, 3]))
+                        segs_in[:, 3] = np.subtract(
+                            r_orig, np.divide(z_diff, 3))
+                        # make circles below 90% of their original radius
+                        # invisible but not removed to preserve their
+                        # corresponding colormap index
+                        segs_in[np.less(
+                            segs_in[:, 3], np.multiply(r_orig, 0.9)), 3] = 0
+                    # show colored, non-pickable circles
+                    segs_color = segs_in
+                    if circles == CIRCLES[3].lower():
+                        # zero out circles from other z's in full annotation
+                        # mode to minimize crowding and highlight center circle
+                        segs_color = np.copy(segs_in)
+                        segs_color[segs_color[:, 0] != z_relative, 3] = 0
+                    collection = self._circle_collection(
+                        segs_color, segs_cmap.astype(float) / 255.0, "none",
+                        SEG_LINEWIDTH)
+                    ax.add_collection(collection)
+
+                # segments outside the ROI shown in black dotted line only for
+                # their corresponding z
+                segs_out_z = None
+                if segs_out is not None:
+                    segs_out_z = segs_out[segs_out[:, 0] == z_relative]
+                    collection_adj = self._circle_collection(
+                        segs_out_z, "k", "none", SEG_LINEWIDTH)
+                    collection_adj.set_linestyle("--")
+                    ax.add_collection(collection_adj)
+
+                # for planes within ROI, overlay segments with dotted line
+                # patch and make pickable for verifying the segment
+                segments_z = segs_in[segs_in[:, 3] > 0] # full annotation
+                if circles == CIRCLES[3].lower():
+                    # when showing full annotation, show all segments in the
+                    # ROI with adjusted radii unless radius is <= 0
+                    for i in range(len(segments_z)):
+                        seg = segments_z[i]
+                        if seg[0] != z_relative:
+                            # add segments outside of plane to Visualizer table
+                            # since they have been added to the plane,
+                            # adjusting rel and abs z coords to the given plane
+                            z_diff = z_relative - seg[0]
+                            seg[0] = z_relative
+                            detector.shift_blob_abs_coords(
+                                segments_z[i], (z_diff, 0, 0))
+                            segments_z[i] = fn_update_seg(seg)
+                else:
+                    # apply only to segments in their current z
+                    segments_z = segs_in[segs_in[:, 0] == z_relative]
+                    if segs_out_z is not None:
+                        segs_out_z_confirmed = segs_out_z[
+                            detector.get_blob_confirmed(segs_out_z) == 1]
+                        if len(segs_out_z_confirmed) > 0:
+                            # include confirmed blobs; TODO: show contextual
+                            # circles in adjacent planes?
+                            segments_z = np.concatenate(
+                                (segments_z, segs_out_z_confirmed))
+                            print("segs_out_z_confirmed:\n{}"
+                                  .format(segs_out_z_confirmed))
+                if segments_z is not None:
+                    # show pickable circles
+                    for seg in segments_z:
+                        self._plot_circle(
+                            ax, seg, SEG_LINEWIDTH, None, fn_update_seg)
+
+                # shows truth blobs as small, solid circles
+                if blobs_truth is not None:
+                    for blob in blobs_truth:
+                        ax.add_patch(patches.Circle(
+                            (blob[2], blob[1]), radius=3,
+                            facecolor=truth_color_dict[blob[5]], alpha=1))
+
+            # adds a simple border to highlight the border of the ROI
+            if border is not None:
+                #print("border: {}, roi_size: {}".format(border, roi_size))
+                ax.add_patch(patches.Rectangle(border_bounds[0],
+                                               border_bounds[1, 0],
+                                               border_bounds[1, 1],
+                                               fill=False, edgecolor="yellow",
+                                               linestyle="dashed",
+                                               linewidth=SEG_LINEWIDTH))
+
+        return ax
+
+    def _circle_collection(self, segments, edgecolor, facecolor, linewidth):
+        """Draws a patch collection of circles for segments.
+
+        Args:
+            segments: Numpy array of segments, generally as an (n, 4)
+                dimension array, where each segment is in (z, y, x, radius).
+            edgecolor: Color of patch borders.
+            facecolor: Color of patch interior.
+            linewidth: Width of the border.
+
+        Returns:
+            The patch collection.
+        """
+        seg_patches = []
+        for seg in segments:
+            seg_patches.append(
+                patches.Circle((seg[2], seg[1]), radius=self._get_radius(seg)))
+        collection = PatchCollection(seg_patches)
+        collection.set_edgecolor(edgecolor)
+        collection.set_facecolor(facecolor)
+        collection.set_linewidth(linewidth)
+        return collection
+
+    def _plot_circle(self, ax, segment, linewidth, linestyle, fn_update_seg,
+                     alpha=0.5, edgecolor="w"):
+        """Create and draw a DraggableCircle from the given segment.
+
+        Args:
+            ax: Matplotlib axes.
+            segment: Numpy array of segments, generally as an (n, 4)
+                dimension array, where each segment is in (z, y, x, radius).
+            linewidth: Edge line width.
+            linestyle: Edge line style.
+            fn_update_seg: Function to call from DraggableCircle.
+            alpha: Alpha transparency level; defaults to 0.5.
+            edgecolor: String of circle edge color; defaults to "w" for white.
+
+        Returns:
+            The DraggableCircle object.
+        """
+        channel = detector.get_blob_channel(segment)
+        facecolor = segs_color_dict[detector.get_blob_confirmed(segment)]
+        if linestyle is None:
+            linestyle = _SEG_LINESTYLES[channel]
+        circle = patches.Circle(
+            (segment[2], segment[1]), radius=self._get_radius(segment),
+            edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth,
+            linestyle=linestyle, alpha=alpha)
+        ax.add_patch(circle)
+        #print("added circle: {}".format(circle))
+        draggable_circle = DraggableCircle(
+            circle, segment, fn_update_seg, facecolor)
+        draggable_circle.connect()
+        _draggable_circles.append(draggable_circle)
+        return draggable_circle
+
+    def _get_radius(self, seg):
+        """Gets the radius for a segments, defaulting to 5 if the segment's
+        radius is close to 0.
+
+        Args:
+            seg: The segments, where seg[3] is the radius.
+
+        Returns:
+            The radius, defaulting to 0 if the given radius value is close
+            to 0 by numpy.allclose.
+        """
+        radius = seg[3]
+        if radius < config.POS_THRESH:
+            radius *= -1
+        return radius
 

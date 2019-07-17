@@ -848,6 +848,7 @@ class Visualization(HasTraits):
             self.segs_cmap, self._fig_close_listener, 
             # additional args with defaults
             self._full_border(self.border), self._planes_2d[0].lower())
+        roi_ed = roi_editor.ROIEditor()
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
             "circles": circles, "grid": grid, "img_region": self._img_region, 
@@ -856,31 +857,31 @@ class Visualization(HasTraits):
             # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(
                 mode="rgba", antialiased=True)
-            roi_editor.plot_2d_stack(
+            roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.SINGLE_ROW.value:
             # single row
             screenshot = self.scene.mlab.screenshot(
                 mode="rgba", antialiased=True)
-            roi_editor.plot_2d_stack(
+            roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, 
                 single_zoom_row=True, 
-                z_level=roi_editor.Z_LEVELS[1], mlab_screenshot=screenshot)
+                z_level=roi_ed.Z_LEVELS[1], mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.WIDE_ROI.value:
             # layout for wide ROIs to maximize real estate on widescreen
-            roi_editor.plot_2d_stack(
+            roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2, zoom_cols=7)
         elif self._styles_2d[0] == Styles2D.MULTI_ZOOM.value:
             # multi-zoom overview plots
-            roi_editor.plot_2d_stack(
+            roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=5)
         elif self._styles_2d[0] == Styles2D.THIN_ROWS.value:
             # layout for square ROIs with thin rows to create a tall fig
-            roi_editor.plot_2d_stack(
+            roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, zoom_cols=6)
         else:
             # defaults to Square style without oblique view
-            roi_editor.plot_2d_stack(
+            roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3)
     
     def _btn_atlas_editor_trait_fired(self):

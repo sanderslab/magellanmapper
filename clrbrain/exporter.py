@@ -113,7 +113,8 @@ def export_rois(db, image5d, channel, path, border):
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
             sitk.WriteImage(img3d_sitk, path_img_nifti, False)
-            roi_editor.plot_roi(
+            roi_ed = roi_editor.ROIEditor()
+            roi_ed.plot_roi(
                 img3d, blobs, channel, show=False, 
                 title=os.path.splitext(path_img)[0])
             lib_clrbrain.show_full_arrays()
@@ -153,7 +154,7 @@ def export_rois(db, image5d, channel, path, border):
                 False)
             # avoid smoothing interpolation, using "nearest" instead
             with plt.style.context(config.rc_params_mpl2_img_interp):
-                roi_editor.plot_roi(
+                roi_ed.plot_roi(
                     img3d_truth, None, channel, show=False, 
                     title=os.path.splitext(path_img_annot)[0])
             
@@ -180,9 +181,10 @@ def load_roi_files(db, path):
 
 def _test_loading_rois(db, channel, path):
     path_base, imgs, img_blobs = load_roi_files(db, path)
+    roi_ed = roi_editor.ROIEditor()
     for img, blobs in zip(imgs, img_blobs):
         config.savefig = None
-        roi_editor.plot_roi(img, blobs, channel, show=True, title=path_base)
+        roi_ed.plot_roi(img, blobs, channel, show=True, title=path_base)
 
 def blobs_to_csv(blobs, path):
     """Exports blob coordinates and radius to CSV file, compressed with GZIP.

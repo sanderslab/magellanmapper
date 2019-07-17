@@ -14,6 +14,7 @@ Attributes:
 
 import math
 import os
+from enum import Enum
 from time import time
 
 import numpy as np
@@ -540,7 +541,12 @@ class ROIEditor:
             z-plane shown in the overview plots.
     """
     ZOOM_COLS = 9
-    Z_LEVELS = ("bottom", "middle", "top")
+
+    ZLevels = Enum(
+        "ZLevels", (
+            "BOTTOM", "MIDDLE", "TOP",
+        )
+    )
 
     def __init__(self):
         print("Initiating ROI Editor")
@@ -549,7 +555,8 @@ class ROIEditor:
                       roi_size,
                       offset, segments, mask_in, segs_cmap, fn_close_listener,
                       border=None, plane="xy", padding_stack=None,
-                      zoom_levels=2, single_zoom_row=False, z_level=Z_LEVELS[0],
+                      zoom_levels=2, single_zoom_row=False,
+                      z_level=ZLevels.BOTTOM, 
                       roi=None, labels=None, blobs_truth=None, circles=None,
                       mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS,
                       img_region=None, max_intens_proj=False):
@@ -652,9 +659,9 @@ class ROIEditor:
         z_planes = z_planes + z_planes_padding * 2
         # position overview at bottom (default), middle, or top of stack
         z_overview = z_start # abs positioning
-        if z_level == self.Z_LEVELS[1]:
+        if z_level == self.ZLevels.MIDDLE:
             z_overview = (2 * z_start + z_planes) // 2
-        elif z_level == self.Z_LEVELS[2]:
+        elif z_level == self.ZLevels.TOP:
             z_overview = z_start + z_planes
         print("z_overview: {}".format(z_overview))
         max_size = plot_support.max_plane(image5d[0], plane)

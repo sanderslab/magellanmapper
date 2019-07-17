@@ -866,7 +866,7 @@ class Visualization(HasTraits):
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=3, 
                 single_zoom_row=True, 
-                z_level=roi_ed.Z_LEVELS[1], mlab_screenshot=screenshot)
+                z_level=roi_ed.ZLevels.MIDDLE, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.WIDE_ROI.value:
             # layout for wide ROIs to maximize real estate on widescreen
             roi_ed.plot_2d_stack(

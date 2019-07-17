@@ -4,7 +4,6 @@
 """ROI editing GUI in the Clrbrain package.
 
 Attributes:
-    colormap_2d: The Matplotlib colormap for 2D plots.
     verify: If true, verification mode is turned on, which for now
         simply turns on interior borders as the picker remains on
         by default.
@@ -18,7 +17,6 @@ from enum import Enum
 from time import time
 
 import numpy as np
-from matplotlib import cm
 from matplotlib import gridspec as gridspec
 from matplotlib import patches as patches
 from matplotlib import pyplot as plt
@@ -32,54 +30,38 @@ from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_support
 
-SEG_LINEWIDTH = 1
 CIRCLES = ("Circles", "Repeat circles", "No circles", "Full annotation")
-# divisor for finding array interval to downsample images
-_DOWNSAMPLE_MAX_ELTS = 1000
-# need to store DraggableCircles objects to prevent premature garbage collection
-_draggable_circles = []
-_circle_last_picked = []
-_CUT = "cut"
-_COPY = "copy"
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
-colormap_2d = cm.inferno
 verify = False
-
-# segment line styles based on channel
-_SEG_LINESTYLES = {
-    0: ":",
-    1: "-.",
-    2: "--",
-    3: (0, (3, 5, 1, 5, 1, 5)),
-    4: "-",
-}
-# segment colors based on confirmation status
-segs_color_dict = {
-    -1: "none",
-    0: "r",
-    1: "g",
-    2: "y"
-}
-# face colors for truth flags
-truth_color_dict = {
-    -1: None,
-    0: "m",
-    1: "b"
-}
 
 
 class DraggableCircle:
-    def __init__(self, circle, segment, fn_update_seg, color="none"):
+
+    # segment colors based on confirmation status
+    BLOB_COLORS = {
+        -1: "none",
+        0: "r",
+        1: "g",
+        2: "y"
+    }
+
+    CUT = "cut"
+    _COPY = "copy"
+
+    picked = None
+
+    def __init__(self, circle, segment, fn_update_seg, picked, color="none"):
         self.circle = circle
         self.circle.set_picker(5)
         self.facecolori = -1
-        for key, val in segs_color_dict.items():
+        for key, val in self.BLOB_COLORS.items():
             if val == color:
                 self.facecolori = key
         self.press = None
         self.segment = segment
         self.fn_update_seg = fn_update_seg
+        self.picked = picked
 
     def connect(self):
         """Connect events to functions.
@@ -183,17 +165,17 @@ class DraggableCircle:
         #print("color: {}".format(self.facecolori))
         if event.mouseevent.key == "x":
             # "cut" segment
-            _circle_last_picked.append((self, _CUT))
+            self.picked.append((self, self.CUT))
             self.remove_self()
             print("cut seg: {}".format(self.segment))
         elif event.mouseevent.key == "c":
             # "copy" segment
-            _circle_last_picked.append((self, _COPY))
+            self.picked.append((self, self._COPY))
             print("copied seg: {}".format(self.segment))
         elif event.mouseevent.key == "d":
             # delete segment, which will be stored as cut segment to allow
             # undoing the deletion by pasting
-            _circle_last_picked.append((self, _CUT))
+            self.picked.append((self, self.CUT))
             self.remove_self()
             self.fn_update_seg(self.segment, remove=True)
             print("deleted seg: {}".format(self.segment))
@@ -204,15 +186,15 @@ class DraggableCircle:
             change = -1 if event.mouseevent.key == "r" else 1
             i = self.facecolori + change
             # wrap around keys if exceeding min/max
-            if i > max(segs_color_dict.keys()):
+            if i > max(self.BLOB_COLORS.keys()):
                 if self.segment[3] < config.POS_THRESH:
                     # user-added segments simply disappear when exceeding
-                    _circle_last_picked.append((self, _CUT))
+                    self.picked.append((self, self.CUT))
                     self.remove_self()
                 i = -1
-            elif i < min(segs_color_dict.keys()):
-                i = max(segs_color_dict.keys())
-            self.circle.set_facecolor(segs_color_dict[i])
+            elif i < min(self.BLOB_COLORS.keys()):
+                i = max(self.BLOB_COLORS.keys())
+            self.circle.set_facecolor(self.BLOB_COLORS[i])
             self.facecolori = i
             self.segment[4] = i
             self.fn_update_seg(self.segment, seg_old)
@@ -250,6 +232,31 @@ class ROIEditor:
             "BOTTOM", "MIDDLE", "TOP",
         )
     )
+
+    # segment line styles based on channel
+    _BLOB_LINESTYLES = {
+        0: ":",
+        1: "-.",
+        2: "--",
+        3: (0, (3, 5, 1, 5, 1, 5)),
+        4: "-",
+    }
+
+    # face colors for truth flags
+    _TRUTH_COLORS = {
+        -1: None,
+        0: "m",
+        1: "b"
+    }
+
+    _BLOB_LINEWIDTH = 1
+
+    # divisor for finding array interval to downsample images
+    _DOWNSAMPLE_MAX_ELTS = 1000
+
+    # need to store DraggableCircles objects to prevent premature garbage collection
+    _draggable_circles = []
+    _circle_last_picked = []
 
     def __init__(self):
         print("Initiating ROI Editor")
@@ -472,7 +479,8 @@ class ROIEditor:
             # downsample by taking interval to minimize values required to
             # access per plane, which can improve performance considerably
             downsample = np.max(
-                np.divide(img2d_ov.shape, _DOWNSAMPLE_MAX_ELTS)).astype(np.int)
+                np.divide(img2d_ov.shape,
+                          self._DOWNSAMPLE_MAX_ELTS)).astype(np.int)
             if downsample < 1:
                 downsample = 1
             min_show = config.near_min
@@ -682,33 +690,34 @@ class ROIEditor:
                             seg = fn_update_seg(seg[0])
                             # adds a circle to denote the new segment
                             patch = self._plot_circle(
-                                ax, seg, SEG_LINEWIDTH, "-", fn_update_seg)
+                                ax, seg, self._BLOB_LINEWIDTH, "-", fn_update_seg)
                     except ValueError as e:
                         print(e)
                         print("not on a plot to select a point")
                 elif event.key == "v":
-                    _circle_last_picked_len = len(_circle_last_picked)
+                    _circle_last_picked_len = len(self._circle_last_picked)
                     if _circle_last_picked_len < 1:
                         print("No previously picked circle to paste")
                         return
-                    moved_item = _circle_last_picked[_circle_last_picked_len - 1]
+                    moved_item = self._circle_last_picked[
+                        _circle_last_picked_len - 1]
                     circle, move_type = moved_item
                     axi = ax_z_list.index(ax)
                     dz = axi - z_planes_padding - circle.segment[0]
                     seg_old = np.copy(circle.segment)
                     seg_new = np.copy(circle.segment)
                     seg_new[0] += dz
-                    if move_type == _CUT:
+                    if move_type == DraggableCircle.CUT:
                         print("Pasting a cut segment")
-                        _draggable_circles.remove(circle)
-                        _circle_last_picked.remove(moved_item)
+                        self._draggable_circles.remove(circle)
+                        self._circle_last_picked.remove(moved_item)
                         seg_new = fn_update_seg(seg_new, seg_old)
                     else:
                         print("Pasting a copied in segment")
                         detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
                         seg_new = fn_update_seg(seg_new)
                     self._plot_circle(
-                        ax, seg_new, SEG_LINEWIDTH, None, fn_update_seg)
+                        ax, seg_new, self._BLOB_LINEWIDTH, None, fn_update_seg)
 
             fig.canvas.mpl_connect("button_release_event", on_btn_release)
             # reset circles window flag
@@ -948,7 +957,7 @@ class ROIEditor:
                         segs_color[segs_color[:, 0] != z_relative, 3] = 0
                     collection = self._circle_collection(
                         segs_color, segs_cmap.astype(float) / 255.0, "none",
-                        SEG_LINEWIDTH)
+                        self._BLOB_LINEWIDTH)
                     ax.add_collection(collection)
 
                 # segments outside the ROI shown in black dotted line only for
@@ -957,7 +966,7 @@ class ROIEditor:
                 if segs_out is not None:
                     segs_out_z = segs_out[segs_out[:, 0] == z_relative]
                     collection_adj = self._circle_collection(
-                        segs_out_z, "k", "none", SEG_LINEWIDTH)
+                        segs_out_z, "k", "none", self._BLOB_LINEWIDTH)
                     collection_adj.set_linestyle("--")
                     ax.add_collection(collection_adj)
 
@@ -995,14 +1004,14 @@ class ROIEditor:
                     # show pickable circles
                     for seg in segments_z:
                         self._plot_circle(
-                            ax, seg, SEG_LINEWIDTH, None, fn_update_seg)
+                            ax, seg, self._BLOB_LINEWIDTH, None, fn_update_seg)
 
                 # shows truth blobs as small, solid circles
                 if blobs_truth is not None:
                     for blob in blobs_truth:
                         ax.add_patch(patches.Circle(
                             (blob[2], blob[1]), radius=3,
-                            facecolor=truth_color_dict[blob[5]], alpha=1))
+                            facecolor=self._TRUTH_COLORS[blob[5]], alpha=1))
 
             # adds a simple border to highlight the border of the ROI
             if border is not None:
@@ -1012,7 +1021,7 @@ class ROIEditor:
                                                border_bounds[1, 1],
                                                fill=False, edgecolor="yellow",
                                                linestyle="dashed",
-                                               linewidth=SEG_LINEWIDTH))
+                                               linewidth=self._BLOB_LINEWIDTH))
 
         return ax
 
@@ -1057,9 +1066,10 @@ class ROIEditor:
             The DraggableCircle object.
         """
         channel = detector.get_blob_channel(segment)
-        facecolor = segs_color_dict[detector.get_blob_confirmed(segment)]
+        facecolor = DraggableCircle.BLOB_COLORS[
+            detector.get_blob_confirmed(segment)]
         if linestyle is None:
-            linestyle = _SEG_LINESTYLES[channel]
+            linestyle = self._BLOB_LINESTYLES[channel]
         circle = patches.Circle(
             (segment[2], segment[1]), radius=self._get_radius(segment),
             edgecolor=edgecolor, facecolor=facecolor, linewidth=linewidth,
@@ -1067,9 +1077,9 @@ class ROIEditor:
         ax.add_patch(circle)
         #print("added circle: {}".format(circle))
         draggable_circle = DraggableCircle(
-            circle, segment, fn_update_seg, facecolor)
+            circle, segment, fn_update_seg, self._circle_last_picked, facecolor)
         draggable_circle.connect()
-        _draggable_circles.append(draggable_circle)
+        self._draggable_circles.append(draggable_circle)
         return draggable_circle
 
     def _get_radius(self, seg):

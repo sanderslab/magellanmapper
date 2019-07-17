@@ -30,7 +30,6 @@ from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_support
 
-CIRCLES = ("Circles", "Repeat circles", "No circles", "Full annotation")
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order
 verify = False
@@ -232,6 +231,12 @@ class ROIEditor:
             "BOTTOM", "MIDDLE", "TOP",
         )
     )
+
+    class CircleStyles(Enum):
+        CIRCLES = "Circles"
+        REPEAT_CIRCLES = "Repeat circles"
+        NO_CIRCLES = "No circles"
+        FULL_ANNOTATION = "Full annotation"
 
     # segment line styles based on channel
     _BLOB_LINESTYLES = {
@@ -581,7 +586,7 @@ class ROIEditor:
         # zoomed-in views of z-planes spanning from just below to just above ROI
         segs_in = None
         segs_out = None
-        if (circles != CIRCLES[2].lower() and segments is not None
+        if (circles != self.CircleStyles.NO_CIRCLES.value.lower() and segments is not None
             and len(segments) > 0):
             # separate segments inside from outside the ROI
             if mask_in is not None:
@@ -658,7 +663,7 @@ class ROIEditor:
                     plot_support.add_scale_bar(ax_z, plane=plane)
                 ax_z_list.append(ax_z)
 
-        if not circles == CIRCLES[2].lower():
+        if not circles == self.CircleStyles.NO_CIRCLES.value.lower():
             # add points that were not segmented by ctrl-clicking on zoom plots
             # as long as not in "no circles" mode
             def on_btn_release(event):
@@ -791,7 +796,8 @@ class ROIEditor:
                 ax_z = self.show_subplot(
                     fig, gs, i, j, image5d, channel, roi_size, zoom_offset,
                     None,
-                    segments, None, None, 1.0, z, circles=CIRCLES[0],
+                    segments, None, None, 1.0, z,
+                    circles=self.CircleStyles.CIRCLES.value.lower(),
                     roi=roi)
                 if i == 0 and j == 0 and config.scale_bar:
                     plot_support.add_scale_bar(ax_z)
@@ -924,9 +930,9 @@ class ROIEditor:
                         #ax.imshow(label[z_relative]) # showing only threshold
 
             if ((segs_in is not None or segs_out is not None)
-                and not circles == CIRCLES[2].lower()):
+                and not circles == self.CircleStyles.NO_CIRCLES.value.lower()):
                 segs_in = np.copy(segs_in)
-                if circles is None or circles == CIRCLES[0].lower():
+                if circles is None or circles == self.CircleStyles.CIRCLES.value.lower():
                     # show circles at detection point only mode:
                     # zero radius of all segments outside of current z to
                     # preservethe order of segments for the corresponding
@@ -934,7 +940,8 @@ class ROIEditor:
                     segs_in[segs_in[:, 0] != z_relative, 3] = 0
 
                 if segs_in is not None and segs_cmap is not None:
-                    if circles in (CIRCLES[1].lower(), CIRCLES[3].lower()):
+                    if circles in (self.CircleStyles.REPEAT_CIRCLES.value.lower(),
+                                   self.CircleStyles.FULL_ANNOTATION.value.lower()):
                         # repeat circles and full annotation:
                         # show segments from all z's as circles with colored
                         # outlines, gradually decreasing in size when moving
@@ -950,7 +957,7 @@ class ROIEditor:
                             segs_in[:, 3], np.multiply(r_orig, 0.9)), 3] = 0
                     # show colored, non-pickable circles
                     segs_color = segs_in
-                    if circles == CIRCLES[3].lower():
+                    if circles == self.CircleStyles.FULL_ANNOTATION.value.lower():
                         # zero out circles from other z's in full annotation
                         # mode to minimize crowding and highlight center circle
                         segs_color = np.copy(segs_in)
@@ -973,7 +980,7 @@ class ROIEditor:
                 # for planes within ROI, overlay segments with dotted line
                 # patch and make pickable for verifying the segment
                 segments_z = segs_in[segs_in[:, 3] > 0] # full annotation
-                if circles == CIRCLES[3].lower():
+                if circles == self.CircleStyles.FULL_ANNOTATION.value.lower():
                     # when showing full annotation, show all segments in the
                     # ROI with adjusted radii unless radius is <= 0
                     for i in range(len(segments_z)):

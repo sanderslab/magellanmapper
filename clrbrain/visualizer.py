@@ -564,7 +564,8 @@ class Visualization(HasTraits):
         
         # default options setup
         self._set_border(True)
-        self._circles_2d = [roi_editor.CIRCLES[0]]
+        self._circles_2d = [
+            roi_editor.ROIEditor.CircleStyles.CIRCLES.value.capitalize()]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [Styles2D.SQUARE_ROI.value]
         #self._check_list_2d = [self._DEFAULTS_2D[1]]
@@ -779,19 +780,19 @@ class Visualization(HasTraits):
         self._circles_opened_type = None
         self._opened_window_style = None
         circles = self._circles_2d[0].lower()
-        if circles == roi_editor.CIRCLES[3].lower():
+        if circles == roi_editor.ROIEditor.CircleStyles.FULL_ANNOTATION.value.lower():
             # reset if in full annotation mode to avoid further duplicating 
             # circles, saving beforehand to prevent loss from premature  
             # window closure
             self.save_segs()
             self._reset_segments()
-            self._circles_2d = [roi_editor.CIRCLES[0]]
+            self._circles_2d = [roi_editor.ROIEditor.CircleStyles.CIRCLES.value.capitalize()]
             self.segs_feedback = "Reset circles after saving full annotations"
     
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
         if (self._circles_opened_type 
-            and self._circles_opened_type != roi_editor.CIRCLES[2].lower()):
+            and self._circles_opened_type != roi_editor.ROIEditor.CircleStyles.NO_CIRCLES.value.lower()):
             # prevent multiple editable windows from being opened 
             # simultaneously to avoid unsynchronized state
             self.segs_feedback = (
@@ -800,7 +801,7 @@ class Visualization(HasTraits):
             return
         circles = self._circles_2d[0].lower()
         if (not self._circles_opened_type 
-            or self._circles_opened_type == roi_editor.CIRCLES[2].lower()):
+            or self._circles_opened_type == roi_editor.ROIEditor.CircleStyles.NO_CIRCLES.value.lower()):
             # set opened window type if not already set or non-editable window
             self._circles_opened_type = circles
         self._opened_window_style = self._styles_2d[0]
@@ -1220,7 +1221,9 @@ class Visualization(HasTraits):
                     VGroup(
                         Item(
                              "_circles_2d", 
-                             editor=CheckListEditor(values=roi_editor.CIRCLES),
+                             editor=CheckListEditor(values=[
+                                 e.value.capitalize()
+                                 for e in roi_editor.ROIEditor.CircleStyles]),
                              style="simple",
                              label="Circles"
                         ),

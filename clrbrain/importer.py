@@ -1,6 +1,6 @@
 #!/bin/bash
 # Image stack importer
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 """Imports image stacks using Bioformats.
 
 Bioformats is access through Python-Bioformats and Javabridge.
@@ -21,7 +21,6 @@ import os
 from time import time
 import glob
 import re
-import multiprocessing as mp
 from xml import etree as et
 import warnings
 
@@ -37,7 +36,6 @@ except ImportError as e:
           "when attempting to read Nifti, raw, or other formats by "
           "SimpleITK/SimpleElastix")
 
-from clrbrain import chunking
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import plot_3d
@@ -732,14 +730,17 @@ def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     including boundaries for each channel in multichannel images.
     
     Assume that the image will be small enough to load entirely into 
-    memory rather than calculating bounds plane-by-plane. Also assume that 
-    bounds for all channels will be calculated.
+    memory rather than calculating bounds plane-by-plane, but can also 
+    be given an individual plane. Also assume that bounds for all channels 
+    will be calculated.
     
     Args:
         image5d: Image as a 5D (t, z, y, x, c) array, or a 4D array if only 
             1 channel is present.
-        lower: Lower bound as a percentile.
-        upper: Upper bound as a percentile.
+        lower: Lower bound as a percentile; defaults to 0.5.
+        upper: Upper bound as a percentile; defaults to 99.5.
+        dim_channel: Axis number of channel; defaults to 4, where the
+            channel value is collapsed into the x-axis.
     
     Returns:
         Tuple of ``lows`` and ``highs``, each of which is a list of the 
@@ -755,7 +756,9 @@ def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
         highs.append(high)
     return lows, highs
 
-def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows, highs):
+def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows, 
+                                highs):
+    # get the extremes from lists of near-min/max vals
     if num_channels > 1:
         # get min/max from list of 1-element arrays
         near_mins.append(min(lows)[0])

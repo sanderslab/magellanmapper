@@ -682,9 +682,8 @@ class ROIEditor:
                             seg_channel = 1
                     try:
                         axi = ax_z_list.index(ax)
-                        if (axi != -1 and axi >= z_planes_padding
-                            and axi < z_planes - z_planes_padding):
-
+                        if (axi != -1 and z_planes_padding <= axi
+                                < z_planes - z_planes_padding):
                             seg = np.array([[axi - z_planes_padding,
                                              event.ydata.astype(int),
                                              event.xdata.astype(int), -5]])

@@ -1,6 +1,6 @@
 #!/bin/bash
 # 3D image visualization
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2019
 """3D Visualization GUI.
 
 This module is the main GUI for visualizing 3D objects from imaging stacks. 
@@ -57,6 +57,7 @@ from clrbrain import sqlite
 
 _ROI_DEFAULT = "None selected"
 
+
 def main():
     """Starts the visualization GUI.
     
@@ -68,6 +69,7 @@ def main():
     visualization = Visualization()
     visualization.configure_traits()
     
+
 def _fig_title(atlas_region, offset, roi_size):
     """Figure title parser.
     
@@ -90,6 +92,7 @@ def _fig_title(atlas_region, offset, roi_size):
         region, os.path.basename(config.filename), config.series, offset, 
         tuple(roi_size), tuple(roi_size_um), u'\u00b5m')
 
+
 class VisHandler(Handler):
     """Simple handler for Visualization object events.
     
@@ -101,8 +104,10 @@ class VisHandler(Handler):
         importer.jb.kill_vm()
         config.db.conn.close()
 
+
 class ListSelections(HasTraits):
     selections = List([_ROI_DEFAULT])
+
 
 class SegmentsArrayAdapter(TabularAdapter):
     columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
@@ -113,15 +118,16 @@ class SegmentsArrayAdapter(TabularAdapter):
     def _get_index_text(self):
         return str(self.row)
 
+
 class Styles2D(Enum):
-    """Enumerations for 2D ROI GUI styles.
-    """
+    """Enumerations for 2D ROI GUI styles."""
     SQUARE_ROI = "Square ROI"
     SQUARE_ROI_3D = "Square ROI with 3D"
     SINGLE_ROW = "Single row"
     WIDE_ROI = "Wide ROI"
     MULTI_ZOOM = "Multi-zoom"
     THIN_ROWS = "Thin rows"
+
 
 class Visualization(HasTraits):
     """GUI for choosing a region of interest and segmenting it.
@@ -271,11 +277,11 @@ class Visualization(HasTraits):
                 segs_to_delete.append(seg_db)
             else:
                 if (seg[0] >= self.border[2] 
-                    and seg[0] < (curr_roi_size[2] - self.border[2])
-                    and seg[1] >= self.border[1] 
-                    and seg[1] < (curr_roi_size[1] - self.border[1])
-                    and seg[2] >= self.border[0] 
-                    and seg[2] < (curr_roi_size[0] - self.border[0])):
+                        and seg[0] < (curr_roi_size[2] - self.border[2])
+                        and seg[1] >= self.border[1]
+                        and seg[1] < (curr_roi_size[1] - self.border[1])
+                        and seg[2] >= self.border[0]
+                        and seg[2] < (curr_roi_size[0] - self.border[0])):
                     # transposes segments within inner ROI to absolute coords
                     feedback.append(
                         "{} to insert".format(self._format_seg(seg_db)))
@@ -286,7 +292,7 @@ class Visualization(HasTraits):
         
         segs_transposed_np = np.array(segs_transposed)
         unverified = None
-        if (len(segs_transposed_np) > 0):
+        if len(segs_transposed_np) > 0:
             # unverified blobs are those with default confirmation setting 
             # and radius > 0, where radii < 0 would indicate a user-added circle
             unverified = np.logical_and(
@@ -532,15 +538,11 @@ class Visualization(HasTraits):
         # true max, but currently convenient to display size and checked 
         # elsewhere
         self.z_high, self.y_high, self.x_high = size
-        curr_offset = cli.offset
-        # apply user-defined offsets
-        if curr_offset is not None:
-            self.x_offset = curr_offset[0]
-            self.y_offset = curr_offset[1]
-            self.z_offset = curr_offset[2]
-        else:
-            print("No offset, using standard one")
-            curr_offset = self._curr_offset()
+        if cli.offset is not None:
+            # apply user-defined offsets
+            self.x_offset = cli.offset[0]
+            self.y_offset = cli.offset[1]
+            self.z_offset = cli.offset[2]
         self.roi_array[0] = ([100, 100, 15] if cli.roi_size is None 
                              else cli.roi_size)
         
@@ -555,7 +557,6 @@ class Visualization(HasTraits):
         self.rois_check_list = _ROI_DEFAULT
         
         # show the default ROI
-        settings = config.process_settings
         self.show_3d()
     
     def __init__(self):

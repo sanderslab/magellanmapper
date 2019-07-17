@@ -705,7 +705,7 @@ class Visualization(HasTraits):
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
             segs_all, _ = detector.get_blobs_in_roi(
-                cli.segments_proc, offset, roi_size, plot_2d.padding)
+                cli.segments_proc, offset, roi_size, roi_editor.padding)
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)

@@ -67,8 +67,7 @@ class StackPlaneIO(object):
         Assumes that :attr:``imgs`` is a list of nested 2D image lists, 
         where the first nested list is assumed to be a sequence of 
         histology image planes, while subsequent images are 
-        labels-based images. Applies first :attr:``config.flip`` array 
-        element to rotate the image by 180 degrees.
+        labels-based images.
         
         Args:
             i: Index within nested lists of :attr:``imgs`` to plot.
@@ -95,9 +94,6 @@ class StackPlaneIO(object):
                 img = transform.rescale(
                     img_stack[i], rescale, mode="reflect", multichannel=False, 
                     preserve_range=True, anti_aliasing=False, order=0)
-            if config.flip is not None and config.flip[0]:
-                # rotate image by 180deg if first flip setting is True
-                img = np.rot90(img, 2, (0, 1))
             imgs_proc.append(img)
         if rotate:
             # rotate, filling background with edge color

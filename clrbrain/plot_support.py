@@ -23,6 +23,9 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
                         norms=None):
     """Show multichannel 2D image with channels overlaid over one another.
     
+    Applies first :attr:``config.flip`` array element to rotate the image
+    by 180 degrees.
+
     Args:
         ax: Axes plot.
         img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
@@ -47,6 +50,12 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
     vmin_plane = None
     vmax_plane = None
     num_chls = len(channels)
+    if config.flip is not None and config.flip[0]:
+        # rotate image by 180deg if first flip setting is True
+        last_axis = img2d.ndim - 1
+        if multichannel:
+            last_axis -= 1
+        img2d = np.rot90(img2d, 2, (last_axis - 1, last_axis))
     if num_chls > 1:
         # increasing numbers of channels are each more transluscent
         alpha /= np.sqrt(num_chls + 1)

@@ -20,7 +20,8 @@ class PlotEditor:
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
                  aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
                  plane_slider, img3d_borders=None, cmap_borders=None, 
-                 fn_show_label_3d=None, interp_planes=None):
+                 fn_show_label_3d=None, interp_planes=None,
+                 fn_update_intensity=None):
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
@@ -38,8 +39,10 @@ class PlotEditor:
         self.cmap_borders = cmap_borders
         self.fn_show_label_3d = fn_show_label_3d
         self.interp_planes = interp_planes
+        self.fn_update_intensity = fn_update_intensity
         
-        self.intensity = None
+        self.intensity = None  # picked intensity
+        self.intensity_spec = None  # specified intensity
         self.cidpress = None
         self.cidrelease = None
         self.cidmotion = None
@@ -60,6 +63,7 @@ class PlotEditor:
         self.ylim = None
         self.ax_img = None
         self.edited = False
+        self.edit_mode = False  # True to edit with mouse motion
         
         # track label editing during mouse click/movement for plane interp
         self._editing = False
@@ -76,7 +80,7 @@ class PlotEditor:
         self.cidkeypress = canvas.mpl_connect(
             "key_press_event", self.on_key_press)
         self.connected = True
-    
+
     def disconnect(self):
         """Connect events to functions.
         """
@@ -86,7 +90,7 @@ class PlotEditor:
         canvas.mpl_discconnect(self.cidmotion)
         canvas.mpl_discconnect(self.cidkeypress)
         self.connected = False
-    
+
     def update_coord(self, coord):
         update_overview = self.coord is None or coord[0] != self.coord[0]
         self.coord = coord
@@ -192,19 +196,30 @@ class PlotEditor:
         self.last_loc = (int(event.x), int(event.y))
         
         if event.button == 1:
-            if event.key not in self._KEY_MODIFIERS:
+            if self.edit_mode and self.img3d_labels is not None:
+                if event.key is not None and "alt" in event.key:
+                    print("using previously picked intensity instead,",
+                          self.intensity)
+                elif self.intensity_spec is None:
+                    # click while in editing mode to initialize intensity value
+                    # for painting, using value from current position
+                    self.intensity = self.img3d_labels[self.coord[0], y, x]
+                    print("got intensity {} at x,y,z = {},{},{}"
+                          .format(self.intensity, x, y, self.coord[0]))
+                    if self.fn_update_intensity:
+                        # trigger text box update
+                        self.fn_update_intensity(self.intensity)
+                else:
+                    # use user-specified intensity value, resetting it
+                    # afterward to allow updating with clicked intensities
+                    print("using specified intensity of", self.intensity_spec)
+                    self.intensity = self.intensity_spec
+                    self.intensity_spec = None
+            elif event.key not in self._KEY_MODIFIERS:
                 # click without modifiers to update crosshairs and 
                 # corresponding planes
                 self.coord[1:] = y, x
                 self.fn_update_coords(self.coord, self.plane)
-            elif ("alt" in event.key and "z" not in event.key 
-                  and self.img3d_labels is not None):
-                   # "alt"-click to get intensity under cursor; "alt-z" to 
-                   # avoid picking intensity, using previously picked 
-                   # intensity to start painting
-                   self.intensity = self.img3d_labels[self.coord[0], y, x]
-                   print("got intensity {} at x,y,z = {},{},{}"
-                         .format(self.intensity, x, y, self.coord[0]))
             
             if event.key == "3" and self.fn_show_label_3d is not None:
                 if self.img3d_labels is not None:
@@ -302,18 +317,17 @@ class PlotEditor:
                 
                 coord = [self.coord[0], y, x]
                 if event.button == 1:
-                    if (event.key and "alt" in event.key 
-                        and self.intensity is not None):
-                        # alt+click to use the chosen intensity value to 
-                        # overwrite the image with a pen of the chosen radius
+                    if self.edit_mode and self.intensity is not None:
+                        # click in editing mode to overwrite image with pen
+                        # of the chosen radius using current intensity
                         if self.ax_img is not None:
                             rr, cc = draw.circle(
                                 y, x, self.radius, 
                                 self.img3d_labels[self.coord[0]].shape)
                             self.img3d_labels[
                                 self.coord[0], rr, cc] = self.intensity
-                            print("changed intensity to {} at x,y,z = {},{},{}"
-                                  .format(self.intensity, x, y, self.coord[0]))
+                            print("changed intensity at x,y,z = {},{},{} to {}"
+                                  .format(x, y, self.coord[0], self.intensity))
                             self.ax_img.set_data(
                                 self.img3d_labels[self.coord[0]])
                             self.fn_refresh_images(self)

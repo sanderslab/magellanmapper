@@ -8,7 +8,7 @@ import datetime
 
 from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
-from matplotlib.widgets import Slider, Button
+from matplotlib.widgets import Slider, Button, TextBox
 
 from clrbrain import colormaps
 from clrbrain import config
@@ -17,6 +17,7 @@ from clrbrain import plot_editor
 from clrbrain import plot_support
 from clrbrain import plot_3d
 from clrbrain import register
+
 
 class AtlasEditor:
     """Graphical interface to view an atlas in multiple orthogonal 
@@ -45,6 +46,8 @@ class AtlasEditor:
         interp_btn: Matplotlib button to initiate plane interpolation.
         save_btn: Matplotlib button to save the atlas.
     """
+
+    _EDIT_BTN_LBLS = ("Edit", "Editing")
     
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
                  borders_img=None, fn_show_label_3d=None):
@@ -64,6 +67,8 @@ class AtlasEditor:
         self.interp_planes = None
         self.interp_btn = None
         self.save_btn = None
+        self.edit_btn = None
+        self.color_picker_box = None
         
     def show_atlas(self):
         """Set up the atlas display with multiple orthogonal views."""
@@ -82,23 +87,28 @@ class AtlasEditor:
             self.borders_img, self.labels_img, cmap_labels)
         coord = list(self.offset[::-1])
         
-        # transparency controls; increase width space to prevent overlap of 
-        # slider value label with reset button
+        # editor controls, split into a slider sub-spec to allow greater
+        # spacing for labels on either side and a separate sub-spec for
+        # buttons and other fields
         gs_controls = gridspec.GridSpecFromSubplotSpec(
-            1, 4, subplot_spec=gs[1, 0], width_ratios=(5, 1, 1, 1), wspace=0.3)
-        ax_alpha = plt.subplot(gs_controls[0, 0])
+            1, 2, subplot_spec=gs[1, 0], width_ratios=(1, 1),
+            wspace=0.15)
         self.alpha_slider = Slider(
-            ax_alpha, "Opacity", 0.0, 1.0, 
+            plt.subplot(gs_controls[0, 0]), "Opacity", 0.0, 1.0,
             valinit=plot_editor.PlotEditor.ALPHA_DEFAULT)
-        ax_alpha_reset = plt.subplot(gs_controls[0, 1])
-        self.alpha_reset_btn = Button(ax_alpha_reset, "Reset")
-        ax_interp = plt.subplot(gs_controls[0, 2])
-        self.interp_btn = Button(ax_interp, "Fill Label")
+        gs_controls_btns = gridspec.GridSpecFromSubplotSpec(
+            1, 5, subplot_spec=gs_controls[0, 1], wspace=0.1)
+        self.alpha_reset_btn = Button(
+            plt.subplot(gs_controls_btns[0, 0]), "Reset")
+        self.interp_btn = Button(
+            plt.subplot(gs_controls_btns[0, 1]), "Fill Label")
         self.interp_planes = InterpolatePlanes(self.interp_btn)
         self.interp_planes.update_btn()
-        ax_save = plt.subplot(gs_controls[0, 3])
-        self.save_btn = Button(ax_save, "Save")
+        self.save_btn = Button(plt.subplot(gs_controls_btns[0, 2]), "Save")
         enable_btn(self.save_btn, False)
+        self.edit_btn = Button(plt.subplot(gs_controls_btns[0, 3]), "Edit")
+        self.color_picker_box = TextBox(
+            plt.subplot(gs_controls_btns[0, 4]), None)
     
         def setup_plot_ed(plane, gs_spec):
             # subplot grid, with larger height preference for plot for 
@@ -150,7 +160,8 @@ class AtlasEditor:
                 scaling, plane_slider, img3d_borders=borders_img_transposed, 
                 cmap_borders=cmap_borders, 
                 fn_show_label_3d=self.fn_show_label_3d, 
-                interp_planes=self.interp_planes)
+                interp_planes=self.interp_planes,
+                fn_update_intensity=self.update_color_picker)
             return plot_ed
         
         # setup plot editor for all 3 orthogonal directions
@@ -171,6 +182,8 @@ class AtlasEditor:
         self.alpha_reset_btn.on_clicked(self.alpha_reset)
         self.interp_btn.on_clicked(self.interpolate)
         self.save_btn.on_clicked(self.save_atlas)
+        self.edit_btn.on_clicked(self.toggle_edit_mode)
+        self.color_picker_box.on_text_change(self.color_picker_changed)
         
         # initialize planes in all plot editors
         self.update_coords(coord, config.PLANE[0])
@@ -206,6 +219,9 @@ class AtlasEditor:
         elif event.key == "up" or event.key == "down":
             # up/down arrow for scrolling planes
             self.scroll_overview(event)
+        elif event.key == "w":
+            # shortcut to toggle editing mode
+            self.toggle_edit_mode(event)
     
     def update_coords(self, coord, plane_src=config.PLANE[0]):
         """Update all plot editors with given coordinates.
@@ -298,6 +314,55 @@ class AtlasEditor:
         enable_btn(self.save_btn, False)
         print("Saved labels image at {}".format(datetime.datetime.now()))
 
+    def toggle_edit_mode(self, event):
+        """Toggle editing mode, determining the current state from the
+        first :class:``PlotEditor`` and switching to the opposite value
+        for all plot editors.
+
+        Args:
+            event: Button event, currently not used.
+        """
+        edit_mode = False
+        for i, ed in enumerate(self.plot_eds.values()):
+            if i == 0:
+                # change edit mode based on current mode in first plot editor
+                edit_mode = not ed.edit_mode
+                toggle_btn(self.edit_btn, edit_mode, text=self._EDIT_BTN_LBLS)
+            ed.edit_mode = edit_mode
+        if not edit_mode:
+            # reset the color picker text box when turning off editing
+            self.color_picker_box.set_val("")
+
+    def update_color_picker(self, val):
+        """Update the color picker :class:``TextBox`` with the given value.
+
+        Args:
+            val: Color value.
+        """
+        self.color_picker_box.set_val(val)
+
+    def color_picker_changed(self, text):
+        """Respond to color picker :class:``TextBox`` changes by updating
+        the specified intensity value in all plot editors to an integer
+        of the given value if it is a number and the first editor does
+        not already have an intensity set to this value.
+
+        Args:
+            text: String of text box value.
+        """
+        if not lib_clrbrain.is_number(text): return
+        intensity = int(text)
+        for i, ed in enumerate(self.plot_eds.values()):
+            if i == 0:
+                if intensity == ed.intensity:
+                    # ignore if intensity already set, eg if
+                    # triggered by update_color_picker
+                    return
+                else:
+                    print("updating specified color to", text)
+            ed.intensity_spec = intensity
+
+
 def enable_btn(btn, enable=True):
     """Display a button as enabled or disabled.
     
@@ -316,6 +381,30 @@ def enable_btn(btn, enable=True):
         # "disable" button by making darker and no hover response
         btn.color = "0.5"
         btn.hovercolor = "0.5"
+
+
+def toggle_btn(btn, on=True, shift=0.2, text=None):
+    """Toggle a button between on/off modes.
+
+    Args:
+        btn: Button widget to change.
+        on: True to display the button as on, False as off.
+        shift: Float of amount to shift the button color intensity;
+            defaults to 0.2.
+        text: Tuple of ``(on_text, off_text)" for the button label;
+            defaults to None to keep the original text.
+    """
+    if on:
+        # turn button "on" by darkening intensities and updating label
+        btn.color = str(float(btn.color) - shift)
+        btn.hovercolor = str(float(btn.hovercolor) - shift)
+        if text: btn.label.set_text(text[1])
+    else:
+        # turn button "off" by lightening intensities and updating label
+        btn.color = str(float(btn.color) + shift)
+        btn.hovercolor = str(float(btn.hovercolor) + shift)
+        if text: btn.label.set_text(text[0])
+
 
 class InterpolatePlanes:
     """Track manually edited planes between which to interpolate changes 
@@ -406,6 +495,7 @@ class InterpolatePlanes:
             del self._bounds[0]
         else:
             self._bounds = val
+
 
 if __name__ == "__main__":
     print("Starting atlas editor")

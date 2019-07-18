@@ -82,13 +82,15 @@ class PlotEditor:
         self.connected = True
 
     def disconnect(self):
-        """Connect events to functions.
+        """Disconnect event listeners.
         """
-        canvas = self.axes.figure.canvas
-        canvas.mpl_discconnect(self.cidpress)
-        canvas.mpl_discconnect(self.cidrelease)
-        canvas.mpl_discconnect(self.cidmotion)
-        canvas.mpl_discconnect(self.cidkeypress)
+        self.circle = None
+        listeners = [
+            self.cidpress, self.cidrelease, self.cidmotion, self.cidenter,
+            self.cidleave, self.cidkeypress]
+        for listener in listeners:
+            if listener and self.ax_img is not None:
+                self.ax_img.figure.canvas.mpl_disconnect(listener)
         self.connected = False
 
     def update_coord(self, coord):
@@ -392,17 +394,6 @@ class PlotEditor:
         #print("radius: {}".format(self.radius))
         if rad_orig != self.radius and self.circle:
             self.circle.radius = self.radius
-    
-    def disconnect(self):
-        """Disconnect event listeners.
-        """
-        self.circle = None
-        listeners = [
-            self.cidpress, self.cidrelease, self.cidmotion, self.cidenter, 
-            self.cidleave, self.cidkeypress]
-        for listener in listeners:
-            if listener and self.ax_img is not None:
-                self.ax_img.figure.canvas.mpl_disconnect(listener)
 
 class PixelDisplay(object):
     """Custom image intensity display in :attr:``Axes.format_coord``.

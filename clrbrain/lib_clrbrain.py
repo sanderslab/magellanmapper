@@ -383,12 +383,15 @@ def convert_indices_to_int(dict_to_convert):
     }
     return dict_converted
 
-def npstr_to_array(s):
+def npstr_to_array(s, shape=None):
     """Convert a string representation of a Numpy array back to an array.
 
     Args:
         s: String representation of a Numpy array such as from a ``print``
             command.
+        shape: Tuple of ints by which to reshape the Numpy array. Defaults
+            to None, in which case the output will be a 1-D array even
+            if the input is multi-dimensional.
 
     Returns:
         A numpy array, or None if the string could not be converted.
@@ -396,11 +399,11 @@ def npstr_to_array(s):
     """
     arr = None
     if isinstance(s, str):
-        # find num of dimensions based on initial brackets
-        ndim = len(s) - len(s.lstrip("["))
         try:
-            # only works for 1-D arrays
-            arr = np.fromstring(s[ndim:-ndim], sep=" ")
+            # outputs 1-D array
+            arr = np.fromstring(s.replace("[", "").replace("]", ""), sep=" ")
+            if shape is not None:
+                arr = arr.reshape(shape)
         except ValueError:
             pass
     return arr

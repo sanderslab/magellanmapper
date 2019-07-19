@@ -1121,7 +1121,8 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
         rotate: Number of times to rotate by 90 degrees; defaults to None.
         target_size: Size of target image, typically one to which ``img_sitk`` 
             will be registered, in (x,y,z, SimpleITK standard) ordering.
-        flipud: Flip along the final z-axis; defaults to False.
+        flipud: True to flip along the final z-axis for mirrorred axes; 
+            defaults to False.
     
     Returns:
         Transposed image in SimpleITK format.
@@ -1137,7 +1138,9 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
             plane, [transposed], [spacing, origin])
         transposed = arrs_3d[0]
         spacing, origin = arrs_1d
-        if flipud: transposed = np.flipud(transposed)
+        if flipud:
+            # flip along z-axis for mirrored orientations
+            transposed = np.flipud(transposed)
     if rotate:
         # rotate the final output image by 90 deg
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 

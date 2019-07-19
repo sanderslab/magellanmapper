@@ -590,8 +590,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     else:
         # set up groups
         df_groups = None
-        if cols_group is None:
-            groups = [""] # default to single group of empty string
+        if not cols_group:
+            groups = [""]  # default to single group of empty string
         else:
             # treat each unique combination of cols_group values as 
             # a separate group
@@ -623,7 +623,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             ax.scatter(
                 xs, ys, s=s, label=label, color=colors[i], marker="o")
             if col_annot:
-                # annote each point with val from annotation col
+                # annotate each point with val from annotation col
                 for x, y, annot in zip(xs, ys, df_group[col_annot]):
                     ax.annotate(
                         "{}".format(lib_clrbrain.format_num(annot, 3)), (x, y))
@@ -698,12 +698,14 @@ def plot_roc(df, show=True):
     start = len(mlearn.GridSearchStats.PARAM.value)
     names_group = [col[start+1:] for col in cols_group]
     
-    # plot sensitivity by FDR, annotating with value of final hyperparameter
+    # plot sensitivity by FDR, annotating with col of final hyperparameter
+    # rather than using this col in the group specification
     plot_scatter(
         "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
-        mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group, 
+        mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
         names_group, "False Discovery Rate", "Sensitivity", (0, 1), (0, 1), 
-        "Nuclei Detection ROC", df=df, show=show)
+        "Nuclei Detection ROC Over {}".format(names_group[-1]), df=df,
+        show=show)
 
 def plot_image(img, path=None, show=False):
     """Plot a single image in a borderless figure, with option to export 

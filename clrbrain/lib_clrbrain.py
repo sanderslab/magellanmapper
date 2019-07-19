@@ -383,6 +383,28 @@ def convert_indices_to_int(dict_to_convert):
     }
     return dict_converted
 
+def npstr_to_array(s):
+    """Convert a string representation of a Numpy array back to an array.
+
+    Args:
+        s: String representation of a Numpy array such as from a ``print``
+            command.
+
+    Returns:
+        A numpy array, or None if the string could not be converted.
+
+    """
+    arr = None
+    if isinstance(s, str):
+        # find num of dimensions based on initial brackets
+        ndim = len(s) - len(s.lstrip("["))
+        try:
+            # only works for 1-D arrays
+            arr = np.fromstring(s[ndim:-ndim], sep=" ")
+        except ValueError:
+            pass
+    return arr
+
 def show_full_arrays(on=True):
     """Show full Numpy arrays, except for particularly large arrays.
     

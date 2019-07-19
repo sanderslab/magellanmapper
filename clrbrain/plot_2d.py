@@ -527,7 +527,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
 def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 
                  names_group=None, x_label=None, y_label=None, xlim=None, 
                  ylim=None, title=None, fig_size=None, show=True, suffix=None, 
-                 df=None, xy_line=False, col_size=None, size_mult=5):
+                 df=None, xy_line=False, col_size=None, size_mult=5,
+                 annot_arri=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -563,6 +564,9 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         col_size: Name of column from which to scale point sizes, where 
             the max value in the column is 1; defaults to None.
         size_mult: Point size multiplier; defaults to 5.
+        annot_arri: Int as index or slice of indices of annotation value
+            if the annotation isa string that can be converted into a
+            Numpy array; defaults to None.
     """
     # load data frame from CSV and setup figure
     if df is None:
@@ -625,6 +629,12 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             if col_annot:
                 # annotate each point with val from annotation col
                 for x, y, annot in zip(xs, ys, df_group[col_annot]):
+                    if annot_arri is not None:
+                        # attempt to convert string into array to extract
+                        # the given values
+                        annot_arr = lib_clrbrain.npstr_to_array(annot)
+                        if annot_arr is not None:
+                            annot = annot_arr[annot_arri]
                     ax.annotate(
                         "{}".format(lib_clrbrain.format_num(annot, 3)), (x, y))
     
@@ -683,13 +693,16 @@ def plot_probability(path, conds, metric_cols, col_size, **kwargs):
         y_label=conds[1].capitalize(), xy_line=True, 
         col_size=col_size, **kwargs)
     
-def plot_roc(df, show=True):
+def plot_roc(df, show=True, annot_arri=None):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     
     Args:
         df: Data frame generated from :meth:``mlearn.parse_grid_stats``.
         show: True to display the plot in :meth:``plot_scatter``; 
             defaults to True.
+        annot_arri: Int as index or slice of indices of annotation value
+            if the annotation isa string that can be converted into a
+            Numpy array; defaults to None.
     """
     # names of hyperparameters for each group name, with hyperparameters 
     # identified by param prefix
@@ -705,7 +718,7 @@ def plot_roc(df, show=True):
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
         names_group, "False Discovery Rate", "Sensitivity", (0, 1), (0, 1), 
         "Nuclei Detection ROC Over {}".format(names_group[-1]), df=df,
-        show=show)
+        show=show, annot_arri=annot_arri)
 
 def plot_image(img, path=None, show=False):
     """Plot a single image in a borderless figure, with option to export 
@@ -806,7 +819,10 @@ if __name__ == "__main__":
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve
-        plot_roc(pd.read_csv(config.filename))
+
+        # set annotation array index as 0 since most often vary only
+        # z-val, but switch or remove when varying other axes
+        plot_roc(pd.read_csv(config.filename), show, 0)
 
     elif plot_2d_type is config.Plot2DTypes.SCATTER_INTENS_NUC:
         # scatter plot of intensity vs nuclei values

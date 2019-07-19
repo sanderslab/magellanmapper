@@ -156,9 +156,9 @@ def args_with_dict(args):
     
     Args:
         args: List of arguments, which can be single values or "=" delimited 
-           values. Single values will be stored in the same order, while 
-           delimited entries will be entered sequentially into a dictionary. 
-           Entries can also be comma-delimited to specify lists.
+            values. Single values will be stored in the same order, while
+            delimited entries will be entered sequentially into a dictionary.
+            Entries can also be comma-delimited to specify lists.
     
     Returns:
         List of arguments ordered first with single-value entries in the 
@@ -193,6 +193,7 @@ def args_to_dict(args, keys_enum, args_dict={}):
             in the existing order of ``keys_enum`` based on member values, 
             while keyword-based values will be entered if an enum 
             member corresponding to the keyword exists.
+            Entries can also be comma-delimited to specify lists.
         keys_enum: Enum to use as keys for dictionary. Values are 
             assumed to range from 1 to number of members as output 
             by the default Enum functional API.
@@ -208,7 +209,7 @@ def args_to_dict(args, keys_enum, args_dict={}):
     num_enums = len(keys_enum)
     for i, arg in enumerate(args):
         arg_split = arg.split("=")
-        # assume by position until any keywork given
+        # assume by position until any keyword given
         by_position = by_position and len(arg_split) < 2
         if by_position:
             # positions are based on enum vals, assumed to range from 
@@ -261,6 +262,7 @@ def main(process_args_only=False):
     parser.add_argument("--saveroi", action="store_true")
     parser.add_argument("--labels", nargs="*")
     parser.add_argument("--flip", nargs="*")
+    parser.add_argument("--transform", nargs="*")
     parser.add_argument("--register")
     parser.add_argument("--stats")
     parser.add_argument("--plot_2d")
@@ -407,12 +409,20 @@ def main(process_args_only=False):
         if config.labels_level is not None:
             config.labels_level = int(config.labels_level)
         print("Set labels level to {}".format(config.labels_level))
+
     if args.flip:
         config.flip = []
         for flip in args.flip:
             config.flip.append(_is_arg_true(flip))
         print("Set flip to {}".format(config.flip))
-    
+
+    if args.transform is not None:
+        # image transformations such as flipping, rotation;
+        # TODO: consider superseding the flip arg by incorporation here
+        config.transform = args_to_dict(
+            args.transform, config.Transforms, config.transform)
+        print("Set transformations to {}".format(config.transform))
+
     if args.register:
         # register type to process in register module
         config.register_type = args.register
@@ -527,7 +537,8 @@ def main(process_args_only=False):
         config.plot_labels = args_to_dict(
             args.plot_labels, config.PlotLabels, config.plot_labels)
         print("Set plot labels to {}".format(config.plot_labels))
-    
+
+
     # prep filename
     if not config.filename:
         # unable to parse anymore args without filename

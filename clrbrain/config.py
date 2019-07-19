@@ -86,6 +86,14 @@ PlotLabels = Enum(
 )
 plot_labels = dict.fromkeys(PlotLabels, None)
 
+# image transformation keys for command-line parsing
+Transforms = Enum(
+    "Transforms", (
+        "ROTATE", "FLIP_VERT", "FLIP_HORIZ"
+    )
+)
+transform = dict.fromkeys(Transforms, None)
+
 # extensions for saving figures
 FORMATS_3D = ("obj", "x3d") # save 3D renderings
 savefig = None # save files using this extension

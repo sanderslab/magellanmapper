@@ -22,9 +22,10 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
                         vmin=None, vmax=None, origin=None, interpolation=None, 
                         norms=None):
     """Show multichannel 2D image with channels overlaid over one another.
-    
-    Applies first :attr:``config.flip`` array element to rotate the image
-    by 180 degrees.
+
+    Applies :attr:``config.transpose`` to flip/rotate images. Also checks
+    first :attr:``config.flip`` array element to rotate the image
+    by 180 degrees if ``rotate`` is not available in :attr:``config.transpose``.
 
     Args:
         ax: Axes plot.
@@ -50,12 +51,23 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
     vmin_plane = None
     vmax_plane = None
     num_chls = len(channels)
-    if config.flip is not None and config.flip[0]:
-        # rotate image by 180deg if first flip setting is True
+
+    # transform image based on config parameters
+    rotate = config.transform[config.Transforms.ROTATE]
+    if rotate is not None or config.flip is not None and config.flip[0]:
+        if rotate is None:
+            # rotate image by 180deg if first flip setting is True;
+            # TODO: consider replacing flip with transpose attribute
+            rotate = 2
         last_axis = img2d.ndim - 1
         if multichannel:
             last_axis -= 1
-        img2d = np.rot90(img2d, 2, (last_axis - 1, last_axis))
+        img2d = np.rot90(img2d, rotate, (last_axis - 1, last_axis))
+    if config.transform[config.Transforms.FLIP_HORIZ]:
+        img2d = img2d[..., ::-1, :] if multichannel else img2d[..., ::-1]
+    if config.transform[config.Transforms.FLIP_VERT]:
+        img2d = img2d[::-1]
+
     if num_chls > 1:
         # increasing numbers of channels are each more transluscent
         alpha /= np.sqrt(num_chls + 1)

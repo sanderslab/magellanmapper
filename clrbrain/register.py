@@ -3729,13 +3729,13 @@ def main():
              SmoothingMetrics.DISPLACED.value, 
              SmoothingMetrics.SM_QUALITY.value), 
             ("--", "--", "-"), "Smoothing Filter Size", 
-            "Fractional Change", title, size, not config.no_show, "_quality")
+            "Fractional Change", title, size, show, "_quality")
         plot_2d.plot_lines(
             config.filename, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.SA_VOL.value, 
              SmoothingMetrics.LABEL_LOSS.value), 
             ("-", "-"), "Smoothing Filter Size", 
-            "Fractional Change", None, size, not config.no_show, "_extras", 
+            "Fractional Change", None, size, show, "_extras",
             ("C3", "C4"))
     
     elif reg is config.RegisterTypes.smoothing_peaks:
@@ -3828,7 +3828,7 @@ def main():
                         if config.reg_suffixes[key] is not None]
         register_reg(
             *config.filenames[:2], IMG_EXP, suffixes, config.plane, 
-            flip, config.prefix, config.suffix, not config.no_show)
+            flip, config.prefix, config.suffix, show)
 
     elif reg is config.RegisterTypes.make_labels_level:
         # make a labels image grouped at the given level

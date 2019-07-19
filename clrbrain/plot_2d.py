@@ -508,7 +508,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         linestyle = linestyles[i] if linestyles else "-"
         color = "C{}".format(i) if colors is None else colors[i]
         ax.plot(
-            x, df[col], color=color, linestyle=linestyles[i], 
+            x, df[col], color=color, linestyle=linestyle,
             label=str(col).replace("_", " "))
     
     # add supporting plot components

@@ -935,6 +935,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             props[0].bbox, padding, orig_img_np.shape)
         
         if mode == SMOOTHING_METRIC_MODES[0]:
+            # TODO: consider deprecating unused smoothing metric modes
             # "vol": measure wrapping volume by closing filter
             selem = morphology.ball(filter_size)
             mask_orig, broad_orig = broad_borders(
@@ -949,7 +950,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 * penalty_wt)
             # normalize to total foreground
             size_orig = np.sum(mask_orig)
-            if label_id != 0: tot_size += size_orig
         elif mode in SMOOTHING_METRIC_MODES[1:]:
             
             # measure surface area for SA:vol and to get vol mask
@@ -3140,7 +3140,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     
     dfs = []
     dfs_all = []
-    sort_cols=["Region", "Sample", "Side"]
+    sort_cols = ["Region", "Sample", "Side"]
     for i, img_path in enumerate(img_paths):
         # adjust image path with suffix
         mod_path = img_path

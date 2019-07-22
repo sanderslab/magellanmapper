@@ -499,11 +499,11 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
     """
-    # load data frame from CSV and setup figure
+    # load data frame from CSV unless already given and setup figure
     if df is None:
         df = pd.read_csv(path_to_df)
-    fig = plt.figure(figsize=size)
-    gs = gridspec.GridSpec(1, 1)
+    fig = plt.figure(figsize=size, constrained_layout=True)
+    gs = gridspec.GridSpec(1, 1, figure=fig)
     ax = plt.subplot(gs[0, 0])
 
     if colors is None:
@@ -524,7 +524,6 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     if x_label: ax.set_xlabel(x_label)
     if y_label: ax.set_ylabel(y_label)
     if title: ax.set_title(title)
-    gs.tight_layout(fig)
     
     # save and display
     out_path = path_to_df

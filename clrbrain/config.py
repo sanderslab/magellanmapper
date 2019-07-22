@@ -455,9 +455,10 @@ def update_process_settings(settings, settings_type):
              "num_sigma": 10,
              "overlap": 0.2}, 
             profile)
-        
+
+        # isotropic image that does not require interpolating visually
         settings.add_modifier(
-            "small", 
+            "isotropic",
             {"points_3d_thresh": 0.3, # used only if not surface
              "isotropic_vis": (1, 1, 1)}, 
             profile)

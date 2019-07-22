@@ -1520,7 +1520,7 @@ def import_atlas(atlas_dir, show=True):
        sitk.Show(img_atlas)
        sitk.Show(img_labels)
     
-def register_duo(fixed_img, moving_img):
+def register_duo(fixed_img, moving_img, path=None):
     """Register two images to one another using ``SimpleElastix``.
     
     Args:
@@ -1528,6 +1528,10 @@ def register_duo(fixed_img, moving_img):
             format.
         moving_img: The image to register to ``fixed_img`` in 
             :class``SimpleITK.Image`` format.
+        path: Path as string from whose parent directory the points-based
+            registration files ``fix_pts.txt`` and ``mov_pts.txt`` will
+            be found; defaults to None, in which case points-based
+            reg will be ignored even if set.
     
     Returns:
         Tuple of the registered image in SimpleITK Image format and a 
@@ -1570,14 +1574,14 @@ def register_duo(fixed_img, moving_img):
     param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
     _config_reg_resolutions(
         settings["grid_spacing_schedule"], param_map, fixed_img.GetDimension())
-    if settings["point_based"]:
+    if path is not None and settings["point_based"]:
         # point-based registration added to b-spline, which takes point sets 
         # found in name_prefix's folder; note that coordinates are from the 
         # originally set fixed and moving images, not after transformation up 
         # to this point
-        fix_pts_path = os.path.join(os.path.dirname(name_prefix), "fix_pts.txt")
+        fix_pts_path = os.path.join(os.path.dirname(path), "fix_pts.txt")
         move_pts_path = os.path.join(
-            os.path.dirname(name_prefix), "mov_pts.txt")
+            os.path.dirname(path), "mov_pts.txt")
         if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
             metric = list(param_map["Metric"])
             metric.append("CorrespondingPointsEuclideanDistanceMetric")
@@ -1652,7 +1656,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         moving_img, labels_img, flip)
     
     transformed_img, transformix_img_filter = register_duo(
-        fixed_img, moving_img)
+        fixed_img, moving_img, name_prefix)
     # turn off to avoid overshooting the interpolation for the labels image 
     # (see Elastix manual section 4.3)
     transform_param_map = transformix_img_filter.GetTransformParameterMap()
@@ -1808,7 +1812,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     rotate = 2 if flip else 0
     moving_img = transpose_img(moving_img, plane, rotate)
     transformed_img, transformix_img_filter = register_duo(
-        fixed_img, moving_img)
+        fixed_img, moving_img, prefix)
     reg_imgs = [transformed_img]
     names = [IMG_EXP if reg_base is None else reg_base]
     if reg_names is not None:

@@ -740,10 +740,11 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
             array of [n, [z, row, column, radius, ...]].
         blobs_truth: The list by which to check for accuracy, in the same
             format as blobs.
-        tol: Tolerance as z,y,x to check for closeness . Blobs that are 
-            equal to or less than the the absolute difference for all 
-            corresponding parameters will be considered a potential match.
-        output_db: Database in which to save the verification flags, typicall 
+        tol: Tolerance as z,y,x of floats specifying padding for the inner
+            ROI and used to generate a single tolerance distance within
+            which a detected and ground truth blob will be considered
+            potential matches.
+        output_db: Database in which to save the verification flags, typical
             the database in :attr:``config.verified_db``.
         exp_id: Experiment ID in ``output_db``.
         channel: Filter ``blobs_truth`` by this channel.
@@ -757,7 +758,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     # threshold for point distance map, which assumes isotropy; use 
     # custom tol rather than calculating isotropy since may need to give 
     # greater latitude along a given axis, such as poorer res in z
-    thresh = np.amax(tol) # similar to longest radius from the tol bounding box
+    thresh = np.amax(tol)  # similar to longest radius from the tol bounding box
     scaling = thresh / tol
     # casting to int causes improper offset import into db
     inner_padding = np.floor(tol[::-1])
@@ -801,7 +802,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         # closest blob detector prioritizes the closest matches
         found, found_truth, dists = find_closest_blobs_cdist(
             blobs_inner, blobs_truth_roi, thresh, scaling)
-        blobs_inner[: , 4] = 0
+        blobs_inner[:, 4] = 0
         blobs_inner[found, 4] = 1
         blobs_truth_roi[blobs_truth_inner_mask, 5] = 0
         blobs_truth_roi[found_truth, 5] = 1

@@ -473,7 +473,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
                y_label=None, title=None, size=None, show=True, suffix=None, 
                colors=None, df=None):
-    """Plot line graph from Pandas data frame.
+    """Plot a line graph from a Pandas data frame.
     
     Args:
         path_to_df: Path from which to read saved Pandas data frame.
@@ -494,7 +494,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         suffix: String to append to output path before extension; 
             defaults to None to ignore.
         colors: Sequence of colors for plot lines; defaults to None to use 
-            the default plot cycler (``C0``, ``C1``, etc).
+            :meth:``colormaps.discrete_colormap`` while prioritizing the
+            default ``CN`` color cycler (``C0``, ``C1``, etc).
         df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
     """
@@ -504,14 +505,18 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     fig = plt.figure(figsize=size)
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
+
+    if colors is None:
+        # default to discrete colors starting with CN colors
+        colors = colormaps.discrete_colormap(
+            len(data_cols), prioritize_default="cn", seed=config.seed) / 255
     
     # plot selected columns with corresponding styles
     x = df[x_col]
     for i, col in enumerate(data_cols):
         linestyle = linestyles[i] if linestyles else "-"
-        color = "C{}".format(i) if colors is None else colors[i]
         ax.plot(
-            x, df[col], color=color, linestyle=linestyle,
+            x, df[col], color=colors[i], linestyle=linestyle,
             label=str(col).replace("_", " "))
     
     # add supporting plot components

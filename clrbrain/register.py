@@ -2269,6 +2269,12 @@ def _mirror_imported_labels(labels_img_np, start):
     labels_img_np = np.swapaxes(labels_img_np, 0, 2)
     return labels_img_np
 
+def _is_profile_mirrored():
+    # check if profile is set for mirroring, though does not necessarily
+    # mean that the image itself is mirrored
+    return (config.register_settings["extend_atlas"] and
+            config.register_settings["labels_mirror"] is not None)
+
 def make_edge_images(path_img, show=True, atlas=True, suffix=None, 
                      path_atlas_dir=None):
     """Make edge-detected atlas and associated labels images.
@@ -2336,8 +2342,6 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     # output images
     atlas_sitk_log = None
     atlas_sitk_edge = None
-    labels_sitk_edge = None
-    labels_sitk_interior = None
     
     log_sigma = config.register_settings["log_sigma"]
     if log_sigma is not None and suffix is None:
@@ -2352,14 +2356,15 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         atlas_sitk_edge = replace_sitk_with_numpy(atlas_sitk, atlas_edge)
     else:
         # if sigma not set or if using suffix to compare two images, 
-        # load from original image to copmare against common image
+        # load from original image to compare against common image
         atlas_edge = load_registered_img(path_img, reg_name=IMG_ATLAS_EDGE)
     
     # make map of label interiors for interior/border comparisons
     print("Eroding labels to generate interior labels image")
     erosion = config.register_settings["marker_erosion"]
     erosion_frac = config.register_settings["erosion_frac"]
-    interior = erode_labels(labels_img_np, erosion, erosion_frac, atlas)
+    interior = erode_labels(
+        labels_img_np, erosion, erosion_frac, atlas and _is_profile_mirrored())
     labels_sitk_interior = replace_sitk_with_numpy(labels_sitk, interior)
     
     # make labels edge and edge distance images
@@ -2383,23 +2388,23 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     # write images to same directory as atlas with appropriate suffix
     write_reg_images(imgs_write, mod_path)
 
-def erode_labels(labels_img_np, erosion, erosion_frac=None, atlas=True):
+def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
     """Erode labels image for use as markers or a map of the interior.
     
     Args:
         labels_img_np: Numpy image array of labels in z,y,x format.
         erosion: Filter size for erosion.
         erosion_frac: Target erosion fraction; defaults to None.
-        atlas: True if the primary image is an atlas, which is assumed 
-            to be symmetrical. False if the image is an experimental/sample 
-            image, in which case erosion will be performed on the full image.
+        mirrored: True if the primary image mirrored/symmatrical. False
+            if otherwise, such as unmirrored atlases or experimental/sample
+            images, in which case erosion will be performed on the full image.
     
     Returns:
         The eroded labels as a new array of same shape as that of 
         ``labels_img_np``.
     """
     labels_to_erode = labels_img_np
-    if atlas:
+    if mirrored:
         # for atlases, assume that labels image is symmetric across the x-axis
         len_half = labels_img_np.shape[2] // 2
         labels_to_erode = labels_img_np[..., :len_half]
@@ -2408,7 +2413,7 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, atlas=True):
     #eroded = segmenter.labels_to_markers_blob(labels_img_np)
     eroded = segmenter.labels_to_markers_erosion(
         labels_to_erode, erosion, erosion_frac)
-    if atlas:
+    if mirrored:
         eroded = _mirror_imported_labels(eroded, len_half)
     
     return eroded
@@ -2532,6 +2537,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     # erode all labels images into markers from which to grown via watershed
     erosion = config.register_settings["marker_erosion"]
     erosion_frac = config.register_settings["erosion_frac"]
+    mirrored = atlas and _is_profile_mirrored()
     for img_path in img_paths:
         mod_path = img_path
         if suffix is not None:
@@ -2541,7 +2547,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         print("Eroding labels to generate markers for atlas segmentation")
         # use default minimal post-erosion size (not setting erosion frac)
         markers = erode_labels(
-            sitk.GetArrayFromImage(labels_sitk), erosion, atlas=atlas)
+            sitk.GetArrayFromImage(labels_sitk), erosion, mirrored=mirrored)
         labels_sitk_markers = replace_sitk_with_numpy(labels_sitk, markers)
         write_reg_images({IMG_LABELS_MARKERS: labels_sitk_markers}, mod_path)
     
@@ -2572,7 +2578,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         
         # make interior images from labels using given target post-erosion frac
         interior = erode_labels(
-            labels_np, erosion, erosion_frac=erosion_frac, atlas=atlas)
+            labels_np, erosion, erosion_frac=erosion_frac, mirrored=mirrored)
         labels_sitk_interior = replace_sitk_with_numpy(labels_sitk, interior)
         
         # write images to same directory as atlas

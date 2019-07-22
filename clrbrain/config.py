@@ -372,6 +372,7 @@ def update_process_settings(settings, settings_type):
         # v2.3 (Clrbrain 0.8.7): added prune_tol_factor
         # v2.4 (Clrbrain 0.8.8): decreased min/max sigma, segment size
         # v2.5 (Clrbrain 0.8.9): added exclude_border
+        # v2.6 (Clrbrain 0.9.3): slight dec in x/y verify tol for Hungarian meth
         settings.add_modifier(
             "lightsheet", 
             {"points_3d_thresh": 0.7, 
@@ -394,7 +395,8 @@ def update_process_settings(settings, settings_type):
             "sub_stack_max_pixels": (1200, 800, 800), 
             "exclude_border": (1, 0, 0)}, 
             profile)
-        
+
+        # 2-photon 20x nuclei
         settings.add_modifier(
             "2p20x", 
             {"vis_3d": "surface", 
@@ -418,13 +420,15 @@ def update_process_settings(settings, settings_type):
             "prune_tol_factor": (1.5, 1.3, 1.3), 
             "segmenting_mean_thresh": -0.25}, 
             profile)
-        
+
+        # 2p 20x of zebrafish nuclei
         settings.add_modifier(
             "zebrafish", 
             {"min_sigma_factor": 2.5,
              "max_sigma_factor": 3}, 
             profile)
-        
+
+        # higher contrast colormaps
         settings.add_modifier(
             "contrast", 
             {"channel_colors": ("inferno", "bone")}, 
@@ -436,13 +440,15 @@ def update_process_settings(settings, settings_type):
             {"channel_colors": ("bone", "bone")},
             profile)
 
+        # diverging colormaps for heat maps centered on 0
         settings.add_modifier(
             "diverging", 
             {"channel_colors": ("RdBu", "BrBG"), 
              "scale_bar_color": "k", 
              "colorbar": True}, 
             profile)
-        
+
+        # lightsheet 5x of cytoplasmic markers
         settings.add_modifier(
             "cytoplasm", 
             {"clip_min": 0.3,
@@ -462,7 +468,8 @@ def update_process_settings(settings, settings_type):
             {"points_3d_thresh": 0.3, # used only if not surface
              "isotropic_vis": (1, 1, 1)}, 
             profile)
-        
+
+        # binary image
         settings.add_modifier(
             "binary", 
             {"denoise_size": None,

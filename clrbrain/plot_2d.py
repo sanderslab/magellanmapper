@@ -472,7 +472,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
                y_label=None, title=None, size=None, show=True, suffix=None, 
-               colors=None):
+               colors=None, df=None):
     """Plot line graph from Pandas data frame.
     
     Args:
@@ -495,9 +495,12 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
             defaults to None to ignore.
         colors: Sequence of colors for plot lines; defaults to None to use 
             the default plot cycler (``C0``, ``C1``, etc).
+        df: Data frame to use; defaults to None. If set, this data frame
+            will be used instead of loading from ``path``.
     """
     # load data frame from CSV and setup figure
-    df = pd.read_csv(path_to_df)
+    if df is None:
+        df = pd.read_csv(path_to_df)
     fig = plt.figure(figsize=size)
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])

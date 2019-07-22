@@ -3956,7 +3956,8 @@ def main():
         
         # display as probability plot
         lims = (0, 0.7)
-        plot_2d.plot_probability(path, conds, metric_cols, "Volume", 
+        plot_2d.plot_probability(
+            path, conds, metric_cols, "Volume",
             xlim=lims, ylim=lims, title="Coefficient of Variation", 
             fig_size=size, show=show, suffix=None, df=df)
 
@@ -3971,6 +3972,50 @@ def main():
             config.GENOTYPE_KEY)
         stats.data_frames_to_csv(
             df, lib_clrbrain.insert_before_ext(config.filename, "_melted"))
+
+    elif reg is config.RegisterTypes.plot_region_dev:
+        # plot region development
+
+        # assume that vol stats file is given first, then region IDs;
+        # merge in region names and levels
+        df_regions = pd.read_csv(config.filenames[1])
+        df = pd.read_csv(config.filename).merge(
+            df_regions[["Region", "RegionName", "Level"]], on="Region",
+            how="left")
+
+        # convert sample names to ages, assuming:
+        # - format of "[stage][age in days post-conception]", where stage
+        #   is either "E" = "embryonic" or "P" = "postnatal"
+        # - gestation time is 19 days
+        ages = {}
+        for val in df["Sample"].unique():
+            age = float(val[1:])
+            if val[0].lower() == "p":
+                age += 19
+            ages[val] = age
+        df["Age"] = df["Sample"].map(ages)
+
+        # generate a separate graph for each condition at each level
+        levels = df["Level"].unique()
+        for level in levels:
+            df_level = df.loc[df["Level"] == level]
+            conds = df_level["Condition"]
+            for cond in conds.unique():
+                # pivot region names into separate columns for each condition
+                # at each level
+                df_cond = df_level.loc[conds == cond]
+                regions = df_cond["RegionName"].unique()
+                df_cond = df_cond.pivot(
+                    index="Age", columns="RegionName",
+                    values=vols.LabelMetrics.Volume.name).reset_index()
+                plot_2d.plot_lines(
+                    config.filename, "Age",
+                    regions, x_label="Post-Conceptional Age (d)",
+                    y_label="Volume",
+                    title="Structure Development (Level {})".format(level),
+                    size=size, show=show,
+                    suffix="_dev_level{}_{}".format(level, cond), df=df_cond)
+
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

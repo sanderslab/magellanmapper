@@ -211,7 +211,8 @@ RegisterTypes = Enum(
         "plot_smoothing_metrics", "smoothing_peaks", 
         "merge_images", "merge_images_channels", 
         "register_reg", "labels_diff", "labels_diff_stats", 
-        "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols", 
+        "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols",
+        "plot_region_dev",
     ]
 )
 register_type = None

@@ -429,7 +429,13 @@ def update_process_settings(settings, settings_type):
             "contrast", 
             {"channel_colors": ("inferno", "bone")}, 
             profile)
-        
+
+        # similar colormaps to greyscale but with a cool blue tinge
+        settings.add_modifier(
+            "bone",
+            {"channel_colors": ("bone", "bone")},
+            profile)
+
         settings.add_modifier(
             "diverging", 
             {"channel_colors": ("RdBu", "BrBG"), 

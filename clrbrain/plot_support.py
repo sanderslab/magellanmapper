@@ -428,7 +428,7 @@ def set_scinot(ax, lims=(-2, 4), lbls=[], units=[]):
     of the y-axis and right of the x-axis, which may be missed or overlap 
     with the title or other labels. This method sets scientific notation 
     along with axis labels and units and moves any exponent to the 
-    unit labels.
+    unit labels. Units will be formatted with math text.
     
     Args:
         ax: Axis object.
@@ -438,18 +438,18 @@ def set_scinot(ax, lims=(-2, 4), lbls=[], units=[]):
         lbls: Sequence of axis labels given in the order ``(y-axis, x-axis)``. 
             No value for a given label will cause that label not to be set. 
             None causes the corresponding value from ``config.plot_labels` 
-            to be used if avialable. Defaults to an empty list to set no labels.
+            to be used if available. Defaults to an empty list to set no labels.
         units: Sequence of units given in the order ``(y-axis, x-axis)``. 
             No value for a given unit will cause that unit not to be set. 
             None causes the corresponding value from ``config.plot_labels` 
-            to be used if avialable. Defaults to an empty list to set no units.
+            to be used if available. Defaults to an empty list to set no units.
     """
     # set scientific notation
     ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
     num_lbls = len(lbls)
     num_units = len(units)
     for i, axis in enumerate((ax.yaxis, ax.xaxis)):
-        # set labels and units for each axis unless the lable is not given
+        # set labels and units for each axis unless the label is not given
         if i >= num_lbls: continue
         lbl = lbls[i]
         if not lbl:
@@ -475,8 +475,8 @@ def set_scinot(ax, lims=(-2, 4), lbls=[], units=[]):
             if unit is not None and unit != "":
                 unit_all.append(unit)
             if len(unit_all) > 0:
-                # put unit in parentheses
-                lbl = "{} ({})".format(lbl, " ".join(unit_all))
+                # put unit in parentheses and format with math text
+                lbl = "{} (${{{}}}$)".format(lbl, " ".join(unit_all))
             axis.set_label_text(lbl)
 
 def get_plane_axis(plane):

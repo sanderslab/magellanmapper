@@ -232,14 +232,16 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             will not be displayed.
         x_labels: Sequence of labels for each bar group, where the length 
             should be equal to that of each main value sequence in ``lists``.
-        y_label: Y-axis label.
+        y_label: Y-axis label. Falls back to :meth:``plot_support.set_scinot`` 
+            defaults.
         title: Graph title.
-        padding: Fraction each bar group's widththat should be left 
+        padding: Fraction each bar group's width that should be left 
             unoccupied by bars. Defaults to 0.2.
         skip_all_zero: True to skip any data list that contains only 
             values below :attr:``config.POS_THRESH``; defaults to False.
         rotation: Degrees of x-tick label rotation; defaults to 80.
-        y_unit: Measurement unit for y-axis; defaults to None.
+        y_unit: Measurement unit for y-axis; defaults to None, falling 
+            back to :meth:``plot_support.set_scinot``.
         vspans: Shade with vertical spans with indices of bar groups 
             at which alternating colors; defaults to None.
     """
@@ -298,7 +300,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     ax.set_title(title)
     
     # show y-label with any unit in scientific notation
-    plot_support.set_scinot(ax, lbls=(None, ), units=(None, ))
+    plot_support.set_scinot(ax, lbls=(y_label, ), units=(y_unit, ))
     # draw x-tick labels with smaller font for increasing number of labels
     font_size = plt.rcParams["axes.titlesize"]
     if lib_clrbrain.is_number(font_size):

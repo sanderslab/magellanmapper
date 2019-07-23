@@ -4006,7 +4006,7 @@ def main():
         df["Age"] = df["Sample"].map(ages)
 
         # generate a separate graph for each condition at each level
-        levels = df["Level"].unique()
+        levels = np.sort(df["Level"].unique())
         conds = df["Condition"].unique()
         for level in levels:
             df_level = df.loc[df["Level"] == level]

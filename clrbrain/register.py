@@ -3992,7 +3992,15 @@ def main():
         df = pd.read_csv(config.filename).merge(
             df_regions[["Region", "RegionName", "Level"]], on="Region",
             how="left")
-
+        
+        label_id = config.atlas_labels[config.AtlasLabels.ID]
+        if label_id is not None:
+            # show only selected region and its children
+            labels_ref_lookup = ontology.create_aba_reverse_lookup(
+                ontology.load_labels_ref(config.load_labels))
+            ids = ontology.get_children_from_id(labels_ref_lookup, label_id)
+            df = df[np.isin(df["Region"], ids)]
+        
         # convert sample names to ages, assuming:
         # - format of "[stage][age in days post-conception]", where stage
         #   is either "E" = "embryonic" or "P" = "postnatal"

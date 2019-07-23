@@ -4007,24 +4007,25 @@ def main():
 
         # generate a separate graph for each condition at each level
         levels = df["Level"].unique()
+        conds = df["Condition"].unique()
         for level in levels:
             df_level = df.loc[df["Level"] == level]
-            conds = df_level["Condition"]
-            for cond in conds.unique():
-                # pivot region names into separate columns for each condition
-                # at each level
-                df_cond = df_level.loc[conds == cond]
-                regions = df_cond["RegionName"].unique()
-                df_cond = df_cond.pivot(
-                    index="Age", columns="RegionName",
-                    values=vols.LabelMetrics.Volume.name).reset_index()
-                plot_2d.plot_lines(
-                    config.filename, "Age",
-                    regions, x_label="Post-Conceptional Age (d)",
-                    y_label="Volume",
-                    title="Structure Development (Level {})".format(level),
-                    size=size, show=show,
-                    suffix="_dev_level{}_{}".format(level, cond), df=df_cond)
+            # use multi-level indexing; assumes that no duplicates exist for
+            # a given age-cond-reg combo, and if they do, simply take 1st val
+            df_level = df_level.pivot_table(
+                index=["Age", "Condition"], columns="RegionName",
+                values=vols.LabelMetrics.Volume.name, aggfunc="first")
+            regions = df_level.columns  # may be fewer than orig
+            # move Condition into separate sub-cols of each region and
+            # reset index to access Age as col
+            df_level = df_level.unstack().reset_index()
+            plot_2d.plot_lines(
+                config.filename, "Age",
+                regions, x_label="Post-Conceptional Age (d)",
+                y_label="Volume",
+                title="Structure Development (Level {})".format(level),
+                size=size, show=show,
+                suffix="_dev_level{}".format(level), df=df_level, groups=conds)
 
 
 if __name__ == "__main__":

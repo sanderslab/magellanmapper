@@ -583,8 +583,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         ax.add_artist(legend_group)
 
     # add supporting plot components
-    if x_label: ax.set_xlabel(x_label)
-    if y_label: ax.set_ylabel(y_label)
+    plot_support.set_scinot(ax, lbls=(y_label, x_label), units=(None, None))
     if title: ax.set_title(title)
     
     # save and display

@@ -4029,7 +4029,7 @@ def main():
             df_level = df_level.unstack().reset_index()
             plot_2d.plot_lines(
                 config.filename, "Age",
-                regions, x_label="Post-Conceptional Age (d)",
+                regions, x_label="Post-Conceptional Age",
                 y_label="Volume",
                 title="Structure Development (Level {})".format(level),
                 size=size, show=show, ignore_invis=True,

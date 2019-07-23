@@ -472,7 +472,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
                y_label=None, title=None, size=None, show=True, suffix=None, 
-               colors=None, df=None):
+               colors=None, df=None, groups=None):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -480,9 +480,12 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
             The figure will be saved to file if :attr:``config.savefig`` is 
             set, using this same path except with the savefig extension.
         x_col: Name of column to use for x.
-        data_cols: Sequence of names to plot as separate lines.
+        data_cols: Sequence of column names to plot as separate lines.
+            Hierarchical columns will be plotted with the same color
+            and style unless ``groups`` is specified.
         linestyles: Sequence of styles to use for each line; defaults to 
-            None, in which case "-" will be used for all lines.
+            None, in which case "-" will be used for all lines if
+            ``groups`` is None, or each group will use a distinct style.
         x_label: Name of x-axis; defaults to None.
         y_label: Name of y-axis; defaults to None.
         title: Title of figure; defaults to None.
@@ -498,6 +501,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
             default ``CN`` color cycler (``C0``, ``C1``, etc).
         df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
+        groups: Sequence of strings of groups within each data column.
+            If given, all lines within a group will have the same
+            style, and a separate group legend will be displayed
+            with these line styles. Defaults to None.
     """
     # load data frame from CSV unless already given and setup figure
     if df is None:
@@ -510,17 +517,62 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         # default to discrete colors starting with CN colors
         colors = colormaps.discrete_colormap(
             len(data_cols), prioritize_default="cn", seed=config.seed) / 255
-    
+
+    if linestyles is None:
+        # default to solid line for all lines if no groups or cycling
+        # through all main line styles for each group
+        if groups is None:
+            linestyles = ["-"] * len(data_cols)
+        else:
+            linestyles = ["-", "--", ":", "-."] * (len(groups) % 4 + 1)
+
     # plot selected columns with corresponding styles
     x = df[x_col]
+    lines = []
+    lines_groups = None if groups is None else []
     for i, col in enumerate(data_cols):
-        linestyle = linestyles[i] if linestyles else "-"
-        ax.plot(
-            x, df[col], color=colors[i], linestyle=linestyle,
-            label=str(col).replace("_", " "))
-    
+        df_col = df[col]
+        label = str(col).replace("_", " ")
+        if groups is None:
+            # plot lines with unique colors but same style unless explicitly
+            # set to a given style
+            lines.extend(ax.plot(
+                x, df_col, color=colors[i], linestyle=linestyles[i],
+                label=label))
+        else:
+            for j, group in enumerate(groups):
+                # plot all lines within group with unique colors but same style
+                lines_group = ax.plot(
+                    x, df_col[group], color=colors[i], linestyle=linestyles[j],
+                    label=label)
+                if j == 0:
+                    # add first line to main legend
+                    lines.extend(lines_group)
+                if i == 0:
+                    # for first data col, add dummy lines only for group legend
+                    lines_groups.extend(
+                        ax.plot(
+                            [], [], color="k", linestyle=linestyles[j],
+                            label=group))
+
+    # add legends, using "best" location for main legend unless also showing
+    # a group legend, in which case locations are set explicitly
+    legend_main_loc = "best"
+    legend_group = None
+    if lines_groups is not None:
+        # group legend from empty lines to show line style
+        legend_group = ax.legend(
+            lines_groups, [l.get_label() for l in lines_groups],
+            loc="lower right", fancybox=True, framealpha=0.5)
+        legend_main_loc = "upper left"
+    ax.legend(
+        lines, [l.get_label() for l in lines], loc=legend_main_loc,
+        fancybox=True, framealpha=0.5)
+    if legend_group is not None:
+        # only last legend appears to be shown so need to add prior legends
+        ax.add_artist(legend_group)
+
     # add supporting plot components
-    ax.legend(loc="best", fancybox=True, framealpha=0.5)
     if x_label: ax.set_xlabel(x_label)
     if y_label: ax.set_ylabel(y_label)
     if title: ax.set_title(title)

@@ -396,19 +396,12 @@ def main(process_args_only=False):
         config.saveroi = args.saveroi
         print("Set save ROI to file to ".format(config.saveroi))
     if args.labels:
-        # parse labels with optional args transferred directly to config
-        labels_parsed = args_with_dict(args.labels)
-        parsed_len = len(labels_parsed)
-        parsed_dict = labels_parsed[-1]
-        config.load_labels = (
-            labels_parsed[0] if parsed_len > 1 
-            else parsed_dict.get("labels_path"))
-        print("Set load labels path to {}".format(config.load_labels))
-        config.labels_level = (
-            labels_parsed[1] if parsed_len > 2 else parsed_dict.get("level"))
-        if config.labels_level is not None:
-            config.labels_level = int(config.labels_level)
-        print("Set labels level to {}".format(config.labels_level))
+        # atlas labels as positional or dictionary-like args
+        config.atlas_labels = args_to_dict(
+            args.labels, config.AtlasLabels, config.atlas_labels)
+        config.load_labels = config.atlas_labels[config.AtlasLabels.PATH_REF]
+        config.labels_level = config.atlas_labels[config.AtlasLabels.LEVEL]
+        print("Set labels to {}".format(config.atlas_labels))
 
     if args.flip:
         config.flip = []

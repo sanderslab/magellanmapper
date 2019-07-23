@@ -162,6 +162,14 @@ verified_db = None # automated verifications DB
 
 # IMAGE REGISTRATION
 
+# atlas label keys for command-line parsing
+AtlasLabels = Enum(
+    "AtlasLabels", (
+        "PATH_REF", "LEVEL", "ID" 
+    )
+)
+atlas_labels = dict.fromkeys(AtlasLabels, None)
+
 # reference atlas labels
 load_labels = None
 labels_img = None # in Numpy format

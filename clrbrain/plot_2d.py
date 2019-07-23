@@ -472,7 +472,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
                y_label=None, title=None, size=None, show=True, suffix=None, 
-               colors=None, df=None, groups=None):
+               colors=None, df=None, groups=None, ignore_invis=False):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -505,7 +505,14 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
             If given, all lines within a group will have the same
             style, and a separate group legend will be displayed
             with these line styles. Defaults to None.
+        ignore_invis: True to ignore lines that aren't displayed,
+            such as those with only a single value; defaults to False.
     """
+
+    def to_ignore(arr):
+        # True if set to ignore and fewer than 2 points to plot
+        return ignore_invis and np.sum(~np.isnan(arr)) < 2
+
     # load data frame from CSV unless already given and setup figure
     if df is None:
         df = pd.read_csv(path_to_df)
@@ -536,14 +543,17 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         if groups is None:
             # plot lines with unique colors but same style unless explicitly
             # set to a given style
+            if to_ignore(df_col): continue
             lines.extend(ax.plot(
                 x, df_col, color=colors[i], linestyle=linestyles[i],
                 label=label))
         else:
             for j, group in enumerate(groups):
                 # plot all lines within group with unique colors but same style
+                df_group = df_col[group]
+                if to_ignore(df_group): continue
                 lines_group = ax.plot(
-                    x, df_col[group], color=colors[i], linestyle=linestyles[j],
+                    x, df_group, color=colors[i], linestyle=linestyles[j],
                     label=label)
                 if j == 0:
                     # add first line to main legend

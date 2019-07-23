@@ -4024,7 +4024,7 @@ def main():
                 regions, x_label="Post-Conceptional Age (d)",
                 y_label="Volume",
                 title="Structure Development (Level {})".format(level),
-                size=size, show=show,
+                size=size, show=show, ignore_invis=True,
                 suffix="_dev_level{}".format(level), df=df_level, groups=conds)
 
 

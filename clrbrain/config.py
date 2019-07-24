@@ -904,7 +904,8 @@ def update_register_settings(settings, settings_type):
              },
             profile)
         
-        # turn off mirroring/extension along with smoothing
+        # turn off mirroring/extension along with smoothing while preserving 
+        # their settings for measurements and cropping
         settings.add_modifier(
             "nomirror", 
             {"extend_atlas": False, 

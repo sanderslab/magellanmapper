@@ -823,19 +823,20 @@ def crop_to_labels(img_labels, img_ref, mask=None, padding=2):
     of a small dilation of the labels mask will be turned to zero.
     
     Args:
-        img_labels: Labels image as Numpy array.
-        img_ref: Reference image as Numpy array of same shape as that 
+        img_labels (:obj:`np.ndarray`): Labels image.
+        img_ref (:obj:`np.ndarray`): Reference image of same shape as that 
             of ``img_labels``.
-        mask: Binary Numpy array of same shape as that of ``img_labels`` 
-            to use in place of it for determining the extent of cropping. 
-            Defaults to None.
-        padding: Int size of structuring element for padding the crop 
-            region; defaults to 2.
+        mask (:obj:`np.ndarray`, optional): Binary array of same shape as 
+            that of ``img_labels`` to use in place of it for determining 
+            the extent of cropping. Defaults to None.
+        padding (int, optional): Size of structuring element for padding 
+            the crop region; defaults to 2.
     
     Returns:
-        Tuple of ``extracted_labels``, the cropped labels, and 
+        Tuple of ``extracted_labels``, the cropped labels image; 
         ``extracted_ref``, the cropped reference image, extracting only 
-        pixels corresponding to the labels.
+        pixels corresponding to the labels; and ``slices``, a list of 
+        the bounding box slices by which the images were cropped.
     """
     if mask is None:
         # default to get bounding box of all labels, assuming 0 is background
@@ -853,7 +854,7 @@ def crop_to_labels(img_labels, img_ref, mask=None, padding=2):
     mask_dil = morphology.binary_dilation(
         extracted_mask, morphology.ball(padding))
     extracted_ref[~mask_dil] = 0
-    return extracted_labels, extracted_ref
+    return extracted_labels, extracted_ref, slices
 
 def interpolate_contours(bottom, top, fracs):
     """Interpolate contours between two planes.

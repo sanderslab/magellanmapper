@@ -113,6 +113,8 @@ class AtlasMetrics(Enum):
     DSC_ATLAS_LABELS = "DSC_atlas_labels"
     DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
     DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
+    LAT_UNLBL_VOL = "Lateral_unlabeled_vol"
+    LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"
 
 class SmoothingMetrics(Enum):
     """Smoothing metric enumerations."""
@@ -428,12 +430,13 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         resize: True to resize the image during mirroring; defaults to True.
     
     Returns:
-        Tuple of the mirrored image in Numpy format; a tuple of the 
-        indices at which the edge was extended and theimage was 
-        mirrored, respectively; a borders image of the same size as the 
-        mirrored image, or None if any smoothing did not give a 
-        borders image; and a data frame of smoothing stats, or None 
-        if smoothing was not performed.
+         Tuple of the mirrored image in Numpy format; a tuple of the 
+         indices from which the edge was extended (labels used as template 
+         from this plane index) and the image was mirrored (index where 
+         mirrored hemisphere starts); a borders image of the same size as the 
+         mirrored image, or None if any smoothing did not give a 
+         borders image; and a data frame of smoothing stats, or None 
+         if smoothing was not performed.
     """
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
@@ -449,31 +452,30 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     img_ref_np = sitk.GetArrayFromImage(img_ref)
     tot_planes = len(img_np)
     
-    # extend near edges: lateral edges of atlas labels (ie low z) are missing 
-    # in many ABA developing mouse atlases, requiring extension
+    # lateral edges of atlas labels (ie low z in sagittal orientation) are 
+    # missing in many ABA developing mouse atlases, requiring extension
     edgei = 0
     edgei_first = None
+    if edge == -1 or edge is None:
+        # find the first non-zero plane
+        for plane in img_np:
+            if not np.allclose(plane, 0):
+                if edgei_first is None:
+                    edgei_first = edgei
+                elif edgei - edgei_first >= 1:
+                    # require at least 2 contiguous planes with signal
+                    edgei = edgei_first
+                    break
+            else:
+                edgei_first = None
+            edgei += 1
+        print("found start of contiguous non-zero planes at {}".format(edgei))
+    else:
+        # based on profile settings
+        edgei = int(edge * tot_planes)
+        print("will extend near edge from plane {}".format(edgei))
+    
     if edge is not None:
-        if edge == -1:
-            # find the first non-zero plane
-            for plane in img_np:
-                if not np.allclose(plane, 0):
-                    if edgei_first is None:
-                        edgei_first = edgei
-                    elif edgei - edgei_first >= 1:
-                        # require at least 2 contiguous planes with signal
-                        edgei = edgei_first
-                        print("found start of contiguous non-zero planes at {}"
-                              .format(edgei))
-                        break
-                else:
-                    edgei_first = None
-                edgei += 1
-        else:
-            # based on profile settings
-            edgei = int(edge * tot_planes)
-            print("will extend near edge from plane {}".format(edgei))
-        
         # find the bounds of the reference image in the given plane and resize 
         # the corresponding section of the labels image to the bounds of the 
         # reference image in the next plane closer to the edge, recursively 
@@ -1311,19 +1313,21 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
             num_res /= ndim
         param_map["NumberOfResolutions"] = [str(num_res)]
 
-def match_atlas_labels(img_atlas, img_labels, flip=False):
+def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     """Apply register profile settings to labels and match atlas image 
     accordingly.
     
     Args:
-        img_labels: Labels image as SimpleITK image.
-        img_ref: Reference image as SimpleITK image.
-        flip: True to rotate images 180deg around the final z axis; 
+        img_labels (:obj:`sitk.Image`): Labels image.
+        img_ref (:obj:`sitk.Image`): Reference image, such as histology.
+        flip (bool): True to rotate images 180deg around the final z axis; 
             defaults to False.
+        metrics (:obj:`dict`): Dictionary to store metrics; defaults to 
+            None, in which case metrics will not be measured.
     
     Returns:
         Tuple of ``img_atlas``, the updated atlas; ``img_labels``, the 
-        updated labels; ``img_borders``, a new SimpleITK image of the 
+        updated labels; ``img_borders``, a new (:obj:`sitk.Image`) of the 
         same shape as the prior images except an extra channels dimension 
         as given by :func:``_curate_labels``; and ``df_smoothing``, a 
         data frame of smoothing stats, or None if smoothing was not performed.
@@ -1352,23 +1356,23 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         img_labels = replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # curate labels
-    mask_lbls = None
+    mask_lbls = None  # mask of fully extended/mirrored labels for cropping
+    extis = None  # extension indices of 1st labeled, then unlabeled planes
     if extend_atlas:
-        # include any lateral extension and mirroing
-        img_labels_np, mirror_indices, borders_img_np, df_smoothing = (
+        # include any lateral extension and mirroring
+        img_labels_np, extis, borders_img_np, df_smoothing = (
             _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
                 affine))
     else:
-        # turn off lateral extension and mirroing
+        # turn off lateral extension and mirroring
         img_labels_np, _, borders_img_np, df_smoothing = _curate_labels(
             img_labels, img_atlas, None, None, expand, rotate, smooth, 
             affine)
-        if crop and (mirror is not None or edge is not None):
-            # separately get mirrored labels only for cropping to labels
+        if metrics or crop and (mirror is not None or edge is not None):
             print("\nCurating labels with extension/mirroring only "
-                  "for cropping:")
-            lbls_np_mir, mirror_indices, _, _ = _curate_labels(
+                  "for measurements and any cropping:")
+            lbls_np_mir, extis, _, _ = _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, None, 
                 affine, False)
             mask_lbls = lbls_np_mir != 0
@@ -1386,13 +1390,49 @@ def match_atlas_labels(img_atlas, img_labels, flip=False):
         # TODO: consider removing dup since not using
         dup = config.register_settings["labels_dup"]
         img_atlas_np = _mirror_planes(
-            img_atlas_np, mirror_indices[1], start_dup=dup)
+            img_atlas_np, extis[1], start_dup=dup)
     
     if crop:
         # crop atlas to the mask of the labels with some padding; 
         # TODO: crop or deprecate borders image
-        img_labels_np, img_atlas_np = plot_3d.crop_to_labels(
+        img_labels_np, img_atlas_np, crop_sl = plot_3d.crop_to_labels(
             img_labels_np, img_atlas_np, mask_lbls)
+        if crop_sl[0].start > 0:
+            # offset extension indices and crop labels mask
+            extis = tuple(n - crop_sl[0].start for n in extis)
+            if mask_lbls is not None:
+                mask_lbls = mask_lbls[tuple(crop_sl)]
+    
+    if metrics is not None:
+        # meas frac of hemisphere that is unlabeled using "mirror" bounds
+        thresh = config.register_settings["atlas_threshold_all"]
+        thresh_atlas = img_atlas_np > thresh
+        # some edge planes may be partially labeled
+        lbl_edge = np.logical_and(
+            img_labels_np[:extis[0]] != 0, thresh_atlas[:extis[0]])
+        # simply treat rest of hem as labeled to focus on unlabeled lat portion
+        metrics[AtlasMetrics.LAT_UNLBL_VOL] = 1 - (
+            (np.sum(lbl_edge) + np.sum(thresh_atlas[extis[0]:extis[1]])) 
+            / np.sum(thresh_atlas[:extis[1]]))
+
+        # meas frac of planes that are at least partially labeled, using 
+        # mask labels since from atlas portion that should be labeled
+        frac = 0   # mask labels fully covered, so fully labeled by this def
+        if mask_lbls is not None:
+            planes_lbl = 0
+            planes_tot = 0.
+            for i in range(extis[1]):
+                if not np.all(mask_lbls[i] == 0):
+                    # plane that should be labeled
+                    print(np.where(mask_lbls[i]))
+                    planes_tot += 1
+                    if not np.all(img_labels_np[i] == 0):
+                        # plane is at least partially labeled
+                        planes_lbl += 1
+                print("i", i, "planes_tot", planes_tot, "planes_lbl", planes_lbl)
+            if planes_tot > 0:
+                frac = 1 - (planes_lbl / planes_tot)
+        metrics[AtlasMetrics.LAT_UNLBL_PLANES] = frac
     
     imgs_np = (img_atlas_np, img_labels_np, borders_img_np)
     if pre_plane:
@@ -1434,6 +1474,15 @@ def import_atlas(atlas_dir, show=True):
     # load atlas and corresponding labels
     img_atlas, path_atlas = read_sitk(os.path.join(atlas_dir, IMG_ATLAS))
     img_labels, _ = read_sitk(os.path.join(atlas_dir, IMG_LABELS))
+    
+    # prep export paths
+    target_dir = atlas_dir + "_import"
+    basename = os.path.basename(atlas_dir)
+    df_base_path = os.path.join(target_dir, basename) + "_{}"
+    df_metrics_path = df_base_path.format(config.PATH_ATLAS_IMPORT_METRICS)
+    name_prefix = os.path.join(target_dir, basename) + ".czi"
+    
+    # set up condition
     overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]
     extend_atlas = config.register_settings["extend_atlas"]
     if extend_atlas:
@@ -1445,9 +1494,16 @@ def import_atlas(atlas_dir, show=True):
         _measure_overlap_combined_labels(
             img_atlas, img_labels, overlap_meas_add)
     
+    # prep metrics
+    metrics = {
+        AtlasMetrics.SAMPLE: [basename], 
+        AtlasMetrics.REGION: config.REGION_ALL, 
+        AtlasMetrics.CONDITION: cond, 
+    }
+    
     # match atlas and labels to one another
     img_atlas, img_labels, img_borders, df_smoothing = match_atlas_labels(
-        img_atlas, img_labels)
+        img_atlas, img_labels, metrics=metrics)
     
     truncate = config.register_settings["truncate_labels"]
     if truncate:
@@ -1462,13 +1518,6 @@ def import_atlas(atlas_dir, show=True):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    # prep export paths
-    target_dir = atlas_dir + "_import"
-    basename = os.path.basename(atlas_dir)
-    df_base_path = os.path.join(target_dir, basename) + "_{}"
-    df_metrics_path = df_base_path.format(config.PATH_ATLAS_IMPORT_METRICS)
-    name_prefix = os.path.join(target_dir, basename) + ".czi"
-    
     # whole atlas stats; measure DSC if processed and prep dict for data frame
     print("\nDSC after import:")
     dsc = _measure_overlap_combined_labels(
@@ -1480,13 +1529,8 @@ def import_atlas(atlas_dir, show=True):
     thresh_atlas = img_atlas_np > thresh
     compactness = plot_3d.compactness(
         plot_3d.perimeter_nd(thresh_atlas), thresh_atlas)
-    metrics = {
-        AtlasMetrics.SAMPLE: [basename], 
-        AtlasMetrics.REGION: config.REGION_ALL, 
-        AtlasMetrics.CONDITION: cond, 
-        AtlasMetrics.DSC_ATLAS_LABELS: [dsc], 
-        SmoothingMetrics.COMPACTNESS: [compactness]
-    }
+    metrics[AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
+    metrics[SmoothingMetrics.COMPACTNESS] = [compactness]
     
     # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
@@ -1517,8 +1561,8 @@ def import_atlas(atlas_dir, show=True):
     stats.dict_to_data_frame(metrics, df_metrics_path, show="\t")
     
     if show:
-       sitk.Show(img_atlas)
-       sitk.Show(img_labels)
+        sitk.Show(img_atlas)
+        sitk.Show(img_labels)
     
 def register_duo(fixed_img, moving_img, path=None):
     """Register two images to one another using ``SimpleElastix``.

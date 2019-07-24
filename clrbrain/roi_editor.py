@@ -36,7 +36,23 @@ verify = False
 
 
 class DraggableCircle:
-
+    """Circle representation of a blob to allow the user to manipulate 
+    blob position, size, and status.
+    
+    Attributes:
+        BLOB_COLORS (:obj:`dict`): Mapping of integers to ``Matplotlib`` 
+            color strings.
+        CUT (str): Flag to cut a circle.
+        circle (:obj:`patches.Circle`): A circle patch. 
+        segment (:obj:`np.ndarray`): Array in the format, 
+            `[z, y, x, r, confirmation, truth]` of the blob. 
+        fn_update_seg (`meth`): Function that takes 
+            `(segment_new, segment_old)` to call when updating the blob.
+        picked (:obj:`list`): List of picked, active blobs in the 
+            tuple format, `(segment, pick_flag)`.
+    
+    """
+    
     # segment colors based on confirmation status
     BLOB_COLORS = {
         -1: "none",
@@ -46,32 +62,56 @@ class DraggableCircle:
     }
 
     CUT = "cut"
+    
+    #: str: Flag to copy a circle.
     _COPY = "copy"
 
     picked = None
 
     def __init__(self, circle, segment, fn_update_seg, picked, color="none"):
+        """Initialize a circle from a blob.
+        
+        Args:
+            circle (:obj:`patches.Circle`): A circle patch. 
+            segment (:obj:`np.ndarray`): Array in the format, 
+                `[z, y, x, r, confirmation, truth]` of the blob. 
+            fn_update_seg (`meth`): Function that takes 
+                `(segment_new, segment_old)` to call when updating the blob.
+            picked (:obj:`list`): List of picked, active blobs in the 
+                tuple format, `(segment, pick_flag)`.
+            color (str, optional): ``Matplotlib`` color string for the circle; 
+                defaults to "none".
+        
+        """
         self.circle = circle
         self.circle.set_picker(5)
-        self.facecolori = -1
+        self._facecolori = -1
         for key, val in self.BLOB_COLORS.items():
             if val == color:
-                self.facecolori = key
-        self.press = None
+                self._facecolori = key
         self.segment = segment
         self.fn_update_seg = fn_update_seg
         self.picked = picked
 
+        self._press = None  # event position
+        self._background = None  # bbox of bkgd for blitting
+        
+        # event connection objects
+        self._cidpress = None
+        self._cidrelease = None
+        self._cidmotion = None
+        self._cidpick = None
+
     def connect(self):
         """Connect events to functions.
         """
-        self.cidpress = self.circle.figure.canvas.mpl_connect(
+        self._cidpress = self.circle.figure.canvas.mpl_connect(
             "button_press_event", self.on_press)
-        self.cidrelease = self.circle.figure.canvas.mpl_connect(
+        self._cidrelease = self.circle.figure.canvas.mpl_connect(
             "button_release_event", self.on_release)
-        self.cidmotion = self.circle.figure.canvas.mpl_connect(
+        self._cidmotion = self.circle.figure.canvas.mpl_connect(
             "motion_notify_event", self.on_motion)
-        self.cidpick = self.circle.figure.canvas.mpl_connect(
+        self._cidpick = self.circle.figure.canvas.mpl_connect(
             "pick_event", self.on_pick)
         #print("connected circle at {}".format(self.circle.center))
 
@@ -91,7 +131,7 @@ class DraggableCircle:
         if not contains: return
         print("pressed on {}".format(self.circle.center))
         x0, y0 = self.circle.center
-        self.press = x0, y0, event.xdata, event.ydata
+        self._press = x0, y0, event.xdata, event.ydata
         DraggableCircle.lock = self
 
         # draw everywhere except the circle itself, store the pixel buffer
@@ -100,16 +140,16 @@ class DraggableCircle:
         ax = self.circle.axes
         self.circle.set_animated(True)
         canvas.draw()
-        self.background = canvas.copy_from_bbox(self.circle.axes.bbox)
+        self._background = canvas.copy_from_bbox(self.circle.axes.bbox)
         ax.draw_artist(self.circle)
         canvas.blit(ax.bbox)
 
     def on_motion(self, event):
         """Move the circle if the drag event has been initiated.
         """
-        if self.press is None: return
+        if self._press is None: return
         if event.inaxes != self.circle.axes: return
-        x0, y0, xpress, ypress = self.press
+        x0, y0, xpress, ypress = self._press
         dx = None
         dy = None
         if event.key == "shift":
@@ -126,7 +166,7 @@ class DraggableCircle:
         # restore the saved background and redraw the circle at its new position
         canvas = self.circle.figure.canvas
         ax = self.circle.axes
-        canvas.restore_region(self.background)
+        canvas.restore_region(self._background)
         ax.draw_artist(self.circle)
         canvas.blit(ax.bbox)
 
@@ -134,22 +174,22 @@ class DraggableCircle:
         """Finalize the circle and segment's position after a drag event
         is completed with a button release.
         """
-        if self.press is None: return
+        if self._press is None: return
         print("released on {}".format(self.circle.center))
         print("segment moving from {}...".format(self.segment))
         seg_old = np.copy(self.segment)
         self.segment[1:3] += np.subtract(
-            self.circle.center, self.press[0:2]).astype(np.int)[::-1]
+            self.circle.center, self._press[0:2]).astype(np.int)[::-1]
         rad_sign = -1 if self.segment[3] < config.POS_THRESH else 1
         self.segment[3] = rad_sign * self.circle.radius
         print("...to {}".format(self.segment))
         self.fn_update_seg(self.segment, seg_old)
-        self.press = None
+        self._press = None
 
         # turn off animation property, reset background
         DraggableCircle.lock = None
         self.circle.set_animated(False)
-        self.background = None
+        self._background = None
         self.circle.figure.canvas.draw()
 
     def on_pick(self, event):
@@ -183,7 +223,7 @@ class DraggableCircle:
             seg_old = np.copy(self.segment)
             # "r"-click to change flag in reverse order
             change = -1 if event.mouseevent.key == "r" else 1
-            i = self.facecolori + change
+            i = self._facecolori + change
             # wrap around keys if exceeding min/max
             if i > max(self.BLOB_COLORS.keys()):
                 if self.segment[3] < config.POS_THRESH:
@@ -194,7 +234,7 @@ class DraggableCircle:
             elif i < min(self.BLOB_COLORS.keys()):
                 i = max(self.BLOB_COLORS.keys())
             self.circle.set_facecolor(self.BLOB_COLORS[i])
-            self.facecolori = i
+            self._facecolori = i
             self.segment[4] = i
             self.fn_update_seg(self.segment, seg_old)
             print("picked segment: {}".format(self.segment))
@@ -202,9 +242,10 @@ class DraggableCircle:
     def disconnect(self):
         """Disconnect event listeners.
         """
-        self.circle.figure.canvas.mpl_disconnect(self.cidpress)
-        self.circle.figure.canvas.mpl_disconnect(self.cidrelease)
-        self.circle.figure.canvas.mpl_disconnect(self.cidmotion)
+        self.circle.figure.canvas.mpl_disconnect(self._cidpress)
+        self.circle.figure.canvas.mpl_disconnect(self._cidrelease)
+        self.circle.figure.canvas.mpl_disconnect(self._cidmotion)
+        self.circle.figure.canvas.mpl_disconnect(self._cidpick)
 
 
 class ROIEditor:
@@ -259,7 +300,7 @@ class ROIEditor:
     # divisor for finding array interval to downsample images
     _DOWNSAMPLE_MAX_ELTS = 1000
 
-    # need to store DraggableCircles objects to prevent premature garbage collection
+    # store DraggableCircles objects to prevent premature garbage collection
     _draggable_circles = []
     _circle_last_picked = []
 

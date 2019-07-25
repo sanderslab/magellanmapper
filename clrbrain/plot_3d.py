@@ -728,15 +728,16 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
     """Get the region properties for a thresholded image.
     
     Args:
-        img_np: Image as a Numpy array.
-        threshold: Threshold level; defaults to 10. If None, assume 
-            ``img_np`` is already binary.
-        sort_reverse: Sort properties from largest to smallest area; 
+        img_np (:obj:`np.ndarray`): Image array.
+        threshold (int, float): Threshold level; defaults to 10. If None, 
+            assume ``img_np`` is already binary.
+        sort_reverse (bool): Sort properties from largest to smallest area; 
             defaults to False, in which case sorting is from smallest to 
             largest.
     
     Returns:
-        List of ``(prop, area)`` sorted by area.
+        List of ``(prop, area)``, sorted by area from smallest to largest 
+        unless reversed by ``sort_reverse``.
     """
     thresholded = img_np
     if threshold is not None:
@@ -754,8 +755,7 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
     props_sizes.sort(key=lambda x: x[1], reverse=sort_reverse)
     return props_sizes
 
-def extend_edge(region, region_ref, threshold, plane_region, planei, 
-                largest_only=False):
+def extend_edge(region, region_ref, threshold, plane_region, planei):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
     
@@ -786,34 +786,34 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             resized for current plane; if None, a template will be cropped 
             from `region` at `planei`.
         planei (int): Plane index.
-        largest_only (bool): True to only use the property with the largest 
-            area; defaults to False.
     """
     if planei < 0: return
     
     # find sub-regions in the reference image
+    has_template = plane_region is not None
     region_ref_filt = region_ref[planei]
-    if plane_region is None:
+    if not has_template:
         # limit the reference image to the labels since when generating 
         # label templates since labels can only be extended from labeled areas; 
         # include padding by dilating slightly for unlabeled borders
         remove_bg_from_dil_fg(
             region_ref_filt, region[planei] != 0, morphology.disk(2))
+    # order extension from smallest to largest regions so largest have 
+    # final say
     prop_sizes = get_thresholded_regionprops(
-        region_ref_filt, threshold=threshold, sort_reverse=largest_only)
+        region_ref_filt, threshold=threshold)
     if prop_sizes is None: return
     
-    if largest_only:
-        # keep only largest property
+    if has_template:
+        # resize only largest property
         # TODO: could follow all props separately by generating new templates, 
         # though would need to decide when to crop new templates vs resize 
-        # TODO: consider replacing this param with checking plane_region
         num_props = len(prop_sizes)
         if num_props > 1:
             print("plane {}: ignoring smaller {} prop(s) of size(s) {}"
                   .format(planei, num_props - 1, 
                           [p[1] for p in prop_sizes[1:]]))
-        prop_sizes = prop_sizes[:1]
+        prop_sizes = prop_sizes[-1:]
     print("plane {}: extending {} props of sizes {}".format(
         planei, len(prop_sizes), [p[1] for p in prop_sizes]))
     
@@ -823,7 +823,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
         lbl_size = np.sum(prop_region[planei] != 0)
-        if plane_region is None:
+        if not has_template:
             # crop to set up the labels in the region to use as template for 
             # next plane; remove ventricular space using empirically determined 
             # selem, which appears to be very sensitive to radius since 
@@ -847,7 +847,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         # new regions appear, where the labels would be unknown
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region, 
-            planei - 1, True)
+            planei - 1)
 
 def crop_to_labels(img_labels, img_ref, mask=None, dil_size=2, padding=5):
     """Crop images to match labels volume.

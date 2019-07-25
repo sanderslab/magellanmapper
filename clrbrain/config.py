@@ -766,10 +766,10 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "abae13pt5", 
             {"target_size": (552, 673, 340),
-             "resize_factor": None, # turn off resizing
+             "resize_factor": None,  # turn off resizing
              "labels_mirror": 0.48, 
              "labels_edge": -1, 
-             "atlas_threshold": 80, # to avoid edge over-extension into skull
+             "atlas_threshold": 55,  # to avoid edge over-extension into skull
              "rotate": ((-4, 1), (-2, 2)),
              "crop_to_labels": True, 
              "smooth": 2, 
@@ -780,10 +780,10 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "abae15pt5", 
             {"target_size": (704, 982, 386),
-             "resize_factor": None, # turn off resizing
+             "resize_factor": None,  # turn off resizing
              "labels_mirror": 0.49, 
              "labels_edge": -1, 
-             "atlas_threshold": 80, # to avoid edge over-extension into skull
+             "atlas_threshold": 45,  # to avoid edge over-extension into skull
              "rotate": ((-4, 1), ), 
              "crop_to_labels": True,
              "smooth": 2

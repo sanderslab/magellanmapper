@@ -757,53 +757,87 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
 def extend_edge(region, region_ref, threshold, plane_region, planei, 
                 largest_only=False):
     """Recursively extend the nearest plane with labels based on the 
-    underlying atlas.
+    underlying atlas histology.
     
-    Assume that each nearer plane is the same size or smaller than the next 
-    farther plane, such as the tapering edge of a specimen. The number of 
-    objects to extend is set by the first plane, after which only the 
-    largest object in each region will be followed.
+    Labels in a given atlas may be incomplete, absent along the lateral 
+    edges. To fill in these missing labels, the last labeled plane will be 
+    used to extend labeling for all distinct structures in the histology 
+    ("reference" image). The given reference region will be thresholded 
+    to find distinct sub-regions, and each sub-region will be recursively 
+    extended to fill each successive lateral plane with labels from the 
+    prior plane resized to that of the reference region in the given plane.
+    
+    This approach assumes that each nearer plane is the same size or smaller 
+    than the next farther plane is, such as the tapering edge of a specimen, 
+    since each subsequent plane will be within the bounds of the prior plane. 
+    The number of sub-regions to extend is set by the first plane, after 
+    which only the largest object within each sub-region will be followed. 
+    Labels will be cropped in this first plane to match the size of 
+    each corresponding reference region and resized to the size of the 
+    largest object in all subsequent planes.
     
     Args:
-        region: Labels region, which will be updated in-place.
-        region_ref: Corresponding reference atlas region.
-        threshold: Threshold intensity for ``region_ref``.
-        plane_region: Labels template that will be resized for current plane.
-        planei: Plane index.
-        largest_only: True to only use the property with the largest area; 
-            defaults to False.
+        region (:obj:`np.ndarray`): Labels volume region, which will be 
+            extended along decreasing z-planes and updated in-place.
+        region_ref (:obj:`np.ndarray`): Corresponding reference 
+            (eg histology) region.
+        threshold (int, float): Threshold intensity for `region_ref`.
+        plane_region (:obj:`np.ndarray`): Labels 2D template that will be 
+            resized for current plane; if None, a template will be cropped 
+            from `region` at `planei`.
+        planei (int): Plane index.
+        largest_only (bool): True to only use the property with the largest 
+            area; defaults to False.
     """
     if planei < 0: return
     
-    # find the bounds of the reference image in the given plane to resize 
-    # the corresponding section of the labels image to the bounds of the 
-    # reference image in the next plane closer to the edge
+    # find sub-regions in the reference image
+    region_ref_filt = region_ref[planei]
+    if plane_region is None:
+        # limit the reference image to the labels since when generating 
+        # label templates since labels can only be extended from labeled areas; 
+        # include padding by dilating slightly for unlabeled borders
+        remove_bg_from_dil_fg(
+            region_ref_filt, region[planei] != 0, morphology.disk(2))
     prop_sizes = get_thresholded_regionprops(
-        region_ref[planei], threshold=threshold, sort_reverse=largest_only)
+        region_ref_filt, threshold=threshold, sort_reverse=largest_only)
     if prop_sizes is None: return
+    
     if largest_only:
         # keep only largest property
+        # TODO: could follow all props separately by generating new templates, 
+        # though would need to decide when to crop new templates vs resize 
+        # TODO: consider replacing this param with checking plane_region
         num_props = len(prop_sizes)
         if num_props > 1:
-            print("ignoring smaller {} prop(s) in plane {}"
-                  .format(num_props - 1, planei))
+            print("plane {}: ignoring smaller {} prop(s) of size(s) {}"
+                  .format(planei, num_props - 1, 
+                          [p[1] for p in prop_sizes[1:]]))
         prop_sizes = prop_sizes[:1]
+    print("plane {}: extending {} props of sizes {}".format(
+        planei, len(prop_sizes), [p[1] for p in prop_sizes]))
+    
     for prop_size in prop_sizes:
         # get the region from the property
         _, slices = get_bbox_region(prop_size[0].bbox)
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
+        lbl_size = np.sum(prop_region[planei] != 0)
         if plane_region is None:
-            # set up the labels in the region to use as template for next 
-            # plane; remove ventricular space using empirically determined 
+            # crop to set up the labels in the region to use as template for 
+            # next plane; remove ventricular space using empirically determined 
             # selem, which appears to be very sensitive to radius since 
             # values above or below lead to square shaped artifact along 
             # outer sample edges
+            print("plane {}: generating labels template of size {}"
+                  .format(planei, lbl_size))
             prop_plane_region = prop_region[planei]
             prop_plane_region = morphology.closing(
                 prop_plane_region, morphology.square(12))
         else:
             # resize prior plane's labels to region's shape and replace region
+            print("plane {}: extending labels from template of size {}"
+                  .format(planei, lbl_size))
             prop_plane_region = transform.resize(
                 plane_region, prop_region[planei].shape, preserve_range=True, 
                 order=0, anti_aliasing=False, mode="reflect")
@@ -815,7 +849,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             prop_region, prop_region_ref, threshold, prop_plane_region, 
             planei - 1, True)
 
-def crop_to_labels(img_labels, img_ref, mask=None, padding=2):
+def crop_to_labels(img_labels, img_ref, mask=None, dil_size=2, padding=5):
     """Crop images to match labels volume.
     
     Both labels and reference images will be cropped to match the extent of 
@@ -829,8 +863,10 @@ def crop_to_labels(img_labels, img_ref, mask=None, padding=2):
         mask (:obj:`np.ndarray`, optional): Binary array of same shape as 
             that of ``img_labels`` to use in place of it for determining 
             the extent of cropping. Defaults to None.
-        padding (int, optional): Size of structuring element for padding 
+        dil_size (int, optional): Size of structuring element for dilating 
             the crop region; defaults to 2.
+        padding (int, optional): Size of padding around the mask 
+            bounding box; defaults to 5.
     
     Returns:
         Tuple of ``extracted_labels``, the cropped labels image; 
@@ -844,17 +880,31 @@ def crop_to_labels(img_labels, img_ref, mask=None, padding=2):
     props = measure.regionprops(mask.astype(np.int))
     if not props or len(props) < 1: return
     shape, slices = get_bbox_region(
-        props[0].bbox, padding=5, img_shape=img_labels.shape)
+        props[0].bbox, padding=padding, img_shape=img_labels.shape)
     
     # crop images to bbox and erase reference pixels just outside of 
     # corresponding labels; dilate to include immediate neighborhood
     extracted_labels = img_labels[tuple(slices)]
     extracted_ref = img_ref[tuple(slices)]
     extracted_mask = mask[tuple(slices)]
-    mask_dil = morphology.binary_dilation(
-        extracted_mask, morphology.ball(padding))
-    extracted_ref[~mask_dil] = 0
+    remove_bg_from_dil_fg(extracted_ref, extracted_mask, morphology.ball(dil_size))
     return extracted_labels, extracted_ref, slices
+
+def remove_bg_from_dil_fg(img, mask, selem):
+    """Remove background by converting the area outside of a dilated 
+    foreground mask to background.
+    
+    Args:
+        img (:obj:`np.ndarray`): Image array whose pixels outside of the 
+            dilated ``mask`` will be zeroed in-place.
+        mask (:obj:`np.ndarray`): Foreground as a binary array of 
+            same size as ``img`` that will be dilated. 
+        selem (:obj:`np.ndarray`): Array of the same dimensions as ``img`` 
+            to serve as the structuring element for dilation.
+
+    """
+    mask_dil = morphology.binary_dilation(mask, selem)
+    img[~mask_dil] = 0
 
 def interpolate_contours(bottom, top, fracs):
     """Interpolate contours between two planes.

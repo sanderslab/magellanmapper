@@ -473,10 +473,10 @@ def set_scinot(ax, lims=(-2, 4), lbls=[], units=[]):
                     config.PlotLabels.Y_UNIT 
                     if i == 0 else config.PlotLabels.X_UNIT]
             if unit is not None and unit != "":
-                unit_all.append(unit)
+                unit_all.append("${{{}}}$".format(unit))
             if len(unit_all) > 0:
                 # put unit in parentheses and format with math text
-                lbl = "{} (${{{}}}$)".format(lbl, " ".join(unit_all))
+                lbl = "{} ({})".format(lbl, " ".join(unit_all))
             axis.set_label_text(lbl)
 
 def get_plane_axis(plane):

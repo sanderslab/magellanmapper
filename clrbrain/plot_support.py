@@ -420,7 +420,7 @@ def set_overview_title(ax, plane, z_overview, zoom="", level=0,
         title = zoom
     ax.set_title(title)
 
-def set_scinot(ax, lims=(-2, 4), lbls=[], units=[]):
+def set_scinot(ax, lims=(-3, 4), lbls=[], units=[]):
     """Set scientific notation for tick labels and shift exponents from 
     axes to their labels.
     
@@ -434,7 +434,7 @@ def set_scinot(ax, lims=(-2, 4), lbls=[], units=[]):
         ax: Axis object.
         lims: Scientific notation limits as a sequence of lower and 
             upper bounds outside of which scientific notation will 
-            be used for each applicable axis. Defaults to ``(-3, 4)``.
+            be used for each applicable axis. Defaults to ``(-2, 4)``.
         lbls: Sequence of axis labels given in the order ``(y-axis, x-axis)``. 
             No value for a given label will cause that label not to be set. 
             None causes the corresponding value from ``config.plot_labels` 

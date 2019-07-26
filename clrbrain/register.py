@@ -1424,12 +1424,10 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             for i in range(extis[1]):
                 if not np.all(mask_lbls[i] == 0):
                     # plane that should be labeled
-                    print(np.where(mask_lbls[i]))
                     planes_tot += 1
                     if not np.all(img_labels_np[i] == 0):
                         # plane is at least partially labeled
                         planes_lbl += 1
-                print("i", i, "planes_tot", planes_tot, "planes_lbl", planes_lbl)
             if planes_tot > 0:
                 frac = 1 - (planes_lbl / planes_tot)
         metrics[AtlasMetrics.LAT_UNLBL_PLANES] = frac

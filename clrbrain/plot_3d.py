@@ -822,7 +822,6 @@ def extend_edge(region, region_ref, threshold, plane_region, planei):
         _, slices = get_bbox_region(prop_size[0].bbox)
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
-        lbl_size = np.sum(prop_region[planei] != 0)
         if not has_template:
             # crop to set up the labels in the region to use as template for 
             # next plane; remove ventricular space using empirically determined 
@@ -830,17 +829,17 @@ def extend_edge(region, region_ref, threshold, plane_region, planei):
             # values above or below lead to square shaped artifact along 
             # outer sample edges
             print("plane {}: generating labels template of size {}"
-                  .format(planei, lbl_size))
+                  .format(planei, np.sum(prop_region[planei] != 0)))
             prop_plane_region = prop_region[planei]
             prop_plane_region = morphology.closing(
                 prop_plane_region, morphology.square(12))
         else:
             # resize prior plane's labels to region's shape and replace region
-            print("plane {}: extending labels from template of size {}"
-                  .format(planei, lbl_size))
             prop_plane_region = transform.resize(
                 plane_region, prop_region[planei].shape, preserve_range=True, 
                 order=0, anti_aliasing=False, mode="reflect")
+            print("plane {}: extending labels with template resized to {}"
+                  .format(planei, np.sum(prop_plane_region != 0)))
             prop_region[planei] = prop_plane_region
         # recursively call for each region to follow in next plane, but 
         # only get largest region for subsequent planes in case 

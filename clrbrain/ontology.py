@@ -472,3 +472,26 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling,
         coord = tuple(np.around(coord_labels / scaling).astype(np.int))
     print("coord at middle: {}".format(coord))
     return coord, img_region, region_ids
+
+def rel_to_abs_ages(rel_ages, gestation=19):
+    """Convert sample names to ages.
+    
+    Args:
+        rel_ages (List[str]): Sequence of strings in the format, 
+            ``[stage][relative_age_in_days]``, where stage
+            is either "E" = "embryonic" or "P" = "postnatal", such as 
+            "E3.5" for 3.5 days after conception, or "P10" for 10 days 
+            after birth.
+        gestation (int): Number of days from conception until birth.
+
+    Returns:
+        Dictionary of ``{name: age_in_days}``.
+
+    """
+    ages = {}
+    for val in rel_ages:
+        age = float(val[1:])
+        if val[0].lower() == "p":
+            age += 19
+        ages[val] = age
+    return ages

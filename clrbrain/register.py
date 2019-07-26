@@ -113,7 +113,7 @@ class AtlasMetrics(Enum):
     DSC_ATLAS_LABELS = "DSC_atlas_labels"
     DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
     DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
-    LAT_UNLBL_VOL = "Lateral_unlabeled_vol"
+    LAT_UNLBL_VOL = "Lateral_unlabeled_volume"
     LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"
 
 class SmoothingMetrics(Enum):
@@ -4046,16 +4046,8 @@ def main():
             ids = ontology.get_children_from_id(labels_ref_lookup, label_id)
             df = df[np.isin(df["Region"], ids)]
         
-        # convert sample names to ages, assuming:
-        # - format of "[stage][age in days post-conception]", where stage
-        #   is either "E" = "embryonic" or "P" = "postnatal"
-        # - gestation time is 19 days
-        ages = {}
-        for val in df["Sample"].unique():
-            age = float(val[1:])
-            if val[0].lower() == "p":
-                age += 19
-            ages[val] = age
+        # convert sample names to ages
+        ages = ontology.rel_to_abs_ages(df["Sample"].unique())
         df["Age"] = df["Sample"].map(ages)
 
         # generate a separate graph for each condition at each level
@@ -4079,6 +4071,50 @@ def main():
                 title="Structure Development (Level {})".format(level),
                 size=size, show=show, ignore_invis=True,
                 suffix="_dev_level{}".format(level), df=df_level, groups=conds)
+
+    elif reg is config.RegisterTypes.plot_lateral_unlabeled:
+        # plot lateral edge unlabeled fractions as both lines and bars
+
+        # load data frame and convert sample names to ages
+        df = pd.read_csv(config.filename)
+        ages = ontology.rel_to_abs_ages(df["Sample"].unique())
+        df["Age"] = df["Sample"].map(ages)
+        
+        # generate a separate graph for each metric
+        cols = (AtlasMetrics.LAT_UNLBL_VOL.value, 
+                AtlasMetrics.LAT_UNLBL_PLANES.value)
+        conds = df["Condition"].unique()
+        for col in cols:
+            title = "{}".format(col).replace("_", " ")
+            y_label = "Fraction of hemisphere unlabeled"
+            
+            # plot as lines
+            
+            # use multi-level indexing; assumes that no duplicates exist for
+            # a given age-cond-reg combo, and if they do, simply take 1st val
+            df_lines = df.pivot_table(
+                index=["Age", "Condition"], columns="Region",
+                values=col, aggfunc="first")
+            regions = df_lines.columns  # may be fewer than orig
+            # move Condition into separate sub-cols of each region and
+            # reset index to access Age as col
+            df_lines = df_lines.unstack().reset_index()
+            plot_2d.plot_lines(
+                config.filename, "Age", regions, 
+                x_label="Post-Conceptional Age", y_label=y_label, title=title,
+                size=size, show=show, ignore_invis=True,
+                suffix="_{}".format(col), df=df_lines, groups=conds)
+            
+            # plot as bars
+            
+            # pivot value into separate columns by condition
+            df_bars = df.pivot(
+                index="Sample", columns="Condition", values=col).reset_index()
+            plot_2d.plot_bars(
+                config.filename, conds, col_groups="Sample", y_label=y_label, 
+                title=title, size=None, show=show, df=df_bars, 
+                prefix="{}_{}".format(
+                    os.path.splitext(config.filename)[0], col))
 
 
 if __name__ == "__main__":

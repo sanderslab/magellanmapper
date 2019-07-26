@@ -344,7 +344,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
-              col_wt=None):
+              col_wt=None, df=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -356,7 +356,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             set, using this same path except with the savefig extension.
         data_cols: Sequence of names of columns to plot as separate sets 
             of bars, where each row is part of a separate group. Defaults 
-            to None, which will use plot all columns but ``col_groups``.
+            to None, which will plot all columns except ``col_groups``.
         err_cols: Sequence of column names with relative error values 
             corresponding to ``data_cols``. Defaults to None, in which 
             case matching columns with "_err" as suffix will be used for 
@@ -385,9 +385,12 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
         col_wt: Name of column to use for weighting, where the size of 
             bars and error bars will be adjusted as fractions of the max 
             value; defaults to None.
+        df: Data frame to use; defaults to None. If set, this data frame
+            will be used instead of loading from ``path``.
     """
     # load data frame from CSV and setup figure
-    df = pd.read_csv(path_to_df)
+    if df is None:
+        df = pd.read_csv(path_to_df)
     fig = plt.figure(figsize=size, constrained_layout=True)
     gs = gridspec.GridSpec(1, 1, figure=fig)
     ax = plt.subplot(gs[0, 0])

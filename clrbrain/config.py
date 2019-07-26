@@ -220,7 +220,7 @@ RegisterTypes = Enum(
         "merge_images", "merge_images_channels", 
         "register_reg", "labels_diff", "labels_diff_stats", 
         "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols",
-        "plot_region_dev",
+        "plot_region_dev", "plot_lateral_unlabeled", 
     ]
 )
 register_type = None

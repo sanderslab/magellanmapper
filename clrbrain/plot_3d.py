@@ -755,7 +755,8 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
     props_sizes.sort(key=lambda x: x[1], reverse=sort_reverse)
     return props_sizes
 
-def extend_edge(region, region_ref, threshold, plane_region, planei):
+def extend_edge(region, region_ref, threshold, plane_region, planei, 
+                surr_size=0, closing_size=0):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
     
@@ -786,18 +787,27 @@ def extend_edge(region, region_ref, threshold, plane_region, planei):
             resized for current plane; if None, a template will be cropped 
             from `region` at `planei`.
         planei (int): Plane index.
+        surr_size (int): Structuring element size for dilating the labeled 
+            area that will be considered foreground in `region_ref` 
+            for finding regions to extend; defaults to 0 to not dilate.
+        surr_size (int): Structuring element size for dilating the labeled 
+            area that will be considered foreground in `region_ref` 
+            for finding regions to extend; defaults to 0 to not dilate.
+        closing_size (int): Structuring element size for closing the 
+            template labels to reduce holes such as ventricles; defaults 
+            to 0 to not close.
     """
     if planei < 0: return
     
     # find sub-regions in the reference image
     has_template = plane_region is not None
     region_ref_filt = region_ref[planei]
-    if not has_template:
+    if not has_template and surr_size > 0:
         # limit the reference image to the labels since when generating 
         # label templates since labels can only be extended from labeled areas; 
         # include padding by dilating slightly for unlabeled borders
         remove_bg_from_dil_fg(
-            region_ref_filt, region[planei] != 0, morphology.disk(2))
+            region_ref_filt, region[planei] != 0, morphology.disk(surr_size))
     # order extension from smallest to largest regions so largest have 
     # final say
     prop_sizes = get_thresholded_regionprops(
@@ -823,16 +833,15 @@ def extend_edge(region, region_ref, threshold, plane_region, planei):
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
         if not has_template:
-            # crop to set up the labels in the region to use as template for 
-            # next plane; remove ventricular space using empirically determined 
-            # selem, which appears to be very sensitive to radius since 
-            # values above or below lead to square shaped artifact along 
-            # outer sample edges
+            # crop to use corresponding labels as template for next planes
             print("plane {}: generating labels template of size {}"
                   .format(planei, np.sum(prop_region[planei] != 0)))
             prop_plane_region = prop_region[planei]
-            prop_plane_region = morphology.closing(
-                prop_plane_region, morphology.square(12))
+            # close holes such as ventricles
+            # TODO: apply during resizing for tapering ventricles?
+            if closing_size > 0:
+                prop_plane_region = morphology.closing(
+                    prop_plane_region, morphology.square(closing_size))
         else:
             # resize prior plane's labels to region's shape and replace region
             prop_plane_region = transform.resize(
@@ -846,7 +855,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei):
         # new regions appear, where the labels would be unknown
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region, 
-            planei - 1)
+            planei - 1, surr_size, closing_size)
 
 def crop_to_labels(img_labels, img_ref, mask=None, dil_size=2, padding=5):
     """Crop images to match labels volume.

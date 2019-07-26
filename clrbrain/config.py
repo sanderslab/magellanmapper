@@ -768,7 +768,10 @@ def update_register_settings(settings, settings_type):
             {"target_size": (552, 673, 340),
              "resize_factor": None,  # turn off resizing
              "labels_mirror": 0.48, 
-             "labels_edge": -1, 
+             # smaller surr size to avoid capturing 3rd labeled area that 
+             # becomes an artifact; smaller closing size to avoid filling in 
+             # smaller ventricle excessively
+             "labels_edge": {"start": -1, "surr_size": 5, "closing_size": 5}, 
              "atlas_threshold": 55,  # to avoid edge over-extension into skull
              "rotate": ((-4, 1), (-2, 2)),
              "crop_to_labels": True, 
@@ -782,7 +785,9 @@ def update_register_settings(settings, settings_type):
             {"target_size": (704, 982, 386),
              "resize_factor": None,  # turn off resizing
              "labels_mirror": 0.49, 
-             "labels_edge": -1, 
+             # closing to balance keeping ventricles open for medial 
+             # planes while not too open because of more lateral planes
+             "labels_edge": {"start": -1, "surr_size": 12, "closing_size": 10}, 
              "atlas_threshold": 45,  # to avoid edge over-extension into skull
              "rotate": ((-4, 1), ), 
              "crop_to_labels": True,
@@ -796,7 +801,10 @@ def update_register_settings(settings, settings_type):
             {"target_size": (278, 581, 370),
              "resize_factor": None, # turn off resizing
              "labels_mirror": 0.525, 
-             "labels_edge": 0.137, # to use the smallest BG
+             # start from smallest BG
+             # TODO: smaller closing size since fully closes ventricles?
+             "labels_edge": {
+                 "start": 0.137, "surr_size": 12, "closing_size": 12}, 
              "expand_labels": (((None, ), (0, 279), (103, 108)),), 
              "rotate": ((1.5, 1), (2, 2)),
              "smooth": 4
@@ -809,9 +817,10 @@ def update_register_settings(settings, settings_type):
             {"target_size": (724, 403, 398),
              "resize_factor": None, # turn off resizing
              "labels_mirror": 0.487, 
-             "labels_edge": -1, 
+             # no closing since no ventricles to extend
+             "labels_edge": {"start": -1, "surr_size": 12, "closing_size": 0}, 
              # open caudal labels to allow smallest mirror plane index, though 
-             # still cross midline since some regions only have labels past midline
+             # still cross midline as some regions only have labels past midline
              "rotate": ((0.22, 1), ),
              "smooth": 4
             }, 
@@ -825,7 +834,7 @@ def update_register_settings(settings, settings_type):
              # will still cross midline since some regions only have labels 
              # past midline
              "labels_mirror": 0.5, 
-             "labels_edge": -1, 
+             "labels_edge": {"start": -1, "surr_size": 12, "closing_size": 0}, 
              # rotate conservatively for symmetry without losing labels
              "rotate": ((-0.4, 1), ),
              "smooth": 4
@@ -840,8 +849,9 @@ def update_register_settings(settings, settings_type):
              # will still cross midline since some regions only have labels 
              # past midline
              "labels_mirror": 0.48, 
-             # set edge since some lateral labels are only partially complete
-             "labels_edge": 0.11, 
+             # set edge explicitly since some lateral labels are only 
+             # partially complete; smallest closing to close ventricles
+             "labels_edge": {"start": 0.11, "surr_size": 12, "closing_size": 5}, 
              #"labels_dup": 0.48, 
              # rotate for symmetry, which also reduces label loss
              "rotate": ((1, 2), ),
@@ -856,8 +866,10 @@ def update_register_settings(settings, settings_type):
              "resize_factor": None, # turn off resizing
              # stained sections and labels almost but not symmetric
              "labels_mirror": 0.5,
-             # set edge since some lateral labels are only partially complete
-             "labels_edge": 0.138, 
+             # set edge explicitly since some lateral labels are only 
+             # partially complete; smallest closing to close ventricles
+             "labels_edge": {
+                 "start": 0.138, "surr_size": 12, "closing_size": 4}, 
              "smooth": 2
             }, 
             profile)
@@ -869,8 +881,8 @@ def update_register_settings(settings, settings_type):
              "resize_factor": None, # turn off resizing
              # same stained sections as for P56dev; 
              # labels are already mirrored starting at z=228, but atlas is not
-             # here, so mirror starting at the same z-plane to make both sections 
-             # and labels symmetric and aligned with one another
+             # here, so mirror starting at the same z-plane to make both 
+             # sections and labels symmetric and aligned with one another
              "labels_mirror": 0.5,
              "labels_edge": None, 
              "smooth": 2

@@ -410,11 +410,13 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             -1 will cause the mirror plane to be found automatically 
             based on the first plane completely without labels, starting 
             from the highest plane and working downward.
-        edge: Fraction of planes at which to start extending the near 
-            (assumed to be lateral) edge; defaults to None, in which 
-            case edge extension will be skipped. -1 will cause the 
+        edge (Dict[str, float]): Lateral edge extension parameters passed 
+            to :meth:`plot_3d.extend_edge`. The value from ``start`` 
+            specifies the fraction of z-planes from which to start 
+            extending the edge to lower z-planes, and -1 will cause the 
             edge plane to be found automatically based on the first 
-            plane with any labels, starting from the lowest plane.
+            plane with any labels, starting from the lowest plane. 
+            Defaults to None, in which case edge extension will be skipped.
         expand: Tuple of 
             ((x_pixels_start, end), (y, ...), ...), (next_region, ...)) 
             specifying slice boundaries for regions to expand the labels to 
@@ -456,7 +458,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     # missing in many ABA developing mouse atlases, requiring extension
     edgei = 0
     edgei_first = None
-    if edge == -1 or edge is None:
+    edge_start = None if edge is None else edge["start"]
+    if edge_start == -1 or edge is None:
         # find the first non-zero plane
         for plane in img_np:
             if not np.allclose(plane, 0):
@@ -472,7 +475,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         print("found start of contiguous non-zero planes at {}".format(edgei))
     else:
         # based on profile settings
-        edgei = int(edge * tot_planes)
+        edgei = int(edge_start * tot_planes)
         print("will extend near edge from plane {}".format(edgei))
     
     if edge is not None:
@@ -484,7 +487,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # than the next farther plane, such as a tapering specimen
         plot_3d.extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
-            None, edgei)
+            None, edgei, edge["surr_size"], edge["closing_size"])
     
     if expand:
         # expand selected regions

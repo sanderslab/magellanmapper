@@ -278,6 +278,39 @@ def melt_cols(df, id_cols, melt_cols, var_name=None):
         id_vars=id_cols, value_vars=melt_cols, var_name=var_name)
     return df_melted
 
+def pivot_with_conditions(df, index, columns, values, aggfunc="first"):
+    """Pivot a data frame to columns with sub-columns for different conditions.
+    
+    For example, a table of metric values for different regions within 
+    each sample under different conditions will be reorganized to region 
+    columns that are each split into condition sub-columns.
+    
+    Args:
+        df (:obj:`pd.DataFrame`): Data frame to pivot. 
+        index (str, List): Column name or sequence of columns specifying 
+            samples, generally a sequence to later unstack.
+        columns (str, List): Column name or sequence of columns to pivot 
+            into separate columns.
+        values (str): Column of values to move into new columns.
+        aggfunc (func): Aggregation function for duplicates; defaults to 
+            "first" to take the first value.
+
+    Returns:
+        Tuple of the pivoted data frame and the list of pivoted columns.
+
+    """
+    # use multi-level indexing; assumes that no duplicates exist for
+    # a given index-pivot-column combo, and if they do, simply take 1st val
+    df_lines = df.pivot_table(
+        index=index, columns=columns, values=values, aggfunc=aggfunc)
+    cols = df_lines.columns  # may be fewer than orig
+    if lib_clrbrain.is_seq(index) and len(index) > 1:
+        # move multi-index into separate sub-cols of each region and
+        # reset index to access all columns
+        df_lines = df_lines.unstack()
+    df_lines = df_lines.reset_index()
+    return df_lines, cols
+
 def print_data_frame(df, sep=" "):
     """Print formatted data frame.
     

@@ -4055,15 +4055,9 @@ def main():
         conds = df["Condition"].unique()
         for level in levels:
             df_level = df.loc[df["Level"] == level]
-            # use multi-level indexing; assumes that no duplicates exist for
-            # a given age-cond-reg combo, and if they do, simply take 1st val
-            df_level = df_level.pivot_table(
-                index=["Age", "Condition"], columns="RegionName",
-                values=vols.LabelMetrics.Volume.name, aggfunc="first")
-            regions = df_level.columns  # may be fewer than orig
-            # move Condition into separate sub-cols of each region and
-            # reset index to access Age as col
-            df_level = df_level.unstack().reset_index()
+            df_level, regions = stats.pivot_with_conditions(
+                df_level, ["Age", "Condition"], "RegionName", 
+                vols.LabelMetrics.Volume.name)
             plot_2d.plot_lines(
                 config.filename, "Age",
                 regions, x_label="Post-Conceptional Age",
@@ -4089,16 +4083,8 @@ def main():
             y_label = "Fraction of hemisphere unlabeled"
             
             # plot as lines
-            
-            # use multi-level indexing; assumes that no duplicates exist for
-            # a given age-cond-reg combo, and if they do, simply take 1st val
-            df_lines = df.pivot_table(
-                index=["Age", "Condition"], columns="Region",
-                values=col, aggfunc="first")
-            regions = df_lines.columns  # may be fewer than orig
-            # move Condition into separate sub-cols of each region and
-            # reset index to access Age as col
-            df_lines = df_lines.unstack().reset_index()
+            df_lines, regions = stats.pivot_with_conditions(
+                df, ["Age", "Condition"], "Region", col)
             plot_2d.plot_lines(
                 config.filename, "Age", regions, 
                 x_label="Post-Conceptional Age", y_label=y_label, title=title,

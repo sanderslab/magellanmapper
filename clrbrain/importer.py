@@ -276,10 +276,11 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
     
     # reload and show info file contents
     print("Saved image metadata:")
-    output = np.load(filename_info_npz)
+    info = np.load(filename_info_npz)
+    output = read_np_archive(info)
+    info.close()
     for key, value in output.items():
         print("{}: {}".format(key, value))
-    output.close()
 
 def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     # update image archive metadata using dictionary of values successfully 

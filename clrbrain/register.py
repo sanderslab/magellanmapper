@@ -1422,13 +1422,22 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         # mask labels since from atlas portion that should be labeled
         frac = 0   # mask labels fully covered, so fully labeled by this def
         if mask_lbls is not None:
+            mask_lbls_unrot = mask_lbls
+            lbls_unrot = img_labels_np
+            if rotate:
+                # un-rotate so sagittal planes are oriented as orig drawn
+                for rot in rotate[::-1]:
+                    mask_lbls_unrot = plot_3d.rotate_nd(
+                        mask_lbls_unrot, -rot[0], rot[1], 0)
+                    lbls_unrot = plot_3d.rotate_nd(
+                        lbls_unrot, -rot[0], rot[1], 0)
             planes_lbl = 0
             planes_tot = 0.
             for i in range(extis[1]):
-                if not np.all(mask_lbls[i] == 0):
+                if not np.all(mask_lbls_unrot[i] == 0):
                     # plane that should be labeled
                     planes_tot += 1
-                    if not np.all(img_labels_np[i] == 0):
+                    if not np.all(lbls_unrot[i] == 0):
                         # plane is at least partially labeled
                         planes_lbl += 1
             if planes_tot > 0:

@@ -436,45 +436,42 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
             upper bounds outside of which scientific notation will 
             be used for each applicable axis. Defaults to ``(-2, 4)``.
         lbls: Sequence of axis labels given in the order ``(y-axis, x-axis)``. 
-            None causes the corresponding value from ``config.plot_labels` 
-            to be used if available. Defaults to None, which will 
-            prevent any label main text from displaying and will show the 
+            Defaults to None, which causes the corresponding value from 
+            :attr:`config.plot_labels` to be used if available. A None element 
+            prevents the label main text from displaying and will show the 
             unit without parentheses if available.
         units: Sequence of units given in the order ``(y-axis, x-axis)``. 
-            None causes the corresponding value from ``config.plot_labels` 
-            to be used if available. Defaults to None, which will prevent 
-            any unit display other than any scientific notation exponent.
+            Defaults to None, which causes the corresponding value from 
+            :attr:`config.plot_labels` to be used if available. A None 
+            element prevents unit display other than any scientific notation 
+            exponent.
     """
     # set scientific notation
     ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
-    num_lbls = len(lbls) if lbls else 0
-    num_units = len(units) if units else 0
+    if not lbls:
+        lbls = (config.plot_labels[config.PlotLabels.Y_LABEL], 
+                 config.plot_labels[config.PlotLabels.X_LABEL])
+    if not units:
+        units = (config.plot_labels[config.PlotLabels.Y_UNIT], 
+                 config.plot_labels[config.PlotLabels.X_UNIT])
+    num_lbls = len(lbls)
+    num_units = len(units)
     for i, axis in enumerate((ax.yaxis, ax.xaxis)):
         # set labels and units for each axis unless the label is not given
         lbl = lbls[i] if num_lbls > i else None
-        unit_all = []
-        if lbls and not lbl:
-            # default to config setting
-            lbl = config.plot_labels[
-                config.PlotLabels.Y_LABEL 
-                if i == 0 else config.PlotLabels.X_LABEL]
+        
         # either tighten layout or draw first to populate exp text
         ax.figure.canvas.draw()
         offset_text = axis.get_offset_text().get_text()
+        unit_all = []
         if offset_text != "":
             # prepend unit with any exponent
             unit_all.append(offset_text)
             axis.offsetText.set_visible(False)
-        if units:
-            unit = units[i] if num_units > i else None
-            if not unit:
-                # default to config setting
-                unit = config.plot_labels[
-                    config.PlotLabels.Y_UNIT 
-                    if i == 0 else config.PlotLabels.X_UNIT]
-            if unit is not None and unit != "":
-                # format unit with math text
-                unit_all.append("${{{}}}$".format(unit))
+        unit = units[i] if num_units > i else None
+        if unit is not None:
+            # format unit with math text
+            unit_all.append("${{{}}}$".format(unit))
         if lbl and unit_all:
             # put unit in parentheses and combine with label main text
             lbl = "{} ({})".format(lbl, " ".join(unit_all))

@@ -3787,20 +3787,18 @@ def main():
             lib_clrbrain.str_to_disp(
                 os.path.basename(config.filename).replace(
                     config.PATH_SMOOTHING_METRICS, "")))
+        lbls = ("Smoothing Filter Size", "Fractional Change")
         plot_2d.plot_lines(
             config.filename, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.COMPACTED.value, 
              SmoothingMetrics.DISPLACED.value, 
              SmoothingMetrics.SM_QUALITY.value), 
-            ("--", "--", "-"), "Smoothing Filter Size", 
-            "Fractional Change", title, size, show, "_quality")
+            ("--", "--", "-"), lbls, title, size, show, "_quality")
         plot_2d.plot_lines(
             config.filename, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.SA_VOL.value, 
              SmoothingMetrics.LABEL_LOSS.value), 
-            ("-", "-"), "Smoothing Filter Size", 
-            "Fractional Change", None, size, show, "_extras",
-            ("C3", "C4"))
+            ("-", "-"), lbls, None, size, show, "_extras", ("C3", "C4"))
     
     elif reg is config.RegisterTypes.smoothing_peaks:
         # find peak smoothing qualities without label loss for a set 
@@ -4085,7 +4083,7 @@ def main():
                     vols.LabelMetrics.Volume.name)
                 plot_2d.plot_lines(
                     config.filename, "Age", regions, 
-                    x_label="Post-Conceptional Age", y_label="Volume", 
+                    labels=("Volume", "Post-Conceptional Age"), 
                     linestyles=("--", "-"), 
                     title="Structure Development ({}, Level {})".format(
                         key, level),
@@ -4114,7 +4112,7 @@ def main():
                 df, ["Age", "Condition"], "Region", col)
             plot_2d.plot_lines(
                 config.filename, "Age", regions, linestyles=("--", "-"), 
-                x_label="Post-Conceptional Age", y_label=y_label, title=title,
+                labels=(y_label, "Post-Conceptional Age"), title=title,
                 size=size, show=show, ignore_invis=True, 
                 suffix="_{}".format(col), df=df_lines, groups=conds)
             

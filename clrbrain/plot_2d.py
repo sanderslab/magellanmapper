@@ -367,8 +367,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             Defaults to None, which will use the first column for names.
         groups: Sequence of groups to include and by which to sort; 
             defaults to None to include all groups found from ``col_groups``.
-        y_label: Name of y-axis; defaults to None.
-        y_unit: Measurement unit for y-axis; defaults to None.
+        y_label: Name of y-axis; defaults to None to use 
+            :attr:`config.plot_labels`. ``(None, )`` prevents label display.
+        y_unit: Measurement unit for y-axis; defaults to None to use 
+            :attr:`config.plot_labels`. ``(None, )`` prevents unit display.
         title: Title of figure; defaults to None, which will use  
             ``path_to_df`` to build the title.
         size: Sequence of ``width, height`` to size the figure; defaults 
@@ -391,6 +393,11 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     # load data frame from CSV and setup figure
     if df is None:
         df = pd.read_csv(path_to_df)
+    if not y_label:
+        y_label = config.plot_labels[config.PlotLabels.Y_LABEL]
+    if not y_unit:
+        y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
+    
     fig = plt.figure(figsize=size, constrained_layout=True)
     gs = gridspec.GridSpec(1, 1, figure=fig)
     ax = plt.subplot(gs[0, 0])
@@ -475,9 +482,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     save_fig(out_path, config.savefig, "_barplot")
     if show: plt.show()
 
-def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None, 
-               y_label=None, title=None, size=None, show=True, suffix=None, 
-               colors=None, df=None, groups=None, ignore_invis=False):
+def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None, 
+               title=None, size=None, show=True, suffix=None, 
+               colors=None, df=None, groups=None, ignore_invis=False, 
+               units=None):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -491,8 +499,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         linestyles: Sequence of styles to use for each line; defaults to 
             None, in which case "-" will be used for all lines if
             ``groups`` is None, or each group will use a distinct style.
-        x_label: Name of x-axis; defaults to None.
-        y_label: Name of y-axis; defaults to None.
+        labels: ``(y_label, x_label)`` to display; defaults 
+            to None to use :attr:`config.plot_labels`. Can explicitly set a 
+            value to None to prevent unit display. 
         title: Title of figure; defaults to None.
         size: Sequence of ``width, height`` to size the figure; defaults 
             to None.
@@ -512,6 +521,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
             with these line styles. Defaults to None.
         ignore_invis: True to ignore lines that aren't displayed,
             such as those with only a single value; defaults to False.
+        units (List[str, str]): ``(y_unit, x_unit)`` to display; defaults 
+            to None to use :attr:`config.plot_labels`. Can explicitly set a 
+            value to None to prevent unit display. 
     """
 
     def to_ignore(arr):
@@ -589,7 +601,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
         ax.add_artist(legend_group)
 
     # add supporting plot components
-    plot_support.set_scinot(ax, lbls=(y_label, x_label), units=(None, None))
+    plot_support.set_scinot(ax, lbls=labels, units=units)
     if title: ax.set_title(title)
     
     # save and display

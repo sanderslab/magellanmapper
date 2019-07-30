@@ -543,24 +543,25 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, x_label=None,
     lines = []
     lines_groups = None if groups is None else []
     for i, col in enumerate(data_cols):
+        # plot columns with unique colors
         df_col = df[col]
         label = str(col).replace("_", " ")
         if groups is None:
-            # plot lines with unique colors but same style unless explicitly
-            # set to a given style
             if to_ignore(df_col): continue
             lines.extend(ax.plot(
                 x, df_col, color=colors[i], linestyle=linestyles[i],
                 label=label))
         else:
+            # prioritize solid line for main legend
+            labelj = linestyles.index("-") if "-" in linestyles else 0
             for j, group in enumerate(groups):
-                # plot all lines within group with unique colors but same style
+                # plot all lines within group with same color but unique styles
                 df_group = df_col[group]
                 if to_ignore(df_group): continue
                 lines_group = ax.plot(
                     x, df_group, color=colors[i], linestyle=linestyles[j],
                     label=label)
-                if j == 0:
+                if j == labelj:
                     # add first line to main legend
                     lines.extend(lines_group)
                 if i == 0:

@@ -4072,6 +4072,7 @@ def main():
                 regions, x_label="Post-Conceptional Age",
                 y_label="Volume",
                 title="Structure Development (Level {})".format(level),
+                linestyles=("--", "-"), 
                 size=size, show=show, ignore_invis=True,
                 suffix="_dev_level{}".format(level), df=df_level, groups=conds)
 
@@ -4095,9 +4096,9 @@ def main():
             df_lines, regions = stats.pivot_with_conditions(
                 df, ["Age", "Condition"], "Region", col)
             plot_2d.plot_lines(
-                config.filename, "Age", regions, 
+                config.filename, "Age", regions, linestyles=("--", "-"), 
                 x_label="Post-Conceptional Age", y_label=y_label, title=title,
-                size=size, show=show, ignore_invis=True,
+                size=size, show=show, ignore_invis=True, 
                 suffix="_{}".format(col), df=df_lines, groups=conds)
             
             # plot as bars

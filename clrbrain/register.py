@@ -4037,6 +4037,12 @@ def main():
 
     elif reg is config.RegisterTypes.plot_region_dev:
         # plot region development
+        
+        # set up access to data frame columns
+        metrics = (vols.LabelMetrics.Volume.name, )
+        id_cols = ["Age", "Condition"]
+        extra_cols = ["RegionName"]
+        cond_col = "Region"
 
         # assume that vol stats file is given first, then region IDs;
         # merge in region names and levels
@@ -4049,14 +4055,9 @@ def main():
         ages = ontology.rel_to_abs_ages(df["Sample"].unique())
         df["Age"] = df["Sample"].map(ages)
         
-        # get neural plate and subtract spinal cord to get brain alone 
-        # since fraction of total spinal cord that is labeled is variable
+        # get neural plate and spinal cord in prep to get brain alone 
         df_base = df[df["Region"] == 15565]
         df_sp = df[df["Region"] == 17651]
-        id_cols = ["Age", "Condition"]
-        df_base = stats.normalize_df(
-            df_base, id_cols, "Region", None, ["Volume"], ["RegionName"], 
-            df_sp, stats.df_subtract)
         
         label_id = config.atlas_labels[config.AtlasLabels.ID]
         if label_id is not None:
@@ -4065,31 +4066,54 @@ def main():
                 ontology.load_labels_ref(config.load_labels))
             ids = ontology.get_children_from_id(labels_ref_lookup, label_id)
             df = df[np.isin(df["Region"], ids)]
-        
-        # generate a separate graph for each condition at each level
+
         levels = np.sort(df["Level"].unique())
         conds = df["Condition"].unique()
-        for level in levels:
-            df_level = df.loc[df["Level"] == level]
+        for metric in metrics:
+            cols_show = (*id_cols, cond_col, *extra_cols, metric)
+            # subtract spinal cord from neural plate to get brain alone 
+            # since fraction of total spinal cord that is labeled is variable
+            df_base = stats.normalize_df(
+                df_base, id_cols, cond_col, None, [metric], extra_cols, 
+                df_sp, stats.df_subtract)
+            print("Brain {}:".format(metric))
+            stats.print_data_frame(df_base.loc[:, cols_show], "\t")
             
-            df_norm = stats.normalize_df(
-                df_level, id_cols, "Region", None, ["Volume"], ["RegionName"], 
-                df_base)
-            
-            dfs = {"vol": df_level, "norm": df_norm}
-            for key, df_sub in dfs.items():
-                df_sub, regions = stats.pivot_with_conditions(
-                    df_sub, ["Age", "Condition"], "RegionName", 
-                    vols.LabelMetrics.Volume.name)
+            for level in levels:
+                # plot raw metric at given level
+                df_level = df.loc[df["Level"] == level]
+                print("Raw {}:".format(metric))
+                stats.print_data_frame(df_level.loc[:, cols_show], "\t")
+                df_level_piv, regions = stats.pivot_with_conditions(
+                    df_level, id_cols, "RegionName", metric)
                 plot_2d.plot_lines(
                     config.filename, "Age", regions, 
                     labels=("Volume", "Post-Conceptional Age"), 
                     linestyles=("--", "-"), 
                     title="Structure Development ({}, Level {})".format(
-                        key, level),
+                        metric, level),
                     size=size, show=show, ignore_invis=True,
-                    suffix="_dev_level{}_{}".format(level, key), df=df_sub, 
-                    groups=conds)
+                    suffix="_dev_{}_level{}".format(metric, level), 
+                    df=df_level_piv, groups=conds)
+
+                # plot metric normalized to whole brain at given level
+                df_norm = stats.normalize_df(
+                    df_level, id_cols, cond_col, None, [metric], extra_cols, 
+                    df_base)
+                print("{} normalized to whole brain:".format(metric))
+                stats.print_data_frame(df_norm.loc[:, cols_show], "\t")
+                df_norm_piv, regions = stats.pivot_with_conditions(
+                    df_norm, id_cols, "RegionName", metric)
+                plot_2d.plot_lines(
+                    config.filename, "Age", regions, 
+                    labels=("Fraction", "Post-Conceptional Age"), 
+                    linestyles=("--", "-"), 
+                    units=(None, config.plot_labels[config.PlotLabels.X_UNIT]), 
+                    title=("Structure Development Normalized to Whole Brain "
+                           "({}, Level {})".format(metric, level)),
+                    size=size, show=show, ignore_invis=True,
+                    suffix="_dev_{}_level{}_norm".format(metric, level), 
+                    df=df_norm_piv, groups=conds)
 
     elif reg is config.RegisterTypes.plot_lateral_unlabeled:
         # plot lateral edge unlabeled fractions as both lines and bars

@@ -7,6 +7,7 @@
 import os
 import shutil
 import numpy as np
+from skimage import exposure
 
 from clrbrain import config
 
@@ -217,28 +218,28 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
     if ext: path = "{}.{}".format(os.path.splitext(path)[0], ext)
     return path
 
-def normalize(array, minimum, maximum, background=None):
+def normalize(array, minimum, maximum):
     """Normalizes an array to fall within the given min and max.
     
     Args:
-        min: Minimum value for the array.
-        max: Maximum value for the array.
+        array (:obj:`np.ndarray`): Array to normalize.
+        min (int): Minimum value for the array.
+        max (int): Maximum value for the array. Assumed to be greater 
+            than ``min``.
     
     Returns:
-        The normalized array, operated on in-place.
+        The normalized array, operated on in-place and returned for 
+        chained calls.
     """
-    #print(array)
     if len(array) <= 0:
         return array
-    foreground = array
-    if background is not None:
-        foreground = foreground[foreground > background]
-    array -= np.min(foreground)
-    print("min: {}".format(np.min(foreground)))
-    array /= np.max(array) / (maximum - minimum)
-    array += minimum
-    if background is not None:
-        array[array < minimum] = minimum
+    
+    # rescale intensity while avoiding divide by 0 error
+    if np.max(array) - np.min(array) == 0:
+        array[:] = minimum
+    else:
+        array = exposure.rescale_intensity(array, out_range=(minimum, maximum))
+    
     return array
 
 def printv(*s):
@@ -623,14 +624,4 @@ def enum_dict_aslist(d):
     return [(key.name, val) for key, val in d.items()]
 
 if __name__ == "__main__":
-    print(insert_before_ext("test.name01.jpg", "_modifier"))
-    a = np.arange(2 * 3).reshape(2, 3).astype(np.float)
-    a = np.ones(3 * 4).reshape(3, 4).astype(np.float)
-    a *= 100
-    a[0, 0] = 0
-    a[1, 1] = 50
-    print("a:\n{}".format(a))
-    a_norm = normalize(np.copy(a), 1, 2)
-    print("a_norm without background:\n{}".format(a_norm))
-    a_norm = normalize(np.copy(a), 1, 2, background=0)
-    print("a_norm with background:\n{}".format(a_norm))
+    print("Initializing Clrbrain general library module")

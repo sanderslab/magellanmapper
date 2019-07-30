@@ -16,8 +16,6 @@ from scipy import interpolate
 from scipy import ndimage
 from skimage import draw
 from skimage import restoration
-from skimage import img_as_uint
-from skimage import img_as_float
 from skimage import filters
 from skimage import measure
 from skimage import morphology
@@ -895,7 +893,8 @@ def crop_to_labels(img_labels, img_ref, mask=None, dil_size=2, padding=5):
     extracted_labels = img_labels[tuple(slices)]
     extracted_ref = img_ref[tuple(slices)]
     extracted_mask = mask[tuple(slices)]
-    remove_bg_from_dil_fg(extracted_ref, extracted_mask, morphology.ball(dil_size))
+    remove_bg_from_dil_fg(
+        extracted_ref, extracted_mask, morphology.ball(dil_size))
     return extracted_labels, extracted_ref, slices
 
 def remove_bg_from_dil_fg(img, mask, selem):
@@ -1307,9 +1306,6 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
             return False
         mask = math.ceil(points_len / _MASK_DIVIDEND)
         print("points: {}, mask: {}".format(points_len, mask))
-        # TODO: better performance if manually interval the points rather than 
-        # through mask flag?
-        #roi_show_1d = roi_show_1d[::mask]
         pts = scene_mlab.points3d(
             np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
             roi_show_1d, mode="sphere", 

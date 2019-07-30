@@ -19,6 +19,36 @@ from scipy import stats as spstats
 from clrbrain import config
 from clrbrain import lib_clrbrain
 
+def df_div(df0, df1, axis=1):
+    """Wrapper function to divide two Pandas data frames in a functional manner.
+    
+    Args:
+        df0 (:obj:`pd.DataFrame`): First data frame.
+        df1 (:obj:`pd.DataFrame`): Second data frame.
+        axis (int): Axis. 
+
+    Returns:
+        The quotient from applying :meth:`pd.DataFrame.div` from ``df0`` to 
+        ``df1``.
+
+    """
+    return df0.div(df1, axis=axis)
+
+def df_subtract(df0, df1, axis=1):
+    """Wrapper function to subtract two Pandas data frames in a functional manner.
+    
+    Args:
+        df0 (:obj:`pd.DataFrame`): First data frame.
+        df1 (:obj:`pd.DataFrame`): Second data frame.
+        axis (int): Axis. 
+
+    Returns:
+        The difference from applying :meth:`pd.DataFrame.subtract` from 
+        ``df0`` to ``df1``.
+
+    """
+    return df0.subtract(df1, axis=axis)
+
 def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
     """Transform volumes by regions data frame to experiments-condition 
     as columns and regions as rows.
@@ -77,7 +107,8 @@ def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
         df_pivoted.to_csv(df_path, na_rep="NaN")
     return dfs
 
-def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
+def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols, 
+                 df_base=None, fn=df_div):
     """Normalize columns from various conditions to the corresponding 
     values in another condition.
     
@@ -88,10 +119,14 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
         id_cols: Sequence of columns to serve as index/indices.
         cond_col: Name of the condition column.
         cond_base: Name of the condition to which all other conditions 
-            will be normalized.
+            will be normalized. Ignored if ``df_base`` is given.
         metric_cols: Sequence of metric columns to normalize.
         extra_cols: Sequence of additional columns to include in the 
             output data frame.
+        df_base: Data frame to which values will be normalized. If given, 
+            ``cond_base`` will be ignored; defaults to None.
+        fn: Function by which to normalize along axis 0; defaults to 
+            :meth:`df_div`.
     
     Returns:
         New data frame with columns from ``id_cols``, ``cond_col``, 
@@ -100,19 +135,21 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols):
         other conditions should be normalized to the original ``cond_base`` 
         values.
     """
-    # set up conditions, output columns, and copy of base condition
+    # set up conditions, output columns, and data frame of base condition
     conds = np.unique(df[cond_col])
-    if cond_base not in conds: return
     cols = (*id_cols, cond_col, *extra_cols, *metric_cols)
-    df_base = df.loc[df[cond_col] == cond_base, cols].set_index(id_cols)
+    if df_base is None:
+        if cond_base not in conds: return
+        df_base = df.loc[df[cond_col] == cond_base, cols]
+    df_base = df_base.set_index(id_cols)
     dfs = []
     
     for cond in conds:
         # copy given condition and normalize to base condition, using 
-        # div to compare by index
+        # the given function, assumed to compare by index
         df_cond = df.loc[df[cond_col] == cond, cols].set_index(id_cols)
-        df_cond.loc[:, metric_cols] = df_cond.loc[
-            :, metric_cols].div(df_base.loc[:, metric_cols], axis=0)
+        df_cond.loc[:, metric_cols] = fn(
+            df_cond.loc[:, metric_cols], df_base.loc[:, metric_cols], axis=0)
         df_cond = df_cond.reset_index()
         #print_data_frame(df_cond, " ")
         dfs.append(df_cond)

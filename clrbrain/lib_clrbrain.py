@@ -6,6 +6,8 @@
 
 import os
 import shutil
+import warnings
+
 import numpy as np
 from skimage import exposure
 
@@ -262,6 +264,17 @@ def printv_format(s, form):
     """
     if config.verbose:
         print(s.format(*form))
+
+def warn(msg, category=UserWarning, stacklevel=2):
+    """Print a warning message.
+    
+    Args:
+        msg (str): Message to print.
+        category (Exception): Warning category class.
+        stacklevel: Warning message level.
+
+    """
+    warnings.warn(msg, category, stacklevel=stacklevel)
 
 def series_as_str(series):
     """Get the series as a string for Clrbrain filenames, ensuring 5 

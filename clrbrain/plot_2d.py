@@ -499,7 +499,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         linestyles: Sequence of styles to use for each line; defaults to 
             None, in which case "-" will be used for all lines if
             ``groups`` is None, or each group will use a distinct style.
-        labels: ``(y_label, x_label)`` to display; defaults 
+        labels (List[str]): ``(y_label, x_label)`` to display; defaults 
             to None to use :attr:`config.plot_labels`. Can explicitly set a 
             value to None to prevent unit display. 
         title: Title of figure; defaults to None.
@@ -521,7 +521,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             with these line styles. Defaults to None.
         ignore_invis: True to ignore lines that aren't displayed,
             such as those with only a single value; defaults to False.
-        units (List[str, str]): ``(y_unit, x_unit)`` to display; defaults 
+        units (List[str]): ``(y_unit, x_unit)`` to display; defaults 
             to None to use :attr:`config.plot_labels`. Can explicitly set a 
             value to None to prevent unit display. 
     """
@@ -611,7 +611,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     if show: plt.show()
 
 def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 
-                 names_group=None, x_label=None, y_label=None, xlim=None, 
+                 names_group=None, labels=None, units=None, xlim=None, 
                  ylim=None, title=None, fig_size=None, show=True, suffix=None, 
                  df=None, xy_line=False, col_size=None, size_mult=5,
                  annot_arri=None):
@@ -630,8 +630,12 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         names_group: Sequence of names to display in place of ``cols_group``; 
             defaults to None, in which case ``cols_groups`` will be used 
             instead. Length should equal that of ``cols_group``.
-        x_label: Name of x-axis; defaults to None.
-        y_label: Name of y-axis; defaults to None.
+        labels (List[str]): ``(y_label, x_label)`` to display; defaults 
+            to None to use :attr:`config.plot_labels`. Can explicitly set a 
+            value to None to prevent unit display. 
+        units (List[str]): ``(y_unit, x_unit)`` to display; defaults 
+            to None to use :attr:`config.plot_labels`. Can explicitly set a 
+            value to None to prevent unit display. 
         xlim: Sequence of min and max boundaries for the x-axis; 
             defaults to None.
         xlim: Sequence of min and max boundaries for the y-axis; 
@@ -734,8 +738,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         ax.plot(xy_line, xy_line)
     
     # set labels and title if given
-    if x_label: ax.set_xlabel(x_label)
-    if y_label: ax.set_ylabel(y_label)
+    plot_support.set_scinot(ax, lbls=labels, units=units)
     if title: ax.set_title(title)
     
     # tighten layout before creating legend to avoid compressing the graph 
@@ -775,9 +778,9 @@ def plot_probability(path, conds, metric_cols, col_size, **kwargs):
             ["{}_{}".format(col, cond) for col in metric_cols])
     plot_scatter(
         path, metric_cond_cols[0], metric_cond_cols[1], None, None, 
-        names_group=metric_cols, x_label=conds[0].capitalize(), 
-        y_label=conds[1].capitalize(), xy_line=True, 
-        col_size=col_size, **kwargs)
+        names_group=metric_cols, 
+        labels=(conds[1].capitalize(), conds[0].capitalize()), 
+        xy_line=True, col_size=col_size, **kwargs)
     
 def plot_roc(df, show=True, annot_arri=None):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
@@ -802,7 +805,8 @@ def plot_roc(df, show=True, annot_arri=None):
     plot_scatter(
         "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
-        names_group, "False Discovery Rate", "Sensitivity", (0, 1), (0, 1), 
+        names_group, ("Sensitivity", "False Discovery Rate"), 
+        None, (0, 1), (0, 1), 
         "Nuclei Detection ROC Over {}".format(names_group[-1]), df=df,
         show=show, annot_arri=annot_arri)
 
@@ -924,6 +928,6 @@ if __name__ == "__main__":
             names_group = [col.split(".")[1] for col in col_x[:2]]
         plot_scatter(
             config.filename, col_x, col_y, names_group=names_group, 
-            x_label="Intensity", y_label="Nuclei", 
+            labels=("Nuclei", "Intensity"), 
             title="Nuclei Vs. Intensity By Region", fig_size=size, show=show, 
             suffix=config.suffix, df=df)

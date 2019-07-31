@@ -337,8 +337,6 @@ class ProcessSettings(SettingsDict):
         self["segment_size"] = 500 # detection ROI max size along longest edge
         self["prune_tol_factor"] = (1, 1, 1)
         self["verify_tol_factor"] = (1, 1, 1)
-        self["segmenting_mean_thresh"] = 0.4
-        self["scale_factor"] = None # z,y,x; req custom skimage
         self["channel_colors"] = (Cmaps.CMAP_GRBK_NAME, Cmaps.CMAP_RDBK_NAME)
         self["isotropic"] = None
         self["isotropic_vis"] = None
@@ -382,6 +380,8 @@ def update_process_settings(settings, settings_type):
         # v2.4 (Clrbrain 0.8.8): decreased min/max sigma, segment size
         # v2.5 (Clrbrain 0.8.9): added exclude_border
         # v2.6 (Clrbrain 0.9.3): slight dec in x/y verify tol for Hungarian meth
+        # v2.6.1 (Clrbrain 0.9.4): scale_factor, segmenting_mean_thresh had 
+        #     already been turned off, now removed from Clrbrain and here
         settings.add_modifier(
             "lightsheet", 
             {"points_3d_thresh": 0.7, 
@@ -397,8 +397,6 @@ def update_process_settings(settings, settings_type):
             "segment_size": 150, 
             "prune_tol_factor": (1, 0.9, 0.9), 
             "verify_tol_factor": (3, 1.2, 1.2), 
-            "segmenting_mean_thresh": -10, # unused since scale factor off
-            "scale_factor": None, 
             "isotropic": (0.96, 1, 1), 
             "isotropic_vis": (1.3, 1, 1), 
             "sub_stack_max_pixels": (1200, 800, 800), 
@@ -426,8 +424,7 @@ def update_process_settings(settings, settings_type):
             #"thresholding_size": 50.0, # for random_walker
             "denoise_size": 25, 
             "segment_size": 100, 
-            "prune_tol_factor": (1.5, 1.3, 1.3), 
-            "segmenting_mean_thresh": -0.25}, 
+            "prune_tol_factor": (1.5, 1.3, 1.3)}, 
             profile)
 
         # 2p 20x of zebrafish nuclei
@@ -1051,12 +1048,6 @@ roc_dict = OrderedDict([
 ])
 '''
 
-# scale factors
-_scale_zs = np.arange(0.57, 0.61, 0.01)
-_scale_factors = np.ones((len(_scale_zs), 3))
-_scale_factors[:, 0] = _scale_zs
-#print(_scale_factors)
-
 # isotropic factors
 #_isotropic_zs = np.arange(0.9, 1.1, 0.02)
 _isotropic_zs = np.arange(0.1, 2, 0.1)
@@ -1077,17 +1068,12 @@ roc_dict = OrderedDict([
         ("points_3d_thresh", [0.7]),
         
         # unfused baseline
-        #("scale_factor", 0.59),
         #("clip_vmax", 98.5),
         #("clip_max", 0.5),
-        #("scale_factor", np.array([(0.59, 1, 1)])),
         #("clip_vmax", np.arange(98.5, 99, 0.5)),
         #("clip_max", np.arange(0.5, 0.6, 0.1)),
         
         # test parameters
-        #("scale_factor", _scale_factors),
-        #("scale_factor", np.array([(0.6, 1, 1)])),
-        #("segmenting_mean_thresh", -5),
         #("isotropic", _isotropic_factors),
         #("isotropic", np.array([(0.96, 1, 1)])),
         #("overlap", np.arange(0.1, 1.0, 0.1)),
@@ -1097,9 +1083,6 @@ roc_dict = OrderedDict([
         #("clip_vmax", np.arange(97, 100.5, 0.5)),
         #("clip_max", np.arange(0.3, 0.7, 0.1)),
         #("erosion_threshold", np.arange(0.16, 0.35, 0.02)),
-        #("segmenting_mean_thresh", np.arange(0.2, 0.8, 0.1)),
-        #("segmenting_mean_thresh", np.arange(-5, -4.9, 0.1)),
-        #("segmenting_mean_thresh", np.arange(5, 5.1, 0.1)),
         #"denoise_size", np.arange(5, 25, 2)
         #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
         #("tot_var_denoise", (False, True)),

@@ -20,11 +20,11 @@ The setup script will install the following:
 - A `clr3` environment with Python 3
 - Scipy, Numpy, Matplotlib stack
 - Mayavi and TraitsUI stack for GUI and 3D visualization; note that Mayavi currently requires a graphical environment to install
-- Scikit-Image for image processing
+- Scikit-image for image processing
 - Pandas for stats I/O
 - SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
 
-On occasion, Python dependencies with required updates that have not been released will be downloaded as shallow Git clones into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) and pip installed.
+If an unreleased Python dependency update is required, it will be downloaded as shallow Git clones into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) and pip installed.
 
 To install/run without a GUI, run a lightweight setup, `./setup_env.sh -l` ("L" arg), which avoids the Mayavi stack.
 
@@ -38,15 +38,16 @@ To build and install SimpleElastix manually, the `build_se.sh` script can be cal
 
 ### Additional Build/Runtime Dependencies
 
-#### Required
+#### Recommended (not required)
 
 - Java SDK, tested on v8-11, for importing image files from proprietary formats (eg `.czi`) and the ImageJ-based stitching pipeline (ImageJ currently requires Java 8)
+- ImageJ/Fiji for image stitching via the BigSticher plugin
+- R for statistical models
 
 #### Optional
 
-- GCC or related compilers for compiling Mayavi and SimpleElastix
+- GCC or related compilers for compiling SimpleElastix or any unreleased dependencies
 - Git for downloading unreleased dependencies as above
-- R for statistical models
 - Zstd (fallback to Zip) for compression on servers
 - MeshLab for 3D surface clean-up
 
@@ -54,11 +55,12 @@ To build and install SimpleElastix manually, the `build_se.sh` script can be cal
 
 Clrbrain has been tested to build and run on:
 
-- MacOS, tested on 10.11+
-- Linux, tested on RHEL 7.4+, Ubuntu 18.04
-- Windows, tested on Windows 10 (see below for details):
+- MacOS, tested on 10.11-10.14
+- Linux, tested on RHEL 7.4-7.5, Ubuntu 18.04
+- Windows, tested on Windows 10 (see below for details) in various environments:
   - Via built-in Windows Subsystem for Linux (WSL), tested on Ubuntu 18.04 and an X Server
-  - Via Cygwin, tested on Cygwin 2.10+
+  - Native command-prompt
+  - Bash scripts in Cygwin (tested on Cygwin 2.10+), MSYS2
 
 ## Run Clrbrain
 
@@ -107,10 +109,14 @@ The atlas image must have an associated annotation image. Use the `--labels` fla
 - Scroll or arrow `up`/`down` to move planes in the current plot
 - `Right-click` or `Ctrl+left-click` + mouse-up/down to zoom
 - `Middle-click` or `Shift+left-click` + mouse drag to pan
-- `Alt+left-click` to pick a color, then drag to paint over a new area; add `z` to use the last picked color instead
-- `[`/`]` (brackets) to make the paintbrush smaller/bigger; add `shift` to halve the increment
 - `a` to toggle between 0 and full labels alpha (opacity)
 - `shift+a` to halve alpha (press `a` twice to return to original alpha)
+
+Press on the "Edit" button to start painting labels:
+
+- `Left-click` to pick a color, then drag to paint over a new area
+- `Alt+Left-click` to use the last picked color instead
+- `[`/`]` (brackets) to make the paintbrush smaller/bigger; add `shift` to halve the increment
 - Use the save button in the main window with the atlas window still open to resave
 
 
@@ -312,13 +318,6 @@ export LANG=en_US.UTF-8
 - If you get an `syntax error near unexpected token (` error, the run script may have been formatted incorrectly, eg through the Mac Text Editor program. Try `dos2unix [runclrbrain.sh]` (replace with your run script filename) or re-copying from `runclrbrain.sh`.
 
 ## Obsolete Issues
-
-### Sciki-image installation
-
-- By default, Clrbrain will use a precompiled Scikit-image package from Pip
-- Clrbrain < v0.6.8 or use of the `scale_factor` microscope profile setting required a custom Scikit-image installation (see [develop branch of fork](https://github.com/the4thchild/scikit-image/tree/develop)) with compilation:
-  - If you continue getting errors during Scikit-image compilation, delete the folder and restart its compilation from scratch
-  - After updating any Scikit-image Cython files, run `python setup.py build_ext -i` as per https://github.com/scikit-image/scikit-image. If older version of extensions remain, run `git clean -dxf` to completely clear the working directory (check for any working files you need!) before rerunning the extension builder.
 
 ### Windowing responsiveness
 

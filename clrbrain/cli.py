@@ -219,7 +219,7 @@ def args_to_dict(args, keys_enum, args_dict={}):
                 print("no further parameters in {} to assign \"{}\" by "
                       "position, skipping".format(keys_enum, arg))
             else:
-                args_dict[keys_enum(n)] = arg
+                args_dict[keys_enum(n)] = lib_clrbrain.get_int(arg)
         else:
             # assign based on keyword if its equivalent enum exists
             vals = arg_split[1]

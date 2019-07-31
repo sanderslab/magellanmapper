@@ -15,6 +15,14 @@ config = {
     "version": "0.9.4",
     "packages": setuptools.find_packages(),
     "scripts": [], 
+    "python_requires": ">=3",  # TODO: may need to increase; tested on >=3.6
+    # TODO: consider adding pythong-bioformats, simpleitk (SimpleElastix fork)
+    "install_requires": [
+        "scikit-image", 
+        "matplotlib", 
+        "mayavi", 
+        "pandas", 
+    ]
 }
 
 setuptools.setup(**config)

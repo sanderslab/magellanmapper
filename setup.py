@@ -1,17 +1,20 @@
+# Clrbrain setup script
+# Author: David Young, 2017, 2019
+
 try:
-    from setuptools import setup
+    import setuptools
 except ImportError:
-    from distutils.core import setup
+    import distutils.core
 
 config = {
-    "name" = "clrbrain"
-    "description": "3D brain imaging analysis",
+    "name": "clrbrain", 
+    "description": "3D atlas analysis and annotation",
     "author": "David Young",
     "url": "URL",
     "author_email": "david@textflex.com",
-    "version": "0.1",
-    "packages": ["clrbrain"],
-    "scripts": []
+    "version": "0.9.4",
+    "packages": setuptools.find_packages(),
+    "scripts": [], 
 }
 
-setup(**config)
+setuptools.setup(**config)

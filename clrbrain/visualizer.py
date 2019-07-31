@@ -101,7 +101,7 @@ class VisHandler(Handler):
     def closed(self, info, is_ok):
         """Closes the Java VM when the GUI is closed.
         """
-        importer.jb.kill_vm()
+        importer.stop_jvm()
         config.db.conn.close()
 
 

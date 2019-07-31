@@ -25,16 +25,28 @@ from xml import etree as et
 import warnings
 
 import numpy as np
-import javabridge as jb
-import bioformats as bf
+try:
+    import javabridge as jb
+except ImportError as e:
+    jb = None
+    warnings.warn(
+        "Python-Javabridge could not be found, so there will be error when "
+        "attempting to import images into Numpy format", ImportWarning)
+try:
+    import bioformats as bf
+except ImportError as e:
+    bf = None
+    warnings.warn(
+        "Python-Bioformats could not be found, so there will be error when "
+        "attempting to import images into Numpy format", ImportWarning)
 from skimage import io
 try:
     import SimpleITK as sitk
 except ImportError as e:
-    print(e)
-    print("WARNING: SimpleElastix could not be found, so there will be error "
-          "when attempting to read Nifti, raw, or other formats by "
-          "SimpleITK/SimpleElastix")
+    sitk = None
+    warnings.warn(
+        "SimpleElastix could not be found, so there will be error when "
+        "attempting to read Nifti, raw, or other formats", ImportWarning)
 
 from clrbrain import config
 from clrbrain import detector
@@ -76,7 +88,16 @@ def start_jvm(heap_size="8G"):
     Args:
         heap_size: JVM heap size, defaulting to 8G.
     """
+    if not jb:
+        lib_clrbrain.warn("Python-Javabridge not available, cannot start JVM")
+        return
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
+
+def stop_jvm():
+    if not jb:
+        lib_clrbrain.warn("Python-Javabridge not available, cannot stop JVM")
+        return
+    jb.kill_vm()
 
 def parse_ome(filename):
     """Parses metadata for image name and size information using Bioformats'
@@ -547,6 +568,13 @@ def read_file(filename, series, load=True, z_max=-1,
                 if return_info:
                     return None, output
                 return None
+    
+    if jb is None or bf is None:
+        lib_clrbrain.warn(
+            "Python-Bioformats or Python-Javabridge not available, "
+            "multi-page images cannot be imported")
+        return None
+    
     start_jvm()
     time_start = time()
     image5d = None
@@ -687,9 +715,9 @@ def read_file_sitk(filename_sitk, filename_np, series=0):
     
     if detector.resolutions is None:
         # fallback to determining metadata directly from sitk file
-        msg = ("Clrbrain image metadata file not loaded; will fallback to {} "
-               "for metadata".format(filename_sitk))
-        warnings.warn(msg)
+        lib_clrbrain.warn(
+            "Clrbrain image metadata file not loaded; will fallback to {} "
+            "for metadata".format(filename_sitk))
         detector.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(detector.resolutions))
     

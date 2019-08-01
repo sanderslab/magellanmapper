@@ -559,8 +559,9 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         combine_sides: True to combine corresponding labels from opposite 
             sides of the sample; defaults to True. Corresponding labels 
             are assumed to have the same absolute numerical number and 
-            differ only in signage.
-        labels_ids: Sequence of label IDs to include. Defaults to None, 
+            differ only in signage. May be False if combining by passing 
+            both pos/neg labels in ``label_ids``.
+        label_ids: Sequence of label IDs to include. Defaults to None, 
             in which case the labels will be taken from unique values 
             in ``labels_img_np``.
         grouping: Dictionary of sample grouping metadata, where each 
@@ -577,6 +578,12 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     physical_mult = None
     if spacing is not None:
         physical_mult = np.prod(spacing)
+    
+    if df is not None:
+        # invert label IDs of right-sided regions; assumes that using df 
+        # will specify sides explicitly in label_ids
+        # TODO: consider removing combine_sides and using label_ids only
+        df.loc[df["Side"] == "R", LabelMetrics.Region.name] *= -1
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
@@ -630,7 +637,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         label_metrics[LabelMetrics.RegDensityMean] = (
             reg_nuc_mean / vol_mean_physical)
         
-        # set side, assuming that positive labels are left
+        # set side, assuming that positive labels are left, and add 
+        # metadata to master dictionary
         if np.all(np.greater(label_id, 0)):
             side = "L"
         elif np.all(np.less(label_id, 0)):

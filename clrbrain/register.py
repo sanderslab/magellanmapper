@@ -3186,7 +3186,9 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             label = labels_ref_lookup[abs(label_id)]
             label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
             if label_level <= max_level:
-                # get children (including parent first) if up through level
+                # get children (including parent first) up through level, 
+                # including both pos and neg IDs within a super-label if 
+                # combining sides
                 ids_with_children.append(
                     ontology.get_children_from_id(
                         labels_ref_lookup, label_id, both_sides=combine_sides))

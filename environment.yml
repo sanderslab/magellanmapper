@@ -1,11 +1,10 @@
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - python=3.6
   - cython
-  - numpy
-  - scipy
   - matplotlib
   - pyamg
-  - traitsui
+  - mayavi
   - pandas

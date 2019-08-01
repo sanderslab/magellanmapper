@@ -216,7 +216,7 @@ clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh \
 
 ### Java installation
 
-- Tested on Java 8-11 SE
+- Tested on Java 8-12 SE
 - Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
 - You may need to set up the JAVA_HOME environment variable in your `~/.bash_profile` or `~/.bashrc` file, such as:
 
@@ -272,18 +272,41 @@ Building SimpleElastix on Windows is more complicated, however, requiring the fo
 
 Clrbrain will default to installing SimpleITK, which may be sufficient if registration tasks are not required.
 
-### Linux
 
-#### RHEL
+### Qt/Mayavi/VTK errors
+
+```
+QXcbConnection: Could not connect to display
+qt.qpa.xcb: could not connect to display
+```
+
+- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work directly in headless cloud instances
+- For servers, use RDP or an X11 forwarding instead
+- For non-graphical setups such as WSL, start an X11 server (eg in Windows)
+- As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
+
+```
+ImportError: libGL.so.1: cannot open shared object file: No such file or directory
+```
+
+- Leads to `ImportError: No module named 'vtkRenderingOpenGL2Python'`
+- Install the `libgl1-mesa-glx` package in Ubuntu (or similar in other distros)
+
+```
+qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
+```
+
+- A number of missing libraries may prevent Qt from loading
+- Run `export QT_DEBUG_PLUGINS=1` to check error messages during startup, which may display the following missing packages:
+  - `libxkbcommon-x11.so.0`: `xkbcommon` was removed from Qt [starting in 5.12.1](https://code.qt.io/cgit/qt/qtbase.git/tree/dist/changes-5.12.1?h=5.12.1); install `libxkbcommon-x11-0`
+  - `libfontconfig.so.1`: Install `libfontconfig1`
+  - `libXrender.so.1`: Install `libxrender1`
+
+Additional errors:
 
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04
-- PyQt5 5.12 gives an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
+- PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
 
-
-### Mayavi installation
-
-- As of at least 2018-01-05, Mayavi installation requires a GUI so will not work on headless cloud instances, giving a `QXcbConnection: Could not connect to display` error; use RDP or an X11 forwarding instead
-- As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
 
 ### Image Stitching
 

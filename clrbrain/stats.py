@@ -19,13 +19,14 @@ from scipy import stats as spstats
 from clrbrain import config
 from clrbrain import lib_clrbrain
 
+
 def df_div(df0, df1, axis=1):
     """Wrapper function to divide two Pandas data frames in a functional manner.
     
     Args:
         df0 (:obj:`pd.DataFrame`): First data frame.
         df1 (:obj:`pd.DataFrame`): Second data frame.
-        axis (int): Axis. 
+        axis (int): Axis; defaults to 1.
 
     Returns:
         The quotient from applying :meth:`pd.DataFrame.div` from ``df0`` to 
@@ -34,20 +35,41 @@ def df_div(df0, df1, axis=1):
     """
     return df0.div(df1, axis=axis)
 
-def df_subtract(df0, df1, axis=1):
-    """Wrapper function to subtract two Pandas data frames in a functional manner.
-    
+
+def df_add(df0, df1, axis=1, fill_value=0):
+    """Wrapper function to add two Pandas data frames in a functional manner.
+
     Args:
         df0 (:obj:`pd.DataFrame`): First data frame.
         df1 (:obj:`pd.DataFrame`): Second data frame.
-        axis (int): Axis. 
+        axis (int): Axis; defaults to 1.
+        fill_value (int): Value with which to fill NaNs; defaults to 0.
 
     Returns:
         The difference from applying :meth:`pd.DataFrame.subtract` from 
         ``df0`` to ``df1``.
 
     """
-    return df0.subtract(df1, axis=axis)
+    return df0.add(df1, axis=axis, fill_value=fill_value)
+
+
+def df_subtract(df0, df1, axis=1, fill_value=0):
+    """Wrapper function to subtract two Pandas data frames in a functional 
+    manner.
+    
+    Args:
+        df0 (:obj:`pd.DataFrame`): First data frame.
+        df1 (:obj:`pd.DataFrame`): Second data frame.
+        axis (int): Axis; defaults to 1.
+        fill_value (int): Value with which to fill NaNs; defaults to 0.
+
+    Returns:
+        The difference from applying :meth:`pd.DataFrame.subtract` from 
+        ``df0`` to ``df1``.
+
+    """
+    return df0.subtract(df1, axis=axis, fill_value=fill_value)
+
 
 def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
     """Transform volumes by regions data frame to experiments-condition 

@@ -3240,7 +3240,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, get_sitk=True, reg_name=IMG_EXP)
             except FileNotFoundError as e:
                 print(e)
-                print("will load atlas image instead")
+                lib_clrbrain.warn("will load atlas image instead")
                 img_sitk = load_registered_img(
                     mod_path, get_sitk=True, reg_name=IMG_ATLAS)
             img_np = sitk.GetArrayFromImage(img_sitk)
@@ -3252,15 +3252,20 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, reg_name=IMG_LABELS)
             except FileNotFoundError as e:
                 print(e)
-                print("will attempt to load trucated labels image instead")
+                lib_clrbrain.warn(
+                    "will attempt to load trucated labels image instead")
                 labels_img_np = load_registered_img(
                     mod_path, reg_name=IMG_LABELS_TRUNC)
             
             # load labels edge and edge distances images
-            labels_edge = load_registered_img(
-                mod_path, reg_name=IMG_LABELS_EDGE)
-            dist_to_orig = load_registered_img(
-                mod_path,reg_name=IMG_LABELS_DIST)
+            try:
+                labels_edge = load_registered_img(
+                    mod_path, reg_name=IMG_LABELS_EDGE)
+                dist_to_orig = load_registered_img(
+                    mod_path,reg_name=IMG_LABELS_DIST)
+            except FileNotFoundError as e:
+                print(e)
+                lib_clrbrain.warn("will ignore edge measurements")
             
             # load labels marker image
             try:
@@ -3268,14 +3273,14 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, reg_name=IMG_LABELS_INTERIOR)
             except FileNotFoundError as e:
                 print(e)
-                print("will ignore label markers")
+                lib_clrbrain.warn("will ignore label markers")
             
             # load heat map of nuclei per voxel if available
             try:
                 heat_map = load_registered_img(mod_path,reg_name=IMG_HEAT_MAP)
             except FileNotFoundError as e:
                 print(e)
-                print("will ignore nuclei stats")
+                lib_clrbrain.warn("will ignore nuclei stats")
             
             # load sub-segmentation labels if available
             try:
@@ -3283,7 +3288,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path,reg_name=IMG_LABELS_SUBSEG)
             except FileNotFoundError as e:
                 print(e)
-                print("will ignore labels sub-segmentations")
+                lib_clrbrain.warn("will ignore labels sub-segmentations")
             print("tot blobs", np.sum(heat_map))
         
         # prepare sample name with original name for comparison across 

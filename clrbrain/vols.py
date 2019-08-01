@@ -232,7 +232,7 @@ class MeasureLabel(object):
     labels_img_np = None
     labels_edge = None
     dist_to_orig = None
-    labels_markers = None
+    labels_interior = None
     heat_map = None
     subseg = None
     df = None
@@ -302,8 +302,7 @@ class MeasureLabel(object):
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
-            Tuple of the given label ID, sum of edge distances, mean of 
-            edge distances, and number ofpixels in the label edge. 
+            Tuple of the given label ID and a dictionary of metrics. 
             The metrics are NaN if the label size is 0.
         """
         metrics = dict.fromkeys(cls._COUNT_METRICS, np.nan)
@@ -368,8 +367,7 @@ class MeasureLabel(object):
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
-            Tuple of the given label ID, intensity variation, number of 
-            pixels in the label, density variation, and number of blobs. 
+            Tuple of the given label ID and a dictionary a metrics. 
             The metrics are NaN if the label size is 0.
         """
         metrics = dict((key, []) for key in VAR_METRICS)
@@ -412,7 +410,9 @@ class MeasureLabel(object):
                     vals[LabelMetrics.CoefVarIntens] = (
                         vals[LabelMetrics.VarIntensity] 
                         / vals[LabelMetrics.MeanIntensity])
-                    
+
+                    interior_mask = None
+                    border_mask = None
                     if cls.labels_interior is not None:
                         # inner vs border variability
                         interior_mask = cls.labels_interior == seg_id
@@ -425,12 +425,12 @@ class MeasureLabel(object):
                         # get variability interior-border match as abs diff
                         vals[LabelMetrics.VarIntensMatch] = abs(
                             vals[LabelMetrics.VarIntensOut] 
-                                - vals[LabelMetrics.VarIntensIn])
+                            - vals[LabelMetrics.VarIntensIn])
                     
                         # get variability interior-border simple difference
                         vals[LabelMetrics.VarIntensDiff] = (
                             vals[LabelMetrics.VarIntensOut] 
-                                - vals[LabelMetrics.VarIntensIn])
+                            - vals[LabelMetrics.VarIntensIn])
                     
                     if cls.heat_map is not None:
                         # number of blob and variation in blob density
@@ -438,12 +438,14 @@ class MeasureLabel(object):
                         vals[LabelMetrics.VarNuclei] = np.std(blobs_per_px)
                         vals[LabelMetrics.RegNucMean] = np.sum(blobs_per_px)
                         vals[LabelMetrics.MeanNuclei] = np.mean(blobs_per_px)
-                        heat_interior = cls.heat_map[interior_mask]
-                        heat_border = cls.heat_map[border_mask]
-                        vals[LabelMetrics.VarNucIn] = np.std(heat_interior)
-                        vals[LabelMetrics.VarNucOut] = np.std(heat_border)
-                        vals[LabelMetrics.VarNucMatch] = abs(
-                            vals[LabelMetrics.VarNucOut] 
+                        if (interior_mask is not None and 
+                                border_mask is not None): 
+                            heat_interior = cls.heat_map[interior_mask]
+                            heat_border = cls.heat_map[border_mask]
+                            vals[LabelMetrics.VarNucIn] = np.std(heat_interior)
+                            vals[LabelMetrics.VarNucOut] = np.std(heat_border)
+                            vals[LabelMetrics.VarNucMatch] = abs(
+                                vals[LabelMetrics.VarNucOut] 
                                 - vals[LabelMetrics.VarNucIn])
                         vals[LabelMetrics.CoefVarNuc] = (
                             vals[LabelMetrics.VarNuclei] 
@@ -497,13 +499,14 @@ class MeasureLabel(object):
                 in :attr:``labels_img_np`` for which to measure variation.
         
         Returns:
-            Tuple of the given label ID, sum of edge distances, mean of 
-            edge distances, and number ofpixels in the label edge. 
+            Tuple of the given label ID and dictionary of metrics. 
             The metrics are NaN if the label size is 0.
         """
         metrics = dict.fromkeys(cls._EDGE_METRICS, np.nan)
         
         # get collective region
+        label_mask = None
+        labels = None
         if cls.df is None:
             # get region directly from image
             label_mask = np.isin(cls.labels_edge, label_ids)

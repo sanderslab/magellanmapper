@@ -1,12 +1,12 @@
 name: clr3
 channels:
-- defaults
+  - defaults
 dependencies:
-- python=3.6
-- cython
-- numpy
-- scipy
-- matplotlib
-- pyamg
-- traitsui
-- pandas
+  - python=3.6
+  - cython
+  - numpy
+  - scipy
+  - matplotlib
+  - pyamg
+  - traitsui
+  - pandas

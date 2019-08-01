@@ -4076,11 +4076,18 @@ def main():
         ids_nonbr_large = (17651, 126651558)
         dfs_nonbr_large = [df[df["Region"] == n] for n in ids_nonbr_large]
         
+        # get data frame with region IDs of all non-brain structures removed
+        labels_ref_lookup = ontology.create_aba_reverse_lookup(
+            ontology.load_labels_ref(config.load_labels))
+        ids_nonbr = []
+        for n in ids_nonbr_large:
+            ids_nonbr.extend(
+                ontology.get_children_from_id(labels_ref_lookup, n))
+        df_brain = df.loc[~df["Region"].isin(ids_nonbr)]
+
         label_id = config.atlas_labels[config.AtlasLabels.ID]
         if label_id is not None:
             # show only selected region and its children
-            labels_ref_lookup = ontology.create_aba_reverse_lookup(
-                ontology.load_labels_ref(config.load_labels))
             ids = ontology.get_children_from_id(labels_ref_lookup, label_id)
             df = df[np.isin(df["Region"], ids)]
 
@@ -4121,10 +4128,11 @@ def main():
                     df=df_level_piv, groups=conds)
                 
                 if df_nonbr is not None:
-                    # plot metric normalized to whole brain tissue
+                    # plot metric normalized to whole brain tissue; structures 
+                    # above removed regions will still contain them 
                     df_brain_level = df_brain.loc[df_brain["Level"] == level]
                     df_norm = stats.normalize_df(
-                        df_level, id_cols, cond_col, None, [metric], 
+                        df_brain_level, id_cols, cond_col, None, [metric], 
                         extra_cols, df_base)
                     print("{} normalized to whole brain:".format(metric))
                     stats.print_data_frame(df_norm.loc[:, cols_show], "\t")

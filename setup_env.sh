@@ -295,11 +295,10 @@ fi
 #install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
 pip install -U scikit-image
 
-# cannot be installed in Conda environment configuration script 
-# for some reason; also for some reason install from shallow clone gives 
-# version number of 0.0.0, so install gets overwritten by bioformats install
-#install_shallow_clone https://github.com/LeeKamentsky/python-javabridge.git
-pip install -U javabridge
+# may need to install Python-Javabridge from Git for fixes for newer JDKs; 
+# shallow clone does not work for some reason
+#pip install -U javabridge
+pip install git+https://github.com/LeeKamentsky/python-javabridge.git
 
 # need older version since ver > 1.1 give heap space error
 pip install -U python-bioformats==1.1.0

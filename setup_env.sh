@@ -285,9 +285,9 @@ if [[ $lightweight -eq 0 ]]; then
   #pip install -U mayavi
 fi
 
-# use Scikit-image 0.14 release
+# if newer Scikit-image release is on PyPI
 #install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
-pip install -U scikit-image
+#pip install -U scikit-image
 
 # may need to install Python-Javabridge from Git for fixes for newer JDKs; 
 # shallow clone does not work for some reason

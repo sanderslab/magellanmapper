@@ -34,6 +34,8 @@ LabelMetrics = Enum(
         "VarNucMatch", 
         "EdgeSize", "EdgeDistSum", "EdgeDistMean", 
         "CoefVarIntens", "CoefVarNuc", 
+        # shape measurements
+        "SurfaceArea", "Compactness", 
     ]
 )
 
@@ -222,6 +224,8 @@ class MeasureLabel(object):
     _EDGE_METRICS = (
         LabelMetrics.EdgeSize, LabelMetrics.EdgeDistSum, 
         LabelMetrics.EdgeDistMean)
+    _SHAPE_METRICS = (
+        LabelMetrics.SurfaceArea, LabelMetrics.Compactness)
     
     # images and data frame
     atlas_img_np = None
@@ -248,7 +252,7 @@ class MeasureLabel(object):
         cls.df = df
     
     @classmethod
-    def label_metrics(cls, label_id):
+    def label_metrics(cls, label_id, extra_metrics=None):
         """Calculate metrics for a given label or set of labels.
         
         Wrapper to call :func:``measure_variation``, 
@@ -257,6 +261,8 @@ class MeasureLabel(object):
         Args:
             label_id: Integer of the label or sequence of multiple labels 
                 in :attr:``labels_img_np`` for which to measure variation.
+            extra_metrics (List[:obj:`config.MetricGroups`]): Sequence of 
+                additional metric groups to measure; defaults to None. 
         
         Returns:
             Tuple of the given label ID, intensity variation, number of 
@@ -264,11 +270,23 @@ class MeasureLabel(object):
             sum edge distances, mean of edge distances, and number of 
             pixels in the label edge.
         """
+        # process basic metrics
         #print("getting label metrics for {}".format(label_id))
         _, count_metrics = cls.measure_counts(label_id)
         _, var_metrics = cls.measure_variation(label_id)
         _, edge_metrics = cls.measure_edge_dist(label_id)
         metrics = {**count_metrics, **var_metrics, **edge_metrics}
+        
+        if extra_metrics:
+            for extra_metric in extra_metrics:
+                # process additional metrics by applying corresponding function
+                fn = None
+                if extra_metric is config.MetricGroups.SHAPES:
+                    fn = cls.measure_shapes
+                if fn:
+                    _, extra_metrics = fn(label_id)
+                    metrics.update(extra_metrics)
+        
         return label_id, metrics
     
     @classmethod
@@ -518,6 +536,45 @@ class MeasureLabel(object):
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
         return label_ids, metrics
 
+    @classmethod
+    def measure_shapes(cls, label_ids):
+        """Measure label shapes.
+
+        Labels will be measured even if :attr:``df`` is available 
+        to account for the global shape rather than using weighted-averages.
+
+        Args:
+            label_ids: Integer of the label or sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure shapes.
+
+        Returns:
+            Tuple of the given label ID and a dictionary of metrics.
+        """
+        metrics = dict.fromkeys(cls._SHAPE_METRICS, np.nan)
+
+        # sum up counts within the collective region
+        label_mask = np.isin(cls.labels_img_np, label_ids)
+        label_size = np.sum(label_mask)
+        
+        if label_size > 0:
+            perim = plot_3d.perimeter_nd(label_mask)
+            metrics[LabelMetrics.SurfaceArea] = np.sum(perim)
+            metrics[LabelMetrics.Compactness] = plot_3d.compactness(
+                perim, label_mask)
+            # TODO: high memory consumption with these measurements
+            # props = measure.regionprops(label_mask.astype(np.uint8))
+            # if props:
+            #     prop = props[0]
+            #     metrics[LabelMetrics.ConvexVolume] = prop.convex_area
+            #     metrics[LabelMetrics.Solidity] = prop.solidity
+            props = None
+            
+        disp_id = get_single_label(label_ids)
+        print("shape measurements of label {}: {}"
+              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+        return label_ids, metrics
+
+
 def get_single_label(label_id):
     """Get an ID as a single element.
     
@@ -537,7 +594,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
                            heat_map=None, 
                            subseg=None, spacing=None, unit_factor=None, 
                            combine_sides=True, label_ids=None, grouping={}, 
-                           df=None):
+                           df=None, extra_metrics=None):
     """Compute metrics such as variation and distances within regions 
     based on maps corresponding to labels image.
     
@@ -570,6 +627,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         df: Data frame with rows for all drawn labels to pool into 
             parent labels instead of re-measuring stats for all 
             children of each parent; defaults to None.
+        extra_metrics (List[:obj:`config.MetricGroups`]): List of enums 
+            specifying additional stats; defaults to None.
     
     Returns:
         Pandas data frame of the regions and weighted means for the metrics.
@@ -607,7 +666,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         if combine_sides: label_id = [label_id, -1 * label_id]
         pool_results.append(
             pool.apply_async(
-                MeasureLabel.label_metrics, args=(label_id, )))
+                MeasureLabel.label_metrics, args=(label_id, extra_metrics)))
     
     totals = {}
     for result in pool_results:
@@ -651,8 +710,11 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         vals = (sample, *grouping.values())
         for col, val in zip(cols_metadata, vals):
             metrics.setdefault(col, []).append(val)
+        
+        # transfer all found metrics to master dictionary
         for col in LabelMetrics:
-            metrics.setdefault(col.name, []).append(label_metrics[col])
+            if col in label_metrics:
+                metrics.setdefault(col.name, []).append(label_metrics[col])
         
         # weight and accumulate total metrics
         totals.setdefault(LabelMetrics.EdgeDistSum, []).append(

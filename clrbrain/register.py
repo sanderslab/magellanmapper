@@ -3116,7 +3116,8 @@ def _find_atlas_labels(load_labels, max_level, labels_ref_lookup):
     return label_ids
 
 def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None, 
-                   groups=None, max_level=None, combine_sides=True):
+                  groups=None, max_level=None, combine_sides=True, 
+                  extra_metrics=None):
     """Get volumes and additional label metrics for each single labels ID.
     
     Args:
@@ -3144,6 +3145,9 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             and negative numbers will always be included, and this 
             flag will only determine whether the sides are combined 
             rather than kept separate.
+        extra_metrics (List[Enum]): List of enums from 
+            :class:`config.MetricGroups` specifying additional stats; 
+            defaults to None.
     
     Returns:
         Tuple of Pandas data frames with volume-related metrics for each 
@@ -3225,9 +3229,12 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         labels_interior = None
         heat_map = None
         subseg = None
-        if df is None:
-            # open images registered to the main image, staring with the 
-            # experimental image if available and falling back to atlas
+        if (df is None or 
+                extra_metrics and config.MetricGroups.SHAPES in extra_metrics):
+            # open images registered to the main image, starting with the 
+            # experimental image if available and falling back to atlas; 
+            # avoid opening if data frame is available and not taking any 
+            # stats requiring images
             try:
                 img_sitk = load_registered_img(
                     mod_path, get_sitk=True, reg_name=IMG_EXP)
@@ -3293,7 +3300,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             labels_edge, dist_to_orig, labels_interior, heat_map, subseg, 
             spacing, unit_factor, 
             combine_sides and max_level is None, 
-            label_ids, grouping, df)
+            label_ids, grouping, df, extra_metrics)
         if max_level is None:
             stats.data_frames_to_csv([df], df_path, sort_cols=sort_cols)
         dfs.append(df)
@@ -3840,7 +3847,6 @@ def main():
         # volumes stats
         ref = ontology.load_labels_ref(config.load_labels)
         labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
-        groups_numeric = None
         groups = {}
         if config.groups is not None:
             groups[config.GENOTYPE_KEY] = [
@@ -3848,10 +3854,12 @@ def main():
         # should generally leave uncombined for drawn labels to allow 
         # faster level building, where can combine sides
         combine_sides = config.register_settings["combine_sides"]
+        extra_metric_groups = config.register_settings["extra_metric_groups"]
         volumes_by_id(
             config.filenames, labels_ref_lookup, suffix=config.suffix, 
             unit_factor=unit_factor, groups=groups, 
-            max_level=config.labels_level, combine_sides=combine_sides)
+            max_level=config.labels_level, combine_sides=combine_sides, 
+            extra_metrics=extra_metric_groups)
     
     elif reg is config.RegisterTypes.make_density_images:
         # make density images

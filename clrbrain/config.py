@@ -232,6 +232,13 @@ SmoothingModes = Enum(
     ]
 )
 
+# metric groups
+MetricGroups = Enum(
+    "MetricGroups", [
+        "SHAPES", 
+    ]
+)
+
 # flip/rotate the image; the direction of change can be variable
 flip = None
 
@@ -654,6 +661,10 @@ class RegisterSettings(SettingsDict):
         # when measuring overlap, eg labeled ventricles that would be 
         # background in histology image
         self["overlap_meas_add_lbls"] = None
+        
+        # sequence of :class:`MetricGroups` enums to measure in addition to 
+        # basic metrics
+        self["extra_metric_groups"] = None
 
 def update_register_settings(settings, settings_type):
     
@@ -1020,7 +1031,13 @@ def update_register_settings(settings, settings_type):
             "combinesides", 
             {"combine_sides": True}, 
             profile)
-    
+
+        # more volume stats
+        settings.add_modifier(
+            "morestats",
+            {"extra_metric_groups": (MetricGroups.SHAPES,)},
+            profile)
+
     if verbose:
         print("process settings for {}:\n{}"
               .format(settings["settings_name"], settings))

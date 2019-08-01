@@ -3787,7 +3787,7 @@ def main():
             lib_clrbrain.str_to_disp(
                 os.path.basename(config.filename).replace(
                     config.PATH_SMOOTHING_METRICS, "")))
-        lbls = ("Smoothing Filter Size", "Fractional Change")
+        lbls = ("Fractional Change", "Smoothing Filter Size")
         plot_2d.plot_lines(
             config.filename, SmoothingMetrics.FILTER_SIZE.value, 
             (SmoothingMetrics.COMPACTED.value, 

@@ -36,7 +36,7 @@ env_name=""
 # default .yml files
 ENV_CONFIG="environment.yml"
 ENV_CONFIG_LIGHT="environment_light.yml"
-config_default="$ENV_CONFIG"
+config="$ENV_CONFIG"
 
 build_simple_elastix=0
 lightweight=0
@@ -61,7 +61,7 @@ while getopts hn:slad opt; do
     l)
       lightweight=1
       env_default="$CONDA_ENV_LIGHT"
-      config_default="$ENV_CONFIG_LIGHT"
+      config="$ENV_CONFIG_LIGHT"
       echo "Set to create lightweight (no GUI) environment"
       ;;
     a)
@@ -173,23 +173,20 @@ then
 fi
 
 # create or update Conda environment
-config="$config_default"
-if [[ "$env_name" == "" ]]; then
-  echo "Setting up default Conda environment, $env_default"
-  env_name="$env_default"
-else
-  # change name in environment file with user-defined name
-  echo "Updating environment configuration for $env_name"
-  config="env_${env_name}.yml"
-  sed -e "s/$env_default/$env_name/g" "$config_default" > "$config"
-fi
 check_env="`conda env list | grep -w $env_name`"
 if [[ "$check_env" == "" ]]
 then
+	# create an empty environment before setting channel priority to 
+	# generate an env-specific .condarc file; Python version duplicated in 
+	# .yml for those who want to create env directly from .yml
 	echo "Creating new Conda environment from $config..."
-	conda env create -f "$config"
+	conda create -n "$env_name" python=3.6
+	source activate "$env_name"
+	conda config --env --set channel_priority strict # for mixed channels
+	conda env update -f "$config"
 else
 	echo "$env_name already exists, will update"
+	source activate "$env_name"
 	conda env update -f "$config"
 fi
 
@@ -201,10 +198,7 @@ then
 	echo "$env_name could not be found, exiting."
 	exit 1
 fi
-# need to reload conda script for unclear reasons; assume that 
-# CONDA_PREFIX has already been set by base environment
-#. "$CONDA_PREFIX/etc/profile.d/conda.sh"
-source activate $env_name
+
 
 ############################################
 # Download a shallow Git clone and pip install its Python package.

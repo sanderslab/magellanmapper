@@ -4094,6 +4094,8 @@ def main():
         levels = np.sort(df["Level"].unique())
         conds = df["Condition"].unique()
         for metric in metrics:
+            
+            # get whole brain tissue for normalization 
             cols_show = (*id_cols, cond_col, *extra_cols, metric)
             df_nonbr = None
             if dfs_nonbr_large:
@@ -4107,8 +4109,26 @@ def main():
                 df_base = stats.normalize_df(
                     df_base, id_cols, cond_col, None, [metric], extra_cols, 
                     df_nonbr, stats.df_subtract)
+            df_base.loc[:, "RegionName"] = "Brain tissue"
             print("Brain {}:".format(metric))
             stats.print_data_frame(df_base.loc[:, cols_show], "\t")
+            df_base_piv, regions = stats.pivot_with_conditions(
+                df_base, id_cols, "RegionName", metric)
+            lines_params = {
+                "labels": [metric, "Post-Conceptional Age"], 
+                "linestyles": ("--", "-"), 
+                "size": size, 
+                "show": show, 
+                "ignore_invis": True, 
+                "groups": conds
+            }
+            line_params_norm = lines_params.copy()
+            line_params_norm["labels"][0] = "Fraction"
+            plot_2d.plot_lines(
+                config.filename, "Age", regions, 
+                title="Whole Brain Development ({})".format(metric), 
+                suffix="_dev_{}_brain".format(metric), 
+                df=df_base_piv, **lines_params)
             
             for level in levels:
                 # plot raw metric at given level
@@ -4119,13 +4139,10 @@ def main():
                     df_level, id_cols, "RegionName", metric)
                 plot_2d.plot_lines(
                     config.filename, "Age", regions, 
-                    labels=("Volume", "Post-Conceptional Age"), 
-                    linestyles=("--", "-"), 
                     title="Structure Development ({}, Level {})".format(
                         metric, level),
-                    size=size, show=show, ignore_invis=True,
                     suffix="_dev_{}_level{}".format(metric, level), 
-                    df=df_level_piv, groups=conds)
+                    df=df_level_piv, **lines_params)
                 
                 if df_nonbr is not None:
                     # plot metric normalized to whole brain tissue; structures 
@@ -4140,15 +4157,12 @@ def main():
                         df_norm, id_cols, "RegionName", metric)
                     plot_2d.plot_lines(
                         config.filename, "Age", regions, 
-                        labels=("Fraction", "Post-Conceptional Age"), 
-                        linestyles=("--", "-"), 
                         units=(None, 
                                config.plot_labels[config.PlotLabels.X_UNIT]), 
                         title=("Structure Development Normalized to Whole "
                                "Brain ({}, Level {})".format(metric, level)),
-                        size=size, show=show, ignore_invis=True,
                         suffix="_dev_{}_level{}_norm".format(metric, level), 
-                        df=df_norm_piv, groups=conds)
+                        df=df_norm_piv, **line_params_norm)
 
     elif reg is config.RegisterTypes.plot_lateral_unlabeled:
         # plot lateral edge unlabeled fractions as both lines and bars

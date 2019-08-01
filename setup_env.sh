@@ -265,14 +265,14 @@ if [[ $lightweight -eq 0 ]]; then
   
   pip install -U matplotlib-scalebar
   
-  # Mayavi install says that vtk not directly required and not 
-  # installed, so need to install directly here
-  pip install -U vtk
+  # if Mayavi install says that vtk not directly required and not 
+  # installed, install directly here
+  #pip install -U vtk
   
-  # pyqt 5.9.2 available in Conda gives a blank screen so need to use pip-based 
-  # version, currently 5.10.1 as of 2018-05-10, until Conda version updated; 
-  # Matplotlib in Conda on Linux64 is not compatible with this release, 
-  # however, and will install the Conda package alongside the pip one
+  # pyqt 5.9.2 available in Conda gives a blank screen so need to use nwer 
+  # pip-based version until Conda version is updated; 
+  # Matplotlib in Conda on Linux64 and Mayavi on Mac at least not still 
+  # require Conda pyqt, however, and will install the Conda package as well
   pip install -U PyQt5
   
   # use Conda now that TraitsUI and Pyface 6 available there
@@ -282,7 +282,7 @@ if [[ $lightweight -eq 0 ]]; then
   
   # use Mayavi 4.6 release with Python 3 support
   #install_shallow_clone https://github.com/enthought/mayavi.git
-  pip install -U mayavi
+  #pip install -U mayavi
 fi
 
 # use Scikit-image 0.14 release

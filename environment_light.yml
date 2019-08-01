@@ -1,11 +1,11 @@
 name: clrclu
 channels:
-- defaults
+  - defaults
 dependencies:
-- python=3.6
-- cython
-- numpy
-- scipy
-- matplotlib
-- dask
-- pyamg
+  - python=3.6
+  - cython
+  - numpy
+  - scipy
+  - matplotlib
+  - dask
+  - pyamg

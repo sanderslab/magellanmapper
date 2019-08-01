@@ -34,7 +34,8 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         cmaps: List of colormaps corresponding to each channel. Colormaps 
             can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
-        alpha: Default alpha transparency level.
+        alpha (List[float]): Sequence of transparency levels. If any 
+            value is 0, the corresponding image will not be output. 
         vim: Sequence of vmin levels for each channel; defaults to None.
         vmax: Sequence of vmax levels for each channel; defaults to None.
         origin: Image origin; defaults to None.
@@ -84,10 +85,14 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         if vmax is not None:
             vmax_plane = vmax[chl]
         #print("vmin: {}, vmax: {}".format(vmin_plane, vmax_plane))
-        img_chl = ax.imshow(
-            img2d_show, cmap=cmap, norm=norm, aspect=aspect, alpha=alpha, 
-            vmin=vmin_plane, vmax=vmax_plane, origin=origin, 
-            interpolation=interpolation)
+        img_chl = None
+        if alpha > 0:
+            # skip display if alpha is 0 to avoid outputting a hidden image 
+            # that may show up in other renderers (eg PDf viewers)
+            img_chl = ax.imshow(
+                img2d_show, cmap=cmap, norm=norm, aspect=aspect, alpha=alpha, 
+                vmin=vmin_plane, vmax=vmax_plane, origin=origin, 
+                interpolation=interpolation)
         img.append(img_chl)
         i += 1
     return img

@@ -14,9 +14,17 @@ from clrbrain import stats
 from clrbrain import vols
 
 
-def plot_region_development(size=None, show=True):
+def plot_region_development(metric, size=None, show=True):
+    """Plot regions across development for the given metric.
+    
+    Args:
+        metric (str): Column name of metric to track.
+        size (List[int]): Sequence of ``width, height`` to size the figure; 
+            defaults to None.
+        show (bool): True to display the image; defaults to True.
+
+    """
     # set up access to data frame columns
-    metrics = (vols.LabelMetrics.Volume.name, vols.LabelMetrics.Compactness.name)
     id_cols = ["Age", "Condition"]
     extra_cols = ["RegionName"]
     cond_col = "Region"
@@ -55,74 +63,73 @@ def plot_region_development(size=None, show=True):
 
     levels = np.sort(df["Level"].unique())
     conds = df["Condition"].unique()
-    for metric in metrics:
         
-        # get whole brain tissue for normalization 
-        cols_show = (*id_cols, cond_col, *extra_cols, metric)
-        df_nonbr = None
-        if dfs_nonbr_large:
-            # subtract non-brain tissue structures from whole organism 
-            # to get brain tissue alone, updating given metric in db_base
-            df_nonbr = dfs_nonbr_large[0]
-            for df_out in dfs_nonbr_large[1:]:
-                df_nonbr = stats.normalize_df(
-                    df_nonbr, id_cols, cond_col, None, [metric], 
-                    extra_cols, df_out, stats.df_add)
-            df_base = stats.normalize_df(
-                df_base, id_cols, cond_col, None, [metric], extra_cols, 
-                df_nonbr, stats.df_subtract)
-        df_base.loc[:, "RegionName"] = "Brain tissue"
-        print("Brain {}:".format(metric))
-        stats.print_data_frame(df_base.loc[:, cols_show], "\t")
-        df_base_piv, regions = stats.pivot_with_conditions(
-            df_base, id_cols, "RegionName", metric)
-        lines_params = {
-            "labels": (metric, "Post-Conceptional Age"), 
-            "linestyles": ("--", "-"), 
-            "size": size, 
-            "show": show, 
-            "ignore_invis": True, 
-            "groups": conds, 
-            "marker": ".", 
-        }
-        line_params_norm = lines_params.copy()
-        line_params_norm["labels"] = ("Fraction", "Post-Conceptional Age")
+    # get whole brain tissue for normalization 
+    cols_show = (*id_cols, cond_col, *extra_cols, metric)
+    df_nonbr = None
+    if dfs_nonbr_large:
+        # subtract non-brain tissue structures from whole organism 
+        # to get brain tissue alone, updating given metric in db_base
+        df_nonbr = dfs_nonbr_large[0]
+        for df_out in dfs_nonbr_large[1:]:
+            df_nonbr = stats.normalize_df(
+                df_nonbr, id_cols, cond_col, None, [metric], 
+                extra_cols, df_out, stats.df_add)
+        df_base = stats.normalize_df(
+            df_base, id_cols, cond_col, None, [metric], extra_cols, 
+            df_nonbr, stats.df_subtract)
+    df_base.loc[:, "RegionName"] = "Brain tissue"
+    print("Brain {}:".format(metric))
+    stats.print_data_frame(df_base.loc[:, cols_show], "\t")
+    df_base_piv, regions = stats.pivot_with_conditions(
+        df_base, id_cols, "RegionName", metric)
+    lines_params = {
+        "labels": (metric, "Post-Conceptional Age"), 
+        "linestyles": ("--", "-"), 
+        "size": size, 
+        "show": show, 
+        "ignore_invis": True, 
+        "groups": conds, 
+        "marker": ".", 
+    }
+    line_params_norm = lines_params.copy()
+    line_params_norm["labels"] = ("Fraction", "Post-Conceptional Age")
+    plot_2d.plot_lines(
+        config.filename, "Age", regions, 
+        title="Whole Brain Development ({})".format(metric), 
+        suffix="_dev_{}_brain".format(metric), 
+        df=df_base_piv, **lines_params)
+    
+    for level in levels:
+        # plot raw metric at given level
+        df_level = df.loc[df["Level"] == level]
+        print("Raw {}:".format(metric))
+        stats.print_data_frame(df_level.loc[:, cols_show], "\t")
+        df_level_piv, regions = stats.pivot_with_conditions(
+            df_level, id_cols, "RegionName", metric)
         plot_2d.plot_lines(
             config.filename, "Age", regions, 
-            title="Whole Brain Development ({})".format(metric), 
-            suffix="_dev_{}_brain".format(metric), 
-            df=df_base_piv, **lines_params)
+            title="Structure Development ({}, Level {})".format(
+                metric, level),
+            suffix="_dev_{}_level{}".format(metric, level), 
+            df=df_level_piv, **lines_params)
         
-        for level in levels:
-            # plot raw metric at given level
-            df_level = df.loc[df["Level"] == level]
-            print("Raw {}:".format(metric))
-            stats.print_data_frame(df_level.loc[:, cols_show], "\t")
-            df_level_piv, regions = stats.pivot_with_conditions(
-                df_level, id_cols, "RegionName", metric)
+        if df_nonbr is not None:
+            # plot metric normalized to whole brain tissue; structures 
+            # above removed regions will still contain them 
+            df_brain_level = df_brain.loc[df_brain["Level"] == level]
+            df_norm = stats.normalize_df(
+                df_brain_level, id_cols, cond_col, None, [metric], 
+                extra_cols, df_base)
+            print("{} normalized to whole brain:".format(metric))
+            stats.print_data_frame(df_norm.loc[:, cols_show], "\t")
+            df_norm_piv, regions = stats.pivot_with_conditions(
+                df_norm, id_cols, "RegionName", metric)
             plot_2d.plot_lines(
                 config.filename, "Age", regions, 
-                title="Structure Development ({}, Level {})".format(
-                    metric, level),
-                suffix="_dev_{}_level{}".format(metric, level), 
-                df=df_level_piv, **lines_params)
-            
-            if df_nonbr is not None:
-                # plot metric normalized to whole brain tissue; structures 
-                # above removed regions will still contain them 
-                df_brain_level = df_brain.loc[df_brain["Level"] == level]
-                df_norm = stats.normalize_df(
-                    df_brain_level, id_cols, cond_col, None, [metric], 
-                    extra_cols, df_base)
-                print("{} normalized to whole brain:".format(metric))
-                stats.print_data_frame(df_norm.loc[:, cols_show], "\t")
-                df_norm_piv, regions = stats.pivot_with_conditions(
-                    df_norm, id_cols, "RegionName", metric)
-                plot_2d.plot_lines(
-                    config.filename, "Age", regions, 
-                    units=(None, 
-                           config.plot_labels[config.PlotLabels.X_UNIT]), 
-                    title=("Structure Development Normalized to Whole "
-                           "Brain ({}, Level {})".format(metric, level)),
-                    suffix="_dev_{}_level{}_norm".format(metric, level), 
-                    df=df_norm_piv, **line_params_norm)
+                units=(None, 
+                       config.plot_labels[config.PlotLabels.X_UNIT]), 
+                title=("Structure Development Normalized to Whole "
+                       "Brain ({}, Level {})".format(metric, level)),
+                suffix="_dev_{}_level{}_norm".format(metric, level), 
+                df=df_norm_piv, **line_params_norm)

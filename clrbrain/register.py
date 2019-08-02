@@ -4070,7 +4070,13 @@ def main():
 
     elif reg is config.RegisterTypes.plot_region_dev:
         # plot region development
-        atlas_stats.plot_region_development(size, show)
+        try:
+            metric = vols.LabelMetrics[config.stats_type].name
+            atlas_stats.plot_region_development(metric, size, show)
+        except KeyError:
+            lib_clrbrain.warn(
+                "\"{}\" metric not found in {} for developmental plots"
+                .format(config.stats_type, [e.name for e in vols.LabelMetrics]))
         
     elif reg is config.RegisterTypes.plot_lateral_unlabeled:
         # plot lateral edge unlabeled fractions as both lines and bars

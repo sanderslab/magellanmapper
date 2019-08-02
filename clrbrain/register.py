@@ -1361,16 +1361,17 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     # curate labels
     mask_lbls = None  # mask of fully extended/mirrored labels for cropping
     extis = None  # extension indices of 1st labeled, then unlabeled planes
-    if extend_atlas:
+    if all(extend_atlas.values()):
         # include any lateral extension and mirroring
         img_labels_np, extis, borders_img_np, df_smoothing = (
             _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
                 affine))
     else:
-        # turn off lateral extension and mirroring
+        # turn off lateral extension and/or mirroring
         img_labels_np, _, borders_img_np, df_smoothing = _curate_labels(
-            img_labels, img_atlas, None, None, expand, rotate, smooth, 
+            img_labels, img_atlas, mirror if extend_atlas["mirror"] else None, 
+            edge if extend_atlas["edge"] else None, expand, rotate, smooth, 
             affine)
         if metrics or crop and (mirror is not None or edge is not None):
             print("\nCurating labels with extension/mirroring only "
@@ -1389,7 +1390,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     if affine:
         for aff in affine:
             img_atlas_np = plot_3d.affine_nd(img_atlas_np, **aff)
-    if extend_atlas and mirror is not None:
+    if extend_atlas["mirror"] and mirror is not None:
         # TODO: consider removing dup since not using
         dup = config.register_settings["labels_dup"]
         img_atlas_np = _mirror_planes(
@@ -1495,7 +1496,7 @@ def import_atlas(atlas_dir, show=True):
     # set up condition
     overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]
     extend_atlas = config.register_settings["extend_atlas"]
-    if extend_atlas:
+    if any(extend_atlas.values()):
         cond = "extended" 
     else:
         # show baseline DSC of atlas to labels before any processing
@@ -2329,8 +2330,9 @@ def _mirror_imported_labels(labels_img_np, start):
 
 def _is_profile_mirrored():
     # check if profile is set for mirroring, though does not necessarily
-    # mean that the image itself is mirrored
-    return (config.register_settings["extend_atlas"] and
+    # mean that the image itself is mirrored; allows checking for 
+    # simplification by operating on one half and mirroring to the other
+    return (config.register_settings["extend_atlas"]["mirror"] and
             config.register_settings["labels_mirror"] is not None)
 
 def make_edge_images(path_img, show=True, atlas=True, suffix=None, 

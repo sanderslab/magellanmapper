@@ -4133,7 +4133,7 @@ def main():
             df_base_piv, regions = stats.pivot_with_conditions(
                 df_base, id_cols, "RegionName", metric)
             lines_params = {
-                "labels": [metric, "Post-Conceptional Age"], 
+                "labels": (metric, "Post-Conceptional Age"), 
                 "linestyles": ("--", "-"), 
                 "size": size, 
                 "show": show, 
@@ -4141,7 +4141,7 @@ def main():
                 "groups": conds
             }
             line_params_norm = lines_params.copy()
-            line_params_norm["labels"][0] = "Fraction"
+            line_params_norm["labels"] = ("Fraction", "Post-Conceptional Age")
             plot_2d.plot_lines(
                 config.filename, "Age", regions, 
                 title="Whole Brain Development ({})".format(metric), 

@@ -3248,7 +3248,8 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             img_np = sitk.GetArrayFromImage(img_sitk)
             spacing = img_sitk.GetSpacing()[::-1]
             
-            # load labels in order of priority: full labels > truncated labels
+            # load labels in order of priority: full labels > truncated labels; 
+            # labels are required and will give exception if not found
             try:
                 labels_img_np = load_registered_img(
                     mod_path, reg_name=IMG_LABELS)
@@ -3287,18 +3288,33 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             # load sub-segmentation labels if available
             try:
                 subseg = load_registered_img(
-                    mod_path,reg_name=IMG_LABELS_SUBSEG)
+                    mod_path, reg_name=IMG_LABELS_SUBSEG)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn("will ignore labels sub-segmentations")
             print("tot blobs", np.sum(heat_map))
+            
+            mirror = config.register_settings["labels_mirror"]
+            if mirror is None or mirror == -1: mirror = 0.5
+            mirrori = int(labels_img_np.shape[2] * mirror)
+            half_lbls = labels_img_np[:, :, mirrori:]
+            if (np.sum(half_lbls < 0) == 0 and 
+                    np.sum(half_lbls != 0) > np.sum(labels_img_np != 0) / 3):
+                # unmirrored images may have bilateral labels that are all pos, 
+                # while these metrics assume that R hem is neg; invert pos R 
+                # labels if they are at least 1/3 of total labels and not just 
+                # spillover from the L side into an otherwise unlabeled R
+                print("less than half of labels in right hemisphere are neg; "
+                      "inverting all pos labels in x >= {} (shape {}) for "
+                      "sided metrics".format(mirrori, labels_img_np.shape))
+                half_lbls[half_lbls > 0] *= -1
         
         # prepare sample name with original name for comparison across 
         # conditions and add an arbitrary number of metadata grouping cols
         sample = lib_clrbrain.get_filename_without_ext(img_path)
         if groups is not None:
-             for key in groups.keys():
-                 grouping[key] = groups[key][i]
+            for key in groups.keys():
+                grouping[key] = groups[key][i]
             
         # measure stats per label for the given sample; max_level already 
         # takes care of combining sides

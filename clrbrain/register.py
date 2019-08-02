@@ -4138,7 +4138,8 @@ def main():
                 "size": size, 
                 "show": show, 
                 "ignore_invis": True, 
-                "groups": conds
+                "groups": conds, 
+                "marker": ".", 
             }
             line_params_norm = lines_params.copy()
             line_params_norm["labels"] = ("Fraction", "Post-Conceptional Age")

@@ -485,7 +485,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None, 
                title=None, size=None, show=True, suffix=None, 
                colors=None, df=None, groups=None, ignore_invis=False, 
-               units=None):
+               units=None, marker=None):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -523,7 +523,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             such as those with only a single value; defaults to False.
         units (List[str]): ``(y_unit, x_unit)`` to display; defaults 
             to None to use :attr:`config.plot_labels`. Can explicitly set a 
-            value to None to prevent unit display. 
+            value to None to prevent unit display.
+        marker (str): Marker style for points; defaults to None.
     """
 
     def to_ignore(arr):
@@ -562,7 +563,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             if to_ignore(df_col): continue
             lines.extend(ax.plot(
                 x, df_col, color=colors[i], linestyle=linestyles[i],
-                label=label))
+                label=label, marker=marker))
         else:
             # prioritize solid line for main legend
             labelj = linestyles.index("-") if "-" in linestyles else 0
@@ -572,7 +573,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                 if to_ignore(df_group): continue
                 lines_group = ax.plot(
                     x, df_group, color=colors[i], linestyle=linestyles[j],
-                    label=label)
+                    label=label, marker=marker)
                 if j == labelj:
                     # add first line to main legend
                     lines.extend(lines_group)

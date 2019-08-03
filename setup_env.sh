@@ -173,7 +173,7 @@ if [[ "$check_env" == "" ]]; then
   # generate an env-specific .condarc file; Python version duplicated in 
   # .yml for those who want to create env directly from .yml
   echo "Creating new Conda environment from $config..."
-  conda create -n "$env_name" python=3.6
+  conda create -y -n "$env_name" python=3.6
   source activate "$env_name"
   conda config --env --set channel_priority strict # for mixed channels
   conda env update -f "$config"
@@ -296,7 +296,7 @@ cd "$BASE_DIR"
 
 if [[ $build_simple_elastix -eq 1 ]]; then
   # build and install SimpleElastix, replacing SimpleITK
-  pip uninstall simpleitk
+  pip uninstall -y simpleitk
   ./build_se.sh -i
 fi
 

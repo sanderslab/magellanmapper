@@ -303,12 +303,9 @@ cd "$BASE_DIR"
 
 if [ $build_simple_elastix -eq 1 ]
 then
-  # build and install SimpleElastix
+  # build and install SimpleElastix, replacing SimpleITK
+  pip uninstall simpleitk
   ./build_se.sh -i
-elif [[ $lightweight -eq 0 ]]; then
-  # install SimpleITK if not installing SimpleElastix and not a 
-  # lightweight install to allow opening files through SimpleITK
-  conda install -y -c simpleitk simpleitk
 fi
 
 if [[ $aws -eq 1 ]]; then

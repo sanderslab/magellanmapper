@@ -263,37 +263,6 @@ ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
 
 ## Troubleshooting
 
-### Java installation for Python-Bioformats/Javabridge
-
-- Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
-- You may need to set up the JAVA\_HOME and JDK\_HOME environment variables in your `~/.bash_profile` or `~/.bashrc` files, such as:
-
-```
-# for a specific JDK installation
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home
-# or for the latest JDK you have installed
-export JAVA_HOME="$(/usr/libexec/java_home)"
-# then add to JDK_HOME and your path
-export JDK_HOME="$JAVA_HOME"
-export "PATH=$JAVA_HOME/bin:$PATH"
-```
-
-- Or add to the Windows Environment Variables "Path"
-- Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141) in the Python-Javabridge dependency
-- Java 11 similarly changed other Java locations, also fixed in Python-Javabridge
-- `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step; if you don't know whether Java is installed, run `java` from the command-line to check and install any Java 8+ (eg from [OpenJDK](http://openjdk.java.net/), not the default Mac installation) if necessary
-
-### Command Line Tools setup (Mac)
-
-- `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated. If you get:
-
-```
-xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), \
-missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
-```
-
-- The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading [Xcode directly](https://developer.apple.com/download/), then run `sudo xcodebuild -license` to accept the license agreement.
-
 ### Installation on Windows
 
 Currently Clrbrain uses many Bash scripts, which require Cygwin or more recently Windows Subsystem for Linux (WSL) to run. Theoretically Clrbrain most likely could run without them, which we will need to test.
@@ -357,6 +326,36 @@ Additional errors:
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04
 - PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
 
+### Java installation for Python-Bioformats/Javabridge
+
+- Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
+- You may need to set up the JAVA\_HOME and JDK\_HOME environment variables in your `~/.bash_profile` or `~/.bashrc` files, such as:
+
+```
+# for a specific JDK installation
+export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home
+# or for the latest JDK you have installed
+export JAVA_HOME="$(/usr/libexec/java_home)"
+# then add to JDK_HOME and your path
+export JDK_HOME="$JAVA_HOME"
+export "PATH=$JAVA_HOME/bin:$PATH"
+```
+
+- Or add to the Windows Environment Variables "Path"
+- Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141) in the Python-Javabridge dependency
+- Java 11 similarly changed other Java locations, also fixed in Python-Javabridge
+- `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step; if you don't know whether Java is installed, run `java` from the command-line to check and install any Java 8+ (eg from [OpenJDK](http://openjdk.java.net/), not the default Mac installation) if necessary
+
+### Command Line Tools setup (Mac)
+
+- `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated. If you get:
+
+```
+xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), \
+missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
+```
+
+- The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading [Xcode directly](https://developer.apple.com/download/), then run `sudo xcodebuild -license` to accept the license agreement.
 
 ### Image Stitching
 

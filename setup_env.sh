@@ -96,8 +96,7 @@ fi
 
 # Dependencies checks
   
-if ! command -v "javac" &> /dev/null
-then
+if ! command -v "javac" &> /dev/null; then
   # check for Java compiler availability for Javabridge
   echo "Warning: \"javac\" not found; Python-Bioformats and Python-Javabridge"
   echo "will ot install correctly. Please install a JDK or add JDK_HOME or"
@@ -120,8 +119,7 @@ if [[ "$os" == "MacOSX" ]]; then
   fi
 fi
 
-if ! command -v "gcc" &> /dev/null
-then
+if ! command -v "gcc" &> /dev/null; then
   # check for gcc availability for compiling Scikit-image (if directly from 
   # repo), Traits (if not from Conda), and Javabridge
   echo "Warning: \"gcc\" not found; installations that require compilation"
@@ -129,8 +127,7 @@ then
   echo "compilation, please install \"gcc\"."
 fi
 
-if ! command -v "git" &> /dev/null
-then
+if ! command -v "git" &> /dev/null; then
   # check for git availability for downloading repos for any installs 
   # from Git repos
   echo "Warning: \"git\" not found; installations that require repository"
@@ -140,14 +137,12 @@ fi
 
 
 # check for Anaconda installation and download/install if not found
-if ! command -v "conda" &> /dev/null
-then
+if ! command -v "conda" &> /dev/null; then
   echo "Downloading and installing Miniconda..."
   PLATFORM=$os-$bit
   MINICONDA="Miniconda3-latest-$PLATFORM.${ext}"
   CONDA_URL=https://repo.continuum.io/miniconda/$MINICONDA
-  if [[ "$os" == "MacOSX" ]]
-  then
+  if [[ "$os" == "MacOSX" ]]; then
     curl -O "$CONDA_URL"
   else
     wget "$CONDA_URL"
@@ -173,8 +168,7 @@ fi
 
 # create or update Conda environment
 check_env="`conda env list | grep -w $env_name`"
-if [[ "$check_env" == "" ]]
-then
+if [[ "$check_env" == "" ]]; then
   # create an empty environment before setting channel priority to 
   # generate an env-specific .condarc file; Python version duplicated in 
   # .yml for those who want to create env directly from .yml
@@ -192,8 +186,7 @@ fi
 # check that the environment was created and activate it
 echo "Checking and activating conda environment..."
 check_env="`conda env list | grep -w $env_name`"
-if [[ "$check_env" == "" ]]
-then
+if [[ "$check_env" == "" ]]; then
   echo "$env_name could not be found, exiting."
   exit 1
 fi
@@ -301,8 +294,7 @@ pip install -U python-bioformats==1.1.0
 cd "$BASE_DIR"
 
 
-if [ $build_simple_elastix -eq 1 ]
-then
+if [[ $build_simple_elastix -eq 1 ]]; then
   # build and install SimpleElastix, replacing SimpleITK
   pip uninstall simpleitk
   ./build_se.sh -i

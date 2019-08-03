@@ -11,49 +11,91 @@ Currently access is limited to a private Git repo. Our eventual plan is to make 
 - Download the repo: `git clone git@bitbucket.org:psychcore/clrbrain.git`
 
 ## Installation
-```
-./setup_env.sh
-```
-The setup script will install the following:
 
-- [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python, will be installed if an existing installation isn't found
-- A `clr3` environment with Python 3
+We provide setup scripts to create a separate environiment with all the required dependencies. The simplest pathway is to use our script for installation via Anaconda/Miniconda.
+
+Setup scripts assume a Bash environment (standard on Mac, Linux; via WSL, MSYS2, or Cygwin on Windows). See below for alternative installations in other shells (eg Windows Command Prompt).
+
+### Conda
+
+```
+./setup_conda.sh
+```
+
+Run this command from the `clrbrain` folder to install the following dependencies:
+
+- If not already installed: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
+- A `clr3` Conda environment with Python 3
 - Scipy, Numpy, Matplotlib stack
-- Mayavi and TraitsUI stack for GUI and 3D visualization; note that Mayavi currently requires a graphical environment to install
+- Mayavi and TraitsUI stack for GUI and 3D visualization (optional, use the `-l` ("L") to create a lightweight environment without the Mayavi stack)
 - Scikit-image for image processing
-- Pandas for stats I/O
+- Pandas for stats
 - SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
+- Python-Bioformats and Python-Javabridge for importing images from propriety formast such as `.czi` (optional, ok if install fails)
 
-If an unreleased Python dependency update is required, it will be downloaded as shallow Git clones into the parent folder of Clrbrain (ie alongside rather than inside Clrbrain) and pip installed.
+### Venv
 
-To install/run without a GUI, run a lightweight setup, `./setup_env.sh -l` ("L" arg), which avoids the Mayavi stack.
+```
+./setup_venv.sh
+```
 
-### SimpleITK/SimpleElastix dependency
+This setup script will check and install the following dependencies:
 
-SimpleElastix is used for registration tasks in Clrbrain. The library is not currently available in Pip and must be built manually.
+- Checks for an existing Python 3.6+ install, which already include Venv
+- Pip installs packages in `requirements.txt`
+- Installs SimpleITK or SimpleElastix
 
-Running the environment setup with `./setup_env.sh -s` will attempt to build and install SimpleElastix during setup. Without the `-s` flag, setup will fallback to installing SimpleITK, from which SimpleElastix is derived, to allow opening many 3D image formats such as `.mhd/.raw` and `.nii` files.
+### Installation Without Bash Scripts
 
-To build and install SimpleElastix manually, the `build_se.sh` script can be called directly. Be sure to uninstall SimpleITK from the environment (`pip uninstall SimpleITK`) before installing SimpleElastix to avoid a conflict.
+You can also install Clrbrain these ways:
 
-### Additional Build/Runtime Dependencies
+- In a Python environment of your choice or none at all, run `pip install -r requirements.txt`
+- In a Conda environment, run `conda env create -n [name] environment.yml`, where `name` is your chosen environment name
+- If you have manually installed the dependencies, run `python setup.py install`
 
-#### Recommended (not required)
+### Optional Dependency Build and Runtime Requirements
 
-- Java SDK, tested on v8-11, for importing image files from proprietary formats (eg `.czi`) and the ImageJ-based stitching pipeline (ImageJ currently requires Java 8)
-- ImageJ/Fiji for image stitching via the BigSticher plugin
-- R for statistical models
+In most cases Clrbrain can be installed without a compiler or non-Python libraries. A few optional dependencies that require these resources provide added functionality.
 
-#### Optional
+#### Dependencies requiring a compilier
 
-- GCC or related compilers for compiling SimpleElastix or any unreleased dependencies
-- Git for downloading unreleased dependencies as above
+- Python-Javabridge, used with Python-Bioformats to import image files from proprietary formats (eg `.czi`)
+- Traits via Pip/PyPI (not required for Conda package), for GUI
+- SimpleElastix (see below)
+
+Compilers by platform:
+
+- Mac and Linux: `gcc`/`clang`
+- Windows: Microsoft Visual Studio Build Tools (tested on 2017, 2019) along with Windows 10 SDK, CMake, and C++/CLI support components
+
+#### Dependencies requiring Java
+
+- Python-Javabridge, tested on v8-12
+- ImageJ/Fiji-based stitching pipeline via the BigSticher plugin (ImageJ currently requires Java 8)
+
+#### Dependencies requiring Git
+
+- We install Python-Javabridge via Git to support Java 12+
+- At times we install other bleeding-edge, unreleased dependency versions via Git
+
+#### Additional optional packages
+
+- R for additional stats
 - Zstd (fallback to Zip) for compression on servers
 - MeshLab for 3D surface clean-up
 
+#### SimpleElastix dependency
+
+SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in Clrbrain. The library is not currently available in Pip and must be built manually. As the buid process is not trivial, we install SimpleITK by default since SimpleElastix was forked from SimpleITK, and it contains all but the registration functions accessed in Clrbrain.
+
+To ease the build process for just the SimpleElastix Python wrapper, we provide a couple build scripts:
+
+- Mac or Linux: Run the environment setup with `./setup_env.sh -s` to build and install SimpleElastix during setup using the `build_se.sh` script. SimpleElastix can also be built after envrionment setup by running this script within the environment. Be sure to uninstall SimpleITK from the environment (`pip uninstall simpleitk`) before installing SimpleElastix to avoid a conflict. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
+- Windows: Run `build_se.bat` within your environment. See above for required Windows compiler components.
+
 ### Tested Platforms
 
-Clrbrain has been tested to build and run on:
+Clrbrain has been built and tested to buildon:
 
 - MacOS, tested on 10.11-10.14
 - Linux, tested on RHEL 7.4-7.5, Ubuntu 18.04
@@ -64,23 +106,20 @@ Clrbrain has been tested to build and run on:
 
 ## Run Clrbrain
 
-Clrbrain can be run as a GUI or headlessly for desktop or server tasks, respectively. To start Clrbrain:
-
-- Open a new terminal if you just installed Miniconda
-- Run the script:
+Clrbrain can be run as a GUI or headlessly for desktop or server tasks, respectively. To start Clrbrain, run (assuming a Conda environment):
 
 ```
 source activate clr3
-./runclrbrain.sh -i [path_to_your_image]
+./run --img [path_to_your_image]
 ```
-
-`runclrbrain.sh` is a script to run many pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. The default pipeline will open the Clrbrain GUI.
 
 Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
 
+You can also use `pipelines.sh`, a script to run many automated pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. See below for more details.
+
 ## 3D viewer
 
-The main Clrbrain GUI displays a 3D viewer and ROI selection controls. Clrbrain uses Mayavi for 3D voxel or surface rendering.
+The main Clrbrain GUI displays a 3D viewer and region of interest (ROI) selection controls. Clrbrain uses Mayavi for 3D voxel or surface rendering.
 
 From the ROI selection controls, two different 2D editors can be opened. All but the last `2D styles` option open various forms of the Nuclei Annotation Editor. The final option opens the Atlas Editor, a 2D/3D viewer.
 
@@ -190,6 +229,16 @@ Deploy the Clrbrain folder and supporting files:
 - To only update an existing Clrbrain directory on the server, add `-u`
 - To add multiple files or folders such as `.aws` credentials, use the `-d` option as many times as you'd like
 
+Setup drives on a new server instance:
+
+```
+./setup_server.sh -d [path_to_data_device] -w [path_to_swap_device] \
+    -f [size_of_swap_file] -u [username]
+```
+
+- Format and mount data and swap drives
+- Create swap files
+
 #### Run Clrbrain on server
 
 Log into your instance and run the Clrbrain pipeline of choice.
@@ -207,42 +256,43 @@ ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
 - Run a pipeline, such as this command to fully process a multi-tile image with tile stitching, import to Numpy array, and cell detection, with AWS S3 import/export and Slack notifications along the way, followed by server clean-up/shutdown:
 
 ```
-clrbrain/process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh \
+./process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh \
   -i "/data/HugeImage.czi" -a "my/s3/bucket" -n \
   "https://hooks.slack.com/services/my/incoming/webhook" -p full -c
 ```
 
 ## Troubleshooting
 
-### Java installation
+### Java installation for Python-Bioformats/Javabridge
 
-- Tested on Java 8-12 SE
 - Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
-- You may need to set up the JAVA_HOME environment variable in your `~/.bash_profile` or `~/.bashrc` file, such as:
+- You may need to set up the JAVA\_HOME and JDK\_HOME environment variables in your `~/.bash_profile` or `~/.bashrc` files, such as:
 
 ```
 # for a specific JDK installation
 export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_111.jdk/Contents/Home
 # or for the latest JDK you have installed
 export JAVA_HOME="$(/usr/libexec/java_home)"
-# then add to your path
-export "PATH=$JAVA_HOME:$PATH"
+# then add to JDK_HOME and your path
+export JDK_HOME="$JAVA_HOME"
+export "PATH=$JAVA_HOME/bin:$PATH"
 ```
 
+- Or add to the Windows Environment Variables "Path"
 - Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141) in the Python-Javabridge dependency
 - Java 11 similarly changed other Java locations, also fixed in Python-Javabridge
 - `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step; if you don't know whether Java is installed, run `java` from the command-line to check and install any Java 8+ (eg from [OpenJDK](http://openjdk.java.net/), not the default Mac installation) if necessary
 
 ### Command Line Tools setup (Mac)
 
-- As of Clrbrain v0.8.0, `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated. If you get:
+- `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated. If you get:
 
 ```
 xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), \
 missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
 ```
 
-- The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading Xcode directly from https://developer.apple.com/download/, then run `sudo xcodebuild -license` to accept the license agreement.
+- The Command Line Tools package on Mac may need to be installed or updated. Try `xcode-select --install` to install Xcode. If you get an error (eg "Can't install the software because it is not currently available from the Software Update server"), try downloading [Xcode directly](https://developer.apple.com/download/), then run `sudo xcodebuild -license` to accept the license agreement.
 
 ### Installation on Windows
 

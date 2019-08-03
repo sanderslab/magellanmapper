@@ -96,8 +96,8 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -e "${build_dir}/${PKG}" ]]; then
     -DCMAKE_C_COMPILER:STRING=/usr/bin/$compiler_c \
     -DWRAP_JAVA:BOOL=OFF -DWRAP_LUA:BOOL=OFF \
     -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF \
-    -DWRAP_TCL:BOOL=OFF \
-    -DSimpleITK_PYTHON_USE_VIRTUALENV:BOOL=OFF \
+    -DWRAP_TCL:BOOL=OFF -DWRAP_CSHARP:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF \
+    -DBUILD_TESTING:BOOL=OFF -DSimpleITK_PYTHON_USE_VIRTUALENV:BOOL=OFF \
     ../SimpleElastix/SuperBuild
   
   # change to -j1 for debugging to avoid multiple processes

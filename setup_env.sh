@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sets up the Clrbrain environment
-# Author: David Young 2017, 2018
+# Author: David Young 2017, 2019
 
 HELP="
 Sets up the initial Clrbrain environment with Anaconda and all
@@ -256,6 +256,7 @@ install_shallow_clone() {
   cd ..
 }
 
+: '
 # pip dependencies that are not available in Conda, some of which are 
 # git-pip installed from Clrbrain parent directory
 cd ..
@@ -295,6 +296,7 @@ pip install git+https://github.com/LeeKamentsky/python-javabridge.git
 
 # need older version since ver > 1.1 give heap space error
 pip install -U python-bioformats==1.1.0
+'
 
 cd "$BASE_DIR"
 

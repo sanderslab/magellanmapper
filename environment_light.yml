@@ -2,9 +2,13 @@ channels:
   - defaults
 dependencies:
   - python=3.6
+  - pip
   - cython
   - numpy
   - scipy
   - matplotlib
   - dask
   - pyamg
+  - pip:
+    - "git+https://github.com/LeeKamentsky/python-javabridge.git"
+    - python-bioformats==1.1.0

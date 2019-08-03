@@ -13,6 +13,6 @@ dependencies:
   - pip:
     - matplotlib-scalebar
     - PyQt5
+    - simpleitk
     - "git+https://github.com/LeeKamentsky/python-javabridge.git"
     - python-bioformats==1.1.0
-    - simpleitk

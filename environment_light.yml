@@ -10,6 +10,6 @@ dependencies:
   - dask
   - pyamg
   - pip:
+    - simpleitk
     - "git+https://github.com/LeeKamentsky/python-javabridge.git"
     - python-bioformats==1.1.0
-    - simpleitk

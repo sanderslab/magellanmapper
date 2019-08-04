@@ -27,11 +27,11 @@ Run this command from the `clrbrain` folder to install the following dependencie
 - If not already installed: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
 - A `clr3` Conda environment with Python 3
 - Scipy, Numpy, Matplotlib stack
-- Mayavi and TraitsUI stack for GUI and 3D visualization (optional, use the `-l` ("L") to create a lightweight environment without the Mayavi stack)
+- Mayavi/TraitsUI/Qt stack for GUI and 3D visualization (optional, use the `-l` ("L") flag to create a lightweight environment without this stack)
 - Scikit-image for image processing
 - Pandas for stats
 - SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
-- Python-Bioformats and Python-Javabridge for importing images from propriety formast such as `.czi` (optional, ok if install fails)
+- Python-Bioformats/Javabridge for importing images from propriety formast such as `.czi` (optional, requires Java SDK and C compiler, ok if install fails)
 
 ### Venv
 
@@ -42,12 +42,12 @@ Run this command from the `clrbrain` folder to install the following dependencie
 This setup script will check and install the following dependencies:
 
 - Checks for an existing Python 3.6+ install, which already include Venv
-- Pip installs packages in `requirements.txt`
+- Pip installs packages in `requirements.txt` (requires a C compiler for some dependencies, see below)
 - Installs SimpleITK or SimpleElastix
 
 ### Installation Without Bash Scripts
 
-You can also install Clrbrain these ways:
+You can also install Clrbrain these ways in the shell and Python environment of your choice:
 
 - In a Python environment of your choice or none at all, run `pip install -r requirements.txt`
 - In a Conda environment, run `conda env create -n [name] environment.yml`, where `name` is your chosen environment name
@@ -55,7 +55,7 @@ You can also install Clrbrain these ways:
 
 ### Optional Dependency Build and Runtime Requirements
 
-In most cases Clrbrain can be installed without a compiler or non-Python libraries. A few optional dependencies that require these resources provide added functionality.
+In most cases Clrbrain can be installed without a compiler or non-Python libraries. A few **optional** dependencies that require these resources provide added functionality.
 
 #### Dependencies requiring a compilier
 
@@ -63,7 +63,7 @@ In most cases Clrbrain can be installed without a compiler or non-Python librari
 - Traits via Pip/PyPI (not required for Conda package), for GUI
 - SimpleElastix (see below)
 
-Compilers by platform:
+Compilers used by dependencies, by platform:
 
 - Mac and Linux: `gcc`/`clang`
 - Windows: Microsoft Visual Studio Build Tools (tested on 2017, 2019) along with Windows 10 SDK, CMake, and C++/CLI support components

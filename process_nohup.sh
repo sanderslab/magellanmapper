@@ -17,10 +17,12 @@ Arguments:
     to \"out.txt\".
   -o: Pass the output file as an argument (eg \"-o file.txt\"), 
     prepended to the extra arguments after its first arg.
+  -q: Quiet mode to not show nohup log output.
 "
 
 dest="out.txt"
 pass_output=0
+quiet=0
 
 # run from parent directory
 BASE_DIR="`dirname $0`"
@@ -28,16 +30,19 @@ cd "$BASE_DIR"
 echo $PWD
 
 OPTIND=1
-while getopts hd:o opt; do
+while getopts hd:oq opt; do
   case $opt in
     h)  echo "$HELP"
       exit 0
       ;;
     d)  dest="$OPTARG"
-      echo "Set destination output path to $DEST"
+      echo "Set destination output path to $dest"
       ;;
     o)  pass_output=1
       echo "Set to pass output file to command that nohup will run"
+      ;;
+    q)  quiet=1
+      echo "Set to be quiet"
       ;;
     :)  echo "Option -$OPTARG requires an argument"
       exit 1
@@ -81,13 +86,17 @@ fi
 nohup $EXTRA_ARGS > "$out_path" 2>&1 &
 PID_NOHUP=$!
 echo "Started \"$EXTRA_ARGS\" in nohup (PID $PID_NOHUP)"
-tail -f "$out_path" &
-PID_TAIL=$!
 
-# in case process does in fact complete during this session, 
-# notify the user of completion
-while ps -p $PID_NOHUP > /dev/null; do
-  sleep 1
-done
-kill $PID_TAIL
-echo "$PID_NOHUP completed, exiting."
+if [[ "$quiet" -eq 0 ]]; then
+  # show continuous updates from nohup log file
+  tail -f "$out_path" &
+  PID_TAIL=$!
+  
+  # in case process does in fact complete during this session, 
+  # notify the user of completion
+  while ps -p $PID_NOHUP > /dev/null; do
+    sleep 1
+  done
+  kill $PID_TAIL
+  echo "$PID_NOHUP completed, exiting."
+fi

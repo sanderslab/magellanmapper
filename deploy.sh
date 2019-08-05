@@ -16,8 +16,6 @@ Arguments:
   -f: Update Fiji/ImageJ. Assume that it has already been deployed.
   -g [git_hash]: Archive and upload the given specific Git commit; 
       otherwise, defaults to HEAD.
-  -q: Quiet mode, which will suppress ssh output and cause the 
-      script to return immediately.
   -r [path]: Run script path to pipe and execute via SSH after all 
       uploads and other commands.
   -n [username]: Username on server. Defaults to ec2-user.
@@ -38,7 +36,7 @@ cd "$base_dir"
 echo $PWD
 
 OPTIND=1
-while getopts hi:p:ufr:d:g:qn: opt; do
+while getopts hi:p:ufr:d:g:n: opt; do
   case $opt in
     h)  echo $HELP
       exit 0
@@ -63,9 +61,6 @@ while getopts hi:p:ufr:d:g:qn: opt; do
       ;;
     g)  git_hash="$OPTARG"
       echo "Using $git_hash as git hash"
-      ;;
-    q)  quiet=1
-      echo "Set to be quiet"
       ;;
     n)  username="$OPTARG"
       echo "Changing username to $username"
@@ -115,21 +110,11 @@ echo -e "\nCommand to execute on server:"
 echo "$server_cmd"
 echo ""
 
-# run remote script on server
-run_remote_script() {
-  ssh -i "$pem" "${username}@${ip}" "bash -s" < "$run_script"
-}
-
 # execute upload and server commands
 scp -i "$pem" -r ${deploy_files[@]} "${username}@${ip}":~
 ssh -i "$pem" "${username}@${ip}" "$server_cmd"
 
 if [[ "$run_script" != "" ]]; then
   # pipe and execute custom script via SSH
-  if [[ $quiet -eq 0 ]]; then
-    run_remote_script
-  else
-    # suppress output and return immediately
-    run_remote_script >&- 2>&- <&- &
-  fi
+  ssh -i "$pem" "${username}@${ip}" "bash -s" < "$run_script"
 fi

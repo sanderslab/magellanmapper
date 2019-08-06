@@ -188,7 +188,8 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         cmap[:end, :3] = colors_default[:end]
     return cmap
 
-def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False):
+def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False, 
+                                 use_orig_labels=False):
     """Get a default discrete colormap for a labels image, assuming that 
     background is 0, and the seed is determined by :attr:``config.seed``.
     
@@ -198,13 +199,20 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False):
             to turn on background fully.
         dup_for_neg: True to duplicate positive labels as negative 
             labels; defaults to False.
+        use_orig_labels (bool): True to use original labels from 
+            :attr:`config.labels_img_orig` if available, falling back to 
+            ``labels_img``. Defaults to False.
     
     Returns:
         :class:``DiscreteColormap`` object with a separate color for 
         each unique value in ``labels_img``.
     """
+    lbls = labels_img
+    if use_orig_labels and config.labels_img_orig is not None:
+        # use original labels if available for mapping consistency
+        lbls = config.labels_img_orig
     return DiscreteColormap(
-        labels_img, config.seed, 255, False, 150, 50, 
+        lbls, config.seed, 255, False, 150, 50, 
         (0, (0, 0, 0, alpha_bkgd)), dup_for_neg)
 
 def get_borders_colormap(borders_img, labels_img, cmap_labels):

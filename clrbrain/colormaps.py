@@ -9,7 +9,6 @@ from matplotlib import cm
 from matplotlib import colors
 
 from clrbrain import config
-from clrbrain import lib_clrbrain
 
 # default colormaps, with keys backed by config.Cmaps enums
 CMAPS = {}

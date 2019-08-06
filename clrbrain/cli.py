@@ -82,23 +82,17 @@ Attributes:
 """
 
 import os
-import sys
 import argparse
-from time import time
-import multiprocessing as mp
 import numpy as np
 import pandas as pd
 
 from clrbrain import roi_editor
-from clrbrain import chunking
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import sqlite
-from clrbrain import plot_3d
 from clrbrain import detector
-from clrbrain import chunking
 from clrbrain import mlearn
 from clrbrain import ontology
 from clrbrain import stack_detect

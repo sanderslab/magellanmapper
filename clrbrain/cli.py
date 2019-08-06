@@ -95,6 +95,7 @@ from clrbrain import sqlite
 from clrbrain import detector
 from clrbrain import mlearn
 from clrbrain import ontology
+from clrbrain import register
 from clrbrain import stack_detect
 from clrbrain import stats
 from clrbrain import transformer
@@ -761,12 +762,9 @@ def process_file(filename_base, offset, roi_size):
     
     if config.load_labels is not None:
         # load registered files including labels
-        from clrbrain import register
-        
-        suffixes = config.reg_suffixes
         
         # main image is currently required since many parameters depend on it
-        atlas_suffix = suffixes[config.RegSuffixes.ATLAS]
+        atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
         if atlas_suffix is None and image5d is None:
             # fallback to atlas if main image not already loaded
             atlas_suffix = register.IMG_ATLAS
@@ -776,7 +774,7 @@ def process_file(filename_base, offset, roi_size):
                 config.filename, reg_name=atlas_suffix)
             image5d = image5d[None]
         
-        annotation_suffix = suffixes[config.RegSuffixes.ANNOTATION]
+        annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
         if annotation_suffix is not None:
             # load labels image, set up scaling, and load labels file, 
             # using prefix for registered files if given
@@ -798,7 +796,7 @@ def process_file(filename_base, offset, roi_size):
             except FileNotFoundError as e:
                 print(e)
         
-        borders_suffix = suffixes[config.RegSuffixes.BORDERS]
+        borders_suffix = config.reg_suffixes[config.RegSuffixes.BORDERS]
         if borders_suffix is not None:
             # load borders image, which can also be another labels image
             try:

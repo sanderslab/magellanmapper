@@ -804,6 +804,18 @@ def process_file(filename_base, offset, roi_size):
                     config.filename, reg_name=borders_suffix)
             except FileNotFoundError as e:
                 print(e)
+        
+        if config.atlas_labels[config.AtlasLabels.ORIG_COLORS]:
+            # load original labels image from same directory as ontology 
+            # file for consistent ID-color mapping, even if labels are missing
+            try:
+                config.labels_img_orig = register.load_registered_img(
+                    config.load_labels, reg_name=register.IMG_LABELS)
+            except FileNotFoundError as e:
+                print(e)
+                lib_clrbrain.warn(
+                    "could not load original labels image; colors may differ"
+                    "differ from it")
     
     load_rot90 = config.process_settings["load_rot90"]
     if load_rot90:

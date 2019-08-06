@@ -167,14 +167,17 @@ verified_db = None # automated verifications DB
 # atlas label keys for command-line parsing
 AtlasLabels = Enum(
     "AtlasLabels", (
-        "PATH_REF", "LEVEL", "ID" 
+        "PATH_REF", "LEVEL", "ID", "ORIG_COLORS" 
     )
 )
+# default to load original labels image if available for ID-color mapping
 atlas_labels = dict.fromkeys(AtlasLabels, None)
+atlas_labels[AtlasLabels.ORIG_COLORS] = 1
 
 # reference atlas labels
 load_labels = None
-labels_img = None # in Numpy format
+labels_img = None  # in Numpy format
+labels_img_orig = None  # in Numpy format
 labels_scaling = None
 labels_ref_lookup = None
 labels_level = None

@@ -66,7 +66,9 @@ In most cases Clrbrain can be installed without a compiler or non-Python librari
 Compilers used by dependencies, by platform:
 
 - Mac and Linux: `gcc`/`clang`
-- Windows: Microsoft Visual Studio Build Tools (tested on 2017, 2019) along with Windows 10 SDK, CMake, and C++/CLI support components
+- Windows: Microsoft Visual Studio Build Tools (tested on 2017, 2019) along with these components:
+  - MSVC C++ x64/x86 build tools
+  - Windows 10 SDK
 
 #### Dependencies requiring Java
 
@@ -91,11 +93,11 @@ SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.ni
 To ease the build process for just the SimpleElastix Python wrapper, we provide a couple build scripts:
 
 - Mac or Linux: Run the environment setup with `./setup_env.sh -s` to build and install SimpleElastix during setup using the `build_se.sh` script. SimpleElastix can also be built after envrionment setup by running this script within the environment. Be sure to uninstall SimpleITK from the environment (`pip uninstall simpleitk`) before installing SimpleElastix to avoid a conflict. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
-- Windows: Run `build_se.bat` within your environment. See above for required Windows compiler components.
+- Windows: Run `build_se.bat` within your environment. See above for required Windows compiler components. Note that CMake 3.14 in the MSVC 2019 build tools package has not worked for us, but CMake 3.15 from the official download site has worked.
 
 ### Tested Platforms
 
-Clrbrain has been built and tested to buildon:
+Clrbrain has been built and tested to build on:
 
 - MacOS, tested on 10.11-10.14
 - Linux, tested on RHEL 7.4-7.5, Ubuntu 18.04

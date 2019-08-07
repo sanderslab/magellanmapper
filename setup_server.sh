@@ -39,7 +39,7 @@ swapfile_size=""
 OPTIND=1
 while getopts hslw:d:u:f: opt; do
   case $opt in
-    h)  echo $HELP
+    h)  echo "$HELP"
       exit 0
       ;;
     s)  setup=1

@@ -38,7 +38,7 @@ echo $PWD
 OPTIND=1
 while getopts hi:p:ufr:d:g:n: opt; do
   case $opt in
-    h)  echo $HELP
+    h)  echo "$HELP"
       exit 0
       ;;
     i)  ip="$OPTARG"

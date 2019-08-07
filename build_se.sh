@@ -24,7 +24,7 @@ install_wrapper=0
 OPTIND=1
 while getopts hid: opt; do
   case $opt in
-    h)  echo $HELP
+    h)  echo "$HELP"
       exit 0
       ;;
     d)  build_dir_base="$OPTARG"

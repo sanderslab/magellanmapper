@@ -12,11 +12,25 @@ Currently access is limited to a private Git repo. Our eventual plan is to make 
 
 ## Installation
 
-We provide setup scripts to create a separate environiment with all the required dependencies. The simplest pathway is to use our script for installation via Anaconda/Miniconda.
+### Basic install
 
-Setup scripts assume a Bash environment (standard on Mac, Linux; via WSL, MSYS2, or Cygwin on Windows). See below for alternative installations in other shells (eg Windows Command Prompt).
+```
+pip install -e .
+```
 
-### Conda
+from within the `clrbrain` folder. You can use the virtual environment of your choice, such as Conda or Venv.
+
+Or if you prefer to use Conda packages, run with`name` as your chosen environment name:
+
+```
+conda env create -n [name] environment.yml
+```
+
+### Through Bash scripts
+
+To ease complete setup including creating new virtual environments and installing all dependencies, we provide Bash setup scripts for Anaconda/Miniconda and Venv. These setup scripts assume a Bash environment (standard on Mac, Linux; via WSL, MSYS2, or Cygwin on Windows).
+
+#### Setup script for Conda
 
 ```
 ./setup_conda.sh
@@ -33,7 +47,7 @@ Run this command from the `clrbrain` folder to install the following dependencie
 - SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
 - Python-Bioformats/Javabridge for importing images from propriety formast such as `.czi` (optional, requires Java SDK and C compiler, ok if install fails)
 
-### Venv
+#### Setup script for Venv
 
 ```
 ./setup_venv.sh
@@ -42,15 +56,14 @@ Run this command from the `clrbrain` folder to install the following dependencie
 This setup script will check and install the following dependencies:
 
 - Checks for an existing Python 3.6+ install, which already include Venv
-- Pip installs packages in `requirements.txt` (requires a C compiler for some dependencies, see below)
+- Performs a Pip install (requires a C compiler for some dependencies, see below)
 - Installs SimpleITK or SimpleElastix
 
-### Installation Without Bash Scripts
+### Alternative installation methods
 
 You can also install Clrbrain these ways in the shell and Python environment of your choice:
 
-- In a Python environment of your choice or none at all, run `pip install -r requirements.txt`
-- In a Conda environment, run `conda env create -n [name] environment.yml`, where `name` is your chosen environment name
+- In a Python environment of your choice or none at all, run `pip install -r requirements.txt` to match one of our tested setups (Mac, Linux only)
 - If you have manually installed the dependencies, run `python setup.py install`
 
 ### Optional Dependency Build and Runtime Requirements

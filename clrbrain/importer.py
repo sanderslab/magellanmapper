@@ -24,6 +24,11 @@ import re
 from xml import etree as et
 import warnings
 
+from clrbrain import config
+from clrbrain import detector
+from clrbrain import plot_3d
+from clrbrain import lib_clrbrain
+
 import numpy as np
 try:
     import javabridge as jb
@@ -44,14 +49,7 @@ try:
     import SimpleITK as sitk
 except ImportError as e:
     sitk = None
-    warnings.warn(
-        "SimpleElastix could not be found, so there will be error when "
-        "attempting to read Nifti, raw, or other formats", ImportWarning)
-
-from clrbrain import config
-from clrbrain import detector
-from clrbrain import plot_3d
-from clrbrain import lib_clrbrain
+    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html

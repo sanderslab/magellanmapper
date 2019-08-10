@@ -47,12 +47,6 @@ import shutil
 from time import time
 import warnings
 import pandas as pd
-try:
-    import SimpleITK as sitk
-except ImportError as e:
-    print(e)
-    print("WARNING: SimpleElastix could not be found, so there will be error "
-          "when attempting to register images or load registered images")
 import numpy as np
 from skimage import filters
 from skimage import measure
@@ -72,6 +66,12 @@ from clrbrain import segmenter
 from clrbrain import stats
 from clrbrain import transformer
 from clrbrain import vols
+
+try:
+    import SimpleITK as sitk
+except ImportError as e:
+    sitk = None
+    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
 
 # registered image suffixes
 IMG_ATLAS = "atlasVolume.mhd"

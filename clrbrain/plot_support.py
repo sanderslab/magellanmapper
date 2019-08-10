@@ -5,18 +5,24 @@
 """
 
 import os
+import warnings
 
 import numpy as np
 import matplotlib.backend_bases as backend_bases
 from matplotlib import pyplot as plt
-from matplotlib_scalebar.scalebar import ScaleBar
-from matplotlib_scalebar.scalebar import SI_LENGTH
 
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+
+try:
+    from matplotlib_scalebar import scalebar
+except ImportError as e:
+    scalebar = None
+    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
+
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, 
                         vmin=None, vmax=None, origin=None, interpolation=None, 
@@ -223,6 +229,9 @@ def add_scale_bar(ax, downsample=None, plane=None):
             find the corresponding x resolution for the given orientation. 
             Defaults to None.
     """
+    # ensure that ScaleBar package exists
+    if not scalebar: return
+    
     resolutions = detector.resolutions[0]
     if plane:
         # transpose resolutions to the given plane
@@ -231,8 +240,8 @@ def add_scale_bar(ax, downsample=None, plane=None):
     res = resolutions[2] # assume scale bar is along x-axis
     if downsample:
         res *= downsample
-    scale_bar = ScaleBar(
-        res, u'\u00b5m', SI_LENGTH, box_alpha=0, 
+    scale_bar = scalebar.ScaleBar(
+        res, u'\u00b5m', scalebar.SI_LENGTH, box_alpha=0, 
         color=config.process_settings["scale_bar_color"], location=3)
     ax.add_artist(scale_bar)
 

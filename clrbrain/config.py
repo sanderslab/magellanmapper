@@ -306,6 +306,9 @@ notify_attach = None
 WARN_IMPORT_SITK = (
     "SimpleElastix could not be found, so there will be error when "
     "attempting to read Nifti, raw, or other formats")
+WARN_IMPORT_SCALEBAR = (
+    "Matplotlib ScaleBar could not be found, so scale bars will not be "
+    "displayed")
 
 # MICROSCOPE SETTINGS FOR DETECTIONS
 

@@ -22,6 +22,8 @@ config = {
         "matplotlib", 
         "mayavi", 
         "pandas", 
+        "PyQt5", 
+        "simpleitk", 
     ]
 }
 

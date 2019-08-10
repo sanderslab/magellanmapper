@@ -150,9 +150,9 @@ if [[ ! -e "$env_act" ]]; then
 fi
 source "$env_act"
 
-# update pip and install all dependencies for Clrbrain
+# update pip and install Clrbrain including required dependencies
 "$python" -m pip install -U pip
-pip install -r requirements.txt
+pip install -e .
 
 
 if [[ $build_simple_elastix -eq 1 ]]; then

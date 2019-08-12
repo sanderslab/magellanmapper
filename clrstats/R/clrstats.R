@@ -726,9 +726,9 @@ runStats <- function(stat.type=NULL) {
   
   # setup configuration environment
   setupConfig()
-  #setupConfig("aba")
   #setupConfig("dsc")
-  setupConfig("wt")
+  setupConfig("aba")
+  #setupConfig("wt")
   #setupConfig("compactness")
   #setupConfig("compactness.stats")
   #setupConfig("reg")

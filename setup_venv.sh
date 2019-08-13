@@ -8,7 +8,6 @@ venv environment manager.
 
 Arguments:
   -h: Show help and exit.
-  -d: Skip dependencies check before environment setup.
   -e [path]: Path to folder where the new venv directory will be placed. 
     Defaults to \"../venvs\".
   -n [name]: Set the virtual environment name; defaults to CLR_ENV.
@@ -20,10 +19,9 @@ env_name="$CLR_ENV"
 venv_dir="../venvs"
 
 build_simple_elastix=0
-deps_check=1
 
 OPTIND=1
-while getopts hn:sde: opt; do
+while getopts hn:se: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -40,10 +38,6 @@ while getopts hn:sde: opt; do
     e)
       venv_dir="$OPTARG"
       echo "Set the venv directory to $venv_dir"
-      ;;
-    d)
-      deps_check=0
-      echo "Set to skip dependencies check"
       ;;
     :)
       echo "Option -$OPTARG requires an argument"
@@ -72,34 +66,11 @@ if [[ "$os" = "Windows" ]]; then
   ext="ext"
 fi
 
-# Dependencies check
-if [[ $deps_check -eq 1 ]]; then
-  
-  # check for Java jar availability
-  if ! command -v "javac" &> /dev/null
-  then
-  	echo "Please install a JDK or add JAVA_HOME to your path environment "
-  	echo "variables. Exiting."
-  	exit 1
-  fi
-  
-  # Mac-specific check for command-line tools (CLT) package since the commands 
-  # that are not activated will still return
-  if [[ "$os" == "MacOSX" ]]; then
-    if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
-      if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
-        # ver <= 10.13 apparently also requires CLT headers here
-        :
-      else
-        echo "Mac command-line tools not present/activated."
-        echo "Please run \"xcode-select --install\""
-        exit 1
-      fi
-    fi
-  fi
-fi
-check="$(check_python python 3 8)"
-
+# Dependencies checks
+check_javac
+check_clt
+check_gcc
+check_git
 
 # check for Python availability and version requirement
 py_ver_min=(3 6)

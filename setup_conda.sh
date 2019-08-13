@@ -93,48 +93,11 @@ if [[ "$os" = "Windows" ]]; then
   ext="ext"
 fi
 
-
 # Dependencies checks
-  
-if ! command -v "javac" &> /dev/null; then
-  # check for Java compiler availability for Javabridge
-  echo "Warning: \"javac\" not found; Python-Bioformats and Python-Javabridge"
-  echo "will ot install correctly. Please install a JDK or add JDK_HOME or"
-  echo "add JAVA_HOME to your path environment variables"
-fi
-
-if [[ "$os" == "MacOSX" ]]; then
-  if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
-    # Mac-specific check for command-line tools (CLT) package since the 
-    # commands that are not activated will still return
-    if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
-      # ver <= 10.13 apparently also requires CLT headers here
-      :
-    else
-      echo "Warning: Mac command-line tools not present/activated;"
-      echo "installations that require compilation may not work properly."
-      echo "If you encounter problems related to compilation, please run "
-      echo "\"xcode-select --install\""
-    fi
-  fi
-fi
-
-if ! command -v "gcc" &> /dev/null; then
-  # check for gcc availability for compiling Scikit-image (if directly from 
-  # repo), Traits (if not from Conda), and Javabridge
-  echo "Warning: \"gcc\" not found; installations that require compilation"
-  echo "may not work properly. If you encounter problems related to"
-  echo "compilation, please install \"gcc\"."
-fi
-
-if ! command -v "git" &> /dev/null; then
-  # check for git availability for downloading repos for any installs 
-  # from Git repos
-  echo "Warning: \"git\" not found; installations that require repository"
-  echo "access may not work properly. If you encounter problems related to"
-  echo "repository downloads, please install \"git\"."
-fi
-
+check_javac
+check_clt
+check_gcc
+check_git
 
 # check for Anaconda installation and download/install if not found
 if ! command -v "conda" &> /dev/null; then

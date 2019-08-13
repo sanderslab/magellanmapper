@@ -103,6 +103,97 @@ check_python() {
 }
 
 ############################################
+# Check for existing Java compiler.
+# Globals:
+#   NONE
+# Arguments:
+#   NONE
+# Returns:
+#   0 if javac is found; 1 if otherwise.
+############################################
+check_javac() {
+  if ! command -v "javac" &> /dev/null; then
+    # check for Java compiler availability for Javabridge
+    echo "Warning: \"javac\" not found; Python-Bioformats and Python-Javabridge"
+    echo "will ot install correctly. Please install a JDK or add JDK_HOME or"
+    echo "add JAVA_HOME to your path environment variables"
+    return 1
+  fi
+  return 0
+}
+
+############################################
+# Check for existing, installed Mac Command-Line Tools
+# Globals:
+#   os: Operating System string to check for MacOS.
+# Arguments:
+#   NONE
+# Returns:
+#   0 if an activated CLT installation is found; 1 if otherwise.
+############################################
+check_clt() {
+  if [[ "$os" == "MacOSX" ]]; then
+    if [[ ! -e "/Library/Developer/CommandLineTools/usr/bin/git" ]]; then
+      # Mac-specific check for command-line tools (CLT) package since the 
+      # commands that are not activated will still return
+      if [[ "$os_ver" < "10.14" && -e "/usr/include/iconv.h" ]]; then
+        # vers < 10.14 require both git and CLT headers
+        :
+      else
+        echo "Warning: Mac command-line tools not present/activated;"
+        echo "installations that require compilation may not work properly."
+        echo "If you encounter problems related to compilation, please run "
+        echo "\"xcode-select --install\""
+        return 1
+      fi
+    fi
+  fi
+  return 0
+}
+
+############################################
+# Check for existing gcc compiler.
+# Globals:
+#   NONE
+# Arguments:
+#   NONE
+# Returns:
+#   0 if gcc is found; 1 if otherwise.
+############################################
+check_gcc() {
+  if ! command -v "gcc" &> /dev/null; then
+    # check for gcc availability for compiling Scikit-image (if directly from 
+    # repo), Traits (if not from Conda), and Javabridge
+    echo "Warning: \"gcc\" not found; installations that require compilation"
+    echo "may not work properly. If you encounter problems related to"
+    echo "compilation, please install \"gcc\"."
+    return 1
+  fi
+  return 0
+}
+
+############################################
+# Check for existing Git executable.
+# Globals:
+#   NONE
+# Arguments:
+#   NONE
+# Returns:
+#   0 if git is found; 1 if otherwise.
+############################################
+check_git() {
+  if ! command -v "git" &> /dev/null; then
+    # check for git availability for downloading repos for any installs 
+    # from Git repos
+    echo "Warning: \"git\" not found; installations that require repository"
+    echo "access may not work properly. If you encounter problems related to"
+    echo "repository downloads, please install \"git\"."
+    return 1
+  fi
+  return 0
+}
+
+############################################
 # Suppress all output.
 # Globals:
 #   Redirects all streams to suppress output

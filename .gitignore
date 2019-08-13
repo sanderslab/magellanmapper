@@ -7,7 +7,6 @@ __pycache__
 *.pdf
 *.png
 *.sif
-*.yml
 *.zip
 docs/_build
 stats/.*

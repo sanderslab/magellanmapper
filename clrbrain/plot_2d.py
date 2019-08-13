@@ -549,7 +549,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         if groups is None:
             linestyles = ["-"] * len(data_cols)
         else:
-            linestyles = ["-", "--", ":", "-."] * (len(groups) % 4 + 1)
+            linestyles = ["-", "--", ":", "-."]
+    if groups is not None:
+        # simply repeat line style sets if groups exceed existing styles
+        linestyles = linestyles * (len(groups) // (len(linestyles) + 1) + 1)
 
     # plot selected columns with corresponding styles
     x = df[x_col]

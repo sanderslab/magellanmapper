@@ -1338,6 +1338,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     pre_plane = config.register_settings["pre_plane"]
     extend_atlas = config.register_settings["extend_atlas"]
     mirror = config.register_settings["labels_mirror"]
+    is_mirror = extend_atlas["mirror"]
     edge = config.register_settings["labels_edge"]
     expand = config.register_settings["expand_labels"]
     rotate = config.register_settings["rotate"]
@@ -1370,15 +1371,16 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     else:
         # turn off lateral extension and/or mirroring
         img_labels_np, _, borders_img_np, df_smoothing = _curate_labels(
-            img_labels, img_atlas, mirror if extend_atlas["mirror"] else None, 
+            img_labels, img_atlas, mirror if is_mirror else None, 
             edge if extend_atlas["edge"] else None, expand, rotate, smooth, 
             affine)
         if metrics or crop and (mirror is not None or edge is not None):
             print("\nCurating labels with extension/mirroring only "
                   "for measurements and any cropping:")
+            resize = is_mirror and mirror is not None
             lbls_np_mir, extis, _, _ = _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, None, 
-                affine, False)
+                affine, resize)
             mask_lbls = lbls_np_mir != 0
             print()
     
@@ -1390,7 +1392,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     if affine:
         for aff in affine:
             img_atlas_np = plot_3d.affine_nd(img_atlas_np, **aff)
-    if extend_atlas["mirror"] and mirror is not None:
+    if is_mirror and mirror is not None:
         # TODO: consider removing dup since not using
         dup = config.register_settings["labels_dup"]
         img_atlas_np = _mirror_planes(

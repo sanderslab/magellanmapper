@@ -83,9 +83,18 @@ def plot_region_development(metric, size=None, show=True):
     stats.print_data_frame(df_base.loc[:, cols_show], "\t")
     df_base_piv, regions = stats.pivot_with_conditions(
         df_base, id_cols, "RegionName", metric)
+    
+    # plot lines with separate styles for each condition and colors for 
+    # each region name
+    linestyles = ("--", "-.", ":", "-")
+    num_conds = len(conds)
+    linestyles = linestyles * (num_conds // (len(linestyles) + 1) + 1)
+    if num_conds < len(linestyles):
+        # ensure that 1st and last styles are dashed and solid unless
+        linestyles = (*linestyles[:num_conds-1], linestyles[-1])
     lines_params = {
         "labels": (metric, "Post-Conceptional Age"), 
-        "linestyles": ("--", "-"), 
+        "linestyles": linestyles, 
         "size": size, 
         "show": show, 
         "ignore_invis": True, 

@@ -127,12 +127,9 @@ pip install -e .
 
 
 if [[ $build_simple_elastix -eq 1 ]]; then
-  # build and install SimpleElastix
+  # build and install SimpleElastix, replacing SimpleITK
+  pip uninstall -y simpleitk
   ./build_se.sh -i
-else
-  # install SimpleITK if not installing SimpleElastix and not a 
-  # lightweight install to allow opening files through SimpleITK
-  pip install simpleitk
 fi
 
 echo "Clrbrain environment setup complete!"

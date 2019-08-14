@@ -39,7 +39,7 @@ To ease complete setup including creating new virtual environments and installin
 Run this command from the `clrbrain` folder to install the following dependencies:
 
 - If not already installed: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
-- A `clr3` Conda environment with Python 3
+- A `clr` Conda environment with Python 3
 - Scipy, Numpy, Matplotlib stack
 - Mayavi/TraitsUI/Qt stack for GUI and 3D visualization (optional, use the `-l` ("L") flag to create a lightweight environment without this stack)
 - Scikit-image for image processing

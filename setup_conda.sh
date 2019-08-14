@@ -7,7 +7,7 @@ Sets up the initial Clrbrain environment with Anaconda and all
 packages including git repositories.
 
 Downloads and installs Miniconda3 if it is not already present. 
-Installs or updates a Conda environment named \"clr3\" by 
+Installs or updates a Conda environment named \"clr\" by 
 default in a standard graphical setup or \"clrclu\" for a 
 lightweight setup.
 
@@ -28,7 +28,7 @@ Arguments:
 "
 
 # default Conda environment names as found in .yml configs
-CONDA_ENV="clr3"
+CONDA_ENV="clr"
 CONDA_ENV_LIGHT="clrclu"
 env_name="$CONDA_ENV"
 
@@ -45,7 +45,7 @@ OPTIND=1
 while getopts hn:sla opt; do
   case $opt in
     h)
-      echo $HELP
+      echo "$HELP"
       exit 0
       ;;
     n)

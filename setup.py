@@ -3,6 +3,11 @@
 
 import setuptools
 
+# optional dependencies to import files via BioFormats, which requires 
+# a Java SDK installation
+_EXTRAS_IMPORT = ["python-bioformats==1.1.0"]
+
+# installation configuration
 config = {
     "name": "clrbrain", 
     "description": "3D atlas analysis and annotation",
@@ -13,7 +18,6 @@ config = {
     "packages": setuptools.find_packages(),
     "scripts": [], 
     "python_requires": ">=3",  # TODO: may need to increase; tested on >=3.6
-    # TODO: consider adding pythong-bioformats, simpleitk (SimpleElastix fork)
     "install_requires": [
         "scikit-image", 
         "matplotlib", 
@@ -21,7 +25,16 @@ config = {
         "pandas", 
         "PyQt5", 
         "simpleitk", 
-    ]
+    ], 
+    "extras_require": {
+        "import": _EXTRAS_IMPORT, 
+        "all": [
+            "matplotlib_scalebar", 
+            "pyamg", 
+            *_EXTRAS_IMPORT,  
+        ]
+    }
 }
 
+# perform setup
 setuptools.setup(**config)

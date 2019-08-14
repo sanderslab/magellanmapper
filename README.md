@@ -63,7 +63,8 @@ This setup script will check and install the following dependencies:
 
 You can also install Clrbrain these ways in the shell and Python environment of your choice:
 
-- In a Python environment of your choice or none at all, run `pip install -r requirements.txt` to match one of our tested setups (Mac, Linux only)
+- In a Python environment of your choice or none at all, run `pip install -r requirements.txt` to match one of our pinned, tested setups (Mac, Linux only)
+- To create the equivalent Conda environment, run `conda env create -n [name] -f environment_full.yml`, where `name` is your desired environment name
 - If you have manually installed the dependencies, run `python setup.py install`
 
 ### Optional Dependency Build and Runtime Requirements

@@ -1,10 +1,7 @@
 # Clrbrain setup script
 # Author: David Young, 2017, 2019
 
-try:
-    import setuptools
-except ImportError:
-    import distutils.core
+import setuptools
 
 config = {
     "name": "clrbrain", 

@@ -3213,8 +3213,11 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         
         # load data frame if available
         df_path = "{}_volumes.csv".format(os.path.splitext(mod_path)[0])
+        df_level_path = None
         df = None
         if max_level is not None:
+            df_level_path = lib_clrbrain.insert_before_ext(
+                df_path, "_level{}".format(max_level))
             if os.path.exists(df_path):
                 df = pd.read_csv(df_path)
             else:
@@ -3326,8 +3329,13 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             spacing, unit_factor, 
             combine_sides and max_level is None, 
             label_ids, grouping, df, extra_metrics)
+        
+        # output volume stats CSV to atlas directory and append for 
+        # combined CSVs
         if max_level is None:
             stats.data_frames_to_csv([df], df_path, sort_cols=sort_cols)
+        elif df_level_path is not None:
+            stats.data_frames_to_csv([df], df_level_path, sort_cols=sort_cols)
         dfs.append(df)
         dfs_all.append(df_all)
     

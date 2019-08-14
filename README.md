@@ -20,15 +20,23 @@ pip install -e .
 
 from within the `clrbrain` folder. You can use the virtual environment of your choice, such as Conda or Venv.
 
-Or if you prefer to use Conda packages, run with`name` as your chosen environment name:
+Or to include all dependencies, which assumes that a Java SDK is installed:
 
 ```
-conda env create -n [name] environment.yml
+pip install -e .[all]
 ```
 
-### Through Bash scripts
+If you hava Anaconda/[Miniconda](https://docs.conda.io/en/latest/miniconda.html) installed and prefer to use Conda packages:
 
-To ease complete setup including creating new virtual environments and installing all dependencies, we provide Bash setup scripts for Anaconda/Miniconda and Venv. These setup scripts assume a Bash environment (standard on Mac, Linux; via WSL, MSYS2, or Cygwin on Windows).
+```
+conda env create -n clr environment.yml
+```
+
+You can replace `clr` with your desired environment name.
+
+### Install through Bash scripts
+
+To ease complete setup including creating new virtual environments and installing all dependencies, we provide Bash setup scripts for Anaconda/Miniconda and Venv. These setup scripts assume a Bash environment (standard on Mac and Linux; via WSL, MSYS2, or Cygwin on Windows).
 
 #### Setup script for Conda
 

@@ -11,7 +11,6 @@ from clrbrain import config
 from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import stats
-from clrbrain import vols
 
 
 def plot_region_development(metric, size=None, show=True):

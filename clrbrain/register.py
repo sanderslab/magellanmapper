@@ -3176,8 +3176,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         out_path_summary += config.suffix
     
     # grouping metadata, which will be combined with groups
-    grouping = {}
-    grouping["Condition"] = condition
+    grouping = {"Condition": condition}
     
     # setup labels
     label_ids = _find_atlas_labels(
@@ -3221,12 +3220,12 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             if os.path.exists(df_path):
                 df = pd.read_csv(df_path)
             else:
-                msg = ("Could not find raw stats for drawn labels from "
-                       "{}, will measure stats for individual regions "
-                       "repeatedly. To save processing time, consider "
-                       "stopping and re-running first without levels"
-                       .format(df_path))
-                warnings.warn(msg)
+                lib_clrbrain.warn(
+                    "Could not find raw stats for drawn labels from "
+                    "{}, will measure stats for individual regions "
+                    "repeatedly. To save processing time, consider "
+                    "stopping and re-running first without levels"
+                    .format(df_path))
         
         spacing = None
         img_np = None

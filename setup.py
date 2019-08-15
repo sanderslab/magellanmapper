@@ -6,6 +6,7 @@ import setuptools
 # optional dependencies to import files via BioFormats, which requires 
 # a Java SDK installation
 _EXTRAS_IMPORT = ["python-bioformats==1.1.0"]
+_EXTRAS_AWS = ["boto3", "awscli"]
 
 # installation configuration
 config = {
@@ -28,12 +29,14 @@ config = {
     ], 
     "extras_require": {
         "import": _EXTRAS_IMPORT, 
+        "aws": _EXTRAS_AWS, 
         "all": [
             "matplotlib_scalebar", 
             "pyamg", 
             *_EXTRAS_IMPORT,  
+            *_EXTRAS_AWS, 
         ]
-    }
+    }, 
 }
 
 # perform setup

@@ -27,7 +27,6 @@ Arguments:
 
 # default Conda environment names as found in .yml configs
 CONDA_ENV="clr"
-CONDA_ENV_LIGHT="clrclu"
 env_name="$CONDA_ENV"
 
 # default .yml files
@@ -52,7 +51,6 @@ while getopts hn:l opt; do
       ;;
     l)
       lightweight=1
-      env_name="$CONDA_ENV_LIGHT"
       config="$ENV_CONFIG_LIGHT"
       echo "Set to create lightweight (no GUI) environment"
       ;;

@@ -4,12 +4,13 @@ dependencies:
   - python=3.6
   - pip
   - cython
-  - numpy
-  - scipy
   - matplotlib
-  - dask
   - pyamg
+  - pandas
+  - scikit-image
   - pip:
-    - simpleitk
+    - --index-url https://pypi.fury.io/dd8/
+    - --extra-index-url https://pypi.org/simple/
+    - simpleitk==1.2.0rc2.dev1162+g2a79d
     - "git+https://github.com/LeeKamentsky/python-javabridge.git"
     - python-bioformats==1.1.0

@@ -118,7 +118,7 @@ source "$env_act"
 
 # update pip and install Clrbrain including required dependencies
 "$python" -m pip install -U pip
-pip install -e .
+pip install -e .[all]
 
 echo "Clrbrain environment setup complete!"
 echo "** Please run \"source $env_act\" to enter your new environment **"

@@ -15,15 +15,15 @@ Currently access is limited to a private Git repo. Our eventual plan is to make 
 ### Basic install
 
 ```
-pip install -e .
+pip install -e . --extra-index-url https://pypi.fury.io/dd8/
 ```
 
-from within the `clrbrain` folder. You can use the virtual environment of your choice, such as Conda or Venv.
+from within the `clrbrain` folder. You can use the virtual environment of your choice, such as Conda or Venv. The extr URL is for pre-built SimpleElastix binaries.
 
 Or to include all dependencies, which assumes that a Java SDK is installed:
 
 ```
-pip install -e .[all]
+pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 If you hava Anaconda/[Miniconda](https://docs.conda.io/en/latest/miniconda.html) installed and prefer to use Conda packages:

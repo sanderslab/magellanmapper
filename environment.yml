@@ -13,8 +13,10 @@ dependencies:
   - boto3
   - awscli
   - pip:
+    - --index-url https://pypi.fury.io/dd8/
+    - --extra-index-url https://pypi.org/simple/
     - matplotlib-scalebar
     - PyQt5
-    - simpleitk
+    - simpleitk==1.2.0rc2.dev1162+g2a79d
     - "git+https://github.com/LeeKamentsky/python-javabridge.git"
     - python-bioformats==1.1.0

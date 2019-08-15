@@ -10,6 +10,8 @@ dependencies:
   - mayavi
   - pandas
   - scikit-image
+  - boto3
+  - awscli
   - pip:
     - matplotlib-scalebar
     - PyQt5

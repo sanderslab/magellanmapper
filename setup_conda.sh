@@ -20,7 +20,6 @@ clones will be downloaded and installed through Pip.
 
 Arguments:
   -h: Show help and exit.
-  -a: Install AWS components.
   -n: Set the Conda environment name; defaults to CONDA_ENV.
   -s: Build and install SimpleElastix.
   -l: Lightweight environment setup, which does not include 
@@ -42,7 +41,7 @@ lightweight=0
 aws=0
 
 OPTIND=1
-while getopts hn:sla opt; do
+while getopts hn:sl opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -61,10 +60,6 @@ while getopts hn:sla opt; do
       env_name="$CONDA_ENV_LIGHT"
       config="$ENV_CONFIG_LIGHT"
       echo "Set to create lightweight (no GUI) environment"
-      ;;
-    a)
-      aws=1
-      echo "Set to install AWS components"
       ;;
     :)
       echo "Option -$OPTARG requires an argument"
@@ -261,12 +256,6 @@ if [[ $build_simple_elastix -eq 1 ]]; then
   # build and install SimpleElastix, replacing SimpleITK
   pip uninstall -y simpleitk
   ./build_se.sh -i
-fi
-
-if [[ $aws -eq 1 ]]; then
-  # install AWS components
-  pip install boto3
-  pip install awscli
 fi
 
 echo "Clrbrain environment setup complete!"

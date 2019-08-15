@@ -11,7 +11,6 @@ Arguments:
   -e [path]: Path to folder where the new venv directory will be placed. 
     Defaults to \"../venvs\".
   -n [name]: Set the virtual environment name; defaults to CLR_ENV.
-  -s: Build and install SimpleElastix by running the \"build_se.sh\" script.
 "
 
 CLR_ENV="clr"
@@ -21,7 +20,7 @@ venv_dir="../venvs"
 build_simple_elastix=0
 
 OPTIND=1
-while getopts hn:se: opt; do
+while getopts hn:e: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -30,10 +29,6 @@ while getopts hn:se: opt; do
     n)
       env_name="$OPTARG"
       echo "Set to create the venv environment $env_name"
-      ;;
-    s)
-      build_simple_elastix=1
-      echo "Set to build and install SimpleElastix"
       ;;
     e)
       venv_dir="$OPTARG"
@@ -124,13 +119,6 @@ source "$env_act"
 # update pip and install Clrbrain including required dependencies
 "$python" -m pip install -U pip
 pip install -e .
-
-
-if [[ $build_simple_elastix -eq 1 ]]; then
-  # build and install SimpleElastix, replacing SimpleITK
-  pip uninstall -y simpleitk
-  ./build_se.sh -i
-fi
 
 echo "Clrbrain environment setup complete!"
 echo "** Please run \"source $env_act\" to enter your new environment **"

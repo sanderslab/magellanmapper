@@ -21,7 +21,6 @@ clones will be downloaded and installed through Pip.
 Arguments:
   -h: Show help and exit.
   -n: Set the Conda environment name; defaults to CONDA_ENV.
-  -s: Build and install SimpleElastix.
   -l: Lightweight environment setup, which does not include 
     GUI components such as Matplotlib or Mayavi.
 "
@@ -41,7 +40,7 @@ lightweight=0
 aws=0
 
 OPTIND=1
-while getopts hn:sl opt; do
+while getopts hn:l opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -50,10 +49,6 @@ while getopts hn:sl opt; do
     n)
       env_name="$OPTARG"
       echo "Set to create the Conda environment $env_name"
-      ;;
-    s)
-      build_simple_elastix=1
-      echo "Set to build and install SimpleElastix"
       ;;
     l)
       lightweight=1
@@ -124,8 +119,12 @@ if ! command -v "conda" &> /dev/null; then
   fi
 fi
 
-# create or update Conda environment
+# create or update Conda environment; warn of apparent hang since no 
+# progress monitor displays during installs by environment spec
 check_env="`conda env list | grep -w $env_name`"
+msg="Installing dependencies (may take awhile and appear to hang after the"
+msg+="\n  \"Executing transaction\" step because of additional"
+msg+="downloads/installs)..."
 if [[ "$check_env" == "" ]]; then
   # create an empty environment before setting channel priority to 
   # generate an env-specific .condarc file; Python version duplicated in 
@@ -134,10 +133,12 @@ if [[ "$check_env" == "" ]]; then
   conda create -y -n "$env_name" python=3.6
   source activate "$env_name"
   conda config --env --set channel_priority strict # for mixed channels
+  echo -e "$msg"
   conda env update -f "$config"
 else
   echo "$env_name already exists, will update"
   source activate "$env_name"
+  echo -e "$msg"
   conda env update -f "$config"
 fi
 
@@ -250,13 +251,6 @@ pip install -U python-bioformats==1.1.0
 '
 
 cd "$BASE_DIR"
-
-
-if [[ $build_simple_elastix -eq 1 ]]; then
-  # build and install SimpleElastix, replacing SimpleITK
-  pip uninstall -y simpleitk
-  ./build_se.sh -i
-fi
 
 echo "Clrbrain environment setup complete!"
 echo "** Please run \"conda activate $env_name\" or \"source activate $env_name\""

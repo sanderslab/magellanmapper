@@ -2,20 +2,22 @@
 # Build script to compile SimpleElastix
 # Author: David Young, 2017, 2019
 
-################################################
-# Compiles SimpleElastix in a clean build directory on Mac
-# in an Anaconda environment. Includes compiler flags to 
-# configure CMake to use clang on later Mac versions. Turns off
-# virtual environment creation to avoid conflicts with Anaconda, 
-# so assumes the configuration/build process takes place within
-# an Anaconda environment. Also includes flags to turn off all 
-# wrappers except Python.
-#
-# Assumptions:
-# -If SimpleElastix git repository already exists, it might be
-#  usable, but you might want to move it aside to download
-#  a fresh clone or update them manually
-################################################
+HELP="
+Compiles SimpleElastix in a clean build directory with support for Mac and 
+Linux with Python virtual environments.
+
+Includes compiler flags to configure CMake to use clang on later Mac versions. 
+Turns off virtual environment creation to avoid conflicts with Anaconda. 
+Also includes flags to turn off all wrappers except Python and all 
+example and test configurations.
+
+Arguments:
+  -h: Show help and exit.
+  -e [path]: Path to folder where the new venv directory will be placed. 
+    Defaults to \"../venvs\".
+  -n [name]: Set the virtual environment name; defaults to CLR_ENV.
+  -s: Build and install SimpleElastix by running the \"build_se.sh\" script.
+"
 
 build_dir_base="build_se"
 PKG="SimpleITK-build/Wrapping/Python"

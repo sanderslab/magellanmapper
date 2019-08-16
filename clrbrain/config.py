@@ -951,11 +951,19 @@ def update_register_settings(settings, settings_type):
              "smooth": None
              },
             profile)
-        
-        # turn off mirroring/extension along with smoothing while preserving 
-        # their settings for measurements and cropping
+
+        # turn off mirroring along with smoothing
         settings.add_modifier(
-            "nomirror", 
+            "nomirror",
+            {"extend_labels": {"edge": True, "mirror": False},
+             "smooth": None
+             },
+            profile)
+
+        # turn off both mirroring and edge extension along with smoothing 
+        # while preserving their settings for measurements and cropping
+        settings.add_modifier(
+            "noext", 
             {"extend_labels": {"edge": False, "mirror": False}, 
              "smooth": None
              },

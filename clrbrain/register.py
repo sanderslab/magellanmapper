@@ -1336,9 +1336,9 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         data frame of smoothing stats, or None if smoothing was not performed.
     """
     pre_plane = config.register_settings["pre_plane"]
-    extend_atlas = config.register_settings["extend_atlas"]
+    extend_labels = config.register_settings["extend_labels"]
     mirror = config.register_settings["labels_mirror"]
-    is_mirror = extend_atlas["mirror"]
+    is_mirror = extend_labels["mirror"]
     edge = config.register_settings["labels_edge"]
     expand = config.register_settings["expand_labels"]
     rotate = config.register_settings["rotate"]
@@ -1362,7 +1362,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     # curate labels
     mask_lbls = None  # mask of fully extended/mirrored labels for cropping
     extis = None  # extension indices of 1st labeled, then unlabeled planes
-    if all(extend_atlas.values()):
+    if all(extend_labels.values()):
         # include any lateral extension and mirroring
         img_labels_np, extis, borders_img_np, df_smoothing = (
             _curate_labels(
@@ -1372,7 +1372,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         # turn off lateral extension and/or mirroring
         img_labels_np, _, borders_img_np, df_smoothing = _curate_labels(
             img_labels, img_atlas, mirror if is_mirror else None, 
-            edge if extend_atlas["edge"] else None, expand, rotate, smooth, 
+            edge if extend_labels["edge"] else None, expand, rotate, smooth, 
             affine)
         if metrics or crop and (mirror is not None or edge is not None):
             print("\nCurating labels with extension/mirroring only "
@@ -1497,8 +1497,8 @@ def import_atlas(atlas_dir, show=True):
     
     # set up condition
     overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]
-    extend_atlas = config.register_settings["extend_atlas"]
-    if any(extend_atlas.values()):
+    extend_labels = config.register_settings["extend_labels"]
+    if any(extend_labels.values()):
         cond = "extended" 
     else:
         # show baseline DSC of atlas to labels before any processing
@@ -2334,7 +2334,7 @@ def _is_profile_mirrored():
     # check if profile is set for mirroring, though does not necessarily
     # mean that the image itself is mirrored; allows checking for 
     # simplification by operating on one half and mirroring to the other
-    return (config.register_settings["extend_atlas"]["mirror"] and
+    return (config.register_settings["extend_labels"]["mirror"] and
             config.register_settings["labels_mirror"] is not None)
 
 def make_edge_images(path_img, show=True, atlas=True, suffix=None, 

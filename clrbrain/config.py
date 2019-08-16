@@ -600,12 +600,12 @@ class RegisterSettings(SettingsDict):
         
         # labels curation, given as fractions of the total planes; 
         # use None to ignore, -1 to set automatically (for mirror and edge), 
-        # or give a fraction between 0 and 1; can turn off with extend_atlas 
+        # or give a fraction between 0 and 1; can turn off with extend_labels 
         # while keeping settings for cropping, etc
-        self["extend_atlas"] = {"edge": True, "mirror": True}
         self["labels_mirror"] = None  # reflect planes starting here
         self["labels_edge"] = None  # extend edge labels from here
         self["labels_dup"] = None  # start duplicating planes til last labels
+        self["extend_labels"] = {"edge": True, "mirror": True}
         
         # expand labels within bounds given by 
         # (((x_pixels_start, x_pixels_end), ...), (next_region...)), or None 
@@ -934,7 +934,7 @@ def update_register_settings(settings, settings_type):
         # turn off edge extension along with smoothing
         settings.add_modifier(
             "noedge", 
-            {"extend_atlas": {"edge": False, "mirror": True}, 
+            {"extend_labels": {"edge": False, "mirror": True}, 
              "smooth": None
              },
             profile)
@@ -943,7 +943,7 @@ def update_register_settings(settings, settings_type):
         # their settings for measurements and cropping
         settings.add_modifier(
             "nomirror", 
-            {"extend_atlas": {"edge": False, "mirror": False}, 
+            {"extend_labels": {"edge": False, "mirror": False}, 
              "smooth": None
              },
             profile)
@@ -952,7 +952,7 @@ def update_register_settings(settings, settings_type):
         # while allowing transformations set as command-line arguments
         settings.add_modifier(
             "raw", 
-            {"extend_atlas": {"edge": False, "mirror": False}, 
+            {"extend_labels": {"edge": False, "mirror": False}, 
              "expand_labels": None, 
              "rotate": None, 
              "affine": None,

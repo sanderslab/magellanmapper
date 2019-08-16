@@ -924,7 +924,20 @@ def update_register_settings(settings, settings_type):
              "smooth": 4, 
             }, 
             profile)
-        
+
+        # turn off most image manipulations to show original atlas and labels 
+        # while allowing transformations set as command-line arguments
+        settings.add_modifier(
+            "raw",
+            {"extend_labels": {"edge": False, "mirror": False},
+             "expand_labels": None,
+             "rotate": None,
+             "affine": None,
+             "smooth": None,
+             "crop_to_labels": False,
+             },
+            profile)
+
         # turn off atlas rotation
         settings.add_modifier(
             "norotate", 
@@ -946,19 +959,6 @@ def update_register_settings(settings, settings_type):
             {"extend_labels": {"edge": False, "mirror": False}, 
              "smooth": None
              },
-            profile)
-        
-        # turn off most image manipulations to show original atlas and labels 
-        # while allowing transformations set as command-line arguments
-        settings.add_modifier(
-            "raw", 
-            {"extend_labels": {"edge": False, "mirror": False}, 
-             "expand_labels": None, 
-             "rotate": None, 
-             "affine": None,
-             "smooth": None, 
-             "crop_to_labels": False, 
-            }, 
             profile)
         
         # turn off label smoothing

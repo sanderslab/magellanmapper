@@ -187,7 +187,7 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
             or multiple indices such as would be used for an animation.
         plane: Type of plane to extract, which should be one of 
             :attribute:`config.PLANES`.
-        max_intens_projection: True to show a max intensity projection, which 
+        max_intens_proj: True to show a max intensity projection, which 
             assumes that plane_n is an array of multiple, typically 
             contiguous planes along which the max intensity pixel will 
             be taken. Defaults to False.
@@ -197,9 +197,6 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
         scalar or ``max_intens_projection`` is True, or 3D otherwise; 
         the aspect ratio; and the origin value.
     """
-    origin = None
-    aspect = None # aspect ratio
-    img3d = None
     if image5d.ndim >= 4:
         img3d = image5d[0]
     else:

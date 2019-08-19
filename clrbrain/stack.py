@@ -239,8 +239,9 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     
     # build "z" slice, which will be applied to the transposed image; 
     # reduce image to 1 plane if in single mode
+    interval = 1
     if offset is not None and roi_size is not None:
-        # tranpose coordinates to given plane
+        # transpose coordinates to given plane
         _, arrs_1d = plot_support.transpose_images(
             config.plane, arrs_1d=[offset[::-1], roi_size[::-1]])
         offset = arrs_1d[0][::-1]
@@ -274,7 +275,6 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     origin = None
     cmaps_labels = []
     lbl_suffix = ""
-    fnc = None
     extracted_planes = []
     if os.path.isdir(path):
         # builds animations from all files in a directory

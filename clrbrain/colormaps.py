@@ -13,6 +13,7 @@ from clrbrain import config
 # default colormaps, with keys backed by config.Cmaps enums
 CMAPS = {}
 
+
 def make_dark_linear_cmap(name, color):
     """Make a linear colormap starting with black and ranging to 
     ``color``.
@@ -26,12 +27,14 @@ def make_dark_linear_cmap(name, color):
     """
     return colors.LinearSegmentedColormap.from_list(name, ("black", color))
 
+
 def setup_cmaps():
     """Setup default colormaps, storing them in :const:``CMAPS``."""
     CMAPS[config.Cmaps.CMAP_GRBK_NAME] = make_dark_linear_cmap(
         config.Cmaps.CMAP_GRBK_NAME.value, "green")
     CMAPS[config.Cmaps.CMAP_RDBK_NAME] = make_dark_linear_cmap(
         config.Cmaps.CMAP_RDBK_NAME.value, "red")
+
 
 class DiscreteColormap(colors.ListedColormap):
     """Extends :class:``matplotlib.colors.ListedColormap`` to generate a 
@@ -99,7 +102,7 @@ class DiscreteColormap(colors.ListedColormap):
         # potential merging of 2 extreme labels
         labels_unique = np.append(labels_unique, [labels_unique[-1] + 1])
         if index_direct:
-            # asssume label vals increase by 1 from 0 until num_colors
+            # assume label vals increase by 1 from 0 until num_colors
             self.norm = colors.NoNorm()
         else:
             # labels themselves serve as bounds, allowing for large gaps 
@@ -109,7 +112,7 @@ class DiscreteColormap(colors.ListedColormap):
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
             multiplier=multiplier, offset=offset)
         if background is not None:
-            # replace backgound label color with given color
+            # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
             if len(bkgdi) > 0 and bkgdi[0].size > 0:
                 self.cmap_labels[bkgdi[0][0]] = background[1]
@@ -142,6 +145,7 @@ class DiscreteColormap(colors.ListedColormap):
         cmap.make_cmap()
         return cmap
 
+
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
                       seed=None, multiplier=255, offset=0):
     """Make a discrete colormap using :attr:``config.colors`` as the 
@@ -150,7 +154,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     Args:
         num_colors: Number of discrete colors to generate.
         alpha: Transparency level.
-        prioritize_defaults: If True, the default colors from 
+        prioritize_default: If True, the default colors from 
             :attr:``config.colors`` will replace the initial colormap elements; 
             defaults to True. Alternatively, `cn` can be given to use 
             the "CN" color spec instead.
@@ -188,6 +192,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         cmap[:end, :3] = colors_default[:end]
     return cmap
 
+
 def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False, 
                                  use_orig_labels=False):
     """Get a default discrete colormap for a labels image, assuming that 
@@ -215,6 +220,7 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         lbls, config.seed, 255, False, 150, 50, 
         (0, (0, 0, 0, alpha_bkgd)), dup_for_neg)
 
+
 def get_borders_colormap(borders_img, labels_img, cmap_labels):
     """Get a colormap for borders, using corresponding labels with 
     intensity change to distinguish the borders.
@@ -238,8 +244,7 @@ def get_borders_colormap(borders_img, labels_img, cmap_labels):
     """
     cmap_borders = None
     if borders_img is not None:
-        if (np.unique(labels_img).size 
-            == np.unique(borders_img).size):
+        if np.unique(labels_img).size == np.unique(borders_img).size:
             # get matching colors by using labels colormap as template, 
             # with brightest colormap for original (channel 0) borders
             channels = 1
@@ -253,6 +258,7 @@ def get_borders_colormap(borders_img, labels_img, cmap_labels):
             # of labels while still ensuring a transparent background
             cmap_borders = [get_labels_discrete_colormap(borders_img, 0)]
     return cmap_borders
+
 
 def get_cmap(cmap, n=None):
     """Get colormap from a list of colormaps, string, or enum.

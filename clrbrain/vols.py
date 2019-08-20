@@ -738,7 +738,10 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
             reg_nuc_mean * label_size)
     pool.close()
     pool.join()
+    
+    # make data frame of raw metrics, dropping columns of all NaNs
     df = pd.DataFrame(metrics)
+    df = df.dropna(axis=1, how="all")
     print(df.to_csv())
     
     # build data frame of total metrics from weighted means

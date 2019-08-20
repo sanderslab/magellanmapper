@@ -111,6 +111,7 @@ class AtlasMetrics(Enum):
     REGION = "Region"
     CONDITION = "Condition"
     DSC_ATLAS_LABELS = "DSC_atlas_labels"
+    DSC_ATLAS_LABELS_HEM = "DSC_atlas_labels_hemisphere"
     DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
     DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
     LAT_UNLBL_VOL = "Lateral_unlabeled_volume"
@@ -1410,6 +1411,15 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
                 mask_lbls = mask_lbls[tuple(crop_sl)]
     
     if metrics is not None:
+        
+        # meas DSC of labeled hemisphere, using the sagittal midline 
+        # to define the hemispheric boundaries
+        dsc = _measure_overlap_combined_labels(
+            sitk.GetImageFromArray(img_atlas_np[:extis[1]]), 
+            sitk.GetImageFromArray(img_labels_np[:extis[1]]), 
+            config.register_settings["overlap_meas_add_lbls"])
+        metrics[AtlasMetrics.DSC_ATLAS_LABELS_HEM] = [dsc]
+        
         # meas frac of hemisphere that is unlabeled using "mirror" bounds
         thresh = config.register_settings["atlas_threshold_all"]
         thresh_atlas = img_atlas_np > thresh

@@ -89,16 +89,15 @@ lsblk -p
 # Arguments:
 #   1: Device path.
 # Returns:
-#   1 if device is formatted; 0 otherwise.
+#   0 if device is formatted, otherwise 1.
 ############################################
 is_formatted() {
   local format="$(lsblk -o FSTYPE -n $1)"
-  if [[ -z "${format// }" ]]; then
-    return 0
-  else
+  if [[ -n "${format// }" ]]; then
     echo "$1 is already formatted"
-    return 1
+    return
   fi
+  false
 }
 
 ############################################
@@ -144,17 +143,17 @@ is_nvme_name() {
 # Arguments:
 #   1: Name of device, eg /dev/sdf.
 # Returns:
-#   0 if match is found; 1 otherwise.
+#   0 if match is found, otherwise 1.
 ############################################
 map_nvme_name() {
   for i in {0..5}; do
     dev="/dev/nvme${i}n1"
     if [[ "$(is_nvme_name ${dev} ${1})" != "" ]]; then
       echo "found match between $1 and $dev"
-      return 0
+      return
     fi
   done
-  return 1
+  false
 }
 
 
@@ -184,12 +183,12 @@ if [[ $setup -eq 1 ]]; then
   if [[ "$data" != "" ]]; then
     # format data device if not already formatted and mount
     is_formatted "$data"
-    newly_formatted="$?"
-    if [[ $newly_formatted -eq 0 ]]; then
+    already_formatted="$?"
+    if [[ $already_formatted -ne 0 ]]; then
       sudo mkfs -t ext4 "$data"
     fi
     mount_dev "$data" "$DIR_DATA"
-    if [[ $newly_formatted -eq 0 ]]; then
+    if [[ $already_formatted -ne 0 ]]; then
       # need to change ownership if new drive attached
       sudo chown -R "${username}.${username}" "$DIR_DATA"
     fi
@@ -210,8 +209,7 @@ if [[ $setup -eq 1 ]]; then
       fi
     else
       # generate swap partition if device isn't already formatted
-      is_formatted "$swap"
-      if [[ "$?" -eq 0 ]]; then
+      if ! is_formatted "$swap"; then
         sudo mkswap "$swap"
       fi
     fi

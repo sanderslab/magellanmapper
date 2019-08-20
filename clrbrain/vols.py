@@ -321,7 +321,8 @@ class MeasureLabel(object):
                 cls.df[LabelMetrics.Region.name].isin(label_ids)]
             label_size = np.nansum(labels[LabelMetrics.Volume.name])
             intens = np.nansum(labels[LabelMetrics.Intensity.name])
-            nuclei = np.nansum(labels[LabelMetrics.Nuclei.name])
+            if LabelMetrics.Nuclei.name in labels:
+                nuclei = np.nansum(labels[LabelMetrics.Nuclei.name])
         if label_size > 0:
             metrics[LabelMetrics.Volume] = label_size
             metrics[LabelMetrics.Intensity] = intens
@@ -459,7 +460,10 @@ class MeasureLabel(object):
             for i, row in labels.iterrows():
                 if row[LabelMetrics.RegVolMean.name] > 0:
                     for metric in VAR_METRICS:
-                        metrics[metric].append(row[metric.name])
+                        if metric.name in row:
+                            metrics[metric].append(row[metric.name])
+                        else:
+                            metrics[metric] = np.nan
         
         # weighted average, with weights given by frac of region or 
         # sub-region size from total size
@@ -470,7 +474,7 @@ class MeasureLabel(object):
         tot_nucs = np.nansum(nucs)
         for key in metrics.keys():
             #print("{} {}: {}".format(disp_id, key.name, metrics[key]))
-            if tot_size > 0:
+            if tot_size > 0 and metrics[key] != np.nan:
                 # take weighted mean
                 if key in NUC_METRICS:
                     # use weighting from nuclei for nuclei-oriented metrics
@@ -729,13 +733,16 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
             label_metrics[LabelMetrics.VarIntensity] * label_size)
         totals.setdefault("vol", []).append(label_size)
         totals.setdefault(LabelMetrics.Volume, []).append(vol_physical)
-        totals.setdefault(LabelMetrics.VarNuclei, []).append(
-            label_metrics[LabelMetrics.VarNuclei] * label_size)
-        totals.setdefault(LabelMetrics.Nuclei, []).append(nuc)
         totals.setdefault(LabelMetrics.RegVolMean, []).append(
             vol_mean_physical * label_size)
-        totals.setdefault(LabelMetrics.RegNucMean, []).append(
-            reg_nuc_mean * label_size)
+        var_nuc = label_metrics[LabelMetrics.VarNuclei]
+        if var_nuc != np.nan:
+            totals.setdefault(LabelMetrics.VarNuclei, []).append(
+                label_metrics[LabelMetrics.VarNuclei] * label_size)
+            totals.setdefault(LabelMetrics.Nuclei, []).append(nuc)
+        if reg_nuc_mean != np.nan:
+            totals.setdefault(LabelMetrics.RegNucMean, []).append(
+                reg_nuc_mean * label_size)
     pool.close()
     pool.join()
     
@@ -756,13 +763,16 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     
     # divide weighted values by sum of corresponding weights
     totals[LabelMetrics.Region] = "all"
-    totals[LabelMetrics.Density] = (
-        totals[LabelMetrics.Nuclei] / totals[LabelMetrics.Volume])
     totals[LabelMetrics.RegVolMean] /= totals["vol"]
-    totals[LabelMetrics.RegNucMean] /= totals["vol"]
-    totals[LabelMetrics.RegDensityMean] = (
-        totals[LabelMetrics.RegNucMean] / totals[LabelMetrics.RegVolMean])
-    totals[LabelMetrics.VarNuclei] /= totals["vol"]
+    if LabelMetrics.Nuclei in totals:
+        totals[LabelMetrics.Density] = (
+            totals[LabelMetrics.Nuclei] / totals[LabelMetrics.Volume])
+    if LabelMetrics.RegNucMean in totals:
+        totals[LabelMetrics.RegNucMean] /= totals["vol"]
+        totals[LabelMetrics.RegDensityMean] = (
+            totals[LabelMetrics.RegNucMean] / totals[LabelMetrics.RegVolMean])
+    if LabelMetrics.VarNuclei in totals:
+        totals[LabelMetrics.VarNuclei] /= totals["vol"]
     totals[LabelMetrics.VarIntensity] /= totals["vol"]
     totals[LabelMetrics.EdgeDistMean] /= totals[LabelMetrics.EdgeSize]
     for col in LabelMetrics:

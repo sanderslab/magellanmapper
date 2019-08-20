@@ -1774,12 +1774,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
             print("writing {}".format(out_path))
             sitk.WriteImage(imgs_write[i], out_path, False)
 
-    # show 2D overlay for registered images
-    imgs = [
-        sitk.GetArrayFromImage(fixed_img),
-        sitk.GetArrayFromImage(moving_img), 
-        sitk.GetArrayFromImage(transformed_img), 
-        sitk.GetArrayFromImage(labels_img)]
     # save transform parameters and attempt to find the original position 
     # that corresponds to the final position that will be displayed
     _, translation = _handle_transform_file(name_prefix, transform_param_map)
@@ -1811,9 +1805,17 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         name_prefix, config.PATH_ATLAS_IMPORT_METRICS)
     print("\nImported {} whole atlas stats:".format(basename))
     stats.dict_to_data_frame(metrics, df_path, show="\t")
-    
-    # show overlays last since blocks until fig is closed
-    #_show_overlays(imgs, translation, fixed_file, None)
+
+    '''
+    # show 2D overlays or registered image and atlas last since blocks until 
+    # fig is closed
+    imgs = [
+        sitk.GetArrayFromImage(fixed_img),
+        sitk.GetArrayFromImage(moving_img), 
+        sitk.GetArrayFromImage(transformed_img), 
+        sitk.GetArrayFromImage(labels_img)]
+    _show_overlays(imgs, translation, fixed_file, None)
+    '''
     print("time elapsed for single registration (s): {}"
           .format(time() - start_time))
 

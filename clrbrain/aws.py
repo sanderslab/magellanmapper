@@ -1,5 +1,5 @@
 # Interface with AWS
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Connect Clrbrain with AWS such as S3 and EC2.
 
 Attributes:
@@ -17,6 +17,7 @@ from clrbrain import config
 
 _EC2_STATES = (
     "pending", "running", "shutting-down", "terminated", "stopping", "stopped")
+
 
 def instance_info(instance_id, get_ip):
     """Show settings for a given instance.
@@ -46,6 +47,7 @@ def instance_info(instance_id, get_ip):
           .format(instance_id, image_id, tags, instance_ip))
     return instance_id, instance_ip
 
+
 def show_instances(instances, get_ip=False):
     """Show settings for instances.
     
@@ -70,6 +72,7 @@ def show_instances(instances, get_ip=False):
     pool.close()
     pool.join()
     return info
+
 
 def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group, 
                     key_name, ebs, max_count=1, snapshot_ids=None):
@@ -142,6 +145,7 @@ def start_instances(tag_name, ami_id, instance_type, subnet_id, sec_group,
     except ClientError as e:
         print(e)
 
+
 def terminate_instances(instance_ids):
     """Terminate instances with the given IDs.
     
@@ -156,6 +160,7 @@ def terminate_instances(instance_ids):
     
     except ClientError as e:
         print(e)
+
 
 def list_instances(state=None, image_id=None):
     """List instances with the given parameters.
@@ -201,7 +206,7 @@ if __name__ == "__main__":
         start_instances(*config.ec2_start[:-1], **config.ec2_start[-1])
     if config.ec2_list:
         if len(config.ec2_list) == 1:
-            # no paremeters required, so may have list of only parameter dict
+            # no parameters required, so may have list of only parameter dict
             list_instances(**config.ec2_list[0])
         else:
             list_instances(*config.ec2_list[:-1], **config.ec2_list[-1])

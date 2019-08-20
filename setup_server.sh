@@ -160,7 +160,7 @@ map_nvme_name() {
 if [[ "$nvme" -eq 1 ]]; then
   # convert device names to NVMe device paths since these devices are assigned 
   # different names and in inconsistent order
-  if [[ "$data" != "" ]]; then
+  if [[ -n "$data" ]]; then
     if map_nvme_name "$data"; then
       data="$dev"
     else
@@ -168,7 +168,7 @@ if [[ "$nvme" -eq 1 ]]; then
       exit 1
     fi
   fi
-  if [[ "$swap" != "" && "$swapfile_size" = "" ]]; then
+  if [[ -n "$swap" && -z "$swapfile_size" ]]; then
     if map_nvme_name "$swap"; then
       swap="$dev"
     else
@@ -180,7 +180,7 @@ fi
 
 if [[ $setup -eq 1 ]]; then
   # initialize swap and storage drives if setting up a new server instance
-  if [[ "$data" != "" ]]; then
+  if [[ -n "$data" ]]; then
     # format data device if not already formatted and mount
     is_formatted "$data"
     already_formatted="$?"
@@ -193,7 +193,7 @@ if [[ $setup -eq 1 ]]; then
       sudo chown -R "${username}.${username}" "$DIR_DATA"
     fi
   fi
-  if [[ "$swap" != "" ]]; then
+  if [[ -n "$swap" ]]; then
     if [[ "$swapfile_size" != "" ]]; then
       # generate swap file
       if [[ -e "$swap" ]]; then
@@ -219,11 +219,11 @@ fi
 
 # mount storage drive and turn on swap, which should fail if these 
 # drives were not initialized or attached
-if [[ "$data" != "" ]]; then
+if [[ -n "$data" ]]; then
   # mount if not previously mounted
   mount_dev "$data" "$DIR_DATA"
 fi
-if [[ "$swap" != "" ]]; then
+if [[ -n "$swap" ]]; then
   sudo swapon "$swap"
   swapon -s
 fi

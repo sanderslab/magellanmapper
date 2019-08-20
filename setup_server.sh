@@ -35,9 +35,10 @@ swap=""
 data=""
 username="ec2-user" # default on many EC2 distros
 swapfile_size=""
+nvme=0
 
 OPTIND=1
-while getopts hslw:d:u:f: opt; do
+while getopts hslw:d:u:f:n opt; do
   case $opt in
     h)  echo "$HELP"
       exit 0
@@ -45,11 +46,8 @@ while getopts hslw:d:u:f: opt; do
     s)  setup=1
       echo "Set to prepare a new server instance"
       ;;
-    l)  swap="/dev/xvdf"
-      data="/dev/xvdg"
-      echo "Set to use legacy device specifiers:"
-      echo "swap set to $swap"
-      echo "data set to $data"
+    n)  nvme=1
+      echo "Set to convert device names to NVMe assignments"
       ;;
     w)  swap="$OPTARG"
       echo "Set swap device/file path to $swap"
@@ -119,6 +117,64 @@ mount_dev() {
     sudo mount "$1" "$2"
   fi
 }
+
+############################################
+# Check whether the given NVMe device and name match.
+# Globals:
+#   NONE
+# Arguments:
+#   1: Device path.
+#   2: Device name.
+# Returns:
+#   NONE
+############################################
+is_nvme_name() {
+  if [[ -e "$1" ]]; then
+    sudo nvme id-ctrl -v "$1" | grep "$2"
+  fi
+}
+
+############################################
+# Convert a given name to an NVMe device path. Assumes that NVMe paths 
+# are in the format /dev/nvme[n]n1, where n is checked from 0-5.
+# Globals:
+#   dev: Last checked device path.
+# Arguments:
+#   1: Name of device, eg /dev/sdf.
+# Returns:
+#   0 if match is found; 1 otherwise.
+############################################
+map_nvme_name() {
+  for i in {0..5}; do
+    dev="/dev/nvme${i}n1"
+    if [[ "$(is_nvme_name ${dev} ${1})" != "" ]]; then
+      echo "found match between $1 and $dev"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if [[ "$nvme" -eq 1 ]]; then
+  # convert device names to NVMe device paths since these devices are assigned 
+  # different names and in inconsistent order
+  if [[ "$data" != "" ]]; then
+    if map_nvme_name "$data"; then
+      data="$dev"
+    else
+      echo "Could not find mapping from $data to its NVMe name, exiting"
+      exit 1
+    fi
+  fi
+  if [[ "$swap" != "" && "$swapfile_size" = "" ]]; then
+    if map_nvme_name "$swap"; then
+      swap="$dev"
+    else
+      echo "Could not find mapping from $swap to its NVMe name, exiting"
+      exit 1
+    fi
+  fi
+fi
 
 if [[ $setup -eq 1 ]]; then
   # initialize swap and storage drives if setting up a new server instance

@@ -17,7 +17,7 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 
 # measurements, which correspond to columns in main data frame
 kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei", 
-          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels", "Compactness", 
+          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels_hemisphere", "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
           "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
           "Intensity", "DSC")

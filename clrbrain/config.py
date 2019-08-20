@@ -649,9 +649,11 @@ class RegisterSettings(SettingsDict):
         # useful when ventricular spaces are labeled
         self["log_atlas_thresh"] = False
         
-        # erosion filter sizes
-        self["marker_erosion"] = 8 # for converting labels to markers
-        self["erosion_frac"] = 0.5 # target size as frac of orig; can be None
+        # labels erosion for watershed seeds/markers in resegmentation and 
+        # demarcating the interior of regions; can turn on/off with erode_labels
+        self["marker_erosion"] = 8  # for converting labels to markers
+        self["erosion_frac"] = 0.5  # target size as frac of orig; can be None
+        self["erode_labels"] = {"markers": True, "interior": False}
         
         # crop labels back to their original background after smoothing 
         # (ignored during atlas import if no smoothing), given as the filter 
@@ -1059,6 +1061,12 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "morestats",
             {"extra_metric_groups": (MetricGroups.SHAPES,)},
+            profile)
+        
+        # measure interior-border stats
+        settings.add_modifier(
+            "interiorlablels",
+            {"erode_labels": {"markers": True, "interior": True}},
             profile)
 
     if verbose:

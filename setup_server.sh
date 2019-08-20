@@ -3,29 +3,23 @@
 # Author: David Young 2018, 2019
 
 HELP="
-Sets up a server for processing files in the Clrbrain 
-pipeline. Both initial setup and preparing existing servers 
-is supported.
+Sets up a server for processing files in the Clrbrain pipeline. 
+Both initial setup and re-setup of existing servers is supported.
 
 Arguments:
-   -h: Show help and exit.
-   -d [/dev/path]: Set data device path to mount \"/data\". If an empty 
-     string, data mount will not be set up.
+   -d [/dev/name]: Set data device path to mount \"/data\". If an empty 
+     string, data mount will not be set up. Can be a name (eg \"sdf\") to 
+     map to an NVMe name if the NVMe flag is given.
    -f [GB]: Size of swap file in GB.
+   -h: Show help and exit.
+   -n: Map device names to NVMe names. Assumes that NVMe device names 
+     are in the format \"/dev/nvme[n]n1\", where n is from 0-5.
    -s: Set up a fresh server, including drive initiation.
-   -w [/dev/path]: Set swap device path. If an empty 
+   -u [username]: Username on server. Defaults to ec2-user, a standard 
+     username on AWS
+   -w [/dev/name]: Set swap device path. If an empty 
      string, data drive will not be set up.
-   -l: Use legacy drive specifications.
-   -u [username]: Username on server. Defaults to ec2-user.
 
-Assumptions:
-- Two additional drives are attached:
-  1) /dev/nvme1n1: for swap
-  2) /dev/nvmme2n1: ext4 format, for data
-- If \"-l\" flag is given, legacy devices are assumed: 
-  1) /dev/xvdf for swap
-  2) /dev/xvdg for data
-- Username: "ec2-user", a standard username on AWS
 "
 
 DIR_DATA="/data"
@@ -33,35 +27,43 @@ DIR_DATA="/data"
 setup=0
 swap=""
 data=""
-username="ec2-user" # default on many EC2 distros
+username="ec2-user" # default on many EC2 distros but not Ubuntu
 swapfile_size=""
 nvme=0
 
 OPTIND=1
 while getopts hslw:d:u:f:n opt; do
   case $opt in
-    h)  echo "$HELP"
+    h)
+      echo "$HELP"
       exit 0
       ;;
-    s)  setup=1
+    s)
+      setup=1
       echo "Set to prepare a new server instance"
       ;;
-    n)  nvme=1
+    n)
+      nvme=1
       echo "Set to convert device names to NVMe assignments"
       ;;
-    w)  swap="$OPTARG"
+    w)
+      swap="$OPTARG"
       echo "Set swap device/file path to $swap"
       ;;
-    d)  data="$OPTARG"
+    d)
+      data="$OPTARG"
       echo "Set data device path to $data"
       ;;
-    f)  swapfile_size="$OPTARG"
+    f)
+      swapfile_size="$OPTARG"
       echo "Generate a swapfile with size of ${swapfile_size}GB"
       ;;
-    u)  username="$OPTARG"
+    u)
+      username="$OPTARG"
       echo "Changing username to $username"
       ;;
-    :)  echo "Option -$OPTARG requires an argument"
+    :)
+      echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
     --) ;;
@@ -154,6 +156,7 @@ map_nvme_name() {
   done
   return 1
 }
+
 
 if [[ "$nvme" -eq 1 ]]; then
   # convert device names to NVMe device paths since these devices are assigned 

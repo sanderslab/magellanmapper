@@ -1065,7 +1065,7 @@ def update_register_settings(settings, settings_type):
         
         # measure interior-border stats
         settings.add_modifier(
-            "interiorlablels",
+            "interiorlabels",
             {"erode_labels": {"markers": True, "interior": True}},
             profile)
 

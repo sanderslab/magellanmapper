@@ -52,13 +52,13 @@ def plot_region_development(metric, size=None, show=True):
     for n in ids_nonbr_large:
         ids_nonbr.extend(
             ontology.get_children_from_id(labels_ref_lookup, n))
-    df_brain = df.loc[~df["Region"].isin(ids_nonbr)]
 
     label_id = config.atlas_labels[config.AtlasLabels.ID]
     if label_id is not None:
         # show only selected region and its children
         ids = ontology.get_children_from_id(labels_ref_lookup, label_id)
         df = df[np.isin(df["Region"], ids)]
+    df_brain = df.loc[~df["Region"].isin(ids_nonbr)]
 
     levels = np.sort(df["Level"].unique())
     conds = df["Condition"].unique()

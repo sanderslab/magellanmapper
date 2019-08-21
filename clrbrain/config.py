@@ -687,39 +687,48 @@ def update_register_settings(settings, settings_type):
     
     profiles = settings_type.split("_")
     
-    if settings_type.startswith("finer"):
-        # more aggressive parameters for finer tuning
-        settings["settings_name"] = "finer"
-        settings["bspline_iter_max"] = "512"
-        settings["truncate_labels"] = (None, (0.2, 1.0), (0.45, 1.0))
-        settings["holes_area"] = 5000
-    
-    elif settings_type.startswith("groupwise"):
-        # groupwise registration
-        settings["settings_name"] = "groupwise"
-        
-        # larger bspline voxels to avoid over deformation of internal structures
-        settings["bspline_grid_space_voxels"] = "130"
-        
-        # need to empirically determine
-        settings["carve_threshold"] = 0.01
-        settings["holes_area"] = 10000
-        
-        # empirically determined to add variable tissue area from first image 
-        # since this tissue may be necessary to register to other images 
-        # that contain this variable region
-        settings["extend_borders"] = ((60, 180), (0, 200), (20, 110))
-        
-        # increased number of resolutions with overall increased spacing 
-        # schedule since it appears to improve internal alignment
-        settings["grid_spacing_schedule"] = [
-            "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"]
-    
-    elif settings_type.startswith("test"):
-        settings["settings_name"] = "test"
-        settings["target_size"] = (50, 50, 50)
-    
     for profile in profiles:
+        
+        # more aggressive parameters for finer tuning
+        settings.add_modifier(
+            "finer", 
+            {
+                "bspline_iter_max": "512", 
+                "truncate_labels": (None, (0.2, 1.0), (0.45, 1.0)), 
+                "holes_area": 5000
+            }, 
+            profile)
+
+        # groupwise registration
+        settings.add_modifier(
+            "groupwise",
+            {
+                # larger bspline voxels to avoid over deformation of internal 
+                # structures
+                "bspline_grid_space_voxels": "130",
+                
+                # need to empirically determine
+                "carve_threshold": 0.01,
+                "holes_area": 10000,
+        
+                # empirically determined to add variable tissue area from 
+                # first image since this tissue may be necessary to register 
+                # to other images that contain this variable region
+                "extend_borders": ((60, 180), (0, 200), (20, 110)),
+                
+                # increased num of resolutions with overall increased spacing 
+                # schedule since it appears to improve internal alignment
+                "grid_spacing_schedule": [
+                    "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"]
+            },
+            profile)
+        
+        # test a target size
+        settings.add_modifier(
+            "test",
+            {"target_size": (50, 50, 50)},
+            profile)
+
         # atlas is big relative to the experimental image, so need to 
         # more aggressively downsize the atlas
         settings.add_modifier(

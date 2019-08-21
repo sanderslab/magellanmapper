@@ -1619,22 +1619,30 @@ def register_duo(fixed_img, moving_img, path=None):
     elastix_img_filter.SetFixedImage(fixed_img)
     elastix_img_filter.SetMovingImage(moving_img)
     
+    # set up parameter maps for translation, affine, and deformable regs
     settings = config.register_settings
+    metric_sim = settings["metric_similarity"]
     param_map_vector = sitk.VectorOfParameterMap()
+    
     # translation to shift and rotate
     param_map = sitk.GetDefaultParameterMap("translation")
+    param_map["Metric"] = [metric_sim]
     param_map["MaximumNumberOfIterations"] = [settings["translation_iter_max"]]
     '''
     # TESTING: minimal registration
     param_map["MaximumNumberOfIterations"] = ["0"]
     '''
     param_map_vector.append(param_map)
+    
     # affine to sheer and scale
     param_map = sitk.GetDefaultParameterMap("affine")
+    param_map["Metric"] = [metric_sim]
     param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
     param_map_vector.append(param_map)
+    
     # bspline for non-rigid deformation
     param_map = sitk.GetDefaultParameterMap("bspline")
+    param_map["Metric"] = [metric_sim, *param_map["Metric"][1:]]
     param_map["FinalGridSpacingInVoxels"] = [
         settings["bspline_grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox

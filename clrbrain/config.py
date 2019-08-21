@@ -579,6 +579,10 @@ class RegisterSettings(SettingsDict):
     def __init__(self, *args, **kwargs):
         super().__init__(self)
         self["settings_name"] = "default"
+        
+        # registration main similarity metric
+        self["metric_similarity"] = "AdvancedMattesMutualInformation"
+        
         self["translation_iter_max"] = "2048"
         self["affine_iter_max"] = "1024"
         self["bspline_iter_max"] = "256"

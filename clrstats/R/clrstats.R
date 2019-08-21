@@ -17,7 +17,8 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
 
 # measurements, which correspond to columns in main data frame
 kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei", 
-          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels_hemisphere", "Compactness", 
+          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels_hemisphere", 
+          "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
           "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
           "Intensity", "DSC")
@@ -30,7 +31,8 @@ kMeasNames <- setNames(
        list("Edge Distances to Anatomical Boundaries", bquote(list(mu*"m"))), 
        list("Edge Distances to Anatomical Boundaries (Mean)", 
             bquote(list(mu*"m"))), 
-       list("Atlas and Labels Overlay (Dice Similarity Coefficient)", NULL), 
+       list(paste("Labeled Hemisphere Atlas and Labels Overlay", 
+                  "(Dice Similarity Coefficient)"), NULL), 
        list("Region Homogeneity (Core-Periphery Variation Match)", 
             "SD size difference"), 
        list("Edge Noise (Core-Periphery Variation Difference)", 

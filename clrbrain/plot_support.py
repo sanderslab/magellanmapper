@@ -103,6 +103,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         i += 1
     return img
 
+
 def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas, 
                    vmins=None, vmaxs=None):
     """Show multiple, overlaid images.
@@ -178,6 +179,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         ax_imgs.append(ax_img)
     return ax_imgs
 
+
 def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
     """Extract a 2D plane or stack of planes.
     
@@ -211,6 +213,7 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
     #print("aspect: {}, origin: {}".format(aspect, origin))
     return img2d, aspect, origin
 
+
 def add_scale_bar(ax, downsample=None, plane=None):
     """Adds a scale bar to the plot.
     
@@ -242,6 +245,7 @@ def add_scale_bar(ax, downsample=None, plane=None):
         color=config.process_settings["scale_bar_color"], location=3)
     ax.add_artist(scale_bar)
 
+
 def max_plane(img3d, plane):
     """Get the max plane for the given 3D image.
     
@@ -259,6 +263,7 @@ def max_plane(img3d, plane):
         return shape[2]
     else:
         return shape[0]
+
 
 def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
     """Transpose images and associated coorinates to the given plane.
@@ -309,6 +314,7 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
     # no changes for xy, the default plane
     return arrs_3d, arrs_1d
 
+
 def get_aspect_ratio(plane):
     """Get the aspect ratio and origin for the given plane
     
@@ -338,6 +344,7 @@ def get_aspect_ratio(plane):
         if detector.resolutions is not None:
             aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
     return aspect, origin
+
 
 def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
     """Scroll through overview images along their orthogonal axis.
@@ -378,11 +385,13 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
         z_overview_new = max_size - 1
     return z_overview_new
 
+
 def hide_axes(ax):
     """Hides x- and y-axes.
     """
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
+
 
 def fit_frame_to_image(fig, shape, aspect):
     """Compress figure to fit image only.
@@ -404,6 +413,7 @@ def fit_frame_to_image(fig, shape, aspect):
         # multiply both sides by 1 / aspect => number > 1 to enlarge
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
     print("fig size: {}".format(fig.get_size_inches()))
+
 
 def set_overview_title(ax, plane, z_overview, zoom="", level=0, 
                         max_intens_proj=False):
@@ -430,6 +440,7 @@ def set_overview_title(ax, plane, z_overview, zoom="", level=0,
         # show zoom for subsequent overviews
         title = zoom
     ax.set_title(title)
+
 
 def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
     """Set scientific notation for tick labels and shift exponents from 
@@ -461,7 +472,7 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
     ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
     if not lbls:
         lbls = (config.plot_labels[config.PlotLabels.Y_LABEL], 
-                 config.plot_labels[config.PlotLabels.X_LABEL])
+                config.plot_labels[config.PlotLabels.X_LABEL])
     if not units:
         units = (config.plot_labels[config.PlotLabels.Y_UNIT], 
                  config.plot_labels[config.PlotLabels.X_UNIT])
@@ -480,7 +491,7 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
             unit_all.append(offset_text)
             axis.offsetText.set_visible(False)
         unit = units[i] if num_units > i else None
-        if unit is not None:
+        if unit is not None and unit != "":
             # format unit with math text
             unit_all.append("${{{}}}$".format(unit))
         if lbl and unit_all:
@@ -491,6 +502,7 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
             lbl = " ".join(unit_all)
         if lbl:
             axis.set_label_text(lbl)
+
 
 def get_plane_axis(plane):
     """Gets the name of the plane corresponding to the given axis.
@@ -507,6 +519,7 @@ def get_plane_axis(plane):
     elif plane == config.PLANE[2]:
         plane_axis = "x"
     return plane_axis
+
 
 def get_roi_path(path, offset, roi_size):
     """Get a string describing an ROI for an image at a given path.
@@ -541,6 +554,7 @@ def save_fig(path, ext, modifier=""):
         lib_clrbrain.backup_file(plot_path)
         plt.savefig(plot_path)
         print("exported figure to", plot_path)
+
 
 if __name__ == "__main__":
     print("Starting plot support")

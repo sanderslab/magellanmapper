@@ -429,13 +429,13 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     vspans = None
     vspan_lbls = None
     if col_vspan is not None:
-        # further group bar groups by vertical spans
+        # further group bar groups by vertical spans with location based 
+        # on each change in value in col_vspan
         # TODO: change .values to .to_numpy when Pandas req >= 0.24
         vspan_vals = df[col_vspan].values
         vspans = np.insert(
             np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
-        vspan_lbls = [" ".join([col_vspan, str(val)]) 
-                      for val in vspan_vals[vspans]]
+        vspan_lbls = [str(val) for val in vspan_vals[vspans]]
     
     if err_cols is None:
         # default to columns corresponding to data cols with suffix appended 

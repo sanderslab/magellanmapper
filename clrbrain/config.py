@@ -81,7 +81,8 @@ plot_2d_type = None
 # plot label keys for command-line parsing
 PlotLabels = Enum(
     "PlotLabels", (
-        "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT"
+        "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT", 
+        "X_TICK_LABELS", "Y_TICK_LABELS", 
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)

@@ -58,6 +58,7 @@ def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
     if title is not None:
         ax.set_title(title)
 
+
 def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
     """Plot images in a single row, with the final subplot showing an 
     overlay of all images.
@@ -86,6 +87,7 @@ def plot_overlays(imgs, z, cmaps, title=None, aspect=1.0):
         title = "Image overlays"
     gs.tight_layout(fig)
     plt.show()
+
 
 def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp, 
                       cmap_atlas, cmap_labels, translation=None, title=None, 
@@ -198,6 +200,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     save_fig(title, config.savefig)
     if show:
         plt.show()
+
 
 def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
                title, padding=0.2, skip_all_zero=False, rotation=80, 
@@ -341,6 +344,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
     if list_names:
         ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
 
+
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
@@ -482,6 +486,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
     save_fig(out_path, config.savefig, "_barplot")
     if show: plt.show()
 
+
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None, 
                title=None, size=None, show=True, suffix=None, 
                colors=None, df=None, groups=None, ignore_invis=False, 
@@ -613,6 +618,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
     save_fig(out_path, config.savefig)
     if show: plt.show()
+
 
 def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 
                  names_group=None, labels=None, units=None, xlim=None, 
@@ -757,6 +763,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     save_fig(out_path, config.savefig)
     if show: plt.show()
 
+
 def plot_probability(path, conds, metric_cols, col_size, **kwargs):
     """Generate a probability plot such as that used in Q-Q or P-P plots.
     
@@ -785,7 +792,8 @@ def plot_probability(path, conds, metric_cols, col_size, **kwargs):
         names_group=metric_cols, 
         labels=(conds[1].capitalize(), conds[0].capitalize()), 
         xy_line=True, col_size=col_size, **kwargs)
-    
+
+
 def plot_roc(df, show=True, annot_arri=None):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     
@@ -813,6 +821,7 @@ def plot_roc(df, show=True, annot_arri=None):
         None, (0, 1), (0, 1), 
         "Nuclei Detection ROC Over {}".format(names_group[-1]), df=df,
         show=show, annot_arri=annot_arri)
+
 
 def plot_image(img, path=None, show=False):
     """Plot a single image in a borderless figure, with option to export 
@@ -859,7 +868,8 @@ def setup_style(style=None):
     plt.style.use(plt_style)
     pylab.rcParams.update(config.rc_params)
 
-if __name__ == "__main__":
+
+def main():
     # set up command-line args and plotting style
     from clrbrain import cli
     cli.main(True)
@@ -931,3 +941,7 @@ if __name__ == "__main__":
             labels=("Nuclei", "Intensity"), 
             title="Nuclei Vs. Intensity By Region", fig_size=size, show=show, 
             suffix=config.suffix, df=df)
+
+
+if __name__ == "__main__":
+    main()

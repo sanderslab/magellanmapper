@@ -202,8 +202,8 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         plt.show()
 
 
-def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
-               title, padding=0.2, skip_all_zero=False, rotation=80, 
+def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
+               title, padding=0.2, skip_all_zero=False, rotation=80,
                y_unit=None, vspans=None, vspan_lbls=None, vspan_alt_y=False):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
@@ -230,7 +230,7 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             error), with a error sequence for each separate set of 
             bar plots. All error sequences should be the same size as one 
             another and each main value sequence in ``lists``.
-        list_names: Sequence of names to display in the legend. Length 
+        legend_names: Sequence of names to display in the legend. Length 
             should be the same as that of ``lists``. If None, a legend 
             will not be displayed.
         x_labels: Sequence of labels for each bar group, where the length 
@@ -346,11 +346,11 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             ax.text(
                 x, y, vspan_lbls[i], color="k", horizontalalignment="center")
     
-    if list_names:
-        ax.legend(bars, list_names, loc="best", fancybox=True, framealpha=0.5)
+    if legend_names:
+        ax.legend(bars, legend_names, loc="best", fancybox=True, framealpha=0.5)
 
 
-def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="", 
+def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None, 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
               col_wt=None, df=None):
@@ -371,7 +371,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             case matching columns with "_err" as suffix will be used for 
             error bars if present.
         legend_names: Sequence of names for each set of bars. 
-            Defaults to None, which will use ``data_cols`` for names.
+            Defaults to None, which will use ``data_cols`` for names. 
+            Use "" to not display a legend.
         col_groups: Name of column specifying names of each group. 
             Defaults to None, which will use the first column for names.
         groups: Sequence of groups to include and by which to sort; 
@@ -450,7 +451,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names="",
             col += "_err"
             err_cols.append(col if col in df else None)
     
-    if legend_names == "":
+    if legend_names is None:
         # default to using data column names for names of each set of bars
         legend_names = [name.replace("_", " ") for name in data_cols]
     
@@ -917,7 +918,7 @@ def main():
         plot_bars(
             config.filename, data_cols=("vals.effect", ), 
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
-            legend_names=None, col_groups="RegionName", title=title, 
+            legend_names="", col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, 
             size=size, show=show, groups=config.groups, 
             prefix=config.prefix, col_vspan="Level", col_wt=col_wt)

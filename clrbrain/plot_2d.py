@@ -353,7 +353,7 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None, 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
-              col_wt=None, df=None):
+              col_wt=None, df=None, x_tick_labels=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -399,6 +399,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             value; defaults to None.
         df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
+        x_tick_labels (List[str]): Sequence of labels for each bar group 
+            along the x-axis; defaults to None to use ``groups`` instead. 
     """
     # load data frame from CSV and setup figure
     if df is None:
@@ -483,8 +485,9 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     if title is None:
         title = os.path.splitext(
             os.path.basename(path_to_df))[0].replace("_", " ")
+    x_labels = x_tick_labels if x_tick_labels else df[col_groups]
     _bar_plots(
-        ax, lists, errs, legend_names, df[col_groups], bar_colors, y_label, 
+        ax, lists, errs, legend_names, x_labels, bar_colors, y_label, 
         title, y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls)
     
     # save and display
@@ -904,6 +907,7 @@ def main():
         
         # setup labels
         title = config.plot_labels[config.PlotLabels.TITLE]
+        x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
         y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
         y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
         if y_lbl is None: y_lbl = "Effect size"
@@ -921,7 +925,8 @@ def main():
             legend_names="", col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, 
             size=size, show=show, groups=config.groups, 
-            prefix=config.prefix, col_vspan="Level", col_wt=col_wt)
+            prefix=config.prefix, col_vspan="Level", col_wt=col_wt, 
+            x_tick_labels=x_tick_lbls)
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve

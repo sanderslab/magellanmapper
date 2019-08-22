@@ -204,7 +204,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
 
 def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label, 
                title, padding=0.2, skip_all_zero=False, rotation=80, 
-               y_unit=None, vspans=None, vspan_lbls=None):
+               y_unit=None, vspans=None, vspan_lbls=None, vspan_alt_y=False):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
@@ -247,6 +247,10 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
             back to :meth:``plot_support.set_scinot``.
         vspans: Shade with vertical spans with indices of bar groups 
             at which alternating colors; defaults to None.
+        vspan_lbls (List[str]): Sequence of labels of vertical spans; 
+            defaults to None.
+        vspan_alt_y (bool): True to alternate y-axis placement to avoid 
+            overlap; defaults to False.
     """
     bars = []
     if len(lists) < 1: return
@@ -326,17 +330,18 @@ def _bar_plots(ax, lists, errs, list_names, x_labels, colors, y_label,
         lbl.set_transform(lbl.get_transform() + offset)
     
     if vspans is not None and vspan_lbls is not None:
-        # show labels for vspans
+        # show labels for vertical spans
         ylims = ax.get_ylim()
         y_span = abs(ylims[1] - ylims[0])
         y_top = max(ylims)
         for i, x in enumerate(xs):
             end = xs[i + 1] if i < num_xs - 1 else num_groups
             x = (x + end) / 2
-            # position 8% down from top in data coordinates, shifting 
-            # alternating labels further down to avoid overlap
-            y_frac = 0.08
-            if i % 2 == 0: y_frac -= 0.03
+            # position 4% down from top in data coordinates
+            y_frac = 0.04
+            if vspan_alt_y and i % 2 != 0:
+                # shift alternating labels further down to avoid overlap
+                y_frac += 0.03
             y = y_top - y_span * y_frac
             ax.text(
                 x, y, vspan_lbls[i], color="k", horizontalalignment="center")

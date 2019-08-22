@@ -3,6 +3,7 @@
 # Author: David Young, 2019
 """Measurement of atlases and statistics generation.
 """
+import os
 
 import numpy as np
 import pandas as pd
@@ -140,3 +141,44 @@ def plot_region_development(metric, size=None, show=True):
                    "Brain ({}, Level {})".format(metric, level)),
             suffix="_dev_{}_level{}_norm".format(metric, level), 
             df=df_norm_piv, **line_params_norm)
+
+
+def plot_unlabeled_hemisphere(path, cols, size=None, show=True):
+    """Plot unlabeled hemisphere fractions as bar and line plots.
+    
+    Args:
+        path (str): Path to data frame.
+        cols (List[str]): Sequence of columns to plot.
+        size (List[int]): Sequence of ``width, height`` to size the figure; 
+            defaults to None.
+        show (bool): True to display the image; defaults to True.
+
+    """
+    # load data frame and convert sample names to ages
+    df = pd.read_csv(path)
+    ages = ontology.rel_to_abs_ages(df["Sample"].unique())
+    df["Age"] = df["Sample"].map(ages)
+    
+    # generate a separate graph for each metric
+    conds = df["Condition"].unique()
+    for col in cols:
+        title = "{}".format(col).replace("_", " ")
+        y_label = "Fraction of hemisphere unlabeled"
+        
+        # plot as lines
+        df_lines, regions = stats.pivot_with_conditions(
+            df, ["Age", "Condition"], "Region", col)
+        plot_2d.plot_lines(
+            config.filename, "Age", regions, linestyles=("--", "-"), 
+            labels=(y_label, "Post-Conceptional Age"), title=title,
+            size=size, show=show, ignore_invis=True, 
+            suffix="_{}".format(col), df=df_lines, groups=conds)
+        
+        # plot as bars, pivoting value into separate columns by condition
+        df_bars = df.pivot(
+            index="Sample", columns="Condition", values=col).reset_index()
+        plot_2d.plot_bars(
+            config.filename, conds, col_groups="Sample", y_label=y_label, 
+            title=title, size=None, show=show, df=df_bars, 
+            prefix="{}_{}".format(
+                os.path.splitext(config.filename)[0], col))

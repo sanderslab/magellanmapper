@@ -4125,39 +4125,9 @@ def main():
         
     elif reg is config.RegisterTypes.plot_lateral_unlabeled:
         # plot lateral edge unlabeled fractions as both lines and bars
-
-        # load data frame and convert sample names to ages
-        df = pd.read_csv(config.filename)
-        ages = ontology.rel_to_abs_ages(df["Sample"].unique())
-        df["Age"] = df["Sample"].map(ages)
-        
-        # generate a separate graph for each metric
         cols = (AtlasMetrics.LAT_UNLBL_VOL.value, 
                 AtlasMetrics.LAT_UNLBL_PLANES.value)
-        conds = df["Condition"].unique()
-        for col in cols:
-            title = "{}".format(col).replace("_", " ")
-            y_label = "Fraction of hemisphere unlabeled"
-            
-            # plot as lines
-            df_lines, regions = stats.pivot_with_conditions(
-                df, ["Age", "Condition"], "Region", col)
-            plot_2d.plot_lines(
-                config.filename, "Age", regions, linestyles=("--", "-"), 
-                labels=(y_label, "Post-Conceptional Age"), title=title,
-                size=size, show=show, ignore_invis=True, 
-                suffix="_{}".format(col), df=df_lines, groups=conds)
-            
-            # plot as bars
-            
-            # pivot value into separate columns by condition
-            df_bars = df.pivot(
-                index="Sample", columns="Condition", values=col).reset_index()
-            plot_2d.plot_bars(
-                config.filename, conds, col_groups="Sample", y_label=y_label, 
-                title=title, size=None, show=show, df=df_bars, 
-                prefix="{}_{}".format(
-                    os.path.splitext(config.filename)[0], col))
+        atlas_stats.plot_unlabeled_hemisphere(config.filename, cols, size, show)
 
 
 if __name__ == "__main__":

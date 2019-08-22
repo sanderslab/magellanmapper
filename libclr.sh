@@ -214,3 +214,21 @@ suppress_output() {
     exec 2>&4
   fi
 }
+
+############################################
+# Join array elements into a delimited string
+# Globals:
+#   NONE
+# Arguments:
+#   1: Name of array to join.
+#   2: Separator.
+# Returns:
+#   NONE
+############################################
+join_array() {
+  local -n arr="$1"
+  local sep="$2"
+  local ticks=$(printf "${sep}%s" "${arr[@]}")
+  ticks="${ticks:${#sep}}"
+  echo "$ticks"
+}

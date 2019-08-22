@@ -3410,6 +3410,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     """
     # load labels image and data frame before generating map for the 
     # given metric of the chosen measurement
+    print("Generating labels difference image for", meas, "from", df_path)
     reg_name = IMG_LABELS if level is None else IMG_LABELS_LEVEL.format(level)
     labels_sitk = load_registered_img(
         img_path, reg_name=reg_name, get_sitk=True)
@@ -4003,10 +4004,10 @@ def main():
         for metric in metrics:
             path_df = "{}_{}.csv".format("vols_stats", metric)
             if not os.path.exists(path_df): continue
+            col_wt = vols.get_metric_weight_col(metric)
             make_labels_diff_img(
                 config.filename, path_df, "vals.effect", None, config.prefix, 
-                show, meas_path_name=metric, 
-                col_wt=vols.LabelMetrics.Volume.name)
+                show, meas_path_name=metric, col_wt=col_wt)
     
     elif reg is config.RegisterTypes.combine_cols:
         # normalize the given columns to original values in a data frame 
@@ -4058,7 +4059,8 @@ def main():
         
         # display as probability plot
         lims = (-3, 3)
-        plot_2d.plot_probability(path, conds, metric_cols, "Volume", 
+        plot_2d.plot_probability(
+            path, conds, metric_cols, "Volume", 
             xlim=lims, ylim=lims, title="Region Match Z-Scores", 
             fig_size=size, show=show, suffix=None, df=df)
     
@@ -4104,7 +4106,7 @@ def main():
     elif reg is config.RegisterTypes.melt_cols:
         # melt columns specified in "groups" using ID columns from 
         # standard atlas metrics
-        id_cols=[
+        id_cols = [
             AtlasMetrics.SAMPLE.value, AtlasMetrics.REGION.value, 
             AtlasMetrics.CONDITION.value]
         df = stats.melt_cols(

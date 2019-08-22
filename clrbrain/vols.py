@@ -785,7 +785,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     return df, df_all
 
 def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False, 
-                       reverse=False):
+                       reverse=False, col_wt=None):
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
@@ -807,6 +807,10 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
             allows giving a neutral value instead.
         reverse: Reverse the order of sorted conditions when generating 
             stats by ``fn_avg`` to compare conditions; defaults to False.
+        col_wt (str): Name of column to use for weighting, where the 
+            magnitude of ``meas`` will be adjusted as fractions of the max 
+            value in this weighting column for labels found in ``labels_img``; 
+            defaults to None.
     
     Retunrs:
         A map of averages for the given measurement as an image of the 
@@ -814,17 +818,43 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
         values for ``meas`` are found.
     """
     if meas not in df or np.all(np.isnan(df[meas])):
+        # ensure that measurement column is present with non-NaNs
         print("{} not in data frame or all NaNs, no image to generate"
               .format(meas))
         return None
-    # ensure that at least 2 conditions exist to compare
-    conds = sorted(
-        np.unique(df["Condition"]) if "Condition" in df else [], 
-        reverse=reverse)
+    
+    # make image array to map differences for each label and filter data 
+    # frame to get only these regions
     labels_diff = np.zeros_like(labels_img, dtype=np.float)
     labels_img_abs = np.abs(labels_img)
     regions = np.unique(labels_img_abs)
+    df = df.loc[df["Region"].isin(regions)].copy()
+    
+    df_cond = None
+    conds = None
+    if "Condition" in df:
+        # get and sort conditions
+        df_cond = df["Condition"]
+        conds = sorted(np.unique(df_cond), reverse=reverse)
+
+    if col_wt is not None:
+        # make weightings by getting the given column for the first 
+        # condition and normalizing it to its maximum value, or using 
+        # the whole column if no conditions exist
+        print("weighting stats by", col_wt)
+        wts = df.loc[df_cond == conds[0], col_wt] if conds else df[col_wt]
+        wts /= max(wts)
+        if conds:
+            for cond in conds:
+                df.loc[df_cond == cond, meas] = np.multiply(
+                    df.loc[df_cond == cond, meas], wts)
+        else:
+            df.loc[:, meas] *= wts
+    
     for region in regions:
+        # get difference for each region, either from a single column 
+        # that already has the difference of effect size of by taking 
+        # the difference from two columns
         df_region = df[df[LabelMetrics.Region.name] == region]
         labels_region = labels_img_abs == region
         if fn_avg is None:
@@ -833,8 +863,7 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
                 if not skip_nans:
                     labels_diff[labels_region] = np.nan
             else:
-                labels_diff[labels_region] = (
-                    df_region["vals.effect"])# * df_region["vals.logp"])
+                labels_diff[labels_region] = df_region[meas]
         else:
             if len(conds) >= 2:
                 # compare the metrics for the first two conditions
@@ -856,3 +885,22 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
                 # take the metric for the single condition
                 labels_diff[labels_region] = fn_avg(df_region[meas])
     return labels_diff
+
+
+def get_metric_weight_col(stat):
+    """Get the weighting column for a given metric.
+    
+    Args:
+        stat (str): The metric for which to find the appropriate weighting 
+            metric.
+
+    Returns:
+        The name of the corresponding weighting metric as a string.
+
+    """
+    col_wt = None
+    if stat in [metric.name for metric in WT_METRICS]:
+        col_wt = LabelMetrics.Volume.name
+        if stat in [metric.name for metric in NUC_METRICS]:
+            col_wt = LabelMetrics.Nuclei.name
+    return col_wt

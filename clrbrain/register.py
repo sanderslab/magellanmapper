@@ -3384,7 +3384,8 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     return df_combined, df_combined_all
 
 def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None, 
-                         show=False, level=None, meas_path_name=None):
+                         show=False, level=None, meas_path_name=None, 
+                         col_wt=None):
     """Replace labels in an image with the differences in metrics for 
     each given region between two conditions.
     
@@ -3405,6 +3406,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
             Defaults to None to use only drawn labels.
         meas_path_name: Name to use in place of `meas` in output path; 
             defaults to None.
+        col_wt (str): Name of column to use for weighting; defaults to None.
     """
     # load labels image and data frame before generating map for the 
     # given metric of the chosen measurement
@@ -3414,7 +3416,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     labels_np = sitk.GetArrayFromImage(labels_sitk)
     df = pd.read_csv(df_path)
     labels_diff = vols.map_meas_to_labels(
-        labels_np, df, meas, fn_avg, reverse=True)
+        labels_np, df, meas, fn_avg, reverse=True, col_wt=col_wt)
     if labels_diff is None: return
     labels_diff_sitk = replace_sitk_with_numpy(labels_sitk, labels_diff)
     
@@ -3984,9 +3986,10 @@ def main():
             (vols.LabelMetrics.CoefVarIntens.name, np.nanmedian), 
         ]
         for metric in metrics:
+            col_wt = vols.get_metric_weight_col(metric[0])
             make_labels_diff_img(
                 config.filename, path_df, *metric, config.prefix, show, 
-                config.labels_level)
+                config.labels_level, col_wt=col_wt)
 
     elif reg is config.RegisterTypes.labels_diff_stats:
         # generate labels difference images for various measurements 
@@ -4002,7 +4005,8 @@ def main():
             if not os.path.exists(path_df): continue
             make_labels_diff_img(
                 config.filename, path_df, "vals.effect", None, config.prefix, 
-                show, meas_path_name=metric)
+                show, meas_path_name=metric, 
+                col_wt=vols.LabelMetrics.Volume.name)
     
     elif reg is config.RegisterTypes.combine_cols:
         # normalize the given columns to original values in a data frame 

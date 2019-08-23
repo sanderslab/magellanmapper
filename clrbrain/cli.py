@@ -771,7 +771,7 @@ def process_file(filename_base, offset, roi_size):
         if atlas_suffix is not None:
             # will take the place of any previously loaded image5d
             image5d = register.load_registered_img(
-                config.filename, reg_name=atlas_suffix)
+                config.filename, atlas_suffix)
             image5d = image5d[None]
         
         annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
@@ -781,7 +781,7 @@ def process_file(filename_base, offset, roi_size):
             try:
                 path = config.prefix if config.prefix else config.filename
                 config.labels_img = register.load_registered_img(
-                    path, reg_name=annotation_suffix)
+                    path, annotation_suffix)
                 config.labels_scaling = importer.calc_scaling(
                     image5d, config.labels_img)
                 labels_ref = ontology.load_labels_ref(config.load_labels)
@@ -801,7 +801,7 @@ def process_file(filename_base, offset, roi_size):
             # load borders image, which can also be another labels image
             try:
                 config.borders_img = register.load_registered_img(
-                    config.filename, reg_name=borders_suffix)
+                    config.filename, borders_suffix)
             except FileNotFoundError as e:
                 print(e)
         
@@ -810,7 +810,7 @@ def process_file(filename_base, offset, roi_size):
             # file for consistent ID-color mapping, even if labels are missing
             try:
                 config.labels_img_orig = register.load_registered_img(
-                    config.load_labels, reg_name=register.IMG_LABELS)
+                    config.load_labels, register.IMG_LABELS)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn(

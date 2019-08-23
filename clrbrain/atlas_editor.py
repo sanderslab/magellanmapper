@@ -308,8 +308,7 @@ class AtlasEditor:
         # only save if at least one editor has been edited
         if not any([ed.edited for ed in self.plot_eds.values()]): return
         register.load_registered_img(
-            config.filename, reg_name=register.IMG_LABELS, 
-            replace=config.labels_img)
+            config.filename, register.IMG_LABELS, replace=config.labels_img)
         # reset edited flag in all editors and show save button as disabled
         for ed in self.plot_eds.values(): ed.edited = False
         enable_btn(self.save_btn, False)

@@ -3740,7 +3740,7 @@ def main():
         print("Please choose a registration type")
     
     elif reg in (
-        config.RegisterTypes.single, config.RegisterTypes.new_atlas):
+            config.RegisterTypes.single, config.RegisterTypes.new_atlas):
         # "single", basic registration of 1st to 2nd image, transposing the 
         # second image according to config.plane and config.flip_horiz; 
         # "new_atlas" registers similarly but outputs new atlas files
@@ -3867,8 +3867,8 @@ def main():
         stats.data_frames_to_csv(dfs, "smoothing_peaks.csv")
     
     elif reg in (
-        config.RegisterTypes.make_edge_images, 
-        config.RegisterTypes.make_edge_images_exp):
+            config.RegisterTypes.make_edge_images, 
+            config.RegisterTypes.make_edge_images_exp):
         
         # convert atlas or experiment image and associated labels 
         # to edge-detected images; labels can be given as atlas dir from 
@@ -4007,8 +4007,8 @@ def main():
             df, lib_clrbrain.insert_before_ext(config.filename, "_norm"))
 
     elif reg is config.RegisterTypes.zscores:
-        # export z-scores for the given metrics to a new data frame 
-        # and display as a scatter plot
+        # measurea and export z-scores for the given metrics to a new 
+        # data frame and display as a scatter plot
         metric_cols = (
             vols.LabelMetrics.VarIntensity.name, 
             #vols.LabelMetrics.VarIntensDiff.name,
@@ -4035,8 +4035,8 @@ def main():
             vols.MetricCombos.COEFVAR_INTENS, vols.MetricCombos.COEFVAR_NUC
         )
         atlas_stats.meas_plot_coefvar(
-            config.filename, metric_cols, combos, 
-            vols.LabelMetrics.Volume.name, size, show)
+            config.filename, ["Region"], "Condition", "original", metric_cols, 
+            combos, vols.LabelMetrics.Volume.name, size, show)
 
     elif reg is config.RegisterTypes.melt_cols:
         # melt columns specified in "groups" using ID columns from 

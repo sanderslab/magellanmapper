@@ -227,8 +227,8 @@ def meas_plot_zscores(path, metric_cols, extra_cols, composites, size=None,
         fig_size=size, show=show, suffix=None, df=df)
 
 
-def meas_plot_coefvar(path, metric_cols, composites, size_col=None, size=None,
-                      show=True):
+def meas_plot_coefvar(path, id_cols, cond_col, cond_base, metric_cols, 
+                      composites, size_col=None, size=None, show=True):
     """Measure and plot coefficient of variation (CV) as a scatter plot.
     
     CV is computed two ways:
@@ -239,6 +239,10 @@ def meas_plot_coefvar(path, metric_cols, composites, size_col=None, size=None,
     
     Args:
         path (str): Path to data frame.
+        id_cols (List[str]): Sequence of columns to serve as index/indices.
+        cond_col (str): Name of the condition column.
+        cond_base (str): Name of the condition to which all other conditions 
+            will be normalized.
         metric_cols (List[str]): Sequence of column names for which to 
             compute z-scores.
         composites (List[Enum]): Sequence of enums specifying the 
@@ -258,10 +262,9 @@ def meas_plot_coefvar(path, metric_cols, composites, size_col=None, size=None,
     
     # measure CV within each condition and shift metrics from each 
     # condition to separate columns
-    df = stats.coefvar_df(df, ["Region", "Condition"], metric_cols, size_col)
-    conds = np.unique(df["Condition"])
-    df = stats.cond_to_cols_df(
-        df, ["Region"], "Condition", "original", metric_cols)
+    df = stats.coefvar_df(df, [*id_cols, cond_col], metric_cols, size_col)
+    conds = np.unique(df[cond_col])
+    df = stats.cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols)
     path = lib_clrbrain.insert_before_ext(config.filename, "_coefvartransp")
     stats.data_frames_to_csv(df, path)
     

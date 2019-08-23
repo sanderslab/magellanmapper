@@ -4016,7 +4016,7 @@ def main():
             vols.LabelMetrics.EdgeDistSum.name, 
         )
         extra_cols = ("Sample", "Condition", vols.LabelMetrics.Volume.name)
-        atlas_stats.plot_zscores(
+        atlas_stats.meas_plot_zscores(
             config.filename, metric_cols, extra_cols, 
             (vols.MetricCombos.HOMOGENEITY, ), size, show)
     
@@ -4034,7 +4034,7 @@ def main():
         combos = (
             vols.MetricCombos.COEFVAR_INTENS, vols.MetricCombos.COEFVAR_NUC
         )
-        atlas_stats.plot_coefvar(
+        atlas_stats.meas_plot_coefvar(
             config.filename, metric_cols, combos, 
             vols.LabelMetrics.Volume.name, size, show)
 

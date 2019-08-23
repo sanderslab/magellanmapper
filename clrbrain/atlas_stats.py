@@ -185,8 +185,8 @@ def plot_unlabeled_hemisphere(path, cols, size=None, show=True):
                 os.path.splitext(config.filename)[0], col))
 
 
-def plot_zscores(path, metric_cols, extra_cols, composites, size=None,
-                 show=True):
+def meas_plot_zscores(path, metric_cols, extra_cols, composites, size=None,
+                      show=True):
     """Measure and plot z-scores for given columns in a data frame.
     
     Args:
@@ -227,8 +227,8 @@ def plot_zscores(path, metric_cols, extra_cols, composites, size=None,
         fig_size=size, show=show, suffix=None, df=df)
 
 
-def plot_coefvar(path, metric_cols, composites, size_col=None, size=None, 
-                 show=True):
+def meas_plot_coefvar(path, metric_cols, composites, size_col=None, size=None,
+                      show=True):
     """Measure and plot coefficient of variation (CV) as a scatter plot.
     
     CV is computed two ways:

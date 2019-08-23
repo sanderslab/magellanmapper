@@ -466,6 +466,32 @@ def merge_csvs(in_paths, out_path):
     dfs = [pd.read_csv(path) for path in in_paths]
     data_frames_to_csv(dfs, out_path)
 
+
+def filter_dfs_on_vals(dfs, cols, row_matches):
+    """Filter data frames for rows matching a value for a given column 
+    and concatenate the filtered data frames.
+    
+    Args:
+        dfs (List[:obj:`pd.DataFrame`]): Sequence of data frames to filter.
+        cols (List[str]): Sequence of columns to keep.
+        row_matches (List[Tuple]): Sequence of ``(col, val)`` criteria 
+            corresponding to ``dfs``, where only the rows with matching 
+            values to ``val`` for the given ``col`` will be kept.
+
+    Returns:
+        Tuple of the concatenated filtered data frames and a list of 
+        the filtered data frames.
+
+    """
+    dfs_filt = []
+    for df, match in zip(dfs, row_matches):
+        if match:
+            df = df.loc[df[match[0]] == match[1]]
+        dfs_filt.append(df[cols])
+    df_merged = pd.concat(dfs_filt)
+    return df_merged, dfs_filt
+
+
 if __name__ == "__main__":
     print("Starting Clrbrain stats...")
     from clrbrain import cli

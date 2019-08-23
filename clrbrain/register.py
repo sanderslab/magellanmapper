@@ -3608,21 +3608,6 @@ def export_common_labels(img_paths, output_path):
     print("common labels exported to {}".format(output_path))
     return df
 
-def extract_sample_metrics(df, cols):
-    """Extract columns from data frame relevant to samples.
-    
-    Args:
-        df: Data frame from which to extract columns.
-        cols: Sequence of additional columns to extract.
-    
-    Returns:
-        Data frame view with sample, region, condition, and any additional 
-        given columns extracted.
-    """
-    df_sm = df[
-        [AtlasMetrics.SAMPLE.value, AtlasMetrics.REGION.value, 
-         AtlasMetrics.CONDITION.value, *cols]]
-    return df_sm
 
 def _test_labels_lookup():
     """Test labels reverse dictionary creation and lookup.
@@ -3821,39 +3806,35 @@ def main():
         # and 2nd element should be smoothing stats
         
         # load data frames
-        df_stats = pd.read_csv(config.filename) # atlas import stats
-        df_smoothing = pd.read_csv(config.filenames[1]) # smoothing stats
+        df_stats = pd.read_csv(config.filename)  # atlas import stats
+        df_smoothing = pd.read_csv(config.filenames[1])  # smoothing stats
         
-        # compare histo vs unsmoothed labels
-        df_stats_base = extract_sample_metrics(
-            df_stats, [SmoothingMetrics.COMPACTNESS.value])
-        df_smoothing_base = df_smoothing.loc[
-            df_smoothing[SmoothingMetrics.FILTER_SIZE.value] == 0]
-        df_smoothing_base = extract_sample_metrics(
-            df_smoothing_base, [SmoothingMetrics.COMPACTNESS.value])
-        df_baseline = pd.concat([df_stats_base, df_smoothing_base])
-        df_baseline[config.GENOTYPE_KEY] = (
-            "Histo Vs Orig Labels")
+        cols = [AtlasMetrics.SAMPLE.value, 
+                AtlasMetrics.REGION.value, 
+                AtlasMetrics.CONDITION.value, 
+                SmoothingMetrics.COMPACTNESS.value]
         
-        # compare unsmoothed vs smoothed labels
+        # compare histology vs combined original labels
+        df_histo_vs_orig, dfs_baseline = stats.filter_dfs_on_vals(
+            [df_stats, df_smoothing], cols, 
+            [None, (SmoothingMetrics.FILTER_SIZE.value, 0)])
+        df_histo_vs_orig[config.GENOTYPE_KEY] = "Histo Vs Orig Labels"
+        
+        # compare combined original vs smoothed labels
         smooth = config.register_settings["smooth"]
-        df_smoothing_sm = df_smoothing.loc[
-            df_smoothing[SmoothingMetrics.FILTER_SIZE.value] == smooth]
-        df_smoothing_sm = extract_sample_metrics(
-            df_smoothing_sm, [SmoothingMetrics.COMPACTNESS.value])
-        df_smoothing_vs = pd.concat([df_smoothing_base, df_smoothing_sm])
-        df_smoothing_vs[config.GENOTYPE_KEY] = (
-            "Smoothing")
-        
-        # compare histo vs smoothed labels
-        df_histo_sm = pd.concat([df_stats_base, df_smoothing_sm])
-        df_histo_sm[config.GENOTYPE_KEY] = (
-            "Vs Smoothed Labels")
+        df_unsm_vs_sm, dfs_smoothed = stats.filter_dfs_on_vals(
+            [dfs_baseline[1], df_smoothing], cols, 
+            [None, (SmoothingMetrics.FILTER_SIZE.value, smooth)])
+        df_unsm_vs_sm[config.GENOTYPE_KEY] = "Smoothing"
+
+        # compare histology vs smoothed labels
+        df_histo_vs_sm = pd.concat([dfs_baseline[0], dfs_smoothed[1]])
+        df_histo_vs_sm[config.GENOTYPE_KEY] = "Vs Smoothed Labels"
         
         # export data frames
         output_path = lib_clrbrain.combine_paths(
             config.filename, "compactness.csv")
-        df = pd.concat([df_baseline, df_histo_sm, df_smoothing_vs])
+        df = pd.concat([df_histo_vs_orig, df_histo_vs_sm, df_unsm_vs_sm])
         df[AtlasMetrics.REGION.value] = "all"
         stats.data_frames_to_csv(df, output_path)
     

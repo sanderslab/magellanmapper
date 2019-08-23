@@ -9,34 +9,37 @@ machine learning algorithms or other applications.
 
 import os
 import glob
+import warnings
 
 import numpy as np
 from matplotlib import pyplot as plt
-try:
-    import SimpleITK as sitk
-except ImportError as e:
-    print(e)
-    print("WARNING: SimpleElastix could not be found, so there will be error "
-          "when attempting to export images to non-Numpy formats")
 
 from clrbrain import config
-from clrbrain import chunking
 from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import sqlite
-from clrbrain import plot_2d
 from clrbrain import plot_3d
 from clrbrain import roi_editor
 
+try:
+    import SimpleITK as sitk
+except ImportError as e:
+    sitk = None
+    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
+ 
+ 
 def make_roi_paths(path, roi_id, channel, make_dirs=False):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
     path_dir_nifti = "{}_nifti".format(path_base)
     name_base = os.path.basename(path_base)
     path_img = os.path.join(path_base, "{}_ch{}.npy".format(name_base, channel))
-    path_img_nifti = os.path.join(path_dir_nifti, "{}_ch{}.nii.gz".format(name_base, channel))
+    path_img_nifti = os.path.join(
+        path_dir_nifti, "{}_ch{}.nii.gz".format(name_base, channel))
     path_blobs = os.path.join(path_base, "{}_blobs.npy".format(name_base))
-    path_img_annot = os.path.join(path_base, "{}_ch{}_annot.npy".format(name_base, channel))
-    path_img_annot_nifti = os.path.join(path_dir_nifti, "{}_ch{}_annot.nii.gz".format(name_base, channel))
+    path_img_annot = os.path.join(
+        path_base, "{}_ch{}_annot.npy".format(name_base, channel))
+    path_img_annot_nifti = os.path.join(
+        path_dir_nifti, "{}_ch{}_annot.nii.gz".format(name_base, channel))
     if make_dirs:
         if not os.path.exists(path_base):
             os.makedirs(path_base)
@@ -44,6 +47,7 @@ def make_roi_paths(path, roi_id, channel, make_dirs=False):
             os.makedirs(path_dir_nifti)
     return path_base, path_dir_nifti, path_img, path_img_nifti, path_blobs, \
         path_img_annot, path_img_annot_nifti
+
 
 def export_rois(db, image5d, channel, path, border):
     """Export all ROIs from database.
@@ -163,6 +167,7 @@ def export_rois(db, image5d, channel, path, border):
     _test_loading_rois(db, channel, path)
     '''
 
+
 def load_roi_files(db, path):
     path_base, path_img, path_blobs = make_roi_paths(path, "*")
     img_paths = sorted(glob.glob(path_img))
@@ -179,12 +184,14 @@ def load_roi_files(db, path):
         img_blobs.append(blobs)
     return path_base, imgs, img_blobs
 
+
 def _test_loading_rois(db, channel, path):
     path_base, imgs, img_blobs = load_roi_files(db, path)
     roi_ed = roi_editor.ROIEditor()
     for img, blobs in zip(imgs, img_blobs):
         config.savefig = None
         roi_ed.plot_roi(img, blobs, channel, show=True, title=path_base)
+
 
 def blobs_to_csv(blobs, path):
     """Exports blob coordinates and radius to CSV file, compressed with GZIP.
@@ -198,6 +205,7 @@ def blobs_to_csv(blobs, path):
     path_out = "{}.csv.gz".format(os.path.splitext(path)[0])
     header = "z,y,x,r"
     np.savetxt(path_out, blobs[:, :4], delimiter=",", header=header)
+
 
 if __name__ == "__main__":
     print("Clrbrain exporter")

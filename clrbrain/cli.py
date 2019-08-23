@@ -86,6 +86,7 @@ import argparse
 import numpy as np
 import pandas as pd
 
+import clrbrain.sitk_io
 from clrbrain import roi_editor
 from clrbrain import colormaps
 from clrbrain import config
@@ -96,6 +97,7 @@ from clrbrain import detector
 from clrbrain import mlearn
 from clrbrain import ontology
 from clrbrain import register
+from clrbrain import sitk_io
 from clrbrain import stack_detect
 from clrbrain import stats
 from clrbrain import transformer
@@ -770,7 +772,7 @@ def process_file(filename_base, offset, roi_size):
             atlas_suffix = register.IMG_ATLAS
         if atlas_suffix is not None:
             # will take the place of any previously loaded image5d
-            image5d = register.load_registered_img(
+            image5d = sitk_io.load_registered_img(
                 config.filename, atlas_suffix)
             image5d = image5d[None]
         
@@ -780,7 +782,7 @@ def process_file(filename_base, offset, roi_size):
             # using prefix for registered files if given
             try:
                 path = config.prefix if config.prefix else config.filename
-                config.labels_img = register.load_registered_img(
+                config.labels_img = sitk_io.load_registered_img(
                     path, annotation_suffix)
                 config.labels_scaling = importer.calc_scaling(
                     image5d, config.labels_img)
@@ -800,7 +802,7 @@ def process_file(filename_base, offset, roi_size):
         if borders_suffix is not None:
             # load borders image, which can also be another labels image
             try:
-                config.borders_img = register.load_registered_img(
+                config.borders_img = sitk_io.load_registered_img(
                     config.filename, borders_suffix)
             except FileNotFoundError as e:
                 print(e)
@@ -809,7 +811,7 @@ def process_file(filename_base, offset, roi_size):
             # load original labels image from same directory as ontology 
             # file for consistent ID-color mapping, even if labels are missing
             try:
-                config.labels_img_orig = register.load_registered_img(
+                config.labels_img_orig = sitk_io.load_registered_img(
                     config.load_labels, register.IMG_LABELS)
             except FileNotFoundError as e:
                 print(e)

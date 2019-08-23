@@ -11,7 +11,7 @@ from collections import OrderedDict
 from clrbrain import config
 from clrbrain import ontology
 from clrbrain import stats
-from clrbrain.register import _find_atlas_labels
+from clrbrain import sitk_io
 
 
 def export_region_ids(labels_ref_lookup, path, level):
@@ -42,7 +42,7 @@ def export_region_ids(labels_ref_lookup, path, level):
     
     cols = ("Region", "RegionAbbr", "RegionName", "Level", "Parent")
     data = OrderedDict()
-    label_ids = _find_atlas_labels(
+    label_ids = sitk_io.find_atlas_labels(
         config.load_labels, level, labels_ref_lookup)
     for key in label_ids:
         # does not include laterality distinction, only using original IDs

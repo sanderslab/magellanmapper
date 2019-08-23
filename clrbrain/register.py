@@ -4021,43 +4021,22 @@ def main():
             (vols.MetricCombos.HOMOGENEITY, ), size, show)
     
     elif reg is config.RegisterTypes.coefvar:
-        # export coefficient of variation for the given metrics to a 
-        # new data frame and display as a scatter plot
-        
-        # measure coefficient of variation
-        df = pd.read_csv(config.filename)
-        cols_orig = df.columns
-        combos = (
-            vols.MetricCombos.COEFVAR_INTENS, vols.MetricCombos.COEFVAR_NUC
-        )
-        df = stats.combine_cols(df, combos)
-        stats.data_frames_to_csv(
-            df, 
-            lib_clrbrain.insert_before_ext(config.filename, "_coefvar"))
-
+        # measure and export coefficient of variation for the given metrics 
+        # to a new data frame and display as a scatter plot; note that these 
+        # CVs are variation of intensity variation, for example, rather than 
+        # the raw CVs of intensity measures in vols
         metric_cols = (
             vols.LabelMetrics.VarIntensity.name, 
             vols.LabelMetrics.VarIntensMatch.name,
             vols.LabelMetrics.VarNuclei.name,  
             vols.LabelMetrics.EdgeDistSum.name, 
         )
-        df = stats.coefvar_df(
-            df, ["Region", "Condition"], metric_cols, 
-            vols.LabelMetrics.Volume.name)
-        
-        # shift metrics from each condition to separate columns
-        conds = np.unique(df["Condition"])
-        df = stats.cond_to_cols_df(
-            df, ["Region"], "Condition", "original", metric_cols)
-        path = lib_clrbrain.insert_before_ext(config.filename, "_coefvarhom")
-        stats.data_frames_to_csv(df, path)
-        
-        # display as probability plot
-        lims = (0, 0.7)
-        plot_2d.plot_probability(
-            path, conds, metric_cols, "Volume",
-            xlim=lims, ylim=lims, title="Coefficient of Variation", 
-            fig_size=size, show=show, suffix=None, df=df)
+        combos = (
+            vols.MetricCombos.COEFVAR_INTENS, vols.MetricCombos.COEFVAR_NUC
+        )
+        atlas_stats.plot_coefvar(
+            config.filename, metric_cols, combos, 
+            vols.LabelMetrics.Volume.name, size, show)
 
     elif reg is config.RegisterTypes.melt_cols:
         # melt columns specified in "groups" using ID columns from 

@@ -225,3 +225,49 @@ def plot_zscores(path, metric_cols, extra_cols, composites, size=None,
         path, conds, metric_cols, "Volume", 
         xlim=lims, ylim=lims, title="Region Match Z-Scores", 
         fig_size=size, show=show, suffix=None, df=df)
+
+
+def plot_coefvar(path, metric_cols, composites, size_col=None, size=None, 
+                 show=True):
+    """Measure and plot coefficient of variation (CV) as a scatter plot.
+    
+    CV is computed two ways:
+    
+    - Based on columns and equation specified in ``composites``, applied 
+      across all samples regardless of group
+    - For each metric in ``metric_cols``, separated by groups
+    
+    Args:
+        path (str): Path to data frame.
+        metric_cols (List[str]): Sequence of column names for which to 
+            compute z-scores.
+        composites (List[Enum]): Sequence of enums specifying the 
+            combination, typically from :class:`vols.MetricCombos`.
+        size_col (str): Name of weighting column for coefficient of 
+            variation measurement; defaults to None.
+        size (List[int]): Sequence of ``width, height`` to size the figure; 
+            defaults to None.
+        show (bool): True to display the image; defaults to True.
+
+    """
+    # measure coefficient of variation per sample-region regardless of group
+    df = pd.read_csv(path)
+    df = stats.combine_cols(df, composites)
+    stats.data_frames_to_csv(
+        df, lib_clrbrain.insert_before_ext(config.filename, "_coefvar"))
+    
+    # measure CV within each condition and shift metrics from each 
+    # condition to separate columns
+    df = stats.coefvar_df(df, ["Region", "Condition"], metric_cols, size_col)
+    conds = np.unique(df["Condition"])
+    df = stats.cond_to_cols_df(
+        df, ["Region"], "Condition", "original", metric_cols)
+    path = lib_clrbrain.insert_before_ext(config.filename, "_coefvartransp")
+    stats.data_frames_to_csv(df, path)
+    
+    # display CV measured by condition as probability plot
+    lims = (0, 0.7)
+    plot_2d.plot_probability(
+        path, conds, metric_cols, "Volume",
+        xlim=lims, ylim=lims, title="Coefficient of Variation", 
+        fig_size=size, show=show, suffix=None, df=df)

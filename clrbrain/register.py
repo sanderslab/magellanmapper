@@ -4009,41 +4009,16 @@ def main():
     elif reg is config.RegisterTypes.zscores:
         # export z-scores for the given metrics to a new data frame 
         # and display as a scatter plot
-        
-        # generate z-scores
-        df = pd.read_csv(config.filename)
         metric_cols = (
             vols.LabelMetrics.VarIntensity.name, 
-            vols.LabelMetrics.VarIntensDiff.name,
+            #vols.LabelMetrics.VarIntensDiff.name,
             vols.LabelMetrics.VarNuclei.name,  
             vols.LabelMetrics.EdgeDistSum.name, 
         )
-        extra_cols = (
-            "Sample", "Condition", vols.LabelMetrics.Volume.name, 
-        )
-        df = stats.zscore_df(
-            df, "Region", metric_cols, extra_cols, True)
-        
-        # generate composite score column
-        df_comb = stats.combine_cols(
-            df, (vols.MetricCombos.HOMOGENEITY, ), np.sum)
-        stats.data_frames_to_csv(
-            df_comb, 
-            lib_clrbrain.insert_before_ext(config.filename, "_zhomogeneity"))
-        
-        # shift metrics from each condition to separate columns
-        conds = np.unique(df["Condition"])
-        df = stats.cond_to_cols_df(
-            df, ["Sample", "Region"], "Condition", "original", metric_cols)
-        path = lib_clrbrain.insert_before_ext(config.filename, "_zscore")
-        stats.data_frames_to_csv(df, path)
-        
-        # display as probability plot
-        lims = (-3, 3)
-        plot_2d.plot_probability(
-            path, conds, metric_cols, "Volume", 
-            xlim=lims, ylim=lims, title="Region Match Z-Scores", 
-            fig_size=size, show=show, suffix=None, df=df)
+        extra_cols = ("Sample", "Condition", vols.LabelMetrics.Volume.name)
+        atlas_stats.plot_zscores(
+            config.filename, metric_cols, extra_cols, 
+            (vols.MetricCombos.HOMOGENEITY, ), size, show)
     
     elif reg is config.RegisterTypes.coefvar:
         # export coefficient of variation for the given metrics to a 

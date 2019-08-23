@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from clrbrain import config
+from clrbrain import lib_clrbrain
 from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import stats
@@ -182,3 +183,45 @@ def plot_unlabeled_hemisphere(path, cols, size=None, show=True):
             title=title, size=None, show=show, df=df_bars, 
             prefix="{}_{}".format(
                 os.path.splitext(config.filename)[0], col))
+
+
+def plot_zscores(path, metric_cols, extra_cols, composites, size=None,
+                 show=True):
+    """Measure and plot z-scores for given columns in a data frame.
+    
+    Args:
+        path (str): Path to data frame.
+        metric_cols (List[str]): Sequence of column names for which to 
+            compute z-scores.
+        extra_cols (List[str]): Additional columns to included in the 
+            output data frame.
+        composites (List[Enum]): Sequence of enums specifying the 
+            combination, typically from :class:`vols.MetricCombos`.
+        size (List[int]): Sequence of ``width, height`` to size the figure; 
+            defaults to None.
+        show (bool): True to display the image; defaults to True.
+
+    """
+    # generate z-scores
+    df = pd.read_csv(path)
+    df = stats.zscore_df(df, "Region", metric_cols, extra_cols, True)
+    
+    # generate composite score column
+    df_comb = stats.combine_cols(df, composites)
+    stats.data_frames_to_csv(
+        df_comb, 
+        lib_clrbrain.insert_before_ext(config.filename, "_zhomogeneity"))
+    
+    # shift metrics from each condition to separate columns
+    conds = np.unique(df["Condition"])
+    df = stats.cond_to_cols_df(
+        df, ["Sample", "Region"], "Condition", "original", metric_cols)
+    path = lib_clrbrain.insert_before_ext(config.filename, "_zscore")
+    stats.data_frames_to_csv(df, path)
+    
+    # display as probability plot
+    lims = (-3, 3)
+    plot_2d.plot_probability(
+        path, conds, metric_cols, "Volume", 
+        xlim=lims, ylim=lims, title="Region Match Z-Scores", 
+        fig_size=size, show=show, suffix=None, df=df)

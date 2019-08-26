@@ -116,6 +116,7 @@ def _translation_adjust(orig, transformed, translation, flip=False):
         translation_adj = translation_adj[::-1]
     return translation_adj
 
+
 def _show_overlays(imgs, translation, fixed_file, plane):
     """Shows overlays via :func:plot_2d:`plot_overlays_reg`.
     
@@ -130,6 +131,7 @@ def _show_overlays(imgs, translation, fixed_file, plane):
     show = not config.no_show
     plot_2d.plot_overlays_reg(
         *imgs, *cmaps, translation, os.path.basename(fixed_file), plane, show)
+
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
     base_name = sitk_io.reg_out_path(fixed_file, "")
@@ -179,6 +181,7 @@ def _load_numpy_to_sitk(numpy_file, rotate=False):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
     return sitk_img
+
 
 def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True, 
                 holes_area=None):
@@ -241,6 +244,7 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
                 fixed_img, result_img_for_overlap, transformed_thresh=1)
     return result_imgs
 
+
 def _transform_labels(transformix_img_filter, labels_img, truncation=None, 
                       flip=False):
     if truncation is not None:
@@ -279,6 +283,7 @@ def _transform_labels(transformix_img_filter, labels_img, truncation=None,
     print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
     '''
     return transformed_labels_img
+
 
 def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
     if grid_spacing_schedule:
@@ -385,6 +390,7 @@ def register_duo(fixed_img, moving_img, path=None):
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     
     return transformed_img, transformix_img_filter
+
 
 def register(fixed_file, moving_file_dir, plane=None, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
@@ -552,6 +558,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     print("time elapsed for single registration (s): {}"
           .format(time() - start_time))
 
+
 def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None, 
                  plane=None, flip=False, prefix=None, suffix=None, show=True):
     """Using registered images including the unregistered copies of 
@@ -682,6 +689,7 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
     else:
         print("could not find non-empty plane at which to crop")
     return img_crop, i
+
 
 def register_group(img_files, flip=None, show_imgs=True, 
              write_imgs=True, name_prefix=None, scale=None):
@@ -877,6 +885,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     print("time elapsed for groupwise registration (s): {}"
           .format(time() - start_time))
 
+
 def register_labels_to_atlas(path_fixed):
     """Register annotation labels to its own atlas.
     
@@ -1015,6 +1024,7 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
         reg_name, COMBINED_SUFFIX, "_")
     sitk_io.write_reg_images({output_reg: combined_sitk}, output_base)
     return combined_sitk
+
 
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
                             flip=False, name_prefix=None, out_plane=None):
@@ -1385,6 +1395,7 @@ def _test_labels_lookup():
     print("blob IDs:\n{}".format(ids))
     print("coord_scaled:\n{}".format(coord_scaled))
 
+
 def _test_region_from_id():
     """Test finding a region by ID in a labels image.
     """
@@ -1418,6 +1429,7 @@ def _test_region_from_id():
     props, bbox, centroid = get_scaled_regionprops(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))
 
+
 def _test_curate_img(path, prefix):
     fixed_img = _load_numpy_to_sitk(path)
     labels_img = sitk_io.load_registered_img(
@@ -1434,6 +1446,7 @@ def _test_curate_img(path, prefix):
     sitk.Show(result_imgs[0])
     sitk.Show(result_imgs[1])
 
+
 def _test_smoothing_metric():
     img = np.zeros((6, 6, 6), dtype=int)
     img[1:5, 1:5, 1:5] = 1
@@ -1441,6 +1454,7 @@ def _test_smoothing_metric():
     print("img:\n{}".format(img))
     print("img_smoothed:\n{}".format(img_smoothed))
     atlas_refiner.label_smoothing_metric(img, img_smoothed)
+
 
 def main():
     """Handle registration processing tasks as specified in 

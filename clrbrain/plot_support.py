@@ -21,7 +21,7 @@ try:
     from matplotlib_scalebar import scalebar
 except ImportError as e:
     scalebar = None
-    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
+    warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, 

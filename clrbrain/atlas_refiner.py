@@ -1,6 +1,6 @@
 #!/bin/bash
 # Atlas refinement
-# Author: David Young, 2018, 2019
+# Author: David Young, 2019
 """Refine atlases in 3D.
 """
 import multiprocessing as mp

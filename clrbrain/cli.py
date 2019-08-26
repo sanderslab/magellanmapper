@@ -86,7 +86,6 @@ import argparse
 import numpy as np
 import pandas as pd
 
-import clrbrain.sitk_io
 from clrbrain import roi_editor
 from clrbrain import colormaps
 from clrbrain import config
@@ -96,7 +95,6 @@ from clrbrain import sqlite
 from clrbrain import detector
 from clrbrain import mlearn
 from clrbrain import ontology
-from clrbrain import register
 from clrbrain import sitk_io
 from clrbrain import stack_detect
 from clrbrain import stats
@@ -769,7 +767,7 @@ def process_file(filename_base, offset, roi_size):
         atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
         if atlas_suffix is None and image5d is None:
             # fallback to atlas if main image not already loaded
-            atlas_suffix = register.IMG_ATLAS
+            atlas_suffix = config.RegNames.IMG_ATLAS.value
         if atlas_suffix is not None:
             # will take the place of any previously loaded image5d
             image5d = sitk_io.load_registered_img(
@@ -812,7 +810,7 @@ def process_file(filename_base, offset, roi_size):
             # file for consistent ID-color mapping, even if labels are missing
             try:
                 config.labels_img_orig = sitk_io.load_registered_img(
-                    config.load_labels, register.IMG_LABELS)
+                    config.load_labels, config.RegNames.IMG_LABELS.value)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn(

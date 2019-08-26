@@ -16,7 +16,6 @@ from clrbrain import lib_clrbrain
 from clrbrain import plot_editor
 from clrbrain import plot_support
 from clrbrain import plot_3d
-from clrbrain import register
 from clrbrain import sitk_io
 
 
@@ -309,7 +308,8 @@ class AtlasEditor:
         # only save if at least one editor has been edited
         if not any([ed.edited for ed in self.plot_eds.values()]): return
         sitk_io.load_registered_img(
-            config.filename, register.IMG_LABELS, replace=config.labels_img)
+            config.filename, config.RegNames.IMG_LABELS.value, 
+            replace=config.labels_img)
         # reset edited flag in all editors and show save button as disabled
         for ed in self.plot_eds.values(): ed.edited = False
         enable_btn(self.save_btn, False)

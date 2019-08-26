@@ -74,25 +74,6 @@ except ImportError as e:
     sitk = None
     warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
 
-# registered image suffixes
-IMG_ATLAS = "atlasVolume.mhd"
-IMG_LABELS = "annotation.mhd"
-IMG_EXP = "exp.mhd"
-IMG_GROUPED = "grouped.mhd"
-IMG_BORDERS = "borders.mhd"
-IMG_HEAT_MAP = "heat.mhd"
-IMG_ATLAS_EDGE = "atlasEdge.mhd"
-IMG_ATLAS_LOG = "atlasLoG.mhd"
-IMG_LABELS_TRUNC = "annotationTrunc.mhd"
-IMG_LABELS_EDGE = "annotationEdge.mhd"
-IMG_LABELS_DIST = "annotationDist.mhd"
-IMG_LABELS_MARKERS = "annotationMarkers.mhd"
-IMG_LABELS_INTERIOR = "annotationInterior.mhd"
-IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
-IMG_LABELS_DIFF = "annotationDiff.mhd"
-IMG_LABELS_LEVEL = "annotationLevel{}.mhd"
-IMG_LABELS_EDGE_LEVEL = "annotationEdgeLevel{}.mhd"
-
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
 SAMPLE_VOLS_SUMMARY = SAMPLE_VOLS + "_summary"
@@ -1459,8 +1440,9 @@ def import_atlas(atlas_dir, show=True):
     """
     # load atlas and corresponding labels
     img_atlas, path_atlas = sitk_io.read_sitk(
-        os.path.join(atlas_dir, IMG_ATLAS))
-    img_labels, _ = sitk_io.read_sitk(os.path.join(atlas_dir, IMG_LABELS))
+        os.path.join(atlas_dir, config.RegNames.IMG_ATLAS.value))
+    img_labels, _ = sitk_io.read_sitk(
+        os.path.join(atlas_dir, config.RegNames.IMG_LABELS.value))
     
     # prep export paths
     target_dir = atlas_dir + "_import"
@@ -1522,7 +1504,9 @@ def import_atlas(atlas_dir, show=True):
     # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
     imgs_write = {
-        IMG_ATLAS: img_atlas, IMG_LABELS: img_labels, IMG_BORDERS: img_borders}
+        config.RegNames.IMG_ATLAS.value: img_atlas, 
+        config.RegNames.IMG_LABELS.value: img_labels, 
+        config.RegNames.IMG_BORDERS.value: img_borders}
     write_reg_images(
         imgs_write, name_prefix, copy_to_suffix=True, 
         ext=os.path.splitext(path_atlas)[1])
@@ -1686,11 +1670,12 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     fixed_img_size = fixed_img.GetSize()
     
     # load moving image, assumed to be atlas
-    moving_file = os.path.join(moving_file_dir, IMG_ATLAS)
+    moving_file = os.path.join(moving_file_dir, config.RegNames.IMG_ATLAS.value)
     moving_img = sitk.ReadImage(moving_file)
     
     # load labels image and match with atlas
-    labels_img = sitk.ReadImage(os.path.join(moving_file_dir, IMG_LABELS))
+    labels_img = sitk.ReadImage(os.path.join(
+        moving_file_dir, config.RegNames.IMG_LABELS.value))
     moving_img, labels_img, _, _ = match_atlas_labels(
         moving_img, labels_img, flip)
     
@@ -1743,10 +1728,16 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     if write_imgs:
         # write atlas and labels files, transposed according to plane setting
         if new_atlas:
-            imgs_names = (IMG_ATLAS, IMG_LABELS)
+            imgs_names = (
+                config.RegNames.IMG_ATLAS.value, 
+                config.RegNames.IMG_LABELS.value)
             imgs_write = [transformed_img, labels_img]
         else:
-            imgs_names = (IMG_EXP, IMG_ATLAS, IMG_LABELS, IMG_LABELS_TRUNC)
+            imgs_names = (
+                config.RegNames.IMG_EXP.value, 
+                config.RegNames.IMG_ATLAS.value, 
+                config.RegNames.IMG_LABELS.value, 
+                config.RegNames.IMG_LABELS_TRUNC.value)
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
             if new_atlas:
@@ -1808,7 +1799,8 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     
     For example, registered images can be registered back to the atlas. 
     This method can also be used to move unregistered original images 
-    that have simply been copied as ``IMG_EXP`` during registration. 
+    that have simply been copied as ``config.RegNames.IMG_EXP.value`` 
+    during registration. 
     This copy can be registered "back" to the atlas, reversing the 
     fixed/moving images in :meth:``register`` to move all experimental 
     images into the same space.
@@ -1820,7 +1812,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
             to register to the image at ``fixed_path``.
         reg_base: Registration suffix to combine with ``moving_path``. 
             Defaults to None to use ``moving_path`` as-is, with 
-            output name based on :const:``IMG_EXP``.
+            output name based on :const:``config.RegNames.IMG_EXP.value``.
         reg_names: List of additional registration suffixes associated 
             with ``moving_path`` to be registered using the same 
             transformation. Defaults to None.
@@ -1855,7 +1847,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     transformed_img, transformix_img_filter = register_duo(
         fixed_img, moving_img, prefix)
     reg_imgs = [transformed_img]
-    names = [IMG_EXP if reg_base is None else reg_base]
+    names = [config.RegNames.IMG_EXP.value if reg_base is None else reg_base]
     if reg_names is not None:
         for reg_name in reg_names:
             img = sitk_io.load_registered_img(mod_path, reg_name, get_sitk=True)
@@ -2105,7 +2097,8 @@ def register_group(img_files, flip=None, show_imgs=True,
         # have the same structures since variable amount of tissue posteriorly; 
         # cropping appears to work better than erasing for groupwise reg, 
         # preventing some images from being stretched into the erased space
-        labels_img = sitk_io.load_registered_img(img_files[i], IMG_LABELS_TRUNC)
+        labels_img = sitk_io.load_registered_img(
+            img_files[i], config.RegNames.IMG_LABELS_TRUNC.value)
         img_np, y_cropped = _crop_image(img_np, labels_img, 1)#, eraser=0)
         '''
         # crop anterior region
@@ -2221,7 +2214,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     if write_imgs:
         # write both the .mhd and Numpy array files to a separate folder to 
         # mimic the atlas folder format
-        out_path = os.path.join(name_prefix, IMG_GROUPED)
+        out_path = os.path.join(name_prefix, config.RegNames.IMG_GROUPED.value)
         if not os.path.exists(name_prefix):
             os.makedirs(name_prefix)
         print("writing {}".format(out_path))
@@ -2252,9 +2245,9 @@ def register_labels_to_atlas(path_fixed):
     """
     # load corresponding edge files
     fixed_sitk = sitk_io.load_registered_img(
-        path_fixed, IMG_ATLAS_EDGE, get_sitk=True)
+        path_fixed, config.RegNames.IMG_ATLAS_EDGE.value, get_sitk=True)
     moving_sitk = sitk_io.load_registered_img(
-        path_fixed, IMG_LABELS_EDGE, get_sitk=True)
+        path_fixed, config.RegNames.IMG_LABELS_EDGE.value, get_sitk=True)
     
     # set up SimpleElastix filter
     elastix_img_filter = sitk.ElastixImageFilter()
@@ -2291,7 +2284,7 @@ def register_labels_to_atlas(path_fixed):
     
     # apply transformation, manually resetting spacing in case of rounding
     labels_sitk = sitk_io.load_registered_img(
-        path_fixed, IMG_LABELS, get_sitk=True)
+        path_fixed, config.RegNames.IMG_LABELS.value, get_sitk=True)
     transformed_labels = _transform_labels(transformix_img_filter, labels_sitk)
     transformed_labels.SetSpacing(transformed_img.GetSpacing())
     #sitk.Show(transformed_labels)
@@ -2299,11 +2292,13 @@ def register_labels_to_atlas(path_fixed):
     # write transformed labels file
     out_path_base = os.path.splitext(path_fixed)[0] + "_edgereg.mhd"
     imgs_write = {
-        IMG_LABELS: transformed_labels}
+        config.RegNames.IMG_LABELS.value: transformed_labels}
     write_reg_images(imgs_write, out_path_base)
     # copy original atlas metadata file to allow opening this atlas 
     # alongside new labels image for comparison
-    shutil.copy(sitk_io.reg_out_path(path_fixed, IMG_ATLAS), out_path_base)
+    shutil.copy(
+        sitk_io.reg_out_path(path_fixed, config.RegNames.IMG_ATLAS.value), 
+        out_path_base)
 
 def _mirror_imported_labels(labels_img_np, start):
     # mirror labels that have been imported and transformed with x and z swapped
@@ -2353,10 +2348,10 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     # load atlas image, assumed to be a histology image
     if atlas:
         print("generating edge images for atlas")
-        atlas_suffix = IMG_ATLAS
+        atlas_suffix = config.RegNames.IMG_ATLAS.value
     else:
         print("generating edge images for experiment/sample image")
-        atlas_suffix = IMG_EXP
+        atlas_suffix = config.RegNames.IMG_EXP.value
     
     # adjust image path with suffix
     mod_path = path_img
@@ -2368,14 +2363,15 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         # load labels from atlas directory
         # TODO: consider applying suffix to labels dir
         path_atlas = path_img
-        path_labels = os.path.join(path_atlas_dir, IMG_LABELS)
+        path_labels = os.path.join(
+            path_atlas_dir, config.RegNames.IMG_LABELS.value)
         print("loading labels from", path_labels)
         labels_sitk = sitk.ReadImage(path_labels)
     else:
         # load labels registered to sample image
         path_atlas = mod_path
         labels_sitk = sitk_io.load_registered_img(
-            mod_path, IMG_LABELS, get_sitk=True)
+            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     
     # load atlas image, set resolution from it
@@ -2404,7 +2400,8 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     else:
         # if sigma not set or if using suffix to compare two images, 
         # load from original image to compare against common image
-        atlas_edge = sitk_io.load_registered_img(path_img, IMG_ATLAS_EDGE)
+        atlas_edge = sitk_io.load_registered_img(
+            path_img, config.RegNames.IMG_ATLAS_EDGE.value)
 
     erode = config.register_settings["erode_labels"]
     if erode["interior"]:
@@ -2426,11 +2423,11 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     
     # show all images
     imgs_write = {
-        IMG_ATLAS_LOG: atlas_sitk_log, 
-        IMG_ATLAS_EDGE: atlas_sitk_edge, 
-        IMG_LABELS_EDGE: labels_sitk_edge, 
-        IMG_LABELS_INTERIOR: labels_sitk_interior, 
-        IMG_LABELS_DIST: dist_sitk, 
+        config.RegNames.IMG_ATLAS_LOG.value: atlas_sitk_log, 
+        config.RegNames.IMG_ATLAS_EDGE.value: atlas_sitk_edge, 
+        config.RegNames.IMG_LABELS_EDGE.value: labels_sitk_edge, 
+        config.RegNames.IMG_LABELS_INTERIOR.value: labels_sitk_interior, 
+        config.RegNames.IMG_LABELS_DIST.value: dist_sitk, 
     }
     if show:
         for img in imgs_write.values():
@@ -2509,13 +2506,13 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
     
     # load corresponding files via SimpleITK
     atlas_sitk = sitk_io.load_registered_img(
-        load_path, IMG_ATLAS, get_sitk=True)
+        load_path, config.RegNames.IMG_ATLAS.value, get_sitk=True)
     atlas_sitk_edge = sitk_io.load_registered_img(
-        load_path, IMG_ATLAS_EDGE, get_sitk=True)
+        load_path, config.RegNames.IMG_ATLAS_EDGE.value, get_sitk=True)
     labels_sitk = sitk_io.load_registered_img(
-        load_path, IMG_LABELS, get_sitk=True)
+        load_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_sitk_markers = sitk_io.load_registered_img(
-        load_path, IMG_LABELS_MARKERS, get_sitk=True)
+        load_path, config.RegNames.IMG_LABELS_MARKERS.value, get_sitk=True)
     
     # get Numpy arrays of images
     atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
@@ -2564,7 +2561,8 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
     print()
     
     # show and write image to same directory as atlas with appropriate suffix
-    write_reg_images({IMG_LABELS: labels_sitk_seg}, mod_path)
+    write_reg_images(
+        {config.RegNames.IMG_LABELS.value: labels_sitk_seg}, mod_path)
     if show: sitk.Show(labels_sitk_seg)
     return path_atlas
 
@@ -2595,7 +2593,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         if suffix is not None:
             mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
         labels_sitk = sitk_io.load_registered_img(
-            mod_path, IMG_LABELS, get_sitk=True)
+            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
         print("Eroding labels to generate markers for atlas segmentation")
         if erode["markers"]:
             # use default minimal post-erosion size (not setting erosion frac)
@@ -2604,7 +2602,8 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
             labels_sitk_markers = sitk_io.replace_sitk_with_numpy(
                 labels_sitk, markers)
             write_reg_images(
-                {IMG_LABELS_MARKERS: labels_sitk_markers}, mod_path)
+                {config.RegNames.IMG_LABELS_MARKERS.value: labels_sitk_markers},
+                mod_path)
     
     pool = mp.Pool()
     pool_results = []
@@ -2624,7 +2623,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         
         # make edge distance images and stats
         labels_sitk = sitk_io.load_registered_img(
-            mod_path, IMG_LABELS, get_sitk=True)
+            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
         labels_np = sitk.GetArrayFromImage(labels_sitk)
         dist_to_orig, labels_edge = edge_distances(
             labels_np, path=path, spacing=labels_sitk.GetSpacing()[::-1])
@@ -2644,9 +2643,9 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         
         # write images to same directory as atlas
         imgs_write = {
-            IMG_LABELS_DIST: dist_sitk, 
-            IMG_LABELS_EDGE: labels_sitk_edge, 
-            IMG_LABELS_INTERIOR: labels_sitk_interior, 
+            config.RegNames.IMG_LABELS_DIST.value: dist_sitk, 
+            config.RegNames.IMG_LABELS_EDGE.value: labels_sitk_edge, 
+            config.RegNames.IMG_LABELS_INTERIOR.value: labels_sitk_interior, 
         }
         write_reg_images(imgs_write, mod_path)
         if show:
@@ -2674,7 +2673,8 @@ def edge_distances(labels, atlas_edge=None, path=None, spacing=None):
         label edge values replaced by corresponding distance values.
     """
     if atlas_edge is None:
-        atlas_edge = sitk_io.load_registered_img(path, IMG_ATLAS_EDGE)
+        atlas_edge = sitk_io.load_registered_img(
+            path, config.RegNames.IMG_ATLAS_EDGE.value)
     
     # create distance map between edges of original and new segmentations
     labels_edge = vols.make_labels_edge(labels)
@@ -2716,7 +2716,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
         mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
     if labels_img_sitk is None:
         labels_img_sitk = sitk_io.load_registered_img(
-            mod_path, IMG_LABELS, get_sitk=True)
+            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_img = sitk.GetArrayFromImage(labels_img_sitk)
     # load blobs
     filename_base = importer.filename_to_base(
@@ -2755,7 +2755,8 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     
     # build heat map to store densities per label px and save to file
     heat_map = plot_3d.build_heat_map(labels_img.shape, coord_scaled)
-    out_path = sitk_io.reg_out_path(mod_path, IMG_HEAT_MAP)
+    out_path = sitk_io.reg_out_path(
+        mod_path, config.RegNames.IMG_HEAT_MAP.value)
     print("writing {}".format(out_path))
     heat_map_sitk = sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)
     sitk.WriteImage(heat_map_sitk, out_path, False)
@@ -2814,17 +2815,19 @@ def make_sub_segmented_labels(img_path, suffix=None):
     
     # load labels
     labels_sitk = sitk_io.load_registered_img(
-        mod_path, IMG_LABELS, get_sitk=True)
+        mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     
     # atlas edge image is associated with original, not modified image
-    atlas_edge = sitk_io.load_registered_img(img_path, IMG_ATLAS_EDGE)
+    atlas_edge = sitk_io.load_registered_img(
+        img_path, config.RegNames.IMG_ATLAS_EDGE.value)
     
     # sub-divide the labels and save to file
     labels_img_np = sitk.GetArrayFromImage(labels_sitk)
     labels_subseg = segmenter.sub_segment_labels(labels_img_np, atlas_edge)
     labels_subseg_sitk = sitk_io.replace_sitk_with_numpy(
         labels_sitk, labels_subseg)
-    write_reg_images({IMG_LABELS_SUBSEG: labels_subseg_sitk}, mod_path)
+    write_reg_images(
+        {config.RegNames.IMG_LABELS_SUBSEG.value: labels_subseg_sitk}, mod_path)
     return labels_subseg
 
 def merge_images(img_paths, reg_name, prefix=None, suffix=None, 
@@ -2916,7 +2919,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     
     # get the atlas file and transpose it to match the orientation of the 
     # experiment image
-    out_path = os.path.join(moving_file_dir, IMG_ATLAS)
+    out_path = os.path.join(moving_file_dir, config.RegNames.IMG_ATLAS.value)
     print("Reading in {}".format(out_path))
     moving_sitk = sitk.ReadImage(out_path)
     moving_sitk = transpose_img(moving_sitk, plane, 2 if flip else 0)
@@ -2927,7 +2930,8 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     transformed_img = sitk.GetArrayFromImage(transformed_sitk)
     
     # get the registered labels file, which should also already be transposed
-    labels_img = sitk_io.load_registered_img(name_prefix, IMG_LABELS)
+    labels_img = sitk_io.load_registered_img(
+        name_prefix, config.RegNames.IMG_LABELS.value)
     
     # calculate the Dice similarity coefficient
     measure_overlap(_load_numpy_to_sitk(fixed_file), transformed_sitk)
@@ -3136,12 +3140,12 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             # stats requiring images
             try:
                 img_sitk = sitk_io.load_registered_img(
-                    mod_path, IMG_EXP, get_sitk=True)
+                    mod_path, config.RegNames.IMG_EXP.value, get_sitk=True)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn("will load atlas image instead")
                 img_sitk = sitk_io.load_registered_img(
-                    mod_path, IMG_ATLAS, get_sitk=True)
+                    mod_path, config.RegNames.IMG_ATLAS.value, get_sitk=True)
             img_np = sitk.GetArrayFromImage(img_sitk)
             spacing = img_sitk.GetSpacing()[::-1]
             
@@ -3149,20 +3153,20 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             # labels are required and will give exception if not found
             try:
                 labels_img_np = sitk_io.load_registered_img(
-                    mod_path, IMG_LABELS)
+                    mod_path, config.RegNames.IMG_LABELS.value)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn(
                     "will attempt to load trucated labels image instead")
                 labels_img_np = sitk_io.load_registered_img(
-                    mod_path, IMG_LABELS_TRUNC)
+                    mod_path, config.RegNames.IMG_LABELS_TRUNC.value)
             
             # load labels edge and edge distances images
             try:
                 labels_edge = sitk_io.load_registered_img(
-                    mod_path, IMG_LABELS_EDGE)
+                    mod_path, config.RegNames.IMG_LABELS_EDGE.value)
                 dist_to_orig = sitk_io.load_registered_img(
-                    mod_path, IMG_LABELS_DIST)
+                    mod_path, config.RegNames.IMG_LABELS_DIST.value)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn("will ignore edge measurements")
@@ -3170,14 +3174,15 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             # load labels marker image
             try:
                 labels_interior = sitk_io.load_registered_img(
-                    mod_path, IMG_LABELS_INTERIOR)
+                    mod_path, config.RegNames.IMG_LABELS_INTERIOR.value)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn("will ignore label markers")
             
             # load heat map of nuclei per voxel if available
             try:
-                heat_map = sitk_io.load_registered_img(mod_path, IMG_HEAT_MAP)
+                heat_map = sitk_io.load_registered_img(
+                    mod_path, config.RegNames.IMG_HEAT_MAP.value)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn("will ignore nuclei stats")
@@ -3185,7 +3190,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             # load sub-segmentation labels if available
             try:
                 subseg = sitk_io.load_registered_img(
-                    mod_path, IMG_LABELS_SUBSEG)
+                    mod_path, config.RegNames.IMG_LABELS_SUBSEG.value)
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn("will ignore labels sub-segmentations")
@@ -3272,7 +3277,8 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     # load labels image and data frame before generating map for the 
     # given metric of the chosen measurement
     print("Generating labels difference image for", meas, "from", df_path)
-    reg_name = IMG_LABELS if level is None else IMG_LABELS_LEVEL.format(level)
+    reg_name = (config.RegNames.IMG_LABELS.value if level is None 
+                else config.RegNames.IMG_LABELS_LEVEL.value.format(level))
     labels_sitk = sitk_io.load_registered_img(img_path, reg_name, get_sitk=True)
     labels_np = sitk.GetArrayFromImage(labels_sitk)
     df = pd.read_csv(df_path)
@@ -3284,7 +3290,8 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     # save and show labels difference image using measurement name in 
     # output path or overriding with custom name
     meas_path = meas if meas_path_name is None else meas_path_name
-    reg_diff = lib_clrbrain.insert_before_ext(IMG_LABELS_DIFF, meas_path, "_")
+    reg_diff = lib_clrbrain.insert_before_ext(
+        config.RegNames.IMG_LABELS_DIFF.value, meas_path, "_")
     if fn_avg is not None:
         # add function name to output path if given
         reg_diff = lib_clrbrain.insert_before_ext(
@@ -3311,7 +3318,7 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
     """
     # load original labels image and setup ontology dictionary
     labels_sitk = sitk_io.load_registered_img(
-        img_path, IMG_LABELS, get_sitk=True)
+        img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_np = sitk.GetArrayFromImage(labels_sitk)
     ref = ontology.load_labels_ref(config.load_labels)
     labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
@@ -3340,8 +3347,9 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
     
     # write and optionally display labels level image
     imgs_write = {
-        IMG_LABELS_LEVEL.format(level): labels_level_sitk, 
-        IMG_LABELS_EDGE_LEVEL.format(level): labels_edge_sikt, 
+        config.RegNames.IMG_LABELS_LEVEL.value.format(level): labels_level_sitk, 
+        config.RegNames.IMG_LABELS_EDGE_LEVEL.value.format(level): 
+            labels_edge_sikt, 
     }
     out_path = prefix if prefix else img_path
     write_reg_images(imgs_write, out_path)
@@ -3367,7 +3375,8 @@ def export_common_labels(img_paths, output_path):
     labels_dict = {}
     for img_path in img_paths:
         name = lib_clrbrain.get_filename_without_ext(img_path)
-        labels_np = sitk_io.load_registered_img(img_path, IMG_LABELS)
+        labels_np = sitk_io.load_registered_img(
+            img_path, config.RegNames.IMG_LABELS.value)
         # only use pos labels since assume neg labels are merely mirrored
         labels_unique = np.unique(labels_np[labels_np >= 0])
         labels_dict[name] = pd.Series(
@@ -3389,7 +3398,8 @@ def _test_labels_lookup():
     #lookup_id = 126652058 # last item
     time_dict_start = time()
     id_dict = ontology.create_aba_reverse_lookup(ref)
-    labels_img = sitk_io.load_registered_img(config.filename, IMG_LABELS)
+    labels_img = sitk_io.load_registered_img(
+        config.filename, config.RegNames.IMG_LABELS.value)
     max_labels = np.max(labels_img)
     print("max_labels: {}".format(max_labels))
     time_dict_end = time()
@@ -3427,14 +3437,16 @@ def _test_region_from_id():
     if len(config.filenames) > 1:
         # unregistered, original labels image; assume that atlas directory has 
         # been given similarly to register fn
-        path = os.path.join(config.filenames[1], IMG_LABELS)
+        path = os.path.join(
+            config.filenames[1], config.RegNames.IMG_LABELS.value)
         labels_img = sitk.ReadImage(path)
         labels_img = sitk.GetArrayFromImage(labels_img)
         scaling = np.ones(3)
         print("loaded labels image from {}".format(path))
     else:
         # registered labels image and associated experiment file
-        labels_img = sitk_io.load_registered_img(config.filename, IMG_LABELS)
+        labels_img = sitk_io.load_registered_img(
+            config.filename, config.RegNames.IMG_LABELS.value)
         if config.filename.endswith(".mhd"):
             img = sitk.ReadImage(config.filename)
             img = sitk.GetArrayFromImage(img)
@@ -3454,8 +3466,10 @@ def _test_region_from_id():
 
 def _test_curate_img(path, prefix):
     fixed_img = _load_numpy_to_sitk(path)
-    labels_img = sitk_io.load_registered_img(prefix, IMG_LABELS, get_sitk=True)
-    atlas_img = sitk_io.load_registered_img(prefix, IMG_ATLAS, get_sitk=True)
+    labels_img = sitk_io.load_registered_img(
+        prefix, config.RegNames.IMG_LABELS.value, get_sitk=True)
+    atlas_img = sitk_io.load_registered_img(
+        prefix, config.RegNames.IMG_ATLAS.value, get_sitk=True)
     labels_img.SetSpacing(fixed_img.GetSpacing())
     holes_area = config.register_settings["holes_area"]
     result_imgs = _curate_img(
@@ -3695,7 +3709,7 @@ def main():
     elif reg is config.RegisterTypes.merge_images:
         # take mean of separate experiments from all paths using the 
         # given registered image type, defaulting to experimental images
-        suffix = IMG_EXP
+        suffix = config.RegNames.IMG_EXP.value
         if config.reg_suffixes is not None:
             # use suffix assigned to atlas
             suffix_exp = config.reg_suffixes[config.RegSuffixes.ATLAS]
@@ -3705,8 +3719,8 @@ def main():
     elif reg is config.RegisterTypes.merge_images_channels:
         # combine separate experiments from all paths into separate channels
         merge_images(
-            config.filenames, IMG_EXP, config.prefix, config.suffix, 
-            fn_combine=None)
+            config.filenames, config.RegNames.IMG_EXP.value, config.prefix, 
+            config.suffix, fn_combine=None)
 
     elif reg is config.RegisterTypes.register_reg:
         # register a group of registered images to another image, 
@@ -3718,8 +3732,8 @@ def main():
                         for key, val in config.reg_suffixes.items() 
                         if config.reg_suffixes[key] is not None]
         register_reg(
-            *config.filenames[:2], IMG_EXP, suffixes, config.plane, 
-            flip, config.prefix, config.suffix, show)
+            *config.filenames[:2], config.RegNames.IMG_EXP.value, suffixes, 
+            config.plane, flip, config.prefix, config.suffix, show)
 
     elif reg is config.RegisterTypes.make_labels_level:
         # make a labels image grouped at the given level

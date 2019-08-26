@@ -13,7 +13,6 @@ import numpy as np
 from clrbrain import config
 from clrbrain import importer
 from clrbrain import lib_clrbrain
-from clrbrain.register import IMG_LABELS
 
 try:
     import SimpleITK as sitk
@@ -160,12 +159,13 @@ def find_atlas_labels(load_labels, max_level, labels_ref_lookup):
         Sequence of label IDs.
     """
     orig_atlas_dir = os.path.dirname(load_labels)
-    orig_labels_path = os.path.join(orig_atlas_dir, IMG_LABELS)
+    orig_labels_path = os.path.join(
+        orig_atlas_dir, config.RegNames.IMG_LABELS.value)
     # need all labels from a reference as registered image may have lost labels
     if max_level is None and os.path.exists(orig_labels_path):
         # use all drawn labels in original labels image
         config.labels_img_orig = load_registered_img(
-            config.load_labels, IMG_LABELS)
+            config.load_labels, config.RegNames.IMG_LABELS.value)
         orig_labels_sitk = sitk.ReadImage(orig_labels_path)
         orig_labels_np = sitk.GetArrayFromImage(orig_labels_sitk)
         label_ids = np.unique(orig_labels_np).tolist()

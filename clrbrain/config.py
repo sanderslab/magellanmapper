@@ -175,6 +175,28 @@ AtlasLabels = Enum(
 atlas_labels = dict.fromkeys(AtlasLabels, None)
 atlas_labels[AtlasLabels.ORIG_COLORS] = 1
 
+
+# registered image suffixes
+class RegNames(Enum):
+    IMG_ATLAS = "atlasVolume.mhd"
+    IMG_LABELS = "annotation.mhd"
+    IMG_EXP = "exp.mhd"
+    IMG_GROUPED = "grouped.mhd"
+    IMG_BORDERS = "borders.mhd"
+    IMG_HEAT_MAP = "heat.mhd"
+    IMG_ATLAS_EDGE = "atlasEdge.mhd"
+    IMG_ATLAS_LOG = "atlasLoG.mhd"
+    IMG_LABELS_TRUNC = "annotationTrunc.mhd"
+    IMG_LABELS_EDGE = "annotationEdge.mhd"
+    IMG_LABELS_DIST = "annotationDist.mhd"
+    IMG_LABELS_MARKERS = "annotationMarkers.mhd"
+    IMG_LABELS_INTERIOR = "annotationInterior.mhd"
+    IMG_LABELS_SUBSEG = "annotationSubseg.mhd"
+    IMG_LABELS_DIFF = "annotationDiff.mhd"
+    IMG_LABELS_LEVEL = "annotationLevel{}.mhd"
+    IMG_LABELS_EDGE_LEVEL = "annotationEdgeLevel{}.mhd"
+
+
 # reference atlas labels
 load_labels = None
 labels_img = None  # in Numpy format

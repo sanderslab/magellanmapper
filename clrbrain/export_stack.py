@@ -19,7 +19,7 @@ from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_support
-from clrbrain import importer
+
 
 class StackPlaneIO(object):
     """Worker class to export planes from a stack with support for 
@@ -52,7 +52,7 @@ class StackPlaneIO(object):
             processed image list has the same length as :attr:``imgs``, 
             or the number of image paths.
         """
-        path = paths[i]
+        path = cls.imgs[i]
         print("importing {}".format(path))
         img = io.imread(path)
         img = transform.rescale(
@@ -105,6 +105,7 @@ class StackPlaneIO(object):
                 #img = img[:-50]
                 imgs_proc[j] = img
         return i, imgs_proc
+
 
 def _build_stack(images, out_path, process_fnc, rescale, aspect=None, 
                  origin=None, delay=None, cmaps_labels=None, scale_bar=True):
@@ -200,6 +201,7 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
         # and requires formats supporting transparency (eg png)
         print("extracting plane as {}".format(out_path))
         fig.savefig(out_path, transparent=True)
+
 
 def stack_to_img_file(image5d, path, offset=None, roi_size=None, 
                       slice_vals=None, rescale=None, delay=None, 
@@ -329,6 +331,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     _build_stack(extracted_planes, out_path, fnc, rescale, aspect=aspect, 
                  origin=origin, delay=delay, 
                  cmaps_labels=cmaps_labels, scale_bar=config.scale_bar)
+
 
 if __name__ == "__main__":
     print("Clrbrain stack manipulations")

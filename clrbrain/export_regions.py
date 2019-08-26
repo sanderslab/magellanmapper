@@ -8,7 +8,11 @@ Convert regions from ontology files or atlases to data frames.
 import csv
 from collections import OrderedDict
 
+import numpy as np
+import pandas as pd
+
 from clrbrain import config
+from clrbrain import lib_clrbrain
 from clrbrain import ontology
 from clrbrain import stats
 from clrbrain import sitk_io
@@ -105,3 +109,33 @@ def export_region_network(labels_ref_lookup, path):
                 row.extend(["pp", *children])
             stats_writer.writerow(row)
     print("output region network to {}".format(path))
+
+
+def export_common_labels(img_paths, output_path):
+    """Export data frame combining all label IDs from the given atlases, 
+    showing the presence of labels in each atlas.
+    
+    Args:
+        img_paths: Image paths from which to load the corresponding 
+            labels images.
+        output_path: Path to export data frame to .csv.
+    
+    Returns:
+        Data frame with label IDs as indices, column for each atlas, and 
+        cells where 1 indicates that the given atlas has the corresponding 
+        label.
+    """
+    labels_dict = {}
+    for img_path in img_paths:
+        name = lib_clrbrain.get_filename_without_ext(img_path)
+        labels_np = sitk_io.load_registered_img(
+            img_path, config.RegNames.IMG_LABELS.value)
+        # only use pos labels since assume neg labels are merely mirrored
+        labels_unique = np.unique(labels_np[labels_np >= 0])
+        labels_dict[name] = pd.Series(
+            np.ones(len(labels_unique), dtype=int), index=labels_unique)
+    df = pd.DataFrame(labels_dict)
+    df.sort_index()
+    df.to_csv(output_path)
+    print("common labels exported to {}".format(output_path))
+    return df

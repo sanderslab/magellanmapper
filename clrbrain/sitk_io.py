@@ -6,6 +6,7 @@
 Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
+import shutil
 import warnings
 
 import numpy as np
@@ -174,3 +175,36 @@ def find_atlas_labels(load_labels, max_level, labels_ref_lookup):
         # labels or if original labels image isn't present
         label_ids = list(labels_ref_lookup.keys())
     return label_ids
+
+
+def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None):
+    """Write registered images to file.
+    
+    Args:
+        imgs_write: Dictionary of ``{suffix: image}``, where ``suffix`` 
+            is a registered images suffix, such as :const:``IMAGE_LABELS``, 
+            and ``image`` is a SimpleITK image object. If the image does 
+            not exist, the file will not be written.
+        prefix: Base path from which to construct registered file paths.
+        copy_to_suffix: If True, copy the output path to a file in the 
+            same directory with ``suffix`` as the filename, which may 
+            be useful when setting the registered images as the 
+            main images in the directory. Defaults to False.
+        ext: Replace extension with this value if given; defaults to None.
+    """
+    target_dir = os.path.dirname(prefix)
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    for suffix in imgs_write.keys():
+        img = imgs_write[suffix]
+        if img is None: continue
+        if ext: suffix = lib_clrbrain.match_ext(ext, suffix)
+        out_path = reg_out_path(prefix, suffix)
+        sitk.WriteImage(img, out_path, False)
+        print("wrote registered image to", out_path)
+        if copy_to_suffix:
+            # copy metadata file to allow opening images from bare suffix name, 
+            # such as when this atlas becomes the new atlas for registration
+            out_path_copy = os.path.join(target_dir, suffix)
+            shutil.copy(out_path, out_path_copy)
+            print("also copied to", out_path_copy)

@@ -1507,7 +1507,7 @@ def import_atlas(atlas_dir, show=True):
         config.RegNames.IMG_ATLAS.value: img_atlas, 
         config.RegNames.IMG_LABELS.value: img_labels, 
         config.RegNames.IMG_BORDERS.value: img_borders}
-    write_reg_images(
+    sitk_io.write_reg_images(
         imgs_write, name_prefix, copy_to_suffix=True, 
         ext=os.path.splitext(path_atlas)[1])
     detector.resolutions = [img_atlas.GetSpacing()[::-1]]
@@ -1869,7 +1869,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
         # use the same reg suffixes, assuming that output_base will give a 
         # distinct name to avoid overwriting previously registered images
         imgs_write[name] = img
-    write_reg_images(imgs_write, output_base)
+    sitk_io.write_reg_images(imgs_write, output_base)
     if show:
         for img in imgs_write.values(): sitk.Show(img)
     
@@ -2293,7 +2293,7 @@ def register_labels_to_atlas(path_fixed):
     out_path_base = os.path.splitext(path_fixed)[0] + "_edgereg.mhd"
     imgs_write = {
         config.RegNames.IMG_LABELS.value: transformed_labels}
-    write_reg_images(imgs_write, out_path_base)
+    sitk_io.write_reg_images(imgs_write, out_path_base)
     # copy original atlas metadata file to allow opening this atlas 
     # alongside new labels image for comparison
     shutil.copy(
@@ -2434,7 +2434,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
             if img: sitk.Show(img)
     
     # write images to same directory as atlas with appropriate suffix
-    write_reg_images(imgs_write, mod_path)
+    sitk_io.write_reg_images(imgs_write, mod_path)
 
 def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
     """Erode labels image for use as markers or a map of the interior.
@@ -2561,7 +2561,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
     print()
     
     # show and write image to same directory as atlas with appropriate suffix
-    write_reg_images(
+    sitk_io.write_reg_images(
         {config.RegNames.IMG_LABELS.value: labels_sitk_seg}, mod_path)
     if show: sitk.Show(labels_sitk_seg)
     return path_atlas
@@ -2601,7 +2601,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
                 sitk.GetArrayFromImage(labels_sitk), erosion, mirrored=mirrored)
             labels_sitk_markers = sitk_io.replace_sitk_with_numpy(
                 labels_sitk, markers)
-            write_reg_images(
+            sitk_io.write_reg_images(
                 {config.RegNames.IMG_LABELS_MARKERS.value: labels_sitk_markers},
                 mod_path)
     
@@ -2647,7 +2647,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
             config.RegNames.IMG_LABELS_EDGE.value: labels_sitk_edge, 
             config.RegNames.IMG_LABELS_INTERIOR.value: labels_sitk_interior, 
         }
-        write_reg_images(imgs_write, mod_path)
+        sitk_io.write_reg_images(imgs_write, mod_path)
         if show:
             for img in imgs_write.values():
                 if img: sitk.Show(img)
@@ -2826,7 +2826,7 @@ def make_sub_segmented_labels(img_path, suffix=None):
     labels_subseg = segmenter.sub_segment_labels(labels_img_np, atlas_edge)
     labels_subseg_sitk = sitk_io.replace_sitk_with_numpy(
         labels_sitk, labels_subseg)
-    write_reg_images(
+    sitk_io.write_reg_images(
         {config.RegNames.IMG_LABELS_SUBSEG.value: labels_subseg_sitk}, mod_path)
     return labels_subseg
 
@@ -2891,7 +2891,7 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
         output_base = lib_clrbrain.insert_before_ext(output_base, suffix)
     output_reg = lib_clrbrain.insert_before_ext(
         reg_name, COMBINED_SUFFIX, "_")
-    write_reg_images({output_reg: combined_sitk}, output_base)
+    sitk_io.write_reg_images({output_reg: combined_sitk}, output_base)
     return combined_sitk
 
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
@@ -2942,38 +2942,6 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     translation = _translation_adjust(
         moving_sitk, transformed_sitk, translation, flip=True)
     _show_overlays(imgs, translation, fixed_file, out_plane)
-
-def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None):
-    """Write registered images to file.
-    
-    Args:
-        imgs_write: Dictionary of ``{suffix: image}``, where ``suffix`` 
-            is a registered images suffix, such as :const:``IMAGE_LABELS``, 
-            and ``image`` is a SimpleITK image object. If the image does 
-            not exist, the file will not be written.
-        prefix: Base path from which to construct registered file paths.
-        copy_to_suffix: If True, copy the output path to a file in the 
-            same directory with ``suffix`` as the filename, which may 
-            be useful when setting the registered images as the 
-            main images in the directory. Defaults to False.
-        ext: Replace extension with this value if given; defaults to None.
-    """
-    target_dir = os.path.dirname(prefix)
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
-    for suffix in imgs_write.keys():
-        img = imgs_write[suffix]
-        if img is None: continue
-        if ext: suffix = lib_clrbrain.match_ext(ext, suffix)
-        out_path = sitk_io.reg_out_path(prefix, suffix)
-        sitk.WriteImage(img, out_path, False)
-        print("wrote registered image to", out_path)
-        if copy_to_suffix:
-            # copy metadata file to allow opening images from bare suffix name, 
-            # such as when this atlas becomes the new atlas for registration
-            out_path_copy = os.path.join(target_dir, suffix)
-            shutil.copy(out_path, out_path_copy)
-            print("also copied to", out_path_copy)
 
 
 def get_scaled_regionprops(img_region, scaling):
@@ -3298,7 +3266,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
             reg_diff, fn_avg.__name__, "_")
     imgs_write = {reg_diff: labels_diff_sitk}
     out_path = prefix if prefix else img_path
-    write_reg_images(imgs_write, out_path)
+    sitk_io.write_reg_images(imgs_write, out_path)
     if show:
         for img in imgs_write.values():
             if img: sitk.Show(img)
@@ -3352,40 +3320,10 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
             labels_edge_sikt, 
     }
     out_path = prefix if prefix else img_path
-    write_reg_images(imgs_write, out_path)
+    sitk_io.write_reg_images(imgs_write, out_path)
     if show:
         for img in imgs_write.values():
             if img: sitk.Show(img)
-
-
-def export_common_labels(img_paths, output_path):
-    """Export data frame combining all label IDs from the given atlases, 
-    showing the presence of labels in each atlas.
-    
-    Args:
-        img_paths: Image paths from which to load the corresponding 
-            labels images.
-        output_path: Path to export data frame to .csv.
-    
-    Returns:
-        Data frame with label IDs as indices, column for each atlas, and 
-        cells where 1 indicates that the given atlas has the corresponding 
-        label.
-    """
-    labels_dict = {}
-    for img_path in img_paths:
-        name = lib_clrbrain.get_filename_without_ext(img_path)
-        labels_np = sitk_io.load_registered_img(
-            img_path, config.RegNames.IMG_LABELS.value)
-        # only use pos labels since assume neg labels are merely mirrored
-        labels_unique = np.unique(labels_np[labels_np >= 0])
-        labels_dict[name] = pd.Series(
-            np.ones(len(labels_unique), dtype=int), index=labels_unique)
-    df = pd.DataFrame(labels_dict)
-    df.sort_index()
-    df.to_csv(output_path)
-    print("common labels exported to {}".format(output_path))
-    return df
 
 
 def _test_labels_lookup():
@@ -3574,7 +3512,8 @@ def main():
     
     elif reg is config.RegisterTypes.export_common_labels:
         # export common labels
-        export_common_labels(config.filenames, config.PATH_COMMON_LABELS)
+        export_regions.export_common_labels(
+            config.filenames, config.PATH_COMMON_LABELS)
     
     elif reg is config.RegisterTypes.convert_itksnap_labels:
         # convert labels from ITK-SNAP to CSV format

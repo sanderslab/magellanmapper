@@ -873,9 +873,9 @@ def process_file(filename_base, offset, roi_size):
         
     elif proc_type in (PROC_TYPES[4], PROC_TYPES[7]):
         # generate animated GIF or extract single plane
-        from clrbrain import stack
+        from clrbrain import export_stack
         animated = proc_type == PROC_TYPES[7]
-        stack.stack_to_img_file(
+        export_stack.stack_to_img_file(
             image5d, config.filename, offset=offset, roi_size=roi_size, 
             slice_vals=config.slice_vals, rescale=config.rescale, 
             delay=config.delay, 

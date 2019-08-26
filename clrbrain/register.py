@@ -39,7 +39,6 @@ outlined here. Each type can be coupled with additional arguments in ``cli``.
 """
 
 import os
-import multiprocessing as mp
 import shutil
 from time import time
 
@@ -56,16 +55,16 @@ from clrbrain import atlas_stats
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import edge_seg
+from clrbrain import export_regions
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import plot_3d
+from clrbrain import sitk_io
 from clrbrain import stats
 from clrbrain import transformer
 from clrbrain import vols
-from clrbrain import export_regions
-from clrbrain import sitk_io
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
@@ -979,114 +978,6 @@ def register_labels_to_atlas(path_fixed):
         out_path_base)
 
 
-def make_density_image(img_path, scale=None, shape=None, suffix=None, 
-                       labels_img_sitk=None):
-    """Make a density image based on associated blobs.
-    
-    Uses the shape of the registered labels image by default to set 
-    the voxel sizes for the blobs.
-    
-    Args:
-        img_path: Path to image, which will be used to indentify the blobs file.
-        scale: Rescaling factor as a scalar value to find the corresponding 
-            full-sized image. Defaults to None to use the register 
-            setting ``target_size`` instead if available, falling back 
-            to load the full size image to find its shape if necessary.
-        shape: Final shape size; defaults to None to use the shape of 
-            the labels image.
-        suffix: Modifier to append to end of ``img_path`` basename for 
-            registered image files that were output to a modified name; 
-            defaults to None.
-        labels_img_sitk: Labels image as a SimpleITK ``Image`` object; 
-            defaults to None, in which case the registered labels image file 
-            corresponding to ``img_path`` with any ``suffix`` modifier 
-            will be opened.
-    
-    Returns:
-        Tuple of the density image as a Numpy array in the same shape as 
-        the opened image; Numpy array of blob IDs; and the original 
-        ``img_path`` to track such as for multiprocessing.
-    """
-    mod_path = img_path
-    if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
-    if labels_img_sitk is None:
-        labels_img_sitk = sitk_io.load_registered_img(
-            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-    labels_img = sitk.GetArrayFromImage(labels_img_sitk)
-    # load blobs
-    filename_base = importer.filename_to_base(
-        img_path, config.series)
-    info = np.load(filename_base + config.SUFFIX_INFO_PROC)
-    blobs = info["segments"]
-    print("loading {} blobs".format(len(blobs)))
-    # get scaling from source image, which can be rescaled/resized image 
-    # since contains scaling image
-    load_size = config.register_settings["target_size"]
-    img_path_transposed = transformer.get_transposed_image_path(
-        img_path, scale, load_size)
-    if scale is not None or load_size is not None:
-        image5d, img_info = importer.read_file(
-            img_path_transposed, config.series, return_info=True)
-        scaling = img_info["scaling"]
-    else:
-        # fall back to scaling based on comparison to original image
-        image5d = importer.read_file(
-            img_path_transposed, config.series)
-        scaling = importer.calc_scaling(image5d, labels_img)
-    if shape is not None:
-        # scale blobs to an alternative final size
-        scaling = np.divide(shape, np.divide(labels_img.shape, scaling))
-        labels_spacing = np.multiply(
-            labels_img_sitk.GetSpacing()[::-1], 
-            np.divide(labels_img.shape, shape))
-        labels_img = np.zeros(shape, dtype=labels_img.dtype)
-        labels_img_sitk.SetSpacing(labels_spacing[::-1])
-    print("using scaling: {}".format(scaling))
-    # annotate blobs based on position
-    blobs_ids, coord_scaled = ontology.get_label_ids_from_position(
-        blobs[:, :3], labels_img, scaling, 
-        return_coord_scaled=True)
-    print("blobs_ids: {}".format(blobs_ids))
-    
-    # build heat map to store densities per label px and save to file
-    heat_map = plot_3d.build_heat_map(labels_img.shape, coord_scaled)
-    out_path = sitk_io.reg_out_path(
-        mod_path, config.RegNames.IMG_HEAT_MAP.value)
-    print("writing {}".format(out_path))
-    heat_map_sitk = sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)
-    sitk.WriteImage(heat_map_sitk, out_path, False)
-    return heat_map, blobs_ids, img_path
-
-def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
-    """Make density images for a list of files as a multiprocessing 
-    wrapper for :func:``make_density_image``
-    
-    Args:
-        img_path: Path to image, which will be used to indentify the blobs file.
-        scale: Rescaling factor as a scalar value. If set, the corresponding 
-            image for this factor will be opened. If None, the full size 
-            image will be used. Defaults to None.
-        suffix: Modifier to append to end of ``img_path`` basename for 
-            registered image files that were output to a modified name; 
-            defaults to None.
-    """
-    start_time = time()
-    pool = mp.Pool()
-    pool_results = []
-    for img_path in img_paths:
-        print("making image", img_path)
-        pool_results.append(pool.apply_async(
-            make_density_image, args=(img_path, scale, shape, suffix)))
-    heat_maps = []
-    for result in pool_results:
-        _, _, path = result.get()
-        print("finished {}".format(path))
-    pool.close()
-    pool.join()
-    print("time elapsed for making density images:", time() - start_time)
-
-
 def merge_images(img_paths, reg_name, prefix=None, suffix=None, 
                  fn_combine=np.sum):
     """Merge images from multiple paths.
@@ -1476,114 +1367,6 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
     print("time elapsed for volumes by ID: {}".format(time() - start_time))
     return df_combined, df_combined_all
 
-def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None, 
-                         show=False, level=None, meas_path_name=None, 
-                         col_wt=None):
-    """Replace labels in an image with the differences in metrics for 
-    each given region between two conditions.
-    
-    Args:
-        img_path: Path to the base image from which the corresponding 
-            registered image will be found.
-        df_path: Path to data frame with metrics for the labels.
-        meas: Name of colum in data frame with the chosen measurement.
-        fn_avg: Function to apply to the set of measurements, such as a mean. 
-            Can be None if ``df_path`` points to a stats file from which 
-            to extract metrics directly in :meth:``vols.map_meas_to_labels``.
-        prefix: Start of path for output image; defaults to None to 
-            use ``img_path`` instead.
-        show: True to show the images after generating them; defaults to False.
-        level: Ontological level at which to look up and show labels. 
-            Assume that labels level image corresponding to this value 
-            has already been generated by :meth:``make_labels_level_img``. 
-            Defaults to None to use only drawn labels.
-        meas_path_name: Name to use in place of `meas` in output path; 
-            defaults to None.
-        col_wt (str): Name of column to use for weighting; defaults to None.
-    """
-    # load labels image and data frame before generating map for the 
-    # given metric of the chosen measurement
-    print("Generating labels difference image for", meas, "from", df_path)
-    reg_name = (config.RegNames.IMG_LABELS.value if level is None 
-                else config.RegNames.IMG_LABELS_LEVEL.value.format(level))
-    labels_sitk = sitk_io.load_registered_img(img_path, reg_name, get_sitk=True)
-    labels_np = sitk.GetArrayFromImage(labels_sitk)
-    df = pd.read_csv(df_path)
-    labels_diff = vols.map_meas_to_labels(
-        labels_np, df, meas, fn_avg, reverse=True, col_wt=col_wt)
-    if labels_diff is None: return
-    labels_diff_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_diff)
-    
-    # save and show labels difference image using measurement name in 
-    # output path or overriding with custom name
-    meas_path = meas if meas_path_name is None else meas_path_name
-    reg_diff = lib_clrbrain.insert_before_ext(
-        config.RegNames.IMG_LABELS_DIFF.value, meas_path, "_")
-    if fn_avg is not None:
-        # add function name to output path if given
-        reg_diff = lib_clrbrain.insert_before_ext(
-            reg_diff, fn_avg.__name__, "_")
-    imgs_write = {reg_diff: labels_diff_sitk}
-    out_path = prefix if prefix else img_path
-    sitk_io.write_reg_images(imgs_write, out_path)
-    if show:
-        for img in imgs_write.values():
-            if img: sitk.Show(img)
-
-def make_labels_level_img(img_path, level, prefix=None, show=False):
-    """Replace labels in an image with their parents at the given level.
-    
-    Labels that do not fall within a parent at that level will remain in place.
-    
-    Args:
-        img_path: Path to the base image from which the corresponding 
-            registered image will be found.
-        level: Ontological level at which to group child labels. 
-        prefix: Start of path for output image; defaults to None to 
-            use ``img_path`` instead.
-        show: True to show the images after generating them; defaults to False.
-    """
-    # load original labels image and setup ontology dictionary
-    labels_sitk = sitk_io.load_registered_img(
-        img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-    labels_np = sitk.GetArrayFromImage(labels_sitk)
-    ref = ontology.load_labels_ref(config.load_labels)
-    labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
-    
-    ids = list(labels_ref_lookup.keys())
-    for key in ids:
-        keys = [key, -1 * key]
-        for region in keys:
-            if region == 0: continue
-            # get ontological label
-            label = labels_ref_lookup[abs(region)]
-            label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
-            if label_level == level:
-                # get children (including parent first) at given level 
-                # and replace them with parent
-                label_ids = ontology.get_children_from_id(
-                    labels_ref_lookup, region)
-                labels_region = np.isin(labels_np, label_ids)
-                print("replacing labels within", region)
-                labels_np[labels_region] = region
-    labels_level_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_np)
-    
-    # generate an edge image at this level
-    labels_edge = vols.make_labels_edge(labels_np)
-    labels_edge_sikt = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_edge)
-    
-    # write and optionally display labels level image
-    imgs_write = {
-        config.RegNames.IMG_LABELS_LEVEL.value.format(level): labels_level_sitk, 
-        config.RegNames.IMG_LABELS_EDGE_LEVEL.value.format(level): 
-            labels_edge_sikt, 
-    }
-    out_path = prefix if prefix else img_path
-    sitk_io.write_reg_images(imgs_write, out_path)
-    if show:
-        for img in imgs_write.values():
-            if img: sitk.Show(img)
-
 
 def _test_labels_lookup():
     """Test labels reverse dictionary creation and lookup.
@@ -1896,7 +1679,7 @@ def main():
         # make density images
         size = config.roi_sizes
         if size: size = size[0][::-1]
-        make_density_images_mp(
+        export_regions.make_density_images_mp(
             config.filenames, config.rescale, size, config.suffix)
     
     elif reg is config.RegisterTypes.make_subsegs:
@@ -1935,7 +1718,7 @@ def main():
 
     elif reg is config.RegisterTypes.make_labels_level:
         # make a labels image grouped at the given level
-        make_labels_level_img(
+        export_regions.make_labels_level_img(
             config.filename, config.labels_level, config.prefix, show)
     
     elif reg is config.RegisterTypes.labels_diff:
@@ -1952,7 +1735,7 @@ def main():
         ]
         for metric in metrics:
             col_wt = vols.get_metric_weight_col(metric[0])
-            make_labels_diff_img(
+            export_regions.make_labels_diff_img(
                 config.filename, path_df, *metric, config.prefix, show, 
                 config.labels_level, col_wt=col_wt)
 
@@ -1969,7 +1752,7 @@ def main():
             path_df = "{}_{}.csv".format("vols_stats", metric)
             if not os.path.exists(path_df): continue
             col_wt = vols.get_metric_weight_col(metric)
-            make_labels_diff_img(
+            export_regions.make_labels_diff_img(
                 config.filename, path_df, "vals.effect", None, config.prefix, 
                 show, meas_path_name=metric, col_wt=col_wt)
     

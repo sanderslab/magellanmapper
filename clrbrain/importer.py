@@ -24,6 +24,8 @@ import re
 from xml import etree as et
 import warnings
 
+import SimpleITK as sitk
+
 from clrbrain import config
 from clrbrain import detector
 from clrbrain import plot_3d
@@ -45,11 +47,6 @@ except ImportError as e:
         "Python-Bioformats could not be found, so there will be error when "
         "attempting to import images into Numpy format", ImportWarning)
 from skimage import io
-try:
-    import SimpleITK as sitk
-except ImportError as e:
-    sitk = None
-    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html

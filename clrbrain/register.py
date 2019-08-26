@@ -44,9 +44,10 @@ import multiprocessing as mp
 from collections import OrderedDict
 import shutil
 from time import time
-import warnings
+
 import pandas as pd
 import numpy as np
+import SimpleITK as sitk
 from skimage import filters
 from skimage import measure
 from skimage import morphology
@@ -67,12 +68,6 @@ from clrbrain import transformer
 from clrbrain import vols
 from clrbrain import export_regions
 from clrbrain import sitk_io
-
-try:
-    import SimpleITK as sitk
-except ImportError as e:
-    sitk = None
-    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"

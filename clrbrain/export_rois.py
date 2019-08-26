@@ -9,10 +9,10 @@ machine learning algorithms or other applications.
 
 import os
 import glob
-import warnings
 
 import numpy as np
 from matplotlib import pyplot as plt
+import SimpleITK as sitk
 
 from clrbrain import config
 from clrbrain import detector
@@ -20,13 +20,6 @@ from clrbrain import lib_clrbrain
 from clrbrain import sqlite
 from clrbrain import plot_3d
 from clrbrain import roi_editor
-
-try:
-    import SimpleITK as sitk
-except ImportError as e:
-    sitk = None
-    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
- 
  
 def make_roi_paths(path, roi_id, channel, make_dirs=False):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))

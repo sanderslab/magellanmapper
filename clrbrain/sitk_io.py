@@ -7,19 +7,13 @@ Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
 import shutil
-import warnings
 
 import numpy as np
+import SimpleITK as sitk
 
 from clrbrain import config
 from clrbrain import importer
 from clrbrain import lib_clrbrain
-
-try:
-    import SimpleITK as sitk
-except ImportError as e:
-    sitk = None
-    warnings.warn(config.WARN_IMPORT_SITK, ImportWarning)
 
 EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
 

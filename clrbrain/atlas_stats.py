@@ -274,3 +274,29 @@ def meas_plot_coefvar(path, id_cols, cond_col, cond_base, metric_cols,
         path, conds, metric_cols, "Volume",
         xlim=lims, ylim=lims, title="Coefficient of Variation", 
         fig_size=size, show=show, suffix=None, df=df)
+
+
+def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
+    """Extract the row of peak smoothing quality from the given data 
+    frame matching the given criteria.
+    
+    Args:
+        df: Data frame from which to extract.
+        thresh_label_loss: Only check rows below or equal to this 
+            fraction of label loss; defaults to None to ignore.
+        filter_size: Only rows with the given filter size; defaults 
+            to None to ignore.
+    
+    Returns:
+        New data frame with the row having the peak smoothing quality 
+        meeting criteria.
+    """
+    if thresh_label_loss is not None:
+        df = df.loc[
+            df[config.SmoothingMetrics.LABEL_LOSS.value] <= thresh_label_loss]
+    if filter_size is not None:
+        df = df.loc[
+            df[config.SmoothingMetrics.FILTER_SIZE.value] == filter_size]
+    sm_qual = df[config.SmoothingMetrics.SM_QUALITY.value]
+    df_peak = df.loc[sm_qual == sm_qual.max()]
+    return df_peak

@@ -156,32 +156,6 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 
-def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
-    """Extract the row of peak smoothing quality from the given data 
-    frame matching the given criteria.
-    
-    Args:
-        df: Data frame from which to extract.
-        thresh_label_loss: Only check rows below or equal to this 
-            fraction of label loss; defaults to None to ignore.
-        filter_size: Only rows with the given filter size; defaults 
-            to None to ignore.
-    
-    Returns:
-        New data frame with the row having the peak smoothing quality 
-        meeting criteria.
-    """
-    if thresh_label_loss is not None:
-        df = df.loc[
-            df[config.SmoothingMetrics.LABEL_LOSS.value] <= thresh_label_loss]
-    if filter_size is not None:
-        df = df.loc[
-            df[config.SmoothingMetrics.FILTER_SIZE.value] == filter_size]
-    sm_qual = df[config.SmoothingMetrics.SM_QUALITY.value]
-    df_peak = df.loc[sm_qual == sm_qual.max()]
-    return df_peak
-
-
 def _load_numpy_to_sitk(numpy_file, rotate=False):
     """Load Numpy image array to SimpleITK Image object.
     
@@ -1629,7 +1603,7 @@ def main():
         dfs = []
         for path in config.filenames:
             df = pd.read_csv(path)
-            dfs.append(smoothing_peak(df, 0, None))
+            dfs.append(atlas_stats.smoothing_peak(df, 0, None))
         stats.data_frames_to_csv(dfs, "smoothing_peaks.csv")
     
     elif reg in (

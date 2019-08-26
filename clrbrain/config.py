@@ -28,7 +28,6 @@ Attributes:
         in the labels image.
 """
 
-
 import numpy as np
 from collections import OrderedDict
 from enum import Enum
@@ -308,6 +307,34 @@ StatsTypes = Enum(
 )
 stats_type = None
 seed = 0 # random number generator seed
+
+
+class AtlasMetrics(Enum):
+    """General atlas metric enumerations."""
+    SAMPLE = "Sample"
+    REGION = "Region"
+    CONDITION = "Condition"
+    DSC_ATLAS_LABELS = "DSC_atlas_labels"
+    DSC_ATLAS_LABELS_HEM = "DSC_atlas_labels_hemisphere"
+    DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
+    DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
+    LAT_UNLBL_VOL = "Lateral_unlabeled_volume"
+    LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"
+
+
+class SmoothingMetrics(Enum):
+    """Smoothing metric enumerations."""
+    COMPACTED = "Compacted"
+    DISPLACED = "Displaced"
+    SM_QUALITY = "Smoothing_quality"
+    COMPACTNESS = "Compactness"
+    DISPLACEMENT = "Displacement"
+    ROUGHNESS = "Roughness"
+    ROUGHNESS_SM = "Roughness_sm"
+    SA_VOL_ABS = "SA_to_vol_abs"
+    SA_VOL = "SA_to_vol"
+    LABEL_LOSS = "Label_loss"
+    FILTER_SIZE = "Filter_size"
 
 
 # AWS

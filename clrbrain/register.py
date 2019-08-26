@@ -39,7 +39,6 @@ outlined here. Each type can be coupled with additional arguments in ``cli``.
 """
 
 import os
-from enum import Enum
 import multiprocessing as mp
 from collections import OrderedDict
 import shutil
@@ -80,32 +79,6 @@ SMOOTHING_METRIC_MODES = (
     "vol", "area_edt", "area_radial", "area_displvol", "compactness")
 # 3D format extensions to check when finding registered files
 _SIGNAL_THRESHOLD = 0.01
-
-class AtlasMetrics(Enum):
-    """General atlas metric enumerations."""
-    SAMPLE = "Sample"
-    REGION = "Region"
-    CONDITION = "Condition"
-    DSC_ATLAS_LABELS = "DSC_atlas_labels"
-    DSC_ATLAS_LABELS_HEM = "DSC_atlas_labels_hemisphere"
-    DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
-    DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
-    LAT_UNLBL_VOL = "Lateral_unlabeled_volume"
-    LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"
-
-class SmoothingMetrics(Enum):
-    """Smoothing metric enumerations."""
-    COMPACTED = "Compacted"
-    DISPLACED = "Displaced"
-    SM_QUALITY = "Smoothing_quality"
-    COMPACTNESS = "Compactness"
-    DISPLACEMENT = "Displacement"
-    ROUGHNESS = "Roughness"
-    ROUGHNESS_SM = "Roughness_sm"
-    SA_VOL_ABS = "SA_to_vol_abs"
-    SA_VOL = "SA_to_vol"
-    LABEL_LOSS = "Label_loss"
-    FILTER_SIZE = "Filter_size"
 
 
 def _translation_adjust(orig, transformed, translation, flip=False):
@@ -571,7 +544,7 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
     smooth_labels(img_np, filter_size, smoothing_mode)
     borders, df_metrics, df_raw = label_smoothing_metric(
         img_np_orig, img_np, save_borders=save_borders)
-    df_metrics[SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
+    df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
     
     # curate back to lightly smoothed foreground of original labels
     crop = config.register_settings["crop_to_orig"]
@@ -992,30 +965,31 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         if key != "size_orig": vals = np.multiply(vals, pxs["size_orig"])
         totals[key] = np.nansum(vals)
     
-    metrics = dict.fromkeys(SmoothingMetrics, np.nan)
+    metrics = dict.fromkeys(config.SmoothingMetrics, np.nan)
     tot_size = totals["size_orig"]
     if tot_size > 0:
         frac_reduced =  totals["pxs_reduced"] / tot_size
         frac_expanded =  totals["pxs_expanded"] / tot_size
-        metrics[SmoothingMetrics.COMPACTED] = [frac_reduced]
-        metrics[SmoothingMetrics.DISPLACED] = [frac_expanded]
-        metrics[SmoothingMetrics.SM_QUALITY] = [frac_reduced - frac_expanded]
-        metrics[SmoothingMetrics.COMPACTNESS] = [
+        metrics[config.SmoothingMetrics.COMPACTED] = [frac_reduced]
+        metrics[config.SmoothingMetrics.DISPLACED] = [frac_expanded]
+        metrics[config.SmoothingMetrics.SM_QUALITY] = [
+            frac_reduced - frac_expanded]
+        metrics[config.SmoothingMetrics.COMPACTNESS] = [
             totals["compactness_smoothed"] / tot_size]
-        metrics[SmoothingMetrics.DISPLACEMENT] = [
+        metrics[config.SmoothingMetrics.DISPLACEMENT] = [
             totals["displacement"] / tot_size]
         if mode == SMOOTHING_METRIC_MODES[0]:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
-        metrics[SmoothingMetrics.SA_VOL_ABS] = [
+        metrics[config.SmoothingMetrics.SA_VOL_ABS] = [
             totals["SA_to_vol_smoothed"] / tot_size]
-        metrics[SmoothingMetrics.SA_VOL] = [
+        metrics[config.SmoothingMetrics.SA_VOL] = [
             totals["SA_to_vol_ratio"] / tot_size]
-        metrics[SmoothingMetrics.ROUGHNESS] = [roughs_metric[0]]
-        metrics[SmoothingMetrics.ROUGHNESS_SM] = [roughs_metric[1]]
+        metrics[config.SmoothingMetrics.ROUGHNESS] = [roughs_metric[0]]
+        metrics[config.SmoothingMetrics.ROUGHNESS_SM] = [roughs_metric[1]]
         num_labels_orig = len(label_ids)
-        metrics[SmoothingMetrics.LABEL_LOSS] = [
+        metrics[config.SmoothingMetrics.LABEL_LOSS] = [
             (num_labels_orig - len(np.unique(smoothed_img_np))) 
             / num_labels_orig]
     # raw stats
@@ -1047,10 +1021,12 @@ def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
         meeting criteria.
     """
     if thresh_label_loss is not None:
-        df = df.loc[df[SmoothingMetrics.LABEL_LOSS.value] <= thresh_label_loss]
+        df = df.loc[
+            df[config.SmoothingMetrics.LABEL_LOSS.value] <= thresh_label_loss]
     if filter_size is not None:
-        df = df.loc[df[SmoothingMetrics.FILTER_SIZE.value] == filter_size]
-    sm_qual = df[SmoothingMetrics.SM_QUALITY.value]
+        df = df.loc[
+            df[config.SmoothingMetrics.FILTER_SIZE.value] == filter_size]
+    sm_qual = df[config.SmoothingMetrics.SM_QUALITY.value]
     df_peak = df.loc[sm_qual == sm_qual.max()]
     return df_peak
 
@@ -1357,7 +1333,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             sitk.GetImageFromArray(img_atlas_np[:extis[1]]), 
             sitk.GetImageFromArray(img_labels_np[:extis[1]]), 
             config.register_settings["overlap_meas_add_lbls"])
-        metrics[AtlasMetrics.DSC_ATLAS_LABELS_HEM] = [dsc]
+        metrics[config.AtlasMetrics.DSC_ATLAS_LABELS_HEM] = [dsc]
         
         # meas frac of hemisphere that is unlabeled using "mirror" bounds
         thresh = config.register_settings["atlas_threshold_all"]
@@ -1366,7 +1342,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         lbl_edge = np.logical_and(
             img_labels_np[:extis[0]] != 0, thresh_atlas[:extis[0]])
         # simply treat rest of hem as labeled to focus on unlabeled lat portion
-        metrics[AtlasMetrics.LAT_UNLBL_VOL] = 1 - (
+        metrics[config.AtlasMetrics.LAT_UNLBL_VOL] = 1 - (
             (np.sum(lbl_edge) + np.sum(thresh_atlas[extis[0]:extis[1]])) 
             / np.sum(thresh_atlas[:extis[1]]))
 
@@ -1394,7 +1370,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
                         planes_lbl += 1
             if planes_tot > 0:
                 frac = 1 - (planes_lbl / planes_tot)
-        metrics[AtlasMetrics.LAT_UNLBL_PLANES] = frac
+        metrics[config.AtlasMetrics.LAT_UNLBL_PLANES] = frac
     
     imgs_np = (img_atlas_np, img_labels_np, borders_img_np)
     if pre_plane:
@@ -1460,9 +1436,9 @@ def import_atlas(atlas_dir, show=True):
     
     # prep metrics
     metrics = {
-        AtlasMetrics.SAMPLE: [basename], 
-        AtlasMetrics.REGION: config.REGION_ALL, 
-        AtlasMetrics.CONDITION: cond, 
+        config.AtlasMetrics.SAMPLE: [basename], 
+        config.AtlasMetrics.REGION: config.REGION_ALL, 
+        config.AtlasMetrics.CONDITION: cond, 
     }
     
     # match atlas and labels to one another
@@ -1493,8 +1469,8 @@ def import_atlas(atlas_dir, show=True):
     thresh_atlas = img_atlas_np > thresh
     compactness = plot_3d.compactness(
         plot_3d.perimeter_nd(thresh_atlas), thresh_atlas)
-    metrics[AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
-    metrics[SmoothingMetrics.COMPACTNESS] = [compactness]
+    metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
+    metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
     
     # write images with atlas saved as Clrbrain/Numpy format to 
     # allow opening as an image within Clrbrain alongside the labels image
@@ -1513,15 +1489,15 @@ def import_atlas(atlas_dir, show=True):
     if df_smoothing is not None:
         # write smoothing metrics to CSV with identifier columns
         df_smoothing_path = df_base_path.format(config.PATH_SMOOTHING_METRICS)
-        df_smoothing[AtlasMetrics.SAMPLE.value] = basename
-        df_smoothing[AtlasMetrics.REGION.value] = config.REGION_ALL
-        df_smoothing[AtlasMetrics.CONDITION.value] = "smoothed"
+        df_smoothing[config.AtlasMetrics.SAMPLE.value] = basename
+        df_smoothing[config.AtlasMetrics.REGION.value] = config.REGION_ALL
+        df_smoothing[config.AtlasMetrics.CONDITION.value] = "smoothed"
         df_smoothing.loc[
-            df_smoothing[SmoothingMetrics.FILTER_SIZE.value] == 0, 
-            AtlasMetrics.CONDITION.value] = "unsmoothed"
+            df_smoothing[config.SmoothingMetrics.FILTER_SIZE.value] == 0,
+            config.AtlasMetrics.CONDITION.value] = "unsmoothed"
         stats.data_frames_to_csv(
             df_smoothing, df_smoothing_path, 
-            sort_cols=SmoothingMetrics.FILTER_SIZE.value)
+            sort_cols=config.SmoothingMetrics.FILTER_SIZE.value)
 
     print("\nImported {} whole atlas stats:".format(basename))
     stats.dict_to_data_frame(metrics, df_metrics_path, show="\t")
@@ -1761,13 +1737,13 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # save basic metrics in CSV file
     basename = lib_clrbrain.get_filename_without_ext(fixed_file)
     metrics = {
-        AtlasMetrics.SAMPLE: [basename], 
-        AtlasMetrics.REGION: config.REGION_ALL, 
-        AtlasMetrics.CONDITION: [np.nan], 
-        AtlasMetrics.DSC_ATLAS_SAMPLE: [dsc_sample], 
-        AtlasMetrics.DSC_ATLAS_SAMPLE_CUR: [dsc_sample_curated], 
-        AtlasMetrics.DSC_ATLAS_LABELS: [dsc_labels], 
-        SmoothingMetrics.COMPACTNESS: [compactness]
+        config.AtlasMetrics.SAMPLE: [basename], 
+        config.AtlasMetrics.REGION: config.REGION_ALL, 
+        config.AtlasMetrics.CONDITION: [np.nan], 
+        config.AtlasMetrics.DSC_ATLAS_SAMPLE: [dsc_sample], 
+        config.AtlasMetrics.DSC_ATLAS_SAMPLE_CUR: [dsc_sample_curated], 
+        config.AtlasMetrics.DSC_ATLAS_LABELS: [dsc_labels], 
+        config.SmoothingMetrics.COMPACTNESS: [compactness]
     }
     df_path = lib_clrbrain.combine_paths(
         name_prefix, config.PATH_ATLAS_IMPORT_METRICS)
@@ -3528,22 +3504,22 @@ def main():
         df_stats = pd.read_csv(config.filename)  # atlas import stats
         df_smoothing = pd.read_csv(config.filenames[1])  # smoothing stats
         
-        cols = [AtlasMetrics.SAMPLE.value, 
-                AtlasMetrics.REGION.value, 
-                AtlasMetrics.CONDITION.value, 
-                SmoothingMetrics.COMPACTNESS.value]
+        cols = [config.AtlasMetrics.SAMPLE.value,
+                config.AtlasMetrics.REGION.value,
+                config.AtlasMetrics.CONDITION.value,
+                config.SmoothingMetrics.COMPACTNESS.value]
         
         # compare histology vs combined original labels
         df_histo_vs_orig, dfs_baseline = stats.filter_dfs_on_vals(
             [df_stats, df_smoothing], cols, 
-            [None, (SmoothingMetrics.FILTER_SIZE.value, 0)])
+            [None, (config.SmoothingMetrics.FILTER_SIZE.value, 0)])
         df_histo_vs_orig[config.GENOTYPE_KEY] = "Histo Vs Orig Labels"
         
         # compare combined original vs smoothed labels
         smooth = config.register_settings["smooth"]
         df_unsm_vs_sm, dfs_smoothed = stats.filter_dfs_on_vals(
             [dfs_baseline[1], df_smoothing], cols, 
-            [None, (SmoothingMetrics.FILTER_SIZE.value, smooth)])
+            [None, (config.SmoothingMetrics.FILTER_SIZE.value, smooth)])
         df_unsm_vs_sm[config.GENOTYPE_KEY] = "Smoothing"
 
         # compare histology vs smoothed labels
@@ -3554,7 +3530,7 @@ def main():
         output_path = lib_clrbrain.combine_paths(
             config.filename, "compactness.csv")
         df = pd.concat([df_histo_vs_orig, df_histo_vs_sm, df_unsm_vs_sm])
-        df[AtlasMetrics.REGION.value] = "all"
+        df[config.AtlasMetrics.REGION.value] = "all"
         stats.data_frames_to_csv(df, output_path)
     
     elif reg is config.RegisterTypes.plot_smoothing_metrics:
@@ -3565,15 +3541,15 @@ def main():
                     config.PATH_SMOOTHING_METRICS, "")))
         lbls = ("Fractional Change", "Smoothing Filter Size")
         plot_2d.plot_lines(
-            config.filename, SmoothingMetrics.FILTER_SIZE.value, 
-            (SmoothingMetrics.COMPACTED.value, 
-             SmoothingMetrics.DISPLACED.value, 
-             SmoothingMetrics.SM_QUALITY.value), 
+            config.filename, config.SmoothingMetrics.FILTER_SIZE.value, 
+            (config.SmoothingMetrics.COMPACTED.value,
+             config.SmoothingMetrics.DISPLACED.value,
+             config.SmoothingMetrics.SM_QUALITY.value), 
             ("--", "--", "-"), lbls, title, size, show, "_quality")
         plot_2d.plot_lines(
-            config.filename, SmoothingMetrics.FILTER_SIZE.value, 
-            (SmoothingMetrics.SA_VOL.value, 
-             SmoothingMetrics.LABEL_LOSS.value), 
+            config.filename, config.SmoothingMetrics.FILTER_SIZE.value, 
+            (config.SmoothingMetrics.SA_VOL.value,
+             config.SmoothingMetrics.LABEL_LOSS.value), 
             ("-", "-"), lbls, None, size, show, "_extras", ("C3", "C4"))
     
     elif reg is config.RegisterTypes.smoothing_peaks:
@@ -3761,8 +3737,8 @@ def main():
         # melt columns specified in "groups" using ID columns from 
         # standard atlas metrics
         id_cols = [
-            AtlasMetrics.SAMPLE.value, AtlasMetrics.REGION.value, 
-            AtlasMetrics.CONDITION.value]
+            config.AtlasMetrics.SAMPLE.value, config.AtlasMetrics.REGION.value, 
+            config.AtlasMetrics.CONDITION.value]
         df = stats.melt_cols(
             pd.read_csv(config.filename), id_cols, config.groups, 
             config.GENOTYPE_KEY)
@@ -3781,8 +3757,8 @@ def main():
         
     elif reg is config.RegisterTypes.plot_lateral_unlabeled:
         # plot lateral edge unlabeled fractions as both lines and bars
-        cols = (AtlasMetrics.LAT_UNLBL_VOL.value, 
-                AtlasMetrics.LAT_UNLBL_PLANES.value)
+        cols = (config.AtlasMetrics.LAT_UNLBL_VOL.value,
+                config.AtlasMetrics.LAT_UNLBL_PLANES.value)
         atlas_stats.plot_unlabeled_hemisphere(config.filename, cols, size, show)
 
 

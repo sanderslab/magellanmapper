@@ -17,8 +17,6 @@ CLR_ENV="clr"
 env_name="$CLR_ENV"
 venv_dir="../venvs"
 
-build_simple_elastix=0
-
 OPTIND=1
 while getopts hn:e: opt; do
   case $opt in
@@ -38,16 +36,15 @@ while getopts hn:e: opt; do
       echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
-    --) ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 
-# pass arguments after "--" to clrbrain
-shift "$((OPTIND-1))"
-EXTRA_ARGS="$@"
-
 # run from script directory
-BASE_DIR="`dirname $0`"
+BASE_DIR="$(dirname "$0")"
 cd "$BASE_DIR"
 BASE_DIR="$PWD"
 
@@ -70,17 +67,17 @@ check_git
 # check for Python availability and version requirement
 py_ver_min=(3 6)
 py_vers=(3.7 3.6)
-for ver in ${py_vers[@]}; do
+for ver in "${py_vers[@]}"; do
   # prioritize specific versions in case "python" points to lower version
-  if command -v python$ver &> /dev/null; then
+  if command -v "python$ver" &> /dev/null; then
     python=python$ver
     break
   fi
 done
 if [[ -z "$python" ]]; then
-  # fallback to checking "python" along with version number
+  # fallback to checking version number output by "python"
   if command -v python &> /dev/null; then
-    if $(check_python python ${py_ver_min[@]}); then
+    if check_python python "${py_ver_min[@]}"; then
       python=python
     fi
   fi
@@ -123,4 +120,3 @@ pip install -e .[all] --index-url https://pypi.fury.io/dd8/ \
 
 echo "Clrbrain environment setup complete!"
 echo "** Please run \"source $env_act\" to enter your new environment **"
-

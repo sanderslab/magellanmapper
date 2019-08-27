@@ -21,8 +21,8 @@ clones will be downloaded and installed through Pip.
 Arguments:
   -h: Show help and exit.
   -n [name]: Set the Conda environment name; defaults to CONDA_ENV.
-  -l: Lightweight environment setup, which does not include 
-    GUI components such as Matplotlib or Mayavi.
+  -s [spec]: Specify the environment specification file; defaults to 
+    ENV_CONFIG.
 "
 
 # default Conda environment names as found in .yml configs
@@ -31,13 +31,10 @@ env_name="$CONDA_ENV"
 
 # default .yml files
 ENV_CONFIG="environment.yml"
-ENV_CONFIG_LIGHT="environment_light.yml"
 config="$ENV_CONFIG"
 
-lightweight=0
-
 OPTIND=1
-while getopts hn:l opt; do
+while getopts hn:s: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -47,10 +44,9 @@ while getopts hn:l opt; do
       env_name="$OPTARG"
       echo "Set to create the Conda environment $env_name"
       ;;
-    l)
-      lightweight=1
-      config="$ENV_CONFIG_LIGHT"
-      echo "Set to create lightweight (no GUI) environment"
+    s)
+      config="$OPTARG"
+      echo "Set the environment spec file to $config"
       ;;
     :)
       echo "Option -$OPTARG requires an argument"
@@ -246,9 +242,9 @@ pip install git+https://github.com/LeeKamentsky/python-javabridge.git
 pip install -U python-bioformats==1.1.0
 '
 
-cd "$BASE_DIR"
-
-echo "Clrbrain environment setup complete!"
-echo "** Please run \"conda activate $env_name\" or \"source activate $env_name\""
-echo "   depending on your Conda setup to enter the environment for Clrbrain **"
-
+msg="Clrbrain environment setup complete!"
+msg+="\n** Please run \"conda activate $env_name\" or "
+msg+="\"source activate $env_name\""
+msg+="\n   depending on your Conda setup to enter the environment "
+msg+="for Clrbrain **"
+echo -e "$msg"

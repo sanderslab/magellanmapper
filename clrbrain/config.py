@@ -708,7 +708,7 @@ class RegisterSettings(SettingsDict):
         
         # crop labels back to their original background after smoothing 
         # (ignored during atlas import if no smoothing), given as the filter 
-        # size used to open up the backgound before cropping, 0 to use 
+        # size used to open up the background before cropping, 0 to use 
         # the original background as-is, or False not to crop
         self["crop_to_orig"] = 1
         
@@ -720,6 +720,10 @@ class RegisterSettings(SettingsDict):
         # a data frame that can be used for fast aggregation when 
         # grouping into levels
         self["combine_sides"] = False
+        
+        # make the far hemisphere neg if it is not, for atlases (eg P56) with 
+        # bilateral pos labels where one half should be made neg for stats
+        self["make_far_hem_neg"] = False
         
         # planar orientation for transposition prior rather than after import
         self["pre_plane"] = None
@@ -746,7 +750,7 @@ def update_register_settings(settings, settings_type):
             {
                 "bspline_iter_max": "512", 
                 "truncate_labels": (None, (0.2, 1.0), (0.45, 1.0)), 
-                "holes_area": 5000
+                "holes_area": 5000, 
             }, 
             profile)
 
@@ -955,7 +959,8 @@ def update_register_settings(settings, settings_type):
              # partially complete; smallest closing to close ventricles
              "labels_edge": {
                  "start": 0.138, "surr_size": 12, "closing_size": 4}, 
-             "smooth": 2
+             "smooth": 2, 
+             "make_far_hem_neg": True, 
             }, 
             profile)
         
@@ -970,7 +975,8 @@ def update_register_settings(settings, settings_type):
              # sections and labels symmetric and aligned with one another
              "labels_mirror": 0.5,
              "labels_edge": None, 
-             "smooth": 2
+             "smooth": 2, 
+             "make_far_hem_neg": True, 
             }, 
             profile)
         

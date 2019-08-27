@@ -979,6 +979,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     smooth = config.register_settings["smooth"]
     crop = config.register_settings["crop_to_labels"]
     affine = config.register_settings["affine"]
+    far_hem_neg = config.register_settings["make_far_hem_neg"]
     
     if pre_plane:
         # images in the correct desired orientation may need to be 
@@ -1042,6 +1043,18 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             extis = tuple(n - crop_sl[0].start for n in extis)
             if mask_lbls is not None:
                 mask_lbls = mask_lbls[tuple(crop_sl)]
+
+    if far_hem_neg and np.all(img_labels_np >= 0):
+        # unmirrored images may have only pos labels, while metrics assume 
+        # that the far hem is neg; invert pos labels there if they are >=1/3 of 
+        # total labels, not just spillover from the near side
+        half_lbls = img_labels_np[extis[1]:]
+        if (np.sum(half_lbls < 0) == 0 and
+                np.sum(half_lbls != 0) > np.sum(img_labels_np != 0) / 3):
+            print("less than half of labels in right hemisphere are neg; "
+                  "inverting all pos labels in x >= {} (shape {}) for "
+                  "sided metrics".format(extis[1], img_labels_np.shape))
+            half_lbls[half_lbls > 0] *= -1
     
     if metrics is not None:
         

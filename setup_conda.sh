@@ -20,7 +20,7 @@ clones will be downloaded and installed through Pip.
 
 Arguments:
   -h: Show help and exit.
-  -n: Set the Conda environment name; defaults to CONDA_ENV.
+  -n [name]: Set the Conda environment name; defaults to CONDA_ENV.
   -l: Lightweight environment setup, which does not include 
     GUI components such as Matplotlib or Mayavi.
 "
@@ -34,9 +34,7 @@ ENV_CONFIG="environment.yml"
 ENV_CONFIG_LIGHT="environment_light.yml"
 config="$ENV_CONFIG"
 
-build_simple_elastix=0
 lightweight=0
-aws=0
 
 OPTIND=1
 while getopts hn:l opt; do
@@ -58,16 +56,15 @@ while getopts hn:l opt; do
       echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
-    --) ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 
-# pass arguments after "--" to clrbrain
-shift "$((OPTIND-1))"
-EXTRA_ARGS="$@"
-
 # run from script directory
-BASE_DIR="`dirname $0`"
+BASE_DIR="$(dirname "$0")"
 cd "$BASE_DIR"
 BASE_DIR="$PWD"
 
@@ -119,9 +116,9 @@ fi
 
 # create or update Conda environment; warn of apparent hang since no 
 # progress monitor displays during installs by environment spec
-check_env="`conda env list | grep -w $env_name`"
+check_env="$(conda env list | grep -w "$env_name")"
 msg="Installing dependencies (may take awhile and appear to hang after the"
-msg+="\n  \"Executing transaction\" step because of additional"
+msg+="\n  \"Executing transaction\" step because of additional "
 msg+="downloads/installs)..."
 if [[ "$check_env" == "" ]]; then
   # create an empty environment before setting channel priority to 
@@ -142,7 +139,7 @@ fi
 
 # check that the environment was created and activate it
 echo "Checking and activating conda environment..."
-check_env="`conda env list | grep -w $env_name`"
+check_env="$(conda env list | grep -w "$env_name")"
 if [[ "$check_env" == "" ]]; then
   echo "$env_name could not be found, exiting."
   exit 1
@@ -159,8 +156,9 @@ fi
 #   None
 ############################################
 install_shallow_clone() {
-  local folder="`basename $1`"
-  local folder="${folder%.*}"
+  local folder
+  folder="$(basename "$1")"
+  folder="${folder%.*}"
   if [ ! -e "$folder" ]; then
     # download and install fresh repo with shallow clone
     # and editable installation
@@ -184,22 +182,22 @@ install_shallow_clone() {
       branch="$2"
       echo "Checking for differences with $branch"
     fi
-    if [[ `git rev-parse --abbrev-ref HEAD` != "$branch" ]]; then
+    if [[ $(git rev-parse --abbrev-ref HEAD) != "$branch" ]]; then
       echo "Not on $branch branch so will ignore updates"
-    elif [[ `git diff-index HEAD --` ]]; then
+    elif [[ $(git diff-index HEAD --) ]]; then
       echo "Uncommitted file changes exist so will not update"
-    elif [[ `git log HEAD..origin/"$branch" --oneline` ]]; then
+    elif [[ $(git log HEAD..origin/"$branch" --oneline) ]]; then
       # merge in updates only if on same branch as given one, 
       # differences exist between current status and upstream 
       # branch, and no tracked files have uncommitted changes
-      git merge origin/$branch
+      git merge "origin/$branch"
       echo "You may need to run post-update step such as "
       echo "\"python setup.py build_ext -i\""
     else
       echo "No changes found upstream on $branch branch"
     fi
   fi
-  if [[ ! `pip list --format=columns | grep $folder` ]]; then
+  if [[ ! "$(pip list --format=columns | grep $folder)" ]]; then
     echo "Installing $folder"
     pip install -e .
   fi

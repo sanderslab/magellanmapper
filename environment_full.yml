@@ -108,7 +108,7 @@ dependencies:
   - zstd=1.4.0=ha9f0a20_0
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
-    - javabridge==1.0.18.post16+gc7ccaed
+    - "git+https://github.com/LeeKamentsky/python-javabridge.git@c7ccaed43ac7752c4ca361abb04fcb4e9ebdb069"
     - matplotlib-scalebar==0.6.0
     - pyqt5==5.13.0
     - pyqt5-sip==4.19.18

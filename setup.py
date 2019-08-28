@@ -18,7 +18,7 @@ config = {
     "version": "0.9.6",
     "packages": setuptools.find_packages(),
     "scripts": [], 
-    "python_requires": ">=3",  # TODO: may need to increase; tested on >=3.6
+    "python_requires": ">=3.6",  # TODO: consider testing on earlier versions
     "install_requires": [
         "scikit-image", 
         "matplotlib", 

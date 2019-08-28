@@ -66,7 +66,7 @@ check_git
 
 # check for Python availability and version requirement
 py_ver_min=(3 6)
-py_vers=(3.7 3.6)
+py_vers=(3.6 3.7 3.8)
 for ver in "${py_vers[@]}"; do
   # prioritize specific versions in case "python" points to lower version
   if command -v "python$ver" &> /dev/null; then

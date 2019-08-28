@@ -41,39 +41,44 @@ To ease complete setup including creating new virtual environments and installin
 #### Setup script for Conda
 
 ```
-./setup_conda.sh
+./setup_conda.sh [-n name] [-s spec]
 ```
 
-Run this command from the `clrbrain` folder to install the following dependencies:
+Run this command from the `clrbrain` folder to set up the following:
 
 - If not already installed: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
-- A `clr` Conda environment with Python 3
-- Scipy, Numpy, Matplotlib stack
-- Mayavi/TraitsUI/Qt stack for GUI and 3D visualization (optional, use the `-l` ("L") flag to create a lightweight environment without this stack)
-- Scikit-image for image processing
-- Pandas for stats
-- SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
-- Python-Bioformats/Javabridge for importing images from propriety formast such as `.czi` (optional, requires Java SDK and C compiler, ok if install fails)
+- A Conda environment with Python 3, named according to the `-n` option, or `clr` by default
+- Full dependencies based on `environment.yml` (ok if Python-Bioformats/Javabridge fails), or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
 
 #### Setup script for Venv
 
 ```
-./setup_venv.sh
+./setup_venv.sh [-n name]
 ```
 
 This setup script will check and install the following dependencies:
 
 - Checks for an existing Python 3.6+ install, which already include Venv
-- Performs a Pip install (requires a C compiler for some dependencies, see below)
-- Installs SimpleITK or SimpleElastix
+- Performs a Pip install of Clrbrain and all dependencies (requires a C compiler for some dependencies, see below)
 
 ### Alternative installation methods
 
 You can also install Clrbrain these ways in the shell and Python environment of your choice:
 
-- In a Python environment of your choice or none at all, run `pip install -r requirements.txt` to match one of our pinned, tested setups (Mac, Linux only)
-- To create the equivalent Conda environment, run `conda env create -n [name] -f environment_full.yml`, where `name` is your desired environment name
-- If you have manually installed the dependencies, run `python setup.py install`
+- In a Python environment of your choice or none at all, run `pip install -r requirements.txt` to match dependencies in a pinned, current test setup (cross-platform)
+- To create a similar environment in Conda, run `conda env create -n [name] -f environment_[os].yml`, where `name` is your desired environment name, and `os` is `win|mac|lin` for your OS (assumes 64-bit)
+- To install without Pip, run `python setup.py install` to install the package and only required dependencies
+
+### Dependencies
+
+The main required and optional dependencies in Clrbrain are:
+
+- Scipy, Numpy, Matplotlib stack
+- Mayavi/TraitsUI/Qt stack for GUI and 3D visualization
+- Scikit-image for image processing
+- Pandas for stats
+- SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
+- Python-Bioformats/Javabridge for importing images from propriety formast such as `.czi` (optional, requires Java SDK and C compiler)
 
 ### Optional Dependency Build and Runtime Requirements
 
@@ -85,10 +90,10 @@ In most cases Clrbrain can be installed without a compiler or non-Python librari
 - Traits via Pip/PyPI (not required for Conda package), for GUI
 - SimpleElastix (see below)
 
-Compilers used by dependencies, by platform:
+Compilers required for these dependencies, by platform:
 
 - Mac and Linux: `gcc`/`clang`
-- Windows: Microsoft Visual Studio Build Tools (tested on 2017, 2019) along with these components:
+- Windows: Microsoft Visual Studio Build Tools (tested on 2017, 2019) along with these additional components
   - MSVC C++ x64/x86 build tools
   - Windows 10 SDK
 
@@ -110,11 +115,11 @@ Compilers used by dependencies, by platform:
 
 #### SimpleElastix dependency
 
-SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in Clrbrain. The library is not currently available in Pip and must be built manually. As the buid process is not trivial, we install SimpleITK by default since SimpleElastix was forked from SimpleITK, and it contains all but the registration functions accessed in Clrbrain.
+SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in Clrbrain. The library is not currently available in the standard [PyPi](https://pypi.org/). As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/).
 
-To ease the build process for just the SimpleElastix Python wrapper, we provide a couple build scripts:
+If you would prefer to build SimpleElastix yourself, we have provided a couple build scripts to ease the build process for the SimpleElastix Python wrapper:
 
-- Mac or Linux: Run the environment setup with `./setup_env.sh -s` to build and install SimpleElastix during setup using the `build_se.sh` script. SimpleElastix can also be built after envrionment setup by running this script within the environment. Be sure to uninstall SimpleITK from the environment (`pip uninstall simpleitk`) before installing SimpleElastix to avoid a conflict. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
+- Mac or Linux: Run the environment setup with `./setup_conda.sh -s` to build and install SimpleElastix during setup using the `build_se.sh` script. SimpleElastix can also be built after envrionment setup by running this script within the environment. Be sure to uninstall SimpleITK from the environment (`pip uninstall simpleitk`) before installing SimpleElastix to avoid a conflict. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
 - Windows: Run `build_se.bat` within your environment. See above for required Windows compiler components. Note that CMake 3.14 in the MSVC 2019 build tools package has not worked for us, but CMake 3.15 from the official download site has worked.
 
 ### Tested Platforms
@@ -133,7 +138,7 @@ Clrbrain has been built and tested to build on:
 Clrbrain can be run as a GUI or headlessly for desktop or server tasks, respectively. To start Clrbrain, run (assuming a Conda environment):
 
 ```
-source activate clr3
+source activate clr
 ./run --img [path_to_your_image]
 ```
 
@@ -275,7 +280,7 @@ ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
 
 - If necessary, start a graphical server (eg `vncserver`) to run ImageJ/Fiji for stitching or for Mayavi dependency setup
 - Setup drives: `clrbrain/setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
-- If Clrbrain has not been installed, install it with `clrbrain/setup_env.sh` as above
+- If Clrbrain has not been installed, install it with `clrbrain/setup_conda.sh` as above
 - Activate the Conda environment set up during installation
 - Run a pipeline, such as this command to fully process a multi-tile image with tile stitching, import to Numpy array, and cell detection, with AWS S3 import/export and Slack notifications along the way, followed by server clean-up/shutdown:
 
@@ -306,17 +311,22 @@ An alternative X Server is Cygwin/X, which requires the following modifications:
 
 #### Cygwin
 
-As an alternative to WSL, Cygwin itself can be used to build Clrbrain and run without an X server.
+As an alternative to WSL, Cygwin itself can be used to build Clrbrain and run without requiring an X server. Many dependencies must be built, however, using Cygwin's own `gcc`. At least as of 2019-03, VTK is not available for Cygwin.
 
-Building SimpleElastix on Windows is more complicated, however, requiring the following:
+#### MSYS2
 
-- Install Microsoft Visual Studio Build Tools 2017 with Windows SDK to build Mayavi and Javabridge
-- Build SimpleElastix with VS 2017, though this compilation has not worked at least in our experience because of [this issue](https://github.com/SuperElastix/SimpleElastix/issues/126)
-
-Clrbrain will default to installing SimpleITK, which may be sufficient if registration tasks are not required.
+As an alternative to Cygwin, MSYS2 can use binaries for many dependencies, minimizing build time. It can also use the MS Visual Studio compiler to build the dependencies that do require compilation. Note that `vcvars64.bat` or equivalent scripts do not appear to be required for these compilations.
 
 
 ### Qt/Mayavi/VTK errors
+
+```
+Numpy is required to build Mayavi correctly, please install it first
+```
+
+- During installation via `pip install -r requirements.txt`, the Mayavi package [may fail to install](https://github.com/enthought/mayavi/issues/782)
+- Rerunning this command appears to allow Mayavi to find Numpy now that it has been installed
+
 
 ```
 QXcbConnection: Could not connect to display
@@ -326,7 +336,7 @@ qt.qpa.xcb: could not connect to display
 - As of at least 2018-01-05, Mayavi installation requires a GUI so will not work directly in headless cloud instances
 - For servers, use RDP or an X11 forwarding instead
 - For non-graphical setups such as WSL, start an X11 server (eg in Windows)
-- As of v.0.6.6 (2018-05-10), `setup_env.sh -l` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
+- `setup_conda.sh -s environment_light.yml` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
 
 ```
 ImportError: libGL.so.1: cannot open shared object file: No such file or directory
@@ -366,13 +376,13 @@ export "PATH=$JAVA_HOME/bin:$PATH"
 ```
 
 - Or add to the Windows Environment Variables "Path"
-- Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141) in the Python-Javabridge dependency
-- Java 11 similarly changed other Java locations, also fixed in Python-Javabridge
-- `setup_env.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step; if you don't know whether Java is installed, run `java` from the command-line to check and install any Java 8+ (eg from [OpenJDK](http://openjdk.java.net/), not the default Mac installation) if necessary
+- Java 9 [changed](http://openjdk.java.net/jeps/220) the location of `libjvm.so`, fixed [here](https://github.com/LeeKamentsky/python-javabridge/pull/141) in the Python-Javabridge 1.0.18
+- Java 12 no longer allows source <= 6, fixed in Python-Javabridge >1.0.18
+- `setup_conda.sh` does not detect when Mac wants to install its own Java so will try to continue installation but fail at the Javabridge step; if you don't know whether Java is installed, run `java` from the command-line to check and install any Java 8+ (eg from [OpenJDK](http://openjdk.java.net/), not the default Mac installation) if necessary
 
 ### Command Line Tools setup (Mac)
 
-- `setup_env.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated. If you get:
+- `setup_conda.sh` will attempt to detect whether the required Command Line Tools package on Mac is installed and activated. If you get:
 
 ```
 xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), \

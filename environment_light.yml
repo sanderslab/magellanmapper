@@ -9,8 +9,7 @@ dependencies:
   - pandas
   - scikit-image
   - pip:
-    - --index-url https://pypi.fury.io/dd8/
-    - --extra-index-url https://pypi.org/simple/
+    - --extra-index-url https://pypi.fury.io/dd8/
     - simpleitk==1.2.0rc2.dev1162+g2a79d
     - "git+https://github.com/LeeKamentsky/python-javabridge.git"
     - python-bioformats==1.1.0

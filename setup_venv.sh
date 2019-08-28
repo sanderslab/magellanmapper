@@ -115,8 +115,7 @@ source "$env_act"
 
 # update pip and install Clrbrain including required dependencies
 "$python" -m pip install -U pip
-pip install -e .[all] --index-url https://pypi.fury.io/dd8/ \
-  --extra-index-url https://pypi.org/simple/
+pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 
 echo "Clrbrain environment setup complete!"
 echo "** Please run \"source $env_act\" to enter your new environment **"

@@ -13,8 +13,7 @@ dependencies:
   - boto3
   - awscli
   - pip:
-    - --index-url https://pypi.fury.io/dd8/
-    - --extra-index-url https://pypi.org/simple/
+    - --extra-index-url https://pypi.fury.io/dd8/
     - matplotlib-scalebar
     - PyQt5
     - simpleitk==1.2.0rc2.dev1162+g2a79d

@@ -107,8 +107,7 @@ dependencies:
   - zlib=1.2.11=h01d97ff_1005
   - zstd=1.4.0=ha9f0a20_0
   - pip:
-    - --index-url https://pypi.fury.io/dd8/
-    - --extra-index-url https://pypi.org/simple/
+    - --extra-index-url https://pypi.fury.io/dd8/
     - javabridge==1.0.18.post16+gc7ccaed
     - matplotlib-scalebar==0.6.0
     - pyqt5==5.13.0

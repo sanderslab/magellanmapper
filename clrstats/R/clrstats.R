@@ -689,7 +689,7 @@ setupConfig <- function(name=NULL) {
     
   } else if (name == "wt") {
     # WT samples
-    config.env$Measurements <- kMeas[c(4:7, 11:14)]
+    config.env$Measurements <- kMeas[c(4:7, 13:14)]
     config.env$VolcanoLabels <- FALSE
     config.env$VolcanoLogX <- FALSE
     config.env$JitterPlotSave <- FALSE

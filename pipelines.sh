@@ -77,7 +77,7 @@ STITCH_PATHWAYS=("stitching" "bigstitcher")
 stitch_pathway=""
 
 # Choose rescale pathway type, or "" for none
-TRANSPOSE_PATHWAYS=("rescale", "resize")
+TRANSPOSE_PATHWAYS=("rescale" "resize")
 transpose_pathway=""
 scale="0.05" # rescaling factor
 plane="" # xy, yz, zy, or leave empty
@@ -88,7 +88,7 @@ WHOLE_IMG_PROCS=("process")
 whole_img_proc=""
 
 # Choose whether to upload resulting files to AWS S3
-UPLOAD_TYPES=("none", "all", "pathways_specific")
+UPLOAD_TYPES=("none" "all" "pathways_specific")
 upload="${UPLOAD_TYPES[0]}"
 
 # Path to file with nohup output, to upload if specified
@@ -195,9 +195,11 @@ get_compressed_file() {
 ############################################
 compress_upload() {
   local args=("$@")
-  local dir_path="$(dirname "${args[0]}")"
-  local base_path="$(basename "${args[0]}")"
-  echo "$dir_path $base_path ${args[@]:2}"
+  local dir_path
+  dir_path="$(dirname "${args[0]}")"
+  local base_path
+  base_path="$(basename "${args[0]}")"
+  echo "$dir_path $base_path ${args[*]:2}"
   local compression="${args[1]}"
   local paths=()
   for path in "${args[@]:2}"; do
@@ -205,7 +207,7 @@ compress_upload() {
   done
   local out_path=""
   cd "$dir_path"
-  echo "Compressing ${paths[@]} to $compression format..."
+  echo "Compressing ${paths[*]} to $compression format..."
   case "$compression" in
      "${COMPRESSION_EXTS[0]}") # zstd
        out_path="${base_path}.${compression}"
@@ -235,7 +237,8 @@ compress_upload() {
 #   None
 ############################################
 setup_clrbrain_filenames() {
-  local series_filled="$(printf %05d $series)"
+  local series_filled
+  series_filled="$(printf %05d $series)"
   local npz_img_base="${1}_${series_filled}"
   image5d_npz="${npz_img_base}_image5d.npz"
   info_npz="${npz_img_base}_info.npz"
@@ -267,55 +270,76 @@ START_TIME=$SECONDS
 OPTIND=1
 while getopts hi:a:p:s:t:w:o:n:cz:m:j:r:l: opt; do
   case $opt in
-    h)  echo "$HELP"
+    h)
+      echo "$HELP"
       exit 0
       ;;
-    i)  IMG="$OPTARG"
+    i)
+      IMG="$OPTARG"
       echo "Set image path to $IMG"
       ;;
-    a)  S3_DIR="$OPTARG"
+    a)
+      S3_DIR="$OPTARG"
       echo "Set AWS S3 directory to $S3_DIR"
       ;;
-    p)  pipeline="$OPTARG"
+    p)
+      pipeline="$OPTARG"
       echo "Set pipeline to $pipeline"
       ;;
-    s)  stitch_pathway="$OPTARG"
+    s)
+      stitch_pathway="$OPTARG"
       echo "Set stitch pathway to $stitch_pathway"
       ;;
-    t)  transpose_pathway="$OPTARG"
+    t)
+      transpose_pathway="$OPTARG"
       echo "Set transpose pathway to $transpose_pathway"
       ;;
-    w)  whole_img_proc="$OPTARG"
+    w)
+      whole_img_proc="$OPTARG"
       echo "Set whole img proc to $whole_img_proc"
       ;;
-    m)  compression="$OPTARG"
+    m)
+      compression="$OPTARG"
       echo "Set compression format to $compression"
       ;;
-    o)  output_path="$OPTARG"
+    o)
+      output_path="$OPTARG"
       echo "Set output path to $output_path"
       ;;
-    n)  url_notify="$OPTARG"
+    n)
+      url_notify="$OPTARG"
       echo "Set Slack notification URL to $url_notify"
       ;;
-    c)  clean_up=1
+    c)
+      clean_up=1
       echo "Set to perform server clean-up tasks once done"
       ;;
-    z)  size="$OPTARG"
+    z)
+      size="$OPTARG"
       echo "Set size to $size"
       ;;
-    j)  java_home="$OPTARG"
+    j)
+      java_home="$OPTARG"
       echo "Set JAVA_HOME for ImageJ/Fiji to $java_home"
       ;;
-    r)  microscope+=("$OPTARG")
+    r)
+      microscope+=("$OPTARG")
       echo "Added $OPTARG to microscope profile"
       ;;
-    l)  channel="$OPTARG"
+    l)
+      channel="$OPTARG"
       echo "Set channel to $channel"
       ;;
-    :)  echo "Option -$OPTARG requires an argument"
+    :)
+      echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
-    --) ;;
+    --)
+      ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 readonly IMG
@@ -330,7 +354,6 @@ EXTRA_ARGS=("$@")
 OUT_DIR="$(dirname "$IMG")"
 EXP="$(basename "$OUT_DIR")"
 NAME="$(basename "$IMG")"
-IMG_PATH_BASE="${OUT_DIR}/${NAME%.*}"
 EXT="${IMG##*.}"
 s3_exp_path=s3://"${S3_DIR}/${EXP}"
 
@@ -346,7 +369,7 @@ elif [[ $num_mic_profiles -gt 1 ]]; then
 fi
 
 # run from script's directory
-BASE_DIR="`dirname $0`"
+BASE_DIR="$(dirname "$0")"
 cd "$BASE_DIR"
 BASE_DIR="$PWD"
 
@@ -406,14 +429,8 @@ if [[ $gui -eq 1 ]]; then
   #python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
   
   # Load ROI, starting at the given offset and ROI size
-  ./run --img "$IMG" --offset $offset --size $size --savefig pdf \
-    --microscope ${microscope[@]}
   
   : '
-  # Extract a single z-plane
-  python -u -m clrbrain.cli --img "$IMG" --proc extract --channel 0 \
-    --offset 0,0,0 -v --savefig jpeg --microscope ${microscope[@]}
-  
   # Process a sub-stack and load it
   substack_offset=100,800,410
   substack_size=800,100,48
@@ -425,6 +442,8 @@ if [[ $gui -eq 1 ]]; then
     --offset $substack_offset --size $substack_size --savefig pdf \
     --microscope ${microscope[@]}
   '
+  ./run --img "$IMG" --offset "$offset" --size "$size" --savefig pdf \
+    --microscope "${microscope[@]}"
   
   exit 0
 fi
@@ -452,7 +471,6 @@ if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
     "Original image download and decompression time: $(($SECONDS - $start))s")
 fi
 
-out_name_base=""
 clr_img="$IMG"
 start_stitching=$SECONDS
 if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
@@ -505,7 +523,9 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   
   # Rename output file(s)
   FUSED="fused_tp_0"
-  for f in ${OUT_DIR}/${FUSED}*.tif; do mv $f ${f/$FUSED/$OUT_NAME_BASE}; done
+  for f in "${OUT_DIR}/${FUSED}"*.tif; do
+    mv "$f" "${f/$FUSED/$OUT_NAME_BASE}";
+  done
   
   # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
   start=$SECONDS

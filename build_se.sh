@@ -13,51 +13,66 @@ example and test configurations.
 
 Arguments:
   -h: Show help and exit.
-  -e [path]: Path to folder where the new venv directory will be placed. 
-    Defaults to \"../venvs\".
-  -n [name]: Set the virtual environment name; defaults to CLR_ENV.
-  -s: Build and install SimpleElastix by running the \"build_se.sh\" script.
+  -d [path]: Set a build directory path. Relative paths are relative to 
+    this script's directory. Default to \"../build_se\".
+  -i: Install the Python wrapper from the build directory.
+  -s [path]: Set a SimpleElastix repository path. Relative paths are relative 
+    to this script's directory. Default to \"../SimpleElastix\".
 "
 
-build_dir_base="build_se"
+build_dir=""
+se_dir=""
 PKG="SimpleITK-build/Wrapping/Python"
 install_wrapper=0
 
 OPTIND=1
-while getopts hid: opt; do
+while getopts hid:s: opt; do
   case $opt in
-    h)  echo "$HELP"
+    h)
+      echo "$HELP"
       exit 0
       ;;
-    d)  build_dir_base="$OPTARG"
-      echo "Changed build directory to $build_dir_base"
+    d)
+      build_dir="$OPTARG"
+      echo "Changed build directory to $build_dir"
       ;;
-    i)  install_wrapper=1
+    s)
+      se_dir="$OPTARG"
+      echo "Changed SimpleElastix directory to se_dir"
+      ;;
+    i)
+      install_wrapper=1
       echo "Set to install Python wrapper"
       ;;
-    :)  echo "Option -$OPTARG requires an argument"
+    :)
+      echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
-    --) ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 
-# pass arguments after "--" to clrbrain
-shift "$((OPTIND-1))"
-EXTRA_ARGS="$@"
-
 echo "Building SimpleElastix..."
 
-# base directory is parent of script's directory
-base_dir="`dirname $0`"
+# base directory is script's directory, and default repo and build dirs 
+# are in parent directory of base dir
+base_dir="$(dirname "$0")"
 cd "$base_dir"
 base_dir="$PWD"
-cd "${base_dir}/.."
+if [[ -z "$se_dir" ]]; then
+  se_dir="${base_dir}/../SimpleElastix"
+fi
+if [[ -z "$build_dir" ]]; then
+  build_dir="${base_dir}/../build_se"
+fi
 
 # load dependencies
 source "${base_dir}/libclr.sh"
 
-# find platform for Anaconda
+# find platform to determine compilers
 detect_platform
 compiler_c="gcc"
 compiler_cpp="g++"
@@ -65,29 +80,21 @@ if [[ "$os" = "MacOSX" ]]; then
   compiler_c=clang
   compiler_cpp=clang++
 fi
-echo "will use $compiler_c C compiler and $compiler_cpp C++ compiler"
-echo "for $os platform"
+msg="will use $compiler_c C compiler and $compiler_cpp C++ compiler "
+msg+="for $os platform"
+echo -e "$msg"
 
-build_dir_parent="$(dirname "$build_dir_base")"
-cd "$build_dir_parent"
-
-# get SimpleElastix git repo if not already present
-if [[ ! -e SimpleElastix ]]
-then
-  echo "Cloning SimpleElastix git repo..."
-  git clone https://github.com/SuperElastix/SimpleElastix.git
+if [[ ! -d "$se_dir" ]]; then
+  # get SimpleElastix git repo
+  echo "Cloning SimpleElastix git repo to ${se_dir}..."
+  git clone https://github.com/SuperElastix/SimpleElastix.git "$se_dir"
 fi
 
-# build SimpleElastix if install flag is false, in which case 
-# the package will only be installed if possible, or if the 
-# package folder doesn't exist
-build_dir="$(basename "$build_dir_base")"
-if [[ $install_wrapper -ne 1 ]] || [[ ! -e "${build_dir}/${PKG}" ]]; then
-  # backup old build directory if necessary and create a new one
+if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
+  # build SimpleElastix if not set to install or if the package doesn't exist
   backup_file "$build_dir"
   mkdir "$build_dir"
-  cd "$build_dir"
-  pwd
+  cd "$build_dir" || { echo "Unable to enter $build_dir, exiting"; exit 1; }
   
   echo "Building SimpleElastix"
   # run SuperBuild with flags to find clang on later Mac versions, 
@@ -99,19 +106,18 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -e "${build_dir}/${PKG}" ]]; then
     -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF \
     -DWRAP_TCL:BOOL=OFF -DWRAP_CSHARP:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF \
     -DBUILD_TESTING:BOOL=OFF -DSimpleITK_PYTHON_USE_VIRTUALENV:BOOL=OFF \
-    ../SimpleElastix/SuperBuild
+    "${se_dir}/SuperBuild"
   
-  # change to -j1 for debugging to avoid multiple processes
+  # can change to -j1 for debugging to avoid multiple processes
   make -j4
-  
-  cd ..
 fi
 
-# install the Python wrapper if flagged
 if [ $install_wrapper -eq 1 ]
 then
+  # install the newly or previously Python wrapper
   echo "Installing Python wrapper..."
-  cd "${build_dir}/${PKG}"
+  pkg_dir="${build_dir}/${PKG}"
+  cd "$pkg_dir" || { echo "$pkg_dir does not exist, exiting"; exit 1; }
   python Packaging/setup.py install
 fi
 

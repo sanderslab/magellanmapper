@@ -559,6 +559,10 @@ else
   echo "found"
 fi
 
+# output size in KB in cross-platform way
+summary_msg+=(
+  "Main image file size (approx): $(du -k "$image5d_npz" | cut -f1)KB")
+
 
 ####################################
 # Transpose/Resize Image Pipeline

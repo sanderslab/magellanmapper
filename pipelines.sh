@@ -323,7 +323,7 @@ readonly S3_DIR
 
 # pass arguments after "--" to another script if necessary
 shift "$((OPTIND-1))"
-EXTRA_ARGS="$@"
+EXTRA_ARGS=("$@")
 
 
 # Parsing names from your image path
@@ -583,7 +583,8 @@ if [[ "$transpose_pathway" != "" ]]; then
     # Resize to a set size given by a registration profile, with size 
     # specified by register profile, which needs to be passed as 
     # --reg_file [name] in EXTRA_ARGS, and -z flag to find output name
-    python -u -m clrbrain.cli --img "$clr_img" --proc transpose $EXTRA_ARGS
+    python -u -m clrbrain.cli --img "$clr_img" --proc transpose \
+      "${EXTRA_ARGS[@]}"
     img_transposed="${clr_img_base}_resized(${size}).${EXT}"
   fi
   
@@ -613,7 +614,7 @@ if [[ "$whole_img_proc" != "" ]]; then
   # image into multiple smaller stacks to minimize RAM usage and 
   # further chunking to run by multiprocessing for efficiency
   python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp \
-    --channel $channel --microscope ${microscope[@]} $EXTRA_ARGS
+    --channel $channel --microscope "${microscope[@]}" "${EXTRA_ARGS[@]}"
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
     # upload processed fils to S3

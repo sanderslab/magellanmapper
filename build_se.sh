@@ -75,8 +75,7 @@ cd "$build_dir_parent"
 if [[ ! -e SimpleElastix ]]
 then
   echo "Cloning SimpleElastix git repo..."
-  #git clone https://github.com/SuperElastix/SimpleElastix.git
-  git clone https://github.com/the4thchild/SimpleElastix.git
+  git clone https://github.com/SuperElastix/SimpleElastix.git
 fi
 
 # build SimpleElastix if install flag is false, in which case 

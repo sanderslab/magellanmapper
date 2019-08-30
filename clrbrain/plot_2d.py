@@ -353,7 +353,7 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None, 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
-              col_wt=None, df=None, x_tick_labels=None):
+              vspan_fmt=None, col_wt=None, df=None, x_tick_labels=None)
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -394,6 +394,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             by vertical spans. Each change in value when taken in sequence 
             will specify a new span in alternating background colors. 
             Defaults to None.
+        vspan_fmt: String to format with values from ``col_vspan``; defaults 
+            to None to simply use the unformatted values.
         col_wt: Name of column to use for weighting, where the size of 
             bars and error bars will be adjusted as fractions of the max 
             value; defaults to None.
@@ -443,7 +445,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         vspan_vals = df[col_vspan].values
         vspans = np.insert(
             np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
-        vspan_lbls = [str(val) for val in vspan_vals[vspans]]
+        vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val) 
+                      for val in vspan_vals[vspans]]
     
     if err_cols is None:
         # default to columns corresponding to data cols with suffix appended 
@@ -925,8 +928,8 @@ def main():
             legend_names="", col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, 
             size=size, show=show, groups=config.groups, 
-            prefix=config.prefix, col_vspan="Level", col_wt=col_wt, 
-            x_tick_labels=x_tick_lbls)
+            prefix=config.prefix, col_vspan="Level", vspan_fmt="L{}", 
+            col_wt=col_wt, x_tick_labels=x_tick_lbls)
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve

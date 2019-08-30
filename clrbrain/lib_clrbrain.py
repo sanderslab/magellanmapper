@@ -332,22 +332,29 @@ def str_to_disp(s):
     return s.replace("_", " ").strip()
 
 def get_int(val):
-    """Cast a value as an integer, returning the value if any error.
+    """Cast a value as an integer, a float if not an integer, or returning 
+    the value if any error.
     
     Args:
         val: Value to cast. If a tuple or list, each entry will be casted 
             recursively.
     
     Returns:
-        Value casted to int, or the original value if any error occurs during 
-        casting.
+        Value casted to int, falling back to a float, or the original value 
+        if any error occurs during casting.
     """
     if isinstance(val, (tuple, list)):
         return [get_int(elt) for elt in val]
     try:
+        # prioritize casting to int before float if possible
         return int(val)
-    except:
-        return val
+    except ValueError:
+        try:
+            # strings of floating point numbers will give an error when casting 
+            # to int, so try casting to float
+            return float(val)
+        except ValueError:
+            return val
 
 def is_number(val):
     """Check if a value is a number by attempting to cast to ``float``.

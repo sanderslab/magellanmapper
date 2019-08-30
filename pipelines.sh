@@ -468,7 +468,7 @@ if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
   echo "Downloading original image from S3..."
   get_compressed_file "${s3_exp_path}/${NAME}" "$OUT_DIR"
   summary_msg+=(
-    "Original image download and decompression time: $((SECONDS - start))s")
+    "Original image download and decompression time: $((SECONDS - start)) s")
 fi
 
 clr_img="$IMG"
@@ -513,13 +513,13 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   fi
   echo "=================================="
   echo "$msg"
-  summary_msg+=("Stitching import and alignment time: $((SECONDS - start))s")
+  summary_msg+=("Stitching import and alignment time: $((SECONDS - start)) s")
   ./stitch.sh -s "none" -j "$java_home"
   
   # Fuse image for each channel
   start=$SECONDS
   ./stitch.sh -f "$IMG" -s "bigstitcher" -w 1 -j "$java_home"
-  summary_msg+=("Stitching fusion time: $((SECONDS - start))s")
+  summary_msg+=("Stitching fusion time: $((SECONDS - start)) s")
   
   # Rename output file(s)
   FUSED="fused_tp_0"
@@ -532,11 +532,11 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   python -u -m clrbrain.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
     --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v \
     --proc importonly
-  summary_msg+=("Stitched file import time: $((SECONDS - start))s")
+  summary_msg+=("Stitched file import time: $((SECONDS - start)) s")
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi
 summary_msg+=(
-  "Total stitching time (including waiting): $((SECONDS - start_stitching))s")
+  "Total stitching time (including waiting): $((SECONDS - start_stitching)) s")
 clr_img_base="${clr_img%.*}"
 
 if [[ "$pipeline" = "${PIPELINES[1]}" \
@@ -546,7 +546,7 @@ if [[ "$pipeline" = "${PIPELINES[1]}" \
     start=$SECONDS
     upload_images "$clr_img_base"
     summary_msg+=(
-      "Stitched image compression and upload time: $((SECONDS - start))s")
+      "Stitched image compression and upload time: $((SECONDS - start)) s")
   fi
 fi
 
@@ -574,14 +574,14 @@ if [[ ! -e "$image5d_npz" ]]; then
     done
   fi
   summary_msg+=(
-    "Clrbrain image download and decompression time: $((SECONDS - start))s")
+    "Clrbrain image download and decompression time: $((SECONDS - start)) s")
 else
   echo "found"
 fi
 
 # output size in KB in cross-platform way
 summary_msg+=(
-  "Main image file size (approx): $(du -k "$image5d_npz" | cut -f1)KB")
+  "Main image file size (approx): $(du -k "$image5d_npz" | cut -f1) KB")
 
 
 ####################################
@@ -625,7 +625,7 @@ if [[ "$transpose_pathway" != "" ]]; then
     upload_images "$base_path"
   fi
   
-  summary_msg+=("Transposition time: $((SECONDS - start))s")
+  summary_msg+=("Transposition time: $((SECONDS - start)) s")
 fi
 
 
@@ -646,7 +646,7 @@ if [[ "$whole_img_proc" != "" ]]; then
     args=("${proc_npz%.*}" "$compression" "$proc_npz")
     compress_upload "${args[@]}"
   fi
-  summary_msg+=("Detections and upload time: $((SECONDS - start))s")
+  summary_msg+=("Detections and upload time: $((SECONDS - start)) s")
   output_stats_paths+=(
     "blob_ratios_means.csv" "blob_ratios.csv" "stack_detection_times.csv")
 fi
@@ -667,7 +667,7 @@ if [[ ! -z "$s3_exp_path" && "${#output_stats_paths[@]}" -gt 0 ]]; then
     "zip" "${output_stats_paths[@]}"
 fi
 
-msg="Total time elapsed for Clrbrain pipeline: $((SECONDS - START_TIME))s"
+msg="Total time elapsed for Clrbrain pipeline: $((SECONDS - START_TIME)) s"
 summary_msg+=("$msg")
 echo "$msg"
 

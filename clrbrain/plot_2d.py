@@ -894,9 +894,8 @@ def main():
     from clrbrain import cli
     cli.main(True)
     setup_style("default")
-    size = config.roi_sizes
+    size = config.plot_labels[config.PlotLabels.SIZE]
     show = not config.no_show
-    if size: size = size[0][:2]
     
     plot_2d_type = config.Plot2DTypes[config.plot_2d.upper()]
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:

@@ -82,6 +82,7 @@ PlotLabels = Enum(
     "PlotLabels", (
         "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT", 
         "X_TICK_LABELS", "Y_TICK_LABELS", 
+        "SIZE",  # in x,y 
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)

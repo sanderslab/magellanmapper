@@ -203,7 +203,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
 
 
 def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
-               title, padding=0.2, skip_all_zero=False, rotation=80,
+               title, padding=0.2, skip_all_zero=False, rotation=None,
                y_unit=None, vspans=None, vspan_lbls=None, vspan_alt_y=False):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
@@ -242,7 +242,8 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
             unoccupied by bars. Defaults to 0.2.
         skip_all_zero: True to skip any data list that contains only 
             values below :attr:``config.POS_THRESH``; defaults to False.
-        rotation: Degrees of x-tick label rotation; defaults to 80.
+        rotation: Degrees of x-tick label rotation; defaults to None for 
+            vertical text (90 degrees, where 0 degrees is horizontal).
         y_unit: Measurement unit for y-axis; defaults to None, falling 
             back to :meth:``plot_support.set_scinot``.
         vspans: Shade with vertical spans with indices of bar groups 
@@ -252,6 +253,10 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
         vspan_alt_y (bool): True to alternate y-axis placement to avoid 
             overlap; defaults to False.
     """
+    if rotation is None:
+        # default rotation to 90 degrees for "no" rotation (vertical text)
+        rotation = 90
+    
     bars = []
     if len(lists) < 1: return
     
@@ -353,7 +358,8 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None, 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
-              vspan_fmt=None, col_wt=None, df=None, x_tick_labels=None)
+              vspan_fmt=None, col_wt=None, df=None, x_tick_labels=None, 
+              rotation=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -403,6 +409,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             will be used instead of loading from ``path``.
         x_tick_labels (List[str]): Sequence of labels for each bar group 
             along the x-axis; defaults to None to use ``groups`` instead. 
+        rotation: Degrees of x-tick label rotation; defaults to None.
     """
     # load data frame from CSV and setup figure
     if df is None:
@@ -491,7 +498,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     x_labels = x_tick_labels if x_tick_labels else df[col_groups]
     _bar_plots(
         ax, lists, errs, legend_names, x_labels, bar_colors, y_label, 
-        title, y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls)
+        title, y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls, 
+        rotation=rotation)
     
     # save and display
     out_path = path_to_df if prefix is None else prefix
@@ -929,7 +937,7 @@ def main():
             y_label=y_lbl, y_unit=y_unit, 
             size=size, show=show, groups=config.groups, 
             prefix=config.prefix, col_vspan="Level", vspan_fmt="L{}", 
-            col_wt=col_wt, x_tick_labels=x_tick_lbls)
+            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
     
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve

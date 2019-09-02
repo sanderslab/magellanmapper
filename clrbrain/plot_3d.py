@@ -439,6 +439,30 @@ def exterior_nd(img_np):
     exterior = np.logical_xor(dilated, img_np)
     return exterior
 
+
+def surface_area_3d(img_np, level=0.0, spacing=(1.0, 1.0, 1.0)):
+    """Measure the surface area for a 3D volume.
+    
+    Wrapper for :func:`measure.marching_cubes_lewiner` and 
+    :func:`measure.mesh_surface_area`.
+    
+    Args:
+        img_np (:obj:`np.ndarray`): 3D image array, which can be a mask.
+        level (float): Contour value for :func:`measure.marching_cubes_lewiner`;
+            defaults to 0.0.
+        spacing (List[float]): Sequence of voxel spacing in same order 
+            as for ``img_np``; defaults to ``(1.0, 1.0, 1.0)``.
+
+    Returns:
+        Surface area in the coordinate units squared.
+
+    """
+    verts, faces, normals, vals = measure.marching_cubes_lewiner(
+        img_np, level=level, spacing=spacing)
+    area = measure.mesh_surface_area(verts, faces)
+    return area
+
+
 def compactness(mask_borders, mask_object):
     """Compute the classical compactness, currently supported for 2D or 3D.
     

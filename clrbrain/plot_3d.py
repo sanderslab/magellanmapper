@@ -463,18 +463,22 @@ def surface_area_3d(img_np, level=0.0, spacing=(1.0, 1.0, 1.0)):
     return area
 
 
-def compactness(mask_borders, mask_object):
+def compactness(mask_borders, mask_object, borders_meas=None):
     """Compute the classical compactness, currently supported for 2D or 3D.
     
     For 2D, the equation is given by: perimeter^2 / area. 
     For 3D: area^3 / vol^2.
     
     Args:
-        mask_borders: Mask of the borders to find the perimeter (2D) or 
-            surface area (3D).
-        mask_object: Mask of the object to find the area (2D) or 
-            volume (3D). The dimensions of this mask will be used to 
+        mask_borders (:obj:`np.ndarray`): Mask of the borders to find the 
+            perimeter (2D) or surface area (3D) by simple boundary pixel 
+            count.
+        mask_object (:obj:`np.ndarray`): Mask of the object to find the area 
+            (2D) or volume (3D). The dimensions of this mask will be used to 
             determine whether to use the 2D or 3D compactness formula.
+        borders_meas (float): Perimeter (2D) or surface area (3D) 
+            measurement to use in place of taking the pixel count from 
+            ``mask_borders``; defaults to None.
     
     Returns:
         Compactness metric value. If the sum of ``mask_object`` is 0, 
@@ -482,12 +486,16 @@ def compactness(mask_borders, mask_object):
     """
     # TODO: consider supporting higher dimensions, if available
     n = 1 if mask_object.ndim == 2 else 2
+    # convert Numpy to native Python scalars since default Numpy int appears to 
+    # overflow for large sums
+    if borders_meas is None:
+        # simple boundary pixel count, which generally underestimates the 
+        # true border measurement
+        borders_meas = np.sum(mask_borders).item()
     size_object = np.sum(mask_object).item()
     compact = np.nan
     if size_object > 0:
-        # convert to native Python scalars since default Numpy int appears to 
-        # overflow for large sums
-        compact = np.sum(mask_borders).item() ** (n + 1) / size_object ** n
+        compact = borders_meas ** (n + 1) / size_object ** n
     return compact
 
 def signed_distance_transform(borders, mask=None, return_indices=False, 

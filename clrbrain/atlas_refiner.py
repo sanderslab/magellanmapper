@@ -610,7 +610,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         # get the borders of the label and add them to a rough image
         region = img_np[tuple(slices)]
         label_mask_region = region == label_id
-        area = plot_3d.perimeter_nd(label_mask_region)
+        area = plot_3d.surface_area_3d(label_mask_region)
         compactness = plot_3d.compactness(None, label_mask_region, area)
         return label_mask_region, area, compactness
     
@@ -649,12 +649,12 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         pxs.setdefault("displacement", []).append(displ)
         pxs_expanded = displ / size_orig
         
-        # SA:vol metrics, including ratio of SA:vol ratios
-        sa_to_vol_orig = np.sum(area_orig) / np.sum(mask_orig)
+        # SA:vol metrics
+        sa_to_vol_orig = area_orig / np.sum(mask_orig)
         vol_smoothed = np.sum(mask_smoothed)
         sa_to_vol_smoothed = 0
         if vol_smoothed > 0:
-            sa_to_vol_smoothed = np.sum(area_sm) / vol_smoothed
+            sa_to_vol_smoothed = area_sm / vol_smoothed
         sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
         pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
         pxs.setdefault("SA_to_vol_smoothed", []).append(sa_to_vol_smoothed)

@@ -5,16 +5,12 @@
 Attributes:
 """
 
-import copy
-import csv
-from collections import OrderedDict
 from enum import Enum
 import os
 import warnings
 
 import numpy as np
 import pandas as pd
-from scipy import stats as spstats
 
 from clrbrain import config
 from clrbrain import lib_clrbrain

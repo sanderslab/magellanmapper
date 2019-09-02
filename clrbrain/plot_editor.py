@@ -13,7 +13,9 @@ from clrbrain import config
 from clrbrain import ontology
 from clrbrain import plot_support
 
+
 class PlotEditor:
+    """Show a scrollable, editable plot of sequential planes in a 3D image."""
     ALPHA_DEFAULT = 0.5
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
@@ -22,6 +24,35 @@ class PlotEditor:
                  plane_slider, img3d_borders=None, cmap_borders=None, 
                  fn_show_label_3d=None, interp_planes=None,
                  fn_update_intensity=None):
+        """Initialize the plot editor.
+        
+        Args:
+            axes (:obj:`matplotlib.Axes`): Containing subplot axes.
+            img3d (:obj:`np.ndarray`): Main 3D image.
+            img3d_labels (:obj:`np.ndarray`): Labels 3D image.
+            cmap_labels (:obj:`matplotlib.colors.ListedColormap`): Labels 
+                colormap, generally a :obj:`colormaps.DiscreteColormap`.
+            plane (str): One of :attr:`config.PLANE` specifying the orthogonal 
+                plane to view.
+            aspect (float): Aspect ratio.
+            origin (str): Planar orientation, usually either "lower" or None.
+            fn_update_coords (function): Callback when updating coordinates.
+            fn_refresh_images (function): Callback when refreshing the image.
+            scaling (List[float]): Scaling/spacing in z,y,x.
+            plane_slider (:obj:`matplotlib.widgets.Slider`): Slider for 
+                scrolling through planes.
+            img3d_labels (:obj:`np.ndarray`): Borders 3D image; defaults 
+            to None.
+            cmap_borders (:obj:`matplotlib.colors.ListedColormap`): Borders 
+                colormap, generally a :obj:`colormaps.DiscreteColormap`; 
+                defaults to None.
+            fn_show_label_3d (function): Callback to show a label at the 
+                current 3D coordinates; defaults to None.
+            interp_planes (:obj:`atlas_editor.InterpolatePlanes`): Plane 
+                interpolation object; defaults to None.
+            fn_update_intensity (function): Callback when updating the 
+                intensity value; defaults to None.
+        """
         self.axes = axes
         self.img3d = img3d
         self.img3d_labels = img3d_labels
@@ -64,6 +95,7 @@ class PlotEditor:
         self.ax_img = None
         self.edited = False
         self.edit_mode = False  # True to edit with mouse motion
+        self.region_label = None
         
         # track label editing during mouse click/movement for plane interp
         self._editing = False
@@ -269,7 +301,7 @@ class PlotEditor:
             loc_data = (x - dx, y - dy)
             
         elif event.button == 3 or (
-            event.button == 1 and event.key == "control"):
+                event.button == 1 and event.key == "control"):
             
             # zooming by right-click or ctrl+click (which coverts 
             # button event to 3 on Mac at least) while moving mouse up/down in y
@@ -300,8 +332,7 @@ class PlotEditor:
             
         else:
             # hover movements over image
-            if (x >= 0 and y >= 0 and x < self.img3d.shape[2] 
-                and y < self.img3d.shape[1]):
+            if 0 <= x < self.img3d.shape[2] and 0 <= y < self.img3d.shape[1]:
                 
                 if self.circle:
                     # update pen circle position
@@ -360,7 +391,6 @@ class PlotEditor:
                     self.region_label.set_horizontalalignment(alignment)
                     self.region_label.set_position((label_x, y - 10))
                 
-                
         self.last_loc = loc
         self.last_loc_data = loc_data
     
@@ -395,6 +425,7 @@ class PlotEditor:
         if rad_orig != self.radius and self.circle:
             self.circle.radius = self.radius
 
+
 class PixelDisplay(object):
     """Custom image intensity display in :attr:``Axes.format_coord``.
     
@@ -403,6 +434,7 @@ class PixelDisplay(object):
     """
     def __init__(self, imgs):
         self.imgs = imgs
+    
     def __call__(self, x, y):
         coord = (int(y), int(x))
         output = "x={}, y={}, ".format(*coord[::-1])

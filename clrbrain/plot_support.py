@@ -42,7 +42,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         aspect: Aspect ratio.
         alpha (List[float]): Sequence of transparency levels. If any 
             value is 0, the corresponding image will not be output. 
-        vim: Sequence of vmin levels for each channel; defaults to None.
+        vmin: Sequence of vmin levels for each channel; defaults to None.
         vmax: Sequence of vmax levels for each channel; defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
@@ -293,7 +293,7 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
         if arrs_1d is not None:
             arrs_1d_swapped = [
                 None if arr is None else 
-                    lib_clrbrain.swap_elements(np.copy(arr), *indices) 
+                lib_clrbrain.swap_elements(np.copy(arr), *indices) 
                 for arr in arrs_1d]
         return arrs_3d_swapped, arrs_1d_swapped
     
@@ -353,6 +353,7 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
         event: Mouse or key event. For mouse events, scroll step sizes 
             will be used for movements. For key events, up/down arrows 
             will be used.
+        z_overview: Index of plane to show.
         max_size: Maximum number of planes.
         jump: Function to jump to a given plane; defaults to None.
         max_scroll: Max number of planes to scroll by mouse. Ignored during 
@@ -416,7 +417,7 @@ def fit_frame_to_image(fig, shape, aspect):
 
 
 def set_overview_title(ax, plane, z_overview, zoom="", level=0, 
-                        max_intens_proj=False):
+                       max_intens_proj=False):
     """Set the overview image title.
     
     Args:
@@ -549,7 +550,7 @@ def save_fig(path, ext, modifier=""):
         modifier: Modifier string to append before the extension;
             defaults to an empty string.
     """
-    if ext is not None and not ext in config.FORMATS_3D:
+    if ext is not None and ext not in config.FORMATS_3D:
         plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
         lib_clrbrain.backup_file(plot_path)
         plt.savefig(plot_path)

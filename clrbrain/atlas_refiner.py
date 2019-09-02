@@ -238,10 +238,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
          Tuple of the mirrored image in Numpy format; a tuple of the 
          indices from which the edge was extended (labels used as template 
          from this plane index) and the image was mirrored (index where 
-         mirrored hemisphere starts); a borders image of the same size as the 
-         mirrored image, or None if any smoothing did not give a 
-         borders image; and a data frame of smoothing stats, or None 
-         if smoothing was not performed.
+         mirrored hemisphere starts); and a data frame of smoothing stats, 
+         or None if smoothing was not performed.
     """
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
@@ -359,16 +357,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
                 img_smoothed, img_smoothed_orig, smooth)
         else:
             # single filter size
-            _, df_smoothing, borders = _smoothing(
+            _, df_smoothing = _smoothing(
                 img_smoothed, img_smoothed_orig, smooth)
-        if borders is not None:
-            # mirror borders image
-            shape = list(borders.shape)
-            shape[0] = img_np.shape[0]
-            borders_img_np = np.zeros(shape, dtype=np.int32)
-            borders_img_np[:mirrori] = borders
-            borders_img_np = mirror_planes(
-                borders_img_np, mirrori, -1, resize=resize)
     
     # check that labels will fit in integer type
     lib_clrbrain.printv(
@@ -384,7 +374,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         img_np = mirror_planes(
             img_np, mirrori, mirror_mult=-1, check_equality=True, resize=resize)
         print("total final labels: {}".format(np.unique(img_np).size))
-    return img_np, (edgei, mirrori), borders_img_np, df_smoothing
+    return img_np, (edgei, mirrori), df_smoothing
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):
@@ -398,7 +388,7 @@ def crop_to_orig(labels_img_np_orig, labels_img_np, crop):
     labels_img_np[mask] = 0
 
 
-def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
+def _smoothing(img_np, img_np_orig, filter_size):
     """Smooth image and calculate smoothing metric for use individually or 
     in multiprocessing.
     
@@ -407,16 +397,13 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
         img_np_orig: Original image as Numpy array for comparison with 
             smoothed image in metric.
         filter_size: Structuring element size for smoothing.
-        save_borders: True to save borders; defaults to False
     
     Returns:
-        Tuple of ``filter_size``; a data frame of smoothing metrices; 
-        and the borders image.
+        Tuple of ``filter_size`` and a data frame of smoothing metrices.
     """
     smoothing_mode = config.register_settings["smoothing_mode"]
     smooth_labels(img_np, filter_size, smoothing_mode)
-    borders, df_metrics, df_raw = label_smoothing_metric(
-        img_np_orig, img_np, save_borders=save_borders)
+    df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np)
     df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
     
     # curate back to lightly smoothed foreground of original labels
@@ -428,7 +415,7 @@ def _smoothing(img_np, img_np_orig, filter_size, save_borders=False):
         make_labels_fg(sitk.GetImageFromArray(img_np)), 
         make_labels_fg(sitk.GetImageFromArray(img_np_orig)))
     
-    return filter_size, df_metrics, borders
+    return filter_size, df_metrics
 
 
 def _smoothing_mp(img_np, img_np_orig, filter_sizes):
@@ -439,7 +426,7 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes):
         img_np: Image as Numpy array, which will be directly updated.
         img_np_orig: Original image as Numpy array for comparison with 
             smoothed image in metric.
-        filter_size: Tuple or list of structuring element sizes.
+        filter_sizes: Tuple or list of structuring element sizes.
     
     Returns:
         Data frame of combined metrics from smoothing for each filter size.
@@ -451,7 +438,7 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes):
             pool.apply_async(_smoothing, args=(img_np, img_np_orig, n)))
     dfs = []
     for result in pool_results:
-        filter_size, df_metrics, _ = result.get()
+        filter_size, df_metrics = result.get()
         dfs.append(df_metrics)
         print("finished smoothing with filter size {}".format(filter_size))
     pool.close()
@@ -601,120 +588,35 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
           .format(weighted_size_ratio))
 
 
-def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None, 
-                           penalty_wt=None, 
-                           mode=config.SmoothingMetricModes.COMPACTNESS, 
-                           save_borders=False):
+def label_smoothing_metric(orig_img_np, smoothed_img_np):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
     
-    Several methods are available as metrices:
-    
-    ``VOL``: Compare the difference in size of a broad, smooth volume 
-    encompassing ragged edges before and after the smoothing algorithm, giving 
-    a measure of reduction in size and thus increase in compactness by 
-    smoothing. To penalize inappropriate smoothing, the smoothed volume 
-    lying outside of the original broad volume is subtracted from this 
-    size reduction, accounting for unwanted deformation that brings the 
-    region outside of its original bounds.
-    
-    ``AREA_[type]``: Compare surface areas of each label before and after 
-    smoothing. Compaction is taken as a reduction in overall surface area, 
-    while the displacement penalty is measured by the distance transform 
-    of the smoothed border from the original border.
-    
-    ``COMPACTNESS``: Similar to ``AREA_*``, but use the formal compactness 
-    measurement.
+    Compare the difference in compactness before and after the smoothing 
+    algorithm, termed "compaction," while penalizing inappropriate smoothing, 
+    the smoothed volume lying outside of the original broad volume, termed 
+    "displacement."
     
     Args:
         orig_img_np: Unsmoothed labels image as Numpy array.
         smoothed_img_np: Smoothed labels image as Numpy array, which 
             should be of the same shape as ``original_img_np``.
-        filter_size: Structuring element size for determining the filled, 
-            broad volume of each label. Defaults to None. Larger sizes 
-            favor greater smoothing in the final labels.
-        penalty_wt: Weighting factor for the penalty term. For ``vol`` 
-            mode, larger  values favor labels that remain within their 
-            original bounds. For ``area`` mode, this value is used as a 
-            denominator for pixel perimeter displacement, where larger values 
-            tolerate more displacement. Defaults to None.
-        mode: One of :class:``config.SMOOTHING_METRIC_MODES`` (see above for 
-            description of the modes). Defaults to 
-            :obj:``config.SMOOTHING_METRIC_MODES.COMPACTNESS``
-        save_borders: True to save borders of original and smoothed images 
-            in a separate, multichannel image; defaults to False.
     
     Returns:
-        Tuple of a borders image, a Numpy array of the same same as 
-        ``original_img_np`` except with an additional channel dimension at 
-        the end, where channel 0 contains the broad borders of the 
-        original image's labels, and channel 1 is that of the smoothed image, 
-        or None if ``save_borders`` is False; a data frame of the 
-        smoothing metrics; and another data frame of the raw metric 
-        components.
+        Tuple of a data frame of the smoothing metrics and another data 
+        frame of the raw metric components.
     """
-    start_time = time()
-    
-    # check parameters by mode
-    if mode == config.SmoothingMetricModes.VOL:
-        if filter_size is None:
-            raise TypeError(
-                "filter size must be an integer, not {}, for mode {}"
-                .format(filter_size, mode))
-        if penalty_wt is None:
-            penalty_wt = 1.0
-            print("defaulting to penalty weight of {} for mode {}"
-                  .format(penalty_wt, mode))
-    elif mode not in config.SmoothingMetricModes:
-        raise TypeError("no metric of mode {}".format(mode))
-    print("Calculating smoothing metrics, mode {} with filter size of {}, "
-          "penalty weighting factor of {}"
-          .format(mode, filter_size, penalty_wt))
-    
-    # prepare roughness images to track global overlap
-    shape = list(orig_img_np.shape)
-    roughs = [np.zeros(shape, dtype=np.int8)]
-    roughs.append(np.copy(roughs[0]))
-    
-    # prepare borders image with channel for each set of borders
-    shape.append(2)
-    borders_img_np = None
-    if save_borders:
-        borders_img_np = np.zeros(shape, dtype=np.int32)
-    
-    # pepare labels and default selem used to find "broad volume"
-    label_ids = np.unique(orig_img_np)
-    
-    def update_borders_img(borders, slices, label_id, channel):
-        nonlocal borders_img_np
-        if borders_img_np is None: return
-        borders_region = borders_img_np[tuple(slices)]
-        borders_region[borders, channel] = label_id
-    
-    def broad_borders(img_np, slices, label_id, channel, rough_img_np):
-        # use closing filter to approximate volume encompassing rough edges
-        # get region, skipping if no region left
-        region = img_np[tuple(slices)]
-        label_mask_region = region == label_id
-        filtered = morphology.binary_closing(label_mask_region, selem)
-        rough_img_np[tuple(slices)] = np.add(
-            rough_img_np[tuple(slices)], filtered.astype(np.int8))
-        filtered_border = plot_3d.perimeter_nd(filtered)
-        update_borders_img(filtered_border, slices, label_id, channel)
-        return label_mask_region, filtered
-    
-    def surface_area(img_np, slices, label_id, rough_img_np):
+    def meas_compactness(img_np):
         # get the borders of the label and add them to a rough image
         region = img_np[tuple(slices)]
         label_mask_region = region == label_id
-        borders = plot_3d.perimeter_nd(label_mask_region)
-        rough_img_np[tuple(slices)] = np.add(
-            rough_img_np[tuple(slices)], borders.astype(np.int8))
-        return label_mask_region, borders
+        area = plot_3d.perimeter_nd(label_mask_region)
+        compactness = plot_3d.compactness(None, label_mask_region, area)
+        return label_mask_region, area, compactness
     
-    padding = 2 if filter_size is None else 2 * filter_size
     pxs = {}
     cols = ("label_id", "pxs_reduced", "pxs_expanded", "size_orig")
+    label_ids = np.unique(orig_img_np)
     for label_id in label_ids:
         # calculate metric for each label
         if label_id == 0: continue
@@ -727,108 +629,36 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         props = measure.regionprops(label_mask.astype(np.int))
         if len(props) < 1 or props[0].bbox is None: continue
         _, slices = plot_3d.get_bbox_region(
-            props[0].bbox, padding, orig_img_np.shape)
+            props[0].bbox, 2, orig_img_np.shape)
         
-        if mode == config.SmoothingMetricModes.VOL:
-            # TODO: consider deprecating unused smoothing metric modes
-            # "vol": measure wrapping volume by closing filter
-            selem = morphology.ball(filter_size)
-            mask_orig, broad_orig = broad_borders(
-                orig_img_np, slices, label_id, 0, roughs[0])
-            _, broad_smoothed = broad_borders(
-                smoothed_img_np, slices, label_id, 1, roughs[1])
-            # reduction in broad volumes (compaction)
-            pxs_reduced = np.sum(broad_orig) - np.sum(broad_smoothed)
-            # expansion past original broad volume (displacement penalty)
-            pxs_expanded = (
-                np.sum(np.logical_and(broad_smoothed, ~broad_orig)) 
-                * penalty_wt)
-            # normalize to total foreground
-            size_orig = np.sum(mask_orig)
-        else:
-            
-            # measure surface area for SA:vol and to get vol mask
-            mask_orig, borders_orig = surface_area(
-                orig_img_np, slices, label_id, roughs[0])
-            update_borders_img(borders_orig, slices, label_id, 0)
-            mask_smoothed, borders_smoothed = surface_area(
-                smoothed_img_np, slices, label_id, roughs[1])
-            
-            # compaction
-            if mode == config.SmoothingMetricModes.COMPACTNESS:
-                # "compactness": reduction in compactness, multiplied by 
-                # orig vol for wt avg
-                size_orig = np.sum(mask_orig)
-                compactness_orig = plot_3d.compactness(borders_orig, mask_orig)
-                compactness_smoothed = plot_3d.compactness(
-                    borders_smoothed, mask_smoothed)
-                pxs.setdefault("compactness_orig", []).append(compactness_orig)
-                pxs.setdefault("compactness_smoothed", []).append(
-                    compactness_smoothed)
-                pxs_reduced = ((compactness_orig - compactness_smoothed) 
-                               / compactness_orig)
-            else:
-                # "area"-based: reduction in surface area (compaction), 
-                # normalized to orig SA
-                pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
-                size_orig = np.sum(borders_orig)
-            
-            # displacement
-            if mode in (config.SmoothingMetricModes.AREA_DISPLVOL, 
-                        config.SmoothingMetricModes.COMPACTNESS):
-                # measure displacement by simple vol expansion
-                displ = np.sum(np.logical_and(mask_smoothed, ~mask_orig))
-            else:
-                # signed distance between borders; option to use filter for 
-                # buffer around irregular borders to offset distances there
-                dist_to_orig, indices, borders_orig_filled = (
-                    plot_3d.borders_distance(
-                        borders_orig, borders_smoothed, mask_orig=mask_orig, 
-                        filter_size=filter_size, gaus_sigma=penalty_wt))
-                if mode == config.SmoothingMetricModes.AREA_EDT:
-                    # "area_edt": direct distances between borders
-                    if filter_size is not None:
-                        update_borders_img(
-                            borders_orig_filled, slices, label_id, 1)
-                    dist_to_orig[dist_to_orig < 0] = 0 # only expansion
-                elif mode == config.SmoothingMetricModes.AREA_RADIAL:
-                    # "area_radial": radial distances from center to get 
-                    # signed distances (DEPRECATED: use signed dist in area_edt)
-                    region = orig_img_np[tuple(slices)]
-                    props = measure.regionprops(
-                        (region == label_id).astype(np.int))
-                    centroid = props[0].centroid
-                    radial_dist_orig = plot_3d.radial_dist(
-                        borders_orig, centroid)
-                    radial_dist_smoothed = plot_3d.radial_dist(
-                        borders_smoothed, centroid)
-                    radial_diff = plot_3d.radial_dist_diff(
-                        radial_dist_orig, radial_dist_smoothed, indices)
-                    dist_to_orig = np.abs(radial_diff)
-                # SA weighted by distance is essentially the integral of the 
-                # SA, so this sum can be treated as a vol
-                displ = np.sum(dist_to_orig)
-            
-            pxs.setdefault("displacement", []).append(displ)
-            if mode == config.SmoothingMetricModes.COMPACTNESS:
-                # fraction of displaced volume
-                pxs_expanded = displ / size_orig
-            else:
-                # normalize weighted displacement by tot vol for a unitless 
-                # fraction; will later multiply by orig SA to bring back 
-                # to compaction units
-                pxs_expanded = displ / np.sum(mask_orig)
-            
-            # SA:vol metrics, including ratio of SA:vol ratios
-            sa_to_vol_orig = np.sum(borders_orig) / np.sum(mask_orig)
-            vol_smoothed = np.sum(mask_smoothed)
-            sa_to_vol_smoothed = 0
-            if vol_smoothed > 0:
-                sa_to_vol_smoothed = np.sum(borders_smoothed) / vol_smoothed
-            sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
-            pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
-            pxs.setdefault("SA_to_vol_smoothed", []).append(sa_to_vol_smoothed)
-            pxs.setdefault("SA_to_vol_ratio", []).append(sa_to_vol_ratio)
+        # measure surface area for SA:vol and to get vol mask
+        mask_orig, area_orig, compact_orig = meas_compactness(
+            orig_img_np)
+        mask_smoothed, area_sm, compact_smoothed = meas_compactness(
+            smoothed_img_np)
+        
+        # "compaction": reduction in compactness, multiplied by 
+        # orig vol for wt avg
+        size_orig = np.sum(mask_orig)
+        pxs.setdefault("compactness_orig", []).append(compact_orig)
+        pxs.setdefault("compactness_smoothed", []).append(compact_smoothed)
+        pxs_reduced = (compact_orig - compact_smoothed) / compact_orig
+        
+        # "displacement": fraction of displaced volume
+        displ = np.sum(np.logical_and(mask_smoothed, ~mask_orig))
+        pxs.setdefault("displacement", []).append(displ)
+        pxs_expanded = displ / size_orig
+        
+        # SA:vol metrics, including ratio of SA:vol ratios
+        sa_to_vol_orig = np.sum(area_orig) / np.sum(mask_orig)
+        vol_smoothed = np.sum(mask_smoothed)
+        sa_to_vol_smoothed = 0
+        if vol_smoothed > 0:
+            sa_to_vol_smoothed = np.sum(area_sm) / vol_smoothed
+        sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
+        pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
+        pxs.setdefault("SA_to_vol_smoothed", []).append(sa_to_vol_smoothed)
+        pxs.setdefault("SA_to_vol_ratio", []).append(sa_to_vol_ratio)
         
         vals = (label_id, pxs_reduced, pxs_expanded, size_orig)
         for col, val in zip(cols, vals):
@@ -846,8 +676,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     metrics = dict.fromkeys(config.SmoothingMetrics, np.nan)
     tot_size = totals["size_orig"]
     if tot_size > 0:
-        frac_reduced =  totals["pxs_reduced"] / tot_size
-        frac_expanded =  totals["pxs_expanded"] / tot_size
+        frac_reduced = totals["pxs_reduced"] / tot_size
+        frac_expanded = totals["pxs_expanded"] / tot_size
         metrics[config.SmoothingMetrics.COMPACTED] = [frac_reduced]
         metrics[config.SmoothingMetrics.DISPLACED] = [frac_expanded]
         metrics[config.SmoothingMetrics.SM_QUALITY] = [
@@ -856,16 +686,10 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             totals["compactness_smoothed"] / tot_size]
         metrics[config.SmoothingMetrics.DISPLACEMENT] = [
             totals["displacement"] / tot_size]
-        if mode == config.SmoothingMetricModes.VOL:
-            # find only amount of overlap, subtracting label count itself
-            roughs = [rough - 1 for rough in roughs]
-        roughs_metric = [np.sum(rough) / tot_size for rough in roughs]
         metrics[config.SmoothingMetrics.SA_VOL_ABS] = [
             totals["SA_to_vol_smoothed"] / tot_size]
         metrics[config.SmoothingMetrics.SA_VOL] = [
             totals["SA_to_vol_ratio"] / tot_size]
-        metrics[config.SmoothingMetrics.ROUGHNESS] = [roughs_metric[0]]
-        metrics[config.SmoothingMetrics.ROUGHNESS_SM] = [roughs_metric[1]]
         num_labels_orig = len(label_ids)
         metrics[config.SmoothingMetrics.LABEL_LOSS] = [
             (num_labels_orig - len(np.unique(smoothed_img_np))) 
@@ -879,9 +703,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     # data frame just for aligned printing but return metrics dict for 
     # concatenating multiple runs
     df_metrics = stats.dict_to_data_frame(metrics, show="\t")
-    print("\ntime elapsed for smoothing metric (s): {}"
-          .format(time() - start_time))
-    return borders_img_np, df_metrics, df_pxs
+    return df_metrics, df_pxs
 
 
 def transpose_img(img_sitk, plane, rotate=None, target_size=None, 
@@ -998,13 +820,13 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     extis = None  # extension indices of 1st labeled, then unlabeled planes
     if all(extend_labels.values()):
         # include any lateral extension and mirroring
-        img_labels_np, extis, borders_img_np, df_smoothing = (
+        img_labels_np, extis, df_smoothing = (
             _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
                 affine))
     else:
         # turn off lateral extension and/or mirroring
-        img_labels_np, _, borders_img_np, df_smoothing = _curate_labels(
+        img_labels_np, _, df_smoothing = _curate_labels(
             img_labels, img_atlas, mirror if is_mirror else None, 
             edge if extend_labels["edge"] else None, expand, rotate, smooth, 
             affine)
@@ -1012,7 +834,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             print("\nCurating labels with extension/mirroring only "
                   "for measurements and any cropping:")
             resize = is_mirror and mirror is not None
-            lbls_np_mir, extis, _, _ = _curate_labels(
+            lbls_np_mir, extis, _ = _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, None, 
                 affine, resize)
             mask_lbls = lbls_np_mir != 0
@@ -1033,8 +855,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             img_atlas_np, extis[1], start_dup=dup)
     
     if crop:
-        # crop atlas to the mask of the labels with some padding; 
-        # TODO: crop or deprecate borders image
+        # crop atlas to the mask of the labels with some padding
         img_labels_np, img_atlas_np, crop_sl = plot_3d.crop_to_labels(
             img_labels_np, img_atlas_np, mask_lbls)
         if crop_sl[0].start > 0:
@@ -1102,15 +923,14 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
                 frac = 1 - (planes_lbl / planes_tot)
         metrics[config.AtlasMetrics.LAT_UNLBL_PLANES] = frac
     
-    imgs_np = (img_atlas_np, img_labels_np, borders_img_np)
+    imgs_np = (img_atlas_np, img_labels_np)
     if pre_plane:
         # transpose back to original orientation
         imgs_np, _ = plot_support.transpose_images(
             pre_plane, imgs_np, rev=True)
     
     # convert back to sitk img and transpose if necessary
-    img_borders = None if borders_img_np is None else img_labels
-    imgs_sitk = (img_atlas, img_labels, img_borders)
+    imgs_sitk = (img_atlas, img_labels)
     imgs_sitk_replaced = []
     for img_np, img_sitk in zip(imgs_np, imgs_sitk):
         if img_np is not None:
@@ -1123,9 +943,9 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
                 img_sitk = transpose_img(
                     img_sitk, config.plane, rotate, flipud=True)
         imgs_sitk_replaced.append(img_sitk)
-    img_atlas, img_labels, img_borders = imgs_sitk_replaced
+    img_atlas, img_labels = imgs_sitk_replaced
     
-    return img_atlas, img_labels, img_borders, df_smoothing
+    return img_atlas, img_labels, df_smoothing
 
 
 def import_atlas(atlas_dir, show=True):
@@ -1173,7 +993,7 @@ def import_atlas(atlas_dir, show=True):
     }
     
     # match atlas and labels to one another
-    img_atlas, img_labels, img_borders, df_smoothing = match_atlas_labels(
+    img_atlas, img_labels, df_smoothing = match_atlas_labels(
         img_atlas, img_labels, metrics=metrics)
     
     truncate = config.register_settings["truncate_labels"]
@@ -1207,8 +1027,7 @@ def import_atlas(atlas_dir, show=True):
     # allow opening as an image within Clrbrain alongside the labels image
     imgs_write = {
         config.RegNames.IMG_ATLAS.value: img_atlas, 
-        config.RegNames.IMG_LABELS.value: img_labels, 
-        config.RegNames.IMG_BORDERS.value: img_borders}
+        config.RegNames.IMG_LABELS.value: img_labels}
     sitk_io.write_reg_images(
         imgs_write, name_prefix, copy_to_suffix=True, 
         ext=os.path.splitext(path_atlas)[1])

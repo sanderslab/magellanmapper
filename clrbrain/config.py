@@ -182,7 +182,7 @@ class RegNames(Enum):
     IMG_LABELS = "annotation.mhd"
     IMG_EXP = "exp.mhd"
     IMG_GROUPED = "grouped.mhd"
-    IMG_BORDERS = "borders.mhd"
+    IMG_BORDERS = "borders.mhd"  # TODO: consider removing
     IMG_HEAT_MAP = "heat.mhd"
     IMG_ATLAS_EDGE = "atlasEdge.mhd"
     IMG_ATLAS_LOG = "atlasLoG.mhd"
@@ -331,19 +331,11 @@ class SmoothingMetrics(Enum):
     SM_QUALITY = "Smoothing_quality"
     COMPACTNESS = "Compactness"
     DISPLACEMENT = "Displacement"
-    ROUGHNESS = "Roughness"
-    ROUGHNESS_SM = "Roughness_sm"
     SA_VOL_ABS = "SA_to_vol_abs"
     SA_VOL = "SA_to_vol"
     LABEL_LOSS = "Label_loss"
     FILTER_SIZE = "Filter_size"
 
-
-SmoothingMetricModes = Enum(
-    "SmoothingMetricModes", [
-        "VOL", "AREA_EDT", "AREA_RADIAL", "AREA_DISPLVOL", "COMPACTNESS"
-    ]
-)
 
 # AWS
 

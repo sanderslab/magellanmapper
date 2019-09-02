@@ -442,7 +442,7 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # load labels image and match with atlas
     labels_img = sitk.ReadImage(os.path.join(
         moving_file_dir, config.RegNames.IMG_LABELS.value))
-    moving_img, labels_img, _, _ = atlas_refiner.match_atlas_labels(
+    moving_img, labels_img, _ = atlas_refiner.match_atlas_labels(
         moving_img, labels_img, flip)
     
     transformed_img, transformix_img_filter = register_duo(

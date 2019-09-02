@@ -25,9 +25,6 @@ from clrbrain import plot_support
 from clrbrain import sitk_io
 from clrbrain import stats
 
-SMOOTHING_METRIC_MODES = (
-    "vol", "area_edt", "area_radial", "area_displvol", "compactness")
-
 
 def _get_bbox(img_np, threshold=10):
     """Get the bounding box for the largest object within an image.
@@ -605,14 +602,15 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
 
 
 def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None, 
-                           penalty_wt=None, mode=SMOOTHING_METRIC_MODES[4], 
+                           penalty_wt=None, 
+                           mode=config.SmoothingMetricModes.COMPACTNESS, 
                            save_borders=False):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
     
     Several methods are available as metrices:
     
-    ``vol``: Compare the difference in size of a broad, smooth volume 
+    ``VOL``: Compare the difference in size of a broad, smooth volume 
     encompassing ragged edges before and after the smoothing algorithm, giving 
     a measure of reduction in size and thus increase in compactness by 
     smoothing. To penalize inappropriate smoothing, the smoothed volume 
@@ -620,17 +618,17 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     size reduction, accounting for unwanted deformation that brings the 
     region outside of its original bounds.
     
-    ``area``: Compare surface areas of each label before and after 
+    ``AREA_[type]``: Compare surface areas of each label before and after 
     smoothing. Compaction is taken as a reduction in overall surface area, 
     while the displacement penalty is measured by the distance transform 
     of the smoothed border from the original border.
     
-    ``compactness``: Similar to ``area``, but use the formal compactness 
+    ``COMPACTNESS``: Similar to ``AREA_*``, but use the formal compactness 
     measurement.
     
     Args:
-        original_img_np: Unsmoothed labels image as Numpy array.
-        smoothing_img_np: Smoothed labels image as Numpy array, which 
+        orig_img_np: Unsmoothed labels image as Numpy array.
+        smoothed_img_np: Smoothed labels image as Numpy array, which 
             should be of the same shape as ``original_img_np``.
         filter_size: Structuring element size for determining the filled, 
             broad volume of each label. Defaults to None. Larger sizes 
@@ -640,9 +638,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             original bounds. For ``area`` mode, this value is used as a 
             denominator for pixel perimeter displacement, where larger values 
             tolerate more displacement. Defaults to None.
-        mode: One of :const:``SMOOTHING_METRIC_MODES`` (see above for 
+        mode: One of :class:``config.SMOOTHING_METRIC_MODES`` (see above for 
             description of the modes). Defaults to 
-            :const:``SMOOTHING_METRIC_MODES[4]``
+            :obj:``config.SMOOTHING_METRIC_MODES.COMPACTNESS``
         save_borders: True to save borders of original and smoothed images 
             in a separate, multichannel image; defaults to False.
     
@@ -658,7 +656,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
     start_time = time()
     
     # check parameters by mode
-    if mode == SMOOTHING_METRIC_MODES[0]:
+    if mode == config.SmoothingMetricModes.VOL:
         if filter_size is None:
             raise TypeError(
                 "filter size must be an integer, not {}, for mode {}"
@@ -667,7 +665,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             penalty_wt = 1.0
             print("defaulting to penalty weight of {} for mode {}"
                   .format(penalty_wt, mode))
-    elif not mode in SMOOTHING_METRIC_MODES:
+    elif mode not in config.SmoothingMetricModes:
         raise TypeError("no metric of mode {}".format(mode))
     print("Calculating smoothing metrics, mode {} with filter size of {}, "
           "penalty weighting factor of {}"
@@ -731,7 +729,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         _, slices = plot_3d.get_bbox_region(
             props[0].bbox, padding, orig_img_np.shape)
         
-        if mode == SMOOTHING_METRIC_MODES[0]:
+        if mode == config.SmoothingMetricModes.VOL:
             # TODO: consider deprecating unused smoothing metric modes
             # "vol": measure wrapping volume by closing filter
             selem = morphology.ball(filter_size)
@@ -747,7 +745,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 * penalty_wt)
             # normalize to total foreground
             size_orig = np.sum(mask_orig)
-        elif mode in SMOOTHING_METRIC_MODES[1:]:
+        else:
             
             # measure surface area for SA:vol and to get vol mask
             mask_orig, borders_orig = surface_area(
@@ -757,12 +755,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 smoothed_img_np, slices, label_id, roughs[1])
             
             # compaction
-            if mode in SMOOTHING_METRIC_MODES[1:4]:
-                # "area"-based: reduction in surface area (compaction), 
-                # normalized to orig SA
-                pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
-                size_orig = np.sum(borders_orig)
-            elif mode == SMOOTHING_METRIC_MODES[4]:
+            if mode == config.SmoothingMetricModes.COMPACTNESS:
                 # "compactness": reduction in compactness, multiplied by 
                 # orig vol for wt avg
                 size_orig = np.sum(mask_orig)
@@ -774,9 +767,15 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                     compactness_smoothed)
                 pxs_reduced = ((compactness_orig - compactness_smoothed) 
                                / compactness_orig)
+            else:
+                # "area"-based: reduction in surface area (compaction), 
+                # normalized to orig SA
+                pxs_reduced = np.sum(borders_orig) - np.sum(borders_smoothed)
+                size_orig = np.sum(borders_orig)
             
             # displacement
-            if mode in SMOOTHING_METRIC_MODES[3:]:
+            if mode in (config.SmoothingMetricModes.AREA_DISPLVOL, 
+                        config.SmoothingMetricModes.COMPACTNESS):
                 # measure displacement by simple vol expansion
                 displ = np.sum(np.logical_and(mask_smoothed, ~mask_orig))
             else:
@@ -786,13 +785,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                     plot_3d.borders_distance(
                         borders_orig, borders_smoothed, mask_orig=mask_orig, 
                         filter_size=filter_size, gaus_sigma=penalty_wt))
-                if mode == SMOOTHING_METRIC_MODES[1]:
+                if mode == config.SmoothingMetricModes.AREA_EDT:
                     # "area_edt": direct distances between borders
                     if filter_size is not None:
                         update_borders_img(
                             borders_orig_filled, slices, label_id, 1)
                     dist_to_orig[dist_to_orig < 0] = 0 # only expansion
-                elif mode == SMOOTHING_METRIC_MODES[2]:
+                elif mode == config.SmoothingMetricModes.AREA_RADIAL:
                     # "area_radial": radial distances from center to get 
                     # signed distances (DEPRECATED: use signed dist in area_edt)
                     region = orig_img_np[tuple(slices)]
@@ -811,14 +810,14 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
                 displ = np.sum(dist_to_orig)
             
             pxs.setdefault("displacement", []).append(displ)
-            if mode == SMOOTHING_METRIC_MODES[1:4]:
+            if mode == config.SmoothingMetricModes.COMPACTNESS:
+                # fraction of displaced volume
+                pxs_expanded = displ / size_orig
+            else:
                 # normalize weighted displacement by tot vol for a unitless 
                 # fraction; will later multiply by orig SA to bring back 
                 # to compaction units
                 pxs_expanded = displ / np.sum(mask_orig)
-            elif mode == SMOOTHING_METRIC_MODES[4]:
-                # fraction of displaced volume
-                pxs_expanded = displ / size_orig
             
             # SA:vol metrics, including ratio of SA:vol ratios
             sa_to_vol_orig = np.sum(borders_orig) / np.sum(mask_orig)
@@ -857,7 +856,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             totals["compactness_smoothed"] / tot_size]
         metrics[config.SmoothingMetrics.DISPLACEMENT] = [
             totals["displacement"] / tot_size]
-        if mode == SMOOTHING_METRIC_MODES[0]:
+        if mode == config.SmoothingMetricModes.VOL:
             # find only amount of overlap, subtracting label count itself
             roughs = [rough - 1 for rough in roughs]
         roughs_metric = [np.sum(rough) / tot_size for rough in roughs]

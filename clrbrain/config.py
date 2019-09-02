@@ -253,13 +253,6 @@ RegisterTypes = Enum(
 )
 register_type = None
 
-# label smoothing modes
-SmoothingModes = Enum(
-    "SmoothingModes", [
-        "opening", "gaussian", "closing"
-    ]
-)
-
 # metric groups
 MetricGroups = Enum(
     "MetricGroups", [
@@ -323,6 +316,14 @@ class AtlasMetrics(Enum):
     LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"
 
 
+# label smoothing modes
+SmoothingModes = Enum(
+    "SmoothingModes", [
+        "opening", "gaussian", "closing"
+    ]
+)
+
+
 class SmoothingMetrics(Enum):
     """Smoothing metric enumerations."""
     COMPACTED = "Compacted"
@@ -337,6 +338,12 @@ class SmoothingMetrics(Enum):
     LABEL_LOSS = "Label_loss"
     FILTER_SIZE = "Filter_size"
 
+
+SmoothingMetricModes = Enum(
+    "SmoothingMetricModes", [
+        "VOL", "AREA_EDT", "AREA_RADIAL", "AREA_DISPLVOL", "COMPACTNESS"
+    ]
+)
 
 # AWS
 

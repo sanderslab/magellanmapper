@@ -527,19 +527,23 @@ class MeasureLabel(object):
             if cls.df is None:
                 # sum and take average directly from image
                 region_dists = cls.dist_to_orig[label_mask]
-                dist_sum = np.sum(region_dists)
-                dist_mean = np.mean(region_dists)
-                size = region_dists.size
+                metrics[LabelMetrics.EdgeDistSum] = np.sum(region_dists)
+                metrics[LabelMetrics.EdgeDistMean] = np.mean(region_dists)
+                metrics[LabelMetrics.EdgeSize] = region_dists.size
             else:
                 # take sum from rows and weight means by edge sizes
-                dist_sum = np.nansum(labels[LabelMetrics.EdgeDistSum.name])
-                sizes = labels[LabelMetrics.EdgeSize.name]
-                dist_means = labels[LabelMetrics.EdgeDistMean.name]
-                size = np.sum(sizes)
-                dist_mean = np.sum(np.multiply(sizes, dist_means)) / size
-            metrics[LabelMetrics.EdgeDistSum] = dist_sum
-            metrics[LabelMetrics.EdgeDistMean] = dist_mean
-            metrics[LabelMetrics.EdgeSize] = size
+                if LabelMetrics.EdgeDistSum.name in labels:
+                    metrics[LabelMetrics.EdgeDistSum] = np.nansum(
+                        labels[LabelMetrics.EdgeDistSum.name])
+                if LabelMetrics.EdgeSize.name in labels:
+                    sizes = labels[LabelMetrics.EdgeSize.name]
+                    size = np.sum(sizes)
+                    metrics[LabelMetrics.EdgeSize] = size
+                    if LabelMetrics.EdgeDistMean.name in labels:
+                        metrics[LabelMetrics.EdgeDistMean] = (
+                            np.sum(np.multiply(
+                                sizes, labels[LabelMetrics.EdgeDistMean.name])) 
+                            / size)
         disp_id = get_single_label(label_ids)
         print("dist within edge of label {}: {}"
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))

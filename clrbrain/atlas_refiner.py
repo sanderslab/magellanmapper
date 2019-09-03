@@ -6,7 +6,6 @@
 import multiprocessing as mp
 import os
 from collections import OrderedDict
-from time import time
 
 import SimpleITK as sitk
 import numpy as np
@@ -665,14 +664,20 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
             pxs.setdefault(col, []).append(val)
         print("pxs_reduced: {}, pxs_expanded: {}, smoothing quality: {}"
               .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
+    df_pxs = pd.DataFrame(pxs)
     
+    # weight each metric by original size for weighted mean summary stats
+    weighted = {}
     totals = {}
     for key in pxs.keys():
         if key == "label_id": continue
         vals = pxs[key]
         if key != "size_orig": vals = np.multiply(vals, pxs["size_orig"])
+        weighted[key] = vals
         totals[key] = np.nansum(vals)
     
+    # measure summary stats, including weighted means; when not comparing 
+    # original and smoothed stats, use the smoothed stats
     metrics = dict.fromkeys(config.SmoothingMetrics, np.nan)
     tot_size = totals["size_orig"]
     if tot_size > 0:
@@ -684,8 +689,18 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
             frac_reduced - frac_expanded]
         metrics[config.SmoothingMetrics.COMPACTNESS] = [
             totals["compactness_smoothed"] / tot_size]
+        compact_wt = weighted["compactness_smoothed"] / tot_size
+        compact_sd = np.std(compact_wt)
+        metrics[config.SmoothingMetrics.COMPACTNESS_SD] = [compact_sd]
+        metrics[config.SmoothingMetrics.COMPACTNESS_CV] = [
+            compact_sd / np.mean(compact_wt)]
         metrics[config.SmoothingMetrics.DISPLACEMENT] = [
             totals["displacement"] / tot_size]
+        displ_wt = weighted["displacement"] / tot_size
+        displ_sd = np.std(displ_wt)
+        metrics[config.SmoothingMetrics.DISPLACEMENT_SD] = [displ_sd]
+        metrics[config.SmoothingMetrics.DISPLACEMENT_CV] = [
+            displ_sd / np.mean(displ_wt)]
         metrics[config.SmoothingMetrics.SA_VOL_ABS] = [
             totals["SA_to_vol_smoothed"] / tot_size]
         metrics[config.SmoothingMetrics.SA_VOL] = [
@@ -694,15 +709,12 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         metrics[config.SmoothingMetrics.LABEL_LOSS] = [
             (num_labels_orig - len(np.unique(smoothed_img_np))) 
             / num_labels_orig]
-    # raw stats
-    print()
-    df_pxs = pd.DataFrame(pxs)
-    print(df_pxs.to_csv(sep="\t", index=False))
-    print("\nTotal foreground pxs: {}".format(tot_size))
     
-    # data frame just for aligned printing but return metrics dict for 
-    # concatenating multiple runs
-    df_metrics = stats.dict_to_data_frame(metrics, show="\t")
+    # show raw and summary stats
+    print()
+    stats.print_data_frame(df_pxs)
+    print("\nTotal foreground pxs: {}".format(tot_size))
+    df_metrics = stats.dict_to_data_frame(metrics, show=" ")
     return df_metrics, df_pxs
 
 

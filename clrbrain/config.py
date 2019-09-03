@@ -326,15 +326,12 @@ SmoothingModes = Enum(
 
 class SmoothingMetrics(Enum):
     """Smoothing metric enumerations."""
-    COMPACTED = "Compacted"
-    DISPLACED = "Displaced"
+    COMPACTION = "Compaction"
+    DISPLACEMENT = "Displacement"
     SM_QUALITY = "Smoothing_quality"
     COMPACTNESS = "Compactness"
     COMPACTNESS_SD = "Compactness_SD"
     COMPACTNESS_CV = "Compactness_CV"
-    DISPLACEMENT = "Displacement"
-    DISPLACEMENT_SD = "Displacement_SD"
-    DISPLACEMENT_CV = "Displacement_CV"
     SA_VOL_ABS = "SA_to_vol_abs"
     SA_VOL = "SA_to_vol"
     LABEL_LOSS = "Label_loss"

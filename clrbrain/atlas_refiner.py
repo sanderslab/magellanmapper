@@ -608,18 +608,17 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
     def meas_compactness(img_np):
         # get the borders of the label and add them to a rough image
         region = img_np[tuple(slices)]
-        label_mask_region = region == label_id
-        area = plot_3d.surface_area_3d(label_mask_region)
-        compactness = plot_3d.compactness(None, label_mask_region, area)
-        return label_mask_region, area, compactness
+        mask = region == label_id
+        vol = np.sum(mask)
+        compactness = plot_3d.compactness(None, mask, area)
+        area = plot_3d.surface_area_3d(mask)
+        return mask, area, vol, compactness
     
     pxs = {}
-    cols = ("label_id", "pxs_reduced", "pxs_expanded", "size_orig")
     label_ids = np.unique(orig_img_np)
     for label_id in label_ids:
         # calculate metric for each label
         if label_id == 0: continue
-        print("finding border for {}".format(label_id))
         
         # use bounding box that fits around label in both original and 
         # smoothed image to improve efficiency over filtering whole image
@@ -631,39 +630,45 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
             props[0].bbox, 2, orig_img_np.shape)
         
         # measure surface area for SA:vol and to get vol mask
-        mask_orig, area_orig, compact_orig = meas_compactness(
+        mask_orig, area_orig, vol_orig, compact_orig = meas_compactness(
             orig_img_np)
-        mask_smoothed, area_sm, compact_smoothed = meas_compactness(
+        mask_smoothed, area_sm, vol_sm, compact_sm = meas_compactness(
             smoothed_img_np)
         
-        # "compaction": reduction in compactness, multiplied by 
-        # orig vol for wt avg
-        size_orig = np.sum(mask_orig)
-        pxs.setdefault("compactness_orig", []).append(compact_orig)
-        pxs.setdefault("compactness_smoothed", []).append(compact_smoothed)
-        pxs_reduced = (compact_orig - compact_smoothed) / compact_orig
+        # "compaction": fraction of reduced compactness
+        compaction = (compact_orig - compact_sm) / compact_orig
         
         # "displacement": fraction of displaced volume
-        displ = np.sum(np.logical_and(mask_smoothed, ~mask_orig))
-        pxs.setdefault("displacement", []).append(displ)
-        pxs_expanded = displ / size_orig
+        displ = np.sum(np.logical_and(mask_smoothed, ~mask_orig)) / vol_orig
+        
+        # "smoothing quality": difference of compaction and displacement
+        sm_qual = compaction - displ
         
         # SA:vol metrics
-        sa_to_vol_orig = area_orig / np.sum(mask_orig)
-        vol_smoothed = np.sum(mask_smoothed)
+        sa_to_vol_orig = area_orig / vol_orig
         sa_to_vol_smoothed = 0
-        if vol_smoothed > 0:
-            sa_to_vol_smoothed = area_sm / vol_smoothed
+        if vol_sm > 0:
+            sa_to_vol_smoothed = area_sm / vol_sm
         sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
-        pxs.setdefault("SA_to_vol_orig", []).append(sa_to_vol_orig)
-        pxs.setdefault("SA_to_vol_smoothed", []).append(sa_to_vol_smoothed)
-        pxs.setdefault("SA_to_vol_ratio", []).append(sa_to_vol_ratio)
         
-        vals = (label_id, pxs_reduced, pxs_expanded, size_orig)
-        for col, val in zip(cols, vals):
-            pxs.setdefault(col, []).append(val)
-        print("pxs_reduced: {}, pxs_expanded: {}, smoothing quality: {}"
-              .format(pxs_reduced, pxs_expanded, pxs_reduced - pxs_expanded))
+        label_metrics = {
+            "label_id": label_id, 
+            "compaction": compaction, 
+            "displacement": displ, 
+            "smoothing_quality": sm_qual, 
+            "vol_orig": vol_orig, 
+            "vol_smoothed": vol_sm, 
+            "compactness_orig": compact_orig,
+            "compactness_smoothed": compact_sm,
+            "SA_to_vol_orig": sa_to_vol_orig,
+            "SA_to_vol_smoothed": sa_to_vol_smoothed,
+            "SA_to_vol_ratio": sa_to_vol_ratio, 
+        }
+        for key, val in label_metrics.items():
+            pxs.setdefault(key, []).append(val)
+        print("label: {}, compaction: {}, displacement: {}, "
+              "smoothing quality: {}"
+              .format(label_id, compaction, displ, sm_qual))
     df_pxs = pd.DataFrame(pxs)
     
     # weight each metric by original size for weighted mean summary stats
@@ -672,19 +677,20 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
     for key in pxs.keys():
         if key == "label_id": continue
         vals = pxs[key]
-        if key != "size_orig": vals = np.multiply(vals, pxs["size_orig"])
+        if key != "vol_orig": vals = np.multiply(vals, pxs["vol_orig"])
         weighted[key] = vals
         totals[key] = np.nansum(vals)
     
     # measure summary stats, including weighted means; when not comparing 
     # original and smoothed stats, use the smoothed stats
     metrics = dict.fromkeys(config.SmoothingMetrics, np.nan)
-    tot_size = totals["size_orig"]
+    tot_size = totals["vol_orig"]
     if tot_size > 0:
-        frac_reduced = totals["pxs_reduced"] / tot_size
-        frac_expanded = totals["pxs_expanded"] / tot_size
-        metrics[config.SmoothingMetrics.COMPACTED] = [frac_reduced]
-        metrics[config.SmoothingMetrics.DISPLACED] = [frac_expanded]
+        frac_reduced = totals["compaction"] / tot_size
+        frac_expanded = totals["displacement"] / tot_size
+        metrics[config.SmoothingMetrics.COMPACTION] = [frac_reduced]
+        metrics[config.SmoothingMetrics.DISPLACEMENT] = [frac_expanded]
+        # same as totals["smoothing_quality"] / tot_size
         metrics[config.SmoothingMetrics.SM_QUALITY] = [
             frac_reduced - frac_expanded]
         metrics[config.SmoothingMetrics.COMPACTNESS] = [
@@ -694,13 +700,6 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         metrics[config.SmoothingMetrics.COMPACTNESS_SD] = [compact_sd]
         metrics[config.SmoothingMetrics.COMPACTNESS_CV] = [
             compact_sd / np.mean(compact_wt)]
-        metrics[config.SmoothingMetrics.DISPLACEMENT] = [
-            totals["displacement"] / tot_size]
-        displ_wt = weighted["displacement"] / tot_size
-        displ_sd = np.std(displ_wt)
-        metrics[config.SmoothingMetrics.DISPLACEMENT_SD] = [displ_sd]
-        metrics[config.SmoothingMetrics.DISPLACEMENT_CV] = [
-            displ_sd / np.mean(displ_wt)]
         metrics[config.SmoothingMetrics.SA_VOL_ABS] = [
             totals["SA_to_vol_smoothed"] / tot_size]
         metrics[config.SmoothingMetrics.SA_VOL] = [

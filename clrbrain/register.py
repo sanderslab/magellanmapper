@@ -1586,8 +1586,8 @@ def main():
         lbls = ("Fractional Change", "Smoothing Filter Size")
         plot_2d.plot_lines(
             config.filename, config.SmoothingMetrics.FILTER_SIZE.value, 
-            (config.SmoothingMetrics.COMPACTED.value,
-             config.SmoothingMetrics.DISPLACED.value,
+            (config.SmoothingMetrics.COMPACTION.value,
+             config.SmoothingMetrics.DISPLACEMENT.value,
              config.SmoothingMetrics.SM_QUALITY.value), 
             ("--", "--", "-"), lbls, title, size, show, "_quality")
         plot_2d.plot_lines(

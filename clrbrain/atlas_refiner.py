@@ -340,7 +340,6 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         mirrori = int(mirror * tot_planes)
         print("will mirror starting at plane index {}".format(mirrori))
     
-    borders_img_np = None
     df_smoothing = None
     if smooth is not None:
         # minimize jaggedness in labels, often seen outside of the original 
@@ -348,16 +347,16 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # be overwritten
         img_smoothed = img_np[:mirrori]
         img_smoothed_orig = np.copy(img_smoothed)
-        borders = None
+        spacing = img.GetSpacing()[::-1]
         if lib_clrbrain.is_seq(smooth):
-            # test sequence of filter sizes via multiprocessing, in which 
-            # case the original array will be left unchanged
+            # test sequence of filter sizes via multiprocessing for metrics
+            # only, in which case the images will be left unchanged
             df_smoothing = _smoothing_mp(
-                img_smoothed, img_smoothed_orig, smooth)
+                img_smoothed, img_smoothed_orig, smooth, spacing)
         else:
-            # single filter size
+            # smooth labels image with single filter size
             _, df_smoothing = _smoothing(
-                img_smoothed, img_smoothed_orig, smooth)
+                img_smoothed, img_smoothed_orig, smooth, spacing)
     
     # check that labels will fit in integer type
     lib_clrbrain.printv(
@@ -387,7 +386,7 @@ def crop_to_orig(labels_img_np_orig, labels_img_np, crop):
     labels_img_np[mask] = 0
 
 
-def _smoothing(img_np, img_np_orig, filter_size):
+def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     """Smooth image and calculate smoothing metric for use individually or 
     in multiprocessing.
     
@@ -396,13 +395,15 @@ def _smoothing(img_np, img_np_orig, filter_size):
         img_np_orig: Original image as Numpy array for comparison with 
             smoothed image in metric.
         filter_size: Structuring element size for smoothing.
+        spacing: Voxel spacing corresponing to ``img_np`` dimensions; 
+            defaults to None.
     
     Returns:
         Tuple of ``filter_size`` and a data frame of smoothing metrices.
     """
     smoothing_mode = config.register_settings["smoothing_mode"]
     smooth_labels(img_np, filter_size, smoothing_mode)
-    df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np)
+    df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np, spacing)
     df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
     
     # curate back to lightly smoothed foreground of original labels
@@ -417,15 +418,16 @@ def _smoothing(img_np, img_np_orig, filter_size):
     return filter_size, df_metrics
 
 
-def _smoothing_mp(img_np, img_np_orig, filter_sizes):
-    """Smooth image and calculate smoothing metric for a list of smoothing 
-    strengths.
+def _smoothing_mp(img_np, img_np_orig, filter_sizes, spacing=None):
+    """Calculate smoothing metrics for a list of smoothing strengths.
     
     Args:
-        img_np: Image as Numpy array, which will be directly updated.
+        img_np: Image as Numpy array, which will be not be updated.
         img_np_orig: Original image as Numpy array for comparison with 
             smoothed image in metric.
         filter_sizes: Tuple or list of structuring element sizes.
+        spacing: Voxel spacing corresponing to ``img_np`` dimensions; 
+            defaults to None.
     
     Returns:
         Data frame of combined metrics from smoothing for each filter size.
@@ -434,7 +436,8 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes):
     pool_results = []
     for n in filter_sizes:
         pool_results.append(
-            pool.apply_async(_smoothing, args=(img_np, img_np_orig, n)))
+            pool.apply_async(
+                _smoothing, args=(img_np, img_np_orig, n, spacing)))
     dfs = []
     for result in pool_results:
         filter_size, df_metrics = result.get()
@@ -587,7 +590,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
           .format(weighted_size_ratio))
 
 
-def label_smoothing_metric(orig_img_np, smoothed_img_np):
+def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
     
@@ -609,12 +612,13 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         # get the borders of the label and add them to a rough image
         region = img_np[tuple(slices)]
         mask = region == label_id
-        vol = np.sum(mask)
-        compactness = plot_3d.compactness(None, mask, area)
-        area = plot_3d.surface_area_3d(mask)
+        area = plot_3d.surface_area_3d(mask, spacing=spacing)
+        vol = np.sum(mask) * spacing_prod
+        compactness = plot_3d.compactness(None, mask, area, vol)
         return mask, area, vol, compactness
     
     pxs = {}
+    spacing_prod = 1 if spacing is None else np.prod(spacing)
     label_ids = np.unique(orig_img_np)
     for label_id in label_ids:
         # calculate metric for each label
@@ -639,7 +643,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np):
         compaction = (compact_orig - compact_sm) / compact_orig
         
         # "displacement": fraction of displaced volume
-        displ = np.sum(np.logical_and(mask_smoothed, ~mask_orig)) / vol_orig
+        displ = (np.sum(np.logical_and(mask_smoothed, ~mask_orig)) 
+                 * spacing_prod / vol_orig)
         
         # "smoothing quality": difference of compaction and displacement
         sm_qual = compaction - displ

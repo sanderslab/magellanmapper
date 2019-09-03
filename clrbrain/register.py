@@ -392,7 +392,7 @@ def register_duo(fixed_img, moving_img, path=None):
     return transformed_img, transformix_img_filter
 
 
-def register(fixed_file, moving_file_dir, plane=None, flip=False, 
+def register(fixed_file, moving_file_dir, flip=False, 
              show_imgs=True, write_imgs=True, name_prefix=None, 
              new_atlas=False):
     """Register an atlas and associated labels to a sample image 
@@ -404,9 +404,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         moving_file_dir: Directory of the atlas images, including the 
             main image and labels. The atlas was chosen as the moving file
             since it is likely to be lower resolution than the Numpy file.
-        plane: Planar orientation to which the atlas will be transposed, 
-            considering the atlas' original plane as "xy". Defaults to 
-            None to avoid planar transposition.
         flip: True if the moving files (does not apply to fixed file) should 
             be flipped/rotated; defaults to False.
         show_imgs: True if the output images should be displayed; defaults to 
@@ -433,7 +430,6 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
         #img_np = plot_3d.saturate_roi(img_np)
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = sitk_io.replace_sitk_with_numpy(fixed_img, img_np)
-    fixed_img_size = fixed_img.GetSize()
     
     # load moving image, assumed to be atlas
     moving_file = os.path.join(moving_file_dir, config.RegNames.IMG_ATLAS.value)
@@ -1482,9 +1478,9 @@ def main():
         # second image according to config.plane and config.flip_horiz; 
         # "new_atlas" registers similarly but outputs new atlas files
         new_atlas = reg is config.RegisterTypes.new_atlas
-        register(*config.filenames[0:2], plane=config.plane, 
-                 flip=flip, name_prefix=config.prefix, new_atlas=new_atlas, 
-                 show_imgs=show)
+        register(
+            *config.filenames[0:2], flip=flip, name_prefix=config.prefix, 
+            new_atlas=new_atlas, show_imgs=show)
     
     elif reg is config.RegisterTypes.group:
         # groupwise registration, which assumes that the last image 

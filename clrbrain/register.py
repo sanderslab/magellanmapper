@@ -1442,8 +1442,8 @@ def main():
     :attr:``config.register_type``.
     """
     plot_2d.setup_style("default")
-    # convert volumes to next larger prefix (eg um^3 to mm^3)
-    unit_factor = np.power(1000.0, 3)
+    # convert to next larger prefix (eg um to mm)
+    unit_factor = 1000.0
     
     # name prefix to use a different name from the input files, such as when 
     # registering transposed/scaled images but outputting paths corresponding 

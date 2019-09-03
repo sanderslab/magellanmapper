@@ -624,8 +624,8 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         subseg: Integer sub-segmentations labels image as Numpy array; 
             defaults to None to ignore label sub-divisions.
         spacing: Sequence of image spacing for each pixel in the images.
-        unit_factor: Factor by which volumes will be divided to adjust units; 
-            defaults to None.
+        unit_factor: Unit factor conversion; defaults to None. Eg use 
+            1000 to convert from um to mm.
         combine_sides: True to combine corresponding labels from opposite 
             sides of the sample; defaults to True. Corresponding labels 
             are assumed to have the same absolute numerical number and 
@@ -693,14 +693,22 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         vol_physical = label_size
         vol_mean_physical = label_metrics[LabelMetrics.RegVolMean]
         if df is None:
-            # convert to physical units at the given value unless 
-            # using data frame, where values presumably already converted
             if physical_mult is not None:
+                # convert to physical units at the given value unless 
+                # using data frame, where values presumably already converted
                 vol_physical *= physical_mult
                 vol_mean_physical *= physical_mult
             if unit_factor is not None:
-                vol_physical /= unit_factor
-                vol_mean_physical /= unit_factor
+                # further conversion to given unit size
+                unit_factor_vol = unit_factor ** 3
+                vol_physical /= unit_factor_vol
+                vol_mean_physical /= unit_factor_vol
+        if unit_factor is not None:
+            # convert metrics not extracted from data frame
+            if LabelMetrics.SurfaceArea in label_metrics:
+                # already incorporated physical units but needs to convert 
+                # to unit size
+                label_metrics[LabelMetrics.SurfaceArea] /= unit_factor ** 2
         
         # calculate densities based on physical volumes
         label_metrics[LabelMetrics.Volume] = vol_physical

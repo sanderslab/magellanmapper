@@ -440,7 +440,7 @@ def exterior_nd(img_np):
     return exterior
 
 
-def surface_area_3d(img_np, level=0.0, spacing=(1.0, 1.0, 1.0)):
+def surface_area_3d(img_np, level=0.0, spacing=None):
     """Measure the surface area for a 3D volume.
     
     Wrapper for :func:`measure.marching_cubes_lewiner` and 
@@ -451,19 +451,22 @@ def surface_area_3d(img_np, level=0.0, spacing=(1.0, 1.0, 1.0)):
         level (float): Contour value for :func:`measure.marching_cubes_lewiner`;
             defaults to 0.0.
         spacing (List[float]): Sequence of voxel spacing in same order 
-            as for ``img_np``; defaults to ``(1.0, 1.0, 1.0)``.
+            as for ``img_np``; defaults to None, which will use a value of 
+            ``np.ones(3)``.
 
     Returns:
         Surface area in the coordinate units squared.
 
     """
+    if spacing is None:
+        spacing = np.ones(3)
     verts, faces, normals, vals = measure.marching_cubes_lewiner(
         img_np, level=level, spacing=spacing)
     area = measure.mesh_surface_area(verts, faces)
     return area
 
 
-def compactness(mask_borders, mask_object, borders_meas=None):
+def compactness(mask_borders, mask_object, borders_meas=None, size_object=None):
     """Compute the classical compactness, currently supported for 2D or 3D.
     
     For 2D, the equation is given by: perimeter^2 / area. 
@@ -479,6 +482,9 @@ def compactness(mask_borders, mask_object, borders_meas=None):
         borders_meas (float): Perimeter (2D) or surface area (3D) 
             measurement to use in place of taking the pixel count from 
             ``mask_borders``; defaults to None.
+        size_object (float): Area (2D) or volume (3D) measurement to use in 
+            place of taking pixel count from ``mask_object``; defaults to 
+            None.
     
     Returns:
         Compactness metric value. If the sum of ``mask_object`` is 0, 
@@ -492,7 +498,8 @@ def compactness(mask_borders, mask_object, borders_meas=None):
         # simple boundary pixel count, which generally underestimates the 
         # true border measurement
         borders_meas = np.sum(mask_borders).item()
-    size_object = np.sum(mask_object).item()
+    if size_object is None:
+        size_object = np.sum(mask_object).item()
     compact = np.nan
     if size_object > 0:
         compact = borders_meas ** (n + 1) / size_object ** n

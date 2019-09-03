@@ -526,8 +526,8 @@ def register(fixed_file, moving_file_dir, plane=None, flip=False,
     # measure compactness of fixed image
     fixed_img_orig_np = sitk.GetArrayFromImage(fixed_img_orig)
     thresh_atlas = fixed_img_orig_np > filters.threshold_mean(fixed_img_orig_np)
-    compactness = plot_3d.compactness(
-        plot_3d.perimeter_nd(thresh_atlas), thresh_atlas)
+    compactness, _, _ = plot_3d.compactness_3d(
+        thresh_atlas, fixed_img_orig.GetSpacing()[::-1])
     
     # save basic metrics in CSV file
     basename = lib_clrbrain.get_filename_without_ext(fixed_file)

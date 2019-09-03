@@ -236,11 +236,12 @@ class MeasureLabel(object):
     heat_map = None
     subseg = None
     df = None
+    spacing = None
     
     @classmethod
     def set_data(cls, atlas_img_np, labels_img_np, labels_edge, 
                  dist_to_orig, labels_interior=None, heat_map=None, 
-                 subseg=None, df=None):
+                 subseg=None, df=None, spacing=None):
         """Set the images and data frame."""
         cls.atlas_img_np = atlas_img_np
         cls.labels_img_np = labels_img_np
@@ -250,6 +251,7 @@ class MeasureLabel(object):
         cls.heat_map = heat_map
         cls.subseg = subseg
         cls.df = df
+        cls.spacing = spacing
     
     @classmethod
     def label_metrics(cls, label_id, extra_metrics=None):
@@ -564,10 +566,10 @@ class MeasureLabel(object):
         label_size = np.sum(label_mask)
         
         if label_size > 0:
-            perim = plot_3d.perimeter_nd(label_mask)
-            metrics[LabelMetrics.SurfaceArea] = np.sum(perim)
-            metrics[LabelMetrics.Compactness] = plot_3d.compactness(
-                perim, label_mask)
+            compactness, area, _ = plot_3d.compactness_3d(
+                label_mask, cls.spacing)
+            metrics[LabelMetrics.SurfaceArea] = area
+            metrics[LabelMetrics.Compactness] = compactness
             # TODO: high memory consumption with these measurements
             # props = measure.regionprops(label_mask.astype(np.uint8))
             # if props:
@@ -615,7 +617,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         labels_interior: Numpy array of labels eroded to interior region.
         heat_map: Numpy array as a density map; defaults to None to ignore 
             density measurements.
-        sub_seg: Integer sub-segmentations labels image as Numpy array; 
+        subseg: Integer sub-segmentations labels image as Numpy array; 
             defaults to None to ignore label sub-divisions.
         spacing: Sequence of image spacing for each pixel in the images.
         unit_factor: Factor by which volumes will be divided to adjust units; 
@@ -655,7 +657,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     # reference the labels image as a global variable
     MeasureLabel.set_data(
         atlas_img_np, labels_img_np, labels_edge, dist_to_orig, 
-        labels_interior, heat_map, subseg, df)
+        labels_interior, heat_map, subseg, df, spacing)
     
     metrics = {}
     grouping[config.SIDE_KEY] = None

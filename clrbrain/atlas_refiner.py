@@ -612,9 +612,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         # get the borders of the label and add them to a rough image
         region = img_np[tuple(slices)]
         mask = region == label_id
-        area = plot_3d.surface_area_3d(mask, spacing=spacing)
-        vol = np.sum(mask) * spacing_prod
-        compactness = plot_3d.compactness(None, mask, area, vol)
+        compactness, area, vol = plot_3d.compactness_3d(mask, spacing)
         return mask, area, vol, compactness
     
     pxs = {}
@@ -1025,18 +1023,19 @@ def import_atlas(atlas_dir, show=True):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    # whole atlas stats; measure DSC if processed and prep dict for data frame
+    # DSC of atlas and labels
     print("\nDSC after import:")
     dsc = measure_overlap_combined_labels(
         img_atlas, img_labels, overlap_meas_add)
-    # use lower threshold for compactness measurement to minimize noisy 
-    # surface artifacts
+    metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
+    
+    # compactness of whole atlas (non-label) image; use lower threshold for 
+    # compactness measurement to minimize noisy surface artifacts
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
     thresh = config.register_settings["atlas_threshold_all"]
     thresh_atlas = img_atlas_np > thresh
-    compactness = plot_3d.compactness(
-        plot_3d.perimeter_nd(thresh_atlas), thresh_atlas)
-    metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
+    compactness, _, _ = plot_3d.compactness_3d(
+        thresh_atlas, img_atlas.GetSpacing()[::-1])
     metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
     
     # write images with atlas saved as Clrbrain/Numpy format to 
@@ -1066,7 +1065,7 @@ def import_atlas(atlas_dir, show=True):
             sort_cols=config.SmoothingMetrics.FILTER_SIZE.value)
 
     print("\nImported {} whole atlas stats:".format(basename))
-    stats.dict_to_data_frame(metrics, df_metrics_path, show="\t")
+    stats.dict_to_data_frame(metrics, df_metrics_path, show=" ")
     
     if show:
         sitk.Show(img_atlas)

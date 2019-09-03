@@ -466,44 +466,73 @@ def surface_area_3d(img_np, level=0.0, spacing=None):
     return area
 
 
-def compactness(mask_borders, mask_object, borders_meas=None, size_object=None):
-    """Compute the classical compactness, currently supported for 2D or 3D.
-    
-    For 2D, the equation is given by: perimeter^2 / area. 
-    For 3D: area^3 / vol^2.
+def compactness_count(mask_borders, mask_object):
+    """Compute compactness based on simple boundary and size counts.
     
     Args:
         mask_borders (:obj:`np.ndarray`): Mask of the borders to find the 
             perimeter (2D) or surface area (3D) by simple boundary pixel 
             count.
         mask_object (:obj:`np.ndarray`): Mask of the object to find the area 
-            (2D) or volume (3D). The dimensions of this mask will be used to 
-            determine whether to use the 2D or 3D compactness formula.
-        borders_meas (float): Perimeter (2D) or surface area (3D) 
-            measurement to use in place of taking the pixel count from 
-            ``mask_borders``; defaults to None.
-        size_object (float): Area (2D) or volume (3D) measurement to use in 
-            place of taking pixel count from ``mask_object``; defaults to 
-            None.
+            (2D) or volume (3D).
     
     Returns:
-        Compactness metric value. If the sum of ``mask_object`` is 0, 
-        return NaN instead.
+        Tuple of compactness metric value from :func:`calc_compactness`, 
+        borders measurement, and object size.
     """
-    # TODO: consider supporting higher dimensions, if available
-    n = 1 if mask_object.ndim == 2 else 2
-    # convert Numpy to native Python scalars since default Numpy int appears to 
-    # overflow for large sums
-    if borders_meas is None:
-        # simple boundary pixel count, which generally underestimates the 
-        # true border measurement
-        borders_meas = np.sum(mask_borders).item()
-    if size_object is None:
-        size_object = np.sum(mask_object).item()
+    # TODO: consider deprecating since currently unused
+    # simple boundary pixel count, which generally underestimates the 
+    # true border measurement
+    borders_meas = np.sum(mask_borders)
+    size_object = np.sum(mask_object)
+    # convert vol to native Python scalar since np int may not be large enough
+    compactness = calc_compactness(
+        mask_object.ndim, borders_meas.item(), size_object.item())
+    return compactness, borders_meas, size_object
+
+
+def compactness_3d(img_np, spacing=None):
+    """Compute compactness with 3D area based on :func:`surface_area_3d` 
+    and support for anisotropy.
+
+    Args:
+        img_np (:obj:`np.ndarray`): Mask of the object.
+        spacing (List[float]): Sequence of voxel spacing in same order 
+            as for ``img_np``; defaults to None.
+
+    Returns:
+        Tuple of compactness metric value from :func:`calc_compactness`, 
+        surface area, and volume.
+    """
+    area = surface_area_3d(img_np, spacing=spacing)
+    vol = np.sum(img_np)
+    if spacing is not None:
+        vol *= np.prod(spacing)
+    # convert vol to native Python scalar since np int may not be large enough
+    compactness = calc_compactness(img_np.ndim, area, vol.item())
+    return compactness, area, vol
+
+
+def calc_compactness(ndim, size_borders, size_object):
+    """Compute the classical compactness, currently supported for 2D or 3D.
+
+    For 2D, the equation is given by: perimeter^2 / area. 
+    For 3D: area^3 / vol^2.
+
+    Args:
+        ndim (int): Number of dimensions, used to determine whether to use 
+            the 2D or 3D compactness formula.
+        size_borders (float): Perimeter (2D) or surface area (3D) .
+        size_object (float): Area (2D) or volume (3D).
+
+    Returns:
+        Compactness metric value. If ``size_object`` is 0, return NaN instead.
+    """
     compact = np.nan
     if size_object > 0:
-        compact = borders_meas ** (n + 1) / size_object ** n
+        compact = size_borders ** ndim / size_object ** (ndim - 1)
     return compact
+
 
 def signed_distance_transform(borders, mask=None, return_indices=False, 
                               spacing=None):

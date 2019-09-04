@@ -657,14 +657,17 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[8]
     
   } else if (name == "compactness") {
-    # compactness jitter plots for ABA series
+    # compactness combined jitter plot for ABA series by treating conditions 
+    # as separate genotypes of the same "all" region
     setupConfig("aba")
+    setupConfig("square")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[5])
     config.env$Measurements <- kMeas[9]
     config.env$Sort.Groups <- FALSE
     
   } else if (name == "compactness.stats") {
-    # compactness stats for ABA series
+    # compactness stats for ABA series by treating conditions as different 
+    # regions to get corrected p-vals for all "regions"
     setupConfig("compactness")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[6])
     config.env$JitterPlotSave <- FALSE

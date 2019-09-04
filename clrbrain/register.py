@@ -1600,7 +1600,13 @@ def main():
             df = pd.read_csv(path)
             dfs.append(atlas_stats.smoothing_peak(df, 0, None))
         stats.data_frames_to_csv(dfs, "smoothing_peaks.csv")
-    
+
+    elif reg is config.RegisterTypes.smoothing_metrics_aggr:
+        # re-aggregate smoothing metrics from raw stats
+        df = pd.read_csv(config.filename)
+        df_aggr = atlas_refiner.aggr_smoothing_metrics(df)
+        stats.data_frames_to_csv(df_aggr, config.PATH_SMOOTHING_METRICS)
+
     elif reg in (
             config.RegisterTypes.make_edge_images, 
             config.RegisterTypes.make_edge_images_exp):

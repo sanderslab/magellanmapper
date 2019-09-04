@@ -414,6 +414,7 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     smooth_labels(img_np, filter_size, smoothing_mode)
     df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np, spacing)
     df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
+    print("\nAggregated smoothing metrics, weighted by original volume")
     stats.print_data_frame(df_metrics)
     
     # curate back to lightly smoothed foreground of original labels
@@ -699,52 +700,63 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         print("label: {}, compaction: {}, displacement: {}, "
               "smoothing quality: {}"
               .format(label_id, compaction, displ, sm_qual))
+    
+    # print raw stats and calculate aggregate stats
     df_pxs = stats.dict_to_data_frame(pxs)
-    
-    # weight each metric by original size for weighted mean summary stats
-    weighted = {}
-    totals = {}
-    for key in pxs.keys():
-        if key == config.AtlasMetrics.REGION: continue
-        vals = pxs[key]
-        if key != config.SmoothingMetrics.VOL_ORIG: 
-            vals = np.multiply(vals, pxs[config.SmoothingMetrics.VOL_ORIG])
-        weighted[key] = vals
-        totals[key] = np.nansum(vals)
-    
-    # measure summary stats, including weighted means; when not comparing 
-    # original and smoothed stats, use the smoothed stats
-    metrics = dict.fromkeys(config.SmoothingMetrics, np.nan)
-    tot_size = totals[config.SmoothingMetrics.VOL_ORIG]
-    if tot_size > 0:
-        metrics[config.SmoothingMetrics.COMPACTION] = [
-            totals[config.SmoothingMetrics.COMPACTION] / tot_size]
-        metrics[config.SmoothingMetrics.DISPLACEMENT] = [
-            totals[config.SmoothingMetrics.DISPLACEMENT] / tot_size]
-        metrics[config.SmoothingMetrics.SM_QUALITY] = [
-            totals[config.SmoothingMetrics.SM_QUALITY] / tot_size]
-        metrics[config.SmoothingMetrics.COMPACTNESS] = [
-            totals[config.SmoothingMetrics.COMPACTNESS] / tot_size]
-        compact_wt = weighted[config.SmoothingMetrics.COMPACTNESS] / tot_size
-        compact_sd = np.nanstd(compact_wt)
-        metrics[config.SmoothingMetrics.COMPACTNESS_SD] = [compact_sd]
-        metrics[config.SmoothingMetrics.COMPACTNESS_CV] = [
-            compact_sd / np.nanmean(compact_wt)]
-        metrics[config.SmoothingMetrics.SA_VOL] = [
-            totals[config.SmoothingMetrics.SA_VOL] / tot_size]
-        metrics[config.SmoothingMetrics.SA_VOL_FRAC] = [
-            totals[config.SmoothingMetrics.SA_VOL_FRAC] / tot_size]
-        num_labels_orig = len(label_ids)
-        metrics[config.SmoothingMetrics.LABEL_LOSS] = [
-            (num_labels_orig - len(np.unique(smoothed_img_np))) 
-            / num_labels_orig]
-
-    # show raw and summary stats
     print()
     stats.print_data_frame(df_pxs)
-    print("\nTotal foreground pxs: {}".format(tot_size))
-    df_metrics = stats.dict_to_data_frame(metrics)
+    df_metrics = aggr_smoothing_metrics(df_pxs)
     return df_metrics, df_pxs
+
+
+def aggr_smoothing_metrics(df_pxs):
+    """Aggregate smoothing metrics from a data frame of raw stats by label.
+    
+    Stats generally compare original and smoothed versions, but when stats of 
+    a single version, typically the smoothed version is given. Stats are 
+    weighted by the original volume.
+    
+    Args:
+        df_pxs (:obj:`pd.DataFrame`): Data frame with raw stats by label.
+
+    Returns:
+        :obj:`pd.DataFrame`: Data frame of aggregated stats.
+
+    """
+    keys = [
+        config.SmoothingMetrics.COMPACTION,
+        config.SmoothingMetrics.DISPLACEMENT,
+        config.SmoothingMetrics.SM_QUALITY,
+        config.SmoothingMetrics.COMPACTNESS,
+        config.SmoothingMetrics.COMPACTNESS_SD,
+        config.SmoothingMetrics.COMPACTNESS_CV,
+        config.SmoothingMetrics.SA_VOL,
+        config.SmoothingMetrics.SA_VOL_FRAC
+    ]
+    metrics = {}
+    wts = df_pxs[config.SmoothingMetrics.VOL_ORIG.value]
+    for key in keys:
+        if key is config.SmoothingMetrics.COMPACTNESS_SD:
+            # standard deviation
+            sd, _ = stats.weight_std(
+                df_pxs[config.SmoothingMetrics.COMPACTNESS.value], wts)
+            metrics[key] = [sd]
+        elif key is config.SmoothingMetrics.COMPACTNESS_CV:
+            # coefficient of variation, which assumes that SD and weighted 
+            # mean have already been measured
+            metrics[key] = [
+                metrics[config.SmoothingMetrics.COMPACTNESS_SD][0]
+                / metrics[config.SmoothingMetrics.COMPACTNESS][0]]
+        else:
+            # default to weighted mean
+            metrics[key] = [stats.weight_mean(df_pxs[key.value], wts)]
+    # measure label loss based on number of labels whose smoothed vol is 0
+    num_labels_orig = np.sum(wts > 0)
+    metrics[config.SmoothingMetrics.LABEL_LOSS] = [
+        (num_labels_orig - 
+         np.sum(df_pxs[config.SmoothingMetrics.VOL.value] > 0)) 
+        / num_labels_orig]
+    return stats.dict_to_data_frame(metrics)
 
 
 def transpose_img(img_sitk, plane, rotate=None, target_size=None, 

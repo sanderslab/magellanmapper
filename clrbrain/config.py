@@ -244,7 +244,7 @@ RegisterTypes = Enum(
         "make_edge_images", "make_edge_images_exp", "merge_atlas_segs", 
         "reg_labels_to_atlas", "vol_stats", "make_density_images", 
         "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
-        "plot_smoothing_metrics", "smoothing_peaks", 
+        "plot_smoothing_metrics", "smoothing_peaks", "smoothing_metrics_aggr", 
         "merge_images", "merge_images_channels", 
         "register_reg", "labels_diff", "labels_diff_stats", 
         "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols",

@@ -668,9 +668,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         compaction = (compact_orig - compact_sm) / compact_orig
         
         # "displacement": fraction of displaced volume
-        displ = np.nan if np.isnan(compaction) else (
-                np.sum(np.logical_and(mask_smoothed, ~mask_orig)) 
-                * spacing_prod / vol_orig)
+        displ = (np.sum(np.logical_and(mask_smoothed, ~mask_orig)) 
+                 * spacing_prod / vol_orig)
         
         # "smoothing quality": difference of compaction and displacement
         sm_qual = compaction - displ
@@ -717,13 +716,12 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
     metrics = dict.fromkeys(config.SmoothingMetrics, np.nan)
     tot_size = totals["vol_orig"]
     if tot_size > 0:
-        frac_reduced = totals["compaction"] / tot_size
-        frac_expanded = totals["displacement"] / tot_size
-        metrics[config.SmoothingMetrics.COMPACTION] = [frac_reduced]
-        metrics[config.SmoothingMetrics.DISPLACEMENT] = [frac_expanded]
-        # same as totals["smoothing_quality"] / tot_size
+        metrics[config.SmoothingMetrics.COMPACTION] = [
+            totals["compaction"] / tot_size]
+        metrics[config.SmoothingMetrics.DISPLACEMENT] = [
+            totals["displacement"] / tot_size]
         metrics[config.SmoothingMetrics.SM_QUALITY] = [
-            frac_reduced - frac_expanded]
+            totals["smoothing_quality"] / tot_size]
         metrics[config.SmoothingMetrics.COMPACTNESS] = [
             totals["compactness_smoothed"] / tot_size]
         compact_wt = weighted["compactness_smoothed"] / tot_size

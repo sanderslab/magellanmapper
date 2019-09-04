@@ -612,6 +612,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         # get the borders of the label and add them to a rough image
         region = img_np[tuple(slices)]
         mask = region == label_id
+        if np.sum(mask) == 0:
+            print("label {} warning: region missing".format(label_id))
+            return mask, 0, 0, np.nan
         compactness, area, vol = plot_3d.compactness_3d(mask, spacing)
         return mask, area, vol, compactness
     
@@ -641,8 +644,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         compaction = (compact_orig - compact_sm) / compact_orig
         
         # "displacement": fraction of displaced volume
-        displ = (np.sum(np.logical_and(mask_smoothed, ~mask_orig)) 
-                 * spacing_prod / vol_orig)
+        displ = np.nan if np.isnan(compaction) else (
+                np.sum(np.logical_and(mask_smoothed, ~mask_orig)) 
+                * spacing_prod / vol_orig)
         
         # "smoothing quality": difference of compaction and displacement
         sm_qual = compaction - displ
@@ -699,10 +703,10 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         metrics[config.SmoothingMetrics.COMPACTNESS] = [
             totals["compactness_smoothed"] / tot_size]
         compact_wt = weighted["compactness_smoothed"] / tot_size
-        compact_sd = np.std(compact_wt)
+        compact_sd = np.nanstd(compact_wt)
         metrics[config.SmoothingMetrics.COMPACTNESS_SD] = [compact_sd]
         metrics[config.SmoothingMetrics.COMPACTNESS_CV] = [
-            compact_sd / np.mean(compact_wt)]
+            compact_sd / np.nanmean(compact_wt)]
         metrics[config.SmoothingMetrics.SA_VOL_ABS] = [
             totals["SA_to_vol_smoothed"] / tot_size]
         metrics[config.SmoothingMetrics.SA_VOL] = [

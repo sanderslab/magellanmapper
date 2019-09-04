@@ -16,6 +16,36 @@ from clrbrain import config
 from clrbrain import lib_clrbrain
 
 
+def weight_mean(vals, weights):
+    """Calculate the weighted arithmetic mean.
+    
+    Args:
+        vals (List[float]): Sequence of values.
+        weights (List[float]): Sequence of weights.
+
+    Returns:
+        The weighted arithmetic mean of ``vals``.
+
+    """
+    return np.nansum(np.multiply(vals, weights)) / np.sum(weights)
+
+
+def weight_std(vals, weights):
+    """Calculate the weighted standard deviation.
+    
+    Args:
+        vals (List[float]): Sequence of values.
+        weights (List[float]): Sequence of weights.
+
+    Returns:
+        The weighted arithmetic standard deviation of ``vals``.
+
+    """
+    wt_mean = weight_mean(vals, weights)
+    wt_std = np.sqrt(weight_mean(np.power(vals - wt_mean, 2), weights))
+    return wt_std, wt_mean
+
+
 def df_div(df0, df1, axis=1):
     """Wrapper function to divide two Pandas data frames in a functional manner.
     

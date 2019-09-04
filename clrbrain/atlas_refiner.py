@@ -677,7 +677,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         
         # SA:vol metrics
         sa_to_vol_orig = area_orig / vol_orig
-        sa_to_vol_smoothed = 0
+        sa_to_vol_smoothed = np.nan
         if vol_sm > 0:
             sa_to_vol_smoothed = area_sm / vol_sm
         sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig

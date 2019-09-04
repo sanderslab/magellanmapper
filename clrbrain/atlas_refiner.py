@@ -242,6 +242,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     """
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
+    label_ids_orig = np.unique(img_np)
     try:
         dtype = lib_clrbrain.dtype_within_range(0, np.amax(img_np), True, True)
         if dtype != img_np.dtype:
@@ -368,10 +369,16 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         check_mirrorred(img_np)
     else:
         # mirror, check beforehand for labels that will be loss
-        labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
+        print("Labels that will be lost from mirroring:")
+        find_labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
         img_np = mirror_planes(
             img_np, mirrori, mirror_mult=-1, check_equality=True, resize=resize)
         print("total final labels: {}".format(np.unique(img_np).size))
+    
+    print("\nTotal labels lost:")
+    find_labels_lost(label_ids_orig, np.unique(img_np))
+    print()
+    
     return img_np, (edgei, mirrori), df_smoothing
 
 
@@ -450,8 +457,19 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes, spacing=None):
     return df
 
 
-def labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
-    print("Measuring label loss:")
+def find_labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
+    """Find labels lost and optionally the size of each label.
+    
+    Args:
+        label_ids_orig (List[int]): Sequence of original label IDs.
+        label_ids (List[int]): Sequence of new label IDs.
+        label_img_np_orig (:obj:`np.ndarray`): Original labels image 
+            array to show the size of lost regions; defaults to None.
+
+    Returns:
+        List[int]: Sequence of missing labels.
+
+    """
     print("number of labels changed from {} to {}"
           .format(label_ids_orig.size, label_ids.size))
     labels_lost = label_ids_orig[np.isin(
@@ -565,10 +583,10 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
               .format(region_size, region_size_smoothed))
     
     # show label loss metric
-    print()
+    print("\nLabels lost from smoothing:")
     label_ids_smoothed = np.unique(labels_img_np)
-    labels_lost(label_ids, label_ids_smoothed, 
-        label_img_np_orig=labels_img_np_orig)
+    find_labels_lost(
+        label_ids, label_ids_smoothed, label_img_np_orig=labels_img_np_orig)
     
     # show DSC for labels
     print("\nMeasuring overlap of labels:")
@@ -580,7 +598,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
     weighted_size_ratio = 0
     tot_pxs = 0
     for label_id in label_ids_ordered:
-        # skip backgroud since not a "region"
+        # skip background since not a "region"
         if label_id == 0: continue
         size_orig = np.sum(labels_img_np_orig == label_id)
         size_smoothed = np.sum(labels_img_np == label_id)
@@ -795,8 +813,8 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     accordingly.
     
     Args:
+        img_atlas (:obj:`sitk.Image`): Reference image, such as histology.
         img_labels (:obj:`sitk.Image`): Labels image.
-        img_ref (:obj:`sitk.Image`): Reference image, such as histology.
         flip (bool): True to rotate images 180deg around the final z axis; 
             defaults to False.
         metrics (:obj:`dict`): Dictionary to store metrics; defaults to 

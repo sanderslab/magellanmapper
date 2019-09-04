@@ -277,7 +277,7 @@ def meas_plot_coefvar(path, id_cols, cond_col, cond_base, metric_cols,
 
 
 def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
-    """Extract the row of peak smoothing quality from the given data 
+    """Extract the baseline and peak smoothing quality rows from the given data 
     frame matching the given criteria.
     
     Args:
@@ -288,15 +288,17 @@ def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
             to None to ignore.
     
     Returns:
-        New data frame with the row having the peak smoothing quality 
-        meeting criteria.
+        New data frame with the baseline (filter size of 0) row and the 
+        row having the peak smoothing quality meeting criteria.
     """
     if thresh_label_loss is not None:
         df = df.loc[
             df[config.SmoothingMetrics.LABEL_LOSS.value] <= thresh_label_loss]
     if filter_size is not None:
-        df = df.loc[
-            df[config.SmoothingMetrics.FILTER_SIZE.value] == filter_size]
+        df = df.loc[np.isin(
+            df[config.SmoothingMetrics.FILTER_SIZE.value], (filter_size, 0))]
     sm_qual = df[config.SmoothingMetrics.SM_QUALITY.value]
-    df_peak = df.loc[sm_qual == sm_qual.max()]
+    df_peak = df.loc[np.logical_or(
+        sm_qual == sm_qual.max(), 
+        df[config.SmoothingMetrics.FILTER_SIZE.value] == 0)]
     return df_peak

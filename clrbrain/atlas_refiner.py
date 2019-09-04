@@ -405,6 +405,7 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     smooth_labels(img_np, filter_size, smoothing_mode)
     df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np, spacing)
     df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
+    stats.print_data_frame(df_metrics)
     
     # curate back to lightly smoothed foreground of original labels
     crop = config.register_settings["crop_to_orig"]
@@ -720,7 +721,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
     print()
     stats.print_data_frame(df_pxs)
     print("\nTotal foreground pxs: {}".format(tot_size))
-    df_metrics = stats.dict_to_data_frame(metrics, show=" ")
+    df_metrics = stats.dict_to_data_frame(metrics)
     return df_metrics, df_pxs
 
 

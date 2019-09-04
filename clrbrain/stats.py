@@ -20,21 +20,24 @@ def weight_mean(vals, weights):
     """Calculate the weighted arithmetic mean.
     
     Args:
-        vals (List[float]): Sequence of values.
+        vals (List[float]): Sequence of values, which can include NaNs.
         weights (List[float]): Sequence of weights.
 
     Returns:
         The weighted arithmetic mean of ``vals``.
 
     """
-    return np.nansum(np.multiply(vals, weights)) / np.sum(weights)
+    # exclude corresponding weights of NaN values from total weight, 
+    # while nansum excludes them from weighted total values
+    tot_wt = np.sum(weights[~np.isnan(vals)])
+    return np.nansum(np.multiply(vals, weights)) / tot_wt
 
 
 def weight_std(vals, weights):
     """Calculate the weighted standard deviation.
     
     Args:
-        vals (List[float]): Sequence of values.
+        vals (List[float]): Sequence of values, which can include NaNs.
         weights (List[float]): Sequence of weights.
 
     Returns:

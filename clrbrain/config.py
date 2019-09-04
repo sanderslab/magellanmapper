@@ -270,6 +270,9 @@ groups = None
 # smoothing metrics
 PATH_SMOOTHING_METRICS = "smoothing.csv"
 
+# raw smoothing metrics (individual labels)
+PATH_SMOOTHING_RAW_METRICS = "smoothing_raw.csv"
+
 # whole atlas image import metrics
 PATH_ATLAS_IMPORT_METRICS = "stats.csv"
 

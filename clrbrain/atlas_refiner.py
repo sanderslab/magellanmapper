@@ -234,11 +234,12 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         resize: True to resize the image during mirroring; defaults to True.
     
     Returns:
-         Tuple of the mirrored image in Numpy format; a tuple of the 
+         Tuple: the mirrored image in Numpy format; a tuple of the 
          indices from which the edge was extended (labels used as template 
          from this plane index) and the image was mirrored (index where 
-         mirrored hemisphere starts); and a data frame of smoothing stats, 
-         or None if smoothing was not performed.
+         mirrored hemisphere starts); a data frame of smoothing stats, 
+         or None if smoothing was not performed; and a data frame of raw 
+         smoothing stats, or None if smoothing was not performed.
     """
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
@@ -341,7 +342,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         mirrori = int(mirror * tot_planes)
         print("will mirror starting at plane index {}".format(mirrori))
     
-    df_smoothing = None
+    df_sm = None
+    df_sm_raw = None
     if smooth is not None:
         # minimize jaggedness in labels, often seen outside of the original 
         # orthogonal direction, using pre-mirrored slices only since rest will 
@@ -352,11 +354,11 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         if lib_clrbrain.is_seq(smooth):
             # test sequence of filter sizes via multiprocessing for metrics
             # only, in which case the images will be left unchanged
-            df_smoothing = _smoothing_mp(
+            df_sm, df_sm_raw = _smoothing_mp(
                 img_smoothed, img_smoothed_orig, smooth, spacing)
         else:
             # smooth labels image with single filter size
-            _, df_smoothing = _smoothing(
+            _, df_sm, df_sm_raw = _smoothing(
                 img_smoothed, img_smoothed_orig, smooth, spacing)
     
     # check that labels will fit in integer type
@@ -379,7 +381,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     find_labels_lost(label_ids_orig, np.unique(img_np))
     print()
     
-    return img_np, (edgei, mirrori), df_smoothing
+    return img_np, (edgei, mirrori), df_sm, df_sm_raw
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):
@@ -423,7 +425,7 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
         make_labels_fg(sitk.GetImageFromArray(img_np)), 
         make_labels_fg(sitk.GetImageFromArray(img_np_orig)))
     
-    return filter_size, df_metrics
+    return filter_size, df_metrics, df_raw
 
 
 def _smoothing_mp(img_np, img_np_orig, filter_sizes, spacing=None):
@@ -446,15 +448,16 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes, spacing=None):
         pool_results.append(
             pool.apply_async(
                 _smoothing, args=(img_np, img_np_orig, n, spacing)))
-    dfs = []
+    dfs_metrics = []
+    dfs_raw = []
     for result in pool_results:
-        filter_size, df_metrics = result.get()
-        dfs.append(df_metrics)
+        filter_size, df_metrics, df_raw = result.get()
+        dfs_metrics.append(df_metrics)
+        dfs_raw.append(df_raw)
         print("finished smoothing with filter size {}".format(filter_size))
     pool.close()
     pool.join()
-    df = pd.concat(dfs)
-    return df
+    return pd.concat(dfs_metrics), pd.concat(dfs_raw)
 
 
 def find_labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
@@ -622,6 +625,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         orig_img_np: Unsmoothed labels image as Numpy array.
         smoothed_img_np: Smoothed labels image as Numpy array, which 
             should be of the same shape as ``original_img_np``.
+        spacing (List[float]): Sequence of voxel spacing in same order 
+            as for ``img_np``; defaults to None.
     
     Returns:
         Tuple of a data frame of the smoothing metrics and another data 
@@ -821,11 +826,13 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             None, in which case metrics will not be measured.
     
     Returns:
-        Tuple of ``img_atlas``, the updated atlas; ``img_labels``, the 
+        Tuple: ``img_atlas``, the updated atlas; ``img_labels``, the 
         updated labels; ``img_borders``, a new (:obj:`sitk.Image`) of the 
         same shape as the prior images except an extra channels dimension 
-        as given by :func:``_curate_labels``; and ``df_smoothing``, a 
-        data frame of smoothing stats, or None if smoothing was not performed.
+        as given by :func:``_curate_labels``; ``df_sm``, a 
+        data frame of smoothing stats, or None if smoothing was not performed; 
+        and ``df_sm_raw``, a data frame of raw smoothing stats, or 
+        None if smoothing was not performed.
     """
     pre_plane = config.register_settings["pre_plane"]
     extend_labels = config.register_settings["extend_labels"]
@@ -857,13 +864,13 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     extis = None  # extension indices of 1st labeled, then unlabeled planes
     if all(extend_labels.values()):
         # include any lateral extension and mirroring
-        img_labels_np, extis, df_smoothing = (
+        img_labels_np, extis, df_sm, df_sm_raw = (
             _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
                 affine))
     else:
         # turn off lateral extension and/or mirroring
-        img_labels_np, _, df_smoothing = _curate_labels(
+        img_labels_np, _, df_sm, df_sm_raw = _curate_labels(
             img_labels, img_atlas, mirror if is_mirror else None, 
             edge if extend_labels["edge"] else None, expand, rotate, smooth, 
             affine)
@@ -871,7 +878,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             print("\nCurating labels with extension/mirroring only "
                   "for measurements and any cropping:")
             resize = is_mirror and mirror is not None
-            lbls_np_mir, extis, _ = _curate_labels(
+            lbls_np_mir, extis, _, _ = _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, None, 
                 affine, resize)
             mask_lbls = lbls_np_mir != 0
@@ -982,7 +989,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         imgs_sitk_replaced.append(img_sitk)
     img_atlas, img_labels = imgs_sitk_replaced
     
-    return img_atlas, img_labels, df_smoothing
+    return img_atlas, img_labels, df_sm, df_sm_raw
 
 
 def import_atlas(atlas_dir, show=True):
@@ -1030,7 +1037,7 @@ def import_atlas(atlas_dir, show=True):
     }
     
     # match atlas and labels to one another
-    img_atlas, img_labels, df_smoothing = match_atlas_labels(
+    img_atlas, img_labels, df_sm, df_sm_raw = match_atlas_labels(
         img_atlas, img_labels, metrics=metrics)
     
     truncate = config.register_settings["truncate_labels"]
@@ -1073,18 +1080,24 @@ def import_atlas(atlas_dir, show=True):
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
     importer.save_np_image(img_ref_np, name_prefix, 0)
-    
-    if df_smoothing is not None:
+
+    if df_sm_raw is not None:
+        # write raw smoothing metrics
+        stats.data_frames_to_csv(
+            df_sm_raw, 
+            df_base_path.format(config.PATH_SMOOTHING_RAW_METRICS))
+        
+    if df_sm is not None:
         # write smoothing metrics to CSV with identifier columns
         df_smoothing_path = df_base_path.format(config.PATH_SMOOTHING_METRICS)
-        df_smoothing[config.AtlasMetrics.SAMPLE.value] = basename
-        df_smoothing[config.AtlasMetrics.REGION.value] = config.REGION_ALL
-        df_smoothing[config.AtlasMetrics.CONDITION.value] = "smoothed"
-        df_smoothing.loc[
-            df_smoothing[config.SmoothingMetrics.FILTER_SIZE.value] == 0,
+        df_sm[config.AtlasMetrics.SAMPLE.value] = basename
+        df_sm[config.AtlasMetrics.REGION.value] = config.REGION_ALL
+        df_sm[config.AtlasMetrics.CONDITION.value] = "smoothed"
+        df_sm.loc[
+            df_sm[config.SmoothingMetrics.FILTER_SIZE.value] == 0,
             config.AtlasMetrics.CONDITION.value] = "unsmoothed"
         stats.data_frames_to_csv(
-            df_smoothing, df_smoothing_path, 
+            df_sm, df_smoothing_path, 
             sort_cols=config.SmoothingMetrics.FILTER_SIZE.value)
 
     print("\nImported {} whole atlas stats:".format(basename))

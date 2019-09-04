@@ -328,15 +328,23 @@ SmoothingModes = Enum(
 
 
 class SmoothingMetrics(Enum):
-    """Smoothing metric enumerations."""
+    """Smoothing metric enumerations.
+    
+    Generally with reference to the smoothed stat, so original stats will 
+    have an "orig" suffix, while smoothed stats will not have any suffix.
+    """
     COMPACTION = "Compaction"
     DISPLACEMENT = "Displacement"
     SM_QUALITY = "Smoothing_quality"
+    VOL_ORIG = "Vol_orig"
+    VOL = "Vol"
+    COMPACTNESS_ORIG = "Compactness_orig"
     COMPACTNESS = "Compactness"
     COMPACTNESS_SD = "Compactness_SD"
     COMPACTNESS_CV = "Compactness_CV"
-    SA_VOL_ABS = "SA_to_vol_abs"
+    SA_VOL_ORIG = "SA_to_vol_orig"
     SA_VOL = "SA_to_vol"
+    SA_VOL_FRAC = "SA_to_vol_frac"
     LABEL_LOSS = "Label_loss"
     FILTER_SIZE = "Filter_size"
 

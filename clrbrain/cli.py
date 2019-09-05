@@ -361,11 +361,11 @@ def main(process_args_only=False):
             print("Resolution ({}) should be given as 3 values (x, y, z)"
                   .format(args.res))
     if args.mag:
-        detector.magnification = args.mag
-        print("Set magnification to {}".format(detector.magnification))
+        config.magnification = args.mag
+        print("Set magnification to {}".format(config.magnification))
     if args.zoom:
-        detector.zoom = args.zoom
-        print("Set zoom to {}".format(detector.zoom))
+        config.zoom = args.zoom
+        print("Set zoom to {}".format(config.zoom))
     # microscope settings default to lightsheet 5x but can be updated
     if args.microscope is not None:
         for i in range(len(args.microscope)):

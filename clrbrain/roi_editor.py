@@ -554,9 +554,9 @@ class ROIEditor:
             if config.scale_bar: plot_support.add_scale_bar(ax, downsample, plane)
 
             # set title with total zoom including objective and plane number
-            if detector.zoom and detector.magnification:
+            if config.zoom and config.magnification:
                 zoom_components = np.array(
-                    [detector.zoom, detector.magnification, zoom]).astype(np.float)
+                    [config.zoom, config.magnification, zoom]).astype(np.float)
                 tot_zoom = "{}x".format(
                     lib_clrbrain.compact_float(np.prod(zoom_components), 1))
             elif level == 0:

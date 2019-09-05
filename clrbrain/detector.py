@@ -18,9 +18,6 @@ from clrbrain import plot_3d
 from clrbrain import sqlite
 from clrbrain import stats
 
-magnification = -1.0
-zoom = -1.0
-
 # blob confirmation flags
 CONFIRMATION = {
     -1: "unverified",

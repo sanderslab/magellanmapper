@@ -59,6 +59,15 @@ near_min = [0.0]
 cmaps = None
 
 
+# MICROSCOPY
+
+# image resolutions as an array of dimensions (n, r),
+# where each resolution r is a tuple in (z, y, x) order
+resolutions = None
+magnification = -1.0  # objective magnification
+zoom = -1.0  # objective zoom
+
+
 # 2D PLOTTING
 
 # custom colormaps in plot_2d
@@ -1234,6 +1243,3 @@ colors = np.array(
      [240, 228, 66], # yellow
      [0, 0, 0]] # black
 )
-# image resolutions as an array of dimensions (n, r),
-# where each resolution r is a tuple in (z, y, x) order.
-resolutions = None

@@ -27,7 +27,6 @@ import warnings
 import SimpleITK as sitk
 
 from clrbrain import config
-from clrbrain import detector
 from clrbrain import plot_3d
 from clrbrain import lib_clrbrain
 
@@ -441,13 +440,13 @@ def read_info(filename_info_npz, check_ver=False):
         except KeyError:
             print("could not find resolutions")
         try:
-            detector.magnification = output["magnification"]
-            print("magnification: {}".format(detector.magnification))
+            config.magnification = output["magnification"]
+            print("magnification: {}".format(config.magnification))
         except KeyError:
             print("could not find magnification")
         try:
-            detector.zoom = output["zoom"]
-            print("zoom: {}".format(detector.zoom))
+            config.zoom = output["zoom"]
+            print("zoom: {}".format(config.zoom))
         except KeyError:
             print("could not find zoom")
         try:
@@ -612,8 +611,8 @@ def read_file(filename, series, load=True, z_max=-1,
         
         # parses the XML tree directly
         filenames = [filename]
-        names, sizes, config.resolutions, detector.magnification, \
-            detector.zoom, pixel_type = parse_ome_raw(filenames[0])
+        names, sizes, config.resolutions, config.magnification, \
+            config.zoom, pixel_type = parse_ome_raw(filenames[0])
         shape = sizes[series]
         if z_max != -1:
             shape[1] = z_max
@@ -670,8 +669,8 @@ def read_file(filename, series, load=True, z_max=-1,
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
     save_image_info(
-        filename_info_npz, [name], [shape], [config.resolutions[series]], 
-        detector.magnification, detector.zoom, near_mins, near_maxs)
+        filename_info_npz, [name], [shape], [config.resolutions[series]],
+        config.magnification, config.zoom, near_mins, near_maxs)
     return image5d
 
 def read_file_sitk(filename_sitk, filename_np, series=0):
@@ -745,8 +744,8 @@ def import_dir(path):
         highs.append(high)
         i += 1
     save_image_info(
-        filename_info_npz, [name], [image5d.shape], config.resolutions, 
-        detector.magnification, detector.zoom, [min(lows)], [max(highs)])
+        filename_info_npz, [name], [image5d.shape], config.resolutions,
+        config.magnification, config.zoom, [min(lows)], [max(highs)])
     return image5d
 
 def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
@@ -815,7 +814,7 @@ def save_np_image(image, filename, series):
     lows, highs = calc_intensity_bounds(image)
     save_image_info(
         filename_info_npz, [os.path.basename(filename)], [image.shape], 
-        config.resolutions, detector.magnification, detector.zoom, 
+        config.resolutions, config.magnification, config.zoom, 
         lows, highs)
 
 def calc_scaling(image5d, scaled):

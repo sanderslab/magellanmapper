@@ -3,10 +3,6 @@
 """Detects features within a 3D image stack.
 
 Prunes duplicates and verifies detections against truth sets.
-
-Attributes:
-    resolutions: The image resolutions as an array of dimensions (n, r),
-        where each resolution r is a tuple in (z, y, x) order.
 """
 
 from time import time
@@ -22,7 +18,6 @@ from clrbrain import plot_3d
 from clrbrain import sqlite
 from clrbrain import stats
 
-resolutions = None # (z, y, x) order since given from microscope
 magnification = -1.0
 zoom = -1.0
 
@@ -42,13 +37,13 @@ def calc_scaling_factor():
         Array of tolerance values in same shape as the first resolution.
     
     Raises:
-        ``AttributeError`` if the :attr:``resolutions`` is None or has 
+        ``AttributeError`` if the :attr:``config.resolutions`` is None or has 
         less than one element.
     """
-    if resolutions is None or len(resolutions) < 1:
+    if config.resolutions is None or len(config.resolutions) < 1:
         raise AttributeError(
             "Must load resolutions from file or set a resolution")
-    factor = np.divide(1.0, resolutions[0])
+    factor = np.divide(1.0, config.resolutions[0])
     return factor
 
 def _blob_surroundings(blob, roi, padding, plane=False):

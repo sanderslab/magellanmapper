@@ -23,8 +23,6 @@ Attributes:
 
 from enum import Enum
 import os
-import sys
-from time import time
 
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float, 
@@ -87,7 +85,7 @@ def _fig_title(atlas_region, offset, roi_size):
         region = "{} from ".format(atlas_region)
     # cannot round to decimal places or else tuple will further round
     roi_size_um = np.around(
-        np.multiply(roi_size, detector.resolutions[0][::-1]))
+        np.multiply(roi_size, config.resolutions[0][::-1]))
     return "{}{} (series {})\noffset {}, ROI size {} [{}{}]".format(
         region, os.path.basename(config.filename), config.series, offset, 
         tuple(roi_size), tuple(roi_size_um), u'\u00b5m')

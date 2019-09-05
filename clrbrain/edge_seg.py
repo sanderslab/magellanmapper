@@ -12,7 +12,6 @@ import numpy as np
 
 from clrbrain import atlas_refiner
 from clrbrain import config
-from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import segmenter
@@ -99,7 +98,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     # load atlas image, set resolution from it
     atlas_sitk = sitk_io.load_registered_img(
         path_atlas, atlas_suffix, get_sitk=True)
-    detector.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
+    config.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
     atlas_np = sitk.GetArrayFromImage(atlas_sitk)
     
     # output images

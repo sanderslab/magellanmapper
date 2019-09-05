@@ -1234,3 +1234,6 @@ colors = np.array(
      [240, 228, 66], # yellow
      [0, 0, 0]] # black
 )
+# image resolutions as an array of dimensions (n, r),
+# where each resolution r is a tuple in (z, y, x) order.
+resolutions = None

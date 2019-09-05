@@ -16,7 +16,6 @@ from skimage import morphology
 from skimage import transform
 
 from clrbrain import config
-from clrbrain import detector
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
@@ -1087,7 +1086,7 @@ def import_atlas(atlas_dir, show=True):
     sitk_io.write_reg_images(
         imgs_write, name_prefix, copy_to_suffix=True, 
         ext=os.path.splitext(path_atlas)[1])
-    detector.resolutions = [img_atlas.GetSpacing()[::-1]]
+    config.resolutions = [img_atlas.GetSpacing()[::-1]]
     img_ref_np = sitk.GetArrayFromImage(img_atlas)
     img_ref_np = img_ref_np[None]
     importer.save_np_image(img_ref_np, name_prefix, 0)

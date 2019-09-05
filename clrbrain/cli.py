@@ -355,8 +355,8 @@ def main(process_args_only=False):
     if args.res is not None:
         res_split = args.res.split(",")
         if len(res_split) >= 3:
-            detector.resolutions = [tuple(float(i) for i in res_split)[::-1]]
-            print("Set resolutions to {}".format(detector.resolutions))
+            config.resolutions = [tuple(float(i) for i in res_split)[::-1]]
+            print("Set resolutions to {}".format(config.resolutions))
         else:
             print("Resolution ({}) should be given as 3 values (x, y, z)"
                   .format(args.res))
@@ -700,7 +700,7 @@ def process_file(filename_base, offset, roi_size):
                 detector.show_blobs_per_channel(segments_proc)
             #print("segments range:\n{}".format(np.max(segments_proc, axis=0)))
             #print("segments:\n{}".format(segments_proc))
-            detector.resolutions = output_info["resolutions"]
+            config.resolutions = output_info["resolutions"]
             roi_offset = None
             shape = None
             path = config.filename

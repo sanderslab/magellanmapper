@@ -436,8 +436,8 @@ def read_info(filename_info_npz, check_ver=False):
         except KeyError:
             print("could not find sizes")
         try:
-            detector.resolutions = output["resolutions"]
-            print("set resolutions to {}".format(detector.resolutions))
+            config.resolutions = output["resolutions"]
+            print("set resolutions to {}".format(config.resolutions))
         except KeyError:
             print("could not find resolutions")
         try:
@@ -591,7 +591,7 @@ def read_file(filename, series, load=True, z_max=-1,
         
         # require resolution information as it will be necessary for 
         # detections, etc.
-        if detector.resolutions is None:
+        if config.resolutions is None:
             raise IOError("Could not import {}. Please specify resolutions, "
                           "magnification, and zoom.".format(filenames[0]))
         sizes, dtype = find_sizes(filenames[0])
@@ -612,7 +612,7 @@ def read_file(filename, series, load=True, z_max=-1,
         
         # parses the XML tree directly
         filenames = [filename]
-        names, sizes, detector.resolutions, detector.magnification, \
+        names, sizes, config.resolutions, detector.magnification, \
             detector.zoom, pixel_type = parse_ome_raw(filenames[0])
         shape = sizes[series]
         if z_max != -1:
@@ -670,7 +670,7 @@ def read_file(filename, series, load=True, z_max=-1,
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
     save_image_info(
-        filename_info_npz, [name], [shape], [detector.resolutions[series]], 
+        filename_info_npz, [name], [shape], [config.resolutions[series]], 
         detector.magnification, detector.zoom, near_mins, near_maxs)
     return image5d
 
@@ -708,13 +708,13 @@ def read_file_sitk(filename_sitk, filename_np, series=0):
     img_sitk = sitk.ReadImage(filename_sitk)
     img_np = sitk.GetArrayFromImage(img_sitk)
     
-    if detector.resolutions is None:
+    if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
         lib_clrbrain.warn(
             "Clrbrain image metadata file not loaded; will fallback to {} "
             "for metadata".format(filename_sitk))
-        detector.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
-        print("set resolutions to {}".format(detector.resolutions))
+        config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
+        print("set resolutions to {}".format(config.resolutions))
     
     image5d = img_np[None] # insert time axis as first dim
     return image5d
@@ -745,7 +745,7 @@ def import_dir(path):
         highs.append(high)
         i += 1
     save_image_info(
-        filename_info_npz, [name], [image5d.shape], detector.resolutions, 
+        filename_info_npz, [name], [image5d.shape], config.resolutions, 
         detector.magnification, detector.zoom, [min(lows)], [max(highs)])
     return image5d
 
@@ -815,7 +815,7 @@ def save_np_image(image, filename, series):
     lows, highs = calc_intensity_bounds(image)
     save_image_info(
         filename_info_npz, [os.path.basename(filename)], [image.shape], 
-        detector.resolutions, detector.magnification, detector.zoom, 
+        config.resolutions, detector.magnification, detector.zoom, 
         lows, highs)
 
 def calc_scaling(image5d, scaled):

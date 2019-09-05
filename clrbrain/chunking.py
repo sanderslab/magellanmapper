@@ -14,7 +14,6 @@ Attributes:
 """
 
 import numpy as np
-import math
 
 from clrbrain import config
 from clrbrain import detector
@@ -278,11 +277,12 @@ if __name__ == "__main__":
     
     # tests splitting and remerging
     overlap_base = 1
-    detector.resolutions = [[6.6, 1.1, 1.1]]
+    config.resolutions = [[6.6, 1.1, 1.1]]
     roi = np.arange(5 * 4 * 4)
     roi = roi.reshape((5, 4, 4))
     print("roi:\n{}".format(roi))
-    sub_rois, overlap, sub_rois_offsets = stack_splitter(roi, max_pixels_factor_denoise)
+    overlap = calc_overlap()
+    sub_rois, sub_rois_offsets = stack_splitter(roi, [1, 2, 2])
     print("sub_rois shape: {}".format(sub_rois.shape))
     print("sub_rois:\n{}".format(sub_rois))
     print("overlap: {}".format(overlap))

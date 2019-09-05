@@ -13,7 +13,6 @@ from skimage import transform
 
 from clrbrain import chunking
 from clrbrain import config
-from clrbrain import detector
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 
@@ -180,13 +179,13 @@ def transpose_img(filename, series, plane=None, rescale=None):
     if plane is not None and plane != config.PLANE[0]:
         # swap z-y to get (y, z, x) order for xz orientation
         image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 1)
-        detector.resolutions[0] = lib_clrbrain.swap_elements(
-            detector.resolutions[0], 0, 1)
+        config.resolutions[0] = lib_clrbrain.swap_elements(
+            config.resolutions[0], 0, 1)
         if plane == config.PLANE[2]:
             # swap new y-x to get (x, z, y) order for yz orientation
             image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
-            detector.resolutions[0] = lib_clrbrain.swap_elements(
-                detector.resolutions[0], 0, 2)
+            config.resolutions[0] = lib_clrbrain.swap_elements(
+                config.resolutions[0], 0, 2)
     
     scaling = None
     if rescale is not None or target_size is not None:
@@ -246,12 +245,12 @@ def transpose_img(filename, series, plane=None, rescale=None):
         
         if rescale is not None:
             # scale resolutions based on single rescaling factor
-            detector.resolutions = np.multiply(
-                detector.resolutions, 1 / rescale)
+            config.resolutions = np.multiply(
+                config.resolutions, 1 / rescale)
         else:
             # scale resolutions based on size ratio for each dimension
-            detector.resolutions = np.multiply(
-                detector.resolutions, 
+            config.resolutions = np.multiply(
+                config.resolutions, 
                 (image5d_swapped.shape / rescaled_shape)[1:4])
         sizes[0] = rescaled_shape
         scaling = importer.calc_scaling(image5d_swapped, image5d_transposed)
@@ -271,11 +270,11 @@ def transpose_img(filename, series, plane=None, rescale=None):
         sizes[0] = image5d_swapped.shape
     
     # save image metadata
-    print("detector.resolutions: {}".format(detector.resolutions))
+    print("detector.resolutions: {}".format(config.resolutions))
     print("sizes: {}".format(sizes))
     image5d.flush()
     importer.save_image_info(
-        filename_info_npz, info["names"], sizes, detector.resolutions, 
+        filename_info_npz, info["names"], sizes, config.resolutions, 
         info["magnification"], info["zoom"], 
         *importer.calc_intensity_bounds(image5d_transposed), scaling, plane)
     print("saved transposed file to {} with shape {}".format(

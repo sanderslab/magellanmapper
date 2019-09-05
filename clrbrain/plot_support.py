@@ -13,7 +13,6 @@ from matplotlib import pyplot as plt
 
 from clrbrain import colormaps
 from clrbrain import config
-from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 
@@ -232,7 +231,7 @@ def add_scale_bar(ax, downsample=None, plane=None):
     # ensure that ScaleBar package exists
     if not scalebar: return
     
-    resolutions = detector.resolutions[0]
+    resolutions = config.resolutions[0]
     if plane:
         # transpose resolutions to the given plane
         _, arrs_1d = transpose_images(plane, arrs_1d=[resolutions])
@@ -332,17 +331,17 @@ def get_aspect_ratio(plane):
     if plane == config.PLANE[1]:
         # xz plane
         origin = "lower"
-        if detector.resolutions is not None:
-            aspect = detector.resolutions[0, 0] / detector.resolutions[0, 2]
+        if config.resolutions is not None:
+            aspect = config.resolutions[0, 0] / config.resolutions[0, 2]
     elif plane == config.PLANE[2]:
         # yz plane
         origin = "lower"
-        if detector.resolutions is not None:
-            aspect = detector.resolutions[0, 0] / detector.resolutions[0, 1]
+        if config.resolutions is not None:
+            aspect = config.resolutions[0, 0] / config.resolutions[0, 1]
     else:
         # defaults to "xy"
-        if detector.resolutions is not None:
-            aspect = detector.resolutions[0, 1] / detector.resolutions[0, 2]
+        if config.resolutions is not None:
+            aspect = config.resolutions[0, 1] / config.resolutions[0, 2]
     return aspect, origin
 
 

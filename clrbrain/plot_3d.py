@@ -23,9 +23,7 @@ from skimage import transform
 
 from clrbrain import colormaps
 from clrbrain import config
-from clrbrain import detector
 from clrbrain import lib_clrbrain
-from clrbrain import plot_support
 from clrbrain import segmenter
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
@@ -1159,7 +1157,7 @@ def zero_crossing(img, filter_size):
     return crossed
 
 def calc_isotropic_factor(scale):
-    res = detector.resolutions[0]
+    res = config.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))
     resize_factor *= scale
     #print("isotropic resize factor: {}".format(resize_factor))

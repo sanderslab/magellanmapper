@@ -53,7 +53,6 @@ from skimage import transform
 from clrbrain import atlas_refiner
 from clrbrain import atlas_stats
 from clrbrain import config
-from clrbrain import detector
 from clrbrain import edge_seg
 from clrbrain import export_regions
 from clrbrain import importer
@@ -172,7 +171,7 @@ def _load_numpy_to_sitk(numpy_file, rotate=False):
     if rotate:
         roi = np.rot90(roi, 2, (1, 2))
     sitk_img = sitk.GetImageFromArray(roi)
-    spacing = detector.resolutions[0]
+    spacing = config.resolutions[0]
     sitk_img.SetSpacing(spacing[::-1])
     # TODO: consider setting z-origin to 0 since image generally as 
     # tightly bound to subject as possible
@@ -874,7 +873,7 @@ def register_group(img_files, flip=None, show_imgs=True,
         print("writing {}".format(out_path))
         sitk.WriteImage(transformed_img, out_path, False)
         img_np = sitk.GetArrayFromImage(transformed_img)
-        detector.resolutions = [transformed_img.GetSpacing()[::-1]]
+        config.resolutions = [transformed_img.GetSpacing()[::-1]]
         importer.save_np_image(img_np[None], out_path, config.series)
     
     print("time elapsed for groupwise registration (s): {}"

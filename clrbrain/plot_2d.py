@@ -13,7 +13,6 @@ import matplotlib.transforms as transforms
 import pandas as pd
 from skimage import exposure
 
-from clrbrain import detector
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
@@ -118,7 +117,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     fig = plt.figure()
     # give extra space to the first row since the atlas is often larger
     gs = gridspec.GridSpec(2, 3, height_ratios=[3, 2])
-    resolution = detector.resolutions[0]
+    resolution = config.resolutions[0]
     #size_ratio = np.divide(atlas_reg.shape, exp.shape)
     aspect = 1.0
     z = 0

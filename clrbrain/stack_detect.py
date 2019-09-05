@@ -18,6 +18,7 @@ import pandas as pd
 from clrbrain import chunking
 from clrbrain import config
 from clrbrain import detector
+from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import sqlite
@@ -315,9 +316,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         outfile_image5d_proc.close()
     
     outfile_info_proc = open(filename_info_proc, "wb")
-    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all, 
-             resolutions=detector.resolutions, 
-             basename=os.path.basename(config.filename), # only save name
+    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all,
+             resolutions=config.resolutions,
+             basename=os.path.basename(config.filename),  # only save name
              offset=offset, roi_size=roi_size) # None unless explicitly set
     outfile_info_proc.close()
     file_save_time = time() - file_time_start

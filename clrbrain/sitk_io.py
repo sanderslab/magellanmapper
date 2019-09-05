@@ -268,3 +268,49 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
         reg_name, config.RegNames.COMBINED.value)
     write_reg_images({output_reg: combined_sitk}, output_base)
     return combined_sitk
+
+
+def read_file_sitk(filename_sitk, filename_np, series=0):
+    """Read file through SimpleITK and export to Numpy array format, 
+    loading associated metadata and formatting array into Clrbrain image5d 
+    format.
+    
+    Args:
+        filename_sitk: Path to file in a format that can be read by SimpleITK.
+        filename_np: Path to basis for Clrbrain Numpy archive files, which 
+            will be used to load metadata file. If this archive does not 
+            exist, metadata will be determined from ``filename_sitk`` 
+            as much as possible.
+        series: Image series number used to find the associated Numpy 
+            archive; defaults to 0.
+    
+    Returns:
+        Image array in Clrbrain image5d format. Associated metadata will 
+        have been loaded into module-level variables.
+    
+    Raises:
+        ``FileNotFoundError`` if ``filename_sitk`` cannot be found, after 
+        attempting to load metadata from ``filename_np``.
+    """
+    # get metadata from Numpy archive
+    filename_image5d_npz, filename_info_npz = importer.make_filenames(
+        filename_np, series)
+    if os.path.exists(filename_info_npz):
+        output, image5d_ver_num = importer.read_info(filename_info_npz)
+    
+    # load image via SimpleITK
+    if not os.path.exists(filename_sitk):
+        raise FileNotFoundError("could not find file {}".format(filename_sitk))
+    img_sitk = sitk.ReadImage(filename_sitk)
+    img_np = sitk.GetArrayFromImage(img_sitk)
+    
+    if config.resolutions is None:
+        # fallback to determining metadata directly from sitk file
+        lib_clrbrain.warn(
+            "Clrbrain image metadata file not loaded; will fallback to {} "
+            "for metadata".format(filename_sitk))
+        config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
+        print("set resolutions to {}".format(config.resolutions))
+    
+    image5d = img_np[None] # insert time axis as first dim
+    return image5d

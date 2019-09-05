@@ -747,7 +747,7 @@ def process_file(filename_base, offset, roi_size):
             try:
                 # load metadata based on filename_np, then attempt to 
                 # load the images from config.filename
-                image5d = importer.read_file_sitk(
+                image5d = sitk_io.read_file_sitk(
                     config.filename, filename_np, config.series)
             except FileNotFoundError as e:
                 print(e)

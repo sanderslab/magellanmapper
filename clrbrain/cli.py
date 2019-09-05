@@ -737,9 +737,7 @@ def process_file(filename_base, offset, roi_size):
         if os.path.isdir(config.filename):
             # import directory of TIFF images
             image5d = importer.import_dir(os.path.join(config.filename, "*"))
-        elif (config.filename.endswith(".nii.gz") 
-              or config.filename.endswith(".mha")
-              or config.filename.endswith(".mhd")):
+        elif config.filename.endswith(sitk_io.EXTS_3D):
             # load formats supported by SimpleITK, using metadata from 
             # Numpy archive
             filename_np = config.filename # default to same basic name

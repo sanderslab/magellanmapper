@@ -116,6 +116,7 @@ proc_type = None
 TRUTH_DB_TYPES = ("view", "verify", "verified", "edit")
 truth_db_type = None
 
+
 def _parse_coords(arg):
     coords = list(arg) # copy list to avoid altering the arg itself
     n = 0
@@ -130,6 +131,7 @@ def _parse_coords(arg):
         n += 1
     return coords
 
+
 def _check_np_none(val):
     """Checks if a value is either NoneType or a Numpy None object such as
     that returned from a Numpy archive that saved an undefined variable.
@@ -142,8 +144,10 @@ def _check_np_none(val):
     """
     return None if val is None or np.all(np.equal(val, None)) else val
 
+
 def _is_arg_true(arg):
     return arg.lower() == "true" or arg == "1"
+
 
 def args_with_dict(args):
     """Parse arguments list with optional arguments given as dictionary-like 
@@ -177,6 +181,7 @@ def args_with_dict(args):
             parsed.append(vals)
     parsed.append(args_dict)
     return parsed
+
 
 def args_to_dict(args, keys_enum, args_dict={}):
     """Parse arguments list with positional and keyword-based arguments 
@@ -226,6 +231,7 @@ def args_to_dict(args, keys_enum, args_dict={}):
             except KeyError:
                 print("unable to find {} in {}".format(key_str, keys_enum))
     return args_dict
+
 
 def main(process_args_only=False):
     """Starts the visualization GUI.
@@ -627,6 +633,7 @@ def main(process_args_only=False):
     if proc_type != None and proc_type != PROC_TYPES[3]:
         os._exit(os.EX_OK)
 
+
 def _iterate_file_processing(filename_base, offsets, roi_sizes):
     """Processes files iteratively based on offsets.
     
@@ -652,7 +659,7 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
             "Offset {}:\n{}".format(offsets[i], fdbk))
     return stat, summaries
 
-#@profile
+
 def process_file(filename_base, offset, roi_size):
     """Processes a single image file non-interactively.
     
@@ -892,6 +899,7 @@ def process_file(filename_base, offset, roi_size):
             truth_db_type == TRUTH_DB_TYPES[1], not config.roc)
     
     return stats, fdbk
+    
     
 if __name__ == "__main__":
     print("Starting clrbrain command-line interface...")

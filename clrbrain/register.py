@@ -70,7 +70,6 @@ SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
 SAMPLE_VOLS_SUMMARY = SAMPLE_VOLS + "_summary"
 
-COMBINED_SUFFIX = "combined"
 REREG_SUFFIX = "rereg"
 
 # 3D format extensions to check when finding registered files
@@ -621,7 +620,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
             reg_imgs.append(img_result)
             names.append(reg_name)
     
-    # use prefix as base output path if given and append distiguishing string 
+    # use prefix as base output path if given and append distinguishing string 
     # to differentiate from original files
     output_base = lib_clrbrain.insert_before_ext(
         moving_path if prefix is None else prefix, REREG_SUFFIX, "_")
@@ -1016,8 +1015,8 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
     output_base = img_paths[0] if prefix is None else prefix
     if suffix is not None:
         output_base = lib_clrbrain.insert_before_ext(output_base, suffix)
-    output_reg = lib_clrbrain.insert_before_ext(
-        reg_name, COMBINED_SUFFIX, "_")
+    output_reg = lib_clrbrain.combine_paths(
+        reg_name, config.RegNames.COMBINED.value)
     sitk_io.write_reg_images({output_reg: combined_sitk}, output_base)
     return combined_sitk
 

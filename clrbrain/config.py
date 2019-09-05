@@ -22,8 +22,6 @@ Attributes:
         correspond to the main ``image5d`` image.
     labels_scaling: Array of ``labels_img`` compared to ``image5d`` 
         for each corresponding dimension.
-    labels_ref: Raw reference dictionary imported from the JSON file 
-        corresponding to the labels image.
     labels_ref_lookup: Reference dictionary with keys corresponding to the IDs 
         in the labels image.
 """
@@ -195,6 +193,7 @@ class RegNames(Enum):
     IMG_LABELS_DIFF = "annotationDiff.mhd"
     IMG_LABELS_LEVEL = "annotationLevel{}.mhd"
     IMG_LABELS_EDGE_LEVEL = "annotationEdgeLevel{}.mhd"
+    COMBINED = "combined.mhd"  # spliced into other registered names
 
 
 # reference atlas labels

@@ -301,7 +301,7 @@ def read_file_sitk(filename_sitk, filename_np, series=0):
     # load image via SimpleITK
     if not os.path.exists(filename_sitk):
         raise FileNotFoundError("could not find file {}".format(filename_sitk))
-    img_sitk = sitk.ReadImage(filename_sitk)
+    img_sitk, _ = read_sitk(filename_sitk)
     img_np = sitk.GetArrayFromImage(img_sitk)
     
     if config.resolutions is None:

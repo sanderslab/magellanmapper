@@ -117,10 +117,9 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
     return img_sitk
 
 
-def read_file_sitk(filename_sitk, filename_np=None, series=0, reg_names=None):
-    """Read file through SimpleITK and export to Numpy array format, 
-    loading associated metadata and formatting array into Clrbrain image5d 
-    format.
+def read_sitk_files(filename_sitk, filename_np=None, series=0, reg_names=None):
+    """Read files through SimpleITK and export to Numpy array format, 
+    loading associated metadata.
 
     Args:
         filename_sitk: Path to file in a format that can be read by SimpleITK.

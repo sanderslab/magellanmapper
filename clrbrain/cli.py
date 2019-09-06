@@ -759,9 +759,9 @@ def process_file(filename_base, offset, roi_size):
                 filename_np = config.filenames[1]
             try:
                 # load metadata based on filename_np, then attempt to 
-                # load the images from config.filename
-                image5d = sitk_io.read_file_sitk(
-                    config.filename, filename_np, config.series)
+                # load the images from config.filename and prepend time axis
+                image5d = sitk_io.read_sitk_files(
+                    config.filename, filename_np, config.series)[None]
             except FileNotFoundError as e:
                 print(e)
         else:
@@ -781,9 +781,9 @@ def process_file(filename_base, offset, roi_size):
             atlas_suffix = config.RegNames.IMG_ATLAS.value
         if atlas_suffix is not None:
             # will take the place of any previously loaded image5d
-            image5d = sitk_io.load_registered_img(
-                config.filename, atlas_suffix)
-            image5d = image5d[None]
+            image5d = sitk_io.read_sitk_files(
+                config.filename, reg_names=atlas_suffix)[None]
+            print(np.amin(image5d), np.amax(image5d))
         
         annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
         if annotation_suffix is not None:
@@ -791,8 +791,9 @@ def process_file(filename_base, offset, roi_size):
             # using prefix for registered files if given
             try:
                 path = config.prefix if config.prefix else config.filename
-                config.labels_img = sitk_io.load_registered_img(
-                    path, annotation_suffix)
+                # TODO: need to support multichannel labels images
+                config.labels_img = sitk_io.read_sitk_files(
+                    path, reg_names=annotation_suffix)
                 config.labels_scaling = importer.calc_scaling(
                     image5d, config.labels_img)
                 labels_ref = ontology.load_labels_ref(config.load_labels)
@@ -811,8 +812,8 @@ def process_file(filename_base, offset, roi_size):
         if borders_suffix is not None:
             # load borders image, which can also be another labels image
             try:
-                config.borders_img = sitk_io.load_registered_img(
-                    config.filename, borders_suffix)
+                config.borders_img = sitk_io.read_sitk_files(
+                    config.filename, reg_names=borders_suffix)
             except FileNotFoundError as e:
                 print(e)
         

@@ -230,8 +230,8 @@ def normalize(array, minimum, maximum):
     
     Args:
         array (:obj:`np.ndarray`): Array to normalize.
-        min (int): Minimum value for the array.
-        max (int): Maximum value for the array. Assumed to be greater 
+        minimum (int): Minimum value for the array.
+        maximum (int): Maximum value for the array. Assumed to be greater 
             than ``min``.
     
     Returns:

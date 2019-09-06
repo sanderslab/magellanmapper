@@ -104,11 +104,15 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
         img_np_base = img_nps[0]
     img_sitk = load_registered_img(path, reg_name, get_sitk=True)
     img_np = sitk.GetArrayFromImage(img_sitk)
-    if img_np_base is not None and img_np_base.shape != img_np.shape:
-        # resize to first image
-        img_np = transform.resize(
-            img_np, img_np_base.shape, preserve_range=True, 
-            anti_aliasing=True, mode="reflect")
+    if img_np_base is not None:
+        if img_np_base.shape != img_np.shape:
+            # resize to first image
+            img_np = transform.resize(
+                img_np, img_np_base.shape, preserve_range=True, 
+                anti_aliasing=True, mode="reflect")
+        # normalize to max of first image to make comparable when combining
+        img_np = lib_clrbrain.normalize(
+            img_np * 1.0, 0, np.amax(img_np_base))
     img_nps.append(img_np)
     return img_sitk
 

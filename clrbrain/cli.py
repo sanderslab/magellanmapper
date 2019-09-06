@@ -218,18 +218,24 @@ def args_to_dict(args, keys_enum, args_dict={}):
             if n > num_enums:
                 print("no further parameters in {} to assign \"{}\" by "
                       "position, skipping".format(keys_enum, arg))
-            else:
-                args_dict[keys_enum(n)] = lib_clrbrain.get_int(arg)
+                continue
+            vals = arg
+            key = keys_enum(n)
         else:
             # assign based on keyword if its equivalent enum exists
             vals = arg_split[1]
-            vals_split = vals.split(",")
-            if len(vals_split) > 1: vals = vals_split
             key_str = arg_split[0].upper()
             try:
-                args_dict[keys_enum[key_str]] = lib_clrbrain.get_int(vals)
+                key = keys_enum[key_str]
             except KeyError:
                 print("unable to find {} in {}".format(key_str, keys_enum))
+                continue
+        vals_split = vals.split(",")
+        if len(vals_split) > 1:
+            # use split value if comma-delimited
+            vals = vals_split
+        # cast to numeric types if possible and assign to found enum
+        args_dict[key] = lib_clrbrain.get_int(vals)
     return args_dict
 
 

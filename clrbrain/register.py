@@ -482,7 +482,9 @@ def register(fixed_file, moving_file_dir, flip=False,
     labels_img_full, transformed_img, dsc_sample_curated = make_labels(False)
     labels_img, _, _ = labels_img_full if new_atlas else make_labels(True)
     
-    imgs_write = (fixed_img, transformed_img, labels_img_full, labels_img)
+    imgs_write = (
+        fixed_img, transformed_img, transformed_img_precur, labels_img_full, 
+        labels_img)
     if show_imgs:
         # show individual SimpleITK images in default viewer
         for img in imgs_write: sitk.Show(img)
@@ -498,6 +500,7 @@ def register(fixed_file, moving_file_dir, flip=False,
             imgs_names = (
                 config.RegNames.IMG_EXP.value, 
                 config.RegNames.IMG_ATLAS.value, 
+                config.RegNames.IMG_ATLAS_PRECUR.value, 
                 config.RegNames.IMG_LABELS.value, 
                 config.RegNames.IMG_LABELS_TRUNC.value)
         for i in range(len(imgs_write)):

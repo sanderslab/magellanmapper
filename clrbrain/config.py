@@ -189,6 +189,7 @@ atlas_labels[AtlasLabels.ORIG_COLORS] = 1
 # registered image suffixes
 class RegNames(Enum):
     IMG_ATLAS = "atlasVolume.mhd"
+    IMG_ATLAS_PRECUR = "atlasVolumePrecur.mhd"
     IMG_LABELS = "annotation.mhd"
     IMG_EXP = "exp.mhd"
     IMG_GROUPED = "grouped.mhd"

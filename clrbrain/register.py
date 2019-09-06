@@ -454,31 +454,33 @@ def register(fixed_file, moving_file_dir, flip=False,
         transformed_thresh=settings["atlas_threshold"])
     
     def make_labels(truncate):
-        nonlocal transformed_img
         truncation = settings["truncate_labels"] if truncate else None
-        img = _transform_labels(
+        labels_trans = _transform_labels(
             transformix_img_filter, labels_img, truncation=truncation, 
             flip=flip)
-        print(img.GetSpacing())
+        print(labels_trans.GetSpacing())
         # WORKAROUND: labels img floating point vals may be more rounded 
         # than transformed moving img for some reason; assume transformed 
         # labels and moving image should match exactly, so replace labels 
         # with moving image's transformed spacing
-        img.SetSpacing(transformed_img.GetSpacing())
-        print(img.GetSpacing())
-        print(fixed_img_orig.GetSpacing(), transformed_img.GetSpacing())
+        labels_trans.SetSpacing(transformed_img_precur.GetSpacing())
+        print(labels_trans.GetSpacing())
+        print(fixed_img_orig.GetSpacing(), transformed_img_precur.GetSpacing())
         dsc = None
+        transformed_img_cur = transformed_img_precur
         if settings["curate"]:
-            img, transformed_img = _curate_img(
-                fixed_img_orig, img, imgs=[transformed_img], inpaint=new_atlas)
+            labels_trans, transformed_img_cur = _curate_img(
+                fixed_img_orig, labels_trans, imgs=[transformed_img_precur], 
+                inpaint=new_atlas)
             print("DSC of original and registered sample images after curation")
             dsc = atlas_refiner.measure_overlap(
-                fixed_img_orig, transformed_img, 
+                fixed_img_orig, transformed_img_cur, 
                 transformed_thresh=settings["atlas_threshold"])
-        return img, dsc
-    
-    labels_img_full, dsc_sample_curated = make_labels(False)
-    labels_img, _ = labels_img_full if new_atlas else make_labels(True)
+        return labels_trans, transformed_img_cur, dsc
+
+    transformed_img_precur = transformed_img
+    labels_img_full, transformed_img, dsc_sample_curated = make_labels(False)
+    labels_img, _, _ = labels_img_full if new_atlas else make_labels(True)
     
     imgs_write = (fixed_img, transformed_img, labels_img_full, labels_img)
     if show_imgs:

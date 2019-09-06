@@ -95,7 +95,25 @@ def read_sitk(path):
     return img_sitk, path_loaded
 
 
-def read_file_sitk(filename_sitk, filename_np, series=0):
+def _load_reg_img_to_combine(path, reg_name, img_nps):
+    # load registered image in sitk format to combine with other images 
+    # by resizing to the shape of the first image
+    img_np_base = None
+    if img_nps:
+        # use first image in list as basis for shape
+        img_np_base = img_nps[0]
+    img_sitk = load_registered_img(path, reg_name, get_sitk=True)
+    img_np = sitk.GetArrayFromImage(img_sitk)
+    if img_np_base is not None and img_np_base.shape != img_np.shape:
+        # resize to first image
+        img_np = transform.resize(
+            img_np, img_np_base.shape, preserve_range=True, 
+            anti_aliasing=True, mode="reflect")
+    img_nps.append(img_np)
+    return img_sitk
+
+
+def read_file_sitk(filename_sitk, filename_np=None, series=0, reg_names=None):
     """Read file through SimpleITK and export to Numpy array format, 
     loading associated metadata and formatting array into Clrbrain image5d 
     format.
@@ -105,9 +123,13 @@ def read_file_sitk(filename_sitk, filename_np, series=0):
         filename_np: Path to basis for Clrbrain Numpy archive files, which 
             will be used to load metadata file. If this archive does not 
             exist, metadata will be determined from ``filename_sitk`` 
-            as much as possible.
+            as much as possible. Defaults to None, which will still 
+            attempt to load critical metadata from ``filename_sitk`` if it 
+            has not been set.
         series: Image series number used to find the associated Numpy 
             archive; defaults to 0.
+        reg_names: Path or sequence of paths of registered names. Can 
+            be a registered suffix or a full path. Defaults to None.
 
     Returns:
         Image array in Clrbrain image5d format. Associated metadata will 
@@ -117,17 +139,32 @@ def read_file_sitk(filename_sitk, filename_np, series=0):
         ``FileNotFoundError`` if ``filename_sitk`` cannot be found, after 
         attempting to load metadata from ``filename_np``.
     """
-    # get metadata from Numpy archive
-    filename_image5d_npz, filename_info_npz = importer.make_filenames(
-        filename_np, series)
-    if os.path.exists(filename_info_npz):
-        output, image5d_ver_num = importer.read_info(filename_info_npz)
+    if filename_np is not None:
+        # get metadata from Numpy archive
+        _, filename_info_npz = importer.make_filenames(filename_np, series)
+        if os.path.exists(filename_info_npz):
+            importer.read_info(filename_info_npz)
     
     # load image via SimpleITK
-    if not os.path.exists(filename_sitk):
-        raise FileNotFoundError("could not find file {}".format(filename_sitk))
-    img_sitk, _ = read_sitk(filename_sitk)
-    img_np = sitk.GetArrayFromImage(img_sitk)
+    img_sitk = None
+    if reg_names:
+        img_nps = []
+        if not lib_clrbrain.is_seq(reg_names):
+            reg_names = [reg_names]
+        for reg_name in reg_names:
+            # load each registered suffix into list of images with same shape, 
+            # keeping first image in sitk format
+            img = _load_reg_img_to_combine(filename_sitk, reg_name, img_nps)
+            if img_sitk is None: img_sitk = img
+        # merge images
+        img_np = np.stack(img_nps, axis=img_nps[0].ndim)
+    else:
+        # load filename_sitk directly
+        if not os.path.exists(filename_sitk):
+            raise FileNotFoundError(
+                "could not find file {}".format(filename_sitk))
+        img_sitk, _ = read_sitk(filename_sitk)
+        img_np = sitk.GetArrayFromImage(img_sitk)
     
     if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
@@ -276,7 +313,6 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
     if len(img_paths) < 1: return None
     
     img_sitk = None
-    img_np_base = None
     img_nps = []
     for img_path in img_paths:
         mod_path = img_path
@@ -284,19 +320,9 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
             # adjust image path with suffix
             mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
         print("loading", mod_path)
-        get_sitk = img_sitk is None
-        img = load_registered_img(mod_path, reg_name, get_sitk=get_sitk)
-        if get_sitk:
-            # use the first image as template
-            img_np = sitk.GetArrayFromImage(img)
-            img_np_base = img_np
-            img_sitk = img
-        else:
-            # resize to first image
-            img_np = transform.resize(
-                img, img_np_base.shape, preserve_range=True, 
-                anti_aliasing=True, mode="reflect")
-        img_nps.append(img_np)
+        # load and resize images to shape of first loaded image
+        img = _load_reg_img_to_combine(mod_path, reg_name, img_nps)
+        if img_sitk is None: img_sitk = img
     
     # combine images and write single combo image
     if fn_combine is None:

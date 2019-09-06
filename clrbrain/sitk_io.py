@@ -160,8 +160,11 @@ def read_file_sitk(filename_sitk, filename_np=None, series=0, reg_names=None):
             # keeping first image in sitk format
             img = _load_reg_img_to_combine(filename_sitk, reg_name, img_nps)
             if img_sitk is None: img_sitk = img
-        # merge images
-        img_np = np.stack(img_nps, axis=img_nps[0].ndim)
+        if len(img_nps) > 1:
+            # merge images into separate channels
+            img_np = np.stack(img_nps, axis=img_nps[0].ndim)
+        else:
+            img_np = img_nps[0]
     else:
         # load filename_sitk directly
         if not os.path.exists(filename_sitk):
@@ -178,8 +181,7 @@ def read_file_sitk(filename_sitk, filename_np=None, series=0, reg_names=None):
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(config.resolutions))
     
-    image5d = img_np[None]  # insert time axis as first dim
-    return image5d
+    return img_np
 
 
 def load_registered_img(img_path, reg_name, get_sitk=False, replace=None):

@@ -1521,7 +1521,7 @@ def main():
             ("--", "--", "-"), lbls, title, size, show, "_quality")
         plot_2d.plot_lines(
             config.filename, config.SmoothingMetrics.FILTER_SIZE.value, 
-            (config.SmoothingMetrics.SA_VOL.value,
+            (config.SmoothingMetrics.SA_VOL_FRAC.value,
              config.SmoothingMetrics.LABEL_LOSS.value), 
             ("-", "-"), lbls, None, size, show, "_extras", ("C3", "C4"))
     

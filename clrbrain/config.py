@@ -53,7 +53,8 @@ PLANE = ("xy", "xz", "yz")
 plane = None
 vmins = None # cmd-line specified
 DEFAULT_VMAX_OVERVIEW = [None]
-vmax_overview = DEFAULT_VMAX_OVERVIEW # generated from near_max; overwritten at cmd-line
+# generated from near_max; overwritten at cmd-line
+vmax_overview = DEFAULT_VMAX_OVERVIEW
 border = None # clip ROI to border (x,y,z order)
 near_max = [-1.0] # auto-detected, max of clipped intensities of whole img
 near_min = [0.0]
@@ -91,6 +92,7 @@ PlotLabels = Enum(
         "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT", 
         "X_TICK_LABELS", "Y_TICK_LABELS", 
         "SIZE",  # in x,y 
+        "ALPHAS_CHL",  # alphas for main image's channels
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)

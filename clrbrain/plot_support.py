@@ -39,10 +39,13 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         cmaps: List of colormaps corresponding to each channel. Colormaps 
             can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
-        alpha (List[float]): Sequence of transparency levels. If any 
+        alpha (float, List[float]): Transparency level for all channels or 
+            sequence of levels for each channel. If any 
             value is 0, the corresponding image will not be output. 
-        vmin: Sequence of vmin levels for each channel; defaults to None.
-        vmax: Sequence of vmax levels for each channel; defaults to None.
+        vmin (List[float]): Sequence of vmin levels for each channel; 
+            defaults to None.
+        vmax (List[float]): Sequence of vmax levels for each channel; 
+            defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
@@ -53,9 +56,9 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
     img = []
-    i = 0
     vmin_plane = None
     vmax_plane = None
+    alpha_plane = alpha
     num_chls = len(channels)
 
     # transform image based on config parameters
@@ -74,8 +77,9 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
     if config.transform[config.Transforms.FLIP_VERT]:
         img2d = img2d[::-1]
 
-    if num_chls > 1:
-        # increasing numbers of channels are each more transluscent
+    is_alpha_seq = lib_clrbrain.is_seq(alpha)
+    if num_chls > 1 and is_alpha_seq:
+        # more translucent with increasing numbers of channels 
         alpha /= np.sqrt(num_chls + 1)
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d
@@ -89,17 +93,19 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
             vmin_plane = vmin[chl]
         if vmax is not None:
             vmax_plane = vmax[chl]
-        #print("vmin: {}, vmax: {}".format(vmin_plane, vmax_plane))
+        if vmax is not None:
+            vmax_plane = vmax[chl]
+        if is_alpha_seq:
+            alpha_plane = alpha[chl]
         img_chl = None
-        if alpha > 0:
+        if alpha_plane > 0:
             # skip display if alpha is 0 to avoid outputting a hidden image 
-            # that may show up in other renderers (eg PDf viewers)
+            # that may show up in other renderers (eg PDF viewers)
             img_chl = ax.imshow(
-                img2d_show, cmap=cmap, norm=norm, aspect=aspect, alpha=alpha, 
-                vmin=vmin_plane, vmax=vmax_plane, origin=origin, 
-                interpolation=interpolation)
+                img2d_show, cmap=cmap, norm=norm, aspect=aspect, 
+                alpha=alpha_plane, vmin=vmin_plane, vmax=vmax_plane, 
+                origin=origin, interpolation=interpolation)
         img.append(img_chl)
-        i += 1
     return img
 
 
@@ -140,29 +146,31 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     num_imgs2d = len(imgs2d)
     if num_imgs2d < 1: return None
     
-    def fill(fill_with, chls):
+    def fill(fill_with, chls, filled=None, pad=None):
         # make a sequence with vals corresponding to each 2D image, where 
         # the first val is another seq whose values correspond to each of 
         # the channels in that image, starting with fill_with
-        filled = [None] * num_imgs2d
+        if filled is None:
+            filled = [None] * num_imgs2d
         if fill_with is not None:
-            filled[0] = lib_clrbrain.pad_seq(list(fill_with), len(chls))
+            # TODO: extend support for multichannel padding beyond 1st image
+            filled[0] = lib_clrbrain.pad_seq(list(fill_with), len(chls), pad)
         return filled
     
     if channels is None:
         # channels are designators rather than lists of specific channels
         channels = [0] * num_imgs2d
         channels[0] = config.channel
-    if vmins is None or vmaxs is None:
-        # fill vmin/vmax with None for each 2D image and config vals for 
-        # each channel for the first image
-        _, channels_main = plot_3d.setup_channels(imgs2d[0], None, 2)
-        if vmins is None:
-            fill_with = (config.near_min if config.vmins is None 
-                         else config.vmins)
-            vmins = fill(config.vmins, channels_main)
-        if vmaxs is None:
-            vmaxs = fill(config.vmax_overview, channels_main)
+    _, channels_main = plot_3d.setup_channels(imgs2d[0], None, 2)
+    # fill vmin/vmax with None for each 2D image and config vals for 
+    # each channel for the first image
+    if vmins is None:
+        vmins = fill(config.vmins, channels_main)
+    if vmaxs is None:
+        vmaxs = fill(config.vmax_overview, channels_main)
+    alphas = fill(
+        config.plot_labels[config.PlotLabels.ALPHAS_CHL], channels_main, 
+        alphas, 0.5)
     
     for i in range(num_imgs2d):
         # generate a multichannel display image for each 2D image

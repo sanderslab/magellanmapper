@@ -514,7 +514,7 @@ def main(process_args_only=False):
         # specify vmax levels
         # TODO: consider saving as separate var
         config.vmax_overview = [float(val) for val in args.vmax.split(",")]
-        print("Set vmax to", config.vmax_overview)
+        print("Set vmax_overview to", config.vmax_overview)
     
     if args.reg_suffixes is not None:
         # specify suffixes of registered images to load

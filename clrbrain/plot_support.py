@@ -88,7 +88,9 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha,
         cmap = colormaps.get_cmap(cmap)
         if cmap is not None:
             # show masked values such as NaNs as black to distinguish from 0
+            # and make values under vmin transparent
             cmap.set_bad(color="black")
+            cmap.set_under(alpha=0)
         if vmin is not None:
             vmin_plane = vmin[chl]
         if vmax is not None:

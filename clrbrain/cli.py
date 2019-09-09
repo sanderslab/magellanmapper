@@ -842,6 +842,19 @@ def process_file(filename_base, offset, roi_size):
         # rotate main image specified num of times x90deg after loading since 
         # need to rotate images output by deep learning toolkit
         image5d = np.rot90(image5d, load_rot90, (2, 3))
+
+    norm = config.process_settings["norm"]
+    if norm:
+        # normalize the main image and its intensity-related metadata
+        image5d = lib_clrbrain.normalize(image5d, *norm)
+        in_range = (
+            min((0, config.near_max.flat)), max(config.vmax_overview.flat))
+        config.near_min = [
+            lib_clrbrain.normalize(config.near_min, *norm, in_range)]
+        config.near_max = [
+            lib_clrbrain.normalize(config.near_max, *norm, in_range)]
+        config.vmax_overview = [
+            lib_clrbrain.normalize(config.vmax_overview, *norm, in_range)]
     
     # add any additional image5d thresholds for multichannel images, such 
     # as those loaded without metadata for these settings

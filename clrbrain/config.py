@@ -778,6 +778,14 @@ def update_register_settings(settings, settings_type):
             }, 
             profile)
 
+        # Normalized Correlation Coefficient similarity metric for registration
+        settings.add_modifier(
+            "ncc", 
+            {
+                "metric_similarity": "AdvancedNormalizedCorrelation", 
+            }, 
+            profile)
+
         # groupwise registration
         settings.add_modifier(
             "groupwise",

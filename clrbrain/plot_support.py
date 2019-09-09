@@ -158,7 +158,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             # TODO: extend support for multichannel padding beyond 1st image
             filled[0] = lib_clrbrain.pad_seq(list(fill_with), len(chls), pad)
         return filled
-    
+
+    img_norm_setting = config.process_settings["norm"]
     if channels is None:
         # channels are designators rather than lists of specific channels
         channels = [0] * num_imgs2d
@@ -169,12 +170,14 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     if vmins is None:
         vmins = fill(config.vmins, channels_main)
     if vmaxs is None:
-        vmaxs = fill(config.vmax_overview, channels_main)
+        vmaxs = config.vmax_overview
+        if config.vmaxs is None and img_norm_setting:
+            vmaxs = [max(img_norm_setting)]
+        vmaxs = fill(vmaxs, channels_main)
     alphas = fill(
         config.plot_labels[config.PlotLabels.ALPHAS_CHL], channels_main, 
         alphas, 0.5)
 
-    img_norm_setting = config.process_settings["norm"]
     for i in range(num_imgs2d):
         # generate a multichannel display image for each 2D image
         cmap = cmaps[i]
@@ -184,7 +187,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             norm = [cmap.norm]
             cmap = [cmap]
         if i == 0 and img_norm_setting:
-            imgs2d[i] = lib_clrbrain.normalize(imgs2d[i], *img_norm_setting)
+            imgs2d[0] = lib_clrbrain.normalize(imgs2d[0], *img_norm_setting)
         ax_img = imshow_multichannel(
             ax, imgs2d[i], channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
             vmax=vmaxs[i], origin=origin, interpolation="none",

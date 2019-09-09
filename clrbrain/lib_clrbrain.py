@@ -225,7 +225,7 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
     if ext: path = "{}.{}".format(os.path.splitext(path)[0], ext)
     return path
 
-def normalize(array, minimum, maximum):
+def normalize(array, minimum, maximum, in_range="image"):
     """Normalizes an array to fall within the given min and max.
     
     Args:
@@ -233,19 +233,25 @@ def normalize(array, minimum, maximum):
         minimum (int): Minimum value for the array.
         maximum (int): Maximum value for the array. Assumed to be greater 
             than ``min``.
+        in_range(str, List[int, float]): Range within ``array`` to rescale; 
+            defaults to "image" to use the range from ``array`` itself.
     
     Returns:
-        The normalized array, operated on in-place and returned for 
-        chained calls.
+        :obj:`np.ndarray`: The normalized array. 
     """
     if len(array) <= 0:
         return array
     
-    # rescale intensity while avoiding divide by 0 error
-    if np.max(array) - np.min(array) == 0:
-        array[:] = minimum
-    else:
-        array = exposure.rescale_intensity(array, out_range=(minimum, maximum))
+    if not isinstance(array, np.ndarray):
+        # rescale_intensity requires Numpy arrays
+        array = np.array(array)
+    if isinstance(array.flat[0], (int, np.integer)) and (
+            isinstance(minimum, float) or isinstance(maximum, float)):
+        # convert to float if min/max are float but array is not
+        array = 1.0 * array
+    
+    array = exposure.rescale_intensity(
+        array, out_range=(minimum, maximum), in_range=in_range)
     
     return array
 

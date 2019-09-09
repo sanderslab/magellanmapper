@@ -69,6 +69,7 @@ class ProcessSettings(SettingsDict):
         # num of times to rotate image by 90deg after loading
         self["load_rot90"] = 0
         self["exclude_border"] = None  # z,y,x; exclude blob detection border
+        self["norm"] = None  # (min, max) normalization of image5d
 
 
 def update_process_settings(settings, settings_type):
@@ -280,6 +281,15 @@ def update_process_settings(settings, settings_type):
             "randomcolors", 
             {
                 "channel_colors": [],
+            }, 
+            profile)
+        
+        # normalize image5d and associated metadata to intensity values 
+        # between 0 and 1
+        settings.add_modifier(
+            "norm", 
+            {
+                "norm": (0.0, 1.0),
             }, 
             profile)
     

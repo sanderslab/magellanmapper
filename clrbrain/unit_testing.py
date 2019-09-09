@@ -1,6 +1,6 @@
 #!/bin/bash
 # Clrbrain unit testing
-# Author: David Young, 2018
+# Author: David Young, 2018, 2019
 """Unit testing for the Clrbrain package.
 """
 
@@ -9,9 +9,10 @@ import unittest
 from clrbrain import cli
 from clrbrain import config
 from clrbrain import importer
-from clrbrain import lib_clrbrain
+from clrbrain import profiles
 
 TEST_IMG = "test.czi"
+
 
 class TestImageStackProcessing(unittest.TestCase):
     
@@ -19,7 +20,7 @@ class TestImageStackProcessing(unittest.TestCase):
         config.filename = TEST_IMG
         config.series = 0
         config.channel = None
-        config.update_process_settings(
+        profiles.update_process_settings(
             config.process_settings, "lightsheet_v02.2")
         cli.proc_type = cli.PROC_TYPES[2]
     
@@ -35,6 +36,7 @@ class TestImageStackProcessing(unittest.TestCase):
         #self.assertEqual(len(blobs), 4766)
         _, _, blobs = cli.process_file(filename_base, (30, 30, 8), (70, 70, 10))
         self.assertEqual(len(blobs), 195)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -94,6 +94,7 @@ from clrbrain import lib_clrbrain
 from clrbrain import sqlite
 from clrbrain import detector
 from clrbrain import mlearn
+from clrbrain import profiles
 from clrbrain import ontology
 from clrbrain import sitk_io
 from clrbrain import stack_detect
@@ -378,23 +379,30 @@ def main(process_args_only=False):
     if args.zoom:
         config.zoom = args.zoom
         print("Set zoom to {}".format(config.zoom))
-    # microscope settings default to lightsheet 5x but can be updated
+    
+    # initialize microscope profile settings and update with modifiers
+    config.process_settings = profiles.ProcessSettings()
+    config.process_settings_list.append(config.process_settings)
     if args.microscope is not None:
         for i in range(len(args.microscope)):
-            settings = config.process_settings if i == 0 else config.ProcessSettings()
-            config.update_process_settings(settings, args.microscope[i])
+            settings = (config.process_settings if i == 0 
+                        else profiles.ProcessSettings())
+            profiles.update_process_settings(settings, args.microscope[i])
             if i > 0:
                 config.process_settings_list.append(settings)
                 print("Added {} settings for channel {}".format(
                       config.process_settings_list[i]["settings_name"], i))
     print("Set default microscope processing settings to {}"
           .format(config.process_settings["settings_name"]))
-    # registration profile settings
+    
+    # initialize registration profile settings and update with modifiers
+    config.register_settings = profiles.RegisterSettings()
     if args.reg_profile is not None:
-        config.update_register_settings(
+        profiles.update_register_settings(
             config.register_settings, args.reg_profile)
     print("Set register settings to {}"
           .format(config.register_settings["settings_name"]))
+    
     if args.plane is not None:
         from clrbrain import plot_2d
         config.plane = args.plane

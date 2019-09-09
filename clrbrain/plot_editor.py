@@ -92,8 +92,8 @@ class PlotEditor:
         self.coord = None
         self.xlim = None
         self.ylim = None
-        self.ax_img = None
-        self.edited = False
+        self.ax_img = None  # displayed labels image
+        self.edited = False  # True if labels image was edited
         self.edit_mode = False  # True to edit with mouse motion
         self.region_label = None
         

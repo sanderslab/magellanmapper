@@ -23,8 +23,8 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 
-def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, 
-                        vmin=None, vmax=None, origin=None, interpolation=None, 
+def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
+                        vmax=None, origin=None, interpolation=None,
                         norms=None):
     """Show multichannel 2D image with channels overlaid over one another.
 
@@ -173,7 +173,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
     alphas = fill(
         config.plot_labels[config.PlotLabels.ALPHAS_CHL], channels_main, 
         alphas, 0.5)
-    
+
+    img_norm_setting = config.process_settings["norm"]
     for i in range(num_imgs2d):
         # generate a multichannel display image for each 2D image
         cmap = cmaps[i]
@@ -182,9 +183,12 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             # get normalization factor for discrete colormaps
             norm = [cmap.norm]
             cmap = [cmap]
+        if i == 0 and img_norm_setting:
+            imgs2d[i] = lib_clrbrain.normalize(imgs2d[i], *img_norm_setting)
         ax_img = imshow_multichannel(
-            ax, imgs2d[i], channels[i], cmap, aspect, alphas[i], origin=origin, 
-            interpolation="none", norms=norm, vmin=vmins[i], vmax=vmaxs[i])
+            ax, imgs2d[i], channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
+            vmax=vmaxs[i], origin=origin, interpolation="none",
+            norms=norm)
         ax_imgs.append(ax_img)
     return ax_imgs
 

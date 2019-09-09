@@ -846,8 +846,6 @@ def process_file(filename_base, offset, roi_size):
 
     norm = config.process_settings["norm"]
     if norm:
-        # normalize the main image and its intensity-related metadata
-        image5d = lib_clrbrain.normalize(image5d, *norm)
         in_range = (
             min((0, config.near_max.flat)), max(config.vmax_overview.flat))
         config.near_min = [

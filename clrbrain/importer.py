@@ -455,7 +455,7 @@ def read_info(filename_info_npz, check_ver=False):
         try:
             config.near_max = output["near_max"]
             print("set near_max to {}".format(config.near_max))
-            if config.vmax_overview == config.DEFAULT_VMAX_OVERVIEW:
+            if config.vmaxs is None:
                 config.vmax_overview = config.near_max * 1.1
             print("Set vmax_overview to {}".format(config.vmax_overview))
         except KeyError:

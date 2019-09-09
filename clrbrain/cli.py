@@ -519,10 +519,11 @@ def main(process_args_only=False):
         print("Set vmins to", config.vmins)
     
     if args.vmax:
-        # specify vmax levels
-        # TODO: consider saving as separate var
-        config.vmax_overview = [float(val) for val in args.vmax.split(",")]
-        print("Set vmax_overview to", config.vmax_overview)
+        # specify vmax levels and copy to vmax overview used for plotting 
+        # and updated for normalization
+        config.vmaxs = [float(val) for val in args.vmax.split(",")]
+        config.vmax_overview = list(config.vmaxs)
+        print("Set vmaxs to", config.vmaxs)
     
     if args.reg_suffixes is not None:
         # specify suffixes of registered images to load

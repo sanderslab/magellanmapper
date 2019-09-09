@@ -844,21 +844,25 @@ def process_file(filename_base, offset, roi_size):
         # need to rotate images output by deep learning toolkit
         image5d = np.rot90(image5d, load_rot90, (2, 3))
 
-    norm = config.process_settings["norm"]
-    if norm:
-        in_range = (
-            min((0, config.near_max.flat)), max(config.vmax_overview.flat))
-        config.near_min = [
-            lib_clrbrain.normalize(config.near_min, *norm, in_range)]
-        config.near_max = [
-            lib_clrbrain.normalize(config.near_max, *norm, in_range)]
-        config.vmax_overview = [
-            lib_clrbrain.normalize(config.vmax_overview, *norm, in_range)]
-    
     # add any additional image5d thresholds for multichannel images, such 
     # as those loaded without metadata for these settings
     colormaps.setup_cmaps()
     num_channels = 1 if image5d.ndim <= 4 else image5d.shape[4]
+    norm = config.process_settings["norm"]
+    if norm:
+        # normalize/rescale the main image's intensity-related metadata but 
+        # not the image itself since it requires loading the full image; 
+        # instead, defer normalization to just before displaying each plane
+        in_range = (
+            min((0, *config.near_min)), max(config.vmax_overview))
+        config.near_min = [
+            lib_clrbrain.normalize(config.near_min, *norm, in_range=in_range)]
+        config.near_max = [
+            lib_clrbrain.normalize(config.near_max, *norm, in_range=in_range)]
+        if config.vmaxs is None:
+            config.vmax_overview = [
+                lib_clrbrain.normalize(
+                    config.vmax_overview, *norm, in_range=in_range)]
     config.near_max = lib_clrbrain.pad_seq(config.near_max, num_channels, -1)
     config.near_min = lib_clrbrain.pad_seq(config.near_min, num_channels, 0)
     config.vmax_overview = lib_clrbrain.pad_seq(

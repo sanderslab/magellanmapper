@@ -654,5 +654,26 @@ def enum_dict_aslist(d):
     """
     return [(key.name, val) for key, val in d.items()]
 
+
+def get_enum(s, enum_class):
+    """Get an enum from a string where the enum class is assumed to have 
+    all upper-case keys, returning None if the key is not found.
+    
+    Args:
+        s (str): Key of enum to find, case-insensitive.
+        enum_class (:class:`Enum`): Enum class to search.
+
+    Returns:
+        The enum if found, otherwise None.
+
+    """
+    enum = None
+    if s:
+        s_upper = s.upper()
+        if s_upper in enum_class:
+            enum = enum_class[s_upper]
+    return enum
+
+
 if __name__ == "__main__":
     print("Initializing Clrbrain general library module")

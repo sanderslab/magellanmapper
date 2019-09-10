@@ -84,36 +84,38 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   #   is removed if it is a non-intercept row. The colums are assumed to have 
   #   effect size in the 2nd column and p-value in the 4th.
   
-  coef.tab <- NULL
+  result <- NULL
+  col.effect <- "Estimate"
+  num.sides <- length(unique(sides))
   if (model == kModel[1]) {
     # logistic regression
     fit <- glm(genos ~ vals * sides, family=binomial)
-    coef.tab <- summary.glm(fit)$coefficients
+    result <- summary.glm(fit)$coefficients
     # remove first ("non-intercept") row
-    coef.tab <- coef.tab[-(1:1), ]
+    result <- result[-(1:1), ]
   } else if (model == kModel[2]) {
     # linear regression
     # TODO: see whether need to factorize genos
     fit <- lm(vals ~ genos * sides)
-    coef.tab <- summary.lm(fit)$coefficients
+    result <- summary.lm(fit)$coefficients
     # remove first ("non-intercept") row
-    coef.tab <- coef.tab[-(1:1), ]
+    result <- result[-(1:1), ]
   } else if (model == kModel[3]) {
     # generalized estimating equations
     # TODO: fix model prob "fitted value very close to 1" error
     fit <- gee::gee(
       genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
-    coef.tab <- summary(fit)$coefficients
+    result <- summary(fit)$coefficients
   } else if (model == kModel[4]) {
     # ordered logistic regression
     vals <- scale(vals)
     genos <- factor(genos, levels=kGenoLevels)
     fit <- tryCatch({
       fit <- MASS::polr(genos ~ vals * sides, Hess=TRUE)
-      coef.tab <- coef(summary(fit))
+      result <- coef(summary(fit))
       # calculate p-vals and incorporate into coefficients
-      p.vals <- pnorm(abs(coef.tab[, "t value"]), lower.tail=FALSE) * 2
-      coef.tab <- cbind(coef.tab, "p value"=p.vals)
+      p.vals <- pnorm(abs(result[, "t value"]), lower.tail=FALSE) * 2
+      result <- cbind(result, "p value"=p.vals)
     },
       error=function(e) {
         print(paste("Could not calculate ordered logistic regression", 
@@ -123,7 +125,20 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   } else {
     cat("Sorry, model", model, "not found\n")
   }
-  coef.tab <- cbind("N"=length(vals), coef.tab)
+  
+  # basic stats data frame in format for filterStats
+  coef.tab <- setupBasicStats()
+  effect <- result[[col.effect]]
+  coef.tab$Value <- c(effect)
+  stderr <- "Std. Error"
+  if (is.element(stderr, names(result))) {
+    # use SEM for the "CI" values
+    ci <- result[[stderr]]
+    coef.tab$CI.low <- c(effect - ci)
+    coef.tab$CI.hi <- c(ci - effect)
+  }
+  coef.tab$P <- c(result[4])
+  coef.tab$N <- c(length(vals))
   print(coef.tab)
   return(coef.tab)
 }

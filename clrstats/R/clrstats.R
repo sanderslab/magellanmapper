@@ -728,6 +728,13 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[14]
     config.env$SampleLegend <- TRUE
     
+  } else if (name == "geno") {
+    # compare across multiple genotypes
+    config.env$Measurements <- kMeas[2]
+    config.env$Model <- kModel[1]
+    config.env$VolcanoLogX <- FALSE
+    config.env$Condition <- "smoothed"
+    
   } else if (name == "skinny") {
     # very narrow plots
     config.env$PlotSize <- c(3.5, 7)
@@ -763,6 +770,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("compactness.stats")
   #setupConfig("reg")
   #setupConfig("wt.test")
+  #setupConfig("geno")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")
   #setupConfig("skinny.small")

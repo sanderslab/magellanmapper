@@ -638,7 +638,8 @@ def main(process_args_only=False):
             plot_2d.plot_roc(stats_df, not config.no_show)
         else:
             # processes file with default settings
-            process_file(filename_base, offset, roi_size)
+            setup_images(filename_base, config.proc_type)
+            process_file(filename_base, offset, roi_size, config.proc_type)
     
     # unless loading images for GUI, exit directly since otherwise application 
     #hangs if launched from module with GUI
@@ -664,7 +665,9 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
     for i in range(len(offsets)):
         size = (roi_sizes[i] if roi_sizes_len > 1 
                 else roi_sizes[0])
-        stat_roi, fdbk = process_file(filename_base, offsets[i], size)
+        setup_images(filename_base, config.proc_type)
+        stat_roi, fdbk = process_file(
+            filename_base, offsets[i], size, config.proc_type)
         if stat_roi is not None:
             stat = np.add(stat, stat_roi)
         summaries.append(
@@ -672,17 +675,14 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
     return stat, summaries
 
 
-def process_file(filename_base, offset, roi_size):
-    """Processes a single image file non-interactively.
+def setup_images(filename_base, proc_mode):
+    """Sets up an image and all associated images and metadata.
     
     Args:
         filename_base: Base filename.
-        offset: Offset as (x, y, z) to start processing.
-        roi_size: Size of region to process, given as (x, y, z).
+        proc_mode (str): Processing mode, which should be a key in 
+            :class:`config.ProcessTypes`, case-insensitive.
     
-    Returns:
-        Tuple of stats from processing, or None if no stats, and 
-        text feedback from the processing, or None if no feedback.
     """
     # print longer Numpy arrays to assist debugging
     np.set_printoptions(linewidth=200, threshold=10000)
@@ -696,7 +696,7 @@ def process_file(filename_base, offset, roi_size):
     
     # LOAD MAIN IMAGE
 
-    proc_type = lib_clrbrain.get_enum(config.proc_type, config.ProcessTypes)
+    proc_type = lib_clrbrain.get_enum(proc_mode, config.ProcessTypes)
     if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
                      config.ProcessTypes.EXPORT_BLOBS):
         # load a processed image, typically a chunk of a larger image
@@ -863,11 +863,26 @@ def process_file(filename_base, offset, roi_size):
         print("generating colormaps from RGBA colors:\n", colors)
         for color in colors:
             config.cmaps.append(colormaps.make_dark_linear_cmap("", color))
+
+
+def process_file(filename_base, offset, roi_size, proc_mode):
+    """Processes a single image file non-interactively.
     
+    Args:
+        filename_base: Base filename.
+        offset: Offset as (x, y, z) to start processing.
+        roi_size: Size of region to process, given as (x, y, z).
+        proc_mode (str): Processing mode, which should be a key in 
+            :class:`config.ProcessTypes`, case-insensitive.
     
+    Returns:
+        Tuple of stats from processing, or None if no stats, and 
+        text feedback from the processing, or None if no feedback.
+    """
     # PROCESS BY TYPE
     stats = None
     fdbk = None
+    proc_type = lib_clrbrain.get_enum(proc_mode, config.ProcessTypes)
     if proc_type is config.ProcessTypes.LOAD:
         # loading completed
         return None, None
@@ -924,7 +939,7 @@ def process_file(filename_base, offset, roi_size):
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file
         from clrbrain import export_rois
-        export_rois.blobs_to_csv(segments_proc, filename_info_proc)
+        export_rois.blobs_to_csv(segments_proc, filename_base)
         
     elif proc_type in (
             config.ProcessTypes.PROCESSING, config.ProcessTypes.PROCESSING_MP):

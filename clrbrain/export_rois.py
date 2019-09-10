@@ -195,7 +195,7 @@ def blobs_to_csv(blobs, path):
         path: Path to blobs file. The CSV file will be the same as this path 
             except replacing the extension with ``.csv.gz``.
     """
-    path_out = "{}.csv.gz".format(os.path.splitext(path)[0])
+    path_out = "{}_blobs.csv.gz".format(os.path.splitext(path)[0])
     header = "z,y,x,r"
     np.savetxt(path_out, blobs[:, :4], delimiter=",", header=header)
 

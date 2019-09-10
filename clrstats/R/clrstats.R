@@ -75,8 +75,7 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   #   model: Model to use, corresponding to one of kModel.
   #   vals: Main independent variable.
   #   genos: Genotypes vector.
-  #   sides: Vector indicated which side the given values is on, eg 
-  #     corresponding to left or right
+  #   sides: Vector corresponding to the side of vals, eg left or right.
   #   ids: Vector of sample IDs; defaults to NULL.
   #
   # Returns:
@@ -89,7 +88,11 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   num.sides <- length(unique(sides))
   if (model == kModel[1]) {
     # logistic regression
-    fit <- glm(genos ~ vals * sides, family=binomial)
+    if (num.sides > 1) {
+      fit <- glm(genos ~ vals * sides, family=binomial)
+    } else {
+      fit <- glm(genos ~ vals, family=binomial)
+    }
     result <- summary.glm(fit)$coefficients
     # remove first ("non-intercept") row
     result <- result[-(1:1), ]

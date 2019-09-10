@@ -302,10 +302,15 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       points(x.vals, vals.group, pch=pch, col=colors.group, 
              bg=colors.group, cex=pt.cex)
       
-      # plot summary stats on outer subgroups of scatter plots
-      x.summary <- x
-      if (boxplot || paired) {
+      # plot summary stats, eg means/CIs or boxplots
+      x.summary <- x # default to means/CIs under jitter points
+      if (paired) {
+        # shift to outer sides of paired points since the points' vertical 
+        # alignment would occlude summary stats
         x.summary <- if (i %% 2 == 0) x + 0.25 else x - 0.25
+      } else if (boxplot) {
+        # plot boxplot before subgroups
+        x.summary <- x - 0.25
       }
       if (boxplot) {
         # overlay boxplot

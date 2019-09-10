@@ -297,7 +297,7 @@ setupPairing <- function(df.region, col, split.col) {
 }
 
 statsByRegion <- function(df, col, model, split.by.side=TRUE, 
-                          regions.ignore=NULL) {
+                          regions.ignore=NULL, cond=NULL) {
   # Calculate statistics given by region for columns starting with the given 
   # string using the selected model.
   #
@@ -313,6 +313,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   #     corresponding regions from opposite sides into single regions; 
   #     defaults to True.
   #   regions.ignore: Vector of regions to ignore; default to NULL.
+  #   cond: Filter df to keep only this condition; defaults to NULL.
   
   # find all regions
   regions <- unique(df$Region)
@@ -320,6 +321,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   cols <- c("Region", "Stats", "Volume", "Nuclei")
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols
+  if (!is.null(cond)) {
+    # filter by the given condition
+    df <- df[df$Condition == cond, ]
+  }
   # use original order of appearance in Condition column to sort each 
   # region since order may change from region to region
   cond.unique <- unique(df$Condition)
@@ -578,7 +583,8 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
     regions.ignore <- kRegionsIgnore
   }
   stats <- statsByRegion(
-    df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore)
+    df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore,
+    cond=config.env$Condition)
   stats.filtered <- filterStats(stats, corr=corr)
   stats.filtered <- merge(region.ids, stats.filtered, by="Region", all.y=TRUE)
   print(stats.filtered)
@@ -656,6 +662,7 @@ setupConfig <- function(name=NULL) {
     config.env$ReversePairedStats <- FALSE
     config.env$SummaryStats <- kSummaryStats[2]
     config.env$Sort.Groups <- TRUE
+    config.env$Condition <- NULL
     
   } else if (name == "aba") {
     # multiple distinct atlases

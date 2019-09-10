@@ -920,8 +920,11 @@ def process_file(filename_base, offset, roi_size, proc_mode):
         for i in range(nrows):
             for j in range(ncols):
                 ax = fig.add_subplot(gs[i, j])
+                path = config.filenames[i * nrows + j]
+                setup_images(importer.filename_to_base(
+                    path, config.series), proc_mode)
                 plotted_imgs = export_stack.stack_to_img_file(
-                    ax, image5d, config.filename, offset=offset, 
+                    ax, image5d, path, offset=offset, 
                     roi_size=roi_size, slice_vals=config.slice_vals, 
                     rescale=config.rescale, 
                     labels_imgs=(config.labels_img, config.borders_img), 

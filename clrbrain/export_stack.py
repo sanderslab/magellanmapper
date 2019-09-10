@@ -107,9 +107,11 @@ class StackPlaneIO(object):
         return i, imgs_proc
 
 
-def _build_stack(images, out_path, process_fnc, rescale, aspect=None, 
-                 origin=None, delay=None, cmaps_labels=None, scale_bar=True):
+def _build_stack(ax, images, process_fnc, rescale, aspect=None, 
+                 origin=None, cmaps_labels=None, scale_bar=True):
     """Builds an animated GIF from a stack of images.
+    
+    Uses multiprocessing to load or resize each image.
     
     Args:
         images: Sequence of images. For import, each "image" is a path to 
@@ -117,12 +119,9 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
             planes, with the first sequence assumed to an atlas, 
             followed by labels-based images, each consisting of 
             corresponding planes.
-        out_path: Output path.
         process_fnc: Function to process each image through multiprocessing, 
             where the function should take an index and image and return the 
             index and processed plane.
-        delay: Delay between image display in ms. If None, the delay will 
-            defaul to 100ms.
         cmaps_labels: Sequence of colormaps for labels-based images; 
             defaults to None. Length should be equal to that of 
             ``images`` - 1.
@@ -135,10 +134,6 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     if num_images < 1: return None
     
     # Matplotlib figure for building the animation
-    fig = plt.figure(frameon=False, constrained_layout=True)
-    fig.set_constrained_layout_pads(w_pad=0, h_pad=0)
-    gs = gridspec.GridSpec(1, 1, figure=fig)
-    ax = fig.add_subplot(gs[0, 0])
     plot_support.hide_axes(ax)
     
     # import the images as Matplotlib artists via multiprocessing
@@ -178,34 +173,49 @@ def _build_stack(images, out_path, process_fnc, rescale, aspect=None,
     pool.close()
     pool.join()
     
-    # remove borders and add scale bar
-    plot_support.fit_frame_to_image(fig, img_size, aspect)
     if scale_bar:
         plot_support.add_scale_bar(ax, 1 / rescale, config.plane)
     
+    return plotted_imgs
+
+
+def animate_imgs(base_path, plotted_imgs, delay, ext=None):
+    """Export to an animated image.
+    
+    Defaults to an animated GIF unless ``ext`` specifies otherwise.
+    
+    Args:
+        base_path (str): String from which an output path will be constructed.
+        plotted_imgs: 
+        delay: Delay between image display in ms. If None, the delay will 
+            defaul to 100ms.
+
+    Returns:
+
+    """
+    if ext is None: ext = "gif"
+    out_path = lib_clrbrain.combine_paths(base_path, "animated", ext=ext)
     lib_clrbrain.backup_file(out_path)
-    if num_images > 1:
-        # export to animated GIF
-        if delay is None:
-            delay = 100
-        anim = animation.ArtistAnimation(
-            fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
-        try:
-            anim.save(out_path, writer="imagemagick")
-        except ValueError as e:
-            print(e)
-            print("No animation writer available for Matplotlib")
-        print("saved animation file to {}".format(out_path))
+    if delay is None:
+        delay = 100
+    if plotted_imgs and len(plotted_imgs[0]) > 0:
+        fig = plotted_imgs[0][0].figure
     else:
-        # single plane figure export; transparency depends on alphas 
-        # and requires formats supporting transparency (eg png)
-        print("extracting plane as {}".format(out_path))
-        fig.savefig(out_path, transparent=True)
+        lib_clrbrain.warn("No images available to animate")
+        return
+    anim = animation.ArtistAnimation(
+        fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
+    try:
+        anim.save(out_path, writer="imagemagick")
+        print("saved animation file to {}".format(out_path))
+    except ValueError as e:
+        print(e)
+        lib_clrbrain.warn("No animation writer available for Matplotlib")
 
 
-def stack_to_img_file(image5d, path, offset=None, roi_size=None, 
-                      slice_vals=None, rescale=None, delay=None, 
-                      labels_imgs=None, animated=True):
+def stack_to_img_file(ax, image5d, path=None, offset=None, roi_size=None,
+                      slice_vals=None, rescale=None, labels_imgs=None,
+                      multiplane=True, fit=False):
     """Build an image file from a stack of images in a directory or an 
     array, exporting as an animated GIF or movie for multiple planes or 
     extracting a single plane to a standard image file format.
@@ -213,12 +223,12 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     Writes the file to the parent directory of path.
     
     Args:
-        image5d: Images as a 4/5D Numpy array (t,z,y,x[c]).
-        path: Path to the image directory or saved Numpy array. If the path is 
-            a directory, all images from this directory will be imported in 
-            Python sorted order. If the path is a saved Numpy array (eg .npy 
-            file), animations will be built by plane, using the plane 
-            orientation set in :const:`config.plane`.
+        ax (:obj:`plt.Axes`): Matplotlib axes on which to plot images.
+        image5d: Images as a 4/5D Numpy array (t,z,y,x[c]). Can be None if 
+            ``path`` is set.
+        path: Path to an image directory from which all files will be imported 
+            in Python sorted order, taking precedence over ``imaged5d``; 
+            defaults to None.
         offset: Tuple of offset given in user order (x, y, z); defaults to 
             None. Requires ``roi_size`` to not be None.
         roi_size: Size of the region of interest in user order (x, y, z); 
@@ -229,15 +239,13 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
             also given, ``slice_vals`` will only be used for its interval term.
         rescale: Rescaling factor for each image, performed on a plane-by-plane 
             basis; defaults to None, in which case 1.0 will be used.
-        delay: Delay between image display in ms.
         labels_imgs: Sequence of labels-based images as a Numpy z,y,x arrays, 
             typically including labels and borders images; defaults to None.
-        animated: True to extract the images as an animated GIF or movie 
+        multiplane: True to extract the images as an animated GIF or movie 
             file; False to extract a single plane only. Defaults to False.
+        fit (bool): True to fit the figure frame to the resulting image.
     """
     print("Starting image stack export")
-    parent_path = os.path.dirname(path)
-    out_name = lib_clrbrain.get_filename_without_ext(path)
     
     # build "z" slice, which will be applied to the transposed image; 
     # reduce image to 1 plane if in single mode
@@ -254,7 +262,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
         interval = None
         if slice_vals is not None and len(slice_vals) > 2:
             interval = slice_vals[2]
-        size = roi_size[2] if animated else 1
+        size = roi_size[2] if multiplane else 1
         img_sl = slice(offset[2], offset[2] + size, interval)
         if interval is not None and interval < 0:
             # reverse start/stop order to iterate backward
@@ -263,7 +271,7 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
               .format(offset, size, img_sl))
     elif slice_vals is not None:
         # build directly from slice vals unless not an animation
-        if animated:
+        if multiplane:
             img_sl = slice(*slice_vals)
         else:
             # single plane only for non-animation
@@ -276,9 +284,8 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
     aspect = None
     origin = None
     cmaps_labels = []
-    lbl_suffix = ""
     extracted_planes = []
-    if os.path.isdir(path):
+    if path and os.path.isdir(path):
         # builds animations from all files in a directory
         planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
         print(planes)
@@ -297,7 +304,6 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
                 cmaps_labels.append(
                     colormaps.get_labels_discrete_colormap(
                         imgs[1], 0, dup_for_neg=True, use_orig_labels=True))
-                lbl_suffix = "_label"
             if num_imgs > 2:
                 # subsequent images' colormaps are based on first labels 
                 # if possible
@@ -316,21 +322,18 @@ def stack_to_img_file(image5d, path, offset=None, roi_size=None,
             extracted_planes.append(planes)
         fnc = StackPlaneIO.process_plane
     
-    # name file based on animation vs single plane extraction
-    ext = config.savefig
-    if animated:
-        if ext is None: ext = "gif"
-        out_name += "_animation." + ext
-    else:
-        out_name += "_plane_{}{}{}.{}".format(
-            plot_support.get_plane_axis(config.plane), img_sl.start, 
-            lbl_suffix, ext)
-    out_path = os.path.join(parent_path, out_name)
-    
     # export planes
-    _build_stack(extracted_planes, out_path, fnc, rescale, aspect=aspect, 
-                 origin=origin, delay=delay, 
-                 cmaps_labels=cmaps_labels, scale_bar=config.scale_bar)
+    plotted_imgs = _build_stack(
+        ax, extracted_planes, fnc, rescale, aspect=aspect, 
+        origin=origin, cmaps_labels=cmaps_labels, scale_bar=config.scale_bar)
+    
+    if fit and plotted_imgs:
+        # fit frame to first image
+        ax_img = plotted_imgs[0][0]
+        plot_support.fit_frame_to_image(
+            ax_img.figure, ax_img.get_array().shape, aspect)
+    
+    return plotted_imgs
 
 
 if __name__ == "__main__":

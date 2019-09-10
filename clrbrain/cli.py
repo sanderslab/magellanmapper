@@ -895,13 +895,31 @@ def process_file(filename_base, offset, roi_size):
     elif proc_type in (PROC_TYPES[4], PROC_TYPES[7]):
         # generate animated GIF or extract single plane
         from clrbrain import export_stack
+        from clrbrain import plot_support
         animated = proc_type == PROC_TYPES[7]
-        export_stack.stack_to_img_file(
-            image5d, config.filename, offset=offset, roi_size=roi_size, 
-            slice_vals=config.slice_vals, rescale=config.rescale, 
-            delay=config.delay, 
-            labels_imgs=(config.labels_img, config.borders_img), 
-            animated=animated)
+        size = config.plot_labels[config.PlotLabels.SIZE]
+        ncols, nrows = size if size else (1, 1)
+        print(size, ncols, nrows)
+        fig, gs = plot_support.setup_fig(nrows, ncols)
+        plotted_imgs = None
+        for i in range(nrows):
+            for j in range(ncols):
+                ax = fig.add_subplot(gs[i, j])
+                plotted_imgs = export_stack.stack_to_img_file(
+                    ax, image5d, config.filename, offset=offset, 
+                    roi_size=roi_size, slice_vals=config.slice_vals, 
+                    rescale=config.rescale, 
+                    labels_imgs=(config.labels_img, config.borders_img), 
+                    multiplane=animated, 
+                    fit=(size is None or ncols * nrows == 1))
+        if animated:
+            export_stack.animate_imgs(
+                config.filename, plotted_imgs, config.delay, config.savefig)
+        else:
+            planei = roi_size[-1] if roi_size else config.slice_vals[0]
+            mod = "_plane_{}{}".format(
+                plot_support.get_plane_axis(config.plane), planei)
+            plot_support.save_fig(config.filename, config.savefig, mod)
     
     elif proc_type == PROC_TYPES[8]:
         # export blobs to CSV file

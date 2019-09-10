@@ -881,9 +881,9 @@ def process_file(filename_base, offset, roi_size):
         # export ROIs; assumes that info_proc was already loaded to 
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
-        from clrbrain import exporter
+        from clrbrain import export_rois
         db = config.db if config.truth_db is None else config.truth_db
-        exporter.export_rois(
+        export_rois.export_rois(
             db, image5d, config.channel, filename_base, config.border)
         
     elif proc_type == PROC_TYPES[6]:
@@ -905,8 +905,8 @@ def process_file(filename_base, offset, roi_size):
     
     elif proc_type == PROC_TYPES[8]:
         # export blobs to CSV file
-        from clrbrain import exporter
-        exporter.blobs_to_csv(segments_proc, filename_info_proc)
+        from clrbrain import export_rois
+        export_rois.blobs_to_csv(segments_proc, filename_info_proc)
         
     elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
         # detect blobs in the full image

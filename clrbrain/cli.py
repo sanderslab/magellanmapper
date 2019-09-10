@@ -108,12 +108,6 @@ image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
 
-PROC_TYPES = (
-    "importonly", "processing", "processing_mp", "load", "extract", 
-    "export_rois", "transpose", "animated", "export_blobs"
-)
-proc_type = None
-
 TRUTH_DB_TYPES = ("view", "verify", "verified", "edit")
 truth_db_type = None
 
@@ -250,7 +244,7 @@ def main(process_args_only=False):
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for Clrbrain")
-    global roi_size, offset, proc_type, mlab_3d, truth_db_type
+    global roi_size, offset, mlab_3d, truth_db_type
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series")
@@ -358,13 +352,16 @@ def main(process_args_only=False):
         else:
             print("padding_2d ({}) should be given as 3 values (x, y, z)"
                   .format(args.padding_2d))
+    
+    # set up main processing mode
     if args.proc is not None:
-        if args.proc in PROC_TYPES:
-            proc_type = args.proc
-            print("processing type set to {}".format(proc_type))
-        else:
-            print("Did not recognize processing type: {}"
-                  .format(args.proc))
+        config.proc_type = args.proc
+        print("processing type set to {}".format(config.proc_type))
+    proc_type = lib_clrbrain.get_enum(config.proc_type, config.ProcessTypes)
+    if config.proc_type and proc_type not in config.ProcessTypes:
+        lib_clrbrain.warn(
+            "\"{}\" processing type not found".format(config.proc_type))
+    
     if args.res is not None:
         res_split = args.res.split(",")
         if len(res_split) >= 3:
@@ -645,7 +642,7 @@ def main(process_args_only=False):
     
     # unless loading images for GUI, exit directly since otherwise application 
     #hangs if launched from module with GUI
-    if proc_type != None and proc_type != PROC_TYPES[3]:
+    if proc_type is not config.ProcessTypes.LOAD:
         os._exit(os.EX_OK)
 
 
@@ -698,8 +695,10 @@ def process_file(filename_base, offset, roi_size):
     #print(filename_image5d_proc)
     
     # LOAD MAIN IMAGE
-    
-    if proc_type in (PROC_TYPES[3], PROC_TYPES[5], PROC_TYPES[8]):
+
+    proc_type = lib_clrbrain.get_enum(config.proc_type, config.ProcessTypes)
+    if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
+                     config.ProcessTypes.EXPORT_BLOBS):
         # load a processed image, typically a chunk of a larger image
         print("Loading processed image files")
         global image5d_proc, segments_proc
@@ -775,11 +774,11 @@ def process_file(filename_base, offset, roi_size):
                 print(e)
         else:
             # load or import from Clrbrain Numpy format
-            load = proc_type != PROC_TYPES[0] # explicitly re/import
+            load = proc_type is config.ProcessTypes.IMPORT_ONLY  # re/import
             image5d = importer.read_file(
                 config.filename, config.series, channel=config.channel, 
                 load=load)
-    
+
     if config.load_labels is not None:
         # load registered files including labels
         
@@ -869,15 +868,15 @@ def process_file(filename_base, offset, roi_size):
     # PROCESS BY TYPE
     stats = None
     fdbk = None
-    if proc_type == PROC_TYPES[3]:
+    if proc_type is config.ProcessTypes.LOAD:
         # loading completed
         return None, None
-        
-    elif proc_type == PROC_TYPES[0]:
+
+    elif proc_type is config.ProcessTypes.LOAD:
         # already imported so does nothing
         print("imported {}, will exit".format(config.filename))
     
-    elif proc_type == PROC_TYPES[5]:
+    elif proc_type is config.ProcessTypes.EXPORT_ROIS:
         # export ROIs; assumes that info_proc was already loaded to 
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
@@ -886,17 +885,18 @@ def process_file(filename_base, offset, roi_size):
         export_rois.export_rois(
             db, image5d, config.channel, filename_base, config.border)
         
-    elif proc_type == PROC_TYPES[6]:
+    elif proc_type is config.ProcessTypes.TRANSPOSE:
         # transpose and/or rescale whole large image
         transformer.transpose_img(
             config.filename, config.series, plane=config.plane, 
             rescale=config.rescale)
         
-    elif proc_type in (PROC_TYPES[4], PROC_TYPES[7]):
+    elif proc_type in (
+            config.ProcessTypes.EXTRACT, config.ProcessTypes.ANIMATED):
         # generate animated GIF or extract single plane
         from clrbrain import export_stack
         from clrbrain import plot_support
-        animated = proc_type == PROC_TYPES[7]
+        animated = proc_type is config.ProcessTypes.ANIMATED
         size = config.plot_labels[config.PlotLabels.SIZE]
         ncols, nrows = size if size else (1, 1)
         print(size, ncols, nrows)
@@ -921,12 +921,13 @@ def process_file(filename_base, offset, roi_size):
                 plot_support.get_plane_axis(config.plane), planei)
             plot_support.save_fig(config.filename, config.savefig, mod)
     
-    elif proc_type == PROC_TYPES[8]:
+    elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file
         from clrbrain import export_rois
         export_rois.blobs_to_csv(segments_proc, filename_info_proc)
         
-    elif proc_type == PROC_TYPES[1] or proc_type == PROC_TYPES[2]:
+    elif proc_type in (
+            config.ProcessTypes.PROCESSING, config.ProcessTypes.PROCESSING_MP):
         # detect blobs in the full image
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, image5d, offset, roi_size, 

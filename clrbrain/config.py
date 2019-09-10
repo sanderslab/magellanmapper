@@ -69,6 +69,14 @@ resolutions = None
 magnification = -1.0  # objective magnification
 zoom = -1.0  # objective zoom
 
+# main processing tasks
+ProcessTypes = Enum(
+    "ProcessTypes", (
+        "IMPORTONLY", "PROCESSING", "PROCESSING_MP", "LOAD", "EXTRACT", 
+        "EXPORT_ROIS", "TRANSPOSE", "ANIMATED", "EXPORT_BLOBS"
+    )
+)
+proc_type = None
 
 # 2D PLOTTING
 

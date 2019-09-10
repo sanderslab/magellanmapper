@@ -670,8 +670,10 @@ def get_enum(s, enum_class):
     enum = None
     if s:
         s_upper = s.upper()
-        if s_upper in enum_class:
+        try:
             enum = enum_class[s_upper]
+        except KeyError:
+            pass
     return enum
 
 

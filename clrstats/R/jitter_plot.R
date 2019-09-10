@@ -109,10 +109,13 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   for (group in groups.unique) {
     subgroups.in.group <- subgroups
     if (group != "") {
-      subgroups.in.group <- df.region[df.region[[group.col]] == group, split.col]
+      subgroups.in.group <- df.region[
+        df.region[[group.col]] == group, split.col]
     }
-    subgroups.in.group.unique <- getUniqueSubgroups(subgroups.in.group, split.by.subgroup)
-    subgroups.by.group <- append(subgroups.by.group, list(subgroups.in.group.unique))
+    subgroups.in.group.unique <- getUniqueSubgroups(
+      subgroups.in.group, split.by.subgroup)
+    subgroups.by.group <- append(
+      subgroups.by.group, list(subgroups.in.group.unique))
     for (subgroup in subgroups.in.group.unique) {
       # vals for group based on whether to include subgroup
       if (subgroup != "") {

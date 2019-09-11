@@ -641,8 +641,8 @@ def main(process_args_only=False):
                 config.filename, series, offset, roi_size, config.proc_type)
     
     # unless loading images for GUI, exit directly since otherwise application 
-    #hangs if launched from module with GUI
-    if proc_type is not config.ProcessTypes.LOAD:
+    # hangs if launched from module with GUI
+    if proc_type is not None and proc_type is not config.ProcessTypes.LOAD:
         os._exit(os.EX_OK)
 
 

@@ -941,9 +941,15 @@ def process_file(path, series, offset, roi_size, proc_mode):
                 path, plotted_imgs, config.delay, config.savefig)
         else:
             planei = roi_size[-1] if roi_size else config.slice_vals[0]
+            path_base = path
+            if num_paths > 1:
+                # output filename as a collage of images
+                if not os.path.isdir(path_base):
+                    path_base = os.path.dirname(path_base)
+                path_base = os.path.join(path_base, "collage")
             mod = "_plane_{}{}".format(
                 plot_support.get_plane_axis(config.plane), planei)
-            plot_support.save_fig(path, config.savefig, mod)
+            plot_support.save_fig(path_base, config.savefig, mod)
     
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file

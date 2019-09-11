@@ -914,42 +914,9 @@ def process_file(path, series, offset, roi_size, proc_mode):
             config.ProcessTypes.EXTRACT, config.ProcessTypes.ANIMATED):
         # generate animated GIF or extract single plane
         from clrbrain import export_stack
-        from clrbrain import plot_support
-        animated = proc_type is config.ProcessTypes.ANIMATED
-        size = config.plot_labels[config.PlotLabels.LAYOUT]
-        ncols, nrows = size if size else (1, 1)
-        print(size, ncols, nrows)
-        fig, gs = plot_support.setup_fig(nrows, ncols)
-        plotted_imgs = None
-        num_paths = len(config.filenames)
-        for i in range(nrows):
-            for j in range(ncols):
-                ax = fig.add_subplot(gs[i, j])
-                n = i * ncols + j
-                if n >= num_paths: break
-                path_sub = config.filenames[n]
-                setup_images(path_sub, series, proc_mode)
-                plotted_imgs = export_stack.stack_to_img_file(
-                    ax, image5d, path_sub, offset=offset, 
-                    roi_size=roi_size, slice_vals=config.slice_vals, 
-                    rescale=config.rescale, 
-                    labels_imgs=(config.labels_img, config.borders_img), 
-                    multiplane=animated, 
-                    fit=(size is None or ncols * nrows == 1))
-        if animated:
-            export_stack.animate_imgs(
-                path, plotted_imgs, config.delay, config.savefig)
-        else:
-            planei = roi_size[-1] if roi_size else config.slice_vals[0]
-            path_base = path
-            if num_paths > 1:
-                # output filename as a collage of images
-                if not os.path.isdir(path_base):
-                    path_base = os.path.dirname(path_base)
-                path_base = os.path.join(path_base, "collage")
-            mod = "_plane_{}{}".format(
-                plot_support.get_plane_axis(config.plane), planei)
-            plot_support.save_fig(path_base, config.savefig, mod)
+        export_stack.stack_to_img(
+            config.filenames, series, offset, roi_size, 
+            proc_type is config.ProcessTypes.ANIMATED)
     
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file

@@ -10,11 +10,10 @@ import multiprocessing as mp
 import numpy as np
 from skimage import transform
 from skimage import io
-import matplotlib.pyplot as plt
 from matplotlib import animation
 from scipy import ndimage
-import matplotlib.gridspec as gridspec
 
+from clrbrain import cli
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
@@ -213,14 +212,11 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None):
         lib_clrbrain.warn("No animation writer available for Matplotlib")
 
 
-def stack_to_img_file(ax, image5d, path=None, offset=None, roi_size=None,
-                      slice_vals=None, rescale=None, labels_imgs=None,
-                      multiplane=True, fit=False):
-    """Build an image file from a stack of images in a directory or an 
-    array, exporting as an animated GIF or movie for multiple planes or 
-    extracting a single plane to a standard image file format.
-    
-    Writes the file to the parent directory of path.
+def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
+                  slice_vals=None, rescale=None, labels_imgs=None,
+                  multiplane=True, fit=False):
+    """Prepares to combine a stack of images in a directory or a single 
+    image given as a Numpy array.
     
     Args:
         ax (:obj:`plt.Axes`): Matplotlib axes on which to plot images.
@@ -334,6 +330,61 @@ def stack_to_img_file(ax, image5d, path=None, offset=None, roi_size=None,
             ax_img.figure, ax_img.get_array().shape, aspect)
     
     return plotted_imgs
+
+
+def stack_to_img(paths, series, offset, roi_size, animated):
+    """Build an image file from a stack of images in a directory or an 
+    array, exporting as an animated GIF or movie for multiple planes or 
+    extracting a single plane to a standard image file format.
+    
+    Writes the file to the parent directory of path.
+    
+    Args:
+        paths (List[str]): Image paths, which can each be either an image 
+            directory or a base path to a single image, including 
+            volumetric images.
+        series (int): Image series number.
+        offset (List[int]): Tuple of offset given in user order (x, y, z); 
+            defaults to None. Requires ``roi_size`` to not be None.
+        roi_size (List[int]): Size of the region of interest in user order 
+            (x, y, z); defaults to None. Requires ``offset`` to not be None.
+        animated (bool): True to export as an animated image.
+
+    """
+    size = config.plot_labels[config.PlotLabels.LAYOUT]
+    ncols, nrows = size if size else (1, 1)
+    print(size, ncols, nrows)
+    fig, gs = plot_support.setup_fig(nrows, ncols)
+    plotted_imgs = None
+    num_paths = len(paths)
+    for i in range(nrows):
+        for j in range(ncols):
+            ax = fig.add_subplot(gs[i, j])
+            n = i * ncols + j
+            if n >= num_paths: break
+            path_sub = paths[n]
+            cli.setup_images(path_sub, series, config.ProcessTypes.LOAD.name)
+            plotted_imgs = prepare_stack(
+                ax, cli.image5d, path_sub, offset=offset, 
+                roi_size=roi_size, slice_vals=config.slice_vals, 
+                rescale=config.rescale, 
+                labels_imgs=(config.labels_img, config.borders_img), 
+                multiplane=animated, 
+                fit=(size is None or ncols * nrows == 1))
+    if animated:
+        animate_imgs(
+            paths[0], plotted_imgs, config.delay, config.savefig)
+    else:
+        planei = roi_size[-1] if roi_size else config.slice_vals[0]
+        path_base = paths[0]
+        if num_paths > 1:
+            # output filename as a collage of images
+            if not os.path.isdir(path_base):
+                path_base = os.path.dirname(path_base)
+            path_base = os.path.join(path_base, "collage")
+        mod = "_plane_{}{}".format(
+            plot_support.get_plane_axis(config.plane), planei)
+        plot_support.save_fig(path_base, config.savefig, mod)
 
 
 if __name__ == "__main__":

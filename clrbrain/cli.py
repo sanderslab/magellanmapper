@@ -925,7 +925,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         for i in range(nrows):
             for j in range(ncols):
                 ax = fig.add_subplot(gs[i, j])
-                n = i * nrows + j
+                n = i * ncols + j
                 if n >= num_paths: break
                 path_sub = config.filenames[n]
                 setup_images(path_sub, series, proc_mode)

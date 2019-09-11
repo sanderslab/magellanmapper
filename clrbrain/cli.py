@@ -624,13 +624,11 @@ def main(process_args_only=False):
     
     # process the image stack for each series
     for series in series_list:
-        filename_base = importer.filename_to_base(
-            config.filename, series)
         if config.roc:
             # grid search with ROC curve
             stats_dict = mlearn.grid_search(
-                _iterate_file_processing, filename_base, config.offsets, 
-                config.roi_sizes)
+                _iterate_file_processing, config.filename, series, 
+                config.offsets, config.roi_sizes)
             parsed_dict, stats_df = mlearn.parse_grid_stats(stats_dict)
             # plot ROC curve
             from clrbrain import plot_2d
@@ -638,8 +636,9 @@ def main(process_args_only=False):
             plot_2d.plot_roc(stats_df, not config.no_show)
         else:
             # processes file with default settings
-            setup_images(filename_base, config.proc_type)
-            process_file(filename_base, offset, roi_size, config.proc_type)
+            setup_images(config.filename, series, config.proc_type)
+            process_file(
+                config.filename, series, offset, roi_size, config.proc_type)
     
     # unless loading images for GUI, exit directly since otherwise application 
     #hangs if launched from module with GUI
@@ -647,11 +646,13 @@ def main(process_args_only=False):
         os._exit(os.EX_OK)
 
 
-def _iterate_file_processing(filename_base, offsets, roi_sizes):
+def _iterate_file_processing(path, series, offsets, roi_sizes):
     """Processes files iteratively based on offsets.
     
     Args:
-        filename_base: Base filename.
+        path (str): Path to image from which Clrbrain-style paths will 
+            be generated.
+        series (int): Image series number.
         offsets: 2D array of multiple offsets.
         roi_sizes: 2D array of multiple ROI sizes corresponding to offsets.
     
@@ -665,9 +666,9 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
     for i in range(len(offsets)):
         size = (roi_sizes[i] if roi_sizes_len > 1 
                 else roi_sizes[0])
-        setup_images(filename_base, config.proc_type)
+        setup_images(path, series, config.proc_type)
         stat_roi, fdbk = process_file(
-            filename_base, offsets[i], size, config.proc_type)
+            path, series, offsets[i], size, config.proc_type)
         if stat_roi is not None:
             stat = np.add(stat, stat_roi)
         summaries.append(
@@ -675,11 +676,13 @@ def _iterate_file_processing(filename_base, offsets, roi_sizes):
     return stat, summaries
 
 
-def setup_images(filename_base, proc_mode):
+def setup_images(path, series, proc_mode):
     """Sets up an image and all associated images and metadata.
     
     Args:
-        filename_base: Base filename.
+        path (str): Path to image from which Clrbrain-style paths will 
+            be generated.
+        series (int): Image series number.
         proc_mode (str): Processing mode, which should be a key in 
             :class:`config.ProcessTypes`, case-insensitive.
     
@@ -689,10 +692,9 @@ def setup_images(filename_base, proc_mode):
     
     # prepares the filenames
     global image5d
+    filename_base = importer.filename_to_base(path, series)
     filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
     filename_info_proc = filename_base + config.SUFFIX_INFO_PROC
-    filename_roi = None
-    #print(filename_image5d_proc)
     
     # LOAD MAIN IMAGE
 
@@ -724,7 +726,7 @@ def setup_images(filename_base, proc_mode):
             config.resolutions = output_info["resolutions"]
             roi_offset = None
             shape = None
-            path = config.filename
+            path_roi = path
             try:
                 # find original image path and prepare to extract ROI from it 
                 # based on offset/roi_size saved in processed file
@@ -734,13 +736,13 @@ def setup_images(filename_base, proc_mode):
                 print("loaded processed offset: {}, roi_size: {}"
                       .format(roi_offset, shape))
                 # raw image file assumed to be in same dir as processed file
-                path = os.path.join(os.path.dirname(filename_base), 
-                                    str(basename))
+                path_roi = os.path.join(
+                    os.path.dirname(filename_base), str(basename))
             except KeyError as e:
                 print("{} not found for portion of stack to load, will load"
                       "full image".format(e))
             image5d = importer.read_file(
-                path, config.series, offset=roi_offset, size=shape, 
+                path_roi, series, offset=roi_offset, size=shape, 
                 channel=config.channel, import_if_absent=False)
             if image5d is None:
                 # if unable to load original image, attempts to use ROI file
@@ -755,29 +757,28 @@ def setup_images(filename_base, proc_mode):
     if image5d is None:
         # load or import the main image stack
         print("Loading main image")
-        if os.path.isdir(config.filename):
+        if os.path.isdir(path):
             # import directory of TIFF images
-            image5d = importer.import_dir(os.path.join(config.filename, "*"))
-        elif config.filename.endswith(sitk_io.EXTS_3D):
+            image5d = importer.import_dir(os.path.join(path, "*"))
+        elif path.endswith(sitk_io.EXTS_3D):
             # load formats supported by SimpleITK, using metadata from 
             # Numpy archive
-            filename_np = config.filename # default to same basic name
+            filename_np = path  # default to same basic name
             if len(config.filenames) > 1:
                 # load metadata from 2nd filename argument if given
                 filename_np = config.filenames[1]
             try:
                 # load metadata based on filename_np, then attempt to 
-                # load the images from config.filename and prepend time axis
+                # load the images from path and prepend time axis
                 image5d = sitk_io.read_sitk_files(
-                    config.filename, filename_np, config.series)[None]
+                    path, filename_np, series)[None]
             except FileNotFoundError as e:
                 print(e)
         else:
             # load or import from Clrbrain Numpy format
             load = proc_type is config.ProcessTypes.IMPORT_ONLY  # re/import
             image5d = importer.read_file(
-                config.filename, config.series, channel=config.channel, 
-                load=load)
+                path, series, channel=config.channel, load=load)
 
     if config.load_labels is not None:
         # load registered files including labels
@@ -790,7 +791,7 @@ def setup_images(filename_base, proc_mode):
         if atlas_suffix is not None:
             # will take the place of any previously loaded image5d
             image5d = sitk_io.read_sitk_files(
-                config.filename, reg_names=atlas_suffix)[None]
+                path, reg_names=atlas_suffix)[None]
             print(np.amin(image5d), np.amax(image5d))
         
         annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
@@ -798,7 +799,7 @@ def setup_images(filename_base, proc_mode):
             # load labels image, set up scaling, and load labels file, 
             # using prefix for registered files if given
             try:
-                path = config.prefix if config.prefix else config.filename
+                path = config.prefix if config.prefix else path
                 # TODO: need to support multichannel labels images
                 config.labels_img = sitk_io.read_sitk_files(
                     path, reg_names=annotation_suffix)
@@ -821,7 +822,7 @@ def setup_images(filename_base, proc_mode):
             # load borders image, which can also be another labels image
             try:
                 config.borders_img = sitk_io.read_sitk_files(
-                    config.filename, reg_names=borders_suffix)
+                    path, reg_names=borders_suffix)
             except FileNotFoundError as e:
                 print(e)
         
@@ -865,11 +866,13 @@ def setup_images(filename_base, proc_mode):
             config.cmaps.append(colormaps.make_dark_linear_cmap("", color))
 
 
-def process_file(filename_base, offset, roi_size, proc_mode):
+def process_file(path, series, offset, roi_size, proc_mode):
     """Processes a single image file non-interactively.
     
     Args:
-        filename_base: Base filename.
+        path (str): Path to image from which Clrbrain-style paths will 
+            be generated.
+        series (int): Image series number.
         offset: Offset as (x, y, z) to start processing.
         roi_size: Size of region to process, given as (x, y, z).
         proc_mode (str): Processing mode, which should be a key in 
@@ -882,6 +885,7 @@ def process_file(filename_base, offset, roi_size, proc_mode):
     # PROCESS BY TYPE
     stats = None
     fdbk = None
+    filename_base = importer.filename_to_base(path, series)
     proc_type = lib_clrbrain.get_enum(proc_mode, config.ProcessTypes)
     if proc_type is config.ProcessTypes.LOAD:
         # loading completed
@@ -889,7 +893,7 @@ def process_file(filename_base, offset, roi_size, proc_mode):
 
     elif proc_type is config.ProcessTypes.LOAD:
         # already imported so does nothing
-        print("imported {}, will exit".format(config.filename))
+        print("imported {}, will exit".format(path))
     
     elif proc_type is config.ProcessTypes.EXPORT_ROIS:
         # export ROIs; assumes that info_proc was already loaded to 
@@ -903,7 +907,7 @@ def process_file(filename_base, offset, roi_size, proc_mode):
     elif proc_type is config.ProcessTypes.TRANSPOSE:
         # transpose and/or rescale whole large image
         transformer.transpose_img(
-            config.filename, config.series, plane=config.plane, 
+            path, series, plane=config.plane, 
             rescale=config.rescale)
         
     elif proc_type in (
@@ -920,11 +924,11 @@ def process_file(filename_base, offset, roi_size, proc_mode):
         for i in range(nrows):
             for j in range(ncols):
                 ax = fig.add_subplot(gs[i, j])
-                path = config.filenames[i * nrows + j]
-                setup_images(importer.filename_to_base(
-                    path, config.series), proc_mode)
+                n = i * nrows + j
+                path_sub = config.filenames[n]
+                setup_images(path_sub, series, proc_mode)
                 plotted_imgs = export_stack.stack_to_img_file(
-                    ax, image5d, path, offset=offset, 
+                    ax, image5d, path_sub, offset=offset, 
                     roi_size=roi_size, slice_vals=config.slice_vals, 
                     rescale=config.rescale, 
                     labels_imgs=(config.labels_img, config.borders_img), 
@@ -932,12 +936,12 @@ def process_file(filename_base, offset, roi_size, proc_mode):
                     fit=(size is None or ncols * nrows == 1))
         if animated:
             export_stack.animate_imgs(
-                config.filename, plotted_imgs, config.delay, config.savefig)
+                path, plotted_imgs, config.delay, config.savefig)
         else:
             planei = roi_size[-1] if roi_size else config.slice_vals[0]
             mod = "_plane_{}{}".format(
                 plot_support.get_plane_axis(config.plane), planei)
-            plot_support.save_fig(config.filename, config.savefig, mod)
+            plot_support.save_fig(path, config.savefig, mod)
     
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file

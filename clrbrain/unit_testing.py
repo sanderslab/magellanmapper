@@ -30,11 +30,8 @@ class TestImageStackProcessing(unittest.TestCase):
         self.assertEqual(image5d.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):
-        filename_base = importer.filename_to_base(
-            config.filename, config.series)
-        #stats, fdbk, blobs = cli.process_file(filename_base, None, None)
-        #self.assertEqual(len(blobs), 4766)
-        _, _, blobs = cli.process_file(filename_base, (30, 30, 8), (70, 70, 10))
+        _, _, blobs = cli.process_file(
+            config.filename, config.series, (30, 30, 8), (70, 70, 10))
         self.assertEqual(len(blobs), 195)
 
 

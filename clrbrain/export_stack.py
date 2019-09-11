@@ -363,7 +363,7 @@ def stack_to_img(paths, series, offset, roi_size, animated):
             n = i * ncols + j
             if n >= num_paths: break
             path_sub = paths[n]
-            cli.setup_images(path_sub, series, config.ProcessTypes.LOAD.name)
+            cli.setup_images(path_sub, series)
             plotted_imgs = prepare_stack(
                 ax, cli.image5d, path_sub, offset=offset, 
                 roi_size=roi_size, slice_vals=config.slice_vals, 

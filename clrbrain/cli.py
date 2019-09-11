@@ -676,7 +676,7 @@ def _iterate_file_processing(path, series, offsets, roi_sizes):
     return stat, summaries
 
 
-def setup_images(path, series, proc_mode):
+def setup_images(path, series, proc_mode=None):
     """Sets up an image and all associated images and metadata.
     
     Args:
@@ -684,7 +684,7 @@ def setup_images(path, series, proc_mode):
             be generated.
         series (int): Image series number.
         proc_mode (str): Processing mode, which should be a key in 
-            :class:`config.ProcessTypes`, case-insensitive.
+            :class:`config.ProcessTypes`, case-insensitive; defaults to None.
     
     """
     # print longer Numpy arrays to assist debugging

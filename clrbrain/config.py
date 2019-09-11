@@ -100,6 +100,7 @@ PlotLabels = Enum(
         "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT", 
         "X_TICK_LABELS", "Y_TICK_LABELS", 
         "SIZE",  # in x,y 
+        "LAYOUT",  # subplot layout in num of columns, rows
         "ALPHAS_CHL",  # alphas for main image's channels
     )
 )

@@ -916,7 +916,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         from clrbrain import export_stack
         from clrbrain import plot_support
         animated = proc_type is config.ProcessTypes.ANIMATED
-        size = config.plot_labels[config.PlotLabels.SIZE]
+        size = config.plot_labels[config.PlotLabels.LAYOUT]
         ncols, nrows = size if size else (1, 1)
         print(size, ncols, nrows)
         fig, gs = plot_support.setup_fig(nrows, ncols)

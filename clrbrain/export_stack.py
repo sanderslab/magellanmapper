@@ -353,8 +353,8 @@ def stack_to_img(paths, series, offset, roi_size, animated):
     """
     size = config.plot_labels[config.PlotLabels.LAYOUT]
     ncols, nrows = size if size else (1, 1)
-    print(size, ncols, nrows)
-    fig, gs = plot_support.setup_fig(nrows, ncols)
+    fig, gs = plot_support.setup_fig(
+        nrows, ncols, config.plot_labels[config.PlotLabels.SIZE])
     plotted_imgs = None
     num_paths = len(paths)
     for i in range(nrows):

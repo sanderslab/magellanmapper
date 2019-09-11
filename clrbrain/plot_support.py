@@ -574,18 +574,20 @@ def save_fig(path, ext, modifier=""):
         print("exported figure to", plot_path)
 
 
-def setup_fig(nrows, ncols):
+def setup_fig(nrows, ncols, size=None):
     """Setup a figure and associated :class:`gridspec.GridSpec`.
     
     Args:
         nrows (int): Number of rows.
         ncols (int): Number of columns.
+        size (List[float]): Sequence of figure size in ``(width, height)``
+            in inches; defaults to None.
 
     Returns:
         Tuple of figure and :obj:`gridspec.GridSpec`.
 
     """
-    fig = plt.figure(frameon=False, constrained_layout=True)
+    fig = plt.figure(frameon=False, constrained_layout=True, figsize=size)
     fig.set_constrained_layout_pads(w_pad=0, h_pad=0)
     gs = gridspec.GridSpec(nrows, ncols, figure=fig)
     return fig, gs

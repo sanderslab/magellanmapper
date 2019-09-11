@@ -72,7 +72,7 @@ zoom = -1.0  # objective zoom
 # main processing tasks
 ProcessTypes = Enum(
     "ProcessTypes", (
-        "IMPORTONLY", "PROCESSING", "PROCESSING_MP", "LOAD", "EXTRACT", 
+        "IMPORT_ONLY", "PROCESSING", "PROCESSING_MP", "LOAD", "EXTRACT", 
         "EXPORT_ROIS", "TRANSPOSE", "ANIMATED", "EXPORT_BLOBS"
     )
 )

@@ -426,7 +426,7 @@ if [[ $gui -eq 1 ]]; then
   # displaying the GUI.
 
   # Import raw image stack into Numpy array if it doesn't exist already
-  #python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc importonly
+  #python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc import_only
   
   # Load ROI, starting at the given offset and ROI size
   
@@ -491,7 +491,7 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   # (0, 0, 0)
   ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1 -j "$java_home"
   python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" \
-    --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc importonly
+    --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc import_only
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
   
 elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
@@ -531,7 +531,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   start=$SECONDS
   python -u -m clrbrain.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
     --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v \
-    --proc importonly
+    --proc import_only
   summary_msg+=("Stitched file import time: $((SECONDS - start)) s")
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi

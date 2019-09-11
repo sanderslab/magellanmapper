@@ -776,7 +776,7 @@ def setup_images(path, series, proc_mode):
                 print(e)
         else:
             # load or import from Clrbrain Numpy format
-            load = proc_type is config.ProcessTypes.IMPORT_ONLY  # re/import
+            load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
             image5d = importer.read_file(
                 path, series, channel=config.channel, load=load)
 

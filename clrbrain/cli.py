@@ -921,10 +921,12 @@ def process_file(path, series, offset, roi_size, proc_mode):
         print(size, ncols, nrows)
         fig, gs = plot_support.setup_fig(nrows, ncols)
         plotted_imgs = None
+        num_paths = len(config.filenames)
         for i in range(nrows):
             for j in range(ncols):
                 ax = fig.add_subplot(gs[i, j])
                 n = i * nrows + j
+                if n >= num_paths: break
                 path_sub = config.filenames[n]
                 setup_images(path_sub, series, proc_mode)
                 plotted_imgs = export_stack.stack_to_img_file(

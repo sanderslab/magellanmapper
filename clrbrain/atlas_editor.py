@@ -37,12 +37,13 @@ class AtlasEditor:
             be generated.
         fn_show_label_3d: Function to call to show a label in a 
             3D viewer. Defaults to None.
-        plot_eds: Dictionary of :class:``plot_editor.PlotEditor``s, with 
-            key specified by one of :const:``config.PLANE`` plane orientations.
+        plot_eds: Dictionary of :class:`clrbrain.plot_editor.PlotEditor`, with 
+            key specified by one of :const:`clrbrain.config.PLANE` 
+            plane orientations.
         alpha_slider: Matplotlib alpha slider control.
         alpha_reset_btn: Maplotlib button for resetting alpha transparency.
         alpha_last: Float specifying the previous alpha value.
-        interp_planes: Current :class:``InterpolatePlanes`` object.
+        interp_planes: Current :class:`InterpolatePlanes` object.
         interp_btn: Matplotlib button to initiate plane interpolation.
         save_btn: Matplotlib button to save the atlas.
     """
@@ -229,9 +230,9 @@ class AtlasEditor:
         
         Args:
             coord: Coordinate at which to center images, in z,y,x order.
-            plane_src: One of :const:``config.PLANE`` to specify the 
+            plane_src: One of :const:`clrbrain.config.PLANE` to specify the 
                 orientation from which the coordinates were given; defaults 
-                to :const:``config.PLANE[0]``.
+                to the first element of :const:`clrbrain.config.PLANE`.
         """
         coord_rev = lib_clrbrain.transpose_1d_rev(list(coord), plane_src)
         for plane in config.PLANE:
@@ -242,7 +243,7 @@ class AtlasEditor:
         """Refresh images in a plot editor.
         
         Args:
-            plot_ed: :class:``plot_editor.PlotEditor`` whose images 
+            plot_ed: :class:`clrbrain.plot_editor.PlotEditor` whose images 
                 will be refreshed.
         """
         for key in self.plot_eds:
@@ -288,7 +289,7 @@ class AtlasEditor:
             self.plot_eds[key].on_axes_exit(event)
     
     def interpolate(self, event):
-        """Interpolate planes using :attr:``interp_planes``.
+        """Interpolate planes using :attr:`interp_planes`.
         
         Args:
             event: Button event, currently ignored.
@@ -317,8 +318,8 @@ class AtlasEditor:
 
     def toggle_edit_mode(self, event):
         """Toggle editing mode, determining the current state from the
-        first :class:``PlotEditor`` and switching to the opposite value
-        for all plot editors.
+        first :class:`clrbrain.plot_editor.PlotEditor` and switching to the 
+        opposite value for all plot editors.
 
         Args:
             event: Button event, currently not used.
@@ -335,7 +336,7 @@ class AtlasEditor:
             self.color_picker_box.set_val("")
 
     def update_color_picker(self, val):
-        """Update the color picker :class:``TextBox`` with the given value.
+        """Update the color picker :class:`TextBox` with the given value.
 
         Args:
             val: Color value.
@@ -343,7 +344,7 @@ class AtlasEditor:
         self.color_picker_box.set_val(val)
 
     def color_picker_changed(self, text):
-        """Respond to color picker :class:``TextBox`` changes by updating
+        """Respond to color picker :class:`TextBox` changes by updating
         the specified intensity value in all plot editors to an integer
         of the given value if it is a number and the first editor does
         not already have an intensity set to this value.
@@ -392,7 +393,7 @@ def toggle_btn(btn, on=True, shift=0.2, text=None):
         on: True to display the button as on, False as off.
         shift: Float of amount to shift the button color intensity;
             defaults to 0.2.
-        text: Tuple of ``(on_text, off_text)" for the button label;
+        text: Tuple of ``(on_text, off_text)`` for the button label;
             defaults to None to keep the original text.
     """
     if on:
@@ -414,14 +415,15 @@ class InterpolatePlanes:
     This interpolation replaces unedited planes based on the trends of 
     the edited ones to avoid the need to manually edit every single plane.
     
-    Attribtes:
-        plane: Plane in which editing has occurred.
-        bounds: Unsorted start and end planes.
-        label_id: Label ID of the edited region.
+    Attributes:
+        btn (:obj:`matplotlib.widgets.Button`): Button to initiate plane 
+            interpolation.
+        plane (str): Plane in which editing has occurred.
+        bounds (List[int]): Unsorted start and end planes.
+        label_id (int): Label ID of the edited region.
     """
     def __init__(self, btn):
-        """Initialize ``InterpolatePlanes`` with empty attibutes.
-        """
+        """Initialize plane interpolation object."""
         self.btn = btn
         self.plane = None
         self.bounds = None
@@ -449,7 +451,7 @@ class InterpolatePlanes:
             label_id: ID of label, which will overwrite any current ID.
         """
         if self.plane is not None and (
-            plane != self.plane or label_id != self.label_id):
+                plane != self.plane or label_id != self.label_id):
             # reset bounds if new plane or label ID don't match prior settings 
             # and previously set (plane and label_id should have been set 
             # together)
@@ -460,8 +462,8 @@ class InterpolatePlanes:
         self.update_btn()
     
     def interpolate(self, labels_img):
-        """Interpolate between :attr:``bounds`` in the given :attr:``plane`` 
-        direction in the bounding box surrounding :attr:``label_id``.
+        """Interpolate between :attr:`bounds` in the given :attr:`plane` 
+        direction in the bounding box surrounding :attr:`label_id`.
         
         Args:
             labels_img: Labels image as a Numpy array of x,y,z dimensions.

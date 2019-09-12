@@ -49,6 +49,7 @@ offsets = None # list of offsets
 prefix = None # alternate path
 suffix = None # modifier to existing base path
 
+#: Tuple[str]: Plane orientations based on the two axes specifying the plane.
 PLANE = ("xy", "xz", "yz")
 plane = None
 vmins = None # cmd-line specified

@@ -9,6 +9,12 @@ Arguments:
   -a: Rebuild API .rst files.
   -c: Clean docs before rebuilding.
   -h: Show help and exit.
+
+Usage:
+- Clean and rebuild all doc files, including auto-generation of .rst files:
+  $0 -c -a
+- Rebuild docs:
+  $0
 "
 
 DOCS_DIR="docs"
@@ -47,8 +53,7 @@ while getopts hac opt; do
 done
 
 # setup Sphinx configuration
-if [ ! -e "$DOCS_DIR" ]
-then
+if [[ ! -e "$DOCS_DIR" ]]; then
   mkdir "$DOCS_DIR"
   cd "$DOCS_DIR" || { echo "unable to make/enter $DOCS_DIR"; exit 1; }
   sphinx-quickstart
@@ -57,14 +62,12 @@ else
 fi
 
 # (re)build .rst files
-if [ $build_api -eq 1 ]
-then
+if [[ $build_api -eq 1 ]]; then
   sphinx-apidoc -f -o . ..
 fi
 
 # clean docs
-if [ $clean -eq 1 ]
-then
+if [[ $clean -eq 1 ]]; then
   make clean
 fi
 

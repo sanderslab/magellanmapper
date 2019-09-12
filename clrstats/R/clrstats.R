@@ -6,6 +6,12 @@
 #library("devtools")
 #install_github("JosephCrispell/addTextLabels")
 
+# To run stats:
+# - Select profiles in runStats
+# - Start R in clrstats folder
+# - Load source: "devtools::load_all(".")"
+# - Run stats: "runStats()"
+
 # stat processing types
 kStatTypes <- c(
   "default", "corr", "norm"

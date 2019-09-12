@@ -426,6 +426,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         df.jitter$Density <- df.jitter$Nuclei / df.jitter$Volume
         print(df.jitter)
       }
+      # TODO: set up groups and generate stats outside of jitter plots
       stats.group <- jitterPlot(
         df.jitter, col, title, "Geno", split.by.side, split.col, paired, 
         config.env$SampleLegend, config.env$PlotSize, 
@@ -433,11 +434,13 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         summary.stats=config.env$SummaryStats, 
         save=config.env$JitterPlotSave, sort.groups=config.env$Sort.Groups)
       
-      # add mean and CI for each group to stats data frame
+      # add mean, median, and CI for each group to stats data frame
       names <- stats.group[[1]]
       for (j in seq_along(names)) {
         stats[i, paste0(names[j], ".mean")] <- stats.group[[2]][j]
-        stats[i, paste0(names[j], ".ci")] <- stats.group[[3]][j]
+        stats[i, paste0(names[j], ".med")] <- stats.group[[3]][j]
+        stats[i, paste0(names[j], ".sd")] <- stats.group[[4]][j]
+        stats[i, paste0(names[j], ".ci")] <- stats.group[[5]][j]
       }
     } else {
       # ignore region if all values 0, leaving entry for region as NA and 
@@ -490,6 +493,8 @@ filterStats <- function(stats, corr=NULL) {
   cols.names <- names(stats.filt)
   cols.means.cis <- c(
     cols.names[grepl(".mean", cols.names)], 
+    cols.names[grepl(".med", cols.names)], 
+    cols.names[grepl(".sd", cols.names)], 
     cols.names[grepl(".ci", cols.names)])
   
   # build data frame for pertinent coefficients from each type of main 

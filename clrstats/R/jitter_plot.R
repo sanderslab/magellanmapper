@@ -103,7 +103,9 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   int.digits <- nchar(trunc(max(vals)))
   vals.groups <- list() # list of vals for each group-subgroup group
   vals.means <- vector(length=num.groups)
+  vals.medians <- vector(length=num.groups)
   vals.cis <-vector(length=num.groups)
+  vals.sds <-vector(length=num.groups)
   errs <- vector(length=num.groups) # based on CI but 0 if CI is NA
   i <- 1
   for (group in groups.unique) {
@@ -127,8 +129,10 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       
       # error bars
       vals.means[i] <- mean(vals.group)
+      vals.medians[i] <- median(vals.group)
       num.vals <- length(vals.group)
-      vals.sem <- sd(vals.group) / sqrt(num.vals)
+      vals.sds[i] <- sd(vals.group)
+      vals.sem <- vals.sds[i] / sqrt(num.vals)
       # use 97.5th percentile for 2-tailed 95% confidence level
       vals.cis[i] <- qt(0.975, df=num.vals-1) * vals.sem
       # store max height of error bar setting axis limits
@@ -361,7 +365,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     }
   par(par.old)
   
-  return(list(names.groups, vals.means, vals.cis))
+  return(list(names.groups, vals.means, vals.medians, vals.sds, vals.cis))
 }
 
 getUniqueSubgroups <- function(subgroups, split.by.subgroup) {

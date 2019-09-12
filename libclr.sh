@@ -32,8 +32,8 @@ backup_file() {
     local i=2
     while [ -e "$curr_path_last" ]; do
       # increment 
-      curr_path_last="${base}("$i")${ext}"
-      let i++
+      curr_path_last="${base}($i)${ext}"
+      ((i++))
     done
     mv "$curr_path" "$curr_path_last"
     echo "Backed up directory to $curr_path_last"
@@ -53,7 +53,8 @@ backup_file() {
 ############################################
 detect_platform() {
   echo -n "Detecting platform..."
-  local system=`uname -a`
+  local system
+  system="$(uname -a)"
   
   # detect operating system
   os=""
@@ -94,8 +95,9 @@ detect_platform() {
 #   True if the Python version meets or excceds the version requirement.
 ############################################
 check_python() {
-  local py_ver="$("$1" -V 2>&1)"
-  local py_ver="${py_ver#* }"
+  local py_ver
+  py_ver="$("$1" -V 2>&1)"
+  py_ver="${py_ver#* }"
   local py_ver_maj="${py_ver%%.*}"
   local py_ver_rest="${py_ver#*.}"
   local py_ver_min="${py_ver_rest%%.*}"
@@ -228,7 +230,8 @@ suppress_output() {
 join_array() {
   local -n arr="$1"
   local sep="$2"
-  local ticks=$(printf "${sep}%s" "${arr[@]}")
+  local ticks
+  ticks=$(printf "${sep}%s" "${arr[@]}")
   ticks="${ticks:${#sep}}"
   echo "$ticks"
 }

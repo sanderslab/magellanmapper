@@ -25,9 +25,9 @@ pass_output=0
 quiet=0
 
 # run from parent directory
-BASE_DIR="`dirname $0`"
+BASE_DIR="$(dirname "$0")"
 cd "$BASE_DIR"
-echo $PWD
+echo "$PWD"
 
 OPTIND=1
 while getopts hd:oq opt; do
@@ -48,6 +48,10 @@ while getopts hd:oq opt; do
       exit 1
       ;;
     --) ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 
@@ -56,7 +60,6 @@ shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
 # create output filename based on dest
-dest_ext="${dest##.*}"
 dest_base="${dest%.*}"
 out_path="$dest"
 echo "Output file: $out_path"
@@ -67,7 +70,7 @@ if [[ -e "$out_path" ]]; then
   i=2
   while [[ -e "${out_base_last}.txt" ]]; do
     out_base_last="${dest_base}(${i})"
-    let i++
+    ((i++))
   done
   out_path_last="${out_base_last}.txt"
   mv "$out_path" "$out_path_last"

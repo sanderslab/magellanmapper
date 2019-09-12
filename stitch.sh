@@ -22,13 +22,16 @@ Arguments:
     original ImageJ/Fiji plugin), or none. If none, ImageJ/Fiji 
     will simply be opened and left open for stitching review.
 
-To run in normal (not BigStitcher) mode:
--Run the stitch/tile_config.py utility to build a positions
+To run in \"BigStitcher\" mode (default):
+-Run ./stitch.sh -f /path/to/img.czi
+
+To run in \"stitching\" mode:
+-Run the \"stitch/tile_config.py\" utility to build a positions
  configuration file since the .czi file may not contain
  position information, such as for Lightsheet files
 -Sample run command, using nohup in case of long server
  operation: 
- nohup ./stitch.sh -f \"/path/to/img.czi\" > /path/to/output 2>&1 &
+ nohup ./stitch.sh -f /path/to/img.czi > /path/to/output 2>&1 &
 -Track results: \"tail -f /path/to/output\"
 -Note: The resulting TileConfiguration.registered.txt file 
  places unregistered tiles at (0, 0, 0), which will reduce the
@@ -38,11 +41,8 @@ To run in normal (not BigStitcher) mode:
    surrounding tiles
   -Move TileConfiguration.registered.txt to TileConfiguration.txt
   -Kill the current ImageJ process
-  -Edit stitch/ij_stitch.py to remove "compute_overlap" option
+  -Edit stitch/ij_stitch.py to remove \"compute_overlap\" option
   -Re-run this script
-
-To run in BigStitcher mode:
--Run ./stitch.sh -f \"/path/to/img.czi\" -b
 "
 
 write_fused=2
@@ -54,25 +54,35 @@ java_home=""
 OPTIND=1
 while getopts hf:w:s:j: opt; do
   case $opt in
-    h)  echo $HELP
+    h)
+      echo "$HELP"
       exit 0
       ;;
-    f)  IMG="$OPTARG"
+    f)
+      IMG="$OPTARG"
       echo "Set image file to $IMG"
       ;;
-    w)  write_fused="$OPTARG"
+    w)
+      write_fused="$OPTARG"
       echo "Set fuse and write to $write_fused"
       ;;
-    s)  stitch="$OPTARG"
+    s)
+      stitch="$OPTARG"
       echo "Set stitch type to $stitch"
       ;;
-    j)  java_home="$OPTARG"
-      echo "Set JAVA_HOME for ImageJ/Fiji to to $j"
+    j)
+      java_home="$OPTARG"
+      echo "Set JAVA_HOME for ImageJ/Fiji to to $java_home"
       ;;
-    :)  echo "Option -$OPTARG requires an argument"
+    :)
+      echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
     --) ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 
@@ -81,7 +91,7 @@ shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
 # run from script directory
-BASE_DIR="`dirname $0`"
+BASE_DIR="$(dirname "$0")"
 cd "$BASE_DIR"
 BASE_DIR="$PWD"
 
@@ -108,7 +118,7 @@ fi
 # extra padding room (TODO: check if too much for large files)
 if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
   # old stitching plugin, which requires a ton of memory
-  mem=`du "$IMG" | awk '{print $1}'`
+  mem=$(du "$IMG" | awk '{print $1}')
   mem=$((mem/100))
 elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
   # BigStitcher plugin, which is more memory efficient
@@ -116,7 +126,7 @@ elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
     mem=$(sysctl -a | awk '/hw.memsize\:/ {print $2}')
     mem=$((mem/1024))
   else
-    mem=`free|awk '/Mem\:/ { print $2 }'`
+    mem=$(free|awk '/Mem\:/ { print $2 }')
   fi
   mem=$((mem/1024*8/10))
 fi
@@ -147,19 +157,21 @@ echo "Will run ImageJ/Fiji executable as:"
 echo "${ij[@]}"
 
 if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
-  # Fiji Stitching plugin; does not appear to work when fed a separate script in "-macro" mode
-  "${ij[@]}" --headless --run stitch/ij_stitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
+  # Fiji Stitching plugin; does not appear to work when fed a separate script 
+  # in "-macro" mode
+  "${ij[@]}" --headless --run stitch/ij_stitch.py \
+    'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
   
   # manually move files to output directory since specifying this directory
   # within the Stitching plugin requires the tile configuration file to be
   # there as well
-  if [ $write_fused -eq 0 ] || [ "$out_dir" == "" ]
+  if [ "$write_fused" -eq 0 ] || [ "$out_dir" == "" ]
   then
     # exit if not writing fused files or no dir to move into
     exit 0
   fi
   # move into out_dir, assuming output files are in format "img_t..."
-  in_dir="`dirname $IMG`"
+  in_dir="$(dirname "$IMG")"
   echo "Moving files from $in_dir to $out_dir..."
   if [ ! -e "$out_dir" ]
   then
@@ -170,9 +182,9 @@ elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
   # BigStitcher; not working in headless mode so will require GUI; 
   # --ij2 flag must follow --mem flag or else --mem ignored; 
   # TODO: check if need --ij2 flag
-  "${ij[@]}" --ij2 --run stitch/ij_bigstitch.py 'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
+  "${ij[@]}" --ij2 --run stitch/ij_bigstitch.py \
+    'in_file="'"$IMG"'",write_fused="'"$write_fused"'"'
 else
   # no stitching, just open ImageJ/Fiji
   "${ij[@]}" --ij2
 fi
-

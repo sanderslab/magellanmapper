@@ -484,39 +484,48 @@ def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
     print("exported volume data per sample to CSV file: \"{}\"".format(path))
     return combined
 
+
 def merge_csvs(in_paths, out_path):
     """Combine and export multiple CSV files to a single CSV file.
     
     Args:
         in_paths: List of paths to CSV files to import as data frames 
             and concatenate.
-        path: Output path.
+        out_path: Output path.
     """
     dfs = [pd.read_csv(path) for path in in_paths]
     data_frames_to_csv(dfs, out_path)
 
 
-def filter_dfs_on_vals(dfs, cols, row_matches):
+def filter_dfs_on_vals(dfs, cols=None, row_matches=None):
     """Filter data frames for rows matching a value for a given column 
     and concatenate the filtered data frames.
     
     Args:
         dfs (List[:obj:`pd.DataFrame`]): Sequence of data frames to filter.
-        cols (List[str]): Sequence of columns to keep.
+        cols (List[str]): Sequence of columns to keep; defaults to None
+            to keep all columns.
         row_matches (List[Tuple]): Sequence of ``(col, val)`` criteria 
             corresponding to ``dfs``, where only the rows with matching 
-            values to ``val`` for the given ``col`` will be kept.
+            values to ``val`` for the given ``col`` will be kept. Defaults 
+            to None to keep all rows.
 
     Returns:
-        Tuple of the concatenated filtered data frames and a list of 
-        the filtered data frames.
+        Tuple[:obj:`pd.DataFrame`, List[:obj:`pd.DataFrame`]]: Tuple of 
+        the concatenated filtered data frames and a list of the filtered 
+        data frames.
 
     """
     dfs_filt = []
     for df, match in zip(dfs, row_matches):
+        df_filt = df
         if match:
-            df = df.loc[df[match[0]] == match[1]]
-        dfs_filt.append(df[cols])
+            # filter to keep only rows matching a value in the given column
+            df_filt = df_filt.loc[df_filt[match[0]] == match[1]]
+        if cols is not None:
+            # keep only the given columns
+            df_filt = df_filt[cols]
+        dfs_filt.append(df_filt)
     df_merged = pd.concat(dfs_filt)
     return df_merged, dfs_filt
 

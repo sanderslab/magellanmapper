@@ -1377,7 +1377,7 @@ def _test_smoothing_metric():
 
 def main():
     """Handle registration processing tasks as specified in 
-    :attr:``config.register_type``.
+    :attr:`clrbrain.config.register_type`.
     """
     plot_2d.setup_style("default")
     # convert to next larger prefix (eg um to mm)
@@ -1423,7 +1423,6 @@ def main():
     elif reg is config.RegisterTypes.group:
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
-        prefix = config.filenames[-1]
         register_group(
             config.filenames[:-1], flip=config.flip, name_prefix=config.prefix, 
             scale=config.rescale, show_imgs=show)
@@ -1439,12 +1438,6 @@ def main():
     elif reg is config.RegisterTypes.export_regions:
         # export regions IDs to CSV files
         
-        # use ABA levels up through the specified level to collect 
-        # sub-regions to the given level
-        if config.labels_level is None:
-            levels = [None]
-        else:
-            levels = list(range(config.labels_level + 1))
         ref = ontology.load_labels_ref(config.load_labels)
         labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
         
@@ -1531,13 +1524,24 @@ def main():
             ("-", "-"), lbls, None, size, show, "_extras", ("C3", "C4"))
     
     elif reg is config.RegisterTypes.smoothing_peaks:
-        # find peak smoothing qualities without label loss for a set 
-        # of data frames and output to combined data frame
-        dfs = []
+        # find peak smoothing qualities without label loss and at a given
+        # filter size
+        dfs = {}
+        dfs_noloss = []
         for path in config.filenames:
             df = pd.read_csv(path)
-            dfs.append(atlas_stats.smoothing_peak(df, 0, None))
-        stats.data_frames_to_csv(dfs, "smoothing_peaks.csv")
+            filter_sizes = np.unique(
+                df[config.SmoothingMetrics.FILTER_SIZE.value])
+            for filter_size in filter_sizes:
+                # smoothing quality at the given filter size
+                dfs.setdefault(filter_size, []).append(
+                    atlas_stats.smoothing_peak(df, None, filter_size))
+            # peak smoothing qualities without label loss across filter sizes
+            dfs_noloss.append(atlas_stats.smoothing_peak(df, 0, None))
+        for key in dfs:
+            stats.data_frames_to_csv(
+                dfs[key], "smoothing_filt{}.csv".format(key))
+        stats.data_frames_to_csv(dfs_noloss, "smoothing_peaks.csv")
 
     elif reg is config.RegisterTypes.smoothing_metrics_aggr:
         # re-aggregate smoothing metrics from raw stats

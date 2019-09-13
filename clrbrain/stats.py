@@ -537,7 +537,7 @@ if __name__ == "__main__":
     
     # process stats based on command-line argument
     
-    stats_type = config.StatsTypes[config.stats_type.upper()]
+    stats_type = lib_clrbrain.get_enum(config.stats_type, config.StatsTypes)
     if stats_type is config.StatsTypes.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
         merge_csvs(config.filenames, config.prefix)
@@ -545,3 +545,18 @@ if __name__ == "__main__":
     elif stats_type == config.StatsTypes.EXPS_BY_REGION:
         # convert volume stats data frame to experiments by region
         exps_by_regions(config.filename)
+
+    elif stats_type == config.StatsTypes.EXTRACT_FROM_CSV:
+        # convert volume stats data frame to experiments by region, 
+        # co-opting arguments given as plot labels for row extraction, where 
+        # "X_LABEL" = name of column on which to filter, and 
+        # "Y_LABEL" = values in this column for which rows should be kept
+        df = pd.read_csv(config.filename)
+        df_filt, _ = filter_dfs_on_vals(
+            [df], None, 
+            [(config.plot_labels[config.PlotLabels.X_LABEL],
+              config.plot_labels[config.PlotLabels.Y_LABEL])])
+        out_path = config.prefix
+        if not out_path:
+            out_path = "filtered.csv"
+        data_frames_to_csv(df_filt, out_path)

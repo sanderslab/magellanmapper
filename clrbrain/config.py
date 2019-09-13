@@ -318,10 +318,10 @@ class ItkSnapLabels(Enum):
 
 # STATS
 
-# stats module processing types
+#: :class:`Enum`: stats module processing types
 StatsTypes = Enum(
     "StatsTypes", [
-        "MERGE_CSVS", "EXPS_BY_REGION", 
+        "MERGE_CSVS", "EXPS_BY_REGION", "EXTRACT_FROM_CSV"
     ]
 )
 stats_type = None

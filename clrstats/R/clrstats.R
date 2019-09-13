@@ -27,7 +27,7 @@ kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei",
           "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
           "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
-          "Intensity", "DSC")
+          "Intensity", "DSC", "Smoothing_quality")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -63,7 +63,7 @@ kRegionsIgnore <- c(15564)
 kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
                    "vols_by_sample_summary.csv", "dsc_summary.csv", 
                    "compactness_summary.csv", "compactness_summary_stats.csv", 
-                   "reg_stats_melted.csv")
+                   "reg_stats_melted.csv", "smoothing_gausVopen.csv")
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -692,6 +692,12 @@ setupConfig <- function(name=NULL) {
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
     config.env$Measurements <- kMeas[8]
     
+  } else if (name == "smoothing") {
+    # smoothing quality comparison between Gaussian and opening filter methods
+    setupConfig("aba")
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[8])
+    config.env$Measurements <- kMeas[19]
+    
   } else if (name == "compactness") {
     # compactness combined jitter plot for ABA series by treating conditions 
     # as separate genotypes of the same "all" region
@@ -776,12 +782,13 @@ runStats <- function(stat.type=NULL) {
   setupConfig()
   #setupConfig("dsc")
   #setupConfig("aba")
+  #setupConfig("smoothing")
   #setupConfig("wt")
   #setupConfig("compactness")
   #setupConfig("compactness.stats")
   #setupConfig("reg")
   #setupConfig("wt.test")
-  setupConfig("geno")
+  #setupConfig("geno")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")
   #setupConfig("skinny.small")

@@ -375,7 +375,7 @@ def stack_to_img(paths, series, offset, roi_size, animated):
         animate_imgs(
             paths[0], plotted_imgs, config.delay, config.savefig)
     else:
-        planei = roi_size[-1] if roi_size else config.slice_vals[0]
+        planei = offset[-1] if offset else config.slice_vals[0]
         path_base = paths[0]
         if num_paths > 1:
             # output filename as a collage of images

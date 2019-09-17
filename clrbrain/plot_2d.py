@@ -667,7 +667,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             value to None to prevent unit display. 
         xlim: Sequence of min and max boundaries for the x-axis; 
             defaults to None.
-        xlim: Sequence of min and max boundaries for the y-axis; 
+        ylim: Sequence of min and max boundaries for the y-axis; 
             defaults to None.
         title: Title of figure; defaults to None.
         fig_size: Sequence of ``width, height`` to size the figure; defaults 

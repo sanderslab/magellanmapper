@@ -916,7 +916,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         from clrbrain import export_stack
         export_stack.stack_to_img(
             config.filenames, series, offset, roi_size, 
-            proc_type is config.ProcessTypes.ANIMATED)
+            proc_type is config.ProcessTypes.ANIMATED, config.suffix)
     
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file

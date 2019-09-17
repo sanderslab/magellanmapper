@@ -332,7 +332,7 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
     return plotted_imgs
 
 
-def stack_to_img(paths, series, offset, roi_size, animated):
+def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
     """Build an image file from a stack of images in a directory or an 
     array, exporting as an animated GIF or movie for multiple planes or 
     extracting a single plane to a standard image file format.
@@ -348,7 +348,9 @@ def stack_to_img(paths, series, offset, roi_size, animated):
             defaults to None. Requires ``roi_size`` to not be None.
         roi_size (List[int]): Size of the region of interest in user order 
             (x, y, z); defaults to None. Requires ``offset`` to not be None.
-        animated (bool): True to export as an animated image.
+        animated (bool): True to export as an animated image; defaults to False.
+        suffix (str): String to append to output path before extension; 
+            defaults to None to ignore.
 
     """
     size = config.plot_labels[config.PlotLabels.LAYOUT]
@@ -363,6 +365,7 @@ def stack_to_img(paths, series, offset, roi_size, animated):
             n = i * ncols + j
             if n >= num_paths: break
             path_sub = paths[n]
+            # TODO: test directory of images
             cli.setup_images(path_sub, series)
             plotted_imgs = prepare_stack(
                 ax, cli.image5d, path_sub, offset=offset, 
@@ -384,6 +387,7 @@ def stack_to_img(paths, series, offset, roi_size, animated):
             path_base = os.path.join(path_base, "collage")
         mod = "_plane_{}{}".format(
             plot_support.get_plane_axis(config.plane), planei)
+        if suffix: path_base = lib_clrbrain.insert_before_ext(path_base, suffix)
         plot_support.save_fig(path_base, config.savefig, mod)
 
 

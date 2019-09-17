@@ -168,6 +168,7 @@ def update_process_settings(settings, settings_type):
             "contrast", 
             {
                 "channel_colors": ("inferno", "bone"),
+                "scale_bar_color": "w", 
             }, 
             profile)
 
@@ -176,6 +177,7 @@ def update_process_settings(settings, settings_type):
             "bone",
             {
                 "channel_colors": ("bone", "bone"),
+                "scale_bar_color": "w", 
             },
             profile)
 

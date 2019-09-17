@@ -436,6 +436,7 @@ def update_register_settings(settings, settings_type):
             "ncc", 
             {
                 "metric_similarity": "AdvancedNormalizedCorrelation", 
+                "bspline_iter_max": "1024", 
             }, 
             profile)
 

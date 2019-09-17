@@ -1206,8 +1206,6 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
     
     # saturate to remove noise and normalize values
     roi = saturate_roi(roi, settings["clip_vmax"], channel=channel)
-    #roi = np.clip(roi, 0.2, 0.8)
-    #roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
     
     # turn off segmentation if ROI too big (arbitrarily set here as 
     # > 10 million pixels) to avoid performance hit and since likely showing 
@@ -1226,12 +1224,13 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
         if segment:
             # denoising makes for much cleaner images but also seems to allow 
             # structures to blend together. TODO: consider segmented individual 
-            # structures and rendering them as separate surfaces to avoid blending
+            # structures and rendering as separate surfaces to avoid blending
             roi_show = restoration.denoise_tv_chambolle(roi_show, weight=0.1)
             
             # build surface from segmented ROI
             if to_segment:
-                walker = segmenter.segment_rw(roi_show, i, vmin=0.6, vmax=0.7)
+                vmin, vmax = np.percentile(roi_show, (40, 70))
+                walker = segmenter.segment_rw(roi_show, i, vmin=vmin, vmax=vmax)
                 roi_show *= np.subtract(walker[0], 1)
             else:
                 print("deferring segmentation as {} px is above threshold"

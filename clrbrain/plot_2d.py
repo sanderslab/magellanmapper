@@ -943,24 +943,6 @@ def main():
         # z-val, but switch or remove when varying other axes
         plot_roc(pd.read_csv(config.filename), show, 0)
 
-    elif plot_2d_type is config.Plot2DTypes.SCATTER_INTENS_NUC:
-        # scatter plot of intensity vs nuclei values
-        
-        # import CSV manually generated from intensity and nuclei R stats; 
-        # columns should have intensity and nuclei values followed by 
-        # condition (eg "original" and "smoothed")
-        df = pd.read_csv(config.filename)
-        col_x = [col for col in df.columns if col.lower().startswith("intens.")]
-        col_y = [col for col in df.columns if col.lower().startswith("nuc.")]
-        names_group=None
-        if len(col_x) >= 2:
-            names_group = [col.split(".")[1] for col in col_x[:2]]
-        plot_scatter(
-            config.filename, col_x, col_y, names_group=names_group, 
-            labels=("Nuclei", "Intensity"), 
-            title="Nuclei Vs. Intensity By Region", fig_size=size, show=show, 
-            suffix=config.suffix, df=df)
-
 
 if __name__ == "__main__":
     main()

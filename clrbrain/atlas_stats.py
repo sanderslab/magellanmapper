@@ -302,3 +302,28 @@ def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
         sm_qual == sm_qual.max(), 
         df[config.SmoothingMetrics.FILTER_SIZE.value] == 0)]
     return df_peak
+
+
+def plot_intensity_nuclei(size=None, show=True):
+    """Plot nuclei vs. intensity as a scatter plot.
+    
+    Args:
+        size (List[int]): Sequence of ``width, height`` to size the figure; 
+            defaults to None.
+        show (bool): True to display the image; defaults to True.
+
+    """
+    # import CSV manually generated from intensity and nuclei R stats; 
+    # columns should have intensity and nuclei values followed by 
+    # condition (eg "original" and "smoothed")
+    df = pd.read_csv(config.filename)
+    col_x = [col for col in df.columns if col.lower().startswith("intens.")]
+    col_y = [col for col in df.columns if col.lower().startswith("nuc.")]
+    names_group=None
+    if len(col_x) >= 2:
+        names_group = [col.split(".")[1] for col in col_x[:2]]
+    plot_2d.plot_scatter(
+        config.filename, col_x, col_y, names_group=names_group, 
+        labels=("Nuclei", "Intensity"), 
+        title="Nuclei Vs. Intensity By Region", fig_size=size, show=show, 
+        suffix=config.suffix, df=df)

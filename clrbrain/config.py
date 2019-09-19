@@ -90,7 +90,7 @@ class Cmaps(Enum):
 Plot2DTypes = Enum(
     "Plot2DTypes", (
         "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
-        "ROC_CURVE", "SCATTER_INTENS_NUC", 
+        "ROC_CURVE", 
     )
 )
 plot_2d_type = None
@@ -270,7 +270,7 @@ RegisterTypes = Enum(
         "merge_images", "merge_images_channels", 
         "register_reg", "labels_diff", "labels_diff_stats", 
         "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols",
-        "plot_region_dev", "plot_lateral_unlabeled", 
+        "plot_region_dev", "plot_lateral_unlabeled", "plot_intens_nuc", 
     ]
 )
 register_type = None

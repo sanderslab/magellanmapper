@@ -1398,6 +1398,8 @@ def main():
     show = not config.no_show
     size = config.roi_sizes
     if size: size = size[0][:2]
+    # TODO: transition size -> fig_size
+    fig_size = config.plot_labels[config.PlotLabels.SIZE]
     
     #_test_labels_lookup()
     #_test_region_from_id()
@@ -1748,6 +1750,10 @@ def main():
         cols = (config.AtlasMetrics.LAT_UNLBL_VOL.value,
                 config.AtlasMetrics.LAT_UNLBL_PLANES.value)
         atlas_stats.plot_unlabeled_hemisphere(config.filename, cols, size, show)
+    
+    elif reg is config.RegisterTypes.plot_intens_nuc:
+        # plot nuclei vs. intensity as a scatter plot
+        atlas_stats.plot_intensity_nuclei(fig_size, show)
 
 
 if __name__ == "__main__":

@@ -349,6 +349,39 @@ def combine_cols(df, combos):
         df.loc[:, combo_val[0]] = fn_aggr(df.loc[:, metrics])
     return df
 
+
+def append_cols(dfs, labels, fn_col=None):
+    """Append columns from a group of data frames, optionally filtering
+    to keep only columns matching criteria.
+    
+    All columns will be kept from the first data frame.
+    
+    Args:
+        dfs (List[:obj:`pd.DataFrame`]: Sequence of data frames.
+        labels (List[str]): Labels to prepend to filtered columns in
+            the corresponding data frame in ``dfs``.
+        fn_col (func): Function by which to filter columns; defaults to
+            None to keep all columns.
+
+    Returns:
+        The combined data frame
+
+    """
+    for i, (df, label) in enumerate(zip(dfs, labels)):
+        cols = df.columns
+        if fn_col is not None:
+            # filter columns and only keep them except 1st data frame
+            cols = [col for col in cols if fn_col(col)]
+            if i > 0: df = df[cols]
+        # prepend label to filtered columns
+        cols_lbl = ["{}.{}".format(label, col) for col in cols]
+        df = df.rename(columns=dict(zip(cols, cols_lbl)))
+        dfs[i] = df
+    # concatenate columns
+    df = pd.concat(dfs, axis=1)
+    return df
+
+
 def melt_cols(df, id_cols, melt_cols, var_name=None):
     """Melt down a given set of columns to rows.
     
@@ -481,7 +514,9 @@ def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
     combined.to_csv(path, index=False, na_rep="NaN")
     if show is not None:
         print_data_frame(combined, show)
-    print("exported volume data per sample to CSV file: \"{}\"".format(path))
+    if path:
+        print("exported volume data per sample to CSV file: \"{}\""
+              .format(path))
     return combined
 
 

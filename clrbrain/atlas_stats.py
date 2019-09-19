@@ -318,14 +318,9 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
     """
     if len(paths) < 2 or len(labels) < 2: return
     dfs = [pd.read_csv(path) for path in paths]
-    for i, (df, label) in enumerate(zip(dfs, labels)):
-        # get all columns ending with .mean and prepend col name with label
-        cols = [col for col in df.columns if col.lower().endswith(".mean")]
-        if i > 0: df = df[cols]
-        cols_lbl = ["{}.{}".format(label, col) for col in cols]
-        df = df.rename(columns=dict(zip(cols, cols_lbl)))
-        dfs[i] = df
-    df = pd.concat(dfs, axis=1)
+    # merge data frames with all columns ending with .mean, prepending labels
+    df = stats.append_cols(
+        dfs, labels, lambda x: x.lower().endswith(".mean"))
     stats.data_frames_to_csv(df, "vols_stats_intensVnuc.csv")
     
     cols_xy = []
@@ -341,6 +336,5 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
         names_group = [col.split(".")[1] for col in cols_xy[0][:2]]
     plot_2d.plot_scatter(
         config.filename, cols_xy[0], cols_xy[1], names_group=names_group, 
-        labels=("Nuclei", "Intensity"), 
-        title="Nuclei Vs. Intensity By Region", fig_size=size, show=show, 
-        suffix=config.suffix, df=df)
+        labels=labels, title="{} Vs. {} By Region".format(*labels), 
+        fig_size=size, show=show, suffix=config.suffix, df=df)

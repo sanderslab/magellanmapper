@@ -77,18 +77,18 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   subgroups.unique <- getUniqueSubgroups(subgroups, split.by.subgroup)
   num.groups <- length(groups.unique) # total groups
   num.subgroups <- length(subgroups.unique) # total unique subgroups
-  num.groups <- num.groups # total group-subgroup combos
+  num.groupcombos <- num.groups # total group-subgroup combos
   id.cols <- unlist(id.cols, use.names=FALSE)
   if (length(id.cols) > 0) {
     combos <- unique(df.region[, id.cols])
     if (length(id.cols) >= 2) {
-      num.groups <- nrow(combos)
+      num.groupcombos <- nrow(combos)
     } else {
-      num.groups <- length(combos)
+      num.groupcombos <- length(combos)
     }
   }
   subgroups.by.group <- list() # sets of subgroups within each main group
-  names.groups <- vector(length=num.groups) # main and subgroup names combined
+  names.groupcombos <- vector(length=num.groupcombos) # group-subgroup names
   
   # set up summary stats to display
   mean.ci <- FALSE
@@ -102,11 +102,11 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   vals <- df.region[[col]]
   int.digits <- nchar(trunc(max(vals)))
   vals.groups <- list() # list of vals for each group-subgroup group
-  vals.means <- vector(length=num.groups)
-  vals.medians <- vector(length=num.groups)
-  vals.cis <-vector(length=num.groups)
-  vals.sds <-vector(length=num.groups)
-  errs <- vector(length=num.groups) # based on CI but 0 if CI is NA
+  vals.means <- vector(length=num.groupcombos)
+  vals.medians <- vector(length=num.groupcombos)
+  vals.cis <-vector(length=num.groupcombos)
+  vals.sds <-vector(length=num.groupcombos)
+  errs <- vector(length=num.groupcombos) # based on CI but 0 if CI is NA
   i <- 1
   for (group in groups.unique) {
     subgroups.in.group <- subgroups
@@ -144,7 +144,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
         name <- subgroup
         if (num.groups > 1) name <- paste(group, subgroup)
       }
-      names.groups[i] <- name
+      names.groupcombos[i] <- name
       i <- i + 1
     }
   }
@@ -188,7 +188,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   # define graph limits, with x from 0 to number of groups, and y from 
   # 0 to highest y-val, or highest absolute error bar
   mins <- c(-0.5, min(vals) / denom)
-  maxes <- c(num.groups, max(vals) / denom)
+  maxes <- c(num.groupcombos, max(vals) / denom)
   if (mean.ci) {
     mins[2] <- min(mins[2], min(vals.means - errs) / denom)
     maxes[2] <- max(maxes[2], max(vals.means + errs) / denom)
@@ -264,7 +264,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   
   i <- 1
   group.last <- NULL
-  x.pos <- 0:(num.groups-1)
+  x.pos <- 0:(num.groupcombos-1)
   for (j in seq_along(groups.unique)) {
     group <- groups.unique[j]
     subgroups.in.group.unique <- subgroups.by.group[[j]]
@@ -365,7 +365,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     }
   par(par.old)
   
-  return(list(names.groups, vals.means, vals.medians, vals.sds, vals.cis))
+  return(list(names.groupcombos, vals.means, vals.medians, vals.sds, vals.cis))
 }
 
 getUniqueSubgroups <- function(subgroups, split.by.subgroup) {

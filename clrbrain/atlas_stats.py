@@ -304,26 +304,43 @@ def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
     return df_peak
 
 
-def plot_intensity_nuclei(size=None, show=True):
+def plot_intensity_nuclei(paths, labels, size=None, show=True):
     """Plot nuclei vs. intensity as a scatter plot.
     
     Args:
+        paths (List[str]): Sequence of paths to CSV files.
+        labels (List[str]): Sequence of label metrics corresponding to 
+            ``paths``.
         size (List[int]): Sequence of ``width, height`` to size the figure; 
             defaults to None.
         show (bool): True to display the image; defaults to True.
 
     """
-    # import CSV manually generated from intensity and nuclei R stats; 
-    # columns should have intensity and nuclei values followed by 
-    # condition (eg "original" and "smoothed")
-    df = pd.read_csv(config.filename)
-    col_x = [col for col in df.columns if col.lower().startswith("intens.")]
-    col_y = [col for col in df.columns if col.lower().startswith("nuc.")]
-    names_group=None
-    if len(col_x) >= 2:
-        names_group = [col.split(".")[1] for col in col_x[:2]]
+    if len(paths) < 2 or len(labels) < 2: return
+    dfs = [pd.read_csv(path) for path in paths]
+    for i, (df, label) in enumerate(zip(dfs, labels)):
+        # get all columns ending with .mean and prepend col name with label
+        cols = [col for col in df.columns if col.lower().endswith(".mean")]
+        if i > 0: df = df[cols]
+        cols_lbl = ["{}.{}".format(label, col) for col in cols]
+        df = df.rename(columns=dict(zip(cols, cols_lbl)))
+        dfs[i] = df
+    df = pd.concat(dfs, axis=1)
+    stats.data_frames_to_csv(df, "vols_stats_intensVnuc.csv")
+    
+    cols_xy = []
+    for label in labels:
+        # get columns for the given label to plot on a given axis; assume
+        # same order of labels for each group of columns so they correspond
+        cols_xy.append([
+            col for col in df.columns if col.startswith("{}.".format(label))])
+    
+    names_group = None
+    if len(cols_xy[0]) >= 2:
+        # extract name from first 2 columns
+        names_group = [col.split(".")[1] for col in cols_xy[0][:2]]
     plot_2d.plot_scatter(
-        config.filename, col_x, col_y, names_group=names_group, 
+        config.filename, cols_xy[0], cols_xy[1], names_group=names_group, 
         labels=("Nuclei", "Intensity"), 
         title="Nuclei Vs. Intensity By Region", fig_size=size, show=show, 
         suffix=config.suffix, df=df)

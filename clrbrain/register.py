@@ -1753,7 +1753,10 @@ def main():
     
     elif reg is config.RegisterTypes.plot_intens_nuc:
         # plot nuclei vs. intensity as a scatter plot
-        atlas_stats.plot_intensity_nuclei(fig_size, show)
+        labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
+                  config.plot_labels[config.PlotLabels.X_LABEL])
+        atlas_stats.plot_intensity_nuclei(
+            config.filenames, labels, fig_size, show)
 
 
 if __name__ == "__main__":

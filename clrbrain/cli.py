@@ -440,8 +440,8 @@ def main(process_args_only=False):
     
     if args.plot_2d:
         # 2D plot type to process in plot_2d module
-        config.plot_2d = args.plot_2d
-        print("Set plot_2d type to {}".format(config.plot_2d))
+        config.plot_2d_type = args.plot_2d
+        print("Set plot_2d type to {}".format(config.plot_2d_type))
     
     if args.rescale:
         config.rescale = float(args.rescale)

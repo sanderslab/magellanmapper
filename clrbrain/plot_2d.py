@@ -894,7 +894,8 @@ def main():
     size = config.plot_labels[config.PlotLabels.SIZE]
     show = not config.no_show
     
-    plot_2d_type = config.Plot2DTypes[config.plot_2d.upper()]
+    plot_2d_type = lib_clrbrain.get_enum(
+        config.plot_2d_type, config.Plot2DTypes)
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
         plot_bars(

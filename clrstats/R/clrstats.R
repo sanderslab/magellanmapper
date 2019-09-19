@@ -586,7 +586,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   
   # merge in region names based on matching IDs
   df <- merge(df, region.ids, by="Region", all.x=TRUE)
-  print.data.frame(df)
+  #print.data.frame(df)
   print(str(df)) # show data frame structure
   cat("\n\n")
   
@@ -739,6 +739,12 @@ setupConfig <- function(name=NULL) {
     config.env$VolcanoLogX <- FALSE
     config.env$JitterPlotSave <- FALSE
     
+  } else if (name == "intensnuc") {
+    # WT intensity and nuclei counts
+    setupConfig("wt")
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[1])
+    config.env$Measurements <- kMeas[c(3, 17)]
+    
   } else if (name == "wt.test") {
     # WT test
     setupConfig("wt")
@@ -784,6 +790,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("aba")
   #setupConfig("smoothing")
   #setupConfig("wt")
+  #setupConfig("intensnuc")
   #setupConfig("compactness")
   #setupConfig("compactness.stats")
   #setupConfig("reg")
@@ -802,7 +809,7 @@ runStats <- function(stat.type=NULL) {
     split.by.side <- TRUE # false to combine sides
     load.stats <- FALSE # true to load saved stats, only regenerate volcano plots
     
-    # set up paramters based on chosen model
+    # set up parameters based on chosen model
     stat <- "vals"
     if (config.env$Model == kModel[2]) {
       stat <- "genos"

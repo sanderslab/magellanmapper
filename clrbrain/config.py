@@ -332,6 +332,7 @@ class AtlasMetrics(Enum):
     """General atlas metric enumerations."""
     SAMPLE = "Sample"
     REGION = "Region"
+    REGION_ABBR = "RegionAbbr"
     CONDITION = "Condition"
     DSC_ATLAS_LABELS = "DSC_atlas_labels"
     DSC_ATLAS_LABELS_HEM = "DSC_atlas_labels_hemisphere"

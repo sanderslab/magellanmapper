@@ -13,6 +13,7 @@ from clrbrain import lib_clrbrain
 from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import stats
+from clrbrain import vols
 
 
 def plot_region_development(metric, size=None, show=True):
@@ -319,8 +320,13 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
     if len(paths) < 2 or len(labels) < 2: return
     dfs = [pd.read_csv(path) for path in paths]
     # merge data frames with all columns ending with .mean, prepending labels
+    extra_cols = [
+        config.AtlasMetrics.REGION.value,
+        config.AtlasMetrics.REGION_ABBR.value,
+        vols.LabelMetrics.Volume.name,
+    ]
     df = stats.append_cols(
-        dfs, labels, lambda x: x.lower().endswith(".mean"))
+        dfs[:2], labels, lambda x: x.lower().endswith(".mean"), extra_cols)
     stats.data_frames_to_csv(df, "vols_stats_intensVnuc.csv")
     
     cols_xy = []
@@ -328,7 +334,7 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
         # get columns for the given label to plot on a given axis; assume
         # same order of labels for each group of columns so they correspond
         cols_xy.append([
-            col for col in df.columns if col.startswith("{}.".format(label))])
+            col for col in df.columns if col.startswith(label)])
     
     names_group = None
     if len(cols_xy[0]) >= 2:

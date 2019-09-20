@@ -282,7 +282,7 @@ def coefvar_df(df, id_cols, metric_cols, size_col=None):
     
     return df_coef
 
-def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
+def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols, sep="_"):
     """Transpose metric columns from rows within each condition group 
     to separate sets of columns.
     
@@ -293,6 +293,7 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
         cond_base: Name of first condition in output data frame; if None, 
             defaults to first condition found.
         metric_cols: Sequence of metric columns to normalize.
+        sep (str): Separator for metric and condition in new column names.
     
     Returns:
         :obj:`pd.DataFrame: New data frame with ``metric_cols`` expanded
@@ -308,7 +309,8 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
     
     for cond in conds:
         # copy metric cols from each condition to separate cols
-        cols_dict = {col: "{}_{}".format(col, cond) for col in metric_cols}
+        cols_dict = {
+            col: "{}{}{}".format(col, sep, cond) for col in metric_cols}
         df_cond = df_base
         if cond != cond_base:
             df_cond = df.loc[df[cond_col] == cond, cols].set_index(id_cols)

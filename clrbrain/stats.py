@@ -290,19 +290,17 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
         df: Pandas data frame.
         id_cols: Sequence of columns to serve as index/indices.
         cond_col: Name of the condition column.
-        cond_base: Name of the condition to which all other conditions 
-            will be normalized.
+        cond_base: Name of first condition in output data frame; if None, 
+            defaults to first condition found.
         metric_cols: Sequence of metric columns to normalize.
     
     Returns:
-        New data frame with columns from ``id_cols``, ``cond_col``, 
-        ``metric_cols``, and ``extra_cols``. Values with condition equal 
-        to ``cond_base`` should be definition be 1 or NaN, while all 
-        other conditions should be normalized to the original ``cond_base`` 
-        values.
+        :obj:`pd.DataFrame: New data frame with ``metric_cols`` expanded
+        to have separate columns for each condition in ``cond_cols``.
     """
     # set up conditions, output columns, and copy of base condition
     conds = np.unique(df[cond_col])
+    if cond_base is None: cond_base = conds[0]
     if cond_base not in conds: return
     cols = (*id_cols, *metric_cols)
     df_base = df.loc[df[cond_col] == cond_base].set_index(id_cols)
@@ -318,10 +316,10 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols):
         dfs.append(df_cond)
     
     # combine cols and remove obsolete condition col
-    df_norm = pd.concat(dfs, axis=1)
-    df_norm = df_norm.reset_index()
-    df_norm = df_norm.drop(cond_col, axis=1)
-    return df_norm
+    df_out = pd.concat(dfs, axis=1)
+    df_out = df_out.reset_index()
+    df_out = df_out.drop(cond_col, axis=1)
+    return df_out
 
 def combine_cols(df, combos):
     """Combine columns in a data frame with the aggregation function 

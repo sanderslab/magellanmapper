@@ -272,6 +272,7 @@ RegisterTypes = Enum(
         "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols",
         "plot_region_dev", "plot_lateral_unlabeled", 
         "combine_intens_nuc", "plot_intens_nuc", 
+        "pivot_conds",
     ]
 )
 register_type = None

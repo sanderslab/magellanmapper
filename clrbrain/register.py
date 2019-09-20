@@ -1735,6 +1735,17 @@ def main():
         stats.data_frames_to_csv(
             df, lib_clrbrain.insert_before_ext(config.filename, "_melted"))
 
+    elif reg is config.RegisterTypes.pivot_conds:
+        # pivot condition column to separate metric columns
+        id_cols = [
+            config.AtlasMetrics.SAMPLE.value, 
+            config.AtlasMetrics.CONDITION.value]
+        df = stats.cond_to_cols_df(
+            pd.read_csv(config.filename), id_cols, 
+            config.AtlasMetrics.CONDITION.value, None, config.groups)
+        stats.data_frames_to_csv(
+            df, lib_clrbrain.insert_before_ext(config.filename, "_condtocol"))
+
     elif reg is config.RegisterTypes.plot_region_dev:
         # plot region development
         try:

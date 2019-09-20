@@ -350,7 +350,7 @@ def combine_cols(df, combos):
     return df
 
 
-def append_cols(dfs, labels, fn_col=None):
+def append_cols(dfs, labels, fn_col=None, extra_cols=None):
     """Append columns from a group of data frames, optionally filtering
     to keep only columns matching criteria.
     
@@ -362,6 +362,8 @@ def append_cols(dfs, labels, fn_col=None):
             the corresponding data frame in ``dfs``.
         fn_col (func): Function by which to filter columns; defaults to
             None to keep all columns.
+        extra_cols (List[str]): List of additional columns to keep from the
+            first data frame; defaults to None.
 
     Returns:
         The combined data frame
@@ -370,9 +372,13 @@ def append_cols(dfs, labels, fn_col=None):
     for i, (df, label) in enumerate(zip(dfs, labels)):
         cols = df.columns
         if fn_col is not None:
-            # filter columns and only keep them except 1st data frame
+            # filter columns to keep
             cols = [col for col in cols if fn_col(col)]
-            if i > 0: df = df[cols]
+            keep_cols = cols
+            if i == 0 and extra_cols:
+                # keep additional columns from first data frame
+                keep_cols = extra_cols + keep_cols
+            df = df[keep_cols]
         # prepend label to filtered columns
         cols_lbl = ["{}.{}".format(label, col) for col in cols]
         df = df.rename(columns=dict(zip(cols, cols_lbl)))

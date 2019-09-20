@@ -565,7 +565,8 @@ def filter_dfs_on_vals(dfs, cols=None, row_matches=None):
     return df_merged, dfs_filt
 
 
-if __name__ == "__main__":
+def main():
+    """Process stats based on command-line mode."""
     print("Starting Clrbrain stats...")
     from clrbrain import cli
     cli.main(True)
@@ -595,3 +596,7 @@ if __name__ == "__main__":
         if not out_path:
             out_path = "filtered.csv"
         data_frames_to_csv(df_filt, out_path)
+
+
+if __name__ == "__main__":
+    main()

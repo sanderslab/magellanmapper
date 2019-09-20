@@ -1380,8 +1380,6 @@ def main():
     :attr:`clrbrain.config.register_type`.
     """
     plot_2d.setup_style("default")
-    # convert to next larger prefix (eg um to mm)
-    unit_factor = 1000.0
     
     # name prefix to use a different name from the input files, such as when 
     # registering transposed/scaled images but outputting paths corresponding 
@@ -1590,7 +1588,7 @@ def main():
         extra_metric_groups = config.register_settings["extra_metric_groups"]
         volumes_by_id(
             config.filenames, labels_ref_lookup, suffix=config.suffix, 
-            unit_factor=unit_factor, groups=groups, 
+            unit_factor=config.unit_factor, groups=groups, 
             max_level=config.labels_level, combine_sides=combine_sides, 
             extra_metrics=extra_metric_groups)
     

@@ -329,6 +329,9 @@ StatsTypes = Enum(
 stats_type = None
 seed = 0 # random number generator seed
 
+#: float: measurement unit factor to convert to next larger prefix (eg um to mm)
+unit_factor = 1000.0
+
 
 class AtlasMetrics(Enum):
     """General atlas metric enumerations."""

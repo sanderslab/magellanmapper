@@ -20,6 +20,8 @@ from clrbrain import lib_clrbrain
 from clrbrain import sqlite
 from clrbrain import plot_3d
 from clrbrain import roi_editor
+from clrbrain import stats
+from clrbrain import vols
  
 def make_roi_paths(path, roi_id, channel, make_dirs=False):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
@@ -42,7 +44,7 @@ def make_roi_paths(path, roi_id, channel, make_dirs=False):
         path_img_annot, path_img_annot_nifti
 
 
-def export_rois(db, image5d, channel, path, border):
+def export_rois(db, image5d, channel, path, border=None, cond=None):
     """Export all ROIs from database.
     
     If the current processing profile includes isotropic interpolation, the 
@@ -53,11 +55,19 @@ def export_rois(db, image5d, channel, path, border):
         image5d: The image with the ROIs.
         channel: Channel to export.
         path: Path with filename base from which to save the exported files.
-        border: Border dimensions in (x,y,z) order to not include in the ROI; 
-            can be None.
+        border (List[int]): Border dimensions in (x,y,z) order to not 
+            include in the ROI; defaults to None.
+        cond (str): Condition text; defaults to None.
+    
+    Returns:
+        :obj:`pd.DataFrame`: ROI metrics in a data frame.
+    
     """
     if border is not None:
         border = np.array(border)
+    spacing = detector.calc_scaling_factor()
+    phys_mult = np.prod(spacing)
+    metrics_all = {}
     exps = sqlite.select_experiment(db.cur, None)
     for exp in exps:
         rois = sqlite.select_rois(db.cur, exp["id"])
@@ -155,10 +165,34 @@ def export_rois(db, image5d, channel, path, border):
                     img3d_truth, None, channel, show=False, 
                     title=os.path.splitext(path_img_annot)[0])
             
+            # measure ROI metrics and export to data frame; use AtlasMetrics
+            # enum vals since will need LabelMetrics names instead
+            metrics = {
+                config.AtlasMetrics.SAMPLE.value: exp["name"],
+                config.AtlasMetrics.CONDITION.value: cond,
+                config.AtlasMetrics.CHANNEL.value: channel,
+                config.AtlasMetrics.OFFSET.value: offset,
+                config.AtlasMetrics.SIZE.value: size,
+            }
+            # get basic counts for ROI and update volume for physical units
+            vols.MeasureLabel.set_data(
+                img3d, np.ones_like(img3d, dtype=np.int8))
+            _, metrics_counts = vols.MeasureLabel.measure_counts(1)
+            metrics_counts[vols.LabelMetrics.Volume] *= phys_mult
+            for key, val in metrics_counts.items():
+                # convert LabelMetrics to their name
+                metrics[key.name] = val 
+            metrics[vols.LabelMetrics.Nuclei.name] = len(blobs)
+            for key, val in metrics.items():
+                metrics_all.setdefault(key, []).append(val)
+            
             print("exported {}".format(path_base))
-    '''
-    _test_loading_rois(db, channel, path)
-    '''
+    
+    #_test_loading_rois(db, channel, path)
+    out_path = "{}_rois.csv".format(path)
+    if cond: out_path = lib_clrbrain.insert_before_ext(out_path, cond, "_")
+    df = stats.dict_to_data_frame(metrics_all, out_path)
+    return df
 
 
 def load_roi_files(db, path):

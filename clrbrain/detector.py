@@ -148,6 +148,12 @@ def format_blobs(blobs, channel=None):
     use ``detector`` functions to manipulate other fields of blob arrays to 
     ensure that the correct columns are accessed.
     
+    "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 1 = correct.
+    
+    "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where 
+    a "matched" truth blob is one that has a detected blob within a given 
+    tolerance.
+    
     Args:
         blobs: Numpy 2D array in [[z, y, x, radius, ...], ...] format.
         channel: Channel to set. Defaults to None, in which case the channel 

@@ -446,6 +446,7 @@ def print_data_frame(df, sep=" "):
     else:
         print(df.to_csv(sep=sep, index=False, na_rep="NaN"))
 
+
 def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=None):
     """Import dictionary to data frame, with option to export to CSV.
     
@@ -471,19 +472,9 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=None):
         cols = {}
         for key in keys: cols[key] = key.value
         df.rename(dict_import, columns=cols, inplace=True)
-    
-    if sort_cols is not None:
-        df = df.sort_values(sort_cols)
-    
-    if show is not None:
-        print_data_frame(df, show)
-    
-    if path:
-        # backup and export to CSV
-        lib_clrbrain.backup_file(path)
-        df.to_csv(path, index=False, na_rep="NaN")
-        print("data frame saved to {}".format(path))
+    df = data_frames_to_csv(df, path, sort_cols, show)
     return df
+
 
 def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
     """Combine and export multiple data frames to CSV file.

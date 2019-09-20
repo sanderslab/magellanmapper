@@ -215,7 +215,7 @@ class MeasureLabel(object):
         dist_to_orig: Distance map of labels to edges, with intensity values 
             in the same placement as in ``labels_edge``.
         heat_map: Numpy array as a density map.
-        sub_seg: Integer sub-segmentations labels image as Numpy array.
+        subseg: Integer sub-segmentations labels image as Numpy array.
         df: Pandas data frame with a row for each sub-region.
     """
     # metric keys
@@ -239,8 +239,8 @@ class MeasureLabel(object):
     spacing = None
     
     @classmethod
-    def set_data(cls, atlas_img_np, labels_img_np, labels_edge, 
-                 dist_to_orig, labels_interior=None, heat_map=None, 
+    def set_data(cls, atlas_img_np, labels_img_np, labels_edge=None, 
+                 dist_to_orig=None, labels_interior=None, heat_map=None, 
                  subseg=None, df=None, spacing=None):
         """Set the images and data frame."""
         cls.atlas_img_np = atlas_img_np

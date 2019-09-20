@@ -684,9 +684,25 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             the max value in the column is 1; defaults to None.
         size_mult: Point size multiplier; defaults to 5.
         annot_arri: Int as index or slice of indices of annotation value
-            if the annotation isa string that can be converted into a
+            if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
     """
+    def plot():
+        # plot a paired sequence of x/y's and annotate
+        ax.scatter(
+            xs, ys, s=sizes_plot, label=label, color=colors[i], marker="o")
+        if col_annot:
+            # annotate each point with val from annotation col
+            for x, y, annot in zip(xs, ys, df_group[col_annot]):
+                if annot_arri is not None:
+                    # attempt to convert string into array to extract
+                    # the given values
+                    annot_arr = lib_clrbrain.npstr_to_array(annot)
+                    if annot_arr is not None:
+                        annot = annot_arr[annot_arri]
+                ax.annotate(
+                    "{}".format(lib_clrbrain.format_num(annot, 3)), (x, y))
+    
     # load data frame from CSV and setup figure
     if df is None:
         df = pd.read_csv(df)
@@ -701,15 +717,17 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         sizes *= size_mult / np.amax(sizes)
     
     # plot selected columns
+    sizes_plot = sizes
+    df_group = df
     if lib_clrbrain.is_seq(col_x):
         # treat each pair of col_y and col_y values as a group
         colors = colormaps.discrete_colormap(
             len(col_x), prioritize_default="cn", seed=config.seed) / 255
         for i, (x, y) in enumerate(zip(col_x, col_y)):
             label = x if names_group is None else names_group[i]
-            ax.scatter(
-                df[x], df[y], s=sizes, label=label, 
-                color=colors[i], marker="o")
+            xs = df[x]
+            ys = df[y]
+            plot()
     else:
         # set up groups
         df_groups = None
@@ -731,31 +749,19 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         for i, group in enumerate(groups):
             # plot all points in each group with same color
             df_group = df
-            s = sizes
+            sizes_plot = sizes
             label = None
             if group != "":
                 mask = df_groups == group
                 df_group = df.loc[mask]
-                if col_size is not None: s = s[mask]
+                if col_size is not None: sizes_plot = sizes_plot[mask]
                 # make label from group names and values
                 label = ", ".join(
                     ["{} {}".format(name, lib_clrbrain.format_num(val, 3)) 
                      for name, val in zip(names, group.split(","))])
             xs = df_group[col_x]
             ys = df_group[col_y]
-            ax.scatter(
-                xs, ys, s=s, label=label, color=colors[i], marker="o")
-            if col_annot:
-                # annotate each point with val from annotation col
-                for x, y, annot in zip(xs, ys, df_group[col_annot]):
-                    if annot_arri is not None:
-                        # attempt to convert string into array to extract
-                        # the given values
-                        annot_arr = lib_clrbrain.npstr_to_array(annot)
-                        if annot_arr is not None:
-                            annot = annot_arr[annot_arri]
-                    ax.annotate(
-                        "{}".format(lib_clrbrain.format_num(annot, 3)), (x, y))
+            plot()
     
     # set x/y axis limits if given
     if xlim: ax.set_xlim(xlim)

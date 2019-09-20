@@ -44,7 +44,8 @@ def make_roi_paths(path, roi_id, channel, make_dirs=False):
         path_img_annot, path_img_annot_nifti
 
 
-def export_rois(db, image5d, channel, path, border=None, cond=None):
+def export_rois(db, image5d, channel, path, border=None, cond=None, 
+                unit_factor=None):
     """Export all ROIs from database.
     
     If the current processing profile includes isotropic interpolation, the 
@@ -58,6 +59,8 @@ def export_rois(db, image5d, channel, path, border=None, cond=None):
         border (List[int]): Border dimensions in (x,y,z) order to not 
             include in the ROI; defaults to None.
         cond (str): Condition text; defaults to None.
+        unit_factor (float): Linear conversion factor for units (eg 1000.0
+            to convert um to mm).
     
     Returns:
         :obj:`pd.DataFrame`: ROI metrics in a data frame.
@@ -65,8 +68,11 @@ def export_rois(db, image5d, channel, path, border=None, cond=None):
     """
     if border is not None:
         border = np.array(border)
-    spacing = detector.calc_scaling_factor()
-    phys_mult = np.prod(spacing)
+    
+    # convert volume base on scaling and unit factor
+    phys_mult = np.prod(detector.calc_scaling_factor())
+    if unit_factor: phys_mult /= unit_factor ** 3
+    
     metrics_all = {}
     exps = sqlite.select_experiment(db.cur, None)
     for exp in exps:

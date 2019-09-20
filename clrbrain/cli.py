@@ -907,7 +907,8 @@ def process_file(path, series, offset, roi_size, proc_mode):
             db = config.truth_db
             cond = "truth"
         export_rois.export_rois(
-            db, image5d, config.channel, filename_base, config.border, cond)
+            db, image5d, config.channel, filename_base, config.border, cond,
+            config.unit_factor)
         
     elif proc_type is config.ProcessTypes.TRANSPOSE:
         # transpose and/or rescale whole large image

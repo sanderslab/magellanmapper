@@ -305,16 +305,17 @@ def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
     return df_peak
 
 
-def plot_intensity_nuclei(paths, labels, size=None, show=True):
+def combine_intensity_nuclei(paths, labels):
     """Plot nuclei vs. intensity as a scatter plot.
     
     Args:
         paths (List[str]): Sequence of paths to CSV files.
         labels (List[str]): Sequence of label metrics corresponding to 
             ``paths``.
-        size (List[int]): Sequence of ``width, height`` to size the figure; 
-            defaults to None.
-        show (bool): True to display the image; defaults to True.
+    
+    Returns:
+        :obj:`pd.DataFrame`: Data frame with columns matching ``labels``
+        for the given ``paths`` concatenated.
 
     """
     if len(paths) < 2 or len(labels) < 2: return
@@ -327,20 +328,41 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
     ]
     df = stats.append_cols(
         dfs[:2], labels, lambda x: x.lower().endswith(".mean"), extra_cols)
+    for col in df.columns:
+        if col.startswith(labels):
+            df.loc[:, "{}.density".format(col)] = (
+                    df[col] / df[vols.LabelMetrics.Volume.name])
     stats.data_frames_to_csv(df, "vols_stats_intensVnuc.csv")
-    
+    return df
+
+
+def plot_intensity_nuclei(df, labels, fn_filt, size=None, show=True):
+    """Plot nuclei vs. intensity as a scatter plot.
+
+    Args:
+        df (:obj:`pd.DataFrame`): Data frame with intensity and nuclei stats.
+        labels (List[str]): Sequence of label metrics corresponding to 
+            ``paths``.
+        size (List[int]): Sequence of ``width, height`` to size the figure; 
+            defaults to None.
+        show (bool): True to display the image; defaults to True.
+
+    """
     cols_xy = []
     for label in labels:
         # get columns for the given label to plot on a given axis; assume
         # same order of labels for each group of columns so they correspond
         cols_xy.append([
-            col for col in df.columns if col.startswith(label)])
+            col for col in df.columns 
+            if fn_filt(col, label)])
     
     names_group = None
-    if len(cols_xy[0]) >= 2:
-        # extract name from first 2 columns
-        names_group = [col.split(".")[1] for col in cols_xy[0][:2]]
+    if cols_xy:
+        # extract legend names assuming label.cond[.density] format
+        names_group = np.unique([col.split(".")[1] for col in cols_xy[0]])
     plot_2d.plot_scatter(
-        config.filename, cols_xy[0], cols_xy[1], names_group=names_group, 
+        config.filename, cols_xy[0], cols_xy[1], 
+        #col_annot=config.AtlasMetrics.REGION_ABBR.value,
+        names_group=names_group, 
         labels=labels, title="{} Vs. {} By Region".format(*labels), 
         fig_size=size, show=show, suffix=config.suffix, df=df)

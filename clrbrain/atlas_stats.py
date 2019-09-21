@@ -341,8 +341,8 @@ def plot_intensity_nuclei(df, labels, fn_filt, size=None, show=True):
 
     Args:
         df (:obj:`pd.DataFrame`): Data frame with intensity and nuclei stats.
-        labels (List[str]): Sequence of label metrics corresponding to 
-            ``paths``.
+        labels (List[str]): Sequence of label metrics, typically 
+            corresponding to nuclei and intensity.
         size (List[int]): Sequence of ``width, height`` to size the figure; 
             defaults to None.
         show (bool): True to display the image; defaults to True.
@@ -365,4 +365,23 @@ def plot_intensity_nuclei(df, labels, fn_filt, size=None, show=True):
         #col_annot=config.AtlasMetrics.REGION_ABBR.value,
         names_group=names_group, 
         labels=labels, title="{} Vs. {} By Region".format(*labels), 
+        fig_size=size, show=show, suffix=config.suffix, df=df)
+
+
+def plot_intensity_nuclei_roi(df, labels, size=None, show=True):
+    """Plot nuclei vs. intensity from an ROI data frame as a scatter plot.
+
+    Args:
+        df (:obj:`pd.DataFrame`): Data frame with intensity and nuclei stats.
+        labels (List[str]): Sequence of label metrics, typically 
+            corresponding to nuclei and intensity.
+        size (List[int]): Sequence of ``width, height`` to size the figure; 
+            defaults to None.
+        show (bool): True to display the image; defaults to True.
+
+    """
+    plot_2d.plot_scatter(
+        config.filename, labels[1], labels[0],
+        cols_group=[config.AtlasMetrics.CONDITION.value],
+        labels=labels, title="{} Vs. {} By Region".format(*labels),
         fig_size=size, show=show, suffix=config.suffix, df=df)

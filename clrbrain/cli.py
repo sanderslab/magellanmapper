@@ -108,8 +108,6 @@ image5d = None # numpy image array
 image5d_proc = None
 segments_proc = None
 
-TRUTH_DB_TYPES = ("view", "verify", "verified", "edit")
-truth_db_type = None
 
 
 def _parse_coords(arg):
@@ -244,7 +242,7 @@ def main(process_args_only=False):
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for Clrbrain")
-    global roi_size, offset, mlab_3d, truth_db_type
+    global roi_size, offset, mlab_3d
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series")
@@ -560,14 +558,15 @@ def main(process_args_only=False):
         config.db_name = args.db
         print("Set database name to {}".format(config.db_name))
     # load "truth blobs" from separate database for viewing
-    truth_db_type = None
     if args.truth_db is not None:
-        truth_db_type = args.truth_db[0]
-        print("Set truth_db type to {}".format(truth_db_type))
+        config.truth_db_mode = lib_clrbrain.get_enum(
+            args.truth_db[0], config.TruthDBModes)
+        print("Mapped \"{}\" truth_db setting to {}"
+              .format(args.truth_db[0], config.truth_db_mode))
         if len(args.truth_db) > 1:
             config.truth_db_name = args.truth_db[1]
             print("Set truth_db name to {}".format(config.truth_db_name))
-    if truth_db_type == TRUTH_DB_TYPES[0]:
+    if config.truth_db_mode is config.TruthDBModes.VIEW:
         # loads truth DB as a separate database in parallel with the given 
         # editable database, with name based on filename by default unless 
         # truth DB name explicitly given
@@ -577,7 +576,7 @@ def main(process_args_only=False):
         except FileNotFoundError as e:
             print(e)
             print("Could not load truth DB from current image path")
-    elif truth_db_type == TRUTH_DB_TYPES[1]:
+    elif config.truth_db_mode is config.TruthDBModes.VERIFY:
         # creates a new verified DB to store all ROC results
         config.verified_db = sqlite.ClrDB()
         config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
@@ -589,7 +588,7 @@ def main(process_args_only=False):
                 print(e)
                 print("Could not load truth DB from {}"
                       .format(config.truth_db_name))
-    elif truth_db_type == TRUTH_DB_TYPES[2]:
+    elif config.truth_db_mode is config.TruthDBModes.VERIFIED:
         # loads verified DB as the main DB, which includes copies of truth 
         # values with flags for whether they were detected
         path = sqlite.DB_NAME_VERIFIED
@@ -601,7 +600,7 @@ def main(process_args_only=False):
             print(e)
             print("Could not load verified DB from {}"
                   .format(sqlite.DB_NAME_VERIFIED))
-    elif truth_db_type == TRUTH_DB_TYPES[3]:
+    elif config.truth_db_mode is config.TruthDBModes.EDIT:
         # loads truth DB as the main database for editing rather than 
         # loading as a truth database
         config.db_name = config.truth_db_name
@@ -934,7 +933,8 @@ def process_file(path, series, offset, roi_size, proc_mode):
         # detect blobs in the full image
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, image5d, offset, roi_size, 
-            truth_db_type == TRUTH_DB_TYPES[1], not config.roc)
+            config.truth_db_mode is config.TruthDBModes.VERIFY, 
+            not config.roc)
     
     return stats, fdbk
     

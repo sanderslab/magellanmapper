@@ -175,6 +175,16 @@ scale_bar = True
 
 # DATABASE
 
+#: :class:`Enum`: Enum class for truth database modes.
+TruthDBModes = Enum(
+    "TruthDBModes", (
+        "VIEW", "VERIFY", "VERIFIED", "EDIT" 
+    )
+)
+
+#: :obj:`TruthDBModes`: truth database mode enum
+truth_db_mode = None
+
 DB_NAME = "clrbrain.db"
 db_name = DB_NAME # path to main DB
 db = None # main DB

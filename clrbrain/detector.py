@@ -222,6 +222,23 @@ def update_blob_confirmed(blob, confirmed):
     blob[..., 4] = confirmed
     return blob
 
+
+def get_blob_truth(blob):
+    """Get the truth flag of a blob or blobs.
+    
+    Args:
+        blob (:obj:`np.ndarray`): 1D blob array or 2D array of blobs.
+
+    Returns:
+        int or :obj:`np.ndarray`: The truth flag of the blob as an int
+        for a single blob or array of truth flags for an array of blobs. 
+
+    """
+    if blob.ndim > 1:
+        return blob[..., 5]
+    return blob[5]
+
+
 def get_blob_channel(blob):
     return blob[6]
 

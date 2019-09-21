@@ -899,15 +899,11 @@ def process_file(path, series, offset, roi_size, proc_mode):
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
         from clrbrain import export_rois
-        if config.truth_db is None:
-            db = config.db
-            cond = "detected"
-        else:
-            db = config.truth_db
-            cond = "truth"
+        db = config.db if config.truth_db is None else config.truth_db
         export_rois.export_rois(
-            db, image5d, config.channel, filename_base, config.border, cond,
-            config.unit_factor)
+            db, image5d, config.channel, filename_base, config.border, 
+            config.unit_factor, config.truth_db_mode,
+            os.path.basename(config.filename))
         
     elif proc_type is config.ProcessTypes.TRANSPOSE:
         # transpose and/or rescale whole large image

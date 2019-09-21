@@ -44,8 +44,8 @@ def make_roi_paths(path, roi_id, channel, make_dirs=False):
         path_img_annot, path_img_annot_nifti
 
 
-def export_rois(db, image5d, channel, path, border=None, cond=None, 
-                unit_factor=None):
+def export_rois(db, image5d, channel, path, border=None, unit_factor=None, 
+                truth_mode=None, exp_name=None):
     """Export all ROIs from database.
     
     If the current processing profile includes isotropic interpolation, the 
@@ -58,9 +58,12 @@ def export_rois(db, image5d, channel, path, border=None, cond=None,
         path: Path with filename base from which to save the exported files.
         border (List[int]): Border dimensions in (x,y,z) order to not 
             include in the ROI; defaults to None.
-        cond (str): Condition text; defaults to None.
         unit_factor (float): Linear conversion factor for units (eg 1000.0
             to convert um to mm).
+        truth_mode (:obj:`config.TruthDBModes`): Truth mode enum; defaults
+            to None.
+        exp_name (str): Name of experiment to export; defaults to None to
+            export all experiments in ``db``.
     
     Returns:
         :obj:`pd.DataFrame`: ROI metrics in a data frame.
@@ -76,6 +79,10 @@ def export_rois(db, image5d, channel, path, border=None, cond=None,
     metrics_all = {}
     exps = sqlite.select_experiment(db.cur, None)
     for exp in exps:
+        if exp_name and exp["name"] != exp_name:
+            # DBs may contain many experiments, which may not correspond to 
+            # image5d, eg verified DBs from many truth sets
+            continue
         rois = sqlite.select_rois(db.cur, exp["id"])
         for roi in rois:
             # get ROI as a small image
@@ -83,11 +90,23 @@ def export_rois(db, image5d, channel, path, border=None, cond=None,
             offset = sqlite.get_roi_offset(roi)
             img3d = plot_3d.prepare_roi(image5d, size, offset)
             
-            # get blobs, keep only confirmed ones, and change confirmation 
-            # flag to avoid confirmation color in 2D plots
+            # get blobs and change confirmation flag to avoid confirmation 
+            # color in 2D plots
             roi_id = roi["id"]
             blobs = sqlite.select_blobs(db.cur, roi_id)
-            blobs = blobs[detector.get_blob_confirmed(blobs) == 1]
+            blobs_detected = None
+            if truth_mode is config.TruthDBModes.VERIFIED:
+                # verified DBs use a truth value of -1 to indicate "detected",
+                # non-truth blobs, including both correct and incorrect 
+                # detections, while the rest of blobs are "truth" blobs
+                truth_vals = detector.get_blob_truth(blobs)
+                blobs_detected = blobs[truth_vals == -1]
+                blobs = blobs[truth_vals != -1]
+            else:
+                # default to include only confirmed blobs; truth sets 
+                # ironically do not use the truth flag but instead
+                # assume all confirmed blobs are "truth"
+                blobs = blobs[detector.get_blob_confirmed(blobs) == 1]
             blobs[:, 4] = -1
             
             # adjust ROI size and offset if border set
@@ -175,7 +194,7 @@ def export_rois(db, image5d, channel, path, border=None, cond=None,
             # enum vals since will need LabelMetrics names instead
             metrics = {
                 config.AtlasMetrics.SAMPLE.value: exp["name"],
-                config.AtlasMetrics.CONDITION.value: cond,
+                config.AtlasMetrics.CONDITION.value: "truth",
                 config.AtlasMetrics.CHANNEL.value: channel,
                 config.AtlasMetrics.OFFSET.value: offset,
                 config.AtlasMetrics.SIZE.value: size,
@@ -189,14 +208,23 @@ def export_rois(db, image5d, channel, path, border=None, cond=None,
                 # convert LabelMetrics to their name
                 metrics[key.name] = val 
             metrics[vols.LabelMetrics.Nuclei.name] = len(blobs)
-            for key, val in metrics.items():
-                metrics_all.setdefault(key, []).append(val)
+            metrics_dicts = [metrics]
+            if blobs_detected is not None:
+                # add another row for detected blobs
+                metrics_detected = dict(metrics)
+                metrics_detected[
+                    config.AtlasMetrics.CONDITION.value] = "detected"
+                metrics_detected[
+                    vols.LabelMetrics.Nuclei.name] = len(blobs_detected)
+                metrics_dicts.append(metrics_detected)
+            for m in metrics_dicts:
+                for key, val in m.items():
+                    metrics_all.setdefault(key, []).append(val)
             
             print("exported {}".format(path_base))
     
     #_test_loading_rois(db, channel, path)
     out_path = "{}_rois.csv".format(path)
-    if cond: out_path = lib_clrbrain.insert_before_ext(out_path, cond, "_")
     df = stats.dict_to_data_frame(metrics_all, out_path)
     return df
 

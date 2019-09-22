@@ -326,17 +326,23 @@ def combine_intensity_nuclei(paths, labels):
         config.AtlasMetrics.REGION_ABBR.value,
         vols.LabelMetrics.Volume.name,
     ]
+    tag = ".mean"
     df = stats.append_cols(
-        dfs[:2], labels, lambda x: x.lower().endswith(".mean"), extra_cols)
+        dfs[:2], labels, lambda x: x.lower().endswith(tag), extra_cols)
     for col in df.columns:
         if col.startswith(labels):
-            df.loc[:, "{}.density".format(col)] = (
+            col_split = col.split(".")
+            col_split[0] = "{}_density".format(col_split[0])
+            df.loc[:, ".".join(col_split)] = (
                     df[col] / df[vols.LabelMetrics.Volume.name])
+    # strip the tag from column names
+    names = {col: col.rsplit(tag)[0] for col in df.columns}
+    df = df.rename(columns=names)
     stats.data_frames_to_csv(df, "vols_stats_intensVnuc.csv")
     return df
 
 
-def plot_intensity_nuclei(df, labels, fn_filt, size=None, show=True):
+def plot_intensity_nuclei(df, labels, size=None, show=True):
     """Plot nuclei vs. intensity as a scatter plot.
 
     Args:
@@ -353,12 +359,11 @@ def plot_intensity_nuclei(df, labels, fn_filt, size=None, show=True):
         # get columns for the given label to plot on a given axis; assume
         # same order of labels for each group of columns so they correspond
         cols_xy.append([
-            col for col in df.columns 
-            if fn_filt(col, label)])
+            col for col in df.columns if col.split(".")[0] == label])
     
     names_group = None
     if cols_xy:
-        # extract legend names assuming label.cond[.density] format
+        # extract legend names assuming label.cond format
         names_group = np.unique([col.split(".")[1] for col in cols_xy[0]])
     plot_2d.plot_scatter(
         config.filename, cols_xy[0], cols_xy[1], 

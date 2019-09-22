@@ -1771,10 +1771,9 @@ def main():
         labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
                   config.plot_labels[config.PlotLabels.X_LABEL])
         df = pd.read_csv(config.filename)
-        def filt(x, y): return x.startswith(y) and not x.endswith(".density")
-        atlas_stats.plot_intensity_nuclei(df, labels, filt, fig_size, show)
-        def filt_dens(x, y): return x.startswith(y) and x.endswith(".density")
-        atlas_stats.plot_intensity_nuclei(df, labels, filt_dens, fig_size, show)
+        atlas_stats.plot_intensity_nuclei(df, labels, fig_size, show)
+        labels = ["{}_density".format(l) for l in labels]
+        atlas_stats.plot_intensity_nuclei(df, labels, fig_size, show)
 
     elif reg is config.RegisterTypes.plot_intens_nuc_roi:
         labels = (config.plot_labels[config.PlotLabels.Y_LABEL],

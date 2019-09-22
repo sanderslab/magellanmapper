@@ -1760,20 +1760,11 @@ def main():
                 config.AtlasMetrics.LAT_UNLBL_PLANES.value)
         atlas_stats.plot_unlabeled_hemisphere(config.filename, cols, size, show)
 
-    elif reg is config.RegisterTypes.combine_intens_nuc:
-        # combine nuclei vs. intensity R stats
-        labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
-                  config.plot_labels[config.PlotLabels.X_LABEL])
-        atlas_stats.combine_intensity_nuclei(config.filenames, labels)
-
     elif reg is config.RegisterTypes.plot_intens_nuc:
-        # plot nuclei vs. intensity as a scatter plot
+        # combine nuclei vs. intensity R stats and generate scatter plots
         labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
                   config.plot_labels[config.PlotLabels.X_LABEL])
-        df = pd.read_csv(config.filename)
-        atlas_stats.plot_intensity_nuclei(df, labels, fig_size, show)
-        labels = ["{}_density".format(l) for l in labels]
-        atlas_stats.plot_intensity_nuclei(df, labels, fig_size, show)
+        atlas_stats.plot_intensity_nuclei(config.filenames, labels)
 
     elif reg is config.RegisterTypes.plot_intens_nuc_roi:
         labels = (config.plot_labels[config.PlotLabels.Y_LABEL],

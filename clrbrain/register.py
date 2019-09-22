@@ -1736,8 +1736,7 @@ def main():
     elif reg is config.RegisterTypes.pivot_conds:
         # pivot condition column to separate metric columns
         id_cols = [
-            config.AtlasMetrics.SAMPLE.value, 
-            config.AtlasMetrics.CONDITION.value]
+            config.AtlasMetrics.SAMPLE.value, ]
         df = stats.cond_to_cols_df(
             pd.read_csv(config.filename), id_cols, 
             config.AtlasMetrics.CONDITION.value, None, config.groups)

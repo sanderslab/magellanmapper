@@ -948,6 +948,30 @@ def main():
         # set annotation array index as 0 since most often vary only
         # z-val, but switch or remove when varying other axes
         plot_roc(pd.read_csv(config.filename), show, 0)
+    
+    elif plot_2d_type is config.Plot2DTypes.SCATTER_PLOT:
+        # scatter plot
+        
+        # get data frame columns and corresponding labels
+        cols = (config.plot_labels[config.PlotLabels.Y_COL],
+                config.plot_labels[config.PlotLabels.X_COL])
+        labels = [config.plot_labels[config.PlotLabels.Y_LABEL],
+                  config.plot_labels[config.PlotLabels.X_LABEL]]
+        for i, (col, label) in enumerate(zip(cols, labels)):
+            # default to use data frame columns
+            if not label: labels[i] = col
+        
+        # get group columns and title
+        cols_group = config.plot_labels[config.PlotLabels.GROUP_COL]
+        if cols_group and not lib_clrbrain.is_seq(cols_group):
+            cols_group = [cols_group]
+        title = config.plot_labels[config.PlotLabels.TITLE]
+        if not title: title = "{} Vs. {}".format(*labels)
+        
+        plot_scatter(
+            config.filename, cols[1], cols[0], 
+            cols_group=cols_group, labels=labels, title=title,
+            fig_size=size, show=show, suffix=config.suffix)
 
 
 if __name__ == "__main__":

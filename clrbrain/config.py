@@ -90,7 +90,7 @@ class Cmaps(Enum):
 Plot2DTypes = Enum(
     "Plot2DTypes", (
         "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
-        "ROC_CURVE", 
+        "ROC_CURVE", "SCATTER_PLOT",
     )
 )
 plot_2d_type = None
@@ -103,6 +103,8 @@ PlotLabels = Enum(
         "SIZE",  # in x,y 
         "LAYOUT",  # subplot layout in num of columns, rows
         "ALPHAS_CHL",  # alphas for main image's channels
+        "X_COL", "Y_COL",  # columns from data frame to plot
+        "GROUP_COL",  # data frame group column
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)

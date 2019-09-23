@@ -179,7 +179,13 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             filename_info_proc, offset, roi_size)
     
     # get ROI for given region, including all channels
-    roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
+    if image5d is None:
+        image5d = np.load(filename_image5d_proc, mmap_mode="r")
+        image5d = importer.roi_to_image5d(image5d)
+        roi = plot_3d.prepare_roi(
+            image5d, image5d.shape[3::-1], np.zeros(3, dtype=int))
+    else:
+        roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
     _, channels = plot_3d.setup_channels(roi, config.channel, 3)
     
     # chunk ROI into sub-ROIs

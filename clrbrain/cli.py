@@ -662,7 +662,10 @@ def _iterate_file_processing(path, series, offsets, roi_sizes):
     for i in range(len(offsets)):
         size = (roi_sizes[i] if roi_sizes_len > 1 
                 else roi_sizes[0])
-        setup_images(path, series, config.proc_type)
+        try:
+            setup_images(path, series, config.proc_type)
+        except FileNotFoundError:
+            pass
         stat_roi, fdbk = process_file(
             path, series, offsets[i], size, config.proc_type)
         if stat_roi is not None:

@@ -606,7 +606,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   return(stats.filtered)
 }
 
-calcCorr <- function(path.in, cols, plot.size=c(5, 7)) {
+calcCorr <- function(path.in, cols, plot.size=c(5, 7), suffix=NULL) {
   # Calculate correlation coefficient matrix for columns in a data frame 
   # and plot with significance.
   #
@@ -615,6 +615,8 @@ calcCorr <- function(path.in, cols, plot.size=c(5, 7)) {
   #   cols: Vector of columns for which to build correlation matrix.
   #   plot.size: Vector of width, height for exported plot; defaults to 
   #     c(5, 7).
+  #   suffix: String of output path suffix inserted before the stat type;
+  #     defaults to NULL.
   
   # load CSV to data frame, calculate correlation coefficient matrix, 
   # and save correlations and p-vals to CSV
@@ -623,8 +625,12 @@ calcCorr <- function(path.in, cols, plot.size=c(5, 7)) {
   base.path <- tools::file_path_sans_ext(basename(path.in))
   corr <- Hmisc::rcorr(as.matrix(df[, cols]), type="spearman")
   print(corr)
-  write.csv(corr$r, paste0("../", base.path, "_correlation_r.csv"))
-  write.csv(corr$P, paste0("../", base.path, "_correlation_p.csv"))
+  out.path <- paste0("../", base.path, "_corr")
+  if (!is.null(suffix)) {
+    out.path <- paste(out.path, suffix, sep="_")
+  }
+  write.csv(corr$r, paste0(out.path, "_r.csv"))
+  write.csv(corr$P, paste0(out.path, "_p.csv"))
   
   # plot correlation matrix and save to PDF
   corrplot::corrplot(
@@ -850,9 +856,22 @@ runStats <- function(stat.type=NULL) {
     # correlation coefficient matrix; 
     # TODO: generalize scenarios
     #calcCorr(config.env$StatsPathIn, kMeas[c(4:6, 10)], config.env$PlotSize)
-    calcCorr("../vols_stats_IntensVsNuc.csv", 
-             c("Intens.original", "Intens.smoothed", 
-               "Nuc.original", "Nuc.smoothed"), 
+    
+    # intensity vs. nuclei from atlas regions
+    calcCorr("../vols_stats_intensVnuc.csv", 
+             c("Intensity.original", "Intensity.smoothed", 
+               "Nuclei.original", "Nuclei.smoothed"), 
+             config.env$PlotSize)
+    calcCorr("../vols_stats_intensVnuc.csv", 
+             c("Intensity_density.original", 
+               "Intensity_density.smoothed", 
+               "Nuclei_density.original", "Nuclei_density.smoothed"), 
+             config.env$PlotSize, "density")
+    
+    # from ROIs
+    calcCorr("../vols_stats_intensVnuc_rois_condtocol.csv", 
+             c("Intensity_detected", "Intensity_truth", 
+               "Nuclei_detected", "Nuclei_truth"), 
              config.env$PlotSize)
     
   } else if (stat.type == kStatTypes[3]) {

@@ -69,16 +69,6 @@ Attributes:
         an animated GIF with the ``--interval`` and ``--rescale`` options. 
         ``export_blobs`` exports blob coordinates/radii to compressed CSV file.
     proc: The chosen processing mode; defaults to None.
-    TRUTH_DB_TYPES: Truth database modes. ``view`` loads the truth 
-        database corresponding to the filename and any offset/size to show 
-        alongside the current database. ``verify`` creates a new database 
-        to store results from ROC curve building. ``verified`` loads the  
-        verified database generated from the prior mode.
-    truth_db_type: The chosen truth database type; defaults to None. The first 
-        argument will compared with ``TRUTH_DB_TYPES``. If a second argument 
-        is given, it will be used as the path to the truth database for 
-        ``view`` and ``verify``, the main and verified databases for 
-        ``verified``, and the main database for ``edit``.
 """
 
 import os
@@ -557,8 +547,15 @@ def main(process_args_only=False):
     if args.db:
         config.db_name = args.db
         print("Set database name to {}".format(config.db_name))
+    
     # load "truth blobs" from separate database for viewing
     if args.truth_db is not None:
+        # set the truth database mode
+        # - first arg: specifies the mode
+        # - (opt) second arg: path to the truth database for 
+        # ``view`` and ``verify``, the main and verified databases for 
+        # ``verified``, and the main database for ``edit``
+        # TODO: refactor into args_to_dict format
         config.truth_db_mode = lib_clrbrain.get_enum(
             args.truth_db[0], config.TruthDBModes)
         print("Mapped \"{}\" truth_db setting to {}"

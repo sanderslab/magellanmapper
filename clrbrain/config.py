@@ -177,7 +177,11 @@ scale_bar = True
 
 # DATABASE
 
-#: :class:`Enum`: Enum class for truth database modes.
+#: :class:`Enum`: Enum class for truth database modes. ``view`` loads the truth 
+# database corresponding to the filename and any offset/size to show 
+# alongside the current database. ``verify`` creates a new database 
+# to store results from ROC curve building. ``verified`` loads the  
+# verified database generated from the prior mode.
 TruthDBModes = Enum(
     "TruthDBModes", (
         "VIEW", "VERIFY", "VERIFIED", "EDIT" 

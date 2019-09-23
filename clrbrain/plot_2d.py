@@ -705,7 +705,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     
     # load data frame from CSV and setup figure
     if df is None:
-        df = pd.read_csv(df)
+        df = pd.read_csv(path)
     fig = plt.figure(figsize=fig_size)
     gs = gridspec.GridSpec(1, 1)
     ax = plt.subplot(gs[0, 0])
@@ -792,7 +792,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
 def plot_probability(path, conds, metric_cols, col_size, **kwargs):
     """Generate a probability plot such as that used in Q-Q or P-P plots.
     
-    Serves as a wrapper for :meth:``plot_scatter`` with the assumption 
+    Serves as a wrapper for :meth:`plot_scatter` with the assumption that
     matching columns for each of two conditions describe each point.
     
     Args:

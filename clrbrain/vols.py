@@ -19,7 +19,11 @@ from clrbrain import plot_3d
 # metric keys and column names
 LabelMetrics = Enum(
     "LabelMetrics", [
-        "Region", "Volume", "Intensity", "Nuclei", "Density", 
+        "Region", "Volume", "Intensity", "Nuclei", 
+        # densities; "Density" = nuclei density
+        # TODO: change density to nuclei density
+        # TODO: consider changing enum for KEY: name format
+        "Density", "DensityIntens",
         "RegVolMean", "RegNucMean", "RegDensityMean", # per region
         "VarNuclei", "VarNucIn", "VarNucOut", 
         "VarIntensity", "VarIntensIn", "VarIntensOut", 

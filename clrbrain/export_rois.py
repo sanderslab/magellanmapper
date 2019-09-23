@@ -224,8 +224,15 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
             print("exported {}".format(path_base))
     
     #_test_loading_rois(db, channel, path)
-    out_path = "{}_rois.csv".format(path)
-    df = stats.dict_to_data_frame(metrics_all, out_path)
+    
+    # convert to data frame and compute densities for nuclei and intensity
+    df = stats.dict_to_data_frame(metrics_all)
+    vol = df[vols.LabelMetrics.Volume.name]
+    df.loc[:, vols.LabelMetrics.DensityIntens.name] = (
+        df[vols.LabelMetrics.Intensity.name] / vol)
+    df.loc[:, vols.LabelMetrics.Density.name] = (
+        df[vols.LabelMetrics.Nuclei.name] / vol)
+    df = stats.data_frames_to_csv(df, "{}_rois.csv".format(path))
     return df
 
 

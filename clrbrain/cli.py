@@ -703,6 +703,7 @@ def setup_images(path, series, proc_mode=None):
         # load a processed image, typically a chunk of a larger image
         print("Loading processed image files")
         global image5d_proc, segments_proc
+        
         try:
             # processed image file, which < v.0.4.3 was the saved 
             # filtered image, but >= v.0.4.3 is the ROI chunk of the orig image
@@ -751,7 +752,7 @@ def setup_images(path, series, proc_mode=None):
         except IOError as e:
             print("Unable to load processed info file at {}, will exit"
                   .format(filename_info_proc))
-            raise e
+            #raise e
     
     if image5d is None:
         # load or import the main image stack
@@ -776,8 +777,18 @@ def setup_images(path, series, proc_mode=None):
         else:
             # load or import from Clrbrain Numpy format
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
-            image5d = importer.read_file(
-                path, series, channel=config.channel, load=load)
+            try:
+                image5d = importer.read_file(
+                    path, series, channel=config.channel, load=load)
+            except FileNotFoundError:
+                filename_image5d_proc = stack_detect.make_subimage_name(
+                    filename_image5d_proc, offset, roi_size)
+                filename_info_proc = stack_detect.make_subimage_name(
+                    filename_info_proc, offset, roi_size)
+                image5d = np.load(filename_image5d_proc, mmap_mode="r")
+                image5d = importer.roi_to_image5d(image5d)
+                config.full_roi = True
+                print(image5d.shape)
 
     if config.load_labels is not None:
         # load registered files including labels
@@ -930,7 +941,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, image5d, offset, roi_size, 
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
-            not config.roc)
+            not config.roc, config.full_roi)
     
     return stats, fdbk
     

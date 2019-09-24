@@ -149,7 +149,7 @@ def make_subimage_name(base, offset, shape):
     return name
 
 def detect_blobs_large_image(filename_base, image5d, offset, roi_size, 
-                             verify=False, save_dfs=True):
+                             verify=False, save_dfs=True, full_roi=False):
     """Detect blobs within a large image through parallel processing of 
     smaller chunks.
     
@@ -161,6 +161,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         verify: True to verify detections against truth database; defaults 
             to False.
         save_dfs: True to save data frames to file; defaults to True.
+        full_roi (bool): True to treat ``image5d`` as the full ROI; defaults
+            to False.
     """
     time_start = time()
     filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
@@ -179,11 +181,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             filename_info_proc, offset, roi_size)
     
     # get ROI for given region, including all channels
-    if image5d is None:
-        image5d = np.load(filename_image5d_proc, mmap_mode="r")
-        image5d = importer.roi_to_image5d(image5d)
-        roi = plot_3d.prepare_roi(
-            image5d, image5d.shape[3::-1], np.zeros(3, dtype=int))
+    if full_roi:
+        # treat the full image as the ROI
+        roi = image5d[0]
     else:
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
     _, channels = plot_3d.setup_channels(roi, config.channel, 3)
@@ -283,7 +283,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             try:
                 if config.truth_db_name and config.truth_db:
                     # use explicitly given truth DB if given, which can 
-                    # containg multiple experiments for different subimages
+                    # contain multiple experiments for different subimages
                     print("using truth DB from {}"
                           .format(config.truth_db_name))
                     exp_name = importer.deconstruct_np_filename(

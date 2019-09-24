@@ -52,23 +52,17 @@ Command-line arguments in addition to those from attributes listed below:
         attachment file path, stored respectively as 
         :attr:``config.notify_url``, :attr:``config.notify_msg``, and 
         :attr:``config.notify_attach``.
+    * proc: The chosen processing mode; defaults to None.
+    * truth_db: Specify truth database parameters. First arg specifies the mode.
+        Second arg (opt) specifies a path to the truth database for 
+       ``view`` and ``verify``, the main and verified databases for 
+       ``verified``, and the main database for ``edit``.
 
 Attributes:
     roi_size: The size in pixels of the region of interest. Set with
         "size=x,y,z" argument, where x, y, and z are integers.
     offset: The bottom corner in pixels of the region of interest. Set 
         with "offset=x,y,z" argument, where x, y, and z are integers.
-    PROC_TYPES: Processing modes. ``importonly`` imports an image stack and 
-        exits non-interactively. ``processing`` processes and segments the 
-        entire image stack and exits non-interactively. ``load`` loads already 
-        processed images and segments. ``extract`` extracts a single plane 
-        using the z-value from the offset and exits. ``export_rois`` 
-        exports ROIs from the current database to serial 2D plots. 
-        ``transpose`` transposes the Numpy image file associated with 
-        ``filename`` with the ``--rescale`` option. ``animated`` generates 
-        an animated GIF with the ``--interval`` and ``--rescale`` options. 
-        ``export_blobs`` exports blob coordinates/radii to compressed CSV file.
-    proc: The chosen processing mode; defaults to None.
 """
 
 import os
@@ -549,10 +543,6 @@ def main(process_args_only=False):
     # load "truth blobs" from separate database for viewing
     if args.truth_db is not None:
         # set the truth database mode
-        # - first arg: specifies the mode
-        # - (opt) second arg: path to the truth database for 
-        # ``view`` and ``verify``, the main and verified databases for 
-        # ``verified``, and the main database for ``edit``
         # TODO: refactor into args_to_dict format
         config.truth_db_mode = lib_clrbrain.get_enum(
             args.truth_db[0], config.TruthDBModes)

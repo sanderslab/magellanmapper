@@ -71,7 +71,17 @@ resolutions = None
 magnification = -1.0  # objective magnification
 zoom = -1.0  # objective zoom
 
-# main processing tasks
+#: :class:`Enum`: main processing tasks
+# PROC_TYPES: Processing modes. ``importonly`` imports an image stack and 
+# exits non-interactively. ``processing`` processes and segments the 
+# entire image stack and exits non-interactively. ``load`` loads already 
+# processed images and segments. ``extract`` extracts a single plane 
+# using the z-value from the offset and exits. ``export_rois`` 
+# exports ROIs from the current database to serial 2D plots. 
+# ``transpose`` transposes the Numpy image file associated with 
+# ``filename`` with the ``--rescale`` option. ``animated`` generates 
+# an animated GIF with the ``--interval`` and ``--rescale`` options. 
+# ``export_blobs`` exports blob coordinates/radii to compressed CSV file.
 ProcessTypes = Enum(
     "ProcessTypes", (
         "IMPORT_ONLY", "PROCESSING", "PROCESSING_MP", "LOAD", "EXTRACT", 

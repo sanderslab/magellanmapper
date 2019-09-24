@@ -45,7 +45,7 @@ series = 0 # series for multi-stack files
 channel = None # channel of interest, where None specifies all channels
 roi_sizes = None # list of regions of interest
 offsets = None # list of offsets
-full_roi = False
+image5d_is_roi = False  # flag when image5d was loaded as an ROI
 
 prefix = None # alternate path
 suffix = None # modifier to existing base path

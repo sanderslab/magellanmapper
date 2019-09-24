@@ -687,6 +687,7 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
     # reset image5d
     image5d = None
     config.image5d_is_roi = False
+    path_image5d = path
     
     proc_type = lib_clrbrain.get_enum(proc_mode, config.ProcessTypes)
     if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
@@ -706,57 +707,60 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
                 # in ROI format
                 filename_info_proc = stack_detect.make_subimage_name(
                     filename_info_proc, offset, roi_size)
-                config.image5d_is_roi = True
         
-        if (config.image5d_is_roi or 
-                proc_type is not config.ProcessTypes.PROCESSING_MP):
-            # load blobs/ROI metadata +/- ROI image; ROI metadata is only
-            # necessary for blob detection if loading ROI image
-            
-            try:
-                # load processed segments and ROI metadata
-                output_info = importer.read_np_archive(
-                    np.load(filename_info_proc))
-                segments_proc = output_info["segments"]
-                print("{} segments loaded".format(len(segments_proc)))
-                if config.verbose:
-                    detector.show_blobs_per_channel(segments_proc)
-                # TODO: gets overwritten after loading original image's metadata
-                config.resolutions = output_info["resolutions"]
-            except (FileNotFoundError, KeyError) as e:
-                print("Unable to load processed info file at {}, will exit"
-                      .format(filename_info_proc))
+        try:
+            # load image as an ROI chunk of the orig image if available
+            image5d = np.load(filename_image5d_proc, mmap_mode="r")
+            image5d = importer.roi_to_image5d(image5d)
+            config.image5d_is_roi = True
+            print("Loading processed/ROI image from {} with shape {}"
+                  .format(filename_image5d_proc, image5d.shape))
+        except IOError:
+            print("Ignoring ROI image file from {} as unable to load"
+                  .format(filename_image5d_proc))
+
+        basename = None
+        try:
+            # load processed blobs and ROI metadata
+            output_info = importer.read_np_archive(
+                np.load(filename_info_proc))
+            segments_proc = output_info["segments"]
+            print("{} segments loaded".format(len(segments_proc)))
+            if config.verbose:
+                detector.show_blobs_per_channel(segments_proc)
+            # TODO: gets overwritten after loading original image's metadata
+            config.resolutions = output_info["resolutions"]
+            basename = output_info["basename"]
+            # TODO: ROI offset/shape not used
+            roi_offset = _check_np_none(output_info["offset"])
+            shape = _check_np_none(output_info["roi_size"])
+            print("processed image offset: {}, roi_size: {}"
+                  .format(roi_offset, shape))
+        except (FileNotFoundError, KeyError) as e:
+            print("Unable to load processed info file at {}"
+                  .format(filename_info_proc))
+            if proc_type in (
+                    config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_BLOBS):
+                # blobs expected but not found
                 raise e
-            
-            try:
-                # load image as an ROI chunk of the orig image if available
-                image5d = np.load(filename_image5d_proc, mmap_mode="r")
-                image5d = importer.roi_to_image5d(image5d)
-                print("Loading processed/ROI image from {} with shape {}"
-                      .format(filename_image5d_proc, image5d.shape))
-                orig_info = None
-                try:
-                    # load original image's metadata, including essential data
-                    # such as vmin/vmax, based on filename stored in processed
-                    # file,  assuming metadata is in processed file's dir
-                    basename = output_info["basename"]
-                    # TODO: ROI offset/shape not used
-                    roi_offset = _check_np_none(output_info["offset"])
-                    shape = _check_np_none(output_info["roi_size"])
-                    print("processed image offset: {}, roi_size: {}"
-                          .format(roi_offset, shape))
-                    path_roi = os.path.join(
-                        os.path.dirname(filename_base), str(basename))
-                    _, orig_info = importer.make_filenames(path_roi, series)
-                    print("load original image metadata from:", orig_info)
-                    importer.read_info(orig_info)
-                except (FileNotFoundError, KeyError) as e:
-                    print("Unable to original info file at {}, will exit"
-                          .format(orig_info))
-                    raise e
-            except IOError:
-                print("Ignoring ROI image file from {} as unable to load"
-                      .format(filename_image5d_proc))
+
+        orig_info = None
+        try:
+            if basename:
+                # get original image metadata filename from ROI metadata;
+                # assume original metadata is in ROI file's dir; if ROI image
+                # not loaded, will use this path to fully load original image
+                # in case the given path is an ROI path
+                path_image5d = os.path.join(
+                    os.path.dirname(filename_base), str(basename))
+            if image5d is not None:
+                # after loading ROI image, load original image's metadata
+                # for essential data such as vmin/vmax
+                _, orig_info = importer.make_filenames(path_image5d, series)
+                print("load original image metadata from:", orig_info)
+                importer.read_info(orig_info)
+        except (FileNotFoundError, KeyError):
+            print("Unable to load original info file from", orig_info)
     
     if image5d is None:
         # load or import the main image stack
@@ -779,10 +783,11 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
             except FileNotFoundError as e:
                 print(e)
         else:
-            # load or import from Clrbrain Numpy format
+            # load or import from Clrbrain Numpy format, using any path
+            # changes during attempting ROI load
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
             image5d = importer.read_file(
-                path, series, channel=config.channel, load=load)
+                path_image5d, series, channel=config.channel, load=load)
 
     if config.load_labels is not None:
         # load registered files including labels

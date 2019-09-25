@@ -129,9 +129,9 @@ def insert_before_ext(name, insert, sep=""):
     in ``base_path``.
     
     Args:
-        name: Path.
-        insert: String to insert before the extension in the name.
-        sep: Separator between ``name`` and ``insert``; default to an 
+        name (str): Path; if no dot is present, it will be appended.
+        insert (str): String to insert before the extension in the name.
+        sep (str): Separator between ``name`` and ``insert``; default to an 
            empty string.
     
     Returns:
@@ -140,6 +140,7 @@ def insert_before_ext(name, insert, sep=""):
     See Also:
         :func:``combine_paths`` to use the extension from ``insert``.
     """
+    if name.find(".") == -1: name += "."
     return "{0}{2}{3}.{1}".format(*name.rsplit(".", 1), sep, insert)
 
 def splitext(path):

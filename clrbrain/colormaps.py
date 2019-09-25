@@ -152,18 +152,18 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     starting colors and filling in the rest with randomly generated RGB values.
     
     Args:
-        num_colors: Number of discrete colors to generate.
-        alpha: Transparency level.
-        prioritize_default: If True, the default colors from 
+        num_colors (int): Number of discrete colors to generate.
+        alpha (int): Transparency level, from 0-255; defaults to 255.
+        prioritize_default (bool): If True, the default colors from 
             :attr:``config.colors`` will replace the initial colormap elements; 
             defaults to True. Alternatively, `cn` can be given to use 
             the "CN" color spec instead.
-        seed: Random number seed; defaults to None, in which case no seed 
+        seed (int): Random number seed; defaults to None, in which case no seed 
             will be set.
-        multiplier: Multiplier for random values generated for RGB values; 
+        multiplier (int): Multiplier for random values generated for RGB values;
             defaults to 255. Generally range from 1-255, with lower 
             numbers skewing toward darker colors.
-        offset: Offset to generated random numbers; defaults to 0. The 
+        offset (int): Offset to generated random numbers; defaults to 0. The 
             final numbers will be in the range from offset to offset+multiplier.
     
     Returns:

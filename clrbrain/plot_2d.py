@@ -643,7 +643,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                  names_group=None, labels=None, units=None, xlim=None, 
                  ylim=None, title=None, fig_size=None, show=True, suffix=None, 
                  df=None, xy_line=False, col_size=None, size_mult=5,
-                 annot_arri=None):
+                 annot_arri=None, alpha=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -686,6 +686,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         annot_arri: Int as index or slice of indices of annotation value
             if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
+        alpha (int): Point transparency value, from 0-255; defaults to None,
+            in which case 255 will be used.
     """
     def plot():
         # plot a paired sequence of x/y's and annotate
@@ -716,13 +718,17 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         sizes = df[col_size]
         sizes *= size_mult / np.amax(sizes)
     
+    if not alpha:
+        alpha = 255
+    
     # plot selected columns
     sizes_plot = sizes
     df_group = df
     if lib_clrbrain.is_seq(col_x):
         # treat each pair of col_y and col_y values as a group
         colors = colormaps.discrete_colormap(
-            len(col_x), prioritize_default="cn", seed=config.seed) / 255
+            len(col_x), prioritize_default="cn", seed=config.seed,
+            alpha=alpha) / 255
         for i, (x, y) in enumerate(zip(col_x, col_y)):
             label = x if names_group is None else names_group[i]
             xs = df[x]
@@ -745,7 +751,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             groups = df_groups.unique()
         names = cols_group if names_group is None else names_group
         colors = colormaps.discrete_colormap(
-            len(groups), prioritize_default="cn", seed=config.seed) / 255
+            len(groups), prioritize_default="cn", seed=config.seed,
+            alpha=alpha) / 255
         for i, group in enumerate(groups):
             # plot all points in each group with same color
             df_group = df
@@ -971,7 +978,8 @@ def main():
         plot_scatter(
             config.filename, cols[1], cols[0], 
             cols_group=cols_group, labels=labels, title=title,
-            fig_size=size, show=show, suffix=config.suffix)
+            fig_size=size, show=show, suffix=config.suffix, 
+            alpha=config.alphas[0]*255)
 
 
 if __name__ == "__main__":

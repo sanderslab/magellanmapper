@@ -1765,11 +1765,6 @@ def main():
                   config.plot_labels[config.PlotLabels.X_LABEL])
         atlas_stats.plot_intensity_nuclei(config.filenames, labels)
 
-    elif reg is config.RegisterTypes.plot_intens_nuc_roi:
-        labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
-                  config.plot_labels[config.PlotLabels.X_LABEL])
-        df = pd.read_csv(config.filename)
-        atlas_stats.plot_intensity_nuclei_roi(df, labels, fig_size, show)
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

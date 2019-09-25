@@ -692,7 +692,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     def plot():
         # plot a paired sequence of x/y's and annotate
         ax.scatter(
-            xs, ys, s=sizes_plot, label=label, color=colors[i], marker="o")
+            xs, ys, s=sizes_plot, label=label, color=colors[i], 
+            marker=markers[i])
         if col_annot:
             # annotate each point with val from annotation col
             for x, y, annot in zip(xs, ys, df_group[col_annot]):
@@ -721,14 +722,19 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     if not alpha:
         alpha = 255
     
+    # point markers
+    markers = ["o", "v", "^", "d", "<", ">"]
+    
     # plot selected columns
     sizes_plot = sizes
     df_group = df
     if lib_clrbrain.is_seq(col_x):
         # treat each pair of col_y and col_y values as a group
+        num_groups = len(col_x)
         colors = colormaps.discrete_colormap(
-            len(col_x), prioritize_default="cn", seed=config.seed,
+            num_groups, prioritize_default="cn", seed=config.seed,
             alpha=alpha) / 255
+        markers = lib_clrbrain.pad_seq(markers, num_groups)
         for i, (x, y) in enumerate(zip(col_x, col_y)):
             label = x if names_group is None else names_group[i]
             xs = df[x]
@@ -750,8 +756,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                     df_groups = df_groups.str.cat(df_col, sep=",")
             groups = df_groups.unique()
         names = cols_group if names_group is None else names_group
+        num_groups = len(groups)
+        markers = lib_clrbrain.pad_seq(markers, num_groups)
         colors = colormaps.discrete_colormap(
-            len(groups), prioritize_default="cn", seed=config.seed,
+            num_groups, prioritize_default="cn", seed=config.seed,
             alpha=alpha) / 255
         for i, group in enumerate(groups):
             # plot all points in each group with same color

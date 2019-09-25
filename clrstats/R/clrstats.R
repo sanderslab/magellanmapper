@@ -625,10 +625,10 @@ calcCorr <- function(path.in, cols, plot.size=c(5, 7), suffix=NULL) {
   base.path <- tools::file_path_sans_ext(basename(path.in))
   corr <- Hmisc::rcorr(as.matrix(df[, cols]), type="spearman")
   print(corr)
-  out.path <- paste0("../", base.path, "_corr")
   if (!is.null(suffix)) {
-    out.path <- paste(out.path, suffix, sep="_")
+    base.path <- paste(base.path, suffix, sep="_")
   }
+  out.path <- paste0("../", base.path, "_corr")
   write.csv(corr$r, paste0(out.path, "_r.csv"))
   write.csv(corr$P, paste0(out.path, "_p.csv"))
   
@@ -636,10 +636,9 @@ calcCorr <- function(path.in, cols, plot.size=c(5, 7), suffix=NULL) {
   corrplot::corrplot(
     corr$r, method="circle", order="hclust", p.mat=corr$p, 
     sig.level=0.05, insig="p-value")
-  dev.print(
-    pdf, width=plot.size[1], height=plot.size[2], 
-    file=paste0(
-      "../plot_corr_", base.path, ".pdf"))
+  plot.path <- paste0("../plot_corr_", base.path, ".pdf")
+  dev.print(pdf, width=plot.size[1], height=plot.size[2], file=plot.path)
+  cat(paste("Output plot to", plot.path, "\n"))
 }
 
 calcNormality <- function(path.in, cols) {
@@ -869,7 +868,7 @@ runStats <- function(stat.type=NULL) {
              config.env$PlotSize, "density")
     
     # from ROIs
-    calcCorr("../vols_stats_intensVnuc_rois_condtocol.csv", 
+    calcCorr("../vols_stats_intensVnuc_rois_combined_condtocol.csv", 
              c("Intensity_detected", "Intensity_truth", 
                "Nuclei_detected", "Nuclei_truth"), 
              config.env$PlotSize)

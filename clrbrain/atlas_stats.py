@@ -305,7 +305,7 @@ def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
     return df_peak
 
 
-def plot_intensity_nuclei(paths, labels, size=None, show=True):
+def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
     """Plot nuclei vs. intensity as a scatter plot.
     
     Args:
@@ -315,13 +315,14 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
         size (List[int]): Sequence of ``width, height`` to size the figure; 
             defaults to None.
         show (bool): True to display the image; defaults to True.
+        unit (str): Denominator unit for density plot; defaults to None.
     
     Returns:
         :obj:`pd.DataFrame`: Data frame with columns matching ``labels``
         for the given ``paths`` concatenated.
 
     """
-    def plot(lbls):
+    def plot(lbls, suffix=None, unit=None):
         cols_xy = []
         for label in lbls:
             # get columns for the given label to plot on a given axis; assume
@@ -333,12 +334,15 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
         if cols_xy:
             # extract legend names assuming label.cond format
             names_group = np.unique([c.split(".")[1] for c in cols_xy[0]])
+        units = (["{}/{}".format(l.split("_")[0], unit) for l in lbls] 
+                 if unit else None)
+        lbls = [l.replace("_", " ") for l in lbls]
+        title = "{} Vs. {} By Region".format(*lbls)
         plot_2d.plot_scatter(
-            config.filename, cols_xy[0], cols_xy[1],
+            "vols_stats_intensVnuc", cols_xy[0], cols_xy[1], units=units,
             # col_annot=config.AtlasMetrics.REGION_ABBR.value,
-            names_group=names_group,
-            labels=labels, title="{} Vs. {} By Region".format(*labels),
-            fig_size=size, show=show, suffix=config.suffix, df=df)
+            names_group=names_group, labels=lbls, title=title,
+            fig_size=size, show=show, suffix=suffix, df=df)
     
     if len(paths) < 2 or len(labels) < 2: return
     dfs = [pd.read_csv(path) for path in paths]
@@ -365,6 +369,6 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True):
     
     # plot labels and density labels
     plot(labels)
-    plot([dens.format(l) for l in labels])
+    plot([dens.format(l) for l in labels], "_density", unit)
     
     return df

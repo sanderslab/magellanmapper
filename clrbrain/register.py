@@ -1763,7 +1763,10 @@ def main():
         # combine nuclei vs. intensity R stats and generate scatter plots
         labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
                   config.plot_labels[config.PlotLabels.X_LABEL])
-        atlas_stats.plot_intensity_nuclei(config.filenames, labels)
+        # same label use for x/y and only in denominator
+        unit = config.plot_labels[config.PlotLabels.X_UNIT]
+        atlas_stats.plot_intensity_nuclei(
+            config.filenames, labels, fig_size, show, unit)
 
 
 if __name__ == "__main__":

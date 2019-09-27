@@ -116,6 +116,7 @@ PlotLabels = Enum(
         "ALPHAS_CHL",  # alphas for main image's channels
         "X_COL", "Y_COL",  # columns from data frame to plot
         "GROUP_COL",  # data frame group column
+        "WT_COL",  # weight column
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)
@@ -300,6 +301,7 @@ RegisterTypes = Enum(
         "plot_region_dev", "plot_lateral_unlabeled", 
         "plot_intens_nuc", 
         "pivot_conds",
+        "meas_improvement",
     ]
 )
 register_type = None

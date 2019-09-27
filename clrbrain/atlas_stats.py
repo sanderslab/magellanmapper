@@ -372,3 +372,62 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
     plot([dens.format(l) for l in labels], "_density", unit)
     
     return df
+
+
+def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05, 
+                     col_wt=None):
+    """Measure overall improvement and worsening for a column in a data frame.
+    
+    Args:
+        path (str): Path to file to load into data frame.
+        col_effect (str): Name of column with metric to measure.
+        col_p (str): Name of column with p-values.
+        thresh_impr (float): Threshold of effects below which are considered
+            improved.
+        thresh_p (float): Threshold of p-values below which are considered
+            statistically significant.
+        col_wt (str): Name of column for weighting.
+
+    Returns:
+        :obj:`pd.DataFrame`: Data frame with improvement measurements.
+        The data frame will be saved to a filename based on ``path``.
+
+    """
+    def add_wt(mask_cond, mask_cond_ss, name):
+        # add weighted metrics for the given condition, such as improved
+        # vs. worsened
+        wt_impr = df.loc[mask_cond, col_wt]
+        metrics[col_wt] = [np.sum(df[col_wt])]
+        # sum of weighting column fitting the condition
+        metrics["{}_when_{}".format(col_wt, name)] = [np.sum(wt_impr)]
+        # sum of filtered effect multiplied by weighting (all and 
+        # statistically significant)
+        metrics["{}_wt".format(name)] = [np.sum(
+            wt_impr.multiply(df.loc[mask_cond, col_effect]))]
+        metrics["{}_ss_wt".format(name)] = [np.sum(
+            wt_impr.multiply(df.loc[mask_cond_ss, col_effect]))]
+    
+    # masks of improved and worsened, all and statistically significant 
+    # for each, where improvement is above the given threshold
+    df = pd.read_csv(path)
+    effects = df[col_effect]
+    mask_impr = effects > thresh_impr
+    mask_ss = df[col_p] < thresh_p
+    mask_impr_ss = mask_impr & mask_ss
+    mask_wors = effects < thresh_impr
+    mask_wors_ss = mask_wors & mask_ss
+    metrics = {
+        "count": [len(effects)],
+        "improved": [np.sum(mask_impr)],
+        "improved_ss": [np.sum(mask_impr_ss)],
+        "worsened": [np.sum(mask_wors)],
+        "worsened_ss": [np.sum(mask_wors_ss)],
+    }
+    if col_wt:
+        # add columns based on weighting column
+        add_wt(mask_impr, mask_impr_ss, "improved")
+    df_impr = stats.dict_to_data_frame(
+        metrics, lib_clrbrain.insert_before_ext(path, "_impr"))
+        add_wt(mask_wors, mask_wors_ss, "worsened")
+    stats.print_data_frame(df_impr)
+    return df_impr

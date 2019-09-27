@@ -1767,6 +1767,12 @@ def main():
         unit = config.plot_labels[config.PlotLabels.X_UNIT]
         atlas_stats.plot_intensity_nuclei(
             config.filenames, labels, fig_size, show, unit)
+    
+    elif reg is config.RegisterTypes.meas_improvement:
+        # measure summary improvement/worsening stats by label from R stats
+        col_wt = config.plot_labels[config.PlotLabels.WT_COL]
+        atlas_stats.meas_improvement(
+            config.filename, "vals.effect", "vals.pcorr", col_wt=col_wt)
 
 
 if __name__ == "__main__":

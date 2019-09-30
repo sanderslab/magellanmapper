@@ -541,6 +541,7 @@ filterStats <- function(stats, corr=NULL) {
   }
   num.regions <- nrow(filtered)
   if (!is.null(corr)) {
+    # TODO: consider not correcting for means stats with < 2 vals
     cat("correcting for", num.regions, "regions\n")
   }
   for (interact in interactions) {

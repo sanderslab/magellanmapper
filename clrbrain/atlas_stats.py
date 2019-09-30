@@ -375,7 +375,7 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
 
 
 def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05, 
-                     col_wt=None, fn_filt=None):
+                     col_wt=None, fn_filt=None, col_idx=None, suffix=None):
     """Measure overall improvement and worsening for a column in a data frame.
     
     Args:
@@ -389,6 +389,8 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
         col_wt (str): Name of column for weighting.
         fn_filt (func): Function to apply to data frame to filter data
             before measuring improvement.
+        col_idx (str): Index column; defaults to None.
+        suffix (str): Output path suffix; defaults to None.
 
     Returns:
         :obj:`pd.DataFrame`: Data frame with improvement measurements.
@@ -414,10 +416,12 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     # masks of improved and worsened, all and statistically significant 
     # for each, where improvement is above the given threshold
     df = pd.read_csv(path)
-    out_path = lib_clrbrain.insert_before_ext(path, "_impr")
+    if col_idx:
+        df = df.set_index(col_idx)
     if fn_filt is not None:
         df = df.loc[fn_filt(df)]
-        out_path = lib_clrbrain.insert_before_ext(out_path, "_filt")
+        print(df)
+    
     effects = df[col_effect]
     mask_impr = effects > thresh_impr
     mask_ss = df[col_p] < thresh_p
@@ -440,6 +444,10 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
         # add columns based on weighting column
         add_wt(mask_impr, mask_impr_ss, "impr")
         add_wt(mask_wors, mask_wors_ss, "wors")
+    
+    out_path = lib_clrbrain.insert_before_ext(path, "_impr")
+    if suffix:
+        out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
     df_impr = stats.dict_to_data_frame(metrics, out_path)
     # display transposed version for more compact view given large number
     # of columns, but save un-transposed to preserve data types

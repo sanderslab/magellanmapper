@@ -1770,14 +1770,32 @@ def main():
     
     elif reg is config.RegisterTypes.meas_improvement:
         # measure summary improvement/worsening stats by label from R stats
+        
+        def meas(**args):
+            atlas_stats.meas_improvement(
+                config.filename, col_effect, "vals.pcorr", col_wt=col_wt,
+                **args)
+        
+        # improvement for all labels
+        col_effect = "vals.effect"
         col_wt = config.plot_labels[config.PlotLabels.WT_COL]
-        atlas_stats.meas_improvement(
-            config.filename, "vals.effect", "vals.pcorr", col_wt=col_wt)
+        meas()
+        
         # filter based on E18.5 atlas drawn labels
-        atlas_stats.meas_improvement(
-            config.filename, "vals.effect", "vals.pcorr", col_wt=col_wt,
-            fn_filt=(
+        meas(suffix="_e18", fn_filt=(
                 lambda x: x[config.AtlasMetrics.LEVEL.value].isin([5, 7])))
+        
+        if len(config.filenames) >= 2:
+            # keep only labels showing improvement or worsening in another
+            # data frame to show whether improves when this other df improves
+            col_idx = config.AtlasMetrics.REGION.value
+            df_cp = pd.read_csv(config.filenames[1])
+            df_cp_impr = df_cp[df_cp[col_effect] > 0].set_index(col_idx)
+            meas(suffix="_e18_impr", col_idx=col_idx, fn_filt=(
+                    lambda x: x.index.isin(df_cp_impr.index)))
+            df_cp_wors = df_cp[df_cp[col_effect] < 0].set_index(col_idx)
+            meas(suffix="_e18_wors", col_idx=col_idx, fn_filt=(
+                    lambda x: x.index.isin(df_cp_wors.index)))
 
 
 if __name__ == "__main__":

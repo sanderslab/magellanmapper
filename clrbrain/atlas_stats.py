@@ -398,16 +398,18 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     def add_wt(mask_cond, mask_cond_ss, name):
         # add weighted metrics for the given condition, such as improved
         # vs. worsened
-        wt_impr = df.loc[mask_cond, col_wt]
         metrics[col_wt] = [np.sum(df[col_wt])]
-        # sum of weighting column fitting the condition
-        metrics["{}_when_{}".format(col_wt, name)] = [np.sum(wt_impr)]
-        # sum of filtered effect multiplied by weighting (all and 
-        # statistically significant)
-        metrics["{}_wt".format(name)] = [np.sum(
-            wt_impr.multiply(df.loc[mask_cond, col_effect]))]
-        metrics["{}_ss_wt".format(name)] = [np.sum(
-            wt_impr.multiply(df.loc[mask_cond_ss, col_effect]))]
+        wt_cond = df.loc[mask_cond, col_wt]
+        wt_cond_ss = df.loc[mask_cond_ss, col_wt]
+        # sum of weighting column fitting the condition (all and statistically
+        # significant)
+        metrics["{}_{}".format(col_wt, name)] = [np.sum(wt_cond)]
+        metrics["{}_{}_ss".format(col_wt, name)] = [np.sum(wt_cond_ss)]
+        # sum of filtered effect multiplied by weighting
+        metrics["{}_{}_by_{}".format(col_effect, name, col_wt)] = [np.sum(
+            wt_cond.multiply(df.loc[mask_cond, col_effect]))]
+        metrics["{}_{}_by_{}_ss".format(col_effect, name, col_wt)] = [np.sum(
+            wt_cond_ss.multiply(df.loc[mask_cond_ss, col_effect]))]
     
     # masks of improved and worsened, all and statistically significant 
     # for each, where improvement is above the given threshold
@@ -423,16 +425,23 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     mask_wors = effects < thresh_impr
     mask_wors_ss = mask_wors & mask_ss
     metrics = {
-        "count": [len(effects)],
-        "improved": [np.sum(mask_impr)],
-        "improved_ss": [np.sum(mask_impr_ss)],
-        "worsened": [np.sum(mask_wors)],
-        "worsened_ss": [np.sum(mask_wors_ss)],
+        "n": [len(effects)],
+        "n_impr": [np.sum(mask_impr)],
+        "n_impr_ss": [np.sum(mask_impr_ss)],
+        "n_wors": [np.sum(mask_wors)],
+        "n_wors_ss": [np.sum(mask_wors_ss)],
+        col_effect: [np.sum(effects)],
+        "{}_impr".format(col_effect): [np.sum(effects[mask_impr])],
+        "{}_impr_ss".format(col_effect): [np.sum(effects[mask_impr_ss])],
+        "{}_wors".format(col_effect): [np.sum(effects[mask_wors])],
+        "{}_wors_ss".format(col_effect): [np.sum(effects[mask_wors_ss])],
     }
     if col_wt:
         # add columns based on weighting column
-        add_wt(mask_impr, mask_impr_ss, "improved")
-        add_wt(mask_wors, mask_wors_ss, "worsened")
+        add_wt(mask_impr, mask_impr_ss, "impr")
+        add_wt(mask_wors, mask_wors_ss, "wors")
     df_impr = stats.dict_to_data_frame(metrics, out_path)
-    stats.print_data_frame(df_impr)
+    # display transposed version for more compact view given large number
+    # of columns, but save un-transposed to preserve data types
+    stats.print_data_frame(df_impr.T, index=True, header=False)
     return df_impr

@@ -186,8 +186,9 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   for (i in seq_along(conditions.unique)) {
     val.conds[[i]] <- vals[conditions == conditions.unique[i]]
     num.per.cond <- length(val.conds[[i]])
-    if (num.per.cond <= 1) {
-      cat("0-1 values for at least one condition, cannot calculate stats\n")
+    if (is.element(model, kModel[c(5, 7)]) & num.per.cond <= 1) {
+      # T-tests requires >= 2 values
+      cat("<2 values for at least one condition, cannot calculate stats\n")
       return(NULL)
     }
   }

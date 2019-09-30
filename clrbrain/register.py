@@ -1773,6 +1773,11 @@ def main():
         col_wt = config.plot_labels[config.PlotLabels.WT_COL]
         atlas_stats.meas_improvement(
             config.filename, "vals.effect", "vals.pcorr", col_wt=col_wt)
+        # filter based on E18.5 atlas drawn labels
+        atlas_stats.meas_improvement(
+            config.filename, "vals.effect", "vals.pcorr", col_wt=col_wt,
+            fn_filt=(
+                lambda x: x[config.AtlasMetrics.LEVEL.value].isin([5, 7])))
 
 
 if __name__ == "__main__":

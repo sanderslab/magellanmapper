@@ -375,7 +375,7 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
 
 
 def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05, 
-                     col_wt=None):
+                     col_wt=None, fn_filt=None):
     """Measure overall improvement and worsening for a column in a data frame.
     
     Args:
@@ -387,6 +387,8 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
         thresh_p (float): Threshold of p-values below which are considered
             statistically significant.
         col_wt (str): Name of column for weighting.
+        fn_filt (func): Function to apply to data frame to filter data
+            before measuring improvement.
 
     Returns:
         :obj:`pd.DataFrame`: Data frame with improvement measurements.
@@ -410,6 +412,10 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     # masks of improved and worsened, all and statistically significant 
     # for each, where improvement is above the given threshold
     df = pd.read_csv(path)
+    out_path = lib_clrbrain.insert_before_ext(path, "_impr")
+    if fn_filt is not None:
+        df = df.loc[fn_filt(df)]
+        out_path = lib_clrbrain.insert_before_ext(out_path, "_filt")
     effects = df[col_effect]
     mask_impr = effects > thresh_impr
     mask_ss = df[col_p] < thresh_p
@@ -426,8 +432,7 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     if col_wt:
         # add columns based on weighting column
         add_wt(mask_impr, mask_impr_ss, "improved")
-    df_impr = stats.dict_to_data_frame(
-        metrics, lib_clrbrain.insert_before_ext(path, "_impr"))
         add_wt(mask_wors, mask_wors_ss, "worsened")
+    df_impr = stats.dict_to_data_frame(metrics, out_path)
     stats.print_data_frame(df_impr)
     return df_impr

@@ -375,11 +375,11 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
 
 
 def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05, 
-                     col_wt=None, fn_filt=None, col_idx=None, suffix=None):
+                     col_wt=None, suffix=None, df=None):
     """Measure overall improvement and worsening for a column in a data frame.
     
     Args:
-        path (str): Path to file to load into data frame.
+        path (str): Path of file to load into data frame.
         col_effect (str): Name of column with metric to measure.
         col_p (str): Name of column with p-values.
         thresh_impr (float): Threshold of effects below which are considered
@@ -387,10 +387,9 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
         thresh_p (float): Threshold of p-values below which are considered
             statistically significant.
         col_wt (str): Name of column for weighting.
-        fn_filt (func): Function to apply to data frame to filter data
-            before measuring improvement.
-        col_idx (str): Index column; defaults to None.
         suffix (str): Output path suffix; defaults to None.
+        df (:obj:`pd.DataFrame`): Data fram to use instead of loading from
+            ``path``; defaults to None.
 
     Returns:
         :obj:`pd.DataFrame`: Data frame with improvement measurements.
@@ -413,15 +412,11 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
         metrics["{}_{}_by_{}_ss".format(col_effect, name, col_wt)] = [np.sum(
             wt_cond_ss.multiply(df.loc[mask_cond_ss, col_effect]))]
     
+    if df is None:
+        df = pd.read_csv(path)
+
     # masks of improved and worsened, all and statistically significant 
     # for each, where improvement is above the given threshold
-    df = pd.read_csv(path)
-    if col_idx:
-        df = df.set_index(col_idx)
-    if fn_filt is not None:
-        df = df.loc[fn_filt(df)]
-        print(df)
-    
     effects = df[col_effect]
     mask_impr = effects > thresh_impr
     mask_ss = df[col_p] < thresh_p

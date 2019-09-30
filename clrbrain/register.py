@@ -1776,26 +1776,29 @@ def main():
                 config.filename, col_effect, "vals.pcorr", col_wt=col_wt,
                 **args)
         
-        # improvement for all labels
+        col_idx = config.AtlasMetrics.REGION.value
         col_effect = "vals.effect"
         col_wt = config.plot_labels[config.PlotLabels.WT_COL]
-        meas()
+
+        # improvement for all labels
+        df = pd.read_csv(config.filename).set_index(col_idx)
+        meas(df=df)
         
         # filter based on E18.5 atlas drawn labels
-        meas(suffix="_e18", fn_filt=(
-                lambda x: x[config.AtlasMetrics.LEVEL.value].isin([5, 7])))
+        df_e18 = df.loc[df[config.AtlasMetrics.LEVEL.value].isin([5, 7])]
+        meas(suffix="_drawn", df=df_e18)
         
-        if len(config.filenames) >= 2:
+        if len(config.filenames) >= 2 and config.filenames[1]:
             # keep only labels showing improvement or worsening in another
             # data frame to show whether improves when this other df improves
-            col_idx = config.AtlasMetrics.REGION.value
             df_cp = pd.read_csv(config.filenames[1])
             df_cp_impr = df_cp[df_cp[col_effect] > 0].set_index(col_idx)
-            meas(suffix="_e18_impr", col_idx=col_idx, fn_filt=(
-                    lambda x: x.index.isin(df_cp_impr.index)))
             df_cp_wors = df_cp[df_cp[col_effect] < 0].set_index(col_idx)
-            meas(suffix="_e18_wors", col_idx=col_idx, fn_filt=(
-                    lambda x: x.index.isin(df_cp_wors.index)))
+            for df_mode, suf in zip((df, df_e18), ("", "_drawn")):
+                for df_cp_mode, suf_cp in zip(
+                        (df_cp_impr, df_cp_wors), ("_e18_impr", "_e18_wors")):
+                    meas(suffix="".join((suf, suf_cp)), 
+                         df=df_mode.loc[df_mode.index.isin(df_cp_mode.index)])
 
 
 if __name__ == "__main__":

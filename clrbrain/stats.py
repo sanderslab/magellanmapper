@@ -158,6 +158,7 @@ def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
         df_pivoted.to_csv(df_path, na_rep="NaN")
     return dfs
 
+
 def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols, 
                  df_base=None, fn=df_div):
     """Normalize columns from various conditions to the corresponding 
@@ -210,6 +211,7 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols,
     df_norm[np.isinf(df_norm.loc[:, metric_cols])] = np.nan
     return df_norm
 
+
 def zscore_df(df, group_col, metric_cols, extra_cols, replace_metrics=False):
     """Generate z-scores for each metric within each group.
     
@@ -253,6 +255,7 @@ def zscore_df(df, group_col, metric_cols, extra_cols, replace_metrics=False):
         df_zscore.rename(columns=col_dict, inplace=True)
     return df_zscore
 
+
 def coefvar_df(df, id_cols, metric_cols, size_col=None):
     """Generate coefficient of variation for each metric within each group.
     
@@ -281,6 +284,7 @@ def coefvar_df(df, id_cols, metric_cols, size_col=None):
     df_coef = df_coef.reset_index()
     
     return df_coef
+
 
 def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols, sep="_"):
     """Transpose metric columns from rows within each condition group 
@@ -322,6 +326,7 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols, sep="_"):
     df_out = df_out.reset_index()
     df_out = df_out.drop(cond_col, axis=1)
     return df_out
+
 
 def combine_cols(df, combos):
     """Combine columns in a data frame with the aggregation function 
@@ -404,6 +409,7 @@ def melt_cols(df, id_cols, melt_cols, var_name=None):
     df_melted = df.melt(
         id_vars=id_cols, value_vars=melt_cols, var_name=var_name)
     return df_melted
+
 
 def pivot_with_conditions(df, index, columns, values, aggfunc="first"):
     """Pivot a data frame to columns with sub-columns for different conditions.

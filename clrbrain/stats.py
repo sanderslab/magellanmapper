@@ -438,19 +438,22 @@ def pivot_with_conditions(df, index, columns, values, aggfunc="first"):
     df_lines = df_lines.reset_index()
     return df_lines, cols
 
-def print_data_frame(df, sep=" "):
+
+def print_data_frame(df, sep=" ", index=False, header=True):
     """Print formatted data frame.
     
     Args:
-        df: Data frame to print.
-        sep: Separator for columns. True or " " to print the data 
+        df (:obj:`pd.DataFrame`): Data frame to print.
+        sep (str): Separator for columns. True or " " to print the data 
             frame with a space-separated table, or can provide an 
             alternate separator. Defaults to " ".
+        index (bool): True to show index; defaults to False.
+        header (bool): True to show header; defaulst to True.
     """
     if sep is True or sep == " ":
-        print(df.to_string(index=False, na_rep="NaN"))
+        print(df.to_string(index=index, header=header, na_rep="NaN"))
     else:
-        print(df.to_csv(sep=sep, index=False, na_rep="NaN"))
+        print(df.to_csv(sep=sep, index=index, header=header, na_rep="NaN"))
 
 
 def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=None):

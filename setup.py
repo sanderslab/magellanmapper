@@ -15,7 +15,7 @@ config = {
     "author": "David Young",
     "url": "URL",
     "author_email": "david@textflex.com",
-    "version": "0.9.7",
+    "version": "0.9.8",
     "packages": setuptools.find_packages(),
     "scripts": [], 
     "python_requires": ">=3.6",  # TODO: consider testing on earlier versions

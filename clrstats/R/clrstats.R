@@ -576,6 +576,10 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   
   # load CSV file output by Clrbrain Python stats module
   df <- read.csv(path.in)
+  if (!is.element(meas, names(df))) {
+    cat(paste(meas, "not found in data frame", "\n"))
+    return(NULL)
+  }
   
   # convert summary regions into "Mus Musculus" (ID 15564), the 
   # over-arching parent, which will be skipped if in kRegionsIgnore
@@ -837,7 +841,7 @@ runStats <- function(stat.type=NULL) {
           split.by.side=split.by.side, corr="bonferroni")
       }
       
-      if (config.env$PlotVolcano) {
+      if (!is.null(stats) & config.env$PlotVolcano) {
         # plot effects and p's
         volcanoPlot(stats, meas, stat, c(NA, 1.3, 0.2), config.env$VolcanoLogX, 
                     config.env$VolcanoLabels, config.env$PlotSize, 

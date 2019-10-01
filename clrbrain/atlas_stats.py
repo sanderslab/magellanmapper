@@ -1,7 +1,10 @@
 #!/bin/bash
 # Atlas measurements and statistics
 # Author: David Young, 2019
-"""Measurement of atlases and statistics generation.
+"""Low-level measurement of atlases and statistics generation.
+
+Typically applied to specific types of atlases and less generalizable
+than measurements in :module:`vols`.
 """
 import os
 

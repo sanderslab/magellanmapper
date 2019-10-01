@@ -2,6 +2,8 @@
 # Regional volume and density management
 # Author: David Young, 2018, 2019
 """Measure volumes and densities by regions.
+
+Intended to be higher-level, relatively atlas-agnostic measurements.
 """
 
 from enum import Enum

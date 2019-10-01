@@ -16,6 +16,7 @@ from skimage import measure
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
+from clrbrain import ontology
 from clrbrain import plot_3d
 from clrbrain import stats
 
@@ -611,7 +612,59 @@ def get_single_label(label_id):
         return label_id[0]
     return label_id
 
-def measure_labels_metrics(sample, atlas_img_np, labels_img_np, 
+
+def _update_df_side(df):
+    # invert label IDs of right-sided regions; assumes that using df 
+    # will specify sides explicitly in label_ids
+    # TODO: consider removing combine_sides and using label_ids only
+    df.loc[df[config.AtlasMetrics.SIDE.value] == config.HemSides.RIGHT.name,
+           LabelMetrics.Region.name] *= -1
+
+
+def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None):
+    # parse volume metrics into physical units and nuclei density
+    physical_mult = None if spacing is None else np.prod(spacing)
+    label_size = label_metrics[LabelMetrics.Volume]
+    nuc = label_metrics[LabelMetrics.Nuclei]
+    
+    vols_phys = [label_size]
+    if LabelMetrics.RegVolMean in label_metrics:
+        vols_phys.append(label_metrics[LabelMetrics.RegVolMean])
+    if physical_mult is not None:
+        # convert to physical units at the given value unless 
+        # using data frame, where values presumably already converted
+        vols_phys = np.multiply(vols_phys, physical_mult)
+    if unit_factor is not None:
+        # further conversion to given unit size
+        unit_factor_vol = unit_factor ** 3
+        vols_phys = np.divide(vols_phys, unit_factor_vol)
+    if unit_factor is not None:
+        # convert metrics not extracted from data frame
+        if LabelMetrics.SurfaceArea in label_metrics:
+            # already incorporated physical units but needs to convert 
+            # to unit size
+            label_metrics[LabelMetrics.SurfaceArea] /= unit_factor ** 2
+    
+    # calculate densities based on physical volumes
+    label_metrics[LabelMetrics.Volume] = vols_phys[0]
+    label_metrics[LabelMetrics.Density] = nuc / vols_phys[0]
+    return label_size, nuc, vols_phys
+
+
+def _update_vol_dicts(label_id, label_metrics, grouping, metrics):
+    # parse volume metrics metadata into master metrics dictionary
+    side = ontology.get_label_side(label_id)
+    grouping[config.AtlasMetrics.SIDE.value] = side
+    disp_id = get_single_label(label_id)
+    label_metrics[LabelMetrics.Region] = abs(disp_id)
+    for key, val in grouping.items():
+        metrics.setdefault(key, []).append(val)
+    for col in LabelMetrics:
+        if col in label_metrics:
+            metrics.setdefault(col.name, []).append(label_metrics[col])
+
+
+def measure_labels_metrics(atlas_img_np, labels_img_np, 
                            labels_edge, dist_to_orig, labels_interior=None, 
                            heat_map=None, 
                            subseg=None, spacing=None, unit_factor=None, 
@@ -621,7 +674,6 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     based on maps corresponding to labels image.
     
     Args:
-        sample: Sample ID number to be stored in data frame.
         atlas_img_np: Atlas or sample image as a Numpy array.
         labels_img_np: Integer labels image as a Numpy array.
         labels_edge: Numpy array of labels reduced to their edges.
@@ -656,15 +708,12 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         Pandas data frame of the regions and weighted means for the metrics.
     """
     start_time = time()
-    physical_mult = None
-    if spacing is not None:
-        physical_mult = np.prod(spacing)
     
-    if df is not None:
-        # invert label IDs of right-sided regions; assumes that using df 
-        # will specify sides explicitly in label_ids
-        # TODO: consider removing combine_sides and using label_ids only
-        df.loc[df["Side"] == "R", LabelMetrics.Region.name] *= -1
+    if df is None:
+        vol_args = {"spacing": spacing, "unit_factor": unit_factor}
+    else:
+        _update_df_side(df)
+        vol_args = {}
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
@@ -673,8 +722,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         labels_interior, heat_map, subseg, df, spacing)
     
     metrics = {}
-    grouping[config.SIDE_KEY] = None
-    cols_metadata = ("Sample", *grouping.keys())
+    grouping[config.AtlasMetrics.SIDE.value] = None
     pool = mp.Pool()
     pool_results = []
     if label_ids is None:
@@ -694,57 +742,18 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     for result in pool_results:
         # get metrics by label
         label_id, label_metrics = result.get()
-        label_size = label_metrics[LabelMetrics.Volume]
-        nuc = label_metrics[LabelMetrics.Nuclei]
+        label_size, nuc, (vol_physical, vol_mean_physical) = _parse_vol_metrics(
+            label_metrics, **vol_args)
         reg_nuc_mean = label_metrics[LabelMetrics.RegNucMean]
         edge_size = label_metrics[LabelMetrics.EdgeSize]
         
-        vol_physical = label_size
-        vol_mean_physical = label_metrics[LabelMetrics.RegVolMean]
-        if df is None:
-            if physical_mult is not None:
-                # convert to physical units at the given value unless 
-                # using data frame, where values presumably already converted
-                vol_physical *= physical_mult
-                vol_mean_physical *= physical_mult
-            if unit_factor is not None:
-                # further conversion to given unit size
-                unit_factor_vol = unit_factor ** 3
-                vol_physical /= unit_factor_vol
-                vol_mean_physical /= unit_factor_vol
-        if unit_factor is not None:
-            # convert metrics not extracted from data frame
-            if LabelMetrics.SurfaceArea in label_metrics:
-                # already incorporated physical units but needs to convert 
-                # to unit size
-                label_metrics[LabelMetrics.SurfaceArea] /= unit_factor ** 2
-        
         # calculate densities based on physical volumes
-        label_metrics[LabelMetrics.Volume] = vol_physical
-        label_metrics[LabelMetrics.Density] = nuc / vol_physical
         label_metrics[LabelMetrics.RegVolMean] = vol_mean_physical
         label_metrics[LabelMetrics.RegDensityMean] = (
             reg_nuc_mean / vol_mean_physical)
         
-        # set side, assuming that positive labels are left, and add 
-        # metadata to master dictionary
-        if np.all(np.greater(label_id, 0)):
-            side = "L"
-        elif np.all(np.less(label_id, 0)):
-            side = "R"
-        else:
-            side = "both"
-        grouping[config.SIDE_KEY] = side
-        disp_id = get_single_label(label_id)
-        label_metrics[LabelMetrics.Region] = abs(disp_id)
-        vals = (sample, *grouping.values())
-        for col, val in zip(cols_metadata, vals):
-            metrics.setdefault(col, []).append(val)
-        
         # transfer all found metrics to master dictionary
-        for col in LabelMetrics:
-            if col in label_metrics:
-                metrics.setdefault(col.name, []).append(label_metrics[col])
+        _update_vol_dicts(label_id, label_metrics, grouping, metrics)
         
         # weight and accumulate total metrics
         totals.setdefault(LabelMetrics.EdgeDistSum, []).append(
@@ -772,14 +781,13 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     # make data frame of raw metrics, dropping columns of all NaNs
     df = pd.DataFrame(metrics)
     df = df.dropna(axis=1, how="all")
-    print(df.to_csv())
+    stats.print_data_frame(df)
     
     # build data frame of total metrics from weighted means
     metrics_all = {}
-    grouping[config.SIDE_KEY] = "both"
-    vals = (sample, *grouping.values())
-    for col, val in zip(cols_metadata, vals):
-        metrics_all.setdefault(col, []).append(val)
+    grouping[config.AtlasMetrics.SIDE.value] = "both"
+    for key, val in grouping.items():
+        metrics_all.setdefault(key, []).append(val)
     for key in totals.keys():
         totals[key] = np.nansum(totals[key])
         if totals[key] == 0: totals[key] = np.nan
@@ -802,7 +810,7 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
         if col in totals:
             metrics_all.setdefault(col.name, []).append(totals[col])
     df_all = pd.DataFrame(metrics_all)
-    print(df_all.to_csv())
+    stats.print_data_frame(df_all)
     
     print("time elapsed to measure variation:", time() - start_time)
     return df, df_all
@@ -821,13 +829,9 @@ class MeasureLabelOverlap(object):
     individual labels.
 
     Attributes:
-        atlas_img_np: Sample image as a Numpy array.
-        labels_img_np: Integer labels image as a Numpy array.
-        labels_edge: Numpy array of labels reduced to their edges.
-        dist_to_orig: Distance map of labels to edges, with intensity values 
-            in the same placement as in ``labels_edge``.
-        heat_map: Numpy array as a density map.
-        subseg: Integer sub-segmentations labels image as Numpy array.
+        labels_imgs: Sequence of integer labels image as Numpy arrays.
+        heat_map: Numpy array as a density map; defaults to None to ignore 
+            density measurements.
         df: Pandas data frame with a row for each sub-region.
     """
     _OVERLAP_METRICS = (
@@ -848,7 +852,7 @@ class MeasureLabelOverlap(object):
     
     @classmethod
     def measure_overlap(cls, label_ids):
-        """Measure the distance between edge images.
+        """Measure the overlap between image labels.
 
         If :attr:``df`` is available, it will be used to sum values 
         from labels in ``label_ids`` found in the data frame 
@@ -881,7 +885,7 @@ class MeasureLabelOverlap(object):
                 cls.df[LabelMetrics.Region.name].isin(label_ids)]
             label_vols = labels[LabelMetrics.Volume.name]
             label_vol = np.nansum(label_vols)
-            vol_dscs = np.nansum(labels[LabelMetrics.VolDSC.name])
+            vol_dscs = labels[LabelMetrics.VolDSC.name]
             vol_dsc = stats.weight_mean(vol_dscs, label_vols)
             if LabelMetrics.Nuclei.name in labels:
                 nucs = labels[LabelMetrics.Nuclei.name]
@@ -899,14 +903,13 @@ class MeasureLabelOverlap(object):
         return label_ids, metrics
 
 
-def measure_labels_overlap(sample, labels_imgs, heat_map=None, spacing=None, 
+def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None, 
                            unit_factor=None, combine_sides=True, 
                            label_ids=None, grouping={}, df=None):
     """Compute metrics such as variation and distances within regions 
     based on maps corresponding to labels image.
 
     Args:
-        sample: Sample ID number to be stored in data frame.
         labels_imgs: Sequence of integer labels image as Numpy arrays.
         heat_map: Numpy array as a density map; defaults to None to ignore 
             density measurements.
@@ -932,23 +935,19 @@ def measure_labels_overlap(sample, labels_imgs, heat_map=None, spacing=None,
         Pandas data frame of the regions and weighted means for the metrics.
     """
     start_time = time()
-    physical_mult = None
-    if spacing is not None:
-        physical_mult = np.prod(spacing)
     
-    if df is not None:
-        # invert label IDs of right-sided regions; assumes that using df 
-        # will specify sides explicitly in label_ids
-        # TODO: consider removing combine_sides and using label_ids only
-        df.loc[df["Side"] == "R", LabelMetrics.Region.name] *= -1
+    if df is None:
+        vol_args = {"spacing": spacing, "unit_factor": unit_factor}
+    else:
+        _update_df_side(df)
+        vol_args = {}
     
     # use a class to set and process the label without having to 
     # reference the labels image as a global variable
-    MeasureLabelOverlap.set_data(labels_imgs, heat_map)
+    MeasureLabelOverlap.set_data(labels_imgs, heat_map, df)
     
     metrics = {}
-    grouping[config.SIDE_KEY] = None
-    cols_metadata = ("Sample", *grouping.keys())
+    grouping[config.AtlasMetrics.SIDE.value] = None
     pool = mp.Pool()
     pool_results = []
     for label_id in label_ids:
@@ -958,55 +957,23 @@ def measure_labels_overlap(sample, labels_imgs, heat_map=None, spacing=None,
         if combine_sides: label_id = [label_id, -1 * label_id]
         pool_results.append(
             pool.apply_async(
-                MeasureLabelOverlap.measure_overlap, 
-                args=(label_id,)))
+                MeasureLabelOverlap.measure_overlap, args=(label_id,)))
     
     for result in pool_results:
         # get metrics by label
         label_id, label_metrics = result.get()
-        label_size = label_metrics[LabelMetrics.Volume]
-        
-        vol_physical = label_size
-        if df is None:
-            if physical_mult is not None:
-                # convert to physical units at the given value unless 
-                # using data frame, where values presumably already converted
-                vol_physical *= physical_mult
-            if unit_factor is not None:
-                # further conversion to given unit size
-                unit_factor_vol = unit_factor ** 3
-                vol_physical /= unit_factor_vol
-        
-        # calculate densities based on physical volumes
-        label_metrics[LabelMetrics.Volume] = vol_physical
-        
-        # set side, assuming that positive labels are left, and add 
-        # metadata to master dictionary
-        if np.all(np.greater(label_id, 0)):
-            side = "L"
-        elif np.all(np.less(label_id, 0)):
-            side = "R"
-        else:
-            side = "both"
-        grouping[config.SIDE_KEY] = side
-        disp_id = get_single_label(label_id)
-        label_metrics[LabelMetrics.Region] = abs(disp_id)
-        vals = (sample, *grouping.values())
-        for col, val in zip(cols_metadata, vals):
-            metrics.setdefault(col, []).append(val)
-        
+        label_size, nuc, _ = _parse_vol_metrics(label_metrics, **vol_args)
+
         # transfer all found metrics to master dictionary
-        for col in LabelMetrics:
-            if col in label_metrics:
-                metrics.setdefault(col.name, []).append(label_metrics[col])
-        
+        _update_vol_dicts(label_id, label_metrics, grouping, metrics)
+
     pool.close()
     pool.join()
     
     # make data frame of raw metrics, dropping columns of all NaNs
     df = pd.DataFrame(metrics)
     df = df.dropna(axis=1, how="all")
-    print(df.to_csv())
+    stats.print_data_frame(df)
     
     print("time elapsed to measure variation:", time() - start_time)
     return df

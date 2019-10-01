@@ -260,7 +260,6 @@ VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
 VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
 VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
-SIDE_KEY = "Side"
 GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
 REGION_ALL = "all"
@@ -370,6 +369,7 @@ class AtlasMetrics(Enum):
     REGION = "Region"
     REGION_ABBR = "RegionAbbr"
     LEVEL = "Level"
+    SIDE = "Side"
     CONDITION = "Condition"
     DSC_ATLAS_LABELS = "DSC_atlas_labels"
     DSC_ATLAS_LABELS_HEM = "DSC_atlas_labels_hemisphere"

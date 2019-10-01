@@ -17,6 +17,7 @@ from skimage import measure
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+from clrbrain import stats
 
 # metric keys and column names
 LabelMetrics = Enum(
@@ -42,6 +43,8 @@ LabelMetrics = Enum(
         "CoefVarIntens", "CoefVarNuc", 
         # shape measurements
         "SurfaceArea", "Compactness", 
+        # overlap metrics
+        "VolDSC", "NucDSC",
     ]
 )
 
@@ -803,6 +806,211 @@ def measure_labels_metrics(sample, atlas_img_np, labels_img_np,
     
     print("time elapsed to measure variation:", time() - start_time)
     return df, df_all
+
+
+class MeasureLabelOverlap(object):
+    """Measure metrics within image labels in a way that allows 
+    multiprocessing without global variables.
+
+    All images should be of the same shape. If :attr:``df`` is available, 
+    it will be used in place of underlying images. Typically this 
+    data frame contains metrics for labels only at the lowest level, 
+    such as drawn or non-overlapping labels. These labels can then be 
+    used to aggregate values through summation or weighted means to 
+    generate metrics for superseding labels that contains these 
+    individual labels.
+
+    Attributes:
+        atlas_img_np: Sample image as a Numpy array.
+        labels_img_np: Integer labels image as a Numpy array.
+        labels_edge: Numpy array of labels reduced to their edges.
+        dist_to_orig: Distance map of labels to edges, with intensity values 
+            in the same placement as in ``labels_edge``.
+        heat_map: Numpy array as a density map.
+        subseg: Integer sub-segmentations labels image as Numpy array.
+        df: Pandas data frame with a row for each sub-region.
+    """
+    _OVERLAP_METRICS = (
+        LabelMetrics.Volume, LabelMetrics.Nuclei, 
+        LabelMetrics.VolDSC, LabelMetrics.NucDSC)
+    
+    # images and data frame
+    labels_imgs = None
+    heat_map = None
+    df = None
+    
+    @classmethod
+    def set_data(cls, labels_imgs, heat_map=None, df=None):
+        """Set the images and data frame."""
+        cls.labels_imgs = labels_imgs
+        cls.heat_map = heat_map
+        cls.df = df
+    
+    @classmethod
+    def measure_overlap(cls, label_ids):
+        """Measure the distance between edge images.
+
+        If :attr:``df`` is available, it will be used to sum values 
+        from labels in ``label_ids`` found in the data frame 
+        rather than re-measuring values from images.
+
+        Args:
+            label_ids: Integer of the label or sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure variation.
+
+        Returns:
+            Tuple of the given label ID and a dictionary of metrics. 
+            The metrics are NaN if the label size is 0.
+        """
+        metrics = dict.fromkeys(cls._OVERLAP_METRICS, np.nan)
+        nuclei = np.nan
+        nuc_dsc = np.nan
+        
+        if cls.df is None:
+            # sum up counts within the collective region
+            label_masks = [np.isin(l, label_ids) for l in cls.labels_imgs]
+            label_vol = np.sum(label_masks[0])
+            vol_dsc = stats.meas_dice(label_masks[0], label_masks[1])
+            if cls.heat_map is not None:
+                nuclei = np.sum(cls.heat_map[label_masks[0]])
+                nuc_dsc = stats.meas_dice(
+                    label_masks[0], label_masks[1], cls.heat_map)
+        else:
+            # get all rows associated with region and sum stats within columns
+            labels = cls.df.loc[
+                cls.df[LabelMetrics.Region.name].isin(label_ids)]
+            label_vols = labels[LabelMetrics.Volume.name]
+            label_vol = np.nansum(label_vols)
+            vol_dscs = np.nansum(labels[LabelMetrics.VolDSC.name])
+            vol_dsc = stats.weight_mean(vol_dscs, label_vols)
+            if LabelMetrics.Nuclei.name in labels:
+                nucs = labels[LabelMetrics.Nuclei.name]
+                nuc_dscs = labels[LabelMetrics.NucDSC.name]
+                nuc_dsc = stats.weight_mean(nuc_dscs, nucs)
+        if label_vol > 0:
+            metrics[LabelMetrics.Volume] = label_vol
+            metrics[LabelMetrics.Nuclei] = nuclei
+            metrics[LabelMetrics.VolDSC] = vol_dsc
+            metrics[LabelMetrics.NucDSC] = nuc_dsc
+        
+        disp_id = get_single_label(label_ids)
+        print("overlaps within label {}: {}"
+              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+        return label_ids, metrics
+
+
+def measure_labels_overlap(sample, labels_imgs, heat_map=None, spacing=None, 
+                           unit_factor=None, combine_sides=True, 
+                           label_ids=None, grouping={}, df=None):
+    """Compute metrics such as variation and distances within regions 
+    based on maps corresponding to labels image.
+
+    Args:
+        sample: Sample ID number to be stored in data frame.
+        labels_imgs: Sequence of integer labels image as Numpy arrays.
+        heat_map: Numpy array as a density map; defaults to None to ignore 
+            density measurements.
+        spacing: Sequence of image spacing for each pixel in the images.
+        unit_factor: Unit factor conversion; defaults to None. Eg use 
+            1000 to convert from um to mm.
+        combine_sides: True to combine corresponding labels from opposite 
+            sides of the sample; defaults to True. Corresponding labels 
+            are assumed to have the same absolute numerical number and 
+            differ only in signage. May be False if combining by passing 
+            both pos/neg labels in ``label_ids``.
+        label_ids: Sequence of label IDs to include. Defaults to None, 
+            in which case the labels will be taken from unique values 
+            in ``labels_img_np``.
+        grouping: Dictionary of sample grouping metadata, where each 
+            entry will be added as a separate column. Defaults to an 
+            empty dictionary.
+        df: Data frame with rows for all drawn labels to pool into 
+            parent labels instead of re-measuring stats for all 
+            children of each parent; defaults to None.
+
+    Returns:
+        Pandas data frame of the regions and weighted means for the metrics.
+    """
+    start_time = time()
+    physical_mult = None
+    if spacing is not None:
+        physical_mult = np.prod(spacing)
+    
+    if df is not None:
+        # invert label IDs of right-sided regions; assumes that using df 
+        # will specify sides explicitly in label_ids
+        # TODO: consider removing combine_sides and using label_ids only
+        df.loc[df["Side"] == "R", LabelMetrics.Region.name] *= -1
+    
+    # use a class to set and process the label without having to 
+    # reference the labels image as a global variable
+    MeasureLabelOverlap.set_data(labels_imgs, heat_map)
+    
+    metrics = {}
+    grouping[config.SIDE_KEY] = None
+    cols_metadata = ("Sample", *grouping.keys())
+    pool = mp.Pool()
+    pool_results = []
+    for label_id in label_ids:
+        # include corresponding labels from opposite sides while skipping 
+        # background
+        if label_id == 0: continue
+        if combine_sides: label_id = [label_id, -1 * label_id]
+        pool_results.append(
+            pool.apply_async(
+                MeasureLabelOverlap.measure_overlap, 
+                args=(label_id,)))
+    
+    for result in pool_results:
+        # get metrics by label
+        label_id, label_metrics = result.get()
+        label_size = label_metrics[LabelMetrics.Volume]
+        
+        vol_physical = label_size
+        if df is None:
+            if physical_mult is not None:
+                # convert to physical units at the given value unless 
+                # using data frame, where values presumably already converted
+                vol_physical *= physical_mult
+            if unit_factor is not None:
+                # further conversion to given unit size
+                unit_factor_vol = unit_factor ** 3
+                vol_physical /= unit_factor_vol
+        
+        # calculate densities based on physical volumes
+        label_metrics[LabelMetrics.Volume] = vol_physical
+        
+        # set side, assuming that positive labels are left, and add 
+        # metadata to master dictionary
+        if np.all(np.greater(label_id, 0)):
+            side = "L"
+        elif np.all(np.less(label_id, 0)):
+            side = "R"
+        else:
+            side = "both"
+        grouping[config.SIDE_KEY] = side
+        disp_id = get_single_label(label_id)
+        label_metrics[LabelMetrics.Region] = abs(disp_id)
+        vals = (sample, *grouping.values())
+        for col, val in zip(cols_metadata, vals):
+            metrics.setdefault(col, []).append(val)
+        
+        # transfer all found metrics to master dictionary
+        for col in LabelMetrics:
+            if col in label_metrics:
+                metrics.setdefault(col.name, []).append(label_metrics[col])
+        
+    pool.close()
+    pool.join()
+    
+    # make data frame of raw metrics, dropping columns of all NaNs
+    df = pd.DataFrame(metrics)
+    df = df.dropna(axis=1, how="all")
+    print(df.to_csv())
+    
+    print("time elapsed to measure variation:", time() - start_time)
+    return df
+
 
 def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False, 
                        reverse=False, col_wt=None):

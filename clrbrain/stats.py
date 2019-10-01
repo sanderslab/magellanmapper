@@ -49,6 +49,35 @@ def weight_std(vals, weights):
     return wt_std, wt_mean
 
 
+def meas_dice(mask1, mask2, img=None):
+    """Measure Dice Similarity Coefficient (DSC) between two images.
+    
+    Args:
+        mask1 (:obj:`np.ndarray`): Mask of first image.
+        mask2 (:obj:`np.ndarray`): Mask of second image with same shape as
+            that of ``mask2``.
+        img (:obj:`np.ndarray`): Intensity image whose values within each
+            mask will be summed, of the same shape as that of the masks;
+            defaults to None.
+
+    Returns:
+        :float: DSC between the two images, either based directly on the 
+        mask volumes or weighted by intensities of ``img`` if given.
+
+    """
+    union = np.logical_and(mask1, mask2)
+    if img is None:
+        # use direct volume of masks
+        out = (mask1, mask2)
+    else:
+        # weight volumes by underlying intensity
+        union = img[union]
+        out = (img[mask1], img[mask2])
+    denom = np.sum([np.sum(o) for o in out])
+    dsc = np.nan if denom == 0 else 2.0 * np.sum(union) / denom
+    return dsc
+
+
 def df_div(df0, df1, axis=1):
     """Wrapper function to divide two Pandas data frames in a functional manner.
     

@@ -298,6 +298,26 @@ def get_label_name(label):
         print(e, name)
     return name
 
+
+def get_label_side(label_id):
+    """Convert label IDs into side strings.
+    
+    Args:
+        label_id (int, List[int]): Label ID or sequence of IDs to convert,
+            where all negative labels are considered right, all positive
+            are left, and any mix of pos, neg, or zero are both.
+
+    Returns:
+        :str: Value of corresponding :class:`config.HemSides` enum.
+
+    """
+    if np.all(np.greater(label_id, 0)):
+        return config.HemSides.RIGHT.value
+    elif np.all(np.less(label_id, 0)):
+        return config.HemSides.LEFT.value
+    return config.HemSides.BOTH.value
+
+
 def get_label_ids_from_position(coord, labels_img, scaling, rounding=False, 
                                 return_coord_scaled=False):
     """Get the atlas label IDs for the given coordinates.

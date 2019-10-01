@@ -382,6 +382,13 @@ class AtlasMetrics(Enum):
     CHANNEL = "Channel"
 
 
+class HemSides(Enum):
+    """Hemisphere side enumerations."""
+    RIGHT = "R"
+    LEFT = "L"
+    BOTH = "both"
+
+
 # label smoothing modes
 SmoothingModes = Enum(
     "SmoothingModes", [

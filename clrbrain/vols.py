@@ -45,7 +45,8 @@ LabelMetrics = Enum(
         # shape measurements
         "SurfaceArea", "Compactness", 
         # overlap metrics
-        "VolDSC", "NucDSC",
+        "VolDSC", "NucDSC",  # volume/nuclei Dice Similarity Coefficient
+        "VolOut", "NucOut",  # volume/nuclei shifted out of orig position
     ]
 )
 
@@ -621,15 +622,21 @@ def _update_df_side(df):
            LabelMetrics.Region.name] *= -1
 
 
-def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None):
+def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None,
+                       extra_keys=None):
     # parse volume metrics into physical units and nuclei density
     physical_mult = None if spacing is None else np.prod(spacing)
-    label_size = label_metrics[LabelMetrics.Volume]
-    nuc = label_metrics[LabelMetrics.Nuclei]
+    keys = [LabelMetrics.Volume]
+    if extra_keys is not None:
+        keys.extend(extra_keys)
     
-    vols_phys = [label_size]
-    if LabelMetrics.RegVolMean in label_metrics:
-        vols_phys.append(label_metrics[LabelMetrics.RegVolMean])
+    vols_phys = []
+    found_keys = []
+    for key in keys:
+        if key in label_metrics:
+            vols_phys.append(label_metrics[key])
+            found_keys.append(key)
+    label_size = vols_phys[0]
     if physical_mult is not None:
         # convert to physical units at the given value unless 
         # using data frame, where values presumably already converted
@@ -646,8 +653,12 @@ def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None):
             label_metrics[LabelMetrics.SurfaceArea] /= unit_factor ** 2
     
     # calculate densities based on physical volumes
-    label_metrics[LabelMetrics.Volume] = vols_phys[0]
-    label_metrics[LabelMetrics.Density] = nuc / vols_phys[0]
+    for key, val in zip(found_keys, vols_phys):
+        label_metrics[key] = val
+    nuc = np.nan
+    if LabelMetrics.Nuclei in label_metrics:
+        nuc = label_metrics[LabelMetrics.Nuclei]
+        label_metrics[LabelMetrics.Density] = nuc / vols_phys[0]
     return label_size, nuc, vols_phys
 
 
@@ -743,7 +754,7 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
         # get metrics by label
         label_id, label_metrics = result.get()
         label_size, nuc, (vol_physical, vol_mean_physical) = _parse_vol_metrics(
-            label_metrics, **vol_args)
+            label_metrics, extra_keys=(LabelMetrics.RegVolMean,), **vol_args)
         reg_nuc_mean = label_metrics[LabelMetrics.RegNucMean]
         edge_size = label_metrics[LabelMetrics.EdgeSize]
         
@@ -817,8 +828,8 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
 
 
 class MeasureLabelOverlap(object):
-    """Measure metrics within image labels in a way that allows 
-    multiprocessing without global variables.
+    """Measure metrics comparing two versions of image labels in a way
+    that allows multiprocessing without global variables.
 
     All images should be of the same shape. If :attr:``df`` is available, 
     it will be used in place of underlying images. Typically this 
@@ -836,7 +847,9 @@ class MeasureLabelOverlap(object):
     """
     _OVERLAP_METRICS = (
         LabelMetrics.Volume, LabelMetrics.Nuclei, 
-        LabelMetrics.VolDSC, LabelMetrics.NucDSC)
+        LabelMetrics.VolDSC, LabelMetrics.NucDSC,
+        LabelMetrics.VolOut, LabelMetrics.NucOut,
+    )
     
     # images and data frame
     labels_imgs = None
@@ -869,33 +882,53 @@ class MeasureLabelOverlap(object):
         metrics = dict.fromkeys(cls._OVERLAP_METRICS, np.nan)
         nuclei = np.nan
         nuc_dsc = np.nan
+        nuc_out = np.nan
         
         if cls.df is None:
-            # sum up counts within the collective region
+            # find DSC between original and updated versions of the 
+            # collective region
             label_masks = [np.isin(l, label_ids) for l in cls.labels_imgs]
             label_vol = np.sum(label_masks[0])
             vol_dsc = stats.meas_dice(label_masks[0], label_masks[1])
+            
+            # sum up volume and nuclei count in the new version outside of
+            # the original version; assume that volume no longer occupied by
+            # new version will be accounted for by the other labels that
+            # reoccupied that volume
+            mask_out = np.logical_and(label_masks[1], ~label_masks[0])
+            vol_out = np.sum(mask_out)
             if cls.heat_map is not None:
                 nuclei = np.sum(cls.heat_map[label_masks[0]])
                 nuc_dsc = stats.meas_dice(
                     label_masks[0], label_masks[1], cls.heat_map)
+                nuc_out = np.sum(cls.heat_map[mask_out])
         else:
-            # get all rows associated with region and sum stats within columns
+            # get weighted average of DSCs from all rows in a super-region,
+            # assuming all rows are at the lowest hierarchical level
             labels = cls.df.loc[
                 cls.df[LabelMetrics.Region.name].isin(label_ids)]
             label_vols = labels[LabelMetrics.Volume.name]
             label_vol = np.nansum(label_vols)
             vol_dscs = labels[LabelMetrics.VolDSC.name]
+            
             vol_dsc = stats.weight_mean(vol_dscs, label_vols)
+            # sum up volume and nuclei outside of original regions
+            vol_out = np.nansum(labels[LabelMetrics.VolOut.name])
             if LabelMetrics.Nuclei.name in labels:
                 nucs = labels[LabelMetrics.Nuclei.name]
+                nuclei = np.nansum(nucs)
                 nuc_dscs = labels[LabelMetrics.NucDSC.name]
                 nuc_dsc = stats.weight_mean(nuc_dscs, nucs)
+                nuc_out = np.nansum(labels[LabelMetrics.NucOut.name])
+        
         if label_vol > 0:
+            # update dict with metric values
             metrics[LabelMetrics.Volume] = label_vol
             metrics[LabelMetrics.Nuclei] = nuclei
             metrics[LabelMetrics.VolDSC] = vol_dsc
             metrics[LabelMetrics.NucDSC] = nuc_dsc
+            metrics[LabelMetrics.VolOut] = vol_out
+            metrics[LabelMetrics.NucOut] = nuc_out
         
         disp_id = get_single_label(label_ids)
         print("overlaps within label {}: {}"
@@ -906,8 +939,7 @@ class MeasureLabelOverlap(object):
 def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None, 
                            unit_factor=None, combine_sides=True, 
                            label_ids=None, grouping={}, df=None):
-    """Compute metrics such as variation and distances within regions 
-    based on maps corresponding to labels image.
+    """Compute metrics comparing two version of atlas labels.
 
     Args:
         labels_imgs: Sequence of integer labels image as Numpy arrays.
@@ -932,7 +964,8 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
             children of each parent; defaults to None.
 
     Returns:
-        Pandas data frame of the regions and weighted means for the metrics.
+        :obj:`pd.DataFrame`: Pandas data frame of the regions and weighted
+        means for the metrics.
     """
     start_time = time()
     
@@ -962,7 +995,8 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
     for result in pool_results:
         # get metrics by label
         label_id, label_metrics = result.get()
-        label_size, nuc, _ = _parse_vol_metrics(label_metrics, **vol_args)
+        label_size, nuc, _ = _parse_vol_metrics(
+            label_metrics, extra_keys=(LabelMetrics.VolOut,), **vol_args)
 
         # transfer all found metrics to master dictionary
         _update_vol_dicts(label_id, label_metrics, grouping, metrics)

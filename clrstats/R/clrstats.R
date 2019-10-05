@@ -27,7 +27,8 @@ kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei",
           "Compactness", 
           "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
           "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
-          "Intensity", "DSC", "Smoothing_quality")
+          "Intensity", "DSC", "Smoothing_quality",
+          "VolDSC", "NucDSC", "VolOut", "NucOut")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -59,11 +60,14 @@ kRegionsIgnore <- c(15564)
 
 # File Paths
 
-# raw values from Clrbrain
-kStatsFilesIn <- c("vols_by_sample.csv", "vols_by_sample_levels.csv", 
-                   "vols_by_sample_summary.csv", "dsc_summary.csv", 
-                   "compactness_summary.csv", "compactness_summary_stats.csv", 
-                   "reg_stats_melted.csv", "smoothing_gausVopen.csv")
+# paths to files of raw metric values from Clrbrain
+kStatsFilesIn <- c(
+  "vols_by_sample.csv", "vols_by_sample_levels.csv", 
+  "vols_by_sample_summary.csv", "dsc_summary.csv", 
+  "compactness_summary.csv", "compactness_summary_stats.csv", 
+  "reg_stats_melted.csv", "smoothing_gausVopen.csv",
+  "vols_by_sample_compare.csv", "vols_by_sample_compare_levels.csv"
+)
 kStatsPathOut <- "../vols_stats" # output stats
 
 # region-ID map from Clrbrain, which should contain all regions including 
@@ -735,6 +739,14 @@ setupConfig <- function(name=NULL) {
     config.env$SummaryStats <- kSummaryStats[1]
     config.env$Sort.Groups <- FALSE
     
+  } else if (name == "vol_compare") {
+    # basic stats from comparison of two atlases
+    setupConfig("aba")
+    config.env$StatsPathIn <- file.path("..", kStatsFilesIn[10])
+    config.env$Model <- kModel[10]
+    config.env$PlotVolcano <- FALSE
+    config.env$Measurements <- kMeas[20:23]
+    
   } else if (name == "nolevels") {
     # input file from drawn labels only, without levels
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[1])
@@ -806,6 +818,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("compactness.stats")
   #setupConfig("reg")
   #setupConfig("wt.test")
+  #setupConfig("vol_compare")
   #setupConfig("geno")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")

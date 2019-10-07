@@ -448,10 +448,11 @@ def register(fixed_file, moving_file_dir, flip=False,
         moving_img, labels_img, flip)
     
     def reg(metric_sim=None):
+        # register images and turn off final bspline interpolation to avoid
+        # overshooting the interpolation for the labels image 
+        # (see Elastix manual section 4.3)
         img_reg, transformix = register_duo(
             fixed_img, moving_img, name_prefix, metric_sim)
-        # turn off to avoid overshooting the interpolation for the labels image 
-        # (see Elastix manual section 4.3)
         param_map = transformix.GetTransformParameterMap()
         param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
         transformix.SetTransformParameterMap(param_map)
@@ -460,16 +461,20 @@ def register(fixed_file, moving_file_dir, flip=False,
     img_moved, transformix_filter, transform_param_map = reg()
     # overlap stats comparing original and registered samples (eg histology)
     print("DSC of original and registered sample images")
+    thresh_mov = settings["atlas_threshold"]
     dsc_sample = atlas_refiner.measure_overlap(
-        fixed_img_orig, img_moved, 
-        transformed_thresh=settings["atlas_threshold"])
+        fixed_img_orig, img_moved, transformed_thresh=thresh_mov)
     fallback = settings["metric_sim_fallback"]
     if fallback and dsc_sample < fallback[0]:
         print("reg DSC below threshold of {}, will re-register using {} "
               "similarity metric".format(*fallback))
         img_moved, transformix_filter, transform_param_map = reg(fallback[1])
+        dsc_sample = atlas_refiner.measure_overlap(
+            fixed_img_orig, img_moved, transformed_thresh=thresh_mov)
     
     def make_labels(truncate):
+        # apply the same transformation to labels via Transformix, with option
+        # to truncate part of labels
         truncation = settings["truncate_labels"] if truncate else None
         labels_trans = _transform_labels(
             transformix_filter, labels_img, truncation=truncation, 

@@ -305,23 +305,23 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
         param_map["NumberOfResolutions"] = [str(num_res)]
 
 
-def register_duo(fixed_img, moving_img, path=None):
+def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
     """Register two images to one another using ``SimpleElastix``.
     
     Args:
-        fixed_img: The image to be registered to in :class``SimpleITK.Image`` 
-            format.
-        moving_img: The image to register to ``fixed_img`` in 
-            :class``SimpleITK.Image`` format.
-        path: Path as string from whose parent directory the points-based
+        fixed_img (:obj:`sitk.Image`): The image to be registered to.
+        moving_img (:obj:`sitk.Image`): The image to register to ``fixed_img``.
+        path (str): Path as string from whose parent directory the points-based
             registration files ``fix_pts.txt`` and ``mov_pts.txt`` will
             be found; defaults to None, in which case points-based
             reg will be ignored even if set.
+        metric_sim (str): Similarity metric; defaults to None to query from
+            :attr:`config.register_settings`.
     
     Returns:
-        Tuple of the registered image in SimpleITK Image format and a 
-        Transformix filter with the registration's parameters to 
-        reapply them on other images.
+        :obj:`SimpleITK.Image`, :obj:`sitk.TransformixImageFilter`: Tuple of
+        the registered image and a Transformix filter with the registration's
+        parameters to reapply them on other images.
     """
     # basic info from images just prior to SimpleElastix filtering for 
     # registration; to view raw images, show these images rather than merely 
@@ -339,7 +339,8 @@ def register_duo(fixed_img, moving_img, path=None):
     
     # set up parameter maps for translation, affine, and deformable regs
     settings = config.register_settings
-    metric_sim = settings["metric_similarity"]
+    if not metric_sim:
+        metric_sim = settings["metric_similarity"]
     param_map_vector = sitk.VectorOfParameterMap()
     
     # translation to shift and rotate
@@ -446,24 +447,32 @@ def register(fixed_file, moving_file_dir, flip=False,
     moving_img, labels_img, _, _ = atlas_refiner.match_atlas_labels(
         moving_img, labels_img, flip)
     
-    transformed_img, transformix_img_filter = register_duo(
-        fixed_img, moving_img, name_prefix)
-    # turn off to avoid overshooting the interpolation for the labels image 
-    # (see Elastix manual section 4.3)
-    transform_param_map = transformix_img_filter.GetTransformParameterMap()
-    transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
-    transformix_img_filter.SetTransformParameterMap(transform_param_map)
-    
+    def reg(metric_sim=None):
+        img_reg, transformix = register_duo(
+            fixed_img, moving_img, name_prefix, metric_sim)
+        # turn off to avoid overshooting the interpolation for the labels image 
+        # (see Elastix manual section 4.3)
+        param_map = transformix.GetTransformParameterMap()
+        param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
+        transformix.SetTransformParameterMap(param_map)
+        return img_reg, transformix, param_map
+
+    img_moved, transformix_filter, transform_param_map = reg()
     # overlap stats comparing original and registered samples (eg histology)
     print("DSC of original and registered sample images")
     dsc_sample = atlas_refiner.measure_overlap(
-        fixed_img_orig, transformed_img, 
+        fixed_img_orig, img_moved, 
         transformed_thresh=settings["atlas_threshold"])
+    fallback = settings["metric_sim_fallback"]
+    if fallback and dsc_sample < fallback[0]:
+        print("reg DSC below threshold of {}, will re-register using {} "
+              "similarity metric".format(*fallback))
+        img_moved, transformix_filter, transform_param_map = reg(fallback[1])
     
     def make_labels(truncate):
         truncation = settings["truncate_labels"] if truncate else None
         labels_trans = _transform_labels(
-            transformix_img_filter, labels_img, truncation=truncation, 
+            transformix_filter, labels_img, truncation=truncation, 
             flip=flip)
         print(labels_trans.GetSpacing())
         # WORKAROUND: labels img floating point vals may be more rounded 
@@ -485,12 +494,12 @@ def register(fixed_file, moving_file_dir, flip=False,
                 transformed_thresh=settings["atlas_threshold"])
         return labels_trans, transformed_img_cur, dsc
 
-    transformed_img_precur = transformed_img
-    labels_img_full, transformed_img, dsc_sample_curated = make_labels(False)
+    transformed_img_precur = img_moved
+    labels_img_full, img_moved, dsc_sample_curated = make_labels(False)
     labels_img, _, _ = labels_img_full if new_atlas else make_labels(True)
     
     imgs_write = (
-        fixed_img, transformed_img, transformed_img_precur, labels_img_full, 
+        fixed_img, img_moved, transformed_img_precur, labels_img_full, 
         labels_img)
     if show_imgs:
         # show individual SimpleITK images in default viewer
@@ -502,7 +511,7 @@ def register(fixed_file, moving_file_dir, flip=False,
             imgs_names = (
                 config.RegNames.IMG_ATLAS.value, 
                 config.RegNames.IMG_LABELS.value)
-            imgs_write = [transformed_img, labels_img]
+            imgs_write = [img_moved, labels_img]
         else:
             imgs_names = (
                 config.RegNames.IMG_EXP.value, 
@@ -523,7 +532,7 @@ def register(fixed_file, moving_file_dir, flip=False,
     # that corresponds to the final position that will be displayed
     _, translation = _handle_transform_file(name_prefix, transform_param_map)
     translation = _translation_adjust(
-        moving_img, transformed_img, translation, flip=True)
+        moving_img, img_moved, translation, flip=True)
     
     # compare original atlas with registered labels taken as a whole
     dsc_labels = atlas_refiner.measure_overlap_combined_labels(
@@ -557,7 +566,7 @@ def register(fixed_file, moving_file_dir, flip=False,
     imgs = [
         sitk.GetArrayFromImage(fixed_img),
         sitk.GetArrayFromImage(moving_img), 
-        sitk.GetArrayFromImage(transformed_img), 
+        sitk.GetArrayFromImage(img_moved), 
         sitk.GetArrayFromImage(labels_img)]
     _show_overlays(imgs, translation, fixed_file, None)
     '''
@@ -619,6 +628,16 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     moving_img = atlas_refiner.transpose_img(moving_img, plane, rotate)
     transformed_img, transformix_img_filter = register_duo(
         fixed_img, moving_img, prefix)
+    settings = config.register_settings
+    print("DSC of original and registered sample images")
+    dsc_sample = atlas_refiner.measure_overlap(
+        fixed_img, transformed_img, fixed_thresh=settings["atlas_threshold"])
+    fallback = settings["metric_sim_fallback"]
+    if fallback and dsc_sample < fallback[0]:
+        print("reg DSC below threshold of {}, will re-register using {} "
+              "similarity metric".format(*fallback))
+        transformed_img, transformix_img_filter = register_duo(
+            fixed_img, moving_img, prefix, fallback[1])
     reg_imgs = [transformed_img]
     names = [config.RegNames.IMG_EXP.value if reg_base is None else reg_base]
     if reg_names is not None:

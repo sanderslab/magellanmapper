@@ -307,6 +307,9 @@ class RegisterSettings(SettingsDict):
         
         # registration main similarity metric
         self["metric_similarity"] = "AdvancedMattesMutualInformation"
+        # fallback to alternate similarity metric if below DSC threshold as
+        # given by (threshold, alternate_metric)
+        self["metric_sim_fallback"] = None
         
         self["translation_iter_max"] = "2048"
         self["affine_iter_max"] = "1024"
@@ -437,7 +440,10 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "ncc", 
             {
-                "metric_similarity": "AdvancedNormalizedCorrelation", 
+                "metric_similarity": "AdvancedNormalizedCorrelation",
+                # fallback to MMI since it has been rather reliable
+                "metric_sim_fallback":
+                    (0.85, "AdvancedMattesMutualInformation"),
             }, 
             profile)
 

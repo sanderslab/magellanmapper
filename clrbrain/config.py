@@ -375,6 +375,7 @@ class AtlasMetrics(Enum):
     DSC_ATLAS_LABELS_HEM = "DSC_atlas_labels_hemisphere"
     DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
     DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
+    SIMILARITY_METRIC = "Similarity_metric"
     LAT_UNLBL_VOL = "Lateral_unlabeled_volume"
     LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"
     OFFSET = "Offset"

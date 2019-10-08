@@ -447,18 +447,19 @@ def register(fixed_file, moving_file_dir, flip=False,
     moving_img, labels_img, _, _ = atlas_refiner.match_atlas_labels(
         moving_img, labels_img, flip)
     
-    def reg(metric_sim=None):
+    def reg(metric):
         # register images and turn off final bspline interpolation to avoid
         # overshooting the interpolation for the labels image 
         # (see Elastix manual section 4.3)
         img_reg, transformix = register_duo(
-            fixed_img, moving_img, name_prefix, metric_sim)
+            fixed_img, moving_img, name_prefix, metric)
         param_map = transformix.GetTransformParameterMap()
         param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
         transformix.SetTransformParameterMap(param_map)
         return img_reg, transformix, param_map
-
-    img_moved, transformix_filter, transform_param_map = reg()
+    
+    metric_sim = settings["metric_similarity"]
+    img_moved, transformix_filter, transform_param_map = reg(metric_sim)
     # overlap stats comparing original and registered samples (eg histology)
     print("DSC of original and registered sample images")
     thresh_mov = settings["atlas_threshold"]
@@ -468,7 +469,8 @@ def register(fixed_file, moving_file_dir, flip=False,
     if fallback and dsc_sample < fallback[0]:
         print("reg DSC below threshold of {}, will re-register using {} "
               "similarity metric".format(*fallback))
-        img_moved, transformix_filter, transform_param_map = reg(fallback[1])
+        metric_sim = fallback[1]
+        img_moved, transformix_filter, transform_param_map = reg(metric_sim)
         dsc_sample = atlas_refiner.measure_overlap(
             fixed_img_orig, img_moved, transformed_thresh=thresh_mov)
     
@@ -555,10 +557,11 @@ def register(fixed_file, moving_file_dir, flip=False,
         config.AtlasMetrics.SAMPLE: [basename], 
         config.AtlasMetrics.REGION: config.REGION_ALL, 
         config.AtlasMetrics.CONDITION: [np.nan], 
+        config.AtlasMetrics.SIMILARITY_METRIC: [metric_sim],
         config.AtlasMetrics.DSC_ATLAS_SAMPLE: [dsc_sample], 
         config.AtlasMetrics.DSC_ATLAS_SAMPLE_CUR: [dsc_sample_curated], 
         config.AtlasMetrics.DSC_ATLAS_LABELS: [dsc_labels], 
-        config.SmoothingMetrics.COMPACTNESS: [compactness]
+        config.SmoothingMetrics.COMPACTNESS: [compactness],
     }
     df_path = lib_clrbrain.combine_paths(
         name_prefix, config.PATH_ATLAS_IMPORT_METRICS)

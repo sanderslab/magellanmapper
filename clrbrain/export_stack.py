@@ -361,9 +361,9 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
     num_paths = len(paths)
     for i in range(nrows):
         for j in range(ncols):
-            ax = fig.add_subplot(gs[i, j])
             n = i * ncols + j
             if n >= num_paths: break
+            ax = fig.add_subplot(gs[i, j])
             path_sub = paths[n]
             # TODO: test directory of images
             cli.setup_images(path_sub, series)

@@ -135,6 +135,7 @@ proc_npz=""
 #   downloaded; 0 if otherwise.
 ############################################
 get_compressed_file() {
+  # TODO: check extensions matching those in COMPRESSION_EXTS for double ext
   ext="${1##*.}"
   path_base="${1%.*}"
   is_compression=0
@@ -560,12 +561,12 @@ if [[ ! -e "$image5d_npz" ]]; then
   # Get stitched image files from S3
   start=$SECONDS
   name="${image5d_npz%.*}"
-  name="$(basename $name).${compression}"
-  echo "downloading $name from S3..."
+  name="$(basename "$name").${compression}"
+  echo "could not find locally, attempting to download $name from S3..."
   mkdir "$OUT_DIR"
   get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"
   if [[ "$?" -eq 0 ]]; then
-    # get individual .npz files if .zip not present
+    # try getting individual .npz files if archive not present
     echo -n "Could not find compressed files, attempting to download "
     echo "uncompressed files..."
     for npz in "$image5d_npz" "$info_npz"; do

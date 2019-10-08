@@ -7,7 +7,8 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
                        split.by.subgroup=TRUE, split.col=NULL, 
                        paired=FALSE, show.sample.legend=FALSE, 
                        plot.size=c(5, 7), summary.stats=kSummaryStats[2], 
-                       axes.in.range=FALSE, save=TRUE, sort.groups=TRUE) {
+                       axes.in.range=FALSE, save=TRUE, sort.groups=TRUE,
+                       show.labels=FALSE) {
   # Plot jitter/scatter plots of values by groups with summary stats.
   #
   # Groups specified in a main group column will have separate 
@@ -45,6 +46,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   #     defaults to FALSE.
   #   save: True to save plot to file; defaults to TRUE.
   #   sort.groups: True to sort groups; defaults to TRUE.
+  #   show.labels: Annotate points with sample names; defaults to FALSE.
   #
   # Returns:
   #   List of group names, means, and 95% confidence intervals.
@@ -100,6 +102,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   
   # set up coordinates to plot and error ranges
   vals <- df.region[[col]]
+  samples <- df.region$Sample
   int.digits <- nchar(trunc(max(vals)))
   vals.groups <- list() # list of vals for each group-subgroup group
   vals.means <- vector(length=num.groupcombos)
@@ -121,11 +124,12 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     for (subgroup in subgroups.in.group.unique) {
       # vals for group based on whether to include subgroup
       if (subgroup != "") {
-        vals.group <- vals[groups == group & subgroups == subgroup]
+        mask <- groups == group & subgroups == subgroup
       } else {
-        vals.group <- vals[groups == group]
+        mask <- groups == group
       }
-      vals.groups <- append(vals.groups, list(vals.group))
+      vals.group <- vals[mask]
+      vals.groups[[i]] <- list(vals=vals.group, samples=samples[mask])
       
       # error bars
       vals.means[i] <- mean(vals.group)
@@ -211,18 +215,19 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   par.old <- par(no.readonly=TRUE)
   if (show.sample.legend) {
     # setup sample legend names and number of columns based on max name length
-    samples <- df.region$Sample
-    if (is.factor(samples)) {
-      samples <- levels(samples)
+    samples.unique <- samples
+    if (is.factor(samples.unique)) {
+      # get levels but retain original order
+      samples.unique <- levels(samples.unique)[samples.unique]
     }
-    names.samples <- unique(samples)
-    name.max.len <- max(nchar(names.samples))
+    samples.unique <- unique(samples.unique)
+    name.max.len <- max(nchar(samples.unique))
     ncol <- 1
     if (name.max.len <= 10) ncol <- 2
     
     # increase bottom margin based on additional rows for sample legend
     margin <- par()$mar
-    margin[1] <- margin[1] + length(names.samples) / (1.3 * ncol)
+    margin[1] <- margin[1] + length(samples.unique) / (1.3 * ncol)
     par(mar=margin)
     par(xpd=NA) # for custom legend rect outside of plot
   }
@@ -279,13 +284,14 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     if (show.sample.legend) {
       # distinct color for each member in group, using same set of
       # colors for each set of points
+      # TODO: fix colors for unpaired samples
       if (num.subgroups > 0) {
-        colors <- RColorBrewer::brewer.pal(length(vals.groups[[1]]), "Paired")
+        colors <- RColorBrewer::brewer.pal(length(samples.unique), "Paired")
       }
     }
     for (subgroup in subgroups.in.group.unique) {
       # plot points, adding jitter in x-direction unless paired
-      vals.group <- vals.groups[[i]] / denom
+      vals.group <- vals.groups[[i]]$vals / denom
       x <- x.pos[i]
       if (i %% 2 == 0) {
         # shift even groups left slightly and connect if paired
@@ -308,6 +314,10 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       pch <- pchs[match(subgroup, subgroups.unique) + pch.offset]
       points(x.vals, vals.group, pch=pch, col=colors.group, 
              bg=colors.group, cex=pt.cex)
+      if (show.labels) {
+        addTextLabels::addTextLabels(
+          x.vals, vals.group, label=vals.groups[[i]]$samples, cex=0.5, lwd=0.2)
+      }
       
       # plot summary stats, eg means/CIs or boxplots
       x.summary <- x # default to means/CIs under jitter points
@@ -340,7 +350,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       # add sample legend
       if (is.null(legend.subgroups)) {
         legend.sample <- legend(
-          "topleft", inset=c(0, 1), xpd=TRUE, legend=names.samples, lty=1, 
+          "topleft", inset=c(0, 1), xpd=TRUE, legend=samples.unique, lty=1, 
           col=colors, ncol=ncol, text.width=legend.text.width)
       } else {
         # place below group legend to label colors, with manually 
@@ -348,7 +358,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
         group.rect <- legend.subgroups$rect
         legend.sample <- legend(
           x=group.rect$left, y=(group.rect$top-0.7*group.rect$h), 
-          legend=names.samples, lty=1, col=colors, xpd=TRUE, bty="n", 
+          legend=samples.unique, lty=1, col=colors, xpd=TRUE, bty="n", 
           ncol=ncol, text.width=legend.text.width)
         sample.rect <- legend.sample$rect
         rect(sample.rect$left, sample.rect$top - sample.rect$h,

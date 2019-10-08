@@ -437,7 +437,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         config.env$SampleLegend, config.env$PlotSize, 
         axes.in.range=config.env$Axes.In.Range, 
         summary.stats=config.env$SummaryStats, 
-        save=config.env$JitterPlotSave, sort.groups=config.env$Sort.Groups)
+        save=config.env$JitterPlotSave, sort.groups=config.env$Sort.Groups,
+        show.labels=config.env$JitterLabels)
       
       # add mean, median, and CI for each group to stats data frame
       names <- stats.group[[1]]
@@ -687,6 +688,7 @@ setupConfig <- function(name=NULL) {
     config.env$VolcanoLabels <- TRUE
     config.env$VolcanoLogX <- TRUE
     config.env$JitterPlotSave <- TRUE
+    config.env$JitterLabels <- FALSE
     config.env$Axes.In.Range <- FALSE
     config.env$ReversePairedStats <- FALSE
     config.env$SummaryStats <- kSummaryStats[2]
@@ -780,6 +782,7 @@ setupConfig <- function(name=NULL) {
     config.env$Model <- kModel[1]
     config.env$VolcanoLogX <- FALSE
     config.env$Condition <- "smoothed"
+    config.env$JitterLabels <- TRUE
     
   } else if (name == "skinny") {
     # very narrow plots

@@ -544,21 +544,22 @@ filterStats <- function(stats, corr=NULL) {
       filtered[i, col] <- stats.filt[i, col]
     }
   }
+  
   num.regions <- nrow(filtered)
-  if (!is.null(corr)) {
-    # TODO: consider not correcting for means stats with < 2 vals
-    cat("correcting for", num.regions, "regions\n")
-  }
   for (interact in interactions) {
     col.for.log <- paste0(interact, ".pcorr")
     if (!is.null(corr)) {
       # apply correction based on number of comparisons
+      # TODO: consider not correcting for means stats with < 2 vals
+      col <- paste0(interact, ".p")
+      cat("correcting", col, "by", corr, "for", num.regions, "regions\n")
       filtered[[col.for.log]] <- p.adjust(
-        filtered[[paste0(interact, ".p")]], method="bonferroni", n=num.regions)
+        filtered[[col]], method=corr, n=num.regions)
     }
     # calculate -log-p values
     filtered[[paste0(interact, ".logp")]] <- -1 * log10(filtered[[col.for.log]])
   }
+  
   return(filtered)
 }
 
@@ -694,6 +695,7 @@ setupConfig <- function(name=NULL) {
     config.env$SummaryStats <- kSummaryStats[2]
     config.env$Sort.Groups <- TRUE
     config.env$Condition <- NULL
+    config.env$P.Corr <- "bonferroni"
     
   } else if (name == "aba") {
     # multiple distinct atlases
@@ -855,7 +857,7 @@ runStats <- function(stat.type=NULL) {
       } else {
         stats <- calcVolStats(
           config.env$StatsPathIn, path.out, meas, config.env$Model, region.ids, 
-          split.by.side=split.by.side, corr="bonferroni")
+          split.by.side=split.by.side, corr=config.env$P.Corr)
       }
       
       if (!is.null(stats) & config.env$PlotVolcano) {

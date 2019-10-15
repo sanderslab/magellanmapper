@@ -780,11 +780,16 @@ setupConfig <- function(name=NULL) {
     
   } else if (name == "geno") {
     # compare across multiple genotypes
-    config.env$Measurements <- kMeas[2]
+    config.env$Measurements <- kMeas[1:3]
     config.env$Model <- kModel[1]
     config.env$VolcanoLogX <- FALSE
     config.env$Condition <- "smoothed"
     config.env$JitterLabels <- TRUE
+    
+  } else if (name == "lessstringent") {
+    # compare 2 genotypes with slightly less stringent tests
+    config.env$Model <- kModel[6]
+    config.env$P.Corr <- "BH"
     
   } else if (name == "skinny") {
     # very narrow plots
@@ -825,6 +830,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("wt.test")
   #setupConfig("vol_compare")
   #setupConfig("geno")
+  #setupConfig("lessstringent")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")
   #setupConfig("skinny.small")

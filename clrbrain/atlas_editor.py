@@ -452,9 +452,8 @@ class InterpolatePlanes:
         """
         if self.plane is not None and (
                 plane != self.plane or label_id != self.label_id):
-            # reset bounds if new plane or label ID don't match prior settings 
-            # and previously set (plane and label_id should have been set 
-            # together)
+            # reset bounds if new plane or label ID (plane and label_id 
+            # should have been set together)
             self.bounds = None
         self.plane = plane
         self.label_id = label_id
@@ -488,14 +487,16 @@ class InterpolatePlanes:
         """Set the bounds property.
         
         Args:
-            val: Integer to add as a bounds or a value to replace the 
-                current bounds value. None to reset.
+            val: Integer to append to the bounds list if not already
+                present, removing the first value in the list, or a value to
+                replace the current bounds value. None to reset.
         """
         if val is None:
             self._bounds = [None, None]
         elif isinstance(val, int):
-            self._bounds.append(val)
-            del self._bounds[0]
+            if val not in self._bounds:
+                self._bounds.append(val)
+                del self._bounds[0]
         else:
             self._bounds = val
 

@@ -201,12 +201,15 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
     """Extract a 2D plane or stack of planes.
     
     Args:
-        image5d: The full image stack.
-        plane_n: Slice of planes to extract, which can be a single index 
-            or multiple indices such as would be used for an animation.
-        plane: Type of plane to extract, which should be one of 
+        image5d (:obj:`np.ndarray`): The full image stack in either 
+            ``t,z,y,x[,c]`` or ``z,y,x`` formate; if 4 or more dimensions, 
+            the first dimension is assumed to be time and ignored.
+        plane_n (int, slice): Slice of planes to extract, which can be
+            a single index or multiple indices such as would be used for an
+            animation.
+        plane (str): Type of plane to extract, which should be one of 
             :attribute:`config.PLANES`.
-        max_intens_proj: True to show a max intensity projection, which 
+        max_intens_proj (bool): True to show a max intensity projection, which 
             assumes that plane_n is an array of multiple, typically 
             contiguous planes along which the max intensity pixel will 
             be taken. Defaults to False.
@@ -219,6 +222,7 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
     if image5d.ndim >= 4:
         img3d = image5d[0]
     else:
+        # TODO: remove?
         img3d = image5d[:]
     arrs_3d, _ = transpose_images(plane, [img3d])
     aspect, origin = get_aspect_ratio(plane)

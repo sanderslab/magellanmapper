@@ -447,10 +447,10 @@ class ROIEditor:
                 # convert it to an RGBA image, using region as alpha channel and
                 # inverting it opacify areas outside of selected region; if in
                 # MIP mode, will still only show lowest plane
-                img, _, _ = plot_support.extract_planes(
+                img_reg, _, _ = plot_support.extract_planes(
                     img_region, int(scaling[0] * z_overview), plane)
-                img_reg_2d = np.ones(img.shape + (4,))
-                img_reg_2d[..., 3] = np.invert(img) * 0.5
+                img_reg_2d = np.ones(img_reg.shape + (4,))
+                img_reg_2d[..., 3] = np.invert(img_reg) * 0.5
             return img, asp, ori, img_reg_2d
 
         img2d, aspect, origin, img_region_2d = prep_overview()

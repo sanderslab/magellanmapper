@@ -153,7 +153,8 @@ def _build_stack(ax, images, process_fnc, rescale, aspect=None,
     colorbar = config.process_settings["colorbar"]
     cmaps_all = [config.cmaps, *cmaps_labels]
     alphas = lib_clrbrain.pad_seq(config.alphas, num_image_types, 0.9)
-    
+
+    img_size = None
     for result in pool_results:
         i, imgs = result.get()
         if img_size is None: img_size = imgs[0].shape
@@ -307,9 +308,18 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
                 cmaps_labels.append(
                     colormaps.get_borders_colormap(
                         imgs[2], imgs[1], cmaps_labels[0]))
+        img_shape = None
         for img in imgs:
+            sl = img_sl
+            if img_shape:
+                if img_shape[1:4] != img.shape[1:4]:
+                    # scale slice bounds to the first image's shape
+                    z_scale = img.shape[1] / float(img_shape[1])
+                    sl = lib_clrbrain.scale_slice(sl, z_scale)
+            else:
+                img_shape = img.shape
             planes, aspect, origin = plot_support.extract_planes(
-                img, img_sl, plane=config.plane)
+                img, sl, plane=config.plane)
             if offset is not None and roi_size is not None:
                 # get ROI using transposed coordinates on transposed planes; 
                 # returns list

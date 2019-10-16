@@ -60,7 +60,7 @@ class StackPlaneIO(object):
         return i, img
     
     @classmethod
-    def process_plane(cls, i, rescale, multichannel, rotate=None):
+    def process_plane(cls, i, target_size, rotate=None):
         """Process corresponding planes from related images.
         
         Assumes that :attr:``imgs`` is a list of nested 2D image lists, 
@@ -70,8 +70,7 @@ class StackPlaneIO(object):
         
         Args:
             i: Index within nested lists of :attr:``imgs`` to plot.
-            rescale: Rescaling multiplier.
-            multichannel: True if the images are multichannel.
+            target_size: Resize to this shape.
             rotate: Degrees by which to rotate; defaults to None.
         
         Returns:
@@ -84,14 +83,13 @@ class StackPlaneIO(object):
         for j, img_stack in enumerate(cls.imgs):
             if j == 0:
                 # atlas image
-                img = transform.rescale(
-                    img_stack[i], rescale, mode="reflect", 
-                    multichannel=multichannel, 
+                img = transform.resize(
+                    img_stack[i], target_size, mode="reflect",
                     preserve_range=True, anti_aliasing=True)
             else:
                 # labels-based image, using nearest-neighbor interpolation
-                img = transform.rescale(
-                    img_stack[i], rescale, mode="reflect", multichannel=False, 
+                img = transform.resize(
+                    img_stack[i], target_size, mode="reflect",
                     preserve_range=True, anti_aliasing=False, order=0)
             imgs_proc.append(img)
         if rotate:
@@ -137,17 +135,19 @@ def _build_stack(ax, images, process_fnc, rescale, aspect=None,
     
     # import the images as Matplotlib artists via multiprocessing
     plotted_imgs = [None] * num_images
-    img_size = None
+    img_shape = images[0][0].shape
+    target_size = np.multiply(img_shape, rescale).astype(int)
     multichannel = images[0][0].ndim >= 3
-    print("building stack for channel: {}".format(config.channel))
+    if multichannel:
+        print("building stack for channel: {}".format(config.channel))
+        target_size[:-1] = img_shape[-1]
     StackPlaneIO.set_data(images)
     pool = mp.Pool()
     pool_results = []
     for i in range(num_images):
         # add rotation argument if necessary
-        pool_results.append(pool.apply_async(
-            process_fnc, 
-            args=(i, rescale, multichannel)))
+        pool_results.append(
+            pool.apply_async(process_fnc, args=(i, target_size)))
     
     # setup imshow parameters
     colorbar = config.process_settings["colorbar"]
@@ -296,7 +296,8 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
                 if img is not None: imgs.append(img[None])
             num_imgs = len(imgs)
             if num_imgs > 1:
-                # 2nd image is main labels, but use original if available
+                # 2nd image is main labels image, but use original set of 
+                # labels if available
                 cmaps_labels.append(
                     colormaps.get_labels_discrete_colormap(
                         imgs[1], 0, dup_for_neg=True, use_orig_labels=True))

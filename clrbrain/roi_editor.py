@@ -427,22 +427,22 @@ class ROIEditor:
             # main overview image
             z_range = z_overview
             if max_intens_proj:
-                # max intensity projection (MIP) is local, through the entire ROI
-                # and thus not changing with scrolling
+                # max intensity projection (MIP) is local, through the entire
+                # ROI and thus not changing with scrolling
                 z_range = np.arange(z_start, z_start + roi_size[2])
-            img2d, aspect, origin = plot_support.extract_planes(
+            img, asp, ori = plot_support.extract_planes(
                 image5d, z_range, plane, max_intens_proj)
-            img_region_2d = None
+            img_reg_2d = None
             if img_region is not None:
-                # extract correponding plane from scaled region image and
+                # extract corresponding plane from scaled region image and
                 # convert it to an RGBA image, using region as alpha channel and
                 # inverting it opacify areas outside of selected region; if in
                 # MIP mode, will still only show lowest plane
                 img, _, _ = plot_support.extract_planes(
                     img_region, int(scaling[0] * z_overview), plane)
-                img_region_2d = np.ones(img.shape + (4,))
-                img_region_2d[..., 3] = np.invert(img) * 0.5
-            return img2d, aspect, origin, img_region_2d
+                img_reg_2d = np.ones(img.shape + (4,))
+                img_reg_2d[..., 3] = np.invert(img) * 0.5
+            return img, asp, ori, img_reg_2d
 
         img2d, aspect, origin, img_region_2d = prep_overview()
 
@@ -458,7 +458,7 @@ class ROIEditor:
             zoom_plot_rows = math.ceil(z_planes / zoom_cols)
             col_remainder = z_planes % zoom_cols
             zoom_plot_cols = zoom_cols
-            if col_remainder > 0 and col_remainder < zoom_plot_rows:
+            if 0 < col_remainder < zoom_plot_rows:
                 zoom_plot_cols += 1
                 zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
                 col_remainder = z_planes % zoom_plot_cols
@@ -476,50 +476,47 @@ class ROIEditor:
                                height_ratios=height_ratios)
 
         # overview subplotting
-        ax_overviews = [] # overview axes
-        ax_z_list = [] # zoom plot axes
+        ax_overviews = []  # overview axes
+        ax_z_list = []  # zoom plot axes
 
-        def show_overview(ax, img2d_ov, img_region_2d, level):
+        def show_overview(ax_ov, img2d_ov, img_reg_2d, lev):
             """Show overview image with progressive zooming on the ROI for each
             zoom level.
 
             Args:
-                ax: Subplot axes.
+                ax_ov: Subplot axes.
                 img2d_ov: Image in which to zoom.
-                level: Zoom level, where 0 is the original image.
-
-            Returns:
-                The zoom amount as by which ``img2d_ov`` was divided.
+                img_reg_2d: Image of same size as ``img2d_ov`` to highlight.
+                lev: Zoom level, where 0 is the original image.
             """
             patch_offset = offset[0:2]
             zoom = 1
-            if level > 0:
+            if lev > 0:
                 # move origin progressively closer with each zoom level
-                zoom_mult = math.pow(level, 3)
-                origin = np.floor(
-                    np.multiply(offset[0:2],
-                                zoom_levels + zoom_mult - 1)
-                                / (zoom_levels + zoom_mult)).astype(int)
+                zoom_mult = math.pow(lev, 3)
+                ori = np.floor(
+                    np.multiply(offset[0:2], zoom_levels + zoom_mult - 1)
+                    / (zoom_levels + zoom_mult)).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
                 zoom = zoom_mult + 3
                 size = np.floor(zoom_shape / zoom).astype(int)
-                end = np.add(origin, size)
+                end = np.add(ori, size)
                 # keep the zoomed area within the full 2D image
-                for j in range(len(origin)):
-                    if end[j] > zoom_shape[j]:
-                        origin[j] -= end[j] - zoom_shape[j]
+                for o in range(len(ori)):
+                    if end[o] > zoom_shape[o]:
+                        ori[o] -= end[o] - zoom_shape[o]
                 # zoom and position ROI patch position
-                img2d_ov = img2d_ov[origin[1]:end[1], origin[0]:end[0]]
-                if img_region_2d is not None:
+                img2d_ov = img2d_ov[ori[1]:end[1], ori[0]:end[0]]
+                if img_reg_2d is not None:
                     origin_scaled = np.multiply(
-                        origin, scaling[2:0:-1]).astype(np.int)
-                    end_scaled = np.multiply(end, scaling[2:0:-1]).astype(np.int)
-                    img_region_2d = img_region_2d[
+                        ori, scaling[2:0:-1]).astype(np.int)
+                    end_scaled = np.multiply(
+                        end, scaling[2:0:-1]).astype(np.int)
+                    img_reg_2d = img_reg_2d[
                         origin_scaled[1]:end_scaled[1],
                         origin_scaled[0]:end_scaled[0]]
-                #print(img2d_ov_zoom.shape, origin, size)
-                patch_offset = np.subtract(patch_offset, origin)
+                patch_offset = np.subtract(patch_offset, ori)
 
             # downsample by taking interval to minimize values required to
             # access per plane, which can improve performance considerably
@@ -539,19 +536,20 @@ class ROIEditor:
 
             # show the zoomed 2D image along with rectangle highlighting the ROI
             plot_support.imshow_multichannel(
-                ax, img, channel, cmaps, aspect, 1, min_show, max_show)
-            if img_region_2d is not None:
+                ax_ov, img, channel, cmaps, aspect, 1, min_show, max_show)
+            if img_reg_2d is not None:
                 # overlay image with selected region highlighted by opacifying
                 # all surrounding areas
                 img = transform.resize(
-                    img_region_2d, img.shape, order=0, anti_aliasing=True,
+                    img_reg_2d, img.shape, order=0, anti_aliasing=True,
                     mode="reflect")
-                ax.imshow(img)
-            ax.add_patch(patches.Rectangle(
+                ax_ov.imshow(img)
+            ax_ov.add_patch(patches.Rectangle(
                 np.divide(patch_offset, downsample),
                 *np.divide(roi_size[0:2], downsample),
                 fill=False, edgecolor="yellow", linewidth=2))
-            if config.scale_bar: plot_support.add_scale_bar(ax, downsample, plane)
+            if config.scale_bar:
+                plot_support.add_scale_bar(ax_ov, downsample, plane)
 
             # set title with total zoom including objective and plane number
             if config.zoom and config.magnification:
@@ -559,21 +557,20 @@ class ROIEditor:
                     [config.zoom, config.magnification, zoom]).astype(np.float)
                 tot_zoom = "{}x".format(
                     lib_clrbrain.compact_float(np.prod(zoom_components), 1))
-            elif level == 0:
+            elif lev == 0:
                 tot_zoom = "original magnification"
             else:
                 tot_zoom = "{}x of original".format(zoom)
             plot_support.set_overview_title(
-                ax, plane, z_overview, tot_zoom, level, max_intens_proj)
-            return zoom
+                ax_ov, plane, z_overview, tot_zoom, lev, max_intens_proj)
 
         def jump(event):
-            z_overview = None
+            z_ov = None
             if event.inaxes in ax_z_list:
                 # right-arrow to jump to z-plane of given zoom plot
-                z_overview = (ax_z_list.index(event.inaxes) + z_start
-                              - z_planes_padding)
-            return z_overview
+                z_ov = (ax_z_list.index(event.inaxes) + z_start
+                        - z_planes_padding)
+            return z_ov
 
         def scroll_overview(event):
             """Scroll through overview images along their orthogonal axis.
@@ -594,11 +591,12 @@ class ROIEditor:
             if z_overview_new != z_overview:
                 # move only if step registered and changing position
                 z_overview = z_overview_new
-                img2d, aspect, origin, img_region_2d = prep_overview()
-                for level in range(zoom_levels - 1):
-                    ax = ax_overviews[level]
-                    ax.clear() # prevent performance degradation
-                    zoom = show_overview(ax, img2d, img_region_2d, level)
+                img, _, _, img_reg_2d = prep_overview()
+                for lev in range(zoom_levels - 1):
+                    # prevent performance degradation
+                    ax_ov = ax_overviews[lev]
+                    ax_ov.clear()
+                    show_overview(ax_ov, img, img_reg_2d, lev)
 
         def key_press(event):
             # respond to key presses
@@ -619,7 +617,7 @@ class ROIEditor:
             ax = plt.subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
-            zoom = show_overview(ax, img2d, img_region_2d, level)
+            show_overview(ax, img2d, img_region_2d, level)
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 

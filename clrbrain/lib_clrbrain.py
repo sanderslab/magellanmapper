@@ -678,21 +678,32 @@ def get_enum(s, enum_class):
     return enum
 
 
-def scale_slice(sl, scale):
+def scale_slice(sl, scale, size):
     """Scale slice values by a given factor.
     
     Args:
         sl (slice): Slice object to scale.
         scale (int, float): Scaling factor.
+        size (int): Size of the full range, used if ``sl.stop`` is None 
+            and generating a sequence of indices.
 
     Returns:
-        New slice object after scaling.
+        Either a new slice object after scaling if ``scale`` is >= 1, or
+        a :obj:`np.ndarray` of scaled indices with the same number of elements
+        as would be in the original `sl` range.
 
     """
     scaled = [sl.start, sl.stop, sl.step]
-    # TODO: option to preserve number of elements
     scaled = [s if s is None else int(s * scale) for s in scaled]
-    return slice(*scaled)
+    if scale >= 1:
+        # should produce the same number of elements
+        return slice(*scaled)
+    # interval would be < 1 if scaling down, so need to construct a sequence
+    # of indices including repeated indices to get the same total number of
+    # elements
+    start = 0 if scaled[0] is None else scaled[0]
+    end = size if scaled[1] is None else scaled[1]
+    return np.linspace(start, end, sl.stop - sl.start, dtype=int)
 
 
 if __name__ == "__main__":

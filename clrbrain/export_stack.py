@@ -318,7 +318,7 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
                     scaling = np.divide(img_shape, main_shape)
                     axis = plot_support.get_plane_axis(config.plane, True)
                     sl = lib_clrbrain.scale_slice(
-                        sl, scaling[axis])
+                        sl, scaling[axis], img_shape[axis])
             else:
                 main_shape = img_shape
             planes, aspect, origin = plot_support.extract_planes(

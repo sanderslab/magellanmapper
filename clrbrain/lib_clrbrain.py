@@ -678,5 +678,22 @@ def get_enum(s, enum_class):
     return enum
 
 
+def scale_slice(sl, scale):
+    """Scale slice values by a given factor.
+    
+    Args:
+        sl (slice): Slice object to scale.
+        scale (int, float): Scaling factor.
+
+    Returns:
+        New slice object after scaling.
+
+    """
+    scaled = [sl.start, sl.stop, sl.step]
+    # TODO: option to preserve number of elements
+    scaled = [s if s is None else int(s * scale) for s in scaled]
+    return slice(*scaled)
+
+
 if __name__ == "__main__":
     print("Initializing Clrbrain general library module")

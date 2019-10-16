@@ -274,7 +274,7 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
             # single plane only for non-animation
             img_sl = slice(slice_vals[0], slice_vals[0] + 1)
     else:
-        # default to take the whole image
+        # default to take the whole image stack
         img_sl = slice(None, None)
     if rescale is None:
         rescale = 1.0
@@ -308,16 +308,19 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
                 cmaps_labels.append(
                     colormaps.get_borders_colormap(
                         imgs[2], imgs[1], cmaps_labels[0]))
-        img_shape = None
+        main_shape = None  # z,y,x shape of 1st image
         for img in imgs:
             sl = img_sl
-            if img_shape:
-                if img_shape[1:4] != img.shape[1:4]:
+            img_shape = img.shape[1:4]
+            if main_shape:
+                if main_shape != img_shape:
                     # scale slice bounds to the first image's shape
-                    z_scale = img.shape[1] / float(img_shape[1])
-                    sl = lib_clrbrain.scale_slice(sl, z_scale)
+                    scaling = np.divide(img_shape, main_shape)
+                    axis = plot_support.get_plane_axis(config.plane, True)
+                    sl = lib_clrbrain.scale_slice(
+                        sl, scaling[axis])
             else:
-                img_shape = img.shape
+                main_shape = img_shape
             planes, aspect, origin = plot_support.extract_planes(
                 img, sl, plane=config.plane)
             if offset is not None and roi_size is not None:

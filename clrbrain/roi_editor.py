@@ -383,10 +383,6 @@ class ROIEditor:
         # adjust array order based on which plane to show
         border_full = np.copy(border)
         border[2] = 0
-        scaling = None
-        if config.labels_scaling is not None:
-            # check for None since np.copy of None is not None
-            scaling = np.copy(config.labels_scaling)
         if plane == config.PLANE[1]:
             # "xz" planes; flip y-z to give y-planes instead of z
             roi_size = lib_clrbrain.swap_elements(roi_size, 1, 2)
@@ -395,8 +391,6 @@ class ROIEditor:
             border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
             if segments is not None and len(segments) > 0:
                 segments[:, [0, 1]] = segments[:, [1, 0]]
-            if scaling is not None:
-                scaling = lib_clrbrain.swap_elements(scaling, 1, 2)
         elif plane == config.PLANE[2]:
             # "yz" planes; roll backward to flip x-z and x-y
             roi_size = lib_clrbrain.roll_elements(roi_size, -1)
@@ -409,8 +403,6 @@ class ROIEditor:
                 segments[:, [0, 2]] = segments[:, [2, 0]]
                 segments[:, [1, 2]] = segments[:, [2, 1]]
                 print("rolled segments:\n{}".format(segments))
-            if scaling is not None:
-                scaling = lib_clrbrain.roll_elements(scaling, -1)
         print("2D border: {}".format(border))
 
         # mark z-planes to show
@@ -439,19 +431,26 @@ class ROIEditor:
                 # max intensity projection (MIP) is local, through the entire
                 # ROI and thus not changing with scrolling
                 z_range = np.arange(z_start, z_start + roi_size[2])
-            img, asp, ori = plot_support.extract_planes(
+            img5d_2d, asp, ori = plot_support.extract_planes(
                 image5d, z_range, plane, max_intens_proj)
-            img_reg_2d = None
-            if img_region is not None:
+            img5d_shape = image5d.shape[1:4]
+            imgs = [img_region]
+            for img_i, img in enumerate(imgs):
+                if img is not None:
+                    scale = np.divide(img.shape, img5d_shape)
+                    axis = plot_support.get_plane_axis(plane, True)
+                    imgs[img_i], _, _ = plot_support.extract_planes(
+                        img, int(scale[axis] * z_overview), plane)
+            img_reg_2d = imgs[0]
+            if img_reg_2d is not None:
                 # extract corresponding plane from scaled region image and
                 # convert it to an RGBA image, using region as alpha channel and
                 # inverting it opacify areas outside of selected region; if in
                 # MIP mode, will still only show lowest plane
-                img_reg, _, _ = plot_support.extract_planes(
-                    img_region, int(scaling[0] * z_overview), plane)
-                img_reg_2d = np.ones(img_reg.shape + (4,))
-                img_reg_2d[..., 3] = np.invert(img_reg) * 0.5
-            return img, asp, ori, img_reg_2d
+                img = np.ones(img_reg_2d.shape + (4,))
+                img[..., 3] = np.invert(img_reg_2d) * 0.5
+                img_reg_2d = img
+            return img5d_2d, asp, ori, img_reg_2d
 
         img2d, aspect, origin, img_region_2d = prep_overview()
 
@@ -504,7 +503,7 @@ class ROIEditor:
                 # move origin progressively closer with each zoom level
                 zoom_mult = math.pow(lev, 3)
                 ori = np.floor(
-                    np.multiply(offset[0:2], zoom_levels + zoom_mult - 1)
+                    np.multiply(offset[:2], zoom_levels + zoom_mult - 1)
                     / (zoom_levels + zoom_mult)).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
@@ -516,15 +515,15 @@ class ROIEditor:
                     if end[o] > zoom_shape[o]:
                         ori[o] -= end[o] - zoom_shape[o]
                 # zoom and position ROI patch position
-                img2d_ov = img2d_ov[ori[1]:end[1], ori[0]:end[0]]
                 if img_reg_2d is not None:
-                    origin_scaled = np.multiply(
-                        ori, scaling[2:0:-1]).astype(np.int)
-                    end_scaled = np.multiply(
-                        end, scaling[2:0:-1]).astype(np.int)
+                    scale = np.divide(
+                        img_reg_2d.shape[:2], img2d_ov.shape)[::-1]
+                    origin_scaled = np.multiply(ori, scale).astype(np.int)
+                    end_scaled = np.multiply(end, scale).astype(np.int)
                     img_reg_2d = img_reg_2d[
                         origin_scaled[1]:end_scaled[1],
                         origin_scaled[0]:end_scaled[0]]
+                img2d_ov = img2d_ov[ori[1]:end[1], ori[0]:end[0]]
                 patch_offset = np.subtract(patch_offset, ori)
 
             # downsample by taking interval to minimize values required to

@@ -20,6 +20,7 @@ MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
 
+
 def load_labels_ref(path):
     """Load labels from a reference JSON or CSV file.
     
@@ -39,6 +40,7 @@ def load_labels_ref(path):
         labels_ref = pd.read_csv(path)
     return labels_ref
 
+
 def convert_itksnap_to_df(path):
     """Convert an ITK-SNAP labels description file to a CSV file 
     compatible with Clrbrain.
@@ -55,6 +57,7 @@ def convert_itksnap_to_df(path):
         path, sep="\s+", comment="#", 
         names=[e.value for e in config.ItkSnapLabels])
     return df
+
 
 def get_node(nested_dict, key, value, key_children):
     """Get a node from a nested dictionary by iterating through all 
@@ -86,6 +89,7 @@ def get_node(nested_dict, key, value, key_children):
         print(e)
     return None
 
+
 def create_aba_reverse_lookup(labels_ref):
     """Create a reverse lookup dictionary for Allen Brain Atlas style
     ontology files.
@@ -100,6 +104,7 @@ def create_aba_reverse_lookup(labels_ref):
     return create_reverse_lookup(
         labels_ref["msg"][0], config.ABAKeys.ABA_ID.value, 
         config.ABAKeys.CHILDREN.value)
+
 
 def create_reverse_lookup(nested_dict, key, key_children, id_dict=OrderedDict(), 
                           parent_list=None):
@@ -150,6 +155,7 @@ def create_reverse_lookup(nested_dict, key, key_children, id_dict=OrderedDict(),
         print(e)
     return id_dict
 
+
 def create_lookup_pd(df):
     """Create a lookup dictionary from a Pandas data frame.
     
@@ -180,6 +186,7 @@ def create_lookup_pd(df):
         id_dict[region_id] = sub_dict
     return id_dict
 
+
 def _get_children(labels_ref_lookup, label_id, children_all=[]):
     """Recursively get the children of a given non-negative atlas ID.
     
@@ -209,6 +216,7 @@ def _get_children(labels_ref_lookup, label_id, children_all=[]):
             _get_children(labels_ref_lookup, child_id, children_all)
     return children_all
 
+
 def get_children_from_id(labels_ref_lookup, label_id, incl_parent=True, 
                          both_sides=False):
     """Get the children of a given atlas ID.
@@ -235,6 +243,7 @@ def get_children_from_id(labels_ref_lookup, label_id, incl_parent=True,
         region_ids = [-1 * n for n in region_ids]
     #print("region IDs: {}".format(region_ids))
     return region_ids
+
 
 def labels_to_parent(labels_ref_lookup, level):
     """Generate a dictionary mapping label IDs to parent IDs at a given level.
@@ -273,6 +282,7 @@ def labels_to_parent(labels_ref_lookup, level):
                     parent_at_level = parent
         label_parents[label_id] = parent_at_level
     return label_parents
+
 
 def get_label_name(label):
     """Get the atlas region name from the label.
@@ -354,7 +364,7 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False,
         coord_scaled = np.clip(
             coord_scaled, None, np.subtract(labels_img.shape, 1))
     else:
-        # tpyically don't round to stay within bounds
+        # typically don't round to stay within bounds
         coord_scaled = coord_scaled.astype(np.int)
     '''
     exceeding = np.greater_equal(coord_scaled, labels_img.shape)
@@ -368,8 +378,9 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False,
     coordsi = lib_clrbrain.coords_for_indexing(coord_scaled)
     label_ids = labels_img[tuple(coordsi)][0]
     if return_coord_scaled:
-       return label_ids, coord_scaled
+        return label_ids, coord_scaled
     return label_ids
+
 
 def get_label(coord, labels_img, labels_ref, scaling, level=None, 
               rounding=False):
@@ -427,6 +438,7 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
             "could not find label id {} or its parent (error {})"
             .format(label_id, e))
     return label
+
 
 def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling, 
                       both_sides=False):
@@ -493,6 +505,7 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling,
     print("coord at middle: {}".format(coord))
     return coord, img_region, region_ids
 
+
 def rel_to_abs_ages(rel_ages, gestation=19):
     """Convert sample names to ages.
     
@@ -512,6 +525,6 @@ def rel_to_abs_ages(rel_ages, gestation=19):
     for val in rel_ages:
         age = float(val[1:])
         if val[0].lower() == "p":
-            age += 19
+            age += gestation
         ages[val] = age
     return ages

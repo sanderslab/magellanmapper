@@ -526,20 +526,27 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
             axis.set_label_text(lbl)
 
 
-def get_plane_axis(plane):
+def get_plane_axis(plane, get_index=False):
     """Gets the name of the plane corresponding to the given axis.
     
     Args:
-        plane: An element of :attr:``config.PLANE``.
+        plane (str): An element of :attr:``config.PLANE``.
+        get_index (bool): True to get the axis as an index.
     
     Returns:
-        The axis name orthogonal to :attr:``config.PLANE``.
+        The axis name orthogonal to :attr:``config.PLANE`` as string, or 
+        the axis index in the order ``z,y,x`` if ``get_index`` is True.
     """
     plane_axis = "z"
+    i = 0  # axis index, assuming z,y,x order
     if plane == config.PLANE[1]:
         plane_axis = "y"
+        i = 1
     elif plane == config.PLANE[2]:
         plane_axis = "x"
+        i = 2
+    if get_index:
+        return i
     return plane_axis
 
 

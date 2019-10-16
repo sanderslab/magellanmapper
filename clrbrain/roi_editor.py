@@ -308,18 +308,20 @@ class ROIEditor:
         print("Initiating ROI Editor")
 
     def plot_2d_stack(self, fn_update_seg, title, filename, image5d, channel,
-                      roi_size,
-                      offset, segments, mask_in, segs_cmap, fn_close_listener,
-                      border=None, plane="xy", padding_stack=None,
-                      zoom_levels=2, single_zoom_row=False,
-                      z_level=ZLevels.BOTTOM,
-                      roi=None, labels=None, blobs_truth=None, circles=None,
-                      mlab_screenshot=None, grid=False, zoom_cols=ZOOM_COLS,
-                      img_region=None, max_intens_proj=False):
+                      roi_size, offset, segments, mask_in, segs_cmap, 
+                      fn_close_listener, border=None, plane="xy", 
+                      padding_stack=None, zoom_levels=2, single_zoom_row=False,
+                      z_level=ZLevels.BOTTOM, roi=None, labels=None, 
+                      blobs_truth=None, circles=None, mlab_screenshot=None, 
+                      grid=False, zoom_cols=ZOOM_COLS, img_region=None, 
+                      max_intens_proj=False):
         """Shows a figure of 2D plots to compare with the 3D plot.
 
         Args:
-            title: Figure title.
+            fn_update_seg (func): Callback when updating a 
+                :obj:`DraggableCircle`.
+            title (str): Figure title.
+            filename (str): Path to use when saving the plot.
             image5d: Full Numpy array of the image stack.
             channel: Channel of the image to display.
             roi_size: List of x,y,z dimensions of the ROI.
@@ -348,7 +350,14 @@ class ROIEditor:
                 Z_LEVELS[0].
             roi: A denoised region of interest for display in fully zoomed plots.
                 Defaults to None, in which case image5d will be used instead.
+            labels (:obj:`np.ndarray`): Segmentation labels of the same shape
+                as that of ``image5d``; defaults to None.
+            blobs_truth (:obj:`np.ndarray`): Array of blobs to display as
+                ground truth; defaults to None.
             circles: :class:``CircleStyles`` enum member; defaults to None.
+            mlab_screenshot (:obj:`np.ndarray`): Array from Mayavi screenshot;
+                defaults to None.
+            grid (bool): True to overlay a grid on all plots.
             zoom_cols: Number of columns per row to reserve for zoomed plots;
                 defaults to :attr:``ZOOM_COLS``.
             img_region: 3D boolean or binary array corresponding to a scaled

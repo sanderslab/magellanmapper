@@ -436,29 +436,31 @@ class ROIEditor:
             img5d_2d, asp, ori = plot_support.extract_planes(
                 image5d, z_range, plane, max_intens_proj)
             img5d_shape = image5d.shape[1:4]
-            imgs = [labels_img, img_region]
-            cmaps = [None, ("Greys", )]
-            vmins = [None, 0.1]
-            vmaxs = [None, 1]
+            imgs = [img5d_2d, labels_img, img_region]
+            cmaps = [config.cmaps, None, ("Greys", )]
+            vmins = [config.near_min, None, 0.1]
+            vmaxs = [config.vmax_overview, None, 1]
             for img_i, img in enumerate(imgs):
-                if img is not None:
-                    # extract corresponding plane from scaled image
-                    scale = np.divide(img.shape, img5d_shape)
-                    axis = plot_support.get_plane_axis(plane, True)
-                    imgs[img_i], _, _ = plot_support.extract_planes(
-                        img, int(scale[axis] * z_overview), plane)
-            if imgs[0] is not None:
-                cmaps[0] = colormaps.get_labels_discrete_colormap(
-                    imgs[0], 0, dup_for_neg=True, use_orig_labels=True)
-            if imgs[1] is not None:
-                # invert selected region image to opacify areas outside of the
-                # region; if in MIP mode, will still only show lowest plane
-                imgs[1] = np.invert(imgs[1]).astype(float)
-            extras = {
+                if img_i == 0 or img is None: continue
+                # extract corresponding plane from image after scaling
+                scale = np.divide(img.shape, img5d_shape)
+                axis = plot_support.get_plane_axis(plane, True)
+                imgs[img_i], _, _ = plot_support.extract_planes(
+                    img, int(scale[axis] * z_overview), plane)
+                if img_i == 1:
+                    # add discrete colormap for labels image
+                    cmaps[img_i] = colormaps.get_labels_discrete_colormap(
+                        imgs[img_i], 0, dup_for_neg=True, 
+                        use_orig_labels=True)
+                elif img_i == 2:
+                    # invert region selection image to opacify areas outside
+                    # of the region; if in MIP mode, will still only show 
+                    # lowest plane
+                    imgs[img_i] = np.invert(imgs[img_i]).astype(float)
+            return asp, ori, {
                 "imgs": imgs, "cmaps": cmaps, "vmins": vmins, "vmaxs": vmaxs}
-            return img5d_2d, asp, ori, extras
 
-        img2d, aspect, origin, img2d_extras = prep_overview()
+        aspect, origin, img2ds = prep_overview()
 
         # plot layout depending on number of z-planes
         if single_zoom_row:
@@ -482,7 +484,8 @@ class ROIEditor:
         if mlab_screenshot is None:
             # remove column for screenshot
             top_cols -= 1
-            if img2d.shape[1] > 2 * img2d.shape[0]:
+            main_img_shape = img2ds["imgs"][0].shape
+            if main_img_shape[1] > 2 * main_img_shape[0]:
                 # for wide ROIs, prioritize the fully zoomed plots, especially
                 # if only one overview column
                 height_ratios = (1, 1) if top_cols >= 2 else (1, 2)
@@ -493,13 +496,12 @@ class ROIEditor:
         ax_overviews = []  # overview axes
         ax_z_list = []  # zoom plot axes
 
-        def show_overview(ax_ov, img2d_ov, lev, imgs, cmaps, vmins, vmaxs):
+        def show_overview(ax_ov, lev, imgs, cmaps, vmins, vmaxs):
             """Show overview image with progressive zooming on the ROI for each
             zoom level.
 
             Args:
                 ax_ov: Subplot axes.
-                img2d_ov: Image in which to zoom.
                 lev: Zoom level, where 0 is the original image.
                 imgs: Sequence of images to overlay.
                 cmaps: Sequence of colormaps corresponding to ``imgs``.
@@ -509,6 +511,7 @@ class ROIEditor:
             patch_offset = offset[0:2]
             zoom = 1
             imgs = list(imgs)
+            img2d_ov = imgs[0]
             if lev > 0:
                 # move origin progressively closer with each zoom level
                 zoom_mult = math.pow(lev, 3)
@@ -544,34 +547,32 @@ class ROIEditor:
                           self._DOWNSAMPLE_MAX_ELTS)).astype(np.int)
             if downsample < 1:
                 downsample = 1
-            min_show = config.near_min
-            max_show = config.vmax_overview
-            if np.prod(img2d_ov.shape[1:3]) < 2 * np.prod(roi_size[:2]):
-                # remove normalization from overview image if close in size to
-                # zoomed plots to emphasize the raw image
-                min_show = None
-                max_show = None
             img2d_ov_ds = img2d_ov[::downsample, ::downsample]
+            imgs[0] = img2d_ov_ds
 
             # show the zoomed 2D image along with rectangle highlighting the ROI
-            imgs_show = [img2d_ov_ds]
-            cmaps_show = [config.cmaps]
-            vmins_show = [min_show]
-            vmaxs_show = [max_show]
-            for img, cm, vmin, vmax in zip(imgs, cmaps, vmins, vmaxs):
-                if img is not None:
+            show = {"channels": None}
+            for img_i, (img, cm, vmin, vmax) in enumerate(
+                    zip(imgs, cmaps, vmins, vmaxs)):
+                if img is None: continue
+                if img_i == 0:
+                    if np.prod(img.shape[1:3]) < 2 * np.prod(roi_size[:2]):
+                        # remove normalization from overview image if close in
+                        # size to zoomed plots to emphasize the raw image
+                        vmin = None
+                        vmax = None
+                else:
                     # resize extra image to size of main image
                     img = transform.resize(
                         img, img2d_ov_ds.shape, order=0, anti_aliasing=False,
                         preserve_range=True, mode="reflect")
-                    imgs_show.append(img)
-                    cmaps_show.append(cm)
-                    vmins_show.append([vmin])
-                    vmaxs_show.append([vmax])
-            alphas = lib_clrbrain.pad_seq(config.alphas, len(imgs_show), 0.9)
-            plot_support.overlay_images(
-                ax_ov, aspect, origin, imgs_show, None, cmaps_show, alphas,
-                vmins_show, vmaxs_show)
+                show.setdefault("imgs2d", []).append(img)
+                show.setdefault("cmaps", []).append(cm)
+                show.setdefault("vmins", []).append([vmin])
+                show.setdefault("vmaxs", []).append([vmax])
+            show["alphas"] = lib_clrbrain.pad_seq(
+                config.alphas, len(show["imgs2d"]), 0.9)
+            plot_support.overlay_images(ax_ov, aspect, origin, **show)
             ax_ov.add_patch(patches.Rectangle(
                 np.divide(patch_offset, downsample),
                 *np.divide(roi_size[0:2], downsample),
@@ -619,12 +620,12 @@ class ROIEditor:
             if z_overview_new != z_overview:
                 # move only if step registered and changing position
                 z_overview = z_overview_new
-                img, _, _, extras = prep_overview()
+                _, _, imgs = prep_overview()
                 for lev in range(zoom_levels - 1):
                     # prevent performance degradation
                     ax_ov = ax_overviews[lev]
                     ax_ov.clear()
-                    show_overview(ax_ov, img, lev, **extras)
+                    show_overview(ax_ov, lev, **imgs)
 
         def key_press(event):
             # respond to key presses
@@ -644,7 +645,7 @@ class ROIEditor:
             ax = plt.subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
-            show_overview(ax, img2d, level, **img2d_extras)
+            show_overview(ax, level, **img2ds)
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 

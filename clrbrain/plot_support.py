@@ -189,6 +189,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             cmap = [cmap]
         if i == 0 and img_norm_setting:
             imgs2d[0] = lib_clrbrain.normalize(imgs2d[0], *img_norm_setting)
+        if imgs2d[i] is None: continue
         ax_img = imshow_multichannel(
             ax, imgs2d[i], channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
             vmax=vmaxs[i], origin=origin, interpolation="none",

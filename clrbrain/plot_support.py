@@ -84,7 +84,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         alpha /= np.sqrt(num_chls + 1)
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d
-        cmap = cmaps[chl]
+        cmap = None if cmaps is None else cmaps[chl]
         norm = None if norms is None else norms[chl]
         cmap = colormaps.get_cmap(cmap)
         if cmap is not None:

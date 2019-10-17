@@ -493,19 +493,22 @@ class ROIEditor:
         ax_overviews = []  # overview axes
         ax_z_list = []  # zoom plot axes
 
-        def show_overview(ax_ov, img2d_ov, extras, lev):
+        def show_overview(ax_ov, img2d_ov, lev, imgs, cmaps, vmins, vmaxs):
             """Show overview image with progressive zooming on the ROI for each
             zoom level.
 
             Args:
                 ax_ov: Subplot axes.
                 img2d_ov: Image in which to zoom.
-                img_reg_2d: Image of same size as ``img2d_ov`` to highlight.
                 lev: Zoom level, where 0 is the original image.
+                imgs: Sequence of images to overlay.
+                cmaps: Sequence of colormaps corresponding to ``imgs``.
+                vmins: Sequence of vmins corresponding to ``imgs``.
+                vmaxs: Sequence of vmins corresponding to ``imgs``.
             """
             patch_offset = offset[0:2]
             zoom = 1
-            img_extras = list(extras["imgs"])
+            imgs = list(imgs)
             if lev > 0:
                 # move origin progressively closer with each zoom level
                 zoom_mult = math.pow(lev, 3)
@@ -521,13 +524,13 @@ class ROIEditor:
                 for o in range(len(ori)):
                     if end[o] > zoom_shape[o]:
                         ori[o] -= end[o] - zoom_shape[o]
-                for img_i, img in enumerate(img_extras):
+                for img_i, img in enumerate(imgs):
                     if img is not None:
                         # zoom extra images based on scaling to main image
                         scale = np.divide(img.shape[:2], img2d_ov.shape)[::-1]
                         origin_scaled = np.multiply(ori, scale).astype(np.int)
                         end_scaled = np.multiply(end, scale).astype(np.int)
-                        img_extras[img_i] = img[
+                        imgs[img_i] = img[
                             origin_scaled[1]:end_scaled[1],
                             origin_scaled[0]:end_scaled[0]]
                 # zoom main image and position ROI patch
@@ -552,25 +555,23 @@ class ROIEditor:
 
             # show the zoomed 2D image along with rectangle highlighting the ROI
             imgs_show = [img2d_ov_ds]
-            cms = [config.cmaps]
-            vmins = [min_show]
-            vmaxs = [max_show]
-            for img, cm, vmin, vmax in zip(
-                    img_extras, extras["cmaps"], extras["vmins"], 
-                    extras["vmaxs"]):
+            cmaps_show = [config.cmaps]
+            vmins_show = [min_show]
+            vmaxs_show = [max_show]
+            for img, cm, vmin, vmax in zip(imgs, cmaps, vmins, vmaxs):
                 if img is not None:
                     # resize extra image to size of main image
                     img = transform.resize(
                         img, img2d_ov_ds.shape, order=0, anti_aliasing=False,
                         preserve_range=True, mode="reflect")
                     imgs_show.append(img)
-                    cms.append(cm)
-                    vmins.append([vmin])
-                    vmaxs.append([vmax])
+                    cmaps_show.append(cm)
+                    vmins_show.append([vmin])
+                    vmaxs_show.append([vmax])
             alphas = lib_clrbrain.pad_seq(config.alphas, len(imgs_show), 0.9)
             plot_support.overlay_images(
-                ax_ov, aspect, origin, imgs_show, None, cms, alphas, vmins,
-                vmaxs)
+                ax_ov, aspect, origin, imgs_show, None, cmaps_show, alphas,
+                vmins_show, vmaxs_show)
             ax_ov.add_patch(patches.Rectangle(
                 np.divide(patch_offset, downsample),
                 *np.divide(roi_size[0:2], downsample),
@@ -623,7 +624,7 @@ class ROIEditor:
                     # prevent performance degradation
                     ax_ov = ax_overviews[lev]
                     ax_ov.clear()
-                    show_overview(ax_ov, img, extras, lev)
+                    show_overview(ax_ov, img, lev, **extras)
 
         def key_press(event):
             # respond to key presses
@@ -643,7 +644,7 @@ class ROIEditor:
             ax = plt.subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
-            show_overview(ax, img2d, img2d_extras, level)
+            show_overview(ax, img2d, level, **img2d_extras)
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 

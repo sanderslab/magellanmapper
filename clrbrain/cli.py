@@ -731,11 +731,14 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
             # TODO: gets overwritten after loading original image's metadata
             config.resolutions = output_info["resolutions"]
             basename = output_info["basename"]
-            # TODO: ROI offset/shape not used
-            roi_offset = _check_np_none(output_info["offset"])
-            shape = _check_np_none(output_info["roi_size"])
-            print("processed image offset: {}, roi_size: {}"
-                  .format(roi_offset, shape))
+            try:
+                # TODO: ROI offset/shape not used; remove?
+                roi_offset = _check_np_none(output_info["offset"])
+                shape = _check_np_none(output_info["roi_size"])
+                print("processed image offset: {}, roi_size: {}"
+                      .format(roi_offset, shape))
+            except KeyError as e:
+                lib_clrbrain.printv("could not find key:", e)
         except (FileNotFoundError, KeyError) as e:
             print("Unable to load processed info file at {}"
                   .format(filename_info_proc))

@@ -674,10 +674,9 @@ class ROIEditor:
         # collection,and they don't appear to be individually editable
         seg_patch_dict = {}
 
-        # sub-gridspec for fully zoomed plots to allow flexible number of columns
-        gs_zoomed = gridspec.GridSpecFromSubplotSpec(zoom_plot_rows, zoom_plot_cols,
-                                                     gs[1, :],
-                                                     wspace=0.1, hspace=0.1)
+        # sub-gridspec for fully zoomed plots to allow flexible number of cols
+        gs_zoomed = gridspec.GridSpecFromSubplotSpec(
+            zoom_plot_rows, zoom_plot_cols, gs[1, :], wspace=0.1, hspace=0.1)
         cmap_labels = None
         if labels is not None:
             # background partially transparent to show any mismatch
@@ -691,7 +690,7 @@ class ROIEditor:
                 cols = col_remainder
             # show zoomed in plots and highlight one at offset z
             for j in range(cols):
-                # z relative to the start of the ROI, since segs are relative to ROI
+                # z relative to the start of ROI, since segs are relative to ROI
                 z_relative = i * zoom_plot_cols + j - z_planes_padding
                 # absolute z value, relative to start of image5d
                 z = z_start + z_relative
@@ -713,17 +712,17 @@ class ROIEditor:
                         blobs_truth[:, 4] > 0], axis=0)]
                 #print("blobs_truth_z:\n{}".format(blobs_truth_z))
 
-                # shows border outlining area that will be saved if in verify mode
+                # show border outlining area that will be saved in verify mode
                 show_border = (verify and z_relative >= border[2]
                                and z_relative < roi_size[2] - border[2])
 
-                # shows the zoomed subplot with scale bar for the current z-plane
+                # show the zoomed subplot with scale bar for the current z-plane
                 ax_z = self.show_subplot(
-                    fig, gs_zoomed, i, j, image5d, channel, roi_size, zoom_offset,
-                    fn_update_seg,
+                    fig, gs_zoomed, i, j, image5d, channel, roi_size,
+                    zoom_offset, fn_update_seg,
                     segs_in, segs_out, segs_cmap, alpha, z_relative,
-                    z == z_overview, border_full if show_border else None, plane,
-                    roi_show, labels, blobs_truth_z, circles=circles,
+                    z == z_overview, border_full if show_border else None,
+                    plane, roi_show, labels, blobs_truth_z, circles=circles,
                     aspect=aspect, grid=grid, cmap_labels=cmap_labels)
                 if i == 0 and j == 0 and config.scale_bar:
                     plot_support.add_scale_bar(ax_z, plane=plane)
@@ -760,7 +759,8 @@ class ROIEditor:
                             seg = fn_update_seg(seg[0])
                             # adds a circle to denote the new segment
                             patch = self._plot_circle(
-                                ax, seg, self._BLOB_LINEWIDTH, "-", fn_update_seg)
+                                ax, seg, self._BLOB_LINEWIDTH, "-",
+                                fn_update_seg)
                     except ValueError as e:
                         print(e)
                         print("not on a plot to select a point")

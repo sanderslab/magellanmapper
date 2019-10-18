@@ -63,21 +63,17 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
     num_chls = len(channels)
 
     # transform image based on config parameters
+    # TODO: consider removing flip and using only transpose attribute
     rotate = config.transform[config.Transforms.ROTATE]
     if rotate is not None or config.flip is not None and config.flip[0]:
         if rotate is None:
-            # rotate image by 180deg if first flip setting is True;
-            # TODO: consider replacing flip with transpose attribute
+            # rotate image by 180deg if first flip setting is True
             rotate = 2
         last_axis = img2d.ndim - 1
         if multichannel:
             last_axis -= 1
         img2d = np.rot90(img2d, rotate, (last_axis - 1, last_axis))
-    if config.transform[config.Transforms.FLIP_HORIZ]:
-        img2d = img2d[..., ::-1, :] if multichannel else img2d[..., ::-1]
-    if config.transform[config.Transforms.FLIP_VERT]:
-        img2d = img2d[::-1]
-
+    
     is_alpha_seq = lib_clrbrain.is_seq(alpha)
     if num_chls > 1 and is_alpha_seq:
         # more translucent with increasing numbers of channels 
@@ -109,6 +105,19 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
                 alpha=alpha_plane, vmin=vmin_plane, vmax=vmax_plane, 
                 origin=origin, interpolation=interpolation)
         img.append(img_chl)
+    
+    # flip horizontally or vertically by inverting axes
+    if config.transform[config.Transforms.FLIP_HORIZ]:
+        if not ax.xaxis_inverted():
+            ax.invert_xaxis()
+    if config.transform[config.Transforms.FLIP_VERT]:
+        inverted = ax.yaxis_inverted()
+        if (origin in (None, "lower") and inverted) or (
+                origin == "upper" and not inverted):
+            # invert only if inversion state is same as expected from origin
+            # to avoid repeated inversions with repeated calls
+            ax.invert_yaxis()
+    
     return img
 
 

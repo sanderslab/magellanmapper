@@ -358,7 +358,7 @@ def cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols, sep="_"):
 
 
 def combine_cols(df, combos):
-    """Combine columns in a data frame with the aggregation function 
+    """Combine columns within a single data frame with the aggregation function 
     specified in each combination.
     
     Args:
@@ -388,6 +388,7 @@ def append_cols(dfs, labels, fn_col=None, extra_cols=None):
     """Append columns from a group of data frames, optionally filtering
     to keep only columns matching criteria.
     
+    Assumes that each data frame contains identical samples and ordering.
     All columns will be kept from the first data frame.
     
     Args:
@@ -420,6 +421,28 @@ def append_cols(dfs, labels, fn_col=None, extra_cols=None):
     # concatenate columns
     df = pd.concat(dfs, axis=1)
     return df
+
+
+def join_dfs(dfs, id_col):
+    """Join data frames by an ID column.
+    
+    Args:
+        dfs (List[:obj:`pd.DataFrame`]): Sequence of data frames to join.
+        id_col (str): Index column.
+
+    Returns:
+        Data frame after joining after serially joining data frames.
+
+    """
+    df_out = None
+    for i, df in enumerate(dfs):
+        if i == 0:
+            df_out = df.set_index(id_col)
+        else:
+            df_out = df_out.join(df.set_index(id_col), rsuffix="_{}".format(i))
+    df_out = df_out.reset_index()
+    return df_out
+    
 
 
 def melt_cols(df, id_cols, melt_cols, var_name=None):
@@ -612,7 +635,18 @@ def main():
     if stats_type is config.StatsTypes.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
         merge_csvs(config.filenames, config.prefix)
-    
+
+    elif stats_type is config.StatsTypes.MERGE_CSVS_COLS:
+        # join multiple CSV files based on a given index column into single
+        # CSV file
+        dfs = [pd.read_csv(f) for f in config.filenames]
+        df = join_dfs(dfs, config.plot_labels[config.PlotLabels.ID_COL])
+        out_path = config.prefix
+        if not out_path:
+            out_path = lib_clrbrain.insert_before_ext(
+                config.filename, "_joined")
+        data_frames_to_csv(df, out_path)
+
     elif stats_type == config.StatsTypes.EXPS_BY_REGION:
         # convert volume stats data frame to experiments by region
         exps_by_regions(config.filename)

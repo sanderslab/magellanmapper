@@ -117,6 +117,7 @@ PlotLabels = Enum(
         "X_COL", "Y_COL",  # columns from data frame to plot
         "GROUP_COL",  # data frame group column
         "WT_COL",  # weight column
+        "ID_COL",  # ID column
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)
@@ -353,7 +354,7 @@ class ItkSnapLabels(Enum):
 #: :class:`Enum`: stats module processing types
 StatsTypes = Enum(
     "StatsTypes", [
-        "MERGE_CSVS", "EXPS_BY_REGION", "EXTRACT_FROM_CSV"
+        "MERGE_CSVS", "MERGE_CSVS_COLS", "EXPS_BY_REGION", "EXTRACT_FROM_CSV"
     ]
 )
 stats_type = None

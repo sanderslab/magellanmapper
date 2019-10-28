@@ -311,7 +311,7 @@ setupPairing <- function(df.region, col, split.col) {
 }
 
 statsByRegion <- function(df, col, model, split.by.side=TRUE, 
-                          regions.ignore=NULL, cond=NULL) {
+                          regions.ignore=NULL, cond=NULL, group.col=NULL) {
   # Calculate statistics given by region for columns starting with the given 
   # string using the selected model.
   #
@@ -328,6 +328,19 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   #     defaults to True.
   #   regions.ignore: Vector of regions to ignore; default to NULL.
   #   cond: Filter df to keep only this condition; defaults to NULL.
+  #   group.col: Name of group column; defaults to NULL, which uses "Condition"
+  #     for means models and "Geno" otherwise.
+  
+  if (is.null(group.col)) {
+    # set up default group column name
+    if (is.element(model, kModel[5:9])) {
+      # means models split by condition
+      group.col <- "Condition"
+    } else {
+      # split by genotype
+      group.col <- "Geno"
+    }
+  }
   
   # find all regions
   regions <- unique(df$Region)
@@ -391,8 +404,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       if (is.element(model, kModel[5:9])) {
         # means tests
         coef.tab <- meansModel(
-          vals, df.region.nonnan$Condition, model, paired, 
+          vals, df.region.nonnan[[group.col]], model, paired, 
           config.env$ReversePairedStats)
+        
       } else if (model == kModel[10]) {
         # basic stats
         coef.tab <- setupBasicStats()
@@ -402,12 +416,14 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         
       } else {
         # regression tests
-        genos <- df.region.nonnan$Geno
+        genos <- df.region.nonnan[[group.col]]
         sides <- df.region.nonnan$Side
         ids <- df.region.nonnan$Sample
         coef.tab <- fitModel(model, vals, genos, sides, ids)
       }
+      
       if (!is.null(coef.tab)) {
+        # collect stats, taking means for weightings
         stats$Stats[i] <- list(coef.tab)
         stats$Volume[i] <- mean(df.region.nonnan$Volume)
         stats$Nuclei[i] <- mean(df.region.nonnan$Nuclei)
@@ -427,14 +443,17 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       # plot individual values grouped by genotype and selected column
       if (!split.by.side) {
         df.jitter <- aggregate(
-          cbind(Volume, Nuclei) ~ Sample + Geno, df.jitter, sum)
+          cbind(Volume, Nuclei) ~ Sample + group.col, df.jitter, sum)
         df.jitter$Density <- df.jitter$Nuclei / df.jitter$Volume
         print(df.jitter)
       }
+      # TODO: allow split.col to be ignored
+      group.col.jitter <- group.col
+      if (group.col.jitter == split.col) group.col.jitter <- "Geno"
       # TODO: set up groups and generate stats outside of jitter plots
       stats.group <- jitterPlot(
-        df.jitter, col, title, "Geno", split.by.side, split.col, paired, 
-        config.env$SampleLegend, config.env$PlotSize, 
+        df.jitter, col, title, group.col.jitter, split.by.side, split.col, 
+        paired, config.env$SampleLegend, config.env$PlotSize, 
         axes.in.range=config.env$Axes.In.Range, 
         summary.stats=config.env$SummaryStats, 
         save=config.env$JitterPlotSave, sort.groups=config.env$Sort.Groups,
@@ -451,7 +470,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
     } else {
       # ignore region if all values 0, leaving entry for region as NA and 
       # grouping output for empty regions to minimize console output; 
-      # TDOO: consider grouping into list and displaying only at end
+      # TODO: consider grouping into list and displaying only at end
       regions.ignored <- append(regions.ignored, region)
     }
   }
@@ -610,7 +629,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   }
   stats <- statsByRegion(
     df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore,
-    cond=config.env$Condition)
+    cond=config.env$Condition, group.col=config.env$GroupCol)
   stats.filtered <- filterStats(stats, corr=corr)
   stats.filtered <- merge(region.ids, stats.filtered, by="Region", all.y=TRUE)
   print(stats.filtered)
@@ -693,6 +712,7 @@ setupConfig <- function(name=NULL) {
     config.env$Axes.In.Range <- FALSE
     config.env$ReversePairedStats <- FALSE
     config.env$SummaryStats <- kSummaryStats[2]
+    config.env$GroupCol <- NULL
     config.env$Sort.Groups <- TRUE
     config.env$Condition <- NULL
     config.env$P.Corr <- "bonferroni"

@@ -763,7 +763,7 @@ setupConfig <- function(name=NULL) {
     config.env$SummaryStats <- kSummaryStats[1]
     config.env$Sort.Groups <- FALSE
     
-  } else if (name == "vol_compare") {
+  } else if (name == "compare.vol") {
     # basic stats from comparison of two atlases
     setupConfig("aba")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[10])
@@ -804,7 +804,13 @@ setupConfig <- function(name=NULL) {
     config.env$Model <- kModel[1]
     config.env$VolcanoLogX <- FALSE
     config.env$Condition <- "smoothed"
+    config.env$GroupCol <- "Geno"
     config.env$JitterLabels <- TRUE
+    
+  } else if (name == "compare.sex") {
+    # compare sex instead of genotype
+    setupConfig("geno")
+    config.env$GroupCol <- "Sex"
     
   } else if (name == "lessstringent") {
     # compare 2 genotypes with slightly less stringent tests
@@ -848,8 +854,9 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("compactness.stats")
   #setupConfig("reg")
   #setupConfig("wt.test")
-  #setupConfig("vol_compare")
+  #setupConfig("compare.vol")
   #setupConfig("geno")
+  #setupConfig("compare.sex")
   #setupConfig("lessstringent")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")

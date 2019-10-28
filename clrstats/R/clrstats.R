@@ -812,6 +812,11 @@ setupConfig <- function(name=NULL) {
     setupConfig("geno")
     config.env$GroupCol <- "Sex"
     
+  } else if (name == "compare.laterality") {
+    # compare left/right hemispheres instead of genotype
+    setupConfig("geno")
+    config.env$GroupCol <- "Side"
+    
   } else if (name == "lessstringent") {
     # compare 2 genotypes with slightly less stringent tests
     config.env$Model <- kModel[6]
@@ -858,6 +863,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("geno")
   #setupConfig("compare.sex")
   #setupConfig("lessstringent")
+  #setupConfig("compare.laterality")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")
   #setupConfig("skinny.small")

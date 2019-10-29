@@ -318,8 +318,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   # NaN values will be ignored. If all values for a given vector are NaN, 
   # statistics will not be computed.
   #
-  # For non-paired stats, the comparison column is set by group.col. Paired
-  # stats compare groups specified in the "Condition" column.
+  # Groups for comparison will be defined by "group.col" if set. If not,
+  # non-paired stats default to compare groups specified in the "Geno" column,
+  # while paired stats compare based on the "Condition" column.
   #
   # Args:
   #   df: Data frame with at least columns for "Sample" and "Region".
@@ -336,10 +337,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   if (is.null(group.col)) {
     # set up default group column name
     if (is.element(model, kModel[5:9])) {
-      # means models split by condition
+      # means models default to splitting by condition
       group.col <- "Condition"
     } else {
-      # split by genotype
+      # default to splitting by genotype
       group.col <- "Geno"
     }
   }
@@ -381,10 +382,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         if (is.null(df.region.nonnan)) next
       }
       if (is.element(model, kModel[5:9])) {
-        # filter for means tests, which split by "Condition" column; 
+        # filter for means tests, which compare groups specified in group.col
         # TODO: reconsider aggregating sides but need way to properly 
         # average variations in a weighted manner
-        split.col <- "Condition"
+        split.col <- group.col
         if (paired) {
           # sort by sample and condition, matching saved condition order, 
           # split by condition, and filter out pairs where either sample 
@@ -392,7 +393,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
           #print(df.region.nonnan)
           df.region.nonnan <- df.region.nonnan[
             order(df.region.nonnan$Sample, 
-                  match(df.region.nonnan$Condition, cond.unique)), ]
+                  match(df.region.nonnan[[split.col]], cond.unique)), ]
           df.region.nonnan <- setupPairing(df.region.nonnan, col, split.col)
           if (is.null(df.region.nonnan)) next
         }
@@ -449,9 +450,13 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         df.jitter$Density <- df.jitter$Nuclei / df.jitter$Volume
         print(df.jitter)
       }
-      # TODO: allow split.col to be ignored
       group.col.jitter <- group.col
-      if (group.col.jitter == split.col) group.col.jitter <- "Geno"
+      if (group.col.jitter == split.col) {
+        # paired stats default to using "Condition" for both group and split
+        # columns, so need to change if the same
+        # TODO: allow split.col to be ignored
+        group.col.jitter <- "Geno"
+      }
       # TODO: set up groups and generate stats outside of jitter plots
       stats.group <- jitterPlot(
         df.jitter, col, title, group.col.jitter, split.by.side, split.col, 

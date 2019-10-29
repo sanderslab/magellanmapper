@@ -618,7 +618,7 @@ def _update_df_side(df):
     # invert label IDs of right-sided regions; assumes that using df 
     # will specify sides explicitly in label_ids
     # TODO: consider removing combine_sides and using label_ids only
-    df.loc[df[config.AtlasMetrics.SIDE.value] == config.HemSides.RIGHT.name,
+    df.loc[df[config.AtlasMetrics.SIDE.value] == config.HemSides.RIGHT.value,
            LabelMetrics.Region.name] *= -1
 
 
@@ -721,8 +721,10 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
     start_time = time()
     
     if df is None:
+        # convert to physical units based on spacing and unit conversion
         vol_args = {"spacing": spacing, "unit_factor": unit_factor}
     else:
+        # units already converted, but need to convert sides
         _update_df_side(df)
         vol_args = {}
     

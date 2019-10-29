@@ -492,13 +492,15 @@ def main(process_args_only=False):
     
     if args.vmin:
         # specify vmin levels
-        config.vmins = [float(val) for val in args.vmin.split(",")]
+        config.vmins = [
+            lib_clrbrain.get_int(val) for val in args.vmin.split(",")]
         print("Set vmins to", config.vmins)
     
     if args.vmax:
         # specify vmax levels and copy to vmax overview used for plotting 
         # and updated for normalization
-        config.vmaxs = [float(val) for val in args.vmax.split(",")]
+        config.vmaxs = [
+            lib_clrbrain.get_int(val) for val in args.vmax.split(",")]
         config.vmax_overview = list(config.vmaxs)
         print("Set vmaxs to", config.vmaxs)
     

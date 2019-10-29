@@ -29,6 +29,7 @@ _DTYPES = {
 # the start of extensions that may have multiple periods
 _EXTENSIONS_MULTIPLE = (".tar", ".nii")
 
+
 def swap_elements(arr, axis0, axis1, offset=0):
     """Swap elements within an list or tuple.
     
@@ -53,6 +54,7 @@ def swap_elements(arr, axis0, axis1, offset=0):
         arr = tuple(arr)
     return arr
 
+
 def transpose_1d(arr, plane):
     transposed = arr
     if plane == config.PLANE[1]:
@@ -64,6 +66,7 @@ def transpose_1d(arr, plane):
         transposed = swap_elements(arr, 1, 2)
     return transposed
 
+
 def transpose_1d_rev(arr, plane):
     transposed = arr
     if plane == config.PLANE[1]:
@@ -74,6 +77,7 @@ def transpose_1d_rev(arr, plane):
         transposed = swap_elements(arr, 2, 1)
         transposed = swap_elements(arr, 2, 0)
     return transposed
+
 
 def roll_elements(arr, shift, axis=None):
     """Roll elements in a tuple safe manner.
@@ -98,6 +102,7 @@ def roll_elements(arr, shift, axis=None):
         arr = tuple(arr)
     #print("after moving: {}".format(arr))
     return arr
+
 
 def pad_seq(seq, n, pad=None):
     """Pad a sequence with a given value or truncate the sequence to fit 
@@ -124,6 +129,7 @@ def pad_seq(seq, n, pad=None):
         seq += [pad] * (n - len_seq)
     return seq
 
+
 def insert_before_ext(name, insert, sep=""):
     """Merge two paths by splicing in ``insert`` just before the extention 
     in ``base_path``.
@@ -142,6 +148,7 @@ def insert_before_ext(name, insert, sep=""):
     """
     if name.find(".") == -1: name += "."
     return "{0}{2}{3}.{1}".format(*name.rsplit(".", 1), sep, insert)
+
 
 def splitext(path):
     """Split a path at its extension in a way that supports extensions 
@@ -166,6 +173,7 @@ def splitext(path):
         path_split = (path[:i], path[i:])
     return path_split
 
+
 def match_ext(path, path_to_match):
     """Match extensions for two paths.
     
@@ -184,6 +192,7 @@ def match_ext(path, path_to_match):
         path_to_match = os.path.splitext(path_to_match)[0] + path_split[1]
     return path_to_match
 
+
 def get_filename_without_ext(path):
     """Get filename without extension.
     
@@ -198,6 +207,7 @@ def get_filename_without_ext(path):
     name_split = os.path.splitext(name)
     if len(name_split) > 1: return name_split[0]
     return name
+
 
 def combine_paths(base_path, suffix, sep="_", ext=None):
     """Merge two paths by appending ``suffix``, replacing the extention 
@@ -225,6 +235,7 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
         path = os.path.splitext(base_path)[0] + sep + suffix
     if ext: path = "{}.{}".format(os.path.splitext(path)[0], ext)
     return path
+
 
 def normalize(array, minimum, maximum, in_range="image"):
     """Normalizes an array to fall within the given min and max.
@@ -256,6 +267,7 @@ def normalize(array, minimum, maximum, in_range="image"):
     
     return array
 
+
 def printv(*s):
     """Print to console only if verbose.
     
@@ -265,6 +277,7 @@ def printv(*s):
     """
     if config.verbose:
         print(*s)
+
 
 def printv_format(s, form):
     """Print a formatted string to console only if verbose.
@@ -277,6 +290,7 @@ def printv_format(s, form):
     if config.verbose:
         print(s.format(*form))
 
+
 def warn(msg, category=UserWarning, stacklevel=2):
     """Print a warning message.
     
@@ -287,6 +301,7 @@ def warn(msg, category=UserWarning, stacklevel=2):
 
     """
     warnings.warn(msg, category, stacklevel=stacklevel)
+
 
 def series_as_str(series):
     """Get the series as a string for Clrbrain filenames, ensuring 5 
@@ -299,6 +314,7 @@ def series_as_str(series):
         Padded series.
     """
     return str(series).zfill(5)
+
 
 def splice_before(base, search, splice, post_splice="_"):
     """Splice in a string before a given substring.
@@ -331,6 +347,7 @@ def splice_before(base, search, splice, post_splice="_"):
             post_splice = ""
     return base[0:i] + splice + post_splice + base[i:]
 
+
 def str_to_disp(s):
     """Convert a string to a user-friendly, displayable string by replacing 
     underscores with spaces and trimming outer whitespace.
@@ -342,6 +359,7 @@ def str_to_disp(s):
         New, converted string.
     """
     return s.replace("_", " ").strip()
+
 
 def get_int(val):
     """Cast a value as an integer or a float if not an integer, if possible.
@@ -371,6 +389,7 @@ def get_int(val):
                 return None
             return val
 
+
 def is_number(val):
     """Check if a value is a number by attempting to cast to ``float``.
     
@@ -385,6 +404,7 @@ def is_number(val):
         return True
     except (ValueError, TypeError):
         return False
+
 
 def format_num(val, digits=1):
     """Format a value to a given number of digits if the value is a number.
@@ -403,6 +423,7 @@ def format_num(val, digits=1):
         formatted = ("{:." + str(digits) + "g}").format(float(val))
     return formatted
 
+
 def convert_indices_to_int(dict_to_convert):
     """Convert indices of a dictionary to int if possible, including nested 
     indices.
@@ -418,6 +439,7 @@ def convert_indices_to_int(dict_to_convert):
         for k, v in dict_to_convert.items()
     }
     return dict_converted
+
 
 def npstr_to_array(s, shape=None):
     """Convert a string representation of a Numpy array back to an array.
@@ -444,6 +466,7 @@ def npstr_to_array(s, shape=None):
             pass
     return arr
 
+
 def show_full_arrays(on=True):
     """Show full Numpy arrays, except for particularly large arrays.
     
@@ -455,6 +478,7 @@ def show_full_arrays(on=True):
         np.set_printoptions(linewidth=500, threshold=10000000)
     else:
         np.set_printoptions()
+
 
 def print_compact(arr, msg=None, mid=False):
     """Print a Numpy array in a compact form to visual comparison with 
@@ -483,6 +507,7 @@ def print_compact(arr, msg=None, mid=False):
         print(compact)
     return compact
 
+
 def compact_float(n, max_decimals=None):
     """Reduce a float to a more compact value.
     
@@ -501,6 +526,7 @@ def compact_float(n, max_decimals=None):
     elif max_decimals is not None:
         compact = "{0:.{1}f}".format(n, max_decimals)
     return compact
+
 
 def backup_file(path, modifier="", i=None):
     """Backup a file to the next given available path with an index number 
@@ -548,6 +574,7 @@ def backup_file(path, modifier="", i=None):
             break
         i += 1
 
+
 def is_binary(img):
     """Check if image is binary.
     
@@ -558,6 +585,7 @@ def is_binary(img):
         True if the image is composed of only 0 and 1 values.
     """
     return ((img == 0) | (img == 1)).all()
+
 
 def last_lines(path, n):
     """Get the last lines of a file by simply loading the entire file and 
@@ -581,6 +609,7 @@ def last_lines(path, n):
             return lines
     return lines[-1*n:]
 
+
 def coords_for_indexing(coords):
     """Convert array of coordinates to array for fancy indexing in a 
     Numpy array.
@@ -597,6 +626,7 @@ def coords_for_indexing(coords):
     coordsi = np.transpose(coords)
     coordsi = np.split(coordsi, coordsi.shape[0])
     return coordsi
+
 
 def dtype_within_range(min_val, max_val, integer, signed=None):
     """Get a dtype that will contain the given range.
@@ -633,6 +663,7 @@ def dtype_within_range(min_val, max_val, integer, signed=None):
         "unable to find numerical type (integer {}, signed {}) containing "
         "range {} through {}".format(integer, signed, min_val, max_val))
 
+
 def is_seq(val):
     """Check if a value is a non-string sequence.
     
@@ -643,6 +674,7 @@ def is_seq(val):
         True if the value is a list, tuple, or Numpy array.
     """
     return isinstance(val, (list, tuple, np.ndarray))
+
 
 def enum_dict_aslist(d):
     """Summarize a dictionary with enums as keys as a shortened 

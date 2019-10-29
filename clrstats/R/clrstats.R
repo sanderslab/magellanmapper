@@ -820,9 +820,11 @@ setupConfig <- function(name=NULL) {
     config.env$GroupCol <- "Sex"
     
   } else if (name == "compare.laterality") {
-    # compare left/right hemispheres instead of genotype
+    # compare left/right hemispheres instead of genotype; assumes that
+    # the samples will be in the same order after splitting by side
     setupConfig("geno")
     config.env$GroupCol <- "Side"
+    config.env$Model <- kModel[8]
     
   } else if (name == "lessstringent") {
     # compare 2 genotypes with slightly less stringent tests

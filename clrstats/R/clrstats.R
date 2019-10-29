@@ -814,6 +814,11 @@ setupConfig <- function(name=NULL) {
     config.env$GroupCol <- "Geno"
     config.env$JitterLabels <- TRUE
     
+  } else if (name == "lessstringent") {
+    # compare 2 genotypes with slightly less stringent tests
+    setupConfig("benjamini.hochman")
+    config.env$Model <- kModel[6]
+    
   } else if (name == "compare.sex") {
     # compare sex instead of genotype
     setupConfig("geno")
@@ -826,9 +831,8 @@ setupConfig <- function(name=NULL) {
     config.env$GroupCol <- "Side"
     config.env$Model <- kModel[8]
     
-  } else if (name == "lessstringent") {
-    # compare 2 genotypes with slightly less stringent tests
-    config.env$Model <- kModel[6]
+  } else if (name == "benjamini.hochman") {
+    # use Benjamini-Hochman False Discovery Rate instead of Bonferroni
     config.env$P.Corr <- "BH"
     
   } else if (name == "skinny") {
@@ -876,6 +880,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("lessstringent")
   #setupConfig("compare.sex") # M vs F unpaired stats
   setupConfig("compare.laterality") # L vs R paired stats
+  setupConfig("benjamini.hochman")
   
   #setupConfig("nolevels")
   #setupConfig("nojittersave")

@@ -315,12 +315,14 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   # Calculate statistics given by region for columns starting with the given 
   # string using the selected model.
   #
-  # Values of 0 will be ignored. If all values for a given vector are 0, 
+  # NaN values will be ignored. If all values for a given vector are NaN, 
   # statistics will not be computed.
   #
+  # For non-paired stats, the comparison column is set by group.col. Paired
+  # stats compare groups specified in the "Condition" column.
+  #
   # Args:
-  #   df: Data frame with columns for Genos, Sides, Region, and name given by 
-  #     col.
+  #   df: Data frame with at least columns for "Sample" and "Region".
   #   col: Column from which to find main stats.
   #   model: Model to use, corresponding to one of kModel.
   #   split.by.side: True to keep data split by sides, False to combine 
@@ -850,9 +852,11 @@ runStats <- function(stat.type=NULL) {
   
   # setup configuration environment
   setupConfig()
+  
   #setupConfig("dsc")
   #setupConfig("aba")
   #setupConfig("smoothing")
+  
   #setupConfig("wt")
   #setupConfig("intensnuc")
   #setupConfig("compactness")
@@ -860,10 +864,12 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("reg")
   #setupConfig("wt.test")
   #setupConfig("compare.vol")
+  
   #setupConfig("geno")
-  #setupConfig("compare.sex")
   #setupConfig("lessstringent")
-  #setupConfig("compare.laterality")
+  #setupConfig("compare.sex") # M vs F unpaired stats
+  setupConfig("compare.laterality") # L vs R paired stats
+  
   #setupConfig("nolevels")
   #setupConfig("nojittersave")
   #setupConfig("skinny.small")

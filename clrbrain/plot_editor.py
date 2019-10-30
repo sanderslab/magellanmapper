@@ -189,7 +189,8 @@ class PlotEditor:
             # connect once get AxesImage
             self.connect()
         # text label with color for visibility on axes plus fig background
-        self.region_label = self.axes.text(0, 0, "", color="xkcd:silver")
+        self.region_label = self.axes.text(
+            0, 0, "", color="k", bbox=dict(facecolor="xkcd:silver", alpha=0.5))
         self.circle = None
     
     def _update_overview(self, z_overview_new):
@@ -391,12 +392,12 @@ class PlotEditor:
                     self.region_label.set_text(name)
                     if x > self.img3d_labels.shape[2] / 2:
                         alignment = "right"
-                        label_x = x - 10
+                        label_x = x - 20
                     else:
                         alignment = "left"
-                        label_x = x + 10
+                        label_x = x + 20
                     self.region_label.set_horizontalalignment(alignment)
-                    self.region_label.set_position((label_x, y - 10))
+                    self.region_label.set_position((label_x, y - 20))
                 
         self.last_loc = loc
         self.last_loc_data = loc_data

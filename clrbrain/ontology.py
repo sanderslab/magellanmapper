@@ -284,6 +284,29 @@ def labels_to_parent(labels_ref_lookup, level):
     return label_parents
 
 
+def get_label_item(label, item_key, key=NODE):
+    """Convenience function to get the item from the sub-label.
+
+    Args:
+        label (dict): The label dictionary. Assumes that ``label`` is a
+            nested dictionary.
+        item_key (str): Key for item to retrieve from within ``label[key]``.
+        key (str): First level key; defaults to :const:`NODE`.
+
+    Returns:
+        The label item, or None if not found.
+    """
+    item = None
+    try:
+        if label is not None:
+            sub = label[key]
+            if sub is not None:
+                item = sub[item_key]
+    except KeyError as e:
+        print(e, item_key)
+    return item
+
+
 def get_label_name(label):
     """Get the atlas region name from the label.
     

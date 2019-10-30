@@ -260,9 +260,9 @@ class ROIEditor:
     flag, reposition, or add/subtract annotations.
 
     Attributes:
-        ZOOM_COLS: Int as the default number of columns for the "zoomed-in"
+        ZOOM_COLS (int): Default number of columns for the "zoomed-in"
             2D plots, the 2D planes for the ROI.
-        Z_LEVELS: Tuple of strings denoting the possible positions of the
+        ZLevels (:obj:`Enum`): Enum denoting the possible positions of the
             z-plane shown in the overview plots.
     """
     ZOOM_COLS = 9
@@ -300,12 +300,13 @@ class ROIEditor:
     # divisor for finding array interval to downsample images
     _DOWNSAMPLE_MAX_ELTS = 1000
 
-    # store DraggableCircles objects to prevent premature garbage collection
-    _draggable_circles = []
-    _circle_last_picked = []
-
     def __init__(self):
+        """Initialize the editor."""
         print("Initiating ROI Editor")
+        
+        # store DraggableCircles objects to prevent premature garbage collection
+        self._draggable_circles = []
+        self._circle_last_picked = []
 
     def plot_2d_stack(self, fn_update_seg, title, filename, image5d, channel,
                       roi_size, offset, segments, mask_in, segs_cmap, 

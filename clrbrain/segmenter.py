@@ -19,6 +19,7 @@ from clrbrain import config
 from clrbrain import detector
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+from clrbrain import stats
 
 def _markers_from_blobs(roi, blobs):
     # use blobs as seeds by converting blobs into marker image
@@ -339,17 +340,16 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
                 LabelToMarkerErosion.erode_label, 
                 args=(label_id, filter_size, target_frac)))
     for result in pool_results:
-        stats, slices, filtered = result.get()
+        stats_eros, slices, filtered = result.get()
         # can only mutate markers outside of mp for changes to persist
-        markers[tuple(slices)][filtered] = stats[0]
-        for col, stat in zip(cols, stats):
+        markers[tuple(slices)][filtered] = stats_eros[0]
+        for col, stat in zip(cols, stats_eros):
             sizes_dict.setdefault(col, []).append(stat)
     pool.close()
     pool.join()
     
     # show erosion stats
-    df_sizes = pd.DataFrame(sizes_dict)
-    print(df_sizes.to_csv(sep="\t", index=False))
+    stats.dict_to_data_frame(sizes_dict, show=True)
     
     print("time elapsed to erode labels into markers:", time() - start_time)
     return markers

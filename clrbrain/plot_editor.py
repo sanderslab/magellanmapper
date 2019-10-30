@@ -6,6 +6,8 @@ Integrates with :class:``atlas_editor.AtlasEditor`` for synchronized 3D
 view of orthogonal planes.
 """
 
+import textwrap
+
 import matplotlib.patches as patches
 from skimage import draw
 
@@ -378,10 +380,15 @@ class PlotEditor:
                         self.scaling)
                     name = ""
                     if atlas_label is not None:
-                        name = ontology.get_label_name(atlas_label)
-                    self.region_label.set_text(name)
+                        # extract name and ID from label dict
+                        name = "{} ({})".format(
+                            ontology.get_label_name(atlas_label),
+                            ontology.get_label_item(
+                                atlas_label, config.ABAKeys.ABA_ID.value))
                     # minimize chance of text overflowing out of axes by 
-                    # switching alignment at midline horizontally
+                    # word-wrapping and switching sides at vertical midline
+                    name = "\n".join(textwrap.wrap(name, 30))
+                    self.region_label.set_text(name)
                     if x > self.img3d_labels.shape[2] / 2:
                         alignment = "right"
                         label_x = x - 10

@@ -140,7 +140,7 @@ def _build_stack(ax, images, process_fnc, rescale, aspect=None,
     multichannel = images[0][0].ndim >= 3
     if multichannel:
         print("building stack for channel: {}".format(config.channel))
-        target_size[:-1] = img_shape[-1]
+        target_size = target_size[:-1]
     StackPlaneIO.set_data(images)
     pool = mp.Pool()
     pool_results = []
@@ -380,6 +380,7 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
             ax = fig.add_subplot(gs[i, j])
             path_sub = paths[n]
             # TODO: test directory of images
+            # TODO: avoid reloading first image
             cli.setup_images(path_sub, series)
             plotted_imgs = prepare_stack(
                 ax, cli.image5d, path_sub, offset=offset, 

@@ -29,9 +29,12 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
                         norms=None):
     """Show multichannel 2D image with channels overlaid over one another.
 
-    Applies :attr:``config.transpose`` to flip/rotate images. Also checks
-    first :attr:``config.flip`` array element to rotate the image
-    by 180 degrees if ``rotate`` is not available in :attr:``config.transpose``.
+    Applies :attr:`config.transform` with :obj:`config.Transforms.ROTATE`
+    to rotate images. If not available, also checks the first element in
+    :attr:``config.flip`` to rotate the image by 180 degrees.
+    
+    Applies :attr:`config.transform` with :obj:`config.Transforms.FLIP_HORIZ`
+    and :obj:`config.Transforms.FLIP_VERT` to invert images.
 
     Args:
         ax: Axes plot.
@@ -75,9 +78,10 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         img2d = np.rot90(img2d, rotate, (last_axis - 1, last_axis))
     
     is_alpha_seq = lib_clrbrain.is_seq(alpha)
-    if num_chls > 1 and is_alpha_seq:
-        # more translucent with increasing numbers of channels 
-        alpha /= np.sqrt(num_chls + 1)
+    if num_chls > 1 and not is_alpha_seq:
+        # if alphas not explicitly set per channel, make all channels more
+        # translucent with increasing numbers of channels 
+        alpha_plane /= np.sqrt(num_chls + 1)
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d
         cmap = None if cmaps is None else cmaps[chl]
@@ -90,8 +94,6 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
             cmap.set_under(alpha=0)
         if vmin is not None:
             vmin_plane = vmin[chl]
-        if vmax is not None:
-            vmax_plane = vmax[chl]
         if vmax is not None:
             vmax_plane = vmax[chl]
         if is_alpha_seq:
@@ -168,7 +170,9 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             # TODO: extend support for multichannel padding beyond 1st image
             filled[0] = lib_clrbrain.pad_seq(list(fill_with), len(chls), pad)
         return filled
-
+    
+    # use values from config if not already set
+    # TODO: fill any missing value, not only when the whole setting is None
     img_norm_setting = config.process_settings["norm"]
     if channels is None:
         # channels are designators rather than lists of specific channels

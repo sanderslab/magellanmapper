@@ -273,14 +273,17 @@ class LabelToMarkerErosion(object):
         # erode the labels, starting with the given filter size and 
         # decreasing if the resulting label size falls below a given 
         # threshold
-        chosen_selem_size = None
+        chosen_selem_size = np.nan
+        filtered = label_mask_region
+        size_ratio = 1
         for selem_size in range(filter_size, -1, -1):
             if selem_size == 0:
                 if size_ratio < 0.01:
                     print("label {}: could not erode without losing region "
                           "of size {}, skipping".format(label_id, region_size))
                     filtered = label_mask_region
-                    chosen_selem_size = None
+                    region_size_filtered = np.sum(filtered)
+                    chosen_selem_size = np.nan
                 break
             # erode check size ratio
             filtered = morphology.binary_erosion(
@@ -296,8 +299,9 @@ class LabelToMarkerErosion(object):
                   "(size ratio {}), chosen filter size {}"
                   .format(label_id, region_size, region_size_filtered, 
                           size_ratio, chosen_selem_size))
-        stats = (label_id, region_size, region_size_filtered, selem_size)
-        return stats, slices, filtered
+        stats_eros = (label_id, region_size, region_size_filtered,
+                      chosen_selem_size)
+        return stats_eros, slices, filtered
 
 def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     """Convert a labels image to markers as eroded labels via multiprocessing.

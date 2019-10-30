@@ -224,7 +224,7 @@ def main(process_args_only=False):
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for Clrbrain")
-    global roi_size, offset, mlab_3d
+    global roi_size, offset
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series")
@@ -620,7 +620,8 @@ def main(process_args_only=False):
             plot_2d.plot_roc(stats_df, not config.no_show)
         else:
             # processes file with default settings
-            setup_images(config.filename, series, offset, roi_size, config.proc_type)
+            setup_images(
+                config.filename, series, offset, roi_size, config.proc_type)
             process_file(
                 config.filename, series, offset, roi_size, config.proc_type)
     

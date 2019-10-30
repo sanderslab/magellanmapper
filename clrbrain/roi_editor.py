@@ -530,7 +530,8 @@ class ROIEditor:
                 for img_i, img in enumerate(imgs):
                     if img is not None:
                         # zoom extra images based on scaling to main image
-                        scale = np.divide(img.shape[:2], img2d_ov.shape)[::-1]
+                        scale = np.divide(
+                            img.shape[:2], img2d_ov.shape[:2])[::-1]
                         origin_scaled = np.multiply(ori, scale).astype(np.int)
                         end_scaled = np.multiply(end, scale).astype(np.int)
                         imgs[img_i] = img[
@@ -555,6 +556,8 @@ class ROIEditor:
             for img_i, (img, cm, vmin, vmax) in enumerate(
                     zip(imgs, cmaps, vmins, vmaxs)):
                 if img is None: continue
+                vmin = [vmin]
+                vmax = [vmax]
                 if img_i == 0:
                     if np.prod(img.shape[1:3]) < 2 * np.prod(roi_size[:2]):
                         # remove normalization from overview image if close in
@@ -568,8 +571,8 @@ class ROIEditor:
                         preserve_range=True, mode="reflect")
                 show.setdefault("imgs2d", []).append(img)
                 show.setdefault("cmaps", []).append(cm)
-                show.setdefault("vmins", []).append([vmin])
-                show.setdefault("vmaxs", []).append([vmax])
+                show.setdefault("vmins", []).append(vmin)
+                show.setdefault("vmaxs", []).append(vmax)
             show["alphas"] = lib_clrbrain.pad_seq(
                 config.alphas, len(show["imgs2d"]), 0.9)
             plot_support.overlay_images(ax_ov, aspect, origin, **show)

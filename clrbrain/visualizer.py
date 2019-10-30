@@ -796,8 +796,8 @@ class Visualization(HasTraits):
             # prevent multiple editable windows from being opened 
             # simultaneously to avoid unsynchronized state
             self.segs_feedback = (
-                "Cannot show 2D plots while another editable "
-                "plot is showing. Please redraw.")
+                "Cannot show ROI Editor while another editable "
+                "plot is showing. Please choose \"No circles\" or redraw.")
             return
         if (not self._circles_opened_type 
                 or self._circles_opened_type ==

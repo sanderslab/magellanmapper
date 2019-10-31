@@ -243,9 +243,7 @@ class LabelToMarkerErosion(object):
         By default, labels will be eroded with the given ``filter_size`` 
         as long as their final size is > 20% of the original volume. If 
         the eroded volume is below threshold, ``filter_size`` will be 
-        progressively decreased until criteria is met or the filter 
-        cannot be reduced further. If the label at this final filter size 
-        would be essentially lost (ie < 1%), the label will not be eroded.
+        progressively decreased until the filter cannot be reduced further.
         
         Args:
             label_id (int): ID of label to erode.
@@ -279,13 +277,14 @@ class LabelToMarkerErosion(object):
         filtered = label_mask_region
         size_ratio = 1
         for selem_size in range(filter_size, -1, -1):
-                if size_ratio < 0.01:
-                    print("label {}: could not erode without losing region "
-                          "of size {}, skipping".format(label_id, region_size))
-                    filtered = label_mask_region
-                    region_size_filtered = np.sum(filtered)
-                    chosen_selem_size = np.nan
             if selem_size < min_filter_size:
+                print("label {}: could not erode without dropping below "
+                      "minimum filter size of {}, reverting to original "
+                      "region size of {}"
+                      .format(label_id, min_filter_size, region_size))
+                filtered = label_mask_region
+                region_size_filtered = region_size
+                chosen_selem_size = np.nan
                 break
             # erode check size ratio
             filtered = morphology.binary_erosion(

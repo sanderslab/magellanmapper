@@ -380,7 +380,8 @@ def mask_atlas(atlas, labels_img):
     mask = np.logical_or(atlas > thresh, labels_img != 0)
     return mask
 
-def segment_from_labels(edges, markers, labels_img, atlas_img=None):
+def segment_from_labels(edges, markers, labels_img, atlas_img=None,
+                        exclude_labels=None):
     """Segment an image using markers from a labels image.
     
     Labels images may have been generally manually and thus may not 
@@ -390,22 +391,26 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None):
     location of each label.
     
     Args:
-        edges: Image as a Numpy array to segment, typically an edge-detected 
-            image of the main atlas.
-        markers: Image as an integer Numpy array of same shape as ``img`` 
-            to use as seeds for the watershed segmentation. This array 
-            is generally constructed from an array similar to ``labels_img``.
-        labels_img: Labels image as Numpy array of same shape as ``img``, 
-            used to generate a mask for the watershed. If None, a mask 
-            will be generated from a thresholded version of ``atlas_img``, 
-            so should only be None if ``atlas_img`` is not None. 
-        atlas_img: Atlas image as a Numpy array to use for finding foreground; 
-            defaults to None. If both ``labels_img`` and ``atlas_img`` 
-            are not None, their combined volume will be used as a mask.
+        edges (:obj:`np.ndarray`): Image as a Numpy array to segment,
+            typically an edge-detected image of the main atlas.
+        markers (:obj:`np.ndarray`): Image as an integer Numpy array of same
+            shape as ``img`` to use as seeds for the watershed segmentation.
+            This array is generally constructed from an array similar to
+            ``labels_img``.
+        labels_img (:obj:`np.ndarray`): Labels image as Numpy array of same
+            shape as ``img``, used to generate a mask for the watershed.
+            If None, a mask will be generated from a thresholded version of
+            ``atlas_img``, so should only be None if ``atlas_img`` is not None. 
+        atlas_img (:obj:`np.ndarray`): Atlas image as a Numpy array to use
+            for finding foreground; defaults to None. If both ``labels_img``
+            and ``atlas_img`` are not None, their combined volume will be
+            used as a mask.
+        exclude_labels (List[int]): Sequence of labels to exclude from the
+            segmentation; defaults to None.
     
     Returns:
-        Segmented image of the same shape as ``img`` with the same 
-        number of labels as in ``markers``.
+        :obj:`np.ndarray`: Segmented image of the same shape as ``img`` with
+        the same number of labels as in ``markers``.
     """
     if atlas_img is not None and labels_img is not None:
         # broad mask from both atlas and labels
@@ -416,12 +421,26 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None):
             atlas_img, thresh=filters.threshold_otsu(atlas_img), 
             holes_area=5000)
     else:
-        # default to using labels only, opening up small holes to prevent 
+        # default to using labels, opening them up small holes to prevent 
         # spillover across artifacts that may bridge them
         mask = morphology.binary_opening(labels_img != 0, morphology.ball(2))
     
+    exclude = None
+    excluded_markers = None
+    if exclude_labels is not None:
+        # remove excluded markers from mask
+        exclude = np.isin(markers, exclude_labels)
+        mask[exclude] = False
+        excluded_markers = markers[exclude]
+        # WORKAROUND: remove excluded markers from marker image itself for
+        # apparent Scikit-image bug (see PR 3809, fixed in 0.15)
+        markers[exclude] = 0
+    
     watershed = watershed_distance(
         edges == 0, markers, compactness=0.005, mask=mask)
+    if exclude is not None:
+        # add excluded markers directly to watershed image
+        watershed[exclude] = excluded_markers
     return watershed
 
 def watershed_distance(foreground, markers=None, num_peaks=np.inf, 

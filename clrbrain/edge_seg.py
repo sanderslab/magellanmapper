@@ -190,7 +190,8 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
     return eroded, df
 
 
-def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
+def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
+                            exclude_labels=None):
     """Segment an atlas using its previously generated edge map.
     
     Labels may not match their own underlying atlas image well, 
@@ -206,20 +207,22 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
     :func:``make_edge_images``.
     
     Args:
-        path_atlas: Path to the fixed file, typically the atlas file 
+        path_atlas (str): Path to the fixed file, typically the atlas file 
             with stained sections. The corresponding edge and labels 
             files will be loaded based on this path.
-        show_imgs: True if the output images should be displayed; defaults 
+        show (bool): True if the output images should be displayed; defaults 
             to True.
-        atlas: True if the primary image is an atlas, which is assumed 
+        atlas (bool): True if the primary image is an atlas, which is assumed 
             to be symmetrical. False if the image is an experimental/sample 
             image, in which case segmentation will be performed on the full 
             images, and stats will not be performed.
-        suffix: Modifier to append to end of ``path_atlas`` basename for 
+        suffix (str): Modifier to append to end of ``path_atlas`` basename for 
             registered image files that were output to a modified name; 
             defaults to None. If ``atlas`` is True, ``suffix`` will only 
             be applied to saved files, with files still loaded based on the 
             original path.
+        exclude_labels (List[int]): Sequence of labels to exclude from the
+            segmentation; defaults to None.
     """
     # adjust image path with suffix
     load_path = path_atlas
@@ -250,10 +253,13 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
         len_half = atlas_img_np.shape[2] // 2
         labels_seg = segmenter.segment_from_labels(
             atlas_edge[..., :len_half], markers[..., :len_half], 
-            labels_img_np[..., :len_half])
+            labels_img_np[..., :len_half], exclude_labels=exclude_labels)
     else:
+        # segment the full image, including excluded labels on the opposite side
+        exclude_labels = exclude_labels.tolist().extend(
+            (-1 * exclude_labels).tolist())
         labels_seg = segmenter.segment_from_labels(
-            atlas_edge, markers, labels_img_np)
+            atlas_edge, markers, labels_img_np, exclude_labels=exclude_labels)
     
     smoothing = config.register_settings["smooth"]
     if smoothing is not None:
@@ -339,11 +345,16 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     
     pool = mp.Pool()
     pool_results = []
-    for img_path in img_paths:
+    for img_path, df in zip(img_paths, dfs_eros):
         print("setting up atlas segmentation merge for", img_path)
         # convert labels image into markers
+        exclude = df.loc[
+            np.isnan(df[config.SmoothingMetrics.FILTER_SIZE.value]),
+            config.AtlasMetrics.REGION.value]
+        print("excluding these labels from re-segmentation:\n", exclude)
         pool_results.append(pool.apply_async(
-            edge_aware_segmentation, args=(img_path, show, atlas, suffix)))
+            edge_aware_segmentation,
+            args=(img_path, show, atlas, suffix, exclude)))
     for result in pool_results:
         # edge distance calculation and labels interior image generation 
         # are multiprocessed, so run them as post-processing tasks to 

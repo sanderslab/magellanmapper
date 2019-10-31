@@ -426,21 +426,19 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None,
         mask = morphology.binary_opening(labels_img != 0, morphology.ball(2))
     
     exclude = None
-    excluded_markers = None
     if exclude_labels is not None:
-        # remove excluded markers from mask
-        exclude = np.isin(markers, exclude_labels)
+        # remove excluded labels from mask
+        exclude = np.isin(labels_img, exclude_labels)
         mask[exclude] = False
-        excluded_markers = markers[exclude]
         # WORKAROUND: remove excluded markers from marker image itself for
         # apparent Scikit-image bug (see PR 3809, fixed in 0.15)
-        markers[exclude] = 0
+        markers[np.isin(markers, exclude_labels)] = 0
     
     watershed = watershed_distance(
         edges == 0, markers, compactness=0.005, mask=mask)
     if exclude is not None:
-        # add excluded markers directly to watershed image
-        watershed[exclude] = excluded_markers
+        # add excluded labels directly to watershed image
+        watershed[exclude] = labels_img[exclude]
     return watershed
 
 def watershed_distance(foreground, markers=None, num_peaks=np.inf, 

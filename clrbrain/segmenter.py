@@ -7,7 +7,6 @@ import multiprocessing as mp
 from time import time
 
 import numpy as np
-import pandas as pd
 from scipy import ndimage
 from skimage import feature
 from skimage import filters
@@ -21,6 +20,7 @@ from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import stats
 
+
 def _markers_from_blobs(roi, blobs):
     # use blobs as seeds by converting blobs into marker image
     markers = np.zeros(roi.shape, dtype=np.uint8)
@@ -29,6 +29,7 @@ def _markers_from_blobs(roi, blobs):
     markers = morphology.dilation(markers, morphology.ball(1))
     markers = measure.label(markers)
     return markers
+
 
 def _carve_segs(roi, blobs):
     # carve out background from segmented area
@@ -46,6 +47,7 @@ def _carve_segs(roi, blobs):
         #thresholded = thresholded.astype(bool)
         carved[~thresholded] = 0
     return carved
+
 
 def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None, 
                erosion=None, blobs=None, get_labels=False):
@@ -95,7 +97,6 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         walker = segmentation.random_walker(
             roi_segment, markers, beta=beta, mode="cg_mg")
         
-        
         # clean up segmentation
         
         #lib_clrbrain.show_full_arrays()
@@ -106,7 +107,6 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
         if erosion:
             # attempt to reduce label connections by eroding
             walker = morphology.erosion(walker, morphology.octahedron(erosion))
-        
         
         if get_labels:
             # label neighboring pixels to segmented regions
@@ -121,6 +121,7 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
     if get_labels:
         return labels
     return walkers
+
 
 def segment_ws(roi, channel, thresholded=None, blobs=None): 
     """Segment an image using a compact watershed, including the option 
@@ -179,6 +180,7 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
         labels.append(labels_ws)
     return labels_ws
 
+
 def labels_to_markers_blob(labels_img):
     """Convert a labels image to markers as blobs.
     
@@ -215,6 +217,7 @@ def labels_to_markers_blob(labels_img):
         np.zeros_like(labels_img), np.array(list(blobs.values())), 
         ellipsoid=True, labels=list(blobs.keys()), spacing=spacing)
     return markers
+
 
 class LabelToMarkerErosion(object):
     """Convert a label to an eroded marker with class methods as an 
@@ -304,6 +307,7 @@ class LabelToMarkerErosion(object):
                       chosen_selem_size)
         return stats_eros, slices, filtered
 
+
 def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     """Convert a labels image to markers as eroded labels via multiprocessing.
     
@@ -357,6 +361,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     print("time elapsed to erode labels into markers:", time() - start_time)
     return markers, df
 
+
 def mask_atlas(atlas, labels_img):
     """Generate a mask of an atlas by combining its thresholded image 
     with its associated labels image.
@@ -379,6 +384,7 @@ def mask_atlas(atlas, labels_img):
     thresh = filters.threshold_otsu(atlas)
     mask = np.logical_or(atlas > thresh, labels_img != 0)
     return mask
+
 
 def segment_from_labels(edges, markers, labels_img, atlas_img=None,
                         exclude_labels=None):
@@ -441,6 +447,7 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None,
         watershed[exclude] = labels_img[exclude]
     return watershed
 
+
 def watershed_distance(foreground, markers=None, num_peaks=np.inf, 
                        compactness=0, mask=None):
     """Perform watershed segmentation based on distance from foreground 
@@ -475,6 +482,7 @@ def watershed_distance(foreground, markers=None, num_peaks=np.inf,
     watershed = morphology.watershed(
         -distance, markers, compactness=compactness, mask=mask)
     return watershed
+
 
 class SubSegmenter(object):
     """Sub-segment a label based on anatomical boundaries.
@@ -596,6 +604,7 @@ class SubSegmenter(object):
                 labels_seg[label_mask_region] = label_id * config.SUB_SEG_MULT
         
         return label_id, slices, labels_seg
+
 
 def sub_segment_labels(labels_img_np, atlas_edge):
     """Sub-segment a labels image into sub-labels based on anatomical 

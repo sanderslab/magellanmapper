@@ -325,7 +325,8 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     labels_unique = np.unique(labels_img)
     #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
     sizes_dict = {}
-    cols = ("Region", "SizeOrig", "SizeMarker", "FilterSize")
+    cols = (config.AtlasMetrics.REGION.value, "SizeOrig", "SizeMarker", 
+            config.SmoothingMetrics.FILTER_SIZE.value)
     
     # erode labels via multiprocessing
     print("Eroding labels to markers with filter size of", filter_size, 
@@ -351,10 +352,10 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     pool.join()
     
     # show erosion stats
-    stats.dict_to_data_frame(sizes_dict, show=True)
+    df = stats.dict_to_data_frame(sizes_dict, show=True)
     
     print("time elapsed to erode labels into markers:", time() - start_time)
-    return markers
+    return markers, df
 
 def mask_atlas(atlas, labels_img):
     """Generate a mask of an atlas by combining its thresholded image 

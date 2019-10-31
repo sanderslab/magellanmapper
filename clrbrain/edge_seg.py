@@ -130,7 +130,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         print("Eroding labels to generate interior labels image")
         erosion = config.register_settings["marker_erosion"]
         erosion_frac = config.register_settings["erosion_frac"]
-        interior = erode_labels(
+        interior, _ = erode_labels(
             labels_img_np, erosion, erosion_frac, 
             atlas and _is_profile_mirrored())
         labels_sitk_interior = sitk_io.replace_sitk_with_numpy(
@@ -170,8 +170,9 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
             images, in which case erosion will be performed on the full image.
     
     Returns:
-        The eroded labels as a new array of same shape as that of 
-        ``labels_img_np``.
+        :obj:`np.ndarray`, :obj:`pd.DataFrame`: The eroded labels as a new
+        array of same shape as that of ``labels_img_np`` and a data frame
+        of erosion stats.
     """
     labels_to_erode = labels_img_np
     if mirrored:
@@ -181,12 +182,12 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
     
     # convert labels image into markers
     #eroded = segmenter.labels_to_markers_blob(labels_img_np)
-    eroded = segmenter.labels_to_markers_erosion(
+    eroded, df = segmenter.labels_to_markers_erosion(
         labels_to_erode, erosion, erosion_frac)
     if mirrored:
         eroded = _mirror_imported_labels(eroded, len_half)
     
-    return eroded
+    return eroded, df
 
 
 def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None):
@@ -310,11 +311,13 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     """
     start_time = time()
     
-    # erode all labels images into markers from which to grown via watershed
+    # erode all labels images into markers for watershed; not multiprocessed
+    # since erosion is itself multiprocessed
     erode = config.register_settings["erode_labels"]
     erosion = config.register_settings["marker_erosion"]
     erosion_frac = config.register_settings["erosion_frac"]
     mirrored = atlas and _is_profile_mirrored()
+    dfs_eros = []
     for img_path in img_paths:
         mod_path = img_path
         if suffix is not None:
@@ -322,15 +325,17 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         labels_sitk = sitk_io.load_registered_img(
             mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
         print("Eroding labels to generate markers for atlas segmentation")
+        df = None
         if erode["markers"]:
             # use default minimal post-erosion size (not setting erosion frac)
-            markers = erode_labels(
+            markers, df = erode_labels(
                 sitk.GetArrayFromImage(labels_sitk), erosion, mirrored=mirrored)
             labels_sitk_markers = sitk_io.replace_sitk_with_numpy(
                 labels_sitk, markers)
             sitk_io.write_reg_images(
                 {config.RegNames.IMG_LABELS_MARKERS.value: labels_sitk_markers},
                 mod_path)
+        dfs_eros.append(df)
     
     pool = mp.Pool()
     pool_results = []
@@ -362,7 +367,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         if erode["interior"]:
             # make interior images from labels using given targeted 
             # post-erosion frac
-            interior = erode_labels(
+            interior, _ = erode_labels(
                 labels_np, erosion, erosion_frac=erosion_frac, 
                 mirrored=mirrored)
             labels_sitk_interior = sitk_io.replace_sitk_with_numpy(

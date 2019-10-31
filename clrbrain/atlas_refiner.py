@@ -510,6 +510,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
     
     # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
+    fn_selem = morphology.ball if labels_img_np.ndim >= 3 else morphology.disk
     
     # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)
@@ -549,7 +550,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
                 selem_size = selem_size // 2
                 print("using a smaller filter size of {} for a small region "
                       "of {} pixels".format(selem_size, region_size))
-            selem = morphology.ball(selem_size)
+            selem = fn_selem(selem_size)
             smoothed = morphology.binary_opening(label_mask_region, selem)
             region_size_smoothed = np.sum(smoothed)
             size_ratio = region_size_smoothed / region_size

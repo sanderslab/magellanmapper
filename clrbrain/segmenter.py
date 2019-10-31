@@ -231,12 +231,13 @@ class LabelToMarkerErosion(object):
         """Set the labels image.
         
         Args:
-            val: Labels image to set as class attribute.
+            labels_img: Labels image to set as class attribute.
         """
         cls.labels_img = labels_img
     
     @classmethod
-    def erode_label(cls, label_id, filter_size, target_frac=None):
+    def erode_label(cls, label_id, filter_size, target_frac=None,
+                    min_filter_size=1):
         """Convert a label to a marker as an eroded version of the label.
         
         By default, labels will be eroded with the given ``filter_size`` 
@@ -247,17 +248,18 @@ class LabelToMarkerErosion(object):
         would be essentially lost (ie < 1%), the label will not be eroded.
         
         Args:
-            label_id: ID of label to erode.
-            filter_size: Size of structing element to start erosion.
-            target_frac: Target fraction of original label to erode. 
-                Erosion will start with ``filter_size`` and use progressivel 
-                smaller filters until this target fraction is exceeded. If 
-                the fraction is not exceeded by a filter of size 1 
-                without essentially losing the label, this erosion will 
-                be allowed. Defaults to None.
+            label_id (int): ID of label to erode.
+            filter_size (int): Size of structing element to start erosion.
+            target_frac (float): Target fraction of original label to erode. 
+                Erosion will start with ``filter_size`` and use progressively
+                smaller filters until remaining above this target. Defaults
+                to None to use a fraction of 0.2.
+            min_filter_size (int): Minimum filter size, below which the
+                original, uneroded label will be used instead. Defaults to 1.
         
         Returns:
-            Tuple of stats, including ``label_id`` for reference and 
+            :obj:`pd.DataFrame`, List[slice], :obj:`np.ndarray`: stats,
+            including ``label_id`` for reference and 
             sizes of labels; list of slices denoting where to insert 
             the eroded label; and the eroded label itself.
         """
@@ -271,20 +273,19 @@ class LabelToMarkerErosion(object):
         region_size = np.sum(label_mask_region)
         region_size_filtered = region_size
         
-        # erode the labels, starting with the given filter size and 
-        # decreasing if the resulting label size falls below a given 
-        # threshold
+        # erode the labels, starting with the given filter size and decreasing
+        # if the resulting label size falls below a given size ratio
         chosen_selem_size = np.nan
         filtered = label_mask_region
         size_ratio = 1
         for selem_size in range(filter_size, -1, -1):
-            if selem_size == 0:
                 if size_ratio < 0.01:
                     print("label {}: could not erode without losing region "
                           "of size {}, skipping".format(label_id, region_size))
                     filtered = label_mask_region
                     region_size_filtered = np.sum(filtered)
                     chosen_selem_size = np.nan
+            if selem_size < min_filter_size:
                 break
             # erode check size ratio
             filtered = morphology.binary_erosion(

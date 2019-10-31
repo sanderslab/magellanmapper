@@ -288,7 +288,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # than the next farther plane, such as a tapering specimen
         extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
-            None, edgei, edge["surr_size"], edge["in_paint"])
+            None, edgei, edge["surr_size"], edge["smoothing_size"],
+            edge["in_paint"])
     
     if expand:
         # expand selected regions
@@ -384,7 +385,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
 
 
 def extend_edge(region, region_ref, threshold, plane_region, planei,
-                surr_size=0, in_paint=False):
+                surr_size=0, smoothing_size=0, in_paint=False):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
 
@@ -421,6 +422,8 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         surr_size (int): Structuring element size for dilating the labeled 
             area that will be considered foreground in `region_ref` 
             for finding regions to extend; defaults to 0 to not dilate.
+        smoothing_size (int): Structuring element size for 
+            :func:`smooth_labels`; defaults to 0 to not smooth.
         in_paint (bool): True to in-paint ``region_ref`` foreground not
             present in ``plane_region``; defaults to False.
     """
@@ -464,6 +467,9 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             print("plane {}: generating labels template of size {}"
                   .format(planei, np.sum(prop_region[planei] != 0)))
             prop_plane_region = prop_region[planei]
+            if smoothing_size:
+                # smooth to remove artifacts
+                smooth_labels(prop_plane_region, smoothing_size)
         else:
             # resize prior plane's labels to region's shape and replace region
             prop_plane_region = transform.resize(
@@ -485,7 +491,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         # new regions appear, where the labels would be unknown
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region,
-            planei - 1, surr_size, in_paint)
+            planei - 1, surr_size, smoothing_size, in_paint)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

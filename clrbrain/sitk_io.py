@@ -276,7 +276,7 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None):
         ext: Replace extension with this value if given; defaults to None.
     """
     target_dir = os.path.dirname(prefix)
-    if not os.path.exists(target_dir):
+    if len(target_dir) > 0 and not os.path.exists(target_dir):
         os.makedirs(target_dir)
     for suffix in imgs_write.keys():
         img = imgs_write[suffix]

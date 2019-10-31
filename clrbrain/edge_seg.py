@@ -307,11 +307,11 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     contains tasks also performed in multiprocessing.
     
     Args:
-        img_path: Path to image to load.
-        show_imgs: True if the output images should be displayed; defaults 
+        img_paths (List[str]): Sequence of image paths to load.
+        show (bool): True if the output images should be displayed; defaults 
             to True.
-        atlas: True if the image is an atlas; defaults to True.
-        suffix: Modifier to append to end of ``img_path`` basename for 
+        atlas (bool): True if the image is an atlas; defaults to True.
+        suffix (str): Modifier to append to end of ``img_path`` basename for 
             registered image files that were output to a modified name; 
             defaults to None.
     """

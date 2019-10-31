@@ -288,7 +288,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # than the next farther plane, such as a tapering specimen
         extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
-            None, edgei, edge["surr_size"], edge["closing_size"])
+            None, edgei, edge["surr_size"], edge["in_paint"])
     
     if expand:
         # expand selected regions
@@ -384,7 +384,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
 
 
 def extend_edge(region, region_ref, threshold, plane_region, planei,
-                surr_size=0, closing_size=0):
+                surr_size=0, in_paint=False):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
 
@@ -421,9 +421,8 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         surr_size (int): Structuring element size for dilating the labeled 
             area that will be considered foreground in `region_ref` 
             for finding regions to extend; defaults to 0 to not dilate.
-        closing_size (int): Structuring element size for closing the 
-            template labels to reduce holes such as ventricles; defaults 
-            to 0 to not close.
+        in_paint (bool): True to in-paint ``region_ref`` foreground not
+            present in ``plane_region``; defaults to False.
     """
     if planei < 0: return
     
@@ -465,11 +464,6 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             print("plane {}: generating labels template of size {}"
                   .format(planei, np.sum(prop_region[planei] != 0)))
             prop_plane_region = prop_region[planei]
-            # close holes such as ventricles
-            # TODO: apply during resizing for tapering ventricles?
-            if closing_size > 0:
-                prop_plane_region = morphology.closing(
-                    prop_plane_region, morphology.square(closing_size))
         else:
             # resize prior plane's labels to region's shape and replace region
             prop_plane_region = transform.resize(
@@ -477,13 +471,21 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 order=0, anti_aliasing=False, mode="reflect")
             print("plane {}: extending labels with template resized to {}"
                   .format(planei, np.sum(prop_plane_region != 0)))
+            if in_paint:
+                # in-paint to close holes such as ventricles and fill other
+                # missing regions such as edges based on thresholding; does
+                # not subtract but only adds label pixels
+                fg = prop_plane_region != 0
+                fg_thresh = prop_region_ref[planei] > threshold
+                to_fill = np.logical_and(fg_thresh, ~fg)
+                prop_plane_region = plot_3d.in_paint(prop_plane_region, to_fill)
             prop_region[planei] = prop_plane_region
         # recursively call for each region to follow in next plane, but 
         # only get largest region for subsequent planes in case 
         # new regions appear, where the labels would be unknown
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region,
-            planei - 1, surr_size, closing_size)
+            planei - 1, surr_size, in_paint)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

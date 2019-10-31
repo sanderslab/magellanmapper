@@ -286,7 +286,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # extending the nearest plane with labels based on the underlying 
         # atlas; assume that each nearer plane is the same size or smaller 
         # than the next farther plane, such as a tapering specimen
-        plot_3d.extend_edge(
+        extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
             None, edgei, edge["surr_size"], edge["closing_size"])
     
@@ -381,6 +381,109 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     print()
     
     return img_np, (edgei, mirrori), df_sm, df_sm_raw
+
+
+def extend_edge(region, region_ref, threshold, plane_region, planei,
+                surr_size=0, closing_size=0):
+    """Recursively extend the nearest plane with labels based on the 
+    underlying atlas histology.
+
+    Labels in a given atlas may be incomplete, absent along the lateral 
+    edges. To fill in these missing labels, the last labeled plane will be 
+    used to extend labeling for all distinct structures in the histology 
+    ("reference" image). The given reference region will be thresholded 
+    to find distinct sub-regions, and each sub-region will be recursively 
+    extended to fill each successive lateral plane with labels from the 
+    prior plane resized to that of the reference region in the given plane.
+
+    This approach assumes that each nearer plane is the same size or smaller 
+    than the next farther plane is, such as the tapering edge of a specimen, 
+    since each subsequent plane will be within the bounds of the prior plane. 
+    The number of sub-regions to extend is set by the first plane, after 
+    which only the largest object within each sub-region will be followed. 
+    Labels will be cropped in this first plane to match the size of 
+    each corresponding reference region and resized to the size of the 
+    largest object in all subsequent planes.
+
+    Args:
+        region (:obj:`np.ndarray`): Labels volume region, which will be 
+            extended along decreasing z-planes and updated in-place.
+        region_ref (:obj:`np.ndarray`): Corresponding reference 
+            (eg histology) region.
+        threshold (int, float): Threshold intensity for `region_ref`.
+        plane_region (:obj:`np.ndarray`): Labels 2D template that will be 
+            resized for current plane; if None, a template will be cropped 
+            from `region` at `planei`.
+        planei (int): Plane index.
+        surr_size (int): Structuring element size for dilating the labeled 
+            area that will be considered foreground in `region_ref` 
+            for finding regions to extend; defaults to 0 to not dilate.
+        surr_size (int): Structuring element size for dilating the labeled 
+            area that will be considered foreground in `region_ref` 
+            for finding regions to extend; defaults to 0 to not dilate.
+        closing_size (int): Structuring element size for closing the 
+            template labels to reduce holes such as ventricles; defaults 
+            to 0 to not close.
+    """
+    if planei < 0: return
+    
+    # find sub-regions in the reference image
+    has_template = plane_region is not None
+    region_ref_filt = region_ref[planei]
+    if not has_template and surr_size > 0:
+        # limit the reference image to the labels since when generating 
+        # label templates since labels can only be extended from labeled areas; 
+        # include padding by dilating slightly for unlabeled borders
+        plot_3d.remove_bg_from_dil_fg(
+            region_ref_filt, region[planei] != 0, morphology.disk(surr_size))
+    # order extension from smallest to largest regions so largest have 
+    # final say
+    prop_sizes = plot_3d.get_thresholded_regionprops(
+        region_ref_filt, threshold=threshold)
+    if prop_sizes is None: return
+    
+    if has_template:
+        # resize only largest property
+        # TODO: could follow all props separately by generating new templates, 
+        # though would need to decide when to crop new templates vs resize 
+        num_props = len(prop_sizes)
+        if num_props > 1:
+            print("plane {}: ignoring smaller {} prop(s) of size(s) {}"
+                  .format(planei, num_props - 1,
+                          [p[1] for p in prop_sizes[1:]]))
+        prop_sizes = prop_sizes[-1:]
+    print("plane {}: extending {} props of sizes {}".format(
+        planei, len(prop_sizes), [p[1] for p in prop_sizes]))
+    
+    for prop_size in prop_sizes:
+        # get the region from the property
+        _, slices = plot_3d.get_bbox_region(prop_size[0].bbox)
+        prop_region_ref = region_ref[:, slices[0], slices[1]]
+        prop_region = region[:, slices[0], slices[1]]
+        if not has_template:
+            # crop to use corresponding labels as template for next planes
+            print("plane {}: generating labels template of size {}"
+                  .format(planei, np.sum(prop_region[planei] != 0)))
+            prop_plane_region = prop_region[planei]
+            # close holes such as ventricles
+            # TODO: apply during resizing for tapering ventricles?
+            if closing_size > 0:
+                prop_plane_region = morphology.closing(
+                    prop_plane_region, morphology.square(closing_size))
+        else:
+            # resize prior plane's labels to region's shape and replace region
+            prop_plane_region = transform.resize(
+                plane_region, prop_region[planei].shape, preserve_range=True,
+                order=0, anti_aliasing=False, mode="reflect")
+            print("plane {}: extending labels with template resized to {}"
+                  .format(planei, np.sum(prop_plane_region != 0)))
+            prop_region[planei] = prop_plane_region
+        # recursively call for each region to follow in next plane, but 
+        # only get largest region for subsequent planes in case 
+        # new regions appear, where the labels would be unknown
+        extend_edge(
+            prop_region, prop_region_ref, threshold, prop_plane_region,
+            planei - 1, surr_size, closing_size)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

@@ -335,10 +335,12 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None):
     pool_results = []
     for label_id in labels_unique:
         if label_id == 0: continue
+        # erode labels to generate markers, excluding labels small enough
+        # that they would require a filter smaller than half of original size
         pool_results.append(
             pool.apply_async(
                 LabelToMarkerErosion.erode_label, 
-                args=(label_id, filter_size, target_frac)))
+                args=(label_id, filter_size, target_frac, filter_size // 2)))
     for result in pool_results:
         stats_eros, slices, filtered = result.get()
         # can only mutate markers outside of mp for changes to persist

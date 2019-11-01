@@ -477,15 +477,17 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 order=0, anti_aliasing=False, mode="reflect")
             print("plane {}: extending labels with template resized to {}"
                   .format(planei, np.sum(prop_plane_region != 0)))
+            plane_add = prop_plane_region
             if in_paint:
-                # in-paint to close holes such as ventricles and fill other
-                # missing regions such as edges based on thresholding; does
-                # not subtract but only adds label pixels
-                fg = prop_plane_region != 0
+                # in-paint to fill missing areas (eg ventricles that closed,
+                # edges that don't align perfectly) based on thresholding, only
+                # adding but not subtracting label pixels and retaining the
+                # template plane for subsequent planes
+                fg = plane_add != 0
                 fg_thresh = prop_region_ref[planei] > threshold
                 to_fill = np.logical_and(fg_thresh, ~fg)
-                prop_plane_region = plot_3d.in_paint(prop_plane_region, to_fill)
-            prop_region[planei] = prop_plane_region
+                plane_add = plot_3d.in_paint(plane_add, to_fill)
+            prop_region[planei] = plane_add
         # recursively call for each region to follow in next plane, but 
         # only get largest region for subsequent planes in case 
         # new regions appear, where the labels would be unknown

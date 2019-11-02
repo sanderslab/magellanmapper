@@ -1535,6 +1535,23 @@ def build_ground_truth(img3d, blobs, ellipsoid=False, labels=None,
     return img3d
 
 
+def get_selem(ndim):
+    """Get structuring element appropriate for the number of dimensions.
+    
+    Currently only supports disk or ball structuring elements.
+    
+    Args:
+        ndim (int): Number of dimensions.
+
+    Returns:
+        :func: Structuring element function. A :func:`morphology.ball`
+        is returned for 3 or more dimensions, otherwise a
+        :func:`morphology.disk`.
+
+    """
+    return morphology.ball if ndim >= 3 else morphology.disk
+
+
 def _test_interpolate_between_planes():
     '''
     img = np.zeros((2, 4, 4), dtype=int)

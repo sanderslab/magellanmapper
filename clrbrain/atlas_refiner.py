@@ -623,7 +623,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
     
     # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
-    fn_selem = morphology.ball if labels_img_np.ndim >= 3 else morphology.disk
+    fn_selem = plot_3d.get_selem(labels_img_np.ndim)
     
     # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)

@@ -273,6 +273,7 @@ class LabelToMarkerErosion(object):
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
         region_size_filtered = region_size
+        fn_selem = plot_3d.get_selem(cls.labels_img.ndim)
         
         # erode the labels, starting with the given filter size and decreasing
         # if the resulting label size falls below a given size ratio
@@ -291,7 +292,7 @@ class LabelToMarkerErosion(object):
                 break
             # erode check size ratio
             filtered = morphology.binary_erosion(
-                label_mask_region, morphology.ball(selem_size))
+                label_mask_region, fn_selem(selem_size))
             region_size_filtered = np.sum(filtered)
             size_ratio = region_size_filtered / region_size
             thresh = 0.2 if target_frac is None else target_frac
@@ -429,7 +430,8 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None,
     else:
         # default to using labels, opening them up small holes to prevent 
         # spillover across artifacts that may bridge them
-        mask = morphology.binary_opening(labels_img != 0, morphology.ball(2))
+        fn_selem = plot_3d.get_selem(labels_img.ndim)
+        mask = morphology.binary_opening(labels_img != 0, fn_selem(2))
     
     exclude = None
     if exclude_labels is not None:

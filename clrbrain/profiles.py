@@ -430,7 +430,7 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "finer", 
             {
-                "bspline_iter_max": "512", 
+                "bspline_iter_max": "1024", 
                 "truncate_labels": (None, (0.2, 1.0), (0.45, 1.0)), 
                 "holes_area": 5000, 
             }, 

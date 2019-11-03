@@ -20,6 +20,7 @@ from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import plot_support
+from clrbrain import segmenter
 from clrbrain import sitk_io
 from clrbrain import stats
 
@@ -289,7 +290,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
             None, edgei, edge["surr_size"], edge["smoothing_size"],
-            edge["in_paint"])
+            edge["in_paint"], None)
     
     if expand:
         # expand selected regions
@@ -385,7 +386,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
 
 
 def extend_edge(region, region_ref, threshold, plane_region, planei,
-                surr_size=0, smoothing_size=0, in_paint=False):
+                surr_size=0, smoothing_size=0, in_paint=False, edges=False):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
 
@@ -405,6 +406,13 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
     Labels will be cropped in this first plane to match the size of 
     each corresponding reference region and resized to the size of the 
     largest object in all subsequent planes.
+    
+    To improve correspondence with the underlying histology, edge-aware
+    reannotation can be applied. This reannotation is a 2D/3D implementation,
+    where the edge map is generated in 3D, but the reannotation occurs in
+    serial 2D, with each generated plane becoming the template for the next
+    plane to give smooth transitions from plane to plane. During the erosion
+    step, the labels are allowed to disappear to emulate their tapering off.
 
     Args:
         region (:obj:`np.ndarray`): Labels volume region, which will be 
@@ -426,11 +434,16 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             :func:`smooth_labels`; defaults to 0 to not smooth.
         in_paint (bool): True to in-paint ``region_ref`` foreground not
             present in ``plane_region``; defaults to False.
+        edges (bool, :obj:`np.ndarray`): Array of edges for watershed-based
+            reannotation. Typically of same size as ``region``. Defaults
+            to False to not use. If None, new edges will be generated from
+            ``region_ref``.
     """
     if planei < 0: return
     
     # find sub-regions in the reference image
     has_template = plane_region is not None
+    has_edges = isinstance(edges, np.ndarray) 
     region_ref_filt = region_ref[planei]
     if not has_template and surr_size > 0:
         # limit the reference image to the labels since when generating 
@@ -454,6 +467,16 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                   .format(planei, num_props - 1,
                           [p[1] for p in prop_sizes[1:]]))
         prop_sizes = prop_sizes[-1:]
+    elif edges is None:
+        log_sigma = config.register_settings["log_sigma"]
+        if log_sigma is not None:
+            # generate an edge map based on reference image
+            thresh = (config.register_settings["atlas_threshold"] 
+                      if config.register_settings["log_atlas_thresh"] else None)
+            atlas_log = plot_3d.laplacian_of_gaussian_img(
+                region_ref, sigma=log_sigma, thresh=thresh)
+            edges = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
+            has_edges = True
     print("plane {}: extending {} props of sizes {}".format(
         planei, len(prop_sizes), [p[1] for p in prop_sizes]))
     
@@ -462,6 +485,8 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         _, slices = plot_3d.get_bbox_region(prop_size[0].bbox)
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
+        if has_edges:
+            edges = edges[:, slices[0], slices[1]]
         if not has_template:
             # crop to use corresponding labels as template for next planes
             print("plane {}: generating labels template of size {}"
@@ -487,13 +512,22 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 fg_thresh = prop_region_ref[planei] > threshold
                 to_fill = np.logical_and(fg_thresh, ~fg)
                 plane_add = plot_3d.in_paint(plane_add, to_fill)
+            if has_edges:
+                # reannotate based on edge map; allow erosion to lose labels to
+                # mimic tapering off of labels; make resulting plane the new
+                # template for smoother transitions between planes
+                markers, _ = segmenter.labels_to_markers_erosion(
+                    plane_add, 10, -1)
+                plane_add = segmenter.segment_from_labels(
+                    edges[planei], markers, plane_add)
+                prop_plane_region = plane_add
             prop_region[planei] = plane_add
         # recursively call for each region to follow in next plane, but 
         # only get largest region for subsequent planes in case 
         # new regions appear, where the labels would be unknown
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region,
-            planei - 1, surr_size, smoothing_size, in_paint)
+            planei - 1, surr_size, smoothing_size, in_paint, edges)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

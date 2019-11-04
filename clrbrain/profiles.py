@@ -635,7 +635,7 @@ def update_register_settings(settings, settings_type):
                 }, 
                 "expand_labels": (((None, ), (0, 279), (103, 108)),), 
                 "rotate": ((1.5, 1), (2, 2)),
-                "smooth": 4,
+                "smooth": 3,
             }, 
             profile)
         

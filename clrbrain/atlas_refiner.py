@@ -20,6 +20,7 @@ from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
 from clrbrain import plot_support
+from clrbrain import profiles
 from clrbrain import segmenter
 from clrbrain import sitk_io
 from clrbrain import stats
@@ -241,6 +242,10 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
          or None if smoothing was not performed; and a data frame of raw 
          smoothing stats, or None if smoothing was not performed.
     """
+    if edge is None or not edge[profiles.RegKeys.ACTIVE]:
+        # turn off edge if inactive
+        edge = None
+    
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
     label_ids_orig = np.unique(img_np)
@@ -281,16 +286,12 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         print("will extend near edge from plane {}".format(edgei))
     
     if edge is not None:
-        # find the bounds of the reference image in the given plane and resize 
-        # the corresponding section of the labels image to the bounds of the 
-        # reference image in the next plane closer to the edge, recursively 
-        # extending the nearest plane with labels based on the underlying 
-        # atlas; assume that each nearer plane is the same size or smaller 
-        # than the next farther plane, such as a tapering specimen
+        # extend labels from the lowest labeled z-plane to cover the rest
+        # of lower planes with signal in the reference image
         extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
             None, edgei, edge["surr_size"], edge["smoothing_size"],
-            edge["in_paint"], None)
+            edge["in_paint"], None, edge[profiles.RegKeys.MARKER_EROSION])
     
     if expand:
         # expand selected regions

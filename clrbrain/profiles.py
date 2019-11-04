@@ -353,13 +353,17 @@ class RegisterSettings(SettingsDict):
         # or give a fraction between 0 and 1; can turn off with extend_labels 
         # while keeping settings for cropping, etc
         self["labels_mirror"] = None  # reflect planes starting here
-        # extend edge labels, using a dict in the format:
-        # {"start": start plane index (-1 to set automatically),
-        #  "surr_size": dilation filter size for finding histology region,
-        #  "smoothing_size": smoothing filter size to remove artifacts
-        #      (None or 0 to ignore),
-        #  "in_paint": True to fill pxs missing labels}
-        self["labels_edge"] = None
+        # extend edge labels
+        self["labels_edge"] = {
+            RegKeys.ACTIVE: False,
+            "start": -1,  # start plane index (-1 to set automatically)
+            "surr_size": 5,  # dilation filter size for finding histology region
+            # smoothing filter size to remove artifacts (None or 0 to ignore)
+            "smoothing_size": 3,
+            "in_paint": True,  # True to fill pxs missing labels
+            # erosion filter size for watershed markers (0 to ignore)
+            RegKeys.MARKER_EROSION: 10,
+        }
         self["labels_dup"] = None  # start duplicating planes til last labels
         self["extend_labels"] = {"edge": True, "mirror": True}
         
@@ -589,8 +593,7 @@ def update_register_settings(settings, settings_type):
                 # becomes an artifact; need to avoid excessively filling
                 # smaller ventricle
                 "labels_edge": {
-                    "start": -1, "surr_size": 5, "smoothing_size": 3,
-                    "in_paint": True,
+                    RegKeys.ACTIVE: True,
                 }, 
                 "atlas_threshold": 55,  # avoid edge over-extension into skull
                 "rotate": ((-4, 1), (-2, 2)),
@@ -609,8 +612,7 @@ def update_register_settings(settings, settings_type):
                 # need to balance keeping ventricles open for medial 
                 # planes while not too open because of more lateral planes
                 "labels_edge": {
-                    "start": -1, "surr_size": 12, "smoothing_size": 3,
-                    "in_paint": True,
+                    RegKeys.ACTIVE: True, "surr_size": 12,
                 }, 
                 "atlas_threshold": 45,  # avoid edge over-extension into skull
                 "rotate": ((-4, 1), ), 
@@ -629,8 +631,7 @@ def update_register_settings(settings, settings_type):
                 # start from smallest BG; remove spurious label pxs around
                 # medial pallium by smoothing
                 "labels_edge": {
-                    "start": 0.137, "surr_size": 12, "smoothing_size": 3,
-                    "in_paint": True,
+                    RegKeys.ACTIVE: True, "start": 0.137, "surr_size": 12,
                 }, 
                 "expand_labels": (((None, ), (0, 279), (103, 108)),), 
                 "rotate": ((1.5, 1), (2, 2)),
@@ -647,8 +648,7 @@ def update_register_settings(settings, settings_type):
                 "labels_mirror": 0.487, 
                 # no in-painting since no ventricles to extend
                 "labels_edge": {
-                    "start": -1, "surr_size": 12, "smoothing_size": 3,
-                    "in_paint": False,
+                    RegKeys.ACTIVE: True, "surr_size": 12,
                 }, 
                 # open caudal labels to allow smallest mirror plane index, 
                 # though still cross midline as some regions only have 
@@ -669,8 +669,7 @@ def update_register_settings(settings, settings_type):
                 "labels_mirror": 0.5, 
                 # no in-painting since no ventricles to extend
                 "labels_edge": {
-                    "start": -1, "surr_size": 12, "smoothing_size": 3,
-                    "in_paint": False,
+                    RegKeys.ACTIVE: True, "surr_size": 12,
                 }, 
                 # rotate conservatively for symmetry without losing labels
                 "rotate": ((-0.4, 1), ),
@@ -690,8 +689,7 @@ def update_register_settings(settings, settings_type):
                 # set edge explicitly since some lateral labels are only 
                 # partially complete; only small ventricles to close
                 "labels_edge": {
-                    "start": 0.11, "surr_size": 12, "smoothing_size": 3,
-                    "in_paint": True,
+                    RegKeys.ACTIVE: True, "start": 0.11, "surr_size": 12,
                 }, 
                 #"labels_dup": 0.48, 
                 # rotate for symmetry, which also reduces label loss
@@ -711,8 +709,7 @@ def update_register_settings(settings, settings_type):
                 # set edge explicitly since some lateral labels are only 
                 # partially complete; only small ventricles to close
                 "labels_edge": {
-                    "start": 0.138, "surr_size": 12, "smoothing_size": 3,
-                    "in_paint": True,
+                    RegKeys.ACTIVE: True, "start": 0.138, "surr_size": 12,
                 }, 
                 "smooth": 2, 
                 "make_far_hem_neg": True, 

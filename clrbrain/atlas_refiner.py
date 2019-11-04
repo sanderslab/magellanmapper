@@ -386,7 +386,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
 
 
 def extend_edge(region, region_ref, threshold, plane_region, planei,
-                surr_size=0, smoothing_size=0, in_paint=False, edges=False):
+                surr_size=0, smoothing_size=0, in_paint=False, edges=None,
+                marker_erosion=0):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
 
@@ -434,16 +435,18 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             :func:`smooth_labels`; defaults to 0 to not smooth.
         in_paint (bool): True to in-paint ``region_ref`` foreground not
             present in ``plane_region``; defaults to False.
-        edges (bool, :obj:`np.ndarray`): Array of edges for watershed-based
+        edges (:obj:`np.ndarray`): Array of edges for watershed-based
             reannotation. Typically of same size as ``region``. Defaults
-            to False to not use. If None, new edges will be generated from
-            ``region_ref``.
+            to None to generate new edges from ``region_ref`` if 
+            ``marker_erosion`` is > 0.
+        marker_erosion (int): Structuring element size for label erosion to
+            markers for watershed-based reannotation. Defaults to 0 to
+            skip this reannotation.
     """
     if planei < 0: return
     
     # find sub-regions in the reference image
     has_template = plane_region is not None
-    has_edges = isinstance(edges, np.ndarray) 
     region_ref_filt = region_ref[planei]
     if not has_template and surr_size > 0:
         # limit the reference image to the labels since when generating 
@@ -467,7 +470,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                   .format(planei, num_props - 1,
                           [p[1] for p in prop_sizes[1:]]))
         prop_sizes = prop_sizes[-1:]
-    elif edges is None:
+    elif edges is None and marker_erosion > 0:
         log_sigma = config.register_settings["log_sigma"]
         if log_sigma is not None:
             # generate an edge map based on reference image
@@ -476,7 +479,6 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             atlas_log = plot_3d.laplacian_of_gaussian_img(
                 region_ref, sigma=log_sigma, thresh=thresh)
             edges = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
-            has_edges = True
     print("plane {}: extending {} props of sizes {}".format(
         planei, len(prop_sizes), [p[1] for p in prop_sizes]))
     
@@ -485,7 +487,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         _, slices = plot_3d.get_bbox_region(prop_size[0].bbox)
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
-        if has_edges:
+        if edges is not None:
             edges = edges[:, slices[0], slices[1]]
         if not has_template:
             # crop to use corresponding labels as template for next planes
@@ -500,8 +502,9 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             prop_plane_region = transform.resize(
                 plane_region, prop_region[planei].shape, preserve_range=True,
                 order=0, anti_aliasing=False, mode="reflect")
-            print("plane {}: extending labels with template resized to {}"
-                  .format(planei, np.sum(prop_plane_region != 0)))
+            print("plane {}: extending labels with template resized to {}, "
+                  "in-painting set to {}"
+                  .format(planei, np.sum(prop_plane_region != 0), in_paint))
             plane_add = prop_plane_region
             if in_paint:
                 # in-paint to fill missing areas (eg ventricles that closed,
@@ -512,12 +515,12 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 fg_thresh = prop_region_ref[planei] > threshold
                 to_fill = np.logical_and(fg_thresh, ~fg)
                 plane_add = plot_3d.in_paint(plane_add, to_fill)
-            if has_edges:
+            if edges is not None:
                 # reannotate based on edge map; allow erosion to lose labels to
                 # mimic tapering off of labels; make resulting plane the new
                 # template for smoother transitions between planes
                 markers, _ = segmenter.labels_to_markers_erosion(
-                    plane_add, 10, -1)
+                    plane_add, marker_erosion, -1)
                 plane_add = segmenter.segment_from_labels(
                     edges[planei], markers, plane_add)
                 prop_plane_region = plane_add
@@ -527,7 +530,8 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         # new regions appear, where the labels would be unknown
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region,
-            planei - 1, surr_size, smoothing_size, in_paint, edges)
+            planei - 1, surr_size, smoothing_size, in_paint, edges,
+            marker_erosion)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

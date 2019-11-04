@@ -18,11 +18,16 @@ class SettingsDict(dict):
         """Add a modifer dictionary, overwriting any existing settings 
         with values from this dictionary.
         
+        If both the original and new setting are dictionaries, the original
+        dictionary will be updated with rather than overwritten by the
+        new setting.
+        
         Args:
             mod_name: Name of the modifier, which will be appended to the 
                 name of the current settings.
             mods: Dictionary with keys matching default keys and values to 
-                replace the correspondings values.
+                replace the correspondings values (or update if both original
+                and new values are dictionaries).
             name_check: Name of a profile modifier to check; defaults to None. 
                 If matches ``mod_name`` or is None, ``mods`` will be applied.
             sep: Separator between modifier elements. Defaults to "_".
@@ -31,7 +36,12 @@ class SettingsDict(dict):
         if name_check is not None and name_check != mod_name: return
         self["settings_name"] += sep + mod_name
         for key in mods.keys():
-            self[key] = mods[key]
+            if isinstance(self[key], dict) and isinstance(mods[key], dict):
+                # update if both are dicts
+                self[key].update(mods[key])
+            else:
+                # replace with modified setting
+                self[key] = mods[key]
 
 
 class ProcessSettings(SettingsDict):

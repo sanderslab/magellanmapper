@@ -7,6 +7,8 @@ Each profile has a default set of settings, which can be modified through
 "modifier" sub-profiles with groups of settings that overwrite the 
 given default settings. 
 """
+from enum import Enum
+
 from clrbrain import config
 
 
@@ -308,6 +310,12 @@ def update_process_settings(settings, settings_type):
     if config.verbose:
         print("process settings for {}:\n{}"
               .format(settings["settings_name"], settings))
+
+
+class RegKeys(Enum):
+    """Register setting enumerations."""
+    ACTIVE = "active"
+    MARKER_EROSION = "marker_erosion"
 
 
 class RegisterSettings(SettingsDict):

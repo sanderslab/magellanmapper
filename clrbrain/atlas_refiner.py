@@ -488,8 +488,9 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         _, slices = plot_3d.get_bbox_region(prop_size[0].bbox)
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
+        edges_region = None
         if edges is not None:
-            edges = edges[:, slices[0], slices[1]]
+            edges_region = edges[:, slices[0], slices[1]]
         if not has_template:
             # crop to use corresponding labels as template for next planes
             print("plane {}: generating labels template of size {}"
@@ -516,14 +517,14 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 fg_thresh = prop_region_ref[planei] > threshold
                 to_fill = np.logical_and(fg_thresh, ~fg)
                 plane_add = plot_3d.in_paint(plane_add, to_fill)
-            if edges is not None:
+            if edges_region is not None:
                 # reannotate based on edge map; allow erosion to lose labels to
                 # mimic tapering off of labels; make resulting plane the new
                 # template for smoother transitions between planes
                 markers, _ = segmenter.labels_to_markers_erosion(
                     plane_add, marker_erosion, -1)
                 plane_add = segmenter.segment_from_labels(
-                    edges[planei], markers, plane_add)
+                    edges_region[planei], markers, plane_add)
                 prop_plane_region = plane_add
             prop_region[planei] = plane_add
         # recursively call for each region to follow in next plane, but 
@@ -531,7 +532,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         # new regions appear, where the labels would be unknown
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region,
-            planei - 1, surr_size, smoothing_size, in_paint, edges,
+            planei - 1, surr_size, smoothing_size, in_paint, edges_region,
             marker_erosion)
 
 

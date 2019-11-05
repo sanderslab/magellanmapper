@@ -304,6 +304,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         return False
     
     print("Updating image metadata to version {}".format(IMAGE5D_NP_VER))
+    print("Original metadata:\n{}".format(info))
     
     if curr_ver <= 10:
         # ver 10 -> 11
@@ -364,7 +365,8 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         # pixel_type no longer saved since redundant with image5d.dtype
         if "pixel_type" in info:
             del info["pixel_type"]
-        
+
+    print("Updated metadata:\n{}".format(info))
     # backup and save updated info
     lib_clrbrain.backup_file(
         filename_info_npz, modifier="_v{}".format(curr_ver))

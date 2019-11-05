@@ -168,9 +168,12 @@ if [[ "$nvme" -eq 1 ]]; then
       exit 1
     fi
   fi
-  if [[ -n "$swap" && -z "$swapfile_size" ]]; then
+  if [[ "$swap" = "$DIR_DATA"* ]]; then
+    echo "Treating $swap as a swap file in $DIR_DATA"
+  elif [[ -n "$swap" && -z "$swapfile_size" ]]; then
     if map_nvme_name "$swap"; then
       swap="$dev"
+      echo "Will use $swap as a swap partition"
     else
       echo "Could not find mapping from $swap to its NVMe name, exiting"
       exit 1

@@ -703,13 +703,17 @@ def update_register_settings(settings, settings_type):
             "abap56", 
             {
                 "target_size": (528, 320, 456),
-                "resize_factor": None, # turn off resizing
+                "resize_factor": None,  # turn off resizing
                 # stained sections and labels almost but not symmetric
                 "labels_mirror": 0.5,
                 # set edge explicitly since some lateral labels are only 
-                # partially complete; only small ventricles to close
+                # partially complete; keep in-painting to close small
+                # ventricles, but no smoothing to avoid loss of detail; only
+                # mild erosion to minimize layer loss since histology contrast
+                # is low
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "start": 0.138, "surr_size": 12,
+                    "smoothing_size": 0, RegKeys.MARKER_EROSION: 1,
                 }, 
                 "smooth": 2, 
                 "make_far_hem_neg": True, 

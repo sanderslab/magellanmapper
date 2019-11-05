@@ -299,6 +299,9 @@ class ROIEditor:
 
     # divisor for finding array interval to downsample images
     _DOWNSAMPLE_MAX_ELTS = 1000
+    
+    #: int: padding for ROI within overview plots
+    _ROI_PADDING = 10
 
     def __init__(self):
         """Initialize the editor."""
@@ -513,6 +516,7 @@ class ROIEditor:
             zoom = 1
             imgs = list(imgs)
             img2d_ov = imgs[0]
+            roi_end = np.add(offset, roi_size)
             if lev > 0:
                 # move origin progressively closer with each zoom level
                 zoom_mult = math.pow(lev, 3)
@@ -524,6 +528,13 @@ class ROIEditor:
                 zoom = zoom_mult + 3
                 size = np.floor(zoom_shape / zoom).astype(int)
                 end = np.add(ori, size)
+                # if ROI exceeds bounds of zoomed plot, shift plot
+                for o in range(len(ori)):
+                    roi_end_padded = roi_end[o] + self._ROI_PADDING
+                    if end[o] < roi_end_padded:
+                        diff = roi_end_padded - end[o]
+                        ori[o] += diff
+                        end[o] += diff
                 # keep the zoomed area within the full 2D image
                 for o in range(len(ori)):
                     if end[o] > zoom_shape[o]:

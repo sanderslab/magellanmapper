@@ -663,7 +663,8 @@ def _iterate_file_processing(path, series, offsets, roi_sizes):
     return stat, summaries
 
 
-def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
+def setup_images(path=None, series=0, offset=None, roi_size=None, 
+                 proc_mode=None):
     """Sets up an image and all associated images and metadata.
     
     Args:
@@ -681,9 +682,6 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
     
     # prepares the filenames
     global image5d
-    filename_base = importer.filename_to_base(path, series)
-    filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
-    filename_info_proc = filename_base + config.SUFFIX_INFO_PROC
     
     # LOAD MAIN IMAGE
     
@@ -699,6 +697,9 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
         # load a blobs archive, +/- a processed ROI image
         print("Loading processed image files")
         global segments_proc
+        filename_base = importer.filename_to_base(path, series)
+        filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
+        filename_info_proc = filename_base + config.SUFFIX_INFO_PROC
         
         if (not os.path.exists(filename_image5d_proc) and offset is not None
                 and roi_size is not None):
@@ -768,7 +769,7 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
         except (FileNotFoundError, KeyError):
             print("Unable to load original info file from", orig_info)
     
-    if image5d is None:
+    if path and image5d is None:
         # load or import the main image stack
         print("Loading main image")
         if os.path.isdir(path):
@@ -803,7 +804,7 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
         if atlas_suffix is None and image5d is None:
             # fallback to atlas if main image not already loaded
             atlas_suffix = config.RegNames.IMG_ATLAS.value
-        if atlas_suffix is not None:
+        if path and atlas_suffix is not None:
             # will take the place of any previously loaded image5d
             image5d = sitk_io.read_sitk_files(
                 path, reg_names=atlas_suffix)[None]
@@ -818,8 +819,9 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
                 # TODO: need to support multichannel labels images
                 config.labels_img = sitk_io.read_sitk_files(
                     path, reg_names=annotation_suffix)
-                config.labels_scaling = importer.calc_scaling(
-                    image5d, config.labels_img)
+                if image5d is not None:
+                    config.labels_scaling = importer.calc_scaling(
+                        image5d, config.labels_img)
                 labels_ref = ontology.load_labels_ref(config.load_labels)
                 if isinstance(labels_ref, pd.DataFrame):
                     # parse CSV files loaded into data frame
@@ -854,7 +856,7 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
                     "differ from it")
     
     load_rot90 = config.process_settings["load_rot90"]
-    if load_rot90:
+    if load_rot90 and image5d is not None:
         # rotate main image specified num of times x90deg after loading since 
         # need to rotate images output by deep learning toolkit
         image5d = np.rot90(image5d, load_rot90, (2, 3))
@@ -862,7 +864,8 @@ def setup_images(path, series, offset=None, roi_size=None, proc_mode=None):
     # add any additional image5d thresholds for multichannel images, such 
     # as those loaded without metadata for these settings
     colormaps.setup_cmaps()
-    num_channels = 1 if image5d.ndim <= 4 else image5d.shape[4]
+    num_channels = (1 if image5d is None or image5d.ndim <= 4 
+                    else image5d.shape[4])
     config.near_max = lib_clrbrain.pad_seq(config.near_max, num_channels, -1)
     config.near_min = lib_clrbrain.pad_seq(config.near_min, num_channels, 0)
     config.vmax_overview = lib_clrbrain.pad_seq(

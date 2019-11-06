@@ -104,7 +104,7 @@ class StackPlaneIO(object):
         return i, imgs_proc
 
 
-def _build_stack(ax, images, process_fnc, rescale, aspect=None, 
+def _build_stack(ax, images, process_fnc, rescale=1, aspect=None, 
                  origin=None, cmaps_labels=None, scale_bar=True):
     """Builds an animated GIF from a stack of images.
     
@@ -119,6 +119,7 @@ def _build_stack(ax, images, process_fnc, rescale, aspect=None,
         process_fnc: Function to process each image through multiprocessing, 
             where the function should take an index and image and return the 
             index and processed plane.
+        rescale (float): Rescale factor; defaults to 1.
         cmaps_labels: Sequence of colormaps for labels-based images; 
             defaults to None. Length should be equal to that of 
             ``images`` - 1.
@@ -213,6 +214,35 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None):
         lib_clrbrain.warn("No animation writer available for Matplotlib")
 
 
+def _setup_labels_cmaps(imgs, cmaps_labels=None):
+    """Setup labels colormaps for registered images.
+    
+    Args:
+        imgs (List[:obj:`np.ndarray`]): Sequence of images where the first
+            is assumed to be non-labels, the second is labels, and the
+            third are label borders.
+        cmaps_labels (List[List[:obj:`colormaps.DiscreteColormap`]]): 
+            List of discrete colormaps corresponding to ``imgs[:1]``.
+
+    """
+    if cmaps_labels is None:
+        cmaps_labels = []
+    num_imgs = len(imgs)
+    if num_imgs > 1:
+        # 2nd image is main labels image, but use original set of 
+        # labels if available
+        cmaps_labels.append(
+            colormaps.get_labels_discrete_colormap(
+                imgs[1], 0, dup_for_neg=True, use_orig_labels=True))
+    if num_imgs > 2:
+        # subsequent image's colormap is based on first labels 
+        # if possible
+        cmaps_labels.append(
+            colormaps.get_borders_colormap(
+                imgs[2], imgs[1], cmaps_labels[0]))
+    return cmaps_labels
+
+
 def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
                   slice_vals=None, rescale=None, labels_imgs=None,
                   multiplane=True, fit=False):
@@ -295,19 +325,7 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
         if labels_imgs is not None:
             for img in labels_imgs:
                 if img is not None: imgs.append(img[None])
-            num_imgs = len(imgs)
-            if num_imgs > 1:
-                # 2nd image is main labels image, but use original set of 
-                # labels if available
-                cmaps_labels.append(
-                    colormaps.get_labels_discrete_colormap(
-                        imgs[1], 0, dup_for_neg=True, use_orig_labels=True))
-            if num_imgs > 2:
-                # subsequent images' colormaps are based on first labels 
-                # if possible
-                cmaps_labels.append(
-                    colormaps.get_borders_colormap(
-                        imgs[2], imgs[1], cmaps_labels[0]))
+            _setup_labels_cmaps(imgs, cmaps_labels)
         main_shape = None  # z,y,x shape of 1st image
         for img in imgs:
             sl = img_sl
@@ -404,6 +422,34 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
             plot_support.get_plane_axis(config.plane), planei)
         if suffix: path_base = lib_clrbrain.insert_before_ext(path_base, suffix)
         plot_support.save_fig(path_base, config.savefig, mod)
+
+
+def reg_planes_to_img(imgs, path):
+    """Export registered image single planes to a single figure.
+    
+    Simplified export tool taking a single plane from each registered image
+    type, overlaying in a single figure, and exporting to file.
+    
+    Args:
+        imgs (List[:obj:`np.ndarray`]): Sequence of image planes to display.
+            The first image is assumed to be greyscale, the second is labels,
+            and any subsequent images are borders.
+        path (str): Output base path, which will be combined with
+            :attr:`config.savefig`.
+
+    """
+    fig, gs = plot_support.setup_fig(
+        1, 1, config.plot_labels[config.PlotLabels.SIZE])
+    imgs = [img[None] for img in imgs]
+    cmaps_labels = _setup_labels_cmaps(imgs)
+    plotted_imgs = _build_stack(
+        fig.add_subplot(gs[0, 0]), imgs, StackPlaneIO.process_plane,
+        cmaps_labels=cmaps_labels, scale_bar=False)
+    ax_img = plotted_imgs[0][0]
+    aspect, origin = plot_support.get_aspect_ratio(config.plane)
+    plot_support.fit_frame_to_image(
+        ax_img.figure, ax_img.get_array().shape, aspect)
+    plot_support.save_fig(path, config.savefig)
 
 
 if __name__ == "__main__":

@@ -634,7 +634,6 @@ def update_register_settings(settings, settings_type):
                 # medial pallium by smoothing
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "start": 0.137, "surr_size": 12,
-                    RegKeys.SAVE_STEPS: True,
                 }, 
                 "expand_labels": (((None, ), (0, 279), (103, 108)),), 
                 "rotate": ((1.5, 1), (2, 2)),
@@ -851,6 +850,14 @@ def update_register_settings(settings, settings_type):
             "smoothtestlong", 
             {
                 "smooth": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+            }, 
+            profile)
+        
+        # save intermediate steps where supported
+        settings.add_modifier(
+            "savesteps", 
+            {
+                "labels_edge": {RegKeys.SAVE_STEPS: True}
             }, 
             profile)
         

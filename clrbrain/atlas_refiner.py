@@ -498,6 +498,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         edges_region = None
         if edges is not None:
             edges_region = edges[:, slices[0], slices[1]]
+        save_imgs = {}
         if not has_template:
             # crop to use corresponding labels as template for next planes
             print("plane {}: generating labels template of size {}"
@@ -506,6 +507,8 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             if smoothing_size:
                 # smooth to remove artifacts
                 smooth_labels(prop_plane_region, smoothing_size)
+            save_imgs["edge_template_plane{}".format(planei)] = [
+                prop_region_ref[planei], prop_plane_region]
         else:
             # resize prior plane's labels to region's shape and replace region
             prop_plane_region = transform.resize(
@@ -524,6 +527,8 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 fg_thresh = prop_region_ref[planei] > threshold
                 to_fill = np.logical_and(fg_thresh, ~fg)
                 plane_add = plot_3d.in_paint(plane_add, to_fill)
+            save_imgs["edge_resized_plane{}".format(planei)] = [
+                    prop_region_ref[planei], plane_add]
             if edges_region is not None:
                 # reannotate based on edge map; allow erosion to lose labels to
                 # mimic tapering off of labels; make resulting plane the new
@@ -533,13 +538,15 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 plane_add = segmenter.segment_from_labels(
                     edges_region[planei], markers, plane_add)
                 prop_plane_region = plane_add
-                if save_steps:
-                    # export reference, markers, and edges as single file
-                    export_stack.reg_planes_to_img(
-                        [prop_region_ref[planei], markers,
-                         edges_region[planei]],
-                        "edge_plane{}".format(planei))
+                save_imgs["edge_markers_plane{}".format(planei)] = [
+                    prop_region_ref[planei], markers, edges_region[planei]]
+                save_imgs["edge_annot_plane{}".format(planei)] = [
+                    prop_region_ref[planei], prop_plane_region]
             prop_region[planei] = plane_add
+        if save_steps:
+            # export overlaid planes in single files
+            for key, val in save_imgs.items():
+                export_stack.reg_planes_to_img(val, key)
         # recursively call for each region to follow in next plane, but 
         # only get largest region for subsequent planes in case 
         # new regions appear, where the labels would be unknown

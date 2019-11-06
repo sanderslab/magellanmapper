@@ -868,7 +868,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("aba")
   #setupConfig("smoothing")
   
-  #setupConfig("wt")
+  setupConfig("wt")
   #setupConfig("intensnuc")
   #setupConfig("compactness")
   #setupConfig("compactness.stats")
@@ -879,8 +879,8 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("geno")
   #setupConfig("lessstringent")
   #setupConfig("compare.sex") # M vs F unpaired stats
-  setupConfig("compare.laterality") # L vs R paired stats
-  setupConfig("benjamini.hochman")
+  #setupConfig("compare.laterality") # L vs R paired stats
+  #setupConfig("benjamini.hochman")
   
   #setupConfig("nolevels")
   #setupConfig("nojittersave")

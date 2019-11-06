@@ -316,6 +316,7 @@ class RegKeys(Enum):
     """Register setting enumerations."""
     ACTIVE = "active"
     MARKER_EROSION = "marker_erosion"
+    SAVE_STEPS = "save_steps"
 
 
 class RegisterSettings(SettingsDict):
@@ -356,6 +357,7 @@ class RegisterSettings(SettingsDict):
         # extend edge labels
         self["labels_edge"] = {
             RegKeys.ACTIVE: False,
+            RegKeys.SAVE_STEPS: False,
             "start": -1,  # start plane index (-1 to set automatically)
             "surr_size": 5,  # dilation filter size for finding histology region
             # smoothing filter size to remove artifacts (None or 0 to ignore)
@@ -632,6 +634,7 @@ def update_register_settings(settings, settings_type):
                 # medial pallium by smoothing
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "start": 0.137, "surr_size": 12,
+                    RegKeys.SAVE_STEPS: True,
                 }, 
                 "expand_labels": (((None, ), (0, 279), (103, 108)),), 
                 "rotate": ((1.5, 1), (2, 2)),

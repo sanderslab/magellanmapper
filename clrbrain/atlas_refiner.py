@@ -15,7 +15,9 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
+from clrbrain import cli
 from clrbrain import config
+from clrbrain import export_stack
 from clrbrain import importer
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
@@ -288,10 +290,15 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     if edge is not None:
         # extend labels from the lowest labeled z-plane to cover the rest
         # of lower planes with signal in the reference image
+        save_steps = edge[profiles.RegKeys.SAVE_STEPS]
+        if save_steps:
+            # load original labels and setup colormaps
+            cli.setup_images()
         extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
             None, edgei, edge["surr_size"], edge["smoothing_size"],
-            edge["in_paint"], None, edge[profiles.RegKeys.MARKER_EROSION])
+            edge["in_paint"], None, edge[profiles.RegKeys.MARKER_EROSION],
+            save_steps)
     
     if expand:
         # expand selected regions
@@ -388,7 +395,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
 
 def extend_edge(region, region_ref, threshold, plane_region, planei,
                 surr_size=0, smoothing_size=0, in_paint=False, edges=None,
-                marker_erosion=0):
+                marker_erosion=0, save_steps=False):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
 
@@ -526,6 +533,12 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 plane_add = segmenter.segment_from_labels(
                     edges_region[planei], markers, plane_add)
                 prop_plane_region = plane_add
+                if save_steps:
+                    # export reference, markers, and edges as single file
+                    export_stack.reg_planes_to_img(
+                        [prop_region_ref[planei], markers,
+                         edges_region[planei]],
+                        "edge_plane{}".format(planei))
             prop_region[planei] = plane_add
         # recursively call for each region to follow in next plane, but 
         # only get largest region for subsequent planes in case 
@@ -533,7 +546,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region,
             planei - 1, surr_size, smoothing_size, in_paint, edges_region,
-            marker_erosion)
+            marker_erosion, save_steps)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

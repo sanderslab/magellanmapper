@@ -334,6 +334,7 @@ class LabelToMarkerErosion(object):
 
 def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
                               skel_eros_filt_size=None):
+                              min_filter_size=None,
     """Convert a labels image to markers as eroded labels via multiprocessing.
     
     These markers can be used in segmentation algorithms such as 
@@ -347,6 +348,8 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
         target_frac (float): Target fraction of original label to erode,
             passed to :func:`LabelToMarkerErosion.erode_label`. Defaults
             to None.
+        min_filter_size (int): Minimum erosion filter size; defaults to None
+            to use half of ``filter_size``, rounded down.
         skel_eros_filt_size (int): Erosion filter size before skeletonization
             in :func:`LabelToMarkerErosion.erode_labels`. Defaults to None to
             use the minimum filter size, which is half of ``filter_size``.
@@ -358,9 +361,10 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
     start_time = time()
     markers = np.zeros_like(labels_img)
     labels_unique = np.unique(labels_img)
-    min_filter_size = filter_size // 2
+    if min_filter_size is None:
+        min_filter_size = filter_size // 2
     if skel_eros_filt_size is None:
-        skel_eros_filt_size = min_filter_size
+        skel_eros_filt_size = filter_size // 2
     #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
     sizes_dict = {}
     cols = (config.AtlasMetrics.REGION.value, "SizeOrig", "SizeMarker", 

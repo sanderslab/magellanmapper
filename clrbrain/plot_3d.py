@@ -407,18 +407,26 @@ def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None,
     
     return affined
 
-def perimeter_nd(img_np):
+def perimeter_nd(img_np, largest_only=False):
     """Get perimeter of image subtracting eroded image from given image.
     
     Args:
-        img_np: Numpy array of arbitrary dimensions.
+        img_np (:obj:`np.ndarray`): Numpy array of arbitrary dimensions.
+        largest_only (bool): True to retain only the largest connected
+            component, typically the outer border; defaults to False.
     
     Returns:
-        The perimeter as a boolean array where True represents the 
-        border that would have been eroded.
+        :obj:`np.ndarray`: The perimeter as a boolean array where True
+        represents the border that would have been eroded.
     """
     interior = morphology.binary_erosion(img_np)
     img_border = np.logical_xor(img_np, interior)
+    if largest_only:
+        # retain only the largest perimeter based on pixel count
+        labeled = measure.label(img_border)
+        labels, counts = np.unique(labeled[labeled != 0], return_counts=True)
+        labels = labels[np.argsort(counts)]
+        img_border[labeled != labels[-1]] = False
     #print("perimeter:\n{}".format(img_border))
     return img_border
 

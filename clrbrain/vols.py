@@ -1088,13 +1088,11 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
         # the difference from two columns
         df_region = df[df[LabelMetrics.Region.name] == region]
         labels_region = labels_img_abs == region
+        diff = np.nan
         if fn_avg is None:
             # assume that df was output by R clrstats package
-            if df_region.shape[0] < 1:
-                if not skip_nans:
-                    labels_diff[labels_region] = np.nan
-            else:
-                labels_diff[labels_region] = df_region[meas]
+            if df_region.shape[0] > 0:
+                diff = df_region[meas]
         else:
             if len(conds) >= 2:
                 # compare the metrics for the first two conditions
@@ -1105,16 +1103,15 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
                     #print(df_region_cond.to_csv())
                     print(region, cond, fn_avg(df_region_cond[meas]))
                     avgs.append(fn_avg(df_region_cond[meas]))
-                if skip_nans and np.any(np.isnan(avgs[:2])):
-                    # will get NaNs if no row for region or if rows contain 
-                    # NaNs; skip if get NaN avgs for first 2 conditions
-                    print("region {} has NaNs, skipping".format(region))
-                    continue
                 # TODO: consider making order customizable
-                labels_diff[labels_region] = avgs[1] - avgs[0]
+                diff = avgs[1] - avgs[0]
             else:
                 # take the metric for the single condition
-                labels_diff[labels_region] = fn_avg(df_region[meas])
+                diff = fn_avg(df_region[meas])
+        if skip_nans and np.isnan(diff):
+            diff = 0
+        labels_diff[labels_region] = diff
+        print("label {} difference: {}".format(region, diff))
     return labels_diff
 
 

@@ -298,7 +298,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
             None, edgei, edge["surr_size"], edge["smoothing_size"],
             edge["in_paint"], None, edge[profiles.RegKeys.MARKER_EROSION],
-            save_steps)
+            edge[profiles.RegKeys.MARKER_EROSION_USE_MIN], save_steps)
     
     if expand:
         # expand selected regions
@@ -395,7 +395,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
 
 def extend_edge(region, region_ref, threshold, plane_region, planei,
                 surr_size=0, smoothing_size=0, in_paint=False, edges=None,
-                marker_erosion=0, save_steps=False):
+                marker_erosion=0, marker_erosion_use_min=False,
+                save_steps=False):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
 
@@ -531,12 +532,17 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                     prop_region_ref[planei], plane_add]
             if edges_region is not None:
                 # reannotate based on edge map; allow erosion to lose labels to
-                # mimic tapering off of labels; make resulting plane the new
-                # template for smoother transitions between planes
+                # mimic tapering off of labels, preferentially eroding
+                # centrally located labels
+                perim = plot_3d.perimeter_nd(plane_add != 0, largest_only=True)
+                wt_dists = plot_3d.signed_distance_transform(~perim)
                 markers, _ = segmenter.labels_to_markers_erosion(
-                    plane_add, marker_erosion, -1)
+                    plane_add, marker_erosion, -1,
+                    use_min_filter=marker_erosion_use_min, wt_dists=wt_dists)
                 plane_add = segmenter.segment_from_labels(
                     edges_region[planei], markers, plane_add)
+                # make resulting plane the new template for smoother
+                # transitions between planes
                 prop_plane_region = plane_add
                 save_imgs["edge_markers_plane{}".format(planei)] = [
                     prop_region_ref[planei], markers, edges_region[planei]]
@@ -553,7 +559,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         extend_edge(
             prop_region, prop_region_ref, threshold, prop_plane_region,
             planei - 1, surr_size, smoothing_size, in_paint, edges_region,
-            marker_erosion, save_steps)
+            marker_erosion, marker_erosion_use_min, save_steps)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

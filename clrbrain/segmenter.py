@@ -225,22 +225,30 @@ class LabelToMarkerErosion(object):
     global variables.
     
     Attributes:
-        labels_img: Integer labels images as a Numpy array.
+        labels_img (:obj:`np.ndarray`): Integer labels images as a Numpy array.
+        wt_dists (:obj:`np.ndarray`): Array of distances by which to weight
+            the filter size; defaults to None.
     """
     labels_img = None
+    wt_dists = None
     
     @classmethod
-    def set_labels_img(cls, labels_img):
+    def set_labels_img(cls, labels_img, wt_dists):
         """Set the labels image.
         
         Args:
-            labels_img: Labels image to set as class attribute.
+            labels_img (:obj:`np.ndarray`): Labels image to set as class
+                attribute.
+            wt_dists (:obj:`np.ndarray`): Distance weights image to set as
+                class attribute.
         """
         cls.labels_img = labels_img
+        cls.wt_dists = wt_dists
     
     @classmethod
     def erode_label(cls, label_id, filter_size, target_frac=None,
-                    min_filter_size=1, skel_eros_filt_size=0):
+                    min_filter_size=1, use_min_filter=False,
+                    skel_eros_filt_size=0):
         """Convert a label to a marker as an eroded version of the label.
         
         By default, labels will be eroded with the given ``filter_size`` 
@@ -248,12 +256,14 @@ class LabelToMarkerErosion(object):
         the eroded volume is below threshold, ``filter_size`` will be 
         progressively decreased until the filter cannot be reduced further.
         
-        
         Skeletonization of the labels recovers some details by partially
         preserving the original labels' extent, including thin regions that
         would be eroded away, thus serving a similar function as that of
         adaptive morphological filtering. ``skel_eros_filt_size`` allows
         titrating the amount of the labels` extent to be preserved.
+        
+        If :attr:`wt_dists` is present, the label's distance will be used
+        to weight the starting filter size.
         
         Args:
             label_id (int): ID of label to erode.
@@ -264,6 +274,9 @@ class LabelToMarkerErosion(object):
                 to None to use a fraction of 0.2.
             min_filter_size (int): Minimum filter size, below which the
                 original, uneroded label will be used instead. Defaults to 1.
+            use_min_filter (bool): True to erode even if ``min_filter_size``
+                is reached; defaults to False to avoid any erosion if this
+                size is reached.
             skel_eros_filt_size (int): Erosion filter size before
                 skeletonization to balance how much of the labels' extent will
                 be preserved during skeletonization. Increase to reduce the
@@ -276,6 +289,15 @@ class LabelToMarkerErosion(object):
             sizes of labels; list of slices denoting where to insert 
             the eroded label; and the eroded label itself.
         """
+        if cls.wt_dists is not None:
+            # weight the filter size by the fractional distance from median
+            # of label distance and max dist
+            wt = (np.median(cls.wt_dists[cls.labels_img == label_id]) 
+                  / np.amax(cls.wt_dists))
+            filter_size = int(filter_size * wt)
+            if use_min_filter and filter_size < min_filter_size:
+                filter_size = min_filter_size
+        
         # get region as mask; assume that label exists and will yield a 
         # bounding box since labels here are generally derived from the 
         # labels image itself
@@ -294,13 +316,14 @@ class LabelToMarkerErosion(object):
         size_ratio = 1
         for selem_size in range(filter_size, -1, -1):
             if selem_size < min_filter_size:
-                print("label {}: could not erode without dropping below "
-                      "minimum filter size of {}, reverting to original "
-                      "region size of {}"
-                      .format(label_id, min_filter_size, region_size))
-                filtered = label_mask_region
-                region_size_filtered = region_size
-                chosen_selem_size = np.nan
+                if not use_min_filter:
+                    print("label {}: could not erode without dropping below "
+                          "minimum filter size of {}, reverting to original "
+                          "region size of {}"
+                          .format(label_id, min_filter_size, region_size))
+                    filtered = label_mask_region
+                    region_size_filtered = region_size
+                    chosen_selem_size = np.nan
                 break
             # erode check size ratio
             filtered = morphology.binary_erosion(
@@ -313,9 +336,9 @@ class LabelToMarkerErosion(object):
         
         if chosen_selem_size is not None:
             print("label {}: changed num of pixels from {} to {} "
-                  "(size ratio {}), chosen filter size {}"
+                  "(size ratio {}), initial filter size {}, chosen {}"
                   .format(label_id, region_size, region_size_filtered, 
-                          size_ratio, chosen_selem_size))
+                          size_ratio, filter_size, chosen_selem_size))
         
         if skel_eros_filt_size and np.sum(filtered) > 0:
             # skeletonize the labels to recover details from erosion;
@@ -333,8 +356,9 @@ class LabelToMarkerErosion(object):
 
 
 def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
-                              skel_eros_filt_size=None):
                               min_filter_size=None,
+                              use_min_filter=False, 
+                              skel_eros_filt_size=None, wt_dists=None):
     """Convert a labels image to markers as eroded labels via multiprocessing.
     
     These markers can be used in segmentation algorithms such as 
@@ -350,9 +374,16 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
             to None.
         min_filter_size (int): Minimum erosion filter size; defaults to None
             to use half of ``filter_size``, rounded down.
+        use_min_filter (bool): True to erode even if ``min_filter_size``
+            is reached; defaults to False to avoid any erosion if this size
+            is reached.
         skel_eros_filt_size (int): Erosion filter size before skeletonization
             in :func:`LabelToMarkerErosion.erode_labels`. Defaults to None to
             use the minimum filter size, which is half of ``filter_size``.
+        wt_dists (:obj:`np.ndarray`): Array of distances by which to weight
+            the filter size, such as a distance transform to the outer
+            perimeter of ``labels_img`` to weight central labels more
+            heavily. Defaults to None.
     
     Returns:
         :obj:`np.ndarray`: Image array of the same shape as ``img`` and the
@@ -373,7 +404,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
     # erode labels via multiprocessing
     print("Eroding labels to markers with filter size of", filter_size, 
           "and target fraction of", target_frac)
-    LabelToMarkerErosion.set_labels_img(labels_img)
+    LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
     pool = mp.Pool()
     pool_results = []
     for label_id in labels_unique:
@@ -384,7 +415,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
             pool.apply_async(
                 LabelToMarkerErosion.erode_label, 
                 args=(label_id, filter_size, target_frac, min_filter_size,
-                      skel_eros_filt_size)))
+                      use_min_filter, skel_eros_filt_size)))
     for result in pool_results:
         stats_eros, slices, filtered = result.get()
         # can only mutate markers outside of mp for changes to persist

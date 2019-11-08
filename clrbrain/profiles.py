@@ -316,6 +316,7 @@ class RegKeys(Enum):
     """Register setting enumerations."""
     ACTIVE = "active"
     MARKER_EROSION = "marker_erosion"
+    MARKER_EROSION_USE_MIN = "marker_erosion_use_min"
     SAVE_STEPS = "save_steps"
 
 
@@ -365,6 +366,7 @@ class RegisterSettings(SettingsDict):
             "in_paint": True,  # True to fill pxs missing labels
             # erosion filter size for watershed markers (0 to ignore)
             RegKeys.MARKER_EROSION: 10,
+            RegKeys.MARKER_EROSION_USE_MIN: False,
         }
         self["labels_dup"] = None  # start duplicating planes til last labels
         self["extend_labels"] = {"edge": True, "mirror": True}
@@ -634,6 +636,8 @@ def update_register_settings(settings, settings_type):
                 # medial pallium by smoothing
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "start": 0.137, "surr_size": 12,
+                    RegKeys.MARKER_EROSION: 12,
+                    RegKeys.MARKER_EROSION_USE_MIN: True,
                 }, 
                 "expand_labels": (((None, ), (0, 279), (103, 108)),), 
                 "rotate": ((1.5, 1), (2, 2)),
@@ -715,7 +719,7 @@ def update_register_settings(settings, settings_type):
                 # is low
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "start": 0.138, "surr_size": 12,
-                    "smoothing_size": 0, RegKeys.MARKER_EROSION: 1,
+                    "smoothing_size": 0, RegKeys.MARKER_EROSION: 5,
                 }, 
                 "smooth": 2, 
                 "make_far_hem_neg": True, 

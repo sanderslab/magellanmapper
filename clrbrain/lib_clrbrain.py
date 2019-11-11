@@ -390,6 +390,20 @@ def get_int(val):
             return val
 
 
+def is_int(val):
+    """Check if a value is an integer, with support for alternate integer
+    types such as Numpy integers.
+    
+    Args:
+        val: Value to check.
+
+    Returns:
+        True if ``val`` is castable to an int.
+
+    """
+    return val == int(val)
+
+
 def is_number(val):
     """Check if a value is a number by attempting to cast to ``float``.
     

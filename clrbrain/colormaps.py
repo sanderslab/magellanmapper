@@ -9,6 +9,7 @@ from matplotlib import cm
 from matplotlib import colors
 
 from clrbrain import config
+from clrbrain import lib_clrbrain
 
 # default colormaps, with keys backed by config.Cmaps enums
 CMAPS = {}
@@ -159,8 +160,9 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             the "CN" color spec instead.
         seed (int): Random number seed; defaults to None, in which case no seed 
             will be set.
-        min_val (int): Minimum value for random numbers; defaults to 0.
-        max_val (int): Maximum value for random numbers; defaults to 255.
+        min_val (int, float): Minimum value for random numbers; defaults to 0.
+        max_val (int, float): Maximum value for random numbers; defaults to 255.
+            For floating point ranges such as 0.0-1.0, set as a float.
     
     Returns:
         :obj:`np.ndaarry`: 2D Numpy array in the format 
@@ -170,13 +172,13 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         to generate a map that can be used directly in functions such 
         as ``imshow``.
     """
-    # TODO: consider giving option to change to 0-1 scale
     if seed is not None:
         np.random.seed(seed)
     # generate random combination of RGB values for each number of colors, 
     # where each value ranges from min-max
     cmap = (np.random.random((num_colors, 4)) 
-            * (max_val - min_val) + min_val).astype(np.uint8)
+            * (max_val - min_val) + min_val).astype(
+        lib_clrbrain.dtype_within_range(min_val, max_val))
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones

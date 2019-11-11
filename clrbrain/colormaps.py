@@ -54,7 +54,8 @@ class DiscreteColormap(colors.ListedColormap):
             :class:``matplotlib.colors.BoundaryNorm`` if otherwise.
     """
     def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
-                 min_val=0, max_val=255, background=None, dup_for_neg=False):
+                 min_val=0, max_val=255, min_any=0, background=None,
+                 dup_for_neg=False):
         """Generate discrete colormap for labels using 
         :func:``discrete_colormap``.
         
@@ -73,6 +74,8 @@ class DiscreteColormap(colors.ListedColormap):
                 inclusive.
             min_val (int): Minimum value for random numbers; defaults to 0.
             max_val (int): Maximum value for random numbers; defaults to 255.
+            min_any (int, float): Minimum value above which at least one value
+                must be in each set of RGB values; defaults to 0
             background: Tuple of (backround_label, (R, G, B, A)), where 
                 background_label is the label value specifying the background, 
                 and RGBA value will replace the color corresponding to that 
@@ -110,7 +113,7 @@ class DiscreteColormap(colors.ListedColormap):
             self.norm = colors.BoundaryNorm(labels_unique, num_colors)
         self.cmap_labels = discrete_colormap(
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
-            min_val=min_val, max_val=max_val)
+            min_val=min_val, max_val=max_val, min_any=min_any)
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
@@ -147,7 +150,7 @@ class DiscreteColormap(colors.ListedColormap):
 
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
-                      seed=None, min_val=0, max_val=255):
+                      seed=None, min_val=0, max_val=255, min_any=0):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
@@ -163,6 +166,10 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         min_val (int, float): Minimum value for random numbers; defaults to 0.
         max_val (int, float): Maximum value for random numbers; defaults to 255.
             For floating point ranges such as 0.0-1.0, set as a float.
+        min_any (int, float): Minimum value above which at least one value
+            must be in each set of RGB values; defaults to 0. If all
+            values in an RGB set are below this value, a randomly chosen
+            RGB value will be raised to this value. 
     
     Returns:
         :obj:`np.ndaarry`: 2D Numpy array in the format 
@@ -179,6 +186,9 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     cmap = (np.random.random((num_colors, 4)) 
             * (max_val - min_val) + min_val).astype(
         lib_clrbrain.dtype_within_range(min_val, max_val))
+    below_offset = np.all(np.less(cmap[:, :3], min_any), axis=1)
+    axes = np.random.choice(3, np.sum(below_offset))
+    cmap[below_offset, axes] = min_any
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones
@@ -216,8 +226,8 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         # use original labels if available for mapping consistency
         lbls = config.labels_img_orig
     return DiscreteColormap(
-        lbls, config.seed, 255, False, 50, 255, 
-        (0, (0, 0, 0, alpha_bkgd)), dup_for_neg)
+        lbls, config.seed, 255, False, min_any=100,
+        background=(0, (0, 0, 0, alpha_bkgd)), dup_for_neg=dup_for_neg)
 
 
 def get_borders_colormap(borders_img, labels_img, cmap_labels):

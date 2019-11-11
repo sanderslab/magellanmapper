@@ -878,7 +878,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
         chls_diff = num_channels - num_cmaps
         colors = colormaps.discrete_colormap(
             chls_diff, alpha=255, prioritize_default=False, seed=config.seed, 
-            multiplier=150, offset=150) / 255.0
+            min_val=150) / 255.0
         print("generating colormaps from RGBA colors:\n", colors)
         for color in colors:
             config.cmaps.append(colormaps.make_dark_linear_cmap("", color))

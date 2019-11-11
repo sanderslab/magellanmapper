@@ -9,6 +9,7 @@ view of orthogonal planes.
 import textwrap
 
 import matplotlib.patches as patches
+import numpy as np
 from skimage import draw
 
 from clrbrain import config
@@ -398,7 +399,13 @@ class PlotEditor:
                         label_x = x + 20
                     self.region_label.set_horizontalalignment(alignment)
                     self.region_label.set_position((label_x, y - 20))
-                
+                    
+                    # show color value for label
+                    label_id = self.img3d_labels[tuple(coord)]
+                    print("RGB for label {}: {}".format(
+                        label_id, np.multiply(self.ax_img.cmap(
+                            self.ax_img.norm(label_id))[:3], 255)))
+
         self.last_loc = loc
         self.last_loc_data = loc_data
     
@@ -438,7 +445,8 @@ class PixelDisplay(object):
     """Custom image intensity display in :attr:``Axes.format_coord``.
     
     Attributes:
-        imgs: Sequence of images whose intensity values will be displayed.
+        imgs (List[:obj:`np.ndarray`]): Sequence of images whose intensity
+            values will be displayed.
     """
     def __init__(self, imgs):
         self.imgs = imgs
@@ -449,7 +457,7 @@ class PixelDisplay(object):
         zs = []
         for i, img in enumerate(self.imgs):
             if x < 0 or y < 0 or x >= img.shape[1] or y >= img.shape[0]:
-                # no correponding px for the image
+                # no corresponding px for the image
                 z = "n/a"
             else:
                 # get the corresponding intensity value, truncating floats

@@ -216,7 +216,7 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         # use original labels if available for mapping consistency
         lbls = config.labels_img_orig
     return DiscreteColormap(
-        lbls, config.seed, 255, False, 50, 200, 
+        lbls, config.seed, 255, False, 50, 255, 
         (0, (0, 0, 0, alpha_bkgd)), dup_for_neg)
 
 

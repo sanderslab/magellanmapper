@@ -642,7 +642,7 @@ def coords_for_indexing(coords):
     return coordsi
 
 
-def dtype_within_range(min_val, max_val, integer, signed=None):
+def dtype_within_range(min_val, max_val, integer=None, signed=None):
     """Get a dtype that will contain the given range.
     
     :const:``_DTYPES`` will be used to specify the possible dtypes.
@@ -650,7 +650,8 @@ def dtype_within_range(min_val, max_val, integer, signed=None):
     Args:
         min_val: Minimum required value, inclusive.
         max_val: Maximim required value, inclusive.
-        integer: True to get an int type, False for float.
+        integer: True to get an int type, False for float. Defaults to None
+            to determine automatically based on ``max_val``.
         signed: True for a signed int, False for unsigned; ignored for float. 
             Defaults to None to determine automatically based on ``min_val``.
     
@@ -663,6 +664,8 @@ def dtype_within_range(min_val, max_val, integer, signed=None):
     if signed is None:
         # determine automatically based on whether min val is neg
         signed = min_val < 0
+    if integer is None:
+        integer = is_int(max_val)
     if integer:
         type_group = "int" if signed else "uint"
         fn_info = np.iinfo

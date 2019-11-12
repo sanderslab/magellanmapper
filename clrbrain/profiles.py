@@ -595,9 +595,8 @@ def update_register_settings(settings, settings_type):
                 "target_size": (552, 673, 340),
                 "resize_factor": None,  # turn off resizing
                 "labels_mirror": 0.48, 
-                # smaller surr size to avoid capturing 3rd labeled area that 
-                # becomes an artifact; need to avoid excessively filling
-                # smaller ventricle
+                # small, default surr size to avoid capturing 3rd labeled area 
+                # that becomes an artifact
                 "labels_edge": {
                     RegKeys.ACTIVE: True,
                 }, 
@@ -615,10 +614,13 @@ def update_register_settings(settings, settings_type):
                 "target_size": (704, 982, 386),
                 "resize_factor": None,  # turn off resizing
                 "labels_mirror": 0.49, 
-                # need to balance keeping ventricles open for medial 
-                # planes while not too open because of more lateral planes
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "surr_size": 12,
+                    # increase template smoothing to prevent over-extension of
+                    # intermediate stratum of Str
+                    "smoothing_size": 5,
+                    # larger to allow superficial stratum of DPall to take over
+                    RegKeys.MARKER_EROSION: 19,
                 }, 
                 "atlas_threshold": 45,  # avoid edge over-extension into skull
                 "rotate": ((-4, 1), ), 
@@ -652,11 +654,13 @@ def update_register_settings(settings, settings_type):
             "abap4", 
             {
                 "target_size": (724, 403, 398),
-                "resize_factor": None, # turn off resizing
+                "resize_factor": None,  # turn off resizing
                 "labels_mirror": 0.487, 
-                # no in-painting since no ventricles to extend
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "surr_size": 12,
+                    # balance eroding medial pallium and allowing dorsal
+                    # pallium to take over
+                    RegKeys.MARKER_EROSION: 8,
                 }, 
                 # open caudal labels to allow smallest mirror plane index, 
                 # though still cross midline as some regions only have 
@@ -675,9 +679,12 @@ def update_register_settings(settings, settings_type):
                 # will still cross midline since some regions only have labels 
                 # past midline
                 "labels_mirror": 0.5, 
-                # no in-painting since no ventricles to extend
                 "labels_edge": {
-                    RegKeys.ACTIVE: True, "surr_size": 12,
+                    RegKeys.ACTIVE: True,
+                    "start": 0.078,  # avoid alar part size jitter
+                    "surr_size": 12,
+                    RegKeys.MARKER_EROSION: 40,
+                    RegKeys.MARKER_EROSION_MIN: 10, 
                 }, 
                 # rotate conservatively for symmetry without losing labels
                 "rotate": ((-0.4, 1), ),
@@ -694,10 +701,11 @@ def update_register_settings(settings, settings_type):
                 # will still cross midline since some regions only have labels 
                 # past midline
                 "labels_mirror": 0.48, 
-                # set edge explicitly since some lateral labels are only 
-                # partially complete; only small ventricles to close
                 "labels_edge": {
-                    RegKeys.ACTIVE: True, "start": 0.11, "surr_size": 12,
+                    RegKeys.ACTIVE: True,
+                    "start": 0.11,  # some lat labels only partially complete
+                    "surr_size": 12,
+                    "smoothing_size": 0,  # no smoothing to avoid loss of detail
                 }, 
                 #"labels_dup": 0.48, 
                 # rotate for symmetry, which also reduces label loss
@@ -714,14 +722,14 @@ def update_register_settings(settings, settings_type):
                 "resize_factor": None,  # turn off resizing
                 # stained sections and labels almost but not symmetric
                 "labels_mirror": 0.5,
-                # set edge explicitly since some lateral labels are only 
-                # partially complete; keep in-painting to close small
-                # ventricles, but no smoothing to avoid loss of detail; only
-                # mild erosion to minimize layer loss since histology contrast
-                # is low
                 "labels_edge": {
-                    RegKeys.ACTIVE: True, "start": 0.138, "surr_size": 12,
-                    "smoothing_size": 0, RegKeys.MARKER_EROSION: 5,
+                    RegKeys.ACTIVE: True, 
+                    "start": 0.138,  # some lat labels only partially complete
+                    "surr_size": 12,
+                    "smoothing_size": 0,  # no smoothing to avoid loss of detail
+                    # only mild erosion to minimize layer loss since histology
+                    # contrast is low
+                    RegKeys.MARKER_EROSION: 5,
                 }, 
                 "smooth": 2, 
                 "make_far_hem_neg": True, 

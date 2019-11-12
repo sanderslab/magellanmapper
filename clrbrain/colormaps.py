@@ -87,10 +87,9 @@ class DiscreteColormap(colors.ListedColormap):
         if labels is None: return
         self.norm = None
         labels_unique = np.unique(labels)
-        if dup_for_neg and len(labels_unique[labels_unique < 0]) == 0:
-            # for labels that are only pos or 0, duplicate the pos portion 
-            # and make neg so that images with or without negs use the 
-            # same colors
+        if dup_for_neg and np.sum(labels_unique < 0) == 0:
+            # for labels that are only >= 0, duplicate the pos portion 
+            # as neg so that images with or without negs use the same colors
             labels_unique = np.append(
                 -1 * labels_unique[labels_unique > 0][::-1], labels_unique)
         num_colors = len(labels_unique)
@@ -115,7 +114,8 @@ class DiscreteColormap(colors.ListedColormap):
             self.norm = colors.BoundaryNorm(labels_unique, num_colors)
         self.cmap_labels = discrete_colormap(
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
-            min_val=min_val, max_val=max_val, min_any=min_any)
+            min_val=min_val, max_val=max_val, min_any=min_any,
+            dup_for_neg=dup_for_neg)
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
@@ -152,7 +152,8 @@ class DiscreteColormap(colors.ListedColormap):
 
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
-                      seed=None, min_val=0, max_val=255, min_any=0):
+                      seed=None, min_val=0, max_val=255, min_any=0,
+                      dup_for_neg=False):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
@@ -185,6 +186,12 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         np.random.seed(seed)
     # generate random combination of RGB values for each number of colors, 
     # where each value ranges from min-max
+    neg_buffer = 30
+    cmap_offset = 0 if num_colors // 2 == num_colors / 2 else 1
+    if dup_for_neg:
+        # halve number of colors to duplicate for corresponding labels
+        num_colors = int(np.ceil(num_colors / 2))
+        max_val -= neg_buffer
     space = (max_val - min_val) // np.cbrt(num_colors)
     sl = slice(min_val, max_val, space)
     grid = np.mgrid[sl, sl, sl]
@@ -196,6 +203,10 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     rand_coords_shape[-1] += 1
     cmap = np.zeros(rand_coords_shape)
     cmap[:, :-1] = rand_coords
+    if dup_for_neg:
+        # assume that corresponding labels are mirrored (eg -5, 3, 0, 3, 5)
+        cmap_neg = cmap + neg_buffer
+        cmap = np.vstack((cmap_neg[::-1], cmap[cmap_offset:]))
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones

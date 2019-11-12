@@ -185,12 +185,17 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         np.random.seed(seed)
     # generate random combination of RGB values for each number of colors, 
     # where each value ranges from min-max
-    cmap = (np.random.random((num_colors, 4)) 
-            * (max_val - min_val) + min_val).astype(
-        lib_clrbrain.dtype_within_range(min_val, max_val))
-    below_offset = np.all(np.less(cmap[:, :3], min_any), axis=1)
-    axes = np.random.choice(3, np.sum(below_offset))
-    cmap[below_offset, axes] = min_any
+    space = (max_val - min_val) // np.cbrt(num_colors)
+    sl = slice(min_val, max_val, space)
+    grid = np.mgrid[sl, sl, sl]
+    coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
+    coords = coords[~np.all(np.less(coords, min_any), axis=1)]
+    rand = np.random.choice(len(coords), num_colors, replace=False)
+    rand_coords = coords[rand]
+    rand_coords_shape = list(rand_coords.shape)
+    rand_coords_shape[-1] += 1
+    cmap = np.zeros(rand_coords_shape)
+    cmap[:, :-1] = rand_coords
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones

@@ -109,7 +109,9 @@ class DiscreteColormap(colors.ListedColormap):
             self.norm = colors.NoNorm()
         else:
             # labels themselves serve as bounds, allowing for large gaps 
-            # between labels while assigning each label to a unique color
+            # between labels while assigning each label to a unique color;
+            # may have occasional color mapping inaccuracies from this bug:
+            # https://github.com/matplotlib/matplotlib/issues/9937
             self.norm = colors.BoundaryNorm(labels_unique, num_colors)
         self.cmap_labels = discrete_colormap(
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 

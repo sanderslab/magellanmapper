@@ -316,6 +316,7 @@ class RegKeys(Enum):
     """Register setting enumerations."""
     ACTIVE = "active"
     MARKER_EROSION = "marker_erosion"
+    MARKER_EROSION_MIN = "marker_erosion_min"
     MARKER_EROSION_USE_MIN = "marker_erosion_use_min"
     SAVE_STEPS = "save_steps"
 
@@ -366,7 +367,8 @@ class RegisterSettings(SettingsDict):
             "in_paint": True,  # True to fill pxs missing labels
             # erosion filter size for watershed markers (0 to ignore)
             RegKeys.MARKER_EROSION: 10,
-            RegKeys.MARKER_EROSION_USE_MIN: False,
+            RegKeys.MARKER_EROSION_MIN: None,  # use default size; 0 for no min
+            RegKeys.MARKER_EROSION_USE_MIN: False,  # don't erode if reach min
         }
         self["labels_dup"] = None  # start duplicating planes til last labels
         self["extend_labels"] = {"edge": True, "mirror": True}

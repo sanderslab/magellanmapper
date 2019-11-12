@@ -295,6 +295,8 @@ class LabelToMarkerErosion(object):
             wt = (np.median(cls.wt_dists[cls.labels_img == label_id]) 
                   / np.amax(cls.wt_dists))
             filter_size = int(filter_size * wt)
+            print("label {}: distance weight {}, adjusted filter size to {}"
+                  .format(label_id, wt, filter_size))
             if use_min_filter and filter_size < min_filter_size:
                 filter_size = min_filter_size
         
@@ -356,8 +358,7 @@ class LabelToMarkerErosion(object):
 
 
 def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
-                              min_filter_size=None,
-                              use_min_filter=False, 
+                              min_filter_size=None, use_min_filter=False, 
                               skel_eros_filt_size=None, wt_dists=None):
     """Convert a labels image to markers as eroded labels via multiprocessing.
     
@@ -402,8 +403,9 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
             config.SmoothingMetrics.FILTER_SIZE.value)
     
     # erode labels via multiprocessing
-    print("Eroding labels to markers with filter size of", filter_size, 
-          "and target fraction of", target_frac)
+    print("Eroding labels to markers with filter size {}, min filter size {}, "
+          "and target fraction {}"
+          .format(filter_size, min_filter_size, target_frac))
     LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
     pool = mp.Pool()
     pool_results = []

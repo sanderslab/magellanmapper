@@ -186,15 +186,20 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         np.random.seed(seed)
     # generate random combination of RGB values for each number of colors, 
     # where each value ranges from min-max
+    offset = 10
     neg_buffer = 30
     cmap_offset = 0 if num_colors // 2 == num_colors / 2 else 1
     if dup_for_neg:
         # halve number of colors to duplicate for corresponding labels
         num_colors = int(np.ceil(num_colors / 2))
         max_val -= neg_buffer
+    max_val -= offset * 3
     space = (max_val - min_val) // np.cbrt(num_colors)
-    sl = slice(min_val, max_val, space)
-    grid = np.mgrid[sl, sl, sl]
+    sls = []
+    for i in range(3):
+        shift = i * 10
+        sls.append(slice(min_val + shift, max_val + shift, space))
+    grid = np.mgrid[sls[0], sls[1], sls[2]]
     coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
     coords = coords[~np.all(np.less(coords, min_any), axis=1)]
     rand = np.random.choice(len(coords), num_colors, replace=False)

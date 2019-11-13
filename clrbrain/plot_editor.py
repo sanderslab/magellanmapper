@@ -179,7 +179,7 @@ class PlotEditor:
             self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas)
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
-        self.axes.format_coord = PixelDisplay(imgs2d)
+        self.axes.format_coord = PixelDisplay(imgs2d, ax_imgs)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]
         
@@ -399,12 +399,6 @@ class PlotEditor:
                         label_x = x + 20
                     self.region_label.set_horizontalalignment(alignment)
                     self.region_label.set_position((label_x, y - 20))
-                    
-                    # show color value for label
-                    label_id = self.img3d_labels[tuple(coord)]
-                    print("RGB for label {}: {}".format(
-                        label_id, np.multiply(self.ax_img.cmap(
-                            self.ax_img.norm(label_id))[:3], 255)))
 
         self.last_loc = loc
         self.last_loc_data = loc_data
@@ -447,14 +441,17 @@ class PixelDisplay(object):
     Attributes:
         imgs (List[:obj:`np.ndarray`]): Sequence of images whose intensity
             values will be displayed.
+        ax_imgs (List[:obj:`matplotlib.image.AxesImage`]): Nested sequence of
+            Matplotlib images corresponding to ``imgs``. 
     """
-    def __init__(self, imgs):
+    def __init__(self, imgs, ax_imgs):
         self.imgs = imgs
+        self.ax_imgs = ax_imgs
     
     def __call__(self, x, y):
         coord = (int(y), int(x))
-        output = "x={}, y={}, ".format(*coord[::-1])
-        zs = []
+        output = ["x={}".format(coord[1]), "y={}".format(coord[0])]
+        rgb = ""
         for i, img in enumerate(self.imgs):
             if x < 0 or y < 0 or x >= img.shape[1] or y >= img.shape[0]:
                 # no corresponding px for the image
@@ -462,6 +459,13 @@ class PixelDisplay(object):
             else:
                 # get the corresponding intensity value, truncating floats
                 z = img[coord]
+                if i == 1:
+                    # for the label image, get its RGB value
+                    ax_img = self.ax_imgs[i][0]
+                    rgb = "RGB for label {}: {}".format(
+                        z, tuple(np.multiply(ax_img.cmap(
+                            ax_img.norm(z))[:3], 255).astype(int)))
                 if isinstance(z, float): z = "{:.4f}".format(z)
-            zs.append("z(image{})={}".format(i, z))
-        return output + ", ".join(zs)
+            output.append("z(image{})={}".format(i, z))
+        output.append(rgb)
+        return ", ".join(output)

@@ -115,7 +115,7 @@ class DiscreteColormap(colors.ListedColormap):
         self.cmap_labels = discrete_colormap(
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
             min_val=min_val, max_val=max_val, min_any=min_any,
-            dup_for_neg=dup_for_neg)
+            dup_for_neg=dup_for_neg, jitter=30)
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
@@ -153,7 +153,7 @@ class DiscreteColormap(colors.ListedColormap):
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
                       seed=None, min_val=0, max_val=255, min_any=0,
-                      dup_for_neg=False):
+                      dup_for_neg=False, jitter=0):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
@@ -186,27 +186,30 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         np.random.seed(seed)
     # generate random combination of RGB values for each number of colors, 
     # where each value ranges from min-max
-    jitter = 30
     neg_buffer = 30
     cmap_offset = 0 if num_colors // 2 == num_colors / 2 else 1
     if dup_for_neg:
         # halve number of colors to duplicate for corresponding labels
         num_colors = int(np.ceil(num_colors / 2))
         max_val -= neg_buffer
-    if seed is not None:
-        np.random.seed(seed)
-    jitters = np.multiply(
-        np.random.random((num_colors, 3)), jitter - jitter / 2).astype(int)
-    max_val -= np.amax(jitters)
-    min_val -= np.amin(jitters)
+    jitters = None
+    if jitter > 0:
+        if seed is not None:
+            np.random.seed(seed)
+        jitters = np.multiply(
+            np.random.random((num_colors, 3)), jitter - jitter / 2).astype(int)
+        max_val -= np.amax(jitters)
+        min_val -= np.amin(jitters)
     space = (max_val - min_val) // np.cbrt(num_colors)
-    print(space, jitters)
+    print(space)
     sl = slice(min_val, max_val, space)
     grid = np.mgrid[sl, sl, sl]
     coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
     coords = coords[~np.all(np.less(coords, min_any), axis=1)]
     rand = np.random.choice(len(coords), num_colors, replace=False)
-    rand_coords = np.add(coords[rand], jitters)
+    rand_coords = coords[rand]
+    if jitters is not None:
+        rand_coords = np.add(rand_coords, jitters)
     rand_coords_shape = list(rand_coords.shape)
     rand_coords_shape[-1] += 1
     cmap = np.zeros(

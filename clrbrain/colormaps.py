@@ -195,21 +195,23 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         max_val -= neg_buffer
     if seed is not None:
         np.random.seed(seed)
-    jitters = (np.random.random(3) * jitter - jitter / 2).astype(int)
+    jitters = np.multiply(
+        np.random.random((num_colors, 3)), jitter - jitter / 2).astype(int)
     max_val -= np.amax(jitters)
     min_val -= np.amin(jitters)
     space = (max_val - min_val) // np.cbrt(num_colors)
-    sls = []
-    for jit in jitters:
-        sls.append(slice(min_val + jit, max_val + jit, space))
-    grid = np.mgrid[sls[0], sls[1], sls[2]]
+    print(space, jitters)
+    sl = slice(min_val, max_val, space)
+    grid = np.mgrid[sl, sl, sl]
     coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
     coords = coords[~np.all(np.less(coords, min_any), axis=1)]
     rand = np.random.choice(len(coords), num_colors, replace=False)
-    rand_coords = coords[rand]
+    rand_coords = np.add(coords[rand], jitters)
     rand_coords_shape = list(rand_coords.shape)
     rand_coords_shape[-1] += 1
-    cmap = np.zeros(rand_coords_shape)
+    cmap = np.zeros(
+        rand_coords_shape,
+        dtype=lib_clrbrain.dtype_within_range(min_val, max_val))
     cmap[:, :-1] = rand_coords
     if dup_for_neg:
         # assume that corresponding labels are mirrored (eg -5, 3, 0, 3, 5)

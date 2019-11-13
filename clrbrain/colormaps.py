@@ -4,6 +4,8 @@
 """Custom colormaps for Clrbrain.
 """
 
+from enum import Enum, auto
+
 import numpy as np
 from matplotlib import cm
 from matplotlib import colors
@@ -13,6 +15,12 @@ from clrbrain import lib_clrbrain
 
 # default colormaps, with keys backed by config.Cmaps enums
 CMAPS = {}
+
+
+class DiscreteModes(Enum):
+    """Discrete colormap generation modes."""
+    RANDOMN = auto()
+    GRID = auto()
 
 
 def make_dark_linear_cmap(name, color):
@@ -115,7 +123,8 @@ class DiscreteColormap(colors.ListedColormap):
         self.cmap_labels = discrete_colormap(
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
             min_val=min_val, max_val=max_val, min_any=min_any,
-            dup_for_neg=dup_for_neg, jitter=30)
+            dup_for_neg=dup_for_neg, jitter=20,
+            mode=DiscreteModes.RANDOMN)
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
@@ -153,7 +162,7 @@ class DiscreteColormap(colors.ListedColormap):
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
                       seed=None, min_val=0, max_val=255, min_any=0,
-                      dup_for_neg=False, jitter=0):
+                      dup_for_neg=False, jitter=0, mode=DiscreteModes.RANDOMN):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
@@ -182,8 +191,6 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         to generate a map that can be used directly in functions such 
         as ``imshow``.
     """
-    if seed is not None:
-        np.random.seed(seed)
     # generate random combination of RGB values for each number of colors, 
     # where each value ranges from min-max
     neg_buffer = 30
@@ -192,30 +199,42 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         # halve number of colors to duplicate for corresponding labels
         num_colors = int(np.ceil(num_colors / 2))
         max_val -= neg_buffer
-    jitters = None
-    if jitter > 0:
-        if seed is not None:
-            np.random.seed(seed)
-        jitters = np.multiply(
-            np.random.random((num_colors, 3)), jitter - jitter / 2).astype(int)
-        max_val -= np.amax(jitters)
-        min_val -= np.amin(jitters)
-    space = (max_val - min_val) // np.cbrt(num_colors)
-    print(space)
-    sl = slice(min_val, max_val, space)
-    grid = np.mgrid[sl, sl, sl]
-    coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
-    coords = coords[~np.all(np.less(coords, min_any), axis=1)]
-    rand = np.random.choice(len(coords), num_colors, replace=False)
-    rand_coords = coords[rand]
-    if jitters is not None:
-        rand_coords = np.add(rand_coords, jitters)
-    rand_coords_shape = list(rand_coords.shape)
-    rand_coords_shape[-1] += 1
-    cmap = np.zeros(
-        rand_coords_shape,
-        dtype=lib_clrbrain.dtype_within_range(min_val, max_val))
-    cmap[:, :-1] = rand_coords
+    if seed is not None: np.random.seed(seed)
+    if mode is DiscreteModes.GRID:
+        jitters = None
+        if jitter > 0:
+            if seed is not None: np.random.seed(seed)
+            jitters = np.multiply(
+                np.random.random((num_colors, 3)),
+                jitter - jitter / 2).astype(int)
+            max_val -= np.amax(jitters)
+            min_val -= np.amin(jitters)
+        space = (max_val - min_val) // np.cbrt(num_colors)
+        print(space)
+        sl = slice(min_val, max_val, space)
+        grid = np.mgrid[sl, sl, sl]
+        coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
+        # remove all coords where all vals are below threshold
+        # TODO: account for lost coords in initial space size determination
+        coords = coords[~np.all(np.less(coords, min_any), axis=1)]
+        rand = np.random.choice(len(coords), num_colors, replace=False)
+        rand_coords = coords[rand]
+        if jitters is not None:
+            rand_coords = np.add(rand_coords, jitters)
+        rand_coords_shape = list(rand_coords.shape)
+        rand_coords_shape[-1] += 1
+        cmap = np.zeros(
+            rand_coords_shape,
+            dtype=lib_clrbrain.dtype_within_range(min_val, max_val))
+        cmap[:, :-1] = rand_coords
+    else:
+        cmap = (np.random.random((num_colors, 4)) 
+                * (max_val - min_val) + min_val).astype(
+            lib_clrbrain.dtype_within_range(min_val, max_val))
+        below_offset = np.all(np.less(cmap[:, :3], min_any), axis=1)
+        if seed is not None: np.random.seed(seed)
+        axes = np.random.choice(3, np.sum(below_offset))
+        cmap[below_offset, axes] = min_any
     if dup_for_neg:
         # assume that corresponding labels are mirrored (eg -5, 3, 0, 3, 5)
         cmap_neg = cmap + neg_buffer

@@ -123,8 +123,7 @@ class DiscreteColormap(colors.ListedColormap):
         self.cmap_labels = discrete_colormap(
             num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
             min_val=min_val, max_val=max_val, min_any=min_any,
-            dup_for_neg=dup_for_neg, jitter=20,
-            mode=DiscreteModes.RANDOMN)
+            jitter=20, mode=DiscreteModes.RANDOMN)
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
@@ -180,8 +179,13 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             For floating point ranges such as 0.0-1.0, set as a float.
         min_any (int, float): Minimum value above which at least one value
             must be in each set of RGB values; defaults to 0. If all
-            values in an RGB set are below this value, a randomly chosen
-            RGB value will be raised to this value. 
+            values in an RGB set are below this value, the lowest
+            RGB value will be raised by a fraction of this value. 
+        jitter (int): In :obj:`DiscreteModes.GRID` mode, coordinates are
+            randomly shifted by half this value above or below their original
+            value; defaults to 0.
+        mode (:obj:`DiscreteModes`): Mode given as an enumeration; defaults
+            to :obj:`DiscreteModes.RANDOMN` mode.
     
     Returns:
         :obj:`np.ndaarry`: 2D Numpy array in the format 
@@ -191,16 +195,18 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         to generate a map that can be used directly in functions such 
         as ``imshow``.
     """
-    # generate random combination of RGB values for each number of colors, 
-    # where each value ranges from min-max
     neg_buffer = 30
     cmap_offset = 0 if num_colors // 2 == num_colors / 2 else 1
     if dup_for_neg:
         # halve number of colors to duplicate for corresponding labels
         num_colors = int(np.ceil(num_colors / 2))
         max_val -= neg_buffer
-    if seed is not None: np.random.seed(seed)
+
+    # generate random combination of RGB values for each number of colors, 
+    # where each value ranges from min-max
     if mode is DiscreteModes.GRID:
+        # discrete colors taken from an evenly spaced grid for min separation
+        # between color values
         jitters = None
         if jitter > 0:
             if seed is not None: np.random.seed(seed)
@@ -209,14 +215,15 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
                 jitter - jitter / 2).astype(int)
             max_val -= np.amax(jitters)
             min_val -= np.amin(jitters)
+        # TODO: weight chls or scale non-linearly for better visual distinction
         space = (max_val - min_val) // np.cbrt(num_colors)
-        print(space)
         sl = slice(min_val, max_val, space)
         grid = np.mgrid[sl, sl, sl]
         coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
         # remove all coords where all vals are below threshold
         # TODO: account for lost coords in initial space size determination
         coords = coords[~np.all(np.less(coords, min_any), axis=1)]
+        if seed is not None: np.random.seed(seed)
         rand = np.random.choice(len(coords), num_colors, replace=False)
         rand_coords = coords[rand]
         if jitters is not None:
@@ -228,13 +235,17 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             dtype=lib_clrbrain.dtype_within_range(min_val, max_val))
         cmap[:, :-1] = rand_coords
     else:
+        # randomly generate each color value; 4th values only for simplicity
+        # in generating array with shape for alpha channel
+        if seed is not None: np.random.seed(seed)
         cmap = (np.random.random((num_colors, 4)) 
                 * (max_val - min_val) + min_val).astype(
             lib_clrbrain.dtype_within_range(min_val, max_val))
+        # if all vals below threshold, raise lowest value
         below_offset = np.all(np.less(cmap[:, :3], min_any), axis=1)
-        if seed is not None: np.random.seed(seed)
-        axes = np.random.choice(3, np.sum(below_offset))
-        cmap[below_offset, axes] = min_any
+        axes = np.argmin(cmap[below_offset, :3], axis=1)
+        cmap[below_offset, axes] += min_any // 3
+    
     if dup_for_neg:
         # assume that corresponding labels are mirrored (eg -5, 3, 0, 3, 5)
         cmap_neg = cmap + neg_buffer
@@ -276,7 +287,7 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         # use original labels if available for mapping consistency
         lbls = config.labels_img_orig
     return DiscreteColormap(
-        lbls, config.seed, 255, False, min_any=100,
+        lbls, config.seed, 255, False, min_any=160, min_val=10,
         background=(0, (0, 0, 0, alpha_bkgd)), dup_for_neg=dup_for_neg)
 
 

@@ -161,7 +161,8 @@ class DiscreteColormap(colors.ListedColormap):
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
                       seed=None, min_val=0, max_val=255, min_any=0,
-                      dup_for_neg=False, jitter=0, mode=DiscreteModes.RANDOMN):
+                      dup_for_neg=False, dup_offset=30, jitter=0,
+                      mode=DiscreteModes.RANDOMN):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
@@ -180,7 +181,14 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         min_any (int, float): Minimum value above which at least one value
             must be in each set of RGB values; defaults to 0. If all
             values in an RGB set are below this value, the lowest
-            RGB value will be raised by a fraction of this value. 
+            RGB value will be scaled up by the ratio ``max_val:min_any``.
+            Assumes a range of ``min_val < min_any < max_val``; defaults to
+            0 to ignore.
+        dup_for_neg (bool): True to create a symmetric set of colors,
+            assuming the first half of ``num_colors`` mirror those of
+            the second half; defaults to False.
+        dup_offset (int): Amount by which to offset duplicate color values
+            if ``dup_for_neg`` is enabled; defaults to 30.
         jitter (int): In :obj:`DiscreteModes.GRID` mode, coordinates are
             randomly shifted by half this value above or below their original
             value; defaults to 0.
@@ -195,12 +203,11 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         to generate a map that can be used directly in functions such 
         as ``imshow``.
     """
-    neg_buffer = 30
     cmap_offset = 0 if num_colors // 2 == num_colors / 2 else 1
     if dup_for_neg:
         # halve number of colors to duplicate for corresponding labels
         num_colors = int(np.ceil(num_colors / 2))
-        max_val -= neg_buffer
+        max_val -= dup_offset
 
     # generate random combination of RGB values for each number of colors, 
     # where each value ranges from min-max
@@ -220,9 +227,10 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         sl = slice(min_val, max_val, space)
         grid = np.mgrid[sl, sl, sl]
         coords = np.c_[grid[0].ravel(), grid[1].ravel(), grid[2].ravel()]
-        # remove all coords where all vals are below threshold
-        # TODO: account for lost coords in initial space size determination
-        coords = coords[~np.all(np.less(coords, min_any), axis=1)]
+        if min_any > 0:
+            # remove all coords where all vals are below threshold
+            # TODO: account for lost coords in initial space size determination
+            coords = coords[~np.all(np.less(coords, min_any), axis=1)]
         if seed is not None: np.random.seed(seed)
         rand = np.random.choice(len(coords), num_colors, replace=False)
         rand_coords = coords[rand]
@@ -241,14 +249,16 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         cmap = (np.random.random((num_colors, 4)) 
                 * (max_val - min_val) + min_val).astype(
             lib_clrbrain.dtype_within_range(min_val, max_val))
-        # if all vals below threshold, raise lowest value
-        below_offset = np.all(np.less(cmap[:, :3], min_any), axis=1)
-        axes = np.argmin(cmap[below_offset, :3], axis=1)
-        cmap[below_offset, axes] += min_any // 3
+        if min_any > 0:
+            # if all vals below threshold, scale up lowest value
+            below_offset = np.all(np.less(cmap[:, :3], min_any), axis=1)
+            axes = np.argmin(cmap[below_offset, :3], axis=1)
+            cmap[below_offset, axes] = np.multiply(
+                cmap[below_offset, axes], max_val / min_any)
     
     if dup_for_neg:
         # assume that corresponding labels are mirrored (eg -5, 3, 0, 3, 5)
-        cmap_neg = cmap + neg_buffer
+        cmap_neg = cmap + dup_offset
         cmap = np.vstack((cmap_neg[::-1], cmap[cmap_offset:]))
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:

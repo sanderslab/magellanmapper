@@ -314,7 +314,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     if curr_ver <= 11:
         # ver 11 -> 12
         if info["pixel_type"] != image5d.dtype:
-            # Numpy tranpositions did not update pixel type and min/max
+            # Numpy transpositions did not update pixel type and min/max
             info["pixel_type"] = image5d.dtype
             info["near_min"], info["near_max"] = np.percentile(
                 image5d, (0.5, 99.5))

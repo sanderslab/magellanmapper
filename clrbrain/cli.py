@@ -808,7 +808,6 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             # will take the place of any previously loaded image5d
             image5d = sitk_io.read_sitk_files(
                 path, reg_names=atlas_suffix)[None]
-            print(np.amin(image5d), np.amax(image5d))
         
         annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
         if annotation_suffix is not None:

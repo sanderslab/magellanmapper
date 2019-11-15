@@ -825,7 +825,15 @@ def update_register_settings(settings, settings_type):
                 "smooth": None,
             }, 
             profile)
-        
+
+        # set smoothing to 4
+        settings.add_modifier(
+            "smooth4",
+            {
+                "smooth": 4,
+            },
+            profile)
+
         # turn off labels markers generation
         settings.add_modifier(
             "nomarkers", 

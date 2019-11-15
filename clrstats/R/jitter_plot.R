@@ -205,8 +205,9 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       mins[2] <- 0
     }
   }
-  # add 10% padding above and below y-range
-  y.pad <- 0.1 * (maxes[2] - mins[2])
+  # add 20% padding above and below y-range
+  # TODO: consider moving to parameter
+  y.pad <- 0.2 * (maxes[2] - mins[2])
   mins[2] <- mins[2] - y.pad
   maxes[2] <- maxes[2] + y.pad
   

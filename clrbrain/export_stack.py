@@ -124,6 +124,11 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
             defaults to None. Length should be equal to that of 
             ``images`` - 1.
         scale_bar: True to include scale bar; defaults to True.
+    
+    Returns:
+        :List[List[:obj:`matplotlib.image.AxesImage`]]: Nested list of 
+        axes image objects. The first list level contains planes, and
+        the second level are channels within each plane.
     """
     # number of image types (eg atlas, labels) and corresponding planes
     num_image_types = len(images)
@@ -356,10 +361,14 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
         origin=origin, cmaps_labels=cmaps_labels, scale_bar=config.scale_bar)
     
     if fit and plotted_imgs:
-        # fit frame to first image
-        ax_img = plotted_imgs[0][0]
-        plot_support.fit_frame_to_image(
-            ax_img.figure, ax_img.get_array().shape, aspect)
+        # fit frame to first plane's first available image
+        ax_img = None
+        for ax_img in plotted_imgs[0]:
+            # images may be None if alpha set to 0
+            if ax_img is not None: break
+        if ax_img is not None:
+            plot_support.fit_frame_to_image(
+                ax_img.figure, ax_img.get_array().shape, aspect)
     
     return plotted_imgs
 

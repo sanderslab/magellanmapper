@@ -271,9 +271,11 @@ class LabelToMarkerErosion(object):
             target_frac (float): Target fraction of original label to erode. 
                 Erosion will start with ``filter_size`` and use progressively
                 smaller filters until remaining above this target. Defaults
-                to None to use a fraction of 0.2.
+                to None to use a fraction of 0.2. Titrates the relative
+                amount of erosion allowed.
             min_filter_size (int): Minimum filter size, below which the
                 original, uneroded label will be used instead. Defaults to 1.
+                Titrates the absolute amount of erosion allowed.
             use_min_filter (bool): True to erode even if ``min_filter_size``
                 is reached; defaults to False to avoid any erosion if this
                 size is reached.
@@ -335,13 +337,13 @@ class LabelToMarkerErosion(object):
             thresh = 0.2 if target_frac is None else target_frac
             chosen_selem_size = selem_size
             if size_ratio > thresh: break
-        
-        if chosen_selem_size is not None:
+
+        if not np.isnan(chosen_selem_size):
             print("label {}: changed num of pixels from {} to {} "
                   "(size ratio {}), initial filter size {}, chosen {}"
                   .format(label_id, region_size, region_size_filtered, 
                           size_ratio, filter_size, chosen_selem_size))
-        
+
         if skel_eros_filt_size and np.sum(filtered) > 0:
             # skeletonize the labels to recover details from erosion;
             # need another labels erosion before skeletonization to avoid

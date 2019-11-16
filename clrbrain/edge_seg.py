@@ -14,6 +14,7 @@ from clrbrain import atlas_refiner
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import plot_3d
+from clrbrain import profiles
 from clrbrain import segmenter
 from clrbrain import sitk_io
 from clrbrain import vols
@@ -128,7 +129,8 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     if erode["interior"]:
         # make map of label interiors for interior/border comparisons
         print("Eroding labels to generate interior labels image")
-        erosion = config.register_settings["marker_erosion"]
+        erosion = config.register_settings[
+            profiles.RegKeys.EDGE_AWARE_REANNOTAION]
         erosion_frac = config.register_settings["erosion_frac"]
         interior, _ = erode_labels(
             labels_img_np, erosion, erosion_frac, 
@@ -162,9 +164,12 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
     """Erode labels image for use as markers or a map of the interior.
     
     Args:
-        labels_img_np: Numpy image array of labels in z,y,x format.
-        erosion: Filter size for erosion.
-        erosion_frac: Target erosion fraction; defaults to None.
+        labels_img_np (:obj:`np.ndarray`): Numpy image array of labels in
+            z,y,x format.
+        erosion (dict): Dictionary of erosion filter settings from
+            :class:`profiles.RegKeys` to pass to
+            :meth:`segmenter.labels_to_markers_erosion`.
+        erosion_frac (int): Target erosion fraction; defaults to None.
         mirrored: True if the primary image mirrored/symmatrical. False
             if otherwise, such as unmirrored atlases or experimental/sample
             images, in which case erosion will be performed on the full image.
@@ -183,7 +188,8 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
     # convert labels image into markers
     #eroded = segmenter.labels_to_markers_blob(labels_img_np)
     eroded, df = segmenter.labels_to_markers_erosion(
-        labels_to_erode, erosion, erosion_frac)
+        labels_to_erode, erosion[profiles.RegKeys.MARKER_EROSION],
+        erosion_frac, erosion[profiles.RegKeys.MARKER_EROSION_MIN])
     if mirrored:
         eroded = _mirror_imported_labels(eroded, len_half)
     
@@ -320,7 +326,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     # erode all labels images into markers for watershed; not multiprocessed
     # since erosion is itself multiprocessed
     erode = config.register_settings["erode_labels"]
-    erosion = config.register_settings["marker_erosion"]
+    erosion = config.register_settings[profiles.RegKeys.EDGE_AWARE_REANNOTAION]
     erosion_frac = config.register_settings["erosion_frac"]
     mirrored = atlas and _is_profile_mirrored()
     dfs_eros = []

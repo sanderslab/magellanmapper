@@ -319,6 +319,7 @@ class RegKeys(Enum):
     MARKER_EROSION_MIN = auto()
     MARKER_EROSION_USE_MIN = auto()
     SAVE_STEPS = auto()
+    EDGE_AWARE_REANNOTAION = auto()
 
 
 class RegisterSettings(SettingsDict):
@@ -415,9 +416,13 @@ class RegisterSettings(SettingsDict):
         # useful when ventricular spaces are labeled
         self["log_atlas_thresh"] = False
         
-        # labels erosion for watershed seeds/markers in resegmentation and 
-        # demarcating the interior of regions; can turn on/off with erode_labels
-        self["marker_erosion"] = 8  # for converting labels to markers
+        # edge-aware reannotation: labels erosion for watershed seeds/markers
+        # in resegmentation; also used to demarcate the interior of regions;
+        # can turn on/off with erode_labels
+        self[RegKeys.EDGE_AWARE_REANNOTAION] = {
+            RegKeys.MARKER_EROSION: 8,  # filter size for labels to markers
+            RegKeys.MARKER_EROSION_MIN: 1,  # None for default, 0 for no min
+        }
         self["erosion_frac"] = 0.5  # target size as frac of orig; can be None
         self["erode_labels"] = {"markers": True, "interior": False}
         
@@ -443,7 +448,7 @@ class RegisterSettings(SettingsDict):
         # planar orientation for transposition prior rather than after import
         self["pre_plane"] = None
         
-        # labels range given as ``((start0, end0), (start1, end1), ...), 
+        # labels range given as ``((start0, end0), (start1, end1), ...)``, 
         # where labels >= start and < end will be treated as foreground 
         # when measuring overlap, eg labeled ventricles that would be 
         # background in histology image
@@ -570,11 +575,11 @@ def update_register_settings(settings, settings_type):
                     # shear cord opposite the brain back toward midline
                     "axis_along": 1, "axis_shift": 0, "shift": (25, 0), 
                     "bounds": ((None, None), (70, 250), (0, 150))
-                },{
+                }, {
                     # shear distal cord where the tail wraps back on itself
                     "axis_along": 2, "axis_shift": 0, "shift": (0, 50), 
                     "bounds": ((None, None), (0, 200), (50, 150))
-                },{
+                }, {
                     # counter shearing at far distal end, using attachment for 
                     # a more gradual shearing along the y-axis to preserve the 
                     # cord along that axis
@@ -646,6 +651,9 @@ def update_register_settings(settings, settings_type):
                 "expand_labels": (((None, ), (0, 279), (103, 108)),), 
                 "rotate": ((1.5, 1), (2, 2)),
                 "smooth": 3,
+                RegKeys.EDGE_AWARE_REANNOTAION: {
+                    RegKeys.MARKER_EROSION_MIN: 4,
+                }
             }, 
             profile)
         
@@ -838,7 +846,7 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "nomarkers", 
             {
-                "marker_erosion": None,
+                RegKeys.EDGE_AWARE_REANNOTAION: None,
             }, 
             profile)
         

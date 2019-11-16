@@ -7,7 +7,7 @@ Each profile has a default set of settings, which can be modified through
 "modifier" sub-profiles with groups of settings that overwrite the 
 given default settings. 
 """
-from enum import Enum
+from enum import Enum, auto
 
 from clrbrain import config
 
@@ -314,11 +314,11 @@ def update_process_settings(settings, settings_type):
 
 class RegKeys(Enum):
     """Register setting enumerations."""
-    ACTIVE = "active"
-    MARKER_EROSION = "marker_erosion"
-    MARKER_EROSION_MIN = "marker_erosion_min"
-    MARKER_EROSION_USE_MIN = "marker_erosion_use_min"
-    SAVE_STEPS = "save_steps"
+    ACTIVE = auto()
+    MARKER_EROSION = auto()
+    MARKER_EROSION_MIN = auto()
+    MARKER_EROSION_USE_MIN = auto()
+    SAVE_STEPS = auto()
 
 
 class RegisterSettings(SettingsDict):

@@ -451,7 +451,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         print(df.jitter)
       }
       group.col.jitter <- group.col
-      if (group.col.jitter == split.col) {
+      if (!is.null(split.col) && group.col.jitter == split.col) {
         # paired stats default to using "Condition" for both group and split
         # columns, so need to change if the same
         # TODO: allow split.col to be ignored

@@ -518,15 +518,15 @@ class ROIEditor:
             img2d_ov = imgs[0]
             roi_end = np.add(offset, roi_size)
             if lev > 0:
-                # move origin progressively closer with each zoom level
+                # move origin progressively closer with each zoom level,
+                # a small fraction less than the offset
                 zoom_mult = math.pow(lev, 3)
-                ori = np.floor(
-                    np.multiply(offset[:2], zoom_levels + zoom_mult - 1)
-                    / (zoom_levels + zoom_mult)).astype(int)
+                denom = zoom_levels + zoom_mult
+                ori = np.multiply(offset[:2], (denom - 1) / denom).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
                 zoom = zoom_mult + 3
-                size = np.floor(zoom_shape / zoom).astype(int)
+                size = (zoom_shape / zoom).astype(int)
                 end = np.add(ori, size)
                 # if ROI exceeds bounds of zoomed plot, shift plot
                 for o in range(len(ori)):
@@ -655,7 +655,6 @@ class ROIEditor:
 
         # overview images taken from the bottom plane of the offset, with
         # progressively zoomed overview images if set for additional zoom levels
-        overview_cols = zoom_plot_cols // zoom_levels
         for level in range(zoom_levels - 1):
             ax = plt.subplot(gs[0, level])
             ax_overviews.append(ax)

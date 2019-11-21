@@ -123,7 +123,8 @@ class Styles2D(Enum):
     SQUARE_3D = "Square with 3D"
     SINGLE_ROW = "Single row"
     WIDE = "Wide"
-    MULTI_ZOOM = "Multi-zoom"
+    ZOOM3 = "3 level zoom"
+    ZOOM4 = "4 level zoom"
     THIN_ROWS = "Thin rows"
 
 
@@ -875,8 +876,12 @@ class Visualization(HasTraits):
             # layout for wide ROIs to maximize real estate on widescreen
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_cols=7)
-        elif self._styles_2d[0] == Styles2D.MULTI_ZOOM.value:
-            # multi-zoom overview plots
+        elif self._styles_2d[0] == Styles2D.ZOOM3.value:
+            # 3 level zoom overview plots with specific multipliers
+            roi_ed.plot_2d_stack(
+                *stack_args, **stack_args_named, zoom_levels=(0, 4, 20))
+        elif self._styles_2d[0] == Styles2D.ZOOM4.value:
+            # 4 level zoom overview plots with default zoom multipliers
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=4)
         elif self._styles_2d[0] == Styles2D.THIN_ROWS.value:

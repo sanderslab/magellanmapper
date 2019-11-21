@@ -344,8 +344,8 @@ class ROIEditor:
                 XY plane (default) and "xz" to show XZ plane.
             padding_stack: The amount of padding in pixels, defaulting to the
                 padding attribute.
-            zoom_levels: Number of overview zoom levels to include;
-                defaults to 1.
+            zoom_levels (int, List[int]): Number of overview zoom levels to
+                include or sequence of zoom multipliers; defaults to 1.
             single_roi_row: True if the ROI-sized plots should be
                 displayed on a single row; defaults to False.
             z_level: Position of the z-plane shown in the overview plots,
@@ -374,6 +374,11 @@ class ROIEditor:
                 defaults to None.
         """
         time_start = time()
+
+        if not np.ndim(zoom_levels):
+            # convert scalar to sequence of zoom multipliers
+            zoom_levels = np.power(np.arange(zoom_levels), 3)
+        num_zoom_levels = len(zoom_levels)
 
         fig = plt.figure()
         # black text with transluscent background the color of the figure
@@ -482,7 +487,7 @@ class ROIEditor:
                 zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
                 col_remainder = z_planes % zoom_plot_cols
         # number of columns for top row with overview plots
-        top_cols = zoom_levels
+        top_cols = len(zoom_levels)
         height_ratios = (3, zoom_plot_rows)
         if mlab_screenshot is None:
             main_img_shape = img2ds["imgs"][0].shape
@@ -520,8 +525,8 @@ class ROIEditor:
             if lev > 0:
                 # move origin progressively closer with each zoom level,
                 # a small fraction less than the offset
-                zoom_mult = math.pow(lev, 3)
-                denom = zoom_levels + zoom_mult + 1
+                zoom_mult = zoom_levels[lev]
+                denom = num_zoom_levels + zoom_mult + 1
                 ori = np.multiply(offset[:2], (denom - 1) / denom).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
@@ -636,7 +641,7 @@ class ROIEditor:
                 # move only if step registered and changing position
                 z_overview = z_overview_new
                 _, _, imgs = prep_overview()
-                for lev in range(zoom_levels):
+                for lev in range(num_zoom_levels):
                     # prevent performance degradation
                     ax_ov = ax_overviews[lev]
                     ax_ov.clear()
@@ -655,7 +660,7 @@ class ROIEditor:
 
         # overview images taken from the bottom plane of the offset, with
         # progressively zoomed overview images if set for additional zoom levels
-        for level in range(zoom_levels):
+        for level in range(num_zoom_levels):
             ax = plt.subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
@@ -810,7 +815,7 @@ class ROIEditor:
         # show 3D screenshot if available
         if mlab_screenshot is not None:
             img3d = mlab_screenshot
-            ax = plt.subplot(gs[0, zoom_levels])
+            ax = plt.subplot(gs[0, num_zoom_levels])
             # auto to adjust size with less overlap
             ax.imshow(img3d)
             ax.set_aspect(img3d.shape[1] / img3d.shape[0])

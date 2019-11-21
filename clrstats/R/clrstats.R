@@ -574,10 +574,11 @@ filterStats <- function(stats, corr=NULL) {
   
   for (interact in interactions) {
     # only correct/adjust means stats with >= 2 vals
-    mask.corr <- filtered[[paste0(interact, ".n")]] > 1
+    filt.n = filtered[[paste0(interact, ".n")]]
+    mask.corr <- filt.n > 1 & !is.na(filt.n) # eg NA from basic stats
     num.regions <- nrow(filtered[mask.corr, ])
     col.for.log <- paste0(interact, ".pcorr")
-    if (!is.null(corr)) {
+    if (!is.null(corr) && num.regions > 0) {
       # apply correction based on number of comparisons
       col <- paste0(interact, ".p")
       cat("correcting", col, "by", corr, "for", num.regions, "regions\n")

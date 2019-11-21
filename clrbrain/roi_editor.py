@@ -378,6 +378,7 @@ class ROIEditor:
         if not np.ndim(zoom_levels):
             # convert scalar to sequence of zoom multipliers
             zoom_levels = np.power(np.arange(zoom_levels), 3)
+            zoom_levels[1:] += 3
         num_zoom_levels = len(zoom_levels)
 
         fig = plt.figure()
@@ -525,12 +526,11 @@ class ROIEditor:
             if lev > 0:
                 # move origin progressively closer with each zoom level,
                 # a small fraction less than the offset
-                zoom_mult = zoom_levels[lev]
-                denom = num_zoom_levels + zoom_mult + 1
+                zoom = zoom_levels[lev]
+                denom = num_zoom_levels + zoom
                 ori = np.multiply(offset[:2], (denom - 1) / denom).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
-                zoom = zoom_mult + 3
                 size = (zoom_shape / zoom).astype(int)
                 end = np.add(ori, size)
                 # if ROI exceeds bounds of zoomed plot, shift plot

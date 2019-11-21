@@ -119,10 +119,10 @@ class SegmentsArrayAdapter(TabularAdapter):
 
 class Styles2D(Enum):
     """Enumerations for 2D ROI GUI styles."""
-    SQUARE_ROI = "Square ROI"
-    SQUARE_ROI_3D = "Square ROI with 3D"
+    SQUARE = "Square"
+    SQUARE_3D = "Square with 3D"
     SINGLE_ROW = "Single row"
-    WIDE_ROI = "Wide ROI"
+    WIDE = "Wide"
     MULTI_ZOOM = "Multi-zoom"
     THIN_ROWS = "Thin rows"
 
@@ -566,7 +566,7 @@ class Visualization(HasTraits):
         self._circles_2d = [
             roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
-        self._styles_2d = [Styles2D.SQUARE_ROI.value]
+        self._styles_2d = [Styles2D.SQUARE.value]
         #self._check_list_2d = [self._DEFAULTS_2D[1]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
         if (config.process_settings["vis_3d"].lower() 
@@ -857,7 +857,7 @@ class Visualization(HasTraits):
             "grid": grid, "img_region": self._img_region,
             "max_intens_proj": max_intens_proj, 
             "labels_img": config.labels_img}
-        if self._styles_2d[0] == Styles2D.SQUARE_ROI_3D.value:
+        if self._styles_2d[0] == Styles2D.SQUARE_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(
                 mode="rgba", antialiased=True)
@@ -871,7 +871,7 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=2, 
                 single_roi_row=True, 
                 z_level=roi_ed.ZLevels.MIDDLE, mlab_screenshot=screenshot)
-        elif self._styles_2d[0] == Styles2D.WIDE_ROI.value:
+        elif self._styles_2d[0] == Styles2D.WIDE.value:
             # layout for wide ROIs to maximize real estate on widescreen
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_cols=7)

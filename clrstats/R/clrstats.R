@@ -469,10 +469,11 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       # add mean, median, and CI for each group to stats data frame
       names <- stats.group[[1]]
       for (j in seq_along(names)) {
-        stats[i, paste0(names[j], ".mean")] <- stats.group[[2]][j]
-        stats[i, paste0(names[j], ".med")] <- stats.group[[3]][j]
-        stats[i, paste0(names[j], ".sd")] <- stats.group[[4]][j]
-        stats[i, paste0(names[j], ".ci")] <- stats.group[[5]][j]
+        stats[i, paste0(names[j], ".n")] <- stats.group[[2]][j]
+        stats[i, paste0(names[j], ".mean")] <- stats.group[[3]][j]
+        stats[i, paste0(names[j], ".med")] <- stats.group[[4]][j]
+        stats[i, paste0(names[j], ".sd")] <- stats.group[[5]][j]
+        stats[i, paste0(names[j], ".ci")] <- stats.group[[6]][j]
       }
     } else {
       # ignore region if all values 0, leaving entry for region as NA and 
@@ -525,6 +526,7 @@ filterStats <- function(stats, corr=NULL) {
   # get names and mean and CI columns
   cols.names <- names(stats.filt)
   cols.means.cis <- c(
+    cols.names[grepl(".n", cols.names)], 
     cols.names[grepl(".mean", cols.names)], 
     cols.names[grepl(".med", cols.names)], 
     cols.names[grepl(".sd", cols.names)], 

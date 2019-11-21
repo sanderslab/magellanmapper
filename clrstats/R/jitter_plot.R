@@ -49,7 +49,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   #   show.labels: Annotate points with sample names; defaults to FALSE.
   #
   # Returns:
-  #   List of group names, means, and 95% confidence intervals.
+  #   List of group names, n per subgroup, means, and 95% confidence intervals.
   
   # set up grouping, where "group" specifies the main group, and 
   # "split.col" specifies subgroups
@@ -105,6 +105,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   samples <- df.region$Sample
   int.digits <- nchar(trunc(max(vals)))
   vals.groups <- list() # list of vals for each group-subgroup group
+  vals.n <- vector(length=num.groupcombos)
   vals.means <- vector(length=num.groupcombos)
   vals.medians <- vector(length=num.groupcombos)
   vals.cis <-vector(length=num.groupcombos)
@@ -130,6 +131,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       }
       vals.group <- vals[mask]
       vals.groups[[i]] <- list(vals=vals.group, samples=samples[mask])
+      vals.n[[i]] <- length(vals.group)
       
       # error bars
       vals.means[i] <- mean(vals.group)
@@ -376,7 +378,8 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     }
   par(par.old)
   
-  return(list(names.groupcombos, vals.means, vals.medians, vals.sds, vals.cis))
+  return(list(
+    names.groupcombos, vals.n, vals.means, vals.medians, vals.sds, vals.cis))
 }
 
 getUniqueSubgroups <- function(subgroups, split.by.subgroup) {

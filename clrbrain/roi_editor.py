@@ -314,7 +314,7 @@ class ROIEditor:
     def plot_2d_stack(self, fn_update_seg, title, filename, image5d, channel,
                       roi_size, offset, segments, mask_in, segs_cmap, 
                       fn_close_listener, border=None, plane="xy", 
-                      padding_stack=None, zoom_levels=2, single_zoom_row=False,
+                      padding_stack=None, zoom_levels=1, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None, 
                       blobs_truth=None, circles=None, mlab_screenshot=None, 
                       grid=False, zoom_cols=ZOOM_COLS, img_region=None, 
@@ -344,10 +344,9 @@ class ROIEditor:
                 XY plane (default) and "xz" to show XZ plane.
             padding_stack: The amount of padding in pixels, defaulting to the
                 padding attribute.
-            zoom_levels: Number of zoom levels to include, with n - 1 levels
-                included at the overview level, and the last one viewed
-                as the series of ROI-sized plots; defaults to 2.
-            single_zoom_row: True if the ROI-sized zoomed plots should be
+            zoom_levels: Number of overview zoom levels to include;
+                defaults to 1.
+            single_roi_row: True if the ROI-sized plots should be
                 displayed on a single row; defaults to False.
             z_level: Position of the z-plane shown in the overview plots,
                 based on the Z_LEVELS attribute constant; defaults to
@@ -467,7 +466,7 @@ class ROIEditor:
         aspect, origin, img2ds = prep_overview()
 
         # plot layout depending on number of z-planes
-        if single_zoom_row:
+        if single_roi_row:
             # show all plots in single row
             zoom_plot_rows = 1
             col_remainder = 0
@@ -482,17 +481,18 @@ class ROIEditor:
                 zoom_plot_cols += 1
                 zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
                 col_remainder = z_planes % zoom_plot_cols
-        # overview plots is 1 > levels, but last spot is taken by screenshot
+        # number of columns for top row with overview plots
         top_cols = zoom_levels
         height_ratios = (3, zoom_plot_rows)
         if mlab_screenshot is None:
-            # remove column for screenshot
-            top_cols -= 1
             main_img_shape = img2ds["imgs"][0].shape
             if main_img_shape[1] > 2 * main_img_shape[0]:
-                # for wide ROIs, prioritize the fully zoomed plots, especially
+                # for wide layouts, prioritize the ROI plots, especially
                 # if only one overview column
                 height_ratios = (1, 1) if top_cols >= 2 else (1, 2)
+        else:
+            # add column for screenshot
+            top_cols += 1
         gs = gridspec.GridSpec(2, top_cols, wspace=0.7, hspace=0.4,
                                height_ratios=height_ratios)
 
@@ -521,7 +521,7 @@ class ROIEditor:
                 # move origin progressively closer with each zoom level,
                 # a small fraction less than the offset
                 zoom_mult = math.pow(lev, 3)
-                denom = zoom_levels + zoom_mult
+                denom = zoom_levels + zoom_mult + 1
                 ori = np.multiply(offset[:2], (denom - 1) / denom).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
@@ -636,7 +636,7 @@ class ROIEditor:
                 # move only if step registered and changing position
                 z_overview = z_overview_new
                 _, _, imgs = prep_overview()
-                for lev in range(zoom_levels - 1):
+                for lev in range(zoom_levels):
                     # prevent performance degradation
                     ax_ov = ax_overviews[lev]
                     ax_ov.clear()
@@ -655,7 +655,7 @@ class ROIEditor:
 
         # overview images taken from the bottom plane of the offset, with
         # progressively zoomed overview images if set for additional zoom levels
-        for level in range(zoom_levels - 1):
+        for level in range(zoom_levels):
             ax = plt.subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
@@ -810,7 +810,7 @@ class ROIEditor:
         # show 3D screenshot if available
         if mlab_screenshot is not None:
             img3d = mlab_screenshot
-            ax = plt.subplot(gs[0, zoom_levels - 1])
+            ax = plt.subplot(gs[0, zoom_levels])
             # auto to adjust size with less overlap
             ax.imshow(img3d)
             ax.set_aspect(img3d.shape[1] / img3d.shape[0])

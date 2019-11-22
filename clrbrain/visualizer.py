@@ -857,7 +857,8 @@ class Visualization(HasTraits):
             "circles": roi_editor.ROIEditor.CircleStyles(self._circles_2d[0]),
             "grid": grid, "img_region": self._img_region,
             "max_intens_proj": max_intens_proj, 
-            "labels_img": config.labels_img}
+            "labels_img": config.labels_img,
+            "zoom_shift": config.plot_labels[config.PlotLabels.ZOOM_SHIFT]}
         if self._styles_2d[0] == Styles2D.SQUARE_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(

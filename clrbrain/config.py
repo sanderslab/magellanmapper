@@ -118,6 +118,7 @@ PlotLabels = Enum(
         "GROUP_COL",  # data frame group column
         "WT_COL",  # weight column
         "ID_COL",  # ID column
+        "ZOOM_SHIFT",  # shift plot offset when zooming into ROI
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)

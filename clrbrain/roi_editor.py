@@ -314,7 +314,8 @@ class ROIEditor:
     def plot_2d_stack(self, fn_update_seg, title, filename, image5d, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
                       fn_close_listener, border=None, plane="xy",
-                      padding_stack=None, zoom_levels=1, single_roi_row=False,
+                      padding_stack=None, zoom_levels=1, zoom_shift=None,
+                      single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
                       grid=False, roi_cols=ROI_COLS, img_region=None,
@@ -346,6 +347,9 @@ class ROIEditor:
                 padding attribute.
             zoom_levels (int, List[int]): Number of overview zoom levels to
                 include or sequence of zoom multipliers; defaults to 1.
+            zoom_shift (List[float]): Sequence of x,y shift in zoomed plot
+                origin when zooming into ROI; defaults to None, which will
+                use ``(1, 1)``.
             single_roi_row: True if the ROI-sized plots should be
                 displayed on a single row; defaults to False.
             z_level: Position of the z-plane shown in the overview plots,
@@ -380,6 +384,9 @@ class ROIEditor:
             zoom_levels = np.power(np.arange(zoom_levels), 3)
             zoom_levels[1:] += 3
         num_zoom_levels = len(zoom_levels)
+        if zoom_shift is None:
+            # shift origin of zoomed plot so that ROI is near upper L corner
+            zoom_shift = (1, 1)
 
         fig = plt.figure()
         # black text with transluscent background the color of the figure
@@ -527,8 +534,8 @@ class ROIEditor:
                 # move origin progressively closer with each zoom level,
                 # a small fraction less than the offset
                 zoom = zoom_levels[lev]
-                denom = num_zoom_levels + zoom
-                ori = np.multiply(offset[:2], (denom - 1) / denom).astype(int)
+                ori = np.multiply(
+                    offset[:2], np.subtract(zoom, zoom_shift) / zoom).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
                 size = (zoom_shape / zoom).astype(int)

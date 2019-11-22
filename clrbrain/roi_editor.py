@@ -260,12 +260,12 @@ class ROIEditor:
     flag, reposition, or add/subtract annotations.
 
     Attributes:
-        ZOOM_COLS (int): Default number of columns for the "zoomed-in"
+        ROI_COLS (int): Default number of columns for the "zoomed-in"
             2D plots, the 2D planes for the ROI.
         ZLevels (:obj:`Enum`): Enum denoting the possible positions of the
             z-plane shown in the overview plots.
     """
-    ZOOM_COLS = 9
+    ROI_COLS = 9
 
     ZLevels = Enum(
         "ZLevels", (
@@ -312,12 +312,12 @@ class ROIEditor:
         self._circle_last_picked = []
 
     def plot_2d_stack(self, fn_update_seg, title, filename, image5d, channel,
-                      roi_size, offset, segments, mask_in, segs_cmap, 
-                      fn_close_listener, border=None, plane="xy", 
+                      roi_size, offset, segments, mask_in, segs_cmap,
+                      fn_close_listener, border=None, plane="xy",
                       padding_stack=None, zoom_levels=1, single_roi_row=False,
-                      z_level=ZLevels.BOTTOM, roi=None, labels=None, 
-                      blobs_truth=None, circles=None, mlab_screenshot=None, 
-                      grid=False, zoom_cols=ZOOM_COLS, img_region=None, 
+                      z_level=ZLevels.BOTTOM, roi=None, labels=None,
+                      blobs_truth=None, circles=None, mlab_screenshot=None,
+                      grid=False, roi_cols=ROI_COLS, img_region=None,
                       max_intens_proj=False, labels_img=None):
         """Shows a figure of 2D plots to compare with the 3D plot.
 
@@ -361,8 +361,8 @@ class ROIEditor:
             mlab_screenshot (:obj:`np.ndarray`): Array from Mayavi screenshot;
                 defaults to None.
             grid (bool): True to overlay a grid on all plots.
-            zoom_cols: Number of columns per row to reserve for zoomed plots;
-                defaults to :attr:``ZOOM_COLS``.
+            roi_cols (int): Number of columns per row to reserve for ROI plots;
+                defaults to :attr:`ROI_COLS`.
             img_region: 3D boolean or binary array corresponding to a scaled
                 version of ``image5d`` with the selected region labeled as True
                 or 1. ``config.labels_scaling`` will be used to scale up this
@@ -480,9 +480,9 @@ class ROIEditor:
         else:
             # wrap plots after reaching max, but tolerates additional column
             # if it will fit all the remainder plots from the last row
-            zoom_plot_rows = math.ceil(z_planes / zoom_cols)
-            col_remainder = z_planes % zoom_cols
-            zoom_plot_cols = zoom_cols
+            zoom_plot_rows = math.ceil(z_planes / roi_cols)
+            col_remainder = z_planes % roi_cols
+            zoom_plot_cols = roi_cols
             if 0 < col_remainder < zoom_plot_rows:
                 zoom_plot_cols += 1
                 zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
@@ -850,9 +850,9 @@ class ROIEditor:
         z_planes = roi.shape[0]
         # wrap plots after reaching max, but tolerates additional column
         # if it will fit all the remainder plots from the last row
-        zoom_plot_rows = math.ceil(z_planes / self.ZOOM_COLS)
-        col_remainder = z_planes % self.ZOOM_COLS
-        zoom_plot_cols = self.ZOOM_COLS
+        zoom_plot_rows = math.ceil(z_planes / self.ROI_COLS)
+        col_remainder = z_planes % self.ROI_COLS
+        zoom_plot_cols = self.ROI_COLS
         if col_remainder > 0 and col_remainder < zoom_plot_rows:
             zoom_plot_cols += 1
             zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)

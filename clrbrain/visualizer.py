@@ -875,7 +875,7 @@ class Visualization(HasTraits):
         elif self._styles_2d[0] == Styles2D.WIDE.value:
             # layout for wide ROIs to maximize real estate on widescreen
             roi_ed.plot_2d_stack(
-                *stack_args, **stack_args_named, zoom_cols=7)
+                *stack_args, **stack_args_named, roi_cols=7)
         elif self._styles_2d[0] == Styles2D.ZOOM3.value:
             # 3 level zoom overview plots with specific multipliers
             roi_ed.plot_2d_stack(
@@ -887,7 +887,7 @@ class Visualization(HasTraits):
         elif self._styles_2d[0] == Styles2D.THIN_ROWS.value:
             # layout for square ROIs with thin rows to create a tall fig
             roi_ed.plot_2d_stack(
-                *stack_args, **stack_args_named, zoom_levels=2, zoom_cols=6)
+                *stack_args, **stack_args_named, zoom_levels=2, roi_cols=6)
         else:
             # defaults to Square style without oblique view
             roi_ed.plot_2d_stack(

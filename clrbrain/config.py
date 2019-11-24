@@ -218,7 +218,10 @@ verified_db = None # automated verifications DB
 # atlas label keys for command-line parsing
 AtlasLabels = Enum(
     "AtlasLabels", (
-        "PATH_REF", "LEVEL", "ID", "ORIG_COLORS" 
+        "PATH_REF", "LEVEL", "ID", "ORIG_COLORS",
+        # show labels as binary image with transparent background and given
+        # color (eg "black" or "white") as foreground
+        "BINARY",
     )
 )
 # default to load original labels image if available for ID-color mapping

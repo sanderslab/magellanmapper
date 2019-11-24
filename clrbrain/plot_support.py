@@ -26,7 +26,7 @@ except ImportError as e:
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
                         vmax=None, origin=None, interpolation=None,
-                        norms=None):
+                        norms=None, nan_color=None):
     """Show multichannel 2D image with channels overlaid over one another.
 
     Applies :attr:`config.transform` with :obj:`config.Transforms.ROTATE`
@@ -53,10 +53,15 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
+        nan_color (str): String of color to use for NaN values; defaults to
+            None to use "black".
     
     Returns:
         List of ``AxesImage`` objects.
     """
+    if not nan_color:
+        # default to black for NaN values
+        nan_color = "black"
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
     img = []
@@ -88,8 +93,8 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         norm = None if norms is None else norms[chl]
         cmap = colormaps.get_cmap(cmap)
         if cmap is not None:
-            # show masked values such as NaNs as black to distinguish from 0
-            cmap.set_bad(color="black")
+            # given color for masked values such as NaNs to distinguish from 0
+            cmap.set_bad(color=nan_color)
         if vmin is not None:
             vmin_plane = vmin[chl]
         if vmax is not None:
@@ -125,7 +130,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
                    vmins=None, vmaxs=None):
     """Show multiple, overlaid images.
     
-    Wrapper function calling :func:``imshow_multichannel`` for multiple 
+    Wrapper function calling :meth:`imshow_multichannel` for multiple 
     images. The first image is treated as a sample image with potential 
     for multiple channels. Subsequent images are typically label images, 
     which may or may not have multple channels.
@@ -140,8 +145,11 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             for all subsequent images.
         cmaps: Either a single colormap for all images or a list of 
             colormaps corresponding to each image. Colormaps of type 
-            :class:``colormaps.DiscreteColormap`` will have their 
-            normalization object applied as well.
+            :class:`colormaps.DiscreteColormap` will have their 
+            normalization object applied as well. If a color is given for
+            :obj:`config.AtlasLabels.BINARY` in :attr:`config.atlas_labels`,
+            images with :class:`colormaps.DiscreteColormap` will be
+            converted to NaN for foreground to use this color.
         alphas: Either a single alpha for all images or a list of 
             alphas corresponding to each image.
         vmins: A list of vmins for each image; defaults to None to use 
@@ -192,19 +200,26 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
 
     for i in range(num_imgs2d):
         # generate a multichannel display image for each 2D image
+        img = imgs2d[i]
+        if img is None: continue
         cmap = cmaps[i]
         norm = None
+        nan_color = None
         if isinstance(cmap, colormaps.DiscreteColormap):
             # get normalization factor for discrete colormaps
             norm = [cmap.norm]
             cmap = [cmap]
+            nan_color = config.atlas_labels[config.AtlasLabels.BINARY]
+            if nan_color:
+                # convert all foreground to NaN to use the given color;
+                # assumes DiscreteColormap sets background as transparent
+                img[img != 0] = np.nan
         if i == 0 and img_norm_setting:
-            imgs2d[0] = lib_clrbrain.normalize(imgs2d[0], *img_norm_setting)
-        if imgs2d[i] is None: continue
+            img = lib_clrbrain.normalize(img, *img_norm_setting)
         ax_img = imshow_multichannel(
-            ax, imgs2d[i], channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
+            ax, img, channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
             vmax=vmaxs[i], origin=origin, interpolation="none",
-            norms=norm)
+            norms=norm, nan_color=nan_color)
         ax_imgs.append(ax_img)
     return ax_imgs
 

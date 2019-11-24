@@ -917,10 +917,25 @@ def main():
     
     plot_2d_type = lib_clrbrain.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
+    
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
+        title = config.plot_labels[config.PlotLabels.TITLE]
+        x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
+        data_cols = config.plot_labels[config.PlotLabels.Y_COL]
+        if data_cols is not None and not lib_clrbrain.is_seq(data_cols):
+            data_cols = (data_cols, )
+        y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
+        y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
+        col_wt = config.plot_labels[config.PlotLabels.WT_COL]
+        col_groups = config.plot_labels[config.PlotLabels.GROUP_COL]
         plot_bars(
-            config.filename, show=(not config.no_show), prefix=config.prefix)
+            config.filename, data_cols=data_cols, 
+            legend_names=None, col_groups=col_groups, title=title, 
+            y_label=y_lbl, y_unit=y_unit, 
+            size=size, show=show, groups=config.groups, 
+            prefix=config.prefix,
+            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS:
         # barplot for data frame from R stats from means/CIs

@@ -355,7 +355,8 @@ class ROIEditor:
             z_level: Position of the z-plane shown in the overview plots,
                 based on the Z_LEVELS attribute constant; defaults to
                 Z_LEVELS[0].
-            roi: A denoised region of interest for display in fully zoomed plots.
+            roi (:obj:`np.ndarray`): A denoised region of interest for display
+                in ROI plots, such as a preprocessed ROI.
                 Defaults to None, in which case image5d will be used instead.
             labels (:obj:`np.ndarray`): Segmentation labels of the same shape
                 as that of ``image5d``; defaults to None.

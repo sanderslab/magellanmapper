@@ -690,7 +690,9 @@ def is_seq(val):
     Returns:
         True if the value is a list, tuple, or Numpy array.
     """
-    return isinstance(val, (list, tuple, np.ndarray))
+    # Numpy rec instead of isscalar to handle more cases such as 0d Numpy
+    # arrays and third-party objects
+    return np.ndim(val) != 0
 
 
 def enum_dict_aslist(d):

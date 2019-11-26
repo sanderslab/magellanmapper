@@ -351,7 +351,7 @@ def get_label_side(label_id):
     return config.HemSides.BOTH.value
 
 
-def get_label_ids_from_position(coord, labels_img, scaling, rounding=False, 
+def get_label_ids_from_position(coord, labels_img, scaling=None, rounding=False, 
                                 return_coord_scaled=False):
     """Get the atlas label IDs for the given coordinates.
     
@@ -361,7 +361,7 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False,
         labels_img: The registered image whose intensity values correspond to 
             label IDs.
         scaling: Scaling factor for the labels image size compared with the 
-            experiment image.
+            experiment image; defaults to None.
         rounding: True to round coordinates after scaling, which should be 
             used rounding to reverse coordinates that were previously scaled 
             inversely to avoid size degredation with repeated scaling. 
@@ -376,9 +376,12 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False,
         True, also returns a Numpy array of the same shape as ``coord`` 
         scaled based on ``scaling``.
     """
-    lib_clrbrain.printv("getting label IDs from coordinates")
-    # scale coordinates to atlas image size
-    coord_scaled = np.multiply(coord, scaling)
+    lib_clrbrain.printv(
+        "getting label IDs from coordinates using scaling", scaling)
+    coord_scaled = coord
+    if scaling is not None:
+        # scale coordinates to atlas image size
+        coord_scaled = np.multiply(coord, scaling)
     if rounding: 
         # round when extra precision is necessary, such as during reverse 
         # scaling, which requires clipping so coordinates don't exceed labels 
@@ -389,12 +392,6 @@ def get_label_ids_from_position(coord, labels_img, scaling, rounding=False,
     else:
         # typically don't round to stay within bounds
         coord_scaled = coord_scaled.astype(np.int)
-    '''
-    exceeding = np.greater_equal(coord_scaled, labels_img.shape)
-    print("exceeding:\n{}".format(exceeding))
-    print("cood_scaled exceeding:\n{}".format(coord_scaled[np.any(exceeding, axis=1)]))
-    print("y exceeding:\n{}".format(coord_scaled[coord_scaled[:, 1] >= labels_img.shape[1]]))
-    '''
     
     # index blob coordinates into labels image by int array indexing to 
     # get the corresponding label IDs

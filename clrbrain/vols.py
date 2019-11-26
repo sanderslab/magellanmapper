@@ -13,6 +13,7 @@ from time import time
 import numpy as np
 import pandas as pd
 from skimage import measure
+from sklearn import cluster
 
 from clrbrain import config
 from clrbrain import lib_clrbrain
@@ -47,6 +48,9 @@ LabelMetrics = Enum(
         # overlap metrics
         "VolDSC", "NucDSC",  # volume/nuclei Dice Similarity Coefficient
         "VolOut", "NucOut",  # volume/nuclei shifted out of orig position
+        # point cloud measurements
+        "NucCluster",  # nuclei clusters
+        "NucClusNoise",  # nuclei noise, which do not fit into clusters
     ]
 )
 
@@ -226,6 +230,8 @@ class MeasureLabel(object):
         dist_to_orig: Distance map of labels to edges, with intensity values 
             in the same placement as in ``labels_edge``.
         heat_map: Numpy array as a density map.
+        blobs (:obj:`np.ndarray`): 2D array of blobs such as nuclei in the
+            format, ``[[z, y, x, label_id, ...], ...]``. Defaults to None.
         subseg: Integer sub-segmentations labels image as Numpy array.
         df: Pandas data frame with a row for each sub-region.
     """
@@ -237,6 +243,9 @@ class MeasureLabel(object):
         LabelMetrics.EdgeDistMean)
     _SHAPE_METRICS = (
         LabelMetrics.SurfaceArea, LabelMetrics.Compactness)
+    _PCL_METRICS = (
+        LabelMetrics.NucCluster,
+    )
     
     # images and data frame
     atlas_img_np = None
@@ -245,6 +254,7 @@ class MeasureLabel(object):
     dist_to_orig = None
     labels_interior = None
     heat_map = None
+    blobs = None
     subseg = None
     df = None
     spacing = None
@@ -252,7 +262,7 @@ class MeasureLabel(object):
     @classmethod
     def set_data(cls, atlas_img_np, labels_img_np, labels_edge=None, 
                  dist_to_orig=None, labels_interior=None, heat_map=None, 
-                 subseg=None, df=None, spacing=None):
+                 blobs=None, subseg=None, df=None, spacing=None):
         """Set the images and data frame."""
         cls.atlas_img_np = atlas_img_np
         cls.labels_img_np = labels_img_np
@@ -260,6 +270,7 @@ class MeasureLabel(object):
         cls.dist_to_orig = dist_to_orig
         cls.labels_interior = labels_interior
         cls.heat_map = heat_map
+        cls.blobs = blobs
         cls.subseg = subseg
         cls.df = df
         cls.spacing = spacing
@@ -296,6 +307,8 @@ class MeasureLabel(object):
                 fn = None
                 if extra_metric is config.MetricGroups.SHAPES:
                     fn = cls.measure_shapes
+                elif extra_metric is config.MetricGroups.POINT_CLOUD:
+                    fn = cls.measure_point_cloud
                 if fn:
                     _, extra_metrics = fn(label_id)
                     metrics.update(extra_metrics)
@@ -598,6 +611,60 @@ class MeasureLabel(object):
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
         return label_ids, metrics
 
+    @classmethod
+    def measure_point_cloud(cls, label_ids):
+        """Measure point cloud statistics such as those from nuclei.
+        
+        Assumes that the class attribute :attr:`blobs` is available.
+
+        Args:
+            label_ids: Integer of the label or sequence of multiple labels 
+                in :attr:``labels_img_np`` for which to measure variation.
+
+        Returns:
+            Tuple of the given label ID and dictionary of metrics. 
+            The metrics are NaN if the label size is 0.
+        """
+        metrics = dict.fromkeys(cls._PCL_METRICS, np.nan)
+    
+        # get collective region
+        labels = None
+        if cls.df is None:
+            # get region directly from image
+            label_mask = np.isin(cls.labels_img_np, label_ids)
+            label_size = np.sum(label_mask)
+        else:
+            # get all row associated with region
+            labels = cls.df.loc[
+                cls.df[LabelMetrics.Region.name].isin(label_ids)]
+            label_size = np.nansum(labels[LabelMetrics.Volume.name])
+    
+        if label_size > 0:
+            if cls.df is None:
+                # sum and take average directly from image
+                blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids)]
+                clusters = cluster.DBSCAN(
+                    eps=20, min_samples=5, leaf_size=30).fit(blobs)
+                print(clusters)
+                num_clusters = len(np.unique(clusters.labels_)) - (
+                    1 if -1 in clusters.labels_ else 0)
+                print("clusters:", num_clusters)
+                print("noise:", np.sum(clusters.labels_ == -1))
+                metrics[LabelMetrics.NucCluster] = num_clusters
+            else:
+                if LabelMetrics.Nuclei.name in labels:
+                    # weighted average by nuclei
+                    nucs = labels[LabelMetrics.Nuclei.name]
+                    tot_nucs = np.sum(nucs)
+                    for key in metrics.keys():
+                        if key.name not in labels: continue
+                        metrics[key] = np.nansum(
+                            np.multiply(labels[key.name], nucs)) / tot_nucs
+        disp_id = get_single_label(label_ids)
+        print("nuclei clusters within label {}: {}"
+              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+        return label_ids, metrics
+
 
 def get_single_label(label_id):
     """Get an ID as a single element.
@@ -677,7 +744,7 @@ def _update_vol_dicts(label_id, label_metrics, grouping, metrics):
 
 def measure_labels_metrics(atlas_img_np, labels_img_np, 
                            labels_edge, dist_to_orig, labels_interior=None, 
-                           heat_map=None, 
+                           heat_map=None, blobs=None,
                            subseg=None, spacing=None, unit_factor=None, 
                            combine_sides=True, label_ids=None, grouping={}, 
                            df=None, extra_metrics=None):
@@ -693,6 +760,7 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
         labels_interior: Numpy array of labels eroded to interior region.
         heat_map: Numpy array as a density map; defaults to None to ignore 
             density measurements.
+        blobs (:obj:`np.ndarray`): 2D array of blobs; defaults to None.
         subseg: Integer sub-segmentations labels image as Numpy array; 
             defaults to None to ignore label sub-divisions.
         spacing: Sequence of image spacing for each pixel in the images.
@@ -732,7 +800,7 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
     # reference the labels image as a global variable
     MeasureLabel.set_data(
         atlas_img_np, labels_img_np, labels_edge, dist_to_orig, 
-        labels_interior, heat_map, subseg, df, spacing)
+        labels_interior, heat_map, blobs, subseg, df, spacing)
     
     metrics = {}
     grouping[config.AtlasMetrics.SIDE.value] = None

@@ -958,7 +958,8 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "morestats",
             {
-                "extra_metric_groups": (config.MetricGroups.SHAPES,),
+                #"extra_metric_groups": (config.MetricGroups.SHAPES,),
+                "extra_metric_groups": (config.MetricGroups.POINT_CLOUD,),
             },
             profile)
         

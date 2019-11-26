@@ -1226,6 +1226,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         dist_to_orig = None
         labels_interior = None
         heat_map = None
+        blobs = None
         subseg = None
         if (df is None or 
                 extra_metrics and config.MetricGroups.SHAPES in extra_metrics):
@@ -1281,7 +1282,23 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             except FileNotFoundError as e:
                 print(e)
                 lib_clrbrain.warn("will ignore nuclei stats")
-            
+
+            if (extra_metrics and 
+                    config.MetricGroups.POINT_CLOUD in extra_metrics):
+                try:
+                    # load nuclei coordinates if available and append label IDs
+                    cli.setup_images(
+                        config.filename,
+                        proc_mode=config.ProcessTypes.LOAD.name)
+                    blobs = cli.segments_proc[:, :3]
+                    blobs_lbls = ontology.get_label_ids_from_position(
+                        blobs, labels_img_np,
+                        importer.calc_scaling(cli.image5d, labels_img_np))
+                    blobs = np.hstack((blobs, blobs_lbls.reshape((-1, 1))))
+                except FileNotFoundError as e:
+                    print(e)
+                    lib_clrbrain.warn("unable to load nuclei coordinates")
+
             # load sub-segmentation labels if available
             try:
                 subseg = sitk_io.load_registered_img(
@@ -1303,7 +1320,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # takes care of combining sides
         df, df_all = vols.measure_labels_metrics(
             img_np, labels_img_np, labels_edge, dist_to_orig, labels_interior,
-            heat_map, subseg, spacing, unit_factor, 
+            heat_map, blobs, subseg, spacing, unit_factor, 
             combine_sides and max_level is None, label_ids, grouping, df, 
             extra_metrics)
         

@@ -315,7 +315,8 @@ register_type = None
 # metric groups
 MetricGroups = Enum(
     "MetricGroups", [
-        "SHAPES", 
+        "SHAPES",  # whole label morphology metrics
+        "POINT_CLOUD",  # nuclei as point clouds
     ]
 )
 

@@ -320,6 +320,10 @@ class RegKeys(Enum):
     MARKER_EROSION_USE_MIN = auto()
     SAVE_STEPS = auto()
     EDGE_AWARE_REANNOTAION = auto()
+    METRICS_CLUSTER = auto()
+    DBSCAN_EPS = auto()
+    DBSCAN_MINPTS = auto()
+    KNN_N = auto()
 
 
 class RegisterSettings(SettingsDict):
@@ -457,6 +461,13 @@ class RegisterSettings(SettingsDict):
         # sequence of :class:`config.MetricGroups` enums to measure in 
         # addition to basic metrics
         self["extra_metric_groups"] = None
+        
+        # cluster metrics
+        self[RegKeys.METRICS_CLUSTER] = {
+            RegKeys.DBSCAN_EPS: 15.5,  # epsilon for max dist in cluster
+            RegKeys.DBSCAN_MINPTS: 5,  # min points/samples per cluster
+            RegKeys.KNN_N: 0,  # num of neighbors for k-nearest-neighbors
+        }
 
 
 def update_register_settings(settings, settings_type):

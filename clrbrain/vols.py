@@ -19,6 +19,7 @@ from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import ontology
 from clrbrain import plot_3d
+from clrbrain import profiles
 from clrbrain import stats
 
 # metric keys and column names
@@ -628,6 +629,8 @@ class MeasureLabel(object):
             The metrics are NaN if the label size is 0.
         """
         metrics = dict.fromkeys(cls._PCL_METRICS, np.nan)
+        cluster_settings = config.register_settings[
+            profiles.RegKeys.METRICS_CLUSTER]
     
         # get collective region
         labels = None
@@ -645,8 +648,9 @@ class MeasureLabel(object):
             if cls.df is None:
                 # sum and take average directly from image
                 blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids), :3]
-                    blobs, 15)
                 _, num_clusters, num_noise, largest = clustering.cluster_dbscan(
+                    blobs, cluster_settings[profiles.RegKeys.DBSCAN_EPS],
+                    cluster_settings[profiles.RegKeys.DBSCAN_MINPTS])
                 metrics[LabelMetrics.NucCluster] = num_clusters
                 metrics[LabelMetrics.NucClusNoise] = num_noise
                 metrics[LabelMetrics.NucClusLarg] = largest
@@ -808,6 +812,13 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
     if label_ids is None:
         label_ids = np.unique(labels_img_np)
         if combine_sides: label_ids = label_ids[label_ids >= 0]
+
+    cluster_settings = config.register_settings[
+        profiles.RegKeys.METRICS_CLUSTER]
+    knn_n = cluster_settings[profiles.RegKeys.KNN_N]
+    if blobs is not None and knn_n:
+        # display k-nearest-neighbors for nuclei
+        clustering.knn_dist(blobs[:, :3], knn_n, 100)
     
     for label_id in label_ids:
         # include corresponding labels from opposite sides while skipping 

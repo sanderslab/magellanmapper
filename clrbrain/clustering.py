@@ -19,27 +19,32 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         blobs (:obj:`np.ndarray`): Sequence given as
             ``[n_samples, n_features]``, where features typically is of the
             form, ``[z, y, x, ...]``.
-        n (int): Number of neighbors.
+        n (int): Number of neighbors. The farthest neighbor will be used
+            for sorting, filtering, and plotting.
         max_dist (int): Maximum distance to plot; defaults to None to show
             neighbors of all distances.
+        show (bool): True to plot the distances; defaults to True.
 
     Returns:
-        :obj:`neighbors.NearestNeighbors`, :obj:`np.ndarray`, :obj:`np.ndarray`:
-        Tuple of ``NearestNeighbors`` object and the distances and indices
-        from ``kneighbors``.
+        :obj:`neighbors.NearestNeighbors`, :obj:`np.ndarray`:
+        Tuple of ``NearestNeighbors`` object and all distances from
+        ``kneighbors`` sorted by the ``n``th neighbor.
 
     """
     knn = neighbors.NearestNeighbors(n).fit(blobs)
     print(knn)
-    dist, ind = knn.kneighbors(blobs)
-    dist = np.sort(dist, axis=0)
+    dist, _ = knn.kneighbors(blobs)
+    # sort distances based on nth neighbors
+    dist = dist[np.argsort(dist[:, n - 1])]
     if max_dist:
-        dist = dist[dist[:, 1] < max_dist]
-    print(dist)
+        # remove all distances where nth neighbor is beyond threshold
+        dist = dist[dist[:, n - 1] < max_dist]
     if show:
-        df = pd.DataFrame({"point": np.arange(len(dist)), "dist": dist[:, 1]})
+        # line plot of nth neighbor distances by ascending order
+        df = pd.DataFrame(
+            {"point": np.arange(len(dist)), "dist": dist[:, n - 1]})
         plot_2d.plot_lines("", "point", ("dist", ), df=df)
-    return knn, dist, ind
+    return knn, dist
 
 
 def cluster_dbscan(blobs, eps):

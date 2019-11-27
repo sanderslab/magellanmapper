@@ -1286,7 +1286,8 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             if (extra_metrics and 
                     config.MetricGroups.POINT_CLOUD in extra_metrics):
                 try:
-                    # load nuclei coordinates if available and append label IDs
+                    # load nuclei coordinates if available, append label IDs,
+                    # and scale to make isotropic
                     cli.setup_images(
                         config.filename,
                         proc_mode=config.ProcessTypes.LOAD.name)
@@ -1294,6 +1295,8 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     blobs_lbls = ontology.get_label_ids_from_position(
                         blobs, labels_img_np,
                         importer.calc_scaling(cli.image5d, labels_img_np))
+                    blobs = np.multiply(
+                        blobs, config.resolutions[0]).astype(int)
                     blobs = np.hstack((blobs, blobs_lbls.reshape((-1, 1))))
                 except FileNotFoundError as e:
                     print(e)

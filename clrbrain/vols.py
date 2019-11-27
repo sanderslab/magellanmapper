@@ -244,7 +244,7 @@ class MeasureLabel(object):
     _SHAPE_METRICS = (
         LabelMetrics.SurfaceArea, LabelMetrics.Compactness)
     _PCL_METRICS = (
-        LabelMetrics.NucCluster,
+        LabelMetrics.NucCluster, LabelMetrics.NucClusNoise,
     )
     
     # images and data frame
@@ -651,6 +651,7 @@ class MeasureLabel(object):
                 print("clusters:", num_clusters)
                 print("noise:", np.sum(clusters.labels_ == -1))
                 metrics[LabelMetrics.NucCluster] = num_clusters
+                metrics[LabelMetrics.NucClusNoise] = num_noise
             else:
                 if LabelMetrics.Nuclei.name in labels:
                     # weighted average by nuclei

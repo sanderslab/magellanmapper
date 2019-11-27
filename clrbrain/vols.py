@@ -13,8 +13,8 @@ from time import time
 import numpy as np
 import pandas as pd
 from skimage import measure
-from sklearn import cluster
 
+from clrbrain import clustering
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import ontology
@@ -642,14 +642,9 @@ class MeasureLabel(object):
         if label_size > 0:
             if cls.df is None:
                 # sum and take average directly from image
-                blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids)]
-                clusters = cluster.DBSCAN(
-                    eps=20, min_samples=5, leaf_size=30).fit(blobs)
-                print(clusters)
-                num_clusters = len(np.unique(clusters.labels_)) - (
-                    1 if -1 in clusters.labels_ else 0)
-                print("clusters:", num_clusters)
-                print("noise:", np.sum(clusters.labels_ == -1))
+                blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids), :3]
+                _, num_clusters, num_noise = clustering.cluster_dbscan(
+                    blobs, 15)
                 metrics[LabelMetrics.NucCluster] = num_clusters
                 metrics[LabelMetrics.NucClusNoise] = num_noise
             else:

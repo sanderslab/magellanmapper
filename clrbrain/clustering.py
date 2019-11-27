@@ -47,7 +47,7 @@ def knn_dist(blobs, n, max_dist=None, show=True):
     return knn, dist
 
 
-def cluster_dbscan(blobs, eps):
+def cluster_dbscan(blobs, eps, minpts):
     """Cluster by DBSCAN and report cluster and noise metrics.
     
     Args:
@@ -55,17 +55,27 @@ def cluster_dbscan(blobs, eps):
             ``[n_samples, n_features]``, where features typically is of the
             form, ``[z, y, x, ...]``.
         eps (int, float): Maximum distance between points within cluster.
+        minpts (int): Minimum points/samples per cluster.
 
     Returns:
-        :obj:`cluster.DBSCAN`, int, int: Tuple of ``DBSCAN`` cluster object,
-        number of clusters, and number of noise blobs. 
+        :obj:`cluster.DBSCAN`, int, int, float: Tuple of ``DBSCAN`` cluster
+        object, number of clusters, number of noise blobs, and fraction of
+        total clustered blobs contained within largest cluster.
 
     """
-    clusters = cluster.DBSCAN(eps=eps, min_samples=5, leaf_size=30).fit(blobs)
+    # find clusters
+    clusters = cluster.DBSCAN(
+        eps=eps, min_samples=minpts, leaf_size=30).fit(blobs)
     print(clusters)
-    num_clusters = len(np.unique(clusters.labels_)) - (
-        1 if -1 in clusters.labels_ else 0)
+    
+    # cluster metrics
+    lbl_unique, lbl_counts = np.unique(
+        clusters.labels_[clusters.labels_ != -1], return_counts=True)
+    num_clusters = len(lbl_unique)
+    largest_frac = np.nan
+    if len(lbl_counts) > 0:
+        # fraction of total clustered blobs in largest cluster
+        largest_frac = np.amax(lbl_counts) / np.sum(lbl_counts)
     num_noise = np.sum(clusters.labels_ == -1)
-    print("clusters:", num_clusters)
-    print("noise:", num_noise)
-    return clusters, num_clusters, num_noise
+    
+    return clusters, num_clusters, num_noise, largest_frac

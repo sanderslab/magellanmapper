@@ -51,6 +51,7 @@ LabelMetrics = Enum(
         # point cloud measurements
         "NucCluster",  # nuclei clusters
         "NucClusNoise",  # nuclei noise, which do not fit into clusters
+        "NucClusLarg",  # largest cluster as fraction of all clustered nuclei
     ]
 )
 
@@ -245,6 +246,7 @@ class MeasureLabel(object):
         LabelMetrics.SurfaceArea, LabelMetrics.Compactness)
     _PCL_METRICS = (
         LabelMetrics.NucCluster, LabelMetrics.NucClusNoise,
+        LabelMetrics.NucClusLarg,
     )
     
     # images and data frame
@@ -643,10 +645,11 @@ class MeasureLabel(object):
             if cls.df is None:
                 # sum and take average directly from image
                 blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids), :3]
-                _, num_clusters, num_noise = clustering.cluster_dbscan(
                     blobs, 15)
+                _, num_clusters, num_noise, largest = clustering.cluster_dbscan(
                 metrics[LabelMetrics.NucCluster] = num_clusters
                 metrics[LabelMetrics.NucClusNoise] = num_noise
+                metrics[LabelMetrics.NucClusLarg] = largest
             else:
                 if LabelMetrics.Nuclei.name in labels:
                     # weighted average by nuclei

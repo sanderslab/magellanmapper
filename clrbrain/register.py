@@ -1291,16 +1291,18 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     cli.setup_images(
                         config.filename,
                         proc_mode=config.ProcessTypes.LOAD.name)
+                except FileNotFoundError as e:
+                    print(e)
+                if cli.segments_proc is None:
+                    lib_clrbrain.warn("unable to load nuclei coordinates")
+                else:
                     blobs = cli.segments_proc[:, :3]
                     blobs_lbls = ontology.get_label_ids_from_position(
-                        blobs, labels_img_np,
-                        importer.calc_scaling(cli.image5d, labels_img_np))
+                        blobs, labels_img_np, importer.calc_scaling(
+                            None, labels_img_np, config.image5d_shapes[0, 1:]))
                     blobs = np.multiply(
                         blobs, config.resolutions[0]).astype(int)
                     blobs = np.hstack((blobs, blobs_lbls.reshape((-1, 1))))
-                except FileNotFoundError as e:
-                    print(e)
-                    lib_clrbrain.warn("unable to load nuclei coordinates")
 
             # load sub-segmentation labels if available
             try:

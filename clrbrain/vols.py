@@ -50,9 +50,9 @@ LabelMetrics = Enum(
         "VolDSC", "NucDSC",  # volume/nuclei Dice Similarity Coefficient
         "VolOut", "NucOut",  # volume/nuclei shifted out of orig position
         # point cloud measurements
-        "NucCluster",  # nuclei clusters
-        "NucClusNoise",  # nuclei noise, which do not fit into clusters
-        "NucClusLarg",  # largest cluster as fraction of all clustered nuclei
+        "NucCluster",  # number of nuclei clusters
+        "NucClusNoise",  # number of nuclei that do not fit into a cluster
+        "NucClusLarg",  # number of nuclei in the largest cluster
     ]
 )
 
@@ -648,12 +648,13 @@ class MeasureLabel(object):
             if cls.df is None:
                 # sum and take average directly from image
                 blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids), :3]
-                _, num_clusters, num_noise, largest = clustering.cluster_dbscan(
-                    blobs, cluster_settings[profiles.RegKeys.DBSCAN_EPS],
-                    cluster_settings[profiles.RegKeys.DBSCAN_MINPTS])
+                _, num_clusters, num_noise, num_largest = (
+                    clustering.cluster_dbscan(
+                        blobs, cluster_settings[profiles.RegKeys.DBSCAN_EPS],
+                        cluster_settings[profiles.RegKeys.DBSCAN_MINPTS]))
                 metrics[LabelMetrics.NucCluster] = num_clusters
                 metrics[LabelMetrics.NucClusNoise] = num_noise
-                metrics[LabelMetrics.NucClusLarg] = largest
+                metrics[LabelMetrics.NucClusLarg] = num_largest
             else:
                 if LabelMetrics.Nuclei.name in labels:
                     # weighted average by nuclei

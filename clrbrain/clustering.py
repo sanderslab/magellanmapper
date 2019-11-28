@@ -58,9 +58,9 @@ def cluster_dbscan(blobs, eps, minpts):
         minpts (int): Minimum points/samples per cluster.
 
     Returns:
-        :obj:`cluster.DBSCAN`, int, int, float: Tuple of ``DBSCAN`` cluster
-        object, number of clusters, number of noise blobs, and fraction of
-        total clustered blobs contained within largest cluster.
+        :obj:`cluster.DBSCAN`, int, int, int: Tuple of ``DBSCAN`` cluster
+        object, number of clusters, number of noise blobs, and number of
+        blobs contained within the largest cluster.
 
     """
     # find clusters
@@ -72,10 +72,9 @@ def cluster_dbscan(blobs, eps, minpts):
     lbl_unique, lbl_counts = np.unique(
         clusters.labels_[clusters.labels_ != -1], return_counts=True)
     num_clusters = len(lbl_unique)
-    largest_frac = np.nan
-    if len(lbl_counts) > 0:
-        # fraction of total clustered blobs in largest cluster
-        largest_frac = np.amax(lbl_counts) / np.sum(lbl_counts)
+    # number of blobs in largest cluster
+    num_largest = np.nan if len(lbl_counts) == 0 else np.amax(lbl_counts)
+    # number of blobs not in a cluster
     num_noise = np.sum(clusters.labels_ == -1)
     
-    return clusters, num_clusters, num_noise, largest_frac
+    return clusters, num_clusters, num_noise, num_largest

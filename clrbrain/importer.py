@@ -768,26 +768,36 @@ def save_np_image(image, filename, series):
         config.resolutions, config.magnification, config.zoom, 
         lows, highs)
 
-def calc_scaling(image5d, scaled):
+
+def calc_scaling(image5d, scaled, image5d_shape=None, scaled_shape=None):
     """Calculate the exact scaling between two images where one image had 
     been scaled from the other.
     
     Args:
-        image5d: Original image in 5D (time included, channel optional) format.
-        scaled: Scaled image.
+        image5d (:obj:`np.ndarray`): Original image in 5D (time included,
+            channel optional) format.
+        scaled (:obj:`np.ndarray`): Scaled image, assumed to be in either
+            3D or 5D format (3D with channel not currently supported).
+        image5d_shape (List): ``image5d`` shape, which can be given if
+            ``image5d`` is None; defaults to None.
+        scaled_shape (List): ``scaled`` shape, which can be given if
+            ``scaled`` is None; defaults to None.
     
     Returns:
         Array of (z, y, x) scaling factors from the original to the scaled
         image.
     """
-    shape = image5d.shape
-    scaled_shape = scaled.shape
-    # remove time dimension
-    if image5d.ndim >=4:
-        shape = shape[1:4]
-    if scaled.ndim >=4:
+    if image5d_shape is None:
+        image5d_shape = image5d.shape
+    if scaled_shape is None:
+        scaled_shape = scaled.shape
+    # remove time dimension if necessary
+    if len(image5d_shape) >= 4:
+        image5d_shape = image5d_shape[1:4]
+    # TODO: assume only 3D (including 3D + channel) format?
+    if len(scaled_shape) >= 4:
         scaled_shape = scaled_shape[1:4]
-    scaling = np.divide(scaled_shape[0:3], shape[0:3])
+    scaling = np.divide(scaled_shape[:3], image5d_shape[:3])
     print("image scaling compared to image5d: {}".format(scaling))
     return scaling
 

@@ -47,6 +47,11 @@ roi_sizes = None # list of regions of interest
 offsets = None # list of offsets
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
 
+#: :obj:`np.ndarray`: 2D array of shapes per time point in
+# ``[n_time_point, n_shape]`` format in case image5d is not available
+# TODO: consider simplify to single shape as 1D array
+image5d_shapes = None
+
 prefix = None # alternate path
 suffix = None # modifier to existing base path
 

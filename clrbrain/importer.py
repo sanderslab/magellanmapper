@@ -430,8 +430,8 @@ def read_info(filename_info_npz, check_ver=False):
         except KeyError:
             print("could not find names")
         try:
-            sizes = output["sizes"]
-            print("sizes {}".format(sizes))
+            config.image5d_shapes = output["sizes"]
+            print("sizes {}".format(config.image5d_shapes))
         except KeyError:
             print("could not find sizes")
         try:

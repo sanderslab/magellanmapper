@@ -656,14 +656,9 @@ class MeasureLabel(object):
                 metrics[LabelMetrics.NucClusNoise] = num_noise
                 metrics[LabelMetrics.NucClusLarg] = num_largest
             else:
-                if LabelMetrics.Nuclei.name in labels:
-                    # weighted average by nuclei
-                    nucs = labels[LabelMetrics.Nuclei.name]
-                    tot_nucs = np.sum(nucs)
-                    for key in metrics.keys():
-                        if key.name not in labels: continue
-                        metrics[key] = np.nansum(
-                            np.multiply(labels[key.name], nucs)) / tot_nucs
+                for key in metrics.keys():
+                    if key.name not in labels: continue
+                    metrics[key] = np.nansum(labels[key.name])
         disp_id = get_single_label(label_ids)
         print("nuclei clusters within label {}: {}"
               .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))

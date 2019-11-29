@@ -476,22 +476,30 @@ def plot_clusters_by_label(path, z, suffix=None):
     colors = colormaps.discrete_colormap(
         len(np.unique(blobs[:, 4])), prioritize_default="cn") / 255.
     for label_id in label_ids:
+        if label_id == 0:
+            # skip blobs in background
+            continue
         # sort blobs within label by cluster size (descending order),
         # including clusters within all z-planes to keep same order across zs
         blobs_lbl = blobs[blobs[:, 3] == label_id]
         clus_lbls, clus_lbls_counts = np.unique(
             blobs_lbl[:, 4], return_counts=True)
         clus_lbls = clus_lbls[np.argsort(clus_lbls_counts)][::-1]
-        for clus_lbl, color in zip(clus_lbls, colors):
         blobs_lbl = blobs_lbl[blobs_lbl[:, 0] == z]
+        for i, (clus_lbl, color) in enumerate(zip(clus_lbls, colors)):
             blobs_clus = blobs_lbl[blobs_lbl[:, 4] == clus_lbl]
             if len(blobs_clus) < 1: continue
             size = 0.2
+            alpha = 0.5
             if clus_lbl == -1:
+                # show noise as black
                 color = (0, 0, 0, 1)
-                size = 0.1
+            if clus_lbl == -1 or i > 0:
+                # emphasize blobs in non-dominant clusters
+                size = 0.5
+                alpha = 1
             print(label_id, clus_lbl, color, len(blobs_clus))
-            print(blobs_clus)
             ax.scatter(
-                blobs_clus[:, 2], blobs_clus[:, 1], color=color, s=size)
+                blobs_clus[:, 2], blobs_clus[:, 1], color=color, s=size,
+                alpha=alpha)
     plot_support.show()

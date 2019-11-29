@@ -10,10 +10,9 @@ import pandas as pd
 from sklearn import cluster
 from sklearn import neighbors
 
-from clrbrain import cli
 from clrbrain import config
-from clrbrain import importer
 from clrbrain import lib_clrbrain
+from clrbrain import np_io
 from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import profiles
@@ -163,19 +162,13 @@ def cluster_blobs(img_path, suffix=None):
         mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
     labels_img_np = sitk_io.load_registered_img(
         mod_path, config.RegNames.IMG_LABELS.value)
-    try:
-        cli.setup_images(
-            config.filename, proc_mode=config.ProcessTypes.LOAD.name)
-    except FileNotFoundError as e:
-        print(e)
-    if cli.segments_proc is None:
+    blobs, scaling = np_io.load_blobs(img_path, labels_img_np.shape)
+    if blobs is None:
         lib_clrbrain.warn("unable to load nuclei coordinates")
         return
     # append label IDs to blobs and scale to make isotropic
     blobs = ClusterByLabel.cluster_by_label(
-        cli.segments_proc[:, :3], labels_img_np, importer.calc_scaling(
-            None, labels_img_np, config.image5d_shapes[0, 1:]),
-        config.resolutions[0])
+        blobs[:, :3], labels_img_np, scaling, config.resolutions[0])
     print(blobs)
     out_path = lib_clrbrain.combine_paths(mod_path, config.SUFFIX_BLOB_CLUSTERS)
     np.save(out_path, blobs)

@@ -54,26 +54,6 @@ def knn_dist(blobs, n, max_dist=None, show=True):
     return knn, dist
 
 
-def cluster_dbscan(blobs, eps, minpts):
-    """Wrapper for clustering by DBSCAN.
-    
-    Args:
-        blobs (:obj:`np.ndarray`): Sequence given as
-            ``[n_samples, n_features]``, where features typically is of the
-            form, ``[z, y, x, ...]``.
-        eps (int, float): Maximum distance between points within cluster.
-        minpts (int): Minimum points/samples per cluster.
-
-    Returns:
-        :obj:`cluster.DBSCAN`: Tuple of ``DBSCAN`` cluster object.
-
-    """
-    # find clusters
-    clusters = cluster.DBSCAN(
-        eps=eps, min_samples=minpts, leaf_size=30).fit(blobs)
-    return clusters
-
-
 def cluster_dbscan_metrics(labels):
     """Calculate basic metrics for DBSCAN.
     
@@ -100,7 +80,7 @@ class ClusterByLabel(object):
     
     @classmethod
     def cluster_by_label(cls, blobs, labels_img_np, blobs_lbl_scaling,
-                         blobs_iso_scaling):
+                         blobs_iso_scaling, all_labels=False):
         blobs_lbls = ontology.get_label_ids_from_position(
             blobs, labels_img_np, blobs_lbl_scaling)
         blobs = np.multiply(blobs[:, :3], blobs_iso_scaling)
@@ -117,27 +97,38 @@ class ClusterByLabel(object):
         eps = cluster_settings[profiles.RegKeys.DBSCAN_EPS]
         minpts = cluster_settings[profiles.RegKeys.DBSCAN_MINPTS]
         
-        pool = mp.Pool()
-        pool_results = []
-        for label_id in label_ids:
-            # add rotation argument if necessary
-            pool_results.append(
-                pool.apply_async(
-                    cls.cluster_within_label, args=(label_id, eps, minpts)))
-
-        for result in pool_results:
-            label_id, labels = result.get()
-            cls.blobs[cls.blobs[:, 3] == label_id, 4] = labels
-        pool.close()
-        pool.join()
+        if all_labels:
+            # cluster all labels together
+            # TODO: n_jobs appears to be ignored despite reported fixes
+            _, labels = cls.cluster_within_label(None, eps, minpts, -1)
+            cls.blobs[:, 4] = labels
+        else:
+            # cluster by individual label
+            pool = mp.Pool()
+            pool_results = []
+            for label_id in label_ids:
+                # add rotation argument if necessary
+                pool_results.append(
+                    pool.apply_async(
+                        cls.cluster_within_label,
+                        args=(label_id, eps, minpts, None)))
+    
+            for result in pool_results:
+                label_id, labels = result.get()
+                cls.blobs[cls.blobs[:, 3] == label_id, 4] = labels
+            pool.close()
+            pool.join()
         cls.blobs[:, :3] = np.divide(blobs[:, :3], blobs_iso_scaling)
         
         return cls.blobs
     
     @classmethod
-    def cluster_within_label(cls, label_id, eps, minpts):
-        blobs = cls.blobs[cls.blobs[:, 3] == label_id]
-        clusters = cluster_dbscan(blobs, eps, minpts)
+    def cluster_within_label(cls, label_id, eps, minpts, n_jobs):
+        blobs = cls.blobs
+        if label_id is not None:
+            blobs = blobs[blobs[:, 3] == label_id]
+        clusters = cluster.DBSCAN(
+            eps=eps, min_samples=minpts, leaf_size=30, n_jobs=n_jobs).fit(blobs)
         num_clusters, num_noise, num_largest = cluster_dbscan_metrics(
             clusters.labels_)
         print("label {}: num clusters: {}, noise blobs: {}, largest cluster: {}"

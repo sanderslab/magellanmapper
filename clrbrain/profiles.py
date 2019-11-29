@@ -464,9 +464,9 @@ class RegisterSettings(SettingsDict):
         
         # cluster metrics
         self[RegKeys.METRICS_CLUSTER] = {
-            RegKeys.DBSCAN_EPS: 15.5,  # epsilon for max dist in cluster
-            RegKeys.DBSCAN_MINPTS: 5,  # min points/samples per cluster
             RegKeys.KNN_N: 0,  # num of neighbors for k-nearest-neighbors
+            RegKeys.DBSCAN_EPS: 20,  # epsilon for max dist in cluster
+            RegKeys.DBSCAN_MINPTS: 6,  # min points/samples per cluster
         }
 
 

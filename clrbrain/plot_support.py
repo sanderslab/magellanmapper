@@ -631,5 +631,12 @@ def setup_fig(nrows, ncols, size=None):
     return fig, gs
 
 
+def show():
+    """Simple wrapper to show the current Matplotlib figure using
+    :class:`matplotlib.pyplot`, which manages the event loop.
+    """
+    plt.show()
+
+
 if __name__ == "__main__":
     print("Starting plot support")

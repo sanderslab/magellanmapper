@@ -53,6 +53,7 @@ from skimage import transform
 
 from clrbrain import atlas_refiner
 from clrbrain import atlas_stats
+from clrbrain import clustering
 from clrbrain import config
 from clrbrain import edge_seg
 from clrbrain import export_regions
@@ -1285,24 +1286,14 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
 
             if (extra_metrics and 
                     config.MetricGroups.POINT_CLOUD in extra_metrics):
+                # load blobs with coordinates, label IDs, and cluster IDs
+                # if available
                 try:
-                    # load nuclei coordinates if available, append label IDs,
-                    # and scale to make isotropic
-                    cli.setup_images(
-                        config.filename,
-                        proc_mode=config.ProcessTypes.LOAD.name)
+                    blobs = np.load(lib_clrbrain.combine_paths(
+                        mod_path, config.SUFFIX_BLOB_CLUSTERS))
+                    print(blobs)
                 except FileNotFoundError as e:
                     print(e)
-                if cli.segments_proc is None:
-                    lib_clrbrain.warn("unable to load nuclei coordinates")
-                else:
-                    blobs = cli.segments_proc[:, :3]
-                    blobs_lbls = ontology.get_label_ids_from_position(
-                        blobs, labels_img_np, importer.calc_scaling(
-                            None, labels_img_np, config.image5d_shapes[0, 1:]))
-                    blobs = np.multiply(
-                        blobs, config.resolutions[0]).astype(int)
-                    blobs = np.hstack((blobs, blobs_lbls.reshape((-1, 1))))
 
             # load sub-segmentation labels if available
             try:
@@ -1970,6 +1961,10 @@ def main():
                         (df_cp_impr, df_cp_wors), ("_e18_impr", "_e18_wors")):
                     meas(suffix="".join((suf, suf_cp)), 
                          df=df_mode.loc[df_mode.index.isin(df_cp_mode.index)])
+    
+    elif reg is config.RegisterTypes.cluster_blobs:
+        # cluster blobs and output to Numpy archive
+        clustering.cluster_blobs(config.filename, config.suffix)
 
 
 if __name__ == "__main__":

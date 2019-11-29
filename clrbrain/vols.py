@@ -629,8 +629,6 @@ class MeasureLabel(object):
             The metrics are NaN if the label size is 0.
         """
         metrics = dict.fromkeys(cls._PCL_METRICS, np.nan)
-        cluster_settings = config.register_settings[
-            profiles.RegKeys.METRICS_CLUSTER]
     
         # get collective region
         labels = None
@@ -647,11 +645,9 @@ class MeasureLabel(object):
         if label_size > 0:
             if cls.df is None:
                 # sum and take average directly from image
-                blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids), :3]
-                _, num_clusters, num_noise, num_largest = (
-                    clustering.cluster_dbscan(
-                        blobs, cluster_settings[profiles.RegKeys.DBSCAN_EPS],
-                        cluster_settings[profiles.RegKeys.DBSCAN_MINPTS]))
+                blobs = cls.blobs[np.isin(cls.blobs[:, 3], label_ids)]
+                num_clusters, num_noise, num_largest = (
+                    clustering.cluster_dbscan_metrics(blobs[:, 4]))
                 metrics[LabelMetrics.NucCluster] = num_clusters
                 metrics[LabelMetrics.NucClusNoise] = num_noise
                 metrics[LabelMetrics.NucClusLarg] = num_largest

@@ -38,6 +38,7 @@ POS_THRESH = 0.001 # threshold for positive values for float comparison
 
 SUFFIX_IMG_PROC = "_image5d_proc.npz"
 SUFFIX_INFO_PROC = "_info_proc.npz"
+SUFFIX_BLOB_CLUSTERS = "blobclusters.npy"
 
 filename = None # current image file path
 filenames = None # list of multiple image paths
@@ -313,6 +314,7 @@ RegisterTypes = Enum(
         "plot_intens_nuc", 
         "pivot_conds",
         "meas_improvement",
+        "cluster_blobs",
     ]
 )
 register_type = None

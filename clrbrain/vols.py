@@ -805,13 +805,6 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
         label_ids = np.unique(labels_img_np)
         if combine_sides: label_ids = label_ids[label_ids >= 0]
 
-    cluster_settings = config.register_settings[
-        profiles.RegKeys.METRICS_CLUSTER]
-    knn_n = cluster_settings[profiles.RegKeys.KNN_N]
-    if blobs is not None and knn_n:
-        # display k-nearest-neighbors for nuclei
-        clustering.knn_dist(blobs[:, :3], knn_n, 100)
-    
     for label_id in label_ids:
         # include corresponding labels from opposite sides while skipping 
         # background

@@ -1966,6 +1966,11 @@ def main():
         # cluster blobs and output to Numpy archive
         clustering.cluster_blobs(config.filename, config.suffix)
 
+    elif reg is config.RegisterTypes.plot_cluster_blobs:
+        # show blob clusters for the given plane
+        atlas_stats.plot_clusters_by_label(
+            config.filename, config.offsets[0][2], config.suffix)
+
 
 if __name__ == "__main__":
     print("Clrbrain image registration")

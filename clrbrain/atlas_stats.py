@@ -11,10 +11,12 @@ import os
 import numpy as np
 import pandas as pd
 
+from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
 from clrbrain import ontology
 from clrbrain import plot_2d
+from clrbrain import plot_support
 from clrbrain import stats
 from clrbrain import vols
 
@@ -451,3 +453,41 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     # of columns, but save un-transposed to preserve data types
     stats.print_data_frame(df_impr.T, index=True, header=False)
     return df_impr
+
+
+def plot_clusters_by_label(path, z, suffix=None):
+    """Plot separate sets of clusters for each label.
+    
+    Args:
+        path (str): Base path to blobs file with clusters.
+        z (int): z-plane to plot.
+        suffix (str): Suffix for ``path``; defaults to None.
+
+    """
+    mod_path = path
+    if suffix is not None:
+        mod_path = lib_clrbrain.insert_before_ext(path, suffix)
+    blobs = np.load(lib_clrbrain.combine_paths(
+        mod_path, config.SUFFIX_BLOB_CLUSTERS))
+    label_ids = np.unique(blobs[:, 3])
+    fig, gs = plot_support.setup_fig(1, 1)
+    ax = fig.add_subplot(gs[0, 0])
+    colors = colormaps.discrete_colormap(len(np.unique(blobs[:, 4]))) / 255.
+    print(colors)
+    blobs = blobs[blobs[:, 0] == z]
+    for label_id in label_ids:
+        blobs_lbl = blobs[blobs[:, 3] == label_id]
+        clus_lbls, clus_lbls_counts = np.unique(
+            blobs_lbl[:, 4], return_counts=True)
+        clus_lbls = clus_lbls[np.argsort(clus_lbls_counts)][::-1]
+        for clus_lbl, color in zip(clus_lbls, colors):
+            size = 0.2
+            if clus_lbl == -1:
+                color = (0, 0, 0, 1)
+                size = 0.1
+            blobs_clus = blobs_lbl[blobs_lbl[:, 4] == clus_lbl]
+            print(label_id, clus_lbl, color, len(blobs_clus))
+            print(blobs_clus)
+            ax.scatter(
+                blobs_clus[:, 2], blobs_clus[:, 1], color=color, s=size)
+    plot_support.show()

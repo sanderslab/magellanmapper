@@ -472,20 +472,24 @@ def plot_clusters_by_label(path, z, suffix=None):
     label_ids = np.unique(blobs[:, 3])
     fig, gs = plot_support.setup_fig(1, 1)
     ax = fig.add_subplot(gs[0, 0])
-    colors = colormaps.discrete_colormap(len(np.unique(blobs[:, 4]))) / 255.
-    print(colors)
-    blobs = blobs[blobs[:, 0] == z]
+    plot_support.hide_axes(ax)
+    colors = colormaps.discrete_colormap(
+        len(np.unique(blobs[:, 4])), prioritize_default="cn") / 255.
     for label_id in label_ids:
+        # sort blobs within label by cluster size (descending order),
+        # including clusters within all z-planes to keep same order across zs
         blobs_lbl = blobs[blobs[:, 3] == label_id]
         clus_lbls, clus_lbls_counts = np.unique(
             blobs_lbl[:, 4], return_counts=True)
         clus_lbls = clus_lbls[np.argsort(clus_lbls_counts)][::-1]
         for clus_lbl, color in zip(clus_lbls, colors):
+        blobs_lbl = blobs_lbl[blobs_lbl[:, 0] == z]
+            blobs_clus = blobs_lbl[blobs_lbl[:, 4] == clus_lbl]
+            if len(blobs_clus) < 1: continue
             size = 0.2
             if clus_lbl == -1:
                 color = (0, 0, 0, 1)
                 size = 0.1
-            blobs_clus = blobs_lbl[blobs_lbl[:, 4] == clus_lbl]
             print(label_id, clus_lbl, color, len(blobs_clus))
             print(blobs_clus)
             ax.scatter(

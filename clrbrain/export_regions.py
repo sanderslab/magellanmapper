@@ -15,13 +15,12 @@ import numpy as np
 import pandas as pd
 
 from clrbrain import config
-from clrbrain import importer
 from clrbrain import lib_clrbrain
+from clrbrain import np_io
 from clrbrain import ontology
 from clrbrain import plot_3d
 from clrbrain import stats
 from clrbrain import sitk_io
-from clrbrain import transformer
 from clrbrain import vols
 
 
@@ -184,25 +183,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
             mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_img = sitk.GetArrayFromImage(labels_img_sitk)
     # load blobs
-    filename_base = importer.filename_to_base(
-        img_path, config.series)
-    info = np.load(filename_base + config.SUFFIX_INFO_PROC)
-    blobs = info["segments"]
-    print("loading {} blobs".format(len(blobs)))
-    # get scaling from source image, which can be rescaled/resized image 
-    # since contains scaling image
-    load_size = config.register_settings["target_size"]
-    img_path_transposed = transformer.get_transposed_image_path(
-        img_path, scale, load_size)
-    if scale is not None or load_size is not None:
-        image5d, img_info = importer.read_file(
-            img_path_transposed, config.series, return_info=True)
-        scaling = img_info["scaling"]
-    else:
-        # fall back to scaling based on comparison to original image
-        image5d = importer.read_file(
-            img_path_transposed, config.series)
-        scaling = importer.calc_scaling(image5d, labels_img)
+    blobs, scaling = np_io.load_blobs(img_path, labels_img.shape, scale)
     if shape is not None:
         # scale blobs to an alternative final size
         scaling = np.divide(shape, np.divide(labels_img.shape, scaling))

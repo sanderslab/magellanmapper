@@ -90,7 +90,15 @@ class ClusterByLabel(object):
         cls.blobs = blobs_clus
         print(np.unique(blobs_clus[:, 3]))
         print(cls.blobs)
-        
+
+        # TODO: shift to separate func once load blobs without req labels img
+        cluster_settings = config.register_settings[
+            profiles.RegKeys.METRICS_CLUSTER]
+        knn_n = cluster_settings[profiles.RegKeys.KNN_N]
+        if knn_n:
+            # display k-nearest-neighbors for nuclei
+            knn_dist(cls.blobs[:, :3], knn_n, 100)
+
         label_ids = np.unique(labels_img_np)
         cluster_settings = config.register_settings[
             profiles.RegKeys.METRICS_CLUSTER]
@@ -157,14 +165,6 @@ def cluster_blobs(img_path, suffix=None):
     if blobs is None:
         lib_clrbrain.warn("unable to load nuclei coordinates")
         return
-    
-    # TODO: shift to separate function once load blobs without req labels img
-    cluster_settings = config.register_settings[
-        profiles.RegKeys.METRICS_CLUSTER]
-    knn_n = cluster_settings[profiles.RegKeys.KNN_N]
-    if knn_n:
-        # display k-nearest-neighbors for nuclei
-        knn_dist(blobs[:, :3], knn_n, 100)
     
     # append label IDs to blobs and scale to make isotropic
     blobs = ClusterByLabel.cluster_by_label(

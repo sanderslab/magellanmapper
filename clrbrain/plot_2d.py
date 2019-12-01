@@ -549,6 +549,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             to None to use :attr:`config.plot_labels`. Can explicitly set a 
             value to None to prevent unit display.
         marker (str): Marker style for points; defaults to None.
+    
+    Returns:
+        :obj:`matplotlib.Axes`: Axes object.
+    
     """
 
     def to_ignore(arr):
@@ -637,6 +641,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
     save_fig(out_path, config.savefig)
     if show: plt.show()
+    return ax
 
 
 def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 

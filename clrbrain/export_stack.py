@@ -248,11 +248,12 @@ def _setup_labels_cmaps(imgs, cmaps_labels=None):
     return cmaps_labels
 
 
-def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
-                  slice_vals=None, rescale=None, labels_imgs=None,
-                  multiplane=True, fit=False):
-    """Prepares to combine a stack of images in a directory or a single 
-    image given as a Numpy array.
+def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
+                     slice_vals=None, rescale=None, labels_imgs=None,
+                     multiplane=True, fit=False):
+    """Export a stack of images in a directory or a single volumetric image
+    and associated labels images to :obj:`matplotlib.image.AxesImage`
+    objects for export.
     
     Args:
         ax (:obj:`plt.Axes`): Matplotlib axes on which to plot images.
@@ -276,6 +277,10 @@ def prepare_stack(ax, image5d, path=None, offset=None, roi_size=None,
         multiplane: True to extract the images as an animated GIF or movie 
             file; False to extract a single plane only. Defaults to False.
         fit (bool): True to fit the figure frame to the resulting image.
+    
+    Returns:
+        List[:obj:`matplotlib.image.AxesImage`]: List of image objects.
+    
     """
     print("Starting image stack export")
     
@@ -409,7 +414,7 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
             # TODO: test directory of images
             # TODO: avoid reloading first image
             cli.setup_images(path_sub, series)
-            plotted_imgs = prepare_stack(
+            plotted_imgs = stack_to_ax_imgs(
                 ax, cli.image5d, path_sub, offset=offset, 
                 roi_size=roi_size, slice_vals=config.slice_vals, 
                 rescale=config.rescale, 

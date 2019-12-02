@@ -23,6 +23,10 @@ def load_blobs(img_path, scaled_shape=None, scale=None):
             transposed file; defaults to None.
 
     Returns:
+        :obj:`np.ndarray`, List, List: Array of blobs; sequence of scaling
+        factors to a scaled or resized image, or None if not loaded or given;
+        and the resolutions of the full-sized image in which the blobs
+        were detected. 
 
     """
     filename_base = importer.filename_to_base(
@@ -36,14 +40,21 @@ def load_blobs(img_path, scaled_shape=None, scale=None):
     img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, load_size)
     scaling = None
+    res = None
     if scale is not None or load_size is not None:
         _, img_info = importer.read_file(
             img_path_transposed, config.series, return_info=True)
         scaling = img_info["scaling"]
+        res = np.multiply(config.resolutions[0], scaling)
+        print("retrieved scaling from resized image:", scaling)
+        print("rescaled resolution for full-scale image:", res)
     elif scaled_shape is not None:
         # fall back to scaling based on comparison to original image
         image5d = importer.read_file(
             img_path_transposed, config.series)
         scaling = importer.calc_scaling(
             image5d, None, scaled_shape=scaled_shape)
-    return blobs, scaling
+        res = config.resolutions[0]
+        print("using scaling compared to full image:", scaling)
+        print("resolution from full-scale image:", res)
+    return blobs, scaling, res

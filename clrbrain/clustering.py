@@ -161,14 +161,14 @@ def cluster_blobs(img_path, suffix=None):
         mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
     labels_img_np = sitk_io.load_registered_img(
         mod_path, config.RegNames.IMG_LABELS.value)
-    blobs, scaling = np_io.load_blobs(img_path, labels_img_np.shape)
+    blobs, scaling, res = np_io.load_blobs(img_path, labels_img_np.shape)
     if blobs is None:
         lib_clrbrain.warn("unable to load nuclei coordinates")
         return
     
     # append label IDs to blobs and scale to make isotropic
     blobs = ClusterByLabel.cluster_by_label(
-        blobs[:, :3], labels_img_np, scaling, config.resolutions[0])
+        blobs[:, :3], labels_img_np, scaling, res)
     print(blobs)
     out_path = lib_clrbrain.combine_paths(mod_path, config.SUFFIX_BLOB_CLUSTERS)
     np.save(out_path, blobs)

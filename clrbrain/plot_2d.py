@@ -912,6 +912,31 @@ def setup_style(style=None):
     pylab.rcParams.update(config.rc_params)
 
 
+def post_plot(ax, out_path=None, save_ext=None, show=False):
+    """Post plot adjustments, followed by saving and display.
+    
+    Handles additional :attr:`config.plot_labels` values.
+    
+    Args:
+        ax (:obj:`matplotlib.image.Axes`: Image axes object.
+        out_path (str): String to save path without extension; defaults
+            to None. Both ``out_path`` and ``save_ext`` must be given to save.
+        save_ext (str): String to save extension; defaults to None.
+        show (bool): True to show the plot.
+
+    """
+    x_lim = config.plot_labels[config.PlotLabels.X_LIM]
+    y_lim = config.plot_labels[config.PlotLabels.Y_LIM]
+    if x_lim is not None:
+        ax.set_xlim(*x_lim)
+    if y_lim is not None:
+        ax.set_ylim(*y_lim)
+    if out_path and save_ext:
+        save_fig(out_path, save_ext)
+    if show:
+        plt.show()
+
+
 def main():
     # set up command-line args and plotting style
     from clrbrain import cli

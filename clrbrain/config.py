@@ -116,6 +116,7 @@ plot_2d_type = None
 PlotLabels = Enum(
     "PlotLabels", (
         "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT", 
+        "X_LIM", "Y_LIM",  # (min, max) for x-, y-axes
         "X_TICK_LABELS", "Y_TICK_LABELS", 
         "SIZE",  # in x,y 
         "LAYOUT",  # subplot layout in num of columns, rows

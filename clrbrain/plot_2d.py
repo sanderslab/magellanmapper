@@ -358,7 +358,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
               vspan_fmt=None, col_wt=None, df=None, x_tick_labels=None, 
-              rotation=None):
+              rotation=None, save=True):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -409,6 +409,12 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         x_tick_labels (List[str]): Sequence of labels for each bar group 
             along the x-axis; defaults to None to use ``groups`` instead. 
         rotation: Degrees of x-tick label rotation; defaults to None.
+        save (bool): True to save the plot; defaults to True.
+    
+    Returns:
+        :obj:`matplotlib.image.Axes`, str: Plot axes and save path without
+        extension.
+    
     """
     # load data frame from CSV and setup figure
     if df is None:
@@ -502,8 +508,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     
     # save and display
     out_path = path_to_df if prefix is None else prefix
-    save_fig(out_path, config.savefig, "_barplot")
+    out_path = lib_clrbrain.combine_paths(out_path, "barplot")
+    if save: save_fig(out_path, config.savefig)
     if show: plt.show()
+    return ax, out_path
 
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None, 
@@ -948,6 +956,8 @@ def main():
     plot_2d_type = lib_clrbrain.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
     
+    ax = None
+    out_path = None
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
         title = config.plot_labels[config.PlotLabels.TITLE]
@@ -959,21 +969,21 @@ def main():
         y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
         col_wt = config.plot_labels[config.PlotLabels.WT_COL]
         col_groups = config.plot_labels[config.PlotLabels.GROUP_COL]
-        plot_bars(
+        ax, out_path = plot_bars(
             config.filename, data_cols=data_cols, 
             legend_names=None, col_groups=col_groups, title=title, 
             y_label=y_lbl, y_unit=y_unit, 
-            size=size, show=show, groups=config.groups, 
-            prefix=config.prefix,
+            size=size, show=False, groups=config.groups, 
+            prefix=config.prefix, save=False,
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS:
         # barplot for data frame from R stats from means/CIs
-        plot_bars(
+        ax, out_path = plot_bars(
             config.filename, data_cols=("original.mean", "smoothed.mean"), 
             err_cols=("original.ci", "smoothed.ci"), 
             legend_names=("Original", "Smoothed"), col_groups="RegionName", 
-            size=size, show=show, groups=config.groups, 
+            size=size, show=False, groups=config.groups, save=False,
             prefix=config.prefix)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
@@ -993,12 +1003,12 @@ def main():
         if col_wt: print("weighting bars by", col_wt)
         
         # generate bar plot
-        plot_bars(
+        ax, out_path = plot_bars(
             config.filename, data_cols=("vals.effect", ), 
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
             legend_names="", col_groups="RegionName", title=title, 
-            y_label=y_lbl, y_unit=y_unit, 
-            size=size, show=show, groups=config.groups, 
+            y_label=y_lbl, y_unit=y_unit, save=False,
+            size=size, show=False, groups=config.groups, 
             prefix=config.prefix, col_vspan="Level", vspan_fmt="L{}", 
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
     
@@ -1033,6 +1043,9 @@ def main():
             cols_group=cols_group, labels=labels, title=title,
             fig_size=size, show=show, suffix=config.suffix, 
             alpha=config.alphas[0]*255)
+    
+    if ax is not None:
+        post_plot(ax, out_path, config.savefig, show)
 
 
 if __name__ == "__main__":

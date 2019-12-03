@@ -1951,8 +1951,10 @@ def main():
         meas(suffix="_drawn", df=df_e18)
         
         if len(config.filenames) >= 2 and config.filenames[1]:
-            # keep only labels showing improvement or worsening in another
-            # data frame to show whether improves when this other df improves
+            # compare with reference stats from another image such as
+            # the original (eg E18.5) atlas, filtering to keep only labels
+            # that improved in the reference to see how many stats also
+            # improve in the test, and likewise for worsened reference labels
             df_cp = pd.read_csv(config.filenames[1])
             df_cp_impr = df_cp[df_cp[col_effect] > 0].set_index(col_idx)
             df_cp_wors = df_cp[df_cp[col_effect] < 0].set_index(col_idx)

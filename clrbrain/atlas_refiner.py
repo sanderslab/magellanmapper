@@ -1337,9 +1337,9 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
     transformed_thresh_up = float(np.amax(transformed_img_np))
     
     # use threshold mean if lower thresholds not given
-    if not fixed_thresh or fixed_thresh >= fixed_thresh_up:
+    if not fixed_thresh or fixed_thresh > fixed_thresh_up:
         fixed_thresh = float(filters.threshold_mean(fixed_img_np))
-    if not transformed_thresh or transformed_thresh >= transformed_thresh_up:
+    if not transformed_thresh or transformed_thresh > transformed_thresh_up:
         transformed_thresh = float(filters.threshold_mean(transformed_img_np))
     print("measuring overlap with thresholds of {} (fixed) and {} (transformed)"
           .format(fixed_thresh, transformed_thresh))

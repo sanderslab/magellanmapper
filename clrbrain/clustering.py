@@ -123,7 +123,8 @@ class ClusterByLabel(object):
     
             for result in pool_results:
                 label_id, labels = result.get()
-                cls.blobs[cls.blobs[:, 3] == label_id, 4] = labels
+                if labels is not None:
+                    cls.blobs[cls.blobs[:, 3] == label_id, 4] = labels
             pool.close()
             pool.join()
         cls.blobs[:, :3] = np.divide(blobs[:, :3], blobs_iso_scaling)
@@ -135,13 +136,18 @@ class ClusterByLabel(object):
         blobs = cls.blobs
         if label_id is not None:
             blobs = blobs[blobs[:, 3] == label_id]
-        clusters = cluster.DBSCAN(
-            eps=eps, min_samples=minpts, leaf_size=30, n_jobs=n_jobs).fit(blobs)
-        num_clusters, num_noise, num_largest = cluster_dbscan_metrics(
-            clusters.labels_)
-        print("label {}: num clusters: {}, noise blobs: {}, largest cluster: {}"
-              .format(label_id, num_clusters, num_noise, num_largest))
-        return label_id, clusters.labels_
+        clus_lbls = None
+        if len(blobs) > 0:
+            clusters = cluster.DBSCAN(
+                eps=eps, min_samples=minpts, leaf_size=30,
+                n_jobs=n_jobs).fit(blobs)
+            num_clusters, num_noise, num_largest = cluster_dbscan_metrics(
+                clusters.labels_)
+            print("label {}: num clusters: {}, noise blobs: {}, "
+                  "largest cluster: {}"
+                  .format(label_id, num_clusters, num_noise, num_largest))
+            clus_lbls = clusters.labels_
+        return label_id, clus_lbls
 
 
 def cluster_blobs(img_path, suffix=None):

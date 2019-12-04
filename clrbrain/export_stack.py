@@ -438,7 +438,7 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
         plot_support.save_fig(path_base, config.savefig, mod)
 
 
-def reg_planes_to_img(imgs, path):
+def reg_planes_to_img(imgs, path=None, ax=None):
     """Export registered image single planes to a single figure.
     
     Simplified export tool taking a single plane from each registered image
@@ -449,21 +449,27 @@ def reg_planes_to_img(imgs, path):
             The first image is assumed to be greyscale, the second is labels,
             and any subsequent images are borders.
         path (str): Output base path, which will be combined with
-            :attr:`config.savefig`.
+            :attr:`config.savefig`; defaults to None to not save.
+        ax (:obj:`matplotlib.image.Axes`): Axes on which to plot; defaults
+            to False, in which case a new figure and axes will be generated.
 
     """
-    fig, gs = plot_support.setup_fig(
-        1, 1, config.plot_labels[config.PlotLabels.SIZE])
+    if ax is None:
+        # set up new figure with single subplot
+        fig, gs = plot_support.setup_fig(
+            1, 1, config.plot_labels[config.PlotLabels.SIZE])
+        ax = fig.add_subplot(gs[0, 0])
     imgs = [img[None] for img in imgs]
     cmaps_labels = _setup_labels_cmaps(imgs)
     plotted_imgs = _build_stack(
-        fig.add_subplot(gs[0, 0]), imgs, StackPlaneIO.process_plane,
+        ax, imgs, StackPlaneIO.process_plane,
         cmaps_labels=cmaps_labels, scale_bar=False)
     ax_img = plotted_imgs[0][0]
     aspect, origin = plot_support.get_aspect_ratio(config.plane)
     plot_support.fit_frame_to_image(
         ax_img.figure, ax_img.get_array().shape, aspect)
-    plot_support.save_fig(path, config.savefig)
+    if path:
+        plot_support.save_fig(path, config.savefig)
 
 
 if __name__ == "__main__":

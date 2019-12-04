@@ -340,7 +340,7 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
             # extract legend names assuming label.cond format
             names_group = np.unique([c.split(".")[1] for c in cols_xy[0]])
         units = (["{}/{}".format(l.split("_")[0], unit) for l in lbls] 
-                 if unit else None)
+                 if unit else (None, None))
         lbls = [l.replace("_", " ") for l in lbls]
         title = "{} Vs. {} By Region".format(*lbls)
         plot_2d.plot_scatter(

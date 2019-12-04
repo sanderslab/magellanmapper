@@ -453,9 +453,9 @@ def fit_frame_to_image(fig, shape, aspect):
     #fig.tight_layout(pad=-0.4) # neg padding to remove thin left border
     if aspect is None:
         aspect = 1
-    img_size_inches = np.divide(shape, fig.dpi) # convert to inches
-    print("image shape: {}, img_size_inches: {}"
-          .format(shape, img_size_inches))
+    img_size_inches = np.divide(shape, fig.dpi)  # convert to inches
+    print("image shape: {}, img_size_inches: {}, aspect: {}"
+          .format(shape, img_size_inches, aspect))
     if aspect > 1:
         fig.set_size_inches(img_size_inches[1], img_size_inches[0] * aspect)
     else:

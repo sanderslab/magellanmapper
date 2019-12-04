@@ -250,7 +250,7 @@ def _setup_labels_cmaps(imgs, cmaps_labels=None):
 
 def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
                      slice_vals=None, rescale=None, labels_imgs=None,
-                     multiplane=True, fit=False):
+                     multiplane=False, fit=False):
     """Export a stack of images in a directory or a single volumetric image
     and associated labels images to :obj:`matplotlib.image.AxesImage`
     objects for export.

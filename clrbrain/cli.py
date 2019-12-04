@@ -226,6 +226,7 @@ def main(process_args_only=False):
         description="Setup environment for Clrbrain")
     global roi_size, offset
     parser.add_argument("--img", nargs="*")
+    parser.add_argument("--meta", nargs="*")
     parser.add_argument("--channel", type=int)
     parser.add_argument("--series")
     parser.add_argument("--savefig")
@@ -278,7 +279,12 @@ def main(process_args_only=False):
         config.filename = config.filenames[0]
         print("Set filenames to {}, current filename {}"
               .format(config.filenames, config.filename))
-    
+
+    if args.meta is not None:
+        # set metadata paths
+        config.paths_metadata = args.meta
+        print("Set metadata paths to", config.paths_metadata)
+
     if args.channel is not None:
         # set the channel; currently supports a single channel or -1 for all
         # TODO: consider allowing array to support multiple but not 

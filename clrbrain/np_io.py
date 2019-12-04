@@ -58,3 +58,18 @@ def load_blobs(img_path, scaled_shape=None, scale=None):
         print("using scaling compared to full image:", scaling)
         print("resolution from full-scale image:", res)
     return blobs, scaling, res
+
+
+def load_metadata(path):
+    """Load a metadata file.
+    
+    Args:
+        path (str): Path to metadata file.
+
+    Returns:
+        Dictionary of metadata.
+
+    """
+    archive = np.load(path)
+    output = importer.read_np_archive(archive)
+    return output

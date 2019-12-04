@@ -11,9 +11,12 @@ import os
 import numpy as np
 import pandas as pd
 
+from clrbrain import cli
 from clrbrain import colormaps
 from clrbrain import config
+from clrbrain import export_stack
 from clrbrain import lib_clrbrain
+from clrbrain import np_io
 from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import plot_support
@@ -470,11 +473,40 @@ def plot_clusters_by_label(path, z, suffix=None):
     blobs = np.load(lib_clrbrain.combine_paths(
         mod_path, config.SUFFIX_BLOB_CLUSTERS))
     label_ids = np.unique(blobs[:, 3])
-    fig, gs = plot_support.setup_fig(1, 1)
+    fig, gs = plot_support.setup_fig(
+        1, 1, config.plot_labels[config.PlotLabels.SIZE])
     ax = fig.add_subplot(gs[0, 0])
     plot_support.hide_axes(ax)
+    
+    # plot underlying atlas
+    cli.setup_images(mod_path)
+    if config.reg_suffixes[config.RegSuffixes.ATLAS]:
+        # use atlas if explicitly set
+        img = cli.image5d
+    else:
+        # default to black background
+        img = np.zeros_like(config.labels_img)[None]
+    export_stack.stack_to_ax_imgs(
+        ax, img, mod_path, slice_vals=(z, ), 
+        labels_imgs=(config.labels_img, config.borders_img), 
+        fit=False)
+    # export_stack.reg_planes_to_img(
+    #     (np.zeros(config.labels_img.shape[1:], dtype=int),
+    #      config.labels_img[z]), ax=ax)
+    
+    if config.paths_metadata:
+        output = np_io.load_metadata(config.paths_metadata[0])
+        if "scaling" in output:
+            scaling = output["scaling"]
+            blobs = blobs.astype(float)
+            blobs[:, :3] = np.multiply(blobs[:, :3], scaling)
+            blobs[:, 0] = np.floor(blobs[:, 0])
+            print("scaled blobs cluster archive by", scaling)
+    
+    # plot nuclei by label, colored based on cluster size within each label
     colors = colormaps.discrete_colormap(
         len(np.unique(blobs[:, 4])), prioritize_default="cn") / 255.
+    col_noise = (1, 1, 1, 1)
     for label_id in label_ids:
         if label_id == 0:
             # skip blobs in background
@@ -489,11 +521,12 @@ def plot_clusters_by_label(path, z, suffix=None):
         for i, (clus_lbl, color) in enumerate(zip(clus_lbls, colors)):
             blobs_clus = blobs_lbl[blobs_lbl[:, 4] == clus_lbl]
             if len(blobs_clus) < 1: continue
-            size = 0.2
+            # default to small, translucent dominant cluster points 
+            size = 0.1
             alpha = 0.5
             if clus_lbl == -1:
-                # show noise as black
-                color = (0, 0, 0, 1)
+                # color all noise points the same
+                color = col_noise
             if clus_lbl == -1 or i > 0:
                 # emphasize blobs in non-dominant clusters
                 size = 0.5
@@ -502,4 +535,5 @@ def plot_clusters_by_label(path, z, suffix=None):
             ax.scatter(
                 blobs_clus[:, 2], blobs_clus[:, 1], color=color, s=size,
                 alpha=alpha)
+    plot_support.save_fig(mod_path, config.savefig, "_clusplot")
     plot_support.show()

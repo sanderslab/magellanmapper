@@ -629,6 +629,10 @@ class MeasureLabel(object):
             The metrics are NaN if the label size is 0.
         """
         metrics = dict.fromkeys(cls._PCL_METRICS, np.nan)
+        if cls.df is None and cls.blobs is None:
+            print("data frame and blobs not available, unable to measure"
+                  "point cloud stats")
+            return label_ids, metrics
     
         # get collective region
         labels = None

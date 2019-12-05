@@ -22,13 +22,14 @@ kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon",
            "ttest.paired", "wilcoxon.paired", "fligner", "basic")
 
 # measurements, which correspond to columns in main data frame
-kMeas <- c("Volume", "Density", "Nuclei", "VarIntensity", "VarNuclei", 
-          "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels_hemisphere", 
-          "Compactness", 
-          "VarIntensBorder", "VarIntensMatch", "VarIntensDiff", 
-          "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei", 
-          "Intensity", "DSC", "Smoothing_quality",
-          "VolDSC", "NucDSC", "VolOut", "NucOut")
+kMeas <- c(
+  "Volume", "Density", "Nuclei", "VarIntensity",
+  "VarNuclei", "EdgeDistSum", "EdgeDistMean", "DSC_atlas_labels_hemisphere",
+  "Compactness", "VarIntensBorder", "VarIntensMatch", "VarIntensDiff",
+  "CoefVarIntens", "CoefVarNuc", "MeanIntensity", "MeanNuclei",
+  "Intensity", "DSC", "Smoothing_quality", "VolDSC",
+  "NucDSC", "VolOut", "NucOut", "NucCluster",
+  "NucClusNoise")
 
 # named list to convert measurement columns to display names, consisting 
 # of lists of titles/labels and measurement units
@@ -810,6 +811,11 @@ setupConfig <- function(name=NULL) {
     config.env$Measurements <- kMeas[14]
     config.env$SampleLegend <- TRUE
     
+  } else if (name == "clustering") {
+    # nuclei clustering
+    setupConfig("wt")
+    config.env$Measurements <- kMeas[c(24:25)]
+    
   } else if (name == "geno") {
     # compare across multiple genotypes
     config.env$Measurements <- kMeas[1:3]
@@ -880,6 +886,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("reg")
   #setupConfig("wt.test")
   #setupConfig("compare.vol")
+  #setupConfig("clustering")
   
   #setupConfig("geno")
   #setupConfig("lessstringent")

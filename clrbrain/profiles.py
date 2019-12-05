@@ -882,7 +882,7 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "smoothtest", 
             {
-                "smooth": (0, 1, 2, 3, 4, 5),
+                "smooth": (0, 1, 2, 3, 4, 5, 6),
                 #"smooth": (0, ),
             },
             profile)

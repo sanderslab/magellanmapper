@@ -1825,6 +1825,8 @@ def main():
             vols.LabelMetrics.EdgeDistSum.name, 
             vols.LabelMetrics.CoefVarNuc.name, 
             vols.LabelMetrics.CoefVarIntens.name, 
+            vols.LabelMetrics.NucCluster.name,
+            vols.LabelMetrics.NucClusNoise.name,
             #vols.MetricCombos.HOMOGENEITY.value[0], 
         )
         for metric in metrics:

@@ -982,10 +982,11 @@ def main():
         y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
         col_wt = config.plot_labels[config.PlotLabels.WT_COL]
         col_groups = config.plot_labels[config.PlotLabels.GROUP_COL]
+        legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
         hline = config.plot_labels[config.PlotLabels.HLINE]
         ax, out_path = plot_bars(
             config.filename, data_cols=data_cols, 
-            legend_names=None, col_groups=col_groups, title=title, 
+            legend_names=legend_names, col_groups=col_groups, title=title, 
             y_label=y_lbl, y_unit=y_unit, hline=hline,
             size=size, show=False, groups=config.groups, 
             prefix=config.prefix, save=False,

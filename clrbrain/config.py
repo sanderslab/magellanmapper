@@ -127,6 +127,7 @@ PlotLabels = Enum(
         "WT_COL",  # weight column
         "ID_COL",  # ID column
         "ZOOM_SHIFT",  # shift plot offset when zooming into ROI
+        "HLINE",  # horizontal line, usually fn for each group
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)
@@ -142,6 +143,14 @@ transform = dict.fromkeys(Transforms, None)
 # extensions for saving figures
 FORMATS_3D = ("obj", "x3d") # save 3D renderings
 savefig = None # save files using this extension
+
+
+#: dict: Dictionary mapping function names as lower-case strings to functions.
+STR_FN = {
+    "mean": np.nanmean,
+    "med": np.nanmedian,
+}
+
 
 # style sheet
 matplotlib_style = "seaborn"

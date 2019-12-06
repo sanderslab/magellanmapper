@@ -203,7 +203,8 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
 
 def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
                title, padding=0.2, skip_all_zero=False, rotation=None,
-               y_unit=None, vspans=None, vspan_lbls=None, vspan_alt_y=False):
+               y_unit=None, vspans=None, vspan_lbls=None, vspan_alt_y=False,
+               hline=None):
     """Generate grouped bar plots from lists, where corresponding elements 
     in the lists are grouped together.
     
@@ -251,13 +252,19 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
             defaults to None.
         vspan_alt_y (bool): True to alternate y-axis placement to avoid 
             overlap; defaults to False.
+        hline (str): One of :attr:`config.STR_FN` for a function to apply
+            to each list in ``lists`` for a horizontal line to be drawn
+            at this y-value; defaults to None.
     """
+    if len(lists) < 1: return
     if rotation is None:
         # default rotation to 90 degrees for "no" rotation (vertical text)
         rotation = 90
-    
+    hline_fn = None
+    if hline:
+        # retrieve function for horizontal line summary metric
+        hline_fn = config.STR_FN.get(hline.lower())
     bars = []
-    if len(lists) < 1: return
     
     # convert lists to Numpy arrays to allow fancy indexing
     lists = np.array(lists)
@@ -308,6 +315,9 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
         bars.append(
             ax.bar(indices + width * i, lists[i], width=width, color=colors[i], 
                    linewidth=0, yerr=err, error_kw=err_dict, align="edge"))
+        if hline_fn:
+            # dashed horizontal line at the given metric output
+            ax.axhline(hline_fn(lists[i]), color=colors[i], linestyle="--")
     ax.set_title(title)
     
     # show y-label with any unit in scientific notation
@@ -358,7 +368,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
               col_groups=None, groups=None, y_label=None, y_unit=None, 
               title=None, size=None, show=True, prefix=None, col_vspan=None, 
               vspan_fmt=None, col_wt=None, df=None, x_tick_labels=None, 
-              rotation=None, save=True):
+              rotation=None, save=True, hline=None):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -410,6 +420,9 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             along the x-axis; defaults to None to use ``groups`` instead. 
         rotation: Degrees of x-tick label rotation; defaults to None.
         save (bool): True to save the plot; defaults to True.
+        hline (str): One of :attr:`config.STR_FN` for a function to apply
+            to each list in ``lists`` for a horizontal line to be drawn
+            at this y-value; defaults to None.
     
     Returns:
         :obj:`matplotlib.image.Axes`, str: Plot axes and save path without
@@ -504,7 +517,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     _bar_plots(
         ax, lists, errs, legend_names, x_labels, bar_colors, y_label, 
         title, y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls, 
-        rotation=rotation)
+        rotation=rotation, hline=hline)
     
     # save and display
     out_path = path_to_df if prefix is None else prefix
@@ -969,10 +982,11 @@ def main():
         y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
         col_wt = config.plot_labels[config.PlotLabels.WT_COL]
         col_groups = config.plot_labels[config.PlotLabels.GROUP_COL]
+        hline = config.plot_labels[config.PlotLabels.HLINE]
         ax, out_path = plot_bars(
             config.filename, data_cols=data_cols, 
             legend_names=None, col_groups=col_groups, title=title, 
-            y_label=y_lbl, y_unit=y_unit, 
+            y_label=y_lbl, y_unit=y_unit, hline=hline,
             size=size, show=False, groups=config.groups, 
             prefix=config.prefix, save=False,
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)

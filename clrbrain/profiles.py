@@ -708,7 +708,7 @@ def update_register_settings(settings, settings_type):
                 }, 
                 # rotate conservatively for symmetry without losing labels
                 "rotate": ((-0.4, 1), ),
-                "smooth": 4,
+                "smooth": 5,
             }, 
             profile)
         

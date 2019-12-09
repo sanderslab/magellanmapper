@@ -653,13 +653,13 @@ def main():
     elif stats_type == config.StatsTypes.EXTRACT_FROM_CSV:
         # convert volume stats data frame to experiments by region, 
         # co-opting arguments given as plot labels for row extraction, where 
-        # "X_LABEL" = name of column on which to filter, and 
-        # "Y_LABEL" = values in this column for which rows should be kept
+        # "X_COL" = name of column on which to filter, and 
+        # "Y_COL" = values in this column for which rows should be kept
         df = pd.read_csv(config.filename)
         df_filt, _ = filter_dfs_on_vals(
             [df], None, 
-            [(config.plot_labels[config.PlotLabels.X_LABEL],
-              config.plot_labels[config.PlotLabels.Y_LABEL])])
+            [(config.plot_labels[config.PlotLabels.X_COL],
+              config.plot_labels[config.PlotLabels.Y_COL])])
         out_path = config.prefix
         if not out_path:
             out_path = "filtered.csv"

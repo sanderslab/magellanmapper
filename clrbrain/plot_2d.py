@@ -530,7 +530,8 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None, 
                title=None, size=None, show=True, suffix=None, 
                colors=None, df=None, groups=None, ignore_invis=False, 
-               units=None, marker=None, err_cols=None, prefix=None, save=True):
+               units=None, marker=None, err_cols=None, prefix=None, save=True,
+               ax=None):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -575,6 +576,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         prefix: Base path for figure output if :attr:``config.savefig`` 
             is set; defaults to None to use ``path_to_df``.
         save (bool): True to save the plot; defaults to True.
+        ax (:obj:`matplotlib.image.Axes`: Image axes object; defaults to
+            None to generate a new figure and subplot.
     
     Returns:
         :obj:`matplotlib.Axes`: Axes object.
@@ -588,9 +591,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     # load data frame from CSV unless already given and setup figure
     if df is None:
         df = pd.read_csv(path_to_df)
-    fig = plt.figure(figsize=size, constrained_layout=True)
-    gs = gridspec.GridSpec(1, 1, figure=fig)
-    ax = plt.subplot(gs[0, 0])
+    if ax is None:
+        fig = plt.figure(figsize=size, constrained_layout=True)
+        gs = gridspec.GridSpec(1, 1, figure=fig)
+        ax = plt.subplot(gs[0, 0])
 
     if colors is None:
         # default to discrete colors starting with CN colors

@@ -379,8 +379,11 @@ class ItkSnapLabels(Enum):
 #: :class:`Enum`: stats module processing types
 StatsTypes = Enum(
     "StatsTypes", [
-        "MERGE_CSVS", "MERGE_CSVS_COLS", "EXPS_BY_REGION", "EXTRACT_FROM_CSV"
+        "MERGE_CSVS",  # merge rows
+        "MERGE_CSVS_COLS",  # merge columns based on ID
         "APPEND_CSVS_COLS",  # concatenate chosen columns
+        "EXPS_BY_REGION",  # convert volume stats to experiments by region
+        "EXTRACT_FROM_CSV",  # extract rows based on matching rows in given col
         "ADD_CSV_COLS",  # add columns with values to CSV
         "NORMALIZE",  # normalize metrics to a base condition within a CSV
     ]

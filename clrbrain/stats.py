@@ -692,8 +692,7 @@ def main():
         exps_by_regions(config.filename)
 
     elif stats_type == config.StatsTypes.EXTRACT_FROM_CSV:
-        # convert volume stats data frame to experiments by region, 
-        # co-opting arguments given as plot labels for row extraction, where 
+        # extract rows from CSV file based on matching rows in given col, where 
         # "X_COL" = name of column on which to filter, and 
         # "Y_COL" = values in this column for which rows should be kept
         df = pd.read_csv(config.filename)

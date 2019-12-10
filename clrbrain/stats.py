@@ -721,6 +721,25 @@ def main():
                 config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
+    elif stats_type == config.StatsTypes.NORMALIZE:
+        # normalize values in each group to that of a base group, where
+        # "ID_COL" = ID column(s),
+        # "X_COL" = condition column
+        # "Y_COL" = base condition to which values will be normalized,
+        # "GROUP_COL" = metric columns to normalize,
+        # "WT_COL" = extra columns to keep
+        df = pd.read_csv(config.filename)
+        df = normalize_df(
+            df, config.plot_labels[config.PlotLabels.ID_COL],
+            config.plot_labels[config.PlotLabels.X_COL],
+            config.plot_labels[config.PlotLabels.Y_COL], 
+            config.plot_labels[config.PlotLabels.GROUP_COL],
+            config.plot_labels[config.PlotLabels.WT_COL])
+        out_path = config.prefix
+        if not out_path:
+            out_path = lib_clrbrain.insert_before_ext(config.filename, "_norm")
+        data_frames_to_csv(df, out_path)
+
 
 if __name__ == "__main__":
     main()

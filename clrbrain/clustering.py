@@ -19,7 +19,7 @@ from clrbrain import profiles
 from clrbrain import sitk_io
 
 
-def knn_dist(blobs, n, max_dist=None, show=True):
+def knn_dist(blobs, n, max_dist=None, show=True, ax=None):
     """Measure the k-nearest-neighbors distance.
     
     Args:
@@ -31,6 +31,8 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         max_dist (int, float): Maximum distance given as a percentile to plot;
             defaults to None to show neighbors of all distances.
         show (bool): True to plot the distances; defaults to True.
+        ax (:obj:`matplotlib.image.Axes`: Image axes object; defaults to
+            None to generate a new figure and subplot.
 
     Returns:
         :obj:`neighbors.NearestNeighbors`, :obj:`np.ndarray`:
@@ -38,13 +40,13 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         ``kneighbors`` sorted by the ``n``th neighbor.
 
     """
-    knn = neighbors.NearestNeighbors(n).fit(blobs)
     def plot(ax_plot, mod=""):
         df = pd.DataFrame(
             {"point": np.arange(len(dist_disp)), "dist": dist_disp})
         return plot_2d.plot_lines(
             "knn_dist{}".format(mod), "point", ("dist", ), df=df, ax=ax_plot)
     
+    knn = neighbors.NearestNeighbors(n, n_jobs=-1).fit(blobs)
     print(knn)
     dist, _ = knn.kneighbors(blobs)
     # sort distances based on nth neighbors
@@ -61,6 +63,42 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         # zoom to >= 90th percentile
         dist_disp = distn[distn > np.percentile(distn, 90)]
         ax = plot(ax, "_zoomed")
+    return knn, dist, ax
+
+
+def plot_knns(img_paths, suffix=None, show=False):
+    """Plot k-nearest-neighbor distances for multiple sets of blobs,
+    overlaying on a single plot.
+
+    Args:
+        img_paths (List[str]): Base paths from which registered labels and
+            blobs files will be found and output blobs file save location
+            will be constructed.
+        suffix (str): Suffix for ``path``; defaults to None.
+        show (bool): True to plot the distances; defaults to False.
+
+    """
+    cluster_settings = config.register_settings[
+        profiles.RegKeys.METRICS_CLUSTER]
+    knn_n = cluster_settings[profiles.RegKeys.KNN_N]
+    if not knn_n:
+        knn_n = cluster_settings[profiles.RegKeys.DBSCAN_MINPTS] - 1
+    print("Calculating k-nearest-neighbor distances and plotting distances "
+          "for neighbor {}".format(knn_n))
+    ax = None
+    for img_path in img_paths:
+        mod_path = img_path
+        if suffix is not None:
+            mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
+        labels_img_np = sitk_io.load_registered_img(
+            mod_path, config.RegNames.IMG_LABELS.value)
+        blobs, scaling, res = np_io.load_blobs(img_path, labels_img_np.shape)
+        if blobs is None:
+            lib_clrbrain.warn("unable to load nuclei coordinates for", img_path)
+            continue
+        # convert to physical units and display k-nearest-neighbors for nuclei
+        blobs = np.multiply(blobs[:, :3], res)
+        _, _, ax = knn_dist(blobs, knn_n, 99.9, show, ax)
 
 
 def cluster_dbscan_metrics(labels):
@@ -101,12 +139,6 @@ class ClusterByLabel(object):
         print(cls.blobs)
 
         # TODO: shift to separate func once load blobs without req labels img
-        cluster_settings = config.register_settings[
-            profiles.RegKeys.METRICS_CLUSTER]
-        knn_n = cluster_settings[profiles.RegKeys.KNN_N]
-        if knn_n:
-            # display k-nearest-neighbors for nuclei
-            knn_dist(cls.blobs[:, :3], knn_n, 100)
 
         label_ids = np.unique(labels_img_np)
         cluster_settings = config.register_settings[

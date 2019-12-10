@@ -1966,14 +1966,18 @@ def main():
                     meas(suffix="".join((suf, suf_cp)), 
                          df=df_mode.loc[df_mode.index.isin(df_cp_mode.index)])
     
+    elif reg is config.RegisterTypes.plot_knns:
+        # plot k-nearest-neighbor distances for multiple paths
+        clustering.plot_knns(config.filenames, config.suffix, show)
+    
     elif reg is config.RegisterTypes.cluster_blobs:
         # cluster blobs and output to Numpy archive
         clustering.cluster_blobs(config.filename, config.suffix)
-
+    
     elif reg is config.RegisterTypes.plot_cluster_blobs:
         # show blob clusters for the given plane
         atlas_stats.plot_clusters_by_label(
-            config.filename, config.offsets[0][2], config.suffix)
+            config.filename, config.offsets[0][2], config.suffix, show)
 
 
 if __name__ == "__main__":

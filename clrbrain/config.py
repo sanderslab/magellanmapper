@@ -329,6 +329,7 @@ RegisterTypes = Enum(
         "pivot_conds",
         "meas_improvement",
         "cluster_blobs",
+        "plot_knns",
         "plot_cluster_blobs",
     ]
 )

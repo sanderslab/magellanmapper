@@ -695,6 +695,22 @@ def is_seq(val):
     return np.ndim(val) != 0
 
 
+def to_seq(val):
+    """Convert a value to a sequence if not already a sequence.
+    
+    Args:
+        val: Value to convert.
+
+    Returns:
+        A sequence of the value if it is not already a sequence, or
+        otherwise the sequence itself.
+
+    """
+    if not is_seq(val):
+        val = [val]
+    return val
+
+
 def enum_dict_aslist(d):
     """Summarize a dictionary with enums as keys as a shortened 
     list with only the names of each enum member.

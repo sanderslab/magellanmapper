@@ -109,6 +109,7 @@ Plot2DTypes = Enum(
     "Plot2DTypes", (
         "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
         "ROC_CURVE", "SCATTER_PLOT",
+        "LINE_PLOT",  # generic line plot
     )
 )
 plot_2d_type = None
@@ -126,6 +127,7 @@ PlotLabels = Enum(
         "GROUP_COL",  # data frame group column
         "WT_COL",  # weight column
         "ID_COL",  # ID column
+        "ERR_COL",  # error column(s)
         "ZOOM_SHIFT",  # shift plot offset when zooming into ROI
         "HLINE",  # horizontal line, usually fn for each group
         "LEGEND_NAMES",  # names to display in legend

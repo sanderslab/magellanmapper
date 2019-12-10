@@ -1036,7 +1036,23 @@ def main():
             size=size, show=False, groups=config.groups, 
             prefix=config.prefix, col_vspan="Level", vspan_fmt="L{}", 
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
-    
+
+    elif plot_2d_type is config.Plot2DTypes.LINE_PLOT:
+        # generic line plot
+        
+        title = config.plot_labels[config.PlotLabels.TITLE]
+        x_cols = config.plot_labels[config.PlotLabels.X_COL]
+        data_cols = lib_clrbrain.to_seq(
+            config.plot_labels[config.PlotLabels.Y_COL])
+        labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
+                  config.plot_labels[config.PlotLabels.X_LABEL])
+        err_cols = lib_clrbrain.to_seq(
+            config.plot_labels[config.PlotLabels.ERR_COL])
+        ax = plot_lines(
+            config.filename, x_col=x_cols, data_cols=data_cols,
+            labels=labels, err_cols=err_cols, title=title, size=size,
+            show=False, groups=config.groups, prefix=config.prefix)
+
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve
 

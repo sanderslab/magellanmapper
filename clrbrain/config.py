@@ -381,6 +381,7 @@ StatsTypes = Enum(
     "StatsTypes", [
         "MERGE_CSVS", "MERGE_CSVS_COLS", "EXPS_BY_REGION", "EXTRACT_FROM_CSV"
         "APPEND_CSVS_COLS",  # concatenate chosen columns
+        "ADD_CSV_COLS",  # add columns with values to CSV
     ]
 )
 stats_type = None

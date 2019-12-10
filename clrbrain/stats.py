@@ -429,6 +429,23 @@ def append_cols(dfs, labels, fn_col=None, extra_cols=None, data_cols=None):
     return df
 
 
+def add_cols_df(df, cols):
+    """Add columns to a data frame.
+    
+    Args:
+        df (:obj:`pd.DataFrame`): Data frame.
+        cols (Dict[str, Any]): Dictionary of ``{column: default_value}``
+            to add to ``df``.
+
+    Returns:
+        :obj:`pd.DataFrame`: Data frame with columns added.
+
+    """
+    for key, val in cols.items():
+        df[key] = val
+    return df
+
+
 def join_dfs(dfs, id_col):
     """Join data frames by an ID column.
     
@@ -688,6 +705,21 @@ def main():
         if not out_path:
             out_path = "filtered.csv"
         data_frames_to_csv(df_filt, out_path)
+
+    elif stats_type == config.StatsTypes.ADD_CSV_COLS:
+        # add columns with corresponding values for all rows, where 
+        # "X_COL" = name of column(s) to add, and 
+        # "Y_COL" = value(s) for corresponding cols
+        df = pd.read_csv(config.filename)
+        cols = {k: v for k, v in zip(
+            lib_clrbrain.to_seq(config.plot_labels[config.PlotLabels.X_COL]),
+            lib_clrbrain.to_seq(config.plot_labels[config.PlotLabels.Y_COL]))}
+        df = add_cols_df(df, cols)
+        out_path = config.prefix
+        if not out_path:
+            out_path = lib_clrbrain.insert_before_ext(
+                config.filename, "_appended")
+        data_frames_to_csv(df, out_path)
 
 
 if __name__ == "__main__":

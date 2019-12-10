@@ -717,7 +717,7 @@ setupConfig <- function(name=NULL) {
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
     config.env$Measurements <- kMeas[6]
     config.env$Model <- kModel[8]
-    config.env$PlotVolcano <- TRUE
+    config.env$PlotVolcano <- FALSE
     config.env$VolcanoLabels <- TRUE
     config.env$VolcanoLogX <- TRUE
     config.env$JitterPlotSave <- TRUE
@@ -795,6 +795,7 @@ setupConfig <- function(name=NULL) {
   } else if (name == "wt") {
     # WT samples
     config.env$Measurements <- kMeas[c(4:7, 13:14)]
+    config.env$PlotVolcano <- TRUE
     config.env$VolcanoLabels <- FALSE
     config.env$VolcanoLogX <- FALSE
     config.env$JitterPlotSave <- FALSE
@@ -820,6 +821,7 @@ setupConfig <- function(name=NULL) {
     # compare across multiple genotypes
     config.env$Measurements <- kMeas[1:3]
     config.env$Model <- kModel[1]
+    config.env$PlotVolcano <- TRUE
     config.env$VolcanoLogX <- FALSE
     config.env$Condition <- "smoothed"
     config.env$GroupCol <- "Geno"

@@ -458,13 +458,14 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     return df_impr
 
 
-def plot_clusters_by_label(path, z, suffix=None):
+def plot_clusters_by_label(path, z, suffix=None, show=True):
     """Plot separate sets of clusters for each label.
     
     Args:
         path (str): Base path to blobs file with clusters.
         z (int): z-plane to plot.
         suffix (str): Suffix for ``path``; defaults to None.
+        show (bool): True to show; defaults to True.
 
     """
     mod_path = path
@@ -534,4 +535,4 @@ def plot_clusters_by_label(path, z, suffix=None):
                 blobs_clus[:, 2], blobs_clus[:, 1], color=color, s=size,
                 alpha=alpha)
     plot_support.save_fig(mod_path, config.savefig, "_clusplot")
-    plot_support.show()
+    if show: plot_support.show()

@@ -39,6 +39,12 @@ def knn_dist(blobs, n, max_dist=None, show=True):
 
     """
     knn = neighbors.NearestNeighbors(n).fit(blobs)
+    def plot(ax_plot, mod=""):
+        df = pd.DataFrame(
+            {"point": np.arange(len(dist_disp)), "dist": dist_disp})
+        return plot_2d.plot_lines(
+            "knn_dist{}".format(mod), "point", ("dist", ), df=df, ax=ax_plot)
+    
     print(knn)
     dist, _ = knn.kneighbors(blobs)
     # sort distances based on nth neighbors
@@ -48,10 +54,13 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         dist = dist[dist[:, n - 1] < np.percentile(dist, max_dist)]
     if show:
         # line plot of nth neighbor distances by ascending order
-        df = pd.DataFrame(
-            {"point": np.arange(len(dist)), "dist": dist[:, n - 1]})
-        plot_2d.plot_lines("", "point", ("dist", ), df=df)
-    return knn, dist
+        distn = dist[:, n - 1]
+        step = int(len(distn) / 1000)
+        dist_disp = distn[::step]  # downsample for overview plot
+        plot(None)
+        # zoom to >= 90th percentile
+        dist_disp = distn[distn > np.percentile(distn, 90)]
+        ax = plot(ax, "_zoomed")
 
 
 def cluster_dbscan_metrics(labels):

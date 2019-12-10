@@ -380,6 +380,7 @@ class ItkSnapLabels(Enum):
 StatsTypes = Enum(
     "StatsTypes", [
         "MERGE_CSVS", "MERGE_CSVS_COLS", "EXPS_BY_REGION", "EXTRACT_FROM_CSV"
+        "APPEND_CSVS_COLS",  # concatenate chosen columns
     ]
 )
 stats_type = None

@@ -384,7 +384,7 @@ def combine_cols(df, combos):
     return df
 
 
-def append_cols(dfs, labels, fn_col=None, extra_cols=None):
+def append_cols(dfs, labels, fn_col=None, extra_cols=None, data_cols=None):
     """Append columns from a group of data frames, optionally filtering
     to keep only columns matching criteria.
     
@@ -393,22 +393,28 @@ def append_cols(dfs, labels, fn_col=None, extra_cols=None):
     
     Args:
         dfs (List[:obj:`pd.DataFrame`]: Sequence of data frames.
-        labels (List[str]): Labels to prepend to filtered columns in
-            the corresponding data frame in ``dfs``.
+        labels (List[str]): Labels corresponding to data frame in ``dfs``
+             to prepend to columns before appending.
         fn_col (func): Function by which to filter columns; defaults to
-            None to keep all columns.
+            None to keep all columns. Take precedence over ``data_cols``.
         extra_cols (List[str]): List of additional columns to keep from the
-            first data frame; defaults to None.
+            first data frame after filtering by ``fn_col``; defaults to None.
+        data_cols (List[str]): List of columns to keep from each data frame;
+            defaults to None to keep all columns.
 
     Returns:
         The combined data frame
 
     """
     for i, (df, label) in enumerate(zip(dfs, labels)):
+        # default to keep all columns
         cols = df.columns
-        if fn_col is not None:
-            # filter columns to keep
-            cols = [col for col in cols if fn_col(col)]
+        if fn_col is not None or data_cols:
+            # keep only given data columns unless fn_col given
+            cols = data_cols
+            if fn_col is not None:
+                # filter columns to keep instead
+                cols = [col for col in cols if fn_col(col)]
             keep_cols = cols
             if i == 0 and extra_cols:
                 # keep additional columns from first data frame
@@ -644,6 +650,24 @@ def main():
         if not out_path:
             out_path = lib_clrbrain.insert_before_ext(
                 config.filename, "_joined")
+        data_frames_to_csv(df, out_path)
+
+    elif stats_type is config.StatsTypes.APPEND_CSVS_COLS:
+        # join multiple CSV files based on a given index column into single
+        # CSV file
+        dfs = [pd.read_csv(f) for f in config.filenames]
+        labels = lib_clrbrain.to_seq(
+            config.plot_labels[config.PlotLabels.X_LABEL])
+        extra_cols = lib_clrbrain.to_seq(
+            config.plot_labels[config.PlotLabels.X_COL])
+        data_cols = lib_clrbrain.to_seq(
+            config.plot_labels[config.PlotLabels.Y_COL])
+        df = append_cols(
+            dfs, labels, extra_cols=extra_cols, data_cols=data_cols)
+        out_path = config.prefix
+        if not out_path:
+            out_path = lib_clrbrain.insert_before_ext(
+                config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
     elif stats_type == config.StatsTypes.EXPS_BY_REGION:

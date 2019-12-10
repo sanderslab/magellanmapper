@@ -525,10 +525,8 @@ def plot_clusters_by_label(path, z, suffix=None):
             size = 0.1
             alpha = 0.5
             if clus_lbl == -1:
-                # color all noise points the same
+                # color all noise points the same and emphasize points
                 color = col_noise
-            if clus_lbl == -1 or i > 0:
-                # emphasize blobs in non-dominant clusters
                 size = 0.5
                 alpha = 1
             print(label_id, clus_lbl, color, len(blobs_clus))

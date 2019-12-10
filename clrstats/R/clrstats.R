@@ -18,8 +18,9 @@ kStatTypes <- c(
 )
 
 # statistical models
-kModel <- c("logit", "linregr", "gee", "logit.ord", "ttest", "wilcoxon", 
-           "ttest.paired", "wilcoxon.paired", "fligner", "basic")
+kModel <- c(
+  "logit", "linregr", "gee", "logit.ord", "ttest",
+  "wilcoxon", "ttest.paired", "wilcoxon.paired", "fligner", "basic")
 
 # measurements, which correspond to columns in main data frame
 kMeas <- c(
@@ -848,6 +849,11 @@ setupConfig <- function(name=NULL) {
     # use Benjamini-Hochman False Discovery Rate instead of Bonferroni
     config.env$P.Corr <- "BH"
     
+  } else if (name == "basic.stats") {
+    # generate only basic stats
+    config.env$Model <- kModel[10]
+    config.env$PlotVolcano <- FALSE
+    
   } else if (name == "skinny") {
     # very narrow plots
     config.env$PlotSize <- c(3.5, 7)
@@ -874,6 +880,8 @@ runStats <- function(stat.type=NULL) {
   #   stat.type: One of kStatTypes specifying stat processing typest. 
   #     Defaults to NULL to use kStatTypes[1].
   
+  print(paste("running stats of type", stat.type))
+  
   # setup configuration environment
   setupConfig()
   
@@ -896,6 +904,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("compare.laterality") # L vs R paired stats
   #setupConfig("benjamini.hochman")
   
+  #setupConfig("basic.stats")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")
   #setupConfig("skinny.small")

@@ -184,8 +184,11 @@ def args_to_dict(args, keys_enum, args_dict={}):
     num_enums = len(keys_enum)
     for i, arg in enumerate(args):
         arg_split = arg.split("=")
+        len_arg_split = len(arg_split)
         # assume by position until any keyword given
-        by_position = by_position and len(arg_split) < 2
+        by_position = by_position and len_arg_split < 2
+        key = None
+        vals = arg
         if by_position:
             # positions are based on enum vals, assumed to range from 
             # 1 to num of members
@@ -194,8 +197,10 @@ def args_to_dict(args, keys_enum, args_dict={}):
                 print("no further parameters in {} to assign \"{}\" by "
                       "position, skipping".format(keys_enum, arg))
                 continue
-            vals = arg
             key = keys_enum(n)
+        elif len_arg_split < 2:
+            print("parameter {} does not contain a keyword, skipping"
+                  .format(arg))
         else:
             # assign based on keyword if its equivalent enum exists
             vals = arg_split[1]
@@ -205,12 +210,13 @@ def args_to_dict(args, keys_enum, args_dict={}):
             except KeyError:
                 print("unable to find {} in {}".format(key_str, keys_enum))
                 continue
-        vals_split = vals.split(",")
-        if len(vals_split) > 1:
-            # use split value if comma-delimited
-            vals = vals_split
-        # cast to numeric types if possible and assign to found enum
-        args_dict[key] = lib_clrbrain.get_int(vals)
+        if key:
+            vals_split = vals.split(",")
+            if len(vals_split) > 1:
+                # use split value if comma-delimited
+                vals = vals_split
+            # cast to numeric types if possible and assign to found enum
+            args_dict[key] = lib_clrbrain.get_int(vals)
     return args_dict
 
 

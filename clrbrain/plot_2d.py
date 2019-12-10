@@ -530,7 +530,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None, 
                title=None, size=None, show=True, suffix=None, 
                colors=None, df=None, groups=None, ignore_invis=False, 
-               units=None, marker=None):
+               units=None, marker=None, err_cols=None, prefix=None, save=True):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -570,6 +570,11 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             to None to use :attr:`config.plot_labels`. Can explicitly set a 
             value to None to prevent unit display.
         marker (str): Marker style for points; defaults to None.
+        err_cols (List[str]): Sequence of column names with relative error 
+            values corresponding to ``data_cols``; defaults to None.
+        prefix: Base path for figure output if :attr:``config.savefig`` 
+            is set; defaults to None to use ``path_to_df``.
+        save (bool): True to save the plot; defaults to True.
     
     Returns:
         :obj:`matplotlib.Axes`: Axes object.
@@ -611,11 +616,14 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         # plot columns with unique colors
         df_col = df[col]
         label = str(col).replace("_", " ")
+        df_err = df[err_cols[i]] if err_cols else None
         if groups is None:
             if to_ignore(df_col): continue
             lines.extend(ax.plot(
                 x, df_col, color=colors[i], linestyle=linestyles[i],
                 label=label, marker=marker))
+            if df_err is not None:
+                ax.errorbar(x, df_col, df_err)
         else:
             # prioritize solid line for main legend
             labelj = linestyles.index("-") if "-" in linestyles else 0
@@ -626,6 +634,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                 lines_group = ax.plot(
                     x, df_group, color=colors[i], linestyle=linestyles[j],
                     label=label, marker=marker)
+                if df_err is not None:
+                    ax.errorbar(x, df_group, df_err[group])
                 if j == labelj:
                     # add first line to main legend
                     lines.extend(lines_group)
@@ -658,9 +668,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     if title: ax.set_title(title)
     
     # save and display
-    out_path = path_to_df
+    out_path = path_to_df if prefix is None else prefix
     if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
-    save_fig(out_path, config.savefig)
+    if save: save_fig(out_path, config.savefig)
     if show: plt.show()
     return ax
 

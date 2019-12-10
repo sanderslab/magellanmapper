@@ -28,8 +28,8 @@ def knn_dist(blobs, n, max_dist=None, show=True):
             form, ``[z, y, x, ...]``.
         n (int): Number of neighbors. The farthest neighbor will be used
             for sorting, filtering, and plotting.
-        max_dist (int): Maximum distance to plot; defaults to None to show
-            neighbors of all distances.
+        max_dist (int, float): Maximum distance given as a percentile to plot;
+            defaults to None to show neighbors of all distances.
         show (bool): True to plot the distances; defaults to True.
 
     Returns:
@@ -45,7 +45,7 @@ def knn_dist(blobs, n, max_dist=None, show=True):
     dist = dist[np.argsort(dist[:, n - 1])]
     if max_dist:
         # remove all distances where nth neighbor is beyond threshold
-        dist = dist[dist[:, n - 1] < max_dist]
+        dist = dist[dist[:, n - 1] < np.percentile(dist, max_dist)]
     if show:
         # line plot of nth neighbor distances by ascending order
         df = pd.DataFrame(

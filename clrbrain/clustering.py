@@ -50,6 +50,7 @@ def knn_dist(blobs, n, max_dist=None, show=True):
             "knn_dist{}".format(mod), "point", ("dist", ), df=df, show=show)
         return df
     
+    #blobs = blobs[::int(len(blobs) / 1000)]  # TESTING: small num of blobs
     knn = neighbors.NearestNeighbors(n, n_jobs=-1).fit(blobs)
     print(knn)
     dist, _ = knn.kneighbors(blobs)
@@ -63,6 +64,7 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         # line plot of nth neighbor distances by ascending order
         distn = dist[:, n - 1]
         step = int(len(distn) / 1000)
+        if step < 1: step = 1
         dist_disp = distn[::step]  # downsample for overview plot
         dfs.append(plot())
         # zoom to >= 90th percentile

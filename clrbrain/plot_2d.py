@@ -541,7 +541,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         x_col: Name of column to use for x.
         data_cols: Sequence of column names to plot as separate lines.
             Hierarchical columns will be plotted with the same color
-            and style unless ``groups`` is specified.
+            and style unless ``groups`` is specified. Legend names will
+            correspond to these colum names.
         linestyles: Sequence of styles to use for each line; defaults to 
             None, in which case "-" will be used for all lines if
             ``groups`` is None, or each group will use a distinct style.
@@ -561,10 +562,13 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             default ``CN`` color cycler (``C0``, ``C1``, etc).
         df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
-        groups: Sequence of strings of groups within each data column.
-            If given, all lines within a group will have the same
-            style, and a separate group legend will be displayed
-            with these line styles. Defaults to None.
+        groups (List[str]): Sequence of groups names within each data column
+            to plot separately, assuming that each data column has sub-columns
+            that include these group names. If given, all lines within a
+            group will have the same style, and a separate group legend will
+            be displayed with these line styles. To simply plot with
+            different colors, use separate data colums in ``data_cols``
+            instead. Defaults to None.
         ignore_invis: True to ignore lines that aren't displayed,
             such as those with only a single value; defaults to False.
         units (List[str]): ``(y_unit, x_unit)`` to display; defaults 

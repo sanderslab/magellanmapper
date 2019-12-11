@@ -3,6 +3,7 @@
 # Author: David Young, 2019
 """Clustering measurements."""
 
+import os
 import multiprocessing as mp
 
 import numpy as np
@@ -17,9 +18,10 @@ from clrbrain import ontology
 from clrbrain import plot_2d
 from clrbrain import profiles
 from clrbrain import sitk_io
+from clrbrain import stats
 
 
-def knn_dist(blobs, n, max_dist=None, show=True, ax=None):
+def knn_dist(blobs, n, max_dist=None, show=True):
     """Measure the k-nearest-neighbors distance.
     
     Args:
@@ -31,20 +33,22 @@ def knn_dist(blobs, n, max_dist=None, show=True, ax=None):
         max_dist (int, float): Maximum distance given as a percentile to plot;
             defaults to None to show neighbors of all distances.
         show (bool): True to plot the distances; defaults to True.
-        ax (:obj:`matplotlib.image.Axes`: Image axes object; defaults to
-            None to generate a new figure and subplot.
 
     Returns:
-        :obj:`neighbors.NearestNeighbors`, :obj:`np.ndarray`:
-        Tuple of ``NearestNeighbors`` object and all distances from
-        ``kneighbors`` sorted by the ``n``th neighbor.
+        :obj:`neighbors.NearestNeighbors`, :obj:`np.ndarray`,
+        List[:obj:`pd.DataFrame`]:
+        Tuple of ``NearestNeighbors`` object, all distances from
+        ``kneighbors`` sorted by the ``n``th neighbor, and a list of
+        data frames at different zoom levels (``[df_overview, df_zoomed]``).
 
     """
-    def plot(ax_plot, mod=""):
+    def plot(mod=""):
+        # plot sorted distances as line and return data frame
         df = pd.DataFrame(
             {"point": np.arange(len(dist_disp)), "dist": dist_disp})
-        return plot_2d.plot_lines(
-            "knn_dist{}".format(mod), "point", ("dist", ), df=df, ax=ax_plot)
+        plot_2d.plot_lines(
+            "knn_dist{}".format(mod), "point", ("dist", ), df=df, show=show)
+        return df
     
     knn = neighbors.NearestNeighbors(n, n_jobs=-1).fit(blobs)
     print(knn)
@@ -54,19 +58,20 @@ def knn_dist(blobs, n, max_dist=None, show=True, ax=None):
     if max_dist:
         # remove all distances where nth neighbor is beyond threshold
         dist = dist[dist[:, n - 1] < np.percentile(dist, max_dist)]
-    if show:
+    dfs = []
+    if show or config.savefig:
         # line plot of nth neighbor distances by ascending order
         distn = dist[:, n - 1]
         step = int(len(distn) / 1000)
         dist_disp = distn[::step]  # downsample for overview plot
-        plot(None)
+        dfs.append(plot())
         # zoom to >= 90th percentile
         dist_disp = distn[distn > np.percentile(distn, 90)]
-        ax = plot(ax, "_zoomed")
-    return knn, dist, ax
+        dfs.append(plot("_zoomed"))
+    return knn, dist, dfs
 
 
-def plot_knns(img_paths, suffix=None, show=False):
+def plot_knns(img_paths, suffix=None, show=False, names=None):
     """Plot k-nearest-neighbor distances for multiple sets of blobs,
     overlaying on a single plot.
 
@@ -76,6 +81,8 @@ def plot_knns(img_paths, suffix=None, show=False):
             will be constructed.
         suffix (str): Suffix for ``path``; defaults to None.
         show (bool): True to plot the distances; defaults to False.
+        names (List[str]): Sequence of names corresponding to ``img_paths``
+            for the plot legend.
 
     """
     cluster_settings = config.register_settings[
@@ -85,8 +92,13 @@ def plot_knns(img_paths, suffix=None, show=False):
         knn_n = cluster_settings[profiles.RegKeys.DBSCAN_MINPTS] - 1
     print("Calculating k-nearest-neighbor distances and plotting distances "
           "for neighbor {}".format(knn_n))
-    ax = None
-    for img_path in img_paths:
+    
+    # set up combined data frames for all samples at each zoom level
+    df_keys = ("ov", "zoom")
+    dfs_comb = {key: [] for key in df_keys}
+    names_disp = names if names else []
+    for i, img_path in enumerate(img_paths):
+        # load blobs associated with image
         mod_path = img_path
         if suffix is not None:
             mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
@@ -98,7 +110,23 @@ def plot_knns(img_paths, suffix=None, show=False):
             continue
         # convert to physical units and display k-nearest-neighbors for nuclei
         blobs = np.multiply(blobs[:, :3], res)
-        _, _, ax = knn_dist(blobs, knn_n, 99.9, show, ax)
+        _, _, dfs = knn_dist(blobs, knn_n, 99.9, False)
+        if names is None:
+            # default to naming from filename
+            names_disp.append(os.path.basename(mod_path))
+        for j, df in enumerate(dfs):
+            dfs_comb[df_keys[j]].append(df)
+    
+    for key in dfs_comb:
+        # combine data frames at each zoom level and plot together with
+        # different colors for each image
+        df = stats.join_dfs(dfs_comb[key], "point")
+        dist_cols = [col for col in df.columns if col.startswith("dist")]
+        rename_cols = {col: name for col, name in zip(dist_cols, names_disp)}
+        df = df.rename(rename_cols, axis=1)
+        plot_2d.plot_lines(
+            "knn_dist_combine_{}".format(key), "point", rename_cols.values(),
+            df=df, show=show)
 
 
 def cluster_dbscan_metrics(labels):

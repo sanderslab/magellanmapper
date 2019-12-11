@@ -1968,7 +1968,9 @@ def main():
     
     elif reg is config.RegisterTypes.plot_knns:
         # plot k-nearest-neighbor distances for multiple paths
-        clustering.plot_knns(config.filenames, config.suffix, show)
+        clustering.plot_knns(
+            config.filenames, config.suffix, show,
+            config.plot_labels[config.PlotLabels.LEGEND_NAMES])
     
     elif reg is config.RegisterTypes.cluster_blobs:
         # cluster blobs and output to Numpy archive

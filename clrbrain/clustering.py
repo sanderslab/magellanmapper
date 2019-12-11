@@ -120,15 +120,16 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
             dfs_comb[df_keys[j]].append(df)
     
     for key in dfs_comb:
-        # combine data frames at each zoom level and plot together with
+        # combine data frames at each zoom level, save, and plot with
         # different colors for each image
         df = stats.join_dfs(dfs_comb[key], "point")
         dist_cols = [col for col in df.columns if col.startswith("dist")]
         rename_cols = {col: name for col, name in zip(dist_cols, names_disp)}
         df = df.rename(rename_cols, axis=1)
+        out_path = "knn_dist_combine_{}".format(key)
+        stats.data_frames_to_csv(df, out_path)
         plot_2d.plot_lines(
-            "knn_dist_combine_{}".format(key), "point", rename_cols.values(),
-            df=df, show=show)
+            out_path, "point", rename_cols.values(), df=df, show=show)
 
 
 def cluster_dbscan_metrics(labels):

@@ -21,7 +21,7 @@ from clrbrain import sitk_io
 from clrbrain import stats
 
 
-def knn_dist(blobs, n, max_dist=None, show=True):
+def knn_dist(blobs, n, max_dist=None, max_pts=None, show=True):
     """Measure the k-nearest-neighbors distance.
     
     Args:
@@ -33,7 +33,12 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         max_dist (float): Cap the maximum distance of points to plot, given
             as factor of the median distance; defaults to None to show
             neighbors of all distances.
-        show (bool): True to plot the distances; defaults to True.
+        max_pts (int): Cap the maximum number of points for the zoomed
+            plot if the 90th percentile exceeds this number; defaults
+            to None.
+        show (bool): True to immediately show the plot the distances;
+            defaults to True. Will still plot and save in the background
+            if :attr:`config.savefig` is set.
 
     Returns:
         :obj:`neighbors.NearestNeighbors`, :obj:`np.ndarray`,
@@ -48,7 +53,8 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         df = pd.DataFrame(
             {"point": np.arange(len(dist_disp)), "dist": dist_disp})
         plot_2d.plot_lines(
-            "knn_dist{}".format(mod), "point", ("dist", ), df=df, show=show)
+            "knn_dist{}".format(mod), "point", ("dist", ), df=df, show=show,
+            title=config.plot_labels[config.PlotLabels.TITLE])
         return df
     
     #blobs = blobs[::int(len(blobs) / 1000)]  # TESTING: small num of blobs
@@ -63,13 +69,22 @@ def knn_dist(blobs, n, max_dist=None, show=True):
         if max_dist:
             # remove all distances where nth neighbor is beyond threshold
             distn = distn[distn < max_dist * np.median(distn)]
-        # line plot of nth neighbor distances by ascending order
-        step = int(len(distn) / 1000)
+        len_distn = len(distn)
+        
+        # line plot of nth neighbor distances by ascending order,
+        # downsampling for overview plot
+        step = int(len_distn / 1000)
         if step < 1: step = 1
-        dist_disp = distn[::step]  # downsample for overview plot
+        dist_disp = distn[::step]
         dfs.append(plot())
-        # zoom to >= 90th percentile
-        dist_disp = distn[distn > np.percentile(distn, 90)]
+        
+        # zoom to >= 90th percentile or max points, whichever is smaller
+        above_pct = distn > np.percentile(distn, 90)
+        if max_pts and max_pts < np.sum(above_pct):
+            print("limiting zoomed plot to last {} points".format(max_pts))
+            dist_disp = distn[len_distn-max_pts:]
+        else:
+            dist_disp = distn[above_pct]
         dfs.append(plot("_zoomed"))
     return knn, dist, dfs
 
@@ -115,7 +130,7 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
         blobs = np.multiply(blobs[:, :3], res)
         # TESTING: given the same blobs, simply shift
         #blobs = np.multiply(blobs[i*10000000:, :3], res)
-        _, _, dfs = knn_dist(blobs, knn_n, 2, False)
+        _, _, dfs = knn_dist(blobs, knn_n, 2, 1000000, False)
         if names is None:
             # default to naming from filename
             names_disp.append(os.path.basename(mod_path))
@@ -132,7 +147,8 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
         out_path = "knn_dist_combine_{}".format(key)
         stats.data_frames_to_csv(df, out_path)
         plot_2d.plot_lines(
-            out_path, "point", rename_cols.values(), df=df, show=show)
+            out_path, "point", rename_cols.values(), df=df, show=show,
+            title=config.plot_labels[config.PlotLabels.TITLE])
 
 
 def cluster_dbscan_metrics(labels):

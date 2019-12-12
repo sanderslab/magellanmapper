@@ -200,18 +200,20 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     maxes[2] <- max(maxes[2], max(vals.means + errs) / denom)
   }
   if (axes.in.range) {
-    # ensure that y-axis remains within range; x-axis already within range
+    # ensure that y-axis remains within range if all vals either above or
+    # below 0; x-axis already within range
     if (mins[2] < 0 & maxes[2] < 0) {
       maxes[2] <- 0
     } else if (mins[2] > 0 & maxes[2] > 0) {
       mins[2] <- 0
     }
+  } else {
+    # add 20% padding above and below y-range
+    # TODO: consider moving to parameter
+    y.pad <- 0.2 * (maxes[2] - mins[2])
+    mins[2] <- mins[2] - y.pad
+    maxes[2] <- maxes[2] + y.pad
   }
-  # add 20% padding above and below y-range
-  # TODO: consider moving to parameter
-  y.pad <- 0.2 * (maxes[2] - mins[2])
-  mins[2] <- mins[2] - y.pad
-  maxes[2] <- maxes[2] + y.pad
   
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots

@@ -30,8 +30,9 @@ def knn_dist(blobs, n, max_dist=None, show=True):
             form, ``[z, y, x, ...]``.
         n (int): Number of neighbors. The farthest neighbor will be used
             for sorting, filtering, and plotting.
-        max_dist (int, float): Maximum distance given as a percentile to plot;
-            defaults to None to show neighbors of all distances.
+        max_dist (float): Cap the maximum distance of points to plot, given
+            as factor of the median distance; defaults to None to show
+            neighbors of all distances.
         show (bool): True to plot the distances; defaults to True.
 
     Returns:
@@ -56,13 +57,13 @@ def knn_dist(blobs, n, max_dist=None, show=True):
     dist, _ = knn.kneighbors(blobs)
     # sort distances based on nth neighbors
     dist = dist[np.argsort(dist[:, n - 1])]
-    if max_dist:
-        # remove all distances where nth neighbor is beyond threshold
-        dist = dist[dist[:, n - 1] < np.percentile(dist, max_dist)]
     dfs = []
     if show or config.savefig:
-        # line plot of nth neighbor distances by ascending order
         distn = dist[:, n - 1]
+        if max_dist:
+            # remove all distances where nth neighbor is beyond threshold
+            distn = distn[distn < max_dist * np.median(distn)]
+        # line plot of nth neighbor distances by ascending order
         step = int(len(distn) / 1000)
         if step < 1: step = 1
         dist_disp = distn[::step]  # downsample for overview plot
@@ -112,7 +113,9 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
             continue
         # convert to physical units and display k-nearest-neighbors for nuclei
         blobs = np.multiply(blobs[:, :3], res)
-        _, _, dfs = knn_dist(blobs, knn_n, 99.9, False)
+        # TESTING: given the same blobs, simply shift
+        #blobs = np.multiply(blobs[i*10000000:, :3], res)
+        _, _, dfs = knn_dist(blobs, knn_n, 2, False)
         if names is None:
             # default to naming from filename
             names_disp.append(os.path.basename(mod_path))

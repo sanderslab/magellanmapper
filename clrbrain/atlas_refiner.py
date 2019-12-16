@@ -573,7 +573,16 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):
-    # crop new labels to extent of original labels unless crop is False
+    """Crop new labels to extent of original labels.
+    
+    Args:
+        labels_img_np_orig (:obj:`np.ndarray`): Original labels image array.
+        labels_img_np (:obj:`np.ndarray`): Labels image array, which will
+            be cropped in-place to ``labels_img_np_orig``.
+        crop (bool): True to apply morphological opening to
+            ``labels_img_np_orig`` before cropping.
+
+    """
     print("cropping to original labels' extent with filter size of", crop)
     if crop is False: return
     mask = labels_img_np_orig == 0

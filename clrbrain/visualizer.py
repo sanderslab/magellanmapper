@@ -446,7 +446,7 @@ class Visualization(HasTraits):
         if self._DEFAULTS_3D[2] in self._check_list_3d:
             # show region of interest based on raw image
             self.roi = plot_3d.prepare_roi(
-                cli.image5d, curr_roi_size, curr_offset)
+                config.image5d, curr_roi_size, curr_offset)
             
             if self._DEFAULTS_3D[3] in self._check_list_3d:
                 # surface rendering, segmenting to clean up image 
@@ -508,7 +508,7 @@ class Visualization(HasTraits):
             label_mask = np.isin(config.labels_img[tuple(slices)], label_id)
         else:
             label_mask = config.labels_img[tuple(slices)] == label_id
-        self.roi = np.copy(cli.image5d[0][slices])
+        self.roi = np.copy(config.image5d[0][slices])
         self.roi[~label_mask] = 0
         plot_3d.plot_3d_surface(
             self.roi, self.scene.mlab, config.channel, flipud=self.flipz)
@@ -521,9 +521,9 @@ class Visualization(HasTraits):
         """Setup GUI parameters for the loaded image5d.
         """
         # set up channel spinner based on number of channels available
-        if cli.image5d.ndim >= 5:
+        if config.image5d.ndim >= 5:
             # increase max channels based on channel dimension
-            self._channel_high = cli.image5d.shape[4] - 1
+            self._channel_high = config.image5d.shape[4] - 1
         else:
             # only one channel available
             self._channel_low = 0
@@ -532,18 +532,18 @@ class Visualization(HasTraits):
         self._channel = -1 if config.channel is None else config.channel
         
         # dimension max values in pixels
-        size = cli.image5d.shape[1:4]
+        size = config.image5d.shape[1:4]
         # TODO: consider subtracting 1 to avoid max offset being 1 above
         # true max, but currently convenient to display size and checked 
         # elsewhere
         self.z_high, self.y_high, self.x_high = size
-        if cli.offset is not None:
+        if config.offset is not None:
             # apply user-defined offsets
-            self.x_offset = cli.offset[0]
-            self.y_offset = cli.offset[1]
-            self.z_offset = cli.offset[2]
-        self.roi_array[0] = ([100, 100, 15] if cli.roi_size is None 
-                             else cli.roi_size)
+            self.x_offset = config.offset[0]
+            self.y_offset = config.offset[1]
+            self.z_offset = config.offset[2]
+        self.roi_array[0] = ([100, 100, 15] if config.roi_size is None 
+                             else config.roi_size)
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {_ROI_DEFAULT: None}
@@ -599,7 +599,7 @@ class Visualization(HasTraits):
             print("Changed filename to {}, series to {}"
                   .format(config.filename, config.series))
             # TODO: consider loading processed images, blobs, etc
-            cli.image5d = importer.read_file(config.filename, config.series)
+            config.image5d = importer.read_file(config.filename, config.series)
             self._setup_for_image()
         else:
             print("Could not parse filename {} and series {}"
@@ -694,7 +694,7 @@ class Visualization(HasTraits):
         segs_all = None
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
-        if cli.segments_proc is None:
+        if config.blobs is None:
             # on-the-fly blob detection, which includes border but not 
             # padding region; already in relative coordinates
             roi = self.roi
@@ -706,7 +706,7 @@ class Visualization(HasTraits):
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
             segs_all, _ = detector.get_blobs_in_roi(
-                cli.segments_proc, offset, roi_size, roi_editor.padding)
+                config.blobs, offset, roi_size, roi_editor.padding)
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)
@@ -814,7 +814,7 @@ class Visualization(HasTraits):
         curr_roi_size = self.roi_array[0].astype(int)
         # update verify flag
         roi_editor.verify = self._DEFAULTS_2D[1] in self._check_list_2d
-        img = cli.image5d
+        img = config.image5d
         roi = None
         if self._DEFAULTS_2D[0] in self._check_list_2d:
             print("showing processed 2D images")
@@ -823,10 +823,10 @@ class Visualization(HasTraits):
             if config.process_settings["thresholding"]:
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
-        elif cli.image5d is None:
+        elif config.image5d is None:
             print("loading original image stack from file")
-            cli.image5d = importer.read_file(config.filename, config.series)
-            img = cli.image5d
+            config.image5d = importer.read_file(config.filename, config.series)
+            img = config.image5d
         
         blobs_truth_roi = None
         if config.truth_db is not None:
@@ -898,7 +898,7 @@ class Visualization(HasTraits):
         # atlas editor; need to retain ref or else instance callbacks 
         # created within AtlasEditor will be garbage collected
         self.atlas_ed = atlas_editor.AtlasEditor(
-            cli.image5d, config.labels_img, config.channel, 
+            config.image5d, config.labels_img, config.channel, 
             self._curr_offset(), self._fig_close_listener, 
             borders_img=config.borders_img, fn_show_label_3d=self.show_label_3d)
         self.atlas_ed.show_atlas()
@@ -921,16 +921,16 @@ class Visualization(HasTraits):
             # get chosen ROI to reconstruct original ROI size and offset 
             # including border
             roi = self._rois_dict[self.rois_check_list]
-            cli.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
-            cli.roi_size = tuple(
+            config.roi_size = (roi["size_x"], roi["size_y"], roi["size_z"])
+            config.roi_size = tuple(
                 np.add(
-                    cli.roi_size, 
+                    config.roi_size, 
                     np.multiply(self.border, 2)).astype(int).tolist())
-            self.roi_array = [cli.roi_size]
-            cli.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
-            cli.offset = tuple(
-                np.subtract(cli.offset, self.border).astype(int).tolist())
-            self.x_offset, self.y_offset, self.z_offset = cli.offset
+            self.roi_array = [config.roi_size]
+            config.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
+            config.offset = tuple(
+                np.subtract(config.offset, self.border).astype(int).tolist())
+            self.x_offset, self.y_offset, self.z_offset = config.offset
             
             # redraw the original ROI and prepare verify mode
             self.show_3d()

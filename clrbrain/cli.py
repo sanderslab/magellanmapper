@@ -57,12 +57,11 @@ Command-line arguments in addition to those from attributes listed below:
         Second arg (opt) specifies a path to the truth database for 
        ``view`` and ``verify``, the main and verified databases for 
        ``verified``, and the main database for ``edit``.
-
-Attributes:
-    roi_size: The size in pixels of the region of interest. Set with
+    * roi_size: The size in pixels of the region of interest. Set with
         "size=x,y,z" argument, where x, y, and z are integers.
-    offset: The bottom corner in pixels of the region of interest. Set 
+    * offset: The bottom corner in pixels of the region of interest. Set 
         with "offset=x,y,z" argument, where x, y, and z are integers.
+
 """
 
 import os
@@ -84,12 +83,6 @@ from clrbrain import sitk_io
 from clrbrain import stack_detect
 from clrbrain import stats
 from clrbrain import transformer
-
-roi_size = None # current region of interest
-offset = None # current offset
-
-image5d = None # numpy image array
-segments_proc = None
 
 
 def _parse_coords(arg):
@@ -230,7 +223,6 @@ def main(process_args_only=False):
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for Clrbrain")
-    global roi_size, offset
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--meta", nargs="*")
     parser.add_argument("--channel", type=int)
@@ -326,14 +318,14 @@ def main(process_args_only=False):
         print("Set ROC to {}".format(config.roc))
     if args.offset is not None:
         config.offsets = _parse_coords(args.offset)
-        offset = config.offsets[0]
+        config.offset = config.offsets[0]
         print("Set offsets to {}, current offset {}"
-              .format(config.offsets, offset))
+              .format(config.offsets, config.offset))
     if args.size is not None:
         config.roi_sizes = _parse_coords(args.size)
-        roi_size = config.roi_sizes[0]
+        config.roi_size = config.roi_sizes[0]
         print("Set ROI sizes to {}, current size {}"
-              .format(config.roi_sizes, roi_size))
+              .format(config.roi_sizes, config.roi_size))
     if args.padding_2d is not None:
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
@@ -635,9 +627,11 @@ def main(process_args_only=False):
         else:
             # processes file with default settings
             setup_images(
-                config.filename, series, offset, roi_size, config.proc_type)
+                config.filename, series, config.offset,
+                config.roi_size, config.proc_type)
             process_file(
-                config.filename, series, offset, roi_size, config.proc_type)
+                config.filename, series, config.offset,
+                config.roi_size, config.proc_type)
     
     # unless loading images for GUI, exit directly since otherwise application 
     # hangs if launched from module with GUI
@@ -693,12 +687,11 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
     np.set_printoptions(linewidth=200, threshold=10000)
     
     # prepares the filenames
-    global image5d
-    
+
     # LOAD MAIN IMAGE
     
     # reset image5d
-    image5d = None
+    config.image5d = None
     config.image5d_is_roi = False
     path_image5d = path
     
@@ -708,7 +701,6 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                      config.ProcessTypes.PROCESSING_MP):
         # load a blobs archive, +/- a processed ROI image
         print("Loading processed image files")
-        global segments_proc
         filename_base = importer.filename_to_base(path, series)
         filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
         filename_info_proc = filename_base + config.SUFFIX_INFO_PROC
@@ -726,11 +718,12 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
         
         try:
             # load image as an ROI chunk of the orig image if available
-            image5d = np.load(filename_image5d_proc, mmap_mode="r")
-            image5d = importer.roi_to_image5d(image5d)
+            config.image5d = np.load(filename_image5d_proc, mmap_mode="r")
+            config.image5d = importer.roi_to_image5d(
+                config.image5d)
             config.image5d_is_roi = True
             print("Loading processed/ROI image from {} with shape {}"
-                  .format(filename_image5d_proc, image5d.shape))
+                  .format(filename_image5d_proc, config.image5d.shape))
         except IOError:
             print("Ignoring ROI image file from {} as unable to load"
                   .format(filename_image5d_proc))
@@ -740,10 +733,11 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             # load processed blobs and ROI metadata
             output_info = importer.read_np_archive(
                 np.load(filename_info_proc))
-            segments_proc = output_info["segments"]
-            print("{} segments loaded".format(len(segments_proc)))
+            config.blobs = output_info["segments"]
+            print("{} segments loaded".format(len(
+                config.blobs)))
             if config.verbose:
-                detector.show_blobs_per_channel(segments_proc)
+                detector.show_blobs_per_channel(config.blobs)
             # TODO: gets overwritten after loading original image's metadata
             config.resolutions = output_info["resolutions"]
             basename = output_info["basename"]
@@ -772,7 +766,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                 # in case the given path is an ROI path
                 path_image5d = os.path.join(
                     os.path.dirname(filename_base), str(basename))
-            if image5d is not None:
+            if config.image5d is not None:
                 # after loading ROI image, load original image's metadata
                 # for essential data such as vmin/vmax
                 _, orig_info = importer.make_filenames(path_image5d, series)
@@ -781,12 +775,12 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
         except (FileNotFoundError, KeyError):
             print("Unable to load original info file from", orig_info)
     
-    if path and image5d is None:
+    if path and config.image5d is None:
         # load or import the main image stack
         print("Loading main image")
         if os.path.isdir(path):
             # import directory of TIFF images
-            image5d = importer.import_dir(os.path.join(path, "*"))
+            config.image5d = importer.import_dir(os.path.join(path, "*"))
         elif path.endswith(sitk_io.EXTS_3D):
             # load formats supported by SimpleITK, using metadata from 
             # Numpy archive
@@ -797,7 +791,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             try:
                 # load metadata based on filename_np, then attempt to 
                 # load the images from path and prepend time axis
-                image5d = sitk_io.read_sitk_files(
+                config.image5d = sitk_io.read_sitk_files(
                     path, filename_np, series)[None]
             except FileNotFoundError as e:
                 print(e)
@@ -805,7 +799,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             # load or import from Clrbrain Numpy format, using any path
             # changes during attempting ROI load
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
-            image5d = importer.read_file(
+            config.image5d = importer.read_file(
                 path_image5d, series, channel=config.channel, load=load)
 
     if config.load_labels is not None:
@@ -813,12 +807,12 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
         
         # main image is currently required since many parameters depend on it
         atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
-        if atlas_suffix is None and image5d is None:
+        if atlas_suffix is None and config.image5d is None:
             # fallback to atlas if main image not already loaded
             atlas_suffix = config.RegNames.IMG_ATLAS.value
         if path and atlas_suffix is not None:
             # will take the place of any previously loaded image5d
-            image5d = sitk_io.read_sitk_files(
+            config.image5d = sitk_io.read_sitk_files(
                 path, reg_names=atlas_suffix)[None]
         
         annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
@@ -830,9 +824,9 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                 # TODO: need to support multichannel labels images
                 config.labels_img = sitk_io.read_sitk_files(
                     path, reg_names=annotation_suffix)
-                if image5d is not None:
+                if config.image5d is not None:
                     config.labels_scaling = importer.calc_scaling(
-                        image5d, config.labels_img)
+                        config.image5d, config.labels_img)
                 labels_ref = ontology.load_labels_ref(config.load_labels)
                 if isinstance(labels_ref, pd.DataFrame):
                     # parse CSV files loaded into data frame
@@ -867,16 +861,16 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                     "differ from it")
     
     load_rot90 = config.process_settings["load_rot90"]
-    if load_rot90 and image5d is not None:
+    if load_rot90 and config.image5d is not None:
         # rotate main image specified num of times x90deg after loading since 
         # need to rotate images output by deep learning toolkit
-        image5d = np.rot90(image5d, load_rot90, (2, 3))
+        config.image5d = np.rot90(config.image5d, load_rot90, (2, 3))
 
     # add any additional image5d thresholds for multichannel images, such 
     # as those loaded without metadata for these settings
     colormaps.setup_cmaps()
-    num_channels = (1 if image5d is None or image5d.ndim <= 4 
-                    else image5d.shape[4])
+    num_channels = (1 if config.image5d is None or config.image5d.ndim <= 4 
+                    else config.image5d.shape[4])
     config.near_max = lib_clrbrain.pad_seq(config.near_max, num_channels, -1)
     config.near_min = lib_clrbrain.pad_seq(config.near_min, num_channels, 0)
     config.vmax_overview = lib_clrbrain.pad_seq(
@@ -931,7 +925,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         from clrbrain import export_rois
         db = config.db if config.truth_db is None else config.truth_db
         export_rois.export_rois(
-            db, image5d, config.channel, filename_base, config.border, 
+            db, config.image5d, config.channel, filename_base, config.border, 
             config.unit_factor, config.truth_db_mode,
             os.path.basename(config.filename))
         
@@ -952,13 +946,13 @@ def process_file(path, series, offset, roi_size, proc_mode):
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file
         from clrbrain import export_rois
-        export_rois.blobs_to_csv(segments_proc, filename_base)
+        export_rois.blobs_to_csv(config.blobs, filename_base)
         
     elif proc_type in (
             config.ProcessTypes.PROCESSING, config.ProcessTypes.PROCESSING_MP):
         # detect blobs in the full image
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
-            filename_base, image5d, offset, roi_size, 
+            filename_base, config.image5d, offset, roi_size, 
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
             not config.roc, config.image5d_is_roi)
     

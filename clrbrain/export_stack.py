@@ -415,7 +415,7 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
             # TODO: avoid reloading first image
             cli.setup_images(path_sub, series)
             plotted_imgs = stack_to_ax_imgs(
-                ax, cli.image5d, path_sub, offset=offset, 
+                ax, config.image5d, path_sub, offset=offset, 
                 roi_size=roi_size, slice_vals=config.slice_vals, 
                 rescale=config.rescale, 
                 labels_imgs=(config.labels_img, config.borders_img), 

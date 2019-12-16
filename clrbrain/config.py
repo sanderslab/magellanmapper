@@ -46,8 +46,12 @@ paths_metadata = None  # metadata file paths
 series = 0 # series for multi-stack files
 channel = None # channel of interest, where None specifies all channels
 roi_sizes = None # list of regions of interest
+roi_size = None  # current region of interest
 offsets = None # list of offsets
+offset = None  # current offset
+image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
+blobs = None  # blobs
 
 #: :obj:`np.ndarray`: 2D array of shapes per time point in
 # ``[n_time_point, n_shape]`` format in case image5d is not available

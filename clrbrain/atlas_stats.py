@@ -483,7 +483,7 @@ def plot_clusters_by_label(path, z, suffix=None, show=True):
     cli.setup_images(mod_path)
     if config.reg_suffixes[config.RegSuffixes.ATLAS]:
         # use atlas if explicitly set
-        img = cli.image5d
+        img = config.image5d
     else:
         # default to black background
         img = np.zeros_like(config.labels_img)[None]

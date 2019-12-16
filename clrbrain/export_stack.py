@@ -13,10 +13,10 @@ from skimage import io
 from matplotlib import animation
 from scipy import ndimage
 
-from clrbrain import cli
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import lib_clrbrain
+from clrbrain import np_io
 from clrbrain import plot_support
 
 
@@ -413,7 +413,7 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
             path_sub = paths[n]
             # TODO: test directory of images
             # TODO: avoid reloading first image
-            cli.setup_images(path_sub, series)
+            np_io.setup_images(path_sub, series)
             plotted_imgs = stack_to_ax_imgs(
                 ax, config.image5d, path_sub, offset=offset, 
                 roi_size=roi_size, slice_vals=config.slice_vals, 

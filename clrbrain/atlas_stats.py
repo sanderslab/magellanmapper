@@ -11,7 +11,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from clrbrain import cli
 from clrbrain import colormaps
 from clrbrain import config
 from clrbrain import export_stack
@@ -480,7 +479,7 @@ def plot_clusters_by_label(path, z, suffix=None, show=True):
     plot_support.hide_axes(ax)
     
     # plot underlying atlas
-    cli.setup_images(mod_path)
+    np_io.setup_images(mod_path)
     if config.reg_suffixes[config.RegSuffixes.ATLAS]:
         # use atlas if explicitly set
         img = config.image5d

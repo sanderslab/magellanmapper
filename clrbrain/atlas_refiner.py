@@ -15,11 +15,11 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
-from clrbrain import cli
 from clrbrain import config
 from clrbrain import export_stack
 from clrbrain import importer
 from clrbrain import lib_clrbrain
+from clrbrain import np_io
 from clrbrain import plot_3d
 from clrbrain import plot_support
 from clrbrain import profiles
@@ -293,7 +293,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         save_steps = edge[profiles.RegKeys.SAVE_STEPS]
         if save_steps:
             # load original labels and setup colormaps
-            cli.setup_images()
+            np_io.setup_images()
         extend_edge(
             img_np, img_ref_np, config.register_settings["atlas_threshold"], 
             None, edgei, edge["surr_size"], edge["smoothing_size"],

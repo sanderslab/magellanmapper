@@ -379,31 +379,36 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     return True
 
 
-def read_info(filename_info_npz, check_ver=False):
+def load_metadata(path, check_ver=False, assign=True):
     """Load image info, such as saved microscopy data and image ranges, 
     storing some values into appropriate module level variables.
     
     Args:
-        filename_info_npz: Path to image info file.
-        check_ver: True to stop loading if the archive's version number  
+        path (str): Path to image info file.
+        check_ver (bool): True to stop loading if the archive's version number  
             is less than :const:``IMAGE5D_NP_VER``; defaults to False.
+        assign (bool): True to assign values to module-level settings.
     
     Returns:
         Tuple of ``output``, the dictionary with image info, and 
         ``image5d_ver_num``, the version number of the info file, 
         which is -1 if the key could not be found.
     """
-    print("Reading image metadata from {}".format(filename_info_npz))
-    archive = np.load(filename_info_npz)
-    output = np_io.read_np_archive(archive)
+    print("Reading image metadata from {}".format(path))
     image5d_ver_num = -1
+    try:
+        archive = np.load(path)
+    except FileNotFoundError:
+        lib_clrbrain.warn("Could not find metadata file {}".format(path))
+        return None, image5d_ver_num
+    output = np_io.read_np_archive(archive)
     try:
         # find the info version number
         image5d_ver_num = output["ver"]
         print("loaded image5d version number {}".format(image5d_ver_num))
     except KeyError:
         print("could not find image5d version number")
-    if not check_ver or image5d_ver_num >= IMAGE5D_NP_VER:
+    if assign and (not check_ver or image5d_ver_num >= IMAGE5D_NP_VER):
         # load into various module variables unless checking version 
         # and below current version to avoid errors during loading
         try:
@@ -498,7 +503,7 @@ def read_file(filename, series, load=True, z_max=-1,
         try:
             time_start = time()
             # load image5d metadata; if updating, only fully load if curr ver
-            output, image5d_ver_num = read_info(filename_info_npz, update_info)
+            output, image5d_ver_num = load_metadata(filename_info_npz, update_info)
             
             # load original image, using mem-mapped accessed for the image
             # file to minimize memory requirement, only loading on-the-fly
@@ -516,7 +521,7 @@ def read_file(filename, series, load=True, z_max=-1,
                     image5d_ver_num, image5d, output, filename_info_npz)
                 if load_info:
                     # load updated archive
-                    output, image5d_ver_num = read_info(filename_info_npz)
+                    output, image5d_ver_num = load_metadata(filename_info_npz)
             if return_info:
                 return image5d, output
             return image5d

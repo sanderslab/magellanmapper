@@ -146,7 +146,7 @@ def read_sitk_files(filename_sitk, filename_np=None, series=0, reg_names=None):
         # get metadata from Numpy archive
         _, filename_info_npz = importer.make_filenames(filename_np, series)
         if os.path.exists(filename_info_npz):
-            importer.read_info(filename_info_npz)
+            importer.load_metadata(filename_info_npz)
     
     # load image via SimpleITK
     img_sitk = None

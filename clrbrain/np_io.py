@@ -219,7 +219,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                 # for essential data such as vmin/vmax
                 _, orig_info = importer.make_filenames(path_image5d, series)
                 print("load original image metadata from:", orig_info)
-                importer.read_info(orig_info)
+                importer.load_metadata(orig_info)
         except (FileNotFoundError, KeyError):
             print("Unable to load original info file from", orig_info)
     

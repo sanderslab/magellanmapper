@@ -117,20 +117,12 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
     return img_sitk
 
 
-def read_sitk_files(filename_sitk, filename_np=None, series=0, reg_names=None):
+def read_sitk_files(filename_sitk, reg_names=None):
     """Read files through SimpleITK and export to Numpy array format, 
     loading associated metadata.
 
     Args:
         filename_sitk: Path to file in a format that can be read by SimpleITK.
-        filename_np: Path to basis for Clrbrain Numpy archive files, which 
-            will be used to load metadata file. If this archive does not 
-            exist, metadata will be determined from ``filename_sitk`` 
-            as much as possible. Defaults to None, which will still 
-            attempt to load critical metadata from ``filename_sitk`` if it 
-            has not been set.
-        series: Image series number used to find the associated Numpy 
-            archive; defaults to 0.
         reg_names: Path or sequence of paths of registered names. Can 
             be a registered suffix or a full path. Defaults to None.
 
@@ -142,12 +134,6 @@ def read_sitk_files(filename_sitk, filename_np=None, series=0, reg_names=None):
         ``FileNotFoundError`` if ``filename_sitk`` cannot be found, after 
         attempting to load metadata from ``filename_np``.
     """
-    if filename_np is not None:
-        # get metadata from Numpy archive
-        _, filename_info_npz = importer.make_filenames(filename_np, series)
-        if os.path.exists(filename_info_npz):
-            importer.load_metadata(filename_info_npz)
-    
     # load image via SimpleITK
     img_sitk = None
     if reg_names:

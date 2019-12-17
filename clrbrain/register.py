@@ -1979,7 +1979,7 @@ def main():
     elif reg is config.RegisterTypes.plot_cluster_blobs:
         # show blob clusters for the given plane
         scaling = None
-        if config.metadatas:
+        if config.metadatas and config.metadatas[0]:
             output = config.metadatas[0]
             if "scaling" in output:
                 scaling = output["scaling"]

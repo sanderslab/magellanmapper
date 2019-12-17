@@ -411,45 +411,56 @@ def load_metadata(path, check_ver=False, assign=True):
     if assign and (not check_ver or image5d_ver_num >= IMAGE5D_NP_VER):
         # load into various module variables unless checking version 
         # and below current version to avoid errors during loading
-        try:
-            names = output["names"]
-            print("names: {}".format(names))
-        except KeyError:
-            print("could not find names")
-        try:
-            config.image5d_shapes = output["sizes"]
-            print("sizes {}".format(config.image5d_shapes))
-        except KeyError:
-            print("could not find sizes")
-        try:
-            config.resolutions = output["resolutions"]
-            print("set resolutions to {}".format(config.resolutions))
-        except KeyError:
-            print("could not find resolutions")
-        try:
-            config.magnification = output["magnification"]
-            print("magnification: {}".format(config.magnification))
-        except KeyError:
-            print("could not find magnification")
-        try:
-            config.zoom = output["zoom"]
-            print("zoom: {}".format(config.zoom))
-        except KeyError:
-            print("could not find zoom")
-        try:
-            config.near_min = output["near_min"]
-            print("set near_min to {}".format(config.near_min))
-        except KeyError:
-            print("could not find near_max")
-        try:
-            config.near_max = output["near_max"]
-            print("set near_max to {}".format(config.near_max))
-            if config.vmaxs is None:
-                config.vmax_overview = config.near_max * 1.1
-            print("Set vmax_overview to {}".format(config.vmax_overview))
-        except KeyError:
-            print("could not find near_max")
+        assign_metadata(output)
     return output, image5d_ver_num
+
+
+def assign_metadata(md):
+    """Assign values from a metadata dictionary to module variables. 
+    
+    Args:
+        md (dict): Dictionary of metadata.
+
+    """
+    try:
+        names = md["names"]
+        print("names: {}".format(names))
+    except KeyError:
+        print("could not find names")
+    try:
+        config.image5d_shapes = md["sizes"]
+        print("sizes {}".format(config.image5d_shapes))
+    except KeyError:
+        print("could not find sizes")
+    try:
+        config.resolutions = md["resolutions"]
+        print("set resolutions to {}".format(config.resolutions))
+    except KeyError:
+        print("could not find resolutions")
+    try:
+        config.magnification = md["magnification"]
+        print("magnification: {}".format(config.magnification))
+    except KeyError:
+        print("could not find magnification")
+    try:
+        config.zoom = md["zoom"]
+        print("zoom: {}".format(config.zoom))
+    except KeyError:
+        print("could not find zoom")
+    try:
+        config.near_min = md["near_min"]
+        print("set near_min to {}".format(config.near_min))
+    except KeyError:
+        print("could not find near_max")
+    try:
+        config.near_max = md["near_max"]
+        print("set near_max to {}".format(config.near_max))
+        if config.vmaxs is None:
+            config.vmax_overview = config.near_max * 1.1
+        print("Set vmax_overview to {}".format(config.vmax_overview))
+    except KeyError:
+        print("could not find near_max")
+
 
 def read_file(filename, series, load=True, z_max=-1, 
               offset=None, size=None, channel=None, return_info=False, 

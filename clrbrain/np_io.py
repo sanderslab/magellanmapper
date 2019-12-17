@@ -215,17 +215,9 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             # import directory of TIFF images
             config.image5d = importer.import_dir(os.path.join(path, "*"))
         elif path.endswith(sitk_io.EXTS_3D):
-            # load formats supported by SimpleITK, using metadata from 
-            # Numpy archive
-            filename_np = path  # default to same basic name
-            if len(config.filenames) > 1:
-                # load metadata from 2nd filename argument if given
-                filename_np = config.filenames[1]
             try:
-                # load metadata based on filename_np, then attempt to 
-                # load the images from path and prepend time axis
-                config.image5d = sitk_io.read_sitk_files(
-                    path, filename_np, series)[None]
+                # attempt to format supported by SimpleITK and prepend time axis
+                config.image5d = sitk_io.read_sitk_files(path)[None]
             except FileNotFoundError as e:
                 print(e)
         else:
@@ -234,6 +226,13 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
             config.image5d = importer.read_file(
                 path_image5d, series, channel=config.channel, load=load)
+    
+    if config.metadatas and config.metadatas[0]:
+        # assign metadata from alternate file if given to supersede settings
+        # for any loaded image5d
+        # TODO: access metadata directly from given image5d's dict to allow
+        # loading multiple image5d images simultaneously
+        importer.assign_metadata(config.metadatas[0])
 
     if config.load_labels is not None:
         # load registered files including labels

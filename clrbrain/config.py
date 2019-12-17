@@ -42,7 +42,8 @@ SUFFIX_BLOB_CLUSTERS = "blobclusters.npy"
 
 filename = None # current image file path
 filenames = None # list of multiple image paths
-paths_metadata = None  # metadata file paths
+metadata_paths = None  # metadata file paths
+metadatas = None  # metadata dicts
 series = 0 # series for multi-stack files
 channel = None # channel of interest, where None specifies all channels
 roi_sizes = None # list of regions of interest

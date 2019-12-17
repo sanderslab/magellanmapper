@@ -84,23 +84,8 @@ def read_np_archive(archive):
     for key in archive.keys():
         try:
             output[key] = archive[key]
-        except ValueError as e:
+        except ValueError:
             print("unable to load {} from archive, will ignore".format(key))
-    return output
-
-
-def load_metadata(path):
-    """Load a metadata file.
-    
-    Args:
-        path (str): Path to metadata file.
-
-    Returns:
-        Dictionary of metadata.
-
-    """
-    archive = np.load(path)
-    output = read_np_archive(archive)
     return output
 
 

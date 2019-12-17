@@ -494,14 +494,14 @@ def plot_clusters_by_label(path, z, suffix=None, show=True):
     #     (np.zeros(config.labels_img.shape[1:], dtype=int),
     #      config.labels_img[z]), ax=ax)
     
-    if config.paths_metadata:
-        output = np_io.load_metadata(config.paths_metadata[0])
         if "scaling" in output:
             scaling = output["scaling"]
             blobs = blobs.astype(float)
             blobs[:, :3] = np.multiply(blobs[:, :3], scaling)
             blobs[:, 0] = np.floor(blobs[:, 0])
             print("scaled blobs cluster archive by", scaling)
+    if config.metadata_paths:
+        output = config.metadatas[0]
     
     # plot nuclei by label, colored based on cluster size within each label
     colors = colormaps.discrete_colormap(

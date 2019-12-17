@@ -263,8 +263,13 @@ def main(process_args_only=False):
 
     if args.meta is not None:
         # set metadata paths
-        config.paths_metadata = args.meta
-        print("Set metadata paths to", config.paths_metadata)
+        config.metadata_paths = args.meta
+        print("Set metadata paths to", config.metadata_paths)
+        config.metadatas = []
+        for path in config.metadata_paths:
+            # load metadata to dictionary
+            md, _ = importer.load_metadata(path, assign=False)
+            config.metadatas.append(md)
 
     if args.channel is not None:
         # set the channel; currently supports a single channel or -1 for all

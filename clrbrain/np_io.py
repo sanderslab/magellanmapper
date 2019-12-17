@@ -68,6 +68,27 @@ def load_blobs(img_path, scaled_shape=None, scale=None):
     return blobs, scaling, res
 
 
+def read_np_archive(archive):
+    """Load Numpy archive file into a dictionary, skipping any values 
+    that cannot be loaded.
+
+    Args:
+        archive: Loaded Numpy archive.
+
+    Returns:
+        Dictionary with keys and values corresponding to that of the 
+        Numpy archive, skipping any values that could not be loaded 
+        such as those that would require pickling when not allowed.
+    """
+    output = {}
+    for key in archive.keys():
+        try:
+            output[key] = archive[key]
+        except ValueError as e:
+            print("unable to load {} from archive, will ignore".format(key))
+    return output
+
+
 def load_metadata(path):
     """Load a metadata file.
     
@@ -79,7 +100,7 @@ def load_metadata(path):
 
     """
     archive = np.load(path)
-    output = importer.read_np_archive(archive)
+    output = read_np_archive(archive)
     return output
 
 
@@ -158,7 +179,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
         basename = None
         try:
             # load processed blobs and ROI metadata
-            output_info = importer.read_np_archive(
+            output_info = read_np_archive(
                 np.load(filename_info_proc))
             config.blobs = output_info["segments"]
             print("{} segments loaded".format(len(

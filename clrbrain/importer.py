@@ -25,6 +25,7 @@ from xml import etree as et
 import warnings
 
 from clrbrain import config
+from clrbrain import np_io
 from clrbrain import plot_3d
 from clrbrain import lib_clrbrain
 
@@ -290,7 +291,7 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
     # reload and show info file contents
     print("Saved image metadata:")
     info = np.load(filename_info_npz)
-    output = read_np_archive(info)
+    output = np_io.read_np_archive(info)
     info.close()
     for key, value in output.items():
         print("{}: {}".format(key, value))
@@ -377,25 +378,6 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     
     return True
 
-def read_np_archive(archive):
-    """Load Numpy archive file into a dictionary, skipping any values 
-    that cannot be loaded.
-    
-    Args:
-        archive: Loaded Numpy archive.
-    
-    Returns:
-        Dictionary with keys and values corresponding to that of the 
-        Numpy archive, skipping any values that could not be loaded 
-        such as those that would require pickling when not allowed.
-    """
-    output = {}
-    for key in archive.keys():
-        try:
-            output[key] = archive[key]
-        except ValueError as e:
-            print("unable to load {} from archive, will ignore".format(key))
-    return output
 
 def read_info(filename_info_npz, check_ver=False):
     """Load image info, such as saved microscopy data and image ranges, 
@@ -413,7 +395,7 @@ def read_info(filename_info_npz, check_ver=False):
     """
     print("Reading image metadata from {}".format(filename_info_npz))
     archive = np.load(filename_info_npz)
-    output = read_np_archive(archive)
+    output = np_io.read_np_archive(archive)
     image5d_ver_num = -1
     try:
         # find the info version number

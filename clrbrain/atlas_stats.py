@@ -457,7 +457,7 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     return df_impr
 
 
-def plot_clusters_by_label(path, z, suffix=None, show=True):
+def plot_clusters_by_label(path, z, suffix=None, show=True, scaling=None):
     """Plot separate sets of clusters for each label.
     
     Args:
@@ -465,6 +465,8 @@ def plot_clusters_by_label(path, z, suffix=None, show=True):
         z (int): z-plane to plot.
         suffix (str): Suffix for ``path``; defaults to None.
         show (bool): True to show; defaults to True.
+        scaling (List): Sequence of scaling from blobs' coordinate space
+             to that of :attr:`config.labels_img`.
 
     """
     mod_path = path
@@ -494,14 +496,11 @@ def plot_clusters_by_label(path, z, suffix=None, show=True):
     #     (np.zeros(config.labels_img.shape[1:], dtype=int),
     #      config.labels_img[z]), ax=ax)
     
-        if "scaling" in output:
-            scaling = output["scaling"]
-            blobs = blobs.astype(float)
-            blobs[:, :3] = np.multiply(blobs[:, :3], scaling)
-            blobs[:, 0] = np.floor(blobs[:, 0])
-            print("scaled blobs cluster archive by", scaling)
-    if config.metadata_paths:
-        output = config.metadatas[0]
+    if scaling is not None:
+        print("scaling blobs cluster coordinates by", scaling)
+        blobs = blobs.astype(float)
+        blobs[:, :3] = np.multiply(blobs[:, :3], scaling)
+        blobs[:, 0] = np.floor(blobs[:, 0])
     
     # plot nuclei by label, colored based on cluster size within each label
     colors = colormaps.discrete_colormap(

@@ -1978,8 +1978,13 @@ def main():
     
     elif reg is config.RegisterTypes.plot_cluster_blobs:
         # show blob clusters for the given plane
+        scaling = None
+        if config.metadatas:
+            output = config.metadatas[0]
+            if "scaling" in output:
+                scaling = output["scaling"]
         atlas_stats.plot_clusters_by_label(
-            config.filename, config.offsets[0][2], config.suffix, show)
+            config.filename, config.offsets[0][2], config.suffix, show, scaling)
 
 
 if __name__ == "__main__":

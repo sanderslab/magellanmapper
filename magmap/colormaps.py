@@ -1,7 +1,7 @@
 #!/bin/bash
-# Colormaps for Clrbrain
+# Colormaps for MagellanMapper
 # Author: David Young, 2018, 2019
-"""Custom colormaps for Clrbrain.
+"""Custom colormaps for MagellanMapper.
 """
 
 from enum import Enum, auto

@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=Clrbrain
+set SPHINXPROJ=MagellanMapper
 
 if "%1" == "" goto help
 

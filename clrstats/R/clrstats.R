@@ -1,4 +1,4 @@
-# Clrbrain stats in R
+# MagellanMapper stats in R
 # Author: David Young, 2018, 2019
 
 # library to avoid overlapping text labels
@@ -62,7 +62,7 @@ kRegionsIgnore <- c(15564)
 
 # File Paths
 
-# paths to files of raw metric values from Clrbrain
+# paths to files of raw metric values from MagellanMapper
 kStatsFilesIn <- c(
   "vols_by_sample.csv", "vols_by_sample_levels.csv", 
   "vols_by_sample_summary.csv", "dsc_summary.csv", 
@@ -72,7 +72,7 @@ kStatsFilesIn <- c(
 )
 kStatsPathOut <- "../vols_stats" # output stats
 
-# region-ID map from Clrbrain, which should contain all regions including 
+# region-ID map from MagellanMapper, which should contain all regions including 
 # hierarchical/ontological ones
 kRegionIDsPath <- "../region_ids.csv"
 
@@ -614,7 +614,7 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   # Returns:
   #   Filtered data frame from \code{\link{filterStats}}.
   
-  # load CSV file output by Clrbrain Python stats module
+  # load CSV file output by MagellanMapper Python stats module
   df <- read.csv(path.in)
   if (!is.element(meas, names(df))) {
     cat(paste(meas, "not found in data frame", "\n"))

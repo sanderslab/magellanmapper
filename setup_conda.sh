@@ -1,9 +1,9 @@
 #!/bin/bash
-# Sets up the Clrbrain environment
+# Sets up the MagellanMapper environment
 # Author: David Young 2017, 2019
 
 HELP="
-Sets up the initial Clrbrain environment with Anaconda and all
+Sets up the initial MagellanMapper environment with Anaconda and all
 packages including git repositories.
 
 Downloads and installs Miniconda3 if it is not already present. 
@@ -202,7 +202,7 @@ install_shallow_clone() {
 
 : '
 # pip dependencies that are not available in Conda, some of which are 
-# git-pip installed from Clrbrain parent directory
+# git-pip installed from MagellanMapper parent directory
 cd ..
 if [[ $lightweight -eq 0 ]]; then
   # install dependencies for GUI requirement
@@ -242,9 +242,9 @@ pip install git+https://github.com/LeeKamentsky/python-javabridge.git
 pip install -U python-bioformats==1.1.0
 '
 
-msg="Clrbrain environment setup complete!"
+msg="MagellanMapper environment setup complete!"
 msg+="\n** Please run \"conda activate $env_name\" or "
 msg+="\"source activate $env_name\""
 msg+="\n   depending on your Conda setup to enter the environment "
-msg+="for Clrbrain **"
+msg+="for MagellanMapper **"
 echo -e "$msg"

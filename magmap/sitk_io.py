@@ -127,7 +127,7 @@ def read_sitk_files(filename_sitk, reg_names=None):
             be a registered suffix or a full path. Defaults to None.
 
     Returns:
-        Image array in Clrbrain image5d format. Associated metadata will 
+        Image array in MagellanMapper image5d format. Associated metadata will 
         have been loaded into module-level variables.
 
     Raises:
@@ -161,7 +161,7 @@ def read_sitk_files(filename_sitk, reg_names=None):
     if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
         lib_clrbrain.warn(
-            "Clrbrain image metadata file not loaded; will fallback to {} "
+            "MagellanMapper image metadata file not loaded; will fallback to {} "
             "for metadata".format(filename_sitk))
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(config.resolutions))

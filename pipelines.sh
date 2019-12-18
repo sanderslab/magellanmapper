@@ -1,9 +1,9 @@
 #!/bin/bash
-# Clrbrain pipelines script
+# MagellanMapper pipelines script
 # Author: David Young 2017, 2019
 
 HELP="
-Run Clrbrain pipelines. Choose various pathways from simple viewing to 
+Run MagellanMapper pipelines. Choose various pathways from simple viewing to 
 stitching and full volumetric image detection.
 
 Note that currently not all options are settable through at 
@@ -116,7 +116,7 @@ compression="${COMPRESSION_EXTS[0]}"
 # if multiple microscope profiles are given
 channel=0
 
-# Clrbrain filenames
+# MagellanMapper filenames
 image5d_npz=""
 info_npz=""
 proc_npz=""
@@ -226,7 +226,7 @@ compress_upload() {
 }
 
 ############################################
-# Set up paths for Clrbrain formatted files.
+# Set up paths for MagellanMapper formatted files.
 # Globals:
 #   image5d_npz
 #   info_npz
@@ -421,8 +421,8 @@ fi
 # Display region of interest in main GUI and exit when GUI is closed
 
 if [[ $gui -eq 1 ]]; then
-  # Run Clrbrain GUI, importing the image into Numpy-based format that 
-  # Clrbrain can read if not available. A few additional scenarios are
+  # Run MagellanMapper GUI, importing the image into Numpy-based format that 
+  # MagellanMapper can read if not available. A few additional scenarios are
   # also shown, currently commented out. The script will exit after 
   # displaying the GUI.
 
@@ -528,7 +528,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
     mv "$f" "${f/$FUSED/$OUT_NAME_BASE}";
   done
   
-  # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
+  # Import stacked TIFF file(s) into Numpy arrays for MagellanMapper
   start=$SECONDS
   python -u -m magmap.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
     --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v \
@@ -552,9 +552,9 @@ if [[ "$pipeline" = "${PIPELINES[1]}" \
 fi
 
 # At this point, you can delete the TIFF dir/image since it has been 
-# exported into a Numpy-based format for loading into Clrbrain
+# exported into a Numpy-based format for loading into MagellanMapper
 
-# Check for existing files in Clrbrain Numpy format
+# Check for existing files in MagellanMapper Numpy format
 setup_clrbrain_filenames "$clr_img_base"
 echo -n "Looking for ${image5d_npz}..."
 if [[ ! -e "$image5d_npz" ]]; then
@@ -575,7 +575,7 @@ if [[ ! -e "$image5d_npz" ]]; then
     done
   fi
   summary_msg+=(
-    "Clrbrain image download and decompression time: $((SECONDS - start)) s")
+    "MagellanMapper image download and decompression time: $((SECONDS - start)) s")
 else
   echo "found"
 fi
@@ -668,14 +668,14 @@ if [[ ! -z "$s3_exp_path" && "${#output_stats_paths[@]}" -gt 0 ]]; then
     "zip" "${output_stats_paths[@]}"
 fi
 
-msg="Total time elapsed for Clrbrain pipeline: $((SECONDS - START_TIME)) s"
+msg="Total time elapsed for MagellanMapper pipeline: $((SECONDS - START_TIME)) s"
 summary_msg+=("$msg")
 echo "$msg"
 
 if [[ "$url_notify" != "" ]]; then
   # post-processing notification to Slack
   summary_msg=(
-    "Clrbrain \"$pipeline\" pipeline for $NAME completed" "${summary_msg[@]}")
+    "MagellanMapper \"$pipeline\" pipeline for $NAME completed" "${summary_msg[@]}")
   msg=$(printf "%s\n" "${summary_msg[@]}")
   attach=""
   if [[ "$output_path" != "" ]]; then
@@ -686,7 +686,7 @@ fi
 
 if [[ $clean_up -eq 1 ]]; then
   # Server Clean-Up
-  echo "Completed Clrbrain pipelines, shutting down server..."
+  echo "Completed MagellanMapper pipelines, shutting down server..."
   sudo poweroff
 fi
 

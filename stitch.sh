@@ -101,7 +101,7 @@ source libclr.sh
 detect_platform
 # auto-detect ImageJ binary path if not already set; assume that 
 # Fiji.app folder is in the standard Mac Applications directory (Mac)
-# or in the Clrbrain parent directory (Windows/Linux)
+# or in the MagellanMapper parent directory (Windows/Linux)
 bit_short="64"
 if [[ "$bit" =~ "32" ]]; then
   bit_short="32"

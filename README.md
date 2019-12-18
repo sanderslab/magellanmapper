@@ -1,11 +1,11 @@
-# Clrbrain
-Clrbrain is an imaging informatics GUI and pipeline for high-throughput, automated analysis of whole organs. Its design philosophy is to make the raw, original images as accessible as possible; simplify annotation from nuclei to atlases; and scale from the laptop to the cloud in cross-platform environments.
+# MagellanMapper
+MagellanMapper is an imaging informatics GUI and pipeline for high-throughput, automated analysis of whole organs. Its design philosophy is to make the raw, original images as accessible as possible; simplify annotation from nuclei to atlases; and scale from the laptop to the cloud in cross-platform environments.
 
 Author: David Young, 2017, 2019, Stephan Sanders Lab
 
 ## Download
 
-Currently access is limited to a private Git repo. Our eventual plan is to make Clrbrain available via Anaconda and Pip.
+Currently access is limited to a private Git repo. Our eventual plan is to make MagellanMapper available via Anaconda and Pip.
 
 - Contact the project managers about loading your public key to access the project repository
 - Download the repo: `git clone git@bitbucket.org:psychcore/clrbrain.git`
@@ -59,11 +59,11 @@ Run this command from the `clrbrain` folder to set up the following:
 This setup script will check and install the following dependencies:
 
 - Checks for an existing Python 3.6+ install, which already include Venv
-- Performs a Pip install of Clrbrain and all dependencies (requires a C compiler for some dependencies, see below)
+- Performs a Pip install of MagellanMapper and all dependencies (requires a C compiler for some dependencies, see below)
 
 ### Alternative installation methods
 
-You can also install Clrbrain these ways in the shell and Python environment of your choice:
+You can also install MagellanMapper these ways in the shell and Python environment of your choice:
 
 - In a Python environment of your choice or none at all, run `pip install -r requirements.txt` to match dependencies in a pinned, current test setup (cross-platform)
 - To create a similar environment in Conda, run `conda env create -n [name] -f environment_[os].yml`, where `name` is your desired environment name, and `os` is `win|mac|lin` for your OS (assumes 64-bit)
@@ -71,7 +71,7 @@ You can also install Clrbrain these ways in the shell and Python environment of 
 
 ### Dependencies
 
-The main required and optional dependencies in Clrbrain are:
+The main required and optional dependencies in MagellanMapper are:
 
 - Scipy, Numpy, Matplotlib stack
 - Mayavi/TraitsUI/Qt stack for GUI and 3D visualization
@@ -82,7 +82,7 @@ The main required and optional dependencies in Clrbrain are:
 
 ### Optional Dependency Build and Runtime Requirements
 
-In most cases Clrbrain can be installed without a compiler or non-Python libraries. A few **optional** dependencies that require these resources provide added functionality.
+In most cases MagellanMapper can be installed without a compiler or non-Python libraries. A few **optional** dependencies that require these resources provide added functionality.
 
 #### Dependencies requiring a compilier
 
@@ -115,7 +115,7 @@ Compilers required for these dependencies, by platform:
 
 #### SimpleElastix dependency
 
-SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in Clrbrain. The library is not currently available in the standard [PyPi](https://pypi.org/). As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/).
+SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in MagellanMapper. The library is not currently available in the standard [PyPi](https://pypi.org/). As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/).
 
 If you would prefer to build SimpleElastix yourself, we have provided a couple build scripts to ease the build process for the SimpleElastix Python wrapper:
 
@@ -124,7 +124,7 @@ If you would prefer to build SimpleElastix yourself, we have provided a couple b
 
 ### Tested Platforms
 
-Clrbrain has been built and tested to build on:
+MagellanMapper has been built and tested to build on:
 
 - MacOS, tested on 10.11-10.14
 - Linux, tested on RHEL 7.4-7.5, Ubuntu 18.04
@@ -133,9 +133,9 @@ Clrbrain has been built and tested to build on:
   - Native command-prompt
   - Bash scripts in Cygwin (tested on Cygwin 2.10+), MSYS2
 
-## Run Clrbrain
+## Run MagellanMapper
 
-Clrbrain can be run as a GUI or headlessly for desktop or server tasks, respectively. To start Clrbrain, run (assuming a Conda environment):
+MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, respectively. To start MagellanMapper, run (assuming a Conda environment):
 
 ```
 source activate clr
@@ -144,11 +144,11 @@ source activate clr
 
 Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
 
-You can also use `pipelines.sh`, a script to run many automated pipelines within Clrbrain, such as whole volume nuclei detection and image transposition. See below for more details.
+You can also use `pipelines.sh`, a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details.
 
 ## 3D viewer
 
-The main Clrbrain GUI displays a 3D viewer and region of interest (ROI) selection controls. Clrbrain uses Mayavi for 3D voxel or surface rendering.
+The main MagellanMapper GUI displays a 3D viewer and region of interest (ROI) selection controls. MagellanMapper uses Mayavi for 3D voxel or surface rendering.
 
 From the ROI selection controls, two different 2D editors can be opened. All but the last `2D styles` option open various forms of the Nuclei Annotation Editor. The final option opens the Atlas Editor, a 2D/3D viewer.
 
@@ -224,9 +224,9 @@ Optional dependencies:
 
 #### Launch a server
 
-You can launch a standard server, deploy Clrbrain code, and run a pipeline. Note that typically login with graphical support (eg via `vncserver`) is required during installation for Mayavi and stitching in the standard setup, but you can alternatively run a lightweight install without GUI (see above).
+You can launch a standard server, deploy MagellanMapper code, and run a pipeline. Note that typically login with graphical support (eg via `vncserver`) is required during installation for Mayavi and stitching in the standard setup, but you can alternatively run a lightweight install without GUI (see above).
 
-If you already have an AMI with Clrbrain installed, you can launch a new instance of it via Clrbrain:
+If you already have an AMI with MagellanMapper installed, you can launch a new instance of it via MagellanMapper:
 
 ```
 python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
@@ -234,7 +234,7 @@ python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
 ```
 
 - `Name` is your name of choice
-- `ami` is your previously saved AMI with Clrbrain
+- `ami` is your previously saved AMI with MagellanMapper
 - `m5.4xlarge` is the instance type, which can be changed depending on your performance requirements
 - `subnet` is your subnet group
 - `sg` is your security group
@@ -242,9 +242,9 @@ python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
 - `50,2000` creates a 50GB swap and 2000GB data drive, which can be changed depending on your needs
 - `2` starts two instances (optional, defaults to 1)
 
-#### Setup server with Clrbrain
+#### Setup server with MagellanMapper
 
-Deploy the Clrbrain folder and supporting files:
+Deploy the MagellanMapper folder and supporting files:
 
 ```
 ./deploy.sh -p [path_to_your_aws_pem] -i [server_ip] \
@@ -252,10 +252,10 @@ Deploy the Clrbrain folder and supporting files:
 ```
 
 - This script by default will:
-  - Archive the Clrbrain Git directory and `scp` it to the server, using your `.pem` file to access it
+  - Archive the MagellanMapper Git directory and `scp` it to the server, using your `.pem` file to access it
   - Download and install ImageJ/Fiji onto the server
   - Update Fiji and install BigStitcher for image stitching
-- To only update an existing Clrbrain directory on the server, add `-u`
+- To only update an existing MagellanMapper directory on the server, add `-u`
 - To add multiple files or folders such as `.aws` credentials, use the `-d` option as many times as you'd like
 
 Setup drives on a new server instance:
@@ -268,9 +268,9 @@ Setup drives on a new server instance:
 - Format and mount data and swap drives
 - Create swap files
 
-#### Run Clrbrain on server
+#### Run MagellanMapper on server
 
-Log into your instance and run the Clrbrain pipeline of choice.
+Log into your instance and run the MagellanMapper pipeline of choice.
 
 - SSH into your server instance, typically with port forwarding to allow VNC access:
 
@@ -280,7 +280,7 @@ ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
 
 - If necessary, start a graphical server (eg `vncserver`) to run ImageJ/Fiji for stitching or for Mayavi dependency setup
 - Setup drives: `clrbrain/setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
-- If Clrbrain has not been installed, install it with `clrbrain/setup_conda.sh` as above
+- If MagellanMapper has not been installed, install it with `clrbrain/setup_conda.sh` as above
 - Activate the Conda environment set up during installation
 - Run a pipeline, such as this command to fully process a multi-tile image with tile stitching, import to Numpy array, and cell detection, with AWS S3 import/export and Slack notifications along the way, followed by server clean-up/shutdown:
 
@@ -294,13 +294,13 @@ ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
 
 ### Installation on Windows
 
-Currently Clrbrain uses many Bash scripts, which require Cygwin or more recently Windows Subsystem for Linux (WSL) to run. Theoretically Clrbrain most likely could run without them, which we will need to test.
+Currently MagellanMapper uses many Bash scripts, which require Cygwin or more recently Windows Subsystem for Linux (WSL) to run. Theoretically MagellanMapper most likely could run without them, which we will need to test.
 
 In the meantime, here are instructions for either Linux-like layer:
 
 #### WSL
 
-After loading a WSL terminal, setup the Clrbrain environment using the same steps as for Mac. SimpleElastix can be built during or after the setup as above.
+After loading a WSL terminal, setup the MagellanMapper environment using the same steps as for Mac. SimpleElastix can be built during or after the setup as above.
 
 Running in WSL requires setting up an X Server since WSL does not provide graphical support out of the box. In our experience, the easiest option is to use [MobaXTerm](https://mobaxterm.mobatek.net/), which supports HiDPI and OpenGL.
 
@@ -311,7 +311,7 @@ An alternative X Server is Cygwin/X, which requires the following modifications:
 
 #### Cygwin
 
-As an alternative to WSL, Cygwin itself can be used to build Clrbrain and run without requiring an X server. Many dependencies must be built, however, using Cygwin's own `gcc`. At least as of 2019-03, VTK is not available for Cygwin.
+As an alternative to WSL, Cygwin itself can be used to build MagellanMapper and run without requiring an X server. Many dependencies must be built, however, using Cygwin's own `gcc`. At least as of 2019-03, VTK is not available for Cygwin.
 
 #### MSYS2
 
@@ -362,7 +362,7 @@ Additional errors:
 
 ### Java installation for Python-Bioformats/Javabridge
 
-- Double-check that the Java SDK has truly been installed since the Clrbrain setup script may not catch all missing installations
+- Double-check that the Java SDK has truly been installed since the MagellanMapper setup script may not catch all missing installations
 - You may need to set up the JAVA\_HOME and JDK\_HOME environment variables in your `~/.bash_profile` or `~/.bashrc` files, such as:
 
 ```
@@ -395,13 +395,13 @@ missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
 
 - Image stitching is run through ImageJ/Fiji
   - ImageJ itself also depends on Java but does not work well on Java > 8 (as of 2019-01-29)
-  - As of Clrbrain v0.8.3, an argument can be given to `runclrbrain.sh` and `stitch.sh` to specify the Java home specifically for ImageJ, which should be a typical path exported as `JAVA_HOME` but here passed as an argument to ImageJ, eg:
+  - As of MagellanMapper v0.8.3, an argument can be given to `runclrbrain.sh` and `stitch.sh` to specify the Java home specifically for ImageJ, which should be a typical path exported as `JAVA_HOME` but here passed as an argument to ImageJ, eg:
 
 ```
 ./runclrbrain.sh -j /Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home
 ```
 
-- Two ImageJ stitching plugins are available, which Clrbrain runs as ImageJ scripts in minimize the need for intervention:
+- Two ImageJ stitching plugins are available, which MagellanMapper runs as ImageJ scripts in minimize the need for intervention:
   - The original stitcher, `Stitching`, requires a large amount of RAM/swap space and runs single-threaded, taking days to stitch a multi-tile image
   - The new, recommended stitcher, `BigStitcher`, uses RAM much more efficiently through an HDF5 format and utilizes multiprocessing
 - BigStitcher currently requires a graphical environment, which is also recommended for manual verification of tile alignment

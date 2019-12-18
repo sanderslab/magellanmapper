@@ -43,7 +43,7 @@ def load_labels_ref(path):
 
 def convert_itksnap_to_df(path):
     """Convert an ITK-SNAP labels description file to a CSV file 
-    compatible with Clrbrain.
+    compatible with MagellanMapper.
     
     Args:
         path: Path to description file.

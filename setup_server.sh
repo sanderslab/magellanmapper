@@ -1,9 +1,9 @@
 #!/bin/bash
-# Prepare a server the Clrbrain pipeline
+# Prepare a server the MagellanMapper pipeline
 # Author: David Young 2018, 2019
 
 HELP="
-Sets up a server for processing files in the Clrbrain pipeline. 
+Sets up a server for processing files in the MagellanMapper pipeline. 
 Both initial setup and re-setup of existing servers is supported.
 
 Arguments:

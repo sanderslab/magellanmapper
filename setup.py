@@ -1,4 +1,4 @@
-# Clrbrain setup script
+# MagellanMapper setup script
 # Author: David Young, 2017, 2019
 
 import setuptools

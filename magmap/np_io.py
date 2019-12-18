@@ -107,7 +107,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
     """Sets up an image and all associated images and metadata.
     
     Args:
-        path (str): Path to image from which Clrbrain-style paths will 
+        path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
         series (int): Image series number.
         offset (List[int]): ROI offset given in x,y,z; defaults to None.
@@ -221,7 +221,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             except FileNotFoundError as e:
                 print(e)
         else:
-            # load or import from Clrbrain Numpy format, using any path
+            # load or import from MagellanMapper Numpy format, using any path
             # changes during attempting ROI load
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
             config.image5d = importer.read_file(

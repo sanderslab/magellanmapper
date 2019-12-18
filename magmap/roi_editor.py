@@ -1,7 +1,7 @@
 #!/bin/bash
 # ROI Editor with serial 2D viewer and annotator
 # Author: David Young, 2018, 2019
-"""ROI editing GUI in the Clrbrain package.
+"""ROI editing GUI in the MagellanMapper package.
 
 Attributes:
     verify: If true, verification mode is turned on, which for now

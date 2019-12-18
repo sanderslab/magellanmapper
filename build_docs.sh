@@ -1,9 +1,9 @@
 #!/bin/bash
-# Build Clrbrain documentation
+# Build MagellanMapper documentation
 # Author: David Young 2018, 2019
 
 HELP="
-Build documentation files for Clrbrain through the Sphinx package.
+Build documentation files for MagellanMapper through the Sphinx package.
 
 Arguments:
   -a: Rebuild API .rst files.

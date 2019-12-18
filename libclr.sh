@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bash library functions for Clrbrain
+# Bash library functions for MagellanMapper
 # Author: David Young 2018, 2019
 
 

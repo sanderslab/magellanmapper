@@ -1,6 +1,6 @@
 # Interface with AWS
 # Author: David Young, 2018, 2019
-"""Connect Clrbrain with AWS such as S3 and EC2.
+"""Connect MagellanMapper with AWS such as S3 and EC2.
 
 Attributes:
 """

@@ -1,9 +1,9 @@
 #!/bin/bash
-# Deploy Clrbrain to AWS
+# Deploy MagellanMapper to AWS
 # Author: David Young 2017, 2019
 
 HELP="
-Deploy Clrbrain and related files to AWS.
+Deploy MagellanMapper and related files to AWS.
 
 Arguments:
   -h: Show help and exit.
@@ -11,7 +11,7 @@ Arguments:
       multiple times to add additional files for upload.
   -i [IP]: IP address of the AWS EC2 instance.
   -p [path]: Path to the .pem file for accessing EC2.
-  -u: Upload and update Clrbrain files only, skipping the rest of 
+  -u: Upload and update MagellanMapper files only, skipping the rest of 
       deployment.
   -f: Update Fiji/ImageJ. Assume that it has already been deployed.
   -g [git_hash]: Archive and upload the given specific Git commit; 
@@ -23,7 +23,7 @@ Arguments:
 
 FIJI="http://downloads.imagej.net/fiji/latest/fiji-nojre.zip"
 FIJI_SITES=("BigStitcher http://sites.imagej.net/BigStitcher/")
-update=0 # update Clrbrain
+update=0 # update MagellanMapper
 update_fiji=0 # update Fiji/ImageJ
 run_script="" # run script, which will be executed as last cmd
 deploy_files=() # files to deploy
@@ -51,7 +51,7 @@ while getopts hi:p:ufr:d:g:n: opt; do
       ;;
     u)
       update=1
-      echo "Set to update Clrbrain only"
+      echo "Set to update MagellanMapper only"
       ;;
     f)
       update_fiji=1

@@ -1,6 +1,6 @@
-# Notifications in Clrbrain
+# Notifications in MagellanMapper
 # Author: David Young, 2018
-"""Post Clrbrain notifications.
+"""Post MagellanMapper notifications.
 
 Attributes:
 """
@@ -27,6 +27,6 @@ def post(url, msg, attachment):
     return response
 
 if __name__ == "__main__":
-    print("Starting Clrbrain notifier...")
+    print("Starting MagellanMapper notifier...")
     cli.main(True)
     post(config.notify_url, config.notify_msg, config.notify_attach)

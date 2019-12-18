@@ -1,7 +1,7 @@
 #!/bin/bash
-# ROI exporter for Clrbrain
+# ROI exporter for MagellanMapper
 # Author: David Young, 2017, 2019
-"""ROI exporter for Clrbrain.
+"""ROI exporter for MagellanMapper.
 
 Convert images and corresponding database entries into formats for 
 machine learning algorithms or other applications.
@@ -276,4 +276,4 @@ def blobs_to_csv(blobs, path):
 
 
 if __name__ == "__main__":
-    print("Clrbrain exporter")
+    print("MagellanMapper exporter")

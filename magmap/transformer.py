@@ -132,7 +132,7 @@ def transpose_img(filename, series, plane=None, rescale=None):
     
     Saves file to a new NPY archive with "transposed" inserted just prior
     to the series name so that "transposed" can be appended to the original
-    filename for future loading within Clrbrain. Files are saved through 
+    filename for future loading within MagellanMapper. Files are saved through 
     memmap-based arrays to minimize RAM usage. Currently transposes all 
     channels, ignoring :attr:``config.channel`` parameter.
     

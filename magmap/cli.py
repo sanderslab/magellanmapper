@@ -1,7 +1,7 @@
 #!/bin/bash
 # Command line parsing and setup
 # Author: David Young, 2017, 2019
-"""Command line parser and and environment setup for Clrbrain.
+"""Command line parser and and environment setup for MagellanMapper.
 
 This module can be run either as a script to work in headless mode or 
 loaded and initialized by calling main(). 
@@ -205,7 +205,7 @@ def main(process_args_only=False):
         process_args_only: If True, processes command-line arguments and exits.
     """
     parser = argparse.ArgumentParser(
-        description="Setup environment for Clrbrain")
+        description="Setup environment for MagellanMapper")
     parser.add_argument("--img", nargs="*")
     parser.add_argument("--meta", nargs="*")
     parser.add_argument("--channel", type=int)
@@ -631,7 +631,7 @@ def _iterate_file_processing(path, series, offsets, roi_sizes):
     """Processes files iteratively based on offsets.
     
     Args:
-        path (str): Path to image from which Clrbrain-style paths will 
+        path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
         series (int): Image series number.
         offsets: 2D array of multiple offsets.
@@ -661,7 +661,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
     """Processes a single image file non-interactively.
     
     Args:
-        path (str): Path to image from which Clrbrain-style paths will 
+        path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
         series (int): Image series number.
         offset: Offset as (x, y, z) to start processing.

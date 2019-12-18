@@ -1,5 +1,5 @@
 Package: clrstats
-Title: Clrbrain R Statistics
+Title: MagellanMapper R Statistics
 Version: 0.1
 Authors@R: person("David", "Young", email = "dave.young@ucsf.edu",
                   role = c("aut", "cre"))

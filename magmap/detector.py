@@ -107,7 +107,7 @@ def detect_blobs(roi, channel, exclude_border=None):
         
         # find blobs; sigma factors can be sequences by axes for anisotropic 
         # detection in skimage >= 0.15, or images can be interpolated to 
-        # isotropy using the "isotropic" Clrbrain setting
+        # isotropy using the "isotropic" MagellanMapper setting
         blobs_log = blob_log(
             roi_detect, 
             min_sigma=settings["min_sigma_factor"]*scaling_factor, 
@@ -144,7 +144,7 @@ def format_blobs(blobs, channel=None):
     """Format blobs with additional fields for confirmation, truth, and 
     channel, abs z, abs y, abs x values.
     
-    Blobs in Clrbrain can be assumed to start with (z, y, x, radius) but should 
+    Blobs in MagellanMapper can be assumed to start with (z, y, x, radius) but should 
     use ``detector`` functions to manipulate other fields of blob arrays to 
     ensure that the correct columns are accessed.
     
@@ -658,7 +658,7 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0)):
     """Get blobs within an ROI based on offset and size.
     
     Note that dimensions are in x,y,z for natural ordering but may 
-    change for consistency with z,y,x ordering used throughout Clrbrain.
+    change for consistency with z,y,x ordering used throughout MagellanMapper.
     
     Args:
         blobs: The blobs to retrieve, given as 2D array of 

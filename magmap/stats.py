@@ -1,6 +1,6 @@
-# Stats for Clrbrain
+# Stats for MagellanMapper
 # Author: David Young, 2018, 2019
-"""Stats calculations and text output for Clrbrain.
+"""Stats calculations and text output for MagellanMapper.
 
 Attributes:
 """

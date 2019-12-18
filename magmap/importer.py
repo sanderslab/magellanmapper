@@ -206,10 +206,10 @@ def find_sizes(filename):
     return sizes, dtype
 
 def make_filenames(filename, series, modifier=""):
-    """Make Clrbrain-oriented image and image metadata filenames.
+    """Make MagellanMapper-oriented image and image metadata filenames.
     
     Args:
-        filename: Original path from which Clrbrain-oriented filenames 
+        filename: Original path from which MagellanMapper-oriented filenames 
             will be derived.
         series: Image series.
         modifier: Separator for image series; defaults to "_"
@@ -226,7 +226,7 @@ def make_filenames(filename, series, modifier=""):
 
 def filename_to_base(filename, series, modifier=""):
     """Convert an image path to a base path including series information 
-    for use within Clrbrain.
+    for use within MagellanMapper.
     
     Args:
         filename: Path to original image.

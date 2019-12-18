@@ -1277,8 +1277,8 @@ def import_atlas(atlas_dir, show=True):
         thresh_atlas, img_atlas.GetSpacing()[::-1])
     metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
     
-    # write images with atlas saved as Clrbrain/Numpy format to 
-    # allow opening as an image within Clrbrain alongside the labels image
+    # write images with atlas saved as MagellanMapper/Numpy format to 
+    # allow opening as an image within MagellanMapper alongside the labels image
     imgs_write = {
         config.RegNames.IMG_ATLAS.value: img_atlas, 
         config.RegNames.IMG_LABELS.value: img_labels}

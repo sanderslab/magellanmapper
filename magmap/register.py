@@ -1988,7 +1988,7 @@ def main():
 
 
 if __name__ == "__main__":
-    print("Clrbrain image registration")
+    print("MagellanMapper image registration")
     from magmap import cli
     cli.main(True)
     main()

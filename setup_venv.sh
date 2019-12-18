@@ -1,9 +1,9 @@
 #!/bin/bash
-# Sets up the Clrbrain environment using venv
+# Sets up the MagellanMapper environment using venv
 # Author: David Young 2019
 
 HELP="
-Sets up the initial Clrbrain environment using the built-in
+Sets up the initial MagellanMapper environment using the built-in
 venv environment manager.
 
 Arguments:
@@ -113,9 +113,9 @@ if [[ ! -e "$env_act" ]]; then
 fi
 source "$env_act"
 
-# update pip and install Clrbrain including required dependencies
+# update pip and install MagellanMapper including required dependencies
 "$python" -m pip install -U pip
 pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 
-echo "Clrbrain environment setup complete!"
+echo "MagellanMapper environment setup complete!"
 echo "** Please run \"source $env_act\" to enter your new environment **"

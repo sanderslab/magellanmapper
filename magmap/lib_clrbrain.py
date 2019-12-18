@@ -1,7 +1,7 @@
 #!/bin/bash
-# Library functions shared within Clrbrain
+# Library functions shared within MagellanMapper
 # Author: David Young, 2017, 2019
-"""Shared functions with the Clrbrain package.
+"""Shared functions with the MagellanMapper package.
 """
 
 import os
@@ -304,7 +304,7 @@ def warn(msg, category=UserWarning, stacklevel=2):
 
 
 def series_as_str(series):
-    """Get the series as a string for Clrbrain filenames, ensuring 5 
+    """Get the series as a string for MagellanMapper filenames, ensuring 5 
     characters to allow for a large number of series.
     
     Args:
@@ -777,4 +777,4 @@ def scale_slice(sl, scale, size):
 
 
 if __name__ == "__main__":
-    print("Initializing Clrbrain general library module")
+    print("Initializing MagellanMapper general library module")

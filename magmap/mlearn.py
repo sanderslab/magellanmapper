@@ -1,7 +1,7 @@
 #!/bin/bash
-# Machine learning for Clrbrain
+# Machine learning for MagellanMapper
 # Author: David Young, 2017, 2019
-"""Machine learning and output for Clrbrain.
+"""Machine learning and output for MagellanMapper.
 """
 
 from collections import OrderedDict
@@ -139,4 +139,4 @@ def parse_grid_stats(stats_dict):
 
     
 if __name__ == "__main__":
-    print("Clrbrain machine learning")
+    print("MagellanMapper machine learning")

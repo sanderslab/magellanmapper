@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Clrbrain documentation build configuration file, created by
+# MagellanMapper documentation build configuration file, created by
 # sphinx-quickstart on Tue Oct  3 13:11:48 2017.
 #
 # This file is execfile()d with the current directory set to its
@@ -49,7 +49,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = 'Clrbrain'
+project = 'MagellanMapper'
 copyright = '2017, David Young'
 author = 'David Young'
 
@@ -145,7 +145,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Clrbrain.tex', 'Clrbrain Documentation',
+    (master_doc, 'MagellanMapper.tex', 'MagellanMapper Documentation',
      'David Young', 'manual'),
 ]
 
@@ -166,8 +166,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Clrbrain', 'Clrbrain Documentation',
-     author, 'Clrbrain', 'One line description of project.',
+    (master_doc, 'MagellanMapper', 'MagellanMapper Documentation',
+     author, 'MagellanMapper', 'One line description of project.',
      'Miscellaneous'),
 ]
 

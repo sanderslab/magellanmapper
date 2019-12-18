@@ -611,7 +611,7 @@ def load_truth_db(filename_base):
     image.
     
     Args:
-        filename_base: Clrbrain-oriented base name associated with an 
+        filename_base: MagellanMapper-oriented base name associated with an 
             image path.
     
     Returns:

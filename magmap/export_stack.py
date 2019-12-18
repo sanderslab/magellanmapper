@@ -473,4 +473,4 @@ def reg_planes_to_img(imgs, path=None, ax=None):
 
 
 if __name__ == "__main__":
-    print("Clrbrain stack manipulations")
+    print("MagellanMapper stack manipulations")

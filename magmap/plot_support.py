@@ -1,7 +1,7 @@
 #!/bin/bash
-# Plot Support for Clrbrain
+# Plot Support for MagellanMapper
 # Author: David Young, 2018, 2019
-"""Shared plotting functions with the Clrbrain package.
+"""Shared plotting functions with the MagellanMapper package.
 """
 
 import os

@@ -106,17 +106,17 @@ def update_process_settings(settings, settings_type):
         
         # Lightsheet nuclei
         # pre-v01
-        # v1 (Clrbrain v0.6.1)
-        # v2 (Clrbrain v0.6.2): isotropy (no anisotropic detection), dec 
+        # v1 (MagellanMapper v0.6.1)
+        # v2 (MagellanMapper v0.6.2): isotropy (no anisotropic detection), dec 
         #     clip_max, use default sub_stack_max_pixels
-        # v2.1 (Clrbrain v0.6.4): erosion_threshold
-        # v2.2 (Clrbrain v0.6.6): narrower and taller stack shape
-        # v2.3 (Clrbrain 0.8.7): added prune_tol_factor
-        # v2.4 (Clrbrain 0.8.8): decreased min/max sigma, segment size
-        # v2.5 (Clrbrain 0.8.9): added exclude_border
-        # v2.6 (Clrbrain 0.9.3): slight dec in x/y verify tol for Hungarian meth
-        # v2.6.1 (Clrbrain 0.9.4): scale_factor, segmenting_mean_thresh had 
-        #     already been turned off, now removed from Clrbrain and here
+        # v2.1 (MagellanMapper v0.6.4): erosion_threshold
+        # v2.2 (MagellanMapper v0.6.6): narrower and taller stack shape
+        # v2.3 (MagellanMapper 0.8.7): added prune_tol_factor
+        # v2.4 (MagellanMapper 0.8.8): decreased min/max sigma, segment size
+        # v2.5 (MagellanMapper 0.8.9): added exclude_border
+        # v2.6 (MagellanMapper 0.9.3): slight dec in x/y verify tol for Hungarian meth
+        # v2.6.1 (MagellanMapper 0.9.4): scale_factor, segmenting_mean_thresh had 
+        #     already been turned off, now removed from MagellanMapper and here
         settings.add_modifier(
             "lightsheet", 
             {

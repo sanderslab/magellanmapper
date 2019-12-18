@@ -19,7 +19,7 @@ from magmap import np_io
 from magmap import ontology
 from magmap import plot_2d
 from magmap import plot_support
-from magmap import stats
+from magmap import df_io
 from magmap import vols
 
 
@@ -79,18 +79,18 @@ def plot_region_development(metric, size=None, show=True):
         # add all large non-brain structures
         df_nonbr = dfs_nonbr_large[0]
         for df_out in dfs_nonbr_large[1:]:
-            df_nonbr = stats.normalize_df(
+            df_nonbr = df_io.normalize_df(
                 df_nonbr, id_cols, cond_col, None, [metric], 
-                extra_cols, df_out, stats.df_add)
+                extra_cols, df_out, df_io.df_add)
         # subtract them from whole organism to get brain tissue alone, 
         # updating given metric in db_base
-        df_base = stats.normalize_df(
+        df_base = df_io.normalize_df(
             df_base, id_cols, cond_col, None, [metric], extra_cols, 
-            df_nonbr, stats.df_subtract)
+            df_nonbr, df_io.df_subtract)
     df_base.loc[:, "RegionName"] = "Brain tissue"
     print("Brain {}:".format(metric))
-    stats.print_data_frame(df_base.loc[:, cols_show], "\t")
-    df_base_piv, regions = stats.pivot_with_conditions(
+    df_io.print_data_frame(df_base.loc[:, cols_show], "\t")
+    df_base_piv, regions = df_io.pivot_with_conditions(
         df_base, id_cols, "RegionName", metric)
     
     # plot lines with separate styles for each condition and colors for 
@@ -122,8 +122,8 @@ def plot_region_development(metric, size=None, show=True):
         # plot raw metric at given level
         df_level = df.loc[df["Level"] == level]
         print("Raw {}:".format(metric))
-        stats.print_data_frame(df_level.loc[:, cols_show], "\t")
-        df_level_piv, regions = stats.pivot_with_conditions(
+        df_io.print_data_frame(df_level.loc[:, cols_show], "\t")
+        df_level_piv, regions = df_io.pivot_with_conditions(
             df_level, id_cols, "RegionName", metric)
         plot_2d.plot_lines(
             config.filename, "Age", regions, 
@@ -135,12 +135,12 @@ def plot_region_development(metric, size=None, show=True):
         # plot metric normalized to whole brain tissue; structures 
         # above removed regions will still contain them 
         df_brain_level = df_brain.loc[df_brain["Level"] == level]
-        df_norm = stats.normalize_df(
+        df_norm = df_io.normalize_df(
             df_brain_level, id_cols, cond_col, None, [metric], 
             extra_cols, df_base)
         print("{} normalized to whole brain:".format(metric))
-        stats.print_data_frame(df_norm.loc[:, cols_show], "\t")
-        df_norm_piv, regions = stats.pivot_with_conditions(
+        df_io.print_data_frame(df_norm.loc[:, cols_show], "\t")
+        df_norm_piv, regions = df_io.pivot_with_conditions(
             df_norm, id_cols, "RegionName", metric)
         plot_2d.plot_lines(
             config.filename, "Age", regions, 
@@ -175,7 +175,7 @@ def plot_unlabeled_hemisphere(path, cols, size=None, show=True):
         y_label = "Fraction of hemisphere unlabeled"
         
         # plot as lines
-        df_lines, regions = stats.pivot_with_conditions(
+        df_lines, regions = df_io.pivot_with_conditions(
             df, ["Age", "Condition"], "Region", col)
         plot_2d.plot_lines(
             config.filename, "Age", regions, linestyles=("--", "-"), 
@@ -212,20 +212,20 @@ def meas_plot_zscores(path, metric_cols, extra_cols, composites, size=None,
     """
     # generate z-scores
     df = pd.read_csv(path)
-    df = stats.zscore_df(df, "Region", metric_cols, extra_cols, True)
+    df = df_io.zscore_df(df, "Region", metric_cols, extra_cols, True)
     
     # generate composite score column
-    df_comb = stats.combine_cols(df, composites)
-    stats.data_frames_to_csv(
+    df_comb = df_io.combine_cols(df, composites)
+    df_io.data_frames_to_csv(
         df_comb, 
         lib_clrbrain.insert_before_ext(config.filename, "_zhomogeneity"))
     
     # shift metrics from each condition to separate columns
     conds = np.unique(df["Condition"])
-    df = stats.cond_to_cols_df(
+    df = df_io.cond_to_cols_df(
         df, ["Sample", "Region"], "Condition", "original", metric_cols)
     path = lib_clrbrain.insert_before_ext(config.filename, "_zscore")
-    stats.data_frames_to_csv(df, path)
+    df_io.data_frames_to_csv(df, path)
     
     # display as probability plot
     lims = (-3, 3)
@@ -264,17 +264,17 @@ def meas_plot_coefvar(path, id_cols, cond_col, cond_base, metric_cols,
     """
     # measure coefficient of variation per sample-region regardless of group
     df = pd.read_csv(path)
-    df = stats.combine_cols(df, composites)
-    stats.data_frames_to_csv(
+    df = df_io.combine_cols(df, composites)
+    df_io.data_frames_to_csv(
         df, lib_clrbrain.insert_before_ext(config.filename, "_coefvar"))
     
     # measure CV within each condition and shift metrics from each 
     # condition to separate columns
-    df = stats.coefvar_df(df, [*id_cols, cond_col], metric_cols, size_col)
+    df = df_io.coefvar_df(df, [*id_cols, cond_col], metric_cols, size_col)
     conds = np.unique(df[cond_col])
-    df = stats.cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols)
+    df = df_io.cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols)
     path = lib_clrbrain.insert_before_ext(config.filename, "_coefvartransp")
-    stats.data_frames_to_csv(df, path)
+    df_io.data_frames_to_csv(df, path)
     
     # display CV measured by condition as probability plot
     lims = (0, 0.7)
@@ -360,7 +360,7 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
         vols.LabelMetrics.Volume.name,
     ]
     tag = ".mean"
-    df = stats.append_cols(
+    df = df_io.append_cols(
         dfs[:2], labels, lambda x: x.lower().endswith(tag), extra_cols)
     dens = "{}_density"
     for col in df.columns:
@@ -372,7 +372,7 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
     # strip the tag from column names
     names = {col: col.rsplit(tag)[0] for col in df.columns}
     df = df.rename(columns=names)
-    stats.data_frames_to_csv(df, "vols_stats_intensVnuc.csv")
+    df_io.data_frames_to_csv(df, "vols_stats_intensVnuc.csv")
     
     # plot labels and density labels
     plot(labels)
@@ -450,10 +450,10 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
     out_path = lib_clrbrain.insert_before_ext(path, "_impr")
     if suffix:
         out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
-    df_impr = stats.dict_to_data_frame(metrics, out_path)
+    df_impr = df_io.dict_to_data_frame(metrics, out_path)
     # display transposed version for more compact view given large number
     # of columns, but save un-transposed to preserve data types
-    stats.print_data_frame(df_impr.T, index=True, header=False)
+    df_io.print_data_frame(df_impr.T, index=True, header=False)
     return df_impr
 
 

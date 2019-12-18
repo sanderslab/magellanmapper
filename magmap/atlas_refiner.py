@@ -25,7 +25,7 @@ from magmap import plot_support
 from magmap import profiles
 from magmap import segmenter
 from magmap import sitk_io
-from magmap import stats
+from magmap import df_io
 
 
 def _get_bbox(img_np, threshold=10):
@@ -612,7 +612,7 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np, spacing)
     df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
     print("\nAggregated smoothing metrics, weighted by original volume")
-    stats.print_data_frame(df_metrics)
+    df_io.print_data_frame(df_metrics)
     
     # curate back to lightly smoothed foreground of original labels
     crop = config.register_settings["crop_to_orig"]
@@ -900,9 +900,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
               .format(label_id, compaction, displ, sm_qual))
     
     # print raw stats and calculate aggregate stats
-    df_pxs = stats.dict_to_data_frame(pxs)
+    df_pxs = df_io.dict_to_data_frame(pxs)
     print()
-    stats.print_data_frame(df_pxs)
+    df_io.print_data_frame(df_pxs)
     df_metrics = aggr_smoothing_metrics(df_pxs)
     return df_metrics, df_pxs
 
@@ -936,7 +936,7 @@ def aggr_smoothing_metrics(df_pxs):
     for key in keys:
         if key is config.SmoothingMetrics.COMPACTNESS_SD:
             # standard deviation
-            sd, _ = stats.weight_std(
+            sd, _ = df_io.weight_std(
                 df_pxs[config.SmoothingMetrics.COMPACTNESS.value], wts)
             metrics[key] = [sd]
         elif key is config.SmoothingMetrics.COMPACTNESS_CV:
@@ -947,14 +947,14 @@ def aggr_smoothing_metrics(df_pxs):
                 / metrics[config.SmoothingMetrics.COMPACTNESS][0]]
         else:
             # default to weighted mean
-            metrics[key] = [stats.weight_mean(df_pxs[key.value], wts)]
+            metrics[key] = [df_io.weight_mean(df_pxs[key.value], wts)]
     # measure label loss based on number of labels whose smoothed vol is 0
     num_labels_orig = np.sum(wts > 0)
     metrics[config.SmoothingMetrics.LABEL_LOSS] = [
         (num_labels_orig - 
          np.sum(df_pxs[config.SmoothingMetrics.VOL.value] > 0)) 
         / num_labels_orig]
-    return stats.dict_to_data_frame(metrics)
+    return df_io.dict_to_data_frame(metrics)
 
 
 def transpose_img(img_sitk, plane, rotate=None, target_size=None, 
@@ -1292,7 +1292,7 @@ def import_atlas(atlas_dir, show=True):
 
     if df_sm_raw is not None:
         # write raw smoothing metrics
-        stats.data_frames_to_csv(
+        df_io.data_frames_to_csv(
             df_sm_raw, 
             df_base_path.format(config.PATH_SMOOTHING_RAW_METRICS))
         
@@ -1305,12 +1305,12 @@ def import_atlas(atlas_dir, show=True):
         df_sm.loc[
             df_sm[config.SmoothingMetrics.FILTER_SIZE.value] == 0,
             config.AtlasMetrics.CONDITION.value] = "unsmoothed"
-        stats.data_frames_to_csv(
+        df_io.data_frames_to_csv(
             df_sm, df_smoothing_path, 
             sort_cols=config.SmoothingMetrics.FILTER_SIZE.value)
 
     print("\nImported {} whole atlas stats:".format(basename))
-    stats.dict_to_data_frame(metrics, df_metrics_path, show=" ")
+    df_io.dict_to_data_frame(metrics, df_metrics_path, show=" ")
     
     if show:
         sitk.Show(img_atlas)

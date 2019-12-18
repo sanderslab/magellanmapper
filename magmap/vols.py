@@ -20,7 +20,7 @@ from magmap import lib_clrbrain
 from magmap import ontology
 from magmap import plot_3d
 from magmap import profiles
-from magmap import stats
+from magmap import df_io
 
 # metric keys and column names
 LabelMetrics = Enum(
@@ -861,7 +861,7 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
     # make data frame of raw metrics, dropping columns of all NaNs
     df = pd.DataFrame(metrics)
     df = df.dropna(axis=1, how="all")
-    stats.print_data_frame(df)
+    df_io.print_data_frame(df)
     
     # build data frame of total metrics from weighted means
     metrics_all = {}
@@ -890,7 +890,7 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
         if col in totals:
             metrics_all.setdefault(col.name, []).append(totals[col])
     df_all = pd.DataFrame(metrics_all)
-    stats.print_data_frame(df_all)
+    df_io.print_data_frame(df_all)
     
     print("time elapsed to measure variation:", time() - start_time)
     return df, df_all
@@ -958,7 +958,7 @@ class MeasureLabelOverlap(object):
             # collective region
             label_masks = [np.isin(l, label_ids) for l in cls.labels_imgs]
             label_vol = np.sum(label_masks[0])
-            vol_dsc = stats.meas_dice(label_masks[0], label_masks[1])
+            vol_dsc = df_io.meas_dice(label_masks[0], label_masks[1])
             
             # sum up volume and nuclei count in the new version outside of
             # the original version; assume that volume no longer occupied by
@@ -968,7 +968,7 @@ class MeasureLabelOverlap(object):
             vol_out = np.sum(mask_out)
             if cls.heat_map is not None:
                 nuclei = np.sum(cls.heat_map[label_masks[0]])
-                nuc_dsc = stats.meas_dice(
+                nuc_dsc = df_io.meas_dice(
                     label_masks[0], label_masks[1], cls.heat_map)
                 nuc_out = np.sum(cls.heat_map[mask_out])
         else:
@@ -980,14 +980,14 @@ class MeasureLabelOverlap(object):
             label_vol = np.nansum(label_vols)
             vol_dscs = labels[LabelMetrics.VolDSC.name]
             
-            vol_dsc = stats.weight_mean(vol_dscs, label_vols)
+            vol_dsc = df_io.weight_mean(vol_dscs, label_vols)
             # sum up volume and nuclei outside of original regions
             vol_out = np.nansum(labels[LabelMetrics.VolOut.name])
             if LabelMetrics.Nuclei.name in labels:
                 nucs = labels[LabelMetrics.Nuclei.name]
                 nuclei = np.nansum(nucs)
                 nuc_dscs = labels[LabelMetrics.NucDSC.name]
-                nuc_dsc = stats.weight_mean(nuc_dscs, nucs)
+                nuc_dsc = df_io.weight_mean(nuc_dscs, nucs)
                 nuc_out = np.nansum(labels[LabelMetrics.NucOut.name])
         
         if label_vol > 0:
@@ -1076,7 +1076,7 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
     # make data frame of raw metrics, dropping columns of all NaNs
     df = pd.DataFrame(metrics)
     df = df.dropna(axis=1, how="all")
-    stats.print_data_frame(df)
+    df_io.print_data_frame(df)
     
     print("time elapsed to measure variation:", time() - start_time)
     return df

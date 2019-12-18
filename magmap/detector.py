@@ -16,7 +16,7 @@ from magmap import config
 from magmap import lib_clrbrain
 from magmap import plot_3d
 from magmap import sqlite
-from magmap import stats
+from magmap import df_io
 
 # blob confirmation flags
 CONFIRMATION = {
@@ -909,7 +909,7 @@ def _test_blob_verification(a, b, tol):
     #found_truth, detected = _find_closest_blobs(b, a, tol)
     #dists = np.zeros(len(blobs)
     detected, found_truth, dists = find_closest_blobs_cdist(b, a, tol)
-    stats.dict_to_data_frame(
+    df_io.dict_to_data_frame(
         {"Testi": detected, "Masteri": found_truth, "Dist": dists}, show=True)
 
 def _test_blob_close_sorted():

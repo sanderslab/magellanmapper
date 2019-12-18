@@ -77,7 +77,7 @@ from magmap import sqlite
 from magmap import mlearn
 from magmap import profiles
 from magmap import stack_detect
-from magmap import stats
+from magmap import df_io
 from magmap import transformer
 
 
@@ -638,8 +638,7 @@ def _iterate_file_processing(path, series, offsets, roi_sizes):
         roi_sizes: 2D array of multiple ROI sizes corresponding to offsets.
     
     Returns:
-        stats: Summed stats.
-        summaries: Concatenated summaries.
+        :obj:`np.ndarray`, str: Summed stats array and concatenated summaries.
     """
     stat = np.zeros(3)
     roi_sizes_len = len(roi_sizes)

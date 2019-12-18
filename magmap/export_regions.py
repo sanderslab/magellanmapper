@@ -19,7 +19,7 @@ from magmap import lib_clrbrain
 from magmap import np_io
 from magmap import ontology
 from magmap import plot_3d
-from magmap import stats
+from magmap import df_io
 from magmap import sitk_io
 from magmap import vols
 
@@ -65,7 +65,7 @@ def export_region_ids(labels_ref_lookup, path, level):
                 label[ontology.NODE][config.ABAKeys.LEVEL.value], parent)
         for col, val in zip(cols, vals):
             data.setdefault(col, []).append(val)
-    data_frame = stats.dict_to_data_frame(data, path)
+    data_frame = df_io.dict_to_data_frame(data, path)
     return data_frame
 
 

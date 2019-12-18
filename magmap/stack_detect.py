@@ -22,7 +22,7 @@ from magmap import importer
 from magmap import lib_clrbrain
 from magmap import plot_3d
 from magmap import sqlite
-from magmap import stats
+from magmap import df_io
 
 # Numpy archive for blobs versions:
 # 0: initial version
@@ -242,7 +242,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     if df_pruning is not None:
         print("\nBlob pruning ratios:")
         path_pruning = "blob_ratios.csv" if save_dfs else None
-        df_pruning_all = stats.data_frames_to_csv(
+        df_pruning_all = df_io.data_frames_to_csv(
             df_pruning, path_pruning, show=" ")
         cols = df_pruning_all.columns.tolist()
         blob_pruning_means = {}
@@ -254,7 +254,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
                     np.sum(np.multiply(df_pruning_all[col], blobs_unpruned)) 
                     / num_blobs_unpruned]
             path_pruning_means = "blob_ratios_means.csv" if save_dfs else None
-            df_pruning_means = stats.dict_to_data_frame(
+            df_pruning_means = df_io.dict_to_data_frame(
                 blob_pruning_means, path_pruning_means, show=" ")
         else:
             print("no blob ratios found")
@@ -345,7 +345,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     print("file save time:", file_save_time)
     print("\nTotal detection processing times (s):")
     path_times = "stack_detection_times.csv" if save_dfs else None
-    df_times_sum = stats.dict_to_data_frame(
+    df_times_sum = df_io.dict_to_data_frame(
         times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, segments_all

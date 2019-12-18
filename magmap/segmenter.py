@@ -18,7 +18,7 @@ from magmap import config
 from magmap import detector
 from magmap import lib_clrbrain
 from magmap import plot_3d
-from magmap import stats
+from magmap import df_io
 
 
 def _markers_from_blobs(roi, blobs):
@@ -430,7 +430,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
     pool.join()
     
     # show erosion stats
-    df = stats.dict_to_data_frame(sizes_dict, show=True)
+    df = df_io.dict_to_data_frame(sizes_dict, show=True)
     
     print("time elapsed to erode labels into markers:", time() - start_time)
     return markers, df

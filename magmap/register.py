@@ -63,7 +63,7 @@ from magmap import ontology
 from magmap import plot_2d
 from magmap import plot_3d
 from magmap import sitk_io
-from magmap import stats
+from magmap import df_io
 from magmap import transformer
 from magmap import vols
 
@@ -567,7 +567,7 @@ def register(fixed_file, moving_file_dir, flip=False,
     df_path = lib_clrbrain.combine_paths(
         name_prefix, config.PATH_ATLAS_IMPORT_METRICS)
     print("\nImported {} whole atlas stats:".format(basename))
-    stats.dict_to_data_frame(metrics, df_path, show="\t")
+    df_io.dict_to_data_frame(metrics, df_path, show="\t")
 
     '''
     # show 2D overlays or registered image and atlas last since blocks until 
@@ -1323,22 +1323,22 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # output volume stats CSV to atlas directory and append for 
         # combined CSVs
         if max_level is None:
-            stats.data_frames_to_csv([df], df_path, sort_cols=_SORT_VOL_COLS)
+            df_io.data_frames_to_csv([df], df_path, sort_cols=_SORT_VOL_COLS)
         elif df_level_path is not None:
-            stats.data_frames_to_csv(
+            df_io.data_frames_to_csv(
                 [df], df_level_path, sort_cols=_SORT_VOL_COLS)
         dfs.append(df)
         dfs_all.append(df_all)
     
     # combine data frames from all samples by region for each sample
-    df_combined = stats.data_frames_to_csv(
+    df_combined = df_io.data_frames_to_csv(
         dfs, out_path, sort_cols=_SORT_VOL_COLS)
     df_combined_all = None
     if max_level is None:
         # combine weighted combo of all regions per sample; 
         # not necessary for levels-based (ontological) volumes since they 
         # already accumulate from sublevels
-        df_combined_all = stats.data_frames_to_csv(
+        df_combined_all = df_io.data_frames_to_csv(
             dfs_all, out_path_summary)
     print("time elapsed for volumes by ID: {}".format(time() - start_time))
     return df_combined, df_combined_all
@@ -1413,10 +1413,10 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
     # output volume stats CSV to atlas directory and append for 
     # combined CSVs
     if max_level is None:
-        df_out = stats.data_frames_to_csv(
+        df_out = df_io.data_frames_to_csv(
             df_out, df_path, sort_cols=_SORT_VOL_COLS)
     elif df_level_path is not None:
-        df_out = stats.data_frames_to_csv(
+        df_out = df_io.data_frames_to_csv(
             df_out, df_level_path, sort_cols=_SORT_VOL_COLS)
     print("time elapsed for volumes compared by ID: {}"
           .format(time() - start_time))
@@ -1614,7 +1614,7 @@ def main():
         df = ontology.convert_itksnap_to_df(config.filename)
         output_path = lib_clrbrain.combine_paths(
             config.filename, ".csv", sep="")
-        stats.data_frames_to_csv([df], output_path)
+        df_io.data_frames_to_csv([df], output_path)
     
     elif reg is config.RegisterTypes.export_metrics_compactness:
         # export data frame with compactness to compare:
@@ -1633,14 +1633,14 @@ def main():
                 config.SmoothingMetrics.COMPACTNESS.value]
         
         # compare histology vs combined original labels
-        df_histo_vs_orig, dfs_baseline = stats.filter_dfs_on_vals(
+        df_histo_vs_orig, dfs_baseline = df_io.filter_dfs_on_vals(
             [df_stats, df_smoothing], cols, 
             [None, (config.SmoothingMetrics.FILTER_SIZE.value, 0)])
         df_histo_vs_orig[config.GENOTYPE_KEY] = "Histo Vs Orig Labels"
         
         # compare combined original vs smoothed labels
         smooth = config.register_settings["smooth"]
-        df_unsm_vs_sm, dfs_smoothed = stats.filter_dfs_on_vals(
+        df_unsm_vs_sm, dfs_smoothed = df_io.filter_dfs_on_vals(
             [dfs_baseline[1], df_smoothing], cols, 
             [None, (config.SmoothingMetrics.FILTER_SIZE.value, smooth)])
         df_unsm_vs_sm[config.GENOTYPE_KEY] = "Smoothing"
@@ -1654,7 +1654,7 @@ def main():
             config.filename, "compactness.csv")
         df = pd.concat([df_histo_vs_orig, df_histo_vs_sm, df_unsm_vs_sm])
         df[config.AtlasMetrics.REGION.value] = "all"
-        stats.data_frames_to_csv(df, output_path)
+        df_io.data_frames_to_csv(df, output_path)
     
     elif reg is config.RegisterTypes.plot_smoothing_metrics:
         # plot smoothing metrics
@@ -1691,15 +1691,15 @@ def main():
             # peak smoothing qualities without label loss across filter sizes
             dfs_noloss.append(atlas_stats.smoothing_peak(df, 0, None))
         for key in dfs:
-            stats.data_frames_to_csv(
+            df_io.data_frames_to_csv(
                 dfs[key], "smoothing_filt{}.csv".format(key))
-        stats.data_frames_to_csv(dfs_noloss, "smoothing_peaks.csv")
+        df_io.data_frames_to_csv(dfs_noloss, "smoothing_peaks.csv")
 
     elif reg is config.RegisterTypes.smoothing_metrics_aggr:
         # re-aggregate smoothing metrics from raw stats
         df = pd.read_csv(config.filename)
         df_aggr = atlas_refiner.aggr_smoothing_metrics(df)
-        stats.data_frames_to_csv(df_aggr, config.PATH_SMOOTHING_METRICS)
+        df_io.data_frames_to_csv(df_aggr, config.PATH_SMOOTHING_METRICS)
 
     elif reg in (
             config.RegisterTypes.make_edge_images, 
@@ -1841,16 +1841,16 @@ def main():
         # normalize the given columns to original values in a data frame 
         # and combine columns for composite metrics
         df = pd.read_csv(config.filename)
-        df = stats.normalize_df(
+        df = df_io.normalize_df(
             df, ["Sample", "Region"], "Condition", "original", 
             (vols.LabelMetrics.VarIntensity.name, 
              vols.LabelMetrics.VarIntensDiff.name, 
              vols.LabelMetrics.EdgeDistSum.name, 
              vols.LabelMetrics.VarNuclei.name), 
             (vols.LabelMetrics.VarIntensity.Volume.name, ))
-        df = stats.combine_cols(
+        df = df_io.combine_cols(
             df, (vols.MetricCombos.HOMOGENEITY, ))
-        stats.data_frames_to_csv(
+        df_io.data_frames_to_csv(
             df, lib_clrbrain.insert_before_ext(config.filename, "_norm"))
 
     elif reg is config.RegisterTypes.zscores:
@@ -1891,20 +1891,20 @@ def main():
         id_cols = [
             config.AtlasMetrics.SAMPLE.value, config.AtlasMetrics.REGION.value, 
             config.AtlasMetrics.CONDITION.value]
-        df = stats.melt_cols(
+        df = df_io.melt_cols(
             pd.read_csv(config.filename), id_cols, config.groups, 
             config.GENOTYPE_KEY)
-        stats.data_frames_to_csv(
+        df_io.data_frames_to_csv(
             df, lib_clrbrain.insert_before_ext(config.filename, "_melted"))
 
     elif reg is config.RegisterTypes.pivot_conds:
         # pivot condition column to separate metric columns
         id_cols = [
             config.AtlasMetrics.SAMPLE.value, ]
-        df = stats.cond_to_cols_df(
+        df = df_io.cond_to_cols_df(
             pd.read_csv(config.filename), id_cols, 
             config.AtlasMetrics.CONDITION.value, None, config.groups)
-        stats.data_frames_to_csv(
+        df_io.data_frames_to_csv(
             df, lib_clrbrain.insert_before_ext(config.filename, "_condtocol"))
 
     elif reg is config.RegisterTypes.plot_region_dev:

@@ -11,7 +11,7 @@ import numpy as np
 
 from magmap import config
 from magmap import lib_clrbrain
-from magmap import stats
+from magmap import df_io
 
 class GridSearchStats(Enum):
     """Grid search statistics categories."""
@@ -134,7 +134,7 @@ def parse_grid_stats(stats_dict):
             group_dict[key] = (fdr, sens, last_param_vals)
     print()
     path_df = "gridsearch_{}.csv".format("_".join(param_keys))
-    df = stats.dict_to_data_frame(stats_for_df, path_df, show=" ")
+    df = df_io.dict_to_data_frame(stats_for_df, path_df, show=" ")
     return parsed_stats, df
 
     

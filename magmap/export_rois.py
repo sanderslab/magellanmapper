@@ -20,7 +20,7 @@ from magmap import lib_clrbrain
 from magmap import sqlite
 from magmap import plot_3d
 from magmap import roi_editor
-from magmap import stats
+from magmap import df_io
 from magmap import vols
  
 def make_roi_paths(path, roi_id, channel, make_dirs=False):
@@ -226,13 +226,13 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
     #_test_loading_rois(db, channel, path)
     
     # convert to data frame and compute densities for nuclei and intensity
-    df = stats.dict_to_data_frame(metrics_all)
+    df = df_io.dict_to_data_frame(metrics_all)
     vol = df[vols.LabelMetrics.Volume.name]
     df.loc[:, vols.LabelMetrics.DensityIntens.name] = (
         df[vols.LabelMetrics.Intensity.name] / vol)
     df.loc[:, vols.LabelMetrics.Density.name] = (
         df[vols.LabelMetrics.Nuclei.name] / vol)
-    df = stats.data_frames_to_csv(df, "{}_rois.csv".format(path))
+    df = df_io.data_frames_to_csv(df, "{}_rois.csv".format(path))
     return df
 
 

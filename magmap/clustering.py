@@ -18,7 +18,7 @@ from magmap import ontology
 from magmap import plot_2d
 from magmap import profiles
 from magmap import sitk_io
-from magmap import stats
+from magmap import df_io
 
 
 def knn_dist(blobs, n, max_dist=None, max_pts=None, show=True):
@@ -140,12 +140,12 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
     for key in dfs_comb:
         # combine data frames at each zoom level, save, and plot with
         # different colors for each image
-        df = stats.join_dfs(dfs_comb[key], "point")
+        df = df_io.join_dfs(dfs_comb[key], "point")
         dist_cols = [col for col in df.columns if col.startswith("dist")]
         rename_cols = {col: name for col, name in zip(dist_cols, names_disp)}
         df = df.rename(rename_cols, axis=1)
         out_path = "knn_dist_combine_{}".format(key)
-        stats.data_frames_to_csv(df, out_path)
+        df_io.data_frames_to_csv(df, out_path)
         plot_2d.plot_lines(
             out_path, "point", rename_cols.values(), df=df, show=show,
             title=config.plot_labels[config.PlotLabels.TITLE])

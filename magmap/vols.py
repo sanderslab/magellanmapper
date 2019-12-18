@@ -17,7 +17,7 @@ from skimage import measure
 from magmap import clustering
 from magmap import config
 from magmap.io import libmag
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap import plot_3d
 from magmap.io import df_io
 

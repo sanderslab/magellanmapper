@@ -44,12 +44,12 @@ from magmap import config
 from magmap import detector
 from magmap.io import importer
 from magmap.io import libmag
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap import plot_3d
 from magmap import plot_2d
 from magmap import plot_support
 from magmap.gui import roi_editor
-from magmap import segmenter
+from magmap.atlas import segmenter
 from magmap.io import sqlite
 
 _ROI_DEFAULT = "None selected"
@@ -838,7 +838,7 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
-        title = _fig_title(ontology.get_label_name(self._atlas_label), 
+        title = _fig_title(ontology.get_label_name(self._atlas_label),
                            curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(
             config.filename, config.series)

@@ -13,7 +13,7 @@ import numpy as np
 from skimage import draw
 
 from magmap import config
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap import plot_support
 
 

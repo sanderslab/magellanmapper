@@ -14,7 +14,7 @@ from sklearn import neighbors
 from magmap import config
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap import plot_2d
 from magmap import profiles
 from magmap.io import sitk_io

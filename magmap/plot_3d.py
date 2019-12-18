@@ -24,7 +24,7 @@ from skimage import transform
 from magmap import colormaps
 from magmap import config
 from magmap.io import libmag
-from magmap import segmenter
+from magmap.atlas import segmenter
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
 

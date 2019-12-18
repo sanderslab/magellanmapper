@@ -13,10 +13,10 @@ from magmap import config
 from magmap import detector
 from magmap.io import importer
 from magmap.io import libmag
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap.io import sitk_io
 from magmap import stack_detect
-from magmap import transformer
+from magmap.atlas import transformer
 
 
 def load_blobs(img_path, scaled_shape=None, scale=None):

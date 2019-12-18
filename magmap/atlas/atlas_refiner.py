@@ -23,7 +23,7 @@ from magmap.io import np_io
 from magmap import plot_3d
 from magmap import plot_support
 from magmap import profiles
-from magmap import segmenter
+from magmap.atlas import segmenter
 from magmap.io import sitk_io
 from magmap.io import df_io
 

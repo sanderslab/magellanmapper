@@ -17,7 +17,7 @@ import pandas as pd
 from magmap import config
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap import plot_3d
 from magmap.io import df_io
 from magmap.io import sitk_io
@@ -60,8 +60,8 @@ def export_region_ids(labels_ref_lookup, path, level):
         label = labels_ref_lookup[key]
         # ID of parent at label_parents' level
         parent = label_parents[key]
-        vals = (key, label[ontology.NODE][config.ABAKeys.ACRONYM.value], 
-                label[ontology.NODE][config.ABAKeys.NAME.value], 
+        vals = (key, label[ontology.NODE][config.ABAKeys.ACRONYM.value],
+                label[ontology.NODE][config.ABAKeys.NAME.value],
                 label[ontology.NODE][config.ABAKeys.LEVEL.value], parent)
         for col, val in zip(cols, vals):
             data.setdefault(col, []).append(val)

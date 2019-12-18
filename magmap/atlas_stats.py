@@ -16,7 +16,7 @@ from magmap import config
 from magmap.io import export_stack
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap import plot_2d
 from magmap import plot_support
 from magmap.io import df_io

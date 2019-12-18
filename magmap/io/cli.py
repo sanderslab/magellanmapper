@@ -77,7 +77,7 @@ from magmap.io import sqlite
 from magmap import mlearn
 from magmap import profiles
 from magmap import stack_detect
-from magmap import transformer
+from magmap.atlas import transformer
 
 
 def _parse_coords(arg):

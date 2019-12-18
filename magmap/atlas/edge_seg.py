@@ -10,12 +10,12 @@ from time import time
 import SimpleITK as sitk
 import numpy as np
 
-from magmap import atlas_refiner
+from magmap.atlas import atlas_refiner
 from magmap import config
 from magmap.io import libmag
 from magmap import plot_3d
 from magmap import profiles
-from magmap import segmenter
+from magmap.atlas import segmenter
 from magmap.io import sitk_io
 from magmap import vols
 

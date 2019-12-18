@@ -51,20 +51,20 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
-from magmap import atlas_refiner
+from magmap.atlas import atlas_refiner
 from magmap import atlas_stats
 from magmap import clustering
 from magmap import config
-from magmap import edge_seg
+from magmap.atlas import edge_seg
 from magmap.io import export_regions
 from magmap.io import importer
 from magmap.io import libmag
-from magmap import ontology
+from magmap.atlas import ontology
 from magmap import plot_2d
 from magmap import plot_3d
 from magmap.io import sitk_io
 from magmap.io import df_io
-from magmap import transformer
+from magmap.atlas import transformer
 from magmap import vols
 
 SAMPLE_VOLS = "vols_by_sample"
@@ -1444,7 +1444,7 @@ def _test_labels_lookup():
     found = id_dict[lookup_id]
     time_node_end = time()
     print("found {}: {} with parents {}"
-          .format(lookup_id, found[ontology.NODE]["name"], 
+          .format(lookup_id, found[ontology.NODE]["name"],
                   found[ontology.PARENT_IDS]))
     
     # brute-force query

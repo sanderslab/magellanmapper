@@ -13,13 +13,13 @@ import pandas as pd
 
 from magmap import colormaps
 from magmap import config
-from magmap import export_stack
-from magmap import lib_clrbrain
-from magmap import np_io
+from magmap.io import export_stack
+from magmap.io import lib_clrbrain
+from magmap.io import np_io
 from magmap import ontology
 from magmap import plot_2d
 from magmap import plot_support
-from magmap import df_io
+from magmap.io import df_io
 from magmap import vols
 
 

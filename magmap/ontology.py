@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 
 NODE = "node"
 PARENT_IDS = "parent_ids"

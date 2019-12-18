@@ -56,14 +56,14 @@ from magmap import atlas_stats
 from magmap import clustering
 from magmap import config
 from magmap import edge_seg
-from magmap import export_regions
-from magmap import importer
-from magmap import lib_clrbrain
+from magmap.io import export_regions
+from magmap.io import importer
+from magmap.io import lib_clrbrain
 from magmap import ontology
 from magmap import plot_2d
 from magmap import plot_3d
-from magmap import sitk_io
-from magmap import df_io
+from magmap.io import sitk_io
+from magmap.io import df_io
 from magmap import transformer
 from magmap import vols
 
@@ -1989,6 +1989,7 @@ def main():
 
 if __name__ == "__main__":
     print("MagellanMapper image registration")
-    from magmap import cli
+    from magmap.io import cli
+
     cli.main(True)
     main()

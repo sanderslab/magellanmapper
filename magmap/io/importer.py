@@ -25,9 +25,9 @@ from xml import etree as et
 import warnings
 
 from magmap import config
-from magmap import np_io
+from magmap.io import np_io
 from magmap import plot_3d
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 
 import numpy as np
 try:
@@ -813,5 +813,6 @@ def roi_to_image5d(roi):
 
 if __name__ == "__main__":
     print("MagellanMapper importer manipulations")
-    from magmap import cli
+    from magmap.io import cli
+
     cli.main(True)

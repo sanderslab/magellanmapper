@@ -25,8 +25,8 @@ from enum import Enum
 import os
 
 import numpy as np
-from traits.api import (HasTraits, Instance, on_trait_change, Button, Float, 
-                        Int, List, Array, Str, Dict, push_exception_handler, 
+from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
+                        Int, List, Array, Str, push_exception_handler,
                         Property, File)
 from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
                           RangeEditor, HSplit, TabularEditor, CheckListEditor, 
@@ -39,19 +39,18 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 
 from magmap import atlas_editor
 from magmap import chunking
-from magmap import cli
+from magmap.io import cli
 from magmap import config
 from magmap import detector
-from magmap import importer
-from magmap import lib_clrbrain
+from magmap.io import importer
+from magmap.io import lib_clrbrain
 from magmap import ontology
 from magmap import plot_3d
 from magmap import plot_2d
 from magmap import plot_support
 from magmap import roi_editor
 from magmap import segmenter
-from magmap import sqlite
-
+from magmap.io import sqlite
 
 _ROI_DEFAULT = "None selected"
 

@@ -11,10 +11,10 @@ import pandas as pd
 from magmap import colormaps
 from magmap import config
 from magmap import detector
-from magmap import importer
-from magmap import lib_clrbrain
+from magmap.io import importer
+from magmap.io import lib_clrbrain
 from magmap import ontology
-from magmap import sitk_io
+from magmap.io import sitk_io
 from magmap import stack_detect
 from magmap import transformer
 

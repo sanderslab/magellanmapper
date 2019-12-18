@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 
 
 def weight_mean(vals, weights):
@@ -648,7 +648,7 @@ def filter_dfs_on_vals(dfs, cols=None, row_matches=None):
 def main():
     """Process stats based on command-line mode."""
     print("Starting MagellanMapper stats...")
-    from magmap import cli
+    from magmap.io import cli
     cli.main(True)
     
     # process stats based on command-line argument

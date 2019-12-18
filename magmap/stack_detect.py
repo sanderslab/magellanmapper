@@ -18,11 +18,11 @@ import pandas as pd
 from magmap import chunking
 from magmap import config
 from magmap import detector
-from magmap import importer
-from magmap import lib_clrbrain
+from magmap.io import importer
+from magmap.io import lib_clrbrain
 from magmap import plot_3d
-from magmap import sqlite
-from magmap import df_io
+from magmap.io import sqlite
+from magmap.io import df_io
 
 # Numpy archive for blobs versions:
 # 0: initial version

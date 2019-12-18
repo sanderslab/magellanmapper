@@ -8,9 +8,10 @@ Attributes:
 import json
 from urllib import request
 
-from magmap import cli
+from magmap.io import cli
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
+
 
 def post(url, msg, attachment):
     post_fields = {"text": msg}

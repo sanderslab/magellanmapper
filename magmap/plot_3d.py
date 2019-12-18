@@ -23,7 +23,7 @@ from skimage import transform
 
 from magmap import colormaps
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import segmenter
 
 _MASK_DIVIDEND = 10000.0 # 3D max points

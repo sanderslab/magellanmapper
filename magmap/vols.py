@@ -16,11 +16,10 @@ from skimage import measure
 
 from magmap import clustering
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import ontology
 from magmap import plot_3d
-from magmap import profiles
-from magmap import df_io
+from magmap.io import df_io
 
 # metric keys and column names
 LabelMetrics = Enum(

@@ -13,8 +13,9 @@ from skimage import transform
 
 from magmap import chunking
 from magmap import config
-from magmap import importer
-from magmap import lib_clrbrain
+from magmap.io import importer
+from magmap.io import lib_clrbrain
+
 
 class Downsampler(object):
     """Downsample (or theoretically upsample) a large image in a way 

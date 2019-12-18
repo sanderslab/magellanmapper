@@ -70,14 +70,13 @@ import numpy as np
 
 from magmap import roi_editor
 from magmap import config
-from magmap import importer
-from magmap import lib_clrbrain
-from magmap import np_io
-from magmap import sqlite
+from magmap.io import importer
+from magmap.io import lib_clrbrain
+from magmap.io import np_io
+from magmap.io import sqlite
 from magmap import mlearn
 from magmap import profiles
 from magmap import stack_detect
-from magmap import df_io
 from magmap import transformer
 
 
@@ -689,7 +688,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         # export ROIs; assumes that info_proc was already loaded to 
         # give smaller region from which smaller ROIs from the truth DB 
         # will be extracted
-        from magmap import export_rois
+        from magmap.io import export_rois
         db = config.db if config.truth_db is None else config.truth_db
         export_rois.export_rois(
             db, config.image5d, config.channel, filename_base, config.border, 
@@ -705,14 +704,14 @@ def process_file(path, series, offset, roi_size, proc_mode):
     elif proc_type in (
             config.ProcessTypes.EXTRACT, config.ProcessTypes.ANIMATED):
         # generate animated GIF or extract single plane
-        from magmap import export_stack
+        from magmap.io import export_stack
         export_stack.stack_to_img(
             config.filenames, series, offset, roi_size, 
             proc_type is config.ProcessTypes.ANIMATED, config.suffix)
     
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file
-        from magmap import export_rois
+        from magmap.io import export_rois
         export_rois.blobs_to_csv(config.blobs, filename_base)
         
     elif proc_type in (

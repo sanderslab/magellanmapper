@@ -12,11 +12,11 @@ import numpy as np
 
 from magmap import atlas_refiner
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import plot_3d
 from magmap import profiles
 from magmap import segmenter
-from magmap import sitk_io
+from magmap.io import sitk_io
 from magmap import vols
 
 

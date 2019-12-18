@@ -12,7 +12,7 @@ import boto3
 import boto3.session
 from botocore.exceptions import ClientError
 
-from magmap import cli
+from magmap.io import cli
 from magmap import config
 
 _EC2_STATES = (

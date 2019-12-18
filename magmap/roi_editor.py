@@ -26,8 +26,8 @@ from skimage import transform
 from magmap import colormaps
 from magmap import config
 from magmap import detector
-from magmap import importer
-from magmap import lib_clrbrain
+from magmap.io import importer
+from magmap.io import lib_clrbrain
 from magmap import plot_support
 
 # TODO: may want to base on scaling factor instead

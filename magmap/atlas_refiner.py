@@ -16,16 +16,16 @@ from skimage import morphology
 from skimage import transform
 
 from magmap import config
-from magmap import export_stack
-from magmap import importer
-from magmap import lib_clrbrain
-from magmap import np_io
+from magmap.io import export_stack
+from magmap.io import importer
+from magmap.io import lib_clrbrain
+from magmap.io import np_io
 from magmap import plot_3d
 from magmap import plot_support
 from magmap import profiles
 from magmap import segmenter
-from magmap import sitk_io
-from magmap import df_io
+from magmap.io import sitk_io
+from magmap.io import df_io
 
 
 def _get_bbox(img_np, threshold=10):

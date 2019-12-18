@@ -17,7 +17,7 @@ import numpy as np
 
 from magmap import config
 from magmap import detector
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 
 OVERLAP_FACTOR = 5
 

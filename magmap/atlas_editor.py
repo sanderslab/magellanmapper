@@ -12,11 +12,11 @@ from matplotlib.widgets import Slider, Button, TextBox
 
 from magmap import colormaps
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import plot_editor
 from magmap import plot_support
 from magmap import plot_3d
-from magmap import sitk_io
+from magmap.io import sitk_io
 
 
 class AtlasEditor:

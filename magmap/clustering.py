@@ -12,13 +12,13 @@ from sklearn import cluster
 from sklearn import neighbors
 
 from magmap import config
-from magmap import lib_clrbrain
-from magmap import np_io
+from magmap.io import lib_clrbrain
+from magmap.io import np_io
 from magmap import ontology
 from magmap import plot_2d
 from magmap import profiles
-from magmap import sitk_io
-from magmap import df_io
+from magmap.io import sitk_io
+from magmap.io import df_io
 
 
 def knn_dist(blobs, n, max_dist=None, max_pts=None, show=True):

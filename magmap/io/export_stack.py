@@ -15,8 +15,8 @@ from scipy import ndimage
 
 from magmap import colormaps
 from magmap import config
-from magmap import lib_clrbrain
-from magmap import np_io
+from magmap.io import lib_clrbrain
+from magmap.io import np_io
 from magmap import plot_support
 
 

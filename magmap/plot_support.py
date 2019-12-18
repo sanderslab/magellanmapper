@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 
 from magmap import colormaps
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import plot_3d
 
 try:

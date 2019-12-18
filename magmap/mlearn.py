@@ -10,8 +10,9 @@ from enum import Enum
 import numpy as np
 
 from magmap import config
-from magmap import lib_clrbrain
-from magmap import df_io
+from magmap.io import lib_clrbrain
+from magmap.io import df_io
+
 
 class GridSearchStats(Enum):
     """Grid search statistics categories."""

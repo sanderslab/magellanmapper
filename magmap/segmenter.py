@@ -16,9 +16,9 @@ from skimage import morphology
 
 from magmap import config
 from magmap import detector
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import plot_3d
-from magmap import df_io
+from magmap.io import df_io
 
 
 def _markers_from_blobs(roi, blobs):

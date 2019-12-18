@@ -15,7 +15,7 @@ from skimage import exposure
 
 from magmap import colormaps
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import mlearn
 from magmap import plot_support
 from magmap import vols
@@ -978,7 +978,7 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
 
 def main():
     # set up command-line args and plotting style
-    from magmap import cli
+    from magmap.io import cli
     cli.main(True)
     setup_style("default")
     size = config.plot_labels[config.PlotLabels.SIZE]

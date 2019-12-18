@@ -15,7 +15,7 @@ import numpy as np
 
 from magmap import config
 from magmap import detector
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 
 DB_NAME_VERIFIED = "clrbrain_verified.db"
 DB_NAME_MERGED = "clrbrain_merged.db"
@@ -647,7 +647,7 @@ class ClrDB():
 def main():
     """Run main SQLite access commands after loading CLI."""
     # parses arguments and sets up the DB
-    from magmap import cli
+    from magmap.io import cli
     cli.main(True)
     conn = config.db.conn
     cur = config.db.cur

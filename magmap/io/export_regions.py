@@ -15,12 +15,12 @@ import numpy as np
 import pandas as pd
 
 from magmap import config
-from magmap import lib_clrbrain
-from magmap import np_io
+from magmap.io import lib_clrbrain
+from magmap.io import np_io
 from magmap import ontology
 from magmap import plot_3d
-from magmap import df_io
-from magmap import sitk_io
+from magmap.io import df_io
+from magmap.io import sitk_io
 from magmap import vols
 
 

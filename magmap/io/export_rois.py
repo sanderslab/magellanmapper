@@ -16,11 +16,11 @@ import SimpleITK as sitk
 
 from magmap import config
 from magmap import detector
-from magmap import lib_clrbrain
-from magmap import sqlite
+from magmap.io import lib_clrbrain
+from magmap.io import sqlite
 from magmap import plot_3d
 from magmap import roi_editor
-from magmap import df_io
+from magmap.io import df_io
 from magmap import vols
  
 def make_roi_paths(path, roi_id, channel, make_dirs=False):

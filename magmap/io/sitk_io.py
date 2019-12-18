@@ -13,8 +13,8 @@ import SimpleITK as sitk
 from skimage import transform
 
 from magmap import config
-from magmap import importer
-from magmap import lib_clrbrain
+from magmap.io import importer
+from magmap.io import lib_clrbrain
 
 EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
 

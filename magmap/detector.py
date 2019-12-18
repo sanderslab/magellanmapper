@@ -13,10 +13,10 @@ from scipy.spatial import distance
 from skimage.feature import blob_log
 
 from magmap import config
-from magmap import lib_clrbrain
+from magmap.io import lib_clrbrain
 from magmap import plot_3d
-from magmap import sqlite
-from magmap import df_io
+from magmap.io import sqlite
+from magmap.io import df_io
 
 # blob confirmation flags
 CONFIRMATION = {
@@ -833,11 +833,11 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
                 found_truth_out, dists_out)
         
         # store blobs in separate verified DB
-        roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id, 
+        roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id,
                                       series, offset_inner, size_inner)
-        sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id, 
+        sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id,
                             blobs_inner_plus)
-        sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id, 
+        sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id,
                             blobs_truth_inner_plus)
         true_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 1])
         false_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 0])

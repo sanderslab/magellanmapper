@@ -10,6 +10,7 @@ dependencies:
   - mayavi
   - pandas
   - scikit-image
+  - scikit-learn
   - boto3
   - awscli
   - pip:

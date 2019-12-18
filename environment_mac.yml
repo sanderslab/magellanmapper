@@ -2,110 +2,112 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - apptools=4.4.0=py36_1002
-  - asn1crypto=0.24.0=py36_1003
-  - awscli=1.16.226=py36_0
-  - boto3=1.9.216=py_0
-  - botocore=1.12.216=py_0
-  - bzip2=1.0.8=h01d97ff_0
-  - ca-certificates=2019.6.16=hecc5488_0
-  - certifi=2019.6.16=py36_1
-  - cffi=1.12.3=py36hccf1714_0
-  - cloudpickle=1.2.1=py_0
-  - colorama=0.3.9=py_1
+  - apptools=4.5.0=py_0
+  - awscli=1.16.305=py36_0
+  - boto3=1.10.41=py_0
+  - botocore=1.13.41=py_0
+  - bzip2=1.0.8=h0b31af3_2
+  - ca-certificates=2019.11.28=hecc5488_0
+  - certifi=2019.11.28=py36_0
+  - cffi=1.13.2=py36h33e799b_0
+  - cloudpickle=1.2.2=py_1
+  - colorama=0.4.1=py_0
   - configobj=5.0.6=py_0
-  - cryptography=2.7=py36h212c5bf_0
+  - cryptography=2.8=py36hafa8578_1
   - curl=7.65.3=h22ea746_0
-  - cycler=0.10.0=py_1
-  - cython=0.29.13=py36h6de7cb9_0
-  - cytoolz=0.10.0=py36h01d97ff_0
-  - dask-core=2.3.0=py_0
+  - cycler=0.10.0=py_2
+  - cython=0.29.14=py36h4a8c4bd_0
+  - cytoolz=0.10.1=py36h0b31af3_0
+  - dask-core=2.9.0=py_0
   - dbus=1.13.6=h2f22bb5_0
-  - decorator=4.4.0=py_0
+  - decorator=4.4.1=py_0
   - docutils=0.15.2=py36_0
-  - envisage=4.7.2=py_0
-  - expat=2.2.5=h6de7cb9_1003
+  - envisage=4.8.0=py_0
+  - expat=2.2.5=h4a8c4bd_1004
   - freetype=2.10.0=h24853df_1
-  - future=0.17.1=py36_1000
+  - future=0.18.2=py36_0
   - gettext=0.19.8.1=h46ab8bc_1002
-  - glib=2.58.3=h9d45998_1002
-  - hdf4=4.2.13=hf3c6af0_1002
-  - hdf5=1.10.5=nompi_h15a436c_1103
+  - glib=2.58.3=py36h577aef8_1002
+  - hdf4=4.2.13=h84186c3_1003
+  - hdf5=1.10.5=nompi_h3e39495_1104
   - icu=64.2=h6de7cb9_1
   - idna=2.8=py36_1000
-  - imageio=2.5.0=py36_0
+  - imageio=2.6.1=py36_0
   - jmespath=0.9.4=py_0
+  - joblib=0.14.1=py_0
   - jpeg=9c=h1de35cc_1001
-  - jsoncpp=1.8.4=h770b8ee_1001
-  - kiwisolver=1.1.0=py36h770b8ee_0
-  - krb5=1.16.3=hcfa6398_1001
-  - libblas=3.8.0=12_openblas
-  - libcblas=3.8.0=12_openblas
+  - jsoncpp=1.8.4=ha1b3eb9_1002
+  - kiwisolver=1.1.0=py36ha1b3eb9_0
+  - krb5=1.16.4=h1752a42_0
+  - libblas=3.8.0=14_openblas
+  - libcblas=3.8.0=14_openblas
+  - libclang=8.0.1=h770b8ee_1
   - libcurl=7.65.3=h16faf7d_0
-  - libcxx=8.0.1=0
-  - libcxxabi=8.0.1=0
+  - libcxx=9.0.0=h89e68fa_1
   - libedit=3.1.20170329=hcfe32e1_1001
   - libffi=3.2.1=h6de7cb9_1006
   - libgfortran=4.0.0=2
   - libiconv=1.15=h01d97ff_1005
-  - liblapack=3.8.0=12_openblas
-  - libnetcdf=4.6.2=h1a02027_1002
-  - libopenblas=0.3.7=h4bb4525_1
+  - liblapack=3.8.0=14_openblas
+  - libllvm8=8.0.1=h770b8ee_0
+  - libnetcdf=4.7.3=nompi_hec86efb_100
+  - libopenblas=0.3.7=h3d69b6c_5
   - libpng=1.6.37=h2573ce8_0
   - libssh2=1.8.2=hcdc9a53_2
-  - libtiff=4.0.10=hd08fb8f_1003
-  - libxml2=2.9.9=h12c6b28_5
-  - llvm-openmp=8.0.1=h770b8ee_0
+  - libtiff=4.1.0=ha78913b_1
+  - libxml2=2.9.10=h53d96d6_0
+  - llvm-openmp=9.0.0=h40edb58_0
   - lz4-c=1.8.3=h6de7cb9_1001
-  - matplotlib=3.1.1=py36_1
-  - matplotlib-base=3.1.1=py36h3a684a6_1
-  - mayavi=4.7.1=py36hb7221d7_2
+  - matplotlib=3.1.2=py36_1
+  - matplotlib-base=3.1.2=py36h11da6c2_1
+  - mayavi=4.7.1=py36ha91d4f2_2
   - ncurses=6.1=h0a44026_1002
-  - networkx=2.3=py_0
-  - numpy=1.17.0=py36h6b0580a_0
+  - networkx=2.4=py_0
+  - nspr=4.20=h0a44026_1000
+  - nss=3.47=hcec2283_0
+  - numpy=1.17.3=py36hde6bac1_0
   - olefile=0.46=py_0
-  - openssl=1.1.1c=h01d97ff_0
-  - pandas=0.25.1=py36h86efe34_0
-  - pcre=8.41=h0a44026_1003
-  - pillow=6.1.0=py36h75ffe9a_1
-  - pip=19.2.3=py36_0
-  - pyamg=4.0.0=py36haf112f3_1001
-  - pyasn1=0.4.6=py_0
+  - openssl=1.1.1d=h0b31af3_0
+  - pandas=0.25.3=py36h4f17bb1_0
+  - pcre=8.43=h4a8c4bd_0
+  - pillow=6.2.1=py36h43b43f3_1
+  - pip=19.3.1=py36_0
+  - pyamg=4.0.0=py36hbf1eeb5_1001
+  - pyasn1=0.4.8=py_0
   - pycparser=2.19=py36_1
   - pyface=6.1.2=py_0
-  - pygments=2.4.2=py_0
-  - pyopenssl=19.0.0=py36_0
-  - pyparsing=2.4.2=py_0
-  - pyqt=5.9.2=py36h2a560b1_2
-  - pysocks=1.7.0=py36_0
-  - python=3.6.7=h94afb7f_1005
+  - pygments=2.5.2=py_0
+  - pyopenssl=19.1.0=py36_0
+  - pyparsing=2.4.5=py_0
+  - pysocks=1.7.1=py36_0
+  - python=3.6.7=h4285619_1006
   - python-dateutil=2.8.0=py_0
-  - pytz=2019.2=py_0
-  - pywavelets=1.0.3=py36h1e5eb4f_1
-  - pyyaml=5.1.2=py36h01d97ff_0
-  - qt=5.9.7=h8cf7e54_3
+  - pytz=2019.3=py_0
+  - pywavelets=1.1.1=py36h3b54f70_0
+  - pyyaml=5.1.2=py36h0b31af3_1
+  - qt=5.12.5=h1b46049_0
   - readline=8.0=hcfe32e1_0
   - rsa=3.4.2=py_1
   - s3transfer=0.2.1=py36_0
-  - scikit-image=0.15.0=py36h86efe34_2
-  - scipy=1.3.1=py36h7e0e109_2
-  - setuptools=41.2.0=py36_0
-  - sip=4.19.8=py36h0a44026_1000
-  - six=1.12.0=py36_1000
-  - sqlite=3.29.0=hb7d70f7_0
-  - tbb=2019.7=h770b8ee_0
-  - tk=8.6.9=h2573ce8_1002
+  - scikit-image=0.16.2=py36h4f17bb1_0
+  - scikit-learn=0.22=py36h3dc85bc_1
+  - scipy=1.3.3=py36h82752d6_0
+  - setuptools=42.0.2=py36_0
+  - six=1.13.0=py36_0
+  - sqlite=3.30.1=h93121df_0
+  - tbb=2019.9=ha1b3eb9_1
+  - tk=8.6.10=hbbe82c9_0
   - toolz=0.10.0=py_0
-  - tornado=6.0.3=py36h01d97ff_0
-  - traits=5.1.2=py36h01d97ff_0
-  - traitsui=6.1.2=py_0
-  - urllib3=1.25.3=py36_0
-  - vtk=8.2.0=py36hcba847f_203
+  - tornado=6.0.3=py36h0b31af3_0
+  - traits=5.2.0=py36h0b31af3_0
+  - traitsui=6.1.3=py_0
+  - urllib3=1.25.7=py36_0
+  - vtk=8.2.0=py36hb651df3_207
   - wheel=0.33.6=py36_0
   - xz=5.2.4=h1de35cc_1001
-  - yaml=0.1.7=h1de35cc_1001
-  - zlib=1.2.11=h01d97ff_1005
-  - zstd=1.4.0=ha9f0a20_0
+  - yaml=0.2.2=h0b31af3_1
+  - zlib=1.2.11=h0b31af3_1006
+  - zstd=1.4.4=he7fca8b_1
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - "git+https://github.com/LeeKamentsky/python-javabridge.git@c7ccaed43ac7752c4ca361abb04fcb4e9ebdb069"

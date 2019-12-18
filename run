@@ -1,4 +1,4 @@
 #! /usr/bin/env python
-from magmap import visualizer
+from magmap.gui import visualizer
 
 visualizer.main()

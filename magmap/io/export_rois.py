@@ -19,7 +19,7 @@ from magmap import detector
 from magmap.io import libmag
 from magmap.io import sqlite
 from magmap import plot_3d
-from magmap import roi_editor
+from magmap.gui import roi_editor
 from magmap.io import df_io
 from magmap import vols
  

@@ -13,7 +13,7 @@ from matplotlib.widgets import Slider, Button, TextBox
 from magmap import colormaps
 from magmap import config
 from magmap.io import libmag
-from magmap import plot_editor
+from magmap.gui import plot_editor
 from magmap import plot_support
 from magmap import plot_3d
 from magmap.io import sitk_io

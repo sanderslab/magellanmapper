@@ -68,7 +68,7 @@ import os
 import argparse
 import numpy as np
 
-from magmap import roi_editor
+from magmap.gui import roi_editor
 from magmap import config
 from magmap.io import importer
 from magmap.io import libmag

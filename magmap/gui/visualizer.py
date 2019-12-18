@@ -37,7 +37,7 @@ from tvtk.pyface.scene_model import SceneModelError
 from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 
-from magmap import atlas_editor
+from magmap.gui import atlas_editor
 from magmap import chunking
 from magmap.io import cli
 from magmap import config
@@ -48,7 +48,7 @@ from magmap import ontology
 from magmap import plot_3d
 from magmap import plot_2d
 from magmap import plot_support
-from magmap import roi_editor
+from magmap.gui import roi_editor
 from magmap import segmenter
 from magmap.io import sqlite
 

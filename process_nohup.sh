@@ -55,7 +55,7 @@ while getopts hd:oq opt; do
   esac
 done
 
-# pass arguments after "--" to clrbrain
+# pass arguments after "--" to magmap
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 

@@ -427,7 +427,7 @@ if [[ $gui -eq 1 ]]; then
   # displaying the GUI.
 
   # Import raw image stack into Numpy array if it doesn't exist already
-  #python -u -m clrbrain.cli --img "$IMG" --channel 0 --proc import_only
+  #python -u -m magmap.cli --img "$IMG" --channel 0 --proc import_only
   
   # Load ROI, starting at the given offset and ROI size
   
@@ -435,7 +435,7 @@ if [[ $gui -eq 1 ]]; then
   # Process a sub-stack and load it
   substack_offset=100,800,410
   substack_size=800,100,48
-  python -m clrbrain.cli --img "$IMG" --proc processing_mp --channel 0 -v \
+  python -m magmap.cli --img "$IMG" --proc processing_mp --channel 0 -v \
     --offset $substack_offset --size $substack_size \
     --microscope ${microscope[@]}
   IMG_ROI="${IMG_PATH_BASE}_(${substack_offset})x(${substack_size}).${EXT}"
@@ -491,7 +491,7 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   # fit properly, especially since unregistered tiles may be shifted to 
   # (0, 0, 0)
   ./stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1 -j "$java_home"
-  python -u -m clrbrain.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" \
+  python -u -m magmap.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" \
     --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc import_only
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
   
@@ -510,7 +510,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   # after review
   msg="Stitching completed for $NAME, now awaiting your alignment review"
   if [[ "$url_notify" != "" ]]; then
-    python -u -m clrbrain.notify --notify "$url_notify" "$msg"
+    python -u -m magmap.notify --notify "$url_notify" "$msg"
   fi
   echo "=================================="
   echo "$msg"
@@ -530,7 +530,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   
   # Import stacked TIFF file(s) into Numpy arrays for Clrbrain
   start=$SECONDS
-  python -u -m clrbrain.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
+  python -u -m magmap.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
     --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v \
     --proc import_only
   summary_msg+=("Stitched file import time: $((SECONDS - start)) s")
@@ -595,12 +595,12 @@ if [[ "$transpose_pathway" != "" ]]; then
     if [[ "$plane" != "" ]]; then
       # Both rescale and transpose an image from z-axis (xy plane) 
       # to x-axis (yz plane) orientation
-      python -u -m clrbrain.cli --img "$clr_img" --proc transpose \
+      python -u -m magmap.cli --img "$clr_img" --proc transpose \
         --rescale ${scale} --plane "$plane"
       img_transposed="${clr_img_base}_plane${plane}_scale${scale}.${EXT}"
     else
       # Rescale an image to downsample by the scale factor only
-      python -u -m clrbrain.cli --img "$clr_img" --proc transpose \
+      python -u -m magmap.cli --img "$clr_img" --proc transpose \
         --rescale ${scale}
       img_transposed="${clr_img_base}_scale${scale}.${EXT}"
     fi
@@ -608,7 +608,7 @@ if [[ "$transpose_pathway" != "" ]]; then
     # Resize to a set size given by a registration profile, with size 
     # specified by register profile, which needs to be passed as 
     # --reg_file [name] in EXTRA_ARGS, and -z flag to find output name
-    python -u -m clrbrain.cli --img "$clr_img" --proc transpose \
+    python -u -m magmap.cli --img "$clr_img" --proc transpose \
       "${EXTRA_ARGS[@]}"
     img_transposed="${clr_img_base}_resized(${size}).${EXT}"
   fi
@@ -616,7 +616,7 @@ if [[ "$transpose_pathway" != "" ]]; then
   if [[ "$animation" != "" ]]; then
     # Export transposed image to an animated GIF or MP4 video 
     # (requires ImageMagick)
-    python -u -m clrbrain.cli --img "$img_transposed" --proc animated \
+    python -u -m magmap.cli --img "$img_transposed" --proc animated \
       --interval 5 --rescale 1.0 --savefig "$animation"
   fi
   
@@ -638,7 +638,7 @@ if [[ "$whole_img_proc" != "" ]]; then
   # Process an entire image locally the given channel(s), chunking the 
   # image into multiple smaller stacks to minimize RAM usage and 
   # further chunking to run by multiprocessing for efficiency
-  python -u -m clrbrain.cli --img "$clr_img" --proc processing_mp \
+  python -u -m magmap.cli --img "$clr_img" --proc processing_mp \
     --channel $channel --microscope "${microscope[@]}" "${EXTRA_ARGS[@]}"
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
@@ -681,7 +681,7 @@ if [[ "$url_notify" != "" ]]; then
   if [[ "$output_path" != "" ]]; then
     attach="$output_path"
   fi
-  python -u -m clrbrain.notify --notify "$url_notify" "$msg" "$attach"
+  python -u -m magmap.notify --notify "$url_notify" "$msg" "$attach"
 fi
 
 if [[ $clean_up -eq 1 ]]; then

@@ -10,7 +10,7 @@ _EXTRAS_AWS = ["boto3", "awscli"]
 
 # installation configuration
 config = {
-    "name": "clrbrain", 
+    "name": "magellanmapper", 
     "description": "3D atlas analysis and annotation",
     "author": "David Young",
     "url": "URL",

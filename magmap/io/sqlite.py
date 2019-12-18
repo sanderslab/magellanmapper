@@ -15,7 +15,7 @@ import numpy as np
 
 from magmap import config
 from magmap import detector
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 DB_NAME_VERIFIED = "clrbrain_verified.db"
 DB_NAME_MERGED = "clrbrain_merged.db"
@@ -33,7 +33,7 @@ def _create_db(path):
     # creates empty database in the current working directory if
     # not already there.
     if os.path.exists(path):
-        lib_clrbrain.backup_file(path)
+        libmag.backup_file(path)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
@@ -635,7 +635,7 @@ class ClrDB():
     
     def load_truth_blobs(self):
         self.blobs_truth = select_blobs_confirmed(self.cur, 1)
-        lib_clrbrain.printv("truth blobs:\n{}".format(self.blobs_truth))
+        libmag.printv("truth blobs:\n{}".format(self.blobs_truth))
     
     def get_rois(self, filename):
         exps = select_experiment(self.cur, filename)

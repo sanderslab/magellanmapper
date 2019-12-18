@@ -19,7 +19,7 @@ from magmap import chunking
 from magmap import config
 from magmap import detector
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import plot_3d
 from magmap.io import sqlite
 from magmap.io import df_io
@@ -92,7 +92,7 @@ class StackDetector(object):
                 for y in range(denoise_rois.shape[1]):
                     for x in range(denoise_rois.shape[2]):
                         denoise_coord = (z, y, x)
-                        lib_clrbrain.printv_format(
+                        libmag.printv_format(
                             "preprocessing sub-sub-ROI {} of {} (shape {}"
                             " within sub-ROI shape {})", 
                             (denoise_coord, np.subtract(denoise_rois.shape, 1), 
@@ -143,8 +143,8 @@ def make_subimage_name(base, offset, shape):
         Name (or path) to subimage.
     """
     roi_site = "{}x{}".format(offset, shape).replace(" ", "")
-    series_fill = lib_clrbrain.series_as_str(config.series)
-    name = lib_clrbrain.splice_before(base, series_fill, roi_site)
+    series_fill = libmag.series_as_str(config.series)
+    name = libmag.splice_before(base, series_fill, roi_site)
     print("subimage name: {}".format(name))
     return name
 
@@ -510,7 +510,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                       .format(axis, i, num_sections - 1))
                 offset = sub_rois_offsets[tuple(coord)]
                 size = sub_rois[tuple(coord)].shape
-                lib_clrbrain.printv_format(
+                libmag.printv_format(
                     "offset: {}, size: {}", (offset, size))
                 
                 # overlapping region: each region but the last extends 
@@ -528,7 +528,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 if i < num_sections - 1:
                     bounds = [offset_axis + size[axis] - shift,
                               offset_axis + size[axis] + overlap_tol[axis]]
-                    lib_clrbrain.printv(
+                    libmag.printv(
                         "axis {}, boundaries: {}".format(axis, bounds))
                     blobs_ol = blobs[np.all([
                         blobs[:, axis] >= bounds[0], 
@@ -543,7 +543,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                     shape = np.add(
                         sub_rois_offsets[coord_last], 
                         sub_rois[coord_last].shape[:3])
-                    lib_clrbrain.printv(
+                    libmag.printv(
                         "axis {}, boundaries (next): {}, max bounds: {}"
                         .format(axis, bounds_next, shape[axis]))
                     if np.all(np.less(bounds_next, shape[axis])):

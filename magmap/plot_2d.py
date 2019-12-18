@@ -15,7 +15,7 @@ from skimage import exposure
 
 from magmap import colormaps
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import mlearn
 from magmap import plot_support
 from magmap import vols
@@ -324,7 +324,7 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
     plot_support.set_scinot(ax, lbls=(y_label, ), units=(y_unit, ))
     # draw x-tick labels with smaller font for increasing number of labels
     font_size = plt.rcParams["axes.titlesize"]
-    if lib_clrbrain.is_number(font_size):
+    if libmag.is_number(font_size):
         # scale font size of x-axis labels by a sigmoid function to rapidly 
         # decrease size for larger numbers of labels so they don't overlap
         font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
@@ -500,7 +500,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         # separate bar group
         lists.append(df[col] * wts)
         errs_dfs = None
-        if lib_clrbrain.is_seq(col_err):
+        if libmag.is_seq(col_err):
             # asymmetric error bars
             errs_dfs = [df[e] * wts for e in col_err]
         elif col_err is not None:
@@ -521,7 +521,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     
     # save and display
     out_path = path_to_df if prefix is None else prefix
-    out_path = lib_clrbrain.combine_paths(out_path, "barplot")
+    out_path = libmag.combine_paths(out_path, "barplot")
     if save: save_fig(out_path, config.savefig)
     if show: plt.show()
     return ax, out_path
@@ -677,7 +677,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     
     # save and display
     out_path = path_to_df if prefix is None else prefix
-    if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
+    if suffix: out_path = libmag.insert_before_ext(out_path, suffix)
     if save: save_fig(out_path, config.savefig)
     if show: plt.show()
     return ax
@@ -744,11 +744,11 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                 if annot_arri is not None:
                     # attempt to convert string into array to extract
                     # the given values
-                    annot_arr = lib_clrbrain.npstr_to_array(annot)
+                    annot_arr = libmag.npstr_to_array(annot)
                     if annot_arr is not None:
                         annot = annot_arr[annot_arri]
                 ax.annotate(
-                    "{}".format(lib_clrbrain.format_num(annot, 3)), (x, y))
+                    "{}".format(libmag.format_num(annot, 3)), (x, y))
     
     # load data frame from CSV and setup figure
     if df is None:
@@ -772,13 +772,13 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     # plot selected columns
     sizes_plot = sizes
     df_group = df
-    if lib_clrbrain.is_seq(col_x):
+    if libmag.is_seq(col_x):
         # treat each pair of col_y and col_y values as a group
         num_groups = len(col_x)
         colors = colormaps.discrete_colormap(
             num_groups, prioritize_default="cn", seed=config.seed,
             alpha=alpha) / 255
-        markers = lib_clrbrain.pad_seq(markers, num_groups)
+        markers = libmag.pad_seq(markers, num_groups)
         for i, (x, y) in enumerate(zip(col_x, col_y)):
             label = x if names_group is None else names_group[i]
             xs = df[x]
@@ -801,7 +801,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             groups = df_groups.unique()
         names = cols_group if names_group is None else names_group
         num_groups = len(groups)
-        markers = lib_clrbrain.pad_seq(markers, num_groups)
+        markers = libmag.pad_seq(markers, num_groups)
         colors = colormaps.discrete_colormap(
             num_groups, prioritize_default="cn", seed=config.seed,
             alpha=alpha) / 255
@@ -816,7 +816,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                 if col_size is not None: sizes_plot = sizes_plot[mask]
                 # make label from group names and values
                 label = ", ".join(
-                    ["{} {}".format(name, lib_clrbrain.format_num(val, 3)) 
+                    ["{} {}".format(name, libmag.format_num(val, 3)) 
                      for name, val in zip(names, group.split(","))])
             xs = df_group[col_x]
             ys = df_group[col_y]
@@ -843,7 +843,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     
     # save and display
     out_path = path
-    if suffix: out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
+    if suffix: out_path = libmag.insert_before_ext(out_path, suffix)
     save_fig(out_path, config.savefig)
     if show: plt.show()
 
@@ -984,7 +984,7 @@ def main():
     size = config.plot_labels[config.PlotLabels.SIZE]
     show = not config.no_show
     
-    plot_2d_type = lib_clrbrain.get_enum(
+    plot_2d_type = libmag.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
     
     ax = None
@@ -994,7 +994,7 @@ def main():
         title = config.plot_labels[config.PlotLabels.TITLE]
         x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
         data_cols = config.plot_labels[config.PlotLabels.Y_COL]
-        if data_cols is not None and not lib_clrbrain.is_seq(data_cols):
+        if data_cols is not None and not libmag.is_seq(data_cols):
             data_cols = (data_cols, )
         y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
         y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
@@ -1050,11 +1050,11 @@ def main():
         
         title = config.plot_labels[config.PlotLabels.TITLE]
         x_cols = config.plot_labels[config.PlotLabels.X_COL]
-        data_cols = lib_clrbrain.to_seq(
+        data_cols = libmag.to_seq(
             config.plot_labels[config.PlotLabels.Y_COL])
         labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
                   config.plot_labels[config.PlotLabels.X_LABEL])
-        err_cols = lib_clrbrain.to_seq(
+        err_cols = libmag.to_seq(
             config.plot_labels[config.PlotLabels.ERR_COL])
         ax = plot_lines(
             config.filename, x_col=x_cols, data_cols=data_cols,
@@ -1082,7 +1082,7 @@ def main():
         
         # get group columns and title
         cols_group = config.plot_labels[config.PlotLabels.GROUP_COL]
-        if cols_group and not lib_clrbrain.is_seq(cols_group):
+        if cols_group and not libmag.is_seq(cols_group):
             cols_group = [cols_group]
         title = config.plot_labels[config.PlotLabels.TITLE]
         if not title: title = "{} Vs. {}".format(*labels)

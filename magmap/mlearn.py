@@ -10,7 +10,7 @@ from enum import Enum
 import numpy as np
 
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import df_io
 
 
@@ -58,7 +58,7 @@ def grid_search(fnc, *fnc_args):
                     paren_i = name.rfind("(")
                     if paren_i != -1:
                         name = name[:paren_i]
-                    if lib_clrbrain.is_number(j):
+                    if libmag.is_number(j):
                         name += "({:.3g})".format(j)
                     else:
                         name += " {}".format(j)
@@ -71,7 +71,7 @@ def grid_search(fnc, *fnc_args):
                 for param in last_param_vals:
                     print("===============================================\n"
                           "Grid search hyperparameters {} for {}"
-                          .format(name, lib_clrbrain.format_num(param, 3)))
+                          .format(name, libmag.format_num(param, 3)))
                     settings[key] = param
                     stat, summaries = fnc(*fnc_args)
                     stats.append(stat)

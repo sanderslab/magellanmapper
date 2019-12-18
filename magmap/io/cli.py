@@ -71,7 +71,7 @@ import numpy as np
 from magmap import roi_editor
 from magmap import config
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import np_io
 from magmap.io import sqlite
 from magmap import mlearn
@@ -124,7 +124,7 @@ def args_with_dict(args):
         vals = arg_split[1] if for_dict else arg
         vals_split = vals.split(",")
         if len(vals_split) > 1: vals = vals_split
-        vals = lib_clrbrain.get_int(vals)
+        vals = libmag.get_int(vals)
         if for_dict:
             args_dict[arg_split[0]] = vals
         else:
@@ -191,7 +191,7 @@ def args_to_dict(args, keys_enum, args_dict={}):
                 # use split value if comma-delimited
                 vals = vals_split
             # cast to numeric types if possible and assign to found enum
-            args_dict[key] = lib_clrbrain.get_int(vals)
+            args_dict[key] = libmag.get_int(vals)
     return args_dict
 
 
@@ -328,9 +328,9 @@ def main(process_args_only=False):
     if args.proc is not None:
         config.proc_type = args.proc
         print("processing type set to {}".format(config.proc_type))
-    proc_type = lib_clrbrain.get_enum(config.proc_type, config.ProcessTypes)
+    proc_type = libmag.get_enum(config.proc_type, config.ProcessTypes)
     if config.proc_type and proc_type not in config.ProcessTypes:
-        lib_clrbrain.warn(
+        libmag.warn(
             "\"{}\" processing type not found".format(config.proc_type))
     
     if args.res is not None:
@@ -484,14 +484,14 @@ def main(process_args_only=False):
     if args.vmin:
         # specify vmin levels
         config.vmins = [
-            lib_clrbrain.get_int(val) for val in args.vmin.split(",")]
+            libmag.get_int(val) for val in args.vmin.split(",")]
         print("Set vmins to", config.vmins)
     
     if args.vmax:
         # specify vmax levels and copy to vmax overview used for plotting 
         # and updated for normalization
         config.vmaxs = [
-            lib_clrbrain.get_int(val) for val in args.vmax.split(",")]
+            libmag.get_int(val) for val in args.vmax.split(",")]
         config.vmax_overview = list(config.vmaxs)
         print("Set vmaxs to", config.vmaxs)
     
@@ -537,7 +537,7 @@ def main(process_args_only=False):
     if args.truth_db is not None:
         # set the truth database mode
         # TODO: refactor into args_to_dict format
-        config.truth_db_mode = lib_clrbrain.get_enum(
+        config.truth_db_mode = libmag.get_enum(
             args.truth_db[0], config.TruthDBModes)
         print("Mapped \"{}\" truth_db setting to {}"
               .format(args.truth_db[0], config.truth_db_mode))
@@ -675,7 +675,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
     stats = None
     fdbk = None
     filename_base = importer.filename_to_base(path, series)
-    proc_type = lib_clrbrain.get_enum(proc_mode, config.ProcessTypes)
+    proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
     if proc_type is config.ProcessTypes.LOAD:
         # loading completed
         return None, None

@@ -18,7 +18,7 @@ from skimage import transform
 from magmap import config
 from magmap.io import export_stack
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import np_io
 from magmap import plot_3d
 from magmap import plot_support
@@ -252,7 +252,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     img_np = sitk.GetArrayFromImage(img)
     label_ids_orig = np.unique(img_np)
     try:
-        dtype = lib_clrbrain.dtype_within_range(0, np.amax(img_np), True, True)
+        dtype = libmag.dtype_within_range(0, np.amax(img_np), True, True)
         if dtype != img_np.dtype:
             print("casting labels image to type", dtype)
             img_np = img_np.astype(dtype)
@@ -361,7 +361,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         img_smoothed = img_np[:mirrori]
         img_smoothed_orig = np.copy(img_smoothed)
         spacing = img.GetSpacing()[::-1]
-        if lib_clrbrain.is_seq(smooth):
+        if libmag.is_seq(smooth):
             # test sequence of filter sizes via multiprocessing for metrics
             # only, in which case the images will be left unchanged
             df_sm, df_sm_raw = _smoothing_mp(
@@ -372,7 +372,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
                 img_smoothed, img_smoothed_orig, smooth, spacing)
     
     # check that labels will fit in integer type
-    lib_clrbrain.printv(
+    libmag.printv(
         "type: {}, max: {}, max avail: {}".format(
             img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     
@@ -995,8 +995,8 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
         # horizontal rotation)
         transposed = np.rot90(transposed, rotate, (1, 2))
         if rotate % 2 != 0:
-            spacing = lib_clrbrain.swap_elements(spacing, 1, 2)
-            origin = lib_clrbrain.swap_elements(origin, 1, 2)
+            spacing = libmag.swap_elements(spacing, 1, 2)
+            origin = libmag.swap_elements(origin, 1, 2)
     resize_factor = config.register_settings["resize_factor"]
     if target_size is not None and resize_factor:
         # rescale based on xy dimensions of given and target image so that

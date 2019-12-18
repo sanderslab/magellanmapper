@@ -16,7 +16,7 @@ from skimage import measure
 
 from magmap import clustering
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import ontology
 from magmap import plot_3d
 from magmap.io import df_io
@@ -357,7 +357,7 @@ class MeasureLabel(object):
             metrics[LabelMetrics.Nuclei] = nuclei
         disp_id = get_single_label(label_ids)
         print("counts within label {}: {}"
-              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+              .format(disp_id, libmag.enum_dict_aslist(metrics)))
         return label_ids, metrics
     
     @classmethod
@@ -400,7 +400,7 @@ class MeasureLabel(object):
             The metrics are NaN if the label size is 0.
         """
         metrics = dict((key, []) for key in VAR_METRICS)
-        if not lib_clrbrain.is_seq(label_ids): label_ids = [label_ids]
+        if not libmag.is_seq(label_ids): label_ids = [label_ids]
         seg_ids = []
         
         for label_id in label_ids:
@@ -514,7 +514,7 @@ class MeasureLabel(object):
                         np.multiply(metrics[key], vols)) / tot_size
             if tot_size <= 0 or metrics[key] == 0: metrics[key] = np.nan
         print("variation within label {}: {}"
-              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+              .format(disp_id, libmag.enum_dict_aslist(metrics)))
         return label_ids, metrics
 
     @classmethod
@@ -572,7 +572,7 @@ class MeasureLabel(object):
                             / size)
         disp_id = get_single_label(label_ids)
         print("dist within edge of label {}: {}"
-              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+              .format(disp_id, libmag.enum_dict_aslist(metrics)))
         return label_ids, metrics
 
     @classmethod
@@ -610,7 +610,7 @@ class MeasureLabel(object):
             
         disp_id = get_single_label(label_ids)
         print("shape measurements of label {}: {}"
-              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+              .format(disp_id, libmag.enum_dict_aslist(metrics)))
         return label_ids, metrics
 
     @classmethod
@@ -660,7 +660,7 @@ class MeasureLabel(object):
                     metrics[key] = np.nansum(labels[key.name])
         disp_id = get_single_label(label_ids)
         print("nuclei clusters within label {}: {}"
-              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+              .format(disp_id, libmag.enum_dict_aslist(metrics)))
         return label_ids, metrics
 
 
@@ -674,7 +674,7 @@ def get_single_label(label_id):
         The first elements if ``label_id`` is a sequence, or the 
         ``label_id`` itself if not.
     """
-    if lib_clrbrain.is_seq(label_id) and len(label_id) > 0:
+    if libmag.is_seq(label_id) and len(label_id) > 0:
         return label_id[0]
     return label_id
 
@@ -1000,7 +1000,7 @@ class MeasureLabelOverlap(object):
         
         disp_id = get_single_label(label_ids)
         print("overlaps within label {}: {}"
-              .format(disp_id, lib_clrbrain.enum_dict_aslist(metrics)))
+              .format(disp_id, libmag.enum_dict_aslist(metrics)))
         return label_ids, metrics
 
 

@@ -16,7 +16,7 @@ from skimage import morphology
 
 from magmap import config
 from magmap import detector
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import plot_3d
 from magmap.io import df_io
 
@@ -24,7 +24,7 @@ from magmap.io import df_io
 def _markers_from_blobs(roi, blobs):
     # use blobs as seeds by converting blobs into marker image
     markers = np.zeros(roi.shape, dtype=np.uint8)
-    coords = lib_clrbrain.coords_for_indexing(blobs[:, :3].astype(int))
+    coords = libmag.coords_for_indexing(blobs[:, :3].astype(int))
     markers[tuple(coords)] = 1
     markers = morphology.dilation(markers, morphology.ball(1))
     markers = measure.label(markers)
@@ -706,7 +706,7 @@ def sub_segment_labels(labels_img_np, atlas_edge):
     pool_results = []
     label_ids = np.unique(labels_img_np)
     max_val = np.amax(labels_img_np) * (config.SUB_SEG_MULT + 1)
-    dtype = lib_clrbrain.dtype_within_range(-max_val, max_val, True)
+    dtype = libmag.dtype_within_range(-max_val, max_val, True)
     subseg = np.zeros_like(labels_img_np, dtype=dtype)
     
     for label_id in label_ids:

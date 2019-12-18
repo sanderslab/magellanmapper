@@ -12,7 +12,7 @@ import numpy as np
 
 from magmap import atlas_refiner
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import plot_3d
 from magmap import profiles
 from magmap import segmenter
@@ -78,7 +78,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     # adjust image path with suffix
     mod_path = path_img
     if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+        mod_path = libmag.insert_before_ext(mod_path, suffix)
     
     labels_from_atlas_dir = path_atlas_dir and os.path.isdir(path_atlas_dir)
     if labels_from_atlas_dir:
@@ -234,7 +234,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     load_path = path_atlas
     mod_path = path_atlas
     if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+        mod_path = libmag.insert_before_ext(mod_path, suffix)
         if atlas: load_path = mod_path
     
     # load corresponding files via SimpleITK
@@ -333,7 +333,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     for img_path in img_paths:
         mod_path = img_path
         if suffix is not None:
-            mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+            mod_path = libmag.insert_before_ext(mod_path, suffix)
         labels_sitk = sitk_io.load_registered_img(
             mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
         print("Eroding labels to generate markers for atlas segmentation")
@@ -368,7 +368,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         path = result.get()
         mod_path = path
         if suffix is not None:
-            mod_path = lib_clrbrain.insert_before_ext(path, suffix)
+            mod_path = libmag.insert_before_ext(path, suffix)
         
         # make edge distance images and stats
         labels_sitk = sitk_io.load_registered_img(
@@ -455,7 +455,7 @@ def make_sub_segmented_labels(img_path, suffix=None):
     # adjust image path with suffix
     mod_path = img_path
     if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+        mod_path = libmag.insert_before_ext(mod_path, suffix)
     
     # load labels
     labels_sitk = sitk_io.load_registered_img(

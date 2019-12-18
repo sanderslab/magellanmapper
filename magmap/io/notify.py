@@ -10,13 +10,13 @@ from urllib import request
 
 from magmap.io import cli
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 
 def post(url, msg, attachment):
     post_fields = {"text": msg}
     if attachment:
-        lines = lib_clrbrain.last_lines(attachment, 20)
+        lines = libmag.last_lines(attachment, 20)
         if lines:
             attach_msg = "\n".join(lines)
             #print("got lines: {}".format(attach_msg))

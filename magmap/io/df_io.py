@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 
 def weight_mean(vals, weights):
@@ -511,7 +511,7 @@ def pivot_with_conditions(df, index, columns, values, aggfunc="first"):
     df_lines = df.pivot_table(
         index=index, columns=columns, values=values, aggfunc=aggfunc)
     cols = df_lines.columns  # may be fewer than orig
-    if lib_clrbrain.is_seq(index) and len(index) > 1:
+    if libmag.is_seq(index) and len(index) > 1:
         # move multi-index into separate sub-cols of each region and
         # reset index to access all columns
         df_lines = df_lines.unstack()
@@ -585,7 +585,7 @@ def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
     ext = ".csv"
     if path:
         if not path.endswith(ext): path += ext
-        lib_clrbrain.backup_file(path)
+        libmag.backup_file(path)
     combined = data_frames
     if not isinstance(data_frames, pd.DataFrame):
         combined = pd.concat(combined)
@@ -653,7 +653,7 @@ def main():
     
     # process stats based on command-line argument
     
-    stats_type = lib_clrbrain.get_enum(config.stats_type, config.StatsTypes)
+    stats_type = libmag.get_enum(config.stats_type, config.StatsTypes)
     if stats_type is config.StatsTypes.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
         merge_csvs(config.filenames, config.prefix)
@@ -665,7 +665,7 @@ def main():
         df = join_dfs(dfs, config.plot_labels[config.PlotLabels.ID_COL])
         out_path = config.prefix
         if not out_path:
-            out_path = lib_clrbrain.insert_before_ext(
+            out_path = libmag.insert_before_ext(
                 config.filename, "_joined")
         data_frames_to_csv(df, out_path)
 
@@ -673,17 +673,17 @@ def main():
         # join multiple CSV files based on a given index column into single
         # CSV file
         dfs = [pd.read_csv(f) for f in config.filenames]
-        labels = lib_clrbrain.to_seq(
+        labels = libmag.to_seq(
             config.plot_labels[config.PlotLabels.X_LABEL])
-        extra_cols = lib_clrbrain.to_seq(
+        extra_cols = libmag.to_seq(
             config.plot_labels[config.PlotLabels.X_COL])
-        data_cols = lib_clrbrain.to_seq(
+        data_cols = libmag.to_seq(
             config.plot_labels[config.PlotLabels.Y_COL])
         df = append_cols(
             dfs, labels, extra_cols=extra_cols, data_cols=data_cols)
         out_path = config.prefix
         if not out_path:
-            out_path = lib_clrbrain.insert_before_ext(
+            out_path = libmag.insert_before_ext(
                 config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
@@ -711,12 +711,12 @@ def main():
         # "Y_COL" = value(s) for corresponding cols
         df = pd.read_csv(config.filename)
         cols = {k: v for k, v in zip(
-            lib_clrbrain.to_seq(config.plot_labels[config.PlotLabels.X_COL]),
-            lib_clrbrain.to_seq(config.plot_labels[config.PlotLabels.Y_COL]))}
+            libmag.to_seq(config.plot_labels[config.PlotLabels.X_COL]),
+            libmag.to_seq(config.plot_labels[config.PlotLabels.Y_COL]))}
         df = add_cols_df(df, cols)
         out_path = config.prefix
         if not out_path:
-            out_path = lib_clrbrain.insert_before_ext(
+            out_path = libmag.insert_before_ext(
                 config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
@@ -736,7 +736,7 @@ def main():
             config.plot_labels[config.PlotLabels.WT_COL])
         out_path = config.prefix
         if not out_path:
-            out_path = lib_clrbrain.insert_before_ext(config.filename, "_norm")
+            out_path = libmag.insert_before_ext(config.filename, "_norm")
         data_frames_to_csv(df, out_path)
 
 

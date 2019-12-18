@@ -12,7 +12,7 @@ from sklearn import cluster
 from sklearn import neighbors
 
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import np_io
 from magmap import ontology
 from magmap import plot_2d
@@ -119,12 +119,12 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
         # load blobs associated with image
         mod_path = img_path
         if suffix is not None:
-            mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
+            mod_path = libmag.insert_before_ext(img_path, suffix)
         labels_img_np = sitk_io.load_registered_img(
             mod_path, config.RegNames.IMG_LABELS.value)
         blobs, scaling, res = np_io.load_blobs(img_path, labels_img_np.shape)
         if blobs is None:
-            lib_clrbrain.warn("unable to load nuclei coordinates for", img_path)
+            libmag.warn("unable to load nuclei coordinates for", img_path)
             continue
         # convert to physical units and display k-nearest-neighbors for nuclei
         blobs = np.multiply(blobs[:, :3], res)
@@ -255,17 +255,17 @@ def cluster_blobs(img_path, suffix=None):
     """
     mod_path = img_path
     if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
+        mod_path = libmag.insert_before_ext(img_path, suffix)
     labels_img_np = sitk_io.load_registered_img(
         mod_path, config.RegNames.IMG_LABELS.value)
     blobs, scaling, res = np_io.load_blobs(img_path, labels_img_np.shape)
     if blobs is None:
-        lib_clrbrain.warn("unable to load nuclei coordinates")
+        libmag.warn("unable to load nuclei coordinates")
         return
     
     # append label IDs to blobs and scale to make isotropic
     blobs = ClusterByLabel.cluster_by_label(
         blobs[:, :3], labels_img_np, scaling, res)
     print(blobs)
-    out_path = lib_clrbrain.combine_paths(mod_path, config.SUFFIX_BLOB_CLUSTERS)
+    out_path = libmag.combine_paths(mod_path, config.SUFFIX_BLOB_CLUSTERS)
     np.save(out_path, blobs)

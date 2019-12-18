@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -376,7 +376,7 @@ def get_label_ids_from_position(coord, labels_img, scaling=None, rounding=False,
         True, also returns a Numpy array of the same shape as ``coord`` 
         scaled based on ``scaling``.
     """
-    lib_clrbrain.printv(
+    libmag.printv(
         "getting label IDs from coordinates using scaling", scaling)
     coord_scaled = coord
     if scaling is not None:
@@ -395,7 +395,7 @@ def get_label_ids_from_position(coord, labels_img, scaling=None, rounding=False,
     
     # index blob coordinates into labels image by int array indexing to 
     # get the corresponding label IDs
-    coordsi = lib_clrbrain.coords_for_indexing(coord_scaled)
+    coordsi = libmag.coords_for_indexing(coord_scaled)
     label_ids = labels_img[tuple(coordsi)][0]
     if return_coord_scaled:
         return label_ids, coord_scaled
@@ -427,7 +427,7 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
         found.
     """
     label_id = get_label_ids_from_position(coord, labels_img, scaling, rounding)
-    lib_clrbrain.printv("found label_id: {}".format(label_id))
+    libmag.printv("found label_id: {}".format(label_id))
     mirrored = label_id < 0
     if mirrored:
         label_id = -1 * label_id
@@ -451,10 +451,10 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
                     break
         if label is not None:
             label[MIRRORED] = mirrored
-            lib_clrbrain.printv(
+            libmag.printv(
                 "label ID at level {}: {}".format(level, label_id))
     except KeyError as e:
-        lib_clrbrain.printv(
+        libmag.printv(
             "could not find label id {} or its parent (error {})"
             .format(label_id, e))
     return label

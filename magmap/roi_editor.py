@@ -27,7 +27,7 @@ from magmap import colormaps
 from magmap import config
 from magmap import detector
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import plot_support
 
 # TODO: may want to base on scaling factor instead
@@ -404,18 +404,18 @@ class ROIEditor:
         border[2] = 0
         if plane == config.PLANE[1]:
             # "xz" planes; flip y-z to give y-planes instead of z
-            roi_size = lib_clrbrain.swap_elements(roi_size, 1, 2)
-            offset = lib_clrbrain.swap_elements(offset, 1, 2)
-            border = lib_clrbrain.swap_elements(border, 1, 2)
-            border_full = lib_clrbrain.swap_elements(border_full, 1, 2)
+            roi_size = libmag.swap_elements(roi_size, 1, 2)
+            offset = libmag.swap_elements(offset, 1, 2)
+            border = libmag.swap_elements(border, 1, 2)
+            border_full = libmag.swap_elements(border_full, 1, 2)
             if segments is not None and len(segments) > 0:
                 segments[:, [0, 1]] = segments[:, [1, 0]]
         elif plane == config.PLANE[2]:
             # "yz" planes; roll backward to flip x-z and x-y
-            roi_size = lib_clrbrain.roll_elements(roi_size, -1)
-            offset = lib_clrbrain.roll_elements(offset, -1)
-            border = lib_clrbrain.roll_elements(border, -1)
-            border_full = lib_clrbrain.roll_elements(border_full, -1)
+            roi_size = libmag.roll_elements(roi_size, -1)
+            offset = libmag.roll_elements(offset, -1)
+            border = libmag.roll_elements(border, -1)
+            border_full = libmag.roll_elements(border_full, -1)
             print("orig segments:\n{}".format(segments))
             if segments is not None and len(segments) > 0:
                 # roll forward since segments in zyx order
@@ -598,7 +598,7 @@ class ROIEditor:
                 show.setdefault("cmaps", []).append(cm)
                 show.setdefault("vmins", []).append(vmin)
                 show.setdefault("vmaxs", []).append(vmax)
-            show["alphas"] = lib_clrbrain.pad_seq(
+            show["alphas"] = libmag.pad_seq(
                 config.alphas, len(show["imgs2d"]), 0.9)
             plot_support.overlay_images(ax_ov, aspect, origin, **show)
             ax_ov.add_patch(patches.Rectangle(
@@ -613,7 +613,7 @@ class ROIEditor:
                 zoom_components = np.array(
                     [config.zoom, config.magnification, zoom]).astype(np.float)
                 tot_zoom = "{}x".format(
-                    lib_clrbrain.compact_float(np.prod(zoom_components), 1))
+                    libmag.compact_float(np.prod(zoom_components), 1))
             elif lev == 0:
                 tot_zoom = "original magnification"
             else:
@@ -949,11 +949,11 @@ class ROIEditor:
         image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
         if plane == config.PLANE[1]:
             # "xz" planes
-            size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
+            size = libmag.swap_elements(size, 0, 1, image5d_shape_offset)
         elif plane == config.PLANE[2]:
             # "yz" planes
-            size = lib_clrbrain.swap_elements(size, 0, 2, image5d_shape_offset)
-            size = lib_clrbrain.swap_elements(size, 0, 1, image5d_shape_offset)
+            size = libmag.swap_elements(size, 0, 2, image5d_shape_offset)
+            size = libmag.swap_elements(size, 0, 1, image5d_shape_offset)
         z = offset[2]
         ax.set_title("{}={}".format(plane_axis, z))
         if border is not None:
@@ -981,10 +981,10 @@ class ROIEditor:
                           slice(0, roi_size[0])]
             # swap columns if showing a different plane
             if plane == config.PLANE[1]:
-                region = lib_clrbrain.swap_elements(region, 0, 1)
+                region = libmag.swap_elements(region, 0, 1)
             elif plane == config.PLANE[2]:
-                region = lib_clrbrain.swap_elements(region, 0, 2)
-                region = lib_clrbrain.swap_elements(region, 0, 1)
+                region = libmag.swap_elements(region, 0, 2)
+                region = libmag.swap_elements(region, 0, 1)
             # get the zoomed region
             if roi.ndim >= 4:
                 roi = roi[tuple(region + [slice(None)])]

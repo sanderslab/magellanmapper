@@ -16,7 +16,7 @@ import SimpleITK as sitk
 
 from magmap import config
 from magmap import detector
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import sqlite
 from magmap import plot_3d
 from magmap import roi_editor
@@ -149,7 +149,7 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
             roi_ed.plot_roi(
                 img3d, blobs, channel, show=False, 
                 title=os.path.splitext(path_img)[0])
-            lib_clrbrain.show_full_arrays()
+            libmag.show_full_arrays()
             
             # export image and blobs, stripping blob flags and adjusting 
             # user-added segments' radii; use original rather than blobs with 
@@ -167,7 +167,7 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
             # https://github.com/scikit-image/scikit-image/issues/2112
             #blobs[:, 3] += 1E-1
             blobs[:, 3] -= 0.5
-            lib_clrbrain.printv("blobs:\n{}".format(blobs))
+            libmag.printv("blobs:\n{}".format(blobs))
             np.save(path_blobs, blobs)
             
             # convert blobs to ground truth

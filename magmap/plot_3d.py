@@ -23,7 +23,7 @@ from skimage import transform
 
 from magmap import colormaps
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import segmenter
 
 _MASK_DIVIDEND = 10000.0 # 3D max points
@@ -74,13 +74,13 @@ def saturate_roi(roi, clip_vmax=-1, channel=None):
             clip_vmax = settings["clip_vmax"]
         # enhance contrast and normalize to 0-1 scale
         vmin, vmax = np.percentile(roi_show, (5, clip_vmax))
-        lib_clrbrain.printv(
+        libmag.printv(
             "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[i])
         # ensures that vmax is at least 50% of near max value of image5d
         max_thresh = config.near_max[i] * 0.5
         if vmax < max_thresh:
             vmax = max_thresh
-            lib_clrbrain.printv("adjusted vmax to {}".format(vmax))
+            libmag.printv("adjusted vmax to {}".format(vmax))
         saturated = np.clip(roi_show, vmin, vmax)
         saturated = (saturated - vmin) / (vmax - vmin)
         if multichannel:
@@ -179,7 +179,7 @@ def threshold(roi):
         selem = morphology.disk(15)
         print(np.min(roi), np.max(roi))
         roi_thresh = np.copy(roi)
-        roi_thresh = lib_clrbrain.normalize(roi_thresh, -1.0, 1.0)
+        roi_thresh = libmag.normalize(roi_thresh, -1.0, 1.0)
         print(roi_thresh)
         print(np.min(roi_thresh), np.max(roi_thresh))
         for i in range(roi.shape[0]):
@@ -999,8 +999,8 @@ def build_heat_map(shape, coords):
     # get counts of points at the same coordinate as a measure of density
     coords_unique, coords_count = np.unique(
         coords, return_counts=True, axis=0)
-    coordsi = lib_clrbrain.coords_for_indexing(coords_unique)
-    dtype = lib_clrbrain.dtype_within_range(
+    coordsi = libmag.coords_for_indexing(coords_unique)
+    dtype = libmag.dtype_within_range(
         0, np.amax(coords_count), True, False)
     heat_map = np.zeros(shape, dtype=dtype)
     heat_map[tuple(coordsi)] = coords_count
@@ -1074,8 +1074,8 @@ def make_isotropic(roi, scale):
     resize_factor = calc_isotropic_factor(scale)
     isotropic_shape = np.array(roi.shape)
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
-    lib_clrbrain.printv("original ROI shape: {}, isotropic: {}"
-                        .format(roi.shape, isotropic_shape))
+    libmag.printv("original ROI shape: {}, isotropic: {}"
+                  .format(roi.shape, isotropic_shape))
     mode = "reflect"
     if np.any(np.array(roi.shape) == 1):
         # may crash with floating point exception if 1px thick (see 
@@ -1268,7 +1268,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
         roi_show_1d = np.delete(roi_show_1d, remove)
         
         # adjust range from 0-1 to region of colormap to use
-        roi_show_1d = lib_clrbrain.normalize(roi_show_1d, 0.6, 1.0)
+        roi_show_1d = libmag.normalize(roi_show_1d, 0.6, 1.0)
         points_len = roi_show_1d.size
         if points_len == 0:
             print("no 3D points to display")
@@ -1364,8 +1364,8 @@ def prepare_roi(image5d, roi_size, offset):
     cube_slices = []
     for i in range(len(offset)):
         cube_slices.append(slice(offset[i], offset[i] + roi_size[i]))
-    lib_clrbrain.printv("preparing ROI at offset: {}, size: {}, slices: {}"
-                        .format(offset, roi_size, cube_slices))
+    libmag.printv("preparing ROI at offset: {}, size: {}, slices: {}"
+                  .format(offset, roi_size, cube_slices))
     
     # cube with corner at offset, side of cube_len
     if image5d.ndim >= 5:

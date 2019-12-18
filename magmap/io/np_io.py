@@ -12,7 +12,7 @@ from magmap import colormaps
 from magmap import config
 from magmap import detector
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import ontology
 from magmap.io import sitk_io
 from magmap import stack_detect
@@ -128,7 +128,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
     config.image5d_is_roi = False
     path_image5d = path
     
-    proc_type = lib_clrbrain.get_enum(proc_mode, config.ProcessTypes)
+    proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
     if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
                      config.ProcessTypes.EXPORT_BLOBS,
                      config.ProcessTypes.PROCESSING_MP):
@@ -181,7 +181,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                 print("processed image offset: {}, roi_size: {}"
                       .format(roi_offset, shape))
             except KeyError as e:
-                lib_clrbrain.printv("could not find key:", e)
+                libmag.printv("could not find key:", e)
         except (FileNotFoundError, KeyError) as e:
             print("Unable to load processed info file at {}"
                   .format(filename_info_proc))
@@ -288,7 +288,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                     config.load_labels, config.RegNames.IMG_LABELS.value)
             except FileNotFoundError as e:
                 print(e)
-                lib_clrbrain.warn(
+                libmag.warn(
                     "could not load original labels image; colors may differ"
                     "differ from it")
     
@@ -303,9 +303,9 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
     colormaps.setup_cmaps()
     num_channels = (1 if config.image5d is None or config.image5d.ndim <= 4 
                     else config.image5d.shape[4])
-    config.near_max = lib_clrbrain.pad_seq(config.near_max, num_channels, -1)
-    config.near_min = lib_clrbrain.pad_seq(config.near_min, num_channels, 0)
-    config.vmax_overview = lib_clrbrain.pad_seq(
+    config.near_max = libmag.pad_seq(config.near_max, num_channels, -1)
+    config.near_min = libmag.pad_seq(config.near_min, num_channels, 0)
+    config.vmax_overview = libmag.pad_seq(
         config.vmax_overview, num_channels)
     config.cmaps = list(config.process_settings["channel_colors"])
     num_cmaps = len(config.cmaps)

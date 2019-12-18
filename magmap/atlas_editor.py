@@ -12,7 +12,7 @@ from matplotlib.widgets import Slider, Button, TextBox
 
 from magmap import colormaps
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import plot_editor
 from magmap import plot_support
 from magmap import plot_3d
@@ -234,9 +234,9 @@ class AtlasEditor:
                 orientation from which the coordinates were given; defaults 
                 to the first element of :const:`magmap.config.PLANE`.
         """
-        coord_rev = lib_clrbrain.transpose_1d_rev(list(coord), plane_src)
+        coord_rev = libmag.transpose_1d_rev(list(coord), plane_src)
         for plane in config.PLANE:
-            coord_transposed = lib_clrbrain.transpose_1d(list(coord_rev), plane)
+            coord_transposed = libmag.transpose_1d(list(coord_rev), plane)
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed):
@@ -352,7 +352,7 @@ class AtlasEditor:
         Args:
             text: String of text box value.
         """
-        if not lib_clrbrain.is_number(text): return
+        if not libmag.is_number(text): return
         intensity = int(text)
         for i, ed in enumerate(self.plot_eds.values()):
             if i == 0:

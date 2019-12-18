@@ -27,7 +27,7 @@ import warnings
 from magmap import config
 from magmap.io import np_io
 from magmap import plot_3d
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 import numpy as np
 try:
@@ -82,13 +82,13 @@ def start_jvm(heap_size="8G"):
         heap_size: JVM heap size, defaulting to 8G.
     """
     if not jb:
-        lib_clrbrain.warn("Python-Javabridge not available, cannot start JVM")
+        libmag.warn("Python-Javabridge not available, cannot start JVM")
         return
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
 
 def stop_jvm():
     if not jb:
-        lib_clrbrain.warn("Python-Javabridge not available, cannot stop JVM")
+        libmag.warn("Python-Javabridge not available, cannot stop JVM")
         return
     jb.kill_vm()
 
@@ -234,8 +234,8 @@ def filename_to_base(filename, series, modifier=""):
         modifier: Modifier string prior to series; default to empty string.
     """
     return "{}_{}{}".format(
-        lib_clrbrain.splitext(filename)[0], modifier, 
-        lib_clrbrain.series_as_str(series))
+        libmag.splitext(filename)[0], modifier, 
+        libmag.series_as_str(series))
 
 def deconstruct_np_filename(np_filename, ext="czi"):
     """Deconstruct Numpy image filename to the appropriate image components.
@@ -369,7 +369,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
 
     print("Updated metadata:\n{}".format(info))
     # backup and save updated info
-    lib_clrbrain.backup_file(
+    libmag.backup_file(
         filename_info_npz, modifier="_v{}".format(curr_ver))
     info["ver"] = IMAGE5D_NP_VER
     outfile_info = open(filename_info_npz, "wb")
@@ -399,7 +399,7 @@ def load_metadata(path, check_ver=False, assign=True):
     try:
         archive = np.load(path)
     except FileNotFoundError:
-        lib_clrbrain.warn("Could not find metadata file {}".format(path))
+        libmag.warn("Could not find metadata file {}".format(path))
         return None, image5d_ver_num
     output = np_io.read_np_archive(archive)
     try:
@@ -505,7 +505,7 @@ def read_file(filename, series, load=True, z_max=-1,
         image5d, the array of image data. If ``return_info`` is True, a 
         second value a dictionary of image properties will be returned.
     """
-    path_split = lib_clrbrain.splitext(filename)
+    path_split = libmag.splitext(filename)
     ext = path_split[1]
     filename_image5d_npz, filename_info_npz = make_filenames(
         filename, series)
@@ -557,7 +557,7 @@ def read_file(filename, series, load=True, z_max=-1,
                 return None
     
     if jb is None or bf is None:
-        lib_clrbrain.warn(
+        libmag.warn(
             "Python-Bioformats or Python-Javabridge not available, "
             "multi-page images cannot be imported")
         return None

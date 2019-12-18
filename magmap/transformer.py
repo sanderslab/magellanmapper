@@ -14,7 +14,7 @@ from skimage import transform
 from magmap import chunking
 from magmap import config
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 
 class Downsampler(object):
@@ -123,7 +123,7 @@ def get_transposed_image_path(img_path, scale=None, target_size=None):
             # otherwise assume set target size
             modifier = make_modifier_resized(target_size)
             print("loading resized file with {} modifier".format(modifier))
-        img_path_modified = lib_clrbrain.insert_before_ext(
+        img_path_modified = libmag.insert_before_ext(
             img_path, "_" + modifier)
     return img_path_modified
 
@@ -180,12 +180,12 @@ def transpose_img(filename, series, plane=None, rescale=None):
     if plane is not None and plane != config.PLANE[0]:
         # swap z-y to get (y, z, x) order for xz orientation
         image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 1)
-        config.resolutions[0] = lib_clrbrain.swap_elements(
+        config.resolutions[0] = libmag.swap_elements(
             config.resolutions[0], 0, 1)
         if plane == config.PLANE[2]:
             # swap new y-x to get (x, z, y) order for yz orientation
             image5d_swapped = np.swapaxes(image5d_swapped, offset, offset + 2)
-            config.resolutions[0] = lib_clrbrain.swap_elements(
+            config.resolutions[0] = libmag.swap_elements(
                 config.resolutions[0], 0, 2)
     
     scaling = None

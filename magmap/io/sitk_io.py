@@ -14,7 +14,7 @@ from skimage import transform
 
 from magmap import config
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
 
@@ -35,7 +35,7 @@ def reg_out_path(file_path, reg_name, match_ext=False):
     file_path_base = importer.filename_to_base(
         file_path, config.series)
     if match_ext:
-        reg_name = lib_clrbrain.match_ext(file_path, reg_name)
+        reg_name = libmag.match_ext(file_path, reg_name)
     return file_path_base + "_" + reg_name
 
 
@@ -74,7 +74,7 @@ def read_sitk(path):
         in :const:``EXTS_3D`` until a file is found.
     """
     # prioritize given extension
-    path_split = lib_clrbrain.splitext(path)
+    path_split = libmag.splitext(path)
     exts = list(EXTS_3D)
     if path_split[1] in exts: exts.remove(path_split[1])
     exts.insert(0, path_split[1])
@@ -111,7 +111,7 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
                 img_np, img_np_base.shape, preserve_range=True, 
                 anti_aliasing=True, mode="reflect")
         # normalize to max of first image to make comparable when combining
-        img_np = lib_clrbrain.normalize(
+        img_np = libmag.normalize(
             img_np * 1.0, 0, np.amax(img_np_base))
     img_nps.append(img_np)
     return img_sitk
@@ -138,7 +138,7 @@ def read_sitk_files(filename_sitk, reg_names=None):
     img_sitk = None
     if reg_names:
         img_nps = []
-        if not lib_clrbrain.is_seq(reg_names):
+        if not libmag.is_seq(reg_names):
             reg_names = [reg_names]
         for reg_name in reg_names:
             # load each registered suffix into list of images with same shape, 
@@ -160,7 +160,7 @@ def read_sitk_files(filename_sitk, reg_names=None):
     
     if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
-        lib_clrbrain.warn(
+        libmag.warn(
             "MagellanMapper image metadata file not loaded; will fallback to {} "
             "for metadata".format(filename_sitk))
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
@@ -198,7 +198,7 @@ def load_registered_img(img_path, reg_name, get_sitk=False, replace=None):
         # fallback to loading barren reg_name from img_path's dir
         reg_img_path = os.path.join(
             os.path.dirname(img_path), 
-            lib_clrbrain.match_ext(img_path, reg_name))
+            libmag.match_ext(img_path, reg_name))
         reg_img, reg_img_path = read_sitk(reg_img_path)
         if reg_img is None:
             raise FileNotFoundError(
@@ -267,7 +267,7 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None):
     for suffix in imgs_write.keys():
         img = imgs_write[suffix]
         if img is None: continue
-        if ext: suffix = lib_clrbrain.match_ext(ext, suffix)
+        if ext: suffix = libmag.match_ext(ext, suffix)
         out_path = reg_out_path(prefix, suffix)
         sitk.WriteImage(img, out_path, False)
         print("wrote registered image to", out_path)
@@ -309,7 +309,7 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
         mod_path = img_path
         if suffix is not None:
             # adjust image path with suffix
-            mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+            mod_path = libmag.insert_before_ext(mod_path, suffix)
         print("loading", mod_path)
         # load and resize images to shape of first loaded image
         img = _load_reg_img_to_combine(mod_path, reg_name, img_nps)
@@ -326,8 +326,8 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
     # fallback to using first image's name as base
     output_base = img_paths[0] if prefix is None else prefix
     if suffix is not None:
-        output_base = lib_clrbrain.insert_before_ext(output_base, suffix)
-    output_reg = lib_clrbrain.combine_paths(
+        output_base = libmag.insert_before_ext(output_base, suffix)
+    output_reg = libmag.combine_paths(
         reg_name, config.RegNames.COMBINED.value)
     write_reg_images({output_reg: combined_sitk}, output_base)
     return combined_sitk

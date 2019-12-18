@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import np_io
 from magmap import ontology
 from magmap import plot_3d
@@ -133,7 +133,7 @@ def export_common_labels(img_paths, output_path):
     """
     labels_dict = {}
     for img_path in img_paths:
-        name = lib_clrbrain.get_filename_without_ext(img_path)
+        name = libmag.get_filename_without_ext(img_path)
         labels_np = sitk_io.load_registered_img(
             img_path, config.RegNames.IMG_LABELS.value)
         # only use pos labels since assume neg labels are merely mirrored
@@ -177,7 +177,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     """
     mod_path = img_path
     if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
+        mod_path = libmag.insert_before_ext(img_path, suffix)
     if labels_img_sitk is None:
         labels_img_sitk = sitk_io.load_registered_img(
             mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
@@ -279,11 +279,11 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     # save and show labels difference image using measurement name in 
     # output path or overriding with custom name
     meas_path = meas if meas_path_name is None else meas_path_name
-    reg_diff = lib_clrbrain.insert_before_ext(
+    reg_diff = libmag.insert_before_ext(
         config.RegNames.IMG_LABELS_DIFF.value, meas_path, "_")
     if fn_avg is not None:
         # add function name to output path if given
-        reg_diff = lib_clrbrain.insert_before_ext(
+        reg_diff = libmag.insert_before_ext(
             reg_diff, fn_avg.__name__, "_")
     imgs_write = {reg_diff: labels_diff_sitk}
     out_path = prefix if prefix else img_path

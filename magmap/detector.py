@@ -13,7 +13,7 @@ from scipy.spatial import distance
 from skimage.feature import blob_log
 
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import plot_3d
 from magmap.io import sqlite
 from magmap.io import df_io
@@ -115,10 +115,10 @@ def detect_blobs(roi, channel, exclude_border=None):
             num_sigma=settings["num_sigma"], 
             threshold=settings["detection_threshold"], 
             overlap=settings["overlap"])
-        lib_clrbrain.printv(
+        libmag.printv(
             "time for 3D blob detection: {}".format(time() - time_start))
         if blobs_log.size < 1:
-            lib_clrbrain.printv("no blobs detected")
+            libmag.printv("no blobs detected")
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
         blobs = format_blobs(blobs_log, i)
@@ -490,7 +490,7 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
         return blobs, blobs_master
     
     # smallest type to hold blob coordinates, signed to use for diffs
-    dtype = lib_clrbrain.dtype_within_range(
+    dtype = libmag.dtype_within_range(
         0, np.amax((np.amax(blobs[:, :3]), np.amax(blobs_master[:, :3]))), 
         True, True)
     match_check = None
@@ -745,7 +745,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     scaling = thresh / tol
     # casting to int causes improper offset import into db
     inner_padding = np.floor(tol[::-1])
-    lib_clrbrain.printv(
+    libmag.printv(
         "verifying blobs with tol {} leading to thresh {}, scaling {}, "
         "inner_padding {}".format(tol, thresh, scaling, inner_padding))
     
@@ -754,7 +754,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     if resize:
         blobs = multiply_blob_rel_coords(blobs, resize)
         #tol = np.multiply(resize, tol).astype(np.int)
-        lib_clrbrain.printv("resized blobs by {}:\n{}".format(resize, blobs))
+        libmag.printv("resized blobs by {}:\n{}".format(resize, blobs))
     
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
@@ -764,14 +764,14 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         # get all detected and truth blobs for inner and total ROI
         offset_inner = np.add(offset, inner_padding)
         size_inner = np.subtract(size, inner_padding * 2)
-        lib_clrbrain.printv(
+        libmag.printv(
             "offset: {}, offset_inner: {}, size: {}, size_inner: {}"
             .format(offset, offset_inner, size, size_inner))
         blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
         if resize is not None:
             # TODO: doesn't align with exported ROIs
-            lib_clrbrain.printv("shifting blobs in ROI by offset {}, border {}"
-                                .format(offset, config.border))
+            libmag.printv("shifting blobs in ROI by offset {}, border {}"
+                          .format(offset, config.border))
             blobs_roi = shift_blob_rel_coords(blobs_roi, offset)
             if config.border:
                 blobs_roi = shift_blob_rel_coords(blobs_roi, config.border)

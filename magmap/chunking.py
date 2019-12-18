@@ -17,7 +17,7 @@ import numpy as np
 
 from magmap import config
 from magmap import detector
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 OVERLAP_FACTOR = 5
 
@@ -199,7 +199,7 @@ def get_split_stack_total_shape(sub_rois, overlap=None):
     channel_dim = 3
     if len(shape_sub_roi) > channel_dim:
         final_shape[channel_dim] = shape_sub_roi[channel_dim]
-    lib_clrbrain.printv("final_shape: {}".format(final_shape))
+    libmag.printv("final_shape: {}".format(final_shape))
     return final_shape
 
 def merge_split_stack2(sub_rois, overlap, offset, output):
@@ -259,7 +259,7 @@ def merge_blobs(blob_rois):
                 blobs = blob_rois[coord]
                 #print("checking blobs in {}:\n{}".format(coord, blobs))
                 if blobs is None:
-                    lib_clrbrain.printv("no blobs to add, skipping")
+                    libmag.printv("no blobs to add, skipping")
                 else:
                     # add temporary tag with sub-ROI coordinate
                     extras = np.zeros((blobs.shape[0], 3), dtype=int)

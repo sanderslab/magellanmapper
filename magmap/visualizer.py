@@ -43,7 +43,7 @@ from magmap.io import cli
 from magmap import config
 from magmap import detector
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import ontology
 from magmap import plot_3d
 from magmap import plot_2d
@@ -383,7 +383,7 @@ class Visualization(HasTraits):
         if self._scene_3d_shown:
             if config.savefig in config.FORMATS_3D:
                 path = "{}.{}".format(title, config.savefig)
-                lib_clrbrain.backup_file(path)
+                libmag.backup_file(path)
                 try:
                     # save before setting any other objects to avoid VTK 
                     # render error
@@ -461,12 +461,12 @@ class Visualization(HasTraits):
                     self.roi, self.scene.mlab, config.channel, self.flipz)
             
             # process ROI in prep for showing filtered 2D view and segmenting
-            if not lib_clrbrain.is_binary(self.roi):
+            if not libmag.is_binary(self.roi):
                 self.roi = plot_3d.saturate_roi(
                     self.roi, channel=config.channel)
                 self.roi = plot_3d.denoise_roi(self.roi, config.channel)
             else:
-                lib_clrbrain.printv(
+                libmag.printv(
                     "binary image detected, will not preprocess")
         
         else:

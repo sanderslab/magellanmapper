@@ -11,7 +11,7 @@ from matplotlib import cm
 from matplotlib import colors
 
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 
 # default colormaps, with keys backed by config.Cmaps enums
 CMAPS = {}
@@ -240,7 +240,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         rand_coords_shape[-1] += 1
         cmap = np.zeros(
             rand_coords_shape,
-            dtype=lib_clrbrain.dtype_within_range(min_val, max_val))
+            dtype=libmag.dtype_within_range(min_val, max_val))
         cmap[:, :-1] = rand_coords
     else:
         # randomly generate each color value; 4th values only for simplicity
@@ -248,7 +248,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         if seed is not None: np.random.seed(seed)
         cmap = (np.random.random((num_colors, 4)) 
                 * (max_val - min_val) + min_val).astype(
-            lib_clrbrain.dtype_within_range(min_val, max_val))
+            libmag.dtype_within_range(min_val, max_val))
         if min_any > 0:
             # if all vals below threshold, scale up lowest value
             below_offset = np.all(np.less(cmap[:, :3], min_any), axis=1)

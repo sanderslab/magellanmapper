@@ -14,7 +14,7 @@ import pandas as pd
 from magmap import colormaps
 from magmap import config
 from magmap.io import export_stack
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import np_io
 from magmap import ontology
 from magmap import plot_2d
@@ -218,13 +218,13 @@ def meas_plot_zscores(path, metric_cols, extra_cols, composites, size=None,
     df_comb = df_io.combine_cols(df, composites)
     df_io.data_frames_to_csv(
         df_comb, 
-        lib_clrbrain.insert_before_ext(config.filename, "_zhomogeneity"))
+        libmag.insert_before_ext(config.filename, "_zhomogeneity"))
     
     # shift metrics from each condition to separate columns
     conds = np.unique(df["Condition"])
     df = df_io.cond_to_cols_df(
         df, ["Sample", "Region"], "Condition", "original", metric_cols)
-    path = lib_clrbrain.insert_before_ext(config.filename, "_zscore")
+    path = libmag.insert_before_ext(config.filename, "_zscore")
     df_io.data_frames_to_csv(df, path)
     
     # display as probability plot
@@ -266,14 +266,14 @@ def meas_plot_coefvar(path, id_cols, cond_col, cond_base, metric_cols,
     df = pd.read_csv(path)
     df = df_io.combine_cols(df, composites)
     df_io.data_frames_to_csv(
-        df, lib_clrbrain.insert_before_ext(config.filename, "_coefvar"))
+        df, libmag.insert_before_ext(config.filename, "_coefvar"))
     
     # measure CV within each condition and shift metrics from each 
     # condition to separate columns
     df = df_io.coefvar_df(df, [*id_cols, cond_col], metric_cols, size_col)
     conds = np.unique(df[cond_col])
     df = df_io.cond_to_cols_df(df, id_cols, cond_col, cond_base, metric_cols)
-    path = lib_clrbrain.insert_before_ext(config.filename, "_coefvartransp")
+    path = libmag.insert_before_ext(config.filename, "_coefvartransp")
     df_io.data_frames_to_csv(df, path)
     
     # display CV measured by condition as probability plot
@@ -447,9 +447,9 @@ def meas_improvement(path, col_effect, col_p, thresh_impr=0, thresh_p=0.05,
         add_wt(mask_impr, mask_impr_ss, "impr")
         add_wt(mask_wors, mask_wors_ss, "wors")
     
-    out_path = lib_clrbrain.insert_before_ext(path, "_impr")
+    out_path = libmag.insert_before_ext(path, "_impr")
     if suffix:
-        out_path = lib_clrbrain.insert_before_ext(out_path, suffix)
+        out_path = libmag.insert_before_ext(out_path, suffix)
     df_impr = df_io.dict_to_data_frame(metrics, out_path)
     # display transposed version for more compact view given large number
     # of columns, but save un-transposed to preserve data types
@@ -471,8 +471,8 @@ def plot_clusters_by_label(path, z, suffix=None, show=True, scaling=None):
     """
     mod_path = path
     if suffix is not None:
-        mod_path = lib_clrbrain.insert_before_ext(path, suffix)
-    blobs = np.load(lib_clrbrain.combine_paths(
+        mod_path = libmag.insert_before_ext(path, suffix)
+    blobs = np.load(libmag.combine_paths(
         mod_path, config.SUFFIX_BLOB_CLUSTERS))
     label_ids = np.unique(blobs[:, 3])
     fig, gs = plot_support.setup_fig(

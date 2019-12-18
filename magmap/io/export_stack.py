@@ -15,7 +15,7 @@ from scipy import ndimage
 
 from magmap import colormaps
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap.io import np_io
 from magmap import plot_support
 
@@ -158,7 +158,7 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
     # setup imshow parameters
     colorbar = config.process_settings["colorbar"]
     cmaps_all = [config.cmaps, *cmaps_labels]
-    alphas = lib_clrbrain.pad_seq(config.alphas, num_image_types, 0.9)
+    alphas = libmag.pad_seq(config.alphas, num_image_types, 0.9)
 
     img_size = None
     for result in pool_results:
@@ -200,14 +200,14 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None):
 
     """
     if ext is None: ext = "gif"
-    out_path = lib_clrbrain.combine_paths(base_path, "animated", ext=ext)
-    lib_clrbrain.backup_file(out_path)
+    out_path = libmag.combine_paths(base_path, "animated", ext=ext)
+    libmag.backup_file(out_path)
     if delay is None:
         delay = 100
     if plotted_imgs and len(plotted_imgs[0]) > 0:
         fig = plotted_imgs[0][0].figure
     else:
-        lib_clrbrain.warn("No images available to animate")
+        libmag.warn("No images available to animate")
         return
     anim = animation.ArtistAnimation(
         fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
@@ -216,7 +216,7 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None):
         print("saved animation file to {}".format(out_path))
     except ValueError as e:
         print(e)
-        lib_clrbrain.warn("No animation writer available for Matplotlib")
+        libmag.warn("No animation writer available for Matplotlib")
 
 
 def _setup_labels_cmaps(imgs, cmaps_labels=None):
@@ -345,7 +345,7 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
                     # scale slice bounds to the first image's shape
                     scaling = np.divide(img_shape, main_shape)
                     axis = plot_support.get_plane_axis(config.plane, True)
-                    sl = lib_clrbrain.scale_slice(
+                    sl = libmag.scale_slice(
                         sl, scaling[axis], img_shape[axis])
             else:
                 main_shape = img_shape
@@ -434,7 +434,7 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
             path_base = os.path.join(path_base, "collage")
         mod = "_plane_{}{}".format(
             plot_support.get_plane_axis(config.plane), planei)
-        if suffix: path_base = lib_clrbrain.insert_before_ext(path_base, suffix)
+        if suffix: path_base = libmag.insert_before_ext(path_base, suffix)
         plot_support.save_fig(path_base, config.savefig, mod)
 
 

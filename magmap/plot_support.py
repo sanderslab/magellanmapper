@@ -14,7 +14,7 @@ from matplotlib import pyplot as plt
 
 from magmap import colormaps
 from magmap import config
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import plot_3d
 
 try:
@@ -82,7 +82,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
             last_axis -= 1
         img2d = np.rot90(img2d, rotate, (last_axis - 1, last_axis))
     
-    is_alpha_seq = lib_clrbrain.is_seq(alpha)
+    is_alpha_seq = libmag.is_seq(alpha)
     if num_chls > 1 and not is_alpha_seq:
         # if alphas not explicitly set per channel, make all channels more
         # translucent with increasing numbers of channels 
@@ -174,7 +174,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             filled = [None] * num_imgs2d
         if fill_with is not None:
             # TODO: extend support for multichannel padding beyond 1st image
-            filled[0] = lib_clrbrain.pad_seq(list(fill_with), len(chls), pad)
+            filled[0] = libmag.pad_seq(list(fill_with), len(chls), pad)
         return filled
     
     # use values from config if not already set
@@ -215,7 +215,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
                 # assumes DiscreteColormap sets background as transparent
                 img[img != 0] = np.nan
         if i == 0 and img_norm_setting:
-            img = lib_clrbrain.normalize(img, *img_norm_setting)
+            img = libmag.normalize(img, *img_norm_setting)
         ax_img = imshow_multichannel(
             ax, img, channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
             vmax=vmaxs[i], origin=origin, interpolation="none",
@@ -341,7 +341,7 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
         if arrs_1d is not None:
             arrs_1d_swapped = [
                 None if arr is None else 
-                lib_clrbrain.swap_elements(np.copy(arr), *indices) 
+                libmag.swap_elements(np.copy(arr), *indices) 
                 for arr in arrs_1d]
         return arrs_3d_swapped, arrs_1d_swapped
     
@@ -607,7 +607,7 @@ def save_fig(path, ext, modifier=""):
     """
     if ext is not None and ext not in config.FORMATS_3D:
         plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
-        lib_clrbrain.backup_file(plot_path)
+        libmag.backup_file(plot_path)
         plt.savefig(plot_path)
         print("exported figure to", plot_path)
 

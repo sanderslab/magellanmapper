@@ -58,7 +58,7 @@ from magmap import config
 from magmap import edge_seg
 from magmap.io import export_regions
 from magmap.io import importer
-from magmap.io import lib_clrbrain
+from magmap.io import libmag
 from magmap import ontology
 from magmap import plot_2d
 from magmap import plot_3d
@@ -553,7 +553,7 @@ def register(fixed_file, moving_file_dir, flip=False,
         thresh_atlas, fixed_img_orig.GetSpacing()[::-1])
     
     # save basic metrics in CSV file
-    basename = lib_clrbrain.get_filename_without_ext(fixed_file)
+    basename = libmag.get_filename_without_ext(fixed_file)
     metrics = {
         config.AtlasMetrics.SAMPLE: [basename], 
         config.AtlasMetrics.REGION: config.REGION_ALL, 
@@ -564,7 +564,7 @@ def register(fixed_file, moving_file_dir, flip=False,
         config.AtlasMetrics.DSC_ATLAS_LABELS: [dsc_labels], 
         config.SmoothingMetrics.COMPACTNESS: [compactness],
     }
-    df_path = lib_clrbrain.combine_paths(
+    df_path = libmag.combine_paths(
         name_prefix, config.PATH_ATLAS_IMPORT_METRICS)
     print("\nImported {} whole atlas stats:".format(basename))
     df_io.dict_to_data_frame(metrics, df_path, show="\t")
@@ -622,7 +622,7 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     mod_path = moving_path
     if suffix is not None:
         # adjust image path to load with suffix
-        mod_path = lib_clrbrain.insert_before_ext(mod_path, suffix)
+        mod_path = libmag.insert_before_ext(mod_path, suffix)
     if reg_base is None:
         # load the image directly from given path
         moving_img = sitk.ReadImage(mod_path)
@@ -661,10 +661,10 @@ def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None,
     
     # use prefix as base output path if given and append distinguishing string 
     # to differentiate from original files
-    output_base = lib_clrbrain.insert_before_ext(
+    output_base = libmag.insert_before_ext(
         moving_path if prefix is None else prefix, REREG_SUFFIX, "_")
     if suffix is not None:
-        output_base = lib_clrbrain.insert_before_ext(output_base, suffix)
+        output_base = libmag.insert_before_ext(output_base, suffix)
     imgs_write = {}
     for name, img in zip(names, reg_imgs):
         # use the same reg suffixes, assuming that output_base will give a 
@@ -1141,12 +1141,12 @@ def _setup_vols_df(df_path, max_level):
     df_level_path = None
     df = None
     if max_level is not None:
-        df_level_path = lib_clrbrain.insert_before_ext(
+        df_level_path = libmag.insert_before_ext(
             df_path, "_level{}".format(max_level))
         if os.path.exists(df_path):
             df = pd.read_csv(df_path)
         else:
-            lib_clrbrain.warn(
+            libmag.warn(
                 "Could not find raw stats for drawn labels from {}, will "
                 "measure stats for individual regions repeatedly. To save "
                 "processing time, consider stopping and re-running first "
@@ -1214,7 +1214,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         # adjust image path with suffix
         mod_path = img_path
         if suffix is not None:
-            mod_path = lib_clrbrain.insert_before_ext(img_path, suffix)
+            mod_path = libmag.insert_before_ext(img_path, suffix)
         
         # load data frame if available
         df_path = "{}_volumes.csv".format(os.path.splitext(mod_path)[0])
@@ -1240,7 +1240,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, config.RegNames.IMG_EXP.value, get_sitk=True)
             except FileNotFoundError as e:
                 print(e)
-                lib_clrbrain.warn("will load atlas image instead")
+                libmag.warn("will load atlas image instead")
                 img_sitk = sitk_io.load_registered_img(
                     mod_path, config.RegNames.IMG_ATLAS.value, get_sitk=True)
             img_np = sitk.GetArrayFromImage(img_sitk)
@@ -1253,7 +1253,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, config.RegNames.IMG_LABELS.value)
             except FileNotFoundError as e:
                 print(e)
-                lib_clrbrain.warn(
+                libmag.warn(
                     "will attempt to load trucated labels image instead")
                 labels_img_np = sitk_io.load_registered_img(
                     mod_path, config.RegNames.IMG_LABELS_TRUNC.value)
@@ -1266,7 +1266,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, config.RegNames.IMG_LABELS_DIST.value)
             except FileNotFoundError as e:
                 print(e)
-                lib_clrbrain.warn("will ignore edge measurements")
+                libmag.warn("will ignore edge measurements")
             
             # load labels marker image
             try:
@@ -1274,7 +1274,7 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, config.RegNames.IMG_LABELS_INTERIOR.value)
             except FileNotFoundError as e:
                 print(e)
-                lib_clrbrain.warn("will ignore label markers")
+                libmag.warn("will ignore label markers")
             
             # load heat map of nuclei per voxel if available
             try:
@@ -1282,14 +1282,14 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, config.RegNames.IMG_HEAT_MAP.value)
             except FileNotFoundError as e:
                 print(e)
-                lib_clrbrain.warn("will ignore nuclei stats")
+                libmag.warn("will ignore nuclei stats")
 
             if (extra_metrics and 
                     config.MetricGroups.POINT_CLOUD in extra_metrics):
                 # load blobs with coordinates, label IDs, and cluster IDs
                 # if available
                 try:
-                    blobs = np.load(lib_clrbrain.combine_paths(
+                    blobs = np.load(libmag.combine_paths(
                         mod_path, config.SUFFIX_BLOB_CLUSTERS))
                     print(blobs)
                 except FileNotFoundError as e:
@@ -1301,12 +1301,12 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                     mod_path, config.RegNames.IMG_LABELS_SUBSEG.value)
             except FileNotFoundError as e:
                 print(e)
-                lib_clrbrain.warn("will ignore labels sub-segmentations")
+                libmag.warn("will ignore labels sub-segmentations")
             print("tot blobs", np.sum(heat_map))
             
         # prepare sample name with original name for comparison across 
         # conditions and add an arbitrary number of metadata grouping cols
-        sample = lib_clrbrain.get_filename_without_ext(img_path)
+        sample = libmag.get_filename_without_ext(img_path)
         grouping[config.AtlasMetrics.SAMPLE.value] = sample
         if groups is not None:
             for key in groups.keys():
@@ -1368,7 +1368,7 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
     start_time = time()
     num_img_paths = len(img_paths)
     if num_img_paths < 2:
-        lib_clrbrain.warn(
+        libmag.warn(
             "need at least 2 images to compare, found {}".format(num_img_paths))
     
     # setup labels and load data frame if available
@@ -1394,10 +1394,10 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
             heat_map = sitk_io.load_registered_img(
                 img_paths[0], config.RegNames.IMG_HEAT_MAP.value)
         except FileNotFoundError as e:
-            lib_clrbrain.warn("will ignore nuclei stats")
+            libmag.warn("will ignore nuclei stats")
     
     # sample metadata
-    sample = lib_clrbrain.get_filename_without_ext(img_paths[0])
+    sample = libmag.get_filename_without_ext(img_paths[0])
     grouping = OrderedDict()
     grouping[config.AtlasMetrics.SAMPLE.value] = sample
     if groups is not None:
@@ -1612,7 +1612,7 @@ def main():
     elif reg is config.RegisterTypes.convert_itksnap_labels:
         # convert labels from ITK-SNAP to CSV format
         df = ontology.convert_itksnap_to_df(config.filename)
-        output_path = lib_clrbrain.combine_paths(
+        output_path = libmag.combine_paths(
             config.filename, ".csv", sep="")
         df_io.data_frames_to_csv([df], output_path)
     
@@ -1650,7 +1650,7 @@ def main():
         df_histo_vs_sm[config.GENOTYPE_KEY] = "Vs Smoothed Labels"
         
         # export data frames
-        output_path = lib_clrbrain.combine_paths(
+        output_path = libmag.combine_paths(
             config.filename, "compactness.csv")
         df = pd.concat([df_histo_vs_orig, df_histo_vs_sm, df_unsm_vs_sm])
         df[config.AtlasMetrics.REGION.value] = "all"
@@ -1659,7 +1659,7 @@ def main():
     elif reg is config.RegisterTypes.plot_smoothing_metrics:
         # plot smoothing metrics
         title = "{} Label Smoothing".format(
-            lib_clrbrain.str_to_disp(
+            libmag.str_to_disp(
                 os.path.basename(config.filename).replace(
                     config.PATH_SMOOTHING_METRICS, "")))
         lbls = ("Fractional Change", "Smoothing Filter Size")
@@ -1851,7 +1851,7 @@ def main():
         df = df_io.combine_cols(
             df, (vols.MetricCombos.HOMOGENEITY, ))
         df_io.data_frames_to_csv(
-            df, lib_clrbrain.insert_before_ext(config.filename, "_norm"))
+            df, libmag.insert_before_ext(config.filename, "_norm"))
 
     elif reg is config.RegisterTypes.zscores:
         # measurea and export z-scores for the given metrics to a new 
@@ -1895,7 +1895,7 @@ def main():
             pd.read_csv(config.filename), id_cols, config.groups, 
             config.GENOTYPE_KEY)
         df_io.data_frames_to_csv(
-            df, lib_clrbrain.insert_before_ext(config.filename, "_melted"))
+            df, libmag.insert_before_ext(config.filename, "_melted"))
 
     elif reg is config.RegisterTypes.pivot_conds:
         # pivot condition column to separate metric columns
@@ -1905,7 +1905,7 @@ def main():
             pd.read_csv(config.filename), id_cols, 
             config.AtlasMetrics.CONDITION.value, None, config.groups)
         df_io.data_frames_to_csv(
-            df, lib_clrbrain.insert_before_ext(config.filename, "_condtocol"))
+            df, libmag.insert_before_ext(config.filename, "_condtocol"))
 
     elif reg is config.RegisterTypes.plot_region_dev:
         # plot region development
@@ -1913,7 +1913,7 @@ def main():
             metric = vols.LabelMetrics[config.stats_type].name
             atlas_stats.plot_region_development(metric, size, show)
         except KeyError:
-            lib_clrbrain.warn(
+            libmag.warn(
                 "\"{}\" metric not found in {} for developmental plots"
                 .format(config.stats_type, [e.name for e in vols.LabelMetrics]))
         

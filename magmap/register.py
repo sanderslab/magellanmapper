@@ -55,6 +55,7 @@ from magmap.atlas import atlas_refiner
 from magmap import atlas_stats
 from magmap import clustering
 from magmap import config
+from magmap import cv_nd
 from magmap.atlas import edge_seg
 from magmap.io import export_regions
 from magmap.io import importer
@@ -235,9 +236,9 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
         img = imgs[i]
         result_img_np = sitk.GetArrayFromImage(img)
         if inpaint:
-            result_img_np = plot_3d.in_paint(result_img_np, to_fill)
+            result_img_np = cv_nd.in_paint(result_img_np, to_fill)
         if carve:
-            _, mask = plot_3d.carve(fixed_img_np, thresh, holes_area)
+            _, mask = cv_nd.carve(fixed_img_np, thresh, holes_area)
             result_img_np[~mask] = 0
         result_img = sitk_io.replace_sitk_with_numpy(img, result_img_np)
         result_imgs.append(result_img)
@@ -549,7 +550,7 @@ def register(fixed_file, moving_file_dir, flip=False,
     # measure compactness of fixed image
     fixed_img_orig_np = sitk.GetArrayFromImage(fixed_img_orig)
     thresh_atlas = fixed_img_orig_np > filters.threshold_mean(fixed_img_orig_np)
-    compactness, _, _ = plot_3d.compactness_3d(
+    compactness, _, _ = cv_nd.compactness_3d(
         thresh_atlas, fixed_img_orig.GetSpacing()[::-1])
     
     # save basic metrics in CSV file
@@ -889,7 +890,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     imgs_to_show.append(img_raw)
     holes_area = settings["holes_area"]
     if carve_threshold and holes_area:
-        img_mean, _, img_mean_unfilled = plot_3d.carve(
+        img_mean, _, img_mean_unfilled = cv_nd.carve(
             img_mean, thresh=carve_threshold, holes_area=holes_area, 
             return_unfilled=True)
         img_unfilled = sitk_io.replace_sitk_with_numpy(

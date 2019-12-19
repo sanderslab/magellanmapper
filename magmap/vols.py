@@ -18,7 +18,7 @@ from magmap import clustering
 from magmap import config
 from magmap.io import libmag
 from magmap.atlas import ontology
-from magmap import plot_3d
+from magmap import cv_nd
 from magmap.io import df_io
 
 # metric keys and column names
@@ -162,13 +162,13 @@ class LabelToEdge(object):
         label_mask = cls.labels_img_np == label_id
         props = measure.regionprops(label_mask.astype(np.int))
         if len(props) > 0 and props[0].bbox is not None:
-            _, slices = plot_3d.get_bbox_region(props[0].bbox)
+            _, slices = cv_nd.get_bbox_region(props[0].bbox)
             
             # work on a view of the region for efficiency, obtaining borders 
             # as eroded region and writing into new array
             region = cls.labels_img_np[tuple(slices)]
             label_mask_region = region == label_id
-            borders = plot_3d.perimeter_nd(label_mask_region)
+            borders = cv_nd.perimeter_nd(label_mask_region)
         return label_id, slices, borders
 
 def make_labels_edge(labels_img_np):
@@ -596,7 +596,7 @@ class MeasureLabel(object):
         label_size = np.sum(label_mask)
         
         if label_size > 0:
-            compactness, area, _ = plot_3d.compactness_3d(
+            compactness, area, _ = cv_nd.compactness_3d(
                 label_mask, cls.spacing)
             metrics[LabelMetrics.SurfaceArea] = area
             metrics[LabelMetrics.Compactness] = compactness

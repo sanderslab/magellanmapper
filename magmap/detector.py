@@ -13,6 +13,7 @@ from scipy.spatial import distance
 from skimage.feature import blob_log
 
 from magmap import config
+from magmap import cv_nd
 from magmap.io import libmag
 from magmap import plot_3d
 from magmap.io import sqlite
@@ -92,7 +93,7 @@ def detect_blobs(roi, channel, exclude_border=None):
     if isotropic is not None:
         # interpolate for (near) isotropy during detection, using only the 
         # first process settings since applies to entire ROI
-        roi = plot_3d.make_isotropic(roi, isotropic)
+        roi = cv_nd.make_isotropic(roi, isotropic)
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     blobs_all = []
     for i in channels:
@@ -130,7 +131,7 @@ def detect_blobs(roi, channel, exclude_border=None):
     if isotropic is not None:
         # if detected on isotropic ROI, need to reposition blob coordinates 
         # for original, non-isotropic ROI
-        isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
+        isotropic_factor = cv_nd.calc_isotropic_factor(isotropic)
         blobs_all = multiply_blob_rel_coords(blobs_all, 1 / isotropic_factor)
         blobs_all = multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
     

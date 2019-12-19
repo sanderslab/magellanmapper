@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 import SimpleITK as sitk
 
 from magmap import config
+from magmap import cv_nd
 from magmap import detector
 from magmap.io import libmag
 from magmap.io import sqlite
@@ -121,8 +122,8 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
             blobs_orig = blobs
             if isotropic is not None:
                 # interpolation for isotropy if set in first processing profile
-                img3d = plot_3d.make_isotropic(img3d, isotropic)
-                isotropic_factor = plot_3d.calc_isotropic_factor(isotropic)
+                img3d = cv_nd.make_isotropic(img3d, isotropic)
+                isotropic_factor = cv_nd.calc_isotropic_factor(isotropic)
                 blobs_orig = np.copy(blobs)
                 blobs = detector.multiply_blob_rel_coords(
                     blobs, isotropic_factor)
@@ -174,7 +175,7 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
             img3d_truth = plot_3d.build_ground_truth(
                 np.zeros(size[::-1], dtype=np.uint8), blobs)
             if isotropic is not None:
-                img3d_truth = plot_3d.make_isotropic(img3d_truth, isotropic)
+                img3d_truth = cv_nd.make_isotropic(img3d_truth, isotropic)
                 # remove fancy blending since truth set must be binary
                 img3d_truth[img3d_truth >= 0.5] = 1
                 img3d_truth[img3d_truth < 0.5] = 0

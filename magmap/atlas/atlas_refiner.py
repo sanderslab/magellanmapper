@@ -20,7 +20,7 @@ from magmap.io import export_stack
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap import plot_3d
+from magmap import cv_nd
 from magmap import plot_support
 from magmap import profiles
 from magmap.atlas import segmenter
@@ -39,7 +39,7 @@ def _get_bbox(img_np, threshold=10):
     Returns:
         Bounding box of the largest object in the image.
     """
-    props_sizes = plot_3d.get_thresholded_regionprops(
+    props_sizes = cv_nd.get_thresholded_regionprops(
         img_np, threshold=threshold, sort_reverse=True)
     if props_sizes is None: return None
     labels_bbox = props_sizes[0][0].bbox
@@ -313,10 +313,10 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             for expandi in range(len(region_ref)):
                 # find bounding boxes for labels and atlas within region
                 bbox = _get_bbox(region[expandi], 0) # assume pos labels region
-                shape, slices = plot_3d.get_bbox_region(bbox)
+                shape, slices = cv_nd.get_bbox_region(bbox)
                 plane_region = region[expandi, slices[0], slices[1]]
                 bbox_ref = _get_bbox(region_ref[expandi])
-                shape_ref, slices_ref = plot_3d.get_bbox_region(bbox_ref)
+                shape_ref, slices_ref = cv_nd.get_bbox_region(bbox_ref)
                 # expand bounding box region of labels to that of atlas
                 plane_region = transform.resize(
                     plane_region, shape_ref, preserve_range=True, order=0, 
@@ -340,12 +340,12 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
                 img_np[i] = img_np[mirrori - 1]
         for rot in rotate:
             print("rotating by", rot)
-            img_np = plot_3d.rotate_nd(img_np, rot[0], rot[1], order=0)
+            img_np = cv_nd.rotate_nd(img_np, rot[0], rot[1], order=0)
     
     if affine:
         for aff in affine:
             print("performing affine of", aff)
-            img_np = plot_3d.affine_nd(img_np, **aff)
+            img_np = cv_nd.affine_nd(img_np, **aff)
     
     if mirror is not None and mirror != -1:
         # reset mirror based on fractional profile setting
@@ -470,11 +470,11 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         # limit the reference image to the labels since when generating 
         # label templates since labels can only be extended from labeled areas; 
         # include padding by dilating slightly for unlabeled borders
-        plot_3d.remove_bg_from_dil_fg(
+        cv_nd.remove_bg_from_dil_fg(
             region_ref_filt, region[planei] != 0, morphology.disk(surr_size))
     # order extension from smallest to largest regions so largest have 
     # final say
-    prop_sizes = plot_3d.get_thresholded_regionprops(
+    prop_sizes = cv_nd.get_thresholded_regionprops(
         region_ref_filt, threshold=threshold)
     if prop_sizes is None: return
     
@@ -494,15 +494,15 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             # generate an edge map based on reference image
             thresh = (config.register_settings["atlas_threshold"] 
                       if config.register_settings["log_atlas_thresh"] else None)
-            atlas_log = plot_3d.laplacian_of_gaussian_img(
+            atlas_log = cv_nd.laplacian_of_gaussian_img(
                 region_ref, sigma=log_sigma, thresh=thresh)
-            edges = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
+            edges = cv_nd.zero_crossing(atlas_log, 1).astype(np.uint8)
     print("plane {}: extending {} props of sizes {}".format(
         planei, len(prop_sizes), [p[1] for p in prop_sizes]))
     
     for prop_size in prop_sizes:
         # get the region from the property
-        _, slices = plot_3d.get_bbox_region(prop_size[0].bbox)
+        _, slices = cv_nd.get_bbox_region(prop_size[0].bbox)
         prop_region_ref = region_ref[:, slices[0], slices[1]]
         prop_region = region[:, slices[0], slices[1]]
         edges_region = None
@@ -536,15 +536,16 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 fg = plane_add != 0
                 fg_thresh = prop_region_ref[planei] > threshold
                 to_fill = np.logical_and(fg_thresh, ~fg)
-                plane_add = plot_3d.in_paint(plane_add, to_fill)
+                plane_add = cv_nd.in_paint(plane_add, to_fill)
             save_imgs["edge_resized_plane{}".format(planei)] = [
                     prop_region_ref[planei], plane_add]
             if edges_region is not None:
                 # reannotate based on edge map; allow erosion to lose labels to
                 # mimic tapering off of labels, preferentially eroding
                 # centrally located labels
-                perim = plot_3d.perimeter_nd(plane_add != 0, largest_only=True)
-                wt_dists = plot_3d.signed_distance_transform(~perim)
+                perim = cv_nd.perimeter_nd(
+                    plane_add != 0, largest_only=True)
+                wt_dists = cv_nd.signed_distance_transform(~perim)
                 markers, _ = segmenter.labels_to_markers_erosion(
                     plane_add, marker_erosion, -1, marker_erosion_min,
                     marker_erosion_use_min, wt_dists=wt_dists)
@@ -708,7 +709,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
     
     # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
-    fn_selem = plot_3d.get_selem(labels_img_np.ndim)
+    fn_selem = cv_nd.get_selem(labels_img_np.ndim)
     
     # sort labels by size, starting from largest to smallest
     label_ids = np.unique(labels_img_np)
@@ -724,9 +725,9 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
         print("smoothing label ID {}".format(label_id))
         
         # get bounding box for label region
-        bbox = plot_3d.get_label_bbox(labels_img_np, label_id)
+        bbox = cv_nd.get_label_bbox(labels_img_np, label_id)
         if bbox is None: continue
-        _, slices = plot_3d.get_bbox_region(
+        _, slices = cv_nd.get_bbox_region(
             bbox, np.ceil(2 * filter_size).astype(int), labels_img_np.shape)
         
         # get region, skipping if no region left
@@ -760,7 +761,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
                 region_size_smoothed = np.sum(smoothed)
             
             # fill empty spaces with closest surrounding labels
-            region = plot_3d.in_paint(region, label_mask_region)
+            region = cv_nd.in_paint(region, label_mask_region)
             
         elif mode is config.SmoothingModes.gaussian:
             # smoothing with gaussian blur
@@ -776,7 +777,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
             region_size_smoothed = np.sum(smoothed)
             
             # fill empty spaces with closest surrounding labels
-            region = plot_3d.in_paint(region, label_mask_region)
+            region = cv_nd.in_paint(region, label_mask_region)
         
         # replace smoothed volume within in-painted region
         region[smoothed] = label_id
@@ -838,7 +839,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         if np.sum(mask) == 0:
             print("label {} warning: region missing".format(label_id))
             return mask, 0, 0, np.nan
-        compactness, area, vol = plot_3d.compactness_3d(mask, spacing)
+        compactness, area, vol = cv_nd.compactness_3d(mask, spacing)
         return mask, area, vol, compactness
     
     pxs = {}
@@ -854,7 +855,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
             orig_img_np == label_id, smoothed_img_np == label_id)
         props = measure.regionprops(label_mask.astype(np.int))
         if len(props) < 1 or props[0].bbox is None: continue
-        _, slices = plot_3d.get_bbox_region(
+        _, slices = cv_nd.get_bbox_region(
             props[0].bbox, 2, orig_img_np.shape)
         
         # measure surface area for SA:vol and to get vol mask
@@ -1097,10 +1098,10 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
     if rotate:
         for rot in rotate:
-            img_atlas_np = plot_3d.rotate_nd(img_atlas_np, rot[0], rot[1])
+            img_atlas_np = cv_nd.rotate_nd(img_atlas_np, rot[0], rot[1])
     if affine:
         for aff in affine:
-            img_atlas_np = plot_3d.affine_nd(img_atlas_np, **aff)
+            img_atlas_np = cv_nd.affine_nd(img_atlas_np, **aff)
     if is_mirror and mirror is not None:
         # TODO: consider removing dup since not using
         dup = config.register_settings["labels_dup"]
@@ -1109,7 +1110,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     
     if crop:
         # crop atlas to the mask of the labels with some padding
-        img_labels_np, img_atlas_np, crop_sl = plot_3d.crop_to_labels(
+        img_labels_np, img_atlas_np, crop_sl = cv_nd.crop_to_labels(
             img_labels_np, img_atlas_np, mask_lbls)
         if crop_sl[0].start > 0:
             # offset extension indices and crop labels mask
@@ -1159,9 +1160,9 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             if rotate:
                 # un-rotate so sagittal planes are oriented as orig drawn
                 for rot in rotate[::-1]:
-                    mask_lbls_unrot = plot_3d.rotate_nd(
+                    mask_lbls_unrot = cv_nd.rotate_nd(
                         mask_lbls_unrot, -rot[0], rot[1], 0)
-                    lbls_unrot = plot_3d.rotate_nd(
+                    lbls_unrot = cv_nd.rotate_nd(
                         lbls_unrot, -rot[0], rot[1], 0)
             planes_lbl = 0
             planes_tot = 0.
@@ -1273,7 +1274,7 @@ def import_atlas(atlas_dir, show=True):
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
     thresh = config.register_settings["atlas_threshold_all"]
     thresh_atlas = img_atlas_np > thresh
-    compactness, _, _ = plot_3d.compactness_3d(
+    compactness, _, _ = cv_nd.compactness_3d(
         thresh_atlas, img_atlas.GetSpacing()[::-1])
     metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
     

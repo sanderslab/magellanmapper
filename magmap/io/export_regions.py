@@ -18,7 +18,7 @@ from magmap import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology
-from magmap import plot_3d
+from magmap import cv_nd
 from magmap.io import df_io
 from magmap.io import sitk_io
 from magmap import vols
@@ -200,7 +200,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     print("blobs_ids: {}".format(blobs_ids))
     
     # build heat map to store densities per label px and save to file
-    heat_map = plot_3d.build_heat_map(labels_img.shape, coord_scaled)
+    heat_map = cv_nd.build_heat_map(labels_img.shape, coord_scaled)
     out_path = sitk_io.reg_out_path(
         mod_path, config.RegNames.IMG_HEAT_MAP.value)
     print("writing {}".format(out_path))

@@ -13,7 +13,7 @@ import numpy as np
 from magmap.atlas import atlas_refiner
 from magmap import config
 from magmap.io import libmag
-from magmap import plot_3d
+from magmap import cv_nd
 from magmap import profiles
 from magmap.atlas import segmenter
 from magmap.io import sitk_io
@@ -113,10 +113,10 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         print("generating LoG edge-detected images with sigma", log_sigma)
         thresh = (config.register_settings["atlas_threshold"] 
                   if config.register_settings["log_atlas_thresh"] else None)
-        atlas_log = plot_3d.laplacian_of_gaussian_img(
+        atlas_log = cv_nd.laplacian_of_gaussian_img(
             atlas_np, sigma=log_sigma, labels_img=labels_img_np, thresh=thresh)
         atlas_sitk_log = sitk_io.replace_sitk_with_numpy(atlas_sitk, atlas_log)
-        atlas_edge = plot_3d.zero_crossing(atlas_log, 1).astype(np.uint8)
+        atlas_edge = cv_nd.zero_crossing(atlas_log, 1).astype(np.uint8)
         atlas_sitk_edge = sitk_io.replace_sitk_with_numpy(
             atlas_sitk, atlas_edge)
     else:
@@ -428,7 +428,7 @@ def edge_distances(labels, atlas_edge=None, path=None, spacing=None):
     
     # create distance map between edges of original and new segmentations
     labels_edge = vols.make_labels_edge(labels)
-    dist_to_orig, _, _ = plot_3d.borders_distance(
+    dist_to_orig, _, _ = cv_nd.borders_distance(
         atlas_edge != 0, labels_edge != 0, spacing=spacing)
     
     return dist_to_orig, labels_edge

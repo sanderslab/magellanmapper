@@ -15,7 +15,7 @@ from magmap import config
 from magmap.io import libmag
 from magmap.gui import plot_editor
 from magmap import plot_support
-from magmap import plot_3d
+from magmap import cv_nd
 from magmap.io import sitk_io
 
 
@@ -469,7 +469,7 @@ class InterpolatePlanes:
         """
         if not any(self.bounds):
             raise ValueError("boundaries not fully set: {}".format(self.bounds))
-        plot_3d.interpolate_label_between_planes(
+        cv_nd.interpolate_label_between_planes(
             labels_img, self.label_id, config.PLANE.index(self.plane), 
             self.bounds)
     

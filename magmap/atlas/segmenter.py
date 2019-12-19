@@ -15,6 +15,7 @@ from skimage import measure
 from skimage import morphology
 
 from magmap import config
+from magmap import cv_nd
 from magmap import detector
 from magmap.io import libmag
 from magmap import plot_3d
@@ -36,7 +37,7 @@ def _carve_segs(roi, blobs):
     carved = roi
     if blobs is None:
         # clean up by using simple threshold to remove all background
-        carved, _ = plot_3d.carve(carved)
+        carved, _ = cv_nd.carve(carved)
     else:
         # use blobs as ellipsoids to identify background to remove; 
         # TODO: consider setting spacing in config since depends on 
@@ -202,7 +203,7 @@ def labels_to_markers_blob(labels_img):
     for label_id in labels_unique:
         if label_id == 0: continue
         print("finding centroid for label ID {}".format(label_id))
-        props = plot_3d.get_label_props(labels_img, label_id)
+        props = cv_nd.get_label_props(labels_img, label_id)
         if len(props) >= 1: 
             # get centroid and convert to ellipsoid marker
             blob = [int(n) for n in props[0].centroid]
@@ -305,13 +306,13 @@ class LabelToMarkerErosion(object):
         # get region as mask; assume that label exists and will yield a 
         # bounding box since labels here are generally derived from the 
         # labels image itself
-        bbox = plot_3d.get_label_bbox(cls.labels_img, label_id)
-        _, slices = plot_3d.get_bbox_region(bbox)
+        bbox = cv_nd.get_label_bbox(cls.labels_img, label_id)
+        _, slices = cv_nd.get_bbox_region(bbox)
         region = cls.labels_img[tuple(slices)]
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
         region_size_filtered = region_size
-        fn_selem = plot_3d.get_selem(cls.labels_img.ndim)
+        fn_selem = cv_nd.get_selem(cls.labels_img.ndim)
         
         # erode the labels, starting with the given filter size and decreasing
         # if the resulting label size falls below a given size ratio
@@ -497,13 +498,13 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None,
         mask = mask_atlas(atlas_img, labels_img)
     elif atlas_img is not None:
         # otsu seems to give more inclusive threshold for these atlases
-        _, mask = plot_3d.carve(
+        _, mask = cv_nd.carve(
             atlas_img, thresh=filters.threshold_otsu(atlas_img), 
             holes_area=5000)
     else:
         # default to using labels, opening them up small holes to prevent 
         # spillover across artifacts that may bridge them
-        fn_selem = plot_3d.get_selem(labels_img.ndim)
+        fn_selem = cv_nd.get_selem(labels_img.ndim)
         mask = morphology.binary_opening(labels_img != 0, fn_selem(2))
     
     exclude = None
@@ -603,7 +604,7 @@ class SubSegmenter(object):
         slices = None
         if label_size > 0:
             props = measure.regionprops(label_mask.astype(np.int))
-            _, slices = plot_3d.get_bbox_region(props[0].bbox)
+            _, slices = cv_nd.get_bbox_region(props[0].bbox)
             
             # work on a view of the region for efficiency
             labels_region = np.copy(cls.labels_img_np[tuple(slices)])
@@ -670,7 +671,7 @@ class SubSegmenter(object):
             '''
             if retained_unique.size > 0:
                 # in-paint missing space from non-retained sub-labels
-                labels_seg = plot_3d.in_paint(
+                labels_seg = cv_nd.in_paint(
                     labels_retained, labels_retained == 0)
                 labels_seg[~label_mask_region] = 0
             else:

@@ -41,6 +41,7 @@ from magmap.gui import atlas_editor
 from magmap import chunking
 from magmap.io import cli
 from magmap import config
+from magmap import cv_nd
 from magmap import detector
 from magmap.io import importer
 from magmap.io import libmag
@@ -491,9 +492,9 @@ class Visualization(HasTraits):
             label_id: ID of label to display.
         """
         # get bounding box for label region
-        bbox = plot_3d.get_label_bbox(config.labels_img, label_id)
+        bbox = cv_nd.get_label_bbox(config.labels_img, label_id)
         if bbox is None: return
-        shape, slices = plot_3d.get_bbox_region(
+        shape, slices = cv_nd.get_bbox_region(
             bbox, 10, config.labels_img.shape)
         
         # update GUI dimensions

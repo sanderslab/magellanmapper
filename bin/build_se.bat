@@ -12,6 +12,7 @@ SET "generator=Visual Studio 16 2019"
 SET "arch=x64"
 
 : make build folder
+cd ..
 pushd "%~dp0"
 cd ..
 mkdir "%build_dir%"

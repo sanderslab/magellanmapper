@@ -25,8 +25,8 @@ pass_output=0
 quiet=0
 
 # run from parent directory
-BASE_DIR="$(dirname "$0")"
-cd "$BASE_DIR"
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 echo "$PWD"
 
 OPTIND=1

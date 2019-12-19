@@ -1,6 +1,6 @@
 #!/bin/bash
 # 3D object clean-up with MeshLab
-# Author: David Young 2018
+# Author: David Young 2018, 2019
 
 HELP="
 Clean up 3D object surfaces using MeshLab scripting.
@@ -17,9 +17,9 @@ Arguments:
 "
 
 # run from parent directory
-base_dir="`dirname $0`"
-cd "$base_dir"
-echo $PWD
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
+echo "$PWD"
 
 path_meshlab=""
 path_meshlab_server=""

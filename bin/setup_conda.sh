@@ -60,8 +60,8 @@ while getopts hn:s: opt; do
 done
 
 # run from script directory
-BASE_DIR="$(dirname "$0")"
-cd "$BASE_DIR"
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 BASE_DIR="$PWD"
 
 # load dependencies

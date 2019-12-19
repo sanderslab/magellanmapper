@@ -90,9 +90,9 @@ done
 shift "$((OPTIND-1))"
 EXTRA_ARGS="$@"
 
-# run from script directory
-BASE_DIR="$(dirname "$0")"
-cd "$BASE_DIR"
+# run from script's parent directory
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 BASE_DIR="$PWD"
 
 # load dependencies

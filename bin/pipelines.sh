@@ -369,9 +369,9 @@ elif [[ $num_mic_profiles -gt 1 ]]; then
   channel=-1
 fi
 
-# run from script's directory
-BASE_DIR="$(dirname "$0")"
-cd "$BASE_DIR"
+# run from script's parent directory
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 BASE_DIR="$PWD"
 
 # set pat combinations for common grouped pathways

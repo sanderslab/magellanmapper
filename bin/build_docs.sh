@@ -22,8 +22,8 @@ build_api=0
 clean=0
 
 # run from project root directory
-BASE_DIR="$(dirname "$0")"
-cd "$BASE_DIR"
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 echo "$PWD"
 
 OPTIND=1

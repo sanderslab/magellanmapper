@@ -57,10 +57,10 @@ done
 
 echo "Building SimpleElastix..."
 
-# base directory is script's directory, and default repo and build dirs 
+# base directory is script's parent directory, and default repo and build dirs 
 # are in parent directory of base dir
-base_dir="$(dirname "$0")"
-cd "$base_dir"
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 base_dir="$PWD"
 if [[ -z "$se_dir" ]]; then
   se_dir="${base_dir}/../SimpleElastix"

@@ -31,8 +31,8 @@ git_hash="" # git commit, including short hashes
 username="ec2-user" # default on many EC2 distros
 
 # run from parent directory
-base_dir="$(dirname "$0")"
-cd "$base_dir"
+BASE_DIR="$(dirname "$0")/.."
+cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 
 OPTIND=1
 while getopts hi:p:ufr:d:g:n: opt; do

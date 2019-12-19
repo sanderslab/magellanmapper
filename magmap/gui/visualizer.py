@@ -38,11 +38,11 @@ from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 
 from magmap.gui import atlas_editor
-from magmap import chunking
+from magmap.cv import chunking
 from magmap.io import cli
 from magmap import config
-from magmap import cv_nd
-from magmap import detector
+from magmap.cv import cv_nd
+from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.atlas import ontology
@@ -50,7 +50,7 @@ from magmap import plot_3d
 from magmap import plot_2d
 from magmap import plot_support
 from magmap.gui import roi_editor
-from magmap.atlas import segmenter
+from magmap.cv import segmenter
 from magmap.io import sqlite
 
 _ROI_DEFAULT = "None selected"

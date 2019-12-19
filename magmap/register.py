@@ -55,7 +55,7 @@ from magmap.atlas import atlas_refiner
 from magmap import atlas_stats
 from magmap import clustering
 from magmap import config
-from magmap import cv_nd
+from magmap.cv import cv_nd
 from magmap.atlas import edge_seg
 from magmap.io import export_regions
 from magmap.io import importer

@@ -13,9 +13,9 @@ import numpy as np
 from magmap.atlas import atlas_refiner
 from magmap import config
 from magmap.io import libmag
-from magmap import cv_nd
+from magmap.cv import cv_nd
 from magmap import profiles
-from magmap.atlas import segmenter
+from magmap.cv import segmenter
 from magmap.io import sitk_io
 from magmap import vols
 

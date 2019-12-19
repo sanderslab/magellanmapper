@@ -11,7 +11,7 @@ from time import time
 import numpy as np
 from skimage import transform
 
-from magmap import chunking
+from magmap.cv import chunking
 from magmap import config
 from magmap.io import importer
 from magmap.io import libmag

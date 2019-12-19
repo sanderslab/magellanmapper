@@ -15,7 +15,7 @@ from magmap import config
 from magmap.io import libmag
 from magmap.gui import plot_editor
 from magmap import plot_support
-from magmap import cv_nd
+from magmap.cv import cv_nd
 from magmap.io import sitk_io
 
 

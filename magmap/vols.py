@@ -18,7 +18,7 @@ from magmap import clustering
 from magmap import config
 from magmap.io import libmag
 from magmap.atlas import ontology
-from magmap import cv_nd
+from magmap.cv import cv_nd
 from magmap.io import df_io
 
 # metric keys and column names

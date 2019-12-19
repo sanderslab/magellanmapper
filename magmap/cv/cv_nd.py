@@ -13,7 +13,7 @@ from skimage import morphology
 from skimage import transform
 
 from magmap import config
-from magmap.atlas import segmenter
+from magmap.cv import segmenter
 from magmap.io import libmag
 
 

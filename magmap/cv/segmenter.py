@@ -15,8 +15,8 @@ from skimage import measure
 from skimage import morphology
 
 from magmap import config
-from magmap import cv_nd
-from magmap import detector
+from magmap.cv import cv_nd
+from magmap.cv import detector
 from magmap.io import libmag
 from magmap import plot_3d
 from magmap.io import df_io

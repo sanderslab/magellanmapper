@@ -17,7 +17,7 @@ from skimage import morphology
 from magmap import colormaps
 from magmap import config
 from magmap.io import libmag
-from magmap.atlas import segmenter
+from magmap.cv import segmenter
 
 #: float: Maximum number of points to show.
 _MASK_DIVIDEND = 10000.0  # 3D max points

@@ -20,10 +20,10 @@ from magmap.io import export_stack
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap import cv_nd
+from magmap.cv import cv_nd
 from magmap import plot_support
 from magmap import profiles
-from magmap.atlas import segmenter
+from magmap.cv import segmenter
 from magmap.io import sitk_io
 from magmap.io import df_io
 

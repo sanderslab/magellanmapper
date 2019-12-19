@@ -15,8 +15,8 @@ from matplotlib import pyplot as plt
 import SimpleITK as sitk
 
 from magmap import config
-from magmap import cv_nd
-from magmap import detector
+from magmap.cv import cv_nd
+from magmap.cv import detector
 from magmap.io import libmag
 from magmap.io import sqlite
 from magmap import plot_3d

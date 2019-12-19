@@ -1,24 +1,16 @@
 #!/bin/bash
 # Chunking image stacks
 # Author: David Young, 2017, 2018
-"""Divides a region into smaller chunks and reassembles it.
-
-Attributes:
-    max_pixels_factor_denoise: Factor to multiply by scaling
-        for maximum number of pixels per sub ROI when denoising.
-        See detector.calc_scaling_factor() for scaling.
-    max_pixels_factor_segment: Factor to multiply by scaling
-        for maximum number of pixels per sub ROI when segmenting.
-    overlap_factor: Factor to multiply by scaling
-        for maximum number of pixels per sub ROI for overlap.
-"""
+"""Divides a region into smaller chunks and reassembles it."""
 
 import numpy as np
 
 from magmap import config
-from magmap import detector
+from magmap.cv import detector
 from magmap.io import libmag
 
+#: int: Factor to multiply by scaling for maximum number of pixels per
+# sub ROI for overlap.
 OVERLAP_FACTOR = 5
 
 def calc_overlap():
@@ -28,7 +20,7 @@ def calc_overlap():
         Overlap as an array in the same shape and order as in 
         :attr:``detector.resolutions``.
     """
-    return np.ceil(np.multiply(detector.calc_scaling_factor(), 
+    return np.ceil(np.multiply(detector.calc_scaling_factor(),
                                OVERLAP_FACTOR)).astype(int)
 
 def _num_units(size, max_pixels):

@@ -76,7 +76,7 @@ from magmap.io import np_io
 from magmap.io import sqlite
 from magmap import mlearn
 from magmap import profiles
-from magmap import stack_detect
+from magmap.cv import stack_detect
 from magmap.atlas import transformer
 
 

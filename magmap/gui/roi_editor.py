@@ -25,7 +25,7 @@ from skimage import transform
 
 from magmap import colormaps
 from magmap import config
-from magmap import detector
+from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
 from magmap import plot_support

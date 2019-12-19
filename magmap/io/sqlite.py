@@ -14,7 +14,7 @@ import sqlite3
 import numpy as np
 
 from magmap import config
-from magmap import detector
+from magmap.cv import detector
 from magmap.io import libmag
 
 DB_NAME_VERIFIED = "clrbrain_verified.db"

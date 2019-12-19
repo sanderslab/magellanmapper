@@ -15,9 +15,9 @@ from time import time
 import numpy as np
 import pandas as pd
 
-from magmap import chunking
+from magmap.cv import chunking
 from magmap import config
-from magmap import detector
+from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
 from magmap import plot_3d

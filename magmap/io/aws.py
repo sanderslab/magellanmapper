@@ -13,7 +13,7 @@ import boto3.session
 from botocore.exceptions import ClientError
 
 from magmap.io import cli
-from magmap import config
+from magmap.settings import config
 
 _EC2_STATES = (
     "pending", "running", "shutting-down", "terminated", "stopping", "stopped")

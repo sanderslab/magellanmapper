@@ -14,7 +14,7 @@ import pandas as pd
 from skimage import exposure
 
 from magmap.plot import colormaps
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.stats import mlearn
 from magmap.plot import plot_support
@@ -1037,7 +1037,7 @@ def main():
         
         # generate bar plot
         ax, out_path = plot_bars(
-            config.filename, data_cols=("vals.effect", ), 
+            config.filename, data_cols=("vals.effect",), 
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
             legend_names="", col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, save=False,
@@ -1091,7 +1091,7 @@ def main():
             config.filename, cols[1], cols[0], 
             cols_group=cols_group, labels=labels, title=title,
             fig_size=size, show=show, suffix=config.suffix, 
-            alpha=config.alphas[0]*255)
+            alpha=config.alphas[0] * 255)
     
     if ax is not None:
         post_plot(ax, out_path, config.savefig, show)

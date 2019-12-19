@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from magmap.plot import colormaps
-from magmap import config
+from magmap.settings import config
 from magmap.io import export_stack
 from magmap.io import libmag
 from magmap.io import np_io
@@ -144,7 +144,7 @@ def plot_region_development(metric, size=None, show=True):
             df_norm, id_cols, "RegionName", metric)
         plot_2d.plot_lines(
             config.filename, "Age", regions, 
-            units=(None, 
+            units=(None,
                    config.plot_labels[config.PlotLabels.X_UNIT]), 
             title=("Structure Development Normalized to Whole "
                    "Brain ({}, Level {})".format(metric, level)),
@@ -307,7 +307,7 @@ def smoothing_peak(df, thresh_label_loss=None, filter_size=None):
             df[config.SmoothingMetrics.FILTER_SIZE.value], (filter_size, 0))]
     sm_qual = df[config.SmoothingMetrics.SM_QUALITY.value]
     df_peak = df.loc[np.logical_or(
-        sm_qual == sm_qual.max(), 
+        sm_qual == sm_qual.max(),
         df[config.SmoothingMetrics.FILTER_SIZE.value] == 0)]
     return df_peak
 

@@ -12,7 +12,7 @@ import matplotlib.patches as patches
 import numpy as np
 from skimage import draw
 
-from magmap import config
+from magmap.settings import config
 from magmap.atlas import ontology
 from magmap.plot import plot_support
 
@@ -145,7 +145,7 @@ class PlotEditor:
     
     def show_overview(self):
         # assume colorbar already shown if set and image previously displayed
-        colorbar = (config.process_settings["colorbar"] 
+        colorbar = (config.process_settings["colorbar"]
                     and len(self.axes.images) < 1)
         self.axes.clear()
         self.hline = None

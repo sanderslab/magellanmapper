@@ -12,7 +12,7 @@ import warnings
 import numpy as np
 import pandas as pd
 
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 
 

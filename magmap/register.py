@@ -54,7 +54,7 @@ from skimage import transform
 from magmap.atlas import atlas_refiner
 from magmap.stats import atlas_stats
 from magmap.stats import clustering
-from magmap import config
+from magmap.settings import config
 from magmap.cv import cv_nd
 from magmap.atlas import edge_seg
 from magmap.io import export_regions
@@ -518,15 +518,15 @@ def register(fixed_file, moving_file_dir, flip=False,
         # write atlas and labels files, transposed according to plane setting
         if new_atlas:
             imgs_names = (
-                config.RegNames.IMG_ATLAS.value, 
+                config.RegNames.IMG_ATLAS.value,
                 config.RegNames.IMG_LABELS.value)
             imgs_write = [img_moved, labels_img]
         else:
             imgs_names = (
-                config.RegNames.IMG_EXP.value, 
-                config.RegNames.IMG_ATLAS.value, 
-                config.RegNames.IMG_ATLAS_PRECUR.value, 
-                config.RegNames.IMG_LABELS.value, 
+                config.RegNames.IMG_EXP.value,
+                config.RegNames.IMG_ATLAS.value,
+                config.RegNames.IMG_ATLAS_PRECUR.value,
+                config.RegNames.IMG_LABELS.value,
                 config.RegNames.IMG_LABELS_TRUNC.value)
         for i in range(len(imgs_write)):
             out_path = imgs_names[i]
@@ -1703,7 +1703,7 @@ def main():
         df_io.data_frames_to_csv(df_aggr, config.PATH_SMOOTHING_METRICS)
 
     elif reg in (
-            config.RegisterTypes.make_edge_images, 
+            config.RegisterTypes.make_edge_images,
             config.RegisterTypes.make_edge_images_exp):
         
         # convert atlas or experiment image and associated labels 
@@ -1719,7 +1719,7 @@ def main():
         register_labels_to_atlas(config.filename)
     
     elif reg in (
-            config.RegisterTypes.merge_atlas_segs, 
+            config.RegisterTypes.merge_atlas_segs,
             config.RegisterTypes.merge_atlas_segs_exp):
         
         # merge various forms of atlas segmentations
@@ -1789,8 +1789,8 @@ def main():
         suffixes = None
         if config.reg_suffixes is not None:
             # get additional suffixes to register the same as for exp img
-            suffixes = [config.reg_suffixes[key] 
-                        for key, val in config.reg_suffixes.items() 
+            suffixes = [config.reg_suffixes[key]
+                        for key, val in config.reg_suffixes.items()
                         if config.reg_suffixes[key] is not None]
         register_reg(
             *config.filenames[:2], config.RegNames.IMG_EXP.value, suffixes, 

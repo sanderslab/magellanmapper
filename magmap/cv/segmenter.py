@@ -14,7 +14,7 @@ from skimage import segmentation
 from skimage import measure
 from skimage import morphology
 
-from magmap import config
+from magmap.settings import config
 from magmap.cv import cv_nd
 from magmap.cv import detector
 from magmap.io import libmag
@@ -402,7 +402,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
         skel_eros_filt_size = filter_size // 2
     #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
     sizes_dict = {}
-    cols = (config.AtlasMetrics.REGION.value, "SizeOrig", "SizeMarker", 
+    cols = (config.AtlasMetrics.REGION.value, "SizeOrig", "SizeMarker",
             config.SmoothingMetrics.FILTER_SIZE.value)
     
     # erode labels via multiprocessing

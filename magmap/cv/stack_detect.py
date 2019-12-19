@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 from magmap.cv import chunking
-from magmap import config
+from magmap.settings import config
 from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag

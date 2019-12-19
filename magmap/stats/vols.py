@@ -15,7 +15,7 @@ import pandas as pd
 from skimage import measure
 
 from magmap.stats import clustering
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.atlas import ontology
 from magmap.cv import cv_nd

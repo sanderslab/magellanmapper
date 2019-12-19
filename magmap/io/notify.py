@@ -9,7 +9,7 @@ import json
 from urllib import request
 
 from magmap.io import cli
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 
 

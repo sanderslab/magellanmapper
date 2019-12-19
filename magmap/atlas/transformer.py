@@ -12,7 +12,7 @@ import numpy as np
 from skimage import transform
 
 from magmap.cv import chunking
-from magmap import config
+from magmap.settings import config
 from magmap.io import importer
 from magmap.io import libmag
 

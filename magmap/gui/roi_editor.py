@@ -24,7 +24,7 @@ from matplotlib.collections import PatchCollection
 from skimage import transform
 
 from magmap.plot import colormaps
-from magmap import config
+from magmap.settings import config
 from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
@@ -454,7 +454,7 @@ class ROIEditor:
                 image5d, z_range, plane, max_intens_proj)
             img5d_shape = image5d.shape[1:4]
             imgs = [img5d_2d, labels_img, img_region]
-            cmaps = [config.cmaps, None, ("Greys", )]
+            cmaps = [config.cmaps, None, ("Greys",)]
             vmins = [config.near_min, None, 0.1]
             vmaxs = [config.vmax_overview, None, 1]
             for img_i, img in enumerate(imgs):

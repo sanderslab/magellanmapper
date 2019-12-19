@@ -12,7 +12,7 @@ from scipy import optimize
 from scipy.spatial import distance
 from skimage.feature import blob_log
 
-from magmap import config
+from magmap.settings import config
 from magmap.cv import cv_nd
 from magmap.io import libmag
 from magmap.plot import plot_3d

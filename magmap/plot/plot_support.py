@@ -13,7 +13,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib import pyplot as plt
 
 from magmap.plot import colormaps
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.plot import plot_3d
 
@@ -520,10 +520,10 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
     # set scientific notation
     ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
     if not lbls:
-        lbls = (config.plot_labels[config.PlotLabels.Y_LABEL], 
+        lbls = (config.plot_labels[config.PlotLabels.Y_LABEL],
                 config.plot_labels[config.PlotLabels.X_LABEL])
     if not units:
-        units = (config.plot_labels[config.PlotLabels.Y_UNIT], 
+        units = (config.plot_labels[config.PlotLabels.Y_UNIT],
                  config.plot_labels[config.PlotLabels.X_UNIT])
     num_lbls = len(lbls)
     num_units = len(units)

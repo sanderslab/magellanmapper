@@ -14,7 +14,7 @@ import SimpleITK as sitk
 import numpy as np
 import pandas as pd
 
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology

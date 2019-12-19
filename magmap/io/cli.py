@@ -69,13 +69,13 @@ import argparse
 import numpy as np
 
 from magmap.gui import roi_editor
-from magmap import config
+from magmap.settings import config
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.io import sqlite
 from magmap.stats import mlearn
-from magmap import profiles
+from magmap.settings import profiles
 from magmap.cv import stack_detect
 from magmap.atlas import transformer
 
@@ -422,7 +422,7 @@ def main(process_args_only=False):
         # of arguments as for slice built-in function and interpreting 
         # "none" string as None
         config.slice_vals = args.slice.split(",")
-        config.slice_vals = [None if val.lower() == "none" else int(val) 
+        config.slice_vals = [None if val.lower() == "none" else int(val)
                              for val in config.slice_vals]
         print("Set slice values to {}".format(config.slice_vals))
     if args.delay:
@@ -706,7 +706,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         # generate animated GIF or extract single plane
         from magmap.io import export_stack
         export_stack.stack_to_img(
-            config.filenames, series, offset, roi_size, 
+            config.filenames, series, offset, roi_size,
             proc_type is config.ProcessTypes.ANIMATED, config.suffix)
     
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
@@ -718,7 +718,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
             config.ProcessTypes.PROCESSING, config.ProcessTypes.PROCESSING_MP):
         # detect blobs in the full image
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
-            filename_base, config.image5d, offset, roi_size, 
+            filename_base, config.image5d, offset, roi_size,
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
             not config.roc, config.image5d_is_roi)
     

@@ -40,7 +40,7 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 from magmap.gui import atlas_editor
 from magmap.cv import chunking
 from magmap.io import cli
-from magmap import config
+from magmap.settings import config
 from magmap.cv import cv_nd
 from magmap.cv import detector
 from magmap.io import importer
@@ -846,9 +846,9 @@ class Visualization(HasTraits):
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
         stack_args = (
-            self.update_segment, title, filename_base, img, config.channel, 
-            curr_roi_size, curr_offset, self.segments, self.segs_in_mask, 
-            self.segs_cmap, self._fig_close_listener, 
+            self.update_segment, title, filename_base, img, config.channel,
+            curr_roi_size, curr_offset, self.segments, self.segs_in_mask,
+            self.segs_cmap, self._fig_close_listener,
             # additional args with defaults
             self._full_border(self.border), self._planes_2d[0].lower())
         roi_ed = roi_editor.ROIEditor()

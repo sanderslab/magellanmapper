@@ -11,10 +11,10 @@ import SimpleITK as sitk
 import numpy as np
 
 from magmap.atlas import atlas_refiner
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.cv import cv_nd
-from magmap import profiles
+from magmap.settings import profiles
 from magmap.cv import segmenter
 from magmap.io import sitk_io
 from magmap.stats import vols

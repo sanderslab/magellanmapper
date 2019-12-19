@@ -15,7 +15,7 @@ from skimage import filters
 from skimage import morphology
 
 from magmap.plot import colormaps
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.cv import segmenter
 

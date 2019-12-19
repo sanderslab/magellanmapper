@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib import colors
 
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 
 # default colormaps, with keys backed by config.Cmaps enums

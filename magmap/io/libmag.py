@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 from skimage import exposure
 
-from magmap import config
+from magmap.settings import config
 
 # file types that are associated with other types
 _FILE_TYPE_GROUPS = {

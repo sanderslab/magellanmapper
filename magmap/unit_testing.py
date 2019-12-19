@@ -7,9 +7,9 @@
 import unittest
 
 from magmap.io import cli
-from magmap import config
+from magmap.settings import config
 from magmap.io import importer
-from magmap import profiles
+from magmap.settings import profiles
 
 TEST_IMG = "test.czi"
 

@@ -5,7 +5,7 @@
 
 import numpy as np
 
-from magmap import config
+from magmap.settings import config
 from magmap.cv import detector
 from magmap.io import libmag
 

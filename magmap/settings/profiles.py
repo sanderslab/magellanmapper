@@ -9,7 +9,7 @@ given default settings.
 """
 from enum import Enum, auto
 
-from magmap import config
+from magmap.settings import config
 
 
 class SettingsDict(dict):

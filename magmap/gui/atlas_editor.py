@@ -11,7 +11,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Slider, Button, TextBox
 
 from magmap.plot import colormaps
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.gui import plot_editor
 from magmap.plot import plot_support

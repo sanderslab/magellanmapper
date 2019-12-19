@@ -14,7 +14,7 @@ from matplotlib import animation
 from scipy import ndimage
 
 from magmap.plot import colormaps
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.plot import plot_support

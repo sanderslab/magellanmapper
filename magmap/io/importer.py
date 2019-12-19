@@ -24,7 +24,7 @@ import re
 from xml import etree as et
 import warnings
 
-from magmap import config
+from magmap.settings import config
 from magmap.io import np_io
 from magmap.plot import plot_3d
 from magmap.io import libmag
@@ -605,7 +605,7 @@ def read_file(filename, series, load=True, z_max=-1,
         # parses the XML tree directly
         filenames = [filename]
         names, sizes, config.resolutions, config.magnification, \
-            config.zoom, pixel_type = parse_ome_raw(filenames[0])
+        config.zoom, pixel_type = parse_ome_raw(filenames[0])
         shape = sizes[series]
         if z_max != -1:
             shape[1] = z_max

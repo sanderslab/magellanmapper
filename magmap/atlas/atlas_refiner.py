@@ -15,14 +15,14 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
-from magmap import config
+from magmap.settings import config
 from magmap.io import export_stack
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.cv import cv_nd
 from magmap.plot import plot_support
-from magmap import profiles
+from magmap.settings import profiles
 from magmap.cv import segmenter
 from magmap.io import sitk_io
 from magmap.io import df_io
@@ -952,7 +952,7 @@ def aggr_smoothing_metrics(df_pxs):
     # measure label loss based on number of labels whose smoothed vol is 0
     num_labels_orig = np.sum(wts > 0)
     metrics[config.SmoothingMetrics.LABEL_LOSS] = [
-        (num_labels_orig - 
+        (num_labels_orig -
          np.sum(df_pxs[config.SmoothingMetrics.VOL.value] > 0)) 
         / num_labels_orig]
     return df_io.dict_to_data_frame(metrics)

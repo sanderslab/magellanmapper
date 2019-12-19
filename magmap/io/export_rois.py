@@ -14,7 +14,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 import SimpleITK as sitk
 
-from magmap import config
+from magmap.settings import config
 from magmap.cv import cv_nd
 from magmap.cv import detector
 from magmap.io import libmag

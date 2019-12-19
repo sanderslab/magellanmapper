@@ -9,7 +9,7 @@ from enum import Enum
 
 import numpy as np
 
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import df_io
 

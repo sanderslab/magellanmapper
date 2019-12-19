@@ -11,12 +11,12 @@ import pandas as pd
 from sklearn import cluster
 from sklearn import neighbors
 
-from magmap import config
+from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology
 from magmap.plot import plot_2d
-from magmap import profiles
+from magmap.settings import profiles
 from magmap.io import sitk_io
 from magmap.io import df_io
 

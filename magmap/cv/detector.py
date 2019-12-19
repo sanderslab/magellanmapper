@@ -15,7 +15,7 @@ from skimage.feature import blob_log
 from magmap import config
 from magmap.cv import cv_nd
 from magmap.io import libmag
-from magmap import plot_3d
+from magmap.plot import plot_3d
 from magmap.io import sqlite
 from magmap.io import df_io
 

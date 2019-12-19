@@ -316,7 +316,7 @@ def main(process_args_only=False):
     if args.padding_2d is not None:
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
-            from magmap import plot_2d
+            from magmap.plot import plot_2d
             roi_editor.padding = tuple(int(i) for i in padding_split)
             print("Set plot_2d.padding to {}".format(
                 roi_editor.padding))
@@ -372,7 +372,7 @@ def main(process_args_only=False):
           .format(config.register_settings["settings_name"]))
     
     if args.plane is not None:
-        from magmap import plot_2d
+        from magmap.plot import plot_2d
         config.plane = args.plane
         print("Set plane to {}".format(config.plane))
     if args.saveroi:
@@ -608,7 +608,7 @@ def main(process_args_only=False):
                 config.offsets, config.roi_sizes)
             parsed_dict, stats_df = mlearn.parse_grid_stats(stats_dict)
             # plot ROC curve
-            from magmap import plot_2d
+            from magmap.plot import plot_2d
             plot_2d.setup_style()
             plot_2d.plot_roc(stats_df, not config.no_show)
         else:

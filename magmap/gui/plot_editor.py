@@ -14,7 +14,7 @@ from skimage import draw
 
 from magmap import config
 from magmap.atlas import ontology
-from magmap import plot_support
+from magmap.plot import plot_support
 
 
 class PlotEditor:

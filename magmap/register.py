@@ -61,8 +61,8 @@ from magmap.io import export_regions
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.atlas import ontology
-from magmap import plot_2d
-from magmap import plot_3d
+from magmap.plot import plot_2d
+from magmap.plot import plot_3d
 from magmap.io import sitk_io
 from magmap.io import df_io
 from magmap.atlas import transformer

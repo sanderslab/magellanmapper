@@ -23,12 +23,12 @@ from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
 from skimage import transform
 
-from magmap import colormaps
+from magmap.plot import colormaps
 from magmap import config
 from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
-from magmap import plot_support
+from magmap.plot import plot_support
 
 # TODO: may want to base on scaling factor instead
 padding = (5, 5, 3) # human (x, y, z) order

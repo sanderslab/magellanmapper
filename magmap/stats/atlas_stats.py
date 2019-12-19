@@ -11,14 +11,14 @@ import os
 import numpy as np
 import pandas as pd
 
-from magmap import colormaps
+from magmap.plot import colormaps
 from magmap import config
 from magmap.io import export_stack
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology
-from magmap import plot_2d
-from magmap import plot_support
+from magmap.plot import plot_2d
+from magmap.plot import plot_support
 from magmap.io import df_io
 from magmap.stats import vols
 

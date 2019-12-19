@@ -10,11 +10,11 @@ from matplotlib import pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.widgets import Slider, Button, TextBox
 
-from magmap import colormaps
+from magmap.plot import colormaps
 from magmap import config
 from magmap.io import libmag
 from magmap.gui import plot_editor
-from magmap import plot_support
+from magmap.plot import plot_support
 from magmap.cv import cv_nd
 from magmap.io import sitk_io
 
@@ -436,7 +436,7 @@ class InterpolatePlanes:
             # show current values if any exist
             self.btn.label.set_text(
                 "Fill {} {}\nID {}"
-                .format(plot_support.get_plane_axis(self.plane), self.bounds, 
+                .format(plot_support.get_plane_axis(self.plane), self.bounds,
                         self.label_id))
             self.btn.label.set_fontsize("xx-small")
         enable_btn(self.btn, all(self.bounds))

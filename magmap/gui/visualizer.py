@@ -46,9 +46,9 @@ from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.atlas import ontology
-from magmap import plot_3d
-from magmap import plot_2d
-from magmap import plot_support
+from magmap.plot import plot_3d
+from magmap.plot import plot_2d
+from magmap.plot import plot_support
 from magmap.gui import roi_editor
 from magmap.cv import segmenter
 from magmap.io import sqlite

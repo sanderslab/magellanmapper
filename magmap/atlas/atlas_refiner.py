@@ -21,7 +21,7 @@ from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.cv import cv_nd
-from magmap import plot_support
+from magmap.plot import plot_support
 from magmap import profiles
 from magmap.cv import segmenter
 from magmap.io import sitk_io

@@ -12,10 +12,10 @@ import matplotlib.backend_bases as backend_bases
 import matplotlib.gridspec as gridspec
 from matplotlib import pyplot as plt
 
-from magmap import colormaps
+from magmap.plot import colormaps
 from magmap import config
 from magmap.io import libmag
-from magmap import plot_3d
+from magmap.plot import plot_3d
 
 try:
     from matplotlib_scalebar import scalebar

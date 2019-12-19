@@ -20,7 +20,7 @@ from magmap import config
 from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
-from magmap import plot_3d
+from magmap.plot import plot_3d
 from magmap.io import sqlite
 from magmap.io import df_io
 

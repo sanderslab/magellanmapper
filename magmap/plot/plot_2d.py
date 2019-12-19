@@ -13,13 +13,13 @@ import matplotlib.transforms as transforms
 import pandas as pd
 from skimage import exposure
 
-from magmap import colormaps
+from magmap.plot import colormaps
 from magmap import config
 from magmap.io import libmag
 from magmap.stats import mlearn
-from magmap import plot_support
+from magmap.plot import plot_support
 from magmap.stats import vols
-from magmap.plot_support import save_fig
+from magmap.plot.plot_support import save_fig
 
 
 def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
@@ -321,7 +321,7 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
     ax.set_title(title)
     
     # show y-label with any unit in scientific notation
-    plot_support.set_scinot(ax, lbls=(y_label, ), units=(y_unit, ))
+    plot_support.set_scinot(ax, lbls=(y_label,), units=(y_unit,))
     # draw x-tick labels with smaller font for increasing number of labels
     font_size = plt.rcParams["axes.titlesize"]
     if libmag.is_number(font_size):

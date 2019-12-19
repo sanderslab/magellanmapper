@@ -8,7 +8,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from magmap import colormaps
+from magmap.plot import colormaps
 from magmap import config
 from magmap.cv import detector
 from magmap.io import importer

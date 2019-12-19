@@ -26,7 +26,7 @@ import warnings
 
 from magmap import config
 from magmap.io import np_io
-from magmap import plot_3d
+from magmap.plot import plot_3d
 from magmap.io import libmag
 
 import numpy as np

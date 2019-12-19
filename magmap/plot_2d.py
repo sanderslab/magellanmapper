@@ -16,9 +16,9 @@ from skimage import exposure
 from magmap import colormaps
 from magmap import config
 from magmap.io import libmag
-from magmap import mlearn
+from magmap.stats import mlearn
 from magmap import plot_support
-from magmap import vols
+from magmap.stats import vols
 from magmap.plot_support import save_fig
 
 
@@ -891,7 +891,7 @@ def plot_roc(df, show=True, annot_arri=None):
     """
     # names of hyperparameters for each group name, with hyperparameters 
     # identified by param prefix
-    cols_group = [col for col in df 
+    cols_group = [col for col in df
                   if col.startswith(mlearn.GridSearchStats.PARAM.value)]
     start = len(mlearn.GridSearchStats.PARAM.value)
     names_group = [col[start+1:] for col in cols_group]

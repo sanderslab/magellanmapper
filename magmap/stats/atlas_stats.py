@@ -20,7 +20,7 @@ from magmap.atlas import ontology
 from magmap import plot_2d
 from magmap import plot_support
 from magmap.io import df_io
-from magmap import vols
+from magmap.stats import vols
 
 
 def plot_region_development(metric, size=None, show=True):

@@ -22,8 +22,9 @@ from magmap.io import sqlite
 from magmap import plot_3d
 from magmap.gui import roi_editor
 from magmap.io import df_io
-from magmap import vols
- 
+from magmap.stats import vols
+
+
 def make_roi_paths(path, roi_id, channel, make_dirs=False):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
     path_dir_nifti = "{}_nifti".format(path_base)
@@ -230,9 +231,9 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
     df = df_io.dict_to_data_frame(metrics_all)
     vol = df[vols.LabelMetrics.Volume.name]
     df.loc[:, vols.LabelMetrics.DensityIntens.name] = (
-        df[vols.LabelMetrics.Intensity.name] / vol)
+            df[vols.LabelMetrics.Intensity.name] / vol)
     df.loc[:, vols.LabelMetrics.Density.name] = (
-        df[vols.LabelMetrics.Nuclei.name] / vol)
+            df[vols.LabelMetrics.Nuclei.name] / vol)
     df = df_io.data_frames_to_csv(df, "{}_rois.csv".format(path))
     return df
 

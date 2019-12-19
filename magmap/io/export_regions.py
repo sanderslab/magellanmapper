@@ -21,7 +21,7 @@ from magmap.atlas import ontology
 from magmap.cv import cv_nd
 from magmap.io import df_io
 from magmap.io import sitk_io
-from magmap import vols
+from magmap.stats import vols
 
 
 def export_region_ids(labels_ref_lookup, path, level):

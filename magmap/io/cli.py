@@ -74,7 +74,7 @@ from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.io import sqlite
-from magmap import mlearn
+from magmap.stats import mlearn
 from magmap import profiles
 from magmap.cv import stack_detect
 from magmap.atlas import transformer

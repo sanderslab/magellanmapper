@@ -17,7 +17,7 @@ from magmap.cv import cv_nd
 from magmap import profiles
 from magmap.cv import segmenter
 from magmap.io import sitk_io
-from magmap import vols
+from magmap.stats import vols
 
 
 def _mirror_imported_labels(labels_img_np, start):

@@ -31,7 +31,7 @@ OPTIND=1
 while getopts hm:i:o:s: opt; do
   case $opt in
     h) 
-      echo $HELP
+      echo "$HELP"
       exit 0
       ;;
     m)  
@@ -55,6 +55,10 @@ while getopts hm:i:o:s: opt; do
       exit 1
       ;;
     --) ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 

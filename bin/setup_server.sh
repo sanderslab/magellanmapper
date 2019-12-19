@@ -67,6 +67,10 @@ while getopts hslw:d:u:f:n opt; do
       exit 1
       ;;
     --) ;;
+    *)
+      echo "$HELP" >&2
+      exit 1
+      ;;
   esac
 done
 

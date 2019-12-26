@@ -180,7 +180,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   
   # require at least 2 condition to compare, sorting in direction based 
   # on reverse argument
-  conditions.unique = sort(unique(conditions), decreasing=reverse)
+  conditions.unique <- sort(unique(conditions), decreasing=reverse)
   if (length(conditions.unique) < 2) {
     cat("need at least 2 conditions, cannot compare means\n")
     return(NULL)
@@ -265,7 +265,7 @@ setupPairing <- function(df.region, col, split.col) {
   
   # require at least 2 condition to compare
   conditions <- df.region[[split.col]]
-  conditions.unique = sort(unique(conditions))
+  conditions.unique <- sort(unique(conditions))
   if (length(conditions.unique) < 2) {
     cat("need at least 2 conditions, cannot set up pairing\n")
     return(NULL)
@@ -345,6 +345,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       # default to splitting by genotype
       group.col <- "Geno"
     }
+    cat("\ndefaulting group column to", group.col, "\n")
   }
   
   # find all regions

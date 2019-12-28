@@ -26,7 +26,7 @@ Arguments:
 "
 
 # default Conda environment names as found in .yml configs
-CONDA_ENV="clr"
+CONDA_ENV="mag"
 env_name="$CONDA_ENV"
 
 # default .yml files

@@ -18,7 +18,7 @@ Currently access is limited to a private Git repo. Our eventual plan is to make 
 pip install -e . --extra-index-url https://pypi.fury.io/dd8/
 ```
 
-from within the `clrbrain` folder. You can use the virtual environment of your choice, such as Conda or Venv. The extra URL is for pre-built SimpleElastix binaries.
+from within the `magellanmapper` folder. You can use the virtual environment of your choice, such as Conda or Venv. The extra URL is for pre-built SimpleElastix binaries.
 
 Or to include all dependencies, which assumes that a Java SDK is installed:
 
@@ -29,10 +29,10 @@ pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 If you hava Anaconda/[Miniconda](https://docs.conda.io/en/latest/miniconda.html) installed and prefer to use Conda packages:
 
 ```
-conda env create -n clr environment.yml
+conda env create -n mag environment.yml
 ```
 
-You can replace `clr` with your desired environment name.
+You can replace `mag` with your desired environment name.
 
 ### Install through Bash scripts
 
@@ -44,10 +44,10 @@ To ease complete setup including creating new virtual environments and installin
 ./setup_conda.sh [-n name] [-s spec]
 ```
 
-Run this command from the `clrbrain` folder to set up the following:
+Run this command from the `magellanmapper` folder to set up the following:
 
 - If not already installed: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
-- A Conda environment with Python 3, named according to the `-n` option, or `clr` by default
+- A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
 - Full dependencies based on `environment.yml` (ok if Python-Bioformats/Javabridge fails), or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
 
 #### Setup script for Venv
@@ -76,6 +76,7 @@ The main required and optional dependencies in MagellanMapper are:
 - Scipy, Numpy, Matplotlib stack
 - Mayavi/TraitsUI/Qt stack for GUI and 3D visualization
 - Scikit-image for image processing
+- Scikit-learn for machine learning based stats
 - Pandas for stats
 - SimpleITK or [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork with Elastix integrated (see below)
 - Python-Bioformats/Javabridge for importing images from propriety formast such as `.czi` (optional, requires Java SDK and C compiler)
@@ -99,7 +100,7 @@ Compilers required for these dependencies, by platform:
 
 #### Dependencies requiring Java
 
-- Python-Javabridge, tested on v8-12
+- Python-Javabridge, tested on v8-13
 - ImageJ/Fiji-based stitching pipeline via the BigSticher plugin (ImageJ currently requires Java 8)
 
 #### Dependencies requiring Git
@@ -135,10 +136,10 @@ MagellanMapper has been built and tested to build on:
 
 ## Run MagellanMapper
 
-MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, respectively. To start MagellanMapper, run (assuming a Conda environment):
+MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, respectively. To start MagellanMapper, run (assuming a Conda environment named `mag`):
 
 ```
-source activate clr
+source activate mag
 ./run --img [path_to_your_image]
 ```
 
@@ -199,25 +200,25 @@ Optional dependencies:
 - [Slack incoming webhook](https://api.slack.com/incoming-webhooks): to notify when tile stitching alignment is ready for verification and pipeline has completed
 
 ### Local
-Run a pipeline in `runclrbrain.sh`.
+Run a pipeline in `pipelines.sh`.
 
 For example, load a `.czi` file and display in the GUI, which will import the file into a Numpy format for faster future loading:
 
 ```
-./runclrbrain.sh -i data/HugeImage.czi
+bin/pipelines.sh -i data/HugeImage.czi
 ```
 
 To sitch a multi-tile image and perform cell detection on the entire image, which will load BigStitcher in ImageJ/Fiji for tile stitching:
 
 ```
-./runclrbrain.sh -i data/HugeImage.czi -p full
+bin/pipelines.sh -i data/HugeImage.czi -p full
 ```
 
 See `runclrbrain.sh` for additional sample commands for common scenarios, such as cell detection on a small region of interest. The file can be edited directly to load the same image, for example.
 
 ### Server
 
-Optional dependencies:
+#### Dependencies
 
 - `awscli`: AWS Command Line Interface for basic up/downloading of images and processed files S3. Install via Pip.
 - `boto3`: AWS Python client to manage EC2 instances.
@@ -229,7 +230,7 @@ You can launch a standard server, deploy MagellanMapper code, and run a pipeline
 If you already have an AMI with MagellanMapper installed, you can launch a new instance of it via MagellanMapper:
 
 ```
-python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
+python -u -m magmap.io.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
   "subnet-xxxxxxxx" "sg-xxxxxxxx" "UserName" 50,2000 [2]
 ```
 
@@ -247,7 +248,7 @@ python -u -m clrbrain.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
 Deploy the MagellanMapper folder and supporting files:
 
 ```
-./deploy.sh -p [path_to_your_aws_pem] -i [server_ip] \
+bin/deploy.sh -p [path_to_your_aws_pem] -i [server_ip] \
     -d [optional_file0] -d [optional_file1]
 ```
 
@@ -261,7 +262,7 @@ Deploy the MagellanMapper folder and supporting files:
 Setup drives on a new server instance:
 
 ```
-./setup_server.sh -d [path_to_data_device] -w [path_to_swap_device] \
+bin/setup_server.sh -d [path_to_data_device] -w [path_to_swap_device] \
     -f [size_of_swap_file] -u [username]
 ```
 
@@ -279,13 +280,13 @@ ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
 ```
 
 - If necessary, start a graphical server (eg `vncserver`) to run ImageJ/Fiji for stitching or for Mayavi dependency setup
-- Setup drives: `clrbrain/setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
-- If MagellanMapper has not been installed, install it with `clrbrain/setup_conda.sh` as above
+- Setup drives: `bin/setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
+- If MagellanMapper has not been installed, install it with `bin/setup_conda.sh` as above
 - Activate the Conda environment set up during installation
 - Run a pipeline, such as this command to fully process a multi-tile image with tile stitching, import to Numpy array, and cell detection, with AWS S3 import/export and Slack notifications along the way, followed by server clean-up/shutdown:
 
 ```
-./process_nohup.sh -d "out_experiment.txt" -o -- ./runclrbrain.sh \
+bin/process_nohup.sh -d "out_experiment.txt" -o -- bin/pipelines.sh \
   -i "/data/HugeImage.czi" -a "my/s3/bucket" -n \
   "https://hooks.slack.com/services/my/incoming/webhook" -p full -c
 ```
@@ -414,6 +415,7 @@ missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
 
 ### International setup
 - If you get a Python locale error, add these lines to your `~/.bash_profile` file:
+
 ```
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
@@ -421,7 +423,7 @@ export LANG=en_US.UTF-8
 
 ### Additional tips
 
-- If you get an `syntax error near unexpected token (` error, the run script may have been formatted incorrectly, eg through the Mac Text Editor program. Try `dos2unix [runclrbrain.sh]` (replace with your run script filename) or re-copying from `runclrbrain.sh`.
+- If you get an `syntax error near unexpected token (` error, the run script may have been formatted incorrectly, eg through the Mac Text Editor program. Try `dos2unix [runclrbrain.sh]` (replace with your run script filename).
 
 ## Obsolete Issues
 

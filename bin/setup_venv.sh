@@ -13,7 +13,7 @@ Arguments:
   -n [name]: Set the virtual environment name; defaults to CLR_ENV.
 "
 
-CLR_ENV="clr"
+CLR_ENV="mag"
 env_name="$CLR_ENV"
 venv_dir="../venvs"
 

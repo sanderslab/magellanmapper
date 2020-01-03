@@ -1,6 +1,6 @@
 #!/bin/bash
 # Stitch files using ImageJ/Fiji plugin
-# Author: David Young 2017, 2019
+# Author: David Young 2017, 2020
 
 HELP="
 Stitch files using ImageJ/Fiji plugin.
@@ -78,7 +78,6 @@ while getopts hf:w:s:j: opt; do
       echo "Option -$OPTARG requires an argument"
       exit 1
       ;;
-    --) ;;
     *)
       echo "$HELP" >&2
       exit 1
@@ -86,17 +85,13 @@ while getopts hf:w:s:j: opt; do
   esac
 done
 
-# pass arguments after "--" to magmap
-shift "$((OPTIND-1))"
-EXTRA_ARGS="$@"
-
 # run from script's parent directory
 BASE_DIR="$(dirname "$0")/.."
 cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 BASE_DIR="$PWD"
 
 # load dependencies
-source libclr.sh
+source bin/libclr.sh
 
 detect_platform
 # auto-detect ImageJ binary path if not already set; assume that 

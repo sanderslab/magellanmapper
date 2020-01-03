@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy MagellanMapper to AWS
-# Author: David Young 2017, 2019
+# Author: David Young 2017, 2020
 
 HELP="
 Deploy MagellanMapper and related files to AWS.
@@ -87,12 +87,12 @@ done
 if [[ "$git_hash" == "" ]]; then
   git_hash=$(git rev-parse --short HEAD)
 fi
-archive="clrbrain_${git_hash}.zip"
+archive="magellanmapper_${git_hash}.zip"
 git archive -o "$archive" "$git_hash"
 
 # basic deployment
 deploy_files+=("$archive")
-server_cmd="unzip -o $archive -d clrbrain"
+server_cmd="unzip -o $archive -d magellanmapper"
 cmd_fiji_update="Fiji.app/ImageJ-linux64 --update update"
 
 # append for initial deployment

@@ -44,6 +44,7 @@ dependencies:
   - libclang=8.0.1=h770b8ee_1
   - libcurl=7.65.3=h16faf7d_0
   - libcxx=9.0.0=h89e68fa_1
+  - libcxxabi=4.0.1=hcfea43d_1
   - libedit=3.1.20170329=hcfe32e1_1001
   - libffi=3.2.1=h6de7cb9_1006
   - libgfortran=4.0.0=2
@@ -51,7 +52,7 @@ dependencies:
   - liblapack=3.8.0=14_openblas
   - libllvm8=8.0.1=h770b8ee_0
   - libnetcdf=4.7.3=nompi_hec86efb_100
-  - libopenblas=0.3.7=h3d69b6c_5
+  - libopenblas=0.3.7=h3d69b6c_6
   - libpng=1.6.37=h2573ce8_0
   - libssh2=1.8.2=hcdc9a53_2
   - libtiff=4.1.0=ha78913b_1
@@ -114,6 +115,7 @@ dependencies:
     - matplotlib-scalebar==0.6.0
     - pyqt5==5.13.0
     - pyqt5-sip==4.19.18
+    - pyqtwebengine==5.12.1
     - python-bioformats==1.1.0
     - simpleitk==1.2.0rc2.dev1162+g2a79d
 

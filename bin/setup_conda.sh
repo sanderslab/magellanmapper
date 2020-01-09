@@ -65,7 +65,7 @@ cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 BASE_DIR="$PWD"
 
 # load dependencies
-source libclr.sh
+source bin/libclr.sh
 
 # find platform for Anaconda
 detect_platform
@@ -116,19 +116,20 @@ check_env="$(conda env list | grep -w "$env_name")"
 msg="Installing dependencies (may take awhile and appear to hang after the"
 msg+="\n  \"Executing transaction\" step because of additional "
 msg+="downloads/installs)..."
+eval "$(conda shell.bash hook)"
 if [[ "$check_env" == "" ]]; then
   # create an empty environment before setting channel priority to 
   # generate an env-specific .condarc file; Python version duplicated in 
   # .yml for those who want to create env directly from .yml
   echo "Creating new Conda environment from $config..."
   conda create -y -n "$env_name" python=3.6
-  source activate "$env_name"
+  conda activate "$env_name"
   conda config --env --set channel_priority strict # for mixed channels
   echo -e "$msg"
   conda env update -f "$config"
 else
   echo "$env_name already exists, will update"
-  source activate "$env_name"
+  conda activate "$env_name"
   echo -e "$msg"
   conda env update -f "$config"
 fi

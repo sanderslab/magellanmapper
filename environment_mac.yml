@@ -3,9 +3,9 @@ channels:
   - defaults
 dependencies:
   - apptools=4.5.0=py_0
-  - awscli=1.16.305=py36_0
-  - boto3=1.10.41=py_0
-  - botocore=1.13.41=py_0
+  - awscli=1.16.313=py36_0
+  - boto3=1.10.49=py_0
+  - botocore=1.13.49=py_0
   - bzip2=1.0.8=h0b31af3_2
   - ca-certificates=2019.11.28=hecc5488_0
   - certifi=2019.11.28=py36_0
@@ -18,7 +18,7 @@ dependencies:
   - cycler=0.10.0=py_2
   - cython=0.29.14=py36h4a8c4bd_0
   - cytoolz=0.10.1=py36h0b31af3_0
-  - dask-core=2.9.0=py_0
+  - dask-core=2.9.1=py_0
   - dbus=1.13.6=h2f22bb5_0
   - decorator=4.4.1=py_0
   - docutils=0.15.2=py36_0
@@ -41,37 +41,33 @@ dependencies:
   - krb5=1.16.4=h1752a42_0
   - libblas=3.8.0=14_openblas
   - libcblas=3.8.0=14_openblas
-  - libclang=8.0.1=h770b8ee_1
   - libcurl=7.65.3=h16faf7d_0
-  - libcxx=9.0.0=h89e68fa_1
+  - libcxx=9.0.1=1
   - libcxxabi=4.0.1=hcfea43d_1
   - libedit=3.1.20170329=hcfe32e1_1001
   - libffi=3.2.1=h6de7cb9_1006
   - libgfortran=4.0.0=2
   - libiconv=1.15=h01d97ff_1005
   - liblapack=3.8.0=14_openblas
-  - libllvm8=8.0.1=h770b8ee_0
   - libnetcdf=4.7.3=nompi_hec86efb_100
   - libopenblas=0.3.7=h3d69b6c_6
   - libpng=1.6.37=h2573ce8_0
   - libssh2=1.8.2=hcdc9a53_2
-  - libtiff=4.1.0=ha78913b_1
+  - libtiff=4.1.0=ha78913b_3
   - libxml2=2.9.10=h53d96d6_0
-  - llvm-openmp=9.0.0=h40edb58_0
+  - llvm-openmp=9.0.1=h40edb58_0
   - lz4-c=1.8.3=h6de7cb9_1001
   - matplotlib=3.1.2=py36_1
   - matplotlib-base=3.1.2=py36h11da6c2_1
   - mayavi=4.7.1=py36ha91d4f2_2
   - ncurses=6.1=h0a44026_1002
   - networkx=2.4=py_0
-  - nspr=4.20=h0a44026_1000
-  - nss=3.47=hcec2283_0
   - numpy=1.17.3=py36hde6bac1_0
   - olefile=0.46=py_0
   - openssl=1.1.1d=h0b31af3_0
   - pandas=0.25.3=py36h4f17bb1_0
   - pcre=8.43=h4a8c4bd_0
-  - pillow=6.2.1=py36h43b43f3_1
+  - pillow=7.0.0=py36h918e99a_0
   - pip=19.3.1=py36_0
   - pyamg=4.0.0=py36hbf1eeb5_1001
   - pyasn1=0.4.8=py_0
@@ -79,21 +75,23 @@ dependencies:
   - pyface=6.1.2=py_0
   - pygments=2.5.2=py_0
   - pyopenssl=19.1.0=py36_0
-  - pyparsing=2.4.5=py_0
+  - pyparsing=2.4.6=py_0
+  - pyqt=5.9.2=py36h2a560b1_4
   - pysocks=1.7.1=py36_0
   - python=3.6.7=h4285619_1006
-  - python-dateutil=2.8.0=py_0
+  - python-dateutil=2.8.1=py_0
   - pytz=2019.3=py_0
   - pywavelets=1.1.1=py36h3b54f70_0
-  - pyyaml=5.1.2=py36h0b31af3_1
-  - qt=5.12.5=h1b46049_0
+  - pyyaml=5.2=py36h0b31af3_0
+  - qt=5.9.7=h8cf7e54_3
   - readline=8.0=hcfe32e1_0
   - rsa=3.4.2=py_1
   - s3transfer=0.2.1=py36_0
   - scikit-image=0.16.2=py36h4f17bb1_0
-  - scikit-learn=0.22=py36h3dc85bc_1
-  - scipy=1.3.3=py36h82752d6_0
-  - setuptools=42.0.2=py36_0
+  - scikit-learn=0.22.1=py36h3dc85bc_1
+  - scipy=1.4.1=py36h82752d6_0
+  - setuptools=44.0.0=py36_0
+  - sip=4.19.8=py36h0a44026_1000
   - six=1.13.0=py36_0
   - sqlite=3.30.1=h93121df_0
   - tbb=2019.9=ha1b3eb9_1
@@ -112,10 +110,9 @@ dependencies:
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - "git+https://github.com/LeeKamentsky/python-javabridge.git@c7ccaed43ac7752c4ca361abb04fcb4e9ebdb069"
-    - matplotlib-scalebar==0.6.0
-    - pyqt5==5.13.0
-    - pyqt5-sip==4.19.18
-    - pyqtwebengine==5.12.1
+    - matplotlib-scalebar==0.6.1
+    - pyqt5==5.14.1
+    - pyqt5-sip==12.7.0
     - python-bioformats==1.1.0
     - simpleitk==1.2.0rc2.dev1162+g2a79d
 

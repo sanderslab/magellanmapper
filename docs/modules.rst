@@ -1,9 +1,8 @@
-clrbrain
-========
+magellanmapper
+==============
 
 .. toctree::
    :maxdepth: 4
 
-   clrbrain
+   magmap
    setup
-   stitch

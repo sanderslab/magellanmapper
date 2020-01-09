@@ -41,7 +41,7 @@ To ease complete setup including creating new virtual environments and installin
 #### Setup script for Conda
 
 ```
-./setup_conda.sh [-n name] [-s spec]
+bin/setup_conda.sh [-n name] [-s spec]
 ```
 
 Run this command from the `magellanmapper` folder to set up the following:
@@ -53,7 +53,7 @@ Run this command from the `magellanmapper` folder to set up the following:
 #### Setup script for Venv
 
 ```
-./setup_venv.sh [-n name]
+bin/setup_venv.sh [-n name]
 ```
 
 This setup script will check and install the following dependencies:
@@ -214,7 +214,7 @@ To sitch a multi-tile image and perform cell detection on the entire image, whic
 bin/pipelines.sh -i data/HugeImage.czi -p full
 ```
 
-See `runclrbrain.sh` for additional sample commands for common scenarios, such as cell detection on a small region of interest. The file can be edited directly to load the same image, for example.
+See `bin/pipelines.sh` for additional sample commands for common scenarios, such as cell detection on a small region of interest. The file can be edited directly to load the same image, for example.
 
 ### Server
 
@@ -396,10 +396,10 @@ missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
 
 - Image stitching is run through ImageJ/Fiji
   - ImageJ itself also depends on Java but does not work well on Java > 8 (as of 2019-01-29)
-  - As of MagellanMapper v0.8.3, an argument can be given to `runclrbrain.sh` and `stitch.sh` to specify the Java home specifically for ImageJ, which should be a typical path exported as `JAVA_HOME` but here passed as an argument to ImageJ, eg:
+  - As of MagellanMapper v0.8.3, an argument can be given to `pipelines.sh` and `stitch.sh` to specify the Java home specifically for ImageJ, which should be a typical path exported as `JAVA_HOME` but here passed as an argument to ImageJ, eg:
 
 ```
-./runclrbrain.sh -j /Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home
+bin/pipelines.sh -j /Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home
 ```
 
 - Two ImageJ stitching plugins are available, which MagellanMapper runs as ImageJ scripts in minimize the need for intervention:
@@ -423,7 +423,7 @@ export LANG=en_US.UTF-8
 
 ### Additional tips
 
-- If you get an `syntax error near unexpected token (` error, the run script may have been formatted incorrectly, eg through the Mac Text Editor program. Try `dos2unix [runclrbrain.sh]` (replace with your run script filename).
+- If you get an `syntax error near unexpected token (` error, the run script may have been formatted incorrectly, eg through the Mac Text Editor program. Try `dos2unix [pipelines.sh]` (replace with your run script filename).
 
 ## Obsolete Issues
 

@@ -83,8 +83,10 @@ class AtlasEditor:
         # set up colormaps, using a labels image to generate a template 
         # for the borders image if it has the same number of colors; ideally 
         # use the original labels for consistent ID-color mapping
+        sym_colors = config.atlas_labels[config.AtlasLabels.SYMMETRIC_COLORS]
         cmap_labels = colormaps.get_labels_discrete_colormap(
-            self.labels_img, 0, dup_for_neg=True, use_orig_labels=True)
+            self.labels_img, 0, dup_for_neg=True, use_orig_labels=True,
+            symmetric_colors=sym_colors)
         cmap_borders = colormaps.get_borders_colormap(
             self.borders_img, self.labels_img, cmap_labels)
         coord = list(self.offset[::-1])

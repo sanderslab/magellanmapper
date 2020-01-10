@@ -63,7 +63,7 @@ class DiscreteColormap(colors.ListedColormap):
     """
     def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
                  min_val=0, max_val=255, min_any=0, background=None,
-                 dup_for_neg=False):
+                 dup_for_neg=False, symmetric_colors=False):
         """Generate discrete colormap for labels using 
         :func:``discrete_colormap``.
         
@@ -91,6 +91,8 @@ class DiscreteColormap(colors.ListedColormap):
             dup_for_neg: True to duplicate positive labels as negative 
                 labels to recreate the same set of labels as for a 
                 mirrored labels map. Defaults to False.
+            symmetric_colors (bool): True to make symmetric colors, assuming
+                symmetric labels centered on 0; defaults to False.
         """
         if labels is None: return
         self.norm = None
@@ -121,9 +123,8 @@ class DiscreteColormap(colors.ListedColormap):
             # https://github.com/matplotlib/matplotlib/issues/9937
             self.norm = colors.BoundaryNorm(labels_unique, num_colors)
         self.cmap_labels = discrete_colormap(
-            num_colors, alpha=alpha, prioritize_default=False, seed=seed, 
-            min_val=min_val, max_val=max_val, min_any=min_any,
-            jitter=20, mode=DiscreteModes.RANDOMN)
+            num_colors, alpha, False, seed, min_val, max_val, min_any,
+            symmetric_colors, jitter=20, mode=DiscreteModes.RANDOMN)
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
@@ -159,9 +160,9 @@ class DiscreteColormap(colors.ListedColormap):
         return cmap
 
 
-def discrete_colormap(num_colors, alpha=255, prioritize_default=True, 
+def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
                       seed=None, min_val=0, max_val=255, min_any=0,
-                      dup_for_neg=False, dup_offset=30, jitter=0,
+                      symmetric_colors=False, dup_offset=0, jitter=0,
                       mode=DiscreteModes.RANDOMN):
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
@@ -184,7 +185,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             RGB value will be scaled up by the ratio ``max_val:min_any``.
             Assumes a range of ``min_val < min_any < max_val``; defaults to
             0 to ignore.
-        dup_for_neg (bool): True to create a symmetric set of colors,
+        symmetric_colors (bool): True to create a symmetric set of colors,
             assuming the first half of ``num_colors`` mirror those of
             the second half; defaults to False.
         dup_offset (int): Amount by which to offset duplicate color values
@@ -204,9 +205,9 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         as ``imshow``.
     """
     cmap_offset = 0 if num_colors // 2 == num_colors / 2 else 1
-    if dup_for_neg:
         # halve number of colors to duplicate for corresponding labels
         num_colors = int(np.ceil(num_colors / 2))
+    if symmetric_colors:
         max_val -= dup_offset
 
     # generate random combination of RGB values for each number of colors, 
@@ -256,10 +257,10 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             cmap[below_offset, axes] = np.multiply(
                 cmap[below_offset, axes], max_val / min_any)
     
-    if dup_for_neg:
         # assume that corresponding labels are mirrored (eg -5, 3, 0, 3, 5)
         cmap_neg = cmap + dup_offset
         cmap = np.vstack((cmap_neg[::-1], cmap[cmap_offset:]))
+    if symmetric_colors:
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones
@@ -274,7 +275,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
 
 
 def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False, 
-                                 use_orig_labels=False):
+                                 use_orig_labels=False, symmetric_colors=False):
     """Get a default discrete colormap for a labels image, assuming that 
     background is 0, and the seed is determined by :attr:``config.seed``.
     
@@ -287,6 +288,8 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         use_orig_labels (bool): True to use original labels from 
             :attr:`config.labels_img_orig` if available, falling back to 
             ``labels_img``. Defaults to False.
+        symmetric_colors (bool): True to create a symmetric set of colors;
+            defaults to False.
     
     Returns:
         :class:``DiscreteColormap`` object with a separate color for 
@@ -298,7 +301,8 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         lbls = config.labels_img_orig
     return DiscreteColormap(
         lbls, config.seed, 255, False, min_any=160, min_val=10,
-        background=(0, (0, 0, 0, alpha_bkgd)), dup_for_neg=dup_for_neg)
+        background=(0, (0, 0, 0, alpha_bkgd)), dup_for_neg=dup_for_neg,
+        symmetric_colors=symmetric_colors)
 
 
 def get_borders_colormap(borders_img, labels_img, cmap_labels):

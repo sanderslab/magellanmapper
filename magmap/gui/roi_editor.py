@@ -440,6 +440,7 @@ class ROIEditor:
             z_overview = z_start + z_planes
         print("z_overview: {}".format(z_overview))
         max_size = plot_support.max_plane(image5d[0], plane)
+        sym_colors = config.atlas_labels[config.AtlasLabels.SYMMETRIC_COLORS]
 
         def prep_overview():
             """Prep overview image planes based on chosen orientation.
@@ -468,7 +469,7 @@ class ROIEditor:
                     # add discrete colormap for labels image
                     cmaps[img_i] = colormaps.get_labels_discrete_colormap(
                         imgs[img_i], 0, dup_for_neg=True, 
-                        use_orig_labels=True)
+                        use_orig_labels=True, symmetric_colors=sym_colors)
                 elif img_i == 2:
                     # invert region selection image to opacify areas outside
                     # of the region; if in MIP mode, will still only show 

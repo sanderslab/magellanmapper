@@ -243,7 +243,12 @@ verified_db = None # automated verifications DB
 # atlas label keys for command-line parsing
 AtlasLabels = Enum(
     "AtlasLabels", (
-        "PATH_REF", "LEVEL", "ID", "ORIG_COLORS",
+        "PATH_REF", "LEVEL", "ID",
+        # generate colormap based on original colors, even if some are missing
+        "ORIG_COLORS",
+        # use symmetric colors, assuming symmetric label values from neg to
+        # pos, centered on 0 (eg -5, -3, 0, 3, 5)
+        "SYMMETRIC_COLORS",
         # show labels as binary image with transparent background and given
         # color (eg "black" or "white") as foreground
         "BINARY",
@@ -252,6 +257,7 @@ AtlasLabels = Enum(
 # default to load original labels image if available for ID-color mapping
 atlas_labels = dict.fromkeys(AtlasLabels, None)
 atlas_labels[AtlasLabels.ORIG_COLORS] = 1
+atlas_labels[AtlasLabels.SYMMETRIC_COLORS] = True
 
 
 # registered image suffixes

@@ -189,7 +189,7 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             assuming the first half of ``num_colors`` mirror those of
             the second half; defaults to False.
         dup_offset (int): Amount by which to offset duplicate color values
-            if ``dup_for_neg`` is enabled; defaults to 30.
+            if ``dup_for_neg`` is enabled; defaults to 0.
         jitter (int): In :obj:`DiscreteModes.GRID` mode, coordinates are
             randomly shifted by half this value above or below their original
             value; defaults to 0.
@@ -204,10 +204,8 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
         to generate a map that can be used directly in functions such 
         as ``imshow``.
     """
-    cmap_offset = 0 if num_colors // 2 == num_colors / 2 else 1
-        # halve number of colors to duplicate for corresponding labels
-        num_colors = int(np.ceil(num_colors / 2))
     if symmetric_colors:
+        # make room for offset when duplicating colors
         max_val -= dup_offset
 
     # generate random combination of RGB values for each number of colors, 
@@ -257,10 +255,11 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
             cmap[below_offset, axes] = np.multiply(
                 cmap[below_offset, axes], max_val / min_any)
     
-        # assume that corresponding labels are mirrored (eg -5, 3, 0, 3, 5)
-        cmap_neg = cmap + dup_offset
-        cmap = np.vstack((cmap_neg[::-1], cmap[cmap_offset:]))
     if symmetric_colors:
+        # invert latter half onto former half, assuming that corresponding
+        # labels are mirrored (eg -5, 3, 0, 3, 5), with background centered as 0
+        mid = len(cmap) // 2
+        cmap[:mid] = cmap[:mid:-1] + dup_offset
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones

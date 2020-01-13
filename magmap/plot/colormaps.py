@@ -103,16 +103,20 @@ class DiscreteColormap(colors.ListedColormap):
             labels_unique = np.append(
                 -1 * labels_unique[labels_unique > 0][::-1], labels_unique)
         num_colors = len(labels_unique)
+
         # make first boundary slightly below first label to encompass it 
         # to avoid off-by-one errors that appear to occur when viewing an 
-        # image with an additional extreme label
+        # image with an additional extreme label; float32 unsymmetric colors
+        # for large values despite remaining within range for unclear reasons,
+        # fixed by using float64 instead
         labels_offset = 0.5
-        labels_unique = labels_unique.astype(np.float32)
+        labels_unique = labels_unique.astype(np.float64)
         labels_unique -= labels_offset
         # number of boundaries should be one more than number of labels to 
         # avoid need for interpolation of boundary bin numbers and 
         # potential merging of 2 extreme labels
         labels_unique = np.append(labels_unique, [labels_unique[-1] + 1])
+
         if index_direct:
             # assume label vals increase by 1 from 0 until num_colors
             self.norm = colors.NoNorm()

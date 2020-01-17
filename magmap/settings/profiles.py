@@ -604,7 +604,14 @@ def update_register_settings(settings, settings_type):
                 "overlap_meas_add_lbls": ((126651558, 126652059), ), 
             }, 
             profile)
-        
+
+        # pitch rotation only for ABA E11pt to compare corresponding z-planes
+        # with other stages of refinement
+        settings.add_modifier(
+            "abae11pt5pitch",
+            {"rotate": ((-30, 0),)},
+        )
+
         # ABA E13pt5 specific settings
         settings.add_modifier(
             "abae13pt5", 

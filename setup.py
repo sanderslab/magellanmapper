@@ -33,7 +33,8 @@ config = {
         "aws": _EXTRAS_AWS, 
         "all": [
             "matplotlib_scalebar", 
-            "pyamg", 
+            "pyamg",
+            "openpyxl",  # for Pandas export to Excel files
             *_EXTRAS_IMPORT,  
             *_EXTRAS_AWS, 
         ]

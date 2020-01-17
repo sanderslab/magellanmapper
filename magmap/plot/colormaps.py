@@ -94,8 +94,10 @@ class DiscreteColormap(colors.ListedColormap):
             symmetric_colors (bool): True to make symmetric colors, assuming
                 symmetric labels centered on 0; defaults to False.
         """
-        if labels is None: return
         self.norm = None
+        self.cmap_labels = None
+
+        if labels is None: return
         labels_unique = np.unique(labels)
         if dup_for_neg and np.sum(labels_unique < 0) == 0:
             # for labels that are only >= 0, duplicate the pos portion 

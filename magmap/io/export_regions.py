@@ -5,6 +5,7 @@
 
 Convert regions from ontology files or atlases to data frames.
 """
+import os
 import csv
 import multiprocessing as mp
 from collections import OrderedDict
@@ -21,12 +22,17 @@ from magmap.atlas import ontology
 from magmap.cv import cv_nd
 from magmap.io import df_io
 from magmap.io import sitk_io
+from magmap.plot import colormaps
 from magmap.stats import vols
 
 
 def export_region_ids(labels_ref_lookup, path, level):
     """Export region IDs from annotation reference reverse mapped dictionary 
-    to CSV file.
+    to CSV and Excel files.
+
+    Use a ``level`` of None to export labels only for the currently loaded
+    atlas. The RGB values used for the currently loaded atlas will also be
+    shown, with cell colors corresponding to these values in the Excel file.
     
     Args:
         labels_ref_lookup: The labels reference lookup, assumed to be an 
@@ -43,30 +49,47 @@ def export_region_ids(labels_ref_lookup, path, level):
     Returns:
         Pandas data frame of the region IDs and corresponding names.
     """
+    def color_cells(s):
+        # convert RGB to hex values since Pandas Excel export only supports
+        # named colors or hex (as of v0.22)
+        css = ["background-color: #{:02x}{:02x}{:02x}".format(*c) for c in s]
+        return css
+
     ext = ".csv"
-    if not path.endswith(ext): path += ext
+    path_csv = path if path.endswith(ext) else path + ext
     
     # find parents for label at the given level
     parent_level = -1 if level is None else level
     label_parents = ontology.labels_to_parent(labels_ref_lookup, parent_level)
     
-    cols = ("Region", "RegionAbbr", "RegionName", "Level", "Parent")
+    cols = ["Region", "RegionAbbr", "RegionName", "Level", "Parent"]
     data = OrderedDict()
     label_ids = sitk_io.find_atlas_labels(
         config.load_labels, level, labels_ref_lookup)
-    for key in label_ids:
+    cm = colormaps.get_labels_discrete_colormap(None, 0, use_orig_labels=True)
+    rgbs = cm.cmap_labels
+    if rgbs is not None:
+        cols.append("RGB")
+    for i, key in enumerate(label_ids):
         # does not include laterality distinction, only using original IDs
         if key <= 0: continue
         label = labels_ref_lookup[key]
         # ID of parent at label_parents' level
         parent = label_parents[key]
-        vals = (key, label[ontology.NODE][config.ABAKeys.ACRONYM.value],
+        vals = [key, label[ontology.NODE][config.ABAKeys.ACRONYM.value],
                 label[ontology.NODE][config.ABAKeys.NAME.value],
-                label[ontology.NODE][config.ABAKeys.LEVEL.value], parent)
+                label[ontology.NODE][config.ABAKeys.LEVEL.value], parent]
+        if rgbs is not None:
+            vals.append(rgbs[i, :3])
         for col, val in zip(cols, vals):
             data.setdefault(col, []).append(val)
-    data_frame = df_io.dict_to_data_frame(data, path)
-    return data_frame
+    df = df_io.dict_to_data_frame(data, path_csv)
+    if rgbs is not None:
+        df = df.style.apply(color_cells, subset="RGB")
+    path_xlsx = "{}.xlsx".format(os.path.splitext(path)[0])
+    df.to_excel(path_xlsx)
+    print("exported regions to styled spreadsheet: \"{}\"".format(path_xlsx))
+    return df
 
 
 def export_region_network(labels_ref_lookup, path):

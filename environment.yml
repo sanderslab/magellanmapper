@@ -9,6 +9,7 @@ dependencies:
   - pyamg
   - mayavi
   - pandas
+  - openpyxl
   - scikit-image
   - scikit-learn
   - boto3

@@ -400,6 +400,7 @@ StatsTypes = Enum(
         "EXTRACT_FROM_CSV",  # extract rows based on matching rows in given col
         "ADD_CSV_COLS",  # add columns with values to CSV
         "NORMALIZE",  # normalize metrics to a base condition within a CSV
+        "MERGE_EXCELS",  # merge Excel files into sheets of single Excel file
     ]
 )
 stats_type = None

@@ -645,6 +645,26 @@ def filter_dfs_on_vals(dfs, cols=None, row_matches=None):
     return df_merged, dfs_filt
 
 
+def merge_excels(paths, out_path, names=None):
+    """Merge Excel files into separate sheets of a single Excel output file.
+
+    Args:
+        paths (List[str]): Sequence of paths to Excel files to load.
+        out_path (str): Path to output file.
+        names (List[str]): Sequence of sheet names corresponding to ``paths``.
+            If None, the filenames without extensions in ``paths`` will be
+            used.
+    """
+    libmag.backup_file(out_path)
+    with pd.ExcelWriter(out_path) as writer:
+        if not names:
+            names = [libmag.get_filename_without_ext(p) for p in paths]
+        for path, name in zip(paths, names):
+            # TODO: styling appears to be lost during the read step
+            df = pd.read_excel(path, index_col=0, engine="openpyxl")
+            df.to_excel(writer, sheet_name=name, index=False)
+
+
 def main():
     """Process stats based on command-line mode."""
     print("Starting MagellanMapper stats...")
@@ -739,6 +759,13 @@ def main():
         if not out_path:
             out_path = libmag.insert_before_ext(config.filename, "_norm")
         data_frames_to_csv(df, out_path)
+
+    if stats_type is config.StatsTypes.MERGE_EXCELS:
+        # merge multiple Excel files into single Excel file, with each
+        # original Excel file as a separate sheet in the combined file
+        merge_excels(
+            config.filenames, config.prefix,
+            config.plot_labels[config.PlotLabels.LEGEND_NAMES])
 
 
 if __name__ == "__main__":

@@ -88,13 +88,13 @@ def export_region_network(labels_ref_lookup, path):
     if not path.endswith(ext): path += ext
     network = {}
     for key in labels_ref_lookup.keys():
-        if key < 0: continue # only use original, non-neg region IDs
+        if key < 0: continue  # only use original, non-neg region IDs
         label = labels_ref_lookup[key]
         parents = label.get(ontology.PARENT_IDS)
         if parents:
             for parent in parents[::-1]:
                 # work backward since closest parent listed last
-                print("{} looking for parent {} in network".format(key, parent))
+                #print("{} looking for parent {} in network".format(key, parent))
                 network_parent = network.get(parent)
                 if network_parent is not None:
                     # assume that all parents will have already been entered 
@@ -114,7 +114,7 @@ def export_region_network(labels_ref_lookup, path):
             if children:
                 row.extend(["pp", *children])
             stats_writer.writerow(row)
-    print("output region network to {}".format(path))
+    print("exported region network: \"{}\"".format(path))
 
 
 def export_common_labels(img_paths, output_path):

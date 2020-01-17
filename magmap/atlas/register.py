@@ -1595,8 +1595,11 @@ def main():
         labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
         
         # export region IDs and parents at given level to CSV
+        path = "region_ids"
+        if config.filename:
+            path = "{}_{}".format(path, config.filename)
         export_regions.export_region_ids(
-            labels_ref_lookup, "region_ids", config.labels_level)
+            labels_ref_lookup, path, config.labels_level)
         # export region IDs to network file
         export_regions.export_region_network(
             labels_ref_lookup, "region_network")

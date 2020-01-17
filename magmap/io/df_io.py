@@ -654,6 +654,7 @@ def main():
     # process stats based on command-line argument
     
     stats_type = libmag.get_enum(config.stats_type, config.StatsTypes)
+
     if stats_type is config.StatsTypes.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
         merge_csvs(config.filenames, config.prefix)
@@ -687,11 +688,11 @@ def main():
                 config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
-    elif stats_type == config.StatsTypes.EXPS_BY_REGION:
+    elif stats_type is config.StatsTypes.EXPS_BY_REGION:
         # convert volume stats data frame to experiments by region
         exps_by_regions(config.filename)
 
-    elif stats_type == config.StatsTypes.EXTRACT_FROM_CSV:
+    elif stats_type is config.StatsTypes.EXTRACT_FROM_CSV:
         # extract rows from CSV file based on matching rows in given col, where 
         # "X_COL" = name of column on which to filter, and 
         # "Y_COL" = values in this column for which rows should be kept
@@ -705,7 +706,7 @@ def main():
             out_path = "filtered.csv"
         data_frames_to_csv(df_filt, out_path)
 
-    elif stats_type == config.StatsTypes.ADD_CSV_COLS:
+    elif stats_type is config.StatsTypes.ADD_CSV_COLS:
         # add columns with corresponding values for all rows, where 
         # "X_COL" = name of column(s) to add, and 
         # "Y_COL" = value(s) for corresponding cols
@@ -720,7 +721,7 @@ def main():
                 config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
-    elif stats_type == config.StatsTypes.NORMALIZE:
+    elif stats_type is config.StatsTypes.NORMALIZE:
         # normalize values in each group to that of a base group, where
         # "ID_COL" = ID column(s),
         # "X_COL" = condition column

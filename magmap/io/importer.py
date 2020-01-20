@@ -466,7 +466,7 @@ def assign_metadata(md):
 def read_file(filename, series, load=True, z_max=-1, 
               offset=None, size=None, channel=None, return_info=False, 
               import_if_absent=True, update_info=True):
-    """Reads in an imaging file.
+    """Reads an image file into Numpy format or imports a file into this format.
     
     Loads a Numpy image if available as determined by 
     :func:``make_filenames``. An offset and size can be given to load an 
@@ -566,9 +566,8 @@ def read_file(filename, series, load=True, z_max=-1,
     start_jvm()
     time_start = time()
     image5d = None
-    shape = None
     if offset is None:
-        offset = (0, 0, 0) # (x, y, z)
+        offset = (0, 0, 0)  # (x, y, z)
     num_files = 1
     if ext in _EXT_TIFFS:
         # import multipage TIFFs
@@ -619,7 +618,7 @@ def read_file(filename, series, load=True, z_max=-1,
         # parses the XML tree directly
         filenames = [filename]
         names, sizes, config.resolutions, config.magnification, \
-        config.zoom, pixel_type = parse_ome_raw(filenames[0])
+            config.zoom, pixel_type = parse_ome_raw(filenames[0])
         shape = sizes[series]
         if z_max != -1:
             shape[1] = z_max

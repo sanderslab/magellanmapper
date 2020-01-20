@@ -74,7 +74,7 @@ SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
 
 CHANNEL_SEPARATOR = "_ch_"
-_EXT_TIFFS = (".tif", ".tiff", ".TIF", ".TIFF")
+_EXT_TIFFS = (".tif", ".tiff")
 
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
@@ -507,7 +507,7 @@ def read_file(filename, series, load=True, z_max=-1,
         second value a dictionary of image properties will be returned.
     """
     path_split = libmag.splitext(filename)
-    ext = path_split[1]
+    ext = path_split[1].lower()
     filename_image5d_npz, filename_info_npz = make_filenames(
         filename, series)
     if load:
@@ -581,8 +581,11 @@ def read_file(filename, series, load=True, z_max=-1,
             path_split[0], CHANNEL_SEPARATOR, channel_num)
         filenames = []
         print("looking for TIFF files matching the format:", tif_base)
-        for ext_tif in _EXT_TIFFS:
-            filenames.extend(glob.glob("{}{}".format(tif_base, ext_tif)))
+        matches = glob.glob(tif_base)
+        for match in matches:
+            match_split = os.path.splitext(match)
+            if match_split[1].lower() in _EXT_TIFFS:
+                filenames.append(match)
         filenames = sorted(filenames)
         print("found matching TIFF files: ", filenames)
         if not filenames:

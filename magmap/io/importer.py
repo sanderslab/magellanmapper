@@ -74,6 +74,7 @@ SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
 SUFFIX_INFO = "_info.npz"
 
 CHANNEL_SEPARATOR = "_ch_"
+_EXT_TIFFS = (".tif", ".tiff", ".TIF", ".TIFF")
 
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
@@ -473,7 +474,7 @@ def read_file(filename, series, load=True, z_max=-1,
     found, one will be generated from the given source image. For TIFF images, 
     multiple channels will assume to be stored in separate files with 
     :const:``CHANNEL_SEPARATOR`` followed by an integer corresponding to the 
-    channel number (0-based indexing).
+    channel number (0-based indexing), eg "/path/to/image_ch_0.tif".
     
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
@@ -569,16 +570,26 @@ def read_file(filename, series, load=True, z_max=-1,
     if offset is None:
         offset = (0, 0, 0) # (x, y, z)
     num_files = 1
-    if ext == ".tiff" or ext == ".tif":
+    if ext in _EXT_TIFFS:
         # import multipage TIFFs
         print("Loading multipage TIFF...")
         
         # find files for each channel, defaulting to load all channels available
         name = os.path.basename(filename)
         channel_num = "*" if channel is None else "{}*".format(channel)
-        filenames = sorted(glob.glob(
-            os.path.splitext(filename)[0] + CHANNEL_SEPARATOR + channel_num))
-        print(filenames)
+        tif_base = "{}{}{}".format(
+            path_split[0], CHANNEL_SEPARATOR, channel_num)
+        filenames = []
+        print("looking for TIFF files matching the format:", tif_base)
+        for ext_tif in _EXT_TIFFS:
+            filenames.extend(glob.glob("{}{}".format(tif_base, ext_tif)))
+        filenames = sorted(filenames)
+        print("found matching TIFF files: ", filenames)
+        if not filenames:
+            raise IOError(
+                "No filenames matching the format, \"{}\" with "
+                "extensions of types {}".format(
+                    tif_base, ", ".join(_EXT_TIFFS)))
         num_files = len(filenames)
         
         # require resolution information as it will be necessary for 

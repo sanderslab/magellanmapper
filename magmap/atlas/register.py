@@ -165,18 +165,27 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 
-def _load_numpy_to_sitk(numpy_file, rotate=False):
+def _load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
     """Load Numpy image array to SimpleITK Image object.
+
+    Use ``channel`` to extract a single channel before generating a
+    :obj:`sitk.Image` object for many SimpleITK filters that require
+    single-channel ("scalar" rather than "vector") images.
     
     Args:
         numpy_file: Path to Numpy archive file.
         rotate: True if the image should be rotated 180 deg; defaults to False.
+        channel (int, Tuple[int]): Integer or sequence of integers specifying
+            channels to keep.
     
     Returns:
         The image in SimpleITK format.
     """
     image5d = importer.read_file(numpy_file, config.series)
-    roi = image5d[0, ...] # not using time dimension
+    roi = image5d[0, ...]  # not using time dimension
+    if channel is not None and len(roi.shape) >= 4:
+        roi = roi[..., channel]
+        print("extracted channel(s) for SimpleITK image:", channel)
     if rotate:
         roi = np.rot90(roi, 2, (1, 2))
     sitk_img = sitk.GetImageFromArray(roi)
@@ -429,7 +438,8 @@ def register(fixed_file, moving_file_dir, flip=False,
     settings = config.register_settings
     
     # load fixed image, assumed to be experimental image
-    fixed_img = _load_numpy_to_sitk(fixed_file)
+    chl = 0 if config.channel is None else config.channel
+    fixed_img = _load_numpy_to_sitk(fixed_file, channel=chl)
     
     # preprocessing; store original fixed image for overlap measure
     fixed_img_orig = fixed_img
@@ -775,13 +785,15 @@ def register_group(img_files, flip=None, show_imgs=True,
     spacing = None
     img_np_template = None # first image, used as template for rest
     for i in range(len(img_files)):
-        # load image, fipping if necessary and using tranpsosed img if specified
+        # load image, flipping if necessary and using transposed img if
+        # specified, and extract only the channel from config setting
         img_file = img_files[i]
         img_file = transformer.get_transposed_image_path(
             img_file, scale, target_size)
         if flip is not None:
             flip_img = flip[i]
-        img = _load_numpy_to_sitk(img_file, flip_img)
+        chl = 0 if config.channel is None else config.channel
+        img = _load_numpy_to_sitk(img_file, flip_img, chl)
         size = img.GetSize()
         img_np = sitk.GetArrayFromImage(img)
         if img_np_template is None:

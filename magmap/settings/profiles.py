@@ -376,6 +376,7 @@ class RegisterSettings(SettingsDict):
             RegKeys.MARKER_EROSION_USE_MIN: False,  # don't erode if reach min
         }
         self["labels_dup"] = None  # start duplicating planes til last labels
+        # TODO: replace with ACTIVE flag?
         self["extend_labels"] = {"edge": True, "mirror": True}
         
         # expand labels within bounds given by 
@@ -780,7 +781,24 @@ def update_register_settings(settings, settings_type):
                 "make_far_hem_neg": True, 
             }, 
             profile)
-        
+
+        # ABA CCFv3 specific settings
+        settings.add_modifier(
+            "abaccfv3",
+            {
+                # for "25" image, which has same shape as ABA P56dev, P56adult
+                "target_size": (456, 528, 320),
+                "resize_factor": None,  # turn off resizing
+                # TODO: consider whether to mirror for perfect symmetry
+                "extend_labels": {"mirror": False},
+                # atlas is almost but not perfectly symmetric; midline at z=228
+                "labels_mirror": 0.5,
+                "labels_edge": None,
+                "smooth": 0,
+                "make_far_hem_neg": True,
+            },
+            profile)
+
         # Waxholm rat atlas specific settings
         settings.add_modifier(
             "whsrat", 

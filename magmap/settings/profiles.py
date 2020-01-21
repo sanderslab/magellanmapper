@@ -610,7 +610,7 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "abae11pt5pitch",
             {"rotate": ((-30, 0),)},
-        )
+            profile)
 
         # ABA E13pt5 specific settings
         settings.add_modifier(

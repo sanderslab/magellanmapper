@@ -11,3 +11,4 @@ __pycache__
 docs/_build
 stats/.*
 .Rproj.user
+build

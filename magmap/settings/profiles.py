@@ -494,7 +494,7 @@ def update_register_settings(settings, settings_type):
                 # fallback to MMI since it has been rather reliable
                 "metric_sim_fallback":
                     (0.85, "AdvancedMattesMutualInformation"),
-                "bspline_grid_space_voxels": 60,
+                "bspline_grid_space_voxels": "60",
             }, 
             profile)
 

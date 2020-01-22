@@ -469,9 +469,20 @@ def register(fixed_file, moving_file_dir, flip=False,
         param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
         transformix.SetTransformParameterMap(param_map)
         return img_reg, transformix, param_map
-    
+
+    # perform registration
     metric_sim = settings["metric_similarity"]
-    img_moved, transformix_filter, transform_param_map = reg(metric_sim)
+    try:
+        img_moved, transformix_filter, transform_param_map = reg(metric_sim)
+    except RuntimeError:
+        libmag.warn("Could not perform registration. Will retry with"
+                    "moving image spacing set to that of the fixed image.")
+        # TODO: consider matching spacing by default since output is same
+        spacing = fixed_img.GetSpacing()
+        moving_img.SetSpacing(spacing)
+        labels_img.SetSpacing(spacing)
+        img_moved, transformix_filter, transform_param_map = reg(metric_sim)
+
     # overlap stats comparing original and registered samples (eg histology)
     print("DSC of original and registered sample images")
     thresh_mov = settings["atlas_threshold"]

@@ -1,14 +1,14 @@
 # MagellanMapper
 MagellanMapper is an imaging informatics GUI and pipeline for high-throughput, automated analysis of whole organs. Its design philosophy is to make the raw, original images as accessible as possible; simplify annotation from nuclei to atlases; and scale from the laptop to the cloud in cross-platform environments.
 
-Author: David Young, 2017, 2019, Stephan Sanders Lab
+Author: David Young, 2017, 2020, Stephan Sanders Lab
 
 ## Download
 
 Currently access is limited to a private Git repo. Our eventual plan is to make MagellanMapper available via Anaconda and Pip.
 
 - Contact the project managers about loading your public key to access the project repository
-- Download the repo: `git clone git@bitbucket.org:psychcore/clrbrain.git`
+- Download the repo: `git clone git@bitbucket.org:psychcore/magellanmapper.git`
 
 ## Installation
 

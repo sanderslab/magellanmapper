@@ -444,13 +444,20 @@ def hide_axes(ax):
 
 def fit_frame_to_image(fig, shape, aspect):
     """Compress figure to fit image only.
+
+    Use :attr:`config.plot_labels[config.PlotLabels.PADDING]` to configure
+    figure padding, which will turn off the constrained layout.
     
     Args:
         fig: Figure to compress.
         shape: Shape of image to which the figure will be fit.
         aspect: Aspect ratio of image.
     """
-    #fig.tight_layout(pad=-0.4) # neg padding to remove thin left border
+    pad = config.plot_labels[config.PlotLabels.PADDING]
+    if pad:
+        # use neg padding to remove thin left border that sometimes appears;
+        # NOTE: this setting will turn off constrained layout
+        fig.tight_layout(pad=pad)
     if aspect is None:
         aspect = 1
     img_size_inches = np.divide(shape, fig.dpi)  # convert to inches

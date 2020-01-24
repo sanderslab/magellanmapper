@@ -136,6 +136,7 @@ PlotLabels = Enum(
         "ZOOM_SHIFT",  # shift plot offset when zooming into ROI
         "HLINE",  # horizontal line, usually fn for each group
         "LEGEND_NAMES",  # names to display in legend
+        "PADDING",  # figure tight layout padding
     )
 )
 plot_labels = dict.fromkeys(PlotLabels, None)

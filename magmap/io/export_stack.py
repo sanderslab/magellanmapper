@@ -212,7 +212,8 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None):
     anim = animation.ArtistAnimation(
         fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
     try:
-        anim.save(out_path, writer="imagemagick")
+        writer = "ffmpeg" if ext == "mp4" else "imagemagick"
+        anim.save(out_path, writer=writer)
         print("saved animation file to {}".format(out_path))
     except ValueError as e:
         print(e)

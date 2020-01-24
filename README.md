@@ -196,7 +196,8 @@ Automated processing will attempt to scale based on your system resources but ma
 Optional dependencies:
 
 - ImageJ/Fiji with the BigStitcher plugin: required for tile stitching; downloaded automatically onto a server when running `deploy.sh`
-- ImageMagick: required for stack animation
+- ImageMagick: required for exporting a stack of planes to an animated GIF file
+- FFMpeg: required to export a stack to a movie format such as MP4
 - [Slack incoming webhook](https://api.slack.com/incoming-webhooks): to notify when tile stitching alignment is ready for verification and pipeline has completed
 
 ### Local

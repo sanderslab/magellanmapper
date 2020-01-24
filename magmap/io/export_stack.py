@@ -185,22 +185,28 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
     return plotted_imgs
 
 
-def animate_imgs(base_path, plotted_imgs, delay, ext=None):
+def animate_imgs(base_path, plotted_imgs, delay, ext=None, suffix=None):
     """Export to an animated image.
     
     Defaults to an animated GIF unless ``ext`` specifies otherwise.
+    Requires ``FFMpeg`` for MP4 file format exports and ``ImageMagick`` for
+    all other types of exports.
     
     Args:
         base_path (str): String from which an output path will be constructed.
-        plotted_imgs: 
-        delay: Delay between image display in ms. If None, the delay will 
+        plotted_imgs (List[:obj:`matplotlib.image.AxesImage]): Sequence of
+            images to include in the animation.
+        delay (int): Delay between image display in ms. If None, the delay will
             defaul to 100ms.
-
-    Returns:
+        ext (str): Extension to use when saving, without the period. Defaults
+            to None, in which case "gif" will be used.
+        suffix (str): String to append to output path before extension;
+            defaults to None to ignore.
 
     """
     if ext is None: ext = "gif"
     out_path = libmag.combine_paths(base_path, "animated", ext=ext)
+    if suffix: out_path = libmag.insert_before_ext(out_path, suffix, "_")
     libmag.backup_file(out_path)
     if delay is None:
         delay = 100
@@ -424,12 +430,12 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
                 labels_imgs=(config.labels_img, config.borders_img), 
                 multiplane=animated, 
                 fit=(size is None or ncols * nrows == 1))
+    path_base = paths[0]
     if animated:
         animate_imgs(
-            paths[0], plotted_imgs, config.delay, config.savefig)
+            path_base, plotted_imgs, config.delay, config.savefig, suffix)
     else:
         planei = offset[-1] if offset else config.slice_vals[0]
-        path_base = paths[0]
         if num_paths > 1:
             # output filename as a collage of images
             if not os.path.isdir(path_base):

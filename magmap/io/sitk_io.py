@@ -102,7 +102,8 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
     if img_nps:
         # use first image in list as basis for shape
         img_np_base = img_nps[0]
-    img_sitk = load_registered_img(path, reg_name, get_sitk=True)
+    img_sitk, loaded_path = load_registered_img(
+        path, reg_name, get_sitk=True, return_path=True)
     img_np = sitk.GetArrayFromImage(img_sitk)
     if img_np_base is not None:
         if img_np_base.shape != img_np.shape:
@@ -114,7 +115,7 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
         img_np = libmag.normalize(
             img_np * 1.0, 0, np.amax(img_np_base))
     img_nps.append(img_np)
-    return img_sitk
+    return img_sitk, loaded_path
 
 
 def read_sitk_files(filename_sitk, reg_names=None):
@@ -136,6 +137,7 @@ def read_sitk_files(filename_sitk, reg_names=None):
     """
     # load image via SimpleITK
     img_sitk = None
+    loaded_path = filename_sitk
     if reg_names:
         img_nps = []
         if not libmag.is_seq(reg_names):
@@ -143,8 +145,11 @@ def read_sitk_files(filename_sitk, reg_names=None):
         for reg_name in reg_names:
             # load each registered suffix into list of images with same shape, 
             # keeping first image in sitk format
-            img = _load_reg_img_to_combine(filename_sitk, reg_name, img_nps)
-            if img_sitk is None: img_sitk = img
+            img, path = _load_reg_img_to_combine(
+                filename_sitk, reg_name, img_nps)
+            if img_sitk is None:
+                img_sitk = img
+                loaded_path = path
         if len(img_nps) > 1:
             # merge images into separate channels
             img_np = np.stack(img_nps, axis=img_nps[0].ndim)
@@ -161,15 +166,16 @@ def read_sitk_files(filename_sitk, reg_names=None):
     if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
         libmag.warn(
-            "MagellanMapper image metadata file not loaded; will fallback to {} "
-            "for metadata".format(filename_sitk))
+            "MagellanMapper image metadata file not loaded; will fallback to "
+            "{} for metadata".format(loaded_path))
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(config.resolutions))
     
     return img_np
 
 
-def load_registered_img(img_path, reg_name, get_sitk=False, replace=None):
+def load_registered_img(img_path, reg_name, get_sitk=False, replace=None,
+                        return_path=False):
     """Load atlas-based image that has been registered to another image.
     
     Args:
@@ -183,6 +189,8 @@ def load_registered_img(img_path, reg_name, get_sitk=False, replace=None):
         replace: Numpy image with which to replace and overwrite the loaded 
             image. Defaults to None, in which case no replacement will take 
             place.
+        return_path (bool): True to return the path from which the image
+            was loaded.
     
     Returns:
         The atlas-based image, either as a SimpleITK image or its 
@@ -208,9 +216,9 @@ def load_registered_img(img_path, reg_name, get_sitk=False, replace=None):
         reg_img = replace_sitk_with_numpy(reg_img, replace)
         sitk.WriteImage(reg_img, reg_img_path, False)
         print("replaced {} with current registered image".format(reg_img_path))
-    if get_sitk:
-        return reg_img
-    return sitk.GetArrayFromImage(reg_img)
+    if not get_sitk:
+        reg_img = sitk.GetArrayFromImage(reg_img)
+    return reg_img, reg_img_path if return_path else reg_img
 
 
 def find_atlas_labels(load_labels, max_level, labels_ref_lookup):
@@ -312,7 +320,7 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
             mod_path = libmag.insert_before_ext(mod_path, suffix)
         print("loading", mod_path)
         # load and resize images to shape of first loaded image
-        img = _load_reg_img_to_combine(mod_path, reg_name, img_nps)
+        img, _ = _load_reg_img_to_combine(mod_path, reg_name, img_nps)
         if img_sitk is None: img_sitk = img
     
     # combine images and write single combo image

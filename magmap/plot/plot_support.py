@@ -26,7 +26,7 @@ except ImportError as e:
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
                         vmax=None, origin=None, interpolation=None,
-                        norms=None, nan_color=None):
+                        norms=None, nan_color=None, ignore_invis=False):
     """Show multichannel 2D image with channels overlaid over one another.
 
     Applies :attr:`config.transform` with :obj:`config.Transforms.ROTATE`
@@ -55,6 +55,8 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         norms: List of normalizations, which should correspond to ``cmaps``.
         nan_color (str): String of color to use for NaN values; defaults to
             None to use "black".
+        ignore_invis (bool): True to give None instead of an ``AxesImage``
+            object that would be invisible; defaults to False.
     
     Returns:
         List of ``AxesImage`` objects.
@@ -102,7 +104,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         if is_alpha_seq:
             alpha_plane = alpha[chl]
         img_chl = None
-        if alpha_plane > 0:
+        if not ignore_invis or alpha_plane > 0:
             # skip display if alpha is 0 to avoid outputting a hidden image 
             # that may show up in other renderers (eg PDF viewers)
             img_chl = ax.imshow(
@@ -127,7 +129,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
 
 
 def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas, 
-                   vmins=None, vmaxs=None):
+                   vmins=None, vmaxs=None, ignore_invis=False):
     """Show multiple, overlaid images.
     
     Wrapper function calling :meth:`imshow_multichannel` for multiple 
@@ -157,6 +159,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         vmaxs: A list of vmaxs for each image; defaults to None to use 
             :attr:``config.vmax_overview`` for the first image and None 
             for all others.
+        ignore_invis (bool): True to avoid creating ``AxesImage`` objects
+            for images that would be invisible; defaults to False.
     
     Returns:
         Nested list containing a list of ``AxesImage`` objects 
@@ -219,7 +223,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         ax_img = imshow_multichannel(
             ax, img, channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
             vmax=vmaxs[i], origin=origin, interpolation="none",
-            norms=norm, nan_color=nan_color)
+            norms=norm, nan_color=nan_color, ignore_invis=ignore_invis)
         ax_imgs.append(ax_img)
     return ax_imgs
 

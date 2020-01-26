@@ -170,7 +170,8 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
         # a nested list containing a list for each image, which in turn 
         # contains a list of artists for each channel
         ax_imgs = plot_support.overlay_images(
-            ax, aspect, origin, imgs, None, cmaps_all, alphas)
+            ax, aspect, origin, imgs, None, cmaps_all, alphas,
+            ignore_invis=True)
         if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
             # add colorbar with scientific notation if outside limits
             cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)

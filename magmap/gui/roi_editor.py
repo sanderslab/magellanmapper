@@ -601,7 +601,8 @@ class ROIEditor:
                 show.setdefault("vmaxs", []).append(vmax)
             show["alphas"] = libmag.pad_seq(
                 config.alphas, len(show["imgs2d"]), 0.9)
-            plot_support.overlay_images(ax_ov, aspect, origin, **show)
+            plot_support.overlay_images(
+                ax_ov, aspect, origin, ignore_invis=True, **show)
             ax_ov.add_patch(patches.Rectangle(
                 np.divide(patch_offset, downsample),
                 *np.divide(roi_size[0:2], downsample),

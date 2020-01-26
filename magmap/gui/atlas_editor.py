@@ -37,6 +37,7 @@ class AtlasEditor:
             be generated.
         fn_show_label_3d: Function to call to show a label in a 
             3D viewer. Defaults to None.
+        title (str): Window title; defaults to None.
         plot_eds: Dictionary of :class:`magmap.plot_editor.PlotEditor`, with 
             key specified by one of :const:`magmap.config.PLANE` 
             plane orientations.
@@ -51,7 +52,7 @@ class AtlasEditor:
     _EDIT_BTN_LBLS = ("Edit", "Editing")
     
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
-                 borders_img=None, fn_show_label_3d=None):
+                 borders_img=None, fn_show_label_3d=None, title=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself."""
         self.image5d = image5d
         self.labels_img = labels_img
@@ -60,6 +61,7 @@ class AtlasEditor:
         self.fn_close_listener = fn_close_listener
         self.borders_img = borders_img
         self.fn_show_label_3d = fn_show_label_3d
+        self.title = title
         
         self.plot_eds = {}
         self.alpha_slider = None
@@ -74,7 +76,7 @@ class AtlasEditor:
     def show_atlas(self):
         """Set up the atlas display with multiple orthogonal views."""
         # set up the figure
-        fig = plt.figure()
+        fig = plt.figure(self.title)
         gs = gridspec.GridSpec(
             2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1))
         gs_viewers = gridspec.GridSpecFromSubplotSpec(

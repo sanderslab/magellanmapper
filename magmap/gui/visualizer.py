@@ -900,7 +900,8 @@ class Visualization(HasTraits):
         self.atlas_ed = atlas_editor.AtlasEditor(
             config.image5d, config.labels_img, config.channel, 
             self._curr_offset(), self._fig_close_listener, 
-            borders_img=config.borders_img, fn_show_label_3d=self.show_label_3d)
+            borders_img=config.borders_img,
+            fn_show_label_3d=self.show_label_3d, title=config.filename)
         self.atlas_ed.show_atlas()
     
     def _btn_save_3d_fired(self):

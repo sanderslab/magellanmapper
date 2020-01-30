@@ -324,7 +324,10 @@ class ABAKeys(Enum):
 # register module modes when called from command-line
 RegisterTypes = Enum(
     "RegisterTypes", [
-        "single", "group", "overlays", 
+        "single",  # register atlas directory to single sample image
+        "group",  # groupwise register multiple samples
+        "register_rev",  # reverse register sample to atlas
+        "overlays",
         "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
         "convert_itksnap_labels", 
         "make_edge_images", "make_edge_images_exp", "merge_atlas_segs", 
@@ -333,8 +336,8 @@ RegisterTypes = Enum(
         "make_density_images", 
         "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
         "plot_smoothing_metrics", "smoothing_peaks", "smoothing_metrics_aggr", 
-        "merge_images", "merge_images_channels", 
-        "register_reg", "labels_diff", "labels_diff_stats", 
+        "merge_images", "merge_images_channels",
+        "labels_diff", "labels_diff_stats",
         "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols",
         "plot_region_dev", "plot_lateral_unlabeled", 
         "plot_intens_nuc", 

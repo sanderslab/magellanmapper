@@ -605,18 +605,20 @@ def register(fixed_file, moving_file_dir, flip=False,
           .format(time() - start_time))
 
 
-def register_reg(fixed_path, moving_path, reg_base=None, reg_names=None, 
+def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
                  plane=None, flip=False, prefix=None, suffix=None, show=True):
-    """Using registered images including the unregistered copies of 
-    the original image, register these images to another image.
-    
-    For example, registered images can be registered back to the atlas. 
+    """Reverse registration from :meth:`register`, registering a sample
+    image (moving image) to an atlas image (fixed image).
+
+    Useful for registering a sample image and associated registered atlas
+    images to another image. For example, registered images can be registered
+    back to the atlas.
+
     This method can also be used to move unregistered original images 
     that have simply been copied as ``config.RegNames.IMG_EXP.value`` 
-    during registration. 
-    This copy can be registered "back" to the atlas, reversing the 
-    fixed/moving images in :meth:``register`` to move all experimental 
-    images into the same space.
+    during registration. This copy can be registered "back" to the atlas,
+    reversing the fixed/moving images in :meth:``register`` to move all
+    experimental images into the same space.
     
     Args:
         fixed_path: Path to he image to be registered to in 
@@ -1809,7 +1811,7 @@ def main():
             config.filenames, config.RegNames.IMG_EXP.value, config.prefix, 
             config.suffix, fn_combine=None)
 
-    elif reg is config.RegisterTypes.register_reg:
+    elif reg is config.RegisterTypes.register_rev:
         # register a group of registered images to another image, 
         # such as the atlas to which the images were originally registered
         suffixes = None
@@ -1818,7 +1820,7 @@ def main():
             suffixes = [config.reg_suffixes[key]
                         for key, val in config.reg_suffixes.items()
                         if config.reg_suffixes[key] is not None]
-        register_reg(
+        register_rev(
             *config.filenames[:2], config.RegNames.IMG_EXP.value, suffixes, 
             config.plane, flip, config.prefix, config.suffix, show)
 

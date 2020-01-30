@@ -190,11 +190,12 @@ def load_registered_img(img_path, reg_name, get_sitk=False, replace=None,
             image. Defaults to None, in which case no replacement will take 
             place.
         return_path (bool): True to return the path from which the image
-            was loaded.
+            was loaded; defaults to False.
     
     Returns:
-        The atlas-based image, either as a SimpleITK image or its 
-        corresponding Numpy array.
+        :obj:`np.ndarray`: The atlas-based image as a Numpy array, or a
+        :obj:`sitk.Image` object if ``get_sitk`` is True. Also returns the
+        loaded path if ``return_path`` is True.
     
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
@@ -218,7 +219,7 @@ def load_registered_img(img_path, reg_name, get_sitk=False, replace=None,
         print("replaced {} with current registered image".format(reg_img_path))
     if not get_sitk:
         reg_img = sitk.GetArrayFromImage(reg_img)
-    return reg_img, reg_img_path if return_path else reg_img
+    return (reg_img, reg_img_path) if return_path else reg_img
 
 
 def find_atlas_labels(load_labels, max_level, labels_ref_lookup):

@@ -111,12 +111,13 @@ def update_process_settings(settings, settings_type):
         #     clip_max, use default sub_stack_max_pixels
         # v2.1 (MagellanMapper v0.6.4): erosion_threshold
         # v2.2 (MagellanMapper v0.6.6): narrower and taller stack shape
-        # v2.3 (MagellanMapper 0.8.7): added prune_tol_factor
-        # v2.4 (MagellanMapper 0.8.8): decreased min/max sigma, segment size
-        # v2.5 (MagellanMapper 0.8.9): added exclude_border
-        # v2.6 (MagellanMapper 0.9.3): slight dec in x/y verify tol for Hungarian meth
-        # v2.6.1 (MagellanMapper 0.9.4): scale_factor, segmenting_mean_thresh had 
-        #     already been turned off, now removed from MagellanMapper and here
+        # v2.3 (MagellanMapper v0.8.7): added prune_tol_factor
+        # v2.4 (MagellanMapper v0.8.8): decreased min/max sigma, segment size
+        # v2.5 (MagellanMapper v0.8.9): added exclude_border
+        # v2.6 (MagellanMapper v0.9.3): slight dec in x/y verify tol for
+        #     Hungarian method
+        # v2.6.1 (MagellanMapper v0.9.4): scale_factor, segmenting_mean_thresh
+        #     had already been turned off and now removed completely
         settings.add_modifier(
             "lightsheet", 
             {
@@ -268,9 +269,9 @@ def update_process_settings(settings, settings_type):
             "importdl", 
             {
                 "isotropic": None,  # assume already isotropic
-                "resize_blobs": (.2, 1, 1), 
-                "load_rot90": 2,
-            }, # rotation by 180deg
+                "resize_blobs": (.2, 1, 1),
+                "load_rot90": 2,  # rotation by 180deg
+            },
             profile)
         
         # denoise settings when performing registration

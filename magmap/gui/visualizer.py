@@ -1180,12 +1180,11 @@ class Visualization(HasTraits):
                         Item("_filename", 
                              editor=FileEditor(entries=10, allow_dir=False), 
                              label="File", style="simple"),
-                        Item(
-                            "_channel",
-                            editor=RangeEditor(
-                                low_name="_channel_low",
-                                high_name="_channel_high",
-                                mode="spinner")
+                        Item("_channel", label="Channel",
+                             editor=RangeEditor(
+                                 low_name="_channel_low",
+                                 high_name="_channel_high",
+                                 mode="spinner")
                         ),
                     ),
                     Item("rois_check_list", 

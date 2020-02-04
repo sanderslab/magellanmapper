@@ -215,7 +215,31 @@ class Visualization(HasTraits):
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
     _camera_pos = None
-    
+
+    def __init__(self):
+        # Do not forget to call the parent's __init__
+        HasTraits.__init__(self)
+
+        # default options setup
+        self._set_border(True)
+        self._circles_2d = [
+            roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
+        self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
+        self._styles_2d = [Styles2D.SQUARE.value]
+        # self._check_list_2d = [self._DEFAULTS_2D[1]]
+        self._check_list_3d = [self._DEFAULTS_3D[2]]
+        if (config.process_settings["vis_3d"].lower()
+                == self._DEFAULTS_3D[3].lower()):
+            # check "surface" if set in profile
+            self._check_list_3d.append(self._DEFAULTS_3D[3])
+        # self._structure_scale = self._structure_scale_high
+
+        # setup interface for image
+        # TODO: show the currently loaded Numpy image file without triggering
+        # update
+        # self._filename = config.filename
+        self._setup_for_image()
+
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.
         
@@ -557,31 +581,7 @@ class Visualization(HasTraits):
         
         # show the default ROI
         self.show_3d()
-    
-    def __init__(self):
-        # Do not forget to call the parent's __init__
-        HasTraits.__init__(self)
-        
-        # default options setup
-        self._set_border(True)
-        self._circles_2d = [
-            roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
-        self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
-        self._styles_2d = [Styles2D.SQUARE.value]
-        #self._check_list_2d = [self._DEFAULTS_2D[1]]
-        self._check_list_3d = [self._DEFAULTS_3D[2]]
-        if (config.process_settings["vis_3d"].lower() 
-            == self._DEFAULTS_3D[3].lower()):
-            # check "surface" if set in profile
-            self._check_list_3d.append(self._DEFAULTS_3D[3])
-        #self._structure_scale = self._structure_scale_high
-        
-        # setup interface for image
-        # TODO: show the currently loaded Numpy image file without triggering 
-        # update
-        #self._filename = config.filename
-        self._setup_for_image()
-    
+
     @on_trait_change("_filename")
     def update_filename(self):
         """Update the selected filename and load the corresponding image.

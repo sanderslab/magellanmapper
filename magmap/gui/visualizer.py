@@ -42,6 +42,7 @@ from magmap.cv import cv_nd
 from magmap.cv import detector
 from magmap.io import importer
 from magmap.io import libmag
+from magmap.io import np_io
 from magmap.atlas import ontology
 from magmap.plot import plot_3d
 from magmap.plot import plot_2d
@@ -608,7 +609,7 @@ class Visualization(HasTraits):
             print("Changed filename to {}, series to {}"
                   .format(config.filename, config.series))
             # TODO: consider loading processed images, blobs, etc
-            config.image5d = importer.read_file(config.filename, config.series)
+            np_io.setup_images(config.filename)
             self._setup_for_image()
         else:
             print("Could not parse filename {} and series {}"

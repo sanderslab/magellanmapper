@@ -1,4 +1,54 @@
 #! /usr/bin/env python
-from magmap.gui import visualizer
+# Simple startup script for MagellanMapper
+# Author: David Young, 2017, 2020
 
-visualizer.main()
+import os
+import subprocess
+import sys
+
+
+def is_conda_activated():
+    """Check whether a Conda environment is active.
+
+    Returns:
+        True if the environment is currently activated.
+
+    """
+    return os.path.exists(os.path.join(sys.prefix, "conda-meta"))
+
+
+def is_venv_activated():
+    """Check whether a Venv or virtualenv environment is active.
+
+    Returns:
+        True if the environment is activated.
+
+    """
+    return (hasattr(sys, "real_prefix") or
+            (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix))
+
+
+def main():
+    """Launch the main MagellanMapper GUI.
+
+    If necessary, attempt to activate a virtual environment created
+    by MagellanMapper.
+    """
+    if is_conda_activated() or is_venv_activated():
+        from magmap.gui import visualizer
+        visualizer.main()
+    else:
+        print("Attempting to activate Conda environment")
+        args = [
+            "eval \"$(conda shell.bash hook)\"",
+            "conda activate mag",
+            "cd " + os.path.dirname(os.path.abspath(__file__)),
+            "python -u -c "
+            "\"from magmap.gui import visualizer; visualizer.main()\"",
+        ]
+        subprocess.call("&&".join(args), shell=True)
+
+
+if __name__ == "__main__":
+    print("Starting MagellanMapper run script...")
+    main()

@@ -1,6 +1,6 @@
 #!/bin/bash
 # 3D image visualization
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2020
 """3D Visualization GUI.
 
 This module is the main GUI for visualizing 3D objects from imaging stacks. 
@@ -16,9 +16,6 @@ Examples:
     Alternatively, this module can be run as a script::
         
         $ python -m magmap.visualizer --img /path/to/file.czi
-
-Attributes:
-    params: Additional Matplotlib rc parameters.
 """
 
 from enum import Enum
@@ -53,6 +50,7 @@ from magmap.gui import roi_editor
 from magmap.cv import segmenter
 from magmap.io import sqlite
 
+# default ROI name
 _ROI_DEFAULT = "None selected"
 
 
@@ -104,11 +102,13 @@ class VisHandler(Handler):
 
 
 class ListSelections(HasTraits):
+    """Traits-enabled list of ROIs."""
     selections = List([_ROI_DEFAULT])
 
 
 class SegmentsArrayAdapter(TabularAdapter):
-    columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2), 
+    """Blobs TraitsUI table adapter."""
+    columns = [("i", "index"), ("z", 0), ("row", 1), ("col", 2),
                ("radius", 3), ("confirmed", 4), ("channel", 6), ("abs_z", 7), 
                ("abs_y", 8), ("abs_x", 9)]
     index_text = Property
@@ -171,47 +171,47 @@ class Visualization(HasTraits):
     _rois_dict = None
     _rois = None
     _segments = Array
-    _segs_moved = [] # orig seg of moved blobs to track for deletion
+    _segs_moved = []  # orig seg of moved blobs to track for deletion
     _segs_scale_low = 0.0
-    _segs_scale_high = Float # needs to be trait to dynamically update
+    _segs_scale_high = Float  # needs to be trait to dynamically update
     segs_scale = Float
     segs_pts = None
-    segs_selected = List # indices
+    segs_selected = List  # indices
     # multi-select to allow updating with a list, but segment updater keeps
     # selections to single when updating them
     segs_table = TabularEditor(
         adapter=SegmentsArrayAdapter(), multi_select=True, 
         selected_row="segs_selected")
-    segs_in_mask = None # boolean mask for segments in the ROI
+    segs_in_mask = None  # boolean mask for segments in the ROI
     segs_cmap = None
     segs_feedback = Str("Segments output")
-    labels = None # segmentation labels
-    atlas_ed = None # atlas editor
-    flipz = True # True to invert 3D vis along z-axis
+    labels = None  # segmentation labels
+    atlas_ed = None  # atlas editor
+    flipz = True  # True to invert 3D vis along z-axis
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
     _check_list_2d = List
     _DEFAULTS_2D = [
         "Filtered", "Border zone", "Segmentation", "Grid", "Max inten proj"]
     _planes_2d = List
-    _border_on = False # remembers last border selection
+    _border_on = False  # remembers last border selection
     _DEFAULT_BORDER = np.zeros(3) # default ROI border size
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List  # ROI editor circle styles
     _styles_2d = List
     _atlas_label = None
-    _structure_scale = Int # ontology structure levels
+    _structure_scale = Int  # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
     _region_id = Str
     _mlab_title = None
-    _scene_3d_shown = False # 3D Mayavi display shown
+    _scene_3d_shown = False  # 3D Mayavi display shown
     _circles_opened_type = None  # enum of circle style for opened 2D plots
-    _opened_window_style = None # 2D plots window style curr open
-    _filename = File # file browser
-    _channel = Int # channel number, 0-based
-    _channel_low = -1 # -1 used for None, which translates to "all"
+    _opened_window_style = None  # 2D plots window style curr open
+    _filename = File  # file browser
     _ignore_filename = False  # ignore file update trigger
+    _channel = Int  # channel number, 0-based
+    _channel_low = -1  # -1 used for None, which translates to "all"
     _channel_high = 0
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"

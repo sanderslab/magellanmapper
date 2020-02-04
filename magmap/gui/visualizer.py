@@ -211,6 +211,7 @@ class Visualization(HasTraits):
     _filename = File # file browser
     _channel = Int # channel number, 0-based
     _channel_low = -1 # -1 used for None, which translates to "all"
+    _ignore_filename = False  # ignore file update trigger
     _channel_high = 0
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
@@ -234,10 +235,10 @@ class Visualization(HasTraits):
             self._check_list_3d.append(self._DEFAULTS_3D[3])
         # self._structure_scale = self._structure_scale_high
 
-        # setup interface for image
-        # TODO: show the currently loaded Numpy image file without triggering
-        # update
-        # self._filename = config.filename
+        # setup interface for image, including image filename in file
+        # selector without triggering file update
+        self._ignore_filename = True
+        self._filename = config.filename
         self._setup_for_image()
 
     def _format_seg(self, seg):
@@ -560,6 +561,7 @@ class Visualization(HasTraits):
         # TODO: consider subtracting 1 to avoid max offset being 1 above
         # true max, but currently convenient to display size and checked 
         # elsewhere
+        # TODO: does not appear to update on subsequent image loading
         self.z_high, self.y_high, self.x_high = size
         if config.offset is not None:
             # apply user-defined offsets
@@ -592,6 +594,10 @@ class Visualization(HasTraits):
         from the Numpy image filename. Processed files (eg ROIs, blobs) 
         will not be loaded for now.
         """
+        if self._ignore_filename:
+            # may ignore if only updating widget value, without triggering load
+            self._ignore_filename = False
+            return
         filename, series = importer.deconstruct_np_filename(self._filename)
         if filename is not None and series is not None:
             config.filename = filename

@@ -98,7 +98,8 @@ class VisHandler(Handler):
         """Closes the Java VM when the GUI is closed.
         """
         importer.stop_jvm()
-        config.db.conn.close()
+        if config.db is not None:
+            config.db.conn.close()
 
 
 class ListSelections(HasTraits):
@@ -235,10 +236,11 @@ class Visualization(HasTraits):
             self._check_list_3d.append(self._DEFAULTS_3D[3])
         # self._structure_scale = self._structure_scale_high
 
-        # setup interface for image, including image filename in file
-        # selector without triggering file update
-        self._ignore_filename = True
-        self._filename = config.filename
+        # setup interface for image
+        if config.filename:
+            # show image filename in file selector without triggering update
+            self._ignore_filename = True
+            self._filename = config.filename
         self._setup_for_image()
 
     def _format_seg(self, seg):
@@ -545,44 +547,45 @@ class Visualization(HasTraits):
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.
         """
-        # set up channel spinner based on number of channels available
-        if config.image5d.ndim >= 5:
-            # increase max channels based on channel dimension
-            self._channel_high = config.image5d.shape[4] - 1
-        else:
-            # only one channel available
-            self._channel_low = 0
-        # None channel defaults to all channels, represented in the channel 
-        # spinner here by -1 
-        self._channel = -1 if config.channel is None else config.channel
-        
-        # dimension max values in pixels
-        size = config.image5d.shape[1:4]
-        # TODO: consider subtracting 1 to avoid max offset being 1 above
-        # true max, but currently convenient to display size and checked 
-        # elsewhere
-        # TODO: does not appear to update on subsequent image loading
-        self.z_high, self.y_high, self.x_high = size
-        if config.offset is not None:
-            # apply user-defined offsets
-            self.x_offset = config.offset[0]
-            self.y_offset = config.offset[1]
-            self.z_offset = config.offset[2]
-        self.roi_array[0] = ([100, 100, 15] if config.roi_size is None 
-                             else config.roi_size)
+        if config.image5d is not None:
+            # set up channel spinner based on number of channels available
+            if config.image5d.ndim >= 5:
+                # increase max channels based on channel dimension
+                self._channel_high = config.image5d.shape[4] - 1
+            else:
+                # only one channel available
+                self._channel_low = 0
+            # None channel defaults to all channels, represented in the channel
+            # spinner here by -1
+            self._channel = -1 if config.channel is None else config.channel
+
+            # dimension max values in pixels
+            size = config.image5d.shape[1:4]
+            # TODO: consider subtracting 1 to avoid max offset being 1 above
+            # true max, but currently convenient to display size and checked
+            # elsewhere
+            # TODO: does not appear to update on subsequent image loading
+            self.z_high, self.y_high, self.x_high = size
+            if config.offset is not None:
+                # apply user-defined offsets
+                self.x_offset = config.offset[0]
+                self.y_offset = config.offset[1]
+                self.z_offset = config.offset[2]
+            self.roi_array[0] = ([100, 100, 15] if config.roi_size is None
+                                 else config.roi_size)
+            # show the default ROI
+            self.show_3d()
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {_ROI_DEFAULT: None}
-        self._rois = config.db.get_rois(os.path.basename(config.filename))
+        if config.db is not None:
+            self._rois = config.db.get_rois(os.path.basename(config.filename))
         self.rois_selections_class = ListSelections()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
                 self._append_roi(roi, self._rois_dict)
         self.rois_selections_class.selections = list(self._rois_dict.keys())
         self.rois_check_list = _ROI_DEFAULT
-        
-        # show the default ROI
-        self.show_3d()
 
     @on_trait_change("_filename")
     def update_filename(self):
@@ -1305,7 +1308,7 @@ class Visualization(HasTraits):
         resizable=True
     )
 
+
 if __name__ == "__main__":
     print("Starting visualizer...")
     main()
-    

@@ -88,8 +88,8 @@ In most cases MagellanMapper can be installed without a compiler or non-Python l
 #### Dependencies requiring a compilier
 
 - Python-Javabridge, used with Python-Bioformats to import image files from proprietary formats (eg `.czi`)
-- Traits via Pip/PyPI (not required for Conda package), for GUI
-- SimpleElastix (see below)
+- Traits via Pip/PyPI (not required for Conda package) for GUI
+- SimpleElastix (not required if Pip package is available; see below)
 
 Compilers required for these dependencies, by platform:
 
@@ -100,12 +100,13 @@ Compilers required for these dependencies, by platform:
 
 #### Dependencies requiring Java
 
+- The Conda setup pathway installs Java 8
 - Python-Javabridge, tested on v8-13
 - ImageJ/Fiji-based stitching pipeline via the BigSticher plugin (ImageJ currently requires Java 8)
 
 #### Dependencies requiring Git
 
-- We install Python-Javabridge via Git to support Java 12+
+- The Pip/Venv pathway installs Python-Javabridge via Git to support Java 12+
 - At times we install other bleeding-edge, unreleased dependency versions via Git
 
 #### Additional optional packages

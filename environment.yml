@@ -14,6 +14,7 @@ dependencies:
   - scikit-learn
   - boto3
   - awscli
+  - openjdk=8
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - matplotlib-scalebar

@@ -279,6 +279,10 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
             to None.
         plane: Planar orientation compared with original for transposed 
             images; defaults to None.
+
+    Returns:
+        :dict: The saved metadata as a dictionary.
+    
     """
     outfile_info = open(filename_info_npz, "wb")
     time_start = time()
@@ -296,6 +300,7 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
     info.close()
     for key, value in output.items():
         print("{}: {}".format(key, value))
+    return output
 
 def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     # update image archive metadata using dictionary of values successfully 
@@ -674,9 +679,10 @@ def read_file(filename, series, load=True, z_max=-1,
     #print("lows: {}, highs: {}".format(lows, highs))
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
-    save_image_info(
+    md = save_image_info(
         filename_info_npz, [name], [shape], [config.resolutions[series]],
         config.magnification, config.zoom, near_mins, near_maxs)
+    assign_metadata(md)
     return image5d
 
 
@@ -705,9 +711,10 @@ def import_dir(path):
         lows.append(low)
         highs.append(high)
         i += 1
-    save_image_info(
+    md = save_image_info(
         filename_info_npz, [name], [image5d.shape], config.resolutions,
         config.magnification, config.zoom, [min(lows)], [max(highs)])
+    assign_metadata(md)
     return image5d
 
 def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):

@@ -264,16 +264,24 @@ def update_process_settings(settings, settings_type):
             }, 
             profile)
     
-        # import from deep learning predicted image
+        # downsample an image previously upsampled for isotropy
         settings.add_modifier(
-            "importdl", 
+            "downiso",
             {
                 "isotropic": None,  # assume already isotropic
                 "resize_blobs": (.2, 1, 1),
+            },
+            profile)
+
+        # rotate by 180 deg
+        # TODO: replace with plot labels config setting?
+        settings.add_modifier(
+            "rot180",
+            {
                 "load_rot90": 2,  # rotation by 180deg
             },
             profile)
-        
+
         # denoise settings when performing registration
         settings.add_modifier(
             "register", 

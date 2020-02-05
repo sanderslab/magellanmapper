@@ -28,7 +28,10 @@ Arguments:
   -n [URL]: Slack notification URL.
   -c: Server clean-up, including upload, notification, and 
     poweroff if appropriate.
-  -z [size]: Size in x,y,z format.
+  -z [x,y,z]: Size in x,y,z order.
+  -e [x,y,z]: Resolutions in x,y,z order for metadata.
+  -g [mag]: Lens objective magnification for metadata.
+  -u [zoom]: Lens objective zoom for metadata.
 "
 
 
@@ -39,6 +42,13 @@ Arguments:
 # that names the experiment and also used for S3; eg 
 # "/data/exp_yyyy-mm-dd/WT-cortex.czi"
 IMG="/path/to/your/image"
+
+# lens objective settings
+# TODO: option to gather automatically by importing metadata from
+# original file, though can take awhile for large files
+resolutions="0.913,0.913,4.935"
+magnification="5.0"
+zoom="1.0"
 
 # parent path of image directory in cloud such as AWS S3, excluding the 
 # protocol ("s3://"); eg "MyName/ClearingExps"
@@ -269,7 +279,7 @@ START_TIME=$SECONDS
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w:o:n:cz:m:j:r:l: opt; do
+while getopts hi:a:p:s:t:w:o:n:cz:m:j:r:l:e:g:u: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -330,6 +340,18 @@ while getopts hi:a:p:s:t:w:o:n:cz:m:j:r:l: opt; do
     l)
       channel="$OPTARG"
       echo "Set channel to $channel"
+      ;;
+    e)
+      resolutions="$OPTARG"
+      echo "Set resolutions to $resolutions"
+      ;;
+    g)
+      magnification="$OPTARG"
+      echo "Set magnification to $magnification"
+      ;;
+    u)
+      zoom="$OPTARG"
+      echo "Set zoom to $zoom"
       ;;
     :)
       echo "Option -$OPTARG requires an argument"
@@ -453,13 +475,6 @@ fi
 ####################################
 # Stitching Pipeline
 
-# Replace with your lens objective settings
-# TODO: option to gather automatically by importing metadata from 
-# original file, though can take awhile for large files
-RESOLUTIONS="0.913,0.913,4.935"
-MAGNIFICATION="5.0"
-ZOOM="1.0"
-
 if [[ "$stitch_pathway" != "" && ! -e "$IMG" ]]; then
   # Get large, unstitched image file from cloud, where the fused (all 
   # illuminators merged) image is used for the Stitching pathway, and 
@@ -491,8 +506,8 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   # fit properly, especially since unregistered tiles may be shifted to 
   # (0, 0, 0)
   bin/stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1 -j "$java_home"
-  python -u -m magmap.io.cli --img "$TIFF_DIR" --res "$RESOLUTIONS" \
-    --mag "$MAGNIFICATION" --zoom "$ZOOM" -v --channel 0 --proc import_only
+  python -u -m magmap.io.cli --img "$TIFF_DIR" --res "$resolutions" \
+    --mag "$magnification" --zoom "$zoom" -v --channel 0 --proc import_only
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
   
 elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
@@ -531,7 +546,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   # Import stacked TIFF file(s) into Numpy arrays for MagellanMapper
   start=$SECONDS
   python -u -m magmap.io.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
-    --res "$RESOLUTIONS" --mag "$MAGNIFICATION" --zoom "$ZOOM" -v \
+    --res "$resolutions" --mag "$magnification" --zoom "$zoom" -v \
     --proc import_only
   summary_msg+=("Stitched file import time: $((SECONDS - start)) s")
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"

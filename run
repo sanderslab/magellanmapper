@@ -6,6 +6,9 @@ import os
 import subprocess
 import sys
 
+#: str: Name of Conda or Venv environment
+ENV_NAME = "mag"
+
 #: Tuple: Shell commands to launch :meth:`magmap.gui.visualizer.main`
 ARGS_VIS = (
     "cd " + os.path.dirname(os.path.abspath(__file__)),
@@ -71,7 +74,7 @@ def main():
     print("Attempting to activate Conda environment")
     args = [
         "eval \"$(conda shell.bash hook)\"",
-        "conda activate mag",
+        "conda activate {}".format(ENV_NAME),
     ]
     args.extend(ARGS_VIS)
     try:
@@ -80,8 +83,8 @@ def main():
         # if unable to activate Conda env, try Venv, again using default
         # name in setup script
         print("Conda environment not available, trying Venv")
-        args = ["source activate {}/../venvs/mag".format(
-            os.path.dirname(os.path.abspath(__file__)))]
+        args = ["source activate {}/../venvs/{}".format(
+            os.path.dirname(os.path.abspath(__file__)), ENV_NAME)]
         try:
             launch_subprocess(args)
         except subprocess.CalledProcessError:

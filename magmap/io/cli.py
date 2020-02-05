@@ -695,7 +695,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
             config.unit_factor, config.truth_db_mode,
             os.path.basename(config.filename))
         
-    elif proc_type is config.ProcessTypes.TRANSPOSE:
+    elif proc_type is config.ProcessTypes.TRANSFORM:
         # transpose and/or rescale whole large image
         transformer.transpose_img(
             path, series, plane=config.plane, 

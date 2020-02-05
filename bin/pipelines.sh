@@ -63,7 +63,7 @@ S3_DIR=""
 microscope=()
 
 # Grouped pathways to follow typical pipelines
-PIPELINES=("gui" "full" "detection" "transposition" "download" "stitching")
+PIPELINES=("gui" "full" "detection" "transformation" "download" "stitching")
 pipeline="gui"
 
 
@@ -84,8 +84,8 @@ STITCH_PATHWAYS=("stitching" "bigstitcher")
 stitch_pathway=""
 
 # Choose rescale pathway type, or "" for none
-TRANSPOSE_PATHWAYS=("rescale" "resize")
-transpose_pathway=""
+TRANSFORM_PATHWAYS=("rescale" "resize")
+transform_pathway=""
 scale="0.05" # rescaling factor
 plane="" # xy, yz, zy, or leave empty
 animation="" # gif or mp4
@@ -386,24 +386,24 @@ if [[ "$pipeline" = "${PIPELINES[0]}" ]]; then
   # gui pathway
   gui=1
 elif [[ "$pipeline" = "${PIPELINES[1]}" ]]; then
-  # full, including stitching, transposition, and processing
+  # full, including stitching, transformation, and processing
   gui=0
   stitch_pathway="${STITCH_PATHWAYS[1]}"
-  transpose_pathway="${TRANSPOSE_PATHWAYS[1]}"
+  transform_pathway="${TRANSFORM_PATHWAYS[1]}"
   whole_img_proc="${WHOLE_IMG_PROCS[0]}"
   upload="${UPLOAD_TYPES[1]}"
 elif [[ "$pipeline" = "${PIPELINES[2]}" ]]; then
   # cell detection only
   gui=0
   stitch_pathway=""
-  transpose_pathway=""
+  transform_pathway=""
   whole_img_proc="${WHOLE_IMG_PROCS[0]}"
   upload="${UPLOAD_TYPES[2]}"
 elif [[ "$pipeline" = "${PIPELINES[3]}" ]]; then
-  # transposition only
+  # transformation only
   gui=0
   stitch_pathway=""
-  transpose_pathway="${TRANSPOSE_PATHWAYS[1]}"
+  transform_pathway="${TRANSFORM_PATHWAYS[1]}"
   whole_img_proc=""
   upload="${UPLOAD_TYPES[2]}"
 elif [[ "$pipeline" = "${PIPELINES[4]}" ]]; then
@@ -414,7 +414,7 @@ elif [[ "$pipeline" = "${PIPELINES[5]}" ]]; then
   # stitching only
   gui=0
   stitch_pathway="${STITCH_PATHWAYS[1]}"
-  transpose_pathway=""
+  transform_pathway=""
   whole_img_proc=""
   upload="${UPLOAD_TYPES[2]}"
 fi
@@ -586,47 +586,47 @@ summary_msg+=(
 
 
 ####################################
-# Transpose/Resize Image Pipeline
+# Transform/Resize Image Pipeline
 
-if [[ "$transpose_pathway" != "" ]]; then
+if [[ "$transform_pathway" != "" ]]; then
   start=$SECONDS
-  img_transposed=""
-  if [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[0]}" ]]; then
+  img_transformed=""
+  if [[ "$transform_pathway" = "${TRANSFORM_PATHWAYS[0]}" ]]; then
     if [[ "$plane" != "" ]]; then
-      # Both rescale and transpose an image from z-axis (xy plane) 
+      # Both rescale and transform an image from z-axis (xy plane)
       # to x-axis (yz plane) orientation
-      python -u -m magmap.io.cli --img "$clr_img" --proc transpose \
+      python -u -m magmap.io.cli --img "$clr_img" --proc transform \
         --rescale ${scale} --plane "$plane"
-      img_transposed="${clr_img_base}_plane${plane}_scale${scale}.${EXT}"
+      img_transformed="${clr_img_base}_plane${plane}_scale${scale}.${EXT}"
     else
       # Rescale an image to downsample by the scale factor only
-      python -u -m magmap.io.cli --img "$clr_img" --proc transpose \
+      python -u -m magmap.io.cli --img "$clr_img" --proc transform \
         --rescale ${scale}
-      img_transposed="${clr_img_base}_scale${scale}.${EXT}"
+      img_transformed="${clr_img_base}_scale${scale}.${EXT}"
     fi
-  elif [[ "$transpose_pathway" = "${TRANSPOSE_PATHWAYS[1]}" ]]; then
+  elif [[ "$transform_pathway" = "${TRANSFORM_PATHWAYS[1]}" ]]; then
     # Resize to a set size given by a registration profile, with size 
     # specified by register profile, which needs to be passed as 
     # --reg_file [name] in EXTRA_ARGS, and -z flag to find output name
-    python -u -m magmap.io.cli --img "$clr_img" --proc transpose \
+    python -u -m magmap.io.cli --img "$clr_img" --proc transform \
       "${EXTRA_ARGS[@]}"
-    img_transposed="${clr_img_base}_resized(${size}).${EXT}"
+    img_transformed="${clr_img_base}_resized(${size}).${EXT}"
   fi
   
   if [[ "$animation" != "" ]]; then
-    # Export transposed image to an animated GIF or MP4 video 
+    # Export transformed image to an animated GIF or MP4 video 
     # (requires ImageMagick)
-    python -u -m magmap.io.cli --img "$img_transposed" --proc animated \
+    python -u -m magmap.io.cli --img "$img_transformed" --proc animated \
       --interval 5 --rescale 1.0 --savefig "$animation"
   fi
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
-    # zip and upload transposed files to S3
-    base_path="${img_transposed%.*}"
+    # zip and upload transformed files to S3
+    base_path="${img_transformed%.*}"
     upload_images "$base_path"
   fi
   
-  summary_msg+=("Transposition time: $((SECONDS - start)) s")
+  summary_msg+=("transformation time: $((SECONDS - start)) s")
 fi
 
 

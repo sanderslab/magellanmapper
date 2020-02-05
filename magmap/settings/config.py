@@ -97,7 +97,7 @@ zoom = -1.0  # objective zoom
 ProcessTypes = Enum(
     "ProcessTypes", (
         "IMPORT_ONLY", "PROCESSING", "PROCESSING_MP", "LOAD", "EXTRACT", 
-        "EXPORT_ROIS", "TRANSPOSE", "ANIMATED", "EXPORT_BLOBS"
+        "EXPORT_ROIS", "TRANSFORM", "ANIMATED", "EXPORT_BLOBS"
     )
 )
 proc_type = None

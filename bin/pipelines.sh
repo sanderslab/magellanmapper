@@ -20,9 +20,6 @@ Arguments:
   -r [profile]: Set microscope profile. Give multiple times for each 
     desired channel.
   -l [channel]: Set channel.
-  -s [pathway]: Set stitching pathway.
-  -t [pathway]: Set transposition pathway.
-  -w [pathway]: Set whole image processing pathway.
   -m [ext]: Compression format extension; defaults to zst.
   -o [path]: Path to output file to send in notification and to S3.
   -n [URL]: Slack notification URL.
@@ -279,7 +276,7 @@ START_TIME=$SECONDS
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:s:t:w:o:n:cz:m:j:r:l:e:g:u: opt; do
+while getopts hi:a:p:o:n:cz:m:j:r:l:e:g:u: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -296,18 +293,6 @@ while getopts hi:a:p:s:t:w:o:n:cz:m:j:r:l:e:g:u: opt; do
     p)
       pipeline="$OPTARG"
       echo "Set pipeline to $pipeline"
-      ;;
-    s)
-      stitch_pathway="$OPTARG"
-      echo "Set stitch pathway to $stitch_pathway"
-      ;;
-    t)
-      transpose_pathway="$OPTARG"
-      echo "Set transpose pathway to $transpose_pathway"
-      ;;
-    w)
-      whole_img_proc="$OPTARG"
-      echo "Set whole img proc to $whole_img_proc"
       ;;
     m)
       compression="$OPTARG"

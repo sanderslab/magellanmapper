@@ -363,6 +363,12 @@ Additional errors:
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04
 - PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
 
+### Long load times
+
+- In our experience, initial load times can be very slow on MacOS 10.15 (Catalina) but improve on subsequent loads
+- Images often take longer to display when first displayed because of time reading from disk, but the same part of the image shows faster on subsequent loads during the same session
+- Viewing an image from the `yz` plane can be very slow because of how the image is accessed from disk
+
 ### Java installation for Python-Bioformats/Javabridge
 
 - Double-check that the Java SDK has truly been installed since the MagellanMapper setup script may not catch all missing installations

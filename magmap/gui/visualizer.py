@@ -96,11 +96,8 @@ class VisHandler(Handler):
     Closes the JVM when the window is closed.
     """
     def closed(self, info, is_ok):
-        """Closes the Java VM when the GUI is closed.
-        """
-        importer.stop_jvm()
-        if config.db is not None:
-            config.db.conn.close()
+        """Shuts down the application when the GUI is closed."""
+        cli.shutdown()
 
 
 class ListSelections(HasTraits):

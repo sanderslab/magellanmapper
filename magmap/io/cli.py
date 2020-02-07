@@ -64,8 +64,10 @@ Command-line arguments in addition to those from attributes listed below:
 
 """
 
-import os
 import argparse
+import os
+import sys
+
 import numpy as np
 
 from magmap.gui import roi_editor
@@ -623,7 +625,7 @@ def main(process_args_only=False):
     # unless loading images for GUI, exit directly since otherwise application 
     # hangs if launched from module with GUI
     if proc_type is not None and proc_type is not config.ProcessTypes.LOAD:
-        os._exit(os.EX_OK)
+        shutdown()
 
 
 def _iterate_file_processing(path, series, offsets, roi_sizes):
@@ -723,7 +725,18 @@ def process_file(path, series, offset, roi_size, proc_mode):
             not config.roc, config.image5d_is_roi)
     
     return stats, fdbk
-    
+
+
+def shutdown():
+    """Clean up and shutdown MagellanMapper.
+
+    Stops any running Java virtual machine and closes any main database.
+    """
+    importer.stop_jvm()
+    if config.db is not None:
+        config.db.conn.close()
+    sys.exit()
+
     
 if __name__ == "__main__":
     print("Starting MagellanMapper command-line interface...")

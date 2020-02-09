@@ -15,13 +15,13 @@ Author: David Young, 2017, 2020, Stephan Sanders Lab
   conda env create -n mag magellanmapper/environment.yml
   ```
   
-  On Mac or Linux, you can alternatively use our convenient setup script, which will also install Minconda if necessary:
+  **Convenient alternative**: On Mac or Linux (or Bash shell in Windows), you can use our setup script, which will also install Minconda if necessary:
   
   ```
   magellanmapper/bin/setup_conda.sh
   ```
   
-  See [Installation](docs/install.md) for more details, including installs without Conda such as Pip or Venv+Pip.
+See [Installation](docs/install.md) for more details, including installs without Conda such as Pip or Venv+Pip.
   
 ## Run MagellanMapper
 

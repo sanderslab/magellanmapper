@@ -1,53 +1,59 @@
-### Basic install
+# Installation of MagellanMapper
+
+MagellanMapper can be installed many different ways dependening on one's Python preferences.
+
+## Recommended: Install in a Conda environment
+
+Conda greatly simplifies installation by managing all supporting packages, such as Java and packages that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
+
+After downloading MagellanMapper, create a new Conda environment with all dependent packages installed using this command:
 
 ```
-pip install -e . --extra-index-url https://pypi.fury.io/dd8/
+conda env create -n mag magellanmapper/environment.yml
 ```
 
-from within the `magellanmapper` folder. You can use the virtual environment of your choice, such as Conda or Venv. The extra URL is for pre-built SimpleElastix binaries.
-
-Or to include all dependencies, which assumes that a Java SDK is installed:
+**Convenient alternative**: On Mac, Linux, or a Bash shell in Windows, this setup script perform this full installation including installing Conda if not already present:
 
 ```
-pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
+magellanmapper.bin/setup_conda.sh [-n name] [-s spec]
 ```
 
-If you hava Anaconda/[Miniconda](https://docs.conda.io/en/latest/miniconda.html) installed and prefer to use Conda packages:
+This script will install:
 
-```
-conda env create -n mag environment.yml
-```
-
-You can replace `mag` with your desired environment name.
-
-### Install through Bash scripts
-
-To ease complete setup including creating new virtual environments and installing all dependencies, we provide Bash setup scripts for Anaconda/Miniconda and Venv. These setup scripts assume a Bash environment (standard on Mac and Linux; via WSL, MSYS2, or Cygwin on Windows).
-
-#### Setup script for Conda
-
-```
-bin/setup_conda.sh [-n name] [-s spec]
-```
-
-Run this command from the `magellanmapper` folder to set up the following:
-
-- If not already installed: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
+- If not already present: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
 - A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
-- Full dependencies based on `environment.yml` (ok if Python-Bioformats/Javabridge fails), or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
+- Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
 
-#### Setup script for Venv
+## Option 2: Install through Venv+Pip
+
+Venv is a virtual environment manager included with Python 3.3+. We have provided a convenient script to set up a new environment and install all dependencies using Pip:
 
 ```
-bin/setup_venv.sh [-n name]
+magellanmapper/bin/setup_venv.sh [-n name]
 ```
+
+This option assumes that you have already installed Python 3.6 and a Java Development Kit (JDK) 8. Other versions of Python 3 and the JDK may work but with varying other requirements, such as a C compiler to build dependencies (see [below](#custom-precompiled-packages)).
 
 This setup script will check and install the following dependencies:
 
-- Checks for an existing Python 3.6+ install, which already include Venv
-- Performs a Pip install of MagellanMapper and all dependencies (requires a C compiler for some dependencies, see below)
+- Checks for an existing Python 3.6+, which already includes Venv
+- Performs a Pip install of MagellanMapper and all dependencies
 
-### Alternative installation methods
+## Option 3: Install in another virtual environment or system-wide
+
+Whether in a virtual environment of your choice or none at all, MagellanMapper can be installed through Pip:
+
+```
+pip install -e magellanmapper --extra-index-url https://pypi.fury.io/dd8/
+```
+
+The extra URL provides pre-built custom (with [certain requirements](#custom-precompiled-packages)) dependency packages. To include all dependencies, run this command instead:
+
+```
+pip install -e magellanmapper[all] --extra-index-url https://pypi.fury.io/dd8/
+```
+
+### Option 4: Even more installation methods
 
 You can also install MagellanMapper these ways in the shell and Python environment of your choice:
 
@@ -55,7 +61,7 @@ You can also install MagellanMapper these ways in the shell and Python environme
 - To create a similar environment in Conda, run `conda env create -n [name] -f environment_[os].yml`, where `name` is your desired environment name, and `os` is `win|mac|lin` for your OS (assumes 64-bit)
 - To install without Pip, run `python setup.py install` to install the package and only required dependencies
 
-### Dependencies
+## Dependencies
 
 The main required and optional dependencies in MagellanMapper are:
 
@@ -71,13 +77,14 @@ The main required and optional dependencies in MagellanMapper are:
 
 In most cases MagellanMapper can be installed without a compiler by using custom dependency packages we have provided (see Conda pathway above). Where possible, we have made these dependencies optional for those who would prefer not to use the custom packages. They may also be compiled directly as described here.
 
+### Custom precompiled packages
 
-| Dependency | Precompiled Available? | Build Req | Purpose | 
-| --- | --- | --- | --- |
-| Python-Javabridge | Yes, via custom package | JDK, C compiler| Import proprietary image formats |
-| Traits | Yes, via Conda (not PyPI) | C compiler | GUI |
-| SimpleElastix | Yes, via custom package | C, C++ compilers | Load medical 3D formats, image regsitration |
-| ImageJ/FIJI | Yes, via direct download | n/a | Image stitching |
+| Dependency | Precompiled Available? | Build Req | Precompiled Run Req | Purpose | 
+| --- | --- | --- | --- | --- |
+| Python-Javabridge | Yes, via custom package | JDK, C compiler| Python 3.6, Java 8 | Import proprietary image formats |
+| Traits | Yes, via Conda (not PyPI) | n/a | C compiler | GUI |
+| SimpleElastix | Yes, via custom package | Python 3.6 | C, C++ compilers | Load medical 3D formats, image regsitration |
+| ImageJ/FIJI | Yes, via direct download | n/a | Java 8 | Image stitching |
 
 C compilers by platform:
 
@@ -94,13 +101,13 @@ Java versions:
 
 Our custom packages assume an environment with Python 3.6 and Java 8.
 
-#### Additional optional packages
+### Additional optional packages
 
 - R for additional stats
 - Zstd (fallback to Zip) for compression on servers
 - MeshLab for 3D surface clean-up
 
-#### SimpleElastix dependency
+### SimpleElastix dependency
 
 SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in MagellanMapper. The library is not currently available in the standard [PyPi](https://pypi.org/). As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/).
 
@@ -111,7 +118,7 @@ If you would prefer to build SimpleElastix yourself, we have provided a couple b
 
 As an alternative, the SimpleITK package can provide much of the same functionality except for our image registration pipeline.
 
-### Tested Platforms
+## Tested Platforms
 
 MagellanMapper has been built and tested to build on:
 
@@ -120,4 +127,4 @@ MagellanMapper has been built and tested to build on:
 - Windows, tested on Windows 10 (see below for details) in various environments:
   - Native command-prompt and PowerShell
   - Via built-in Windows Subsystem for Linux (WSL), tested on Ubuntu 18.04 and an X Server
-  - Bash scripts in Cygwin (tested on Cygwin 2.10+), MSYS2
+  - Bash scripts in Cygwin (tested on Cygwin 2.10+) and MSYS2

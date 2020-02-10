@@ -1,11 +1,13 @@
 # MagellanMapper setup script
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2020
 
 import setuptools
 
-# optional dependencies to import files via BioFormats, which requires 
-# a Java SDK installation
-_EXTRAS_IMPORT = ["python-bioformats==1.1.0"]
+# optional dependencies to import files via BioFormats, which Java 8+
+_EXTRAS_IMPORT = [
+    "javabridge==1.0.18.post16+gc7ccaed",
+    "python-bioformats==1.1.0",
+]
 _EXTRAS_AWS = ["boto3", "awscli"]
 
 # installation configuration

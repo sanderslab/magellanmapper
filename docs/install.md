@@ -79,12 +79,12 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 
 ### Custom precompiled packages
 
-| Dependency | Precompiled Available? | Build Req | Precompiled Run Req | Purpose | 
+| Dependency | Precompiled Available? | Precompiled Run Req | Build Req | Purpose | 
 | --- | --- | --- | --- | --- |
-| Python-Javabridge | Yes, via custom package | JDK, C compiler| Python 3.6, Java 8 | Import proprietary image formats |
+| Python-Javabridge | Yes, via custom package | Python 3.6, Java 8+ | JDK, C compiler| Import proprietary image formats |
 | Traits | Yes, via Conda (not PyPI) | n/a | C compiler | GUI |
 | SimpleElastix | Yes, via custom package | Python 3.6 | C, C++ compilers | Load medical 3D formats, image regsitration |
-| ImageJ/FIJI | Yes, via direct download | n/a | Java 8 | Image stitching |
+| ImageJ/FIJI | Yes, via direct download | Java 8 | n/a | Image stitching |
 
 C compilers by platform:
 
@@ -97,7 +97,7 @@ Java versions:
 
 - The Conda setup pathway installs JDK 8
 - Python-Javabridge uses JDK v8-13 (v12+ in latest Git commits)
-- ImageJ/Fiji supports Java 8
+- ImageJ/Fiji currently supports Java 8 best in our experience
 
 Our custom packages assume an environment with Python 3.6 and Java 8.
 

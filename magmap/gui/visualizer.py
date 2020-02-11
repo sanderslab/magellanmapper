@@ -33,6 +33,7 @@ from tvtk.pyface.scene_editor import SceneEditor
 from tvtk.pyface.scene_model import SceneModelError
 from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
+import vtk
 
 from magmap.gui import atlas_editor
 from magmap.cv import chunking
@@ -58,11 +59,20 @@ _ROI_DEFAULT = "None selected"
 def main():
     """Starts the visualization GUI.
     
-    Processes command-line arguments.
+    Also processes command-line arguments, sets up Matplotlib style, and
+    sets up exception handling.
     """
+    # set up command-line arguments, Matplotlib style in which the GUI
+    # has been tested, and show complete stacktraces for debugging.
     cli.main()
     plot_2d.setup_style()
     push_exception_handler(reraise_exceptions=True)
+
+    # suppress output window on Windows but print errors to console
+    vtk_out = vtk.vtkOutputWindow()
+    vtk_out.SetInstance(vtk_out)
+
+    # create Trait-enabled GUI
     visualization = Visualization()
     visualization.configure_traits()
     

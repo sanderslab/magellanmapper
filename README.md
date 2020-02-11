@@ -12,7 +12,7 @@ Author: David Young, 2017, 2020, Stephan Sanders Lab
 1. Install MagellanMapper in a new Conda environment:
   
   ```
-  conda env create -n mag magellanmapper/environment.yml
+  conda env create -n mag -f magellanmapper/environment.yml
   ```
   
   **Convenient alternative**: On Mac or Linux (or Bash shell in Windows), you can use our setup script, which will also install Minconda if necessary:

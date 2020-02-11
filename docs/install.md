@@ -9,7 +9,7 @@ Conda greatly simplifies installation by managing all supporting packages, such 
 After downloading MagellanMapper, create a new Conda environment with all dependent packages installed using this command:
 
 ```
-conda env create -n mag magellanmapper/environment.yml
+conda env create -n mag -f magellanmapper/environment.yml
 ```
 
 **Convenient alternative**: On Mac, Linux, or a Bash shell in Windows, this setup script perform this full installation including installing Conda if not already present:

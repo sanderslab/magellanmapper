@@ -194,6 +194,19 @@ qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it 
   - `libfontconfig.so.1`: Install `libfontconfig1`
   - `libXrender.so.1`: Install `libxrender1`
 
+```
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 686
+vtkWin32OpenGLRenderWindow (00000252735E3450): failed to get wglChoosePixelFormatARB
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 765
+vtkWin32OpenGLRenderWindow (00000252735E3450): failed to get valid pixel format.
+
+ERROR: In ..\Rendering\OpenGL2\vtkOpenGLRenderWindow.cxx, line 741
+vtkWin32OpenGLRenderWindow (00000252735E3450): GLEW could not be initialized: Missing GL version
+```
+
+Windows Virtual Machines may require installation of Mesa for OpenGL support. Pre-built Mesa software is available from [mesa-dist-win](https://github.com/pal1000/mesa-dist-win). The Desktop OpenGL drivers can be installed system-wide.
+
 Additional errors:
 
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04

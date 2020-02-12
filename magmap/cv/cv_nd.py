@@ -641,8 +641,8 @@ def interpolate_contours(bottom, top, fracs):
         bottom: Bottom plane as an binary mask.
         top: Top plane as an binary mask.
         fracs: List of fractions between 0 and 1, inclusive, at which to 
-            interpolate contours. 0 corresponds to the bottom plane, while 
-            1 is the top.
+            interpolate contours. 0 is the plane just above the bottom,
+            and 1 is the plane just below the top.
     
     Returns:
         Array with each plane corresponding to the interpolated plane at the 
@@ -703,7 +703,7 @@ def interpolate_label_between_planes(labels_img, label_id, axis, bounds):
         bounds_sorted[0], bounds_sorted[1] + 1, 
         bounds_sorted[1] - bounds_sorted[0])
     
-    # interpolate contours of each plane between bounds (inclusive)
+    # interpolate contours in each plane between bounds (exclusive)
     region_planes = region[tuple(slices_planes)]
     region_planes_mask = np.zeros_like(region_planes)
     region_planes_mask[region_planes == label_id] = 1
@@ -713,7 +713,7 @@ def interpolate_label_between_planes(labels_img, label_id, axis, bounds):
     slices_plane[axis] = 1
     end = region_planes_mask[tuple(slices_plane)]
     interpolated = interpolate_contours(
-        start, end, np.linspace(0, 1, bounds_sorted[1] - bounds_sorted[0] + 1))
+        start, end, np.linspace(0, 1, bounds_sorted[1] - bounds_sorted[0] - 1))
     # interpolate_contours puts the bounded planes at the ends of a z-stack, 
     # so need to transform back to the original orientation
     if axis == 1:
@@ -724,7 +724,7 @@ def interpolate_label_between_planes(labels_img, label_id, axis, bounds):
     # fill interpolated areas with label and replace corresponding sub-images; 
     # could consider in-painting if labels were removed, but could slightly 
     # decrease other areas
-    slices_planes[axis] = slice(bounds_sorted[0], bounds_sorted[1] + 1)
+    slices_planes[axis] = slice(bounds_sorted[0] + 1, bounds_sorted[1])
     region_within_bounds = region[tuple(slices_planes)]
     region_within_bounds[interpolated] = label_id
     region[tuple(slices_planes)] = region_within_bounds

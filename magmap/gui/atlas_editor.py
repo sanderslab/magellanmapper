@@ -471,8 +471,9 @@ class InterpolatePlanes:
         Args:
             labels_img: Labels image as a Numpy array of x,y,z dimensions.
         """
-        if not any(self.bounds):
+        if not all(self.bounds):
             raise ValueError("boundaries not fully set: {}".format(self.bounds))
+        print("interpolating edits between planes", self.bounds)
         cv_nd.interpolate_label_between_planes(
             labels_img, self.label_id, config.PLANE.index(self.plane), 
             self.bounds)

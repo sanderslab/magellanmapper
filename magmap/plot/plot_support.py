@@ -1,6 +1,6 @@
 #!/bin/bash
 # Plot Support for MagellanMapper
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """Shared plotting functions with the MagellanMapper package.
 """
 
@@ -210,8 +210,10 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         norm = None
         nan_color = None
         if isinstance(cmap, colormaps.DiscreteColormap):
-            # get normalization factor for discrete colormaps
+            # get normalization factor for discrete colormaps and convert
+            # the image for this scaling
             norm = [cmap.norm]
+            img = cmap.convert_img_labels(img)
             cmap = [cmap]
             nan_color = config.atlas_labels[config.AtlasLabels.BINARY]
             if nan_color:

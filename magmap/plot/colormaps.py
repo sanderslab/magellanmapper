@@ -1,6 +1,6 @@
 #!/bin/bash
 # Colormaps for MagellanMapper
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """Custom colormaps for MagellanMapper.
 """
 
@@ -60,6 +60,9 @@ class DiscreteColormap(colors.ListedColormap):
         norm: Normalization object, which is of type 
             :class:``matplotlib.colors.NoNorm`` if indexing directly or 
             :class:``matplotlib.colors.BoundaryNorm`` if otherwise.
+        img_labels (List[int]): Sorted sequence of unique labels. May have
+            more values than in ``labels`` such as mirrored negative values.
+            None if ``index_direct`` is False.
     """
     def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
                  min_val=0, max_val=255, min_any=0, background=None,
@@ -79,7 +82,8 @@ class DiscreteColormap(colors.ListedColormap):
                 and should span sequentially from 0, 1, 2, ...; defaults to 
                 True. If False, a colormap will be generated for the full 
                 range of integers between the lowest and highest label values, 
-                inclusive.
+                inclusive, with a :obj:`colors.BoundaryNorm`, which may
+                incur performance cost.
             min_val (int): Minimum value for random numbers; defaults to 0.
             max_val (int): Maximum value for random numbers; defaults to 255.
             min_any (int, float): Minimum value above which at least one value
@@ -96,6 +100,7 @@ class DiscreteColormap(colors.ListedColormap):
         """
         self.norm = None
         self.cmap_labels = None
+        self.img_labels = None
 
         if labels is None: return
         labels_unique = np.unique(labels)
@@ -106,28 +111,30 @@ class DiscreteColormap(colors.ListedColormap):
                 -1 * labels_unique[labels_unique > 0][::-1], labels_unique)
         num_colors = len(labels_unique)
 
-        # make first boundary slightly below first label to encompass it 
-        # to avoid off-by-one errors that appear to occur when viewing an 
-        # image with an additional extreme label; float32 unsymmetric colors
-        # for large values despite remaining within range for unclear reasons,
-        # fixed by using float64 instead
-        labels_offset = 0.5
-        labels_unique = labels_unique.astype(np.float64)
-        labels_unique -= labels_offset
-        # number of boundaries should be one more than number of labels to 
-        # avoid need for interpolation of boundary bin numbers and 
-        # potential merging of 2 extreme labels
-        labels_unique = np.append(labels_unique, [labels_unique[-1] + 1])
-
+        labels_offset = 0
         if index_direct:
-            # assume label vals increase by 1 from 0 until num_colors
+            # assume label vals increase by 1 from 0 until num_colors; store
+            # sorted labels sequence to translate labels based on index
             self.norm = colors.NoNorm()
+            self.img_labels = labels_unique
         else:
-            # labels themselves serve as bounds, allowing for large gaps 
-            # between labels while assigning each label to a unique color;
-            # may have occasional color mapping inaccuracies from this bug:
-            # https://github.com/matplotlib/matplotlib/issues/9937
-            self.norm = colors.BoundaryNorm(labels_unique, num_colors)
+            # use labels as bounds for each color, including wide bounds
+            # for large gaps between successive labels; offset bounds to
+            # encompass each label and avoid off-by-one errors that appear
+            # when viewing images with additional extreme labels; float32
+            # gives unsymmetric colorsfor large values in mirrored atlases
+            # despite remaining within range for unclear reasons, fixed by
+            # using float64 instead
+            labels_offset = 0.5
+            bounds = labels_unique.astype(np.float64)
+            bounds -= labels_offset
+            # number of boundaries should be one more than number of labels to
+            # avoid need for interpolation of boundary bin numbers and
+            # potential merging of 2 extreme labels
+            bounds = np.append(bounds, [bounds[-1] + 1])
+            # TODO: may have occasional colormap inaccuracies from this bug:
+            # https://github.com/matplotlib/matplotlib/issues/9937;
+            self.norm = colors.BoundaryNorm(bounds, num_colors)
         self.cmap_labels = discrete_colormap(
             num_colors, alpha, False, seed, min_val, max_val, min_any,
             symmetric_colors, jitter=20, mode=DiscreteModes.RANDOMN)
@@ -164,6 +171,25 @@ class DiscreteColormap(colors.ListedColormap):
         cmap.cmap_labels[:, :3] += adjust
         cmap.make_cmap()
         return cmap
+
+    def convert_img_labels(self, img):
+        """Convert an image to the indices in :attr:`img_labels` to give
+        a linearly scaled image.
+
+        This image can be displayed using a colormap with :obj:`colors.NoNorm`
+        to index directly into the colormpa.
+
+        Args:
+            img (:obj:`np.ndarray`): Image to convert.
+
+        Returns:
+            :obj:`np.ndarray`: Array of same shape as ``img`` with values
+            translated to their corresponding indices within :attr:`img_labels`,
+            or ``img`` unchanged if :attr:`img_labels` is None.
+
+        """
+        return (img if self.img_labels is None
+                else np.searchsorted(self.img_labels, img))
 
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
@@ -305,7 +331,7 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         # use original labels if available for mapping consistency
         lbls = config.labels_img_orig
     return DiscreteColormap(
-        lbls, config.seed, 255, False, min_any=160, min_val=10,
+        lbls, config.seed, 255, min_any=160, min_val=10,
         background=(0, (0, 0, 0, alpha_bkgd)), dup_for_neg=dup_for_neg,
         symmetric_colors=symmetric_colors)
 

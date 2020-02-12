@@ -1,5 +1,5 @@
 # 2D overlaid plot editor
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """Editor for 2D plot with overlaid planes.
 
 Integrates with :class:``atlas_editor.AtlasEditor`` for synchronized 3D 
@@ -18,7 +18,16 @@ from magmap.plot import plot_support
 
 
 class PlotEditor:
-    """Show a scrollable, editable plot of sequential planes in a 3D image."""
+    """Show a scrollable, editable plot of sequential planes in a 3D image.
+
+    Attributes:
+        intensity (int): Chosen intensity value of ``img3d_labels``.
+        intensity_spec (int): Intensity value specified directly
+            rather than chosen from the labels image.
+        intensity_shown (int): Displayed intensity in the
+            :obj:`matplotlib.AxesImage` corresponding to ``img3d_labels``.
+
+    """
     ALPHA_DEFAULT = 0.5
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
@@ -55,6 +64,7 @@ class PlotEditor:
                 interpolation object; defaults to None.
             fn_update_intensity (function): Callback when updating the 
                 intensity value; defaults to None.
+
         """
         self.axes = axes
         self.img3d = img3d
@@ -75,8 +85,9 @@ class PlotEditor:
         self.interp_planes = interp_planes
         self.fn_update_intensity = fn_update_intensity
         
-        self.intensity = None  # picked intensity
+        self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
+        self.intensity_shown = None  # shown intensity in AxesImage
         self.cidpress = None
         self.cidrelease = None
         self.cidmotion = None
@@ -212,10 +223,13 @@ class PlotEditor:
         self._update_overview(int(val))
     
     def update_image(self):
-        """Replace current image with underlying plane's data.
+        """Replace the displayed labels image with underlying plane's data.
         """
         if self.ax_img is not None:
-            self.ax_img.set_data(self.img3d_labels[self.coord[0]])
+            # underlying plane may need to be translated to a linear
+            # scale for the colormap before display
+            self.ax_img.set_data(self.cmap_labels.convert_img_labels(
+                self.img3d_labels[self.coord[0]]))
     
     def alpha_updater(self, alpha):
         self.alpha = alpha
@@ -240,8 +254,10 @@ class PlotEditor:
                           self.intensity)
                 elif self.intensity_spec is None:
                     # click while in editing mode to initialize intensity value
-                    # for painting, using value from current position
+                    # for painting, using values at current position for
+                    # the underlying and displayed images
                     self.intensity = self.img3d_labels[self.coord[0], y, x]
+                    self.intensity_shown = self.ax_img.get_array()[y, x]
                     print("got intensity {} at x,y,z = {},{},{}"
                           .format(self.intensity, x, y, self.coord[0]))
                     if self.fn_update_intensity:
@@ -252,6 +268,8 @@ class PlotEditor:
                     # afterward to allow updating with clicked intensities
                     print("using specified intensity of", self.intensity_spec)
                     self.intensity = self.intensity_spec
+                    self.intensity_shown = self.cmap_labels.convert_img_labels(
+                        self.intensity)
                     self.intensity_spec = None
             elif event.key not in self._KEY_MODIFIERS:
                 # click without modifiers to update crosshairs and 
@@ -355,18 +373,19 @@ class PlotEditor:
                 coord = [self.coord[0], y, x]
                 if event.button == 1:
                     if self.edit_mode and self.intensity is not None:
-                        # click in editing mode to overwrite image with pen
-                        # of the chosen radius using current intensity
+                        # click in editing mode to overwrite images with pen
+                        # of the current radius using chosen intensity for the
+                        # underlying and displayed images
                         if self.ax_img is not None:
                             rr, cc = draw.circle(
                                 y, x, self.radius, 
                                 self.img3d_labels[self.coord[0]].shape)
                             self.img3d_labels[
                                 self.coord[0], rr, cc] = self.intensity
+                            self.ax_img.get_array()[
+                                rr, cc] = self.intensity_shown
                             print("changed intensity at x,y,z = {},{},{} to {}"
                                   .format(x, y, self.coord[0], self.intensity))
-                            self.ax_img.set_data(
-                                self.img3d_labels[self.coord[0]])
                             self.fn_refresh_images(self)
                             self.edited = True
                             self._editing = True

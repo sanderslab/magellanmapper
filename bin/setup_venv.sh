@@ -59,11 +59,11 @@ if [[ "$os" = "Windows" ]]; then
 fi
 
 # Dependencies checks
-check_javac
 check_clt
 check_gcc
 check_git
 
+check_java
 # check for Python availability and version requirement
 py_ver_min=(3 6)
 py_vers=(3.6 3.7 3.8)

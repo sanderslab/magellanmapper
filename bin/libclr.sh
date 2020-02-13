@@ -111,20 +111,21 @@ check_python() {
 }
 
 ############################################
-# Check for existing Java compiler.
+# Check for existing Java runtime.
 # Globals:
 #   NONE
 # Arguments:
 #   NONE
 # Returns:
-#   0 if javac is found; 1 if otherwise.
+#   0 if java is found; 1 if otherwise.
 ############################################
-check_javac() {
-  if ! command -v "javac" &> /dev/null; then
-    # check for Java compiler availability for Javabridge
-    echo "Warning: \"javac\" not found; Python-Bioformats and Python-Javabridge"
-    echo "will ot install correctly. Please install a JDK or add JDK_HOME or"
-    echo "add JAVA_HOME to your path environment variables"
+check_java() {
+  if ! command -v "java" &> /dev/null; then
+    # check for Java availability for Javabridge
+    echo "Warning: \"java\" not found; Python-Bioformats and Python-Javabridge"
+    echo "may not install or run correctly. Please install a JDK or add"
+    echo "JDK_HOME or add JAVA_HOME to your path environment variables and"
+    echo "reinstall if you need these dependencies."
     return 1
   fi
   return 0

@@ -58,19 +58,16 @@ if [[ "$os" = "Windows" ]]; then
   ext="ext"
 fi
 
-# Dependencies checks
-check_clt
-check_gcc
-check_git
-
-check_java
 # check for Python availability and version requirement
-py_ver_min=(3 6)
-py_vers=(3.6 3.7 3.8)
+py_ver_majmin="" # found Python version in x.y format
+py_ver_min=(3 6) # minimum supported Python version
+py_vers=(3.6 3.7 3.8) # range of versions currently supported
+py_vers_prebuilt_deps=(3.6) # vers for which custom prebuilt deps are avail
 for ver in "${py_vers[@]}"; do
   # prioritize specific versions in case "python" points to lower version
   if command -v "python$ver" &> /dev/null; then
     python=python$ver
+    py_ver_majmin="$ver"
     break
   fi
 done
@@ -79,6 +76,7 @@ if [[ -z "$python" ]]; then
   if command -v python &> /dev/null; then
     if check_python python "${py_ver_min[@]}"; then
       python=python
+      py_ver_majmin="$PY_VER"
     fi
   fi
   if [[ -z "$python" ]]; then
@@ -87,6 +85,23 @@ if [[ -z "$python" ]]; then
   fi
 fi
 echo "Found $python"
+
+# Compiler and Java dependency checks
+check_java # assume if java is not available, javac is not either
+warn_prebuilt=true
+for ver in "${py_vers_prebuilt_deps[@]}"; do
+  if [[ "$ver" = "$py_ver_majmin" ]]; then
+    warn_prebuilt=false
+    break
+  fi
+done
+if $warn_prebuilt; then
+  # custom precompiled dependencies may not be available, in which case
+  # compilers are required
+  check_clt
+  check_gcc
+  #check_git # only necessary if deps req git
+fi
 
 # create new virtual environment
 env_path="${venv_dir}/${env_name}"

@@ -136,49 +136,6 @@ if [[ "$check_env" == "" ]]; then
   exit 1
 fi
 
-
-: '
-# pip dependencies that are not available in Conda, some of which are 
-# git-pip installed from MagellanMapper parent directory
-cd ..
-if [[ $lightweight -eq 0 ]]; then
-  # install dependencies for GUI requirement
-  
-  pip install -U matplotlib-scalebar
-  
-  # if Mayavi install says that vtk not directly required and not 
-  # installed, install directly here
-  #pip install -U vtk
-  
-  # pyqt 5.9.2 available in Conda gives a blank screen so need to use nwer 
-  # pip-based version until Conda version is updated; 
-  # Matplotlib in Conda on Linux64 and Mayavi on Mac at least not still 
-  # require Conda pyqt, however, and will install the Conda package as well
-  pip install -U PyQt5
-  
-  # use Conda now that TraitsUI and Pyface 6 available there
-  #install_shallow_clone https://github.com/enthought/traits.git
-  #install_shallow_clone https://github.com/enthought/pyface.git
-  #install_shallow_clone https://github.com/enthought/traitsui.git
-  
-  # use Mayavi 4.6 release with Python 3 support
-  #install_shallow_clone https://github.com/enthought/mayavi.git
-  #pip install -U mayavi
-fi
-
-# if newer Scikit-image release is on PyPI
-#install_shallow_clone https://github.com/the4thchild/scikit-image.git develop
-#pip install -U scikit-image
-
-# may need to install Python-Javabridge from Git for fixes for newer JDKs; 
-# shallow clone does not work for some reason
-#pip install -U javabridge
-pip install git+https://github.com/LeeKamentsky/python-javabridge.git
-
-# need older version since ver > 1.1 give heap space error
-pip install -U python-bioformats==1.1.0
-'
-
 msg="MagellanMapper environment setup complete!"
 msg+="\n** Please run \"conda activate $env_name\" or "
 msg+="\"source activate $env_name\""

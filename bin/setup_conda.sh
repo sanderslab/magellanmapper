@@ -74,12 +74,6 @@ if [[ "$os" = "Windows" ]]; then
   ext="ext"
 fi
 
-# Dependencies checks
-check_javac
-check_clt
-check_gcc
-check_git
-
 # check for Anaconda installation and download/install if not found
 if ! command -v "conda" &> /dev/null; then
   echo "Downloading and installing Miniconda..."

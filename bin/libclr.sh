@@ -202,6 +202,64 @@ check_git() {
 }
 
 ############################################
+# Download a shallow Git clone and pip install its Python package.
+# Globals:
+#   None
+# Arguments:
+#   Git repository URL
+# Returns:
+#   None
+############################################
+install_shallow_clone() {
+  local folder
+  folder="$(basename "$1")"
+  folder="${folder%.*}"
+  if [ ! -e "$folder" ]; then
+    # download and install fresh repo with shallow clone
+    # and editable installation
+    # TODO: check whether shallow clone will yield the
+    # correct fetch/merge steps later
+    echo "Cloning into $folder"
+    target=$1
+    if [[ "$#" -gt 1 ]]; then
+      target="${target} -b $2"
+    fi
+    git clone --depth 1 $target
+    cd "$folder"
+  else
+    # update repo if changes found upstream on given branch
+    echo "Updating $folder"
+    cd "$folder"
+    git fetch
+    branch="master" # default branch
+    if [[ "$#" -gt 1 ]]; then
+      # use given branch, if any
+      branch="$2"
+      echo "Checking for differences with $branch"
+    fi
+    if [[ $(git rev-parse --abbrev-ref HEAD) != "$branch" ]]; then
+      echo "Not on $branch branch so will ignore updates"
+    elif [[ $(git diff-index HEAD --) ]]; then
+      echo "Uncommitted file changes exist so will not update"
+    elif [[ $(git log HEAD..origin/"$branch" --oneline) ]]; then
+      # merge in updates only if on same branch as given one,
+      # differences exist between current status and upstream
+      # branch, and no tracked files have uncommitted changes
+      git merge "origin/$branch"
+      echo "You may need to run post-update step such as "
+      echo "\"python setup.py build_ext -i\""
+    else
+      echo "No changes found upstream on $branch branch"
+    fi
+  fi
+  if [[ ! "$(pip list --format=columns | grep $folder)" ]]; then
+    echo "Installing $folder"
+    pip install -e .
+  fi
+  cd ..
+}
+
+############################################
 # Suppress all output.
 # Globals:
 #   Redirects all streams to suppress output

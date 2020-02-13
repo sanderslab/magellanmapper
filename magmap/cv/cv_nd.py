@@ -638,15 +638,15 @@ def interpolate_contours(bottom, top, fracs):
     """Interpolate contours between two planes.
     
     Args:
-        bottom: Bottom plane as an binary mask.
-        top: Top plane as an binary mask.
-        fracs: List of fractions between 0 and 1, inclusive, at which to 
-            interpolate contours. 0 is the plane just above the bottom,
-            and 1 is the plane just below the top.
+        bottom (:obj:`np.ndarray`): Bottom plane as an binary mask.
+        top (:obj:`np.ndarray`): Top plane as an binary mask.
+        fracs (List[float]): List of fractions from 0 to 1, inclusive, at
+            which to interpolate contours. 0 corresponds to the bottom plane,
+            and 1 is the top plane.
     
     Returns:
-        Array with each plane corresponding to the interpolated plane at the 
-        given fraction.
+        :obj:`np.ndarray`: Array with each plane corresponding to the
+        interpolated plane at the fractions corresponding to ``fracs``.
     """
     # convert planes to contour distance maps, where pos distances are 
     # inside the original image
@@ -657,13 +657,13 @@ def interpolate_contours(bottom, top, fracs):
     # merge dist maps into an array with shape (2, r, c) and prep 
     # meshgrid and output array
     stack = np.stack((bottom, top))
-    points = (np.r_[0, 2], np.arange(r), np.arange(c))
+    points = (np.r_[0, 1], np.arange(r), np.arange(c))
     grid = np.rollaxis(np.mgrid[:r, :c], 0, 3).reshape((r * c, 2))
     interpolated = np.zeros((len(fracs), r, c), dtype=bool)
     
     for i, frac in enumerate(fracs):
         # interpolate plane at given fraction between bottom and top planes
-        xi = np.c_[np.full(r * c, frac + 1), grid]
+        xi = np.c_[np.full(r * c, frac), grid]
         out = interpolate.interpn(points, stack, xi)
         out = out.reshape((r, c))
         out = out > 0
@@ -712,8 +712,10 @@ def interpolate_label_between_planes(labels_img, label_id, axis, bounds):
     start = region_planes_mask[tuple(slices_plane)]
     slices_plane[axis] = 1
     end = region_planes_mask[tuple(slices_plane)]
+    # interpolate evenly spaced fractions from 0-1, excluding the ends
     interpolated = interpolate_contours(
-        start, end, np.linspace(0, 1, bounds_sorted[1] - bounds_sorted[0] - 1))
+        start, end,
+        np.linspace(0, 1, bounds_sorted[1] - bounds_sorted[0] + 1)[1:-1])
     # interpolate_contours puts the bounded planes at the ends of a z-stack, 
     # so need to transform back to the original orientation
     if axis == 1:

@@ -86,21 +86,27 @@ detect_platform() {
 ############################################
 # Check Python version.
 # Globals:
-#   NONE
+#   PY_VER: The found Python version in maj.min format, or an empty string
+#     if Python not found.
 # Arguments:
 #   1: Python command to get version.
 #   2: Python minimum major version number.
 #   3: Python minimum minor version number.
 # Returns:
-#   True if the Python version meets or excceds the version requirement.
+#   True if the Python version meets or exceeds the version requirement.
 ############################################
 check_python() {
   local py_ver
+  PY_VER=""
+  if ! command -v "1" &> /dev/null; then
+    return 1
+  fi
   py_ver="$("$1" -V 2>&1)"
   py_ver="${py_ver#* }"
   local py_ver_maj="${py_ver%%.*}"
   local py_ver_rest="${py_ver#*.}"
   local py_ver_min="${py_ver_rest%%.*}"
+  PY_VER="${py_ver_maj}.${py_ver_min}"
   [[ $py_ver_maj -ge "$2" && $py_ver_min -ge "$3" ]]
 }
 

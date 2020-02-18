@@ -560,7 +560,7 @@ def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=None):
         # convert enum keys to names of enums
         cols = {}
         for key in keys: cols[key] = key.value
-        df.rename(dict_import, columns=cols, inplace=True)
+        df.rename(columns=cols, inplace=True)
     df = data_frames_to_csv(df, path, sort_cols, show)
     return df
 

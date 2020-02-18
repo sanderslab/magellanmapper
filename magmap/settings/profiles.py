@@ -330,8 +330,11 @@ _isotropic_factors = np.ones((len(_isotropic_zs), 3))
 _prune_tol_zs = np.arange(0.5, 1.1, 0.5)
 _prune_tol_factors = np.ones((len(_prune_tol_zs), 3)) * 0.9
 
+#: OrderedDict[List[int]]: Nested dictionary where each sub-dictionary
+# contains a sequence of values over which to perform a grid search to
+# generate a receiver operating characteristic curve
 roc_dict = OrderedDict([
-    ("hyperparameters", OrderedDict([
+    ("test", OrderedDict([
         # test single value by iterating on value that should not affect
         # detection ability
         ("points_3d_thresh", [0.7]),
@@ -355,14 +358,16 @@ roc_dict = OrderedDict([
         #"denoise_size", np.arange(5, 25, 2)
         #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
         #("tot_var_denoise", (False, True)),
-        #("min_sigma_factor", np.arange(2, 2.71, 0.1)),
-        #("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
-        #("min_sigma_factor", np.arange(2.5, 3.51, 0.1)),
-        #("max_sigma_factor", np.arange(3.5, 4.51, 0.1)),
         #("num_sigma", np.arange(5, 16, 1)),
         #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
         #("segment_size", np.arange(130, 160, 20)),
-    ]))
+    ])),
+    ("size", OrderedDict([
+        ("min_sigma_factor", np.arange(2, 2.71, 0.1)),
+        ("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
+        #("min_sigma_factor", np.arange(2.5, 3.51, 0.1)),
+        #("max_sigma_factor", np.arange(3.5, 4.51, 0.1)),
+    ])),
 ])
 
 

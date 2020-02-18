@@ -514,8 +514,8 @@ def get_process_settings(i):
     return settings
 
 
-# receiver operating characteristic
-roc = False
+#: List[str]: Receiver operating characteristic/grid search profiles.
+roc = None
 
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)

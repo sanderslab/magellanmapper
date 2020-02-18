@@ -12,7 +12,6 @@ import numpy as np
 from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import df_io
-from magmap.settings import profiles
 
 
 class GridSearchStats(Enum):
@@ -26,17 +25,39 @@ class GridSearchStats(Enum):
     FDR = "FDR"
 
 
-def grid_search(fnc, *fnc_args):
+def grid_search(roc_dict, keys, fnc, *fnc_args):
+    """Perform a grid search for hyperparameter optimization.
+
+    Multiple grid searches can be performed by specifying multiples ``keys``.
+    Note that currently each subsequent grid search will use the last
+    settings from the prior search.
+
+    Args:
+        roc_dict (dict): Nested dictionary, where each sub-dictionary
+            contains sequences of the format:
+            ``(:class:`profiles.ProcessSettings` parameter, (a, b, c, ...))``.
+        keys (List[str]): Sequence of keys in ``roc_dict`` to specify the
+            hyperparameters for the grid search(es).
+        fnc (func): Function to call during the grid search, which must
+            return ``stats, summaries``.
+        *fnc_args: Arguments to pass to ``fnc``.
+
+    Returns:
+        :dict: Dictionary of stats suitable for parsing in
+        :meth:`parse_grid_stats`.
+
+    """
     # gets the ROC settings
     settings = config.process_settings
     stats_dict = OrderedDict()
     file_summaries = []
-    for key, value in profiles.roc_dict.items():
-        # iterate through groups of settings, where each value is 
-        # another dictionary with the group's settings
-        iterable_keys = [] # hyperparameters to iterate through
+    for key in keys:
+        # perform grid search based on the given dict of settings in roc_dict
+        # TODO: consider whether to reset settings between grid searches
+        roc = roc_dict[key]
+        iterable_keys = []  # hyperparameters to iterate through
         iterable_dict = OrderedDict() # group results
-        for key2, value2 in value.items():
+        for key2, value2 in roc.items():
             if np.isscalar(value2):
                 # set scalar values rather than iterating and processing
                 settings[key2] = value2
@@ -81,7 +102,7 @@ def grid_search(fnc, *fnc_args):
                 iterable_dict[name] = (
                     stats, last_param_vals, key, parent_params)
         
-        grid_iterate(0, iterable_keys, value, None, OrderedDict())
+        grid_iterate(0, iterable_keys, roc, None, OrderedDict())
         stats_dict[key] = iterable_dict
     # summary of each file collected together
     for summary in file_summaries:
@@ -100,13 +121,12 @@ def parse_grid_stats(stats_dict):
             ``OrderedDict`` of the parent parameters and their values for 
             the given set of stats.
     """
-    label = ""
-    align = ">"
     parsed_stats = {}
-    stats_for_df = {}
-    headers = None
+    dfs = []
     param_keys = []
     for group, iterable_dicts in stats_dict.items():
+        stats_for_df = {}
+        headers = None
         print("{}:".format(group))
         group_dict = {}
         parsed_stats[group] = group_dict
@@ -136,10 +156,10 @@ def parse_grid_stats(stats_dict):
                 for header, stat in zip(headers, stat_list):
                     stats_for_df.setdefault(header, []).append(stat)
             group_dict[key] = (fdr, sens, last_param_vals)
-    print()
-    path_df = "gridsearch_{}.csv".format("_".join(param_keys))
-    df = df_io.dict_to_data_frame(stats_for_df, path_df, show=" ")
-    return parsed_stats, df
+        print()
+        path_df = "gridsearch_{}.csv".format("_".join(param_keys))
+        dfs.append(df_io.dict_to_data_frame(stats_for_df, path_df, show=" "))
+    return parsed_stats, dfs
 
     
 if __name__ == "__main__":

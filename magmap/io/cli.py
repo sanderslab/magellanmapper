@@ -222,7 +222,7 @@ def main(process_args_only=False):
     parser.add_argument("-v", "--verbose", action="store_true")
     parser.add_argument("--microscope", nargs="*")
     parser.add_argument("--truth_db", nargs="*")
-    parser.add_argument("--roc", action="store_true")
+    parser.add_argument("--roc", nargs="*")
     parser.add_argument("--plane")
     parser.add_argument("--saveroi", action="store_true")
     parser.add_argument("--labels", nargs="*")
@@ -604,15 +604,16 @@ def main(process_args_only=False):
     # process the image stack for each series
     for series in series_list:
         if config.roc:
-            # grid search with ROC curve
+            # grid search(es) for the specified hyperparameter groups
             stats_dict = mlearn.grid_search(
-                _iterate_file_processing, config.filename, series, 
-                config.offsets, config.roi_sizes)
-            parsed_dict, stats_df = mlearn.parse_grid_stats(stats_dict)
-            # plot ROC curve
+                profiles.roc_dict, config.roc, _iterate_file_processing,
+                config.filename, series, config.offsets, config.roi_sizes)
+            parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
             from magmap.plot import plot_2d
             plot_2d.setup_style()
-            plot_2d.plot_roc(stats_df, not config.no_show)
+            for stats_df in stats_dfs:
+                # plot ROC curve
+                plot_2d.plot_roc(stats_df, not config.no_show)
         else:
             # processes file with default settings
             np_io.setup_images(

@@ -12,6 +12,7 @@ import numpy as np
 from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import df_io
+from magmap.settings import profiles
 
 
 class GridSearchStats(Enum):
@@ -24,12 +25,13 @@ class GridSearchStats(Enum):
     FP = "FP"
     FDR = "FDR"
 
+
 def grid_search(fnc, *fnc_args):
     # gets the ROC settings
     settings = config.process_settings
     stats_dict = OrderedDict()
     file_summaries = []
-    for key, value in config.roc_dict.items():
+    for key, value in profiles.roc_dict.items():
         # iterate through groups of settings, where each value is 
         # another dictionary with the group's settings
         iterable_keys = [] # hyperparameters to iterate through
@@ -85,6 +87,7 @@ def grid_search(fnc, *fnc_args):
     for summary in file_summaries:
         print(summary)
     return stats_dict
+
 
 def parse_grid_stats(stats_dict):
     """Parses stats from a grid search.

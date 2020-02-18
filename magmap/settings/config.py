@@ -1,6 +1,6 @@
 #!/bin/bash
 # Config file for shared settings
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2020
 """Configuration storage module.
 
 This module allows customization of settings for various imaging systems, 
@@ -27,7 +27,6 @@ Attributes:
 """
 
 import numpy as np
-from collections import OrderedDict
 from enum import Enum
 
 verbose = False
@@ -517,71 +516,6 @@ def get_process_settings(i):
 
 # receiver operating characteristic
 roc = False
-'''
-roc_dict = OrderedDict([
-    ("threshold_local", OrderedDict([
-        ("thresholding", "local"),
-        ("thresholding_size", np.arange(9, 75, 2))])
-    ),
-    ("threshold_otsu", OrderedDict([
-        ("thresholding", "otsu"),
-        ("thresholding_size", np.array([64, 128, 256, 512, 1024]))])
-    ),
-    ("random-walker", OrderedDict([
-        ("thresholding", "random_walker"),
-        ("thresholding_size", np.array([50.0, 130.0, 250.0, 500.0]))])
-    )
-])
-'''
-
-# isotropic factors
-#_isotropic_zs = np.arange(0.9, 1.1, 0.02)
-_isotropic_zs = np.arange(0.1, 2, 0.1)
-_isotropic_factors = np.ones((len(_isotropic_zs), 3))
-_isotropic_factors[:, 0] = _isotropic_zs
-#print(_isotropic_factors)
-
-# pruning tolerance factors
-_prune_tol_zs = np.arange(0.5, 1.1, 0.5)
-_prune_tol_factors = np.ones((len(_prune_tol_zs), 3)) * 0.9
-_prune_tol_factors[:, 0] = _prune_tol_zs
-#print(_prune_tol_factors)
-
-roc_dict = OrderedDict([
-    ("hyperparameters", OrderedDict([
-        # test single value by iterating on value that should not affect 
-        # detection ability
-        ("points_3d_thresh", [0.7]),
-        
-        # unfused baseline
-        #("clip_vmax", 98.5),
-        #("clip_max", 0.5),
-        #("clip_vmax", np.arange(98.5, 99, 0.5)),
-        #("clip_max", np.arange(0.5, 0.6, 0.1)),
-        
-        # test parameters
-        #("isotropic", _isotropic_factors),
-        #("isotropic", np.array([(0.96, 1, 1)])),
-        #("overlap", np.arange(0.1, 1.0, 0.1)),
-        #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
-        #("prune_tol_factor", _prune_tol_factors),
-        #("clip_min", np.arange(0.0, 0.2, 0.1)),
-        #("clip_vmax", np.arange(97, 100.5, 0.5)),
-        #("clip_max", np.arange(0.3, 0.7, 0.1)),
-        #("erosion_threshold", np.arange(0.16, 0.35, 0.02)),
-        #"denoise_size", np.arange(5, 25, 2)
-        #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
-        #("tot_var_denoise", (False, True)),
-        #("min_sigma_factor", np.arange(2, 2.71, 0.1)),
-        #("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
-        #("min_sigma_factor", np.arange(2.5, 3.51, 0.1)),
-        #("max_sigma_factor", np.arange(3.5, 4.51, 0.1)),
-        #("num_sigma", np.arange(5, 16, 1)),
-        #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
-        #("segment_size", np.arange(130, 160, 20)),
-    ]))
-])
-
 
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)

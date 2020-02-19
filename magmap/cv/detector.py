@@ -1,5 +1,5 @@
 # Cell detection methods
-# Author: David Young, 2017
+# Author: David Young, 2017, 2020
 """Detects features within a 3D image stack.
 
 Prunes duplicates and verifies detections against truth sets.
@@ -79,7 +79,7 @@ def detect_blobs(roi, channel, exclude_border=None):
         roi: Region of interest to segment.
         channel: Channel to select, which can be None to indicate all 
             channels.
-        exclude_borders: Sequence of border pixels in x,y,z to exclude; 
+        exclude_border: Sequence of border pixels in x,y,z to exclude;
             defaults to None.
     
     Returns:
@@ -109,15 +109,19 @@ def detect_blobs(roi, channel, exclude_border=None):
         # find blobs; sigma factors can be sequences by axes for anisotropic 
         # detection in skimage >= 0.15, or images can be interpolated to 
         # isotropy using the "isotropic" MagellanMapper setting
+        min_sigma = settings["min_sigma_factor"] * scaling_factor
+        max_sigma = settings["max_sigma_factor"] * scaling_factor
+        num_sigma = settings["num_sigma"]
+        threshold = settings["detection_threshold"]
+        overlap = settings["overlap"]
         blobs_log = blob_log(
-            roi_detect, 
-            min_sigma=settings["min_sigma_factor"]*scaling_factor, 
-            max_sigma=settings["max_sigma_factor"]*scaling_factor, 
-            num_sigma=settings["num_sigma"], 
-            threshold=settings["detection_threshold"], 
-            overlap=settings["overlap"])
-        libmag.printv(
-            "time for 3D blob detection: {}".format(time() - time_start))
+            roi_detect, min_sigma=min_sigma, max_sigma=max_sigma,
+            num_sigma=num_sigma, threshold=threshold, overlap=overlap)
+        if config.verbose:
+            print("detecting blobs with min size {}, max {}, num std {}, "
+                  "threshold {}, overlap {}"
+                  .format(min_sigma, max_sigma, num_sigma, threshold, overlap))
+            print("time for 3D blob detection: {}".format(time() - time_start))
         if blobs_log.size < 1:
             libmag.printv("no blobs detected")
             continue

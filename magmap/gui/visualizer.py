@@ -151,7 +151,7 @@ class Visualization(HasTraits):
         scene: The main scene
         btn_redraw_trait: Button editor for drawing the reiong of 
             interest.
-        btn_segment_trait: Button editor for segmenting the ROI.
+        btn_detect_trait: Button editor for segmenting the ROI.
         roi: The ROI.
         segments: Array of segments; if None, defaults to a Numpy array
             of zeros with one row.
@@ -169,7 +169,7 @@ class Visualization(HasTraits):
     roi_array = Array(Int, shape=(1, 3))
     scene = Instance(MlabSceneModel, ())
     btn_redraw_trait = Button("Redraw")
-    btn_segment_trait = Button("Detect")
+    btn_detect_trait = Button("Detect")
     btn_2d_trait = Button("ROI Editor")
     btn_atlas_editor_trait = Button("Atlas Editor")
     btn_save_3d = Button("Save 3D Screenshot")
@@ -705,10 +705,9 @@ class Visualization(HasTraits):
         # segs is 0 for some reason if no parameter given in fired trait
         return segs is None or not isinstance(segs, np.ndarray)
     
-    def _btn_segment_trait_fired(self, segs=None):
-        # collect segments in ROI and padding region, ensureing coordinates 
+    def _btn_detect_trait_fired(self, segs=None):
+        # collect segments in ROI and padding region, ensuring coordinates
         # are relative to offset
-        segs_all = None
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
         if config.blobs is None:
@@ -955,7 +954,7 @@ class Visualization(HasTraits):
             if self._scene_3d_shown:
                 self.show_orientation_axes(self.flipz)
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
-            self._btn_segment_trait_fired(segs=blobs)
+            self._btn_detect_trait_fired(segs=blobs)
             roi_editor.verify = True
         else:
             print("no roi found")
@@ -1270,7 +1269,7 @@ class Visualization(HasTraits):
                 ),
                 HGroup(
                     Item("btn_redraw_trait", show_label=False), 
-                    Item("btn_segment_trait", show_label=False), 
+                    Item("btn_detect_trait", show_label=False),
                     Item("btn_2d_trait", show_label=False), 
                     Item("btn_atlas_editor_trait", show_label=False)
                 ),

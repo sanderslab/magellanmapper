@@ -62,7 +62,7 @@ class ProcessSettings(SettingsDict):
         self["unsharp_strength"] = 0.3
         self["erosion_threshold"] = 0.2
         self["min_sigma_factor"] = 3
-        self["max_sigma_factor"] = 30
+        self["max_sigma_factor"] = 5
         self["num_sigma"] = 10
         self["detection_threshold"] = 0.1
         self["overlap"] = 0.5

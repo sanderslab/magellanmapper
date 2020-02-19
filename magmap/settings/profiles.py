@@ -53,14 +53,27 @@ class ProcessSettings(SettingsDict):
     def __init__(self, *args, **kwargs):
         super().__init__(self)
         self["settings_name"] = "default"
+
+        # visualization and plotting
         self["vis_3d"] = "points"  # "points" or "surface" 3D visualization
         self["points_3d_thresh"] = 0.85  # frac of thresh (changed in v.0.6.6)
+        self["channel_colors"] = (
+            config.Cmaps.CMAP_GRBK_NAME, config.Cmaps.CMAP_RDBK_NAME)
+        self["scale_bar_color"] = "w"
+        self["colorbar"] = False
+        # num of times to rotate image by 90deg after loading
+        self["load_rot90"] = 0
+        self["norm"] = None  # (min, max) normalization of image5d
+
+        # image preprocessing before blob detection
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2
         self["clip_max"] = 1.0
         self["tot_var_denoise"] = False
         self["unsharp_strength"] = 0.3
         self["erosion_threshold"] = 0.2
+
+        # 3D blob detection settings
         self["min_sigma_factor"] = 3
         self["max_sigma_factor"] = 5
         self["num_sigma"] = 10
@@ -68,23 +81,20 @@ class ProcessSettings(SettingsDict):
         self["overlap"] = 0.5
         self["thresholding"] = None
         self["thresholding_size"] = -1
+        self["exclude_border"] = None  # z,y,x; exclude blob detection border
+
+        # block processing and automated verification
         self["denoise_size"] = 25  # None turns off preprocessing in stack proc
         self["segment_size"] = 500  # detection ROI max size along longest edge
         self["prune_tol_factor"] = (1, 1, 1)
         self["verify_tol_factor"] = (1, 1, 1)
-        self["channel_colors"] = (
-            config.Cmaps.CMAP_GRBK_NAME, config.Cmaps.CMAP_RDBK_NAME)
-        self["isotropic"] = None
-        self["isotropic_vis"] = None
-        self["resize_blobs"] = None
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
-        self["scale_bar_color"] = "w"
-        self["colorbar"] = False
-        # num of times to rotate image by 90deg after loading
-        self["load_rot90"] = 0
-        self["exclude_border"] = None  # z,y,x; exclude blob detection border
-        self["norm"] = None  # (min, max) normalization of image5d
+
+        # resizing for anisotropy
+        self["isotropic"] = None  # final relative z,y,x scaling after resizing
+        self["isotropic_vis"] = None  # z,y,x scaling factor for vis only
+        self["resize_blobs"] = None  # z,y,x coord scaling before verification
 
 
 def update_process_settings(settings, settings_type):

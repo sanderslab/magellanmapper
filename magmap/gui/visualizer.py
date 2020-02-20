@@ -195,7 +195,7 @@ class Visualization(HasTraits):
     segs_cmap = None
     segs_feedback = Str("Segments output")
     labels = None  # segmentation labels
-    atlas_ed = None  # atlas editor
+    atlas_eds = []  # open atlas editors
     flipz = True  # True to invert 3D vis along z-axis
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
@@ -790,8 +790,12 @@ class Visualization(HasTraits):
         if self.segs_pts is not None:
             self.segs_pts.glyph.glyph.scale_factor = self.segs_scale
     
-    def _fig_close_listener(self, evt):
-        """Handle figure close events.
+    def _roi_ed_close_listener(self, evt):
+        """Handle ROI Editor close events.
+
+        Args:
+            evt (:obj:`matplotlib.backend_bases.Event`): Event.
+
         """
         self._circles_opened_type = None
         self._opened_window_style = None
@@ -804,7 +808,18 @@ class Visualization(HasTraits):
             self._reset_segments()
             self._circles_2d = [roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
             self.segs_feedback = "Reset circles after saving full annotations"
-    
+
+    def _atlas_ed_close_listener(self, evt, atlas_ed):
+        """Handle Atlas Editor close events.
+
+        Args:
+            evt (:obj:`matplotlib.backend_bases.Event`): Event.
+            atlas_ed (:obj:`gui.atlas_editor.AtlasEdtor`): Atlas editor
+                that was closed.
+
+        """
+        self.atlas_eds.remove(atlas_ed)
+
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
         if (self._circles_opened_type 
@@ -864,7 +879,7 @@ class Visualization(HasTraits):
         stack_args = (
             self.update_segment, title, filename_base, img, config.channel,
             curr_roi_size, curr_offset, self.segments, self.segs_in_mask,
-            self.segs_cmap, self._fig_close_listener,
+            self.segs_cmap, self._roi_ed_close_listener,
             # additional args with defaults
             self._full_border(self.border), self._planes_2d[0].lower())
         roi_ed = roi_editor.ROIEditor()
@@ -913,12 +928,13 @@ class Visualization(HasTraits):
     def _btn_atlas_editor_trait_fired(self):
         # atlas editor; need to retain ref or else instance callbacks 
         # created within AtlasEditor will be garbage collected
-        self.atlas_ed = atlas_editor.AtlasEditor(
+        atlas_ed = atlas_editor.AtlasEditor(
             config.image5d, config.labels_img, config.channel, 
-            self._curr_offset(), self._fig_close_listener, 
+            self._curr_offset(), self._atlas_ed_close_listener,
             borders_img=config.borders_img,
             fn_show_label_3d=self.show_label_3d, title=config.filename)
-        self.atlas_ed.show_atlas()
+        self.atlas_eds.append(atlas_ed)
+        atlas_ed.show_atlas()
     
     def _btn_save_3d_fired(self):
         # save 3D image with the currently set extension in config
@@ -1024,9 +1040,10 @@ class Visualization(HasTraits):
             # without non-label areas; TODO: consider making default or 
             # only option
             self.show_label_3d(region_ids)
-        if self.atlas_ed is not None:
-            # sync with atlas editor to point at center of region
-            self.atlas_ed.update_coords(centroid)
+        if self.atlas_eds:
+            for ed in self.atlas_eds:
+                # sync with atlas editor to point at center of region
+                ed.update_coords(centroid)
         self.segs_feedback = (
             "Found region ID {}".format(self._region_id))
     

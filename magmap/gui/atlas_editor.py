@@ -181,7 +181,7 @@ class AtlasEditor:
         # attach listeners
         fig.canvas.mpl_connect("scroll_event", self.scroll_overview)
         fig.canvas.mpl_connect("key_press_event", self.on_key_press)
-        fig.canvas.mpl_connect("close_event", self.fn_close_listener)
+        fig.canvas.mpl_connect("close_event", self._close)
         fig.canvas.mpl_connect("axes_leave_event", self.axes_exit)
         
         self.alpha_slider.on_changed(self.alpha_update)
@@ -198,7 +198,17 @@ class AtlasEditor:
         gs.tight_layout(fig)
         plt.ion()
         plt.show()
-    
+
+    def _close(self, evt):
+        """Handle figure close events by calling :attr:`fn_close_listener`
+        with this object.
+
+        Args:
+            evt (:obj:`matplotlib.backend_bases.CloseEvent`): Close event.
+
+        """
+        self.fn_close_listener(evt, self)
+
     def on_key_press(self, event):
         """Respond to key press events.
         """

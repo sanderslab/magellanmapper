@@ -38,6 +38,10 @@ class AtlasEditor:
         fn_show_label_3d: Function to call to show a label in a 
             3D viewer. Defaults to None.
         title (str): Window title; defaults to None.
+        fn_refresh_atlas_eds (func): Callback for refreshing other
+            Atlas Editors to synchronize them; defaults to None.
+            Typically takes one argument, this ``AtlasEditor`` object
+            to refreshing it. Defaults to None.
         plot_eds: Dictionary of :class:`magmap.plot_editor.PlotEditor`, with 
             key specified by one of :const:`magmap.config.PLANE` 
             plane orientations.
@@ -52,7 +56,8 @@ class AtlasEditor:
     _EDIT_BTN_LBLS = ("Edit", "Editing")
     
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
-                 borders_img=None, fn_show_label_3d=None, title=None):
+                 borders_img=None, fn_show_label_3d=None, title=None,
+                 fn_refresh_atlas_eds=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself."""
         self.image5d = image5d
         self.labels_img = labels_img
@@ -62,6 +67,7 @@ class AtlasEditor:
         self.borders_img = borders_img
         self.fn_show_label_3d = fn_show_label_3d
         self.title = title
+        self.fn_refresh_atlas_eds = fn_refresh_atlas_eds
         
         self.plot_eds = {}
         self.alpha_slider = None
@@ -253,12 +259,15 @@ class AtlasEditor:
             coord_transposed = libmag.transpose_1d(list(coord_rev), plane)
             self.plot_eds[plane].update_coord(coord_transposed)
     
-    def refresh_images(self, plot_ed):
+    def refresh_images(self, plot_ed=None, update_atlas_eds=False):
         """Refresh images in a plot editor.
         
         Args:
-            plot_ed: :class:`magmap.plot_editor.PlotEditor` whose images 
-                will be refreshed.
+            plot_ed (:obj:`magmap.plot_editor.PlotEditor`): Editor that
+                does not need updating, typically the editor that originally
+                changed. Defaults to None.
+            update_atlas_eds (bool): True to update other ``AtlasEditor``s;
+                defaults to False.
         """
         for key in self.plot_eds:
             ed = self.plot_eds[key]
@@ -266,7 +275,10 @@ class AtlasEditor:
             if ed.edited:
                 # display save button as enabled if any editor has been edited
                 enable_btn(self.save_btn)
-    
+        if update_atlas_eds and self.fn_refresh_atlas_eds is not None:
+            # callback to synchronize other Atlas Editors
+            self.fn_refresh_atlas_eds(self)
+
     def scroll_overview(self, event):
         """Scroll images and crosshairs in all plot editors
         
@@ -310,7 +322,7 @@ class AtlasEditor:
         """
         try:
             self.interp_planes.interpolate(self.labels_img)
-            self.refresh_images(None)
+            self.refresh_images(None, True)
         except ValueError as e:
             print(e)
     

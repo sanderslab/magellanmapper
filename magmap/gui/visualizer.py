@@ -936,11 +936,23 @@ class Visualization(HasTraits):
         atlas_ed = atlas_editor.AtlasEditor(
             config.image5d, config.labels_img, config.channel, 
             self._curr_offset(), self._atlas_ed_close_listener,
-            borders_img=config.borders_img,
-            fn_show_label_3d=self.show_label_3d, title=title)
+            config.borders_img, self.show_label_3d, title,
+            self._refresh_atlas_eds)
         self.atlas_eds.append(atlas_ed)
         atlas_ed.show_atlas()
-    
+
+    def _refresh_atlas_eds(self, ed_ignore):
+        """Callback handler to refresh all other Atlas Editors
+
+        Args:
+            ed_ignore (:obj:`gui.atlas_editor.AtlasEditor`): Atlas Editor
+                to not refresh, typically the calling editor.
+
+        """
+        for ed in self.atlas_eds:
+            if ed is None or ed is ed_ignore: continue
+            ed.refresh_images()
+
     def _btn_save_3d_fired(self):
         # save 3D image with the currently set extension in config
         screenshot = self.scene.mlab.screenshot(mode="rgba", antialiased=True)

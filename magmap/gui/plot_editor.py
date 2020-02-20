@@ -50,6 +50,9 @@ class PlotEditor:
             origin (str): Planar orientation, usually either "lower" or None.
             fn_update_coords (function): Callback when updating coordinates.
             fn_refresh_images (function): Callback when refreshing the image.
+                Typically takes two arguments, this ``PlotEditor`` object
+                and a boolean where True will update synchronized
+                ``AtlasEditor``s.
             scaling (List[float]): Scaling/spacing in z,y,x.
             plane_slider (:obj:`matplotlib.widgets.Slider`): Slider for 
                 scrolling through planes.
@@ -386,7 +389,7 @@ class PlotEditor:
                                 rr, cc] = self.intensity_shown
                             print("changed intensity at x,y,z = {},{},{} to {}"
                                   .format(x, y, self.coord[0], self.intensity))
-                            self.fn_refresh_images(self)
+                            self.fn_refresh_images(self, True)
                             self.edited = True
                             self._editing = True
                     else:

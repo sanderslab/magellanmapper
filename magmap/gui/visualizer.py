@@ -472,7 +472,7 @@ class Visualization(HasTraits):
         if not np.all(np.equal(curr_roi_size, roi_size_orig)):
             self.roi_array = [curr_roi_size]
             feedback.append(
-                "Reposized ROI from {} to {} to fit within max bounds of {}"
+                "Resized ROI from {} to {} to fit within max bounds of {}"
                 .format(roi_size_orig, curr_roi_size, max_offset))
         print("using ROI offset {}, size of {} (x,y,z)"
               .format(curr_offset, curr_roi_size))

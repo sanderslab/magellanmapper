@@ -167,10 +167,10 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             output_info = read_np_archive(
                 np.load(filename_info_proc))
             config.blobs = output_info["segments"]
-            print("{} segments loaded".format(len(
-                config.blobs)))
+            print("{} segments loaded".format(len(config.blobs)))
             if config.verbose:
                 detector.show_blobs_per_channel(config.blobs)
+                print(output_info)
             # TODO: gets overwritten after loading original image's metadata
             config.resolutions = output_info["resolutions"]
             basename = output_info["basename"]

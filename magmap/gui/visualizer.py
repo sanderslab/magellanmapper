@@ -818,7 +818,7 @@ class Visualization(HasTraits):
                 that was closed.
 
         """
-        self.atlas_eds.remove(atlas_ed)
+        self.atlas_eds[self.atlas_eds.index(atlas_ed)] = None
 
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
@@ -924,15 +924,20 @@ class Visualization(HasTraits):
             # defaults to Square style without oblique view
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
-    
+
     def _btn_atlas_editor_trait_fired(self):
         # atlas editor; need to retain ref or else instance callbacks 
         # created within AtlasEditor will be garbage collected
+        title = config.filename
+        if self.atlas_eds:
+            # distinguish multiple Atlas Editor windows with number since
+            # using the same title causes the windows to overlap
+            title += " ({})".format(len(self.atlas_eds) + 1)
         atlas_ed = atlas_editor.AtlasEditor(
             config.image5d, config.labels_img, config.channel, 
             self._curr_offset(), self._atlas_ed_close_listener,
             borders_img=config.borders_img,
-            fn_show_label_3d=self.show_label_3d, title=config.filename)
+            fn_show_label_3d=self.show_label_3d, title=title)
         self.atlas_eds.append(atlas_ed)
         atlas_ed.show_atlas()
     
@@ -1040,10 +1045,10 @@ class Visualization(HasTraits):
             # without non-label areas; TODO: consider making default or 
             # only option
             self.show_label_3d(region_ids)
-        if self.atlas_eds:
-            for ed in self.atlas_eds:
-                # sync with atlas editor to point at center of region
-                ed.update_coords(centroid)
+        for ed in self.atlas_eds:
+            if ed is None: continue
+            # sync with atlas editor to point at center of region
+            ed.update_coords(centroid)
         self.segs_feedback = (
             "Found region ID {}".format(self._region_id))
     

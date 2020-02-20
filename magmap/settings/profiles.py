@@ -154,6 +154,17 @@ def update_process_settings(settings, settings_type):
             }, 
             profile)
 
+        # minimal preprocessing
+        settings.add_modifier(
+            "minpreproc",
+            {
+                "clip_vmax": 100,
+                "clip_max": 1,
+                "unsharp_strength": 0,
+                "erosion_threshold": 0,
+            },
+            profile)
+
         # 2-photon 20x nuclei
         settings.add_modifier(
             "2p20x", 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Detect blobs within a chunked stack through multiprocessing
-# Author: David Young, 2019
+# Author: David Young, 2019, 2020
 """Stack blob detector.
 
 Detect blobs within a stack that has been chunked to allow parallel 
@@ -30,11 +30,13 @@ from magmap.io import df_io
 # 2: added archive version number
 BLOBS_NP_VER = 2
 
+
 class StackTimes(Enum):
     """Stack processing durations."""
     DETECTION = "Detection"
     PRUNING = "Pruning"
     TOTAL = "Total_stack"
+
 
 class StackDetector(object):
     """Detect blobs within a stack in a way that allows multiprocessing 
@@ -49,7 +51,7 @@ class StackDetector(object):
             absolute coordinates.
         denoise_max_shape: Maximum shape of each unit within each sub-ROI 
             for denoising.
-        exclude_borders: Sequence of border pixels in x,y,z to exclude; 
+        exclude_border: Sequence of border pixels in x,y,z to exclude;
             defaults to None.
     """
     sub_rois = None
@@ -130,7 +132,8 @@ class StackDetector(object):
             detector.shift_blob_abs_coords(segments, offset)
             #print("segs after:\n{}".format(segments))
         return coord, segments
-    
+
+
 def make_subimage_name(base, offset, shape):
     """Make name of subimage for a given offset and shape.
     
@@ -147,6 +150,7 @@ def make_subimage_name(base, offset, shape):
     name = libmag.splice_before(base, series_fill, roi_site)
     print("subimage name: {}".format(name))
     return name
+
 
 def detect_blobs_large_image(filename_base, image5d, offset, roi_size, 
                              verify=False, save_dfs=True, full_roi=False):
@@ -400,6 +404,7 @@ def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape,
     pool.join()
     return seg_rois
 
+
 class StackPruner(object):
     """Prune blobs within a stack in a way that allows multiprocessing 
     without global variables.
@@ -452,7 +457,8 @@ class StackPruner(object):
             pruning_ratios = detector.meas_pruning_ratio(
                 num_blobs_orig, len(blobs_after_pruning), len(blobs_next))
         return blobs_after_pruning, pruning_ratios
-        
+
+
 def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
                     channels, overlap_tol=None):
     """Prune close blobs within overlapping regions by checking within

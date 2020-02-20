@@ -165,6 +165,17 @@ def update_process_settings(settings, settings_type):
             },
             profile)
 
+        # low resolution
+        settings.add_modifier(
+            "lowres",
+            {
+                "min_sigma_factor": 5,
+                "max_sigma_factor": 6,
+                "denoise_size": 1000,
+                "segment_size": 1000,
+            },
+            profile)
+
         # 2-photon 20x nuclei
         settings.add_modifier(
             "2p20x", 

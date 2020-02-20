@@ -822,7 +822,9 @@ class Visualization(HasTraits):
 
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
-        if (self._circles_opened_type 
+        if (roi_editor.ROIEditor.CircleStyles(self._circles_2d[0])
+                != roi_editor.ROIEditor.CircleStyles.NO_CIRCLES
+                and self._circles_opened_type
                 and self._circles_opened_type !=
                 roi_editor.ROIEditor.CircleStyles.NO_CIRCLES):
             # prevent multiple editable windows from being opened 

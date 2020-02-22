@@ -81,11 +81,13 @@ class ProcessSettings(SettingsDict):
         self["overlap"] = 0.5
         self["thresholding"] = None
         self["thresholding_size"] = -1
-        self["exclude_border"] = None  # z,y,x; exclude blob detection border
+        # z,y,x px to exclude along border after blob detection
+        self["exclude_border"] = None
 
         # block processing and automated verification
         self["denoise_size"] = 25  # None turns off preprocessing in stack proc
         self["segment_size"] = 500  # detection ROI max size along longest edge
+        # z,y,x tolerances for pruning duplicates in overlapped regions
         self["prune_tol_factor"] = (1, 1, 1)
         self["verify_tol_factor"] = (1, 1, 1)
         # module level variable will take precedence

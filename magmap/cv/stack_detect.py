@@ -192,33 +192,40 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
     _, channels = plot_3d.setup_channels(roi, config.channel, 3)
     
-    # chunk ROI into sub-ROIs
+    # prep chunking ROI into sub-ROIs with size based on segment_size, scaling
+    # by physical units to make more independent of resolution
     time_detection_start = time()
-    settings = config.process_settings # use default settings
+    settings = config.process_settings  # use default settings
     scaling_factor = detector.calc_scaling_factor()
     print("microsope scaling factor based on resolutions: {}"
           .format(scaling_factor))
     denoise_size = config.process_settings["denoise_size"]
     denoise_max_shape = None
     if denoise_size:
+        # further subdivide each sub-ROI for local preprocessing
         denoise_max_shape = np.ceil(
             np.multiply(scaling_factor, denoise_size)).astype(int)
+
+    # overlap sub-ROIs to minimize edge effects
     overlap_base = chunking.calc_overlap()
     tol = np.multiply(overlap_base, settings["prune_tol_factor"]).astype(int)
-    overlap_tol = np.copy(tol)
+    overlap_padding = np.copy(tol)
     overlap = np.copy(overlap_base)
     exclude_border = config.process_settings["exclude_border"]
     if exclude_border is not None:
-        # ensure that overlap is greater than twice the border exclusion per 
+        # exclude border to avoid blob detector edge effects, where blobs
+        # often collect at the faces of the sub-ROI;
+        # ensure that overlap is greater than twice the border exclusion per
         # axis so that no plane will be excluded from both overlapping sub-ROIs
         exclude_border_thresh = np.multiply(2, exclude_border)
         overlap_less = np.less(overlap, exclude_border_thresh)
         overlap[overlap_less] = exclude_border_thresh[overlap_less]
         excluded = np.greater(exclude_border, 0)
-        overlap[excluded] += 1 # additional padding
-        overlap_tol[excluded] = 0 # no need to prune past excluded border
-    print("sub-ROI overlap: {}, pruning tolerance: {}, overlap_tol: {}"
-          .format(overlap, tol, overlap_tol))
+        overlap[excluded] += 1  # additional padding
+        overlap_padding[excluded] = 0  # no need to prune past excluded border
+    print("sub-ROI overlap: {}, pruning tolerance: {}, padding beyond "
+          "overlap for pruning: {}, exclude borders: {}"
+          .format(overlap, tol, overlap_padding, exclude_border))
     max_pixels = np.ceil(np.multiply(
         scaling_factor, 
         config.process_settings["segment_size"])).astype(int)
@@ -237,7 +244,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     time_pruning_start = time()
     segments_all, df_pruning = _prune_blobs_mp(
         seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels, 
-        overlap_tol)
+        overlap_padding)
     pruning_time = time() - time_pruning_start
     print("blob pruning time (s):", pruning_time)
     #print("maxes:", np.amax(segments_all, axis=0))
@@ -368,7 +375,7 @@ def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape,
             absolute coordinates.
         denoise_max_shape: Maximum shape of each unit within each sub-ROI 
             for denoising.
-        exclude_borders: Sequence of border pixels in x,y,z to exclude; 
+        exclude_border: Sequence of border pixels in x,y,z to exclude;
             defaults to None.
     
     Returns:
@@ -459,21 +466,21 @@ class StackPruner(object):
         return blobs_after_pruning, pruning_ratios
 
 
-def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets, 
-                    channels, overlap_tol=None):
+def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
+                    channels, overlap_padding=None):
     """Prune close blobs within overlapping regions by checking within
     entire planes across the ROI in parallel with multiprocessing.
     
     Args:
-        segs_roi: Segments from each sub-region.
+        seg_rois: Segments from each sub-region.
         overlap: 1D array of size 3 with the number of overlapping pixels 
             for each image axis.
         tol: Tolerance as (z, y, x), within which a segment will be 
             considered a duplicate of a segment in the master array and
             removed.
         sub_rois: Sub-regions, used to check size.
-        sub_rois_offset: Offsets of each sub-region.
-        overlap_tol: Sequence of z,y,x for additional padding beyond 
+        sub_rois_offsets: Offsets of each sub-region.
+        overlap_padding: Sequence of z,y,x for additional padding beyond
             ``overlap``. Defaults to None to use ``tol`` as padding.
     
     Returns:
@@ -487,11 +494,11 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
     print("total blobs before pruning:", len(blobs_merged))
     
     print("pruning with overlap: {}, overlap tol: {}, pruning tol: {}"
-          .format(overlap, overlap_tol, tol))
+          .format(overlap, overlap_padding, tol))
     blobs_all = []
     blob_ratios = {}
     cols = ("blobs", "ratio_pruning", "ratio_adjacent")
-    if overlap_tol is None: overlap_tol = tol
+    if overlap_padding is None: overlap_padding = tol
     for i in channels:
         # prune blobs from each channel separately to avoid pruning based on 
         # co-localized channel signals
@@ -529,11 +536,11 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 blobs_ol = None
                 blobs_ol_next = None
                 blobs_in_non_ol = []
-                shift = overlap[axis] + overlap_tol[axis]
+                shift = overlap[axis] + overlap_padding[axis]
                 offset_axis = offset[axis]
                 if i < num_sections - 1:
                     bounds = [offset_axis + size[axis] - shift,
-                              offset_axis + size[axis] + overlap_tol[axis]]
+                              offset_axis + size[axis] + overlap_padding[axis]]
                     libmag.printv(
                         "axis {}, boundaries: {}".format(axis, bounds))
                     blobs_ol = blobs[np.all([
@@ -545,7 +552,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                     # starting point with or without overlap_tol
                     start = offset_axis + size[axis] + tol[axis]
                     bounds_next = [
-                        start, start + overlap[axis] + 2 * overlap_tol[axis]]
+                        start, start + overlap[axis] + 2 * overlap_padding[axis]]
                     shape = np.add(
                         sub_rois_offsets[coord_last], 
                         sub_rois[coord_last].shape[:3])

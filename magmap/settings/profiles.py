@@ -176,6 +176,7 @@ def update_process_settings(settings, settings_type):
                 "max_sigma_factor": 6,
                 "denoise_size": 1000,
                 "segment_size": 1000,
+                "exclude_border": (1, 1, 1),
             },
             profile)
 

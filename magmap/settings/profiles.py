@@ -181,6 +181,7 @@ def update_process_settings(settings, settings_type):
             {
                 "min_sigma_factor": 5,
                 "max_sigma_factor": 6,
+                "isotropic": None,
                 "denoise_size": 2000,  # will use full detection ROI
                 "segment_size": 1000,
                 "max_thresh_factor": 1.0,

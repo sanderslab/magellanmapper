@@ -70,6 +70,8 @@ class ProcessSettings(SettingsDict):
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2
         self["clip_max"] = 1.0
+        # mult by config.near_max for lower threshold of max
+        self["max_thresh_factor"] = 0.5
         self["tot_var_denoise"] = False
         self["unsharp_strength"] = 0.3
         self["erosion_threshold"] = 0.2
@@ -179,6 +181,7 @@ def update_process_settings(settings, settings_type):
                 "denoise_size": 1000,
                 "segment_size": 1000,
                 "exclude_border": (1, 1, 1),
+                "max_thresh_factor": 1.0,
             },
             profile)
 

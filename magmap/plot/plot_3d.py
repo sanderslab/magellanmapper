@@ -49,15 +49,23 @@ def setup_channels(roi, channel, dim_channel):
     '''
     return multichannel, channels
 
-def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, channel=None):
+def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, max_thresh_factor=-1,
+                 channel=None):
     """Saturates an image, clipping extreme values and stretching remaining
     values to fit the full range.
     
     Args:
         roi (:obj:`np.ndarray`): Region of interest.
-        clip_vmin (float): Percent for lower clipping.
-        clip_vmax (float): Percent for upper clipping.
-        channel (int): Channel index of ``roi`` to saturate.
+        clip_vmin (float): Percent for lower clipping. Defaults to -1
+            to use the profile setting.
+        clip_vmax (float): Percent for upper clipping. Defaults to -1
+            to use the profile setting.
+        max_thresh_factor (float): Multiplier of :attr:`config.near_max`
+            for ROI's scaled maximum value. If ``vmax`` is at ``clip_vmax``
+            is below this product, ``vmax`` will be set to this product.
+            Defaults to -1 to use the profile setting.
+        channel (int): Channel index of ``roi`` to saturate. Defaults to None
+            to use all channels.
     
     Returns:
         Saturated region of interest.
@@ -71,12 +79,14 @@ def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, channel=None):
             clip_vmin = settings["clip_vmin"]
         if clip_vmax == -1:
             clip_vmax = settings["clip_vmax"]
+        if max_thresh_factor == -1:
+            max_thresh_factor = settings["max_thresh_factor"]
         # enhance contrast and normalize to 0-1 scale
         vmin, vmax = np.percentile(roi_show, (clip_vmin, clip_vmax))
         libmag.printv(
             "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[i])
         # ensures that vmax is at least 50% of near max value of image5d
-        max_thresh = config.near_max[i] * 0.5
+        max_thresh = config.near_max[i] * settings["max_thresh_factor"]
         if vmax < max_thresh:
             vmax = max_thresh
             libmag.printv("adjusted vmax to {}".format(vmax))

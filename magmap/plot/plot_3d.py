@@ -642,19 +642,22 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
     points_len = len(segs)
     mask = math.ceil(points_len / _MASK_DIVIDEND)
     print("points: {}, mask: {}".format(points_len, mask))
-    # show segs within the ROI
-    pts_in = mlab.points3d(
-        segs_in[:, 2], segs_in[:, 1], 
-        segs_in[:, 0], cmap_indices, 
-        mask_points=mask, scale_mode="none", scale_factor=scale, resolution=50) 
-    # show segments within padding or boder region as more transparent
+    pts_in = None
+    if len(segs_in) > 0:
+        # show segs within the ROI
+        pts_in = mlab.points3d(
+            segs_in[:, 2], segs_in[:, 1],
+            segs_in[:, 0], cmap_indices,
+            mask_points=mask, scale_mode="none", scale_factor=scale, resolution=50)
+        pts_in.module_manager.scalar_lut_manager.lut.table = cmap
+    # show segments within padding or border region as more transparent
     segs_out_mask = np.logical_not(segs_in_mask)
-    pts_out = mlab.points3d(
-        segs[segs_out_mask, 2], segs[segs_out_mask, 1], 
-        segs[segs_out_mask, 0], color=(0, 0, 0), 
-        mask_points=mask, scale_mode="none", scale_factor=scale/2, resolution=50, 
-        opacity=0.2) 
-    pts_in.module_manager.scalar_lut_manager.lut.table = cmap
+    if np.sum(segs_out_mask) > 0:
+        mlab.points3d(
+            segs[segs_out_mask, 2], segs[segs_out_mask, 1],
+            segs[segs_out_mask, 0], color=(0, 0, 0),
+            mask_points=mask, scale_mode="none", scale_factor=scale/2, resolution=50,
+            opacity=0.2)
     
     return pts_in, cmap, scale
 

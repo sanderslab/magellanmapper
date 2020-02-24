@@ -88,7 +88,10 @@ class ProcessSettings(SettingsDict):
         self["exclude_border"] = None
 
         # block processing and automated verification
-        self["denoise_size"] = 25  # None turns off preprocessing in stack proc
+        # None turns off preprocessing in stack proc; make much larger than
+        # segment_size (eg 2x) to cover the full segment ROI because of
+        # additional overlap in segment ROIs
+        self["denoise_size"] = 25
         self["segment_size"] = 500  # detection ROI max size along longest edge
         # z,y,x tolerances for pruning duplicates in overlapped regions
         self["prune_tol_factor"] = (1, 1, 1)
@@ -178,7 +181,7 @@ def update_process_settings(settings, settings_type):
             {
                 "min_sigma_factor": 5,
                 "max_sigma_factor": 6,
-                "denoise_size": 1000,
+                "denoise_size": 2000,  # will use full detection ROI
                 "segment_size": 1000,
                 "exclude_border": (1, 1, 1),
                 "max_thresh_factor": 1.0,

@@ -183,8 +183,8 @@ def update_process_settings(settings, settings_type):
                 "max_sigma_factor": 6,
                 "denoise_size": 2000,  # will use full detection ROI
                 "segment_size": 1000,
-                "exclude_border": (1, 1, 1),
                 "max_thresh_factor": 1.0,
+                "exclude_border": (8, 1, 1),
             },
             profile)
 

@@ -49,12 +49,15 @@ def setup_channels(roi, channel, dim_channel):
     '''
     return multichannel, channels
 
-def saturate_roi(roi, clip_vmax=-1, channel=None):
+def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, channel=None):
     """Saturates an image, clipping extreme values and stretching remaining
     values to fit the full range.
     
     Args:
-        roi: Region of interest.
+        roi (:obj:`np.ndarray`): Region of interest.
+        clip_vmin (float): Percent for lower clipping.
+        clip_vmax (float): Percent for upper clipping.
+        channel (int): Channel index of ``roi`` to saturate.
     
     Returns:
         Saturated region of interest.
@@ -64,10 +67,12 @@ def saturate_roi(roi, clip_vmax=-1, channel=None):
     for i in channels:
         roi_show = roi[..., i] if multichannel else roi
         settings = config.get_process_settings(i)
+        if clip_vmin == -1:
+            clip_vmin = settings["clip_vmin"]
         if clip_vmax == -1:
             clip_vmax = settings["clip_vmax"]
         # enhance contrast and normalize to 0-1 scale
-        vmin, vmax = np.percentile(roi_show, (5, clip_vmax))
+        vmin, vmax = np.percentile(roi_show, (clip_vmin, clip_vmax))
         libmag.printv(
             "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[i])
         # ensures that vmax is at least 50% of near max value of image5d
@@ -256,7 +261,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
         roi = np.flipud(roi)
     
     # saturate to remove noise and normalize values
-    roi = saturate_roi(roi, settings["clip_vmax"], channel=channel)
+    roi = saturate_roi(roi, channel=channel)
     
     # turn off segmentation if ROI too big (arbitrarily set here as 
     # > 10 million pixels) to avoid performance hit and since likely showing 
@@ -367,7 +372,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     
     # streamline the image
     if roi is None or roi.size < 1: return False
-    roi = saturate_roi(roi, 98.5, channel)
+    roi = saturate_roi(roi, clip_vmax=98.5, channel=channel)
     roi = np.clip(roi, 0.2, 0.8)
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
     

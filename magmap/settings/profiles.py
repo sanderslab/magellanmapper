@@ -66,6 +66,7 @@ class ProcessSettings(SettingsDict):
         self["norm"] = None  # (min, max) normalization of image5d
 
         # image preprocessing before blob detection
+        self["clip_vmin"] = 5
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2
         self["clip_max"] = 1.0
@@ -160,6 +161,7 @@ def update_process_settings(settings, settings_type):
         settings.add_modifier(
             "minpreproc",
             {
+                "clip_vmin": 0,
                 "clip_vmax": 100,
                 "clip_max": 1,
                 "tot_var_denoise": True,

@@ -162,6 +162,7 @@ def update_process_settings(settings, settings_type):
             {
                 "clip_vmax": 100,
                 "clip_max": 1,
+                "tot_var_denoise": True,
                 "unsharp_strength": 0,
                 "erosion_threshold": 0,
             },

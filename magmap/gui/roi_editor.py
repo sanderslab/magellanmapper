@@ -582,8 +582,6 @@ class ROIEditor:
             for img_i, (img, cm, vmin, vmax) in enumerate(
                     zip(imgs, cmaps, vmins, vmaxs)):
                 if img is None: continue
-                vmin = [vmin]
-                vmax = [vmax]
                 if img_i == 0:
                     if np.prod(img.shape[1:3]) < 2 * np.prod(roi_size[:2]):
                         # remove normalization from overview image if close in

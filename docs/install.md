@@ -6,16 +6,16 @@ MagellanMapper can be installed many different ways dependening on one's Python 
 
 Conda greatly simplifies installation by managing all supporting packages, such as Java and packages that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
 
-After downloading MagellanMapper, create a new Conda environment with all dependent packages installed using this command:
+After downloading MagellanMapper, create a new Conda environment with all dependent packages installed using this command from the repo folder:
 
 ```
-conda env create -n mag -f magellanmapper/environment.yml
+conda env create -n mag -f environment.yml
 ```
 
 **Convenient alternative**: On Mac, Linux, or a Bash shell in Windows, this setup script perform this full installation including installing Conda if not already present:
 
 ```
-magellanmapper.bin/setup_conda.sh [-n name] [-s spec]
+bin/setup_conda.sh [-n name] [-s spec]
 ```
 
 This script will install:
@@ -29,7 +29,7 @@ This script will install:
 Venv is a virtual environment manager included with Python 3.3+. We have provided a convenient script to set up a new environment and install all dependencies using Pip:
 
 ```
-magellanmapper/bin/setup_venv.sh [-n name]
+bin/setup_venv.sh [-n name]
 ```
 
 This option assumes that you have already installed Python 3.6 and a Java Development Kit (JDK) 8. Other versions of Python 3 and the JDK may work but with varying other requirements, such as a C compiler to build dependencies (see [below](#custom-precompiled-packages)).
@@ -44,13 +44,13 @@ This setup script will check and install the following dependencies:
 Whether in a virtual environment of your choice or none at all, MagellanMapper can be installed through Pip:
 
 ```
-pip install -e magellanmapper --extra-index-url https://pypi.fury.io/dd8/
+pip install -e . --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 The extra URL provides pre-built custom (with [certain requirements](#custom-precompiled-packages)) dependency packages. To include all dependencies, run this command instead:
 
 ```
-pip install -e magellanmapper[all] --extra-index-url https://pypi.fury.io/dd8/
+pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 ### Option 4: Even more installation methods

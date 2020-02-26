@@ -19,11 +19,15 @@ ARGS_VIS = (
 def is_conda_activated():
     """Check whether a Conda environment is active.
 
+    Simply checks whether any environment is active to allow flexibility
+    in case the given environment does not have the exact same name as
+    :const:`ENV_NAME`.
+
     Returns:
-        True if the environment is currently activated.
+        True if a Conda environment is currently activated.
 
     """
-    return os.path.exists(os.path.join(sys.prefix, "conda-meta"))
+    return "CONDA_PREFIX" in os.environ
 
 
 def is_venv_activated():

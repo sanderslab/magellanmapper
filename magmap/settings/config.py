@@ -160,23 +160,55 @@ STR_FN = {
 }
 
 
-# style sheet
+#: str: Matplotlib style sheet
 matplotlib_style = "seaborn"
 
-# global setting changes
-rc_params = {
-    "image.interpolation": "bilinear",
-    "image.resample": False, 
-    "font.family": "sans-serif", 
-    # dejavusans is Matplotlib default but not on Mac by default, so 
-    # need to change for PDF export; still falls back to DejaVuSans if 
-    # none else found for display
-    "font.sans-serif": ["Arial", "Helvetica", "Tahoma"], 
-    # some styles use strings; change to num for numerical adjustments
-    "axes.titlesize": 12,
-}
 
-# Matplotlib2 default image interpoloation
+class Themes(Enum):
+    """GUI themes, where each theme currently contains RC parameters to
+    apply to the Matplotlib style."""
+
+    # TODO: consider integrating non-RC parameters such as widget_color
+    # TODO: consider importing custom stylesheets as .yml files
+    # TODO: consider combining with Matplotlib style sheet handling
+
+    # default theme
+    DEFAULT = {
+        "image.interpolation": "bilinear",
+        "image.resample": False,
+        "font.family": "sans-serif",
+        # dejavusans is Matplotlib default but not on Mac by default, so
+        # need to change for PDF export; still falls back to DejaVuSans if
+        # none else found for display
+        "font.sans-serif": ["Arial", "Helvetica", "Tahoma"],
+        # some styles use strings; change to num for numerical adjustments
+        "axes.titlesize": 12,
+    }
+
+    # dark theme
+    DARK = {
+        "text.color": "w",
+        "axes.facecolor": "7a7a7a",
+        "axes.edgecolor": "3b3b3b",
+        "axes.labelcolor": "w",
+        "xtick.color": "w",
+        "ytick.color": "w",
+        "grid.color": "w",
+        "figure.facecolor": "3b3b3b",
+        "figure.edgecolor": "3b3b3b",
+        "savefig.facecolor": "3b3b3b",
+        "savefig.edgecolor": "3b3b3b",
+    }
+
+
+#: List[Enum]: List of theme enums.
+rc_params = [Themes.DEFAULT]
+
+#: float: Base "color" value for Matplotlib widget elements such as buttons,
+# which actually take intensity values as strings
+widget_color = 0.85
+
+# Matplotlib2 default image interpolation
 rc_params_mpl2_img_interp = {
     "image.interpolation": "nearest",
     "image.resample": True

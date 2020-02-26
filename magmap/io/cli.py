@@ -253,6 +253,7 @@ def main(process_args_only=False):
     parser.add_argument("--reg_suffixes", nargs="*")
     parser.add_argument("--no_scale_bar", action="store_true")
     parser.add_argument("--plot_labels", nargs="*")
+    parser.add_argument("--theme", nargs="*")
     args = parser.parse_args()
     
     if args.img is not None:
@@ -518,6 +519,14 @@ def main(process_args_only=False):
         config.plot_labels = args_to_dict(
             args.plot_labels, config.PlotLabels, config.plot_labels)
         print("Set plot labels to {}".format(config.plot_labels))
+
+    if args.theme is not None:
+        # specify themes, currently applied to Matplotlib elements
+        for theme in args.theme:
+            # add theme enum if found
+            theme_enum = libmag.get_enum(theme, config.Themes)
+            if theme_enum: config.rc_params.append(theme_enum)
+        print("Set to use themes to {}".format(config.rc_params))
 
 
     # prep filename

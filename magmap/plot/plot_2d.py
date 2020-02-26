@@ -935,20 +935,32 @@ def plot_image(img, path=None, show=False):
     plt.close() # prevent display during next show call
 
 
-def setup_style(style=None):
-    """Setup Matplotlib styles and RC parameters.
+def setup_style(style=None, rc_params=None):
+    """Setup Matplotlib styles and RC parameter themes.
     
-    Both style and parameters default to those specified in config.
+    Both styles and themes default to those specified in :mod:`config`.
     
     Args:
-        style: Name of Matplotlib style to apply. Defaults to None to 
+        style (str): Name of Matplotlib style to apply. Defaults to None to
             use the style specified in :attr:``config.matplotlib_style``.
+        rc_params (List[Enum]): Sequence of :class:`config.Themes` enums
+            specifying custom themes to apply after setting the style.
+            Themes will be applied in the order listed. Defaults to None,
+            which will use the :attr:`config.rc_params` value.
     """
     #print(plt.style.available)
-    plt_style = config.matplotlib_style if style is None else style
-    print("setting up Matplotlib style", plt_style)
-    plt.style.use(plt_style)
-    pylab.rcParams.update(config.rc_params)
+    if style is None:
+        style = config.matplotlib_style
+    if rc_params is None:
+        rc_params = config.rc_params
+    print("setting up Matplotlib style", style)
+    plt.style.use(style)
+    for rc in rc_params:
+        if rc is config.Themes.DARK:
+            # dark theme requires darker widgets for white text
+            config.widget_color = 0.6
+        print("applying theme", rc.name)
+        pylab.rcParams.update(rc.value)
 
 
 def post_plot(ax, out_path=None, save_ext=None, show=False):

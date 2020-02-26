@@ -116,11 +116,19 @@ class AtlasEditor:
             plt.subplot(gs_controls_btns[0, 1]), "Fill Label")
         self.interp_planes = InterpolatePlanes(self.interp_btn)
         self.interp_planes.update_btn()
-        self.save_btn = Button(plt.subplot(gs_controls_btns[0, 2]), "Save")
-        enable_btn(self.save_btn, False)
-        self.edit_btn = Button(plt.subplot(gs_controls_btns[0, 3]), "Edit")
+        self.save_btn = Button(
+            plt.subplot(gs_controls_btns[0, 2]), "Save")
+        self.edit_btn = Button(
+            plt.subplot(gs_controls_btns[0, 3]), "Edit")
         self.color_picker_box = TextBox(
             plt.subplot(gs_controls_btns[0, 4]), None)
+
+        # adjust button colors based on theme and enabled status; note
+        # that colors do not appear to refresh until fig mouseover
+        for btn in (self.alpha_reset_btn, self.edit_btn):
+            enable_btn(btn)
+        enable_btn(self.save_btn, False)
+        enable_btn(self.color_picker_box, color=config.widget_color+0.1)
     
         def setup_plot_ed(plane, gs_spec):
             # subplot grid, with larger height preference for plot for 
@@ -391,24 +399,34 @@ class AtlasEditor:
             ed.intensity_spec = intensity
 
 
-def enable_btn(btn, enable=True):
-    """Display a button as enabled or disabled.
+def enable_btn(btn, enable=True, color=None):
+    """Display a button or other widget as enabled or disabled.
     
     Note that the button's active state will not change since doing so 
     prevents the coloration from changing.
     
     Args:
-        btn: Button widget to change.
-        enable: True to enable (default), False to disable.
+        btn (:class:`matplotlib.widgets.AxesWidget`): Widget to change,
+            which must have ``color`` and ``hovercolor`` attributes.
+        enable (bool): True to enable (default), False to disable.
+        color (float): Intensity value from 0-1 for the main color. The
+            hovercolor will be just above this value, while the disabled
+            main and hovercolors will be just below this value. Defaults
+            to None, which will use :attr:`config.widget_color`.
     """
+    if color is None:
+        color = config.widget_color
     if enable:
         # "enable" button by changing to default grayscale color intensities
-        btn.color = "0.85"
-        btn.hovercolor = "0.95"
+        btn.color = str(color)
+        btn.hovercolor = str(color + 0.1)
     else:
         # "disable" button by making darker and no hover response
-        btn.color = "0.5"
-        btn.hovercolor = "0.5"
+        color_disabled = color - 0.2
+        if color_disabled < 0: color_disabled = 0
+        color_disabled = str(color_disabled)
+        btn.color = color_disabled
+        btn.hovercolor = color_disabled
 
 
 def toggle_btn(btn, on=True, shift=0.2, text=None):

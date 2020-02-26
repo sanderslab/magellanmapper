@@ -1,34 +1,30 @@
 # MagellanMapper
-MagellanMapper is an imaging informatics GUI and pipeline for high-throughput, automated analysis of whole organs. Its design philosophy is to make the raw, original images as accessible as possible; simplify annotation from nuclei to atlases; and scale from the laptop to the cloud in cross-platform environments.
-
-Author: David Young, 2017, 2020, Stephan Sanders Lab
-
-- Currently access is limited to a private Git repo. Our eventual plan is to make MagellanMapper available via Anaconda and Pip.
-- Contact the project managers about loading your public key to access the project repository
+MagellanMapper is an imaging informatics GUI and pipeline for high-throughput, automated analysis of whole specimen. Its design philosophy is to make the raw, original images as accessible as possible; simplify annotation from nuclei to atlases; and scale from the laptop to the cloud in cross-platform environments.
 
 ## Installation
 
-1. Download and unarchive MagellanMapper, or clone this repo (`git clone git@bitbucket.org:psychcore/magellanmapper.git`)
-1. Install MagellanMapper in a new Conda environment:
+1. Download and unarchive MagellanMapper, or clone this repo (`git clone https://github.com/yoda-vid/magellanmapper.git`)
+1. Navigate to the repo directtory and install MagellanMapper in a new Conda environment:
   
   ```
-  conda env create -n mag -f magellanmapper/environment.yml
+  cd /path/to/magellanmapper
+  conda env create -n mag -f environment.yml
   ```
   
   **Convenient alternative**: On Mac or Linux (or Bash shell in Windows), you can use our setup script, which will also install Minconda if necessary:
   
   ```
-  magellanmapper/bin/setup_conda.sh
+  bin/setup_conda.sh
   ```
   
-See [Installation](docs/install.md) for more details, including installs without Conda such as Pip or Venv+Pip.
+See [Installation](docs/install.md) for more details, including installing without Conda such as Pip or Venv+Pip.
   
 ## Run MagellanMapper
 
 MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, respectively. To start MagellanMapper, run (assuming a Conda environment named `mag`):
 
 ```
-source activate mag
+conda activate mag
 ./run --img [path_to_your_image]
 ```
 
@@ -180,3 +176,5 @@ bin/process_nohup.sh -d "out_experiment.txt" -o -- bin/pipelines.sh \
   -i "/data/HugeImage.czi" -a "my/s3/bucket" -n \
   "https://hooks.slack.com/services/my/incoming/webhook" -p full -c
 ```
+
+Author: David Young, 2017, 2020, Stephan Sanders Lab

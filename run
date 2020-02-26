@@ -15,6 +15,12 @@ ARGS_VIS = [
     "python -u -c \"from magmap.gui import visualizer; visualizer.main()\"",
 ]
 
+#: List[str]: Shell commands to activate a Conda environment
+ARGS_CONDA = [
+    "eval \"$(conda shell.bash hook)\"",
+    "conda activate {}".format(ENV_NAME),
+]
+
 
 def is_conda_activated():
     """Check whether a Conda environment is active.
@@ -73,31 +79,30 @@ def main():
         launch_vis()
         return
 
-    # activate Conda environment, assuming default name in setup script,
-    # and launch GUI
-    print("Attempting to activate Conda environment")
-    args = [
-        "eval \"$(conda shell.bash hook)\"",
-        "conda activate {}".format(ENV_NAME),
-    ]
-    args.extend(ARGS_VIS)
     try:
-        launch_subprocess(args)
+        # activate Conda environment, assuming default name in setup script
+        # and need to initialize shell, and launch GUI
+        print("Attempting to activate Conda environment")
+        launch_subprocess(ARGS_CONDA + ARGS_VIS)
     except subprocess.CalledProcessError:
-        # if unable to activate Conda env, try Venv, again using default
-        # name in setup script
-        print("Conda environment not available, trying Venv")
         try:
-            launch_subprocess(
-                ["source {}/../venvs/{}/bin/activate".format(
-                    os.path.dirname(os.path.abspath(__file__)), ENV_NAME)]
-                + ARGS_VIS)
+            # non-POSIX shells do not accept eval but may run without
+            # initializing the Conda shell hook
+            launch_subprocess(ARGS_CONDA[1:] + ARGS_VIS)
         except subprocess.CalledProcessError:
-            # as fallback, attempt to launch without activating
-            # an environment
-            print("Venv environment not available, attempting to launch"
-                  "without environment")
-            launch_vis()
+            try:
+                # if unable to activate Conda env, try Venv
+                print("Conda environment not available, trying Venv")
+                launch_subprocess(
+                    ["source {}/../venvs/{}/bin/activate".format(
+                        os.path.dirname(os.path.abspath(__file__)), ENV_NAME)]
+                    + ARGS_VIS)
+            except subprocess.CalledProcessError:
+                # as fallback, attempt to launch without activating
+                # an environment
+                print("Neither environment not available, attempting to launch"
+                      "without environment")
+                launch_vis()
 
 
 if __name__ == "__main__":

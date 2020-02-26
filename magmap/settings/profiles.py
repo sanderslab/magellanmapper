@@ -184,7 +184,7 @@ def update_process_settings(settings, settings_type):
                 "isotropic": None,
                 "denoise_size": 2000,  # will use full detection ROI
                 "segment_size": 1000,
-                "max_thresh_factor": 1.0,
+                "max_thresh_factor": 1.5,
                 "exclude_border": (8, 1, 1),
             },
             profile)

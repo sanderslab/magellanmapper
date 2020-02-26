@@ -9,11 +9,11 @@ import sys
 #: str: Name of Conda or Venv environment
 ENV_NAME = "mag"
 
-#: Tuple: Shell commands to launch :meth:`magmap.gui.visualizer.main`
-ARGS_VIS = (
+#: List[str]: Shell commands to launch :meth:`magmap.gui.visualizer.main`
+ARGS_VIS = [
     "cd " + os.path.dirname(os.path.abspath(__file__)),
     "python -u -c \"from magmap.gui import visualizer; visualizer.main()\"",
-)
+]
 
 
 def is_conda_activated():
@@ -87,10 +87,11 @@ def main():
         # if unable to activate Conda env, try Venv, again using default
         # name in setup script
         print("Conda environment not available, trying Venv")
-        args = ["source activate {}/../venvs/{}".format(
-            os.path.dirname(os.path.abspath(__file__)), ENV_NAME)]
         try:
-            launch_subprocess(args)
+            launch_subprocess(
+                ["source {}/../venvs/{}/bin/activate".format(
+                    os.path.dirname(os.path.abspath(__file__)), ENV_NAME)]
+                + ARGS_VIS)
         except subprocess.CalledProcessError:
             # as fallback, attempt to launch without activating
             # an environment

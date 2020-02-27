@@ -3,7 +3,7 @@ MagellanMapper is an imaging informatics GUI and pipeline for high-throughput, a
 
 ## Installation
 
-1. Download and unarchive MagellanMapper, or clone this repo (`git clone https://github.com/yoda-vid/magellanmapper.git`)
+1. Download and unarchive MagellanMapper, or clone this repo (`git clone https://github.com/sanderslab/magellanmapper.git`)
 1. Navigate to the repo directtory and install MagellanMapper in a new Conda environment:
   
   ```

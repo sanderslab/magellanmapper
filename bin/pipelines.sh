@@ -28,6 +28,8 @@ Arguments:
   -z [x,y,z]: Size in x,y,z order.
   -e [x,y,z]: Resolutions in x,y,z order for metadata.
   -g [mag]: Lens objective magnification for metadata.
+  -s [xy|xz|yz]: Planar surface orientation for transformation, taking
+    the original orientation as xy.
   -u [zoom]: Lens objective zoom for metadata.
 "
 
@@ -87,7 +89,7 @@ stitch_pathway=""
 TRANSFORM_PATHWAYS=("rescale" "resize")
 transform_pathway=""
 scale="0.05" # rescaling factor
-plane="" # xy, yz, zy, or leave empty
+plane="" # xy, yz, zy, or leave empty to default to xy
 animation="" # gif or mp4
 
 # Choose whole image processing type, or "" for none
@@ -276,7 +278,7 @@ START_TIME=$SECONDS
 
 # override pathway settings with user arguments
 OPTIND=1
-while getopts hi:a:p:o:n:cz:m:j:r:l:e:g:u: opt; do
+while getopts hi:a:p:o:n:cz:m:j:r:l:e:g:u:s: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -333,6 +335,10 @@ while getopts hi:a:p:o:n:cz:m:j:r:l:e:g:u: opt; do
     g)
       magnification="$OPTARG"
       echo "Set magnification to $magnification"
+      ;;
+    s)
+      plane="$OPTARG"
+      echo "Set planar suface to plane"
       ;;
     u)
       zoom="$OPTARG"

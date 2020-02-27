@@ -446,11 +446,11 @@ if [[ $gui -eq 1 ]]; then
     --offset $substack_offset --size $substack_size \
     --microscope ${microscope[@]}
   IMG_ROI="${IMG_PATH_BASE}_(${substack_offset})x(${substack_size}).${EXT}"
-  ./run --img "$IMG_ROI" -v --channel 0 -v --proc load \
+  ./run.py --img "$IMG_ROI" -v --channel 0 -v --proc load \
     --offset $substack_offset --size $substack_size --savefig pdf \
     --microscope ${microscope[@]}
   '
-  ./run --img "$IMG" --offset "$offset" --size "$size" --savefig pdf \
+  ./run.py --img "$IMG" --offset "$offset" --size "$size" --savefig pdf \
     --microscope "${microscope[@]}"
   
   exit 0

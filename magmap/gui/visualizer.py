@@ -10,7 +10,7 @@ calling main().
 Examples:
     Launch the GUI with the given file at a particular size and offset::
         
-        $ ./run --img /path/to/file.czi --offset 30,50,205 \
+        $ ./run.py --img /path/to/file.czi --offset 30,50,205 \
             --size 150,150,10
     
     Alternatively, this module can be run as a script::

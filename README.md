@@ -32,6 +32,13 @@ Proprietary image formats such as `.czi` will be imported automatically via Biof
 
 You can also use `pipelines.sh`, a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details.
 
+### Sample 3D data
+
+To try out functions with some sample images, download:
+
+- [Sample region of nuclei at 4x](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.czi)
+- [Sample downsampled tissue cleared whole brain](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)
+
 ## 3D viewer
 
 The main MagellanMapper GUI displays a 3D viewer and region of interest (ROI) selection controls. MagellanMapper uses Mayavi for 3D voxel or surface rendering.

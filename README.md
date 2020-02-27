@@ -25,7 +25,7 @@ MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, re
 
 ```
 conda activate mag
-./run --img [path_to_your_image]
+./run.py --img [path_to_your_image]
 ```
 
 Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.

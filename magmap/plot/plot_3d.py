@@ -435,6 +435,10 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
             return False
         mask = math.ceil(points_len / _MASK_DIVIDEND)
         print("points: {}, mask: {}".format(points_len, mask))
+        if any(np.isnan(roi_show_1d)):
+            # TODO: see if some NaNs are permissible
+            print("NaN values for 3D points, will not show 3D visualization")
+            return False
         pts = scene_mlab.points3d(
             np.delete(x, remove), np.delete(y, remove), np.delete(z, remove), 
             roi_show_1d, mode="sphere", 

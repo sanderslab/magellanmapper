@@ -522,11 +522,14 @@ def main(process_args_only=False):
 
     if args.theme is not None:
         # specify themes, currently applied to Matplotlib elements
+        theme_names = []
         for theme in args.theme:
             # add theme enum if found
             theme_enum = libmag.get_enum(theme, config.Themes)
-            if theme_enum: config.rc_params.append(theme_enum)
-        print("Set to use themes to {}".format(config.rc_params))
+            if theme_enum:
+                config.rc_params.append(theme_enum)
+                theme_names.append(theme_enum.name)
+        print("Set to use themes to {}".format(theme_names))
 
 
     # prep filename

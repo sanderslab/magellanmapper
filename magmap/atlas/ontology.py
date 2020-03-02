@@ -307,11 +307,12 @@ def get_label_item(label, item_key, key=NODE):
     return item
 
 
-def get_label_name(label):
+def get_label_name(label, side=False):
     """Get the atlas region name from the label.
     
     Args:
-        label: The label dictionary.
+        label (dict): The label dictionary.
+        side (bool):
     
     Returns:
         The atlas region name, or None if not found.
@@ -322,11 +323,12 @@ def get_label_name(label):
             node = label[NODE]
             if node is not None:
                 name = node[config.ABAKeys.NAME.value]
-                print("name: {}".format(name))
-                if label[MIRRORED]:
-                    name += LEFT_SUFFIX
-                else:
-                    name += RIGHT_SUFFIX
+                print("name: {}".format(name), label[MIRRORED])
+                if side:
+                    if label[MIRRORED]:
+                        name += LEFT_SUFFIX
+                    else:
+                        name += RIGHT_SUFFIX
     except KeyError as e:
         print(e, name)
     return name
@@ -334,6 +336,11 @@ def get_label_name(label):
 
 def get_label_side(label_id):
     """Convert label IDs into side strings.
+
+    The convention used here is that positive values = right, negative
+    values = left.
+
+    TODO: consider making pos/neg side correspondence configurable.
     
     Args:
         label_id (int, List[int]): Label ID or sequence of IDs to convert,

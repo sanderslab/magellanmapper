@@ -188,9 +188,13 @@ class PlotEditor:
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(1)
         
-        # overlay all images and set labels for footer value on mouseover
+        # overlay all images and set labels for footer value on mouseover;
+        # if first time showing image, need to check for images with single
+        # value since they fail to update on subsequent updates for unclear
+        # reasons
         ax_imgs = plot_support.overlay_images(
-            self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas)
+            self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas,
+            check_single=(self.ax_img is None))
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = PixelDisplay(imgs2d, ax_imgs)

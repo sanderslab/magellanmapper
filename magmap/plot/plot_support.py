@@ -129,7 +129,8 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
 
 
 def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas, 
-                   vmins=None, vmaxs=None, ignore_invis=False):
+                   vmins=None, vmaxs=None, ignore_invis=False,
+                   check_single=False):
     """Show multiple, overlaid images.
     
     Wrapper function calling :meth:`imshow_multichannel` for multiple 
@@ -161,6 +162,10 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             for all others.
         ignore_invis (bool): True to avoid creating ``AxesImage`` objects
             for images that would be invisible; defaults to False.
+        check_single (bool): True to check for images with a single unique
+            value, which prevent the image from updating for unclear reasons.
+            If found, the final value will be incremented by one as a
+            workaround to allow updates. Defaults to False.
     
     Returns:
         Nested list containing a list of ``AxesImage`` objects 
@@ -222,6 +227,11 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
                 img[img != 0] = np.nan
         if i == 0 and img_norm_setting:
             img = libmag.normalize(img, *img_norm_setting)
+        if check_single and len(np.unique(img)) < 2:
+            # WORAROUND: increment the last value if the image would
+            # otherwise consist of a single since these images fail to
+            # update on subsequent imshow calls for unknown reasons
+            img[-1, -1] += 1
         ax_img = imshow_multichannel(
             ax, img, channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
             vmax=vmaxs[i], origin=origin, interpolation="none",

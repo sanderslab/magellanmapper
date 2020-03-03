@@ -905,7 +905,7 @@ runStats <- function(stat.type=NULL) {
   #setupConfig("compare.laterality") # L vs R paired stats
   #setupConfig("benjamini.hochman")
   
-  #setupConfig("basic.stats")
+  setupConfig("basic.stats")
   #setupConfig("nolevels")
   #setupConfig("nojittersave")
   #setupConfig("skinny.small")

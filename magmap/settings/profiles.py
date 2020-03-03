@@ -626,10 +626,21 @@ def update_register_settings(settings, settings_type):
                     "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"],
             },
             profile)
-        
+
+        # test no iterations
+        settings.add_modifier(
+            "testnoiter",
+            {
+                "translation_iter_max": "0",
+                "affine_iter_max": "0",
+                "bspline_iter_max": "0",
+                "curate": False,
+            },
+            profile)
+
         # test a target size
         settings.add_modifier(
-            "test",
+            "testsize",
             {
                 "target_size": (50, 50, 50),
             },

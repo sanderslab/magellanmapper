@@ -255,7 +255,8 @@ def find_atlas_labels(load_labels, max_level, labels_ref_lookup):
     return label_ids
 
 
-def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None):
+def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None,
+                     prefix_is_dir=False):
     """Write registered images to file.
     
     Args:
@@ -264,16 +265,22 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None):
             and ``image`` is a SimpleITK image object. If the image does 
             not exist, the file will not be written.
         prefix: Base path from which to construct registered file paths.
+            Parent directories will be created if necessary.
         copy_to_suffix: If True, copy the output path to a file in the 
             same directory with ``suffix`` as the filename, which may 
             be useful when setting the registered images as the 
             main images in the directory. Defaults to False.
         ext: Replace extension with this value if given; defaults to None.
+        prefix_is_dir (bool): True to treat ``prefix`` as a directory;
+            defaults to False to get the directory name of ``prefix``.
     """
-    target_dir = os.path.dirname(prefix)
+    # get parent directories and create them if necessary
+    target_dir = prefix if prefix_is_dir else os.path.dirname(prefix)
     if len(target_dir) > 0 and not os.path.exists(target_dir):
         os.makedirs(target_dir)
+
     for suffix in imgs_write.keys():
+        # write a registered image file for each entry
         img = imgs_write[suffix]
         if img is None: continue
         if ext: suffix = libmag.match_ext(ext, suffix)

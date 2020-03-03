@@ -754,6 +754,8 @@ class Visualization(HasTraits):
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self.scene.mlab, self.segs_in_mask, 
                 show_shadows, self.flipz)
+            # reduce number of digits to make the slider more compact
+            scale = float(libmag.format_num(scale, 4))
             self._scale_detections_high = scale * 2
             self.scale_detections = scale
         

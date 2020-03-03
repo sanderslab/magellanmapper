@@ -208,7 +208,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     # load blobs
     blobs, scaling, _ = np_io.load_blobs(img_path, labels_img.shape, scale)
     if shape is not None:
-        # scale blobs to an alternative final size
+        # scale blob coordinates and heat map to an alternative final shape
         scaling = np.divide(shape, np.divide(labels_img.shape, scaling))
         labels_spacing = np.multiply(
             labels_img_sitk.GetSpacing()[::-1], 
@@ -237,11 +237,14 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
     wrapper for :func:``make_density_image``
     
     Args:
-        img_path: Path to image, which will be used to indentify the blobs file.
-        scale: Rescaling factor as a scalar value. If set, the corresponding 
-            image for this factor will be opened. If None, the full size 
-            image will be used. Defaults to None.
-        suffix: Modifier to append to end of ``img_path`` basename for 
+        img_paths (List[str]): Sequence of image paths, which will be used to
+            indentify the blob files.
+        scale (int, float): Rescaling factor as a scalar value. If set,
+            the corresponding image for this factor will be opened. If None,
+            the full size  image will be used. Defaults to None.
+        shape (List[int]): Sequence of target shape defining the voxels for
+            the density map; defaults to None.
+        suffix (str): Modifier to append to end of ``img_path`` basename for
             registered image files that were output to a modified name; 
             defaults to None.
     """
@@ -252,7 +255,6 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
         print("making image", img_path)
         pool_results.append(pool.apply_async(
             make_density_image, args=(img_path, scale, shape, suffix)))
-    heat_maps = []
     for result in pool_results:
         _, _, path = result.get()
         print("finished {}".format(path))

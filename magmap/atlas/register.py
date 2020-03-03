@@ -527,36 +527,29 @@ def register(fixed_file, moving_file_dir, flip=False,
     transformed_img_precur = img_moved
     labels_img_full, img_moved, dsc_sample_curated = make_labels(False)
     labels_img, _, _ = labels_img_full if new_atlas else make_labels(True)
-    
-    imgs_write = (
-        fixed_img, img_moved, transformed_img_precur, labels_img_full, 
-        labels_img)
+    imgs_write = {
+        config.RegNames.IMG_EXP.value: fixed_img,
+        config.RegNames.IMG_ATLAS.value: img_moved,
+        config.RegNames.IMG_ATLAS_PRECUR.value: transformed_img_precur,
+        config.RegNames.IMG_LABELS.value: labels_img_full,
+        config.RegNames.IMG_LABELS_TRUNC.value: labels_img,
+    }
     if show_imgs:
         # show individual SimpleITK images in default viewer
         for img in imgs_write: sitk.Show(img)
     
     if write_imgs:
-        # write atlas and labels files, transposed according to plane setting
+        # write atlas and labels files
+        write_prefix = name_prefix
         if new_atlas:
-            imgs_names = (
-                config.RegNames.IMG_ATLAS.value,
-                config.RegNames.IMG_LABELS.value)
-            imgs_write = [img_moved, labels_img]
-        else:
-            imgs_names = (
-                config.RegNames.IMG_EXP.value,
-                config.RegNames.IMG_ATLAS.value,
-                config.RegNames.IMG_ATLAS_PRECUR.value,
-                config.RegNames.IMG_LABELS.value,
-                config.RegNames.IMG_LABELS_TRUNC.value)
-        for i in range(len(imgs_write)):
-            out_path = imgs_names[i]
-            if new_atlas:
-                out_path = os.path.join(os.path.dirname(name_prefix), out_path)
-            else:
-                out_path = sitk_io.reg_out_path(name_prefix, out_path)
-            print("writing {}".format(out_path))
-            sitk.WriteImage(imgs_write[i], out_path, False)
+            # new atlases only consist of atlas and labels without fixed
+            # image filename in path
+            keys = (config.RegNames.IMG_ATLAS.value,
+                    config.RegNames.IMG_LABELS.value)
+            imgs_write = {k: imgs_write[k] for k in keys}
+            write_prefix = os.path.dirname(name_prefix)
+        sitk_io.write_reg_images(
+            imgs_write, write_prefix, prefix_is_dir=new_atlas)
 
     # save transform parameters and attempt to find the original position 
     # that corresponds to the final position that will be displayed

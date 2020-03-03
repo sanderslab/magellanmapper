@@ -407,11 +407,13 @@ roc_dict = OrderedDict([
         #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
         #("segment_size", np.arange(130, 160, 20)),
     ])),
-    ("size", OrderedDict([
+    ("size5x", OrderedDict([
         ("min_sigma_factor", np.arange(2, 2.71, 0.1)),
         ("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
-        #("min_sigma_factor", np.arange(2.5, 3.51, 0.1)),
-        #("max_sigma_factor", np.arange(3.5, 4.51, 0.1)),
+    ])),
+    ("size4x", OrderedDict([
+        ("min_sigma_factor", np.arange(2.5, 3.51, 0.3)),
+        ("max_sigma_factor", np.arange(3.5, 4.51, 0.3)),
     ])),
 ])
 

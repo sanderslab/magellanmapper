@@ -181,9 +181,9 @@ class Visualization(HasTraits):
     _rois = None
     _segments = Array
     _segs_moved = []  # orig seg of moved blobs to track for deletion
-    _segs_scale_low = 0.0
-    _segs_scale_high = Float  # needs to be trait to dynamically update
-    segs_scale = Float
+    _scale_detections_low = 0.0
+    _scale_detections_high = Float  # needs to be trait to dynamically update
+    scale_detections = Float
     segs_pts = None
     segs_selected = List  # indices
     # multi-select to allow updating with a list, but segment updater keeps
@@ -754,8 +754,8 @@ class Visualization(HasTraits):
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self.scene.mlab, self.segs_in_mask, 
                 show_shadows, self.flipz)
-            self._segs_scale_high = scale * 2
-            self.segs_scale = scale
+            self._scale_detections_high = scale * 2
+            self.scale_detections = scale
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]
@@ -783,12 +783,12 @@ class Visualization(HasTraits):
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
     
-    @on_trait_change('segs_scale')
-    def update_segs_scale(self):
+    @on_trait_change('scale_detections')
+    def update_scale_detections(self):
         """Updates the glyph scale factor.
         """
         if self.segs_pts is not None:
-            self.segs_pts.glyph.glyph.scale_factor = self.segs_scale
+            self.segs_pts.glyph.glyph.scale_factor = self.scale_detections
     
     def _roi_ed_close_listener(self, evt):
         """Handle ROI Editor close events.
@@ -1310,10 +1310,10 @@ class Visualization(HasTraits):
                     Item("btn_atlas_editor_trait", show_label=False)
                 ),
                 Item(
-                    "segs_scale",
+                    "scale_detections",
                     editor=RangeEditor(
-                        low_name="_segs_scale_low",
-                        high_name="_segs_scale_high",
+                        low_name="_scale_detections_low",
+                        high_name="_scale_detections_high",
                         mode="slider"),
                 ),
                 HGroup(

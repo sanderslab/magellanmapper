@@ -526,7 +526,11 @@ def register(fixed_file, moving_file_dir, flip=False,
 
     transformed_img_precur = img_moved
     labels_img_full, img_moved, dsc_sample_curated = make_labels(False)
-    labels_img, _, _ = labels_img_full if new_atlas else make_labels(True)
+    if new_atlas:
+        labels_img = labels_img_full
+    else:
+        labels_img, _, _ = make_labels(True)
+
     imgs_write = {
         config.RegNames.IMG_EXP.value: fixed_img,
         config.RegNames.IMG_ATLAS.value: img_moved,

@@ -370,10 +370,12 @@ def update_process_settings(settings, settings_type):
 
 
 # isotropic factors
-_isotropic_zs = np.arange(0.1, 2, 0.1)
+_isotropic_zs = np.arange(0.5, 1.5, 0.1)
 _isotropic_factors = np.ones((len(_isotropic_zs), 3))
+_isotropic_factors[:, 0] = _isotropic_zs
 _prune_tol_zs = np.arange(0.5, 1.1, 0.5)
 _prune_tol_factors = np.ones((len(_prune_tol_zs), 3)) * 0.9
+_prune_tol_factors[:, 0] = _prune_tol_zs
 
 #: OrderedDict[List[int]]: Nested dictionary where each sub-dictionary
 # contains a sequence of values over which to perform a grid search to

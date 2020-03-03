@@ -23,20 +23,24 @@ def reg_out_path(file_path, reg_name, match_ext=False):
     """Generate a path for a file registered to another file.
     
     Args:
-        file_path: Full path of file registered to.
+        file_path: Full path of file registered to. :attr:`config.series`
+            will be appended unless ``file_path`` is a directory.
         reg_name: Suffix for type of registration, eg :const:``IMG_LABELS``.
         match_ext: True to change the extension of ``reg_name`` to match 
             that of ``file_path``.
     
     Returns:
-        Full path with the registered filename including appropriate 
+        str: Full path with the registered filename including appropriate
         extension at the end.
     """
-    file_path_base = importer.filename_to_base(
-        file_path, config.series)
     if match_ext:
         reg_name = libmag.match_ext(file_path, reg_name)
-    return file_path_base + "_" + reg_name
+    if os.path.isdir(file_path):
+        return os.path.join(file_path, reg_name)
+    else:
+        file_path_base = importer.filename_to_base(
+            file_path, config.series)
+        return file_path_base + "_" + reg_name
 
 
 def replace_sitk_with_numpy(img_sitk, img_np):

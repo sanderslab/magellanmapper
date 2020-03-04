@@ -687,7 +687,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                  names_group=None, labels=None, units=None, xlim=None, 
                  ylim=None, title=None, fig_size=None, show=True, suffix=None, 
                  df=None, xy_line=False, col_size=None, size_mult=5,
-                 annot_arri=None, alpha=None):
+                 annot_arri=None, alpha=None, legend_loc="best"):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -732,6 +732,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             Numpy array; defaults to None.
         alpha (int): Point transparency value, from 0-255; defaults to None,
             in which case 255 will be used.
+        legend_loc (str): Legend location, which should be one of
+            :attr:``plt.legend.loc`` values; defaults to "best".
     """
     def plot():
         # plot a paired sequence of x/y's and annotate
@@ -839,7 +841,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     # for large legends
     gs.tight_layout(fig)
     if len(ax.get_legend_handles_labels()[1]) > 0:
-        ax.legend(loc="best", fancybox=True, framealpha=0.5)
+        ax.legend(loc=legend_loc, fancybox=True, framealpha=0.5)
     
     # save and display
     out_path = path
@@ -904,7 +906,7 @@ def plot_roc(df, show=True, annot_arri=None):
         names_group, ("Sensitivity", "False Discovery Rate"), 
         None, (0, 1), (0, 1), 
         "Nuclei Detection ROC Over {}".format(names_group[-1]), df=df,
-        show=show, annot_arri=annot_arri)
+        show=show, annot_arri=annot_arri, legend_loc="lower right")
 
 
 def plot_image(img, path=None, show=False):

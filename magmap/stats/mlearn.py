@@ -111,7 +111,7 @@ def grid_search(roc_dict, keys, fnc, *fnc_args):
 
 
 def parse_grid_stats(stats_dict):
-    """Parses stats from a grid search.
+    """Parse stats from multiple grid searches.
     
     Args:
         stats_dict: Dictionary where key is a string with the parameters
@@ -125,20 +125,25 @@ def parse_grid_stats(stats_dict):
     dfs = []
     param_keys = []
     for group, iterable_dicts in stats_dict.items():
+        # parse a grid search
         stats_for_df = {}
         headers = None
         print("{}:".format(group))
         group_dict = {}
         parsed_stats[group] = group_dict
         for key, value in iterable_dicts.items():
-            grid_stats = np.array(value[0])
+            # parse stats from a set of parameters
+            grid_stats = np.array(value[0])  # raw stats
+            # last parameter is given separately since it is actively varying
             last_param_vals, last_param_key, parent_params = value[1:]
             if not headers:
+                # set up headers for each stat and insert parameter headers
+                # at the start
                 headers = [e.value for e in GridSearchStats]
                 headers[0] = "_".join((headers[0], last_param_key))
-                for parent in parent_params.keys():
+                for i, parent in enumerate(parent_params.keys()):
                     headers.insert(
-                        0, "_".join((GridSearchStats.PARAM.value, parent)))
+                        i, "_".join((GridSearchStats.PARAM.value, parent)))
                     param_keys.append(parent)
                 param_keys.append(last_param_key)
             # false discovery rate, inverse of PPV, since don't have true negs

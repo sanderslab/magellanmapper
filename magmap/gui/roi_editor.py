@@ -126,8 +126,10 @@ class DraggableCircle:
         """
         if (event.key not in ("shift", "alt")
                 or event.inaxes != self.circle.axes):
+            # ignore if without the given modifiers or outside of circle's axes
             return
-        contains, attrd = self.circle.contains(event)
+        # ensure that event is within the circle
+        contains, attrd = self.circle.contains(event, radius=self.circle.radius)
         if not contains: return
         print("pressed on {}".format(self.circle.center))
         x0, y0 = self.circle.center

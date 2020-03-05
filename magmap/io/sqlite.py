@@ -21,6 +21,7 @@ DB_VERSION = 3
 
 _COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
 
+
 def _create_db(path):
     """Creates the database including initial schema insertion.
     
@@ -48,12 +49,15 @@ def _create_db(path):
     print("created db at {}".format(path))
     return conn, cur
 
+
 def _create_table_about(cur):
     cur.execute("CREATE TABLE about (version INTEGER PRIMARY KEY, date DATE)")
+
 
 def _create_table_experiments(cur):
     cur.execute("CREATE TABLE experiments (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                           "name TEXT, date DATE)")
+
 
 def _create_table_rois(cur):
     cur.execute("CREATE TABLE rois (id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -63,6 +67,7 @@ def _create_table_rois(cur):
                                    "size_y INTEGER, size_z INTEGER, "
                 "UNIQUE (experiment_id, series, offset_x, offset_y, offset_z))")
 
+
 def _create_table_blobs(cur):
     cur.execute("CREATE TABLE blobs (id INTEGER PRIMARY KEY AUTOINCREMENT, "
                                     "roi_id INTEGER, x INTEGER, y INTEGER, "
@@ -70,6 +75,7 @@ def _create_table_blobs(cur):
                                     "confirmed INTEGER, truth INTEGER, "
                                     "channel INTEGER, "
                 "UNIQUE (roi_id, x, y, z, truth, channel))")
+
 
 def upgrade_db(conn, cur):
     db_ver = 0
@@ -121,6 +127,7 @@ def upgrade_db(conn, cur):
     print("...finished database upgrade.")
     conn.commit()
 
+
 def start_db(path=None, new_db=False):
     """Starts the database.
     
@@ -146,6 +153,7 @@ def start_db(path=None, new_db=False):
     upgrade_db(conn, cur)
     return conn, cur
 
+
 def insert_about(conn, cur, version, date):
     """Inserts an experiment into the database.
     
@@ -161,10 +169,12 @@ def insert_about(conn, cur, version, date):
     conn.commit()
     return cur.lastrowid
 
+
 def select_about(conn, cur):
     cur.execute("SELECT * FROM about")
     rows = cur.fetchall()
     return rows
+
 
 def insert_experiment(conn, cur, name, date):
     """Inserts an experiment into the database.
@@ -182,6 +192,7 @@ def insert_experiment(conn, cur, name, date):
     print("{} experiment inserted".format(name))
     conn.commit()
     return cur.lastrowid
+
 
 def select_experiment(cur, name):
     """Selects an experiment from the given name.
@@ -205,6 +216,7 @@ def select_experiment(cur, name):
     rows = cur.fetchall()
     return rows
 
+
 def select_or_insert_experiment(conn, cur, exp_name, date):
     """Selects an experiment from the given name, or inserts the 
     experiment if not found.
@@ -225,6 +237,7 @@ def select_or_insert_experiment(conn, cur, exp_name, date):
         exp_id = insert_experiment(conn, cur, exp_name, date)
         #raise LookupError("could not find experiment {}".format(exp_name))
     return exp_id
+
 
 def _update_experiments(db_dir):
     """Updates experiment names by shifting the old .czi extension name 
@@ -251,6 +264,7 @@ def _update_experiments(db_dir):
                 print("...no update")
         db.conn.commit()
 
+
 def insert_roi(conn, cur, exp_id, series, offset, size):
     """Inserts an ROI into the database.
     
@@ -276,6 +290,7 @@ def insert_roi(conn, cur, exp_id, series, offset, size):
     print(feedback)
     conn.commit()
     return cur.lastrowid, feedback
+
 
 def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
     """Selects an ROI from the given parameters, or inserts the 
@@ -305,6 +320,7 @@ def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
     else:
         return insert_roi(conn, cur, exp_id, series, offset, size)
 
+
 def select_rois(cur, exp_id):
     """Selects ROIs from the given experiment
     
@@ -317,6 +333,7 @@ def select_rois(cur, exp_id):
                 "size_z FROM rois WHERE experiment_id = ?", (exp_id, ))
     rows = cur.fetchall()
     return rows
+
 
 def update_rois(cur, offset, size):
     """Updates ROI positions and size.
@@ -340,6 +357,7 @@ def update_rois(cur, offset, size):
                      row["id"]))
     conn.commit()
 
+
 def select_roi(cur, roi_id):
     """Selects an ROI from the ID.
     
@@ -353,6 +371,7 @@ def select_roi(cur, roi_id):
     cur.execute("SELECT * FROM rois WHERE id = ?", (roi_id, ))
     row = cur.fetchone()
     return row
+
 
 def insert_blobs(conn, cur, roi_id, blobs):
     """Inserts blobs into the database, replacing any duplicate blobs.
@@ -379,7 +398,8 @@ def insert_blobs(conn, cur, roi_id, blobs):
                             _COLS_BLOBS, ", ", "?")), blobs_list)
     print("{} blobs inserted, {} confirmed".format(cur.rowcount, confirmed))
     conn.commit()
-    
+
+
 def delete_blobs(conn, cur, roi_id, blobs):
     """Deletes blobs matching the given blobs' ROI ID and coordinates.
     
@@ -406,6 +426,7 @@ def delete_blobs(conn, cur, roi_id, blobs):
     conn.commit()
     return deleted
 
+
 def _parse_blobs(rows):
     blobs = np.empty((len(rows), 7))
     rowi = 0
@@ -416,6 +437,7 @@ def _parse_blobs(rows):
         ]
         rowi += 1
     return blobs
+
 
 def select_blobs(cur, roi_id):
     """Selects ROIs from the given experiment
@@ -431,6 +453,7 @@ def select_blobs(cur, roi_id):
         "SELECT {} FROM blobs WHERE roi_id = ?".format(_COLS_BLOBS), (roi_id, ))
     return _parse_blobs(cur.fetchall())
 
+
 def select_blobs_confirmed(cur, confirmed):
     """Selects ROIs from the given experiment
     
@@ -445,6 +468,7 @@ def select_blobs_confirmed(cur, confirmed):
         "SELECT {} FROM blobs WHERE confirmed = ?".format(_COLS_BLOBS), 
         (confirmed, ))
     return _parse_blobs(cur.fetchall())
+
 
 def verification_stats(conn, cur):
     # selects experiment based on command-line arg and gathers all ROIs
@@ -504,16 +528,18 @@ def verification_stats(conn, cur):
               .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
                       false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))
 
+
 def get_roi_offset(roi):
     return (roi["offset_x"], roi["offset_y"], roi["offset_z"])
+
 
 def get_roi_size(roi):
     return (roi["size_x"], roi["size_y"], roi["size_z"])
 
+
 def match_elements(src, delim, repeat):
     src_split = src.split(delim)
     return delim.join([repeat] * len(src_split))
-
 
 
 def _merge_dbs(db_paths, db_merged=None):
@@ -539,6 +565,7 @@ def _merge_dbs(db_paths, db_merged=None):
         print("imported {} experiments from {}".format(exps_len, db_path))
     return db_merged
 
+
 def merge_truth_dbs(img_paths):
     db_merged = None
     for img_path in img_paths:
@@ -546,6 +573,7 @@ def merge_truth_dbs(img_paths):
         db_paths = glob.glob("./{}*{}".format(
             os.path.basename(img_path.rsplit(".", 1)[0]), DB_SUFFIX_TRUTH))
         db_merged = _merge_dbs(db_paths, db_merged)
+
 
 def clean_up_blobs(db):
     """Clean up blobs from pre-v.0.5.0, where user-added radii have neg 
@@ -573,6 +601,7 @@ def clean_up_blobs(db):
             insert_blobs(db.conn, db.cur, roi_id, blobs_confirmed)
         print("updated experiment {}".format(exp["name"]))
 
+
 def _test_db():
     # simple database test
     conn, cur = start_db()
@@ -581,6 +610,7 @@ def _test_db():
     insert_blobs(conn, cur, exp_id, 12, [[3, 2, 5, 23.4], [2, 3, 7, 13.2]])
     conn.commit()
     conn.close()
+
 
 def load_db(path):
     """Load a database from an existing path, raising an exception if 
@@ -602,6 +632,7 @@ def load_db(path):
     db = ClrDB()
     db.load_db(path, False)
     return db
+
 
 def load_truth_db(filename_base):
     """Convenience function to load a truth database associated with an 
@@ -627,6 +658,7 @@ def load_truth_db(filename_base):
     config.truth_db = truth_db
     return truth_db
 
+
 class ClrDB():
     conn = None
     cur = None
@@ -646,6 +678,7 @@ class ClrDB():
             rois = select_rois(self.cur, exps[0]["id"])
         return rois
 
+
 def main():
     """Run main SQLite access commands after loading CLI."""
     # parses arguments and sets up the DB
@@ -663,7 +696,7 @@ def main():
     #clean_up_blobs(config.truth_db)
     #_update_experiments(config.filename)
 
+
 if __name__ == "__main__":
     print("Starting sqlite.py...")
     main()
-    

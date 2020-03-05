@@ -1,6 +1,6 @@
 #!/bin/bash
 # ROI Editor with serial 2D viewer and annotator
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """ROI editing GUI in the MagellanMapper package.
 
 Attributes:
@@ -31,7 +31,7 @@ from magmap.io import libmag
 from magmap.plot import plot_support
 
 # TODO: may want to base on scaling factor instead
-padding = (5, 5, 3) # human (x, y, z) order
+padding = (5, 5, 3)  # human (x, y, z) order
 verify = False
 
 
@@ -124,8 +124,8 @@ class DraggableCircle:
 
         Shift-click to move a circle, and Alt-click to resize a circle's radius.
         """
-        if (event.key != "shift" and event.key != "alt"
-            or event.inaxes != self.circle.axes):
+        if (event.key not in ("shift", "alt")
+                or event.inaxes != self.circle.axes):
             return
         contains, attrd = self.circle.contains(event)
         if not contains: return
@@ -196,10 +196,8 @@ class DraggableCircle:
         """Select the verification flag with button press on a circle when
         not dragging the circle.
         """
-        if (event.mouseevent.key == "control"
-            or event.mouseevent.key == "shift"
-            or event.mouseevent.key == "alt"
-            or event.artist != self.circle):
+        if (event.mouseevent.key in ("control", "shift", "alt")
+                or event.artist != self.circle):
             return
         #print("color: {}".format(self.facecolori))
         if event.mouseevent.key == "x":

@@ -199,7 +199,7 @@ def update_process_settings(settings, settings_type):
                 "clip_max": 0.7, 
                 "tot_var_denoise": True, 
                 "unsharp_strength": 2.5, 
-                # smaller threhsold since total var denoising 
+                # smaller threshold since total var denoising
                 #"points_3d_thresh": 1.1
                 "min_sigma_factor": 2.6, 
                 "max_sigma_factor": 4, 
@@ -228,7 +228,7 @@ def update_process_settings(settings, settings_type):
         settings.add_modifier(
             "contrast", 
             {
-                "channel_colors": ("inferno", "bone"),
+                "channel_colors": ("inferno", "inferno"),
                 "scale_bar_color": "w", 
             }, 
             profile)

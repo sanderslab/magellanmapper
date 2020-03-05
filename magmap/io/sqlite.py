@@ -1,10 +1,7 @@
 # SQLite database connection
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2020
 """Connects with a SQLite database for experiment and image
 analysis storage.
-
-Attributes:
-    db_path: Path to the database.
 """
 
 import os
@@ -17,8 +14,8 @@ from magmap.settings import config
 from magmap.cv import detector
 from magmap.io import libmag
 
-DB_NAME_VERIFIED = "clrbrain_verified.db"
-DB_NAME_MERGED = "clrbrain_merged.db"
+DB_NAME_VERIFIED = "magmap_verified.db"
+DB_NAME_MERGED = "magmap_merged.db"
 DB_SUFFIX_TRUTH = "_truth.db"
 DB_VERSION = 3
 

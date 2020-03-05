@@ -531,7 +531,6 @@ def main(process_args_only=False):
                 theme_names.append(theme_enum.name)
         print("Set to use themes to {}".format(theme_names))
 
-
     # prep filename
     if not config.filename:
         # unable to parse anymore args without filename
@@ -539,8 +538,7 @@ def main(process_args_only=False):
         return
     filename_base = importer.filename_to_base(
         config.filename, config.series)
-    
-    
+
     # Database prep
     
     if args.db:
@@ -550,19 +548,18 @@ def main(process_args_only=False):
     # load "truth blobs" from separate database for viewing
     if args.truth_db is not None:
         # set the truth database mode
-        # TODO: refactor into args_to_dict format
-        config.truth_db_mode = libmag.get_enum(
-            args.truth_db[0], config.TruthDBModes)
-        print("Mapped \"{}\" truth_db setting to {}"
-              .format(args.truth_db[0], config.truth_db_mode))
-        if len(args.truth_db) > 1:
-            config.truth_db_name = args.truth_db[1]
-            print("Set truth_db name to {}".format(config.truth_db_name))
+        config.truth_db_params = args_to_dict(
+            args.truth_db, config.TruthDB, config.truth_db_params)
+        mode = config.truth_db_params[config.TruthDB.MODE]
+        config.truth_db_mode = libmag.get_enum(mode, config.TruthDBModes)
+        print("Mapped \"{}\" truth_db mode to {}"
+              .format(mode, config.truth_db_mode))
+    truth_db_path = config.truth_db_params[config.TruthDB.PATH]
     if config.truth_db_mode is config.TruthDBModes.VIEW:
         # loads truth DB as a separate database in parallel with the given 
         # editable database, with name based on filename by default unless 
         # truth DB name explicitly given
-        path = config.truth_db_name if config.truth_db_name else filename_base
+        path = truth_db_path if truth_db_path else filename_base
         try:
             sqlite.load_truth_db(path)
         except FileNotFoundError as e:
@@ -572,19 +569,19 @@ def main(process_args_only=False):
         # creates a new verified DB to store all ROC results
         config.verified_db = sqlite.ClrDB()
         config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
-        if config.truth_db_name:
+        if truth_db_path:
             # load truth DB path to verify against if explicitly given
             try:
-                sqlite.load_truth_db(config.truth_db_name)
+                sqlite.load_truth_db(truth_db_path)
             except FileNotFoundError as e:
                 print(e)
                 print("Could not load truth DB from {}"
-                      .format(config.truth_db_name))
+                      .format(truth_db_path))
     elif config.truth_db_mode is config.TruthDBModes.VERIFIED:
         # loads verified DB as the main DB, which includes copies of truth 
         # values with flags for whether they were detected
         path = sqlite.DB_NAME_VERIFIED
-        if config.truth_db_name: path = config.truth_db_name
+        if truth_db_path: path = truth_db_path
         try:
             config.db = sqlite.load_db(path)
             config.verified_db = config.db
@@ -595,7 +592,7 @@ def main(process_args_only=False):
     elif config.truth_db_mode is config.TruthDBModes.EDIT:
         # loads truth DB as the main database for editing rather than 
         # loading as a truth database
-        config.db_name = config.truth_db_name
+        config.db_name = truth_db_path
         if not config.db_name: 
             config.db_name = "{}{}".format(
                 os.path.basename(filename_base), sqlite.DB_SUFFIX_TRUTH)

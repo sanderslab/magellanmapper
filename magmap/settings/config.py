@@ -248,6 +248,15 @@ scale_bar = True
 
 # DATABASE
 
+#: :class:`Enum`: Enum class for truth database settings.
+TruthDB = Enum(
+    "TruthDB", (
+        "MODE",  # mode from TruthDBModes
+        "PATH",  # path to DB
+    )
+)
+truth_db_params = dict.fromkeys(TruthDB, None)
+
 #: :class:`Enum`: Enum class for truth database modes. ``view`` loads the truth 
 # database corresponding to the filename and any offset/size to show 
 # alongside the current database. ``verify`` creates a new database 
@@ -263,11 +272,10 @@ TruthDBModes = Enum(
 truth_db_mode = None
 
 DB_NAME = "magmap.db"
-db_name = DB_NAME # path to main DB
-db = None # main DB
-truth_db_name = None # path to truth DB
-truth_db = None # truth blobs DB
-verified_db = None # automated verifications DB
+db_name = DB_NAME  # path to main DB
+db = None  # main DB
+truth_db = None  # truth blobs DB
+verified_db = None  # automated verifications DB
 
 
 # IMAGE REGISTRATION

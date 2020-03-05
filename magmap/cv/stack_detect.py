@@ -292,13 +292,13 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         if verify:
             db_path_base = None
             try:
-                if config.truth_db_name and config.truth_db:
+                truth_db_name = config.truth_db_params[config.TruthDB.PATH]
+                if truth_db_name and config.truth_db:
                     # use explicitly given truth DB if given, which can 
                     # contain multiple experiments for different subimages
-                    print("using truth DB from {}"
-                          .format(config.truth_db_name))
+                    print("using truth DB from {}".format(truth_db_name))
                     exp_name = importer.deconstruct_np_filename(
-                        config.truth_db_name)[0]
+                        truth_db_name)[0]
                 else:
                     # find truth DB based on filename and subimage
                     db_path_base = os.path.basename(

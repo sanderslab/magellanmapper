@@ -609,14 +609,19 @@ def load_truth_db(filename_base):
     
     Args:
         filename_base: MagellanMapper-oriented base name associated with an 
-            image path.
+            image path. If the file is not found, :const:``DB_SUFFIX_TRUTH``
+            will be appended and directories removed.
     
     Returns:
         The :class:``ClrDB`` truth database associated with the image.
     """
     path = filename_base
-    if not filename_base.endswith(DB_SUFFIX_TRUTH):
-        path = os.path.basename(filename_base + DB_SUFFIX_TRUTH)
+    if not os.path.exists(path):
+        # convention has been to save truth databases with suffix in the
+        # working directory; TODO: consider removing
+        if not path.endswith(DB_SUFFIX_TRUTH):
+            path += DB_SUFFIX_TRUTH
+        path = os.path.basename(path)
     truth_db = load_db(path)
     truth_db.load_truth_blobs()
     config.truth_db = truth_db

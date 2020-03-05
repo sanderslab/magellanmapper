@@ -132,10 +132,10 @@ def start_db(path=None, new_db=False):
     """Starts the database.
     
     Args:
-        path: Path where the new database resides; if None, defaults to 
+        path (str): Path where the new database resides; if None, defaults to
             :attr:``DB_NAME``.
-        new_db: If True or if ``path`` does not exist, a new database will 
-            be created; defaults to False.
+        new_db (bool): If True or if ``path`` does not exist, a new database
+            will  be created; defaults to False.
     
     Returns:
         conn: The connection.
@@ -145,6 +145,7 @@ def start_db(path=None, new_db=False):
         path = config.db_name
     if new_db or not os.path.exists(path):
         conn, cur = _create_db(path)
+        print("Created a new database at {}".format(path))
     else:
         conn = sqlite3.connect(path)
         conn.row_factory = sqlite3.Row
@@ -612,28 +613,6 @@ def _test_db():
     conn.close()
 
 
-def load_db(path):
-    """Load a database from an existing path, raising an exception if 
-    the path does not exist.
-    
-    Args:
-        path: Path from which to load a database.
-    
-    Returns:
-        The :class:``ClrDB`` database at the given location.
-    
-    Raises:
-        :class:``FileNoutFoundError`` if ``path`` is not found.
-    """
-    # TODO: consider integrating with ClrDB directly
-    if not os.path.exists(path):
-        raise FileNotFoundError("{} not found for DB".format(path))
-    print("loading DB from {}".format(path))
-    db = ClrDB()
-    db.load_db(path, False)
-    return db
-
-
 def load_truth_db(filename_base):
     """Convenience function to load a truth database associated with an 
     image.
@@ -653,18 +632,35 @@ def load_truth_db(filename_base):
         if not path.endswith(DB_SUFFIX_TRUTH):
             path += DB_SUFFIX_TRUTH
         path = os.path.basename(path)
-    truth_db = load_db(path)
-    truth_db.load_truth_blobs()
-    config.truth_db = truth_db
-    return truth_db
+    print("Loading truth DB...")
+    config.truth_db = ClrDB()
+    config.truth_db.load_db(path)
+    config.truth_db.load_truth_blobs()
+    return config.truth_db
 
 
-class ClrDB():
+class ClrDB:
     conn = None
     cur = None
     blobs_truth = None
     
-    def load_db(self, path, new_db):
+    def load_db(self, path, new_db=False):
+        """Load a database from an existing path, raising an exception if
+        the path does not exist.
+
+        Args:
+            path (str): Path from which to load a database.
+            new_db (bool): If True or if ``path`` does not exist, a new
+                database will  be created; defaults to False.
+
+        Returns:
+            The :class:``ClrDB`` database at the given location.
+
+        Raises:
+            :class:``FileNoutFoundError`` if ``path`` is not found.
+        """
+        if path and not os.path.exists(path):
+            raise FileNotFoundError("{} not found for DB".format(path))
         self.conn, self.cur = start_db(path, new_db)
     
     def load_truth_blobs(self):

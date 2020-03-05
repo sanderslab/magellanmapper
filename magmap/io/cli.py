@@ -583,7 +583,8 @@ def main(process_args_only=False):
         path = sqlite.DB_NAME_VERIFIED
         if truth_db_path: path = truth_db_path
         try:
-            config.db = sqlite.load_db(path)
+            config.db = sqlite.ClrDB()
+            config.db.load_db(path)
             config.verified_db = config.db
         except FileNotFoundError as e:
             print(e)

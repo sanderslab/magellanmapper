@@ -318,7 +318,7 @@ class ROIEditor:
                       single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
-                      grid=False, roi_cols=ROI_COLS, img_region=None,
+                      grid=False, roi_cols=None, img_region=None,
                       max_intens_proj=False, labels_img=None):
         """Shows a figure of 2D plots to compare with the 3D plot.
 
@@ -367,7 +367,7 @@ class ROIEditor:
                 defaults to None.
             grid (bool): True to overlay a grid on all plots.
             roi_cols (int): Number of columns per row to reserve for ROI plots;
-                defaults to :attr:`ROI_COLS`.
+                defaults to None, in which case :attr:`ROI_COLS` will be used.
             img_region: 3D boolean or binary array corresponding to a scaled
                 version of ``image5d`` with the selected region labeled as True
                 or 1. ``config.labels_scaling`` will be used to scale up this
@@ -379,6 +379,9 @@ class ROIEditor:
                 defaults to None.
         """
         time_start = time()
+
+        if not roi_cols:
+            roi_cols = self.ROI_COLS
 
         if not np.ndim(zoom_levels):
             # convert scalar to sequence of zoom multipliers

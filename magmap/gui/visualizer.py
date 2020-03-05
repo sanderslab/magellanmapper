@@ -131,7 +131,7 @@ class Styles2D(Enum):
     SQUARE = "Square"
     SQUARE_3D = "Square with 3D"
     SINGLE_ROW = "Single row"
-    WIDE = "Wide"
+    WIDE = "Wide region"
     ZOOM3 = "3 level zoom"
     ZOOM4 = "4 level zoom"
     THIN_ROWS = "Thin rows"
@@ -887,13 +887,17 @@ class Visualization(HasTraits):
             # additional args with defaults
             self._full_border(self.border), self._planes_2d[0].lower())
         roi_ed = roi_editor.ROIEditor()
+        roi_cols = libmag.get_if_within(
+            config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
             "circles": roi_editor.ROIEditor.CircleStyles(self._circles_2d[0]),
             "grid": grid, "img_region": self._img_region,
             "max_intens_proj": max_intens_proj, 
             "labels_img": config.labels_img,
-            "zoom_shift": config.plot_labels[config.PlotLabels.ZOOM_SHIFT]}
+            "zoom_shift": config.plot_labels[config.PlotLabels.ZOOM_SHIFT],
+            "roi_cols": roi_cols,
+        }
         if self._styles_2d[0] == Styles2D.SQUARE_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(
@@ -909,9 +913,10 @@ class Visualization(HasTraits):
                 single_roi_row=True, 
                 z_level=roi_ed.ZLevels.MIDDLE, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.WIDE.value:
-            # layout for wide ROIs to maximize real estate on widescreen
+            # layout for wide ROIs, which shows only one overview plot
+            stack_args_named["roi_cols"] = 7
             roi_ed.plot_2d_stack(
-                *stack_args, **stack_args_named, roi_cols=7)
+                *stack_args, **stack_args_named)
         elif self._styles_2d[0] == Styles2D.ZOOM3.value:
             # 3 level zoom overview plots with specific multipliers
             roi_ed.plot_2d_stack(
@@ -921,11 +926,13 @@ class Visualization(HasTraits):
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=4)
         elif self._styles_2d[0] == Styles2D.THIN_ROWS.value:
-            # layout for square ROIs with thin rows to create a tall fig
+            # layout for fewer columns to create a thinner, taller fig
+            stack_args_named["roi_cols"] = 6
             roi_ed.plot_2d_stack(
-                *stack_args, **stack_args_named, zoom_levels=2, roi_cols=6)
+                *stack_args, **stack_args_named, zoom_levels=2)
         else:
-            # defaults to Square style without oblique view
+            # defaults to Square style with another overview plot in place
+            # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
 

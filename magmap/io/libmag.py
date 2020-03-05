@@ -711,6 +711,30 @@ def to_seq(val):
     return val
 
 
+def get_if_within(val, i, default=None):
+    """Get a value from a sequence if available, otherwise returning the
+    value if it is a scalar or a default value if the value at the index
+    is not available.
+
+    Args:
+        val (Any): Scalar or sequence.
+        i (int): Index to extract an element from ``val`` if the index
+            is available.
+        default (Any): Default value to return if ``val`` is a sequence
+            but shorter than or equal in length to ``i``.
+
+    Returns:
+        Any: Element ``i`` from ``val`` if present, or ``default`` unless
+        ``val`` is not a sequence, in which case ``val`` is simply returned.
+
+    """
+    if not is_seq(val):
+        return val
+    elif len(val) > i:
+        return val[i]
+    return default
+
+
 def enum_dict_aslist(d):
     """Summarize a dictionary with enums as keys as a shortened 
     list with only the names of each enum member.

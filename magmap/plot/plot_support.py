@@ -46,10 +46,10 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         alpha (float, List[float]): Transparency level for all channels or 
             sequence of levels for each channel. If any 
             value is 0, the corresponding image will not be output. 
-        vmin (List[float]): Sequence of vmin levels for each channel; 
-            defaults to None.
-        vmax (List[float]): Sequence of vmax levels for each channel; 
-            defaults to None.
+        vmin (float, List[float]): Scalar or sequence of vmin levels for
+            all channels; defaults to None.
+        vmin (float, List[float]): Scalar or sequence of vmax levels for
+            all channels; defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
@@ -67,8 +67,6 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
     img = []
-    vmin_plane = None
-    vmax_plane = None
     alpha_plane = alpha
     num_chls = len(channels)
 
@@ -97,12 +95,11 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         if cmap is not None:
             # given color for masked values such as NaNs to distinguish from 0
             cmap.set_bad(color=nan_color)
-        if vmin is not None:
-            vmin_plane = vmin[chl]
-        if vmax is not None:
-            vmax_plane = vmax[chl]
-        if is_alpha_seq:
-            alpha_plane = alpha[chl]
+        # get setting corresponding to the channel index, or use the value
+        # directly if it is a scalar
+        vmin_plane = libmag.get_if_within(vmin, chl)
+        vmax_plane = libmag.get_if_within(vmax, chl)
+        alpha_plane = libmag.get_if_within(alpha, chl, alpha_plane)
         img_chl = None
         if not ignore_invis or alpha_plane > 0:
             # skip display if alpha is 0 to avoid outputting a hidden image 

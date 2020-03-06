@@ -676,7 +676,7 @@ class ClrDB:
         Raises:
             :class:``FileNoutFoundError`` if ``path`` is not found.
         """
-        if path and not os.path.exists(path):
+        if not new_db and path and not os.path.exists(path):
             raise FileNotFoundError("{} not found for DB".format(path))
         self.path = path
         self.conn, self.cur = start_db(path, new_db)

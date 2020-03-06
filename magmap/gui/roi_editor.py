@@ -1022,11 +1022,19 @@ class ROIEditor:
 
             if ((segs_in is not None or segs_out is not None)
                     and not circles == self.CircleStyles.NO_CIRCLES):
+
+                # shows truth blobs as solid circles
+                if blobs_truth is not None:
+                    for blob in blobs_truth:
+                        ax.add_patch(patches.Circle(
+                            (blob[2], blob[1]), radius=blob[3],
+                            facecolor=self._TRUTH_COLORS[blob[5]], alpha=1))
+
                 segs_in = np.copy(segs_in)
                 if circles is None or circles == self.CircleStyles.CIRCLES:
                     # show circles at detection point only mode:
                     # zero radius of all segments outside of current z to
-                    # preservethe order of segments for the corresponding
+                    # preserve the order of segments for the corresponding
                     # colormap order while hiding outside segments
                     segs_in[segs_in[:, 0] != z_relative, 3] = 0
 
@@ -1103,13 +1111,6 @@ class ROIEditor:
                     for seg in segments_z:
                         self._plot_circle(
                             ax, seg, self._BLOB_LINEWIDTH, None, fn_update_seg)
-
-                # shows truth blobs as solid circles
-                if blobs_truth is not None:
-                    for blob in blobs_truth:
-                        ax.add_patch(patches.Circle(
-                            (blob[2], blob[1]), radius=blob[3],
-                            facecolor=self._TRUTH_COLORS[blob[5]], alpha=1))
 
             # adds a simple border to highlight the border of the ROI
             if border is not None:

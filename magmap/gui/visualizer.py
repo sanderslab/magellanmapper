@@ -287,42 +287,38 @@ class Visualization(HasTraits):
         on the filename if not already added.
         """
         print("segments", self.segments)
-        if self.segments is None or self.segments.size < 1:
-            feedback_str = "No segments found to save"
-            print(feedback_str)
-            self.segs_feedback = feedback_str
-            return
         segs_transposed = []
         segs_to_delete = []
         curr_roi_size = self.roi_array[0].astype(int)
         print("Preparing to insert segments to database with border widths {}"
               .format(self.border))
-        feedback = [ "Preparing segments:" ]
-        for i in range(len(self.segments)):
-            seg = self.segments[i]
-            # uses absolute coordinates from end of seg
-            seg_db = detector.blob_for_db(seg)
-            if seg[4] == -1 and seg[3] < config.POS_THRESH:
-                # attempts to delete user added segments, where radius assumed 
-                # to be 0,that are no longer selected
-                feedback.append(
-                    "{} to delete (unselected user added or explicitly deleted)"
-                    .format(seg_db))
-                segs_to_delete.append(seg_db)
-            else:
-                if (seg[0] >= self.border[2] 
-                        and seg[0] < (curr_roi_size[2] - self.border[2])
-                        and seg[1] >= self.border[1]
-                        and seg[1] < (curr_roi_size[1] - self.border[1])
-                        and seg[2] >= self.border[0]
-                        and seg[2] < (curr_roi_size[0] - self.border[0])):
-                    # transposes segments within inner ROI to absolute coords
+        feedback = ["Preparing segments:"]
+        if self.segments is not None:
+            for i in range(len(self.segments)):
+                seg = self.segments[i]
+                # uses absolute coordinates from end of seg
+                seg_db = detector.blob_for_db(seg)
+                if seg[4] == -1 and seg[3] < config.POS_THRESH:
+                    # attempts to delete user added segments, where radius
+                    # assumed to be 0,that are no longer selected
                     feedback.append(
-                        "{} to insert".format(self._format_seg(seg_db)))
-                    segs_transposed.append(seg_db)
+                        "{} to delete (unselected user added or explicitly "
+                        "deleted)".format(seg_db))
+                    segs_to_delete.append(seg_db)
                 else:
-                    feedback.append(
-                        "{} outside, ignored".format(self._format_seg(seg_db)))
+                    if (self.border[2] <= seg[0]
+                            < (curr_roi_size[2] - self.border[2])
+                            and self.border[1] <= seg[1]
+                            < (curr_roi_size[1] - self.border[1])
+                            and self.border[0] <= seg[2]
+                            < (curr_roi_size[0] - self.border[0])):
+                        # transpose segments within inner ROI to absolute coords
+                        feedback.append(
+                            "{} to insert".format(self._format_seg(seg_db)))
+                        segs_transposed.append(seg_db)
+                    else:
+                        feedback.append("{} outside, ignored".format(
+                            self._format_seg(seg_db)))
         
         segs_transposed_np = np.array(segs_transposed)
         unverified = None

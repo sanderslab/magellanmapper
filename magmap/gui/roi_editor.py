@@ -1104,11 +1104,11 @@ class ROIEditor:
                         self._plot_circle(
                             ax, seg, self._BLOB_LINEWIDTH, None, fn_update_seg)
 
-                # shows truth blobs as small, solid circles
+                # shows truth blobs as solid circles
                 if blobs_truth is not None:
                     for blob in blobs_truth:
                         ax.add_patch(patches.Circle(
-                            (blob[2], blob[1]), radius=3,
+                            (blob[2], blob[1]), radius=blob[3],
                             facecolor=self._TRUTH_COLORS[blob[5]], alpha=1))
 
             # adds a simple border to highlight the border of the ROI

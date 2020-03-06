@@ -640,9 +640,26 @@ def load_truth_db(filename_base):
 
 
 class ClrDB:
+    """MagellanMapper experiment database handler.
+
+    Stores detection related data for ground truth sets, automated detections,
+    and their comparisons.
+
+    Attributes:
+        conn (:obj:`sqlite3.Connection): Connection object.
+        cur (:obj:`sqlite3.Cursor): Cursor object.
+        blobs_truth (List[int]): Truth blobs list as returned by
+            :meth:`select_blobs_confirmed`.
+        path (str): Path from which the database was loaded.
+
+    """
     conn = None
     cur = None
     blobs_truth = None
+
+    def __init__(self):
+        """Initialize a MagellanMapper experiment database."""
+        self.path = None
     
     def load_db(self, path, new_db=False):
         """Load a database from an existing path, raising an exception if
@@ -661,6 +678,7 @@ class ClrDB:
         """
         if path and not os.path.exists(path):
             raise FileNotFoundError("{} not found for DB".format(path))
+        self.path = path
         self.conn, self.cur = start_db(path, new_db)
     
     def load_truth_blobs(self):

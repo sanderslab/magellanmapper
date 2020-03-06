@@ -288,42 +288,48 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         detector.replace_rel_with_abs_blob_coords(segments_all)
         segments_all = detector.remove_abs_blob_coords(segments_all)
         
-        # compared detected blobs with truth blobs
+        # compare detected blobs with truth blobs
+        # TODO: assumes ground truth is relative to any ROI offset,
+        # but should make customizable
         if verify:
             db_path_base = None
+            exp_name = os.path.basename(config.filename)
             try:
-                truth_db_name = config.truth_db_params[config.TruthDB.PATH]
-                if truth_db_name and config.truth_db:
-                    # use explicitly given truth DB if given, which can 
-                    # contain multiple experiments for different subimages
-                    print("using truth DB from {}".format(truth_db_name))
-                    exp_name = importer.deconstruct_np_filename(
-                        truth_db_name)[0]
-                else:
-                    # find truth DB based on filename and subimage
+                if config.truth_db is None:
+                    # find and load truth DB based on filename and subimage
                     db_path_base = os.path.basename(
                         make_subimage_name(filename_base, offset, roi_size))
                     print("about to verify with truth db from {}"
                           .format(db_path_base))
                     sqlite.load_truth_db(db_path_base)
-                    exp_name = make_subimage_name(
-                        os.path.basename(config.filename), roi_offset, 
-                        shape)
-                print("exp name: {}".format(exp_name))
                 if config.truth_db is not None:
-                    # series not included in exp name since in ROI
+                    # truth DB may contain multiple experiments for different
+                    # subimages; series not included in exp name since in ROI
+                    rois = config.truth_db.get_rois(exp_name)
+                    if rois is None:
+                        # exp may have been named by ROI
+                        exp_name = make_subimage_name(
+                            os.path.basename(config.filename), roi_offset,
+                            shape)
+                        rois = config.truth_db.get_rois(exp_name)
+                    if rois is None:
+                        raise LookupError(
+                            "No truth set ROIs found for experiment {}, will "
+                            "skip detection verification".format(exp_name))
+                    print("load ROIs from exp: {}".format(exp_name))
                     exp_id = sqlite.insert_experiment(
                         config.verified_db.conn, config.verified_db.cur, 
                         exp_name, None)
-                    rois = config.truth_db.get_rois(exp_name)
                     verify_tol = np.multiply(
                         overlap_base, settings["verify_tol_factor"])
                     stats_detection, fdbk = detector.verify_rois(
                         rois, segments_all, config.truth_db.blobs_truth, 
                         verify_tol, config.verified_db, exp_id, config.channel)
-            except FileNotFoundError as e:
-                print("Could not load truth DB from {}; "
-                      "will not verify ROIs".format(db_path_base))
+            except FileNotFoundError:
+                libmag.warn("Could not load truth DB from {}; "
+                            "will not verify ROIs".format(db_path_base))
+            except LookupError as e:
+                libmag.warn(str(e))
     
     file_time_start = time()
     if config.saveroi:
@@ -356,8 +362,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     print("file save time:", file_save_time)
     print("\nTotal detection processing times (s):")
     path_times = "stack_detection_times.csv" if save_dfs else None
-    df_times_sum = df_io.dict_to_data_frame(
-        times_dict, path_times, show=" ")
+    df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, segments_all
 

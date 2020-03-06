@@ -748,7 +748,7 @@ class ROIEditor:
 
                 # show the zoomed subplot with scale bar for the current z-plane
                 ax_z = self.show_subplot(
-                    fig, gs_zoomed, i, j, image5d, channel, roi_size,
+                    gs_zoomed, i, j, image5d, channel, roi_size,
                     zoom_offset, fn_update_seg,
                     segs_in, segs_out, segs_cmap, alpha, z_relative,
                     z == z_overview, border_full if show_border else None,
@@ -889,7 +889,7 @@ class ROIEditor:
                 # shows the zoomed subplot with scale bar for the current
                 # z-plane with all segments
                 ax_z = self.show_subplot(
-                    fig, gs, i, j, image5d, channel, roi_size, zoom_offset,
+                    gs, i, j, image5d, channel, roi_size, zoom_offset,
                     None, segments, None, None, 1.0, z,
                     circles=self.CircleStyles.CIRCLES, roi=roi)
                 if i == 0 and j == 0 and config.scale_bar:
@@ -899,7 +899,7 @@ class ROIEditor:
             plt.show()
         plot_support.save_fig(title, config.savefig)
 
-    def show_subplot(self, fig, gs, row, col, image5d, channel, roi_size,
+    def show_subplot(self, gs, row, col, image5d, channel, roi_size,
                      offset,
                      fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
                      z_relative, highlight=False, border=None, plane="xy",
@@ -908,7 +908,6 @@ class ROIEditor:
         """Shows subplots of the region of interest.
 
         Args:
-            fig: Matplotlib figure.
             gs: Gridspec layout.
             row: Row number of the subplot in the layout.
             col: Column number of the subplot in the layout.

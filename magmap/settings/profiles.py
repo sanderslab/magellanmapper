@@ -186,6 +186,7 @@ def update_process_settings(settings, settings_type):
                 "segment_size": 1000,
                 "max_thresh_factor": 1.5,
                 "exclude_border": (8, 1, 1),
+                "verify_tol_factor": (3, 2, 2),
             },
             profile)
 

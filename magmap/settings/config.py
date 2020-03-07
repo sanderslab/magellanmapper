@@ -76,11 +76,11 @@ cmaps = None
 
 # MICROSCOPY
 
-# image resolutions as an array of dimensions (n, r),
+#: List[float]: Image resolutions as an array of dimensions (n, r),
 # where each resolution r is a tuple in (z, y, x) order
 resolutions = None
-magnification = -1.0  # objective magnification
-zoom = -1.0  # objective zoom
+magnification = 1.0  #: float: objective magnification
+zoom = 1.0  #: float: objective zoom
 
 #: :class:`Enum`: main processing tasks
 # PROC_TYPES: Processing modes. ``importonly`` imports an image stack and 

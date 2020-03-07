@@ -72,7 +72,7 @@ class ProcessSettings(SettingsDict):
         self["clip_max"] = 1.0
         # mult by config.near_max for lower threshold of max
         self["max_thresh_factor"] = 0.5
-        self["tot_var_denoise"] = False
+        self["tot_var_denoise"] = None  # weight (eg skimage default 0.1)
         self["unsharp_strength"] = 0.3
         self["erosion_threshold"] = 0.2
 
@@ -169,7 +169,7 @@ def update_process_settings(settings, settings_type):
                 "clip_vmin": 0,
                 "clip_vmax": 100,
                 "clip_max": 1,
-                "tot_var_denoise": True,
+                "tot_var_denoise": 0.1,
                 "unsharp_strength": 0,
                 "erosion_threshold": 0,
             },

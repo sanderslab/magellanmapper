@@ -101,7 +101,11 @@ def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, max_thresh_factor=-1,
     return roi_out
     
 def denoise_roi(roi, channel=None):
-    """Denoises an image.
+    """Apply further saturation, denoising, unsharp filtering, and erosion
+    as image preprocessing for blob detection.
+
+    Each step can be configured including turned off by
+    :attr:`config.process_settings`.
     
     Args:
         roi: Region of interest as a 3D (z, y, x) array. Note that 4D arrays 
@@ -119,15 +123,14 @@ def denoise_roi(roi, channel=None):
         # find gross density
         saturated_mean = np.mean(roi_show)
         
-        # additional simple thresholding
+        # further saturation
         denoised = np.clip(roi_show, settings["clip_min"], settings["clip_max"])
-        
-        if settings["tot_var_denoise"]:
+
+        tot_var_denoise = settings["tot_var_denoise"]
+        if tot_var_denoise:
             # total variation denoising
-            #time_start = time()
-            denoised = restoration.denoise_tv_chambolle(denoised, weight=0.1)
-            #denoised = restoration.denoise_tv_bregman(denoised, weight=0.1)
-            #print('time for total variation: %f' %(time() - time_start))
+            denoised = restoration.denoise_tv_chambolle(
+                denoised, weight=tot_var_denoise)
         
         # sharpening
         unsharp_strength = settings["unsharp_strength"]

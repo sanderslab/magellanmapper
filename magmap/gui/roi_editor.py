@@ -613,10 +613,12 @@ class ROIEditor:
 
             # set title with total zoom including objective and plane number
             if config.zoom and config.magnification:
+                # calculate total mag from objective zoom and mag
                 zoom_components = np.array(
                     [config.zoom, config.magnification, zoom]).astype(np.float)
+                # use abs since the default mag and zoom were previously -1.0
                 tot_zoom = "{}x".format(
-                    libmag.compact_float(np.prod(zoom_components), 1))
+                    libmag.compact_float(abs(np.prod(zoom_components)), 1))
             elif lev == 0:
                 tot_zoom = "original magnification"
             else:

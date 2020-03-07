@@ -167,9 +167,9 @@ def update_process_settings(settings, settings_type):
             "minpreproc",
             {
                 "clip_vmin": 0,
-                "clip_vmax": 100,
+                "clip_vmax": 99.99,
                 "clip_max": 1,
-                "tot_var_denoise": 0.1,
+                "tot_var_denoise": 0.01,
                 "unsharp_strength": 0,
                 "erosion_threshold": 0,
             },
@@ -179,8 +179,8 @@ def update_process_settings(settings, settings_type):
         settings.add_modifier(
             "lowres",
             {
-                "min_sigma_factor": 5,
-                "max_sigma_factor": 6,
+                "min_sigma_factor": 10,
+                "max_sigma_factor": 15,
                 "isotropic": None,
                 "denoise_size": 2000,  # will use full detection ROI
                 "segment_size": 1000,

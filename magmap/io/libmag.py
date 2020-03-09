@@ -109,12 +109,14 @@ def pad_seq(seq, n, pad=None):
     a given length.
     
     Args:
-        seq: Sequence to fill in-place.
-        n: Target length.
-        pad: Value with which to fill; defaults to None.
+        seq (List): Sequence to fill in-place.
+        n (int): Target length.
+        pad (float, List): Value with which to fill; defaults to None.
+            If a sequence, filling with start with the first corresponding
+            missing value in ``seq``.
     
     Returns:
-        A truncated view of ``seq`` if the sequence is longer than ``n`` 
+        :List: A truncated view of ``seq`` if the sequence is longer than ``n``
         or ``seq`` as a List with ``pad`` appended to reach a length of ``n``.
     """
     len_seq = len(seq)
@@ -126,7 +128,16 @@ def pad_seq(seq, n, pad=None):
         if isinstance(seq, np.ndarray):
             # convert to list if ndarray to allow mixing with None values
             seq = seq.tolist()
-        seq += [pad] * (n - len_seq)
+        if is_seq(pad):
+            if len(pad) > len_seq:
+                # fill starting with corresponding first missing value
+                seq += pad[len_seq:]
+            # recursively call to truncate if seq now exceeds n or to further
+            # fill with last pad value
+            seq = pad_seq(seq, n, pad[-1])
+        else:
+            # fill with pad value repeats
+            seq += [pad] * (n - len_seq)
     return seq
 
 

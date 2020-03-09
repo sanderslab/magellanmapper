@@ -24,8 +24,8 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 
-def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
-                        vmax=None, origin=None, interpolation=None,
+def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
+                        vmin=None, vmax=None, origin=None, interpolation=None,
                         norms=None, nan_color=None, ignore_invis=False):
     """Show multichannel 2D image with channels overlaid over one another.
 
@@ -44,8 +44,8 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
             can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
         alpha (float, List[float]): Transparency level for all channels or 
-            sequence of levels for each channel. If any 
-            value is 0, the corresponding image will not be output. 
+            sequence of levels for each channel. If any value is 0, the
+            corresponding image will not be output. Defaults to None to use 1.
         vmin (float, List[float]): Scalar or sequence of vmin levels for
             all channels; defaults to None.
         vmax (float, List[float]): Scalar or sequence of vmax levels for
@@ -67,8 +67,14 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
     img = []
-    alpha_plane = alpha
     num_chls = len(channels)
+    if alpha is None:
+        alpha = 1
+    alpha_plane = alpha
+    if num_chls > 1 and not libmag.is_seq(alpha_plane):
+        # if alphas not explicitly set per channel, make all channels more
+        # translucent with increasing numbers of channels
+        alpha_plane /= np.sqrt(num_chls + 1)
 
     # transform image based on config parameters
     # TODO: consider removing flip and using only transpose attribute
@@ -81,12 +87,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
         if multichannel:
             last_axis -= 1
         img2d = np.rot90(img2d, rotate, (last_axis - 1, last_axis))
-    
-    is_alpha_seq = libmag.is_seq(alpha)
-    if num_chls > 1 and not is_alpha_seq:
-        # if alphas not explicitly set per channel, make all channels more
-        # translucent with increasing numbers of channels 
-        alpha_plane /= np.sqrt(num_chls + 1)
+
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d
         cmap = None if cmaps is None else cmaps[chl]

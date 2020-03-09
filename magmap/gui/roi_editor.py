@@ -600,8 +600,6 @@ class ROIEditor:
                 show.setdefault("cmaps", []).append(cm)
                 show.setdefault("vmins", []).append(vmin)
                 show.setdefault("vmaxs", []).append(vmax)
-            show["alphas"] = libmag.pad_seq(
-                config.alphas, len(show["imgs2d"]), 0.9)
             plot_support.overlay_images(
                 ax_ov, aspect, origin, ignore_invis=True, **show)
             ax_ov.add_patch(patches.Rectangle(

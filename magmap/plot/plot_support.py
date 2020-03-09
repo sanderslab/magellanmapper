@@ -48,7 +48,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
             value is 0, the corresponding image will not be output. 
         vmin (float, List[float]): Scalar or sequence of vmin levels for
             all channels; defaults to None.
-        vmin (float, List[float]): Scalar or sequence of vmax levels for
+        vmax (float, List[float]): Scalar or sequence of vmax levels for
             all channels; defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
@@ -125,7 +125,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha, vmin=None,
     return img
 
 
-def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas, 
+def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
                    vmins=None, vmaxs=None, ignore_invis=False,
                    check_single=False):
     """Show multiple, overlaid images.
@@ -151,7 +151,9 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
             images with :class:`colormaps.DiscreteColormap` will be
             converted to NaN for foreground to use this color.
         alphas: Either a single alpha for all images or a list of 
-            alphas corresponding to each image.
+            alphas corresponding to each image. Defaults to None to use
+            :attr:`config.alphas`, filling with 0.9 for any additional
+            values required and :attr:`config.plot_labels` for the first value.
         vmins: A list of vmins for each image; defaults to None to use 
             :attr:``config.vmins`` for the first image and None for all others.
         vmaxs: A list of vmaxs for each image; defaults to None to use 
@@ -177,7 +179,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         # the first val is another seq whose values correspond to each of 
         # the channels in that image, starting with fill_with
         if filled is None:
-            filled = [None] * num_imgs2d
+            filled = [pad] * num_imgs2d
         if fill_with is not None:
             # TODO: extend support for multichannel padding beyond 1st image
             filled[0] = libmag.pad_seq(list(fill_with), len(chls), pad)
@@ -191,8 +193,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         channels = [0] * num_imgs2d
         channels[0] = config.channel
     _, channels_main = plot_3d.setup_channels(imgs2d[0], None, 2)
-    # fill vmin/vmax with None for each 2D image and config vals for 
-    # each channel for the first image
+    # fill default values for each 2D image and config values for
+    # each channel of the first 2D image
     if vmins is None:
         vmins = fill(config.vmins, channels_main)
     if vmaxs is None:
@@ -200,6 +202,9 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas,
         if config.vmaxs is None and img_norm_setting:
             vmaxs = [max(img_norm_setting)]
         vmaxs = fill(vmaxs, channels_main)
+    if alphas is None:
+        # start with config alphas and pad the remaining values
+        alphas = libmag.pad_seq(config.alphas, num_imgs2d, 0.9)
     alphas = fill(
         config.plot_labels[config.PlotLabels.ALPHAS_CHL], channels_main, 
         alphas, 0.5)

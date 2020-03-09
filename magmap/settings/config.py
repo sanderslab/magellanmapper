@@ -237,10 +237,10 @@ sub_stack_max_pixels = None
 # flag to save ROI to file
 saveroi = False
 
-# alpha levels for overlaid images, defaulting to main image, labels image; 
-# set first value to 0 to prevent display/export of main image, which 
-# typically must be loaded
-alphas = [1, 0.9, 0.9]
+#: List[float]: alpha levels for overlaid images (not channels), defaulting
+# to main image, labels image; set first value to 0 to prevent display/export
+# of main image, which typically must be loaded.
+alphas = [1]
 
 # show scale bars
 scale_bar = True

@@ -459,8 +459,14 @@ class ROIEditor:
             img5d_shape = image5d.shape[1:4]
             imgs = [img5d_2d, labels_img, img_region]
             cmaps = [config.cmaps, None, ("Greys",)]
+            # use image metadata vals for vmin/vmax main image; set explicitly
+            # for labels and region highlighter overlays
             vmins = [config.near_min, None, 0.1]
             vmaxs = [config.vmax_overview, None, 1]
+            # default to translucent labels and region images, overwriting
+            # with config values
+            alphas = [None, 0.5, 0.4]
+            alphas = libmag.pad_seq(config.alphas, len(alphas), alphas)
             for img_i, img in enumerate(imgs):
                 if img_i == 0 or img is None: continue
                 # extract corresponding plane from image after scaling
@@ -479,7 +485,8 @@ class ROIEditor:
                     # lowest plane
                     imgs[img_i] = np.invert(imgs[img_i]).astype(float)
             return asp, ori, {
-                "imgs": imgs, "cmaps": cmaps, "vmins": vmins, "vmaxs": vmaxs}
+                "imgs": imgs, "cmaps": cmaps, "vmins": vmins, "vmaxs": vmaxs,
+                "alphas": alphas}
 
         aspect, origin, img2ds = prep_overview()
 
@@ -518,7 +525,7 @@ class ROIEditor:
         ax_overviews = []  # overview axes
         ax_z_list = []  # zoom plot axes
 
-        def show_overview(ax_ov, lev, imgs, cmaps, vmins, vmaxs):
+        def show_overview(ax_ov, lev, imgs, cmaps, vmins, vmaxs, alphas):
             """Show overview image with progressive zooming on the ROI for each
             zoom level.
 
@@ -582,8 +589,9 @@ class ROIEditor:
 
             # show the zoomed 2D image along with rectangle highlighting the ROI
             show = {"channels": None}
-            for img_i, (img, cm, vmin, vmax) in enumerate(
-                    zip(imgs, cmaps, vmins, vmaxs)):
+            keys = ("imgs2d", "cmaps", "vmins", "vmaxs", "alphas")
+            for img_i, (img, cm, vmin, vmax, alp) in enumerate(
+                    zip(imgs, cmaps, vmins, vmaxs, alphas)):
                 if img is None: continue
                 if img_i == 0:
                     if np.prod(img.shape[1:3]) < 2 * np.prod(roi_size[:2]):
@@ -596,10 +604,8 @@ class ROIEditor:
                     img = transform.resize(
                         img, img2d_ov_ds.shape, order=0, anti_aliasing=False,
                         preserve_range=True, mode="reflect")
-                show.setdefault("imgs2d", []).append(img)
-                show.setdefault("cmaps", []).append(cm)
-                show.setdefault("vmins", []).append(vmin)
-                show.setdefault("vmaxs", []).append(vmax)
+                for k, v in zip(keys, (img, cm, vmin, vmax, alp)):
+                    show.setdefault(k, []).append(v)
             plot_support.overlay_images(
                 ax_ov, aspect, origin, ignore_invis=True, **show)
             ax_ov.add_patch(patches.Rectangle(

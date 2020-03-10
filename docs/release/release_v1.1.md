@@ -75,7 +75,7 @@ Atlas refinement
 
 I/O
 - use FFMpeg for export to MP4 files for smaller files that can be opened by QuickTime
-- fixed TIFF import to match only files with TIFF extensions (eg .tif or .tiff)
+- fixed TIFF import to match only files with TIFF extensions (eg `.tif` or `.tiff`)
 - fixed loading images by SimpleITK to select a single channel
 
 Python stats and plots
@@ -86,20 +86,20 @@ Python stats and plots
 ### Changes
 
 Installation
-- changed name from "Clrbrain" to "MagellanMapper"
-- default virtual environment name is `mag`
-- support new style Conda initialization during Conda environment setup
-- update reference Conda environment and Pip package specs
+- Changed name from "Clrbrain" to "MagellanMapper"
+- Default virtual environment name is `mag`
+- Support new style Conda initialization during Conda environment setup
+- Update reference Conda environment and Pip package specs
 
 Atlas refinement
-- default to use symmetric colormaps rather than separate colors for labels on opposite hemispheres
-- export RGB values with colored cells in Excel file of region IDs for a given atlas
+- Default to use symmetric colormaps rather than separate colors for labels on opposite hemispheres
+- Export RGB values with colored cells in Excel file of region IDs for a given atlas
 Atlas registration:
-- fix b-spline grid voxels setting in NCC profile
+- Fix b-spline grid voxels setting in NCC profile
 
 Python stats and plots
-- merge Excel files into separate sheets of single Excel file
+- Merge Excel files into separate sheets of single Excel file
 
 Code base
-- reorganized all source modules into subpackages
-- moved all shell scripts in root folder into `bin` folder"
+- Reorganized all source modules into subpackages
+- Moved all shell scripts in root folder into `bin` folder

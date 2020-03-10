@@ -5,36 +5,36 @@
 ### Changes
 
 Installation
-- updated requirements and environment scripts
+- Updated requirements and environment scripts
 
 GUI
-- more zoom levels in ROI editor
-- customize position of ROI with overview plots
+- More zoom levels in ROI editor
+- Customize position of ROI with overview plots
 
 CLI
-- more CSV manipulations by command-line: append columns to a CSV, normalize metrics
-- generate generic line plots including error bars
+- More CSV manipulations by command-line: append columns to a CSV, normalize metrics
+- Generate generic line plots including error bars
 
 Atlas refinement
-- increase default smoothing for P14 atlas
+- Increase default smoothing for P14 atlas
 
 Atlas registration
-- increase bspline grid size when using correlation coefficient
+- Increase bspline grid size when using correlation coefficient
 
 I/O
-- specify alternate metadata files by ""--meta"" command-line argument
-- load blobs directly rather than through image setup
+- Specify alternate metadata files by `--meta` command-line argument
+- Load blobs directly rather than through image setup
 
 Python stats and plots
-- nuclei clustering stats using DBSCAN and k-nearest-neighbors from scikit-learn
+- Nuclei clustering stats using DBSCAN and k-nearest-neighbors from scikit-learn
 - further customize generic bar plots
-- option to draw a horizontal line on bar plots based on a summary function
-- option to show labels as a binary image
-- fix DSC measurements for labels
+- Option to draw a horizontal line on bar plots based on a summary function
+- Option to show labels as a binary image
+- Fix DSC measurements for labels
 
 R stats and plots
-- record n for each subgroup
-- profile for basic stats
+- Record n for each subgroup
+- Profile for basic stats
 
 ### Dependency Updates
 

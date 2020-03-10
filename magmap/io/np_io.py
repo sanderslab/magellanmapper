@@ -116,11 +116,6 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             :class:`config.ProcessTypes`, case-insensitive; defaults to None.
     
     """
-    # print longer Numpy arrays to assist debugging
-    np.set_printoptions(linewidth=200, threshold=10000)
-    
-    # prepares the filenames
-
     # LOAD MAIN IMAGE
     
     # reset image5d

@@ -301,7 +301,9 @@ def main(process_args_only=False):
         config.savefig = args.savefig
         print("Set savefig extension to {}".format(config.savefig))
     if args.verbose:
+        # verbose mode, including printing longer Numpy arrays for debugging
         config.verbose = args.verbose
+        np.set_printoptions(linewidth=200, threshold=10000)
         print("Set verbose to {}".format(config.verbose))
     if args.roc:
         config.roc = args.roc

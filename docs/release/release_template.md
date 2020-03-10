@@ -1,6 +1,8 @@
-# MagellanMapper vx.y.z Release Notes
+# MagellanMapper vx.y Release Notes
 
-## Changes
+## MagellanMapper vx.y.z
+
+### Changes
 
 Installation
 
@@ -15,6 +17,7 @@ Atlas registration
 Nuclei detection
 
 I/O
+
 Server pipelines
 
 Python stats and plots
@@ -23,8 +26,10 @@ R stats and plots
 
 Code base
 
-## Dependency Updates
+### Dependency Updates
 
-### Python Dependency Changes
+#### Python Dependency Changes
 
-### Server dependency Changes
+#### R Dependency Changes
+
+#### Server dependency Changes

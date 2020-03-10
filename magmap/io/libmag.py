@@ -143,21 +143,24 @@ def pad_seq(seq, n, pad=None):
 
 def insert_before_ext(name, insert, sep=""):
     """Merge two paths by splicing in ``insert`` just before the extention 
-    in ``base_path``.
+    in ``name``.
     
     Args:
-        name (str): Path; if no dot is present, it will be appended.
-        insert (str): String to insert before the extension in the name.
-        sep (str): Separator between ``name`` and ``insert``; default to an 
+        name (str): Path; if no dot is present in the basename, simply
+            merge the string components.
+        insert (str): String to insert before the extension in ``name``.
+        sep (str): Separator between ``name`` and ``insert``; defaults to an
            empty string.
     
     Returns:
-        Modified path.
+        str: ``name`` with ``insert`` inserted just before the extension.
     
     See Also:
         :func:``combine_paths`` to use the extension from ``insert``.
     """
-    if name.find(".") == -1: name += "."
+    if os.path.basename(name).find(".") == -1:
+        # no extension in basename, so simply combine
+        return name + sep + insert
     return "{0}{2}{3}.{1}".format(*name.rsplit(".", 1), sep, insert)
 
 

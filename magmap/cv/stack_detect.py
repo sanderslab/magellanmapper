@@ -146,8 +146,7 @@ def make_subimage_name(base, offset, shape):
         Name (or path) to subimage.
     """
     roi_site = "{}x{}".format(offset, shape).replace(" ", "")
-    series_fill = libmag.series_as_str(config.series)
-    name = libmag.splice_before(base, series_fill, roi_site)
+    name = libmag.combine_paths(base, roi_site)
     print("subimage name: {}".format(name))
     return name
 
@@ -169,8 +168,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             to False.
     """
     time_start = time()
-    filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
-    filename_info_proc = filename_base + config.SUFFIX_INFO_PROC
+    filename_image5d_proc = libmag.combine_paths(
+        filename_base, config.SUFFIX_IMG_PROC)
+    filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
     roi_offset = offset
     shape = roi_size
     if roi_size is None or offset is None:
@@ -181,8 +181,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         # sets up processing for partial stack
         filename_image5d_proc = make_subimage_name(
             filename_image5d_proc, offset, roi_size)
-        filename_info_proc = make_subimage_name(
-            filename_info_proc, offset, roi_size)
+        filename_blobs = make_subimage_name(filename_blobs, offset, roi_size)
     
     # get ROI for given region, including all channels
     if full_roi:
@@ -338,7 +337,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         np.save(outfile_image5d_proc, roi)
         outfile_image5d_proc.close()
     
-    outfile_info_proc = open(filename_info_proc, "wb")
+    outfile_info_proc = open(filename_blobs, "wb")
     np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all,
              resolutions=config.resolutions,
              basename=os.path.basename(config.filename),  # only save name
@@ -365,6 +364,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, segments_all
+
 
 def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape, 
                           exclude_border):

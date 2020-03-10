@@ -1,6 +1,6 @@
 #!/bin/bash
 # Numpy archive import/export.
-# Author: David Young, 2019
+# Author: David Young, 2019, 2020
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
 import os
@@ -37,9 +37,7 @@ def load_blobs(img_path, scaled_shape=None, scale=None):
         were detected. 
 
     """
-    filename_base = importer.filename_to_base(
-        img_path, config.series)
-    info = np.load(filename_base + config.SUFFIX_INFO_PROC)
+    info = np.load(libmag.combine_paths(img_path, config.SUFFIX_BLOBS))
     blobs = info["segments"]
     print("loaded {} blobs".format(len(blobs)))
     # get scaling from source image, which can be rescaled/resized image 
@@ -102,14 +100,14 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 
-def setup_images(path=None, series=0, offset=None, roi_size=None, 
+def setup_images(path=None, series=None, offset=None, roi_size=None,
                  proc_mode=None):
     """Sets up an image and all associated images and metadata.
     
     Args:
         path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
-        series (int): Image series number.
+        series (int): Image series number; defaults to None.
         offset (List[int]): ROI offset given in x,y,z; defaults to None.
         roi_size (List[int]): ROI shape given in x,y,z; defaults to None.
         proc_mode (str): Processing mode, which should be a key in 
@@ -130,8 +128,10 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
         # load a blobs archive, +/- a processed ROI image
         print("Loading processed image files")
         filename_base = importer.filename_to_base(path, series)
-        filename_image5d_proc = filename_base + config.SUFFIX_IMG_PROC
-        filename_info_proc = filename_base + config.SUFFIX_INFO_PROC
+        filename_image5d_proc = libmag.combine_paths(
+            filename_base, config.SUFFIX_IMG_PROC)
+        filename_blobs = libmag.combine_paths(
+            filename_base, config.SUFFIX_BLOBS)
         
         if (not os.path.exists(filename_image5d_proc) and offset is not None
                 and roi_size is not None):
@@ -141,8 +141,8 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
             if os.path.exists(filename_image5d_proc):
                 # if ROI-based image exists, assume info file is also
                 # in ROI format
-                filename_info_proc = stack_detect.make_subimage_name(
-                    filename_info_proc, offset, roi_size)
+                filename_blobs = stack_detect.make_subimage_name(
+                    filename_blobs, offset, roi_size)
         
         try:
             # load image as an ROI chunk of the orig image if available
@@ -160,7 +160,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
         try:
             # load processed blobs and ROI metadata
             output_info = read_np_archive(
-                np.load(filename_info_proc))
+                np.load(filename_blobs))
             config.blobs = output_info["segments"]
             print("{} segments loaded".format(len(config.blobs)))
             if config.verbose:
@@ -179,7 +179,7 @@ def setup_images(path=None, series=0, offset=None, roi_size=None,
                 libmag.printv("could not find key:", e)
         except (FileNotFoundError, KeyError) as e:
             print("Unable to load processed info file at {}"
-                  .format(filename_info_proc))
+                  .format(filename_blobs))
             if proc_type in (
                     config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_BLOBS):
                 # blobs expected but not found

@@ -70,8 +70,6 @@ PIXEL_DTYPE = {
 # 14: removed pixel_type since redundant with image5d.dtype; 
 #     avoids storing object array, which requires loading by pickling
 IMAGE5D_NP_VER = 14 # image5d Numpy saved array version number
-SUFFIX_IMAGE5D = "_image5d.npz" # should actually be .npy
-SUFFIX_INFO = "_info.npz"
 
 CHANNEL_SEPARATOR = "_ch_"
 _EXT_TIFFS = (".tif", ".tiff")
@@ -206,14 +204,14 @@ def find_sizes(filename):
     print('time for finding sizes: %f' %(time() - time_start))
     return sizes, dtype
 
-def make_filenames(filename, series, modifier=""):
+def make_filenames(filename, series=None, modifier=""):
     """Make MagellanMapper-oriented image and image metadata filenames.
     
     Args:
-        filename: Original path from which MagellanMapper-oriented filenames 
-            will be derived.
-        series: Image series.
-        modifier: Separator for image series; defaults to "_"
+        filename (str): Original path from which MagellanMapper-oriented
+            filenames  will be derived.
+        series (int): Image series; defaults to None.
+        modifier (str): Separator for image series; defaults to an empty string.
     
     Returns:
         Tuple of path to the main image and path to metadata.
@@ -221,22 +219,26 @@ def make_filenames(filename, series, modifier=""):
     print("filename: {}".format(filename))
     filename_base = filename_to_base(filename, series, modifier)
     print("filename_base: {}".format(filename_base))
-    filename_image5d_npz = filename_base + SUFFIX_IMAGE5D
-    filename_info_npz = filename_base + SUFFIX_INFO
-    return filename_image5d_npz, filename_info_npz
+    filename_image5d = libmag.combine_paths(
+        filename_base, config.SUFFIX_IMAGE5D)
+    filename_meta = libmag.combine_paths(filename_base, config.SUFFIX_META)
+    return filename_image5d, filename_meta
 
-def filename_to_base(filename, series, modifier=""):
-    """Convert an image path to a base path including series information 
-    for use within MagellanMapper.
+def filename_to_base(filename, series=None, modifier=""):
+    """Convert an image path to a base path with an optional modifier.
     
     Args:
-        filename: Path to original image.
-        series: Series (eg tile) within image.
-        modifier: Modifier string prior to series; default to empty string.
+        filename (str): Path to original image.
+        series (int): Series (eg tile) within image; defaults to None.
+            Currently ignored, but may be implemented in the future to
+            track different tiles or timepoints.
+        modifier (str): Modifier string prior to series; defaults to an
+            empty string.
     """
-    return "{}_{}{}".format(
-        libmag.splitext(filename)[0], modifier, 
-        libmag.series_as_str(series))
+    path = libmag.splitext(filename)[0]
+    if modifier:
+        path = libmag.combine_paths(path, modifier)
+    return path
 
 def deconstruct_np_filename(np_filename, ext="czi"):
     """Deconstruct Numpy image filename to the appropriate image components.
@@ -513,18 +515,18 @@ def read_file(filename, series, load=True, z_max=-1,
     """
     path_split = libmag.splitext(filename)
     ext = path_split[1].lower()
-    filename_image5d_npz, filename_info_npz = make_filenames(
+    filename_image5d, filename_meta = make_filenames(
         filename, series)
     if load:
         image5d_ver_num = -1
         try:
             time_start = time()
             # load image5d metadata; if updating, only fully load if curr ver
-            output, image5d_ver_num = load_metadata(filename_info_npz, update_info)
+            output, image5d_ver_num = load_metadata(filename_meta, update_info)
             
             # load original image, using mem-mapped accessed for the image
             # file to minimize memory requirement, only loading on-the-fly
-            image5d = np.load(filename_image5d_npz, mmap_mode="r")
+            image5d = np.load(filename_image5d, mmap_mode="r")
             print("image5d shape: {}".format(image5d.shape))
             if offset is not None and size is not None:
                 # simplifies to reducing the image to a subset as an ROI if 
@@ -535,10 +537,10 @@ def read_file(filename, series, load=True, z_max=-1,
             if update_info:
                 # if metadata < latest ver, update and load info
                 load_info = _update_image5d_np_ver(
-                    image5d_ver_num, image5d, output, filename_info_npz)
+                    image5d_ver_num, image5d, output, filename_meta)
                 if load_info:
                     # load updated archive
-                    output, image5d_ver_num = load_metadata(filename_info_npz)
+                    output, image5d_ver_num = load_metadata(filename_meta)
             if return_info:
                 return image5d, output
             return image5d
@@ -657,7 +659,7 @@ def read_file(filename, series, load=True, z_max=-1,
                     # open file as memmap to directly output to disk, which is much 
                     # faster than outputting to RAM and saving to disk
                     image5d = np.lib.format.open_memmap(
-                        filename_image5d_npz, mode="w+", dtype=img.dtype, 
+                        filename_image5d, mode="w+", dtype=img.dtype,
                         shape=shape)
                     print("setting image5d array for series {} with shape: {}"
                           .format(series, image5d.shape))
@@ -680,7 +682,7 @@ def read_file(filename, series, load=True, z_max=-1,
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
     md = save_image_info(
-        filename_info_npz, [name], [shape], [config.resolutions[series]],
+        filename_meta, [name], [shape], [config.resolutions[series]],
         config.magnification, config.zoom, near_mins, near_maxs)
     assign_metadata(md)
     return image5d

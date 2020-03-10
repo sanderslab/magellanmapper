@@ -35,15 +35,23 @@ POS_THRESH = 0.001 # threshold for positive values for float comparison
 
 # IMAGE FILES
 
-SUFFIX_IMG_PROC = "_image5d_proc.npz"
-SUFFIX_INFO_PROC = "_info_proc.npz"
+#: str: Suffix for main image.
+SUFFIX_IMAGE5D = "image5d.npy"
+#: str: Suffix for metadata of main image.
+SUFFIX_META = "meta.npz"
+#: str: Suffix for ROI image.
+SUFFIX_IMG_PROC = "image5d_proc.npz"
+#: str: Suffix for blobs archive.
+SUFFIX_BLOBS = "blobs.npz"
+#: str: Suffix for blob clusters archive.
 SUFFIX_BLOB_CLUSTERS = "blobclusters.npy"
 
 filename = None # current image file path
 filenames = None # list of multiple image paths
 metadata_paths = None  # metadata file paths
 metadatas = None  # metadata dicts
-series = 0 # series for multi-stack files
+#: int: Selected series index for multi-stack files; None for no series.
+series = None
 channel = None # channel of interest, where None specifies all channels
 roi_sizes = None # list of regions of interest
 roi_size = None  # current region of interest

@@ -146,7 +146,7 @@ def make_subimage_name(base, offset, shape):
         Name (or path) to subimage.
     """
     roi_site = "{}x{}".format(offset, shape).replace(" ", "")
-    name = libmag.combine_paths(base, roi_site)
+    name = libmag.insert_before_ext(base, roi_site, "_")
     print("subimage name: {}".format(name))
     return name
 
@@ -297,7 +297,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
                 if config.truth_db is None:
                     # find and load truth DB based on filename and subimage
                     db_path_base = os.path.basename(
-                        make_subimage_name(filename_base, offset, roi_size))
+                        make_subimage_name(filename_base, roi_offset, shape))
                     print("about to verify with truth db from {}"
                           .format(db_path_base))
                     sqlite.load_truth_db(db_path_base)

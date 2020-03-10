@@ -1,6 +1,6 @@
 # MagellanMapper v1.1 Release Notes
 
-## MagellanMapper v1.1.2 Release Notes
+## MagellanMapper v1.1.2
 
 ### Changes
 
@@ -18,7 +18,7 @@ Nuclei detection
 - The lower threshold factor for max scaling is now configurable to reduce false detections in low signal areas
 - Microscope profiles for minimal preprocessing and low resolution images
 
-## MagellanMapper v1.1.2 Release Notes
+## MagellanMapper v1.1.2
 
 ### Changes
 
@@ -60,3 +60,46 @@ I/O
 - Git is no longer required since not accessing Javabridge from Git
 - C compiler is no longer necessary as long as prebuilt Javabridge works
 - Java is no longer needs to be preinstalled if following Conda pathway
+
+## MagellanMapper v1.1.1
+
+### Changes
+
+GUI
+- show the file path in the Atlas Editor window
+- fixed loss of label visibility after setting the opacity to 0 and changing planes
+
+Atlas refinement
+- profile for Allen CCFv3
+- use the resolution of the fixed image during registration if the initial registration fails to start
+
+I/O
+- use FFMpeg for export to MP4 files for smaller files that can be opened by QuickTime
+- fixed TIFF import to match only files with TIFF extensions (eg .tif or .tiff)
+- fixed loading images by SimpleITK to select a single channel
+
+Python stats and plots
+- option for image padding size
+
+## MagellanMapper v1.1.0
+
+### Changes
+
+Installation
+- changed name from "Clrbrain" to "MagellanMapper"
+- default virtual environment name is `mag`
+- support new style Conda initialization during Conda environment setup
+- update reference Conda environment and Pip package specs
+
+Atlas refinement
+- default to use symmetric colormaps rather than separate colors for labels on opposite hemispheres
+- export RGB values with colored cells in Excel file of region IDs for a given atlas
+Atlas registration:
+- fix b-spline grid voxels setting in NCC profile
+
+Python stats and plots
+- merge Excel files into separate sheets of single Excel file
+
+Code base
+- reorganized all source modules into subpackages
+- moved all shell scripts in root folder into `bin` folder"

@@ -125,36 +125,38 @@ def setup_images(path=None, series=None, offset=None, roi_size=None,
     if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
                      config.ProcessTypes.EXPORT_BLOBS,
                      config.ProcessTypes.PROCESSING_MP):
-        # load a blobs archive, +/- a processed ROI image
+        # load a blobs archive, +/- a processed ROI image; assume filename is
+        # given in either whole image or ROI format
         print("Loading processed image files")
         filename_base = importer.filename_to_base(path, series)
-        filename_image5d_proc = libmag.combine_paths(
-            filename_base, config.SUFFIX_ROI)
+        filename_roi = libmag.combine_paths(filename_base, config.SUFFIX_ROI)
         filename_blobs = libmag.combine_paths(
             filename_base, config.SUFFIX_BLOBS)
-        
-        if (not os.path.exists(filename_image5d_proc) and offset is not None
+
+        roi_base = filename_base
+        if (not os.path.exists(filename_roi) and offset is not None
                 and roi_size is not None):
             # change image name to ROI format if the given file is not present
-            filename_image5d_proc = stack_detect.make_subimage_name(
-                filename_base, offset, roi_size, config.SUFFIX_ROI)
-            if os.path.exists(filename_image5d_proc):
-                # if ROI-based image exists, assume info file is also
-                # in ROI format
-                filename_blobs = stack_detect.make_subimage_name(
-                    filename_base, offset, roi_size, config.SUFFIX_BLOBS)
+            roi_base = stack_detect.make_subimage_name(
+                roi_base, offset, roi_size)
+            filename_roi = libmag.combine_paths(roi_base, config.SUFFIX_ROI)
+            if os.path.exists(filename_roi):
+                # if ROI-based image exists, will load associated blobs file
+                filename_blobs = libmag.combine_paths(
+                    roi_base, config.SUFFIX_BLOBS)
         
         try:
             # load image as an ROI chunk of the orig image if available
-            config.image5d = np.load(filename_image5d_proc, mmap_mode="r")
+            config.image5d = np.load(filename_roi, mmap_mode="r")
             config.image5d = importer.roi_to_image5d(
                 config.image5d)
             config.image5d_is_roi = True
-            print("Loading processed/ROI image from {} with shape {}"
-                  .format(filename_image5d_proc, config.image5d.shape))
+            print("Loaded ROI image from {} with shape {}"
+                  .format(filename_roi, config.image5d.shape))
+            filename_base = roi_base
         except IOError:
-            print("Ignoring ROI image file from {} as unable to load"
-                  .format(filename_image5d_proc))
+            print("Ignored ROI image file from {} as unable to load"
+                  .format(filename_roi))
 
         basename = None
         try:

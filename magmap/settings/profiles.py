@@ -66,15 +66,15 @@ class ProcessSettings(SettingsDict):
         self["norm"] = None  # (min, max) normalization of image5d
 
         # image preprocessing before blob detection
-        self["clip_vmin"] = 5
+        self["clip_vmin"] = 5  # vmin/vmax set contrast stretching, range 0-100
         self["clip_vmax"] = 99.5
-        self["clip_min"] = 0.2
+        self["clip_min"] = 0.2  # min/max clip after stretching, range 0-1
         self["clip_max"] = 1.0
-        # mult by config.near_max for lower threshold of max
+        # mult by config.near_max for lower threshold of global max
         self["max_thresh_factor"] = 0.5
         self["tot_var_denoise"] = None  # weight (eg skimage default 0.1)
-        self["unsharp_strength"] = 0.3
-        self["erosion_threshold"] = 0.2
+        self["unsharp_strength"] = 0.3  # unsharp filter (sharpens images)
+        self["erosion_threshold"] = 0.2  # erode clumped cells
 
         # 3D blob detection settings
         self["min_sigma_factor"] = 3

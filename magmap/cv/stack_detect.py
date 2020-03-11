@@ -172,12 +172,10 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             to False.
     """
     time_start = time()
-    roi_offset = offset
-    shape = roi_size
     if roi_size is None or offset is None:
         # uses the entire stack if no size or offset specified
-        shape = image5d.shape[3:0:-1]
-        roi_offset = (0, 0, 0)
+        roi_size = image5d.shape[3:0:-1]
+        offset = (0, 0, 0)
     else:
         # change base filename for ROI-based partial stack
         filename_base = make_subimage_name(filename_base, offset, roi_size)
@@ -189,7 +187,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         # treat the full image as the ROI
         roi = image5d[0]
     else:
-        roi = plot_3d.prepare_roi(image5d, shape, roi_offset)
+        roi = plot_3d.prepare_roi(image5d, roi_size, offset)
     _, channels = plot_3d.setup_channels(roi, config.channel, 3)
     
     # prep chunking ROI into sub-ROIs with size based on segment_size, scaling
@@ -307,9 +305,10 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
                     rois = config.truth_db.get_rois(exp_name)
                     if rois is None:
                         # exp may have been named by ROI
+                        print("{} experiment name not found, will try with"
+                              "ROI offset/size".format(exp_name))
                         exp_name = make_subimage_name(
-                            os.path.basename(config.filename), roi_offset,
-                            shape)
+                            os.path.basename(config.filename), offset, roi_size)
                         rois = config.truth_db.get_rois(exp_name)
                     if rois is None:
                         raise LookupError(

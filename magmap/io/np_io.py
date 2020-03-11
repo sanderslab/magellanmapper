@@ -137,12 +137,12 @@ def setup_images(path=None, series=None, offset=None, roi_size=None,
                 and roi_size is not None):
             # change image name to ROI format if the given file is not present
             filename_image5d_proc = stack_detect.make_subimage_name(
-                filename_image5d_proc, offset, roi_size)
+                filename_base, offset, roi_size, config.SUFFIX_IMG_PROC)
             if os.path.exists(filename_image5d_proc):
                 # if ROI-based image exists, assume info file is also
                 # in ROI format
                 filename_blobs = stack_detect.make_subimage_name(
-                    filename_blobs, offset, roi_size)
+                    filename_base, offset, roi_size, config.SUFFIX_BLOBS)
         
         try:
             # load image as an ROI chunk of the orig image if available

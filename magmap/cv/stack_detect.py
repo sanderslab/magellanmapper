@@ -134,19 +134,23 @@ class StackDetector(object):
         return coord, segments
 
 
-def make_subimage_name(base, offset, shape):
+def make_subimage_name(base, offset, shape, suffix=None):
     """Make name of subimage for a given offset and shape.
     
     Args:
-        base: Start of name, which can include full parent path.
-        offset: Offset, generally given as a tuple.
-        shape: Shape, generally given as a tuple.
+        base (str): Start of name, which can include full parent path.
+        offset (Tuple[int]): Offset, generally given as a tuple.
+        shape (Tuple[int]): Shape, generally given as a tuple.
+        suffix (str): Suffix to append, replacing any existing extension
+            in ``base``; defaults to None.
     
     Returns:
-        Name (or path) to subimage.
+        str: Name (or path) to subimage.
     """
     roi_site = "{}x{}".format(offset, shape).replace(" ", "")
     name = libmag.insert_before_ext(base, roi_site, "_")
+    if suffix:
+        name = libmag.combine_paths(name, suffix)
     print("subimage name: {}".format(name))
     return name
 
@@ -180,8 +184,9 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     else:
         # sets up processing for partial stack
         filename_image5d_proc = make_subimage_name(
-            filename_image5d_proc, offset, roi_size)
-        filename_blobs = make_subimage_name(filename_blobs, offset, roi_size)
+            filename_base, offset, roi_size, config.SUFFIX_IMG_PROC)
+        filename_blobs = make_subimage_name(
+            filename_base, offset, roi_size, config.SUFFIX_BLOBS)
     
     # get ROI for given region, including all channels
     if full_roi:

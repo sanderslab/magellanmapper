@@ -129,7 +129,7 @@ def setup_images(path=None, series=None, offset=None, roi_size=None,
         print("Loading processed image files")
         filename_base = importer.filename_to_base(path, series)
         filename_image5d_proc = libmag.combine_paths(
-            filename_base, config.SUFFIX_IMG_PROC)
+            filename_base, config.SUFFIX_ROI)
         filename_blobs = libmag.combine_paths(
             filename_base, config.SUFFIX_BLOBS)
         
@@ -137,7 +137,7 @@ def setup_images(path=None, series=None, offset=None, roi_size=None,
                 and roi_size is not None):
             # change image name to ROI format if the given file is not present
             filename_image5d_proc = stack_detect.make_subimage_name(
-                filename_base, offset, roi_size, config.SUFFIX_IMG_PROC)
+                filename_base, offset, roi_size, config.SUFFIX_ROI)
             if os.path.exists(filename_image5d_proc):
                 # if ROI-based image exists, assume info file is also
                 # in ROI format

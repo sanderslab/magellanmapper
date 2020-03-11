@@ -40,7 +40,7 @@ SUFFIX_IMAGE5D = "image5d.npy"
 #: str: Suffix for metadata of main image.
 SUFFIX_META = "meta.npz"
 #: str: Suffix for ROI image.
-SUFFIX_IMG_PROC = "image5d_proc.npz"
+SUFFIX_ROI = "roi.npy"
 #: str: Suffix for blobs archive.
 SUFFIX_BLOBS = "blobs.npz"
 #: str: Suffix for blob clusters archive.

@@ -173,7 +173,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     """
     time_start = time()
     filename_image5d_proc = libmag.combine_paths(
-        filename_base, config.SUFFIX_IMG_PROC)
+        filename_base, config.SUFFIX_ROI)
     filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
     roi_offset = offset
     shape = roi_size
@@ -184,7 +184,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     else:
         # sets up processing for partial stack
         filename_image5d_proc = make_subimage_name(
-            filename_base, offset, roi_size, config.SUFFIX_IMG_PROC)
+            filename_base, offset, roi_size, config.SUFFIX_ROI)
         filename_blobs = make_subimage_name(
             filename_base, offset, roi_size, config.SUFFIX_BLOBS)
     

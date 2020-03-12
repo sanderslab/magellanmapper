@@ -1,6 +1,6 @@
 #!/bin/bash
 # Command line parsing and setup
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2020
 """Command line parser and and environment setup for MagellanMapper.
 
 This module can be run either as a script to work in headless mode or 
@@ -82,16 +82,19 @@ from magmap.cv import stack_detect
 from magmap.atlas import transformer
 
 
-def _parse_coords(arg):
-    coords = list(arg) # copy list to avoid altering the arg itself
+def _parse_coords(arg, rev=False):
+    # parse a list of strings into 3D coordinates
+    coords = list(arg)  # copy list to avoid altering the arg itself
     n = 0
     for coord in coords:
         coord_split = coord.split(",")
         if len(coord_split) >= 3:
             coord = tuple(int(i) for i in coord_split)
+            if rev:
+                coord = coord[::-1]
         else:
             print("Coordinates ({}) should be given as 3 values (x, y, z)"
-              .format(coord))
+                  .format(coord))
         coords[n] = coord
         n += 1
     return coords
@@ -215,6 +218,8 @@ def main(process_args_only=False):
     parser.add_argument("--padding_2d")
     parser.add_argument("--offset", nargs="*")
     parser.add_argument("--size", nargs="*")
+    parser.add_argument("--subimg_offset", nargs="*")
+    parser.add_argument("--subimg_size", nargs="*")
     parser.add_argument("--proc")
     parser.add_argument("--res")
     parser.add_argument("--mag")
@@ -308,16 +313,31 @@ def main(process_args_only=False):
     if args.roc:
         config.roc = args.roc
         print("Set ROC to {}".format(config.roc))
+
+    # parse sub-image offsets and sizes;
+    # expects x,y,z input but stores as z,y,x by convention
+    if args.subimg_offset is not None:
+        config.subimg_offsets = _parse_coords(args.subimg_offset, True)
+        print("Set sub-image offsets to {} (z,y,x)"
+              .format(config.subimg_offsets))
+    if args.subimg_size is not None:
+        config.subimg_sizes = _parse_coords(args.subimg_size, True)
+        print("Set sub-image sizes to {} (z,y,x)"
+              .format(config.subimg_sizes))
+
+    # parse ROI offsets and sizes, which are relative to any sub-image;
+    # expects x,y,z input and output
     if args.offset is not None:
         config.roi_offsets = _parse_coords(args.offset)
         config.roi_offset = config.roi_offsets[0]
-        print("Set offsets to {}, current offset {}"
+        print("Set ROI offsets to {}, current offset {} (x,y,z)"
               .format(config.roi_offsets, config.roi_offset))
     if args.size is not None:
         config.roi_sizes = _parse_coords(args.size)
         config.roi_size = config.roi_sizes[0]
-        print("Set ROI sizes to {}, current size {}"
+        print("Set ROI sizes to {}, current size {} (x,y,z)"
               .format(config.roi_sizes, config.roi_size))
+
     if args.padding_2d is not None:
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
@@ -628,12 +648,12 @@ def main(process_args_only=False):
                 plot_2d.plot_roc(stats_df, not config.no_show)
         else:
             # processes file with default settings
+            offset = config.subimg_offsets[0] if config.subimg_offsets else None
+            size = config.subimg_sizes[0] if config.subimg_sizes else None
             np_io.setup_images(
-                config.filename, series, config.roi_offset,
-                config.roi_size, config.proc_type)
+                config.filename, series, offset, size, config.proc_type)
             process_file(
-                config.filename, series, config.roi_offset,
-                config.roi_size, config.proc_type)
+                config.filename, series, offset, size, config.proc_type)
     
     # unless loading images for GUI, exit directly since otherwise application 
     # hangs if launched from module with GUI

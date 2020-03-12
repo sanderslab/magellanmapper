@@ -136,6 +136,10 @@ class StackDetector(object):
 
 def make_subimage_name(base, offset, shape, suffix=None):
     """Make name of subimage for a given offset and shape.
+
+    The order of ``offset`` and ``shape`` are assumed to be in z,y,x but
+    will be reversed for the output name since the user-oriented ordering
+    is x,y,z.
     
     Args:
         base (str): Start of name, which can include full parent path.
@@ -147,7 +151,8 @@ def make_subimage_name(base, offset, shape, suffix=None):
     Returns:
         str: Name (or path) to subimage.
     """
-    roi_site = "{}x{}".format(offset, shape).replace(" ", "")
+    # sub-image offset/shape stored as z,y,x, but file named as x,y,z
+    roi_site = "{}x{}".format(offset[::-1], shape[::-1]).replace(" ", "")
     name = libmag.insert_before_ext(base, roi_site, "_")
     if suffix:
         name = libmag.combine_paths(name, suffix)
@@ -155,7 +160,7 @@ def make_subimage_name(base, offset, shape, suffix=None):
     return name
 
 
-def detect_blobs_large_image(filename_base, image5d, offset, roi_size, 
+def detect_blobs_large_image(filename_base, image5d, offset, size,
                              verify=False, save_dfs=True, full_roi=False):
     """Detect blobs within a large image through parallel processing of 
     smaller chunks.
@@ -163,8 +168,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     Args:
         filename_base: Base path to use file output.
         image5d: Large image to process as a Numpy array of t,z,y,x,[c]
-        offset: Image offset given as coordinates in x,y,z.
-        roi_size: ROI shape given in x,y,z.
+        offset: Sub-image offset given as coordinates in z,y,x.
+        size: Sub-image shape given in z,y,x.
         verify: True to verify detections against truth database; defaults 
             to False.
         save_dfs: True to save data frames to file; defaults to True.
@@ -172,14 +177,14 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
             to False.
     """
     time_start = time()
-    if roi_size is None or offset is None:
+    if size is None or offset is None:
         # uses the entire stack if no size or offset specified
-        roi_size = image5d.shape[3:0:-1]
+        size = image5d.shape[1:4]
         offset = (0, 0, 0)
     else:
         # change base filename for ROI-based partial stack
-        filename_base = make_subimage_name(filename_base, offset, roi_size)
-    filename_roi = libmag.combine_paths(filename_base, config.SUFFIX_ROI)
+        filename_base = make_subimage_name(filename_base, offset, size)
+    filename_subimg = libmag.combine_paths(filename_base, config.SUFFIX_SUBIMG)
     filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
     
     # get ROI for given region, including all channels
@@ -187,7 +192,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
         # treat the full image as the ROI
         roi = image5d[0]
     else:
-        roi = plot_3d.prepare_roi(image5d, roi_size, offset)
+        roi = plot_3d.prepare_subimg(image5d, size, offset)
     _, channels = plot_3d.setup_channels(roi, config.channel, 3)
     
     # prep chunking ROI into sub-ROIs with size based on segment_size, scaling
@@ -308,7 +313,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
                         print("{} experiment name not found, will try with"
                               "ROI offset/size".format(exp_name))
                         exp_name = make_subimage_name(
-                            os.path.basename(config.filename), offset, roi_size)
+                            os.path.basename(config.filename), offset, size)
                         rois = config.truth_db.get_rois(exp_name)
                     if rois is None:
                         raise LookupError(
@@ -332,7 +337,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     file_time_start = time()
     if config.saveroi:
         # write the original, raw ROI
-        outfile_image5d_proc = open(filename_roi, "wb")
+        outfile_image5d_proc = open(filename_subimg, "wb")
         np.save(outfile_image5d_proc, roi)
         outfile_image5d_proc.close()
     
@@ -340,7 +345,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, roi_size,
     np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all,
              resolutions=config.resolutions,
              basename=os.path.basename(config.filename),  # only save name
-             offset=offset, roi_size=roi_size) # None unless explicitly set
+             offset=offset, roi_size=size)  # None unless explicitly set
     outfile_info_proc.close()
     file_save_time = time() - file_time_start
     

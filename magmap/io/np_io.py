@@ -100,7 +100,7 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 
-def setup_images(path=None, series=None, offset=None, roi_size=None,
+def setup_images(path=None, series=None, offset=None, size=None,
                  proc_mode=None):
     """Sets up an image and all associated images and metadata.
     
@@ -108,8 +108,8 @@ def setup_images(path=None, series=None, offset=None, roi_size=None,
         path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
         series (int): Image series number; defaults to None.
-        offset (List[int]): ROI offset given in x,y,z; defaults to None.
-        roi_size (List[int]): ROI shape given in x,y,z; defaults to None.
+        offset (List[int]): Sub-image offset given in z,y,x; defaults to None.
+        size (List[int]): Sub-image shape given in z,y,x; defaults to None.
         proc_mode (str): Processing mode, which should be a key in 
             :class:`config.ProcessTypes`, case-insensitive; defaults to None.
     
@@ -129,34 +129,34 @@ def setup_images(path=None, series=None, offset=None, roi_size=None,
         # given in either whole image or ROI format
         print("Loading processed image files")
         filename_base = importer.filename_to_base(path, series)
-        filename_roi = libmag.combine_paths(filename_base, config.SUFFIX_ROI)
+        filename_subimg = libmag.combine_paths(filename_base, config.SUFFIX_SUBIMG)
         filename_blobs = libmag.combine_paths(
             filename_base, config.SUFFIX_BLOBS)
 
-        roi_base = filename_base
-        if (not os.path.exists(filename_roi) and offset is not None
-                and roi_size is not None):
+        subimg_base = filename_base
+        if (not os.path.exists(filename_subimg) and offset is not None
+                and size is not None):
             # change image name to ROI format if the given file is not present
-            roi_base = stack_detect.make_subimage_name(
-                roi_base, offset, roi_size)
-            filename_roi = libmag.combine_paths(roi_base, config.SUFFIX_ROI)
-            if os.path.exists(filename_roi):
+            subimg_base = stack_detect.make_subimage_name(
+                subimg_base, offset, size)
+            filename_subimg = libmag.combine_paths(subimg_base, config.SUFFIX_SUBIMG)
+            if os.path.exists(filename_subimg):
                 # if ROI-based image exists, will load associated blobs file
                 filename_blobs = libmag.combine_paths(
-                    roi_base, config.SUFFIX_BLOBS)
+                    subimg_base, config.SUFFIX_BLOBS)
         
         try:
-            # load image as an ROI chunk of the orig image if available
-            config.image5d = np.load(filename_roi, mmap_mode="r")
+            # load sub-image if available
+            config.image5d = np.load(filename_subimg, mmap_mode="r")
             config.image5d = importer.roi_to_image5d(
                 config.image5d)
             config.image5d_is_roi = True
-            print("Loaded ROI image from {} with shape {}"
-                  .format(filename_roi, config.image5d.shape))
-            filename_base = roi_base
+            print("Loaded sub-image from {} with shape {}"
+                  .format(filename_subimg, config.image5d.shape))
+            filename_base = subimg_base
         except IOError:
-            print("Ignored ROI image file from {} as unable to load"
-                  .format(filename_roi))
+            print("Ignored sub-image file from {} as unable to load"
+                  .format(filename_subimg))
 
         basename = None
         try:

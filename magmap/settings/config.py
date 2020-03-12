@@ -40,7 +40,7 @@ SUFFIX_IMAGE5D = "image5d.npy"
 #: str: Suffix for metadata of main image.
 SUFFIX_META = "meta.npz"
 #: str: Suffix for ROI image.
-SUFFIX_ROI = "roi.npy"
+SUFFIX_SUBIMG = "subimg.npy"
 #: str: Suffix for blobs archive.
 SUFFIX_BLOBS = "blobs.npz"
 #: str: Suffix for blob clusters archive.
@@ -55,10 +55,15 @@ series = None
 channel = None # channel of interest, where None specifies all channels
 
 # ROI settings in x,y,z
-roi_sizes = None # list of regions of interest
-roi_size = None  # current region of interest
-roi_offsets = None # list of offsets
+# TODO: change to z,y,x ordering
+roi_offsets = None  # list of offsets
 roi_offset = None  # current offset
+roi_sizes = None  # list of regions of interest
+roi_size = None  # current region of interest
+
+# sub-image settings in z,y,x
+subimg_offsets = None
+subimg_sizes = None
 
 image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI

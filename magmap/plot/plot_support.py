@@ -70,11 +70,10 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
     num_chls = len(channels)
     if alpha is None:
         alpha = 1
-    alpha_plane = alpha
-    if num_chls > 1 and not libmag.is_seq(alpha_plane):
+    if num_chls > 1 and not libmag.is_seq(alpha):
         # if alphas not explicitly set per channel, make all channels more
-        # translucent with increasing numbers of channels
-        alpha_plane /= np.sqrt(num_chls + 1)
+        # translucent at a fixed value that is higher with more channels
+        alpha /= np.sqrt(num_chls + 1)
 
     # transform image based on config parameters
     # TODO: consider removing flip and using only transpose attribute
@@ -100,7 +99,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
         # directly if it is a scalar
         vmin_plane = libmag.get_if_within(vmin, chl)
         vmax_plane = libmag.get_if_within(vmax, chl)
-        alpha_plane = libmag.get_if_within(alpha, chl, alpha_plane)
+        alpha_plane = libmag.get_if_within(alpha, chl)
         img_chl = None
         if not ignore_invis or alpha_plane > 0:
             # skip display if alpha is 0 to avoid outputting a hidden image 

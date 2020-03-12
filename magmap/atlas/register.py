@@ -2010,7 +2010,7 @@ def main():
             if "scaling" in output:
                 scaling = output["scaling"]
         atlas_stats.plot_clusters_by_label(
-            config.filename, config.offsets[0][2], config.suffix, show, scaling)
+            config.filename, config.roi_offsets[0][2], config.suffix, show, scaling)
 
 
 if __name__ == "__main__":

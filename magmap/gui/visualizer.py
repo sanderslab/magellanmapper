@@ -570,11 +570,11 @@ class Visualization(HasTraits):
             # elsewhere
             # TODO: does not appear to update on subsequent image loading
             self.z_high, self.y_high, self.x_high = size
-            if config.offset is not None:
+            if config.roi_offset is not None:
                 # apply user-defined offsets
-                self.x_offset = config.offset[0]
-                self.y_offset = config.offset[1]
-                self.z_offset = config.offset[2]
+                self.x_offset = config.roi_offset[0]
+                self.y_offset = config.roi_offset[1]
+                self.z_offset = config.roi_offset[2]
             self.roi_array[0] = ([100, 100, 15] if config.roi_size is None
                                  else config.roi_size)
             # show the default ROI
@@ -984,10 +984,10 @@ class Visualization(HasTraits):
                     config.roi_size, 
                     np.multiply(self.border, 2)).astype(int).tolist())
             self.roi_array = [config.roi_size]
-            config.offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
-            config.offset = tuple(
-                np.subtract(config.offset, self.border).astype(int).tolist())
-            self.x_offset, self.y_offset, self.z_offset = config.offset
+            config.roi_offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
+            config.roi_offset = tuple(
+                np.subtract(config.roi_offset, self.border).astype(int).tolist())
+            self.x_offset, self.y_offset, self.z_offset = config.roi_offset
             
             # redraw the original ROI and prepare verify mode
             self.show_3d()

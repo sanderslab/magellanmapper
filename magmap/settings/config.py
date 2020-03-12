@@ -53,10 +53,13 @@ metadatas = None  # metadata dicts
 #: int: Selected series index for multi-stack files; None for no series.
 series = None
 channel = None # channel of interest, where None specifies all channels
+
+# ROI settings in x,y,z
 roi_sizes = None # list of regions of interest
 roi_size = None  # current region of interest
-offsets = None # list of offsets
-offset = None  # current offset
+roi_offsets = None # list of offsets
+roi_offset = None  # current offset
+
 image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
 blobs = None  # blobs

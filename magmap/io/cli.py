@@ -309,10 +309,10 @@ def main(process_args_only=False):
         config.roc = args.roc
         print("Set ROC to {}".format(config.roc))
     if args.offset is not None:
-        config.offsets = _parse_coords(args.offset)
-        config.offset = config.offsets[0]
+        config.roi_offsets = _parse_coords(args.offset)
+        config.roi_offset = config.roi_offsets[0]
         print("Set offsets to {}, current offset {}"
-              .format(config.offsets, config.offset))
+              .format(config.roi_offsets, config.roi_offset))
     if args.size is not None:
         config.roi_sizes = _parse_coords(args.size)
         config.roi_size = config.roi_sizes[0]
@@ -619,7 +619,7 @@ def main(process_args_only=False):
             # grid search(es) for the specified hyperparameter groups
             stats_dict = mlearn.grid_search(
                 profiles.roc_dict, config.roc, _iterate_file_processing,
-                config.filename, series, config.offsets, config.roi_sizes)
+                config.filename, series, config.roi_offsets, config.roi_sizes)
             parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
             from magmap.plot import plot_2d
             plot_2d.setup_style()
@@ -629,10 +629,10 @@ def main(process_args_only=False):
         else:
             # processes file with default settings
             np_io.setup_images(
-                config.filename, series, config.offset,
+                config.filename, series, config.roi_offset,
                 config.roi_size, config.proc_type)
             process_file(
-                config.filename, series, config.offset,
+                config.filename, series, config.roi_offset,
                 config.roi_size, config.proc_type)
     
     # unless loading images for GUI, exit directly since otherwise application 

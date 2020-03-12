@@ -36,7 +36,7 @@ You can also use `pipelines.sh`, a script to run many automated pipelines within
 
 To try out functions with some sample images, download:
 
-- [Sample region of nuclei at 4x](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.czi)
+- [Sample region of nuclei at 4x](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.zip)
 - [Sample downsampled tissue cleared whole brain](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)
 
 ## 3D viewer

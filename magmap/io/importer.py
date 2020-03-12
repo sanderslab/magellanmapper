@@ -470,7 +470,7 @@ def assign_metadata(md):
         print("could not find near_max")
 
 
-def read_file(filename, series, load=True, z_max=-1, 
+def read_file(filename, series=None, load=True, z_max=-1,
               offset=None, size=None, channel=None, return_info=False, 
               import_if_absent=True, update_info=True):
     """Reads an image file into Numpy format or imports a file into this format.
@@ -485,7 +485,7 @@ def read_file(filename, series, load=True, z_max=-1,
     
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
-        series: Series index to load.
+        series: Series index to load. Defaults to None, which will use 0.
         load: If True, attempts to load a Numpy array from the same 
             location and name except for ".npz" appended to the end 
             (default). The array can be accessed as "output['image5d']".
@@ -513,6 +513,8 @@ def read_file(filename, series, load=True, z_max=-1,
         image5d, the array of image data. If ``return_info`` is True, a 
         second value a dictionary of image properties will be returned.
     """
+    if series is None:
+        series = 0
     path_split = libmag.splitext(filename)
     ext = path_split[1].lower()
     filename_image5d, filename_meta = make_filenames(

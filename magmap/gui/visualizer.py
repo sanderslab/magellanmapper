@@ -41,6 +41,7 @@ from magmap.io import cli
 from magmap.settings import config
 from magmap.cv import cv_nd
 from magmap.cv import detector
+from magmap.cv import stack_detect
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
@@ -278,7 +279,17 @@ class Visualization(HasTraits):
            roi["offset_x"], roi["offset_y"], roi["offset_z"], roi["size_x"], 
            roi["size_y"], roi["size_z"])
         rois_dict[label] = roi
-    
+
+    @staticmethod
+    def _get_exp_name(path):
+        # get the experiment name as the basename, adding any sub-image
+        # offset/size parameters if currently set
+        exp_name = os.path.basename(path)
+        if config.subimg_offsets and config.subimg_sizes:
+            exp_name = stack_detect.make_subimage_name(
+                exp_name, config.subimg_offsets[0], config.subimg_sizes[0])
+        return exp_name
+
     def save_segs(self):
         """Saves segments to database.
         
@@ -341,9 +352,9 @@ class Visualization(HasTraits):
             feedback.append("\nDeleting segments:")
             for seg in segs_to_delete:
                 feedback.append(self._format_seg(seg))
+        exp_name = self._get_exp_name(config.filename)
         exp_id = sqlite.select_or_insert_experiment(
-            config.db.conn, config.db.cur, os.path.basename(config.filename),
-            None)
+            config.db.conn, config.db.cur, exp_name, None)
         roi_id, out = sqlite.select_or_insert_roi(
             config.db.conn, config.db.cur, exp_id, config.series, 
             np.add(self._curr_offset(), self.border).tolist(), 
@@ -583,7 +594,7 @@ class Visualization(HasTraits):
         # set up selector for loading past saved ROIs
         self._rois_dict = {_ROI_DEFAULT: None}
         if config.db is not None:
-            self._rois = config.db.get_rois(os.path.basename(config.filename))
+            self._rois = config.db.get_rois(self._get_exp_name(config.filename))
         self.rois_selections_class = ListSelections()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:

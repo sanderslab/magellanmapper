@@ -525,12 +525,11 @@ def prepare_subimg(image5d, size, offset):
             of interest. Defaults to (0, 0, 0).
     
     Returns:
-        The sub-imge without separate time dimension as a 3D
-        if ``image5d`` is 4D, without a separate channel dimension, or 4-D 
-        array if channel dimension exists.
+        The sub-imge without separate time dimension as a 3D (or 4-D
+        array if channel dimension exists) array.
     """
     cube_slices = [slice(o, o + s) for o, s in zip(offset, size)]
-    libmag.printv("preparing ROI at offset: {}, size: {}, slices: {}"
+    libmag.printv("preparing sub-image at offset: {}, size: {}, slices: {}"
                   .format(offset, size, cube_slices))
     
     # cube with corner at offset, side of cube_len
@@ -556,6 +555,7 @@ def prepare_roi(image5d, roi_size, roi_offset):
         if ``image5d`` is 4D, without a separate channel dimension, or 4-D
         array if channel dimension exists.
     """
+    libmag.printv("preparing ROI at x,y,z:")
     return prepare_subimg(image5d, roi_size[::-1], roi_offset[::-1])
 
 

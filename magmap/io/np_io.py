@@ -17,6 +17,7 @@ from magmap.atlas import ontology
 from magmap.io import sitk_io
 from magmap.cv import stack_detect
 from magmap.atlas import transformer
+from magmap.plot import plot_3d
 
 
 def load_blobs(img_path, scaled_shape=None, scale=None):
@@ -119,11 +120,12 @@ def setup_images(path=None, series=None, offset=None, size=None,
     # reset image5d
     config.image5d = None
     config.image5d_is_roi = False
+    load_subimage = offset is not None and size is not None
 
     filename_base = importer.filename_to_base(path, series)
     filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
 
-    if offset is not None and size is not None:
+    if load_subimage:
         # change image name to sub-image format if file is not present
         subimg_base = stack_detect.make_subimage_name(
             filename_base, offset, size)
@@ -138,14 +140,16 @@ def setup_images(path=None, series=None, offset=None, size=None,
             # load sub-image if available
             config.image5d = np.load(filename_subimg, mmap_mode="r")
             config.image5d = importer.roi_to_image5d(config.image5d)
-            # after loading sub-image, load original image's metadata
-            # for essential data such as vmin/vmax
-            _, orig_info = importer.make_filenames(path, series)
-            print("load original image metadata from:", orig_info)
-            importer.load_metadata(orig_info)
             config.image5d_is_roi = True
             print("Loaded sub-image from {} with shape {}"
                   .format(filename_subimg, config.image5d.shape))
+
+            # after loading sub-image, load original image's metadata
+            # for essential data such as vmin/vmax; will only warn if
+            # fails to load since metadata could be specified elsewhere
+            _, orig_info = importer.make_filenames(path, series)
+            print("load original image metadata from:", orig_info)
+            importer.load_metadata(orig_info)
         except IOError:
             print("Ignored sub-image file from {} as unable to load"
                   .format(filename_subimg))
@@ -260,6 +264,13 @@ def setup_images(path=None, series=None, offset=None, size=None,
         # rotate main image specified num of times x90deg after loading since 
         # need to rotate images output by deep learning toolkit
         config.image5d = np.rot90(config.image5d, load_rot90, (2, 3))
+
+    if (config.image5d is not None and load_subimage
+            and not config.image5d_is_roi):
+        # crop full image to bounds of sub-image
+        config.image5d = plot_3d.prepare_subimg(
+            config.image5d, size, offset)[None]
+        config.image5d_is_roi = True
 
     # add any additional image5d thresholds for multichannel images, such 
     # as those loaded without metadata for these settings

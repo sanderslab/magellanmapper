@@ -639,7 +639,8 @@ def main(process_args_only=False):
             # grid search(es) for the specified hyperparameter groups
             stats_dict = mlearn.grid_search(
                 profiles.roc_dict, config.roc, _iterate_file_processing,
-                config.filename, series, config.roi_offsets, config.roi_sizes)
+                config.filename, series, config.subimg_offsets,
+                config.subimg_sizes)
             parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
             from magmap.plot import plot_2d
             plot_2d.setup_style()

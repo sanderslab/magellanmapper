@@ -336,17 +336,19 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
     
     file_time_start = time()
     if config.saveroi:
-        # write the original, raw ROI
-        outfile_image5d_proc = open(filename_subimg, "wb")
-        np.save(outfile_image5d_proc, roi)
-        outfile_image5d_proc.close()
-    
-    outfile_info_proc = open(filename_blobs, "wb")
-    np.savez(outfile_info_proc, ver=BLOBS_NP_VER, segments=segments_all,
+        # write sub-image, which is in ROI (3D) format
+        outfile_subimg = open(filename_subimg, "wb")
+        np.save(outfile_subimg, roi)
+        outfile_subimg.close()
+
+    # save blobs
+    # TODO: only segments used; consider removing the rest except ver
+    outfile_blobs = open(filename_blobs, "wb")
+    np.savez(outfile_blobs, ver=BLOBS_NP_VER, segments=segments_all,
              resolutions=config.resolutions,
              basename=os.path.basename(config.filename),  # only save name
              offset=offset, roi_size=size)  # None unless explicitly set
-    outfile_info_proc.close()
+    outfile_blobs.close()
     file_save_time = time() - file_time_start
     
     # whole image benchmarking time

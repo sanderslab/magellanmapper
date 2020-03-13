@@ -161,24 +161,13 @@ def setup_images(path=None, series=None, offset=None, size=None,
 
         basename = None
         try:
-            # load processed blobs and sub-image metadata
+            # load processed blobs
             output_info = read_np_archive(np.load(filename_blobs))
             config.blobs = output_info["segments"]
             print("{} segments loaded".format(len(config.blobs)))
             if config.verbose:
                 detector.show_blobs_per_channel(config.blobs)
                 print(output_info)
-            # TODO: gets overwritten after loading original image's metadata
-            config.resolutions = output_info["resolutions"]
-            basename = output_info["basename"]
-            try:
-                # TODO: ROI offset/shape not used; remove?
-                roi_offset = _check_np_none(output_info["offset"])
-                shape = _check_np_none(output_info["roi_size"])
-                print("processed image offset: {}, roi_size: {}"
-                      .format(roi_offset, shape))
-            except KeyError as e:
-                libmag.printv("could not find key:", e)
         except (FileNotFoundError, KeyError) as e:
             print("Unable to load processed info file at {}"
                   .format(filename_blobs))

@@ -1,6 +1,45 @@
 # MagellanMapper v1.1 Release Notes
 
-## MagellanMapper v1.1.2
+## MagellanMapper v1.1.4
+
+### Changes
+
+GUI
+- Theming capabilities, including default and dark themes
+- Workaround for error if 3D points contain invalid values
+- Workaround to show labels when the first image displayed has no labels
+- Detection sphere slider is larger by making the max value compact
+- Fixed settings for overlaid multichannel images, allowing scalars in addition to sequences
+- Larger radius to select each ROI Editor draggable circle
+- Customize the number of serial 2D plot columns using the `--plot_labels layout` option
+- ROIs without any blobs can be saved
+- Truth blobs in verified plots are shown with their actual radius rather than as a fixed size and placed below detection blobs
+
+CLI
+- Added "".py"" extension to run script to allow cross-platofrm launch by double-click
+- Fixed detecting and activating Conda and Venv environments in the run script
+- Explicitly set truth database takes priority over the default path
+
+Atlas registration
+- No longer specifies left/right for each label since the laterality may change with mirroring
+- Test profile without any registration iterations
+- Alternate output paths can be given as directories in addition to full paths
+- Fixed regression in generating a new atlas
+
+Nuclei detection
+- Simplified setup for varying values at a single index during a grid search of a hyperparameter as an array
+- Total variation denoising weight is configurable
+
+I/O
+- Default zoom and magnification values are now 1 rather than -1, and total magnification is always shown as a non-negative value
+
+Server pipelines
+- Option to specify the plane orientation
+
+Python stats and plots
+- Shift ROC legends to the lower right to reduce the chance of obscuring data points
+
+## MagellanMapper v1.1.3
 
 ### Changes
 

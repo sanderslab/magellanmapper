@@ -125,31 +125,32 @@ def setup_images(path=None, series=None, offset=None, size=None,
     if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
                      config.ProcessTypes.EXPORT_BLOBS,
                      config.ProcessTypes.PROCESSING_MP):
-        # load a blobs archive, +/- a processed ROI image; assume filename is
-        # given in either whole image or ROI format
+        # load a blobs archive, +/- a sub-image; assume filename is
+        # given in either whole image or sub-image format
         print("Loading processed image files")
         filename_base = importer.filename_to_base(path, series)
-        filename_subimg = libmag.combine_paths(filename_base, config.SUFFIX_SUBIMG)
+        filename_subimg = libmag.combine_paths(
+            filename_base, config.SUFFIX_SUBIMG)
         filename_blobs = libmag.combine_paths(
             filename_base, config.SUFFIX_BLOBS)
 
         subimg_base = filename_base
         if (not os.path.exists(filename_subimg) and offset is not None
                 and size is not None):
-            # change image name to ROI format if the given file is not present
+            # change image name to sub-image format if file is not present
             subimg_base = stack_detect.make_subimage_name(
                 subimg_base, offset, size)
-            filename_subimg = libmag.combine_paths(subimg_base, config.SUFFIX_SUBIMG)
+            filename_subimg = libmag.combine_paths(
+                subimg_base, config.SUFFIX_SUBIMG)
             if os.path.exists(filename_subimg):
-                # if ROI-based image exists, will load associated blobs file
+                # if sub-image-based image exists, will load associated blobs
                 filename_blobs = libmag.combine_paths(
                     subimg_base, config.SUFFIX_BLOBS)
         
         try:
             # load sub-image if available
             config.image5d = np.load(filename_subimg, mmap_mode="r")
-            config.image5d = importer.roi_to_image5d(
-                config.image5d)
+            config.image5d = importer.roi_to_image5d(config.image5d)
             config.image5d_is_roi = True
             print("Loaded sub-image from {} with shape {}"
                   .format(filename_subimg, config.image5d.shape))
@@ -160,9 +161,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
 
         basename = None
         try:
-            # load processed blobs and ROI metadata
-            output_info = read_np_archive(
-                np.load(filename_blobs))
+            # load processed blobs and sub-image metadata
+            output_info = read_np_archive(np.load(filename_blobs))
             config.blobs = output_info["segments"]
             print("{} segments loaded".format(len(config.blobs)))
             if config.verbose:
@@ -190,14 +190,14 @@ def setup_images(path=None, series=None, offset=None, size=None,
         orig_info = None
         try:
             if basename:
-                # get original image metadata filename from ROI metadata;
-                # assume original metadata is in ROI file's dir; if ROI image
-                # not loaded, will use this path to fully load original image
-                # in case the given path is an ROI path
+                # get original image metadata filename from sub-image metadata;
+                # assume original metadata is in sub-image file's dir; if
+                # sub-image not loaded, will use this path to fully load
+                # original image in case the given path is an sub-image path
                 path_image5d = os.path.join(
                     os.path.dirname(filename_base), str(basename))
             if config.image5d is not None:
-                # after loading ROI image, load original image's metadata
+                # after loading sub-image, load original image's metadata
                 # for essential data such as vmin/vmax
                 _, orig_info = importer.make_filenames(path_image5d, series)
                 print("load original image metadata from:", orig_info)

@@ -206,7 +206,8 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
             mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_img = sitk.GetArrayFromImage(labels_img_sitk)
     # load blobs
-    blobs, scaling, _ = np_io.load_blobs(img_path, labels_img.shape, scale)
+    blobs, scaling, _ = np_io.load_blobs(
+        img_path, True, labels_img.shape, scale)
     if shape is not None:
         # scale blob coordinates and heat map to an alternative final shape
         scaling = np.divide(shape, np.divide(labels_img.shape, scaling))

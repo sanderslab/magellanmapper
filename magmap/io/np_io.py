@@ -20,11 +20,14 @@ from magmap.atlas import transformer
 from magmap.plot import plot_3d
 
 
-def load_blobs(img_path, scaled_shape=None, scale=None):
+def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
     """Load blobs from an archive and compute scaling.
     
     Args:
         img_path (str): Base path to blobs.
+        check_scaling (bool): True to check scaling, in which case
+            the scaling factor and scaled resolutions will be returned.
+            Defaults to False.
         scaled_shape (List): Shape of image to calculate scaling factor
             this factor cannot be found from a transposed file's metadata;
             defaults to None.
@@ -32,7 +35,8 @@ def load_blobs(img_path, scaled_shape=None, scale=None):
             transposed file; defaults to None.
 
     Returns:
-        :obj:`np.ndarray`, List, List: Array of blobs; sequence of scaling
+        :obj:`np.ndarray`, List, List: Array of blobs If ``check_scaling``
+        is True, also returns sequence of scaling
         factors to a scaled or resized image, or None if not loaded or given;
         and the resolutions of the full-sized image in which the blobs
         were detected. 
@@ -42,6 +46,10 @@ def load_blobs(img_path, scaled_shape=None, scale=None):
     blobs = info["segments"]
     print("loaded {} blobs".format(len(blobs)))
     # get scaling from source image, which can be rescaled/resized image 
+    if not check_scaling:
+        return blobs
+
+    # get scaling from source image, which can be rescaled/resized image
     # since contains scaling image
     load_size = config.register_settings["target_size"]
     img_path_transposed = transformer.get_transposed_image_path(

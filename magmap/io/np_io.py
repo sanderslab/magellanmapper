@@ -119,47 +119,43 @@ def setup_images(path=None, series=None, offset=None, size=None,
     # reset image5d
     config.image5d = None
     config.image5d_is_roi = False
-    path_image5d = path
-    
-    proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
-    if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
-                     config.ProcessTypes.EXPORT_BLOBS,
-                     config.ProcessTypes.PROCESSING_MP):
-        # load a blobs archive, +/- a sub-image; assume filename is
-        # given in either whole image or sub-image format
-        print("Loading processed image files")
-        filename_base = importer.filename_to_base(path, series)
-        filename_subimg = libmag.combine_paths(
-            filename_base, config.SUFFIX_SUBIMG)
-        filename_blobs = libmag.combine_paths(
-            filename_base, config.SUFFIX_BLOBS)
 
-        subimg_base = filename_base
-        if (not os.path.exists(filename_subimg) and offset is not None
-                and size is not None):
-            # change image name to sub-image format if file is not present
-            subimg_base = stack_detect.make_subimage_name(
-                subimg_base, offset, size)
-            filename_subimg = libmag.combine_paths(
-                subimg_base, config.SUFFIX_SUBIMG)
-            if os.path.exists(filename_subimg):
-                # if sub-image-based image exists, will load associated blobs
-                filename_blobs = libmag.combine_paths(
-                    subimg_base, config.SUFFIX_BLOBS)
-        
+    filename_base = importer.filename_to_base(path, series)
+    filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
+
+    if offset is not None and size is not None:
+        # change image name to sub-image format if file is not present
+        subimg_base = stack_detect.make_subimage_name(
+            filename_base, offset, size)
+        filename_subimg = libmag.combine_paths(
+            subimg_base, config.SUFFIX_SUBIMG)
+        if os.path.exists(filename_subimg):
+            # if sub-image-based image exists, will load associated blobs
+            filename_blobs = libmag.combine_paths(
+                subimg_base, config.SUFFIX_BLOBS)
+
         try:
             # load sub-image if available
             config.image5d = np.load(filename_subimg, mmap_mode="r")
             config.image5d = importer.roi_to_image5d(config.image5d)
+            # after loading sub-image, load original image's metadata
+            # for essential data such as vmin/vmax
+            _, orig_info = importer.make_filenames(path, series)
+            print("load original image metadata from:", orig_info)
+            importer.load_metadata(orig_info)
             config.image5d_is_roi = True
             print("Loaded sub-image from {} with shape {}"
                   .format(filename_subimg, config.image5d.shape))
-            filename_base = subimg_base
         except IOError:
             print("Ignored sub-image file from {} as unable to load"
                   .format(filename_subimg))
 
-        basename = None
+    proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
+    if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
+                     config.ProcessTypes.EXPORT_BLOBS,
+                     config.ProcessTypes.PROCESSING_MP):
+        # load a blobs archive
+        print("Loading blobs file")
         try:
             # load processed blobs
             output_info = read_np_archive(np.load(filename_blobs))
@@ -169,30 +165,11 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 detector.show_blobs_per_channel(config.blobs)
                 print(output_info)
         except (FileNotFoundError, KeyError) as e:
-            print("Unable to load processed info file at {}"
-                  .format(filename_blobs))
+            print("Unable to load blobs file", filename_blobs)
             if proc_type in (
                     config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_BLOBS):
                 # blobs expected but not found
                 raise e
-
-        orig_info = None
-        try:
-            if basename:
-                # get original image metadata filename from sub-image metadata;
-                # assume original metadata is in sub-image file's dir; if
-                # sub-image not loaded, will use this path to fully load
-                # original image in case the given path is an sub-image path
-                path_image5d = os.path.join(
-                    os.path.dirname(filename_base), str(basename))
-            if config.image5d is not None:
-                # after loading sub-image, load original image's metadata
-                # for essential data such as vmin/vmax
-                _, orig_info = importer.make_filenames(path_image5d, series)
-                print("load original image metadata from:", orig_info)
-                importer.load_metadata(orig_info)
-        except (FileNotFoundError, KeyError):
-            print("Unable to load original info file from", orig_info)
     
     if path and config.image5d is None:
         # load or import the main image stack
@@ -211,7 +188,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             # changes during attempting ROI load
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
             config.image5d = importer.read_file(
-                path_image5d, series, channel=config.channel, load=load)
+                path, series, channel=config.channel, load=load)
     
     if config.metadatas and config.metadatas[0]:
         # assign metadata from alternate file if given to supersede settings

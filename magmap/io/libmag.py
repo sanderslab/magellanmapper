@@ -1,4 +1,3 @@
-#!/bin/bash
 # Library functions shared within MagellanMapper
 # Author: David Young, 2017, 2019
 """Shared functions with the MagellanMapper package.

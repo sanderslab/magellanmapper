@@ -1,4 +1,3 @@
-#!/bin/bash
 # Config file for shared settings
 # Author: David Young, 2017, 2020
 """Configuration storage module.

@@ -1,4 +1,3 @@
-#!/bin/bash
 # Region labels export to data frames and CSV files
 # Author: David Young, 2019
 """Region labels export to data frames and CSV files.

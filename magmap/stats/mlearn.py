@@ -1,4 +1,3 @@
-#!/bin/bash
 # Machine learning for MagellanMapper
 # Author: David Young, 2017, 2019
 """Machine learning and output for MagellanMapper.

@@ -1,4 +1,3 @@
-#!/bin/bash
 # ROI Editor with serial 2D viewer and annotator
 # Author: David Young, 2018, 2020
 """ROI editing GUI in the MagellanMapper package.

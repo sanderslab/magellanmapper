@@ -1,4 +1,3 @@
-#!/bin/bash
 # Atlas refinement
 # Author: David Young, 2019
 """Refine atlases in 3D.

@@ -1,4 +1,3 @@
-#!/bin/bash
 # Plot Support for MagellanMapper
 # Author: David Young, 2018, 2020
 """Shared plotting functions with the MagellanMapper package.

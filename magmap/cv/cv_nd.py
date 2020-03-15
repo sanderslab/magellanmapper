@@ -1,4 +1,3 @@
-#!/bin/bash
 # Computer vision library functions for n-dimensions.
 # Author: David Young, 2018, 2019
 """Computer vision library functions for n-dimensions.

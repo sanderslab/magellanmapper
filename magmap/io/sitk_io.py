@@ -1,4 +1,3 @@
-#!/bin/bash
 # Input/Output for SimpleITK/SimpleElastix objects
 # Author: David Young, 2019
 """Input/Output for SimpleITK/SimpleElastix objects.

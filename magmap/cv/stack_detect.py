@@ -1,4 +1,3 @@
-#!/bin/bash
 # Detect blobs within a chunked stack through multiprocessing
 # Author: David Young, 2019, 2020
 """Stack blob detector.

@@ -1,4 +1,3 @@
-#!/bin/bash
 # Numpy archive import/export.
 # Author: David Young, 2019, 2020
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.

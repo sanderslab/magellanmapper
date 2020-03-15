@@ -1,4 +1,3 @@
-#!/bin/bash
 # Regional volume and density management
 # Author: David Young, 2018, 2019
 """Measure volumes and densities by regions.

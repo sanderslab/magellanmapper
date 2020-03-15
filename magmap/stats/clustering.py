@@ -1,4 +1,3 @@
-#!/bin/bash
 # Cluster measurement.
 # Author: David Young, 2019
 """Clustering measurements."""

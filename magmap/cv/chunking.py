@@ -1,4 +1,3 @@
-#!/bin/bash
 # Chunking image stacks
 # Author: David Young, 2017, 2018
 """Divides a region into smaller chunks and reassembles it."""

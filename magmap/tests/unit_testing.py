@@ -1,4 +1,3 @@
-#!/bin/bash
 # MagellanMapper unit testing
 # Author: David Young, 2018, 2019
 """Unit testing for the MagellanMapper package.

@@ -1,4 +1,3 @@
-#!/bin/bash
 # Atlas Editor with orthogonal viewing
 # Author: David Young, 2018, 2019
 """Atlas editing GUI in the MagellanMapper package.

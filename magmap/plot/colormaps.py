@@ -1,4 +1,3 @@
-#!/bin/bash
 # Colormaps for MagellanMapper
 # Author: David Young, 2018, 2020
 """Custom colormaps for MagellanMapper.

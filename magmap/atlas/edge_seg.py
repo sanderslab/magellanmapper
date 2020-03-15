@@ -1,4 +1,3 @@
-#!/bin/bash
 # Segmentation based on edge detection
 # Author: David Young, 2019
 """Re-segment atlases based on edge detections.

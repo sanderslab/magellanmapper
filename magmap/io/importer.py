@@ -1,4 +1,3 @@
-#!/bin/bash
 # Image stack importer
 # Author: David Young, 2017, 2019
 """Imports image stacks using Bioformats.

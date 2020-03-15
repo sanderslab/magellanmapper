@@ -1,4 +1,3 @@
-#!/bin/bash
 # Transform images with multiprocessing
 # Author: David Young, 2019
 """Transform large images with multiprocessing, including up/downsampling 

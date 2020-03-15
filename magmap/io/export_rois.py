@@ -1,4 +1,3 @@
-#!/bin/bash
 # ROI exporter for MagellanMapper
 # Author: David Young, 2017, 2019
 """ROI exporter for MagellanMapper.

@@ -1,4 +1,3 @@
-#!/bin/bash
 # Atlas measurements and statistics
 # Author: David Young, 2019
 """Low-level measurement of atlases and statistics generation.

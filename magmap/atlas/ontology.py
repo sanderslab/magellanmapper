@@ -1,4 +1,3 @@
-#!/bin/bash
 # Anatomical ontology management
 # Author: David Young, 2019
 """Handle ontology lookup.

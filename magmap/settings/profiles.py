@@ -1,4 +1,3 @@
-#!/bin/bash
 # Profile settings
 # Author: David Young, 2019, 2020
 """Profile settings to setup common configurations.

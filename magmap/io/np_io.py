@@ -42,10 +42,15 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
         were detected. 
 
     """
-    info = np.load(libmag.combine_paths(img_path, config.SUFFIX_BLOBS))
+    # load blobs and display counts
+    path = libmag.combine_paths(img_path, config.SUFFIX_BLOBS)
+    print("Loading blobs from", path)
+    info = read_np_archive(np.load(path))
     blobs = info["segments"]
     print("loaded {} blobs".format(len(blobs)))
-    # get scaling from source image, which can be rescaled/resized image 
+    if config.verbose:
+        detector.show_blobs_per_channel(blobs)
+        print(info)
     if not check_scaling:
         return blobs
 

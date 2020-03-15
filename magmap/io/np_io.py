@@ -137,17 +137,14 @@ def setup_images(path=None, series=None, offset=None, size=None,
 
     filename_base = importer.filename_to_base(path, series)
     filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
+    subimg_base = None
 
     if load_subimage:
-        # change image name to sub-image format if file is not present
+        # load a saved sub-image file if available
         subimg_base = stack_detect.make_subimage_name(
             filename_base, offset, size)
         filename_subimg = libmag.combine_paths(
             subimg_base, config.SUFFIX_SUBIMG)
-        if os.path.exists(filename_subimg):
-            # if sub-image-based image exists, will load associated blobs
-            filename_blobs = libmag.combine_paths(
-                subimg_base, config.SUFFIX_BLOBS)
 
         try:
             # load sub-image if available
@@ -173,7 +170,23 @@ def setup_images(path=None, series=None, offset=None, size=None,
                      config.ProcessTypes.PROCESSING_MP):
         # load a blobs archive
         try:
-            config.blobs = load_blobs(filename_base)
+            if subimg_base:
+                try:
+                    # load blobs generated from sub-image
+                    config.blobs = load_blobs(subimg_base)
+                except (FileNotFoundError, KeyError):
+                    # fallback to loading from full image blobs and getting
+                    # a subset, shifting them relative to sub-image offset
+                    print("Unable to load blobs file based on {}, will try "
+                          "from {}".format(subimg_base, filename_base))
+                    config.blobs = load_blobs(filename_base)
+                    config.blobs, _ = detector.get_blobs_in_roi(
+                        config.blobs, offset, size, reverse=False)
+                    detector.shift_blob_rel_coords(
+                        config.blobs, np.multiply(offset, -1))
+            else:
+                # load full image blobs
+                config.blobs = load_blobs(filename_base)
         except (FileNotFoundError, KeyError) as e2:
             print("Unable to load blobs file")
             if proc_type in (

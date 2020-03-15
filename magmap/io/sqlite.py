@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # SQLite database connection
 # Author: David Young, 2017, 2020
 """Connects with a SQLite database for experiment and image

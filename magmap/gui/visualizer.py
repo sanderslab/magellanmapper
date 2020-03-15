@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 # 3D image visualization
 # Author: David Young, 2017, 2020
 """3D Visualization GUI.

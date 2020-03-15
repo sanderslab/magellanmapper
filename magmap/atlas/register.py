@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 # Image registration
 # Author: David Young, 2017, 2019
 """Register images to one another.

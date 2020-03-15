@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # 2D plot image and graph plotter
 # Author: David Young, 2017, 2019
 """Plot 2D views of imaging data and graphs."""

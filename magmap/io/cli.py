@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 # Command line parsing and setup
 # Author: David Young, 2017, 2020
 """Command line parser and and environment setup for MagellanMapper.

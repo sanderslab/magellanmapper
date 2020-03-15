@@ -172,21 +172,14 @@ def setup_images(path=None, series=None, offset=None, size=None,
                      config.ProcessTypes.EXPORT_BLOBS,
                      config.ProcessTypes.PROCESSING_MP):
         # load a blobs archive
-        print("Loading blobs file")
         try:
-            # load processed blobs
-            output_info = read_np_archive(np.load(filename_blobs))
-            config.blobs = output_info["segments"]
-            print("{} segments loaded".format(len(config.blobs)))
-            if config.verbose:
-                detector.show_blobs_per_channel(config.blobs)
-                print(output_info)
-        except (FileNotFoundError, KeyError) as e:
-            print("Unable to load blobs file", filename_blobs)
+            config.blobs = load_blobs(filename_base)
+        except (FileNotFoundError, KeyError) as e2:
+            print("Unable to load blobs file")
             if proc_type in (
                     config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_BLOBS):
                 # blobs expected but not found
-                raise e
+                raise e2
     
     if path and config.image5d is None:
         # load or import the main image stack

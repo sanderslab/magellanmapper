@@ -750,8 +750,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
         from magmap.io import export_rois
         export_rois.blobs_to_csv(config.blobs, filename_base)
         
-    elif proc_type in (
-            config.ProcessTypes.PROCESSING, config.ProcessTypes.PROCESSING_MP):
+    elif proc_type is config.ProcessTypes.DETECT:
         # detect blobs in the full image
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, config.image5d, offset, roi_size,

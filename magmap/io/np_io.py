@@ -166,7 +166,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
     proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
     if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
                      config.ProcessTypes.EXPORT_BLOBS,
-                     config.ProcessTypes.PROCESSING_MP):
+                     config.ProcessTypes.DETECT):
         # load a blobs archive
         try:
             if subimg_base:

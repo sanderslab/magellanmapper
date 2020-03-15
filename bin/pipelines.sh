@@ -448,7 +448,7 @@ if [[ $gui -eq 1 ]]; then
   # Process a sub-stack and load it
   substack_offset=100,800,410
   substack_size=800,100,48
-  python -m magmap.io.cli --img "$IMG" --proc processing_mp --channel 0 -v \
+  python -m magmap.io.cli --img "$IMG" --proc detect --channel 0 -v \
     --offset $substack_offset --size $substack_size \
     --microscope ${microscope[@]}
   IMG_ROI="${IMG_PATH_BASE}_(${substack_offset})x(${substack_size}).${EXT}"
@@ -644,7 +644,7 @@ if [[ "$whole_img_proc" != "" ]]; then
   # Process an entire image locally the given channel(s), chunking the 
   # image into multiple smaller stacks to minimize RAM usage and 
   # further chunking to run by multiprocessing for efficiency
-  python -u -m magmap.io.cli --img "$clr_img" --proc processing_mp \
+  python -u -m magmap.io.cli --img "$clr_img" --proc detect \
     --channel $channel --microscope "${microscope[@]}" "${EXTRA_ARGS[@]}"
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then

@@ -97,10 +97,9 @@ resolutions = None
 magnification = 1.0  #: float: objective magnification
 zoom = 1.0  #: float: objective zoom
 
-#: :class:`Enum`: main processing tasks
-# PROC_TYPES: Processing modes. ``importonly`` imports an image stack and 
-# exits non-interactively. ``processing`` processes and segments the 
-# entire image stack and exits non-interactively. ``load`` loads already 
+#: :class:`Enum`: Whole image processing task enumerations.
+# ``importonly`` imports an image stack and
+# exits non-interactively. ``load`` loads already
 # processed images and segments. ``extract`` extracts a single plane 
 # using the z-value from the offset and exits. ``export_rois`` 
 # exports ROIs from the current database to serial 2D plots. 
@@ -110,7 +109,9 @@ zoom = 1.0  #: float: objective zoom
 # ``export_blobs`` exports blob coordinates/radii to compressed CSV file.
 ProcessTypes = Enum(
     "ProcessTypes", (
-        "IMPORT_ONLY", "PROCESSING", "PROCESSING_MP", "LOAD", "EXTRACT", 
+        "IMPORT_ONLY",
+        "DETECT",  # whole image blob detection
+        "LOAD", "EXTRACT",
         "EXPORT_ROIS", "TRANSFORM", "ANIMATED", "EXPORT_BLOBS"
     )
 )

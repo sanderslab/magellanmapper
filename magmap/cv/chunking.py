@@ -1,5 +1,5 @@
 # Chunking image stacks
-# Author: David Young, 2017, 2018
+# Author: David Young, 2017, 2020
 """Divides a region into smaller chunks and reassembles it."""
 
 import numpy as np
@@ -12,6 +12,7 @@ from magmap.io import libmag
 # sub ROI for overlap.
 OVERLAP_FACTOR = 5
 
+
 def calc_overlap():
     """Calculate overlap based on scaling factor and :const:``OVERLAP_FACTOR``.
     
@@ -21,6 +22,7 @@ def calc_overlap():
     """
     return np.ceil(np.multiply(detector.calc_scaling_factor(),
                                OVERLAP_FACTOR)).astype(int)
+
 
 def _num_units(size, max_pixels):
     """Calculates number of sub regions.
@@ -34,6 +36,7 @@ def _num_units(size, max_pixels):
     num = np.floor_divide(size, max_pixels)
     num[np.remainder(size, max_pixels) > 0] += 1
     return num.astype(np.int)
+
 
 def _bounds_side(size, max_pixels, overlap, coord, axis):
     """Calculates the boundaries of a side based on where in the
@@ -56,6 +59,7 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
     if end > size[axis]:
         end = size[axis]
     return (int(start), int(end))
+
 
 def stack_splitter(roi, max_pixels, overlap=None):
     """Splits a stack into multiple sub regions.
@@ -97,6 +101,7 @@ def stack_splitter(roi, max_pixels, overlap=None):
                 sub_rois_offsets[coord] = (
                     bounds[0][0], bounds[1][0], bounds[2][0])
     return sub_rois, sub_rois_offsets
+
 
 def merge_split_stack(sub_rois, overlap):
     """Merges sub regions back into a single stack.
@@ -148,6 +153,7 @@ def merge_split_stack(sub_rois, overlap):
             merged = np.concatenate((merged, merged_y), axis=0)
     return merged
 
+
 def get_split_stack_total_shape(sub_rois, overlap=None):
     """Get the shape of a chunked stack.
     
@@ -193,6 +199,7 @@ def get_split_stack_total_shape(sub_rois, overlap=None):
     libmag.printv("final_shape: {}".format(final_shape))
     return final_shape
 
+
 def merge_split_stack2(sub_rois, overlap, offset, output):
     """Merges sub regions back into a single stack, saving directly to 
     an output variable such as a memmapped array.
@@ -237,6 +244,7 @@ def merge_split_stack2(sub_rois, overlap, offset, output):
             merged_coord[1] += sub_roi_shape[1]
         merged_coord[1] = 0
         merged_coord[0] += sub_roi_shape[0]
+
 
 def merge_blobs(blob_rois):
     # combine all blobs into a master list so that each overlapping region

@@ -15,13 +15,14 @@ import numpy as np
 import pandas as pd
 
 from magmap.cv import chunking
-from magmap.settings import config
 from magmap.cv import detector
-from magmap.io import importer
-from magmap.io import libmag
-from magmap.plot import plot_3d
-from magmap.io import sqlite
+from magmap.io import cli
 from magmap.io import df_io
+from magmap.io import libmag
+from magmap.io import np_io
+from magmap.io import sqlite
+from magmap.plot import plot_3d
+from magmap.settings import config
 
 # Numpy archive for blobs versions:
 # 0: initial version
@@ -55,7 +56,7 @@ class StackDetector(object):
     exclude_border = None
     
     @classmethod
-    def set_data(cls, img, sub_rois_shape, denoise_max_shape, exclude_border):
+    def set_data(cls, img, last_coord, denoise_max_shape, exclude_border):
         """Set the class attributes to be shared during multiprocessing.
 
         Args:
@@ -66,12 +67,19 @@ class StackDetector(object):
 
         """
         cls.img = img
-        cls.last_coord = np.subtract(sub_rois_shape, 1)
+        cls.last_coord = last_coord
         cls.denoise_max_shape = denoise_max_shape
         cls.exclude_border = exclude_border
-    
+
     @classmethod
-    def detect_sub_roi(cls, coord, sub_roi_slices, offset):
+    def detect_sub_roi_from_data(cls, coord, sub_roi_slices, offset):
+        return cls.detect_sub_roi(
+            coord, sub_roi_slices, offset, cls.last_coord,
+            cls.denoise_max_shape, cls.exclude_border)
+
+    @classmethod
+    def detect_sub_roi(cls, coord, sub_roi_slices, offset, last_coord,
+                       denoise_max_shape, exclude_border, img_path=None):
         """Perform 3D blob detection within a sub-ROI.
         
         Args:
@@ -86,15 +94,19 @@ class StackDetector(object):
             identify the sub-ROI position and an array of detected blobs.
 
         """
+        if cls.img is None and img_path:
+            cli.main(True)
+            np_io.setup_images(img_path)
+            cls.img = config.image5d[0]
         sub_roi = cls.img[sub_roi_slices]
         print("detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."
-              .format(coord, cls.last_coord, tuple(offset.astype(int)),
+              .format(coord, last_coord, tuple(offset.astype(int)),
                       sub_roi.shape))
         
-        if cls.denoise_max_shape is not None:
+        if denoise_max_shape is not None:
             # further split sub-ROI for preprocessing locally
             denoise_roi_slices, _ = chunking.stack_splitter(
-                sub_roi.shape, cls.denoise_max_shape)
+                sub_roi.shape, denoise_max_shape)
             for z in range(denoise_roi_slices.shape[0]):
                 for y in range(denoise_roi_slices.shape[1]):
                     for x in range(denoise_roi_slices.shape[2]):
@@ -122,12 +134,12 @@ class StackDetector(object):
             chunking.merge_split_stack2(denoise_roi_slices, None, 0, merged)
             sub_roi = merged
         
-        if cls.exclude_border is None:
+        if exclude_border is None:
             exclude = None
         else:
-            exclude = np.array([cls.exclude_border, cls.exclude_border])
+            exclude = np.array([exclude_border, exclude_border])
             exclude[0, np.equal(coord, 0)] = 0
-            exclude[1, np.equal(coord, cls.last_coord)] = 0
+            exclude[1, np.equal(coord, last_coord)] = 0
         segments = detector.detect_blobs(sub_roi, config.channel, exclude)
         #print("segs before (offset: {}):\n{}".format(offset, segments))
         if segments is not None:
@@ -405,18 +417,28 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
     """
     # detect nuclei in each sub-ROI, passing an index to access each 
     # sub-ROI to minimize pickling
-    StackDetector.set_data(
-        img, sub_roi_slices.shape, denoise_max_shape, exclude_border)
+    #mp.set_start_method("spawn")
+    is_fork = _is_fork()
+    last_coord = np.subtract(sub_roi_slices.shape, 1)
+    if is_fork:
+        StackDetector.set_data(
+            img, last_coord, denoise_max_shape, exclude_border)
     pool = mp.Pool()
     pool_results = []
     for z in range(sub_roi_slices.shape[0]):
         for y in range(sub_roi_slices.shape[1]):
             for x in range(sub_roi_slices.shape[2]):
                 coord = (z, y, x)
-                pool_results.append(pool.apply_async(
-                    StackDetector.detect_sub_roi,
-                    args=(coord, sub_roi_slices[coord],
-                          sub_rois_offsets[coord])))
+                args = [coord, sub_roi_slices[coord], sub_rois_offsets[coord]]
+                if is_fork:
+                    pool_results.append(pool.apply_async(
+                        StackDetector.detect_sub_roi_from_data, args=args))
+                else:
+                    args.extend(
+                        (last_coord, denoise_max_shape, exclude_border,
+                         config.filename))
+                    pool_results.append(pool.apply_async(
+                        StackDetector.detect_sub_roi, args=args))
     
     # retrieve blobs and assign to object array corresponding to sub_rois
     seg_rois = np.zeros(sub_roi_slices.shape, dtype=object)
@@ -453,17 +475,20 @@ class StackPruner(object):
         cls.blobs_to_prune = blobs_to_prune
     
     @classmethod
-    def prune_overlap(cls, i):
+    def prune_overlap_by_index(cls, i):
         """Prune an overlapping region.
         
         Args:
-            i: Index in :attr:``blobs_to_prune``.
+            i (int): Index in :attr:``blobs_to_prune``.
         
         Returns:
             The results from 
             :meth:``detector.remove_close_blobs_within_sorted_array``.
         """
-        pruner = cls.blobs_to_prune[i]
+        return cls.prune_overlap(i, cls.blobs_to_prune[i])
+
+    @classmethod
+    def prune_overlap(cls, i, pruner):
         blobs, axis, tol, blobs_next = pruner
         axis_col = 10 + axis
         #print("orig blobs in axis {}, i {}\n{}".format(axis, i, blobs))
@@ -605,18 +630,23 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
                 elif blobs_non_ol is not None:
                     blobs_all_non_ol = np.concatenate(
                         (blobs_all_non_ol, blobs_non_ol))
-                
-                #blobs_to_prune.append((blobs_ol, tol, blobs_ol_next))
+
                 blobs_to_prune.append((blobs_ol, axis, tol, blobs_ol_next))
-            
-            StackPruner.set_data(blobs_to_prune)
+
+            is_fork = _is_fork()
+            if is_fork:
+                StackPruner.set_data(blobs_to_prune)
             pool = mp.Pool()
             pool_results = []
-            for i in range(len(blobs_to_prune)):
-                # prune blobs from overlapping regions via multiprocessing, 
-                # using a separate class to avoid pickling input blobs
-                pool_results.append(pool.apply_async(
-                    StackPruner.prune_overlap, args=(i, )))
+            for j in range(len(blobs_to_prune)):
+                if is_fork:
+                    # prune blobs from overlapping regions via multiprocessing,
+                    # using a separate class to avoid pickling input blobs
+                    pool_results.append(pool.apply_async(
+                        StackPruner.prune_overlap_by_index, args=(j, )))
+                else:
+                    pool_results.append(pool.apply_async(
+                        StackPruner.prune_overlap, args=(j, blobs_to_prune[j])))
             
             # collect all the pruned blob lists
             blobs_all_ol = None
@@ -651,3 +681,7 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
     df = pd.DataFrame(blob_ratios)
     
     return blobs_all, df
+
+
+def _is_fork():
+    return mp.get_start_method(False) == "fork"

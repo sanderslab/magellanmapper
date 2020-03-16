@@ -666,13 +666,13 @@ fi
 ####################################
 # Post-Processing
 
-if [[ ! -z "$output_path" ]]; then
+if [[ -n "$output_path" ]]; then
   # include nohup output script for upload
   #attach="`sed -e "s/&/&amp;/" -e "s/</&lt;/" -e "s/>/&g;/" $output_path`"
   output_stats_paths+=("$output_path")
 fi
 
-if [[ ! -z "$s3_exp_path" && "${#output_stats_paths[@]}" -gt 0 ]]; then
+if [[ -n "$S3_DIR" && "${#output_stats_paths[@]}" -gt 0 ]]; then
   # compress and upload output stat files
   compress_upload "$(basename "${clr_img_base}"_stats)" \
     "zip" "${output_stats_paths[@]}"

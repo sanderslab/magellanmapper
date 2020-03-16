@@ -131,6 +131,42 @@ info_npz=""
 proc_npz=""
 
 ############################################
+# Check for existing files in MagellanMapper Numpy format
+# Globals:
+#   $OUT_DIR
+# Arguments:
+#   1: Filename style, passed to setup_clrbrain_filenames
+# Returns:
+#   None
+############################################
+get_image_files() {
+  setup_clrbrain_filenames "$clr_img_base" "1"
+  echo -n "Looking for ${image5d_npz}..."
+  if [[ ! -e "$image5d_npz" ]]; then
+    # Get stitched image files from S3
+    start=$SECONDS
+    name="${image5d_npz%.*}"
+    name="$(basename "$name").${compression}"
+    echo "could not find locally, attempting to download $name from S3..."
+    mkdir "$OUT_DIR"
+    get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"
+    if [[ "$?" -eq 0 ]]; then
+      # try getting individual .npz files if archive not present
+      echo -n "Could not find compressed files, attempting to download "
+      echo "uncompressed files..."
+      for npz in "$image5d_npz" "$info_npz"; do
+        echo "...attempting to download ${npz}..."
+        aws s3 cp "${s3_exp_path}/$(basename "$npz")" "$OUT_DIR"
+      done
+    fi
+    summary_msg+=(
+      "MagellanMapper image download and decompression time: $((SECONDS - start)) s")
+  else
+    echo "found"
+  fi
+}
+
+############################################
 # Download compressed file if available.
 # Globals:
 #   COMPRESSION_EXTS
@@ -241,18 +277,29 @@ compress_upload() {
 #   info_npz
 #   proc_npz
 # Arguments:
-#   Base path from which to construct the filenames, typically 
-#   a full path without extension or series information.
+#   1: Base path from which to construct the filenames, typically
+#      a full path without extension or series information.
+#   2: "series" to use the pre-v1.2 style naming including series string;
+#      defaults to use v1.2+ style naming.
 # Returns:
 #   None
 ############################################
 setup_clrbrain_filenames() {
-  local series_filled
-  series_filled="$(printf %05d $series)"
-  local npz_img_base="${1}_${series_filled}"
-  image5d_npz="${npz_img_base}_image5d.npz"
-  info_npz="${npz_img_base}_info.npz"
-  proc_npz="${npz_img_base}_info_proc.npz"
+  if [[ "$2" = "series" ]]; then
+    # series-based naming (pre-v1.2)
+    local series_filled
+    series_filled="$(printf %05d $series)"
+    local npz_img_base="${1}_${series_filled}"
+    image5d_npz="${npz_img_base}_image5d.npz"
+    info_npz="${npz_img_base}_info.npz"
+    proc_npz="${npz_img_base}_info_proc.npz"
+  else
+    # v1.2+ style naming, which does not have the series string and
+    # and changes the file suffixes
+    image5d_npz="${1}_image5d.npy"
+    info_npz="${1}_meta.npz"
+    proc_npz="${1}_blobs.npz"
+  fi
 }
 
 ############################################
@@ -551,30 +598,11 @@ fi
 # At this point, you can delete the TIFF dir/image since it has been 
 # exported into a Numpy-based format for loading into MagellanMapper
 
-# Check for existing files in MagellanMapper Numpy format
-setup_clrbrain_filenames "$clr_img_base"
-echo -n "Looking for ${image5d_npz}..."
+# get local image file or download from cloud using v1.2+ style naming
+get_image_files ""
 if [[ ! -e "$image5d_npz" ]]; then
-  # Get stitched image files from S3
-  start=$SECONDS
-  name="${image5d_npz%.*}"
-  name="$(basename "$name").${compression}"
-  echo "could not find locally, attempting to download $name from S3..."
-  mkdir "$OUT_DIR"
-  get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"
-  if [[ "$?" -eq 0 ]]; then
-    # try getting individual .npz files if archive not present
-    echo -n "Could not find compressed files, attempting to download "
-    echo "uncompressed files..."
-    for npz in "$image5d_npz" "$info_npz"; do
-      echo "...attempting to download ${npz}..."
-      aws s3 cp "${s3_exp_path}/$(basename "$npz")" "$OUT_DIR"
-    done
-  fi
-  summary_msg+=(
-    "MagellanMapper image download and decompression time: $((SECONDS - start)) s")
-else
-  echo "found"
+  # fall back to pre-v1.2 naming
+  get_image_files series
 fi
 
 # output size in KB in cross-platform way

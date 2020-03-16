@@ -441,21 +441,8 @@ if [[ $gui -eq 1 ]]; then
 
   # Import raw image stack into Numpy array if it doesn't exist already
   #python -u -m magmap.io.cli --img "$IMG" --channel 0 --proc import_only
-  
-  # Load ROI, starting at the given offset and ROI size
-  
-  : '
-  # Process a sub-stack and load it
-  substack_offset=100,800,410
-  substack_size=800,100,48
-  python -m magmap.io.cli --img "$IMG" --proc detect --channel 0 -v \
-    --offset $substack_offset --size $substack_size \
-    --microscope ${microscope[@]}
-  IMG_ROI="${IMG_PATH_BASE}_(${substack_offset})x(${substack_size}).${EXT}"
-  ./run.py --img "$IMG_ROI" -v --channel 0 -v --proc load \
-    --offset $substack_offset --size $substack_size --savefig pdf \
-    --microscope ${microscope[@]}
-  '
+
+  # Load image and set ROI
   ./run.py --img "$IMG" --offset "$offset" --size "$size" --savefig pdf \
     --microscope "${microscope[@]}"
   

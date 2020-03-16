@@ -25,13 +25,16 @@ def calc_overlap():
 
 
 def _num_units(size, max_pixels):
-    """Calculates number of sub regions.
+    """Calculates the shape of sub-regions that would comprise a total
+    shape of ``size`` with ``max_pixels`` per dimension.
     
     Args:
-        size: Size of the entire region
+        size (List[int]): Shape of the entire region.
+        max_pixels (int): Max number of pixels per dimension.
     
     Returns:
-        The size of sub-ROIs array.
+        :obj:`np.ndarray`: Sequence of number of sub-regions for each
+        dimension in ``size``.
     """
     num = np.floor_divide(size, max_pixels)
     num[np.remainder(size, max_pixels) > 0] += 1
@@ -49,7 +52,7 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
         axis: The axis to calculate.
     
     Returns:
-        Boundary of sides in (z, y, x) order as a (start, end) tuple.
+        int, int: Boundary of sides for the given ``axis`` as ``start, end``.
     """
     pixels = max_pixels[axis]
     start = coord[axis] * pixels
@@ -58,7 +61,7 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
         end += overlap[axis]
     if end > size[axis]:
         end = size[axis]
-    return (int(start), int(end))
+    return int(start), int(end)
 
 
 def stack_splitter(roi, max_pixels, overlap=None):

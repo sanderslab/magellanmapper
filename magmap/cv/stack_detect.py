@@ -18,8 +18,8 @@ from magmap.cv import chunking
 from magmap.cv import detector
 from magmap.io import cli
 from magmap.io import df_io
+from magmap.io import importer
 from magmap.io import libmag
-from magmap.io import np_io
 from magmap.io import sqlite
 from magmap.plot import plot_3d
 from magmap.settings import config
@@ -44,7 +44,8 @@ class StackDetector(object):
     
     Attributes:
         img (:obj:`np.ndarray`): Full image array.
-        last_coord (:obj:`np.ndarray`): Coordinates of last sub-ROI.
+        last_coord (:obj:`np.ndarray`): Indices of last sub-ROI given as
+            coordinates in z,y,x.
         denoise_max_shape (Tuple[int]): Maximum shape of each unit within
             each sub-ROI for denoising.
         exclude_border (bool): Sequence of border pixels in x,y,z to exclude;
@@ -57,14 +58,9 @@ class StackDetector(object):
     
     @classmethod
     def set_data(cls, img, last_coord, denoise_max_shape, exclude_border):
-        """Set the class attributes to be shared during multiprocessing.
+        """Set the class attributes to be shared during forked multiprocessing.
 
-        Args:
-            img (:obj:`np.ndarray`): See attributes.
-            sub_rois_shape (Tuple[int]): Number of sub-ROIs along each axis.
-            denoise_max_shape (Tuple[int]): See attributes.
-            exclude_border (bool): See attributes.
-
+        See attributes for args.
         """
         cls.img = img
         cls.last_coord = last_coord
@@ -73,32 +69,54 @@ class StackDetector(object):
 
     @classmethod
     def detect_sub_roi_from_data(cls, coord, sub_roi_slices, offset):
-        return cls.detect_sub_roi(
-            coord, sub_roi_slices, offset, cls.last_coord,
-            cls.denoise_max_shape, cls.exclude_border)
+        """Perform 3D blob detection within a sub-ROI using data stored
+        as class attributes for forked multiprocessing.
 
-    @classmethod
-    def detect_sub_roi(cls, coord, sub_roi_slices, offset, last_coord,
-                       denoise_max_shape, exclude_border, img_path=None):
-        """Perform 3D blob detection within a sub-ROI.
-        
         Args:
             coord (Tuple[int]): Coordinate of the sub-ROI in the order z,y,x.
             sub_roi_slices (Tuple[slice]): Sequence of slices within
                 :attr:``img`` defining the sub-ROI.
             offset (Tuple[int]): Offset of the sub-ROI within the full ROI,
                 in z,y,x.
+
+        Returns:
+            Tuple[int], :obj:`np.ndarray`: The coordinate given back again to
+            identify the sub-ROI position and an array of detected blobs.
+
+        """
+        return cls.detect_sub_roi(
+            coord, offset, cls.last_coord,
+            cls.denoise_max_shape, cls.exclude_border, cls.img[sub_roi_slices])
+
+    @classmethod
+    def detect_sub_roi(cls, coord, offset, last_coord, denoise_max_shape,
+                       exclude_border, sub_roi, img_path=None):
+        """Perform 3D blob detection within a sub-ROI without accessing
+        class attributes, such as for spawned multiprocessing.
+        
+        Args:
+            coord (Tuple[int]): Coordinate of the sub-ROI in the order z,y,x.
+            offset (Tuple[int]): Offset of the sub-ROI within the full ROI,
+                in z,y,x.
+            last_coord (:obj:`np.ndarray`): See attributes.
+            denoise_max_shape (Tuple[int]): See attributes.
+            exclude_border (bool): See attributes.
+            sub_roi (:obj:`np.ndarray`): Array in which to perform detections.
+            img_path (str): Path from which to load metadatat; defaults to None.
+                If given, the command line arguments will be reloaded to
+                set up the image and processing parameters.
         
         Returns:
             Tuple[int], :obj:`np.ndarray`: The coordinate given back again to
             identify the sub-ROI position and an array of detected blobs.
 
         """
-        if cls.img is None and img_path:
+        if img_path:
+            # reload command-line parameters and image metadata, which is
+            # required if run from a spawned (not forked) process
             cli.main(True)
-            np_io.setup_images(img_path)
-            cls.img = config.image5d[0]
-        sub_roi = cls.img[sub_roi_slices]
+            _, orig_info = importer.make_filenames(img_path)
+            importer.load_metadata(orig_info)
         print("detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."
               .format(coord, last_coord, tuple(offset.astype(int)),
                       sub_roi.shape))
@@ -429,16 +447,20 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
         for y in range(sub_roi_slices.shape[1]):
             for x in range(sub_roi_slices.shape[2]):
                 coord = (z, y, x)
-                args = [coord, sub_roi_slices[coord], sub_rois_offsets[coord]]
                 if is_fork:
+                    # use variables stored in class
                     pool_results.append(pool.apply_async(
-                        StackDetector.detect_sub_roi_from_data, args=args))
+                        StackDetector.detect_sub_roi_from_data,
+                        args=(coord, sub_roi_slices[coord],
+                              sub_rois_offsets[coord])))
                 else:
-                    args.extend(
-                        (last_coord, denoise_max_shape, exclude_border,
-                         config.filename))
+                    # pickle full set of variables including sub-ROI and
+                    # filename from which to load image parameters
                     pool_results.append(pool.apply_async(
-                        StackDetector.detect_sub_roi, args=args))
+                        StackDetector.detect_sub_roi,
+                        args=(coord, sub_rois_offsets[coord], last_coord,
+                              denoise_max_shape, exclude_border,
+                              img[sub_roi_slices[coord]], config.filename)))
     
     # retrieve blobs and assign to object array corresponding to sub_rois
     seg_rois = np.zeros(sub_roi_slices.shape, dtype=object)
@@ -645,6 +667,7 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
                     pool_results.append(pool.apply_async(
                         StackPruner.prune_overlap_by_index, args=(j, )))
                 else:
+                    # for spawned methods, need to pickle the blobs
                     pool_results.append(pool.apply_async(
                         StackPruner.prune_overlap, args=(j, blobs_to_prune[j])))
             

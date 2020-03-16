@@ -25,7 +25,7 @@ from magmap.io import df_io
 
 # Numpy archive for blobs versions:
 # 0: initial version
-# 1: added resolutions, basene, offset, roi_size fields
+# 1: added resolutions, basename, offset, roi_size fields
 # 2: added archive version number
 BLOBS_NP_VER = 2
 
@@ -42,76 +42,84 @@ class StackDetector(object):
     without global variables.
     
     Attributes:
-        sub_rois: Numpy object array containing chunked sub-ROIs within a 
-            stack.
-        sub_rois_offsets: Numpy object array of the same shape as 
-            ``sub_rois`` with offsets in z,y,x corresponding to each 
-            sub-ROI. Offets are used to transpose blobs into 
-            absolute coordinates.
-        denoise_max_shape: Maximum shape of each unit within each sub-ROI 
-            for denoising.
-        exclude_border: Sequence of border pixels in x,y,z to exclude;
+        img (:obj:`np.ndarray`): Full image array.
+        last_coord (:obj:`np.ndarray`): Coordinates of last sub-ROI.
+        denoise_max_shape (Tuple[int]): Maximum shape of each unit within
+            each sub-ROI for denoising.
+        exclude_border (bool): Sequence of border pixels in x,y,z to exclude;
             defaults to None.
     """
-    sub_rois = None
-    sub_rois_offsets = None
+    img = None
+    last_coord = None
     denoise_max_shape = None
     exclude_border = None
     
     @classmethod
-    def set_data(cls, sub_rois, sub_rois_offsets, denoise_max_shape, 
-                 exclude_border):
-        """Set the class attributes to be shared during multiprocessing."""
-        cls.sub_rois = sub_rois
-        cls.sub_rois_offsets = sub_rois_offsets
+    def set_data(cls, img, sub_rois_shape, denoise_max_shape, exclude_border):
+        """Set the class attributes to be shared during multiprocessing.
+
+        Args:
+            img (:obj:`np.ndarray`): See attributes.
+            sub_rois_shape (Tuple[int]): Number of sub-ROIs along each axis.
+            denoise_max_shape (Tuple[int]): See attributes.
+            exclude_border (bool): See attributes.
+
+        """
+        cls.img = img
+        cls.last_coord = np.subtract(sub_rois_shape, 1)
         cls.denoise_max_shape = denoise_max_shape
         cls.exclude_border = exclude_border
     
     @classmethod
-    def detect_sub_roi(cls, coord):
-        """Segment the ROI within an array of ROIs.
+    def detect_sub_roi(cls, coord, sub_roi_slices, offset):
+        """Perform 3D blob detection within a sub-ROI.
         
         Args:
-            coord: Coordinate of the sub-ROI in the order (z, y, x).
+            coord (Tuple[int]): Coordinate of the sub-ROI in the order z,y,x.
+            sub_roi_slices (Tuple[slice]): Sequence of slices within
+                :attr:``img`` defining the sub-ROI.
+            offset (Tuple[int]): Offset of the sub-ROI within the full ROI,
+                in z,y,x.
         
         Returns:
-            Tuple of the coordinate given back again to identify the 
-            sub-ROI and an array of detected blobs.
+            Tuple[int], :obj:`np.ndarray`: The coordinate given back again to
+            identify the sub-ROI position and an array of detected blobs.
+
         """
-        sub_roi = cls.sub_rois[coord]
-        offset = cls.sub_rois_offsets[coord]
-        last_coord = np.subtract(cls.sub_rois.shape, 1)
+        sub_roi = cls.img[sub_roi_slices]
         print("detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."
-              .format(coord, last_coord, tuple(offset.astype(int)), 
+              .format(coord, cls.last_coord, tuple(offset.astype(int)),
                       sub_roi.shape))
         
         if cls.denoise_max_shape is not None:
             # further split sub-ROI for preprocessing locally
-            denoise_rois, _ = chunking.stack_splitter(
-                sub_roi, cls.denoise_max_shape)
-            for z in range(denoise_rois.shape[0]):
-                for y in range(denoise_rois.shape[1]):
-                    for x in range(denoise_rois.shape[2]):
+            denoise_roi_slices, _ = chunking.stack_splitter(
+                sub_roi.shape, cls.denoise_max_shape)
+            for z in range(denoise_roi_slices.shape[0]):
+                for y in range(denoise_roi_slices.shape[1]):
+                    for x in range(denoise_roi_slices.shape[2]):
                         denoise_coord = (z, y, x)
+                        denoise_roi = sub_roi[denoise_roi_slices[denoise_coord]]
                         libmag.printv_format(
                             "preprocessing sub-sub-ROI {} of {} (shape {}"
                             " within sub-ROI shape {})", 
-                            (denoise_coord, np.subtract(denoise_rois.shape, 1), 
-                             denoise_rois[denoise_coord].shape, 
-                             sub_roi.shape))
+                            (denoise_coord,
+                             np.subtract(denoise_roi_slices.shape, 1),
+                             denoise_roi.shape, sub_roi.shape))
                         denoise_roi = plot_3d.saturate_roi(
-                            denoise_rois[denoise_coord], channel=config.channel)
+                            denoise_roi, channel=config.channel)
                         denoise_roi = plot_3d.denoise_roi(
                             denoise_roi, channel=config.channel)
-                        denoise_rois[denoise_coord] = denoise_roi
+                        # replace slices with denoised ROI
+                        denoise_roi_slices[denoise_coord] = denoise_roi
             
             # re-merge into one large ROI (the image stack) in preparation for 
             # segmenting with differently sized chunks, typically larger 
             # to minimize the number of sub-ROIs and edge overlaps
-            merged_shape = chunking.get_split_stack_total_shape(denoise_rois)
+            merged_shape = chunking.get_split_stack_total_shape(denoise_roi_slices)
             merged = np.zeros(
-                tuple(merged_shape), dtype=denoise_rois[0, 0, 0].dtype)
-            chunking.merge_split_stack2(denoise_rois, None, 0, merged)
+                tuple(merged_shape), dtype=denoise_roi_slices[0, 0, 0].dtype)
+            chunking.merge_split_stack2(denoise_roi_slices, None, 0, merged)
             sub_roi = merged
         
         if cls.exclude_border is None:
@@ -119,7 +127,7 @@ class StackDetector(object):
         else:
             exclude = np.array([cls.exclude_border, cls.exclude_border])
             exclude[0, np.equal(coord, 0)] = 0
-            exclude[1, np.equal(coord, last_coord)] = 0
+            exclude[1, np.equal(coord, cls.last_coord)] = 0
         segments = detector.detect_blobs(sub_roi, config.channel, exclude)
         #print("segs before (offset: {}):\n{}".format(offset, segments))
         if segments is not None:
@@ -233,19 +241,19 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         config.process_settings["segment_size"])).astype(int)
     print("preprocessing max shape: {}, detection max pixels: {}"
           .format(denoise_max_shape, max_pixels))
-    sub_rois, sub_rois_offsets = chunking.stack_splitter(
-        roi, max_pixels, overlap)
+    sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(
+        roi.shape, max_pixels, overlap)
     # TODO: option to distribute groups of sub-ROIs to different servers 
     # for blob detection
     seg_rois = detect_blobs_sub_rois(
-        sub_rois, sub_rois_offsets, denoise_max_shape, exclude_border)
+        roi, sub_roi_slices, sub_rois_offsets, denoise_max_shape, exclude_border)
     detection_time = time() - time_detection_start
     print("blob detection time (s):", detection_time)
     
     # prune blobs in overlapping portions of sub-ROIs
     time_pruning_start = time()
     segments_all, df_pruning = _prune_blobs_mp(
-        seg_rois, overlap, tol, sub_rois, sub_rois_offsets, channels, 
+        roi, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offsets, channels,
         overlap_padding)
     pruning_time = time() - time_pruning_start
     print("blob pruning time (s):", pruning_time)
@@ -371,50 +379,52 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
     return stats_detection, fdbk, segments_all
 
 
-def detect_blobs_sub_rois(sub_rois, sub_rois_offsets, denoise_max_shape, 
-                          exclude_border):
+def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
+                          denoise_max_shape, exclude_border):
     """Process blobs in an ROI chunked into multiple sub-ROIs via 
     multiprocessing.
     
     Args:
-        sub_rois: Numpy object array containing chunked sub-ROIs within a 
-            stack.
-        sub_rois_offsets: Numpy object array of the same shape as 
-            ``sub_rois`` with offsets in z,y,x corresponding to each 
+        img (:obj:`np.ndarray`): Array in which to detect blobs.
+        sub_roi_slices (:obj:`np.ndarray`): Numpy object array containing chunked
+            sub-ROIs within a stack.
+        sub_rois_offsets (:obj:`np.ndarray`): Numpy object array of the same
+            shape as ``sub_rois`` with offsets in z,y,x corresponding to each
             sub-ROI. Offets are used to transpose blobs into 
             absolute coordinates.
-        denoise_max_shape: Maximum shape of each unit within each sub-ROI 
-            for denoising.
-        exclude_border: Sequence of border pixels in x,y,z to exclude;
-            defaults to None.
+        denoise_max_shape (Tuple[int]): Maximum shape of each unit within
+            each sub-ROI for denoising.
+        exclude_border (Tuple[int]): Sequence of border pixels in x,y,z to
+            exclude; defaults to None.
     
     Returns:
-        Numpy object array of blobs corresponding to ``sub_rois``, with 
-        each set of blobs given as a Numpy array in the format, 
-        ``[n, [z, row, column, radius, ...]]``, including additional 
+        :obj:`np.ndarray`: Numpy object array of blobs corresponding to
+        ``sub_rois``, with each set of blobs given as a Numpy array in the
+        format, ``[n, [z, row, column, radius, ...]]``, including additional
         elements as given in :meth:``StackDetect.detect_sub_roi``.
     """
     # detect nuclei in each sub-ROI, passing an index to access each 
     # sub-ROI to minimize pickling
     StackDetector.set_data(
-        sub_rois, sub_rois_offsets, denoise_max_shape, exclude_border)
+        img, sub_roi_slices.shape, denoise_max_shape, exclude_border)
     pool = mp.Pool()
     pool_results = []
-    for z in range(sub_rois.shape[0]):
-        for y in range(sub_rois.shape[1]):
-            for x in range(sub_rois.shape[2]):
+    for z in range(sub_roi_slices.shape[0]):
+        for y in range(sub_roi_slices.shape[1]):
+            for x in range(sub_roi_slices.shape[2]):
                 coord = (z, y, x)
-                pool_results.append(
-                    pool.apply_async(StackDetector.detect_sub_roi, 
-                                     args=(coord, )))
+                pool_results.append(pool.apply_async(
+                    StackDetector.detect_sub_roi,
+                    args=(coord, sub_roi_slices[coord],
+                          sub_rois_offsets[coord])))
     
     # retrieve blobs and assign to object array corresponding to sub_rois
-    seg_rois = np.zeros(sub_rois.shape, dtype=object)
+    seg_rois = np.zeros(sub_roi_slices.shape, dtype=object)
     for result in pool_results:
         coord, segments = result.get()
         num_blobs = 0 if segments is None else len(segments)
         print("adding {} blobs from sub_roi at {} of {}"
-              .format(num_blobs, coord, np.add(sub_rois.shape, -1)))
+              .format(num_blobs, coord, np.add(sub_roi_slices.shape, -1)))
         seg_rois[coord] = segments
     
     pool.close()
@@ -476,19 +486,21 @@ class StackPruner(object):
         return blobs_after_pruning, pruning_ratios
 
 
-def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
+def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offsets,
                     channels, overlap_padding=None):
     """Prune close blobs within overlapping regions by checking within
     entire planes across the ROI in parallel with multiprocessing.
     
     Args:
-        seg_rois: Segments from each sub-region.
+        img (:obj:`np.ndarray`): Array in which to detect blobs.
+        seg_rois (:obj:`np.ndarray`): Blobs from each sub-region.
         overlap: 1D array of size 3 with the number of overlapping pixels 
             for each image axis.
         tol: Tolerance as (z, y, x), within which a segment will be 
             considered a duplicate of a segment in the master array and
             removed.
-        sub_rois: Sub-regions, used to check size.
+        sub_roi_slices (:obj:`np.ndarray`): Object array of ub-regions, used
+            to check size.
         sub_rois_offsets: Offsets of each sub-region.
         overlap_padding: Sequence of z,y,x for additional padding beyond
             ``overlap``. Defaults to None to use ``tol`` as padding.
@@ -523,7 +535,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
             # multiprocess pruning by overlapping planes
             blobs_all_non_ol = None # all blobs from non-overlapping regions
             blobs_to_prune = []
-            coord_last = tuple(np.subtract(sub_rois.shape, 1))
+            coord_last = tuple(np.subtract(sub_roi_slices.shape, 1))
             for i in range(num_sections):
                 # build overlapping region dimensions based on size of 
                 # sub-region in the given axis
@@ -532,9 +544,9 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                 print("** setting up blob pruning in axis {}, section {} of {}"
                       .format(axis, i, num_sections - 1))
                 offset = sub_rois_offsets[tuple(coord)]
-                size = sub_rois[tuple(coord)].shape
-                libmag.printv_format(
-                    "offset: {}, size: {}", (offset, size))
+                sub_roi = img[sub_roi_slices[tuple(coord)]]
+                size = sub_roi.shape
+                libmag.printv_format("offset: {}, size: {}", (offset, size))
                 
                 # overlapping region: each region but the last extends 
                 # into the next region, with the overlapping volume from 
@@ -564,8 +576,7 @@ def _prune_blobs_mp(seg_rois, overlap, tol, sub_rois, sub_rois_offsets,
                     bounds_next = [
                         start, start + overlap[axis] + 2 * overlap_padding[axis]]
                     shape = np.add(
-                        sub_rois_offsets[coord_last], 
-                        sub_rois[coord_last].shape[:3])
+                        sub_rois_offsets[coord_last], sub_roi.shape[:3])
                     libmag.printv(
                         "axis {}, boundaries (next): {}, max bounds: {}"
                         .format(axis, bounds_next, shape[axis]))

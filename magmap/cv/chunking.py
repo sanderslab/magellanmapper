@@ -64,30 +64,30 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
     return int(start), int(end)
 
 
-def stack_splitter(roi, max_pixels, overlap=None):
-    """Splits a stack into multiple sub regions.
+def stack_splitter(shape, max_pixels, overlap=None):
+    """Split a stack into multiple sub regions.
     
     Args:
-        roi: The region of interest, a stack in (z, y, x, ...) dimensions.
-        max_pixels: Max pixels for each side in (z, y, x) order.
-        overlap: Overlap size between sub-ROIs. Defaults to None for no overlap.
+        shape (Tuple[int]): Shape of the stack to split.
+        max_pixels (Tuple[int]): Max pixels for each side in (z, y, x) order.
+        overlap (Tuple[int]): Overlap size between sub-ROIs. Defaults to None
+            for no overlap.
     
     Return:
-        Tuple of (sub_rois, sub_rois_offsets), where 
-        ``sub_rois`` is a Numpy object array of smaller, potentially 
-        overlapping sub regions split in (z, y, x) order, and 
-        ``sub_rois_offsets`` is a Numpy array of offsets for each sub_roi 
-        from the master ``roi`` array in (z, y, x) order coordinates.
+        :obj:`np.ndarray`, :obj:`np.ndarray`: Tuple of
+        ``sub_roi_slices, sub_rois_offsets``, where
+        ``sub_roi_slices`` is a Numpy object array where each element contains
+        the slice objects of the corresponding sub-region at that position, and
+        ``sub_rois_offsets`` is a Numpy array of corresponding offsets for each
+        sub-ROI in (z, y, x) order coordinates.
     """
-    size = roi.shape
-    
     # prepare the array containing sub ROI slices with type object so that it
     # can contain an arbitrary object of any size and channels, accessible by
     # (z, y, x) coordinates of the chunk, as well as offset for 
     # coordinates of bottom corner for each sub ROI for transposing later
-    num_units = _num_units(size[0:3], max_pixels)
+    num_units = _num_units(shape[:3], max_pixels)
     #print("num_units: {}".format(num_units))
-    sub_rois = np.zeros(num_units, dtype=object)
+    sub_rois_slices = np.zeros(num_units, dtype=object)
     sub_rois_offsets = np.zeros(np.append(num_units, 3))
     
     # fill with sub ROIs including overlap extending into next sub ROI 
@@ -96,14 +96,14 @@ def stack_splitter(roi, max_pixels, overlap=None):
         for y in range(num_units[1]):
             for x in range(num_units[2]):
                 coord = (z, y, x)
-                bounds = [_bounds_side(size, max_pixels, overlap, coord, axis) 
+                bounds = [_bounds_side(shape, max_pixels, overlap, coord, axis)
                           for axis in range(3)]
                 #print("bounds: {}".format(bounds))
-                sub_rois[coord] = roi[
+                sub_rois_slices[coord] = [
                     slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
                 sub_rois_offsets[coord] = (
                     bounds[0][0], bounds[1][0], bounds[2][0])
-    return sub_rois, sub_rois_offsets
+    return sub_rois_slices, sub_rois_offsets
 
 
 def merge_split_stack(sub_rois, overlap):
@@ -282,12 +282,17 @@ def main():
     roi = roi.reshape((5, 4, 4))
     print("roi:\n{}".format(roi))
     overlap = calc_overlap()
-    sub_rois, sub_rois_offsets = stack_splitter(roi, [1, 2, 2])
-    print("sub_rois shape: {}".format(sub_rois.shape))
-    print("sub_rois:\n{}".format(sub_rois))
+    sub_roi_slices, sub_rois_offsets = stack_splitter(roi.shape, [1, 2, 2])
+    print("sub_rois shape: {}".format(sub_roi_slices.shape))
+    print("sub_rois:\n{}".format(sub_roi_slices))
     print("overlap: {}".format(overlap))
     print("sub_rois_offsets:\n{}".format(sub_rois_offsets))
-    merged = merge_split_stack(sub_rois, overlap)
+    for z in range(sub_roi_slices.shape[0]):
+        for y in range(sub_roi_slices.shape[1]):
+            for x in range(sub_roi_slices.shape[2]):
+                coord = (z, y, x)
+                sub_roi_slices[coord] = roi[sub_roi_slices[coord]]
+    merged = merge_split_stack(sub_roi_slices, overlap)
     print("merged:\n{}".format(merged))
     print("merged shape: {}".format(merged.shape))
     print("test roi == merged: {}".format(np.all(roi == merged)))

@@ -21,22 +21,29 @@ class Downsampler(object):
     that allows multiprocessing without global variables.
     
     Attributes:
-        sub_rois: Numpy object array containing chunked sub-ROIs.
+        img (:obj:`np.ndarray`): Full image array.
     """
-    sub_rois = None
+    img = None
     
     @classmethod
-    def set_data(cls, sub_rois):
-        """Set the class attributes to be shared during multiprocessing."""
-        cls.sub_rois = sub_rois
+    def set_data(cls, img):
+        """Set the class attributes to be shared during multiprocessing.
+
+        Args:
+            img (:obj:`np.ndarray`): See attributes.
+
+        """
+        cls.img = img
     
     @classmethod
-    def rescale_sub_roi(cls, coord, rescale, target_size, multichannel):
+    def rescale_sub_roi(cls, coord, slices, rescale, target_size, multichannel):
         """Rescale a sub-ROI.
         
         Args:
             coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
                 chunked ROI.
+            slices (Tuple[slice]): Sequence of slices within
+                :attr:``img`` defining the sub-ROI.
             rescale: Rescaling factor. Can be None, in which case 
                 ``target_size`` will be used instead.
             target_size: Target rescaling size for the given sub-ROI in 
@@ -49,7 +56,7 @@ class Downsampler(object):
             ``coord`` is the same as the given parameter to identify 
             where the sub-ROI is located during multiprocessing tasks.
         """
-        sub_roi = cls.sub_rois[coord]
+        sub_roi = cls.img[slices]
         rescaled = None
         if rescale is not None:
             rescaled = transform.rescale(
@@ -213,22 +220,23 @@ def transpose_img(filename, series, plane=None, rescale=None):
                   .format(target_size, num_chunks, max_pixels, sub_roi_size))
         
         # rescale in chunks with multiprocessing
-        sub_rois, _ = chunking.stack_splitter(rescaled, max_pixels)
-        Downsampler.set_data(sub_rois)
+        sub_roi_slices, _ = chunking.stack_splitter(rescaled.shape, max_pixels)
+        Downsampler.set_data(rescaled)
+        sub_rois = np.zeros_like(sub_roi_slices)
         pool = mp.Pool()
         pool_results = []
-        for z in range(sub_rois.shape[0]):
-            for y in range(sub_rois.shape[1]):
-                for x in range(sub_rois.shape[2]):
+        for z in range(sub_roi_slices.shape[0]):
+            for y in range(sub_roi_slices.shape[1]):
+                for x in range(sub_roi_slices.shape[2]):
                     coord = (z, y, x)
-                    pool_results.append(
-                        pool.apply_async(
-                            Downsampler.rescale_sub_roi, 
-                            args=(coord, rescale, sub_roi_size, multichannel)))
+                    pool_results.append(pool.apply_async(
+                        Downsampler.rescale_sub_roi,
+                        args=(coord, sub_roi_slices[coord], rescale,
+                              sub_roi_size, multichannel)))
         for result in pool_results:
             coord, sub_roi = result.get()
             print("replacing sub_roi at {} of {}"
-                  .format(coord, np.add(sub_rois.shape, -1)))
+                  .format(coord, np.add(sub_roi_slices.shape, -1)))
             sub_rois[coord] = sub_roi
         
         pool.close()
@@ -239,7 +247,7 @@ def transpose_img(filename, series, plane=None, rescale=None):
         print("rescaled_shape: {}".format(rescaled_shape))
         # rescale chunks directly into memmap-backed array to minimize RAM usage
         image5d_transposed = np.lib.format.open_memmap(
-            filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype, 
+            filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype,
             shape=tuple(rescaled_shape))
         chunking.merge_split_stack2(sub_rois, None, offset, image5d_transposed)
         

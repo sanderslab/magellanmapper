@@ -263,11 +263,9 @@ def merge_blobs(blob_rois):
         blobs_all = None
     return blobs_all
 
-if __name__ == "__main__":
-    print("Starting chunking...")
-    
-    # tests splitting and remerging
-    overlap_base = 1
+
+def main():
+    """Test splitting and remerging."""
     config.resolutions = [[6.6, 1.1, 1.1]]
     roi = np.arange(5 * 4 * 4)
     roi = roi.reshape((5, 4, 4))
@@ -282,4 +280,8 @@ if __name__ == "__main__":
     print("merged:\n{}".format(merged))
     print("merged shape: {}".format(merged.shape))
     print("test roi == merged: {}".format(np.all(roi == merged)))
-    
+
+
+if __name__ == "__main__":
+    print("Starting chunking...")
+    main()

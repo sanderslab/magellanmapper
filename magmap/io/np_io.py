@@ -136,7 +136,6 @@ def setup_images(path=None, series=None, offset=None, size=None,
     load_subimage = offset is not None and size is not None
 
     filename_base = importer.filename_to_base(path, series)
-    filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
     subimg_base = None
 
     if load_subimage:

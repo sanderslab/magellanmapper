@@ -506,10 +506,14 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   
   OUT_NAME_BASE="${NAME%.*}_bigstitched"
   start=$SECONDS
+  stitch_args=()
+  if [[ -n "$java_home" ]]; then
+    stitch_args+=(-j "$java_home")
+  fi
   
   # Import file into BigStitcher HDF5 format (warning: large file, just 
   # under size of original file) and find alignments
-  bin/stitch.sh -f "$IMG" -s "bigstitcher" -w 0 -j "$java_home"
+  bin/stitch.sh -f "$IMG" -s "bigstitcher" -w 0 "${stitch_args[@]}"
   
   # notify user via Slack and open ImageJ/Fiji for review, which will 
   # also keep script from continuing until user closes ImageJ/Fiji 
@@ -521,11 +525,11 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   echo "=================================="
   echo "$msg"
   summary_msg+=("Stitching import and alignment time: $((SECONDS - start)) s")
-  bin/stitch.sh -s "none" -j "$java_home"
+  bin/stitch.sh -s "none" "${stitch_args[@]}"
   
   # Fuse image for each channel
   start=$SECONDS
-  bin/stitch.sh -f "$IMG" -s "bigstitcher" -w 1 -j "$java_home"
+  bin/stitch.sh -f "$IMG" -s "bigstitcher" -w 1 "${stitch_args[@]}"
   summary_msg+=("Stitching fusion time: $((SECONDS - start)) s")
   
   # Rename output file(s)

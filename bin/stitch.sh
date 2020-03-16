@@ -9,7 +9,7 @@ Arguments:
   -h: Show help and exit.
   -f [path]: Path to image file.
   -j [path]: Path to custom JAVA_HOME for ImageJ/Fiji. If not given 
-    empty, the default Java installation will be used instead.
+    empty, the JAVA_HOME environment variable will be used instead.
   -w [0|1|2]: 0 = Stitch but do not write fused file. Stitching 
     plugin will compute overlap and write registered tile 
     configuration. BigStitcher will import and calculate 
@@ -48,8 +48,8 @@ To run in \"stitching\" mode:
 write_fused=2
 out_dir=""
 STITCH_TYPES=("none" "stitching" "bigstitcher")
-stitch=STITCH_TYPES[2]
-java_home=""
+stitch="${STITCH_TYPES[2]}"
+java_home="$JAVA_HOME"
 
 OPTIND=1
 while getopts hf:w:s:j: opt; do
@@ -142,7 +142,7 @@ ij=(
   "-Xms${mem}m"
   "--"
 )
-if [[ ! -z "$java_home" ]]; then
+if [[ -n "$java_home" ]]; then
   # specify Java home directly in ImageJ rather than as env var
   ij+=("--java-home" "$java_home")
 fi

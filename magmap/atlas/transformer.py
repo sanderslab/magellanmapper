@@ -1,5 +1,5 @@
 # Transform images with multiprocessing
-# Author: David Young, 2019
+# Author: David Young, 2019, 2020
 """Transform large images with multiprocessing, including up/downsampling 
 and image transposition.
 """
@@ -66,6 +66,7 @@ class Downsampler(object):
                 sub_roi, target_size, mode="reflect", anti_aliasing=True)
         return coord, rescaled
 
+
 def make_modifier_plane(plane):
     """Make a string designating a plane orthogonal transformation.
     
@@ -77,6 +78,7 @@ def make_modifier_plane(plane):
     """
     return "plane{}".format(plane.upper())
 
+
 def make_modifier_scale(scale):
     """Make a string designating a scaling transformation.
     
@@ -87,6 +89,7 @@ def make_modifier_scale(scale):
         String designating the scaling transformation.
     """
     return "scale{}".format(scale)
+
 
 def make_modifier_resized(target_size):
     """Make a string designating a resize transformation.
@@ -101,6 +104,7 @@ def make_modifier_resized(target_size):
         String designating the resize transformation.
     """
     return "resized({},{},{})".format(*target_size)
+
 
 def get_transposed_image_path(img_path, scale=None, target_size=None):
     """Get path, modified for any transposition by :func:``transpose_npy`` 
@@ -132,6 +136,7 @@ def get_transposed_image_path(img_path, scale=None, target_size=None):
         img_path_modified = libmag.insert_before_ext(
             img_path, "_" + modifier)
     return img_path_modified
+
 
 def transpose_img(filename, series, plane=None, rescale=None):
     """Transpose Numpy NPY saved arrays into new planar orientations and 

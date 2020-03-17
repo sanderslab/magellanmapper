@@ -78,6 +78,7 @@ from magmap.io import np_io
 from magmap.io import sqlite
 from magmap.stats import mlearn
 from magmap.settings import profiles
+from magmap.cv import chunking
 from magmap.cv import stack_detect
 from magmap.atlas import transformer
 
@@ -624,7 +625,9 @@ def main(process_args_only=False):
     if config.db is None:
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
-    
+
+    # set multiprocessing start method
+    chunking.set_mp_start_method()
     
     
     # done with arg parsing

@@ -436,7 +436,7 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
     # detect nuclei in each sub-ROI, passing an index to access each 
     # sub-ROI to minimize pickling
     #mp.set_start_method("spawn")
-    is_fork = _is_fork()
+    is_fork = chunking.is_fork()
     last_coord = np.subtract(sub_roi_slices.shape, 1)
     if is_fork:
         StackDetector.set_data(
@@ -655,7 +655,7 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
 
                 blobs_to_prune.append((blobs_ol, axis, tol, blobs_ol_next))
 
-            is_fork = _is_fork()
+            is_fork = chunking.is_fork()
             if is_fork:
                 StackPruner.set_data(blobs_to_prune)
             pool = mp.Pool()
@@ -704,7 +704,3 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
     df = pd.DataFrame(blob_ratios)
     
     return blobs_all, df
-
-
-def _is_fork():
-    return mp.get_start_method(False) == "fork"

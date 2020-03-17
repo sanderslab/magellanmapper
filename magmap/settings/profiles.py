@@ -54,6 +54,7 @@ class ProcessSettings(SettingsDict):
         self["settings_name"] = "default"
 
         # visualization and plotting
+
         self["vis_3d"] = "points"  # "points" or "surface" 3D visualization
         self["points_3d_thresh"] = 0.85  # frac of thresh (changed in v.0.6.6)
         self["channel_colors"] = (
@@ -65,6 +66,7 @@ class ProcessSettings(SettingsDict):
         self["norm"] = None  # (min, max) normalization of image5d
 
         # image preprocessing before blob detection
+
         self["clip_vmin"] = 5  # vmin/vmax set contrast stretching, range 0-100
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2  # min/max clip after stretching, range 0-1
@@ -76,6 +78,7 @@ class ProcessSettings(SettingsDict):
         self["erosion_threshold"] = 0.2  # erode clumped cells
 
         # 3D blob detection settings
+
         self["min_sigma_factor"] = 3
         self["max_sigma_factor"] = 5
         self["num_sigma"] = 10
@@ -87,11 +90,16 @@ class ProcessSettings(SettingsDict):
         self["exclude_border"] = None
 
         # block processing and automated verification
-        # None turns off preprocessing in stack proc; make much larger than
-        # segment_size (eg 2x) to cover the full segment ROI because of
-        # additional overlap in segment ROIs
-        self["denoise_size"] = 25
+
+        # multiprocessing start method; if method not available for the given
+        # platform, the default method for the platform will be used instead
+        self["mp_start"] = "fork"
         self["segment_size"] = 500  # detection ROI max size along longest edge
+        # max size along longest edge for denoising blocks within
+        # segmentation blobs; None turns off preprocessing in stack proc;
+        # make much larger than segment_size (eg 2x) to cover the full segment
+        # ROI because of additional overlap in segment ROIs
+        self["denoise_size"] = 25
         # z,y,x tolerances for pruning duplicates in overlapped regions
         self["prune_tol_factor"] = (1, 1, 1)
         self["verify_tol_factor"] = (1, 1, 1)
@@ -99,6 +107,7 @@ class ProcessSettings(SettingsDict):
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
 
         # resizing for anisotropy
+
         self["isotropic"] = None  # final relative z,y,x scaling after resizing
         self["isotropic_vis"] = None  # z,y,x scaling factor for vis only
         self["resize_blobs"] = None  # z,y,x coord scaling before verification

@@ -2,6 +2,8 @@
 # Author: David Young, 2017, 2020
 """Divides a region into smaller chunks and reassembles it."""
 
+import multiprocessing as mp
+
 import numpy as np
 
 from magmap.settings import config
@@ -11,6 +13,44 @@ from magmap.io import libmag
 #: int: Factor to multiply by scaling for maximum number of pixels per
 # sub ROI for overlap.
 OVERLAP_FACTOR = 5
+
+
+def set_mp_start_method(val=None):
+    """Set the multiprocessing start method.
+
+    If the start method has already been applied, will skip.
+
+    Args:
+        val (str): Start method to set; defaults to None to use the default
+            for the platform. If the given method is not available for the
+            platform, the default method will be used instead.
+
+    Returns:
+        str: The applied start method.
+
+    """
+    if val is None:
+        val = config.process_settings["mp_start"]
+    avail_start_methods = mp.get_all_start_methods()
+    if val not in avail_start_methods:
+        val = avail_start_methods[0]
+    try:
+        mp.set_start_method(val)
+        print("set multiprocessing start method to", val)
+    except RuntimeError:
+        print("multiprocessing start method already set to {}, will skip"
+              .format(mp.get_start_method(False)))
+    return val
+
+
+def is_fork():
+    """Check if the multiprocessing start method is set to "fork".
+
+    Returns:
+        bool: True if the start method is "fork", False if otherwise.
+
+    """
+    return mp.get_start_method(False) == "fork"
 
 
 def calc_overlap():

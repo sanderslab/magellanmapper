@@ -77,9 +77,9 @@ def stack_splitter(shape, max_pixels, overlap=None):
         :obj:`np.ndarray`, :obj:`np.ndarray`: Tuple of
         ``sub_roi_slices, sub_rois_offsets``, where
         ``sub_roi_slices`` is a Numpy object array where each element contains
-        the slice objects of the corresponding sub-region at that position, and
-        ``sub_rois_offsets`` is a Numpy array of corresponding offsets for each
-        sub-ROI in (z, y, x) order coordinates.
+        a tuple of slice objects defining the corresponding sub-region at
+        that position, and ``sub_rois_offsets`` is a Numpy array of
+        corresponding offsets for each sub-ROI in (z, y, x) order coordinates.
     """
     # prepare the array containing sub ROI slices with type object so that it
     # can contain an arbitrary object of any size and channels, accessible by
@@ -99,8 +99,8 @@ def stack_splitter(shape, max_pixels, overlap=None):
                 bounds = [_bounds_side(shape, max_pixels, overlap, coord, axis)
                           for axis in range(3)]
                 #print("bounds: {}".format(bounds))
-                sub_rois_slices[coord] = [
-                    slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2])]
+                sub_rois_slices[coord] = (
+                    slice(*bounds[0]), slice(*bounds[1]), slice(*bounds[2]))
                 sub_rois_offsets[coord] = (
                     bounds[0][0], bounds[1][0], bounds[2][0])
     return sub_rois_slices, sub_rois_offsets

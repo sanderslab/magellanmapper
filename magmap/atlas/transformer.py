@@ -36,8 +36,9 @@ class Downsampler(object):
         cls.img = img
     
     @classmethod
-    def rescale_sub_roi(cls, coord, slices, rescale, target_size, multichannel):
-        """Rescale a sub-ROI.
+    def rescale_sub_roi(cls, coord, slices, rescale, target_size, multichannel,
+                        sub_roi=None):
+        """Rescale or resize a sub-ROI.
         
         Args:
             coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
@@ -50,13 +51,16 @@ class Downsampler(object):
                (z, y, x). If ``rescale`` is not None, ``target_size`` 
                will be ignored.
             multichannel: True if the final dimension is for channels.
+            sub_roi (:obj:`np.ndarray`): Array chunk to rescale/resize;
+                defaults to None to extract from :attr:`img` if available.
         
         Return:
             Tuple of ``coord`` and the rescaled sub-ROI, where 
             ``coord`` is the same as the given parameter to identify 
             where the sub-ROI is located during multiprocessing tasks.
         """
-        sub_roi = cls.img[slices]
+        if sub_roi is None and cls.img is not None:
+            sub_roi = cls.img[slices]
         rescaled = None
         if rescale is not None:
             rescaled = transform.rescale(
@@ -226,7 +230,9 @@ def transpose_img(filename, series, plane=None, rescale=None):
         
         # rescale in chunks with multiprocessing
         sub_roi_slices, _ = chunking.stack_splitter(rescaled.shape, max_pixels)
-        Downsampler.set_data(rescaled)
+        is_fork = chunking.is_fork()
+        if is_fork:
+            Downsampler.set_data(rescaled)
         sub_rois = np.zeros_like(sub_roi_slices)
         pool = mp.Pool()
         pool_results = []
@@ -234,10 +240,14 @@ def transpose_img(filename, series, plane=None, rescale=None):
             for y in range(sub_roi_slices.shape[1]):
                 for x in range(sub_roi_slices.shape[2]):
                     coord = (z, y, x)
+                    slices = sub_roi_slices[coord]
+                    args = [coord, slices, rescale, sub_roi_size,
+                            multichannel]
+                    if not is_fork:
+                        # pickle chunk if img not directly available
+                        args.append(rescaled[slices])
                     pool_results.append(pool.apply_async(
-                        Downsampler.rescale_sub_roi,
-                        args=(coord, sub_roi_slices[coord], rescale,
-                              sub_roi_size, multichannel)))
+                        Downsampler.rescale_sub_roi, args=args))
         for result in pool_results:
             coord, sub_roi = result.get()
             print("replacing sub_roi at {} of {}"

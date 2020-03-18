@@ -43,7 +43,8 @@ def reg_out_path(file_path, reg_name, match_ext=False):
 
 
 def replace_sitk_with_numpy(img_sitk, img_np):
-    """Replace Numpy array in :class:``sitk.Image`` object with a new array.
+    """Generate a :class:``sitk.Image`` object based on another Image object,
+    but replace its array with a new Numpy array.
     
     Args:
         img_sitk: Image object to use as template.

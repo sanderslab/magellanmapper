@@ -1106,7 +1106,8 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         dup = config.register_settings["labels_dup"]
         img_atlas_np = mirror_planes(
             img_atlas_np, extis[1], start_dup=dup)
-    
+
+    crop_offset = None
     if crop:
         # crop atlas to the mask of the labels with some padding
         img_labels_np, img_atlas_np, crop_sl = cv_nd.crop_to_labels(
@@ -1116,6 +1117,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             extis = tuple(n - crop_sl[0].start for n in extis)
             if mask_lbls is not None:
                 mask_lbls = mask_lbls[tuple(crop_sl)]
+        crop_offset = tuple(s.start for s in crop_sl)
 
     if far_hem_neg and np.all(img_labels_np >= 0):
         # unmirrored images may have only pos labels, while metrics assume 
@@ -1188,6 +1190,10 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     for img_np, img_sitk in zip(imgs_np, imgs_sitk):
         if img_np is not None:
             img_sitk = sitk_io.replace_sitk_with_numpy(img_sitk, img_np)
+            if crop_offset:
+                # shift origin for any cropping
+                img_sitk.SetOrigin(np.add(
+                    img_sitk.GetOrigin(), crop_offset[::-1]))
             if pre_plane is None:
                 # plane settings is for post-processing; 
                 # TODO: check if 90deg rot is nec for yz

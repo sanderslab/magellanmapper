@@ -93,7 +93,7 @@ class ProcessSettings(SettingsDict):
 
         # multiprocessing start method; if method not available for the given
         # platform, the default method for the platform will be used instead
-        self["mp_start"] = "fork"
+        self["mp_start"] = "fork"  # fork, spawn, or forkserver
         self["segment_size"] = 500  # detection ROI max size along longest edge
         # max size along longest edge for denoising blocks within
         # segmentation blobs; None turns off preprocessing in stack proc;
@@ -188,7 +188,7 @@ def update_process_settings(settings, settings_type):
             "lowres",
             {
                 "min_sigma_factor": 10,
-                "max_sigma_factor": 15,
+                "max_sigma_factor": 14,
                 "isotropic": None,
                 "denoise_size": 2000,  # will use full detection ROI
                 "segment_size": 1000,

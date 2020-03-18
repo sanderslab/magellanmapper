@@ -207,6 +207,16 @@ vtkWin32OpenGLRenderWindow (00000252735E3450): GLEW could not be initialized: Mi
 
 Windows Virtual Machines may require installation of Mesa for OpenGL support. Pre-built Mesa software is available from [mesa-dist-win](https://github.com/pal1000/mesa-dist-win). The Desktop OpenGL drivers can be installed system-wide.
 
+```
+ERROR: In ../Rendering/OpenGL2/vtkOpenGLRenderWindow.cxx, line 754
+vtkXOpenGLRenderWindow (0x7fffc7718590): Unable to find a valid OpenGL 3.2 or later implementation.
+```
+
+This error may occur in WSL even with an X11 server open. Workarounds include:
+
+- Run `export LIBGL_ALWAYS_INDIRECT=0` and/or `export QT_X11_NO_MITSHM=1`
+- Or simply run the software from within MobaXTerm
+
 Additional errors:
 
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04

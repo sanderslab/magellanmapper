@@ -176,20 +176,20 @@ def transpose_img(filename, series, plane=None, rescale=None):
     # make filenames based on transpositions
     modifier = ""
     if plane is not None:
-        modifier = make_modifier_plane(plane) + "_"
+        modifier = make_modifier_plane(plane)
     # either rescaling or resizing
     if rescale is not None:
-        modifier += make_modifier_scale(rescale) + "_"
+        modifier += make_modifier_scale(rescale)
     elif target_size:
         # target size may differ from final output size but allows a known 
         # size to be used for finding the file later
-        modifier += make_modifier_resized(target_size) + "_"
+        modifier += make_modifier_resized(target_size)
     filename_image5d_npz, filename_info_npz = importer.make_filenames(
         filename, series, modifier=modifier)
     
     # TODO: image5d should assume 4/5 dimensions
     offset = 0 if image5d.ndim <= 3 else 1
-    multichannel = image5d.ndim >=5
+    multichannel = image5d.ndim >= 5
     image5d_swapped = image5d
     
     if plane is not None and plane != config.PLANE[0]:

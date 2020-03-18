@@ -435,7 +435,6 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
     """
     # detect nuclei in each sub-ROI, passing an index to access each 
     # sub-ROI to minimize pickling
-    #mp.set_start_method("spawn")
     is_fork = chunking.is_fork()
     last_coord = np.subtract(sub_roi_slices.shape, 1)
     if is_fork:

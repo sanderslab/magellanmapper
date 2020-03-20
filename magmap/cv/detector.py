@@ -27,6 +27,7 @@ CONFIRMATION = {
     2: "maybe"
 }
 
+
 def calc_scaling_factor():
     """Calculates the tolerance based on the resolutions, using the 
     first resolution.
@@ -43,6 +44,7 @@ def calc_scaling_factor():
             "Must load resolutions from file or set a resolution")
     factor = np.divide(1.0, config.resolutions[0])
     return factor
+
 
 def _blob_surroundings(blob, roi, padding, plane=False):
     rad = blob[3]
@@ -63,6 +65,7 @@ def _blob_surroundings(blob, roi, padding, plane=False):
     else:
         return roi[start[0]:end[0], start[1]:end[1], start[2]:end[2]]
 
+
 def show_blob_surroundings(blobs, roi, padding=1):
     print("showing blob surroundings")
     np.set_printoptions(precision=2, linewidth=200)
@@ -71,6 +74,7 @@ def show_blob_surroundings(blobs, roi, padding=1):
         surroundings = _blob_surroundings(blob, roi, padding, True)
         print("{}\n".format(surroundings))
     np.set_printoptions()
+
 
 def detect_blobs(roi, channel, exclude_border=None):
     """Detects objects using 3D blob detection technique.
@@ -145,6 +149,7 @@ def detect_blobs(roi, channel, exclude_border=None):
     
     return blobs_all
 
+
 def format_blobs(blobs, channel=None):
     """Format blobs with additional fields for confirmation, truth, and 
     channel, abs z, abs y, abs x values.
@@ -187,29 +192,36 @@ def format_blobs(blobs, channel=None):
         blobs[:, channel_dim] = 0
     return blobs
 
+
 def remove_abs_blob_coords(blobs):
     return blobs[:, :7]
 
+
 def get_blob_abs_coords(blobs):
     return blobs[:, 7:10]
+
 
 def set_blob_abs_coords(blobs, coords):
     blobs[:, 7:10] = coords
     return blobs
 
+
 def shift_blob_rel_coords(blobs, offset):
     blobs[..., :3] += offset
     return blobs
 
+
 def shift_blob_abs_coords(blobs, offset):
     blobs[..., -1*len(offset):] += offset
     return blobs
+
 
 def multiply_blob_rel_coords(blobs, factor):
     if blobs is not None:
         rel_coords = blobs[..., :3] * factor
         blobs[..., :3] = rel_coords.astype(np.int)
     return blobs
+
 
 def multiply_blob_abs_coords(blobs, factor):
     if blobs is not None:
@@ -218,10 +230,12 @@ def multiply_blob_abs_coords(blobs, factor):
         blobs[..., start:] = abs_coords.astype(np.int)
     return blobs
 
+
 def get_blob_confirmed(blob):
     if blob.ndim > 1:
         return blob[..., 4]
     return blob[4]
+
 
 def update_blob_confirmed(blob, confirmed):
     blob[..., 4] = confirmed
@@ -247,17 +261,21 @@ def get_blob_truth(blob):
 def get_blob_channel(blob):
     return blob[6]
 
+
 def get_blobs_channel(blobs):
     return blobs[:, 6]
+
 
 def replace_rel_with_abs_blob_coords(blobs):
     blobs[:, :3] = blobs[:, 7:10]
     return blobs
 
+
 def blobs_in_channel(blobs, channel):
     if channel is None:
         return blobs
     return blobs[get_blobs_channel(blobs) == channel]
+
 
 def blob_for_db(blob):
     """Convert segment output from the format used within this module 
@@ -273,6 +291,7 @@ def blob_for_db(blob):
         Segment in (abs_z, abs_y, abs_x, rad, confirmed, truth, channel) format.
     """
     return np.array([*blob[-3:], *blob[3:7]])
+
 
 def remove_duplicate_blobs(blobs, region):
     """Removes duplicate blobs.
@@ -298,6 +317,7 @@ def remove_duplicate_blobs(blobs, region):
           .format(blobs.shape[0] - unique_indices.size))
     return blobs[unique_indices]
 
+
 def sort_blobs(blobs):
     """Sort blobs by their coordinates in priority of z,y,x.
     
@@ -312,6 +332,7 @@ def sort_blobs(blobs):
     blobs = blobs[sort]
     return blobs, sort
 
+
 def _find_close_blobs(blobs, blobs_master, tol):
     # creates a separate array for each blob in blobs_master to allow
     # comparison for each of its blobs with each blob to add
@@ -319,6 +340,7 @@ def _find_close_blobs(blobs, blobs_master, tol):
     close_master, close = np.nonzero((blobs_diffs <= tol).all(2))
     #print("close:\n{}\nclose_master:\n{}".format(close, close_master))
     return close_master, close
+
 
 def _find_closest_blobs(blobs, blobs_master, tol):
     """Finds the closest matching blobs between two arrays. Each entry will 
@@ -408,6 +430,7 @@ def _find_closest_blobs(blobs, blobs_master, tol):
             blobs, blobs_master, close, close_master, np.zeros(len(blobs)))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
+
 def _show_blob_matches(blobs, blobs_master, close, close_master, dists):
     # show sorted list of matches between blobs and master blobs
     found_master = blobs_master[close_master, :3]
@@ -415,6 +438,7 @@ def _show_blob_matches(blobs, blobs_master, close, close_master, dists):
     found = blobs[close, :3][sort]
     print("closest matches found (truth, detected, distance):")
     for f, fm, d in zip(found, found_master, dists[sort]): print(fm, f, d)
+
 
 def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
     """Find the closest blobs within a given tolerance using the 
@@ -467,6 +491,7 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
         dists_closest = dists_closest[dists_in]
     
     return rowis, colis, dists_closest
+
 
 def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     """Removes blobs that are close to one another.
@@ -541,6 +566,7 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
 
+
 def remove_close_blobs_within_array(blobs, region, tol):
     """Removes close blobs within a given array.
     
@@ -578,6 +604,7 @@ def remove_close_blobs_within_array(blobs, region, tol):
                 blobs_all = np.concatenate((blobs_all, blobs_to_add))
     return blobs_all
 
+
 def meas_pruning_ratio(num_blobs_orig, num_blobs_after_pruning, num_blobs_next):
     """Measure blob pruning ratio.
     
@@ -600,6 +627,7 @@ def meas_pruning_ratio(num_blobs_orig, num_blobs_after_pruning, num_blobs_next):
         ratios = (num_blobs_orig, num_blobs_after_pruning / num_blobs_orig, 
                   num_blobs_after_pruning / num_blobs_next)
     return ratios
+
 
 def remove_close_blobs_within_sorted_array(blobs, tol):
     """Removes close blobs within a given array, first sorting the array by
@@ -659,6 +687,7 @@ def remove_close_blobs_within_sorted_array(blobs, tol):
     #print("blobs without close duplicates:\n{}".format(blobs_all))
     return blobs_all
 
+
 def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0), reverse=True):
     """Get blobs within an ROI based on offset and size.
     
@@ -693,6 +722,7 @@ def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0), reverse=True):
     segs_all = blobs[mask]
     return segs_all, mask
 
+
 def get_blobs_interior(blobs, shape, pad_start, pad_end):
     """Get blobs within the interior of a region based on padding.
     
@@ -714,6 +744,7 @@ def get_blobs_interior(blobs, shape, pad_start, pad_end):
             blobs[:, 1] < shape[1] - pad_end[1],
             blobs[:, 2] >= pad_start[2], 
             blobs[:, 2] < shape[2] - pad_end[2]], axis=0)]
+
 
 def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     """Compares blobs from detections with truth blobs, prioritizing the inner 
@@ -883,6 +914,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
     return (pos, true_pos, false_pos), fdbk
 
+
 def show_blobs_per_channel(blobs):
     """Show the number of blobs in each channel.
     
@@ -893,6 +925,7 @@ def show_blobs_per_channel(blobs):
     for channel in channels:
         num_blobs = len(blobs_in_channel(blobs, channel))
         print("- blobs in channel {}: {}".format(int(channel), num_blobs))
+
 
 def _test_blob_duplicates():
     # tests blob duplication removal
@@ -914,6 +947,7 @@ def _test_blob_duplicates():
     blobs_to_add = remove_close_blobs(blobs_to_add, blobs, slice(0, end), tol)
     print("pruned blobs to add:\n{}".format(blobs_to_add))
 
+
 def _test_blob_verification(a, b, tol):
     # test verifying blobs by checking for closest matches within a tolerance
     print("test (b):\n{}".format(b))
@@ -923,6 +957,7 @@ def _test_blob_verification(a, b, tol):
     detected, found_truth, dists = find_closest_blobs_cdist(b, a, tol)
     df_io.dict_to_data_frame(
         {"Testi": detected, "Masteri": found_truth, "Dist": dists}, show=True)
+
 
 def _test_blob_close_sorted():
     a = np.ones((3, 3))
@@ -936,6 +971,7 @@ def _test_blob_close_sorted():
     blobs = blobs[sort]
     blobs = remove_close_blobs_within_sorted_array(blobs, (1, 2, 2))
     print("pruned:\n{}".format(blobs))
+
 
 if __name__ == "__main__":
     print("Detector tests...")

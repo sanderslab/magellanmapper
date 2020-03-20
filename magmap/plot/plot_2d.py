@@ -8,8 +8,8 @@ import math
 
 import numpy as np
 from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
-import matplotlib.pylab as pylab
+from matplotlib import gridspec
+from matplotlib import pylab
 import matplotlib.transforms as transforms
 import pandas as pd
 from skimage import exposure
@@ -915,8 +915,10 @@ def plot_image(img, path=None, show=False):
     directly to file.
     
     Args:
-        img: Image as a Numpy array to display.
-        path: Path to save image. Defaults to None to not save. The 
+        img (:obj:`np.ndarray`): Image as a Numpy array to display.
+        path (str): Path to save image. Defaults to None to not save.
+        show (bool): True to show the image; defaults to False, which will
+            plot the image for saving.
     """
     # plot figure without frame, axes, or border space
     fig, gs = plot_support.setup_fig(1, 1)
@@ -935,7 +937,7 @@ def plot_image(img, path=None, show=False):
             print(path_split, ext)
         save_fig(path, ext)
     if show: plt.show()
-    plt.close() # prevent display during next show call
+    plt.close()  # prevent display during next show call
 
 
 def setup_style(style=None, rc_params=None):

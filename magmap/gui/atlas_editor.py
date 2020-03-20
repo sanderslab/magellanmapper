@@ -6,7 +6,7 @@
 import datetime
 
 from matplotlib import pyplot as plt
-import matplotlib.gridspec as gridspec
+from matplotlib import gridspec
 from matplotlib.widgets import Slider, Button, TextBox
 
 from magmap.plot import colormaps

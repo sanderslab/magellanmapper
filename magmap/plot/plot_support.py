@@ -7,8 +7,8 @@ import os
 import warnings
 
 import numpy as np
-import matplotlib.backend_bases as backend_bases
-import matplotlib.gridspec as gridspec
+from matplotlib import backend_bases
+from matplotlib import gridspec
 from matplotlib import pyplot as plt
 
 from magmap.plot import colormaps

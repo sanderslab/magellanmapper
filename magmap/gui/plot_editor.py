@@ -8,7 +8,7 @@ view of orthogonal planes.
 
 import textwrap
 
-import matplotlib.patches as patches
+from matplotlib import patches
 import numpy as np
 from skimage import draw
 

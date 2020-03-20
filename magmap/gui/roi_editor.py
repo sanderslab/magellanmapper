@@ -16,8 +16,8 @@ from enum import Enum
 from time import time
 
 import numpy as np
-from matplotlib import gridspec as gridspec
-from matplotlib import patches as patches
+from matplotlib import gridspec
+from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
 from skimage import transform

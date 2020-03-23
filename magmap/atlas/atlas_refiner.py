@@ -247,13 +247,19 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     if edge is None or not edge[profiles.RegKeys.ACTIVE]:
         # turn off edge if inactive
         edge = None
-    mirror_start = mirror["start"] if mirror else None
+    mirror_start = None
+    mirror_mult = 1
+    if mirror:
+        mirror_start = mirror["start"]
+        if mirror["neg_labels"]:
+            mirror_mult = -1
     
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
     label_ids_orig = np.unique(img_np)
     try:
-        dtype = libmag.dtype_within_range(0, np.amax(img_np), True, True)
+        signed = True if mirror_mult == -1 else None
+        dtype = libmag.dtype_within_range(0, np.amax(img_np), True, signed)
         if dtype != img_np.dtype:
             print("casting labels image to type", dtype)
             img_np = img_np.astype(dtype)
@@ -385,7 +391,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         print("Labels that will be lost from mirroring:")
         find_labels_lost(np.unique(img_np), np.unique(img_np[:mirrori]))
         img_np = mirror_planes(
-            img_np, mirrori, mirror_mult=-1, check_equality=True, resize=resize)
+            img_np, mirrori, mirror_mult=mirror_mult, check_equality=True,
+            resize=resize)
         print("total final labels: {}".format(np.unique(img_np).size))
     
     print("\nTotal labels lost:")
@@ -1125,9 +1132,15 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         crop_offset = tuple(s.start for s in crop_sl)
 
     if far_hem_neg and np.all(img_labels_np >= 0):
-        # unmirrored images may have only pos labels, while metrics assume 
-        # that the far hem is neg; invert pos labels there if they are >=1/3 of 
-        # total labels, not just spillover from the near side
+        # unmirrored images typically have only pos labels for both
+        # hemispheres, but metrics assume that the far hem is neg to
+        # distinguish sides; to make those labels neg, invert pos labels
+        # there if they are >=1/3 of total labels, not just spillover from
+        # the near side; also convert to signed data type if necessary
+        dtype = libmag.dtype_within_range(
+            np.amin(img_atlas_np), np.amax(img_labels_np), signed=True)
+        if dtype != img_labels_np.dtype:
+            img_labels_np = img_labels_np.astype(dtype)
         half_lbls = img_labels_np[extis[1]:]
         if (np.sum(half_lbls < 0) == 0 and
                 np.sum(half_lbls != 0) > np.sum(img_labels_np != 0) / 3):
@@ -1182,14 +1195,6 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             if planes_tot > 0:
                 frac = 1 - (planes_lbl / planes_tot)
         metrics[config.AtlasMetrics.LAT_UNLBL_PLANES] = frac
-
-    if mirror and not mirror["neg_labels"]:
-        # turn off label signage denoting hemispheres
-        img_labels_np = np.abs(img_labels_np)
-        dtype = libmag.dtype_within_range(
-            np.amin(img_atlas_np), np.amax(img_labels_np))
-        if dtype != img_labels_np.dtype:
-            img_labels_np = img_labels_np.astype(dtype)
 
     imgs_np = (img_atlas_np, img_labels_np)
     if pre_plane:

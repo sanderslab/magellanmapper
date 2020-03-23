@@ -1036,7 +1036,10 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "noneg",
             {
+                # if mirroring, do not invert mirrored labels
                 "labels_mirror": {"neg_labels": False},
+                # do not invert far hemisphere labels
+                "make_far_hem_neg": False,
             },
             profile)
 

@@ -205,6 +205,9 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     necessarily the exact middle of the image. The egde to extend are low z 
     planes. Mirroring takes place across a z-plane, ideally at the true 
     midline.
+
+    ``mirror`` and ``edge`` are applied regardless of their
+    :obj:`profiles.RegKeys.ACTIVE` status.
     
     Args:
         img: Labels image in SimpleITK format.
@@ -244,9 +247,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
          or None if smoothing was not performed; and a data frame of raw 
          smoothing stats, or None if smoothing was not performed.
     """
-    if edge is None or not edge[profiles.RegKeys.ACTIVE]:
-        # turn off edge if inactive
-        edge = None
+    edge_start = edge["start"] if edge else None
     mirror_start = None
     mirror_mult = 1
     if mirror:
@@ -274,9 +275,13 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     # missing in many ABA developing mouse atlases, requiring extension
     edgei = 0
     edgei_first = None
-    edge_start = None if edge is None else edge["start"]
-    if edge_start == -1 or edge is None:
-        # find the first non-zero plane
+    if edge_start is not None and edge_start >= 0:
+        # set start of extension from fraction of total of planes
+        edgei = int(edge_start * tot_planes)
+        print("will extend near edge from plane {}".format(edgei))
+    else:
+        # default to finding the first non-zero plane; if edge_start is None,
+        # will only use this val for metrics and cropping
         for plane in img_np:
             if not np.allclose(plane, 0):
                 if edgei_first is None:
@@ -289,12 +294,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
                 edgei_first = None
             edgei += 1
         print("found start of contiguous non-zero planes at {}".format(edgei))
-    else:
-        # based on profile settings
-        edgei = int(edge_start * tot_planes)
-        print("will extend near edge from plane {}".format(edgei))
     
-    if edge is not None:
+    if edge and edge_start is not None:
         # extend labels from the lowest labeled z-plane to cover the rest
         # of lower planes with signal in the reference image
         save_steps = edge[profiles.RegKeys.SAVE_STEPS]
@@ -1093,7 +1094,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             edge if is_edge else None, expand, rotate, smooth,
             affine)
         if metrics or crop and (
-                mirror["start"] is not None or edge is not None):
+                mirror["start"] is not None or edge["start"] is not None):
             # use edge and mirror settings even if ACTIVE is off, but only
             # for metrics and to get the mask for cropping
             print("\nCurating labels with extension/mirroring only "

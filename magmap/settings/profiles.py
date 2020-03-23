@@ -500,10 +500,14 @@ class RegisterSettings(SettingsDict):
         # None for the entire setting turns off truncation
         self["truncate_labels"] = None
         
-        # labels curation, given as fractions of the total planes; 
-        # use None to ignore, -1 to set automatically (for mirror and edge), 
-        # or give a fraction between 0 and 1; can turn off with extend_labels 
-        # while keeping settings for cropping, etc
+        # labels curation
+
+        # ACTIVE (bool): True to apply the setting to the final image and
+        # metrics; False to use only for metrics and cropping, etc
+        # start (float): fractions of the total planes (0-1); use -1 to
+        # set automatically, None to turn off the entire setting group
+
+        # mirror labels onto the unlabeled hemisphere
         self["labels_mirror"] = {
             RegKeys.ACTIVE: False,
             "start": None,  # reflect planes starting here
@@ -513,7 +517,7 @@ class RegisterSettings(SettingsDict):
         self["labels_edge"] = {
             RegKeys.ACTIVE: False,
             RegKeys.SAVE_STEPS: False,
-            "start": -1,  # start plane index (-1 to set automatically)
+            "start": None,  # start plane index
             "surr_size": 5,  # dilation filter size for finding histology region
             # smoothing filter size to remove artifacts (None or 0 to ignore)
             "smoothing_size": 3,
@@ -735,7 +739,7 @@ def update_register_settings(settings, settings_type):
                 "target_size": (345, 371, 158),
                 "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.52},
-                "labels_edge": None, 
+                "labels_edge": {RegKeys.ACTIVE: False, "start": None},
                 "log_atlas_thresh": True, 
                 "atlas_threshold": 75,  # avoid over-extension into ventricles
                 "atlas_threshold_all": 5,  # include ventricles since labeled
@@ -781,6 +785,7 @@ def update_register_settings(settings, settings_type):
                 # that becomes an artifact
                 "labels_edge": {
                     RegKeys.ACTIVE: True,
+                    "start": -1,
                 }, 
                 "atlas_threshold": 55,  # avoid edge over-extension into skull
                 "rotate": ((-4, 1), (-2, 2)),
@@ -797,7 +802,9 @@ def update_register_settings(settings, settings_type):
                 "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.49},
                 "labels_edge": {
-                    RegKeys.ACTIVE: True, "surr_size": 12,
+                    RegKeys.ACTIVE: True,
+                    "start": -1,
+                    "surr_size": 12,
                     # increase template smoothing to prevent over-extension of
                     # intermediate stratum of Str
                     "smoothing_size": 5,
@@ -842,7 +849,9 @@ def update_register_settings(settings, settings_type):
                 "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.487},
                 "labels_edge": {
-                    RegKeys.ACTIVE: True, "surr_size": 12,
+                    RegKeys.ACTIVE: True,
+                    "start": -1,
+                    "surr_size": 12,
                     # balance eroding medial pallium and allowing dorsal
                     # pallium to take over
                     RegKeys.MARKER_EROSION: 8,
@@ -931,9 +940,9 @@ def update_register_settings(settings, settings_type):
                 # same stained sections as for P56dev; 
                 # labels are already mirrored starting at z=228, but atlas is 
                 # not here, so mirror starting at the same z-plane to make both 
-                # sections and labels symmetric and aligned with one another
+                # sections and labels symmetric and aligned with one another;
+                # no need to extend lateral edges
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
-                "labels_edge": None, 
                 "smooth": 2, 
                 "make_far_hem_neg": True, 
             }, 
@@ -946,13 +955,12 @@ def update_register_settings(settings, settings_type):
                 # for "25" image, which has same shape as ABA P56dev, P56adult
                 "target_size": (456, 528, 320),
                 "resize_factor": None,  # turn off resizing
-                "labels_edge": None,
-                "smooth": 0,
                 # atlas is almost (though not perfectly) symmetric, so turn
                 # off mirroring but specify midline (z=228) to make those
-                # labels negative
+                # labels negative; no need to extend lateral edges
                 "labels_mirror": {RegKeys.ACTIVE: False, "start": 0.5},
                 "make_far_hem_neg": True,
+                "smooth": 0,
             },
             profile)
 
@@ -963,12 +971,18 @@ def update_register_settings(settings, settings_type):
                 "target_size": (441, 1017, 383),
                 "pre_plane": config.PLANE[2], 
                 "resize_factor": None,  # turn off resizing
+                # mirror, but no need to extend lateral edges
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
-                "labels_edge": None, 
                 "crop_to_labels": True,  # much extraneous, unlabeled tissue
                 "smooth": 4, 
             }, 
             profile)
+
+        # Profile modifiers to turn off settings. These "no..." profiles
+        # can be applied on top of atlas-specific profiles to turn off
+        # specific settings. Where possible, the ACTIVE flags will be turned
+        # off to retain the rest of the settings within the given group
+        # so that they can be used for metrics, cropping, etc.
 
         # turn off most image manipulations to show original atlas and labels 
         # while allowing transformations set as command-line arguments

@@ -1182,13 +1182,21 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             if planes_tot > 0:
                 frac = 1 - (planes_lbl / planes_tot)
         metrics[config.AtlasMetrics.LAT_UNLBL_PLANES] = frac
-    
+
+    if mirror and not mirror["neg_labels"]:
+        # turn off label signage denoting hemispheres
+        img_labels_np = np.abs(img_labels_np)
+        dtype = libmag.dtype_within_range(
+            np.amin(img_atlas_np), np.amax(img_labels_np))
+        if dtype != img_labels_np.dtype:
+            img_labels_np = img_labels_np.astype(dtype)
+
     imgs_np = (img_atlas_np, img_labels_np)
     if pre_plane:
         # transpose back to original orientation
         imgs_np, _ = plot_support.transpose_images(
             pre_plane, imgs_np, rev=True)
-    
+
     # convert back to sitk img and transpose if necessary
     imgs_sitk = (img_atlas, img_labels)
     imgs_sitk_replaced = []
@@ -1268,6 +1276,7 @@ def import_atlas(atlas_dir, show=True):
         img_labels = sitk_io.replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # show labels
+    print("labels output data type:", img_labels.GetPixelIDTypeAsString())
     img_labels_np = sitk.GetArrayFromImage(img_labels)
     label_ids = np.unique(img_labels_np)
     print("number of labels: {}".format(label_ids.size))
@@ -1370,7 +1379,7 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
     if add_fixed_mask is not None:
         # add mask to foreground of fixed image
         fixed_binary_np = sitk.GetArrayFromImage(fixed_binary_img)
-        print(np.unique(fixed_binary_np), fixed_binary_np.dtype)
+        #print(np.unique(fixed_binary_np), fixed_binary_np.dtype)
         fixed_binary_np[add_fixed_mask] = True
         fixed_binary_img = sitk_io.replace_sitk_with_numpy(
             fixed_binary_img, fixed_binary_np)

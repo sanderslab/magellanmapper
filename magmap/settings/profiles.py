@@ -507,6 +507,7 @@ class RegisterSettings(SettingsDict):
         self["labels_mirror"] = {
             RegKeys.ACTIVE: False,
             "start": -1,  # reflect planes starting here
+            "neg_labels": True,  # invert values of mirrored labels
         }
         # extend edge labels
         self["labels_edge"] = {
@@ -1027,6 +1028,14 @@ def update_register_settings(settings, settings_type):
             {
                 "smooth": None,
             }, 
+            profile)
+
+        # turn off negative labels
+        settings.add_modifier(
+            "noneg",
+            {
+                "labels_mirror": {"neg_labels": False},
+            },
             profile)
 
         # set smoothing to 4

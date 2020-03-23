@@ -247,9 +247,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     if edge is None or not edge[profiles.RegKeys.ACTIVE]:
         # turn off edge if inactive
         edge = None
-    mirror_start = None
-    if mirror and mirror[profiles.RegKeys.ACTIVE]:
-        mirror_start = mirror["start"]
+    mirror_start = mirror["start"] if mirror else None
     
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)

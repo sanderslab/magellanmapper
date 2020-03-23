@@ -506,7 +506,7 @@ class RegisterSettings(SettingsDict):
         # while keeping settings for cropping, etc
         self["labels_mirror"] = {
             RegKeys.ACTIVE: False,
-            "start": -1,  # reflect planes starting here
+            "start": None,  # reflect planes starting here
             "neg_labels": True,  # invert values of mirrored labels
         }
         # extend edge labels
@@ -950,10 +950,12 @@ def update_register_settings(settings, settings_type):
                 "resize_factor": None,  # turn off resizing
                 # TODO: consider whether to mirror for perfect symmetry
                 "extend_labels": {"mirror": False},
-                # atlas is almost but not perfectly symmetric; midline at z=228
-                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
                 "labels_edge": None,
                 "smooth": 0,
+                # atlas is almost (though not perfectly) symmetric, so turn
+                # off mirroring but specify midline (z=228) to make those
+                # labels negative
+                "labels_mirror": {RegKeys.ACTIVE: False, "start": 0.5},
                 "make_far_hem_neg": True,
             },
             profile)

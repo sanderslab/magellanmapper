@@ -33,7 +33,7 @@ def _is_profile_mirrored():
     # mean that the image itself is mirrored; allows checking for 
     # simplification by operating on one half and mirroring to the other
     return (config.register_settings["extend_labels"]["mirror"] and
-            config.register_settings["labels_mirror"] is not None)
+            config.register_settings["labels_mirror"]["start"] is not None)
 
 
 def make_edge_images(path_img, show=True, atlas=True, suffix=None, 

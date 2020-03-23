@@ -504,7 +504,10 @@ class RegisterSettings(SettingsDict):
         # use None to ignore, -1 to set automatically (for mirror and edge), 
         # or give a fraction between 0 and 1; can turn off with extend_labels 
         # while keeping settings for cropping, etc
-        self["labels_mirror"] = None  # reflect planes starting here
+        self["labels_mirror"] = {
+            RegKeys.ACTIVE: False,
+            "start": -1,  # reflect planes starting here
+        }
         # extend edge labels
         self["labels_edge"] = {
             RegKeys.ACTIVE: False,
@@ -712,7 +715,7 @@ def update_register_settings(settings, settings_type):
             {
                 "resize_factor": 1.0, 
                 "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
-                "labels_mirror": None, 
+                "labels_mirror": {RegKeys.ACTIVE: False},
                 "labels_edge": None, 
             }, 
             profile)
@@ -732,7 +735,7 @@ def update_register_settings(settings, settings_type):
             {
                 "target_size": (345, 371, 158),
                 "resize_factor": None,  # turn off resizing
-                "labels_mirror": 0.52, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.52},
                 "labels_edge": None, 
                 "log_atlas_thresh": True, 
                 "atlas_threshold": 75,  # avoid over-extension into ventricles
@@ -774,7 +777,7 @@ def update_register_settings(settings, settings_type):
             {
                 "target_size": (552, 673, 340),
                 "resize_factor": None,  # turn off resizing
-                "labels_mirror": 0.48, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
                 # small, default surr size to avoid capturing 3rd labeled area 
                 # that becomes an artifact
                 "labels_edge": {
@@ -793,7 +796,7 @@ def update_register_settings(settings, settings_type):
             {
                 "target_size": (704, 982, 386),
                 "resize_factor": None,  # turn off resizing
-                "labels_mirror": 0.49, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.49},
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "surr_size": 12,
                     # increase template smoothing to prevent over-extension of
@@ -815,7 +818,7 @@ def update_register_settings(settings, settings_type):
             {
                 "target_size": (278, 581, 370),
                 "resize_factor": None, # turn off resizing
-                "labels_mirror": 0.525, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.525},
                 # start from smallest BG; remove spurious label pxs around
                 # medial pallium by smoothing
                 "labels_edge": {
@@ -838,7 +841,7 @@ def update_register_settings(settings, settings_type):
             {
                 "target_size": (724, 403, 398),
                 "resize_factor": None,  # turn off resizing
-                "labels_mirror": 0.487, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.487},
                 "labels_edge": {
                     RegKeys.ACTIVE: True, "surr_size": 12,
                     # balance eroding medial pallium and allowing dorsal
@@ -861,7 +864,7 @@ def update_register_settings(settings, settings_type):
                 "resize_factor": None, # turn off resizing
                 # will still cross midline since some regions only have labels 
                 # past midline
-                "labels_mirror": 0.5, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
                 "labels_edge": {
                     RegKeys.ACTIVE: True,
                     "start": 0.078,  # avoid alar part size jitter
@@ -883,7 +886,7 @@ def update_register_settings(settings, settings_type):
                 "resize_factor": None, # turn off resizing
                 # will still cross midline since some regions only have labels 
                 # past midline
-                "labels_mirror": 0.48, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
                 "labels_edge": {
                     RegKeys.ACTIVE: True,
                     "start": 0.11,  # some lat labels only partially complete
@@ -904,7 +907,7 @@ def update_register_settings(settings, settings_type):
                 "target_size": (528, 320, 456),
                 "resize_factor": None,  # turn off resizing
                 # stained sections and labels almost but not symmetric
-                "labels_mirror": 0.5,
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
                 "labels_edge": {
                     RegKeys.ACTIVE: True, 
                     "start": 0.138,  # some lat labels only partially complete
@@ -930,7 +933,7 @@ def update_register_settings(settings, settings_type):
                 # labels are already mirrored starting at z=228, but atlas is 
                 # not here, so mirror starting at the same z-plane to make both 
                 # sections and labels symmetric and aligned with one another
-                "labels_mirror": 0.5,
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
                 "labels_edge": None, 
                 "smooth": 2, 
                 "make_far_hem_neg": True, 
@@ -947,7 +950,7 @@ def update_register_settings(settings, settings_type):
                 # TODO: consider whether to mirror for perfect symmetry
                 "extend_labels": {"mirror": False},
                 # atlas is almost but not perfectly symmetric; midline at z=228
-                "labels_mirror": 0.5,
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
                 "labels_edge": None,
                 "smooth": 0,
                 "make_far_hem_neg": True,
@@ -961,7 +964,7 @@ def update_register_settings(settings, settings_type):
                 "target_size": (441, 1017, 383),
                 "pre_plane": config.PLANE[2], 
                 "resize_factor": None,  # turn off resizing
-                "labels_mirror": 0.48, 
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
                 "labels_edge": None, 
                 "crop_to_labels": True,  # much extraneous, unlabeled tissue
                 "smooth": 4, 

@@ -209,11 +209,12 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     Args:
         img: Labels image in SimpleITK format.
         img_ref: Reference atlas image in SimpleITK format.
-        mirror: Fraction of planes at which to start mirroring; 
-            defaults to None, in which case mirroring will be skipped. 
-            -1 will cause the mirror plane to be found automatically 
-            based on the first plane completely without labels, starting 
-            from the highest plane and working downward.
+        mirror (Dict[str, float]): Label mirroring parameters. The value from
+            ``start`` specifies the fraction of planes at which to start
+            mirroring, where None skips mirroring, and -1 will cause the
+            mirror plane to be found automatically based on the first
+            plane completely without labels, starting from the highest
+            plane and working downward. Defaults to None to ignore mirroring.
         edge (Dict[str, float]): Lateral edge extension parameters passed 
             to :meth:`plot_3d.extend_edge`. The value from ``start`` 
             specifies the fraction of z-planes from which to start 
@@ -246,6 +247,9 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     if edge is None or not edge[profiles.RegKeys.ACTIVE]:
         # turn off edge if inactive
         edge = None
+    mirror_start = None
+    if mirror and mirror[profiles.RegKeys.ACTIVE]:
+        mirror_start = mirror["start"]
     
     # cast to signed int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
@@ -332,7 +336,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         mirrori -= 1
     
     if rotate:
-        if mirror is not None:
+        if mirror_start is not None:
             # mirroring labels with original values in case rotation will cause 
             # some labels to be cut off, then rotate for each specified axis
             for i in range(mirrori, tot_planes):
@@ -346,9 +350,9 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             print("performing affine of", aff)
             img_np = cv_nd.affine_nd(img_np, **aff)
     
-    if mirror is not None and mirror != -1:
+    if mirror_start is not None and mirror_start != -1:
         # reset mirror based on fractional profile setting
-        mirrori = int(mirror * tot_planes)
+        mirrori = int(mirror_start * tot_planes)
         print("will mirror starting at plane index {}".format(mirrori))
     
     df_sm = None
@@ -375,7 +379,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         "type: {}, max: {}, max avail: {}".format(
             img_np.dtype, np.max(img_np), np.iinfo(img_np.dtype).max))
     
-    if mirror is None:
+    if mirror_start is None:
         print("Checking baseline labels symmetry without mirroring:")
         check_mirrorred(img_np)
     else:
@@ -1046,7 +1050,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     pre_plane = config.register_settings["pre_plane"]
     extend_labels = config.register_settings["extend_labels"]
     mirror = config.register_settings["labels_mirror"]
-    is_mirror = extend_labels["mirror"]
+    is_mirror = mirror[profiles.RegKeys.ACTIVE]
     edge = config.register_settings["labels_edge"]
     expand = config.register_settings["expand_labels"]
     rotate = config.register_settings["rotate"]
@@ -1083,10 +1087,11 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             img_labels, img_atlas, mirror if is_mirror else None, 
             edge if extend_labels["edge"] else None, expand, rotate, smooth, 
             affine)
-        if metrics or crop and (mirror is not None or edge is not None):
+        if metrics or crop and (
+                mirror["start"] is not None or edge is not None):
             print("\nCurating labels with extension/mirroring only "
                   "for measurements and any cropping:")
-            resize = is_mirror and mirror is not None
+            resize = is_mirror and mirror["start"] is not None
             lbls_np_mir, extis, _, _ = _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, None, 
                 affine, resize)
@@ -1101,7 +1106,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     if affine:
         for aff in affine:
             img_atlas_np = cv_nd.affine_nd(img_atlas_np, **aff)
-    if is_mirror and mirror is not None:
+    if is_mirror and mirror["start"] is not None:
         # TODO: consider removing dup since not using
         dup = config.register_settings["labels_dup"]
         img_atlas_np = mirror_planes(

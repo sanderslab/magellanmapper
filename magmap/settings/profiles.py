@@ -524,8 +524,6 @@ class RegisterSettings(SettingsDict):
             RegKeys.MARKER_EROSION_USE_MIN: False,  # don't erode if reach min
         }
         self["labels_dup"] = None  # start duplicating planes til last labels
-        # TODO: replace with ACTIVE flag?
-        self["extend_labels"] = {"edge": True, "mirror": True}
         
         # expand labels within bounds given by 
         # (((x_pixels_start, x_pixels_end), ...), (next_region...)), or None 
@@ -948,8 +946,6 @@ def update_register_settings(settings, settings_type):
                 # for "25" image, which has same shape as ABA P56dev, P56adult
                 "target_size": (456, 528, 320),
                 "resize_factor": None,  # turn off resizing
-                # TODO: consider whether to mirror for perfect symmetry
-                "extend_labels": {"mirror": False},
                 "labels_edge": None,
                 "smooth": 0,
                 # atlas is almost (though not perfectly) symmetric, so turn
@@ -979,7 +975,8 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "raw",
             {
-                "extend_labels": {"edge": False, "mirror": False},
+                "labels_edge": {RegKeys.ACTIVE: False},
+                "labels_mirror": {RegKeys.ACTIVE: False},
                 "expand_labels": None,
                 "rotate": None,
                 "affine": None,
@@ -1000,7 +997,8 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "noedge", 
             {
-                "extend_labels": {"edge": False, "mirror": True}, 
+                "labels_edge": {RegKeys.ACTIVE: False},
+                "labels_mirror": {RegKeys.ACTIVE: True},
                 "smooth": None,
              },
             profile)
@@ -1009,7 +1007,8 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "nomirror",
             {
-                "extend_labels": {"edge": True, "mirror": False},
+                "labels_edge": {RegKeys.ACTIVE: True},
+                "labels_mirror": {RegKeys.ACTIVE: False},
                 "smooth": None,
              },
             profile)
@@ -1019,7 +1018,8 @@ def update_register_settings(settings, settings_type):
         settings.add_modifier(
             "noext", 
             {
-                "extend_labels": {"edge": False, "mirror": False}, 
+                "labels_edge": {RegKeys.ACTIVE: False},
+                "labels_mirror": {RegKeys.ACTIVE: False},
                 "smooth": None,
              },
             profile)

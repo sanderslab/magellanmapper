@@ -1046,10 +1046,10 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         None if smoothing was not performed.
     """
     pre_plane = config.register_settings["pre_plane"]
-    extend_labels = config.register_settings["extend_labels"]
     mirror = config.register_settings["labels_mirror"]
-    is_mirror = mirror[profiles.RegKeys.ACTIVE]
+    is_mirror = mirror and mirror[profiles.RegKeys.ACTIVE]
     edge = config.register_settings["labels_edge"]
+    is_edge = edge and edge[profiles.RegKeys.ACTIVE]
     expand = config.register_settings["expand_labels"]
     rotate = config.register_settings["rotate"]
     smooth = config.register_settings["smooth"]
@@ -1073,8 +1073,8 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     # curate labels
     mask_lbls = None  # mask of fully extended/mirrored labels for cropping
     extis = None  # extension indices of 1st labeled, then unlabeled planes
-    if all(extend_labels.values()):
-        # include any lateral extension and mirroring
+    if is_mirror and is_edge:
+        # include any lateral extension and mirroring if ACTIVE flag is on
         img_labels_np, extis, df_sm, df_sm_raw = (
             _curate_labels(
                 img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
@@ -1083,10 +1083,12 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         # turn off lateral extension and/or mirroring
         img_labels_np, _, df_sm, df_sm_raw = _curate_labels(
             img_labels, img_atlas, mirror if is_mirror else None, 
-            edge if extend_labels["edge"] else None, expand, rotate, smooth, 
+            edge if is_edge else None, expand, rotate, smooth,
             affine)
         if metrics or crop and (
                 mirror["start"] is not None or edge is not None):
+            # use edge and mirror settings even if ACTIVE is off, but only
+            # for metrics and to get the mask for cropping
             print("\nCurating labels with extension/mirroring only "
                   "for measurements and any cropping:")
             resize = is_mirror and mirror["start"] is not None
@@ -1245,8 +1247,10 @@ def import_atlas(atlas_dir, show=True):
     
     # set up condition
     overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]
-    extend_labels = config.register_settings["extend_labels"]
-    if any(extend_labels.values()):
+    edge = config.register_settings["labels_edge"]
+    mirror = config.register_settings["labels_mirror"]
+    if (edge and edge[profiles.RegKeys.ACTIVE]
+            or mirror and mirror[profiles.RegKeys.ACTIVE]):
         cond = "extended" 
     else:
         # show baseline DSC of atlas to labels before any processing

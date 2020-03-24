@@ -16,6 +16,7 @@ from magmap.settings import config
 
 class SettingsDict(dict):
     def __init__(self, *args, **kwargs):
+        super().__init__(self)
         self["settings_name"] = "default"
 
     def add_modifier(self, mod_name, mods, name_check=None, sep="_"):

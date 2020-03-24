@@ -8,10 +8,33 @@ given default settings.
 """
 from collections import OrderedDict
 from enum import Enum, auto
+import os
 
 import numpy as np
 
+from magmap.io import yaml_io
 from magmap.settings import config
+
+
+class RegKeys(Enum):
+    """Register setting enumerations."""
+    ACTIVE = auto()
+    MARKER_EROSION = auto()
+    MARKER_EROSION_MIN = auto()
+    MARKER_EROSION_USE_MIN = auto()
+    SAVE_STEPS = auto()
+    EDGE_AWARE_REANNOTAION = auto()
+    METRICS_CLUSTER = auto()
+    DBSCAN_EPS = auto()
+    DBSCAN_MINPTS = auto()
+    KNN_N = auto()
+
+
+#: dict: Dictionary mapping the names of Enums used in profiles to their Enum
+# classes for parsing Enums given as strings.
+_PROFILE_ENUMS = {
+    "RegKeys": RegKeys,
+}
 
 
 class SettingsDict(dict):
@@ -58,11 +81,21 @@ class SettingsDict(dict):
                 value will be replaced by the new value.
             sep (str): Separator between modifier elements. Defaults to "_".
         """
-        # if name to check is given, must match modifier name to continue
-        if mod_name not in profiles:
-            print(mod_name, "profile not found, skipped")
-            return
-        mods = profiles[mod_name]
+        if os.path.splitext(mod_name)[1].lower() in (".yml", ".yaml"):
+            if not os.path.exists(mod_name):
+                print(mod_name, "profile file not found, skipped")
+                return
+            yamls = yaml_io.load_yaml(mod_name, _PROFILE_ENUMS)
+            mods = {}
+            for yaml in yamls:
+                mods.update(yaml)
+            print("loaded {}:\n{}".format(mod_name, mods))
+        else:
+            # if name to check is given, must match modifier name to continue
+            if mod_name not in profiles:
+                print(mod_name, "profile not found, skipped")
+                return
+            mods = profiles[mod_name]
         self["settings_name"] += sep + mod_name
         for key in mods.keys():
             if isinstance(self[key], dict) and isinstance(mods[key], dict):
@@ -424,18 +457,6 @@ roc_dict = OrderedDict([
 ])
 
 
-class RegKeys(Enum):
-    """Register setting enumerations."""
-    ACTIVE = auto()
-    MARKER_EROSION = auto()
-    MARKER_EROSION_MIN = auto()
-    MARKER_EROSION_USE_MIN = auto()
-    SAVE_STEPS = auto()
-    EDGE_AWARE_REANNOTAION = auto()
-    METRICS_CLUSTER = auto()
-    DBSCAN_EPS = auto()
-    DBSCAN_MINPTS = auto()
-    KNN_N = auto()
 class RegisterSettings(SettingsDict):
 
     def __init__(self, *args, **kwargs):

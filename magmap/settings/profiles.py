@@ -15,9 +15,28 @@ from magmap.settings import config
 
 
 class SettingsDict(dict):
+    """Profile dictionary, which contains collections of settings and allows
+    modification by applying additional groups of settings specified in
+    this dictionary.
+
+    Attributes:
+        profiles (dict): Dictionary of profiles to modify the default
+            values, where each key is the profile name and the value
+            is a nested dictionary that will overwrite or update the
+            current values.
+
+    """
+
     def __init__(self, *args, **kwargs):
+        """Initialize a settings dictionary.
+
+        Args:
+            *args:
+            **kwargs:
+        """
         super().__init__(self)
         self["settings_name"] = "default"
+        self.profiles = {}
 
     def add_modifier(self, mod_name, profiles, sep="_"):
         """Add a modifer dictionary, overwriting any existing settings 
@@ -53,192 +72,31 @@ class SettingsDict(dict):
                 # replace with modified setting
                 self[key] = mods[key]
 
+    def update_settings(self, names_str):
+        """Update processing profiles, including layering modifications upon
+        existing base layers.
+
+        For example, "lightsheet_5x" will give one profile, while
+        "lightsheet_5x_contrast" will layer additional settings on top of the
+        original lightsheet profile.
+
+        Args:
+            names_str (str): The name of the settings profile to apply,
+                with individual profiles separated by "_". Profiles will
+                be applied in order of appearance.
+        """
+        profiles = names_str.split("_")
+
+        for profile in profiles:
+            # update default profile with any combo of modifiers, where the
+            # order of the profile listing determines the precedence of settings
+            self.add_modifier(profile, self.profiles)
+
+        if config.verbose:
+            print("settings for {}:\n{}".format(self["settings_name"], self))
+
 
 class ProcessSettings(SettingsDict):
-
-    PROFILES = {
-
-        # Lightsheet nuclei
-        # pre-v01
-        # v1 (MagellanMapper v0.6.1)
-        # v2 (MagellanMapper v0.6.2): isotropy (no anisotropic detection), dec
-        #     clip_max, use default sub_stack_max_pixels
-        # v2.1 (MagellanMapper v0.6.4): erosion_threshold
-        # v2.2 (MagellanMapper v0.6.6): narrower and taller stack shape
-        # v2.3 (MagellanMapper v0.8.7): added prune_tol_factor
-        # v2.4 (MagellanMapper v0.8.8): decreased min/max sigma, segment size
-        # v2.5 (MagellanMapper v0.8.9): added exclude_border
-        # v2.6 (MagellanMapper v0.9.3): slight dec in x/y verify tol for
-        #     Hungarian method
-        # v2.6.1 (MagellanMapper v0.9.4): scale_factor, segmenting_mean_thresh
-        #     had already been turned off and now removed completely
-        "lightsheet": {
-            "points_3d_thresh": 0.7,
-            "clip_vmax": 98.5,
-            "clip_min": 0,
-            "clip_max": 0.5,
-            "unsharp_strength": 0.3,
-            "erosion_threshold": 0.3,
-            "min_sigma_factor": 2.6,
-            "max_sigma_factor": 2.8,
-            "num_sigma": 10,
-            "overlap": 0.55,
-            "segment_size": 150,
-            "prune_tol_factor": (1, 0.9, 0.9),
-            "verify_tol_factor": (3, 1.2, 1.2),
-            "isotropic": (0.96, 1, 1),
-            "isotropic_vis": (1.3, 1, 1),
-            "sub_stack_max_pixels": (1200, 800, 800),
-            "exclude_border": (1, 0, 0),
-        },
-
-        # minimal preprocessing
-        "minpreproc": {
-            "clip_vmin": 0,
-            "clip_vmax": 99.99,
-            "clip_max": 1,
-            "tot_var_denoise": 0.01,
-            "unsharp_strength": 0,
-            "erosion_threshold": 0,
-        },
-
-        # low resolution
-        "lowres": {
-            "min_sigma_factor": 10,
-            "max_sigma_factor": 14,
-            "isotropic": None,
-            "denoise_size": 2000,  # will use full detection ROI
-            "segment_size": 1000,
-            "max_thresh_factor": 1.5,
-            "exclude_border": (8, 1, 1),
-            "verify_tol_factor": (3, 2, 2),
-        },
-
-        # 2-photon 20x nuclei
-        "2p20x": {
-            "vis_3d": "surface",
-            "clip_vmax": 97,
-            "clip_min": 0,
-            "clip_max": 0.7,
-            "tot_var_denoise": True,
-            "unsharp_strength": 2.5,
-            # smaller threshold since total var denoising
-            # "points_3d_thresh": 1.1
-            "min_sigma_factor": 2.6,
-            "max_sigma_factor": 4,
-            "num_sigma": 20,
-            "overlap": 0.1,
-            "thresholding": None,  # "otsu"
-            # "thresholding_size": 41,
-            "thresholding_size": 64,  # for otsu
-            # "thresholding_size": 50.0, # for random_walker
-            "denoise_size": 25,
-            "segment_size": 100,
-            "prune_tol_factor": (1.5, 1.3, 1.3),
-        },
-
-        # 2p 20x of zebrafish nuclei
-        "zebrafish": {
-            "min_sigma_factor": 2.5,
-            "max_sigma_factor": 3,
-        },
-
-        # higher contrast colormaps
-        "contrast": {
-            "channel_colors": ("inferno", "inferno"),
-            "scale_bar_color": "w",
-        },
-
-        # similar colormaps to greyscale but with a cool blue tinge
-        "bone": {
-            "channel_colors": ("bone", "bone"),
-            "scale_bar_color": "w",
-        },
-
-        # diverging colormaps for heat maps centered on 0
-        "diverging": {
-            "channel_colors": ("RdBu", "BrBG"),
-            "scale_bar_color": "k",
-            "colorbar": True,
-        },
-
-        # lightsheet 5x of cytoplasmic markers
-        "cytoplasm": {
-            "clip_min": 0.3,
-            "clip_max": 0.8,
-            "points_3d_thresh": 0.7,
-            # adjust sigmas based on extent of cyto staining;
-            # TODO: consider adding sigma_mult if ratio remains
-            # relatively const
-            "min_sigma_factor": 4,
-            "max_sigma_factor": 10,
-            "num_sigma": 10,
-            "overlap": 0.2,
-        },
-
-        # isotropic image that does not require interpolating visually
-        "isotropic": {
-            "points_3d_thresh": 0.3,  # used only if not surface
-            "isotropic_vis": (1, 1, 1),
-        },
-
-        # binary image
-        "binary": {
-            "denoise_size": None,
-            "detection_threshold": 0.001,
-        },
-
-        # adjust nuclei size for 4x magnification
-        "4xnuc": {
-            "min_sigma_factor": 3,
-            "max_sigma_factor": 4,
-        },
-
-        # fit into ~32GB RAM instance after isotropic interpolation
-        "20x": {
-            "segment_size": 50,
-        },
-
-        # export to deep learning framework with required dimensions
-        "exportdl": {
-            "isotropic": (0.93, 1, 1),
-        },
-
-        # downsample an image previously upsampled for isotropy
-        "downiso": {
-            "isotropic": None,  # assume already isotropic
-            "resize_blobs": (.2, 1, 1),
-        },
-
-        # rotate by 180 deg
-        # TODO: replace with plot labels config setting?
-        "rot180": {
-            "load_rot90": 2,  # rotation by 180deg
-        },
-
-        # denoise settings when performing registration
-        "register": {
-            "unsharp_strength": 1.5,
-        },
-
-        # color and intensity geared toward histology atlas images
-        "atlas": {
-            "channel_colors": ("gray",),
-            "clip_vmax": 97,
-        },
-
-        # colors for each channel based on randomly generated discrete colormaps
-        "randomcolors": {
-            "channel_colors": [],
-        },
-
-        # normalize image5d and associated metadata to intensity values
-        # between 0 and 1
-        "norm": {
-            "norm": (0.0, 1.0),
-        },
-
-    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(self)
@@ -303,31 +161,189 @@ class ProcessSettings(SettingsDict):
         self["isotropic_vis"] = None  # z,y,x scaling factor for vis only
         self["resize_blobs"] = None  # z,y,x coord scaling before verification
 
+        self.profiles = {
 
-def update_process_settings(settings, settings_type):
-    """Update processing profiles, including layering modifications upon 
-    existing base layers.
-    
-    For example, "lightsheet_5x" will give one profile, while 
-    "lightsheet_5x_contrast" will layer additional settings on top of the 
-    original lightsheet profile.
-    
-    Args:
-        settings: A :class:``ProcessSettings`` profile object.
-        settings_type: The name of the settings profile to apply. Profiles 
-            will be matched by the start of the settings name, with 
-            additional modifications made by matching ends of names.
-    """
-    profiles = settings_type.split("_")
-    
-    for profile in profiles:
-        # update default profile with any combo of modifiers, where the 
-        # order of the profile listing determines the precedence of settings
-        settings.add_modifier(profile, settings.PROFILES)
+            # Lightsheet nuclei
+            # pre-v01
+            # v1 (MagellanMapper v0.6.1)
+            # v2 (MagellanMapper v0.6.2): isotropy (no anisotropic detection), dec
+            #     clip_max, use default sub_stack_max_pixels
+            # v2.1 (MagellanMapper v0.6.4): erosion_threshold
+            # v2.2 (MagellanMapper v0.6.6): narrower and taller stack shape
+            # v2.3 (MagellanMapper v0.8.7): added prune_tol_factor
+            # v2.4 (MagellanMapper v0.8.8): decreased min/max sigma, segment size
+            # v2.5 (MagellanMapper v0.8.9): added exclude_border
+            # v2.6 (MagellanMapper v0.9.3): slight dec in x/y verify tol for
+            #     Hungarian method
+            # v2.6.1 (MagellanMapper v0.9.4): scale_factor, segmenting_mean_thresh
+            #     had already been turned off and now removed completely
+            "lightsheet": {
+                "points_3d_thresh": 0.7,
+                "clip_vmax": 98.5,
+                "clip_min": 0,
+                "clip_max": 0.5,
+                "unsharp_strength": 0.3,
+                "erosion_threshold": 0.3,
+                "min_sigma_factor": 2.6,
+                "max_sigma_factor": 2.8,
+                "num_sigma": 10,
+                "overlap": 0.55,
+                "segment_size": 150,
+                "prune_tol_factor": (1, 0.9, 0.9),
+                "verify_tol_factor": (3, 1.2, 1.2),
+                "isotropic": (0.96, 1, 1),
+                "isotropic_vis": (1.3, 1, 1),
+                "sub_stack_max_pixels": (1200, 800, 800),
+                "exclude_border": (1, 0, 0),
+            },
 
-    if config.verbose:
-        print("process settings for {}:\n{}"
-              .format(settings["settings_name"], settings))
+            # minimal preprocessing
+            "minpreproc": {
+                "clip_vmin": 0,
+                "clip_vmax": 99.99,
+                "clip_max": 1,
+                "tot_var_denoise": 0.01,
+                "unsharp_strength": 0,
+                "erosion_threshold": 0,
+            },
+
+            # low resolution
+            "lowres": {
+                "min_sigma_factor": 10,
+                "max_sigma_factor": 14,
+                "isotropic": None,
+                "denoise_size": 2000,  # will use full detection ROI
+                "segment_size": 1000,
+                "max_thresh_factor": 1.5,
+                "exclude_border": (8, 1, 1),
+                "verify_tol_factor": (3, 2, 2),
+            },
+
+            # 2-photon 20x nuclei
+            "2p20x": {
+                "vis_3d": "surface",
+                "clip_vmax": 97,
+                "clip_min": 0,
+                "clip_max": 0.7,
+                "tot_var_denoise": True,
+                "unsharp_strength": 2.5,
+                # smaller threshold since total var denoising
+                # "points_3d_thresh": 1.1
+                "min_sigma_factor": 2.6,
+                "max_sigma_factor": 4,
+                "num_sigma": 20,
+                "overlap": 0.1,
+                "thresholding": None,  # "otsu"
+                # "thresholding_size": 41,
+                "thresholding_size": 64,  # for otsu
+                # "thresholding_size": 50.0, # for random_walker
+                "denoise_size": 25,
+                "segment_size": 100,
+                "prune_tol_factor": (1.5, 1.3, 1.3),
+            },
+
+            # 2p 20x of zebrafish nuclei
+            "zebrafish": {
+                "min_sigma_factor": 2.5,
+                "max_sigma_factor": 3,
+            },
+
+            # higher contrast colormaps
+            "contrast": {
+                "channel_colors": ("inferno", "inferno"),
+                "scale_bar_color": "w",
+            },
+
+            # similar colormaps to greyscale but with a cool blue tinge
+            "bone": {
+                "channel_colors": ("bone", "bone"),
+                "scale_bar_color": "w",
+            },
+
+            # diverging colormaps for heat maps centered on 0
+            "diverging": {
+                "channel_colors": ("RdBu", "BrBG"),
+                "scale_bar_color": "k",
+                "colorbar": True,
+            },
+
+            # lightsheet 5x of cytoplasmic markers
+            "cytoplasm": {
+                "clip_min": 0.3,
+                "clip_max": 0.8,
+                "points_3d_thresh": 0.7,
+                # adjust sigmas based on extent of cyto staining;
+                # TODO: consider adding sigma_mult if ratio remains
+                # relatively const
+                "min_sigma_factor": 4,
+                "max_sigma_factor": 10,
+                "num_sigma": 10,
+                "overlap": 0.2,
+            },
+
+            # isotropic image that does not require interpolating visually
+            "isotropic": {
+                "points_3d_thresh": 0.3,  # used only if not surface
+                "isotropic_vis": (1, 1, 1),
+            },
+
+            # binary image
+            "binary": {
+                "denoise_size": None,
+                "detection_threshold": 0.001,
+            },
+
+            # adjust nuclei size for 4x magnification
+            "4xnuc": {
+                "min_sigma_factor": 3,
+                "max_sigma_factor": 4,
+            },
+
+            # fit into ~32GB RAM instance after isotropic interpolation
+            "20x": {
+                "segment_size": 50,
+            },
+
+            # export to deep learning framework with required dimensions
+            "exportdl": {
+                "isotropic": (0.93, 1, 1),
+            },
+
+            # downsample an image previously upsampled for isotropy
+            "downiso": {
+                "isotropic": None,  # assume already isotropic
+                "resize_blobs": (.2, 1, 1),
+            },
+
+            # rotate by 180 deg
+            # TODO: replace with plot labels config setting?
+            "rot180": {
+                "load_rot90": 2,  # rotation by 180deg
+            },
+
+            # denoise settings when performing registration
+            "register": {
+                "unsharp_strength": 1.5,
+            },
+
+            # color and intensity geared toward histology atlas images
+            "atlas": {
+                "channel_colors": ("gray",),
+                "clip_vmax": 97,
+            },
+
+            # colors for each channel based on randomly generated discrete colormaps
+            "randomcolors": {
+                "channel_colors": [],
+            },
+
+            # normalize image5d and associated metadata to intensity values
+            # between 0 and 1
+            "norm": {
+                "norm": (0.0, 1.0),
+            },
+
+        }
 
 
 def make_hyperparm_arr(start, stop, num_steps, num_col, coli, base=1):
@@ -421,445 +437,6 @@ class RegKeys(Enum):
     DBSCAN_MINPTS = auto()
     KNN_N = auto()
 class RegisterSettings(SettingsDict):
-
-    PROFILES = {
-
-        # more aggressive parameters for finer tuning
-        "finer": {
-            "bspline_iter_max": "512",
-            "truncate_labels": (None, (0.2, 1.0), (0.45, 1.0)),
-            "holes_area": 5000,
-        },
-
-        # Normalized Correlation Coefficient similarity metric for registration
-        "ncc": {
-            "metric_similarity": "AdvancedNormalizedCorrelation",
-            # fallback to MMI since it has been rather reliable
-            "metric_sim_fallback":
-                (0.85, "AdvancedMattesMutualInformation"),
-            "bspline_grid_space_voxels": "60",
-        },
-
-        # groupwise registration
-        "groupwise": {
-            # larger bspline voxels to avoid over deformation of internal
-            # structures
-            "bspline_grid_space_voxels": "130",
-
-            # need to empirically determine
-            "carve_threshold": 0.01,
-            "holes_area": 10000,
-
-            # empirically determined to add variable tissue area from
-            # first image since this tissue may be necessary to register
-            # to other images that contain this variable region
-            "extend_borders": ((60, 180), (0, 200), (20, 110)),
-
-            # increased num of resolutions with overall increased spacing
-            # schedule since it appears to improve internal alignment
-            "grid_spacing_schedule": [
-                "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"],
-        },
-
-        # test no iterations
-        "testnoiter": {
-            "translation_iter_max": "0",
-            "affine_iter_max": "0",
-            "bspline_iter_max": "0",
-            "curate": False,
-        },
-
-        # test a target size
-        "testsize": {
-            "target_size": (50, 50, 50),
-        },
-
-        # atlas is big relative to the experimental image, so need to
-        # more aggressively downsize the atlas
-        "big": {
-            "resize_factor": 0.625,
-        },
-
-        # new atlas generation: turn on preprocessing
-        # TODO: likely remove since not using preprocessing currently
-        "new": {
-            "preprocess": True,
-        },
-
-        # registration to new atlas assumes images are roughly same size and
-        # orientation (ie transposed) and already have mirrored labels aligned
-        # with the fixed image toward the bottom of the z-dimension
-        "generated": {
-            "resize_factor": 1.0,
-            "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
-            "labels_mirror": {RegKeys.ACTIVE: False},
-            "labels_edge": None,
-        },
-
-        # atlas that uses groupwise image as the atlas itself should
-        # determine atlas threshold dynamically
-        "grouped": {
-            "atlas_threshold": None,
-        },
-
-        # ABA E11pt5 specific settings
-        "abae11pt5": {
-            "target_size": (345, 371, 158),
-            "resize_factor": None,  # turn off resizing
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.52},
-            "labels_edge": {RegKeys.ACTIVE: False, "start": None},
-            "log_atlas_thresh": True,
-            "atlas_threshold": 75,  # avoid over-extension into ventricles
-            "atlas_threshold_all": 5,  # include ventricles since labeled
-            # rotate axis 0 to open vertical gap for affines (esp 2nd)
-            "rotate": ((-5, 1), (-1, 2), (-30, 0)),
-            "affine": ({
-                           # shear cord opposite the brain back toward midline
-                           "axis_along": 1, "axis_shift": 0, "shift": (25, 0),
-                           "bounds": ((None, None), (70, 250), (0, 150))
-                       }, {
-                           # shear distal cord where the tail wraps back on itself
-                           "axis_along": 2, "axis_shift": 0, "shift": (0, 50),
-                           "bounds": ((None, None), (0, 200), (50, 150))
-                       }, {
-                           # counter shearing at far distal end, using attachment for
-                           # a more gradual shearing along the y-axis to preserve the
-                           # cord along that axis
-                           "axis_along": 2, "axis_shift": 0, "shift": (45, 0),
-                           "bounds": ((None, None), (160, 200), (90, 150)),
-                           "axis_attach": 1
-                       }),
-            "crop_to_labels": True,  # req because of 2nd affine
-            "smooth": 2,
-            "overlap_meas_add_lbls": ((126651558, 126652059),),
-        },
-
-        # pitch rotation only for ABA E11pt to compare corresponding z-planes
-        # with other stages of refinement
-        "abae11pt5pitch": {"rotate": ((-30, 0),)},
-
-        # ABA E13pt5 specific settings
-        "abae13pt5": {
-            "target_size": (552, 673, 340),
-            "resize_factor": None,  # turn off resizing
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
-            # small, default surr size to avoid capturing 3rd labeled area
-            # that becomes an artifact
-            "labels_edge": {
-                RegKeys.ACTIVE: True,
-                "start": -1,
-            },
-            "atlas_threshold": 55,  # avoid edge over-extension into skull
-            "rotate": ((-4, 1), (-2, 2)),
-            "crop_to_labels": True,
-            "smooth": 2,
-        },
-
-        # ABA E15pt5 specific settings
-        "abae15pt5": {
-            "target_size": (704, 982, 386),
-            "resize_factor": None,  # turn off resizing
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.49},
-            "labels_edge": {
-                RegKeys.ACTIVE: True,
-                "start": -1,
-                "surr_size": 12,
-                # increase template smoothing to prevent over-extension of
-                # intermediate stratum of Str
-                "smoothing_size": 5,
-                # larger to allow superficial stratum of DPall to take over
-                RegKeys.MARKER_EROSION: 19,
-            },
-            "atlas_threshold": 45,  # avoid edge over-extension into skull
-            "rotate": ((-4, 1),),
-            "crop_to_labels": True,
-            "smooth": 2,
-        },
-
-        # ABA E18pt5 specific settings
-        "abae18pt5": {
-            "target_size": (278, 581, 370),
-            "resize_factor": None,  # turn off resizing
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.525},
-            # start from smallest BG; remove spurious label pxs around
-            # medial pallium by smoothing
-            "labels_edge": {
-                RegKeys.ACTIVE: True, "start": 0.137, "surr_size": 12,
-                RegKeys.MARKER_EROSION: 12,
-                RegKeys.MARKER_EROSION_USE_MIN: True,
-            },
-            "expand_labels": (((None,), (0, 279), (103, 108)),),
-            "rotate": ((1.5, 1), (2, 2)),
-            "smooth": 3,
-            RegKeys.EDGE_AWARE_REANNOTAION: {
-                RegKeys.MARKER_EROSION_MIN: 4,
-            }
-        },
-
-        # ABA P4 specific settings
-        "abap4": {
-            "target_size": (724, 403, 398),
-            "resize_factor": None,  # turn off resizing
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.487},
-            "labels_edge": {
-                RegKeys.ACTIVE: True,
-                "start": -1,
-                "surr_size": 12,
-                # balance eroding medial pallium and allowing dorsal
-                # pallium to take over
-                RegKeys.MARKER_EROSION: 8,
-            },
-            # open caudal labels to allow smallest mirror plane index,
-            # though still cross midline as some regions only have
-            # labels past midline
-            "rotate": ((0.22, 1),),
-            "smooth": 4,
-        },
-
-        # ABA P14 specific settings
-        "abap14": {
-            "target_size": (390, 794, 469),
-            "resize_factor": None,  # turn off resizing
-            # will still cross midline since some regions only have labels
-            # past midline
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
-            "labels_edge": {
-                RegKeys.ACTIVE: True,
-                "start": 0.078,  # avoid alar part size jitter
-                "surr_size": 12,
-                RegKeys.MARKER_EROSION: 40,
-                RegKeys.MARKER_EROSION_MIN: 10,
-            },
-            # rotate conservatively for symmetry without losing labels
-            "rotate": ((-0.4, 1),),
-            "smooth": 5,
-        },
-
-        # ABA P28 specific settings
-        "abap28": {
-            "target_size": (863, 480, 418),
-            "resize_factor": None,  # turn off resizing
-            # will still cross midline since some regions only have labels
-            # past midline
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
-            "labels_edge": {
-                RegKeys.ACTIVE: True,
-                "start": 0.11,  # some lat labels only partially complete
-                "surr_size": 12,
-                "smoothing_size": 0,  # no smoothing to avoid loss of detail
-            },
-            # "labels_dup": 0.48,
-            # rotate for symmetry, which also reduces label loss
-            "rotate": ((1, 2),),
-            "smooth": 2,
-        },
-
-        # ABA P56 (developing mouse) specific settings
-        "abap56": {
-            "target_size": (528, 320, 456),
-            "resize_factor": None,  # turn off resizing
-            # stained sections and labels almost but not symmetric
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
-            "labels_edge": {
-                RegKeys.ACTIVE: True,
-                "start": 0.138,  # some lat labels only partially complete
-                "surr_size": 12,
-                "smoothing_size": 0,  # no smoothing to avoid loss of detail
-                # only mild erosion to minimize layer loss since histology
-                # contrast is low
-                RegKeys.MARKER_EROSION: 5,
-            },
-            "smooth": 2,
-            "make_far_hem_neg": True,
-        },
-
-        # ABA P56 (adult) specific settings
-        "abap56adult": {
-            # same atlas image as ABA P56dev
-            "target_size": (528, 320, 456),
-            "resize_factor": None,  # turn off resizing
-            # same stained sections as for P56dev;
-            # labels are already mirrored starting at z=228, but atlas is
-            # not here, so mirror starting at the same z-plane to make both
-            # sections and labels symmetric and aligned with one another;
-            # no need to extend lateral edges
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
-            "smooth": 2,
-            "make_far_hem_neg": True,
-        },
-
-        # ABA CCFv3 specific settings
-        "abaccfv3": {
-            # for "25" image, which has same shape as ABA P56dev, P56adult
-            "target_size": (456, 528, 320),
-            "resize_factor": None,  # turn off resizing
-            # atlas is almost (though not perfectly) symmetric, so turn
-            # off mirroring but specify midline (z=228) to make those
-            # labels negative; no need to extend lateral edges
-            "labels_mirror": {RegKeys.ACTIVE: False, "start": 0.5},
-            "make_far_hem_neg": True,
-            "smooth": 0,
-        },
-
-        # Waxholm rat atlas specific settings
-        "whsrat": {
-            "target_size": (441, 1017, 383),
-            "pre_plane": config.PLANE[2],
-            "resize_factor": None,  # turn off resizing
-            # mirror, but no need to extend lateral edges
-            "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
-            "crop_to_labels": True,  # much extraneous, unlabeled tissue
-            "smooth": 4,
-        },
-
-        # Profile modifiers to turn off settings. These "no..." profiles
-        # can be applied on top of atlas-specific profiles to turn off
-        # specific settings. Where possible, the ACTIVE flags will be turned
-        # off to retain the rest of the settings within the given group
-        # so that they can be used for metrics, cropping, etc.
-
-        # turn off most image manipulations to show original atlas and labels
-        # while allowing transformations set as command-line arguments
-        "raw": {
-            "labels_edge": {RegKeys.ACTIVE: False},
-            "labels_mirror": {RegKeys.ACTIVE: False},
-            "expand_labels": None,
-            "rotate": None,
-            "affine": None,
-            "smooth": None,
-            "crop_to_labels": False,
-        },
-
-        # turn off atlas rotation
-        "norotate": {
-            "rotate": None,
-        },
-
-        # turn off edge extension along with smoothing
-        "noedge": {
-            "labels_edge": {RegKeys.ACTIVE: False},
-            "labels_mirror": {RegKeys.ACTIVE: True},
-            "smooth": None,
-        },
-
-        # turn off mirroring along with smoothing
-        "nomirror": {
-            "labels_edge": {RegKeys.ACTIVE: True},
-            "labels_mirror": {RegKeys.ACTIVE: False},
-            "smooth": None,
-        },
-
-        # turn off both mirroring and edge extension along with smoothing
-        # while preserving their settings for measurements and cropping
-        "noext": {
-            "labels_edge": {RegKeys.ACTIVE: False},
-            "labels_mirror": {RegKeys.ACTIVE: False},
-            "smooth": None,
-        },
-
-        # turn off label smoothing
-        "nosmooth": {
-            "smooth": None,
-        },
-
-        # turn off negative labels
-        "noneg": {
-            # if mirroring, do not invert mirrored labels
-            "labels_mirror": {"neg_labels": False},
-            # do not invert far hemisphere labels
-            "make_far_hem_neg": False,
-        },
-
-        # set smoothing to 4
-        "smooth4": {
-            "smooth": 4,
-        },
-
-        # turn off labels markers generation
-        "nomarkers": {
-            RegKeys.EDGE_AWARE_REANNOTAION: None,
-        },
-
-        # turn off cropping atlas to extent of labels
-        "nocropatlas": {
-            "crop_to_labels": False,
-        },
-
-        # turn off cropping labels to original size
-        "nocroplabels": {
-            "crop_to_orig": False,
-        },
-
-        # test label smoothing over range
-        "smoothtest": {
-            "smooth": (0, 1, 2, 3, 4, 5, 6),
-            # "smooth": (0, ),
-        },
-
-        # test label smoothing over longer range
-        "smoothtestlong": {
-            "smooth": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
-        },
-
-        # save intermediate steps where supported
-        "savesteps": {
-            "labels_edge": {RegKeys.SAVE_STEPS: True}
-        },
-
-        # groupwise registration batch 02
-        "grouped02": {
-            "bspline_grid_space_voxels": "70",
-            "grid_spacing_schedule": [
-                "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"],
-            "carve_threshold": 0.009,
-        },
-
-        # groupwise registration batch 04
-        "grouped04": {
-            "carve_threshold": 0.015,
-        },
-
-        # crop anterior region of labels during single registration
-        "cropanterior": {
-            "truncate_labels": (None, (0.2, 0.8), (0.45, 1.0)),
-        },
-
-        # turn off image curation to avoid post-processing with carving
-        # and in-painting
-        "nopostproc": {
-            "curate": False,
-            "truncate_labels": None
-        },
-
-        # smoothing by Gaussian blur
-        "smoothgaus": {
-            "smoothing_mode": config.SmoothingModes.gaussian,
-            "smooth": 0.25
-        },
-
-        # smoothing by Gaussian blur
-        "smoothgaustest": {
-            "smoothing_mode": config.SmoothingModes.gaussian,
-            "smooth": (0, 0.25, 0.5, 0.75, 1, 1.25)
-        },
-
-        # combine sides for volume stats
-        "combinesides": {
-            "combine_sides": True,
-        },
-
-        # more volume stats
-        "morestats": {
-            # "extra_metric_groups": (config.MetricGroups.SHAPES,),
-            "extra_metric_groups": (config.MetricGroups.POINT_CLOUD,),
-        },
-
-        # measure interior-border stats
-        "interiorlabels": {
-            "erode_labels": {"markers": True, "interior": True},
-        },
-
-    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(self)
@@ -1010,14 +587,441 @@ class RegisterSettings(SettingsDict):
             RegKeys.DBSCAN_MINPTS: 6,  # min points/samples per cluster
         }
 
+        self.profiles = {
 
-def update_register_settings(settings, settings_type):
-    
-    profiles = settings_type.split("_")
-    
-    for profile in profiles:
-        settings.add_modifier(profile, settings.PROFILES)
+            # more aggressive parameters for finer tuning
+            "finer": {
+                "bspline_iter_max": "512",
+                "truncate_labels": (None, (0.2, 1.0), (0.45, 1.0)),
+                "holes_area": 5000,
+            },
 
-    if config.verbose:
-        print("process settings for {}:\n{}"
-              .format(settings["settings_name"], settings))
+            # Normalized Correlation Coefficient similarity metric for registration
+            "ncc": {
+                "metric_similarity": "AdvancedNormalizedCorrelation",
+                # fallback to MMI since it has been rather reliable
+                "metric_sim_fallback":
+                    (0.85, "AdvancedMattesMutualInformation"),
+                "bspline_grid_space_voxels": "60",
+            },
+
+            # groupwise registration
+            "groupwise": {
+                # larger bspline voxels to avoid over deformation of internal
+                # structures
+                "bspline_grid_space_voxels": "130",
+
+                # need to empirically determine
+                "carve_threshold": 0.01,
+                "holes_area": 10000,
+
+                # empirically determined to add variable tissue area from
+                # first image since this tissue may be necessary to register
+                # to other images that contain this variable region
+                "extend_borders": ((60, 180), (0, 200), (20, 110)),
+
+                # increased num of resolutions with overall increased spacing
+                # schedule since it appears to improve internal alignment
+                "grid_spacing_schedule": [
+                    "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"],
+            },
+
+            # test no iterations
+            "testnoiter": {
+                "translation_iter_max": "0",
+                "affine_iter_max": "0",
+                "bspline_iter_max": "0",
+                "curate": False,
+            },
+
+            # test a target size
+            "testsize": {
+                "target_size": (50, 50, 50),
+            },
+
+            # atlas is big relative to the experimental image, so need to
+            # more aggressively downsize the atlas
+            "big": {
+                "resize_factor": 0.625,
+            },
+
+            # new atlas generation: turn on preprocessing
+            # TODO: likely remove since not using preprocessing currently
+            "new": {
+                "preprocess": True,
+            },
+
+            # registration to new atlas assumes images are roughly same size and
+            # orientation (ie transposed) and already have mirrored labels aligned
+            # with the fixed image toward the bottom of the z-dimension
+            "generated": {
+                "resize_factor": 1.0,
+                "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
+                "labels_mirror": {RegKeys.ACTIVE: False},
+                "labels_edge": None,
+            },
+
+            # atlas that uses groupwise image as the atlas itself should
+            # determine atlas threshold dynamically
+            "grouped": {
+                "atlas_threshold": None,
+            },
+
+            # ABA E11pt5 specific settings
+            "abae11pt5": {
+                "target_size": (345, 371, 158),
+                "resize_factor": None,  # turn off resizing
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.52},
+                "labels_edge": {RegKeys.ACTIVE: False, "start": None},
+                "log_atlas_thresh": True,
+                "atlas_threshold": 75,  # avoid over-extension into ventricles
+                "atlas_threshold_all": 5,  # include ventricles since labeled
+                # rotate axis 0 to open vertical gap for affines (esp 2nd)
+                "rotate": ((-5, 1), (-1, 2), (-30, 0)),
+                "affine": ({
+                               # shear cord opposite the brain back toward midline
+                               "axis_along": 1, "axis_shift": 0, "shift": (25, 0),
+                               "bounds": ((None, None), (70, 250), (0, 150))
+                           }, {
+                               # shear distal cord where the tail wraps back on itself
+                               "axis_along": 2, "axis_shift": 0, "shift": (0, 50),
+                               "bounds": ((None, None), (0, 200), (50, 150))
+                           }, {
+                               # counter shearing at far distal end, using attachment for
+                               # a more gradual shearing along the y-axis to preserve the
+                               # cord along that axis
+                               "axis_along": 2, "axis_shift": 0, "shift": (45, 0),
+                               "bounds": ((None, None), (160, 200), (90, 150)),
+                               "axis_attach": 1
+                           }),
+                "crop_to_labels": True,  # req because of 2nd affine
+                "smooth": 2,
+                "overlap_meas_add_lbls": ((126651558, 126652059),),
+            },
+
+            # pitch rotation only for ABA E11pt to compare corresponding z-planes
+            # with other stages of refinement
+            "abae11pt5pitch": {"rotate": ((-30, 0),)},
+
+            # ABA E13pt5 specific settings
+            "abae13pt5": {
+                "target_size": (552, 673, 340),
+                "resize_factor": None,  # turn off resizing
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
+                # small, default surr size to avoid capturing 3rd labeled area
+                # that becomes an artifact
+                "labels_edge": {
+                    RegKeys.ACTIVE: True,
+                    "start": -1,
+                },
+                "atlas_threshold": 55,  # avoid edge over-extension into skull
+                "rotate": ((-4, 1), (-2, 2)),
+                "crop_to_labels": True,
+                "smooth": 2,
+            },
+
+            # ABA E15pt5 specific settings
+            "abae15pt5": {
+                "target_size": (704, 982, 386),
+                "resize_factor": None,  # turn off resizing
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.49},
+                "labels_edge": {
+                    RegKeys.ACTIVE: True,
+                    "start": -1,
+                    "surr_size": 12,
+                    # increase template smoothing to prevent over-extension of
+                    # intermediate stratum of Str
+                    "smoothing_size": 5,
+                    # larger to allow superficial stratum of DPall to take over
+                    RegKeys.MARKER_EROSION: 19,
+                },
+                "atlas_threshold": 45,  # avoid edge over-extension into skull
+                "rotate": ((-4, 1),),
+                "crop_to_labels": True,
+                "smooth": 2,
+            },
+
+            # ABA E18pt5 specific settings
+            "abae18pt5": {
+                "target_size": (278, 581, 370),
+                "resize_factor": None,  # turn off resizing
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.525},
+                # start from smallest BG; remove spurious label pxs around
+                # medial pallium by smoothing
+                "labels_edge": {
+                    RegKeys.ACTIVE: True, "start": 0.137, "surr_size": 12,
+                    RegKeys.MARKER_EROSION: 12,
+                    RegKeys.MARKER_EROSION_USE_MIN: True,
+                },
+                "expand_labels": (((None,), (0, 279), (103, 108)),),
+                "rotate": ((1.5, 1), (2, 2)),
+                "smooth": 3,
+                RegKeys.EDGE_AWARE_REANNOTAION: {
+                    RegKeys.MARKER_EROSION_MIN: 4,
+                }
+            },
+
+            # ABA P4 specific settings
+            "abap4": {
+                "target_size": (724, 403, 398),
+                "resize_factor": None,  # turn off resizing
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.487},
+                "labels_edge": {
+                    RegKeys.ACTIVE: True,
+                    "start": -1,
+                    "surr_size": 12,
+                    # balance eroding medial pallium and allowing dorsal
+                    # pallium to take over
+                    RegKeys.MARKER_EROSION: 8,
+                },
+                # open caudal labels to allow smallest mirror plane index,
+                # though still cross midline as some regions only have
+                # labels past midline
+                "rotate": ((0.22, 1),),
+                "smooth": 4,
+            },
+
+            # ABA P14 specific settings
+            "abap14": {
+                "target_size": (390, 794, 469),
+                "resize_factor": None,  # turn off resizing
+                # will still cross midline since some regions only have labels
+                # past midline
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
+                "labels_edge": {
+                    RegKeys.ACTIVE: True,
+                    "start": 0.078,  # avoid alar part size jitter
+                    "surr_size": 12,
+                    RegKeys.MARKER_EROSION: 40,
+                    RegKeys.MARKER_EROSION_MIN: 10,
+                },
+                # rotate conservatively for symmetry without losing labels
+                "rotate": ((-0.4, 1),),
+                "smooth": 5,
+            },
+
+            # ABA P28 specific settings
+            "abap28": {
+                "target_size": (863, 480, 418),
+                "resize_factor": None,  # turn off resizing
+                # will still cross midline since some regions only have labels
+                # past midline
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
+                "labels_edge": {
+                    RegKeys.ACTIVE: True,
+                    "start": 0.11,  # some lat labels only partially complete
+                    "surr_size": 12,
+                    "smoothing_size": 0,  # no smoothing to avoid loss of detail
+                },
+                # "labels_dup": 0.48,
+                # rotate for symmetry, which also reduces label loss
+                "rotate": ((1, 2),),
+                "smooth": 2,
+            },
+
+            # ABA P56 (developing mouse) specific settings
+            "abap56": {
+                "target_size": (528, 320, 456),
+                "resize_factor": None,  # turn off resizing
+                # stained sections and labels almost but not symmetric
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
+                "labels_edge": {
+                    RegKeys.ACTIVE: True,
+                    "start": 0.138,  # some lat labels only partially complete
+                    "surr_size": 12,
+                    "smoothing_size": 0,  # no smoothing to avoid loss of detail
+                    # only mild erosion to minimize layer loss since histology
+                    # contrast is low
+                    RegKeys.MARKER_EROSION: 5,
+                },
+                "smooth": 2,
+                "make_far_hem_neg": True,
+            },
+
+            # ABA P56 (adult) specific settings
+            "abap56adult": {
+                # same atlas image as ABA P56dev
+                "target_size": (528, 320, 456),
+                "resize_factor": None,  # turn off resizing
+                # same stained sections as for P56dev;
+                # labels are already mirrored starting at z=228, but atlas is
+                # not here, so mirror starting at the same z-plane to make both
+                # sections and labels symmetric and aligned with one another;
+                # no need to extend lateral edges
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
+                "smooth": 2,
+                "make_far_hem_neg": True,
+            },
+
+            # ABA CCFv3 specific settings
+            "abaccfv3": {
+                # for "25" image, which has same shape as ABA P56dev, P56adult
+                "target_size": (456, 528, 320),
+                "resize_factor": None,  # turn off resizing
+                # atlas is almost (though not perfectly) symmetric, so turn
+                # off mirroring but specify midline (z=228) to make those
+                # labels negative; no need to extend lateral edges
+                "labels_mirror": {RegKeys.ACTIVE: False, "start": 0.5},
+                "make_far_hem_neg": True,
+                "smooth": 0,
+            },
+
+            # Waxholm rat atlas specific settings
+            "whsrat": {
+                "target_size": (441, 1017, 383),
+                "pre_plane": config.PLANE[2],
+                "resize_factor": None,  # turn off resizing
+                # mirror, but no need to extend lateral edges
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
+                "crop_to_labels": True,  # much extraneous, unlabeled tissue
+                "smooth": 4,
+            },
+
+            # Profile modifiers to turn off settings. These "no..." profiles
+            # can be applied on top of atlas-specific profiles to turn off
+            # specific settings. Where possible, the ACTIVE flags will be turned
+            # off to retain the rest of the settings within the given group
+            # so that they can be used for metrics, cropping, etc.
+
+            # turn off most image manipulations to show original atlas and labels
+            # while allowing transformations set as command-line arguments
+            "raw": {
+                "labels_edge": {RegKeys.ACTIVE: False},
+                "labels_mirror": {RegKeys.ACTIVE: False},
+                "expand_labels": None,
+                "rotate": None,
+                "affine": None,
+                "smooth": None,
+                "crop_to_labels": False,
+            },
+
+            # turn off atlas rotation
+            "norotate": {
+                "rotate": None,
+            },
+
+            # turn off edge extension along with smoothing
+            "noedge": {
+                "labels_edge": {RegKeys.ACTIVE: False},
+                "labels_mirror": {RegKeys.ACTIVE: True},
+                "smooth": None,
+            },
+
+            # turn off mirroring along with smoothing
+            "nomirror": {
+                "labels_edge": {RegKeys.ACTIVE: True},
+                "labels_mirror": {RegKeys.ACTIVE: False},
+                "smooth": None,
+            },
+
+            # turn off both mirroring and edge extension along with smoothing
+            # while preserving their settings for measurements and cropping
+            "noext": {
+                "labels_edge": {RegKeys.ACTIVE: False},
+                "labels_mirror": {RegKeys.ACTIVE: False},
+                "smooth": None,
+            },
+
+            # turn off label smoothing
+            "nosmooth": {
+                "smooth": None,
+            },
+
+            # turn off negative labels
+            "noneg": {
+                # if mirroring, do not invert mirrored labels
+                "labels_mirror": {"neg_labels": False},
+                # do not invert far hemisphere labels
+                "make_far_hem_neg": False,
+            },
+
+            # set smoothing to 4
+            "smooth4": {
+                "smooth": 4,
+            },
+
+            # turn off labels markers generation
+            "nomarkers": {
+                RegKeys.EDGE_AWARE_REANNOTAION: None,
+            },
+
+            # turn off cropping atlas to extent of labels
+            "nocropatlas": {
+                "crop_to_labels": False,
+            },
+
+            # turn off cropping labels to original size
+            "nocroplabels": {
+                "crop_to_orig": False,
+            },
+
+            # test label smoothing over range
+            "smoothtest": {
+                "smooth": (0, 1, 2, 3, 4, 5, 6),
+                # "smooth": (0, ),
+            },
+
+            # test label smoothing over longer range
+            "smoothtestlong": {
+                "smooth": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
+            },
+
+            # save intermediate steps where supported
+            "savesteps": {
+                "labels_edge": {RegKeys.SAVE_STEPS: True}
+            },
+
+            # groupwise registration batch 02
+            "grouped02": {
+                "bspline_grid_space_voxels": "70",
+                "grid_spacing_schedule": [
+                    "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"],
+                "carve_threshold": 0.009,
+            },
+
+            # groupwise registration batch 04
+            "grouped04": {
+                "carve_threshold": 0.015,
+            },
+
+            # crop anterior region of labels during single registration
+            "cropanterior": {
+                "truncate_labels": (None, (0.2, 0.8), (0.45, 1.0)),
+            },
+
+            # turn off image curation to avoid post-processing with carving
+            # and in-painting
+            "nopostproc": {
+                "curate": False,
+                "truncate_labels": None
+            },
+
+            # smoothing by Gaussian blur
+            "smoothgaus": {
+                "smoothing_mode": config.SmoothingModes.gaussian,
+                "smooth": 0.25
+            },
+
+            # smoothing by Gaussian blur
+            "smoothgaustest": {
+                "smoothing_mode": config.SmoothingModes.gaussian,
+                "smooth": (0, 0.25, 0.5, 0.75, 1, 1.25)
+            },
+
+            # combine sides for volume stats
+            "combinesides": {
+                "combine_sides": True,
+            },
+
+            # more volume stats
+            "morestats": {
+                # "extra_metric_groups": (config.MetricGroups.SHAPES,),
+                "extra_metric_groups": (config.MetricGroups.POINT_CLOUD,),
+            },
+
+            # measure interior-border stats
+            "interiorlabels": {
+                "erode_labels": {"markers": True, "interior": True},
+            },
+
+        }

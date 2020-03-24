@@ -378,10 +378,10 @@ def main(process_args_only=False):
     config.process_settings = profiles.ProcessSettings()
     config.process_settings_list.append(config.process_settings)
     if args.microscope is not None:
-        for i in range(len(args.microscope)):
+        for i, mic in enumerate(args.microscope):
             settings = (config.process_settings if i == 0 
                         else profiles.ProcessSettings())
-            profiles.update_process_settings(settings, args.microscope[i])
+            settings.update_settings(mic)
             if i > 0:
                 config.process_settings_list.append(settings)
                 print("Added {} settings for channel {}".format(
@@ -392,8 +392,7 @@ def main(process_args_only=False):
     # initialize registration profile settings and update with modifiers
     config.register_settings = profiles.RegisterSettings()
     if args.reg_profile is not None:
-        profiles.update_register_settings(
-            config.register_settings, args.reg_profile)
+        config.register_settings.update_settings(args.reg_profile)
     print("Set register settings to {}"
           .format(config.register_settings["settings_name"]))
     

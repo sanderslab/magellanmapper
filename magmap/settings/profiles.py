@@ -992,19 +992,6 @@ class RegisterSettings(SettingsDict):
                 "labels_edge": {RegKeys.SAVE_STEPS: True}
             },
 
-            # groupwise registration batch 02
-            "grouped02": {
-                "bspline_grid_space_voxels": "70",
-                "grid_spacing_schedule": [
-                    "8.0", "7.0", "6.0", "5.0", "4.0", "3.0", "2.0", "1.0"],
-                "carve_threshold": 0.009,
-            },
-
-            # groupwise registration batch 04
-            "grouped04": {
-                "carve_threshold": 0.015,
-            },
-
             # crop anterior region of labels during single registration
             "cropanterior": {
                 "truncate_labels": (None, (0.2, 0.8), (0.45, 1.0)),

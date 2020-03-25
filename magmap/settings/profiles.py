@@ -34,6 +34,9 @@ class RegKeys(Enum):
 # classes for parsing Enums given as strings.
 _PROFILE_ENUMS = {
     "RegKeys": RegKeys,
+    "Cmaps": config.Cmaps,
+    "SmoothingModes": config.SmoothingModes,
+    "MetricGroups": config.MetricGroups,
 }
 
 

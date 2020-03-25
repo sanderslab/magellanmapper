@@ -373,29 +373,10 @@ def main(process_args_only=False):
     if args.zoom:
         config.zoom = args.zoom
         print("Set zoom to {}".format(config.zoom))
-    
-    # initialize microscope profile settings and update with modifiers
-    config.process_settings = profiles.ProcessSettings()
-    config.process_settings_list.append(config.process_settings)
-    if args.microscope is not None:
-        for i, mic in enumerate(args.microscope):
-            settings = (config.process_settings if i == 0 
-                        else profiles.ProcessSettings())
-            settings.update_settings(mic)
-            if i > 0:
-                config.process_settings_list.append(settings)
-                print("Added {} settings for channel {}".format(
-                      config.process_settings_list[i]["settings_name"], i))
-    print("Set default microscope processing settings to {}"
-          .format(config.process_settings["settings_name"]))
-    
-    # initialize registration profile settings and update with modifiers
-    config.register_settings = profiles.RegisterSettings()
-    if args.reg_profile is not None:
-        config.register_settings.update_settings(args.reg_profile)
-    print("Set register settings to {}"
-          .format(config.register_settings["settings_name"]))
-    
+
+    # set up microscope and register profiles
+    setup_profiles(args.microscope, args.reg_profile)
+
     if args.plane is not None:
         from magmap.plot import plot_2d
         config.plane = args.plane
@@ -662,6 +643,41 @@ def main(process_args_only=False):
     # hangs if launched from module with GUI
     if proc_type is not None and proc_type is not config.ProcessTypes.LOAD:
         shutdown()
+
+
+def setup_profiles(mic_profiles, reg_profiles):
+    """Setup microscope/processing and register profiles.
+
+    If either profiles are None, only a default set of profile settings
+    will be generated.
+
+    Args:
+        mic_profiles (List[str]): Sequence of microscope/processing profiles
+            to use for the corresponding channel.
+        reg_profiles (str): Register profiles.
+
+    """
+    # initialize microscope profile settings and update with modifiers
+    config.process_settings = profiles.ProcessSettings()
+    config.process_settings_list.append(config.process_settings)
+    if mic_profiles is not None:
+        for i, mic in enumerate(mic_profiles):
+            settings = (config.process_settings if i == 0
+                        else profiles.ProcessSettings())
+            settings.update_settings(mic)
+            if i > 0:
+                config.process_settings_list.append(settings)
+                print("Added {} settings for channel {}".format(
+                      config.process_settings_list[i]["settings_name"], i))
+    print("Set default microscope processing settings to {}"
+          .format(config.process_settings["settings_name"]))
+
+    # initialize registration profile settings and update with modifiers
+    config.register_settings = profiles.RegisterSettings()
+    if reg_profiles is not None:
+        config.register_settings.update_settings(reg_profiles)
+    print("Set register settings to {}"
+          .format(config.register_settings["settings_name"]))
 
 
 def _iterate_file_processing(path, series, offsets, roi_sizes):

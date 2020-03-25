@@ -456,6 +456,9 @@ class Visualization(HasTraits):
         ROI will undergo full preprocessing in preparation for detection 
         and 2D filtered displays steps.
         """
+        # reload profiles if any profile files have changed
+        cli.update_profiles()
+
         # ensure that cube dimensions don't exceed array
         curr_roi_size = self.roi_array[0].astype(int)
         roi_size_orig = np.copy(curr_roi_size)

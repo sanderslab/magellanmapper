@@ -680,6 +680,19 @@ def setup_profiles(mic_profiles, reg_profiles):
           .format(config.register_settings["settings_name"]))
 
 
+def update_profiles():
+    """Update profiles if any profile file has been modified since it
+    was last loaded.
+
+    Profiles in both :attr:`config.process_settings_list` and
+    :attr:`config.register_settings_list` will be checked to update.
+
+    """
+    for i, prof in enumerate(config.process_settings_list):
+        prof.refresh_profile(True)
+    config.register_settings.refresh_profile(True)
+
+
 def _iterate_file_processing(path, series, offsets, roi_sizes):
     """Processes files iteratively based on offsets.
     

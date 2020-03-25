@@ -47,6 +47,7 @@ class SettingsDict(dict):
             values, where each key is the profile name and the value
             is a nested dictionary that will overwrite or update the
             current values.
+        timestamps (dict): Dictionary of profile files to last modified time.
 
     """
 
@@ -60,6 +61,7 @@ class SettingsDict(dict):
         super().__init__(self)
         self["settings_name"] = "default"
         self.profiles = {}
+        self.timestamps = {}
 
     def add_modifier(self, mod_name, profiles, sep="_"):
         """Add a modifer dictionary, overwriting any existing settings 
@@ -85,6 +87,7 @@ class SettingsDict(dict):
             if not os.path.exists(mod_name):
                 print(mod_name, "profile file not found, skipped")
                 return
+            self.timestamps[mod_name] = os.path.getmtime(mod_name)
             yamls = yaml_io.load_yaml(mod_name, _PROFILE_ENUMS)
             mods = {}
             for yaml in yamls:
@@ -127,6 +130,32 @@ class SettingsDict(dict):
 
         if config.verbose:
             print("settings for {}:\n{}".format(self["settings_name"], self))
+
+    def check_file_changed(self):
+        """Check whether any profile files have changed since last loaded.
+
+        Returns:
+            bool: True if any file has changed.
+
+        """
+        for key, val in self.timestamps.items():
+            if val < os.path.getmtime(key):
+                return True
+        return False
+
+    def refresh_profile(self, check_timestamp=False):
+        """Refresh the profile.
+
+        Args:
+            check_timestamp (bool): True to refresh only if a loaded
+                profile file has changed; defaults to False.
+
+        """
+        if not check_timestamp or self.check_file_changed():
+            # applied profiles are stored in the settings name
+            profile_names = self["settings_name"]
+            self.__init__()
+            self.update_settings(profile_names)
 
 
 class ProcessSettings(SettingsDict):

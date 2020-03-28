@@ -5,9 +5,10 @@
 
 import unittest
 
+from magmap.cv import stack_detect
 from magmap.io import cli
-from magmap.settings import config
 from magmap.io import importer
+from magmap.settings import config
 
 TEST_IMG = "test.czi"
 
@@ -20,14 +21,14 @@ class TestImageStackProcessing(unittest.TestCase):
         cli.setup_profiles(["lightsheet_4xnuc"], None)
     
     def test_load_image(self):
-        image5d = importer.read_file(
+        config.image5d = importer.read_file(
             config.filename, config.series, channel=config.channel, load=False)
-        self.assertEqual(image5d.shape, (1, 51, 200, 200, 2))
+        self.assertEqual(config.image5d.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):
-        _, _, blobs = cli.process_file(
-            config.filename, config.series, (30, 30, 8), (70, 70, 10))
-        self.assertEqual(len(blobs), 195)
+        _, _, blobs = stack_detect.detect_blobs_large_image(
+            config.filename, config.image5d, (30, 30, 8), (70, 70, 10))
+        self.assertEqual(len(blobs), 54)
 
 
 if __name__ == "__main__":

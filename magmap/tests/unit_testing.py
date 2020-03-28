@@ -1,5 +1,5 @@
 # MagellanMapper unit testing
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """Unit testing for the MagellanMapper package.
 """
 
@@ -8,7 +8,6 @@ import unittest
 from magmap.io import cli
 from magmap.settings import config
 from magmap.io import importer
-from magmap.settings import profiles
 
 TEST_IMG = "test.czi"
 
@@ -17,11 +16,8 @@ class TestImageStackProcessing(unittest.TestCase):
     
     def setUp(self):
         config.filename = TEST_IMG
-        config.series = 0
         config.channel = None
-        profiles.update_process_settings(
-            config.process_settings, "lightsheet_v02.2")
-        cli.proc_type = cli.PROC_TYPES[2]
+        cli.setup_profiles(["lightsheet_4xnuc"], None)
     
     def test_load_image(self):
         image5d = importer.read_file(

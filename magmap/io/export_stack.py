@@ -386,7 +386,8 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
     return plotted_imgs
 
 
-def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
+def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
+                 subimg_size=None, animated=False, suffix=None):
     """Build an image file from a stack of images in a directory or an 
     array, exporting as an animated GIF or movie for multiple planes or 
     extracting a single plane to a standard image file format.
@@ -397,11 +398,15 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
         paths (List[str]): Image paths, which can each be either an image 
             directory or a base path to a single image, including 
             volumetric images.
-        series (int): Image series number.
-        offset (List[int]): Tuple of offset given in user order (x, y, z); 
+        roi_offset (List[int]): Tuple of offset given in user order (x, y, z);
             defaults to None. Requires ``roi_size`` to not be None.
         roi_size (List[int]): Size of the region of interest in user order 
             (x, y, z); defaults to None. Requires ``offset`` to not be None.
+        series (int): Image series number; defaults to None.
+        subimg_offset (List[int]): Sub-image offset as (z,y,x) to load;
+            defaults to None.
+        subimg_size (List[int]): Sub-image size as (z,y,x) to load;
+            defaults to None.
         animated (bool): True to export as an animated image; defaults to False.
         suffix (str): String to append to output path before extension; 
             defaults to None to ignore.
@@ -421,9 +426,9 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
             path_sub = paths[n]
             # TODO: test directory of images
             # TODO: avoid reloading first image
-            np_io.setup_images(path_sub, series)
+            np_io.setup_images(path_sub, series, subimg_offset, subimg_size)
             plotted_imgs = stack_to_ax_imgs(
-                ax, config.image5d, path_sub, offset=offset, 
+                ax, config.image5d, path_sub, offset=roi_offset,
                 roi_size=roi_size, slice_vals=config.slice_vals, 
                 rescale=config.rescale, 
                 labels_imgs=(config.labels_img, config.borders_img), 
@@ -434,7 +439,7 @@ def stack_to_img(paths, series, offset, roi_size, animated=False, suffix=None):
         animate_imgs(
             path_base, plotted_imgs, config.delay, config.savefig, suffix)
     else:
-        planei = offset[-1] if offset else config.slice_vals[0]
+        planei = roi_offset[-1] if roi_offset else config.slice_vals[0]
         if num_paths > 1:
             # output filename as a collage of images
             if not os.path.isdir(path_base):

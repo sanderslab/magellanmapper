@@ -637,7 +637,9 @@ def main(process_args_only=False):
             np_io.setup_images(
                 config.filename, series, offset, size, config.proc_type)
             process_file(
-                config.filename, series, offset, size, config.proc_type)
+                config.filename, config.proc_type, series, offset, size,
+                config.roi_offsets[0] if config.roi_offsets else None,
+                config.roi_sizes[0] if config.roi_sizes else None)
     
     # unless loading images for GUI, exit directly since otherwise application 
     # hangs if launched from module with GUI
@@ -693,46 +695,54 @@ def update_profiles():
     config.register_settings.refresh_profile(True)
 
 
-def _iterate_file_processing(path, series, offsets, roi_sizes):
+def _iterate_file_processing(path, series, subimg_offsets, subimg_sizes):
     """Processes files iteratively based on offsets.
     
     Args:
         path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
         series (int): Image series number.
-        offsets: 2D array of multiple offsets.
-        roi_sizes: 2D array of multiple ROI sizes corresponding to offsets.
+        subimg_offsets: 2D array of multiple offsets.
+        subimg_sizes: 2D array of multiple ROI sizes corresponding to offsets.
     
     Returns:
         :obj:`np.ndarray`, str: Summed stats array and concatenated summaries.
     """
     stat = np.zeros(3)
-    roi_sizes_len = len(roi_sizes)
+    roi_sizes_len = len(subimg_sizes)
     summaries = []
-    for i in range(len(offsets)):
-        size = (roi_sizes[i] if roi_sizes_len > 1 
-                else roi_sizes[0])
-        np_io.setup_images(path, series, offsets[i], size, config.proc_type)
+    for i in range(len(subimg_offsets)):
+        size = (subimg_sizes[i] if roi_sizes_len > 1
+                else subimg_sizes[0])
+        np_io.setup_images(
+            path, series, subimg_offsets[i], size, config.proc_type)
         stat_roi, fdbk = process_file(
-            path, series, offsets[i], size, config.proc_type)
+            path, config.proc_type, series, subimg_offsets[i], size)
         if stat_roi is not None:
             stat = np.add(stat, stat_roi)
         summaries.append(
-            "Offset {}:\n{}".format(offsets[i], fdbk))
+            "Offset {}:\n{}".format(subimg_offsets[i], fdbk))
     return stat, summaries
 
 
-def process_file(path, series, offset, roi_size, proc_mode):
+def process_file(path, proc_mode, series=None, subimg_offset=None,
+                 subimg_size=None, roi_offset=None, roi_size=None):
     """Processes a single image file non-interactively.
     
     Args:
         path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
-        series (int): Image series number.
-        offset: Offset as (x, y, z) to start processing.
-        roi_size: Size of region to process, given as (x, y, z).
-        proc_mode (str): Processing mode, which should be a key in 
+        proc_mode (str): Processing mode, which should be a key in
             :class:`config.ProcessTypes`, case-insensitive.
+        series (int): Image series number; defaults to None.
+        subimg_offset (List[int]): Sub-image offset as (z,y,x) to load;
+            defaults to None.
+        subimg_size (List[int]): Sub-image size as (z,y,x) to load;
+            defaults to None.
+        roi_offset (List[int]): Region of interest offset as (x, y, z) to
+            process; defaults to None.
+        roi_size (List[int]): Region of interest size of region to process,
+            given as (x, y, z); defaults to None.
     
     Returns:
         Tuple of stats from processing, or None if no stats, and 
@@ -773,8 +783,9 @@ def process_file(path, series, offset, roi_size, proc_mode):
         # generate animated GIF or extract single plane
         from magmap.io import export_stack
         export_stack.stack_to_img(
-            config.filenames, series, offset, roi_size,
-            proc_type is config.ProcessTypes.ANIMATED, config.suffix)
+            config.filenames, roi_offset, roi_size, series, subimg_offset,
+            subimg_size, proc_type is config.ProcessTypes.ANIMATED,
+            config.suffix)
     
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file
@@ -784,7 +795,7 @@ def process_file(path, series, offset, roi_size, proc_mode):
     elif proc_type is config.ProcessTypes.DETECT:
         # detect blobs in the full image
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
-            filename_base, config.image5d, offset, roi_size,
+            filename_base, config.image5d, subimg_offset, subimg_size,
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
             not config.roc, config.image5d_is_roi)
     

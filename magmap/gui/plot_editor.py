@@ -12,6 +12,7 @@ from matplotlib import patches
 import numpy as np
 from skimage import draw
 
+from magmap.io import libmag
 from magmap.settings import config
 from magmap.atlas import ontology
 from magmap.plot import plot_support
@@ -168,7 +169,7 @@ class PlotEditor:
         # prep main image in grayscale and labels with discrete colormap
         imgs2d = [self.img3d[self.coord[0]]]
         cmaps = [config.cmaps]
-        alphas = [1]
+        alphas = [1]  # will be replaced by default config alpha
         
         if self.img3d_labels is not None:
             imgs2d.append(self.img3d_labels[self.coord[0]])
@@ -187,6 +188,8 @@ class PlotEditor:
                 imgs2d.append(img_add)
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(1)
+        # replace alphas with any config vals
+        alphas = libmag.pad_seq(config.alphas, len(alphas), alphas)
         
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single

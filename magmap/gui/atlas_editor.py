@@ -1,5 +1,5 @@
 # Atlas Editor with orthogonal viewing
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """Atlas editing GUI in the MagellanMapper package.
 """
 
@@ -209,7 +209,7 @@ class AtlasEditor:
         
         # extra padding for slider labels
         gs.tight_layout(fig)
-        plt.ion()
+        plt.ion()  # avoid the need for draw calls
         plt.show()
 
     def _close(self, evt):
@@ -267,7 +267,8 @@ class AtlasEditor:
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed=None, update_atlas_eds=False):
-        """Refresh images in a plot editor.
+        """Refresh images in a plot editor, such as after editing one
+        editor and updating the displayed image in the other editors.
         
         Args:
             plot_ed (:obj:`magmap.plot_editor.PlotEditor`): Editor that

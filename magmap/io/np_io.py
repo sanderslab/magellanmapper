@@ -227,6 +227,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
         if atlas_suffix is None and config.image5d is None:
             # fallback to atlas if main image not already loaded
             atlas_suffix = config.RegNames.IMG_ATLAS.value
+            print("main image is not set, fallling back to registered "
+                  "image with suffix", atlas_suffix)
         if path and atlas_suffix is not None:
             # will take the place of any previously loaded image5d
             config.image5d = sitk_io.read_sitk_files(

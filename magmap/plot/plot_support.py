@@ -161,9 +161,10 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         ignore_invis (bool): True to avoid creating ``AxesImage`` objects
             for images that would be invisible; defaults to False.
         check_single (bool): True to check for images with a single unique
-            value, which prevent the image from updating for unclear reasons.
-            If found, the final value will be incremented by one as a
-            workaround to allow updates. Defaults to False.
+            value displayed with a :class:`colormaps.DiscreteColormap`, which
+            will not update for unclear reasons. If found, the final value
+            will be incremented by one as a workaround to allow updates.
+            Defaults to False.
     
     Returns:
         Nested list containing a list of ``AxesImage`` objects 
@@ -215,7 +216,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         cmap = cmaps[i]
         norm = None
         nan_color = None
-        if isinstance(cmap, colormaps.DiscreteColormap):
+        discrete = isinstance(cmap, colormaps.DiscreteColormap)
+        if discrete:
             # get normalization factor for discrete colormaps and convert
             # the image for this scaling
             norm = [cmap.norm]
@@ -228,10 +230,11 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
                 img[img != 0] = np.nan
         if i == 0 and img_norm_setting:
             img = libmag.normalize(img, *img_norm_setting)
-        if check_single and len(np.unique(img)) < 2:
-            # WORAROUND: increment the last value if the image would
-            # otherwise consist of a single since these images fail to
-            # update on subsequent imshow calls for unknown reasons
+        if check_single and discrete and len(np.unique(img)) < 2:
+            # WORAROUND: increment the last val of single unique val images
+            # shown with a DiscreteColormap (or any ListedColormap) since
+            # they otherwise fail to update on subsequent imshow calls
+            # for unknown reasons
             img[-1, -1] += 1
         ax_img = imshow_multichannel(
             ax, img, channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 

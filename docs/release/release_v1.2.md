@@ -1,5 +1,30 @@
 # MagellanMapper v1.2 Release Notes
 
+## MagellanMapper v1.2.1
+
+### Changes
+
+GUI
+- Atlas Editor uses command-line specified alpha values
+
+CLI
+- Option to load microscope and atlas profiles through YAML files
+
+Atlas refinement
+- Option to turn off negative labeling used to distinguish hemispheres
+- The origin will update after atlas cropping
+- Cleaned up profile settings for label edge extension and mirroring
+
+I/O
+- Fixed image stack export to use the new sub-image settings
+- Applied workaround for exporting image labels where the first labeled plane is empty
+
+### Dependency Updates
+
+#### Python Dependency Changes
+
+- PyYaml (already included with other dependencies)
+
 ## MagellanMapper v1.2.0
 
 ### Changes

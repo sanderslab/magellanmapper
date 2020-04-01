@@ -10,11 +10,14 @@
 # also be copied for use in other shells such as Windows command prompt or
 # Batch scripts. For complete pipelines, see pipelines.sh.
 
+# run from script's parent directory
+cd "$(dirname "$0")/.." || exit 1
+
 # choose file name, channel, and directory
+PREFIXES=(. ../data) # add additional data folders (relative to magellanmapper)
 BASE=sample # replace with your sample file (without extension)
 CHL=1
 SERIES=0
-PREFIXES=(. ../data) # add additional data folders
 ABA_DIR=ABA-CCFv3 # replace with atlas of choice
 ABA_SPEC=ontology1.json # replace with atlas label map file
 

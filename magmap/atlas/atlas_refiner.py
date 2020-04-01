@@ -255,12 +255,13 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         if mirror["neg_labels"]:
             mirror_mult = -1
     
-    # cast to signed int that takes the full range of the labels image
+    # cast to int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
     label_ids_orig = np.unique(img_np)
     try:
         signed = True if mirror_mult == -1 else None
-        dtype = libmag.dtype_within_range(0, np.amax(img_np), True, signed)
+        dtype = libmag.dtype_within_range(
+            np.amin(img_np), np.amax(img_np), True, signed)
         if dtype != img_np.dtype:
             print("casting labels image to type", dtype)
             img_np = img_np.astype(dtype)

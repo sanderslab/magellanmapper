@@ -769,7 +769,9 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
                 smoothed = morphology.binary_closing(label_mask_region, selem)
                 region_size_smoothed = np.sum(smoothed)
             
-            # fill empty spaces with closest surrounding labels
+            # fill original label space with closest surrounding labels
+            # to fill empty spaces that would otherwise remain after
+            # replacing the original with the smoothed label
             region = cv_nd.in_paint(region, label_mask_region)
             
         elif mode is config.SmoothingModes.gaussian:

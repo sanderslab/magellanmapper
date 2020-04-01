@@ -26,25 +26,37 @@ MIC=lightsheet # add/replace additional microscope profiles, separated by "_"
 REG=finer_abaccfv3 # add/replace register/atlas profiles
 THEME=(--theme dark) # GUI theme
 
-
-# set prefix based on identified location of files matching BASE
-IMG="${BASE}."
-prefix=""
-for p in "${PREFIXES[@]}"; do
-  for f in "$p/$BASE"*; do
-    if [[ -f "$f" ]]; then
-      IMG="$p/$IMG"
-      prefix="$p"
-      echo "Set image path to $IMG"
-      break
-    fi
+# Find directory that contains a matching file from a list of directories.
+# Args:
+#   1: Name of array with directory names.
+#   2: Start of file name to match.
+# Returns:
+#   0 if any matching path is found, 1 if not. Echoes directory from $1
+#   where a match was found.
+find_prefix() {
+  local -n dirs="$1"
+  local name="$2"
+  prefix=""
+  for p in "${dirs[@]}"; do
+    for f in "$p/$name"*; do
+      if [[ -f "$f" ]]; then
+        echo "$p"
+        return 0
+      fi
+    done
   done
-done
-if [[ -z "$prefix" ]]; then
-  msg="WARNING: could not find Numpy image associated with $BASE in data "
-  msg+="folders.\nWill assume files are located in \""$(pwd)"\"."
-  echo -e "$msg"
-fi
+  if [[ -z "$prefix" ]]; then
+    msg="WARNING: could not find file in ${dirs[*]} associated with $name. "
+    msg+="\nWill assume files are located in \""$(pwd)"\"."
+    echo -e "$msg"
+  fi
+  echo "$PWD"
+  return 1
+}
+
+# set image prefix based on identified location of files matching BASE
+prefix="$(find_prefix PREFIXES "$BASE")"
+IMG="$prefix/${BASE}."
 
 # set paths from identified prefix
 if [[ -z "$shape_resized" ]]; then
@@ -53,7 +65,9 @@ fi
 IMG_MHD="$prefix/${BASE}.mhd"
 IMG_ALT="$prefix/${BASE}_smoothed.mhd"
 IMG_RESIZED="$prefix/${BASE}_resized($shape_resized)."
-ABA_PATH="$prefix/$ABA_DIR"
+
+# set label directory paths
+ABA_PATH="$(find_prefix PREFIXES "$ABA_DIR/$ABA_SPEC")/$ABA_DIR"
 ABA_LABELS="$ABA_PATH/$ABA_SPEC"
 ABA_IMPORT_DIR="${ABA_PATH}_import"
 

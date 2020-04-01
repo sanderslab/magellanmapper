@@ -1,4 +1,4 @@
-#!//usr/bin/env bash
+#!/usr/bin/env bash
 # Sample commands for MagellanMapper tasks
 # Author: David Young, 2020
 
@@ -12,6 +12,7 @@
 
 # run from script's parent directory
 cd "$(dirname "$0")/.." || exit 1
+. bin/labmag.sh
 
 # choose file name, channel, and directory
 PREFIXES=(. ../data) # add additional data folders (relative to magellanmapper)
@@ -25,34 +26,6 @@ ABA_SPEC=ontology1.json # replace with atlas label map file
 MIC=lightsheet # add/replace additional microscope profiles, separated by "_"
 REG=finer_abaccfv3 # add/replace register/atlas profiles
 THEME=(--theme dark) # GUI theme
-
-# Find directory that contains a matching file from a list of directories.
-# Args:
-#   1: Name of array with directory names.
-#   2: Start of file name to match.
-# Returns:
-#   0 if any matching path is found, 1 if not. Echoes directory from $1
-#   where a match was found.
-find_prefix() {
-  local -n dirs="$1"
-  local name="$2"
-  prefix=""
-  for p in "${dirs[@]}"; do
-    for f in "$p/$name"*; do
-      if [[ -f "$f" ]]; then
-        echo "$p"
-        return 0
-      fi
-    done
-  done
-  if [[ -z "$prefix" ]]; then
-    msg="WARNING: could not find file in ${dirs[*]} associated with $name. "
-    msg+="\nWill assume files are located in \""$(pwd)"\"."
-    echo -e "$msg"
-  fi
-  echo "$PWD"
-  return 1
-}
 
 # set image prefix based on identified location of files matching BASE
 prefix="$(find_prefix PREFIXES "$BASE")"

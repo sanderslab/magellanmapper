@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Bash library functions for MagellanMapper
-# Author: David Young 2018, 2019
+# Author: David Young 2018, 2020
 
 
 ############################################
@@ -299,4 +299,36 @@ join_array() {
   ticks=$(printf "${sep}%s" "${arr[@]}")
   ticks="${ticks:${#sep}}"
   echo "$ticks"
+}
+
+############################################
+# Find directory that contains a matching file from a list of directories.
+# Globals:
+#   NONE
+# Arguments:
+#   1: Name of array with directory names.
+#   2: Start of file name to match.
+# Returns:
+#   0 if any matching path is found, 1 if not. Echoes directory from $1
+#   where a match was found.
+############################################
+find_prefix() {
+  local -n dirs="$1"
+  local name="$2"
+  prefix=""
+  for p in "${dirs[@]}"; do
+    for f in "$p/$name"*; do
+      if [[ -f "$f" ]]; then
+        echo "$p"
+        return 0
+      fi
+    done
+  done
+  if [[ -z "$prefix" ]]; then
+    msg="WARNING: could not find file in ${dirs[*]} associated with $name. "
+    msg+="\nWill assume files are located in \""$(pwd)"\"."
+    echo -e "$msg"
+  fi
+  echo "$PWD"
+  return 1
 }

@@ -65,7 +65,7 @@ cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 BASE_DIR="$PWD"
 
 # load dependencies
-source bin/libclr.sh
+source bin/libmag.sh
 
 # find platform for Anaconda
 detect_platform

@@ -27,16 +27,18 @@ REG=finer_abaccfv3 # add/replace register/atlas profiles
 THEME=(--theme dark) # GUI theme
 
 
-# set prefix based on identified location of pre-imported or imported main image
+# set prefix based on identified location of files matching BASE
 IMG="${BASE}."
 prefix=""
 for p in "${PREFIXES[@]}"; do
-  if [[ -e "$p/${IMG%.*}_image5d.npy" || -e "$p/${IMG%.*}_ch_0.tif" ]]; then
-    IMG="$p/$IMG"
-    prefix="$p"
-    echo "Set image path to $IMG"
-    break
-  fi
+  for f in "$p/$BASE"*; do
+    if [[ -f "$f" ]]; then
+      IMG="$p/$IMG"
+      prefix="$p"
+      echo "Set image path to $IMG"
+      break
+    fi
+  done
 done
 if [[ -z "$prefix" ]]; then
   msg="WARNING: could not find Numpy image associated with $BASE in data "

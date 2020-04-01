@@ -9,6 +9,7 @@ GUI
 
 CLI
 - Option to load microscope and atlas profiles through YAML files
+- Script with sample commands for various common tasks
 
 Atlas refinement
 - Option to turn off negative labeling used to distinguish hemispheres

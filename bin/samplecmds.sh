@@ -27,24 +27,6 @@ MIC=lightsheet # add/replace additional microscope profiles, separated by "_"
 REG=finer_abaccfv3 # add/replace register/atlas profiles
 THEME=(--theme dark) # GUI theme
 
-# set image prefix based on identified location of files matching BASE
-prefix="$(find_prefix PREFIXES "$BASE")"
-IMG="$prefix/${BASE}."
-
-# set paths from identified prefix
-if [[ -z "$shape_resized" ]]; then
-  shape_resized=456,528,320
-fi
-IMG_MHD="$prefix/${BASE}.mhd"
-IMG_ALT="$prefix/${BASE}_smoothed.mhd"
-IMG_RESIZED="$prefix/${BASE}_resized($shape_resized)."
-
-# set label directory paths
-ABA_PATH="$(find_prefix PREFIXES "$ABA_DIR/$ABA_SPEC")/$ABA_DIR"
-ABA_LABELS="$ABA_PATH/$ABA_SPEC"
-ABA_IMPORT_DIR="${ABA_PATH}_import"
-
-
 # Annotation building
 SIZE=1000,100,50 # z: 50-6*2 for ROI, -3*2 for border = 32; x/y: 42-5*2 for border
 ROI_OFFSET=50,25,13 # get z from [50 (tot size) - 18 (ROI size)] / 2 - 3 (border)
@@ -64,6 +46,9 @@ offsets_test=($OFFSET)
 # current offset
 OFFSET="${OFFSETS[0]}"
 
+# setup paths
+setup_image_paths PREFIXES "$BASE"
+setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # IMPORT, REGISTRATION, CELL DETECTION, AND STATS
 

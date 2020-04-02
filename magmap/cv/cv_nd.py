@@ -66,7 +66,7 @@ def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
     return roi_carved, mask
 
 
-def rotate_nd(img_np, angle, axis=0, order=1):
+def rotate_nd(img_np, angle, axis=0, order=1, resize=False):
     """Rotate an image of arbitrary dimensions.
     
     This function is essentially a wrapper of 
@@ -79,19 +79,38 @@ def rotate_nd(img_np, angle, axis=0, order=1):
         axis: Axis along which to rotate, given as an int in standard 
             Numpy axis convention; defaults to 0
         order: Spline interpolation order; defaults to 1.
+        resize (bool): True to resize the output image to avoid any
+            image cropping; defaults to False.
     
     Returns:
         The rotated image.
     """
-    rotated = np.copy(img_np)
     slices = [slice(None)] * img_np.ndim
+    imgs = []
     for i in range(img_np.shape[axis]):
         # rotate each 2D image in the stack along the given axis
         slices[axis] = i
         img2d = img_np[tuple(slices)]
-        img2d = transform.rotate(
-            img2d, angle, order=order, mode="constant", preserve_range=True)
-        rotated[tuple(slices)] = img2d
+        imgs.append(transform.rotate(
+            img2d, angle, order=order, mode="constant", preserve_range=True,
+            resize=resize))
+    if resize:
+        # find output shape based on max plane size; allows rotated images
+        # to be of different sizes such as for progressive rotation, but
+        # currently each plane will be of the same size
+        shapes = [img.shape for img in imgs]
+        rot_shape = (len(imgs), *np.amax(shapes, axis=0))
+        rotated = np.zeros(rot_shape, dtype=img_np.dtype)
+        for i, img in enumerate(imgs):
+            offset = np.subtract(rot_shape[1:], img.shape) // 2
+            rotated[i, offset[0]:offset[0]+img.shape[0],
+                    offset[1]:offset[1]+img.shape[1]] = img
+    else:
+        # output with same shape as that of original image
+        rotated = np.copy(img_np)
+        for i, img in enumerate(imgs):
+            slices[axis] = i
+            rotated[tuple(slices)] = img
     return rotated
 
 

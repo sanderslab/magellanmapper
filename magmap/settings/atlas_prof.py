@@ -273,10 +273,6 @@ class RegisterSettings(profiles.SettingsDict):
                 "overlap_meas_add_lbls": ((126651558, 126652059),),
             },
 
-            # pitch rotation only for ABA E11pt to compare corresponding z-planes
-            # with other stages of refinement
-            "abae11pt5pitch": {"rotate": ((-30, 0),)},
-
             # ABA E13pt5 specific settings
             "abae13pt5": {
                 "target_size": (552, 673, 340),

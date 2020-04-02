@@ -254,6 +254,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         mirror_start = mirror["start"]
         if mirror["neg_labels"]:
             mirror_mult = -1
+    rotation = rotate["rotation"] if rotate else None
     
     # cast to int that takes the full range of the labels image
     img_np = sitk.GetArrayFromImage(img)
@@ -341,15 +342,16 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             break
         mirrori -= 1
     
-    if rotate:
+    if rotation:
         if mirror_start is not None:
             # mirroring labels with original values in case rotation will cause 
             # some labels to be cut off, then rotate for each specified axis
             for i in range(mirrori, tot_planes):
                 img_np[i] = img_np[mirrori - 1]
-        for rot in rotate:
+        for rot in rotation:
             print("rotating by", rot)
-            img_np = cv_nd.rotate_nd(img_np, rot[0], rot[1], order=0)
+            img_np = cv_nd.rotate_nd(
+                img_np, rot[0], rot[1], order=0,resize=rotate["resize"])
     
     if affine:
         for aff in affine:
@@ -1063,6 +1065,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     is_edge = edge and edge[profiles.RegKeys.ACTIVE]
     expand = config.register_settings["expand_labels"]
     rotate = config.register_settings["rotate"]
+    rotation = rotate["rotation"] if rotate else None
     smooth = config.register_settings["smooth"]
     crop = config.register_settings["crop_to_labels"]
     affine = config.register_settings["affine"]
@@ -1111,9 +1114,10 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     
     # adjust atlas with same settings
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
-    if rotate:
-        for rot in rotate:
-            img_atlas_np = cv_nd.rotate_nd(img_atlas_np, rot[0], rot[1])
+    if rotation:
+        for rot in rotation:
+            img_atlas_np = cv_nd.rotate_nd(
+                img_atlas_np, rot[0], rot[1], resize=rotate["resize"])
     if affine:
         for aff in affine:
             img_atlas_np = cv_nd.affine_nd(img_atlas_np, **aff)
@@ -1180,13 +1184,14 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         if mask_lbls is not None:
             mask_lbls_unrot = mask_lbls
             lbls_unrot = img_labels_np
-            if rotate:
+            if rotation:
                 # un-rotate so sagittal planes are oriented as orig drawn
-                for rot in rotate[::-1]:
+                resize = rotate["resize"]
+                for rot in rotation[::-1]:
                     mask_lbls_unrot = cv_nd.rotate_nd(
-                        mask_lbls_unrot, -rot[0], rot[1], 0)
+                        mask_lbls_unrot, -rot[0], rot[1], 0, resize)
                     lbls_unrot = cv_nd.rotate_nd(
-                        lbls_unrot, -rot[0], rot[1], 0)
+                        lbls_unrot, -rot[0], rot[1], 0, resize)
             planes_lbl = 0
             planes_tot = 0.
             for i in range(extis[1]):
@@ -1219,10 +1224,10 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
             if pre_plane is None:
                 # plane settings is for post-processing; 
                 # TODO: check if 90deg rot is nec for yz
-                rotate = 1 if config.plane in config.PLANE[1:] else 0
-                if flip: rotate += 2
+                rotate_num = 1 if config.plane in config.PLANE[1:] else 0
+                if flip: rotate_num += 2
                 img_sitk = transpose_img(
-                    img_sitk, config.plane, rotate, flipud=True)
+                    img_sitk, config.plane, rotate_num, flipud=True)
         imgs_sitk_replaced.append(img_sitk)
     img_atlas, img_labels = imgs_sitk_replaced
     

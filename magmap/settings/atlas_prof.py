@@ -77,7 +77,10 @@ class RegisterSettings(profiles.SettingsDict):
 
         # atlas and labels rotation by ((angle0, axis0), ...), or None to
         # avoid rotation, with axis numbers in z,y,x ordering
-        self["rotate"] = None
+        self["rotate"] = {
+            "rotation": None,
+            "resize": False,
+        }
 
         # atlas thresholds for microscopy images
         self["atlas_threshold"] = 10.0  # raise for finer segmentation
@@ -251,7 +254,10 @@ class RegisterSettings(profiles.SettingsDict):
                 "atlas_threshold": 75,  # avoid over-extension into ventricles
                 "atlas_threshold_all": 5,  # include ventricles since labeled
                 # rotate axis 0 to open vertical gap for affines (esp 2nd)
-                "rotate": ((-5, 1), (-1, 2), (-30, 0)),
+                "rotate": {
+                    "rotation": ((-5, 1), (-1, 2), (-30, 0)),
+                    "resize": False,
+                },
                 "affine": ({
                    # shear cord opposite the brain back toward midline
                    "axis_along": 1, "axis_shift": 0, "shift": (25, 0),
@@ -285,7 +291,10 @@ class RegisterSettings(profiles.SettingsDict):
                     "start": -1,
                 },
                 "atlas_threshold": 55,  # avoid edge over-extension into skull
-                "rotate": ((-4, 1), (-2, 2)),
+                "rotate": {
+                    "rotation": ((-4, 1), (-2, 2)),
+                    "resize": False,
+                },
                 "crop_to_labels": True,
                 "smooth": 2,
             },
@@ -306,7 +315,10 @@ class RegisterSettings(profiles.SettingsDict):
                     RegKeys.MARKER_EROSION: 19,
                 },
                 "atlas_threshold": 45,  # avoid edge over-extension into skull
-                "rotate": ((-4, 1),),
+                "rotate": {
+                    "rotation": ((-4, 1),),
+                    "resize": False,
+                },
                 "crop_to_labels": True,
                 "smooth": 2,
             },
@@ -324,7 +336,10 @@ class RegisterSettings(profiles.SettingsDict):
                     RegKeys.MARKER_EROSION_USE_MIN: True,
                 },
                 "expand_labels": (((None,), (0, 279), (103, 108)),),
-                "rotate": ((1.5, 1), (2, 2)),
+                "rotate": {
+                    "rotation": ((1.5, 1), (2, 2)),
+                    "resize": False,
+                },
                 "smooth": 3,
                 RegKeys.EDGE_AWARE_REANNOTAION: {
                     RegKeys.MARKER_EROSION_MIN: 4,
@@ -347,7 +362,10 @@ class RegisterSettings(profiles.SettingsDict):
                 # open caudal labels to allow smallest mirror plane index,
                 # though still cross midline as some regions only have
                 # labels past midline
-                "rotate": ((0.22, 1),),
+                "rotate": {
+                    "rotation": ((0.22, 1),),
+                    "resize": False,
+                },
                 "smooth": 4,
             },
 
@@ -366,7 +384,10 @@ class RegisterSettings(profiles.SettingsDict):
                     RegKeys.MARKER_EROSION_MIN: 10,
                 },
                 # rotate conservatively for symmetry without losing labels
-                "rotate": ((-0.4, 1),),
+                "rotate": {
+                    "rotation": ((-0.4, 1),),
+                    "resize": False,
+                },
                 "smooth": 5,
             },
 
@@ -385,7 +406,10 @@ class RegisterSettings(profiles.SettingsDict):
                 },
                 # "labels_dup": 0.48,
                 # rotate for symmetry, which also reduces label loss
-                "rotate": ((1, 2),),
+                "rotate": {
+                    "rotation": ((1, 2),),
+                    "resize": False,
+                },
                 "smooth": 2,
             },
 

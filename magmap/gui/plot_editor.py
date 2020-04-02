@@ -169,7 +169,7 @@ class PlotEditor:
         # prep main image in grayscale and labels with discrete colormap
         imgs2d = [self.img3d[self.coord[0]]]
         cmaps = [config.cmaps]
-        alphas = [1]  # will be replaced by default config alpha
+        alphas = [config.alphas[0]]
         
         if self.img3d_labels is not None:
             imgs2d.append(self.img3d_labels[self.coord[0]])
@@ -181,15 +181,13 @@ class PlotEditor:
             # dimension for multiple sets of borders
             img2d = self.img3d_borders[self.coord[0]]
             channels = img2d.ndim if img2d.ndim >= 3 else 1
-            for channel in range(channels - 1, -1, -1):
+            for i, channel in enumerate(range(channels - 1, -1, -1)):
                 # show first (original) borders image last so that its 
                 # colormap values take precedence to highlight original bounds
                 img_add = img2d[..., channel] if channels > 1 else img2d
                 imgs2d.append(img_add)
                 cmaps.append(self.cmap_borders[channel])
-                alphas.append(1)
-        # replace alphas with any config vals
-        alphas = libmag.pad_seq(config.alphas, len(alphas), alphas)
+                alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
         
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single

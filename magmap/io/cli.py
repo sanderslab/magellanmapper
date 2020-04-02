@@ -78,6 +78,7 @@ from magmap.io import np_io
 from magmap.io import sqlite
 from magmap.stats import mlearn
 from magmap.settings import profiles
+from magmap.settings import roi_prof
 from magmap.cv import chunking
 from magmap.cv import stack_detect
 from magmap.atlas import transformer
@@ -660,12 +661,12 @@ def setup_profiles(mic_profiles, reg_profiles):
 
     """
     # initialize microscope profile settings and update with modifiers
-    config.process_settings = profiles.ProcessSettings()
+    config.process_settings = roi_prof.ProcessSettings()
     config.process_settings_list.append(config.process_settings)
     if mic_profiles is not None:
         for i, mic in enumerate(mic_profiles):
             settings = (config.process_settings if i == 0
-                        else profiles.ProcessSettings())
+                        else roi_prof.ProcessSettings())
             settings.update_settings(mic)
             if i > 0:
                 config.process_settings_list.append(settings)

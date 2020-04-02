@@ -49,7 +49,7 @@ OFFSET="${OFFSETS[0]}"
 # APPLY USER SETTINGS
 # run from script's parent directory and set up paths
 cd "$(dirname "$0")/.." || exit 1
-. bin/labmag.sh
+. bin/libmag.sh
 setup_image_paths PREFIXES "$BASE"
 setup_atlas_paths PREFIXES "$ABA_DIR"
 

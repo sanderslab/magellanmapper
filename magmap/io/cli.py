@@ -71,12 +71,13 @@ import sys
 import numpy as np
 
 from magmap.gui import roi_editor
-from magmap.settings import config
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.io import sqlite
 from magmap.stats import mlearn
+from magmap.settings import atlas_prof
+from magmap.settings import config
 from magmap.settings import profiles
 from magmap.settings import roi_prof
 from magmap.cv import chunking
@@ -676,7 +677,7 @@ def setup_profiles(mic_profiles, reg_profiles):
           .format(config.process_settings["settings_name"]))
 
     # initialize registration profile settings and update with modifiers
-    config.register_settings = profiles.RegisterSettings()
+    config.register_settings = atlas_prof.RegisterSettings()
     if reg_profiles is not None:
         config.register_settings.update_settings(reg_profiles)
     print("Set register settings to {}"

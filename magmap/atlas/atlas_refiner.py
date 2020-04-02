@@ -14,17 +14,17 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
-from magmap.settings import config
+from magmap.cv import cv_nd
+from magmap.cv import segmenter
+from magmap.io import df_io
 from magmap.io import export_stack
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap.cv import cv_nd
-from magmap.plot import plot_support
-from magmap.settings import profiles
-from magmap.cv import segmenter
 from magmap.io import sitk_io
-from magmap.io import df_io
+from magmap.plot import plot_support
+from magmap.settings import config
+from magmap.settings import profiles
 
 
 def _get_bbox(img_np, threshold=10):

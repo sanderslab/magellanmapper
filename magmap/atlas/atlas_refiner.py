@@ -1229,7 +1229,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
     return img_atlas, img_labels, df_sm, df_sm_raw
 
 
-def import_atlas(atlas_dir, show=True):
+def import_atlas(atlas_dir, show=True, prefix=None):
     """Import atlas from the given directory, processing it according 
     to the register settings specified at :attr:``config.register_settings``.
     
@@ -1238,8 +1238,11 @@ def import_atlas(atlas_dir, show=True):
     will be calculated and saved as a CSV file in this directory as well.
     
     Args:
-        atlas_dir: Path to atlas directory.
-        show: True to show the imported atlas.
+        atlas_dir (str): Path to atlas directory.
+        show (bool): True to show the imported atlas.
+        prefix (str): Output path; defaults to None to ignore. If an existing
+            directory,``atlas_dir`` will still be used for the output
+            filename;otherwise, the basename will be used for this filename.
     """
     # load atlas and corresponding labels
     img_atlas, path_atlas = sitk_io.read_sitk(
@@ -1250,6 +1253,14 @@ def import_atlas(atlas_dir, show=True):
     # prep export paths
     target_dir = atlas_dir + "_import"
     basename = os.path.basename(atlas_dir)
+    if prefix:
+        if os.path.isdir(prefix):
+            # use existing directory and keep atlas_dir as filename template
+            target_dir = prefix
+        else:
+            # split into dir and filename template
+            target_dir = os.path.dirname(prefix)
+            basename = os.path.basename(prefix)
     df_base_path = os.path.join(target_dir, basename) + "_{}"
     df_metrics_path = df_base_path.format(config.PATH_ATLAS_IMPORT_METRICS)
     name_prefix = os.path.join(target_dir, basename) + ".czi"

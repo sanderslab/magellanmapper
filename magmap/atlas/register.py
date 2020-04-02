@@ -1628,7 +1628,7 @@ def main():
     
     elif reg is config.RegisterTypes.import_atlas:
         # import original atlas, mirroring if necessary
-        atlas_refiner.import_atlas(config.filename, show=show)
+        atlas_refiner.import_atlas(config.filename, show, config.prefix)
     
     elif reg is config.RegisterTypes.export_common_labels:
         # export common labels

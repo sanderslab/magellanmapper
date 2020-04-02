@@ -10,12 +10,11 @@
 # also be copied for use in other shells such as Windows command prompt or
 # Batch scripts. For complete pipelines, see pipelines.sh.
 
-# run from script's parent directory
-cd "$(dirname "$0")/.." || exit 1
-. bin/labmag.sh
+# PATH AND SETTINGS SETUP
+# update paths to your image files and settings
 
-# choose file name, channel, and directory
-PREFIXES=(. ../data) # add additional data folders (relative to magellanmapper)
+# choose file paths (relative to magellanmapper directory), channels, etc
+PREFIXES=(. ../data) # add additional data folders
 BASE=sample # replace with your sample file (without extension)
 CHL=1
 SERIES=0
@@ -46,7 +45,11 @@ offsets_test=($OFFSET)
 # current offset
 OFFSET="${OFFSETS[0]}"
 
-# setup paths
+
+# APPLY USER SETTINGS
+# run from script's parent directory and set up paths
+cd "$(dirname "$0")/.." || exit 1
+. bin/labmag.sh
 setup_image_paths PREFIXES "$BASE"
 setup_atlas_paths PREFIXES "$ABA_DIR"
 

@@ -3,53 +3,31 @@
 # Author: David Young, 2020
 
 # This script is designed to provide examples of commands for performing
-# various tasks in MagellanMapper. Commands can be run directly from this
-# script in a Bash shell after changing variables below and uncommenting
-# (ie remove the "#" at the start of the line) the desired command.
-# Since most of these commands are run directly in Python, the commands can
-# also be copied for use in other shells such as Windows command prompt or
+# various tasks in MagellanMapper. These commands can be copied into
+# Bash scripts or modified slightly for use in other scripts such as Windows
 # Batch scripts. For complete pipelines, see pipelines.sh.
 
-# PATH AND SETTINGS SETUP
-# update paths to your image files and settings
-
-# choose file paths (relative to magellanmapper directory), channels, etc
-PREFIXES=(. ../data) # add additional data folders
-BASE=sample # replace with your sample file (without extension)
-CHL=1
-SERIES=0
-ABA_DIR=ABA-CCFv3 # replace with atlas of choice
-ABA_SPEC=ontology1.json # replace with atlas label map file
-
-# profiles and theme
-MIC=lightsheet # add/replace additional microscope profiles, separated by "_"
-REG=finer_abaccfv3 # add/replace register/atlas profiles
-THEME=(--theme dark) # GUI theme
-
-# Annotation building
-SIZE=1000,100,50 # z: 50-6*2 for ROI, -3*2 for border = 32; x/y: 42-5*2 for border
-ROI_OFFSET=50,25,13 # get z from [50 (tot size) - 18 (ROI size)] / 2 - 3 (border)
-ROI_SIZE=50,50,18
-
-# offsets for ground truth ROIs within a thin, long sub-image
-# - increment each ROI in x by 70 (small gap between each ROI)
-# - view in "wide region" layout
-OFFSETS=(
-  "800,1150,250"
-)
-
-# subsets of OFFSETS that have been completed for testing
-OFFSETS_DONE=("${OFFSETS[@]:0:20}")
-offsets_test=($OFFSET)
-
-# current offset
-OFFSET="${OFFSETS[0]}"
-
+# Alternatively, this script can be run directly after a few modifications.
+# How to use:
+# 1) Copy "sample_settings.sh" to your own file and update it with your settings
+# 2) Uncomment (ie remove the "#" at line start) a desired command below
+# 3) Run this script (eg from the magellanmapper folder), replacing the
+#    settings file with your own: "bin/sample_cmds.sh bin/my_settings.sh"
 
 # APPLY USER SETTINGS
+
 # run from script's parent directory and set up paths
 cd "$(dirname "$0")/.." || exit 1
 . bin/libmag.sh
+
+# load settings from external file
+if [[ -z "$1" ]]; then
+  msg="Please provide a settings file, such as "
+  msg+="\"bin/sample_cmds.sh bin/my_settings.sh\""
+  echo -e "$msg"
+  exit 1
+fi
+. "$1"
 setup_image_paths PREFIXES "$BASE"
 setup_atlas_paths PREFIXES "$ABA_DIR"
 

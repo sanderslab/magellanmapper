@@ -696,7 +696,7 @@ def import_dir(path):
     if num_files < 1:
         return None
     name = os.path.dirname(files[0])
-    filename_image5d_npz, filename_info_npz = make_filenames(name + ".czi", 0)
+    filename_image5d_npz, filename_info_npz = make_filenames(name + ".", 0)
     image5d = None
     lows = []
     highs = []

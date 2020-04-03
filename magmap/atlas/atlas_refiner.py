@@ -1272,7 +1272,7 @@ def import_atlas(atlas_dir, show=True, prefix=None):
             basename = os.path.basename(prefix)
     df_base_path = os.path.join(target_dir, basename) + "_{}"
     df_metrics_path = df_base_path.format(config.PATH_ATLAS_IMPORT_METRICS)
-    name_prefix = os.path.join(target_dir, basename) + ".czi"
+    name_prefix = os.path.join(target_dir, basename) + "."
     
     # set up condition
     overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]

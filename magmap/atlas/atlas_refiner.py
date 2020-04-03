@@ -195,6 +195,26 @@ def check_mirrorred(img_np, mirror_mult=1, axis=0):
     return equality_vals, equality_lbls
 
 
+def find_symmetric_axis(img_np, mirror_mult=1):
+    """Find the axis along which the image is symmetric.
+
+    Args:
+        img_np (:obj:`np.ndarray`): Array to check for symmetry.
+        mirror_mult (int): Number by which to divide the 2nd half before
+            checking for symmetry; defaults to 1. Typically a number
+            used to generate the 2nd half when mirroring.
+
+    Returns:
+        int: The axis that is symmetric, or -1 if no symmetry is found.
+
+    """
+    for i in range(img_np.ndim):
+        eq_val, _ = check_mirrorred(img_np, mirror_mult, i)
+        if eq_val:
+            return i
+    return -1
+
+
 def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None, 
                    rotate=None, smooth=None, affine=None, resize=True):
     """Curate labels through extension, mirroring, and smoothing.

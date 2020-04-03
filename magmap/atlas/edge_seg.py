@@ -19,12 +19,13 @@ from magmap.io import sitk_io
 from magmap.stats import vols
 
 
-def _mirror_imported_labels(labels_img_np, start):
-    # mirror labels that have been imported and transformed with x and z swapped
+def _mirror_imported_labels(labels_img_np, start, mirror_mult, axis):
+    # mirror labels that have been imported and transformed may have had
+    # axes swapped, requiring them to be swapped back
     labels_img_np = atlas_refiner.mirror_planes(
-        np.swapaxes(labels_img_np, 0, 2), start, mirror_mult=-1, 
+        np.swapaxes(labels_img_np, 0, axis), start, mirror_mult=mirror_mult,
         check_equality=True)
-    labels_img_np = np.swapaxes(labels_img_np, 0, 2)
+    labels_img_np = np.swapaxes(labels_img_np, 0, axis)
     return labels_img_np
 
 
@@ -35,6 +36,14 @@ def _is_profile_mirrored():
     mirror = config.register_settings["labels_mirror"]
     return (mirror and mirror[profiles.RegKeys.ACTIVE]
             and mirror["start"] is not None)
+
+
+def _get_mirror_mult():
+    # get the mirrored labels multiplier, which is -1 if set to neg labels
+    # and 1 if otherwise
+    mirror = config.register_settings["labels_mirror"]
+    mirror_mult = -1 if mirror and mirror["neg_labels"] else 1
+    return mirror_mult
 
 
 def make_edge_images(path_img, show=True, atlas=True, suffix=None, 
@@ -50,7 +59,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         path_img: Path to the image atlas. The labels image will be 
             found as a corresponding, registered image, unless 
             ``path_atlas_dir`` is given.
-        show_imgs: True if the output images should be displayed; defaults 
+        show (bool): True if the output images should be displayed; defaults
             to True.
         atlas: True if the primary image is an atlas, which is assumed 
             to be symmetrical. False if the image is an experimental/sample 
@@ -134,7 +143,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         erosion_frac = config.register_settings["erosion_frac"]
         interior, _ = erode_labels(
             labels_img_np, erosion, erosion_frac, 
-            atlas and _is_profile_mirrored())
+            atlas and _is_profile_mirrored(), _get_mirror_mult())
         labels_sitk_interior = sitk_io.replace_sitk_with_numpy(
             labels_sitk, interior)
     
@@ -160,7 +169,8 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     sitk_io.write_reg_images(imgs_write, mod_path)
 
 
-def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
+def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True,
+                 mirror_mult=-1):
     """Erode labels image for use as markers or a map of the interior.
     
     Args:
@@ -170,9 +180,13 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
             :class:`profiles.RegKeys` to pass to
             :meth:`segmenter.labels_to_markers_erosion`.
         erosion_frac (int): Target erosion fraction; defaults to None.
-        mirrored: True if the primary image mirrored/symmatrical. False
-            if otherwise, such as unmirrored atlases or experimental/sample
-            images, in which case erosion will be performed on the full image.
+        mirrored (bool): True if the primary image mirrored/symmatrical, in
+            which case erosion will only be performed one symmetric half
+            and mirrored to the other half. If False or no symmetry is
+            found, such as unmirrored atlases or experimental/sample
+            images, erosion will be performed on the full image.
+        mirror_mult (int): Multiplier for mirrored labels; defaults to -1
+            to make mirrored labels the inverse of their source labels.
     
     Returns:
         :obj:`np.ndarray`, :obj:`pd.DataFrame`: The eroded labels as a new
@@ -180,24 +194,31 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True):
         of erosion stats.
     """
     labels_to_erode = labels_img_np
-    if mirrored:
-        # for atlases, assume that labels image is symmetric across the x-axis
-        len_half = labels_img_np.shape[2] // 2
-        labels_to_erode = labels_img_np[..., :len_half]
+    sym_axis = atlas_refiner.find_symmetric_axis(labels_img_np, mirror_mult)
+    is_mirrored = mirrored and sym_axis >= 0
+    len_half = None
+    if is_mirrored:
+        # if symmetric, erode only one symmetric half
+        len_half = labels_img_np.shape[sym_axis] // 2
+        slices = [slice(None)] * labels_img_np.ndim
+        slices[sym_axis] = slice(len_half)
+        labels_to_erode = labels_img_np[tuple(slices)]
     
     # convert labels image into markers
     #eroded = segmenter.labels_to_markers_blob(labels_img_np)
     eroded, df = segmenter.labels_to_markers_erosion(
         labels_to_erode, erosion[profiles.RegKeys.MARKER_EROSION],
         erosion_frac, erosion[profiles.RegKeys.MARKER_EROSION_MIN])
-    if mirrored:
-        eroded = _mirror_imported_labels(eroded, len_half)
+    if is_mirrored:
+        # mirror changes onto opposite symmetric half
+        eroded = _mirror_imported_labels(
+            eroded, len_half, mirror_mult, sym_axis)
     
     return eroded, df
 
 
 def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
-                            exclude_labels=None):
+                            exclude_labels=None, mirror_mult=-1):
     """Segment an atlas using its previously generated edge map.
     
     Labels may not match their own underlying atlas image well, 
@@ -229,6 +250,8 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
             original path.
         exclude_labels (List[int]): Sequence of labels to exclude from the
             segmentation; defaults to None.
+        mirror_mult (int): Multiplier for mirrored labels; defaults to -1
+            to make mirrored labels the inverse of their source labels.
     """
     # adjust image path with suffix
     load_path = path_atlas
@@ -254,16 +277,22 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     markers = sitk.GetArrayFromImage(labels_sitk_markers)
     
     # segment image from markers
-    if atlas:
+    sym_axis = atlas_refiner.find_symmetric_axis(atlas_img_np)
+    mirrorred = atlas and sym_axis >= 0
+    len_half = None
+    if mirrorred:
         # segment only half of image, assuming symmetry
-        len_half = atlas_img_np.shape[2] // 2
+        len_half = atlas_img_np.shape[sym_axis] // 2
+        slices = [slice(None)] * labels_img_np.ndim
+        slices[sym_axis] = slice(len_half)
+        sl = tuple(slices)
         labels_seg = segmenter.segment_from_labels(
-            atlas_edge[..., :len_half], markers[..., :len_half], 
-            labels_img_np[..., :len_half], exclude_labels=exclude_labels)
+            atlas_edge[sl], markers[sl], labels_img_np[sl],
+            exclude_labels=exclude_labels)
     else:
         # segment the full image, including excluded labels on the opposite side
         exclude_labels = exclude_labels.tolist().extend(
-            (-1 * exclude_labels).tolist())
+            (mirror_mult * exclude_labels).tolist())
         labels_seg = segmenter.segment_from_labels(
             atlas_edge, markers, labels_img_np, exclude_labels=exclude_labels)
     
@@ -273,9 +302,10 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
         atlas_refiner.smooth_labels(
             labels_seg, smoothing, config.SmoothingModes.opening)
     
-    if atlas:
+    if mirrorred:
         # mirror back to other half
-        labels_seg = _mirror_imported_labels(labels_seg, len_half)
+        labels_seg = _mirror_imported_labels(
+            labels_seg, len_half, mirror_mult, sym_axis)
     
     # expand background to smoothed background of original labels to 
     # roughly match background while still allowing holes to be filled
@@ -329,6 +359,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     erosion = config.register_settings[profiles.RegKeys.EDGE_AWARE_REANNOTAION]
     erosion_frac = config.register_settings["erosion_frac"]
     mirrored = atlas and _is_profile_mirrored()
+    mirror_mult = _get_mirror_mult()
     dfs_eros = []
     for img_path in img_paths:
         mod_path = img_path
@@ -341,7 +372,8 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         if erode["markers"]:
             # use default minimal post-erosion size (not setting erosion frac)
             markers, df = erode_labels(
-                sitk.GetArrayFromImage(labels_sitk), erosion, mirrored=mirrored)
+                sitk.GetArrayFromImage(labels_sitk), erosion,
+                mirrored=mirrored, mirror_mult=mirror_mult)
             labels_sitk_markers = sitk_io.replace_sitk_with_numpy(
                 labels_sitk, markers)
             sitk_io.write_reg_images(
@@ -360,7 +392,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         print("excluding these labels from re-segmentation:\n", exclude)
         pool_results.append(pool.apply_async(
             edge_aware_segmentation,
-            args=(img_path, show, atlas, suffix, exclude)))
+            args=(img_path, show, atlas, suffix, exclude, mirror_mult)))
     for result in pool_results:
         # edge distance calculation and labels interior image generation 
         # are multiprocessed, so run them as post-processing tasks to 
@@ -386,7 +418,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
             # post-erosion frac
             interior, _ = erode_labels(
                 labels_np, erosion, erosion_frac=erosion_frac, 
-                mirrored=mirrored)
+                mirrored=mirrored, mirror_mult=mirror_mult)
             labels_sitk_interior = sitk_io.replace_sitk_with_numpy(
                 labels_sitk, interior)
         

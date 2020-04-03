@@ -164,27 +164,31 @@ def mirror_planes(img_np, start, mirror_mult=1, resize=True, start_dup=None,
     return img_np
 
 
-def check_mirrorred(img_np, mirror_mult=1):
+def check_mirrorred(img_np, mirror_mult=1, axis=0):
     """Check whether a given image, typically a labels image, is symmetric.
     
     Args:
-        img_np: Numpy array of image, typically a labels image, where 
-            symmetry will be detected based on equality of two halves 
-            split by the image's last dimension.
-        mirror_mult: Number by which to divide the 2nd half before 
+        img_np (:obj:`np.ndarray`): Numpy array of image, typically a labels
+            image, where symmetry will be detected based on equality of two
+            halves split by the image's last dimension.
+        mirror_mult (int): Number by which to divide the 2nd half before
             checking for symmetry; defaults to 1. Typically a number 
             used to generate the 2nd half when mirroring.
+        axis (int): Axis along which to check for symmetry; defaults to 0.
     
     Returns:
-        Tuple of ``(boolean, boolean)``, where the first value is True if 
-        the sides are equal, and the 2nd is True if the sides have equal 
-        sets of unique values.
+        bool, bool: Values equality, True if the sides are equal, and
+        unique labels equality, True if the sides have equal sets of
+        unique values.
     """
-    half_len = len(img_np) // 2
-    half_before = img_np[:half_len]
-    half_after = img_np[:half_len-1:-1] / mirror_mult
+    half_len = img_np.shape[axis] // 2
+    slices = [slice(None)] * img_np.ndim
+    slices[axis] = slice(0, half_len)
+    half_before = img_np[tuple(slices)]
+    slices[axis] = slice(img_np.shape[axis], half_len - 1, -1)
+    half_after = img_np[tuple(slices)] / mirror_mult
     equality_vals = np.array_equal(half_before, half_after)
-    print("halves equal?", equality_vals)
+    print("halves symmetric along axis {}?".format(axis), equality_vals)
     equality_lbls = np.array_equal(
         np.unique(half_before), np.unique(half_after))
     print("same labels in each half?", equality_lbls)

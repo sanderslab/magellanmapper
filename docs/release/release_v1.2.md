@@ -1,5 +1,19 @@
 # MagellanMapper v1.2 Release Notes
 
+## MagellanMapper v1.2.2
+
+### Changes
+
+GUI
+- Fixed ignoring the Atlas Editor opacity slider setting when scrolling through planes
+
+CLI
+- Sample commands script uses a separate file for paths to allow updating the command script without overwriting users' custom paths
+- Files are found from custom data directories more reliably
+
+Atlas registration
+- Fixed preserving negative labels
+
 ## MagellanMapper v1.2.1
 
 ### Changes

@@ -81,21 +81,15 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # test all OFFSETS with ROC curve
 #python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --offset ${OFFSETS_DONE[@]} --size $SIZE --microscope "$MIC" --truth_db "verify" --roc
-#detect_roc "$IMG" offsets_test $SIZE
-#detect_roc "$IMG" OFFSETS_DONE $SIZE
 
 # view annotation (ie segmentation) truth set
-#./run.py --img "$IMG_ROI" -v --channel "$CHL" --proc load --offset $ROI_OFFSET --size $ROI_SIZE --microscope "lightsheet_contrast" --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"
+#./run.py --img "$IMG" -v --channel "$CHL" --proc load --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"
 
 # edit detections (ie blobs) truth set
-#./run.py --img "$IMG_ROI" -v --channel "$CHL" --offset $ROI_OFFSET --size $ROI_SIZE --microscope "lightsheet_contrast" --proc load --truth_db edit magmap.db
+#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --proc load --truth_db edit magmap.db
 
-# export single ROI after detections
-#./run.py --img "$IMG_ROI" -v --channel "$CHL" --proc export_rois --savefig pdf --truth_db view
-#export_roi "$IMG" $OFFSET $SIZE verified
-
-# export all completed ROIs
-#export_rois "$IMG" offsets_test "$SIZE" verified vols_stats_intensVnuc_rois.csv
+# export ROI after detections
+#./run.py --img "$IMG" -v --channel "$CHL" --proc export_rois --savefig pdf --truth_db view
 
 
 # PIPELINES SCRIPT

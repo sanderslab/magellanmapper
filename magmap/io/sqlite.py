@@ -271,17 +271,19 @@ def insert_roi(conn, cur, exp_id, series, offset, size):
     """Inserts an ROI into the database.
     
     Args:
-        conn: The connection.
-        cur: Connection's cursor.
-        experiment_id: ID of the experiment.
-        series: Series within the experiment.
-        offset: ROI offset as (x, y, z).
-        size: ROI size as (x, y, z)
+        conn (:obj:`sqlite3.Connection): Connection object.
+        cur (:obj:`sqlite3.Cursor): Cursor object.
+        exp_id (int): ID of the experiment.
+        series (int): Series within the experiment. Can be None, in which case
+            the series will be set to 0.
+        offset (List[int): ROI offset as (x, y, z).
+        size (List[int): ROI size as (x, y, z)
     
     Returns:
-        cur.lastrowid: ID of the selected or inserted row.
-        feedback: Feedback string.
+        int, str: ID of the selected or inserted row and the feedback string.
     """
+    if series is None:
+        series = 0
     cur.execute("INSERT OR REPLACE INTO rois (experiment_id, series, "
                                              "offset_x, offset_y, "
                                              "offset_z, size_x, size_y, "
@@ -299,22 +301,26 @@ def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
     ROI if not found.
     
     Args:
-        conn: The connection.
-        cur: Connection's cursor.
-        exp_id: ID of the experiment.
-        series: Series within the experiment.
-        offset: ROI offset as (x, y, z).
-        size: ROI size as (x, y, z)
+        conn (:obj:`sqlite3.Connection): Connection object.
+        cur (:obj:`sqlite3.Cursor): Cursor object.
+        exp_id (int): ID of the experiment.
+        series (int): Series within the experiment. Can be None, in which
+            case all series will be allowed.
+        offset (List[int): ROI offset as (x, y, z).
+        size (List[int): ROI size as (x, y, z)
     
     Returns:
-        row_id: ID of the selected or inserted row.
-        feedback: User feedback on the result.
+        int, str: ID of the selected or inserted row and feedback on the result.
     """
-    cur.execute("SELECT * FROM rois WHERE experiment_id = ? "
-                "AND series = ? AND offset_x = ? AND "
-                "offset_y = ? AND offset_z = ? AND size_x = ? "
-                "AND size_y = ? AND size_z = ?", 
-                (exp_id, series, *offset, *size))
+    stmnt = ("SELECT * FROM rois WHERE experiment_id = ? "
+             "AND offset_x = ? AND offset_y = ? AND offset_z = ? AND "
+             "size_x = ? AND size_y = ? AND size_z = ?")
+    roi_args = [exp_id, *offset, *size]
+    if series is not None:
+        # specify series
+        stmnt += " AND series = ?"
+        roi_args.append(series)
+    cur.execute(stmnt, roi_args)
     row = cur.fetchone()
     if row is not None and len(row) > 0:
         print("selected ROI {}".format(row[0]))

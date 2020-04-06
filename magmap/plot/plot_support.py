@@ -79,7 +79,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
     rotate = config.transform[config.Transforms.ROTATE]
     if rotate is not None or config.flip is not None and config.flip[0]:
         if rotate is None:
-            # rotate image by 180deg if first flip setting is True
+            # rotate image by 180 deg if first flip setting is True
             rotate = 2
         last_axis = img2d.ndim - 1
         if multichannel:
@@ -384,7 +384,10 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
 
 
 def get_aspect_ratio(plane):
-    """Get the aspect ratio and origin for the given plane
+    """Get the aspect ratio and origin for the given plane.
+
+    Inversts the ratio if :attr:`config.transform[config.Transforms.ROTATE]`
+    is set to rotate the image by an odd number of 90 degree turns.
     
     Args:
         plane: Planar orientation, which should be one of 
@@ -411,6 +414,10 @@ def get_aspect_ratio(plane):
         # defaults to "xy"
         if config.resolutions is not None:
             aspect = config.resolutions[0, 1] / config.resolutions[0, 2]
+    rotate = config.transform[config.Transforms.ROTATE]
+    if rotate and rotate % 2 != 0:
+        # invert aspect ratio for 90 or 270 deg rotations
+        aspect = 1 / aspect
     return aspect, origin
 
 

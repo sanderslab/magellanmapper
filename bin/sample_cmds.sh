@@ -69,12 +69,17 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # view original image
 #./run.py --img "$IMG" --microscope "$MIC" --offset 800,1150,250 --size 70,70,30 -v #--proc load #--savefig pdf
 
-# generate, view, and build truth set for single offset
+# detect blobs within a sub-image and export the sub-image for portability
 #python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --saveroi
-#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$ROI_OFFSET" --subimg_size "$ROI_SIZE" --microscope lightsheet_contrast --proc load #--savefig png
 
-# test single offset
-#python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --truth_db verify magmap.db --roc --no_show
+# view and build truth set for a sub-image; after pressing "Save blobs," the truth set will be in magmap.db
+#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --microscope lightsheet_contrast --proc load #--savefig png
+
+# edit saved truth set; load saved ROIs from the "ROIs" dropdown box, then press "ROI Editor"
+#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --proc load --truth_db edit magmap.db
+
+# grid-search on single sub-image using the "test" ROC profile
+#python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --truth_db verify magmap.db --roc test --no_show
 
 # view verifications for single offset
 #./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --microscope lightsheet_contrast --proc load --truth_db verified "${THEME[@]}"
@@ -84,9 +89,6 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # view annotation (ie segmentation) truth set
 #./run.py --img "$IMG" -v --channel "$CHL" --proc load --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"
-
-# edit detections (ie blobs) truth set
-#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --proc load --truth_db edit magmap.db
 
 # export ROI after detections
 #./run.py --img "$IMG" -v --channel "$CHL" --proc export_rois --savefig pdf --truth_db view

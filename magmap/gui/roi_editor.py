@@ -83,7 +83,7 @@ class DraggableCircle:
         
         """
         self.circle = circle
-        self.circle.set_picker(5)
+        self.circle.set_picker(self.circle.radius)
         self._facecolori = -1
         for key, val in self.BLOB_COLORS.items():
             if val == color:

@@ -347,6 +347,7 @@ setup_image_paths() {
   # set image prefix based on identified location of files matching BASE
   local name="$2"
   prefix="$(find_prefix "$1" "$name")"
+  echo "Found image files starting with $name in $prefix"
   IMG="$prefix/${name}."
 
   # set paths from identified prefix
@@ -360,6 +361,7 @@ setup_image_paths() {
 ############################################
 # Set up atlas image file paths.
 # Globals:
+#   ABA_SPEC: Atlas mapping/specification filename in atalas directory.
 #   ABA_PATH: Main atlas directory path.
 #   ABA_LABELS: Path to atlas labels map file.
 #   ABA_IMPORT_DIR: Path to atlas imported from ABA_PATH.
@@ -371,6 +373,7 @@ setup_atlas_paths() {
   # set label directory paths
   local aba_dir="$2"
   ABA_PATH="$(find_prefix "$1" "$aba_dir/$ABA_SPEC")/$aba_dir"
+  echo "Found atlas spec file $aba_dir/$ABA_SPEC in $(dirname "$ABA_PATH")"
   ABA_LABELS="$ABA_PATH/$ABA_SPEC"
   ABA_IMPORT_DIR="${ABA_PATH}_import"
 }

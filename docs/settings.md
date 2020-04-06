@@ -43,6 +43,8 @@ Profile are collections are settings that are typically applied repeatedly. For 
 
 Currently two types of profiles exist in MagellanMapper: 1) microscope profiles, typically used for processing of microscopy images, and 2) register profiles, typically for atlas registration and processing. Each type of profile has its own Python class which defines its settings as a dictionary and set of built-in profiles.
 
+### Specifying Profiles
+
 To apply a profile, use the appropriate command-line argument followed by the profile name. To combine profiles, string these names together, separating each name with an underscore (`_`):
 
 ```
@@ -54,7 +56,11 @@ To apply a profile, use the appropriate command-line argument followed by the pr
 
 Microscope profiles can be distinct for each channel. If only one profile is given for a multi-channel, that profile will be used for all channels.
 
-Users may wish to design their own custom profiles. Profiles can be saved in YAML format using the same setting names and loaded by their paths:
+### Custom Profiles
+
+Users may wish to design their own custom profiles. Profiles can be saved in YAML format using the same setting names and loaded by their paths. Pressing "Refresh" in the ROI Selector window will reload custom profile files on-the-fly if they have changed.
+
+Example profile file:
 
 ```yaml
 ---

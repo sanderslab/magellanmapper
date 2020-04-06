@@ -32,7 +32,9 @@ conda activate mag
 
 Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
 
-You can also use `pipelines.sh`, a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details.
+You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details. [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. It can also be modified and called directly.
+
+See [Settings](docs/settings.md) for how to customize settings to your image files.
 
 ### Sample 3D data
 

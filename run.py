@@ -11,7 +11,8 @@ ENV_NAME = "mag"
 
 #: List[str]: Shell commands to launch :meth:`magmap.gui.visualizer.main`
 ARGS_VIS = [
-    "python -u -c \"from magmap.gui import visualizer; visualizer.main()\"",
+    "python -u -c \"from magmap.gui import visualizer; visualizer.main()\" {}"
+    .format(" ".join(sys.argv[1:])),
 ]
 
 #: List[str]: Shell commands to activate a Conda environment

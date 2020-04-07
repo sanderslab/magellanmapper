@@ -56,9 +56,13 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #python -u -m magmap.atlas.register -v --img "$IMG" --register make_density_images --no_show
 #./run.py --img "$IMG" --microscope lightsheet_contrast --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" --reg_suffixes heat.mhd annotation.mhd
 
-# volume metrics
+# volume metrics (level 13 includes hierarchical regions through this level)
 #python -u -m magmap.atlas.register --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS"
 #python -u -m magmap.atlas.register --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS" 13
+
+# generate CSV of all atlas IDs with names; merge with hierarchical volumes CSV
+#python -u -m magmap.atlas.register --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
+#python -u -m magmap.io.df_io --stats merge_csvs_cols --img "region_ids_$ABA_DIR.csv" "${IMG%.*}_volumes_level13.csv" --plot_labels id_col=Region --prefix "${IMG%.*}_volumes_level13_named.csv"
 
 # turn on WT and basic.stats profiles (requires R 3.5+)
 #Rscript --verbose clrstats/run.R

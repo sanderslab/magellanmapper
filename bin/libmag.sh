@@ -313,7 +313,11 @@ join_array() {
 #   where a match was found.
 ############################################
 find_prefix() {
-  local -n dirs="$1"
+  if ! local -n dirs="$1"; then
+    # fallback to indirect expansion if nameref is not available (Bash < 4.3)
+    local dirs="${1}[@]"
+    dirs=("${!dirs}")
+  fi
   local name="$2"
   prefix=""
   for p in "${dirs[@]}"; do

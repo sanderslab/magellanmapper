@@ -11,7 +11,6 @@ ENV_NAME = "mag"
 
 #: List[str]: Shell commands to launch :meth:`magmap.gui.visualizer.main`
 ARGS_VIS = [
-    "cd " + os.path.dirname(os.path.abspath(__file__)),
     "python -u -c \"from magmap.gui import visualizer; visualizer.main()\"",
 ]
 
@@ -47,19 +46,20 @@ def is_venv_activated():
             (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix))
 
 
-def launch_subprocess(args):
+def launch_subprocess(args, working_dir=None):
     """Launch a subprocess with multiple commands strung together by
     logical ands.
 
     Args:
         args (List): List of shell commands.
+        working_dir (str): Working directory path; defaults to None.
 
     Returns:
         int: 0 if the return code was 0; otherwise, raises a
         :class:`subprocess.CalledProcessError`.
 
     """
-    return subprocess.check_call("&&".join(args), shell=True)
+    return subprocess.check_call("&&".join(args), shell=True, cwd=working_dir)
 
 
 def launch_vis():
@@ -74,6 +74,7 @@ def main():
     If necessary, attempt to activate a virtual environment created
     by MagellanMapper.
     """
+    working_dir = os.path.dirname(os.path.abspath(__file__))
     if is_conda_activated() or is_venv_activated():
         # launch GUI if environment is already active
         launch_vis()
@@ -83,12 +84,12 @@ def main():
         # activate Conda environment, assuming default name in setup script
         # and need to initialize shell, and launch GUI
         print("Attempting to activate Conda environment")
-        launch_subprocess(ARGS_CONDA + ARGS_VIS)
+        launch_subprocess(ARGS_CONDA + ARGS_VIS, working_dir)
     except subprocess.CalledProcessError:
         try:
             # non-POSIX shells do not accept eval but may run without
             # initializing the Conda shell hook
-            launch_subprocess(ARGS_CONDA[1:] + ARGS_VIS)
+            launch_subprocess(ARGS_CONDA[1:] + ARGS_VIS, working_dir)
         except subprocess.CalledProcessError:
             try:
                 # if unable to activate Conda env, try Venv
@@ -96,7 +97,7 @@ def main():
                 launch_subprocess(
                     ["source {}/../venvs/{}/bin/activate".format(
                         os.path.dirname(os.path.abspath(__file__)), ENV_NAME)]
-                    + ARGS_VIS)
+                    + ARGS_VIS, working_dir)
             except subprocess.CalledProcessError:
                 # as fallback, attempt to launch without activating
                 # an environment

@@ -328,11 +328,6 @@ find_prefix() {
       fi
     done
   done
-  if [[ -z "$prefix" ]]; then
-    msg="WARNING: could not find file in ${dirs[*]} associated with $name. "
-    msg+="\nWill assume files are located in \""$(pwd)"\"."
-    echo -e "$msg"
-  fi
   echo "$PWD"
   return 1
 }
@@ -350,8 +345,14 @@ find_prefix() {
 setup_image_paths() {
   # set image prefix based on identified location of files matching BASE
   local name="$2"
-  prefix="$(find_prefix "$1" "$name")"
-  echo "Found image files starting with $name in $prefix"
+  local prefix
+  if prefix="$(find_prefix "$1" "$name")"; then
+    echo "Found image files starting with $name in $prefix"
+  else
+    msg="WARNING: could not find image file associated with \"$name.\" "
+    msg+="\nWill assume image files are located in \"$prefix\"."
+    echo -e "$msg"
+  fi
   IMG="$prefix/${name}."
 
   # set paths from identified prefix
@@ -376,8 +377,13 @@ setup_image_paths() {
 setup_atlas_paths() {
   # set label directory paths
   local aba_dir="$2"
-  ABA_PATH="$(find_prefix "$1" "$aba_dir/$ABA_SPEC")/$aba_dir"
-  echo "Found atlas spec file $aba_dir/$ABA_SPEC in $(dirname "$ABA_PATH")"
+  if ABA_PATH="$(find_prefix "$1" "$aba_dir/$ABA_SPEC")/$aba_dir"; then
+    echo "Found atlas spec file $aba_dir/$ABA_SPEC in $(dirname "$ABA_PATH")"
+  else
+    msg="WARNING: could not find atlas directory associated with \"$aba_dir.\" "
+    msg+="\nWill use the atlas path: \"$ABA_PATH\"."
+    echo -e "$msg"
+  fi
   ABA_LABELS="$ABA_PATH/$ABA_SPEC"
   ABA_IMPORT_DIR="${ABA_PATH}_import"
 }

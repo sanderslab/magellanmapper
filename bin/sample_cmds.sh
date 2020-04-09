@@ -39,11 +39,11 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # - change `mag` to objective magnification
 #python -u -m magmap.io.cli --img "${IMG%.*}.tif" --proc import_only --res 10.52,10.52,10 --mag 0.63 -v
 
-# downsample to size of CCFv3 and view
-#python -u -m magmap.io.cli --img "$IMG" --proc transform --reg_profile finer_abaccfv3 #--plane xz
+# downsample to size of atlas and view
+#python -u -m magmap.io.cli --img "$IMG" --proc transform --reg_profile "$REG" #--plane xz
 #./run.py --img "$IMG_RESIZED" --offset 225,300,150
 
-# register imported CCFv3 to downsampled image and view
+# register imported atlas to downsampled image and view
 # - defaults to using channel 0; add `--channel x` to use channel x instead
 #python -u -m magmap.atlas.register --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --flip 1 --register single --reg_profile "${REG}_raw" --no_show -v
 #./run.py --img "$IMG_MHD" --microscope lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd --offset 70,350,150

@@ -48,6 +48,10 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #python -u -m magmap.atlas.register --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --flip 1 --register single --reg_profile "${REG}_raw" --no_show -v
 #./run.py --img "$IMG_MHD" --microscope lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd --offset 70,350,150
 
+# similar view of registered labels but overlaid on downsampled image
+# including all of its channels
+#./run.py --img "$IMG_RESIZED" --prefix "$IMG_MHD" --microscope lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes annotation=annotation.mhd --offset 70,350,150
+
 # full image detection
 # - detects cells in channel set in variable `CHL`
 #python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --microscope "$MIC"

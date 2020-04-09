@@ -117,6 +117,10 @@ def _check_np_none(val):
 def setup_images(path=None, series=None, offset=None, size=None,
                  proc_mode=None):
     """Sets up an image and all associated images and metadata.
+
+    Paths for related files such as registered images will generally be
+    constructed from ``path``. If :attr:`config.prefix` is set, it will
+    be used in place of ``path`` for registered labels.
     
     Args:
         path (str): Path to image from which MagellanMapper-style paths will 
@@ -227,7 +231,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
         if atlas_suffix is None and config.image5d is None:
             # fallback to atlas if main image not already loaded
             atlas_suffix = config.RegNames.IMG_ATLAS.value
-            print("main image is not set, fallling back to registered "
+            print("main image is not set, falling back to registered "
                   "image with suffix", atlas_suffix)
         if path and atlas_suffix is not None:
             # will take the place of any previously loaded image5d
@@ -239,6 +243,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             # load labels image, set up scaling, and load labels file, 
             # using prefix for registered files if given
             try:
+                # TODO: consider also using prefix for atlas suffix
                 path = config.prefix if config.prefix else path
                 # TODO: need to support multichannel labels images
                 config.labels_img = sitk_io.read_sitk_files(

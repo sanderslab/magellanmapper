@@ -215,58 +215,61 @@ def main(process_args_only=False):
     parser = argparse.ArgumentParser(
         description="Setup environment for MagellanMapper")
     parser.add_argument(
-        "--img", nargs="*", help="Main image path(s); after import, the"
-        "filename is often given as the original name without the extension")
-    parser.add_argument("--meta", nargs="*", help="Metadata path(s)")
+        "--img", nargs="*",
+        help="Main image path(s); after import, the filename is often "
+             "given as the original name without its extension")
+    parser.add_argument(
+        "--meta", nargs="*",
+        help="Metadata path(s), which can be given as multiple files "
+             "corresponding to each image")
     parser.add_argument("--channel", type=int, help="Channel index")
     parser.add_argument("--series", help="Series index")
     parser.add_argument(
-        "--savefig", help="Extension for saved figures (without the period)")
-    parser.add_argument("--padding_2d")
-    parser.add_argument("--offset", nargs="*")
-    parser.add_argument("--size", nargs="*")
-    parser.add_argument("--subimg_offset", nargs="*")
-    parser.add_argument("--subimg_size", nargs="*")
-    parser.add_argument("--res")
-    parser.add_argument("--mag")
-    parser.add_argument("--zoom")
-    parser.add_argument("-v", "--verbose", action="store_true")
-    parser.add_argument("--microscope", nargs="*")
-    parser.add_argument("--truth_db", nargs="*")
-    parser.add_argument("--roc", nargs="*")
-    parser.add_argument("--saveroi", action="store_true")
-    parser.add_argument("--labels", nargs="*")
-    parser.add_argument("--flip", nargs="*")
-    parser.add_argument("--transform", nargs="*")
-    parser.add_argument("--reg_profile")
-    parser.add_argument("--rescale")
-    parser.add_argument("--slice")
-    parser.add_argument("--delay")
-    parser.add_argument("--no_show", action="store_true")
-    parser.add_argument("--border", nargs="*")
-    parser.add_argument("--db")
-    parser.add_argument("--groups", nargs="*")
-    parser.add_argument("--chunk_shape", nargs="*")
-    parser.add_argument("--ec2_start", nargs="*")
-    parser.add_argument("--ec2_list", nargs="*")
-    parser.add_argument("--ec2_terminate", nargs="*")
-    parser.add_argument("--notify", nargs="*")
-    parser.add_argument("--prefix")
-    parser.add_argument("--suffix")
-    parser.add_argument("--alphas")
-    parser.add_argument("--vmin")
-    parser.add_argument("--vmax")
-    parser.add_argument("--seed")
-    parser.add_argument("--reg_suffixes", nargs="*")
-    parser.add_argument("--no_scale_bar", action="store_true")
-    parser.add_argument("--plot_labels", nargs="*")
+        "--savefig", help="Extension for saved figures")
+    parser.add_argument("--padding_2d", help="Padding around ROIs in x,y,z")
+    parser.add_argument("--offset", nargs="*", help="ROI offset in x,y,z")
+    parser.add_argument("--size", nargs="*", help="ROI size in x,y,z")
+    parser.add_argument(
+        "--subimg_offset", nargs="*", help="Sub-image offset in x,y,z")
+    parser.add_argument(
+        "--subimg_size", nargs="*", help="Sub-image size in x,y,z")
     parser.add_argument(
         "--proc", type=str.lower,
         choices=libmag.enum_names_aslist(config.ProcessTypes),
         help="Image processing mode")
+    parser.add_argument("--res", help="Resolutions in x,y,z")
+    parser.add_argument("--mag", help="Objective magnification")
+    parser.add_argument("--zoom", help="Objective zoom")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Verbose output to assist with debugging")
+    parser.add_argument(
+        "--microscope", nargs="*",
+        help="Microscope/ROI profile, which can be separated by underscores "
+             "for multiple profiles and given as paths to custom profiles "
+             "in YAML format. Multiple profile groups can be given, which "
+             "will each be applied to the corresponding channel. See "
+             "docs/settings.md for more details.")
+    parser.add_argument(
+        "--truth_db", nargs="*",
+        help="Truth database; see config.TruthDB for settings and "
+             "config.TruthDBModes for modes")
+    parser.add_argument(
+        "--roc", nargs="*",
+        help="Grid search/Receiver Operating Characteristic curve profile")
     parser.add_argument(
         "--plane", type=str.lower, choices=config.PLANE,
         help="Planar orientation")
+    parser.add_argument(
+        "--saveroi", action="store_true",
+        help="Save sub-image as separate file")
+    parser.add_argument(
+        "--labels", nargs="*", help="Atlas labels; see config.AtlasLabels")
+    parser.add_argument(
+        "--flip", nargs="*",
+        help="1 to rotate the corresponding image by 180 degrees")
+    parser.add_argument(
+        "--transform", nargs="*", help="Image transformations")
     parser.add_argument(
         "--register", type=str.lower,
         choices=libmag.enum_names_aslist(config.RegisterTypes),
@@ -279,6 +282,58 @@ def main(process_args_only=False):
         "--plot_2d", type=str.lower,
         choices=libmag.enum_names_aslist(config.Plot2DTypes),
         help="2D plot task; see config.Plot2DTypes")
+    parser.add_argument(
+        "--reg_profile",
+        help="Register/atlas profile, which can be separated by underscores "
+             "for multiple profiles and given as paths to custom profiles "
+             "in YAML format. See docs/settings.md for more details.")
+    parser.add_argument("--rescale", help="Rescaling factor")
+    parser.add_argument("--slice", help="Slice given as start,stop,step")
+    parser.add_argument("--delay", help="Animation delay in ms")
+    parser.add_argument(
+        "--no_show", action="store_true",
+        help="Avoid showing images after completing the given task")
+    parser.add_argument(
+        "--border", nargs="*",
+        help="Border padding for ROI detection verifications in x,y,z")
+    parser.add_argument("--db", help="Database path")
+    parser.add_argument(
+        "--groups", nargs="*", help="Group values corresponding to each image")
+    parser.add_argument(
+        "--chunk_shape", nargs="*",
+        help="Maximum pixels for each chunk during block processing, "
+             "given in z,y,x")
+    parser.add_argument("--ec2_start", nargs="*", help="AWS EC2 instance start")
+    parser.add_argument("--ec2_list", nargs="*", help="AWS EC2 instance list")
+    parser.add_argument(
+        "--ec2_terminate", nargs="*", help="AWS EC2 instance termination")
+    parser.add_argument(
+        "--notify", nargs="*",
+        help="Notification message URL, message, and attachment strings")
+    parser.add_argument("--prefix", help="Path prefix")
+    parser.add_argument("--suffix", help="Filename suffix")
+    parser.add_argument(
+        "--alphas",
+        help="Alpha opacity levels, which can be comma-delimited for "
+             "multichannel images")
+    parser.add_argument(
+        "--vmin",
+        help="Minimum intensity levels, which can be comma-delimited "
+             "for multichannel images")
+    parser.add_argument(
+        "--vmax",
+        help="Maximum intensity levels, which can be comma-delimited "
+             "for multichannel images")
+    parser.add_argument("--seed", help="Random number generator seed")
+    parser.add_argument(
+        "--reg_suffixes", nargs="*",
+        help="Registered image suffixes; see config.RegSuffixes for settings"
+             "and config.RegNames for values")
+    parser.add_argument(
+        "--no_scale_bar", action="store_true", help="Turn off scale bars")
+    parser.add_argument(
+        "--plot_labels", nargs="*",
+        help="Plot label customizations; see config.PlotLabels for settings")
     parser.add_argument(
         "--theme", nargs="*", type=str.lower,
         choices=libmag.enum_names_aslist(config.Themes),
@@ -313,7 +368,7 @@ def main(process_args_only=False):
             config.channel = None
         print("Set channel to {}".format(config.channel))
     
-    series_list = [config.series] # list of series
+    series_list = [config.series]  # list of series
     if args.series is not None:
         series_split = args.series.split(",")
         series_list = []
@@ -367,6 +422,7 @@ def main(process_args_only=False):
               .format(config.roi_sizes, config.roi_size))
 
     if args.padding_2d is not None:
+        # TODO: consider removing or moving to profile
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
             from magmap.plot import plot_2d

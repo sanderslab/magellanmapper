@@ -209,15 +209,19 @@ def main(process_args_only=False):
     Processes command-line arguments.
     
     Args:
-        process_args_only: If True, processes command-line arguments and exits.
+        process_args_only (bool): Processes command-line arguments and
+            returns; defaults to False.
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for MagellanMapper")
-    parser.add_argument("--img", nargs="*")
-    parser.add_argument("--meta", nargs="*")
-    parser.add_argument("--channel", type=int)
-    parser.add_argument("--series")
-    parser.add_argument("--savefig")
+    parser.add_argument(
+        "--img", nargs="*", help="Main image path(s); after import, the"
+        "filename is often given as the original name without the extension")
+    parser.add_argument("--meta", nargs="*", help="Metadata path(s)")
+    parser.add_argument("--channel", type=int, help="Channel index")
+    parser.add_argument("--series", help="Series index")
+    parser.add_argument(
+        "--savefig", help="Extension for saved figures (without the period)")
     parser.add_argument("--padding_2d")
     parser.add_argument("--offset", nargs="*")
     parser.add_argument("--size", nargs="*")
@@ -305,9 +309,12 @@ def main(process_args_only=False):
         config.series = series_list[0]
         print("Set to series_list to {}, current series {}".format(
               series_list, config.series))
+
     if args.savefig is not None:
-        config.savefig = args.savefig
+        # save figure with file type of this extension; remove leading period
+        config.savefig = args.savefig.lstrip(".")
         print("Set savefig extension to {}".format(config.savefig))
+
     if args.verbose:
         # verbose mode, including printing longer Numpy arrays for debugging
         config.verbose = args.verbose

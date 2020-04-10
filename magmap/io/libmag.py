@@ -748,6 +748,21 @@ def get_if_within(val, i, default=None):
     return default
 
 
+def enum_names_aslist(c, lower=True):
+    """Get an Enum class as a list of enum names.
+
+    Args:
+        c (:class:`Enum`): Enum class.
+        lower (bool): True to get names as lower case; defaults to True for
+            easier comparison with other strings.
+
+    Returns:
+        List: List of enum names.
+
+    """
+    return [e.name.lower() if lower else e.name for e in c]
+
+
 def enum_dict_aslist(d):
     """Summarize a dictionary with enums as keys as a shortened 
     list with only the names of each enum member.

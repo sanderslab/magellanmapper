@@ -227,7 +227,6 @@ def main(process_args_only=False):
     parser.add_argument("--size", nargs="*")
     parser.add_argument("--subimg_offset", nargs="*")
     parser.add_argument("--subimg_size", nargs="*")
-    parser.add_argument("--proc")
     parser.add_argument("--res")
     parser.add_argument("--mag")
     parser.add_argument("--zoom")
@@ -235,14 +234,10 @@ def main(process_args_only=False):
     parser.add_argument("--microscope", nargs="*")
     parser.add_argument("--truth_db", nargs="*")
     parser.add_argument("--roc", nargs="*")
-    parser.add_argument("--plane")
     parser.add_argument("--saveroi", action="store_true")
     parser.add_argument("--labels", nargs="*")
     parser.add_argument("--flip", nargs="*")
     parser.add_argument("--transform", nargs="*")
-    parser.add_argument("--register")
-    parser.add_argument("--stats")
-    parser.add_argument("--plot_2d")
     parser.add_argument("--reg_profile")
     parser.add_argument("--rescale")
     parser.add_argument("--slice")
@@ -265,7 +260,30 @@ def main(process_args_only=False):
     parser.add_argument("--reg_suffixes", nargs="*")
     parser.add_argument("--no_scale_bar", action="store_true")
     parser.add_argument("--plot_labels", nargs="*")
-    parser.add_argument("--theme", nargs="*")
+    parser.add_argument(
+        "--proc", type=str.lower,
+        choices=libmag.enum_names_aslist(config.ProcessTypes),
+        help="Image processing mode")
+    parser.add_argument(
+        "--plane", type=str.lower, choices=config.PLANE,
+        help="Planar orientation")
+    parser.add_argument(
+        "--register", type=str.lower,
+        choices=libmag.enum_names_aslist(config.RegisterTypes),
+        help="Image registration task")
+    parser.add_argument(
+        "--stats", type=str.lower,
+        choices=libmag.enum_names_aslist(config.StatsTypes),
+        help="Statistics task")
+    parser.add_argument(
+        "--plot_2d", type=str.lower,
+        choices=libmag.enum_names_aslist(config.Plot2DTypes),
+        help="2D plot task; see config.Plot2DTypes")
+    parser.add_argument(
+        "--theme", nargs="*", type=str.lower,
+        choices=libmag.enum_names_aslist(config.Themes),
+        help="UI theme, which can be given as multiple themes to apply "
+             "on top of one another")
     args = parser.parse_args()
     
     if args.img is not None:

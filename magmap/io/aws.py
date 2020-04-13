@@ -11,6 +11,7 @@ from pprint import pprint
 
 import boto3
 import boto3.session
+import botocore
 from botocore.exceptions import ClientError
 
 from magmap.io import cli
@@ -230,16 +231,14 @@ def get_bucket_size(name, keys=None):
     return size, df
 
 
-def download_bucket_file(bucket_name, key, out_path=None):
-    """Download a file within a bucket.
+def download_s3_file(bucket_name, key, out_path=None):
+    """Download a file in AWS S3.
 
     Args:
         bucket_name (str): Name of bucket.
         key (str): Key within bucket.
         out_path (str): Output path; defaults to None to use the basename
             of ``key``.
-
-    Returns:
 
     """
     if out_path is None:
@@ -253,6 +252,55 @@ def download_bucket_file(bucket_name, key, out_path=None):
         # https://github.com/boto/boto3/issues/1304
         obj.download_fileobj(f)
         f.flush()
+
+
+def upload_s3_file(path, bucket_name, key):
+    """Upload a file to AWS S3.
+
+    Args:
+        path (str): Path of file to upload.
+        bucket_name (str): Name of bucket.
+        key (str): Destination key in bucket for upload.
+
+    """
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(bucket_name)
+
+    with open(path, "rb") as f:
+        # upload as a managed transfer with multipart download
+        bucket.upload_fileobj(f, key)
+
+
+def delete_s3_file(bucket_name, key, hard=False):
+    """Delete a file on AWS S3.
+
+    Args:
+        bucket_name (str): Name of bucket.
+        key (str): Key within bucket.
+        hard (bool): True to delete all versions associated with the key
+            including any delete markers, effectively deleting the
+            object on S3 permanently. Defaults to False, in which case
+            only a delete marker will be applied if versioning is on;
+            without versioning, the file will be permanently deleted.
+
+    """
+    s3 = boto3.resource("s3")
+    if hard:
+        bucket = s3.Bucket(bucket_name)
+        vers = bucket.object_versions.filter(Prefix=key)
+        for ver in vers:
+            print("permanently deleting {}, versionId {}"
+                  .format(ver.object_key, ver.id))
+            ver.delete()
+    else:
+        obj = s3.Object(bucket_name, key)
+        try:
+            print("deleting (or setting delete marker for) {}, versionId {}"
+                  .format(obj.key, obj.version_id))
+            obj.delete()
+        except botocore.exceptions.ClientError as e:
+            print(e)
+            print("could not find key {} to delete".format(key))
 
 
 if __name__ == "__main__":

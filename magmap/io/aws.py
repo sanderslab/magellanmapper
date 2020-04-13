@@ -5,6 +5,7 @@
 Attributes:
 """
 
+import os
 import multiprocessing as mp
 from pprint import pprint
 
@@ -13,6 +14,7 @@ import boto3.session
 from botocore.exceptions import ClientError
 
 from magmap.io import cli
+from magmap.io import df_io
 from magmap.settings import config
 
 _EC2_STATES = (
@@ -198,7 +200,60 @@ def list_instances(state=None, image_id=None):
         
     except ClientError as e:
         print(e)
-    
+
+
+def get_bucket_size(name, keys=None):
+    """Get the size of an AWS S3 bucket.
+
+    Args:
+        name (str): Name of bucket.
+        keys (List[str]): Sequence of keys within the bucket to include
+            sizes of only these files; defaults to None.
+
+    Returns:
+        float, :obj:`pd.DataFrame`: Size of bucket in GiB, and a dataframe
+        of keys and associated sizes.
+
+    """
+    s3 = boto3.resource("s3")
+    bucket = s3.Bucket(name)
+    size = 0
+    obj_sizes = {}
+    for obj in bucket.objects.all():
+        if not keys or obj.key in keys:
+            obj_sizes.setdefault("Key", []).append(obj.key)
+            obj_sizes.setdefault("Size", []).append(obj.size)
+            size += obj.size
+    df = df_io.dict_to_data_frame(obj_sizes, "bucket_{}".format(bucket.name))
+    print("{} bucket total size (GiB): {}"
+          .format(bucket.name, size / 1045 ** 3))
+    return size, df
+
+
+def download_bucket_file(bucket_name, key, out_path=None):
+    """Download a file within a bucket.
+
+    Args:
+        bucket_name (str): Name of bucket.
+        key (str): Key within bucket.
+        out_path (str): Output path; defaults to None to use the basename
+            of ``key``.
+
+    Returns:
+
+    """
+    if out_path is None:
+        out_path = os.path.basename(key)
+    s3 = boto3.resource("s3")
+    obj = s3.Object(bucket_name, key)
+
+    with open(out_path, "wb") as f:
+        # download as a managed transfer with multipart download;
+        # flush as suggested in this issue:
+        # https://github.com/boto/boto3/issues/1304
+        obj.download_fileobj(f)
+        f.flush()
+
 
 if __name__ == "__main__":
     cli.main(True)

@@ -260,7 +260,7 @@ def download_s3_file(bucket_name, key, out_path=None):
             obj.download_fileobj(f)
             f.flush()
             return True
-        except RetriesExceededError as e:
+        except (RetriesExceededError, ClientError) as e:
             print(e)
     return False
 

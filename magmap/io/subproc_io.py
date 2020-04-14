@@ -7,29 +7,50 @@ Python :mod:`subprocess` module.
 import os
 import subprocess
 
+from magmap.io import libmag
+
 
 def compress_file(path_in, path_out=None):
-    """Compress a file or directory by tar archving and compressing with.
+    """Compress a file or files by tar archving and compressing with.
 
     Assumes that ``tar`` and ``zstd`` are available shell commands.
 
     Args:
-        path_in (str): Input file path.
+        path_in (str, List[str]): Input file path; can be a sequence of paths,
+            in which case the first path will determine the working directory
+            and the default ``path_out`` if none is given.
         path_out (str): Output file path; defaults to None to use the
-            same path as ``path_in`` with ``.tar.zst`` appended.
+            same path as ``path_in`` with ``.tar.zstd`` appended.
 
     """
+    tar_args = ["tar", "cfv", "-"]
+    if libmag.is_seq(path_in):
+        # set up sequence of paths, using the first path as template
+        path_first = path_in[0]
+        tar_args.extend([os.path.basename(p) for p in path_in])
+    else:
+        # set up a single path
+        path_first = path_in
+        tar_args.append(os.path.basename(path_in))
     if path_out is None:
-        path_out = path_in + ".tar.zst"
-    print("compressing {} to {}".format(path_in, path_out))
+        # default to using the first path for compressed file name
+        path_out = os.path.splitext(path_first)[0] + ".tar.zst"
+    # use first path for working directory
+    wd = os.path.dirname(path_first)
+    if not wd:
+        wd = None
+
+    # archive with tar and pipe to zstd for compression
+    print("Compressing \"{}\" to \"{}\"".format(path_in, path_out))
     tar = subprocess.Popen(
-        ["tar", "cfv", "-", os.path.basename(path_in)],
-        cwd=os.path.dirname(path_in), stdout=subprocess.PIPE, bufsize=0)
+        tar_args, cwd=wd, stdout=subprocess.PIPE, bufsize=0)
     with open(path_out, "wb") as f:
-        zst = subprocess.Popen(
+        zstd = subprocess.Popen(
             ["pzstd", "-v"], stdin=tar.stdout, stdout=f, bufsize=0)
         tar.stdout.close()
-        stderr = zst.communicate()[1]
+        # appears to work for large image with memory issues because data
+        # are backed by files
+        stderr = zstd.communicate()[1]
         if stderr:
             print(stderr)
 
@@ -45,9 +66,10 @@ def test_compression(path):
         if otherwise.
 
     """
-    print("testing integrity of compressed file:", path)
+    print("Testing integrity of compressed file:", path)
     try:
         subprocess.check_call(["pzstd", "-t", path])
+        print("Integrity test of \"{}\" completed without error".format(path))
         return True
     except subprocess.CalledProcessError as e:
         print(e)

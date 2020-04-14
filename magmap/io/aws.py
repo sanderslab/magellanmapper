@@ -12,6 +12,7 @@ from pprint import pprint
 import boto3
 import boto3.session
 import botocore
+from boto3.exceptions import S3UploadFailedError
 from botocore.exceptions import ClientError
 
 from magmap.io import cli
@@ -262,13 +263,21 @@ def upload_s3_file(path, bucket_name, key):
         bucket_name (str): Name of bucket.
         key (str): Destination key in bucket for upload.
 
+    Returns:
+        bool: True if the file was successfully uploaded, False if otherwise.
+
     """
     s3 = boto3.resource("s3")
     bucket = s3.Bucket(bucket_name)
 
     with open(path, "rb") as f:
         # upload as a managed transfer with multipart download
-        bucket.upload_fileobj(f, key)
+        try:
+            bucket.upload_fileobj(f, key)
+            return True
+        except S3UploadFailedError as e:
+            print(e)
+    return False
 
 
 def delete_s3_file(bucket_name, key, hard=False):

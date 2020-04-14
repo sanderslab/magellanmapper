@@ -12,7 +12,7 @@ from pprint import pprint
 import boto3
 import boto3.session
 import botocore
-from boto3.exceptions import S3UploadFailedError
+from boto3.exceptions import RetriesExceededError, S3UploadFailedError
 from botocore.exceptions import ClientError
 
 from magmap.io import cli
@@ -241,6 +241,9 @@ def download_s3_file(bucket_name, key, out_path=None):
         out_path (str): Output path; defaults to None to use the basename
             of ``key``.
 
+    Returns:
+        bool: True if the file was successfully downloaded, False if otherwise.
+
     """
     if out_path is None:
         out_path = os.path.basename(key)
@@ -253,8 +256,13 @@ def download_s3_file(bucket_name, key, out_path=None):
         # download as a managed transfer with multipart download;
         # flush as suggested in this issue:
         # https://github.com/boto/boto3/issues/1304
-        obj.download_fileobj(f)
-        f.flush()
+        try:
+            obj.download_fileobj(f)
+            f.flush()
+            return True
+        except RetriesExceededError as e:
+            print(e)
+    return False
 
 
 def upload_s3_file(path, bucket_name, key, dryrun=False):

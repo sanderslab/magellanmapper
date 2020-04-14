@@ -247,6 +247,8 @@ def download_s3_file(bucket_name, key, out_path=None):
     s3 = boto3.resource("s3")
     obj = s3.Object(bucket_name, key)
 
+    print("Downloading bucket \"{}\", key \"{}\" to \"{}\""
+          .format(bucket_name, key, out_path))
     with open(out_path, "wb") as f:
         # download as a managed transfer with multipart download;
         # flush as suggested in this issue:
@@ -255,13 +257,14 @@ def download_s3_file(bucket_name, key, out_path=None):
         f.flush()
 
 
-def upload_s3_file(path, bucket_name, key):
+def upload_s3_file(path, bucket_name, key, dryrun=False):
     """Upload a file to AWS S3.
 
     Args:
         path (str): Path of file to upload.
         bucket_name (str): Name of bucket.
         key (str): Destination key in bucket for upload.
+        dryrun (bool): True to print paths without uploading; defaults to False.
 
     Returns:
         bool: True if the file was successfully uploaded, False if otherwise.
@@ -271,6 +274,11 @@ def upload_s3_file(path, bucket_name, key):
     bucket = s3.Bucket(bucket_name)
 
     with open(path, "rb") as f:
+        print("Uploading file \"{}\" to bucket \"{}\", key \"{}\""
+              .format(path, bucket_name, key))
+        if dryrun:
+            print("Upload of \"{}\" set to dry run, so skipping".format(path))
+            return True
         # upload as a managed transfer with multipart download
         try:
             bucket.upload_fileobj(f, key)
@@ -280,7 +288,7 @@ def upload_s3_file(path, bucket_name, key):
     return False
 
 
-def delete_s3_file(bucket_name, key, hard=False):
+def delete_s3_file(bucket_name, key, hard=False, dryrun=False):
     """Delete a file on AWS S3.
 
     Args:
@@ -291,6 +299,7 @@ def delete_s3_file(bucket_name, key, hard=False):
             object on S3 permanently. Defaults to False, in which case
             only a delete marker will be applied if versioning is on;
             without versioning, the file will be permanently deleted.
+        dryrun (bool): True to print paths without uploading; defaults to False.
 
     Returns:
         bool: True if the file was successfully deleted, False if otherwise.
@@ -299,25 +308,35 @@ def delete_s3_file(bucket_name, key, hard=False):
 
     """
     s3 = boto3.resource("s3")
+    print("Deleting file object at bucket \"{}\", key \"{}\" (hard delete {})"
+          .format(bucket_name, key, hard))
     if hard:
         bucket = s3.Bucket(bucket_name)
         vers = bucket.object_versions.filter(Prefix=key)
         for ver in vers:
             if ver.object_key == key:
-                print("permanently deleting {}, versionId {}"
+                print("Permanently deleting \"{}\", versionId \"{}\""
                       .format(ver.object_key, ver.id))
-                ver.delete()
+                if dryrun:
+                    print("Deletion of \"{}\" set to dry run, so skipping"
+                          .format(ver.object_key))
+                else:
+                    ver.delete()
         return True
     else:
         obj = s3.Object(bucket_name, key)
         try:
-            print("deleting (or setting delete marker for) {}, versionId {}"
+            print("Deleting (or setting delete marker for) \"{}\", versionId \"{}\""
                   .format(obj.key, obj.version_id))
-            obj.delete()
+            if dryrun:
+                print("Deletion of {} set to dry run, so skipping"
+                      .format(obj.key))
+            else:
+                obj.delete()
             return True
         except botocore.exceptions.ClientError as e:
             print(e)
-            print("could not find key {} to delete".format(key))
+            print("Could not find key \"{}\" to delete".format(key))
     return False
 
 

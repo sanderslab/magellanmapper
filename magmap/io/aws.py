@@ -292,24 +292,33 @@ def delete_s3_file(bucket_name, key, hard=False):
             only a delete marker will be applied if versioning is on;
             without versioning, the file will be permanently deleted.
 
+    Returns:
+        bool: True if the file was successfully deleted, False if otherwise.
+        For versioned files, all versions of the given object must have
+        been deleted without error to return True.
+
     """
     s3 = boto3.resource("s3")
     if hard:
         bucket = s3.Bucket(bucket_name)
         vers = bucket.object_versions.filter(Prefix=key)
         for ver in vers:
-            print("permanently deleting {}, versionId {}"
-                  .format(ver.object_key, ver.id))
-            ver.delete()
+            if ver.object_key == key:
+                print("permanently deleting {}, versionId {}"
+                      .format(ver.object_key, ver.id))
+                ver.delete()
+        return True
     else:
         obj = s3.Object(bucket_name, key)
         try:
             print("deleting (or setting delete marker for) {}, versionId {}"
                   .format(obj.key, obj.version_id))
             obj.delete()
+            return True
         except botocore.exceptions.ClientError as e:
             print(e)
             print("could not find key {} to delete".format(key))
+    return False
 
 
 if __name__ == "__main__":

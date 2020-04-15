@@ -236,8 +236,9 @@ def get_bucket_size(name, keys=None, suffix=None):
         suffix (str): String to append to output CSV file; defaults to None.
 
     Returns:
-        float, :obj:`pd.DataFrame`: Size of bucket in GiB, and a dataframe
-        of keys and associated sizes.
+        float, :obj:`pd.DataFrame`, :obj:`pd.DataFrame`: Size of bucket in
+        bytes; a dataframe of keys and associated sizes; and a dataframe
+        of missing keys from ``keys``, or None if ``keys`` is not given.
 
     """
     s3 = boto3.resource("s3")
@@ -246,16 +247,30 @@ def get_bucket_size(name, keys=None, suffix=None):
     obj_sizes = {}
     for obj in bucket.objects.all():
         if not keys or obj.key in keys:
+            obj_sizes.setdefault("Bucket", []).append(bucket.name)
             obj_sizes.setdefault("Key", []).append(obj.key)
             obj_sizes.setdefault("Size", []).append(obj.size)
             size += obj.size
+
     out_path = "bucket_{}".format(bucket.name)
     if suffix:
         out_path = libmag.insert_before_ext(out_path, suffix, "_")
+    df_missing = None
+    if keys:
+        keys_missing = []
+        obj_keys = obj_sizes.keys()
+        for key in keys:
+            if key not in obj_keys:
+                keys_missing.append(key)
+        # print("Missing keys:\n", "\n".join(keys_missing))
+        df_missing = df_io.dict_to_data_frame(
+            {"Keys_missing": keys_missing},
+            libmag.insert_before_ext(out_path, "_missing"))
+
     df = df_io.dict_to_data_frame(obj_sizes, out_path)
     print("{} bucket total size (GiB): {}"
-          .format(bucket.name, size / 1045 ** 3))
-    return size, df
+          .format(bucket.name, libmag.convert_bin_magnitude(size, 3)))
+    return size, df, df_missing
 
 
 def load_s3_file(bucket_name, key):

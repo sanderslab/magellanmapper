@@ -166,6 +166,27 @@ def terminate_instances(instance_ids):
         print(e)
 
 
+def split_s3_path(path):
+    """Split an S3 path into its bucket and key components.
+
+    Args:
+        path (str): S3 path, assumed to begin with ``s3://``.
+
+    Returns:
+        str, str: Bucket name and key.
+
+    """
+    path_split = path.split("/")
+    bucket_name = None
+    key = None
+    num_path_split = len(path_split)
+    if num_path_split > 2:
+        bucket_name = path_split[2]
+    if num_path_split > 3:
+        key = "/".join(path_split[3:])
+    return bucket_name, key
+
+
 def list_instances(state=None, image_id=None):
     """List instances with the given parameters.
     

@@ -17,6 +17,7 @@ from botocore.exceptions import ClientError
 
 from magmap.io import cli
 from magmap.io import df_io
+from magmap.io import libmag
 from magmap.settings import config
 
 _EC2_STATES = (
@@ -225,13 +226,14 @@ def list_instances(state=None, image_id=None):
         print(e)
 
 
-def get_bucket_size(name, keys=None):
+def get_bucket_size(name, keys=None, suffix=None):
     """Get the size of an AWS S3 bucket.
 
     Args:
         name (str): Name of bucket.
         keys (List[str]): Sequence of keys within the bucket to include
             sizes of only these files; defaults to None.
+        suffix (str): String to append to output CSV file; defaults to None.
 
     Returns:
         float, :obj:`pd.DataFrame`: Size of bucket in GiB, and a dataframe
@@ -247,7 +249,10 @@ def get_bucket_size(name, keys=None):
             obj_sizes.setdefault("Key", []).append(obj.key)
             obj_sizes.setdefault("Size", []).append(obj.size)
             size += obj.size
-    df = df_io.dict_to_data_frame(obj_sizes, "bucket_{}".format(bucket.name))
+    out_path = "bucket_{}".format(bucket.name)
+    if suffix:
+        out_path = libmag.insert_before_ext(out_path, suffix, "_")
+    df = df_io.dict_to_data_frame(obj_sizes, out_path)
     print("{} bucket total size (GiB): {}"
           .format(bucket.name, size / 1045 ** 3))
     return size, df

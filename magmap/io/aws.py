@@ -232,6 +232,30 @@ def get_bucket_size(name, keys=None):
     return size, df
 
 
+def load_s3_file(bucket_name, key):
+    """Load a file in AWS S3, retrieving the metadata without the object itself.
+
+    Args:
+        bucket_name (str): Name of bucket.
+        key (str): Key within bucket.
+
+    Returns:
+        :obj:`boto3.resources.factory.s3.Object`: The S3 object if loaded
+        successfully, otherwise None.
+
+    """
+    s3 = boto3.resource("s3")
+    obj = s3.Object(bucket_name, key)
+    try:
+        obj.load()
+        return obj
+    except ClientError as e:
+        print(e)
+        print("Unable to load object at bucket \"{}\", key \"{}\""
+              .format(bucket_name, key))
+    return None
+
+
 def download_s3_file(bucket_name, key, out_path=None, dryrun=False):
     """Download a file in AWS S3.
 

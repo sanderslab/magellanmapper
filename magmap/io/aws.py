@@ -232,7 +232,7 @@ def get_bucket_size(name, keys=None):
     return size, df
 
 
-def download_s3_file(bucket_name, key, out_path=None):
+def download_s3_file(bucket_name, key, out_path=None, dryrun=False):
     """Download a file in AWS S3.
 
     Args:
@@ -240,6 +240,8 @@ def download_s3_file(bucket_name, key, out_path=None):
         key (str): Key within bucket.
         out_path (str): Output path; defaults to None to use the basename
             of ``key``.
+        dryrun (bool): True to print paths without downloading;
+            defaults to False.
 
     Returns:
         bool: True if the file was successfully downloaded, False if otherwise.
@@ -253,6 +255,10 @@ def download_s3_file(bucket_name, key, out_path=None):
     print("Downloading bucket \"{}\", key \"{}\" to \"{}\""
           .format(bucket_name, key, out_path))
     with open(out_path, "wb") as f:
+        if dryrun:
+            # skip downloading while still testing local file write access
+            print("Download of \"{}\" set to dry run, so skipping".format(key))
+            return True
         # download as a managed transfer with multipart download;
         # flush as suggested in this issue:
         # https://github.com/boto/boto3/issues/1304
@@ -285,6 +291,7 @@ def upload_s3_file(path, bucket_name, key, dryrun=False):
         print("Uploading file \"{}\" to bucket \"{}\", key \"{}\""
               .format(path, bucket_name, key))
         if dryrun:
+            # skip uploading while still testing local file access
             print("Upload of \"{}\" set to dry run, so skipping".format(path))
             return True
         # upload as a managed transfer with multipart download

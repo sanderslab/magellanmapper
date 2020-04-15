@@ -451,6 +451,21 @@ def format_num(val, digits=1):
     return formatted
 
 
+def convert_bin_magnitude(val, orders):
+    """Convert a number to another binary order of magnitude.
+
+    Args:
+        val (int, float): Value to convert.
+        orders (int): Orders of magnitude, such as 3 to convert a value in
+            bytes to gibibytes (GiB), or -2 to convert a value in
+            tebibytes (TiB) to mebibytes (MiB).
+
+    Returns:
+
+    """
+    return val / 1024 ** orders
+
+
 def convert_indices_to_int(dict_to_convert):
     """Convert indices of a dictionary to int if possible, including nested 
     indices.

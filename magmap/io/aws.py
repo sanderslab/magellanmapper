@@ -226,14 +226,17 @@ def list_instances(state=None, image_id=None):
         print(e)
 
 
-def get_bucket_size(name, keys=None, suffix=None):
-    """Get the size of an AWS S3 bucket.
+def get_bucket_size(name, keys=None, suffix=None, versions=False):
+    """Get the tot_size of an AWS S3 bucket.
 
     Args:
         name (str): Name of bucket.
         keys (List[str]): Sequence of keys within the bucket to include
             sizes of only these files; defaults to None.
         suffix (str): String to append to output CSV file; defaults to None.
+        versions (bool): True to get all object versions, including
+            deleted objects; False to get only the current versions; defaults
+            to False.
 
     Returns:
         float, :obj:`pd.DataFrame`, :obj:`pd.DataFrame`: Size of bucket in
@@ -243,14 +246,21 @@ def get_bucket_size(name, keys=None, suffix=None):
     """
     s3 = boto3.resource("s3")
     bucket = s3.Bucket(name)
-    size = 0
+    tot_size = 0
     obj_sizes = {}
-    for obj in bucket.objects.all():
+    objs = bucket.object_versions.all() if versions else bucket.objects.all()
+    for obj in objs:
         if not keys or obj.key in keys:
             obj_sizes.setdefault("Bucket", []).append(bucket.name)
             obj_sizes.setdefault("Key", []).append(obj.key)
-            obj_sizes.setdefault("Size", []).append(obj.size)
-            size += obj.size
+            size = obj.size
+            obj_sizes.setdefault("Size", []).append(size)
+            if size:
+                # skip delete markers, which have a size of None
+                tot_size += obj.size
+            if versions:
+                obj_sizes.setdefault("Version_id", []).append(obj.version_id)
+                obj_sizes.setdefault("Last_modified", []).append(obj.last_modified)
 
     out_path = "bucket_{}".format(bucket.name)
     if suffix:
@@ -268,9 +278,9 @@ def get_bucket_size(name, keys=None, suffix=None):
             libmag.insert_before_ext(out_path, "_missing"))
 
     df = df_io.dict_to_data_frame(obj_sizes, out_path)
-    print("{} bucket total size (GiB): {}"
-          .format(bucket.name, libmag.convert_bin_magnitude(size, 3)))
-    return size, df, df_missing
+    print("{} bucket total tot_size (GiB): {}"
+          .format(bucket.name, libmag.convert_bin_magnitude(tot_size, 3)))
+    return tot_size, df, df_missing
 
 
 def load_s3_file(bucket_name, key):

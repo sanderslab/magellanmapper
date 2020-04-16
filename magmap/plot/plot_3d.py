@@ -1,5 +1,5 @@
 # 3D plots from stacks of imaging data
-# Author: David Young, 2017
+# Author: David Young, 2017, 2020
 """Plot image stacks in 3D.
 
 Provides options for drawing as surfaces or points.
@@ -21,6 +21,7 @@ from magmap.cv import segmenter
 
 #: float: Maximum number of points to show.
 _MASK_DIVIDEND = 10000.0  # 3D max points
+
 
 def setup_channels(roi, channel, dim_channel):
     """Setup channels array for the given ROI dimensions.
@@ -48,6 +49,7 @@ def setup_channels(roi, channel, dim_channel):
         .format(multichannel, channels, roi.shape, channel))
     '''
     return multichannel, channels
+
 
 def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, max_thresh_factor=-1,
                  channel=None):
@@ -99,7 +101,8 @@ def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, max_thresh_factor=-1,
         else:
             roi_out = saturated
     return roi_out
-    
+
+
 def denoise_roi(roi, channel=None):
     """Apply further saturation, denoising, unsharp filtering, and erosion
     as image preprocessing for blob detection.
@@ -155,6 +158,7 @@ def denoise_roi(roi, channel=None):
         else:
             roi_out = denoised
     return roi_out
+
 
 def threshold(roi):
     """Thresholds the ROI, with options for various techniques as well as
@@ -233,6 +237,7 @@ def threshold(roi):
     if selem_eros is not None:
         thresholded = morphology.erosion(thresholded, selem_eros)
     return thresholded
+
 
 def deconvolve(roi):
     """Deconvolves the image.
@@ -358,7 +363,8 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
             surface.actor.actor.scale = isotropic[::-1]
     
     print("time to render 3D surface: {}".format(time() - time_start))
-    
+
+
 def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     """Plots all pixels as points in 3D space.
     
@@ -458,6 +464,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     print("time for 3D points display: {}".format(time() - time_start))
     return True
 
+
 def _shadow_img2d(img2d, shape, axis, vis):
     """Shows a plane along the given axis as a shadow parallel to
     the 3D visualization.
@@ -482,6 +489,7 @@ def _shadow_img2d(img2d, shape, axis, vis):
         img2d_full[:, extra_z:extra_z+img2d.shape[1]] = img2d
         img2d = img2d_full
     return vis.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
+
 
 def plot_2d_shadows(roi, vis):
     """Plots 2D shadows in each axis around the 3D visualization.
@@ -581,6 +589,7 @@ def show_surface_labels(segments, vis):
     #surf2 = vis.scene.mlab.points3d(labels)
     return None
 
+
 def _shadow_blob(x, y, z, cmap_indices, cmap, scale, mlab):
     """Shows blobs as shadows projected parallel to the 3D visualization.
     
@@ -599,6 +608,7 @@ def _shadow_blob(x, y, z, cmap_indices, cmap, scale, mlab):
                                           scale_factor=scale*0.8, resolution=20)
     pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
     return pts_shadows
+
 
 def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
     """Shows 3D blob segments.

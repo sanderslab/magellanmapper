@@ -250,6 +250,29 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
     return path
 
 
+def remove_file(path):
+    """Remove a file with error catching.
+
+    Exceptions from files that are not found or are directories will be
+    caught and displayed.
+
+    Args:
+        path (str): Path of file to remove.
+
+    Returns:
+        bool: True if the file was successfully deleted.
+
+    """
+    try:
+        os.remove(path)
+        return True
+    except FileNotFoundError:
+        print("File not found to remove:", path)
+    except IsADirectoryError:
+        print("Path is a directoy, will not be removed:", path)
+    return False
+
+
 def normalize(array, minimum, maximum, in_range="image"):
     """Normalizes an array to fall within the given min and max.
     

@@ -226,13 +226,15 @@ def list_instances(state=None, image_id=None):
         print(e)
 
 
-def get_bucket_size(name, keys=None, suffix=None, versions=False):
-    """Get the tot_size of an AWS S3 bucket.
+def list_s3_bucket(name, keys=None, prefix=None, suffix=None, versions=False):
+    """List all objects or object versions in an AWS S3 bucket.
 
     Args:
         name (str): Name of bucket.
         keys (List[str]): Sequence of keys within the bucket to include
             sizes of only these files; defaults to None.
+        prefix (str): Filter only keys starting with this string; defaults
+            to None.
         suffix (str): String to append to output CSV file; defaults to None.
         versions (bool): True to get all object versions, including
             deleted objects; False to get only the current versions; defaults
@@ -248,9 +250,13 @@ def get_bucket_size(name, keys=None, suffix=None, versions=False):
     bucket = s3.Bucket(name)
     tot_size = 0
     obj_sizes = {}
-    objs = bucket.object_versions.all() if versions else bucket.objects.all()
+    # get latest version of objects or all object version, filtering
+    # for paths starting with prefix if set
+    objs = bucket.object_versions if versions else bucket.objects
+    objs = objs.filter(Prefix=prefix) if prefix else objs.all()
     for obj in objs:
         if not keys or obj.key in keys:
+            # only check keys in list if given
             obj_sizes.setdefault("Bucket", []).append(bucket.name)
             obj_sizes.setdefault("Key", []).append(obj.key)
             size = obj.size
@@ -259,14 +265,17 @@ def get_bucket_size(name, keys=None, suffix=None, versions=False):
                 # skip delete markers, which have a size of None
                 tot_size += obj.size
             if versions:
+                # add columns for version info
                 obj_sizes.setdefault("Version_id", []).append(obj.version_id)
-                obj_sizes.setdefault("Last_modified", []).append(obj.last_modified)
+                obj_sizes.setdefault("Last_modified", []).append(
+                    obj.last_modified)
 
     out_path = "bucket_{}".format(bucket.name)
     if suffix:
         out_path = libmag.insert_before_ext(out_path, suffix, "_")
     df_missing = None
     if keys:
+        # if list of keys given, show all keys that were not found
         keys_missing = []
         obj_keys = obj_sizes.keys()
         for key in keys:

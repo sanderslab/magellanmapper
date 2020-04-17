@@ -832,7 +832,8 @@ def roi_to_image5d(roi):
     Returns:
         ROI with additional time dimension prepended.
     """
-    return np.array([roi])
+    return roi[None]
+
 
 if __name__ == "__main__":
     print("MagellanMapper importer manipulations")

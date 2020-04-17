@@ -1,5 +1,5 @@
 # Image stack importer
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2020
 """Imports image stacks using Bioformats.
 
 Bioformats is access through Python-Bioformats and Javabridge.
@@ -12,8 +12,6 @@ Attributes:
     IMAGE5D_NP_VER: image5d Numpy saved array version number, which should
         be incremented with any change to the image5d or its support "info"
         save array format.
-    SUFFIX_IMAGE5D: Suffix for the image5d Numpy array archive.
-    SUFFIX_INFO: Suffix for the image5d Numpy array "info" support archive.
 """
 
 import os
@@ -68,10 +66,11 @@ PIXEL_DTYPE = {
 #     "scaling" and "plane" fields for transposed images
 # 14: removed pixel_type since redundant with image5d.dtype; 
 #     avoids storing object array, which requires loading by pickling
-IMAGE5D_NP_VER = 14 # image5d Numpy saved array version number
+IMAGE5D_NP_VER = 14  # image5d Numpy saved array version number
 
 CHANNEL_SEPARATOR = "_ch_"
 _EXT_TIFFS = (".tif", ".tiff")
+
 
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
@@ -84,11 +83,13 @@ def start_jvm(heap_size="8G"):
         return
     jb.start_vm(class_path=bf.JARS, max_heap_size=heap_size)
 
+
 def stop_jvm():
     if not jb:
         libmag.warn("Python-Javabridge not available, cannot stop JVM")
         return
     jb.kill_vm()
+
 
 def parse_ome(filename):
     """Parses metadata for image name and size information using Bioformats'
@@ -117,6 +118,7 @@ def parse_ome(filename):
     print('time for parsing OME XML: %f' %(time() - time_start))
     return names, sizes
 
+
 def parse_ome_raw(filename):
     """Parses the microscope's XML file directly, pulling out salient info
     for further processing.
@@ -134,7 +136,7 @@ def parse_ome_raw(filename):
         zoom: Zoom level.
         pixel_type: Pixel data type as a string.
     """
-    array_order = "TZYXC" # desired dimension order
+    array_order = "TZYXC"  # desired dimension order
     names, sizes, resolutions = [], [], []
     # names for sizes in all dimensions
     size_tags = ["Size" + c for c in array_order]
@@ -174,6 +176,7 @@ def parse_ome_raw(filename):
     print("resolutions: {}".format(resolutions))
     return names, sizes, resolutions, magnification, zoom, pixel_type
 
+
 def find_sizes(filename):
     """Finds image size information using the ImageReader using Bioformats'
     wrapper to access a small subset of image properities.
@@ -200,8 +203,9 @@ def find_sizes(filename):
         pixel_type = format_reader.getPixelType()
         dtype = PIXEL_DTYPE[pixel_type]
         print("pixel type: {}, dtype: {}".format(pixel_type, dtype))
-    print('time for finding sizes: %f' %(time() - time_start))
+    print("time for finding sizes: ", time() - time_start)
     return sizes, dtype
+
 
 def make_filenames(filename, series=None, modifier=""):
     """Make MagellanMapper-oriented image and image metadata filenames.
@@ -223,6 +227,7 @@ def make_filenames(filename, series=None, modifier=""):
     filename_meta = libmag.combine_paths(filename_base, config.SUFFIX_META)
     return filename_image5d, filename_meta
 
+
 def filename_to_base(filename, series=None, modifier=""):
     """Convert an image path to a base path with an optional modifier.
     
@@ -238,6 +243,7 @@ def filename_to_base(filename, series=None, modifier=""):
     if modifier:
         path = libmag.combine_paths(path, modifier)
     return path
+
 
 def deconstruct_np_filename(np_filename, ext="czi"):
     """Deconstruct Numpy image filename to the appropriate image components.
@@ -259,6 +265,7 @@ def deconstruct_np_filename(np_filename, ext="czi"):
         series = int(series_fill[0][1:])
         filename = series_reg.split(np_filename)[0] + "." + ext
     return filename, series
+
 
 def save_image_info(filename_info_npz, names, sizes, resolutions, 
                     magnification, zoom, near_min, near_max, 
@@ -302,6 +309,7 @@ def save_image_info(filename_info_npz, names, sizes, resolutions,
     for key, value in output.items():
         print("{}: {}".format(key, value))
     return output
+
 
 def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     # update image archive metadata using dictionary of values successfully 
@@ -677,7 +685,7 @@ def read_file(filename, series=None, load=True, z_max=-1,
             num_files, near_mins, near_maxs, lows, highs)
     print("file import time: {}".format(time() - time_start))
     time_start = time()
-    image5d.flush() # may not be necessary but ensure contents to disk
+    image5d.flush()  # may not be necessary but ensure contents to disk
     print("flush time: {}".format(time() - time_start))
     #print("lows: {}, highs: {}".format(lows, highs))
     # TODO: consider saving resolutions as 1D rather than 2D array
@@ -720,6 +728,7 @@ def import_dir(path):
     assign_metadata(md)
     return image5d
 
+
 def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     """Calculate image intensity boundaries for the given percentiles, 
     including boundaries for each channel in multichannel images.
@@ -751,6 +760,7 @@ def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
         highs.append(high)
     return lows, highs
 
+
 def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows, 
                                 highs):
     # get the extremes from lists of near-min/max vals
@@ -763,6 +773,7 @@ def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows,
         near_mins = np.amin(np.array(lows), 0)
         near_maxs = np.amax(np.array(highs), 0)
     return near_mins, near_maxs
+
 
 def save_np_image(image, filename, series):
     """Save Numpy image to file.
@@ -821,6 +832,7 @@ def calc_scaling(image5d, scaled, image5d_shape=None, scaled_shape=None):
     scaling = np.divide(scaled_shape[:3], image5d_shape[:3])
     print("image scaling compared to image5d: {}".format(scaling))
     return scaling
+
 
 def roi_to_image5d(roi):
     """Convert from ROI image to image5d format, which simply adds a time 

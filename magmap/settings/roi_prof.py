@@ -37,6 +37,8 @@ class ProcessSettings(profiles.SettingsDict):
         self["tot_var_denoise"] = None  # weight (eg skimage default 0.1)
         self["unsharp_strength"] = 0.3  # unsharp filter (sharpens images)
         self["erosion_threshold"] = 0.2  # erode clumped cells
+        # adaptive histogram equalization clipping limit
+        self["adapt_hist_lim"] = 0.1
 
         # 3D blob detection settings
 

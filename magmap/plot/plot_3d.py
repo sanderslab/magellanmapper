@@ -10,9 +10,10 @@ from time import time
 
 import numpy as np
 from skimage import draw
-from skimage import restoration
+from skimage import exposure
 from skimage import filters
 from skimage import morphology
+from skimage import restoration
 
 from magmap.plot import colormaps
 from magmap.settings import config
@@ -51,7 +52,7 @@ def setup_channels(roi, channel, dim_channel):
     return multichannel, channels
 
 
-def saturate_roi(roi, clip_vmin =-1, clip_vmax=-1, max_thresh_factor=-1,
+def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
                  channel=None):
     """Saturates an image, clipping extreme values and stretching remaining
     values to fit the full range.
@@ -253,6 +254,41 @@ def deconvolve(roi):
     roi_deconvolved = restoration.richardson_lucy(roi, psf, iterations=30)
     #roi_deconvolved = restoration.unsupervised_wiener(roi, psf)
     return roi_deconvolved
+
+
+def remap_intensity(roi, channel=None):
+    """Remap intensities, currently using adaptive histogram equalization
+    but potentially plugging in alternative methods in the future.
+
+    Args:
+        roi (:obj:`np.ndarray`): Region of interest as a 3D or 3D+channel array.
+        channel (int): Channel index of ``roi`` to saturate. Defaults to None
+            to use all channels. If a specific channel is given, all other
+            channels remain unchanged.
+
+    Returns:
+        :obj:`np.ndarray`: Remapped region of interest as a new array.
+
+    """
+    multichannel, channels = setup_channels(roi, channel, 3)
+    roi_out = np.copy(roi)
+    for i in channels:
+        roi_show = roi[..., i] if multichannel else roi
+        settings = config.get_process_settings(i)
+        lim = settings["adapt_hist_lim"]
+        equalized = []
+        for plane in roi_show:
+            # workaround for lack of current nD support in scikit-image CLAHE
+            # implementation (but this PR looks promising:
+            # https://github.com/scikit-image/scikit-image/pull/2761 )
+            equalized.append(
+                exposure.equalize_adapthist(plane, clip_limit=lim))
+        equalized = np.stack(equalized)
+        if multichannel:
+            roi_out[..., i] = equalized
+        else:
+            roi_out = equalized
+    return roi_out
 
 
 def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):

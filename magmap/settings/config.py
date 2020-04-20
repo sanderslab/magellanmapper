@@ -376,31 +376,49 @@ class ABAKeys(Enum):
     CHILDREN = "children"
     ACRONYM = "acronym"
 
+
 # register module modes when called from command-line
 RegisterTypes = Enum(
     "RegisterTypes", [
-        "single",  # register atlas directory to single sample image
-        "group",  # groupwise register multiple samples
-        "register_rev",  # reverse register sample to atlas
-        "overlays",
-        "export_regions", "new_atlas", "import_atlas", "export_common_labels", 
-        "convert_itksnap_labels", 
-        "make_edge_images", "make_edge_images_exp", "merge_atlas_segs", 
-        "reg_labels_to_atlas", 
-        "vol_stats", "vol_compare", 
-        "make_density_images", 
-        "merge_atlas_segs_exp", "make_subsegs", "export_metrics_compactness", 
-        "plot_smoothing_metrics", "smoothing_peaks", "smoothing_metrics_aggr", 
-        "merge_images", "merge_images_channels",
-        "labels_diff", "labels_diff_stats",
-        "make_labels_level", "combine_cols", "zscores", "coefvar", "melt_cols",
-        "plot_region_dev", "plot_lateral_unlabeled", 
-        "plot_intens_nuc", 
-        "pivot_conds",
-        "meas_improvement",
-        "cluster_blobs",
-        "plot_knns",
-        "plot_cluster_blobs",
+        "SINGLE",  # register atlas directory to single sample image
+        "GROUP",  # groupwise register multiple samples
+        "REGISTER_REV",  # reverse register sample to atlas
+        "OVERLAYS",
+        "EXPORT_REGIONS",
+        "NEW_ATLAS",
+        "IMPORT_ATLAS",
+        "EXPORT_COMMON_LABELS",
+        "CONVERT_ITKSNAP_LABELS",
+        "MAKE_EDGE_IMAGES",
+        "MAKE_EDGE_IMAGES_EXP",
+        "MERGE_ATLAS_SEGS",
+        "REG_LABELS_TO_ATLAS",
+        "VOL_STATS",
+        "VOL_COMPARE",
+        "MAKE_DENSITY_IMAGES",
+        "MERGE_ATLAS_SEGS_EXP",
+        "MAKE_SUBSEGS",
+        "EXPORT_METRICS_COMPACTNESS",
+        "PLOT_SMOOTHING_METRICS",
+        "SMOOTHING_PEAKS",
+        "SMOOTHING_METRIC_AGGR",
+        "MERGE_IMAGES",
+        "MERGE_IMAGES_CHANNELS",
+        "LABELS_DIFF",
+        "LABELS_DIFF_STATS",
+        "MAKE_LABELS_LEVEL",
+        "COMBINE_COLS",
+        "ZSCORES",
+        "COEFVAR",
+        "MELT_COLS",
+        "PLOT_REGION_DEV",
+        "PLOT_LATERAL_UNLABELED",
+        "PLOT_INTENS_NUC",
+        "PIVOT_CONDS",
+        "MEAS_IMPROVEMENT",
+        "CLUSTER_BLOBS",
+        "PLOT_KNNS",
+        "PLOT_CLUSTER_BLOBS",
     ]
 )
 register_type = None

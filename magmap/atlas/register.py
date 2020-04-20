@@ -1579,30 +1579,31 @@ def main():
     #_test_curate_img(config.filenames[0], config.prefix)
     #_test_smoothing_metric()
     #os._exit(os.EX_OK)
-    
-    reg = config.RegisterTypes[config.register_type]
+
+    reg = libmag.get_enum(config.register_type, config.RegisterTypes)
+    print("Performing register task:", reg)
     if config.register_type is None:
         # explicitly require a registration type
         print("Please choose a registration type")
     
     elif reg in (
-            config.RegisterTypes.single, config.RegisterTypes.new_atlas):
+            config.RegisterTypes.SINGLE, config.RegisterTypes.NEW_ATLAS):
         # "single", basic registration of 1st to 2nd image, transposing the 
         # second image according to config.plane and config.flip_horiz; 
         # "new_atlas" registers similarly but outputs new atlas files
-        new_atlas = reg is config.RegisterTypes.new_atlas
+        new_atlas = reg is config.RegisterTypes.NEW_ATLAS
         register(
             *config.filenames[0:2], flip=flip, name_prefix=config.prefix, 
             new_atlas=new_atlas, show_imgs=show)
     
-    elif reg is config.RegisterTypes.group:
+    elif reg is config.RegisterTypes.GROUP:
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
         register_group(
             config.filenames[:-1], flip=config.flip, name_prefix=config.prefix, 
             scale=config.rescale, show_imgs=show)
     
-    elif reg is config.RegisterTypes.overlays:
+    elif reg is config.RegisterTypes.OVERLAYS:
         # overlay registered images in each orthogonal plane
         for out_plane in config.PLANE:
             overlay_registered_imgs(
@@ -1610,7 +1611,7 @@ def main():
                 flip=flip, name_prefix=config.prefix, 
                 out_plane=out_plane)
     
-    elif reg is config.RegisterTypes.export_regions:
+    elif reg is config.RegisterTypes.EXPORT_REGIONS:
         # export regions IDs to CSV files
         
         ref = ontology.load_labels_ref(config.load_labels)
@@ -1626,23 +1627,23 @@ def main():
         export_regions.export_region_network(
             labels_ref_lookup, "region_network")
     
-    elif reg is config.RegisterTypes.import_atlas:
+    elif reg is config.RegisterTypes.IMPORT_ATLAS:
         # import original atlas, mirroring if necessary
         atlas_refiner.import_atlas(config.filename, show, config.prefix)
     
-    elif reg is config.RegisterTypes.export_common_labels:
+    elif reg is config.RegisterTypes.EXPORT_COMMON_LABELS:
         # export common labels
         export_regions.export_common_labels(
             config.filenames, config.PATH_COMMON_LABELS)
     
-    elif reg is config.RegisterTypes.convert_itksnap_labels:
+    elif reg is config.RegisterTypes.CONVERT_ITKSNAP_LABELS:
         # convert labels from ITK-SNAP to CSV format
         df = ontology.convert_itksnap_to_df(config.filename)
         output_path = libmag.combine_paths(
             config.filename, ".csv", sep="")
         df_io.data_frames_to_csv([df], output_path)
     
-    elif reg is config.RegisterTypes.export_metrics_compactness:
+    elif reg is config.RegisterTypes.EXPORT_METRICS_COMPACTNESS:
         # export data frame with compactness to compare:
         # 1) whole histology image and unsmoothed labels
         # 2) unsmoothed and selected smoothed labels
@@ -1682,7 +1683,7 @@ def main():
         df[config.AtlasMetrics.REGION.value] = "all"
         df_io.data_frames_to_csv(df, output_path)
     
-    elif reg is config.RegisterTypes.plot_smoothing_metrics:
+    elif reg is config.RegisterTypes.PLOT_SMOOTHING_METRICS:
         # plot smoothing metrics
         title = "{} Label Smoothing".format(
             libmag.str_to_disp(
@@ -1701,7 +1702,7 @@ def main():
              config.SmoothingMetrics.LABEL_LOSS.value), 
             ("-", "-"), lbls, None, size, show, "_extras", ("C3", "C4"))
     
-    elif reg is config.RegisterTypes.smoothing_peaks:
+    elif reg is config.RegisterTypes.SMOOTHING_PEAKS:
         # find peak smoothing qualities without label loss and at a given
         # filter size
         dfs = {}
@@ -1721,39 +1722,39 @@ def main():
                 dfs[key], "smoothing_filt{}.csv".format(key))
         df_io.data_frames_to_csv(dfs_noloss, "smoothing_peaks.csv")
 
-    elif reg is config.RegisterTypes.smoothing_metrics_aggr:
+    elif reg is config.RegisterTypes.SMOOTHING_METRICS_AGGR:
         # re-aggregate smoothing metrics from raw stats
         df = pd.read_csv(config.filename)
         df_aggr = atlas_refiner.aggr_smoothing_metrics(df)
         df_io.data_frames_to_csv(df_aggr, config.PATH_SMOOTHING_METRICS)
 
     elif reg in (
-            config.RegisterTypes.make_edge_images,
-            config.RegisterTypes.make_edge_images_exp):
+            config.RegisterTypes.MAKE_EDGE_IMAGES,
+            config.RegisterTypes.MAKE_EDGE_IMAGES_EXP):
         
         # convert atlas or experiment image and associated labels 
         # to edge-detected images; labels can be given as atlas dir from 
         # which labels will be extracted (eg import dir)
-        atlas = reg is config.RegisterTypes.make_edge_images
+        atlas = reg is config.RegisterTypes.MAKE_EDGE_IMAGES
         for img_path in config.filenames:
             edge_seg.make_edge_images(
                 img_path, show, atlas, config.suffix, config.load_labels)
     
-    elif reg is config.RegisterTypes.reg_labels_to_atlas:
+    elif reg is config.RegisterTypes.REG_LABELS_TO_ATLAS:
         # register labels to its underlying atlas
         register_labels_to_atlas(config.filename)
     
     elif reg in (
-            config.RegisterTypes.merge_atlas_segs,
-            config.RegisterTypes.merge_atlas_segs_exp):
+            config.RegisterTypes.MERGE_ATLAS_SEGS,
+            config.RegisterTypes.MERGE_ATLAS_SEGS_EXP):
         
         # merge various forms of atlas segmentations
-        atlas = reg is config.RegisterTypes.merge_atlas_segs
+        atlas = reg is config.RegisterTypes.MERGE_ATLAS_SEGS
         edge_seg.merge_atlas_segmentations(
             config.filenames, show=show, atlas=atlas, suffix=config.suffix)
     
-    elif reg in (config.RegisterTypes.vol_stats,
-                 config.RegisterTypes.vol_compare):
+    elif reg in (config.RegisterTypes.VOL_STATS,
+                 config.RegisterTypes.VOL_COMPARE):
         # volumes stats
         labels_ref_lookup = ontology.create_aba_reverse_lookup(
             ontology.load_labels_ref(config.load_labels))
@@ -1764,7 +1765,7 @@ def main():
         # should generally leave uncombined for drawn labels to allow 
         # faster level building, where can combine sides
         combine_sides = config.register_settings["combine_sides"]
-        if reg is config.RegisterTypes.vol_stats:
+        if reg is config.RegisterTypes.VOL_STATS:
             # separate metrics for each sample
             extra_metric_groups = config.register_settings[
                 "extra_metric_groups"]
@@ -1773,26 +1774,26 @@ def main():
                 unit_factor=config.unit_factor, groups=groups, 
                 max_level=config.labels_level, combine_sides=combine_sides, 
                 extra_metrics=extra_metric_groups)
-        elif reg is config.RegisterTypes.vol_compare:
+        elif reg is config.RegisterTypes.VOL_COMPARE:
             # compare the given samples
             volumes_by_id_compare(
                 config.filenames, labels_ref_lookup, 
                 unit_factor=config.unit_factor, groups=groups,
                 max_level=config.labels_level, combine_sides=combine_sides)
 
-    elif reg is config.RegisterTypes.make_density_images:
+    elif reg is config.RegisterTypes.MAKE_DENSITY_IMAGES:
         # make density images
         size = config.roi_sizes
         if size: size = size[0][::-1]
         export_regions.make_density_images_mp(
             config.filenames, config.rescale, size, config.suffix)
     
-    elif reg is config.RegisterTypes.make_subsegs:
+    elif reg is config.RegisterTypes.MAKE_SUBSEGS:
         # make sub-segmentations for all images
         for img_path in config.filenames:
             edge_seg.make_sub_segmented_labels(img_path, config.suffix)
 
-    elif reg is config.RegisterTypes.merge_images:
+    elif reg is config.RegisterTypes.MERGE_IMAGES:
         # take mean of separate experiments from all paths using the 
         # given registered image type, defaulting to experimental images
         suffix = config.RegNames.IMG_EXP.value
@@ -1802,13 +1803,13 @@ def main():
             if suffix_exp: suffix = suffix_exp
         sitk_io.merge_images(config.filenames, suffix, config.prefix, config.suffix)
 
-    elif reg is config.RegisterTypes.merge_images_channels:
+    elif reg is config.RegisterTypes.MERGE_IMAGES_CHANNELS:
         # combine separate experiments from all paths into separate channels
         sitk_io.merge_images(
             config.filenames, config.RegNames.IMG_EXP.value, config.prefix, 
             config.suffix, fn_combine=None)
 
-    elif reg is config.RegisterTypes.register_rev:
+    elif reg is config.RegisterTypes.REGISTER_REV:
         # register a group of registered images to another image, 
         # such as the atlas to which the images were originally registered
         suffixes = None
@@ -1821,12 +1822,12 @@ def main():
             *config.filenames[:2], config.RegNames.IMG_EXP.value, suffixes, 
             config.plane, flip, config.prefix, config.suffix, show)
 
-    elif reg is config.RegisterTypes.make_labels_level:
+    elif reg is config.RegisterTypes.MAKE_LABELS_LEVEL:
         # make a labels image grouped at the given level
         export_regions.make_labels_level_img(
             config.filename, config.labels_level, config.prefix, show)
     
-    elif reg is config.RegisterTypes.labels_diff:
+    elif reg is config.RegisterTypes.LABELS_DIFF:
         # generate labels difference images for various measurements 
         # and metrics, using the output from volumes measurements for 
         # drawn labels
@@ -1844,7 +1845,7 @@ def main():
                 config.filename, path_df, *metric, config.prefix, show, 
                 config.labels_level, col_wt=col_wt)
 
-    elif reg is config.RegisterTypes.labels_diff_stats:
+    elif reg is config.RegisterTypes.LABELS_DIFF_STATS:
         # generate labels difference images for various measurements 
         # from a stats CSV generated by the R clrstats package
         metrics = (
@@ -1863,7 +1864,7 @@ def main():
                 config.filename, path_df, "vals.effect", None, config.prefix, 
                 show, meas_path_name=metric, col_wt=col_wt)
     
-    elif reg is config.RegisterTypes.combine_cols:
+    elif reg is config.RegisterTypes.COMBINE_COLS:
         # normalize the given columns to original values in a data frame 
         # and combine columns for composite metrics
         df = pd.read_csv(config.filename)
@@ -1879,7 +1880,7 @@ def main():
         df_io.data_frames_to_csv(
             df, libmag.insert_before_ext(config.filename, "_norm"))
 
-    elif reg is config.RegisterTypes.zscores:
+    elif reg is config.RegisterTypes.ZSCORES:
         # measurea and export z-scores for the given metrics to a new 
         # data frame and display as a scatter plot
         metric_cols = (
@@ -1893,7 +1894,7 @@ def main():
             config.filename, metric_cols, extra_cols, 
             (vols.MetricCombos.HOMOGENEITY,), size, show)
     
-    elif reg is config.RegisterTypes.coefvar:
+    elif reg is config.RegisterTypes.COEFVAR:
         # measure and export coefficient of variation for the given metrics 
         # to a new data frame and display as a scatter plot; note that these 
         # CVs are variation of intensity variation, for example, rather than 
@@ -1911,7 +1912,7 @@ def main():
             config.filename, ["Region"], "Condition", "original", metric_cols, 
             combos, vols.LabelMetrics.Volume.name, size, show)
 
-    elif reg is config.RegisterTypes.melt_cols:
+    elif reg is config.RegisterTypes.MELT_COLS:
         # melt columns specified in "groups" using ID columns from 
         # standard atlas metrics
         id_cols = [
@@ -1923,7 +1924,7 @@ def main():
         df_io.data_frames_to_csv(
             df, libmag.insert_before_ext(config.filename, "_melted"))
 
-    elif reg is config.RegisterTypes.pivot_conds:
+    elif reg is config.RegisterTypes.PIVOT_CONDS:
         # pivot condition column to separate metric columns
         id_cols = [
             config.AtlasMetrics.SAMPLE.value, ]
@@ -1933,7 +1934,7 @@ def main():
         df_io.data_frames_to_csv(
             df, libmag.insert_before_ext(config.filename, "_condtocol"))
 
-    elif reg is config.RegisterTypes.plot_region_dev:
+    elif reg is config.RegisterTypes.PLOT_REGION_DEV:
         # plot region development
         try:
             metric = vols.LabelMetrics[config.stats_type].name
@@ -1943,13 +1944,13 @@ def main():
                 "\"{}\" metric not found in {} for developmental plots"
                 .format(config.stats_type, [e.name for e in vols.LabelMetrics]))
         
-    elif reg is config.RegisterTypes.plot_lateral_unlabeled:
+    elif reg is config.RegisterTypes.PLOT_LATERAL_UNLABELED:
         # plot lateral edge unlabeled fractions as both lines and bars
         cols = (config.AtlasMetrics.LAT_UNLBL_VOL.value,
                 config.AtlasMetrics.LAT_UNLBL_PLANES.value)
         atlas_stats.plot_unlabeled_hemisphere(config.filename, cols, size, show)
 
-    elif reg is config.RegisterTypes.plot_intens_nuc:
+    elif reg is config.RegisterTypes.PLOT_INTENS_NUC:
         # combine nuclei vs. intensity R stats and generate scatter plots
         labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
                   config.plot_labels[config.PlotLabels.X_LABEL])
@@ -1958,7 +1959,7 @@ def main():
         atlas_stats.plot_intensity_nuclei(
             config.filenames, labels, fig_size, show, unit)
     
-    elif reg is config.RegisterTypes.meas_improvement:
+    elif reg is config.RegisterTypes.MEAS_IMPROVEMENT:
         # measure summary improvement/worsening stats by label from R stats
         
         def meas(**args):
@@ -1992,17 +1993,17 @@ def main():
                     meas(suffix="".join((suf, suf_cp)), 
                          df=df_mode.loc[df_mode.index.isin(df_cp_mode.index)])
     
-    elif reg is config.RegisterTypes.plot_knns:
+    elif reg is config.RegisterTypes.PLOT_KNNS:
         # plot k-nearest-neighbor distances for multiple paths
         clustering.plot_knns(
             config.filenames, config.suffix, show,
             config.plot_labels[config.PlotLabels.LEGEND_NAMES])
     
-    elif reg is config.RegisterTypes.cluster_blobs:
+    elif reg is config.RegisterTypes.CLUSTER_BLOBS:
         # cluster blobs and output to Numpy archive
         clustering.cluster_blobs(config.filename, config.suffix)
     
-    elif reg is config.RegisterTypes.plot_cluster_blobs:
+    elif reg is config.RegisterTypes.PLOT_CLUSTER_BLOBS:
         # show blob clusters for the given plane
         scaling = None
         if config.metadatas and config.metadatas[0]:
@@ -2011,6 +2012,9 @@ def main():
                 scaling = output["scaling"]
         atlas_stats.plot_clusters_by_label(
             config.filename, config.roi_offsets[0][2], config.suffix, show, scaling)
+
+    else:
+        print("Could not find register task:", reg)
 
 
 if __name__ == "__main__":

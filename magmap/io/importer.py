@@ -775,7 +775,7 @@ def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows,
     return near_mins, near_maxs
 
 
-def save_np_image(image, filename, series):
+def save_np_image(image, filename, series=None):
     """Save Numpy image to file.
     
     Assumes that the image or another image with similar parameters 
@@ -787,13 +787,16 @@ def save_np_image(image, filename, series):
         image: Numpy array.
         filename: Filename of original file, which will be passed to 
             :func:``make_filenames`` to create output filenames.
-        series: Image series.
+        series: Image series; defaults to None.
     """
+    # save the image as a Numpy archive
     filename_image5d_npz, filename_info_npz = make_filenames(
         filename, series)
-    out_file = open(filename_image5d_npz, "wb")
-    np.save(out_file, image)
-    out_file.close()
+    with open(filename_image5d_npz, "wb") as out_file:
+        np.save(out_file, image)
+
+    # save a metadata file using the current settings and updating the
+    # near min/max values
     lows, highs = calc_intensity_bounds(image)
     save_image_info(
         filename_info_npz, [os.path.basename(filename)], [image.shape], 

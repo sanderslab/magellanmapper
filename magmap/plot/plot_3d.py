@@ -75,9 +75,9 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
     """
     multichannel, channels = setup_channels(roi, channel, 3)
     roi_out = None
-    for i in channels:
-        roi_show = roi[..., i] if multichannel else roi
-        settings = config.get_process_settings(i)
+    for chl in channels:
+        roi_show = roi[..., chl] if multichannel else roi
+        settings = config.get_process_settings(chl)
         if clip_vmin == -1:
             clip_vmin = settings["clip_vmin"]
         if clip_vmax == -1:
@@ -87,9 +87,9 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
         # enhance contrast and normalize to 0-1 scale
         vmin, vmax = np.percentile(roi_show, (clip_vmin, clip_vmax))
         libmag.printv(
-            "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[i])
+            "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[chl])
         # ensures that vmax is at least 50% of near max value of image5d
-        max_thresh = config.near_max[i] * settings["max_thresh_factor"]
+        max_thresh = config.near_max[chl] * settings["max_thresh_factor"]
         if vmax < max_thresh:
             vmax = max_thresh
             libmag.printv("adjusted vmax to {}".format(vmax))
@@ -98,7 +98,7 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
         if multichannel:
             if roi_out is None:
                 roi_out = np.zeros(roi.shape, dtype=saturated.dtype)
-            roi_out[..., i] = saturated
+            roi_out[..., chl] = saturated
         else:
             roi_out = saturated
     return roi_out
@@ -121,9 +121,9 @@ def denoise_roi(roi, channel=None):
     """
     multichannel, channels = setup_channels(roi, channel, 3)
     roi_out = None
-    for i in channels:
-        roi_show = roi[..., i] if multichannel else roi
-        settings = config.get_process_settings(i)
+    for chl in channels:
+        roi_show = roi[..., chl] if multichannel else roi
+        settings = config.get_process_settings(chl)
         # find gross density
         saturated_mean = np.mean(roi_show)
         
@@ -155,7 +155,7 @@ def denoise_roi(roi, channel=None):
         if multichannel:
             if roi_out is None:
                 roi_out = np.zeros(roi.shape, dtype=denoised.dtype)
-            roi_out[..., i] = denoised
+            roi_out[..., chl] = denoised
         else:
             roi_out = denoised
     return roi_out
@@ -272,10 +272,12 @@ def remap_intensity(roi, channel=None):
     """
     multichannel, channels = setup_channels(roi, channel, 3)
     roi_out = np.copy(roi)
-    for i in channels:
-        roi_show = roi[..., i] if multichannel else roi
-        settings = config.get_process_settings(i)
+    for chl in channels:
+        roi_show = roi[..., chl] if multichannel else roi
+        settings = config.get_process_settings(chl)
         lim = settings["adapt_hist_lim"]
+        print("Performing adaptive histogram equalization on channel {}, "
+              "clip limit {}".format(channel, lim))
         equalized = []
         for plane in roi_show:
             # workaround for lack of current nD support in scikit-image CLAHE
@@ -285,7 +287,7 @@ def remap_intensity(roi, channel=None):
                 exposure.equalize_adapthist(plane, clip_limit=lim))
         equalized = np.stack(equalized)
         if multichannel:
-            roi_out[..., i] = equalized
+            roi_out[..., chl] = equalized
         else:
             roi_out = equalized
     return roi_out

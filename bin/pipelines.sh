@@ -180,9 +180,14 @@ get_image_files() {
 #   downloaded; 0 if otherwise.
 ############################################
 get_compressed_file() {
-  # TODO: check extensions matching those in COMPRESSION_EXTS for double ext
-  ext="${1##*.}"
-  path_base="${1%.*}"
+  # accommodate paths with multiple extensions (eg .tar.zst) by assuming
+  # that anything after the first period in the basename is the extension
+  local basename ext path_base paths is_compression name out_path
+  basename="$(basename "$1")"
+  ext="${basename#*.}"
+  path_base="$(dirname "$1")/${basename%%.*}"
+
+  # make array of possible paths
   is_compression=0
   paths=()
   for e in "${COMPRESSION_EXTS[@]}"; do

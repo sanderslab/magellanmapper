@@ -112,7 +112,8 @@ ProcessTypes = Enum(
         "IMPORT_ONLY",
         "DETECT",  # whole image blob detection
         "LOAD", "EXTRACT",
-        "EXPORT_ROIS", "TRANSFORM", "ANIMATED", "EXPORT_BLOBS"
+        "EXPORT_ROIS", "TRANSFORM", "ANIMATED", "EXPORT_BLOBS",
+        "PREPROCESS",  # pre-process whole image
     )
 )
 proc_type = None

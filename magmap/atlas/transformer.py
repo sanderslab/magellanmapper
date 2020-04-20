@@ -12,8 +12,10 @@ from skimage import transform
 
 from magmap.cv import chunking
 from magmap.settings import config
+from magmap.settings import profiles
 from magmap.io import importer
 from magmap.io import libmag
+from magmap.plot import plot_3d
 
 
 class Downsampler(object):
@@ -303,3 +305,38 @@ def transpose_img(filename, series, plane=None, rescale=None):
     print("saved transposed file to {} with shape {}".format(
         filename_image5d_npz, image5d_transposed.shape))
     print("time elapsed (s): {}".format(time() - time_start))
+
+
+def preprocess_img(image5d, preprocs, channel, out_path):
+    """Pre-process an image in 3D.
+
+    Args:
+        image5d (:obj:`np.ndarray`): 5D array in t,z,y,x[,c].
+        preprocs (List[:obj:`profiles.PreProcessKeys`): Sequence of
+            pre-processing tasks to perform in the order given.
+        channel (int): Channel to preprocess, or None for all channels.
+        out_path (str): Output base path.
+
+    Returns:
+        :obj:`np.ndarray`: The pre-processed image array.
+
+    """
+    if preprocs is None:
+        print("No preprocessing tasks to perform, skipping")
+        return
+
+    roi = image5d[0]
+    for preproc in preprocs:
+        # perform global pre-processing task
+        print("Pre-processing task:", preproc)
+        if preproc is profiles.PreProcessKeys.SATURATE:
+            roi = plot_3d.saturate_roi(roi, channel=channel)
+        elif preproc is profiles.PreProcessKeys.DENOISE:
+            roi = plot_3d.denoise_roi(roi, channel)
+        elif preproc is profiles.PreProcessKeys.REMAP:
+            roi = plot_3d.remap_intensity(roi, channel)
+
+    # save to new file
+    image5d = importer.roi_to_image5d(roi)
+    importer.save_np_image(image5d, out_path)
+    return image5d

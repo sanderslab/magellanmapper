@@ -39,6 +39,8 @@ class ProcessSettings(profiles.SettingsDict):
         self["erosion_threshold"] = 0.2  # erode clumped cells
         # adaptive histogram equalization clipping limit
         self["adapt_hist_lim"] = 0.1
+        # sequence of profiles.PreProcessKeys for outputting a pre-processed img
+        self["preprocess"] = None
 
         # 3D blob detection settings
 

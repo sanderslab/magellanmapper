@@ -881,7 +881,17 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
             filename_base, config.image5d, subimg_offset, subimg_size,
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
             not config.roc, config.image5d_is_roi)
-    
+
+    elif proc_type is config.ProcessTypes.PREPROCESS:
+        # pre-process a whole image and save to file
+        # TODO: consider chunking option for larger images
+        profile = config.get_process_settings(0)
+        out_path = config.prefix
+        if not out_path:
+            out_path = libmag.insert_before_ext(config.filename, "_preproc")
+        transformer.preprocess_img(
+            config.image5d, profile["preprocess"], config.channel, out_path)
+
     return stats, fdbk
 
 

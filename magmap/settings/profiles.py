@@ -30,6 +30,13 @@ class RegKeys(Enum):
     KNN_N = auto()
 
 
+class PreProcessKeys(Enum):
+    """Pre-processing task enumerations."""
+    SATURATE = auto()
+    DENOISE = auto()
+    REMAP = auto()
+
+
 #: dict: Dictionary mapping the names of Enums used in profiles to their Enum
 # classes for parsing Enums given as strings.
 _PROFILE_ENUMS = {
@@ -37,6 +44,7 @@ _PROFILE_ENUMS = {
     "Cmaps": config.Cmaps,
     "SmoothingModes": config.SmoothingModes,
     "MetricGroups": config.MetricGroups,
+    "PreProcessKeys": PreProcessKeys,
 }
 
 

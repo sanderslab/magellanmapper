@@ -4,6 +4,8 @@
 
 import yaml
 
+from magmap.io import libmag
+
 
 def load_yaml(path, enums=None):
     """Load a YAML file with support for multiple documents and Enums.
@@ -11,27 +13,33 @@ def load_yaml(path, enums=None):
     Args:
         path (str): Path to YAML file.
         enums (dict): Dictionary mapping Enum names to Enum classes; defaults
-            to None. If a key in the YAML file matches an Enum name followed
-            by a period, the corresponding Enum class will be used.
+            to None. If a key or value in the YAML file matches an Enum name
+            followed by a period, the corresponding Enum will be used.
 
     Returns:
 
     """
+    def parse_enum_val(val):
+        if isinstance(val, str):
+            val_split = val.split(".")
+            if len(val_split) > 1 and val_split[0] in enums:
+                # replace with the corresponding Enum class
+                val = enums[val_split[0]][val_split[1]]
+        return val
+
     def parse_enum(d):
-        # recursively parse Enum keys within nested dictionaries
+        # recursively parse Enum keys and values within nested dictionaries
         out = {}
         for key, val in d.items():
-            key_split = key.split(".")
             if isinstance(val, dict):
                 # parse nested dictionaries
                 val = parse_enum(val)
-            if len(key_split) > 1 and key_split[0] in enums:
-                # replace the entry's key with the corresponding Enum class
-                print(enums[key_split[0]])
-                out[enums[key_split[0]][key_split[1]]] = val
+            elif libmag.is_seq(val):
+                val = [parse_enum_val(v) for v in val]
             else:
-                # add the key as-is
-                out[key] = val
+                val = parse_enum_val(val)
+            key = parse_enum_val(key)
+            out[key] = val
         return out
 
     with open(path) as yaml_file:

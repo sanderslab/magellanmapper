@@ -140,7 +140,7 @@ proc_npz=""
 #   None
 ############################################
 get_image_files() {
-  setup_clrbrain_filenames "$clr_img_base" "1"
+  setup_clrbrain_filenames "$clr_img_base" "$1"
   echo -n "Looking for ${image5d_npz}..."
   if [[ ! -e "$image5d_npz" ]]; then
     # Get stitched image files from S3

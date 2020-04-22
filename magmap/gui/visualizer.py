@@ -158,12 +158,6 @@ class Visualization(HasTraits):
             of zeros with one row.
         segs_selected: List of indices of selected segments.
     """
-    x_low = 0
-    x_high = 100
-    y_low = 0
-    y_high = 100
-    z_low = 0
-    z_high = 100
     x_offset = Int
     y_offset = Int
     z_offset = Int
@@ -228,8 +222,17 @@ class Visualization(HasTraits):
     _camera_pos = None
 
     def __init__(self):
-        # Do not forget to call the parent's __init__
+        """Initialize GUI."""
         HasTraits.__init__(self)
+
+        # ROI offset default ranges, to be updated after loading image;
+        # separate variables to access for ranges in RangeEditor
+        self.x_low = 0
+        self.x_high = 100
+        self.y_low = 0
+        self.y_high = 100
+        self.z_low = 0
+        self.z_high = 100
 
         # default options setup
         self._set_border(True)
@@ -1086,7 +1089,8 @@ class Visualization(HasTraits):
             "Found region ID {}".format(self._region_id))
     
     def _curr_offset(self):
-        return (self.x_offset, self.y_offset, self.z_offset)
+        # get ROI offset in x,y,z; TODO: migrate to z,y,x
+        return self.x_offset, self.y_offset, self.z_offset
     
     def _full_border(self, border=None):
         """Gets the full border array, typically based on 
@@ -1131,20 +1135,20 @@ class Visualization(HasTraits):
         return -1
     
     def _force_seg_refresh(self, i, show=False):
-       """Trigger table update by either selecting and reselected the segment
-       or vice versa.
-       
-       Args:
-           i: The element in vis.segs_selected, which is simply an index to
-              the segment in vis.segments.
-       """
-       if i in self.segs_selected:
-           self.segs_selected.remove(i)
-           self.segs_selected.append(i)
-       else:
-           self.segs_selected.append(i)
-           if not show:
-               self.segs_selected.remove(i)
+        """Trigger table update by either selecting and reselected the segment
+        or vice versa.
+
+        Args:
+            i: The element in vis.segs_selected, which is simply an index to
+               the segment in vis.segments.
+        """
+        if i in self.segs_selected:
+            self.segs_selected.remove(i)
+            self.segs_selected.append(i)
+        else:
+            self.segs_selected.append(i)
+            if not show:
+                self.segs_selected.remove(i)
     
     def _flag_seg_for_deletion(self, seg):
         seg[3] = -1 * abs(seg[3])

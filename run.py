@@ -12,10 +12,12 @@ ENV_NAME = "mag"
 #: str: Directory with Venvs directories.
 VENV_DIR = "../venvs"
 
-#: List[str]: Shell commands to launch :meth:`magmap.gui.visualizer.main`
+#: List[str]: Shell commands to launch CLI.
+ARGS_CLI = ["python -u -c \"from magmap.io import cli; cli.main()\" "]
+
+#: List[str]: Shell commands to launch the main GUI.
 ARGS_VIS = [
-    "python -u -c \"from magmap.gui import visualizer; visualizer.main()\" {}"
-    .format(" ".join(sys.argv[1:])),
+    "python -u -c \"from magmap.gui import visualizer; visualizer.main()\" ",
 ]
 
 #: List[str]: Shell commands to activate a Conda environment
@@ -66,41 +68,57 @@ def launch_subprocess(args, working_dir=None):
     return subprocess.check_call("&&".join(args), shell=True, cwd=working_dir)
 
 
+def launch_cli():
+    """Launch the command-line interface."""
+    from magmap.io import cli
+    cli.main()
+
+
 def launch_vis():
-    """Launch :meth:`magmap.gui.visualizer.main`."""
+    """Launch the main graphical user interface."""
     from magmap.gui import visualizer
     visualizer.main()
 
 
-def main():
+def main(gui=True):
     """Launch the main MagellanMapper GUI.
 
     If necessary, attempt to activate a virtual environment created
     by MagellanMapper.
+
+    Args:
+        gui (bool): True to start the main GUI; defaults to True. If False,
+            the CLI will be started instead.
+
     """
     working_dir = os.path.dirname(os.path.abspath(__file__))
     if is_conda_activated() or is_venv_activated():
-        # launch GUI if environment is already active
-        launch_vis()
+        # launch MagellanMapper if environment is already active
+        if gui:
+            launch_vis()
+        else:
+            launch_cli()
         return
 
+    args = ARGS_VIS if gui else ARGS_CLI
+    args[0] += " ".join(sys.argv[1:])
     try:
         # activate Conda environment, assuming default name in setup script
-        # and need to initialize shell, and launch GUI
+        # and need to initialize shell, and launch MagellanMapper
         print("Attempting to activate Conda environment")
-        launch_subprocess(ARGS_CONDA + ARGS_VIS, working_dir)
+        launch_subprocess(ARGS_CONDA + args, working_dir)
     except subprocess.CalledProcessError:
         try:
             # non-POSIX shells do not accept eval but may run without
             # initializing the Conda shell hook
-            launch_subprocess(ARGS_CONDA[1:] + ARGS_VIS, working_dir)
+            launch_subprocess(ARGS_CONDA[1:] + args, working_dir)
         except subprocess.CalledProcessError:
             try:
                 # if unable to activate Conda env, try Venv
                 print("Conda environment not available, trying Venv")
                 launch_subprocess(
                     ["source {}/{}/bin/activate".format(VENV_DIR, ENV_NAME)]
-                    + ARGS_VIS, working_dir)
+                    + args, working_dir)
             except subprocess.CalledProcessError:
                 # as fallback, attempt to launch without activating
                 # an environment

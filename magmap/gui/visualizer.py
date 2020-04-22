@@ -450,18 +450,8 @@ class Visualization(HasTraits):
         #print("reset selected ROI to {}".format(self.rois_check_list))
         #print("view: {}\nroll: {}".format(
         #    self.scene.mlab.view(), self.scene.mlab.roll()))
-    
-    def show_3d(self):
-        """Show the 3D plot and prepare for detections.
-        
-        Type of 3D display depends on configuration settings. A lightly 
-        preprocessed image will be displayed in 3D, and afterward the 
-        ROI will undergo full preprocessing in preparation for detection 
-        and 2D filtered displays steps.
-        """
-        # reload profiles if any profile files have changed
-        cli.update_profiles()
 
+    def _check_roi_position(self):
         # ensure that cube dimensions don't exceed array
         curr_roi_size = self.roi_array[0].astype(int)
         roi_size_orig = np.copy(curr_roi_size)
@@ -489,7 +479,20 @@ class Visualization(HasTraits):
                 .format(roi_size_orig, curr_roi_size, max_offset))
         print("using ROI offset {}, size of {} (x,y,z)"
               .format(curr_offset, curr_roi_size))
+        return curr_offset, curr_roi_size, feedback
+
+    def show_3d(self):
+        """Show the 3D plot and prepare for detections.
         
+        Type of 3D display depends on configuration settings. A lightly 
+        preprocessed image will be displayed in 3D, and afterward the 
+        ROI will undergo full preprocessing in preparation for detection 
+        and 2D filtered displays steps.
+        """
+        # reload profiles if any profile files have changed
+        cli.update_profiles()
+        curr_offset, curr_roi_size, feedback = self._check_roi_position()
+
         # show raw 3D image unless selected not to
         if self._DEFAULTS_3D[2] in self._check_list_3d:
             # show region of interest based on raw image
@@ -584,7 +587,8 @@ class Visualization(HasTraits):
             size = config.image5d.shape[1:4]
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
-            # elsewhere
+            # elsewhere; "high_label" RangeEditor setting also does not
+            # appear to be working
             # TODO: does not appear to update on subsequent image loading
             self.z_high, self.y_high, self.x_high = size
             if config.roi_offset is not None:
@@ -858,8 +862,9 @@ class Visualization(HasTraits):
         self.segs_feedback = ""
         
         # shows 2D plots
-        curr_offset = self._curr_offset()
-        curr_roi_size = self.roi_array[0].astype(int)
+        curr_offset, curr_roi_size, feedback = self._check_roi_position()
+        self.segs_feedback = " ".join(feedback)
+
         # update verify flag
         roi_editor.verify = self._DEFAULTS_2D[1] in self._check_list_2d
         img = config.image5d

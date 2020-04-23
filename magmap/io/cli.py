@@ -856,10 +856,10 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
             os.path.basename(config.filename))
         
     elif proc_type is config.ProcessTypes.TRANSFORM:
-        # transpose and/or rescale whole large image
+        # transpose, rescale, and/or resize whole large image
         transformer.transpose_img(
             path, series, plane=config.plane, 
-            rescale=config.rescale)
+            rescale=config.rescale, target_size=config.roi_size)
         
     elif proc_type in (
             config.ProcessTypes.EXTRACT, config.ProcessTypes.ANIMATED):

@@ -144,27 +144,29 @@ def get_transposed_image_path(img_path, scale=None, target_size=None):
     return img_path_modified
 
 
-def transpose_img(filename, series, plane=None, rescale=None):
+def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
     """Transpose Numpy NPY saved arrays into new planar orientations and 
     rescaling or resizing.
     
-    Saves file to a new NPY archive with "transposed" inserted just prior
-    to the series name so that "transposed" can be appended to the original
-    filename for future loading within MagellanMapper. Files are saved through 
-    memmap-based arrays to minimize RAM usage. Currently transposes all 
-    channels, ignoring :attr:``config.channel`` parameter.
+    Rescaling/resizing take place in multiprocessing. Files are saved
+    through memmap-based arrays to minimize RAM usage. Output filenames
+    are based on the ``make_modifer_[task]`` functions. Currently transposes
+    all channels, ignoring :attr:``config.channel`` parameter.
     
     Args:
         filename: Full file path in :attribute:cli:`filename` format.
         series: Series within multi-series file.
         plane: Planar orientation (see :attribute:plot_2d:`PLANES`). Defaults 
             to None, in which case no planar transformation will occur.
-        rescale: Rescaling factor. Defaults to None, in which case no 
-            rescaling will occur, and resizing based on register profile 
-            setting will be used instead if available. Rescaling takes place 
-            in multiprocessing.
+        rescale: Rescaling factor; defaults to None. Takes precedence over
+            ``target_size``.
+        target_size (List[int]): Target shape in x,y,z; defaults to None,
+            in which case the target size will be extracted from the register
+            profile if available if available.
+
     """
-    target_size = config.register_settings["target_size"]
+    if target_size is None:
+        target_size = config.register_settings["target_size"]
     if plane is None and rescale is None and target_size is None:
         print("No transposition to perform, skipping")
         return

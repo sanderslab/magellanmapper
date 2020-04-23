@@ -337,6 +337,7 @@ find_prefix() {
 # Globals:
 #   IMG: Main image path.
 #   IMG_MHD: Path to main image in MHD format.
+#   SHAPE_RESIZED: Shape in x,y,z for resized image name.
 #   IMG_RESIZED: Resized main image.
 # Arguments:
 #   1: Name of array with directory names.
@@ -356,11 +357,8 @@ setup_image_paths() {
   IMG="$prefix/${name}."
 
   # set paths from identified prefix
-  if [[ -z "$shape_resized" ]]; then
-    shape_resized=456,528,320
-  fi
   IMG_MHD="$prefix/${name}.mhd"
-  IMG_RESIZED="$prefix/${name}_resized($shape_resized)."
+  IMG_RESIZED="$prefix/${name}_resized($SHAPE_RESIZED)."
 }
 
 ############################################

@@ -21,6 +21,9 @@ MIC=lightsheet # add/replace additional microscope profiles
 REG=finer_abaccfv3 # add/replace register/atlas profiles
 THEME=(--theme dark) # GUI theme
 
+# downsampling; change to target shape in x,y,z
+SHAPE_RESIZED="456,528,320" # CCFv3 25um shape
+
 # Annotation building
 SIZE=1000,100,50 # z: 50-6*2 for ROI, -3*2 for border = 32; x/y: 42-5*2 for border
 ROI_OFFSET=50,25,13 # get z from [50 (tot size) - 18 (ROI size)] / 2 - 3 (border)

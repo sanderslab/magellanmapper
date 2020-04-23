@@ -433,7 +433,6 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     """
     print("plotting as 3D points")
     scene_mlab.clf()
-    settings = config.process_settings
     
     # streamline the image
     if roi is None or roi.size < 1: return False
@@ -466,6 +465,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
             x = np.reshape(x, roi_show.size)
             y = np.reshape(y, roi_show.size)
             z = np.reshape(z, roi_show.size)
+        settings = config.get_process_settings(chl)
         
         # clear background points to see remaining structures
         thresh = 0

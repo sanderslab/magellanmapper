@@ -338,8 +338,8 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
     
     time_start = time()
     multichannel, channels = setup_channels(roi, channel, 3)
-    for i in channels:
-        roi_show = roi[..., i] if multichannel else roi
+    for chl in channels:
+        roi_show = roi[..., chl] if multichannel else roi
         
         # clip to minimize sub-nuclear variation
         roi_show = np.clip(roi_show, 0.2, 0.8)
@@ -353,7 +353,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
             # build surface from segmented ROI
             if to_segment:
                 vmin, vmax = np.percentile(roi_show, (40, 70))
-                walker = segmenter.segment_rw(roi_show, i, vmin=vmin, vmax=vmax)
+                walker = segmenter.segment_rw(roi_show, chl, vmin=vmin, vmax=vmax)
                 roi_show *= np.subtract(walker[0], 1)
             else:
                 print("deferring segmentation as {} px is above threshold"
@@ -459,10 +459,10 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     for i in range(shape[0] * shape[1]):
         x[i] = np.arange(shape[2])
     multichannel, channels = setup_channels(roi, channel, 3)
-    for i in channels:
-        roi_show = roi[..., i] if multichannel else roi
+    for chl in channels:
+        roi_show = roi[..., chl] if multichannel else roi
         roi_show_1d = roi_show.reshape(roi_show.size)
-        if i == 0:
+        if chl == 0:
             x = np.reshape(x, roi_show.size)
             y = np.reshape(y, roi_show.size)
             z = np.reshape(z, roi_show.size)
@@ -499,7 +499,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
             roi_show_1d, mode="sphere", 
             scale_mode="scalar", mask_points=mask, line_width=1.0, vmax=1.0, 
             vmin=0.0, transparent=True)
-        cmap = colormaps.get_cmap(config.cmaps, i)
+        cmap = colormaps.get_cmap(config.cmaps, chl)
         if cmap is not None:
             pts.module_manager.scalar_lut_manager.lut.table = cmap(
                 range(0, 256)) * 255

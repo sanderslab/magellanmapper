@@ -33,11 +33,19 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # IMPORT, REGISTRATION, CELL DETECTION, AND STATS
 
+# initial import from original microscopy file
+# - replace `.czi` with the extension of your file
+# - use `pipelines.sh` instead for stitching multi-tile images
+#python -u -m magmap.io.cli --img "${IMG%.*}.czi" --proc import_only -v
+
 # initial import from TIF files
 # - filenames should have the format: name_ch_0.tif, name_ch_1.tif, etc
 # - change `res` to resolutions in x,y,z
 # - change `mag` to objective magnification
 #python -u -m magmap.io.cli --img "${IMG%.*}.tif" --proc import_only --res 10.52,10.52,10 --mag 0.63 -v
+
+# view imported image
+#./run.py --img "$IMG"
 
 # downsample to size of atlas and view
 #python -u -m magmap.io.cli --img "$IMG" --proc transform --reg_profile "$REG" #--plane xz

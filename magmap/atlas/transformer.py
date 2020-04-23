@@ -11,6 +11,7 @@ import numpy as np
 from skimage import transform
 
 from magmap.cv import chunking
+from magmap.cv import cv_nd
 from magmap.settings import config
 from magmap.settings import profiles
 from magmap.io import importer
@@ -337,6 +338,13 @@ def preprocess_img(image5d, preprocs, channel, out_path):
             roi = plot_3d.denoise_roi(roi, channel)
         elif preproc is profiles.PreProcessKeys.REMAP:
             roi = plot_3d.remap_intensity(roi, channel)
+        elif preproc is profiles.PreProcessKeys.ROTATE:
+            rotate = config.register_settings["rotate"]
+            roi = np.copy(roi)
+            for rot in rotate["rotation"]:
+                print("rotating by", rot)
+                roi = cv_nd.rotate_nd(
+                    roi, rot[0], rot[1], order=0, resize=rotate["resize"])
 
     # save to new file
     image5d = importer.roi_to_image5d(roi)

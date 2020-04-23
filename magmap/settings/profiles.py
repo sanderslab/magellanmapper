@@ -35,6 +35,7 @@ class PreProcessKeys(Enum):
     SATURATE = auto()
     DENOISE = auto()
     REMAP = auto()
+    ROTATE = auto()
 
 
 #: dict: Dictionary mapping the names of Enums used in profiles to their Enum

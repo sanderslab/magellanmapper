@@ -375,7 +375,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         for rot in rotation:
             print("rotating by", rot)
             img_np = cv_nd.rotate_nd(
-                img_np, rot[0], rot[1], order=0,resize=rotate["resize"])
+                img_np, rot[0], rot[1], order=0, resize=rotate["resize"])
     
     if affine:
         for aff in affine:

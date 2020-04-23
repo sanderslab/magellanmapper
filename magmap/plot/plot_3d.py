@@ -18,6 +18,7 @@ from skimage import restoration
 from magmap.plot import colormaps
 from magmap.settings import config
 from magmap.io import libmag
+from magmap.cv import cv_nd
 from magmap.cv import segmenter
 
 #: float: Maximum number of points to show.
@@ -293,6 +294,16 @@ def remap_intensity(roi, channel=None):
     return roi_out
 
 
+def _resize_glyphs_isotropic(settings, glyphs=None):
+    # resize Mayavi glyphs to make them isotropic based on profile settings
+    isotropic = settings["isotropic_vis"]
+    if isotropic is not None:
+        isotropic = cv_nd.calc_isotropic_factor(isotropic)
+        if glyphs:
+            glyphs.actor.actor.scale = isotropic[::-1]
+    return isotropic
+
+
 def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
     """Plots areas with greater intensity as 3D surfaces.
     
@@ -394,11 +405,8 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
             print(e)
             print("ignoring min/max contour for now")
         '''
-        
-        isotropic = settings["isotropic_vis"]
-        if isotropic is not None:
-            # adjust for anisotropy
-            surface.actor.actor.scale = isotropic[::-1]
+
+        _resize_glyphs_isotropic(settings, surface)
     
     print("time to render 3D surface: {}".format(time() - time_start))
 
@@ -495,9 +503,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
         if cmap is not None:
             pts.module_manager.scalar_lut_manager.lut.table = cmap(
                 range(0, 256)) * 255
-        isotropic = settings["isotropic_vis"]
-        if isotropic is not None:
-            pts.actor.actor.scale = isotropic[::-1]
+        _resize_glyphs_isotropic(settings, pts)
     
     print("time for 3D points display: {}".format(time() - time_start))
     return True
@@ -674,7 +680,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
     if flipud:
         # invert along z-axis to match handedness of Matplotlib with z up
         segs[:, 0] *= -1
-    isotropic = settings["isotropic_vis"]
+    isotropic = _resize_glyphs_isotropic(settings)
     if isotropic is not None:
         # adjust position based on isotropic factor
         segs[:, :3] = np.multiply(segs[:, :3], isotropic)

@@ -47,9 +47,15 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # view imported image
 #./run.py --img "$IMG"
 
-# downsample to size of atlas and view
+# downsample to size of atlas; the first option uses the target size in the
+# atlas profile, while the next options use a rescaling factor or specific
+# output size; use the plane option to transpose the output image
 #python -u -m magmap.io.cli --img "$IMG" --proc transform --reg_profile "$REG" #--plane xz
-#./run.py --img "$IMG_RESIZED" --offset 225,300,150
+#python -u -m magmap.io.cli --img "$IMG" --proc transform --rescale 0.25
+#python -u -m magmap.io.cli --img "$IMG" --proc transform --size "$SHAPE_RESIZED"
+
+# view downsampled image (assumes filename output using the first option)
+#./run.py --img "$IMG_RESIZED"
 
 # register imported atlas to downsampled image and view
 # - defaults to using channel 0; add `--channel x` to use channel x instead

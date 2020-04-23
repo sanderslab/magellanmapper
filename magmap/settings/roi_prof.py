@@ -73,8 +73,13 @@ class ProcessSettings(profiles.SettingsDict):
 
         # resizing for anisotropy
 
-        self["isotropic"] = None  # final relative z,y,x scaling after resizing
-        self["isotropic_vis"] = None  # z,y,x scaling factor for vis only
+        # setting an isotropic factor automatically calculates isotropy
+        # based on the image resolutions, and the values given here are
+        # scaling factors in z,y,x applied after isotropic scaling;
+        # eg (0.7, 1, 1) rescales the z-axis to be 0.7x isotropic;
+        # None turns off any isotropic rescaling
+        self["isotropic"] = None  # scale ROI for blob detection
+        self["isotropic_vis"] = (1, 1, 1)  # only for visualization
         self["resize_blobs"] = None  # z,y,x coord scaling before verification
 
         self.profiles = {
@@ -108,7 +113,7 @@ class ProcessSettings(profiles.SettingsDict):
                 "prune_tol_factor": (1, 0.9, 0.9),
                 "verify_tol_factor": (3, 1.2, 1.2),
                 "isotropic": (0.96, 1, 1),
-                "isotropic_vis": (1.3, 1, 1),
+                "isotropic_vis": (0.5, 1, 1),
                 "sub_stack_max_pixels": (1200, 800, 800),
                 "exclude_border": (1, 0, 0),
             },

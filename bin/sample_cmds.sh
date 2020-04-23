@@ -120,3 +120,18 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # image downsampling
 #bin/pipelines.sh -p transformation -i "$IMG" -z "$shape_resized" -- --reg_profile "$REG"
+
+
+# OTHER IMAGE TRANSFORMATIONS
+
+# rotate an image along multiple axes as specified in custom profiles;
+# the first profile needs a "preprocess" key with a list of tasks, and
+# the second profile specifies the rotation (see `atlas_prof.py`)
+# ./run_cli.py --img "$IMG" --proc preprocess --microscope profiles/preproc.yaml --reg_profile profiles/rotate.yaml
+
+
+# CUSTOM TASKS
+
+# add your own commands here, or add them to this function in the your
+# script based on `sample_settings.sh` to minimize edits here
+#custom_tasks

@@ -42,3 +42,8 @@ offsets_test=($OFFSET)
 
 # current offset
 OFFSET="${OFFSETS[0]}"
+
+custom_tasks() {
+  :
+  # add custom commands here
+}

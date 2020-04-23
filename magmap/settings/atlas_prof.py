@@ -16,6 +16,8 @@ class RegisterSettings(profiles.SettingsDict):
         super().__init__(self)
         self["settings_name"] = "default"
 
+        # REGISTRATION SETTINGS
+
         # registration main similarity metric
         self["metric_similarity"] = "AdvancedMattesMutualInformation"
         # fallback to alternate similarity metric if below DSC threshold as
@@ -41,7 +43,7 @@ class RegisterSettings(profiles.SettingsDict):
         # None for the entire setting turns off truncation
         self["truncate_labels"] = None
 
-        # labels curation
+        # LABELS CURATION
 
         # ACTIVE (bool): True to apply the setting to the final image and
         # metrics; False to use only for metrics and cropping, etc
@@ -153,6 +155,8 @@ class RegisterSettings(profiles.SettingsDict):
         # background in histology image
         self["overlap_meas_add_lbls"] = None
 
+        # METRICS
+
         # sequence of :class:`config.MetricGroups` enums to measure in
         # addition to basic metrics
         self["extra_metric_groups"] = None
@@ -163,6 +167,12 @@ class RegisterSettings(profiles.SettingsDict):
             RegKeys.DBSCAN_EPS: 20,  # epsilon for max dist in cluster
             RegKeys.DBSCAN_MINPTS: 6,  # min points/samples per cluster
         }
+
+        # ATLAS EDITOR
+
+        # max shape in x,y,z before downsampling; to improve performance,
+        # decrease sizes, especially in x
+        self["editor_max_shape"] = (500, 1000, 2000)
 
         self.profiles = {
 

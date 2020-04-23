@@ -53,7 +53,7 @@ class AtlasEditor:
     """
 
     _EDIT_BTN_LBLS = ("Edit", "Editing")
-    
+
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
                  borders_img=None, fn_show_label_3d=None, title=None,
                  fn_refresh_atlas_eds=None):
@@ -129,8 +129,10 @@ class AtlasEditor:
         enable_btn(self.save_btn, False)
         enable_btn(self.color_picker_box, color=config.widget_color+0.1)
     
-        def setup_plot_ed(plane, gs_spec):
-            # subplot grid, with larger height preference for plot for 
+        def setup_plot_ed(axis, gs_spec):
+            # set up a PlotEditor for the given axis
+
+            # subplot grid, with larger height preference for plot for
             # each increased row to make sliders of approx equal size and  
             # align top borders of top images
             rows_cols = gs_spec.get_rows_columns()
@@ -144,6 +146,7 @@ class AtlasEditor:
             # orthogonal direction
             ax = plt.subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
+            plane = config.PLANE[axis]
             plot_support.max_plane(self.image5d[0], plane)
             arrs_3d = [self.image5d[0]]
             if self.labels_img is not None:
@@ -173,6 +176,7 @@ class AtlasEditor:
                 len(img3d_transposed) - 1, valfmt="%d", valinit=0, valstep=1)
             
             # plot editor
+            max_size = max_shape[axis] if max_shape else None
             plot_ed = plot_editor.PlotEditor(
                 ax, img3d_transposed, labels_img_transposed, cmap_labels, 
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
@@ -180,16 +184,17 @@ class AtlasEditor:
                 cmap_borders=cmap_borders, 
                 fn_show_label_3d=self.fn_show_label_3d, 
                 interp_planes=self.interp_planes,
-                fn_update_intensity=self.update_color_picker)
+                fn_update_intensity=self.update_color_picker,
+                max_size=max_size)
             return plot_ed
         
-        # setup plot editor for all 3 orthogonal directions
-        self.plot_eds[config.PLANE[0]] = setup_plot_ed(
-            config.PLANE[0], gs_viewers[:2, 0])
-        self.plot_eds[config.PLANE[1]] = setup_plot_ed(
-            config.PLANE[1], gs_viewers[0, 1])
-        self.plot_eds[config.PLANE[2]] = setup_plot_ed(
-            config.PLANE[2], gs_viewers[1, 1])
+        # setup plot editors for all 3 orthogonal directions
+        max_shape = config.register_settings["editor_max_shape"]
+        if max_shape:
+            max_shape = max_shape[::-1]
+        for i, gs_viewer in enumerate(
+                (gs_viewers[:2, 0], gs_viewers[0, 1], gs_viewers[1, 1])):
+            self.plot_eds[config.PLANE[i]] = setup_plot_ed(i, gs_viewer)
         
         # attach listeners
         fig.canvas.mpl_connect("scroll_event", self.scroll_overview)

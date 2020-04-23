@@ -36,7 +36,7 @@ class PlotEditor:
                  aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
                  plane_slider, img3d_borders=None, cmap_borders=None, 
                  fn_show_label_3d=None, interp_planes=None,
-                 fn_update_intensity=None):
+                 fn_update_intensity=None, max_size=None):
         """Initialize the plot editor.
         
         Args:
@@ -68,6 +68,8 @@ class PlotEditor:
                 interpolation object; defaults to None.
             fn_update_intensity (function): Callback when updating the 
                 intensity value; defaults to None.
+            max_size (int): Maximum size of either side of the 2D plane shown;
+                defaults to None.
 
         """
         self.axes = axes
@@ -88,6 +90,16 @@ class PlotEditor:
         self.fn_show_label_3d = fn_show_label_3d
         self.interp_planes = interp_planes
         self.fn_update_intensity = fn_update_intensity
+        self.downsample = 1
+        if max_size:
+            # calculate downsampling factor based on max size
+            img = self.img3d[0]
+            self.downsample = np.max(
+                np.divide(img.shape, max_size)).astype(np.int)
+            if self.downsample < 1:
+                self.downsample = 1
+            print("downsampling factor for plane {}: {}"
+                  .format(self.plane, self.downsample))
         
         self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
@@ -149,16 +161,47 @@ class PlotEditor:
         if update_overview:
             self.show_overview()
         self.draw_crosslines()
-    
-    def draw_crosslines(self):
-        if self.hline is None:
-            self.hline = self.axes.axhline(self.coord[1], linestyle=":")
-            self.vline = self.axes.axvline(self.coord[2], linestyle=":")
+
+    def translate_coord(self, coord, up=False):
+        """Translate coordinate based on downsampling factor.
+
+        Coordinates sent to and received from the Atlas Editor are assumed to
+        be in the original image space.
+
+        Args:
+            coord (List[int]): Coordinates in z,y,x.
+            up (bool): True to upsample; defaults to False to adjust
+                coordinates for downsampled images.
+
+        Returns:
+            List[int]: The translated coordinates.
+
+        """
+        coord_tr = np.copy(coord)
+        if up:
+            coord_tr[1:] = np.multiply(coord_tr[1:], self.downsample)
         else:
-            self.hline.set_ydata(self.coord[1])
-            self.vline.set_xdata(self.coord[2])
+            coord_tr[1:] = np.divide(coord_tr[1:], self.downsample)
+        coord_tr = list(coord_tr.astype(np.int))
+        print("translated from {} to {}".format(coord, coord_tr))
+        return coord_tr
+
+    def draw_crosslines(self):
+        """Draw crosshairs depicting the x and y values in orthogonal viewers.
+        """
+        # translate coordinate down for any downsampling
+        coord = self.translate_coord(self.coord)
+        if self.hline is None:
+            # draw new crosshairs
+            self.hline = self.axes.axhline(coord[1], linestyle=":")
+            self.vline = self.axes.axvline(coord[2], linestyle=":")
+        else:
+            # update positions of current crosshairs
+            self.hline.set_ydata(coord[1])
+            self.vline.set_xdata(coord[2])
     
     def show_overview(self):
+        """Show the main 2D plane, taken as a z-plane."""
         # assume colorbar already shown if set and image previously displayed
         colorbar = (config.process_settings["colorbar"]
                     and len(self.axes.images) < 1)
@@ -188,7 +231,12 @@ class PlotEditor:
                 imgs2d.append(img_add)
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
-        
+
+        if self.downsample:
+            # downsample images to reduce access time
+            for i, img in enumerate(imgs2d):
+                imgs2d[i] = img[::self.downsample, ::self.downsample]
+
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single
         # value since they fail to update on subsequent updates for unclear
@@ -198,7 +246,7 @@ class PlotEditor:
             check_single=(self.ax_img is None))
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
-        self.axes.format_coord = PixelDisplay(imgs2d, ax_imgs)
+        self.axes.format_coord = PixelDisplay(imgs2d, ax_imgs, self.downsample)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]
         
@@ -254,6 +302,8 @@ class PlotEditor:
         self.press_loc_data = (x, y)
         self.last_loc_data = tuple(self.press_loc_data)
         self.last_loc = (int(event.x), int(event.y))
+        # re-translate downsampled coordinates back up
+        coord = self.translate_coord([self.coord[0], y, x], up=True)
         
         if event.button == 1:
             if self.edit_mode and self.img3d_labels is not None:
@@ -264,10 +314,10 @@ class PlotEditor:
                     # click while in editing mode to initialize intensity value
                     # for painting, using values at current position for
                     # the underlying and displayed images
-                    self.intensity = self.img3d_labels[self.coord[0], y, x]
+                    self.intensity = self.img3d_labels[tuple(coord)]
                     self.intensity_shown = self.ax_img.get_array()[y, x]
                     print("got intensity {} at x,y,z = {},{},{}"
-                          .format(self.intensity, x, y, self.coord[0]))
+                          .format(self.intensity, *coord[::-1]))
                     if self.fn_update_intensity:
                         # trigger text box update
                         self.fn_update_intensity(self.intensity)
@@ -282,13 +332,13 @@ class PlotEditor:
             elif event.key not in self._KEY_MODIFIERS:
                 # click without modifiers to update crosshairs and 
                 # corresponding planes
-                self.coord[1:] = y, x
+                self.coord = coord
                 self.fn_update_coords(self.coord, self.plane)
             
             if event.key == "3" and self.fn_show_label_3d is not None:
                 if self.img3d_labels is not None:
                     # extract label ID and display in 3D viewer
-                    self.fn_show_label_3d(self.img3d_labels[tuple(self.coord)])
+                    self.fn_show_label_3d(self.img3d_labels[tuple(coord)])
     
     def on_axes_exit(self, event):
         if event.inaxes != self.axes: return
@@ -377,28 +427,34 @@ class PlotEditor:
                         (x, y), radius=self.radius, linestyle=":", fill=False, 
                         edgecolor="w")
                     self.axes.add_patch(self.circle)
-                
-                coord = [self.coord[0], y, x]
+
+                # re-translate downsampled coordinates to original space
+                coord = self.translate_coord([self.coord[0], y, x], up=True)
                 if event.button == 1:
                     if self.edit_mode and self.intensity is not None:
                         # click in editing mode to overwrite images with pen
                         # of the current radius using chosen intensity for the
                         # underlying and displayed images
                         if self.ax_img is not None:
+                            # edit displayed image
+                            img = self.ax_img.get_array()
+                            rr, cc = draw.circle(y, x, self.radius, img.shape)
+                            img[rr, cc] = self.intensity_shown
+
+                            # edit underlying labels image
                             rr, cc = draw.circle(
-                                y, x, self.radius, 
+                                coord[1], coord[2], self.radius * self.downsample,
                                 self.img3d_labels[self.coord[0]].shape)
                             self.img3d_labels[
                                 self.coord[0], rr, cc] = self.intensity
-                            self.ax_img.get_array()[
-                                rr, cc] = self.intensity_shown
                             print("changed intensity at x,y,z = {},{},{} to {}"
-                                  .format(x, y, self.coord[0], self.intensity))
+                                  .format(*coord[::-1], self.intensity))
                             self.fn_refresh_images(self, True)
                             self.edited = True
                             self._editing = True
                     else:
-                        # click and mouseover otherwise moves crosshairs
+                        # mouse left-click drag (separate from the initial
+                        # press) moves crosshairs
                         self.coord = coord
                         self.fn_update_coords(self.coord, self.plane)
                 
@@ -469,15 +525,19 @@ class PixelDisplay(object):
         imgs (List[:obj:`np.ndarray`]): Sequence of images whose intensity
             values will be displayed.
         ax_imgs (List[:obj:`matplotlib.image.AxesImage`]): Nested sequence of
-            Matplotlib images corresponding to ``imgs``. 
+            Matplotlib images corresponding to ``imgs``.
+        downsample (float): Downsampling factor; defaults to 1.
     """
-    def __init__(self, imgs, ax_imgs):
+    def __init__(self, imgs, ax_imgs, downsample=1):
         self.imgs = imgs
         self.ax_imgs = ax_imgs
+        self.downsample = downsample
     
     def __call__(self, x, y):
         coord = (int(y), int(x))
-        output = ["x={}".format(coord[1]), "y={}".format(coord[0])]
+        # re-upsample coordinates for any downsampling
+        output = ["{}={}".format(a, coord[i] * self.downsample)
+                  for i, a in enumerate(("x", "y"))]
         rgb = ""
         for i, img in enumerate(self.imgs):
             if x < 0 or y < 0 or x >= img.shape[1] or y >= img.shape[0]:

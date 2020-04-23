@@ -67,18 +67,18 @@ def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
 
 
 def rotate_nd(img_np, angle, axis=0, order=1, resize=False):
-    """Rotate an image of arbitrary dimensions.
+    """Rotate an image of arbitrary dimensions along a given axis.
     
     This function is essentially a wrapper of 
     :func:``skimage.transform.rotate``, applied to each 2D plane along a 
     given axis for volumetric rotation.
     
     Args:
-        img_np: Numpy array.
-        angle: Angle by which to rotate.
-        axis: Axis along which to rotate, given as an int in standard 
+        img_np (:obj:`np.ndarray`): Numpy array.
+        angle (float): Angle by which to rotate.
+        axis (int): Axis along which to rotate, given as an int in standard
             Numpy axis convention; defaults to 0
-        order: Spline interpolation order; defaults to 1.
+        order (int): Spline interpolation order; defaults to 1.
         resize (bool): True to resize the output image to avoid any
             image cropping; defaults to False.
     
@@ -95,16 +95,21 @@ def rotate_nd(img_np, angle, axis=0, order=1, resize=False):
             img2d, angle, order=order, mode="constant", preserve_range=True,
             resize=resize))
     if resize:
-        # find output shape based on max plane size; allows rotated images
-        # to be of different sizes such as for progressive rotation, but
-        # currently each plane will be of the same size
+        # find output shape based on max plane size, allowing rotated images
+        # to be of different sizes such as for progressive rotation, although
+        # the current implementation of `rotate` outputs planes of same shape
         shapes = [img.shape for img in imgs]
-        rot_shape = (len(imgs), *np.amax(shapes, axis=0))
+        max_2d = np.amax(shapes, axis=0)
+        rot_shape = list(max_2d)
+        rot_shape.insert(axis, len(imgs))
         rotated = np.zeros(rot_shape, dtype=img_np.dtype)
         for i, img in enumerate(imgs):
-            offset = np.subtract(rot_shape[1:], img.shape) // 2
-            rotated[i, offset[0]:offset[0]+img.shape[0],
-                    offset[1]:offset[1]+img.shape[1]] = img
+            # center rotated image in the output plane
+            offset = np.subtract(max_2d, img.shape) // 2
+            slices = [slice(offset[0], offset[0]+img.shape[0]),
+                      slice(offset[1], offset[1]+img.shape[1])]
+            slices.insert(axis, i)
+            rotated[tuple(slices)] = img
     else:
         # output with same shape as that of original image
         rotated = np.copy(img_np)

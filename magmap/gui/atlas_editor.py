@@ -176,7 +176,7 @@ class AtlasEditor:
                 len(img3d_transposed) - 1, valfmt="%d", valinit=0, valstep=1)
             
             # plot editor
-            max_size = max_shape[axis] if max_shape else None
+            max_size = max_sizes[axis] if max_sizes else None
             plot_ed = plot_editor.PlotEditor(
                 ax, img3d_transposed, labels_img_transposed, cmap_labels, 
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
@@ -189,9 +189,12 @@ class AtlasEditor:
             return plot_ed
         
         # setup plot editors for all 3 orthogonal directions
-        max_shape = config.register_settings["editor_max_shape"]
-        if max_shape:
-            max_shape = max_shape[::-1]
+        max_sizes = None
+        downsample_io = config.register_settings["editor_downsample_io"]
+        if downsample_io and config.image5d_io in downsample_io:
+            max_sizes = config.register_settings["editor_max_sizes"]
+            if max_sizes:
+                max_sizes = max_sizes[::-1]
         for i, gs_viewer in enumerate(
                 (gs_viewers[:2, 0], gs_viewers[0, 1], gs_viewers[1, 1])):
             self.plot_eds[config.PLANE[i]] = setup_plot_ed(i, gs_viewer)

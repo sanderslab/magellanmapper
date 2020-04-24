@@ -170,9 +170,14 @@ class RegisterSettings(profiles.SettingsDict):
 
         # ATLAS EDITOR
 
-        # max shape in x,y,z before downsampling; to improve performance,
-        # decrease sizes, especially in x
-        self["editor_max_shape"] = (500, 1000, 2000)
+        # downsample images shown in the Atlas Editor to improve performance
+        # when loaded through these I/O packages; default to Numpy because
+        # its memory mapping reduces memory but is slower to load x-planes
+        self["editor_downsample_io"] = [config.LoadIO.NP]
+        # downsample image planes with an edge size exceeding these values,
+        # given as edge sizes of x,y,z-planes; decrease sizes to improve
+        # performance, especially in x
+        self["editor_max_sizes"] = (500, 1000, 2000)
 
         self.profiles = {
 

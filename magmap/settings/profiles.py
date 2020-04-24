@@ -46,6 +46,7 @@ _PROFILE_ENUMS = {
     "SmoothingModes": config.SmoothingModes,
     "MetricGroups": config.MetricGroups,
     "PreProcessKeys": PreProcessKeys,
+    "LoadIO": config.LoadIO,
 }
 
 

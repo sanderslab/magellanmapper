@@ -90,16 +90,15 @@ class PlotEditor:
         self.fn_show_label_3d = fn_show_label_3d
         self.interp_planes = interp_planes
         self.fn_update_intensity = fn_update_intensity
-        self.downsample = 1
+        self._downsample = 1
         if max_size:
             # calculate downsampling factor based on max size
             img = self.img3d[0]
-            self.downsample = np.max(
-                np.divide(img.shape, max_size)).astype(np.int)
-            if self.downsample < 1:
-                self.downsample = 1
+            self._downsample = max(img.shape[:2]) // max_size
+            if self._downsample < 1:
+                self._downsample = 1
             print("downsampling factor for plane {}: {}"
-                  .format(self.plane, self.downsample))
+                  .format(self.plane, self._downsample))
         
         self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
@@ -179,11 +178,11 @@ class PlotEditor:
         """
         coord_tr = np.copy(coord)
         if up:
-            coord_tr[1:] = np.multiply(coord_tr[1:], self.downsample)
+            coord_tr[1:] = np.multiply(coord_tr[1:], self._downsample)
         else:
-            coord_tr[1:] = np.divide(coord_tr[1:], self.downsample)
+            coord_tr[1:] = np.divide(coord_tr[1:], self._downsample)
         coord_tr = list(coord_tr.astype(np.int))
-        print("translated from {} to {}".format(coord, coord_tr))
+        # print("translated from {} to {}".format(coord, coord_tr))
         return coord_tr
 
     def draw_crosslines(self):
@@ -232,10 +231,10 @@ class PlotEditor:
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
 
-        if self.downsample:
+        if self._downsample:
             # downsample images to reduce access time
             for i, img in enumerate(imgs2d):
-                imgs2d[i] = img[::self.downsample, ::self.downsample]
+                imgs2d[i] = img[::self._downsample, ::self._downsample]
 
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single
@@ -246,7 +245,7 @@ class PlotEditor:
             check_single=(self.ax_img is None))
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
-        self.axes.format_coord = PixelDisplay(imgs2d, ax_imgs, self.downsample)
+        self.axes.format_coord = PixelDisplay(imgs2d, ax_imgs, self._downsample)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]
         
@@ -443,7 +442,7 @@ class PlotEditor:
 
                             # edit underlying labels image
                             rr, cc = draw.circle(
-                                coord[1], coord[2], self.radius * self.downsample,
+                                coord[1], coord[2], self.radius * self._downsample,
                                 self.img3d_labels[self.coord[0]].shape)
                             self.img3d_labels[
                                 self.coord[0], rr, cc] = self.intensity

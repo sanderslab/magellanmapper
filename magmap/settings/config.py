@@ -26,10 +26,12 @@ Attributes:
 """
 
 import numpy as np
-from enum import Enum
+from enum import Enum, auto
 
+#: bool: True for verbose debugging output.
 verbose = False
-POS_THRESH = 0.001 # threshold for positive values for float comparison
+#: float: Threshold for positive values for float comparison.
+POS_THRESH = 0.001
 
 
 # IMAGE FILES
@@ -45,13 +47,18 @@ SUFFIX_BLOBS = "blobs.npz"
 #: str: Suffix for blob clusters archive.
 SUFFIX_BLOB_CLUSTERS = "blobclusters.npy"
 
-filename = None # current image file path
-filenames = None # list of multiple image paths
-metadata_paths = None  # metadata file paths
-metadatas = None  # metadata dicts
+#: str: Current image file path.
+filename = None
+#: List[str]: List of multiple image paths.
+filenames = None
+#: List[str]: Metadata file paths.
+metadata_paths = None
+#: List[dict]: Metadata dictionaries.
+metadatas = None
 #: int: Selected series index for multi-stack files; None for no series.
 series = None
-channel = None # channel of interest, where None specifies all channels
+#: int: Channel of interest, where None specifies all channels.
+channel = None
 
 # ROI settings in x,y,z
 # TODO: change to z,y,x ordering
@@ -72,6 +79,16 @@ blobs = None  # blobs
 # ``[n_time_point, n_shape]`` format in case image5d is not available
 # TODO: consider simplify to single shape as 1D array
 image5d_shapes = None
+
+
+class LoadIO(Enum):
+    """Enumerations for I/O load packages."""
+    NP = auto()
+    SITK = auto()
+
+
+#: :obj:`LoadIO`: I/O source for image5d array.
+image5d_io = None
 
 prefix = None # alternate path
 suffix = None # modifier to existing base path

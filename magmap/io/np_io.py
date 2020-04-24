@@ -154,6 +154,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             config.image5d = np.load(filename_subimg, mmap_mode="r")
             config.image5d = importer.roi_to_image5d(config.image5d)
             config.image5d_is_roi = True
+            config.image5d_io = config.LoadIO.NP
             print("Loaded sub-image from {} with shape {}"
                   .format(filename_subimg, config.image5d.shape))
 
@@ -203,10 +204,12 @@ def setup_images(path=None, series=None, offset=None, size=None,
         if os.path.isdir(path):
             # import directory of TIFF images
             config.image5d = importer.import_dir(os.path.join(path, "*"))
+            config.image5d_io = config.LoadIO.NP
         elif path.endswith(sitk_io.EXTS_3D):
             try:
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
+                config.image5d_io = config.LoadIO.SITK
             except FileNotFoundError as e:
                 print(e)
         else:
@@ -215,6 +218,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
             config.image5d = importer.read_file(
                 path, series, channel=config.channel, load=load)
+            config.image5d_io = config.LoadIO.NP
     
     if config.metadatas and config.metadatas[0]:
         # assign metadata from alternate file if given to supersede settings
@@ -237,6 +241,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             # will take the place of any previously loaded image5d
             config.image5d = sitk_io.read_sitk_files(
                 path, reg_names=atlas_suffix)[None]
+            config.image5d_io = config.LoadIO.SITK
         
         annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
         if annotation_suffix is not None:

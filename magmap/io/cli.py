@@ -75,6 +75,7 @@ from magmap.atlas import transformer
 from magmap.gui import roi_editor
 from magmap.io import importer
 from magmap.io import libmag
+from magmap.io import notify
 from magmap.io import np_io
 from magmap.io import sqlite
 from magmap.stats import mlearn
@@ -704,7 +705,9 @@ def main(process_args_only=False):
         return
     elif config.register_type:
         register.main()
-    
+    elif config.notify_url:
+        notify.main()
+
     if not config.filename:
         # unable to parse anymore args without filename
         print("filename not specified, stopping argparsing")

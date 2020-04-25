@@ -1,5 +1,5 @@
 # Notifications in MagellanMapper
-# Author: David Young, 2018
+# Author: David Young, 2018, 2020
 """Post MagellanMapper notifications.
 
 Attributes:
@@ -27,7 +27,13 @@ def post(url, msg, attachment):
     print(response.read().decode("utf8"))
     return response
 
+
+def main():
+    """Run the main notifier tasks."""
+    post(config.notify_url, config.notify_msg, config.notify_attach)
+
+
 if __name__ == "__main__":
     print("Starting MagellanMapper notifier...")
     cli.main(True)
-    post(config.notify_url, config.notify_msg, config.notify_attach)
+    main()

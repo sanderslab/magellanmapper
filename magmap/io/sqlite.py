@@ -15,8 +15,9 @@ from magmap.settings import config
 from magmap.cv import detector
 from magmap.io import libmag
 
-DB_NAME_VERIFIED = "magmap_verified.db"
-DB_NAME_MERGED = "magmap_merged.db"
+DB_NAME_BASE = "magmap"
+DB_NAME_VERIFIED = "{}_verified.db".format(DB_NAME_BASE)
+DB_NAME_MERGED = "{}_merged.db".format(DB_NAME_BASE)
 DB_SUFFIX_TRUTH = "_truth.db"
 DB_VERSION = 3
 

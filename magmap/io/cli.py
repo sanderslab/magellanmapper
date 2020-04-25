@@ -623,12 +623,10 @@ def main(process_args_only=False):
         print("Set to use themes to {}".format(theme_names))
 
     # prep filename
-    if not config.filename:
-        # unable to parse anymore args without filename
-        print("filename not specified, stopping argparsing")
-        return
-    filename_base = importer.filename_to_base(
-        config.filename, config.series)
+    filename_base = None
+    if config.filename:
+        filename_base = importer.filename_to_base(
+            config.filename, config.series)
 
     # Database prep
     
@@ -647,11 +645,12 @@ def main(process_args_only=False):
         print("Mapped \"{}\" truth_db mode to {}"
               .format(mode, config.truth_db_mode))
     truth_db_path = config.truth_db_params[config.TruthDB.PATH]
+    truth_db_name_base = filename_base if filename_base else sqlite.DB_NAME_BASE
     if config.truth_db_mode is config.TruthDBModes.VIEW:
         # loads truth DB as a separate database in parallel with the given 
         # editable database, with name based on filename by default unless 
         # truth DB name explicitly given
-        path = truth_db_path if truth_db_path else filename_base
+        path = truth_db_path if truth_db_path else truth_db_name_base
         try:
             sqlite.load_truth_db(path)
         except FileNotFoundError as e:
@@ -688,7 +687,7 @@ def main(process_args_only=False):
         config.db_name = truth_db_path
         if not config.db_name: 
             config.db_name = "{}{}".format(
-                os.path.basename(filename_base), sqlite.DB_SUFFIX_TRUTH)
+                os.path.basename(truth_db_name_base), sqlite.DB_SUFFIX_TRUTH)
         print("Editing truth database at {}".format(config.db_name))
     
     if config.db is None:
@@ -706,6 +705,11 @@ def main(process_args_only=False):
     elif config.register_type:
         register.main()
     
+    if not config.filename:
+        # unable to parse anymore args without filename
+        print("filename not specified, stopping argparsing")
+        return
+
     # IMAGE PROCESSING TASKS
 
     for series in series_list:

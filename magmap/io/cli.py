@@ -85,6 +85,7 @@ from magmap.settings import profiles
 from magmap.settings import roi_prof
 from magmap.cv import chunking
 from magmap.cv import stack_detect
+from magmap.plot import plot_2d
 
 
 def _parse_coords(arg, rev=False):
@@ -431,7 +432,6 @@ def main(process_args_only=False):
         # TODO: consider removing or moving to profile
         padding_split = args.padding_2d.split(",")
         if len(padding_split) >= 3:
-            from magmap.plot import plot_2d
             roi_editor.padding = tuple(int(i) for i in padding_split)
             print("Set plot_2d.padding to {}".format(
                 roi_editor.padding))
@@ -467,7 +467,6 @@ def main(process_args_only=False):
     setup_profiles(args.microscope, args.reg_profile)
 
     if args.plane is not None:
-        from magmap.plot import plot_2d
         config.plane = args.plane
         print("Set plane to {}".format(config.plane))
     if args.saveroi:
@@ -707,6 +706,9 @@ def main(process_args_only=False):
         register.main()
     elif config.notify_url:
         notify.main()
+    elif config.plot_2d_type:
+        plot_2d.main()
+        return
 
     if not config.filename:
         # unable to parse anymore args without filename
@@ -725,7 +727,6 @@ def main(process_args_only=False):
                 config.filename, series, config.subimg_offsets,
                 config.subimg_sizes)
             parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
-            from magmap.plot import plot_2d
             plot_2d.setup_style()
             for stats_df in stats_dfs:
                 # plot ROC curve

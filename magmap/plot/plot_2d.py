@@ -995,8 +995,6 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
 
 def main():
     # set up command-line args and plotting style
-    from magmap.io import cli
-    cli.main(True)
     setup_style("default")
     size = config.plot_labels[config.PlotLabels.SIZE]
     show = not config.no_show
@@ -1115,4 +1113,8 @@ def main():
 
 
 if __name__ == "__main__":
+    print("Starting MagellanMapper 2D plotter...")
+    # set up command-line args and run main tasks
+    from magmap.io import cli
+    cli.main(True)
     main()

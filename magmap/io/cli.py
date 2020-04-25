@@ -70,6 +70,8 @@ import sys
 
 import numpy as np
 
+from magmap.atlas import register
+from magmap.atlas import transformer
 from magmap.gui import roi_editor
 from magmap.io import importer
 from magmap.io import libmag
@@ -82,7 +84,6 @@ from magmap.settings import profiles
 from magmap.settings import roi_prof
 from magmap.cv import chunking
 from magmap.cv import stack_detect
-from magmap.atlas import transformer
 
 
 def _parse_coords(arg, rev=False):
@@ -691,16 +692,20 @@ def main(process_args_only=False):
 
     # set multiprocessing start method
     chunking.set_mp_start_method()
-    
-    
-    # done with arg parsing
+
+    # POST-ARGUMENT PARSING
+
+    # exit or transfer to other entry points if indicated
     if process_args_only:
         return
+    elif config.register_type:
+        register.main()
     
-    
-    
-    # process the image stack for each series
+    # IMAGE PROCESSING TASKS
+
     for series in series_list:
+        # process each series, typically a tile within an microscopy image
+        # set or a single whole image
         if config.roc:
             # grid search(es) for the specified hyperparameter groups
             stats_dict = mlearn.grid_search(

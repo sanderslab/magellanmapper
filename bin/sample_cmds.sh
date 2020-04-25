@@ -59,7 +59,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # register imported atlas to downsampled image and view
 # - defaults to using channel 0; add `--channel x` to use channel x instead
-#python -u -m magmap.atlas.register --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --flip 1 --register single --reg_profile "${REG}_raw" --no_show -v
+#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --flip 1 --register single --reg_profile "${REG}_raw" --no_show -v
 #./run.py --img "$IMG_MHD" --microscope lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd --offset 70,350,150
 
 # similar view of registered labels but overlaid on downsampled image
@@ -71,15 +71,15 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --microscope "$MIC"
 
 # make and view density image (heat map)
-#python -u -m magmap.atlas.register -v --img "$IMG" --register make_density_images --no_show
+#./run_cli.py -v --img "$IMG" --register make_density_images --no_show
 #./run.py --img "$IMG" --microscope lightsheet_contrast --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" --reg_suffixes heat.mhd annotation.mhd
 
 # volume metrics (level 13 includes hierarchical regions through this level)
-#python -u -m magmap.atlas.register --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS"
-#python -u -m magmap.atlas.register --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS" 13
+#./run_cli.py --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS"
+#./run_cli.py --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS" 13
 
 # generate CSV of all atlas IDs with names; merge with hierarchical volumes CSV
-#python -u -m magmap.atlas.register --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
+#./run_cli.py --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
 #python -u -m magmap.io.df_io --stats merge_csvs_cols --img "region_ids_$ABA_DIR.csv" "${IMG%.*}_volumes_level13.csv" --plot_labels id_col=Region --prefix "${IMG%.*}_volumes_level13_named.csv"
 
 # turn on WT and basic.stats profiles (requires R 3.5+)

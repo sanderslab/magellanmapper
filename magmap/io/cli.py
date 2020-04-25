@@ -142,32 +142,36 @@ def args_with_dict(args):
     return parsed
 
 
-def args_to_dict(args, keys_enum, args_dict={}):
+def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=","):
     """Parse arguments list with positional and keyword-based arguments 
     into an enum-keyed dictionary.
     
     Args:
-        args: List of arguments with positional values followed by 
-            "=" delimited values. Positional values will be entered 
+        args (List[str]): List of arguments with positional values followed by
+            ``sep_args``-delimited values. Positional values will be entered
             in the existing order of ``keys_enum`` based on member values, 
             while keyword-based values will be entered if an enum 
             member corresponding to the keyword exists.
-            Entries can also be comma-delimited to specify lists.
-        keys_enum: Enum to use as keys for dictionary. Values are 
+            Entries can also be ``sep_vals``-delimited to specify lists.
+        keys_enum (Enum): Enum to use as keys for dictionary. Values are
             assumed to range from 1 to number of members as output 
             by the default Enum functional API.
-        args_dict: Dictionary to be filled or updated with keys from 
-            ``keys_enum``; defaults to empty dict.
+        args_dict (dict): Dictionary to be filled or updated with keys from
+            ``keys_enum``; defaults to None, which will assign an empty dict.
+        sep_args (str): Separator between arguments and values; defaults to "=".
+        sep_vals (str): Separator within values; defaults to ",".
     
     Returns:
-        Dictionary filled with arguments. Values that contain commas 
+        dict: Dictionary filled with arguments. Values that contain commas
         will be split into comma-delimited lists. All values will be 
         converted to ints if possible.
     """
+    if args_dict is None:
+        args_dict = {}
     by_position = True
     num_enums = len(keys_enum)
     for i, arg in enumerate(args):
-        arg_split = arg.split("=")
+        arg_split = arg.split(sep_args)
         len_arg_split = len(arg_split)
         # assume by position until any keyword given
         by_position = by_position and len_arg_split < 2
@@ -195,7 +199,7 @@ def args_to_dict(args, keys_enum, args_dict={}):
                 print("unable to find {} in {}".format(key_str, keys_enum))
                 continue
         if key:
-            vals_split = vals.split(",")
+            vals_split = vals.split(sep_vals)
             if len(vals_split) > 1:
                 # use split value if comma-delimited
                 vals = vals_split

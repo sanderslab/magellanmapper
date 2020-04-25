@@ -699,7 +699,7 @@ def main(process_args_only=False):
 
     # POST-ARGUMENT PARSING
 
-    # exit or transfer to other entry points if indicated
+    # return or transfer to other entry points if indicated
     if process_args_only:
         return
     elif config.register_type:
@@ -708,40 +708,11 @@ def main(process_args_only=False):
         notify.main()
     elif config.plot_2d_type:
         plot_2d.main()
-        return
+    elif config.roc:
+        _grid_search(series_list)
+    elif config.proc_type:
+        _process_files(series_list)
 
-    if not config.filename:
-        # unable to parse anymore args without filename
-        print("filename not specified, stopping argparsing")
-        return
-
-    # IMAGE PROCESSING TASKS
-
-    for series in series_list:
-        # process each series, typically a tile within an microscopy image
-        # set or a single whole image
-        if config.roc:
-            # grid search(es) for the specified hyperparameter groups
-            stats_dict = mlearn.grid_search(
-                profiles.roc_dict, config.roc, _iterate_file_processing,
-                config.filename, series, config.subimg_offsets,
-                config.subimg_sizes)
-            parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
-            plot_2d.setup_style()
-            for stats_df in stats_dfs:
-                # plot ROC curve
-                plot_2d.plot_roc(stats_df, not config.no_show)
-        else:
-            # processes file with default settings
-            offset = config.subimg_offsets[0] if config.subimg_offsets else None
-            size = config.subimg_sizes[0] if config.subimg_sizes else None
-            np_io.setup_images(
-                config.filename, series, offset, size, config.proc_type)
-            process_file(
-                config.filename, config.proc_type, series, offset, size,
-                config.roi_offsets[0] if config.roi_offsets else None,
-                config.roi_sizes[0] if config.roi_sizes else None)
-    
     # unless loading images for GUI, exit directly since otherwise application 
     # hangs if launched from module with GUI
     if proc_type is not None and proc_type is not config.ProcessTypes.LOAD:
@@ -826,9 +797,49 @@ def _iterate_file_processing(path, series, subimg_offsets, subimg_sizes):
     return stat, summaries
 
 
+def _grid_search(series_list):
+    # grid search(es) for the specified hyperparameter groups
+    if not config.filename:
+        print("No image filename set for grid search, skipping")
+        return
+    plot_2d.setup_style()
+    for series in series_list:
+        # process each series, typically a tile within an microscopy image
+        # set or a single whole image
+        stats_dict = mlearn.grid_search(
+            profiles.roc_dict, config.roc, _iterate_file_processing,
+            config.filename, series, config.subimg_offsets,
+            config.subimg_sizes)
+        parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
+        for stats_df in stats_dfs:
+            # plot ROC curve
+            plot_2d.plot_roc(stats_df, not config.no_show)
+
+
+def _process_files(series_list):
+    # wrapper to process files for each series, typically a tile within
+    # an microscopy image set or a single whole image, setting up the
+    # image before each processing
+    if not config.filename:
+        print("No image filename set for processing files, skipping")
+        return
+    for series in series_list:
+        # process each series
+        offset = config.subimg_offsets[0] if config.subimg_offsets else None
+        size = config.subimg_sizes[0] if config.subimg_sizes else None
+        np_io.setup_images(
+            config.filename, series, offset, size, config.proc_type)
+        process_file(
+            config.filename, config.proc_type, series, offset, size,
+            config.roi_offsets[0] if config.roi_offsets else None,
+            config.roi_sizes[0] if config.roi_sizes else None)
+
+
 def process_file(path, proc_mode, series=None, subimg_offset=None,
                  subimg_size=None, roi_offset=None, roi_size=None):
     """Processes a single image file non-interactively.
+
+    Assumes that the image has already been set up.
     
     Args:
         path (str): Path to image from which MagellanMapper-style paths will 

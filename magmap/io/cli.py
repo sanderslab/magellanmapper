@@ -640,9 +640,10 @@ def main(process_args_only=False):
     if args.truth_db is not None:
         # set the truth database mode
         config.truth_db_params = args_to_dict(
-            args.truth_db, config.TruthDB, config.truth_db_params)
+            args.truth_db, config.TruthDB, config.truth_db_params, sep_vals="|")
         mode = config.truth_db_params[config.TruthDB.MODE]
         config.truth_db_mode = libmag.get_enum(mode, config.TruthDBModes)
+        libmag.printv(config.truth_db_params)
         print("Mapped \"{}\" truth_db mode to {}"
               .format(mode, config.truth_db_mode))
     truth_db_path = config.truth_db_params[config.TruthDB.PATH]

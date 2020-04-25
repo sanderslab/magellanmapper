@@ -68,7 +68,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # full image detection
 # - detects cells in channel set in variable `CHL`
-#python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --microscope "$MIC"
+#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --microscope "$MIC"
 
 # make and view density image (heat map)
 #./run_cli.py -v --img "$IMG" --register make_density_images --no_show
@@ -92,7 +92,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #./run.py --img "$IMG" --microscope "$MIC" --offset 800,1150,250 --size 70,70,30 -v #--proc load #--savefig pdf
 
 # detect blobs within a sub-image and export the sub-image for portability
-#python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --saveroi
+#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --saveroi
 
 # view and build truth set for a sub-image; after pressing "Save blobs," the truth set will be in magmap.db
 #./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --microscope lightsheet_contrast --proc load #--savefig png
@@ -101,13 +101,13 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --proc load --truth_db edit magmap.db
 
 # grid-search on single sub-image using the "test" ROC profile
-#python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --truth_db verify magmap.db --roc test --no_show
+#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --truth_db verify magmap.db --roc test --no_show
 
 # view verifications for single offset
 #./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --microscope lightsheet_contrast --proc load --truth_db verified "${THEME[@]}"
 
 # test all OFFSETS with ROC curve
-#python -m magmap.io.cli --img "$IMG" --proc detect --channel "$CHL" --offset ${OFFSETS_DONE[@]} --size $SIZE --microscope "$MIC" --truth_db "verify" --roc
+#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --offset ${OFFSETS_DONE[@]} --size $SIZE --microscope "$MIC" --truth_db "verify" --roc
 
 # view annotation (ie segmentation) truth set
 #./run.py --img "$IMG" -v --channel "$CHL" --proc load --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"

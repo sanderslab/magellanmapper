@@ -263,8 +263,8 @@ def main(process_args_only=False):
         help="Truth database; see config.TruthDB for settings and "
              "config.TruthDBModes for modes")
     parser.add_argument(
-        "--roc", nargs="*",
-        help="Grid search/Receiver Operating Characteristic curve profile")
+        "--grid_search", nargs="*",
+        help="Grid search hyperparameter tuning profile(s)")
     parser.add_argument(
         "--plane", type=str.lower, choices=config.PLANE,
         help="Planar orientation")
@@ -401,9 +401,9 @@ def main(process_args_only=False):
         config.verbose = args.verbose
         np.set_printoptions(linewidth=200, threshold=10000)
         print("Set verbose to {}".format(config.verbose))
-    if args.roc:
-        config.roc = args.roc
-        print("Set ROC to {}".format(config.roc))
+    if args.grid_search:
+        config.grid_search = args.grid_search
+        print("Set ROC to {}".format(config.grid_search))
 
     # parse sub-image offsets and sizes;
     # expects x,y,z input but stores as z,y,x by convention
@@ -711,7 +711,7 @@ def main(process_args_only=False):
         plot_2d.main()
     elif config.df_task:
         df_io.main()
-    elif config.roc:
+    elif config.grid_search:
         _grid_search(series_list)
     else:
         # set up image and perform any whole image processing tasks
@@ -811,7 +811,7 @@ def _grid_search(series_list):
         # process each series, typically a tile within an microscopy image
         # set or a single whole image
         stats_dict = mlearn.grid_search(
-            profiles.roc_dict, config.roc, _iterate_file_processing,
+            profiles.roc_dict, config.grid_search, _iterate_file_processing,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
         parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
@@ -913,7 +913,7 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, config.image5d, subimg_offset, subimg_size,
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
-            not config.roc, config.image5d_is_roi)
+            not config.grid_search, config.image5d_is_roi)
 
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file

@@ -82,7 +82,7 @@ from magmap.io import sqlite
 from magmap.stats import mlearn
 from magmap.settings import atlas_prof
 from magmap.settings import config
-from magmap.settings import profiles
+from magmap.settings import grid_search_prof
 from magmap.settings import roi_prof
 from magmap.cv import chunking
 from magmap.cv import stack_detect
@@ -811,7 +811,7 @@ def _grid_search(series_list):
         # process each series, typically a tile within an microscopy image
         # set or a single whole image
         stats_dict = mlearn.grid_search(
-            profiles.roc_dict, config.grid_search, _iterate_file_processing,
+            grid_search_prof.roc_dict, config.grid_search, _iterate_file_processing,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
         parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)

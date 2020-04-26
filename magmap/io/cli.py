@@ -283,9 +283,9 @@ def main(process_args_only=False):
         choices=libmag.enum_names_aslist(config.RegisterTypes),
         help="Image registration task")
     parser.add_argument(
-        "--stats", type=str.lower,
-        choices=libmag.enum_names_aslist(config.StatsTypes),
-        help="Statistics task")
+        "--df", type=str.lower,
+        choices=libmag.enum_names_aslist(config.DFTasks),
+        help="Data frame task")
     parser.add_argument(
         "--plot_2d", type=str.lower,
         choices=libmag.enum_names_aslist(config.Plot2DTypes),
@@ -499,10 +499,10 @@ def main(process_args_only=False):
         config.register_type = args.register
         print("Set register type to {}".format(config.register_type))
     
-    if args.stats:
-        # stats type to process in stats module
-        config.stats_type = args.stats
-        print("Set stats type to {}".format(config.stats_type))
+    if args.df:
+        # data frame processing task
+        config.df_task = args.df
+        print("Set data frame processing task to {}".format(config.df_task))
     
     if args.plot_2d:
         # 2D plot type to process in plot_2d module
@@ -709,7 +709,7 @@ def main(process_args_only=False):
         notify.main()
     elif config.plot_2d_type:
         plot_2d.main()
-    elif config.stats_type:
+    elif config.df_task:
         df_io.main()
     elif config.roc:
         _grid_search(series_list)

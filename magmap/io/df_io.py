@@ -672,13 +672,13 @@ def main():
     
     # process stats based on command-line argument
     
-    stats_type = libmag.get_enum(config.stats_type, config.StatsTypes)
+    df_task = libmag.get_enum(config.df_task, config.DFTasks)
 
-    if stats_type is config.StatsTypes.MERGE_CSVS:
+    if df_task is config.DFTasks.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
         merge_csvs(config.filenames, config.prefix)
 
-    elif stats_type is config.StatsTypes.MERGE_CSVS_COLS:
+    elif df_task is config.DFTasks.MERGE_CSVS_COLS:
         # join multiple CSV files based on a given index column into single
         # CSV file
         dfs = [pd.read_csv(f) for f in config.filenames]
@@ -689,7 +689,7 @@ def main():
                 config.filename, "_joined")
         data_frames_to_csv(df, out_path)
 
-    elif stats_type is config.StatsTypes.APPEND_CSVS_COLS:
+    elif df_task is config.DFTasks.APPEND_CSVS_COLS:
         # join multiple CSV files based on a given index column into single
         # CSV file
         dfs = [pd.read_csv(f) for f in config.filenames]
@@ -707,11 +707,11 @@ def main():
                 config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
-    elif stats_type is config.StatsTypes.EXPS_BY_REGION:
+    elif df_task is config.DFTasks.EXPS_BY_REGION:
         # convert volume stats data frame to experiments by region
         exps_by_regions(config.filename)
 
-    elif stats_type is config.StatsTypes.EXTRACT_FROM_CSV:
+    elif df_task is config.DFTasks.EXTRACT_FROM_CSV:
         # extract rows from CSV file based on matching rows in given col, where 
         # "X_COL" = name of column on which to filter, and 
         # "Y_COL" = values in this column for which rows should be kept
@@ -725,7 +725,7 @@ def main():
             out_path = "filtered.csv"
         data_frames_to_csv(df_filt, out_path)
 
-    elif stats_type is config.StatsTypes.ADD_CSV_COLS:
+    elif df_task is config.DFTasks.ADD_CSV_COLS:
         # add columns with corresponding values for all rows, where 
         # "X_COL" = name of column(s) to add, and 
         # "Y_COL" = value(s) for corresponding cols
@@ -740,7 +740,7 @@ def main():
                 config.filename, "_appended")
         data_frames_to_csv(df, out_path)
 
-    elif stats_type is config.StatsTypes.NORMALIZE:
+    elif df_task is config.DFTasks.NORMALIZE:
         # normalize values in each group to that of a base group, where
         # "ID_COL" = ID column(s),
         # "X_COL" = condition column
@@ -759,7 +759,7 @@ def main():
             out_path = libmag.insert_before_ext(config.filename, "_norm")
         data_frames_to_csv(df, out_path)
 
-    if stats_type is config.StatsTypes.MERGE_EXCELS:
+    if df_task is config.DFTasks.MERGE_EXCELS:
         # merge multiple Excel files into single Excel file, with each
         # original Excel file as a separate sheet in the combined file
         merge_excels(
@@ -768,6 +768,6 @@ def main():
 
 
 if __name__ == "__main__":
-    print("Starting MagellanMapper stats...")
+    print("Starting MagellanMapper data-frame tasks...")
     cli.main(True)
     main()

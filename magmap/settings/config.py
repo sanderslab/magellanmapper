@@ -492,9 +492,9 @@ class ItkSnapLabels(Enum):
 
 # STATS
 
-#: :class:`Enum`: stats module processing types
-StatsTypes = Enum(
-    "StatsTypes", [
+#: :class:`Enum`: Data frame module tasks.
+DFTasks = Enum(
+    "DFTasks", [
         "MERGE_CSVS",  # merge rows
         "MERGE_CSVS_COLS",  # merge columns based on ID
         "APPEND_CSVS_COLS",  # concatenate chosen columns
@@ -505,7 +505,8 @@ StatsTypes = Enum(
         "MERGE_EXCELS",  # merge Excel files into sheets of single Excel file
     ]
 )
-stats_type = None
+
+df_task = None
 seed = 0  # random number generator seed
 
 #: float: measurement unit factor to convert to next larger prefix (eg um to mm)

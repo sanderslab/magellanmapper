@@ -7,6 +7,7 @@ This release brings many changes to streamline the command-line interface (CLI).
 Summary of usage changes:
 - All command-line based entry points can be accessed through the CLI, which now has a run script named `run_cli.py`
 - Atlases should be fully imported before image registration, and the atlas's profile should no longer be typically given when registering an image
+- `--stats` is now `--df` for data frame tasks since many of these tasks are not stats-related
 
 ### Changes
 

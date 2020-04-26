@@ -2012,12 +2012,12 @@ def main():
     elif reg is config.RegisterTypes.PLOT_REGION_DEV:
         # plot region development
         try:
-            metric = vols.LabelMetrics[config.stats_type].name
+            metric = vols.LabelMetrics[config.df_task].name
             atlas_stats.plot_region_development(metric, size, show)
         except KeyError:
             libmag.warn(
                 "\"{}\" metric not found in {} for developmental plots"
-                .format(config.stats_type, [e.name for e in vols.LabelMetrics]))
+                .format(config.df_task, [e.name for e in vols.LabelMetrics]))
         
     elif reg is config.RegisterTypes.PLOT_LATERAL_UNLABELED:
         # plot lateral edge unlabeled fractions as both lines and bars

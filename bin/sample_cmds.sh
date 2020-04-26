@@ -86,7 +86,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # generate CSV of all atlas IDs with names; merge with hierarchical volumes CSV
 #./run_cli.py --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
-#python -u -m magmap.io.df_io --stats merge_csvs_cols --img "region_ids_$ABA_DIR.csv" "${IMG%.*}_volumes_level13.csv" --plot_labels id_col=Region --prefix "${IMG%.*}_volumes_level13_named.csv"
+#./run_cli.py --df merge_csvs_cols --img "region_ids_$ABA_DIR.csv" "${IMG%.*}_volumes_level13.csv" --plot_labels id_col=Region --prefix "${IMG%.*}_volumes_level13_named.csv"
 
 # turn on WT and basic.stats profiles (requires R 3.5+)
 #Rscript --verbose clrstats/run.R

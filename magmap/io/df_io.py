@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Stats for MagellanMapper
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """Stats calculations and text output for MagellanMapper.
 
 Attributes:
@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from magmap.settings import config
+from magmap.io import cli
 from magmap.io import libmag
 
 
@@ -668,9 +669,6 @@ def merge_excels(paths, out_path, names=None):
 
 def main():
     """Process stats based on command-line mode."""
-    print("Starting MagellanMapper stats...")
-    from magmap.io import cli
-    cli.main(True)
     
     # process stats based on command-line argument
     
@@ -770,4 +768,6 @@ def main():
 
 
 if __name__ == "__main__":
+    print("Starting MagellanMapper stats...")
+    cli.main(True)
     main()

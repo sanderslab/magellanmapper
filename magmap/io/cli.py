@@ -73,6 +73,7 @@ import numpy as np
 from magmap.atlas import register
 from magmap.atlas import transformer
 from magmap.gui import roi_editor
+from magmap.io import df_io
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import notify
@@ -708,6 +709,8 @@ def main(process_args_only=False):
         notify.main()
     elif config.plot_2d_type:
         plot_2d.main()
+    elif config.stats_type:
+        df_io.main()
     elif config.roc:
         _grid_search(series_list)
     elif config.proc_type:

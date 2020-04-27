@@ -2,17 +2,23 @@
 # Sample commands for MagellanMapper tasks
 # Author: David Young, 2020
 
-# This script is designed to provide examples of commands for performing
-# various tasks in MagellanMapper. These commands can be copied into
-# Bash scripts or modified slightly for use in other scripts such as Windows
-# Batch scripts. For complete pipelines, see pipelines.sh.
-
-# Alternatively, this script can be run directly after a few modifications.
-# How to use:
-# 1) Copy "sample_settings.sh" to your own file and update it with your settings
-# 2) Uncomment (ie remove the "#" at line start) a desired command below
-# 3) Run this script (eg from the magellanmapper folder), replacing the
-#    settings file with your own: "bin/sample_cmds.sh bin/my_settings.sh"
+# This script provides examples of commands for performing various tasks in
+# MagellanMapper. You can use the script in various ways:
+#
+# 1) Use these commands as templates. These commands can be copied into
+#    Bash scripts or Windows Batch scripts and customized for your file paths.
+#
+# 2) Run this script directly after a few modifications:
+#    a) Copy `sample_settings.sh` to your own file and customize its settings
+#    b) Copy desired commands below into `custom_tasks` in your settings file
+#    c) Run this script, pointing it to your custom settings file:
+#       `bin/sample_cmds.sh bin/my_settings.sh`
+#
+# 3) You can also uncomment (ie remove the "#" at line start) a desired command
+#    below to run in directly, but this file will need to be reset before
+#    any code repository updates.
+#
+# 4) For complete pipelines, see `pipelines.sh` instead.
 
 # APPLY USER SETTINGS
 
@@ -134,4 +140,4 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # add your own commands here, or add them to this function in the your
 # script based on `sample_settings.sh` to minimize edits here
-#custom_tasks
+custom_tasks

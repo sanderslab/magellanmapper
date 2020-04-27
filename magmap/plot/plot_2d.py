@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # 2D plot image and graph plotter
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2020
 """Plot 2D views of imaging data and graphs."""
 
 import os
@@ -20,7 +20,6 @@ from magmap.io import libmag
 from magmap.stats import mlearn
 from magmap.plot import plot_support
 from magmap.stats import vols
-from magmap.plot.plot_support import save_fig
 
 
 def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
@@ -197,7 +196,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
         title = "Image Overlays"
     fig.suptitle(title)
     gs.tight_layout(fig)
-    save_fig(title, config.savefig)
+    plot_support.save_fig(title, config.savefig)
     if show:
         plt.show()
 
@@ -523,7 +522,7 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     # save and display
     out_path = path_to_df if prefix is None else prefix
     out_path = libmag.combine_paths(out_path, "barplot")
-    if save: save_fig(out_path, config.savefig)
+    if save: plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
     return ax, out_path
 
@@ -679,7 +678,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     # save and display
     out_path = path_to_df if prefix is None else prefix
     if suffix: out_path = libmag.insert_before_ext(out_path, suffix)
-    if save: save_fig(out_path, config.savefig)
+    if save: plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
     return ax
 
@@ -847,7 +846,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     # save and display
     out_path = path
     if suffix: out_path = libmag.insert_before_ext(out_path, suffix)
-    save_fig(out_path, config.savefig)
+    plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
 
 
@@ -935,7 +934,7 @@ def plot_image(img, path=None, show=False):
             path_split = os.path.splitext(path)
             ext = path_split[1][1:] if path_split[1] else "png"
             print(path_split, ext)
-        save_fig(path, ext)
+        plot_support.save_fig(path, ext)
     if show: plt.show()
     plt.close()  # prevent display during next show call
 
@@ -988,7 +987,7 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
     if y_lim is not None:
         ax.set_ylim(*y_lim)
     if out_path and save_ext:
-        save_fig(out_path, save_ext)
+        plot_support.save_fig(out_path, save_ext)
     if show:
         plt.show()
 

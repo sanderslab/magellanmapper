@@ -713,7 +713,8 @@ def main(process_args_only=False):
         df_io.main()
     elif config.roc:
         _grid_search(series_list)
-    elif config.proc_type:
+    else:
+        # set up image and perform any whole image processing tasks
         _process_files(series_list)
 
     # unless loading images for GUI, exit directly since otherwise application 

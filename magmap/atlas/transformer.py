@@ -87,15 +87,19 @@ def make_modifier_plane(plane):
 
 
 def make_modifier_scale(scale):
-    """Make a string designating a scaling transformation.
+    """Make a string designating a scaling transformation, typically for
+    filenames of rescaled images.
     
     Args:
-        scale: Scale to which the image was rescaled.
+        scale (float): Scale to which the image was rescaled. Any decimal
+            point will be replaced with "pt" to avoid confusion with
+            path extensions.
     
     Returns:
-        String designating the scaling transformation.
+        str: String designating the scaling transformation.
     """
-    return "scale{}".format(scale)
+    mod = "scale{}".format(scale)
+    return mod.replace(".", "pt")
 
 
 def make_modifier_resized(target_size):

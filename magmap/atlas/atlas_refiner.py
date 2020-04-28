@@ -1061,7 +1061,7 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
     return transposed
 
 
-def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
+def match_atlas_labels(img_atlas, img_labels, flip=None, metrics=None):
     """Apply register profile settings to labels and match atlas image 
     accordingly.
     
@@ -1069,7 +1069,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         img_atlas (:obj:`sitk.Image`): Reference image, such as histology.
         img_labels (:obj:`sitk.Image`): Labels image.
         flip (bool): True to rotate images 180deg around the final z axis; 
-            defaults to False.
+            defaults to None to get the value from :attr:`config.flip[0]`.
         metrics (:obj:`dict`): Dictionary to store metrics; defaults to 
             None, in which case metrics will not be measured.
     
@@ -1082,6 +1082,8 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         and ``df_sm_raw``, a data frame of raw smoothing stats, or 
         None if smoothing was not performed.
     """
+    if flip is None:
+        flip = config.flip[0] if config.flip else False
     pre_plane = config.register_settings["pre_plane"]
     mirror = config.register_settings["labels_mirror"]
     is_mirror = mirror and mirror[profiles.RegKeys.ACTIVE]

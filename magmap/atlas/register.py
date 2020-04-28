@@ -261,16 +261,16 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
     return result_imgs
 
 
-def _transform_labels(transformix_img_filter, labels_img, truncation=None, 
-                      flip=False):
+def _transform_labels(transformix_img_filter, labels_img, truncation=None):
     if truncation is not None:
         # truncate ventral and posterior portions since variable 
         # amount of tissue or quality of imaging in these regions
         labels_img_np = sitk.GetArrayFromImage(labels_img)
         truncation = list(truncation)
-        if flip:
+        if config.flip and config.flip[0]:
             # assume labels were rotated 180deg around the z-axis, so 
             # need to flip y-axis fracs
+            # TODO: take into account full transformations
             truncation[1] = np.subtract(1, truncation[1])[::-1]
         atlas_refiner.truncate_labels(labels_img_np, *truncation)
         labels_img = sitk_io.replace_sitk_with_numpy(labels_img, labels_img_np)
@@ -409,7 +409,7 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
     return transformed_img, transformix_img_filter
 
 
-def register(fixed_file, moving_file_dir, flip=False, 
+def register(fixed_file, moving_file_dir,
              show_imgs=True, write_imgs=True, name_prefix=None, 
              new_atlas=False):
     """Register an atlas and associated labels to a sample image 
@@ -421,8 +421,6 @@ def register(fixed_file, moving_file_dir, flip=False,
         moving_file_dir: Directory of the atlas images, including the 
             main image and labels. The atlas was chosen as the moving file
             since it is likely to be lower resolution than the Numpy file.
-        flip: True if the moving files (does not apply to fixed file) should 
-            be flipped/rotated; defaults to False.
         show_imgs: True if the output images should be displayed; defaults to 
             True.
         write_imgs: True if the images should be written to file; defaults to 
@@ -500,8 +498,7 @@ def register(fixed_file, moving_file_dir, flip=False,
         # to truncate part of labels
         truncation = settings["truncate_labels"] if truncate else None
         labels_trans = _transform_labels(
-            transformix_filter, labels_img, truncation=truncation, 
-            flip=flip)
+            transformix_filter, labels_img, truncation=truncation)
         print(labels_trans.GetSpacing())
         # WORKAROUND: labels img floating point vals may be more rounded 
         # than transformed moving img for some reason; assume transformed 
@@ -1591,7 +1588,7 @@ def main():
         # "new_atlas" registers similarly but outputs new atlas files
         new_atlas = reg is config.RegisterTypes.NEW_ATLAS
         register(
-            *config.filenames[0:2], flip=flip, name_prefix=config.prefix, 
+            *config.filenames[:2], name_prefix=config.prefix,
             new_atlas=new_atlas, show_imgs=show)
     
     elif reg is config.RegisterTypes.GROUP:

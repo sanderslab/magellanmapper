@@ -186,7 +186,6 @@ class RegisterSettings(profiles.SettingsDict):
             # more aggressive parameters for finer tuning
             "finer": {
                 "bspline_iter_max": "512",
-                "truncate_labels": (None, (0.2, 1.0), (0.45, 1.0)),
                 "holes_area": 5000,
             },
 
@@ -580,6 +579,11 @@ class RegisterSettings(profiles.SettingsDict):
             # save intermediate steps where supported
             "savesteps": {
                 "labels_edge": {RegKeys.SAVE_STEPS: True}
+            },
+
+            # crop ventral and posterior regions
+            "cropventropost": {
+                "truncate_labels": (None, (0.2, 1.0), (0.45, 1.0)),
             },
 
             # crop anterior region of labels during single registration

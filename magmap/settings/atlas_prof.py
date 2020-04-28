@@ -219,7 +219,16 @@ class RegisterSettings(profiles.SettingsDict):
                     "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"],
             },
 
-            # test no iterations
+            # test registration function with all registrations turned off
+            "testreg": {
+                "translation_iter_max": "0",  # need at least one reg
+                "affine_iter_max": None,
+                "bspline_iter_max": None,
+                "curate": False,
+            },
+
+            # test adding parameter maps for each type of registration
+            # without actually performing any iterations
             "testnoiter": {
                 "translation_iter_max": "0",
                 "affine_iter_max": "0",

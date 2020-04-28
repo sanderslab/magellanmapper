@@ -353,49 +353,57 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
     if not metric_sim:
         metric_sim = settings["metric_similarity"]
     param_map_vector = sitk.VectorOfParameterMap()
+
+    translation_iter_max = settings["translation_iter_max"]
+    if translation_iter_max:
+        # translation to shift and rotate
+        param_map = sitk.GetDefaultParameterMap("translation")
+        param_map["Metric"] = [metric_sim]
+        param_map["MaximumNumberOfIterations"] = [translation_iter_max]
+        param_map_vector.append(param_map)
+
+    affine_iter_max = settings["affine_iter_max"]
+    if affine_iter_max:
+        # affine to sheer and scale
+        param_map = sitk.GetDefaultParameterMap("affine")
+        param_map["Metric"] = [metric_sim]
+        param_map["MaximumNumberOfIterations"] = [affine_iter_max]
+        param_map_vector.append(param_map)
+
+    bspline_iter_max = settings["bspline_iter_max"]
+    if bspline_iter_max:
+        # bspline for non-rigid deformation
+        param_map = sitk.GetDefaultParameterMap("bspline")
+        param_map["Metric"] = [metric_sim, *param_map["Metric"][1:]]
+        param_map["FinalGridSpacingInVoxels"] = [
+            settings["bspline_grid_space_voxels"]]
+        # avoid conflict with voxel spacing
+        del param_map["FinalGridSpacingInPhysicalUnits"]
+        param_map["MaximumNumberOfIterations"] = [bspline_iter_max]
+
+        # fine tune the spacing for multi-resolution registration
+        _config_reg_resolutions(
+            settings["grid_spacing_schedule"], param_map,
+            fixed_img.GetDimension())
+
+        if path is not None and settings["point_based"]:
+            # point-based registration added to b-spline, which takes point sets
+            # found in name_prefix's folder; note that coordinates are from the
+            # originally set fixed and moving images, not after transformation
+            # up to this point
+            fix_pts_path = os.path.join(os.path.dirname(path), "fix_pts.txt")
+            move_pts_path = os.path.join(
+                os.path.dirname(path), "mov_pts.txt")
+            if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
+                metric = list(param_map["Metric"])
+                metric.append("CorrespondingPointsEuclideanDistanceMetric")
+                param_map["Metric"] = metric
+                #param_map["Metric2Weight"] = ["0.5"]
+                elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
+                elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
     
-    # translation to shift and rotate
-    param_map = sitk.GetDefaultParameterMap("translation")
-    param_map["Metric"] = [metric_sim]
-    param_map["MaximumNumberOfIterations"] = [settings["translation_iter_max"]]
-    '''
-    # TESTING: minimal registration
-    param_map["MaximumNumberOfIterations"] = ["0"]
-    '''
-    param_map_vector.append(param_map)
-    
-    # affine to sheer and scale
-    param_map = sitk.GetDefaultParameterMap("affine")
-    param_map["Metric"] = [metric_sim]
-    param_map["MaximumNumberOfIterations"] = [settings["affine_iter_max"]]
-    param_map_vector.append(param_map)
-    
-    # bspline for non-rigid deformation
-    param_map = sitk.GetDefaultParameterMap("bspline")
-    param_map["Metric"] = [metric_sim, *param_map["Metric"][1:]]
-    param_map["FinalGridSpacingInVoxels"] = [
-        settings["bspline_grid_space_voxels"]]
-    del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
-    param_map["MaximumNumberOfIterations"] = [settings["bspline_iter_max"]]
-    _config_reg_resolutions(
-        settings["grid_spacing_schedule"], param_map, fixed_img.GetDimension())
-    if path is not None and settings["point_based"]:
-        # point-based registration added to b-spline, which takes point sets 
-        # found in name_prefix's folder; note that coordinates are from the 
-        # originally set fixed and moving images, not after transformation up 
-        # to this point
-        fix_pts_path = os.path.join(os.path.dirname(path), "fix_pts.txt")
-        move_pts_path = os.path.join(
-            os.path.dirname(path), "mov_pts.txt")
-        if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
-            metric = list(param_map["Metric"])
-            metric.append("CorrespondingPointsEuclideanDistanceMetric")
-            param_map["Metric"] = metric
-            #param_map["Metric2Weight"] = ["0.5"]
-            elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
-            elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
-    
-    param_map_vector.append(param_map)
+        param_map_vector.append(param_map)
+
     elastix_img_filter.SetParameterMap(param_map_vector)
     elastix_img_filter.PrintParameterMap()
     transform = elastix_img_filter.Execute()

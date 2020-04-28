@@ -449,15 +449,13 @@ def register(fixed_file, moving_file_dir, flip=False,
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = sitk_io.replace_sitk_with_numpy(fixed_img, img_np)
     
-    # load moving image, assumed to be atlas
+    # load moving image, assumed to be atlas, and labels, then transform
     moving_file = os.path.join(moving_file_dir, config.RegNames.IMG_ATLAS.value)
     moving_img = sitk.ReadImage(moving_file)
-    
-    # load labels image and match with atlas
     labels_img = sitk.ReadImage(os.path.join(
         moving_file_dir, config.RegNames.IMG_LABELS.value))
-    moving_img, labels_img, _, _ = atlas_refiner.match_atlas_labels(
-        moving_img, labels_img)
+    moving_img = atlas_refiner.transpose_img(moving_img)
+    labels_img = atlas_refiner.transpose_img(labels_img)
     
     def reg(metric):
         # register images and turn off final bspline interpolation to avoid

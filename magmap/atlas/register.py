@@ -493,10 +493,9 @@ def register(fixed_file, moving_file_dir,
         dsc_sample = atlas_refiner.measure_overlap(
             fixed_img_orig, img_moved, transformed_thresh=thresh_mov)
     
-    def make_labels(truncate):
+    def make_labels(truncation=None):
         # apply the same transformation to labels via Transformix, with option
         # to truncate part of labels
-        truncation = settings["truncate_labels"] if truncate else None
         labels_trans = _transform_labels(
             transformix_filter, labels_img, truncation=truncation)
         print(labels_trans.GetSpacing())
@@ -520,19 +519,18 @@ def register(fixed_file, moving_file_dir,
         return labels_trans, transformed_img_cur, dsc
 
     transformed_img_precur = img_moved
-    labels_img_full, img_moved, dsc_sample_curated = make_labels(False)
-    if new_atlas:
-        labels_img = labels_img_full
-    else:
-        labels_img, _, _ = make_labels(True)
-
+    truncate_labels = settings["truncate_labels"]
+    labels_img_full, img_moved, dsc_sample_curated = make_labels()
     imgs_write = {
         config.RegNames.IMG_EXP.value: fixed_img,
         config.RegNames.IMG_ATLAS.value: img_moved,
         config.RegNames.IMG_ATLAS_PRECUR.value: transformed_img_precur,
         config.RegNames.IMG_LABELS.value: labels_img_full,
-        config.RegNames.IMG_LABELS_TRUNC.value: labels_img,
     }
+    if truncate_labels is not None:
+        labels_img_truc, _, _ = make_labels(truncate_labels)
+        imgs_write[config.RegNames.IMG_LABELS_TRUNC.value] = labels_img_truc
+
     if show_imgs:
         # show individual SimpleITK images in default viewer
         for img in imgs_write: sitk.Show(img)

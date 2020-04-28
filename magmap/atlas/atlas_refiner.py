@@ -1235,23 +1235,23 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
         imgs_np, _ = plot_support.transpose_images(
             pre_plane, imgs_np, rev=True)
 
-    # convert back to sitk img and transpose if necessary
     imgs_sitk = (img_atlas, img_labels)
     imgs_sitk_replaced = []
     for img_np, img_sitk in zip(imgs_np, imgs_sitk):
         if img_np is not None:
+            # convert back to sitk img
             img_sitk = sitk_io.replace_sitk_with_numpy(img_sitk, img_np)
             if crop_offset:
                 # shift origin for any cropping
                 img_sitk.SetOrigin(np.add(
                     img_sitk.GetOrigin(), crop_offset[::-1]))
-            if pre_plane is None:
-                # plane settings is for post-processing; 
-                # TODO: check if 90deg rot is nec for yz
-                rotate_num = 1 if config.plane in config.PLANE[1:] else 0
-                if flip: rotate_num += 2
-                img_sitk = transpose_img(
-                    img_sitk, config.plane, rotate_num, flipud=True)
+
+            # plane settings is for post-processing;
+            # TODO: check if 90deg rot is nec for yz
+            rotate_num = 1 if config.plane in config.PLANE[1:] else 0
+            if flip: rotate_num += 2
+            img_sitk = transpose_img(
+                img_sitk, config.plane, rotate_num, flipud=True)
         imgs_sitk_replaced.append(img_sitk)
     img_atlas, img_labels = imgs_sitk_replaced
     

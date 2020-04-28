@@ -146,7 +146,9 @@ class RegisterSettings(profiles.SettingsDict):
         # bilateral pos labels where one half should be made neg for stats
         self["make_far_hem_neg"] = False
 
-        # planar orientation for transposition prior rather than after import
+        # the atlas refiner assumes that the z-axis is sagittal planes; use
+        # this setting to transpose an image to this orientation for
+        # refinement, after which the image will be transposed back
         self["pre_plane"] = None
 
         # labels range given as ``((start0, end0), (start1, end1), ...)``,

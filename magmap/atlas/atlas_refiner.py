@@ -1008,7 +1008,7 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
         rotate: Number of times to rotate by 90 degrees; defaults to None.
         target_size: Size of target image, typically one to which ``img_sitk`` 
             will be registered, in (x,y,z, SimpleITK standard) ordering.
-        flipud: True to flip along the final z-axis for mirrorred axes; 
+        flipud: True to invert the z-axis after transposition;
             defaults to False.
     
     Returns:
@@ -1025,9 +1025,9 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
             plane, [transposed], [spacing, origin])
         transposed = arrs_3d[0]
         spacing, origin = arrs_1d
-        if flipud:
-            # flip along z-axis for mirrored orientations
-            transposed = np.flipud(transposed)
+    if flipud:
+        # invert along z-axis
+        transposed = np.flipud(transposed)
     if rotate:
         # rotate the final output image by 90 deg
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 
@@ -1246,12 +1246,17 @@ def match_atlas_labels(img_atlas, img_labels, flip=False, metrics=None):
                 img_sitk.SetOrigin(np.add(
                     img_sitk.GetOrigin(), crop_offset[::-1]))
 
-            # plane settings is for post-processing;
-            # TODO: check if 90deg rot is nec for yz
-            rotate_num = 1 if config.plane in config.PLANE[1:] else 0
+            # perform any transpositions
+            rotate_num = 0
+            flipud = False
+            if config.plane in config.PLANE[1:]:
+                # TODO: check if hold generally true for these planar transforms
+                rotate_num = 1
+                flipud = True
             if flip: rotate_num += 2
             img_sitk = transpose_img(
-                img_sitk, config.plane, rotate_num, flipud=True)
+                img_sitk, config.plane, rotate_num, flipud=flipud)
+
         imgs_sitk_replaced.append(img_sitk)
     img_atlas, img_labels = imgs_sitk_replaced
     

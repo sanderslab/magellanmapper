@@ -996,24 +996,56 @@ def aggr_smoothing_metrics(df_pxs):
     return df_io.dict_to_data_frame(metrics)
 
 
-def transpose_img(img_sitk, plane, rotate=None, target_size=None, 
-                  flipud=False):
+def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
+                  flipud=None):
     """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
     
     Args:
-        img_sitk: Image in SimpleITK format.
-        plane: One of :attr:``config.PLANES`` elements, specifying the 
+        img_sitk (:obj:`sitk.Image`): Image in SimpleITK format.
+        plane (str): One of :attr:`config.PLANES` elements, specifying the
             planar orientation in which to transpose the image. The current 
-            orientation is taken to be "xy".
-        rotate: Number of times to rotate by 90 degrees; defaults to None.
-        target_size: Size of target image, typically one to which ``img_sitk`` 
-            will be registered, in (x,y,z, SimpleITK standard) ordering.
-        flipud: True to invert the z-axis after transposition;
-            defaults to False.
+            orientation is taken to be "xy". Defaults to None, in which case
+            the value from :attr:`config.plane` will be taken.
+        rotate: Number of times to rotate by 90 degrees; defaults to None, in
+            which case the value will be automatically determined based on
+            :attr:`config.flip[0]` and ``plane``.
+        target_size (List[int]): Size of target image, typically one to which
+            ``img_sitk`` will be registered, in (x,y,z, SimpleITK standard)
+             ordering.
+        flipud (bool): True to invert the z-axis after transposition;
+            defaults to None, in which case it will be based on ``plane``.
     
     Returns:
-        Transposed image in SimpleITK format.
+        :obj:`sitk.Image`: The transposed image. If the original image
+        will undergo no transformations, ``img_sitk`` is simply returned.
+    
     """
+    if plane is None:
+        plane = config.plane
+    rotate_num = rotate
+    if rotate is None:
+        rotate_num = 0
+        if config.flip and config.flip[0]:
+            # "flip" here is a 180 degree rotation
+            rotate_num = 2
+    if plane in config.PLANE[1:]:
+        # assume rotation and inversion based on planar transposition
+        # TODO: check if holds generally true for these planar transforms
+        if rotate is None:
+            rotate_num += 1
+        if flipud is None:
+            flipud = True
+    if flipud is None:
+        flipud = False
+    rotate = rotate_num
+    print("Image transformation settings: plane {}, num of rotations {}, "
+          "target_size {}, z-axis inversion {}"
+          .format(plane, rotate, target_size, flipud))
+    if ((not plane or plane == config.PLANE[0]) and not rotate
+            and target_size is None and not flipud):
+        print("No transformations to apply, skipping")
+        return img_sitk
+
     img = sitk.GetArrayFromImage(img_sitk)
     img_dtype = img.dtype
     spacing = img_sitk.GetSpacing()[::-1]
@@ -1061,15 +1093,13 @@ def transpose_img(img_sitk, plane, rotate=None, target_size=None,
     return transposed
 
 
-def match_atlas_labels(img_atlas, img_labels, flip=None, metrics=None):
+def match_atlas_labels(img_atlas, img_labels, metrics=None):
     """Apply register profile settings to labels and match atlas image 
     accordingly.
     
     Args:
         img_atlas (:obj:`sitk.Image`): Reference image, such as histology.
         img_labels (:obj:`sitk.Image`): Labels image.
-        flip (bool): True to rotate images 180deg around the final z axis; 
-            defaults to None to get the value from :attr:`config.flip[0]`.
         metrics (:obj:`dict`): Dictionary to store metrics; defaults to 
             None, in which case metrics will not be measured.
     
@@ -1082,8 +1112,6 @@ def match_atlas_labels(img_atlas, img_labels, flip=None, metrics=None):
         and ``df_sm_raw``, a data frame of raw smoothing stats, or 
         None if smoothing was not performed.
     """
-    if flip is None:
-        flip = config.flip[0] if config.flip else False
     pre_plane = config.register_settings["pre_plane"]
     mirror = config.register_settings["labels_mirror"]
     is_mirror = mirror and mirror[profiles.RegKeys.ACTIVE]
@@ -1249,15 +1277,7 @@ def match_atlas_labels(img_atlas, img_labels, flip=None, metrics=None):
                     img_sitk.GetOrigin(), crop_offset[::-1]))
 
             # perform any transpositions
-            rotate_num = 0
-            flipud = False
-            if config.plane in config.PLANE[1:]:
-                # TODO: check if hold generally true for these planar transforms
-                rotate_num = 1
-                flipud = True
-            if flip: rotate_num += 2
-            img_sitk = transpose_img(
-                img_sitk, config.plane, rotate_num, flipud=flipud)
+            img_sitk = transpose_img(img_sitk)
 
         imgs_sitk_replaced.append(img_sitk)
     img_atlas, img_labels = imgs_sitk_replaced

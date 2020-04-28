@@ -457,7 +457,7 @@ def register(fixed_file, moving_file_dir, flip=False,
     labels_img = sitk.ReadImage(os.path.join(
         moving_file_dir, config.RegNames.IMG_LABELS.value))
     moving_img, labels_img, _, _ = atlas_refiner.match_atlas_labels(
-        moving_img, labels_img, flip)
+        moving_img, labels_img)
     
     def reg(metric):
         # register images and turn off final bspline interpolation to avoid

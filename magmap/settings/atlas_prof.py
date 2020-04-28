@@ -170,6 +170,10 @@ class RegisterSettings(profiles.SettingsDict):
             RegKeys.DBSCAN_MINPTS: 6,  # min points/samples per cluster
         }
 
+        # the default unit is microns (um); use this factor to convert
+        # atlases in other units to um (eg 1000 for atlases in mm)
+        self["unit_factor"] = None
+
         # ATLAS EDITOR
 
         # downsample images shown in the Atlas Editor to improve performance
@@ -494,6 +498,7 @@ class RegisterSettings(profiles.SettingsDict):
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
                 "crop_to_labels": True,  # much extraneous, unlabeled tissue
                 "smooth": 4,
+                "unit_factor": 1000,
             },
 
             # Profile modifiers to turn off settings. These "no..." profiles

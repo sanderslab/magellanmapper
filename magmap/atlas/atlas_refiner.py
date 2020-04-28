@@ -1305,6 +1305,12 @@ def import_atlas(atlas_dir, show=True, prefix=None):
         os.path.join(atlas_dir, config.RegNames.IMG_ATLAS.value))
     img_labels, _ = sitk_io.read_sitk(
         os.path.join(atlas_dir, config.RegNames.IMG_LABELS.value))
+    unit_factor = config.register_settings["unit_factor"]
+    if unit_factor:
+        # adjust spacing to a different unit
+        print("Adjusing atlas spacing by a factor of", unit_factor)
+        for img in (img_atlas, img_labels):
+            img.SetSpacing(np.multiply(img.GetSpacing(), unit_factor))
     
     # prep export paths
     target_dir = atlas_dir + "_import"

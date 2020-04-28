@@ -1018,7 +1018,7 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
     Returns:
         :obj:`sitk.Image`: The transposed image. If the original image
         will undergo no transformations, ``img_sitk`` is simply returned.
-    
+
     """
     if plane is None:
         plane = config.plane
@@ -1463,11 +1463,13 @@ def measure_overlap(fixed_img, transformed_img, fixed_thresh=None,
             fixed_binary_img, fixed_binary_np)
     transformed_binary_img = sitk.BinaryThreshold(
         transformed_img, transformed_thresh, transformed_thresh_up)
+
+    # match world info in case of slight rounding that might prevent the
+    # filter from executing
+    sitk_io.match_world_info(fixed_binary_img, transformed_binary_img)
     overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
     overlap_filter.Execute(fixed_binary_img, transformed_binary_img)
     total_dsc = overlap_filter.GetDiceCoefficient()
-    #sitk.Show(fixed_binary_img)
-    #sitk.Show(transformed_binary_img)
     print("foreground DSC: {}\n".format(total_dsc))
     return total_dsc
 

@@ -480,11 +480,12 @@ def register(fixed_file, moving_file_dir,
         img_moved, transformix_filter, transform_param_map = reg(metric_sim)
     except RuntimeError:
         libmag.warn("Could not perform registration. Will retry with"
-                    "moving image spacing set to that of the fixed image.")
-        # TODO: consider matching spacing by default since output is same
-        spacing = fixed_img.GetSpacing()
-        moving_img.SetSpacing(spacing)
-        labels_img.SetSpacing(spacing)
+                    "world info (spacing, origin, etc) set to that of the "
+                    "fixed image.")
+        # fall back to simply matching all world info
+        # TODO: consider matching world info by default since output is same
+        sitk_io.match_world_info(fixed_img, moving_img)
+        sitk_io.match_world_info(fixed_img, labels_img)
         img_moved, transformix_filter, transform_param_map = reg(metric_sim)
 
     # overlap stats comparing original and registered samples (eg histology)

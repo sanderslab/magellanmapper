@@ -64,6 +64,25 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     return img_sitk_back
 
 
+def match_world_info(source, target):
+    """Copy world information (eg spacing, origin, direction) from one
+    image object to another.
+
+    This matching is sometimes necessary for slight differences in
+    metadata perhaps from founding that may prevent ITK filters from executing.
+
+    Args:
+        source (:obj:`sitk.Image`): Source object whose relevant metadata
+            will be copied into ``target``.
+        target (:obj:`sitk.Image`): Target object whose corresponding
+            metadata will be overwritten by that of ``source``.
+
+    """
+    target.SetSpacing(source.GetSpacing())
+    target.SetOrigin(source.GetOrigin())
+    target.SetDirection(source.GetDirection())
+
+
 def read_sitk(path):
     """Read an image file into :class:``sitk.Image`` format, checking for 
     alternative supported extensions if necessary.

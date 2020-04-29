@@ -187,6 +187,17 @@ class RegisterSettings(profiles.SettingsDict):
 
         self.profiles = {
 
+            # turn off bspline registrations
+            "nobspline": {
+                "bspline_iter_max": None,
+            },
+
+            # turn off affine and bspline registrations
+            "noaffinebspline": {
+                "affine_iter_max": None,
+                "bspline_iter_max": None,
+            },
+
             # more aggressive parameters for finer tuning
             "finer": {
                 "bspline_iter_max": "512",

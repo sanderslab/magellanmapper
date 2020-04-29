@@ -96,7 +96,7 @@ suffix = None # modifier to existing base path
 #: Tuple[str]: Plane orientations based on the two axes specifying the plane.
 PLANE = ("xy", "xz", "yz")
 plane = None
-vmins = None # cmd-line specified
+vmins = None  # cmd-line specified
 vmaxs = None
 # generated from near_max; overwritten at cmd-line
 vmax_overview = [None]
@@ -137,10 +137,12 @@ proc_type = None
 
 # 2D PLOTTING
 
+
 # custom colormaps in plot_2d
 class Cmaps(Enum):
     CMAP_GRBK_NAME = "Green_black"
     CMAP_RDBK_NAME = "Red_black"
+
 
 # processing type directly in module
 Plot2DTypes = Enum(
@@ -177,14 +179,16 @@ plot_labels = dict.fromkeys(PlotLabels, None)
 # image transformation keys for command-line parsing
 Transforms = Enum(
     "Transforms", (
-        "ROTATE", "FLIP_VERT", "FLIP_HORIZ"
+        "ROTATE",  # rotate
+        "FLIP_VERT",  # invert top to bottom
+        "FLIP_HORIZ",  # invert left to right
     )
 )
 transform = dict.fromkeys(Transforms, None)
 
 # extensions for saving figures
-FORMATS_3D = ("obj", "x3d") # save 3D renderings
-savefig = None # save files using this extension
+FORMATS_3D = ("obj", "x3d")  # save 3D renderings
+savefig = None  # save files using this extension (without period)
 
 
 #: dict: Dictionary mapping function names as lower-case strings to functions.
@@ -252,14 +256,14 @@ rc_params_mpl2_img_interp = {
 # IMAGE VIEWING
 
 no_show = False
-max_scroll = 20 # max speed when scrolling through planes
+max_scroll = 20  # max speed when scrolling through planes
 
 
 # STACK PROCESSING
 
-rescale = None # rescale image
-slice_vals = None # list of slice values to give directly to slice fn
-delay = None # delay time between images
+rescale = None  # rescale image
+slice_vals = None  # list of slice values to give directly to slice fn
+delay = None  # delay time between images
 # max pixels of sub-stacks for stack processing (z, y, x order), which can 
 # be set from command-line and takes precedence over process settings to 
 # allow custom configurations depending on instance type
@@ -371,7 +375,7 @@ BLOBS_KEY = "blobs"
 VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
 VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
 GENOTYPE_KEY = "Geno"
-SUB_SEG_MULT = 100 # labels multiplier for sub-segmentations
+SUB_SEG_MULT = 100  # labels multiplier for sub-segmentations
 REGION_ALL = "all"
 
 # registered image suffix keys for command-line parsing
@@ -381,6 +385,7 @@ RegSuffixes = Enum(
     ]
 )
 reg_suffixes = dict.fromkeys(RegSuffixes, None)
+
 
 class ABAKeys(Enum):
     """Allen Brain Atlas ontology hierarchy keys.
@@ -468,6 +473,7 @@ PATH_ATLAS_IMPORT_METRICS = "stats.csv"
 # common labels
 PATH_COMMON_LABELS = "regions_common.csv"
 
+
 class ItkSnapLabels(Enum):
     """Column names to use for ITK-SNAP description labels.
     
@@ -499,7 +505,7 @@ StatsTypes = Enum(
     ]
 )
 stats_type = None
-seed = 0 # random number generator seed
+seed = 0  # random number generator seed
 
 #: float: measurement unit factor to convert to next larger prefix (eg um to mm)
 unit_factor = 1000.0
@@ -612,12 +618,12 @@ roc = None
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)
 colors = np.array(
-    [[213, 94, 0], # vermillion
-     [0, 114, 178], # blue
-     [204, 121, 167], # reddish purple
-     [230, 159, 0], # orange
-     [86, 180, 233], # sky blue
-     [0, 158, 115], # blullish green
-     [240, 228, 66], # yellow
-     [0, 0, 0]] # black
+    [[213, 94, 0],  # vermillion
+     [0, 114, 178],  # blue
+     [204, 121, 167],  # reddish purple
+     [230, 159, 0],  # orange
+     [86, 180, 233],  # sky blue
+     [0, 158, 115],  # blullish green
+     [240, 228, 66],  # yellow
+     [0, 0, 0]]  # black
 )

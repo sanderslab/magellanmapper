@@ -78,9 +78,16 @@ def match_world_info(source, target):
             metadata will be overwritten by that of ``source``.
 
     """
-    target.SetSpacing(source.GetSpacing())
-    target.SetOrigin(source.GetOrigin())
-    target.SetDirection(source.GetDirection())
+    spacing = source.GetSpacing()
+    origin = source.GetOrigin()
+    direction = source.GetDirection()
+    print("Adjusting spacing from {} to {}, origin from {} to {}, "
+          "direction from {} to {}"
+          .format(target.GetSpacing(), spacing, target.GetOrigin(), origin,
+                  target.GetDirection(), direction))
+    target.SetSpacing(spacing)
+    target.SetOrigin(origin)
+    target.SetDirection(direction)
 
 
 def read_sitk(path):

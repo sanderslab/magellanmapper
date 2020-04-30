@@ -292,28 +292,53 @@ def list_s3_bucket(name, keys=None, prefix=None, suffix=None, versions=False):
     return tot_size, df, df_missing
 
 
+def _show_missing_keys(bucket_name, keys, found_keys):
+    # get keys missing from another sequence of keys
+    missing_keys = [k for k in keys if k not in found_keys]
+    if missing_keys:
+        print("Unable to find these file object(s) in bucket \"{}\" to "
+              "delete:".format(bucket_name))
+        for k in missing_keys:
+            print(k)
+    return missing_keys
+
+
 def load_s3_file(bucket_name, key):
-    """Load a file in AWS S3, retrieving the metadata without the object itself.
+    """Load a file or files in AWS S3, retrieving the metadata without
+    the object itself.
 
     Args:
         bucket_name (str): Name of bucket.
-        key (str): Key within bucket.
+        key (str, List[str}): Key or sequence of keys within bucket.
 
     Returns:
-        :obj:`boto3.resources.factory.s3.Object`: The S3 object if loaded
-        successfully, otherwise None.
+        dict[str, :obj:`boto3.resources.factory.s3.Object`]: Dictionary mapping
+        keys to their corresponding successfully loaded S3 objects.
 
     """
     s3 = boto3.resource("s3")
-    obj = s3.Object(bucket_name, key)
-    try:
-        obj.load()
-        return obj
-    except ClientError as e:
-        print(e)
-        print("Unable to load object at bucket \"{}\", key \"{}\""
-              .format(bucket_name, key))
-    return None
+    bucket = s3.Bucket(bucket_name)
+    if libmag.is_seq(key):
+        # get all objects starting with common part of paths
+        prefix = os.path.commonprefix(key)
+    else:
+        prefix = key
+        key = [key]
+    loaded_objs = {}
+    objs = bucket.objects.filter(Prefix=prefix)
+    for obj in objs:
+        if obj.key in key:
+            # ensure an exact match with a key in the given list
+            try:
+                obj.load()
+                loaded_objs[obj.key] = obj
+            except ClientError as e:
+                print(e)
+                print("Unable to load object at bucket \"{}\", key \"{}\""
+                      .format(bucket_name, obj.key))
+    print()
+    _show_missing_keys(bucket_name, key, loaded_objs.keys())
+    return loaded_objs
 
 
 def download_s3_file(bucket_name, key, out_path=None, dryrun=False):

@@ -417,7 +417,7 @@ def delete_s3_file(bucket_name, key, hard=False, dryrun=False):
 
     Args:
         bucket_name (str): Name of bucket.
-        key (str): Key within bucket.
+        key (str, List[str]): Key or sequence of keys within bucket.
         hard (bool): True to delete all versions associated with the key
             including any delete markers, effectively deleting the
             object on S3 permanently. Defaults to False, in which case
@@ -426,19 +426,29 @@ def delete_s3_file(bucket_name, key, hard=False, dryrun=False):
         dryrun (bool): True to print paths without uploading; defaults to False.
 
     Returns:
-        bool: True if the file was successfully deleted, False if otherwise.
+        List[str]: Sequence of successfully deleted keys.
         For versioned files, all versions of the given object must have
         been deleted without error to return True.
 
     """
     s3 = boto3.resource("s3")
-    print("Deleting file object at bucket \"{}\", key \"{}\" (hard delete {})"
-          .format(bucket_name, key, hard))
+    bucket = s3.Bucket(bucket_name)
+    if libmag.is_seq(key):
+        # get all objects starting with common part of paths
+        prefix = os.path.commonprefix(key)
+    else:
+        prefix = key
+        key = [key]
+    print("Deleting selected file object(s) in bucket \"{}\", prefix \"{}\""
+          " (hard delete {})".format(bucket_name, prefix, hard))
+    deleted_keys = []
     if hard:
-        bucket = s3.Bucket(bucket_name)
-        vers = bucket.object_versions.filter(Prefix=key)
+        # hard delete finds all object versions associated with the keys,
+        # including delete markers, and permanently deletes them
+        vers = bucket.object_versions.filter(Prefix=prefix)
         for ver in vers:
-            if ver.object_key == key:
+            if ver.object_key in key:
+                # ensure an exact match with a key in the given list
                 print("Permanently deleting \"{}\", versionId \"{}\""
                       .format(ver.object_key, ver.id))
                 if dryrun:
@@ -446,22 +456,31 @@ def delete_s3_file(bucket_name, key, hard=False, dryrun=False):
                           .format(ver.object_key))
                 else:
                     ver.delete()
-        return True
+                if ver.object_key not in deleted_keys:
+                    deleted_keys.append(ver.object_key)
     else:
-        obj = s3.Object(bucket_name, key)
-        try:
-            print("Deleting (or setting delete marker for) \"{}\", versionId \"{}\""
-                  .format(obj.key, obj.version_id))
-            if dryrun:
-                print("Deletion of {} set to dry run, so skipping"
-                      .format(obj.key))
-            else:
-                obj.delete()
-            return True
-        except botocore.exceptions.ClientError as e:
-            print(e)
-            print("Could not find key \"{}\" to delete".format(key))
-    return False
+        # default delete, which adds a delete marker for buckets with
+        # versioning or permanently deletes objects if no versioning
+        # obj = bucket.Object(key)
+        objs = bucket.objects.filter(Prefix=prefix)
+        for obj in objs:
+            if obj.key in key:
+                # ensure an exact match
+                try:
+                    print("Deleting (or setting delete marker for) \"{}\""
+                          .format(obj.key))
+                    if dryrun:
+                        print("Deletion of {} set to dry run, so skipping"
+                              .format(obj.key))
+                    else:
+                        obj.delete()
+                    deleted_keys.append(obj.key)
+                except botocore.exceptions.ClientError as e:
+                    print(e)
+                    print("Could not find key \"{}\" to delete".format(key))
+    print()
+    _show_missing_keys(bucket_name, key, deleted_keys)
+    return deleted_keys
 
 
 if __name__ == "__main__":

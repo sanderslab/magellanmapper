@@ -30,6 +30,10 @@ class RegisterSettings(profiles.SettingsDict):
         self["bspline_grid_space_voxels"] = "50"
         self["grid_spacing_schedule"] = None
         self["groupwise_iter_max"] = "1024"
+        # True to prevent artificial edges from entering ROI during smoothing,
+        # but leave False to use area around mask for the registration
+        # (see Elastix manual section 5.4)
+        self["erode_mask"] = False
         self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["point_based"] = False

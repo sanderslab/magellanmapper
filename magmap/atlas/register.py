@@ -316,7 +316,8 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
         param_map["NumberOfResolutions"] = [str(num_res)]
 
 
-def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
+def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
+                 fixed_mask=None, moving_mask=None, erode_mask=False):
     """Register two images to one another using ``SimpleElastix``.
     
     Args:
@@ -328,6 +329,11 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
             reg will be ignored even if set.
         metric_sim (str): Similarity metric; defaults to None to query from
             :attr:`config.register_settings`.
+        fixed_mask (:obj:`sitk.Image`): Mask for ``fixed_img``; defaults
+            to None.
+        moving_mask (:obj:`sitk.Image`): Mask for ``moving_img``; defaults
+            to None.
+        erode_mask (bool): True to erode mask; defaults to False.
     
     Returns:
         :obj:`SimpleITK.Image`, :obj:`sitk.TransformixImageFilter`: Tuple of
@@ -347,6 +353,12 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(fixed_img)
     elastix_img_filter.SetMovingImage(moving_img)
+
+    # add any masks
+    if fixed_mask is not None:
+        elastix_img_filter.SetFixedMask(fixed_mask)
+    if moving_mask is not None:
+        elastix_img_filter.SetMovingMask(moving_mask)
     
     # set up parameter maps for translation, affine, and deformable regs
     settings = config.register_settings
@@ -360,6 +372,8 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
         param_map = sitk.GetDefaultParameterMap("translation")
         param_map["Metric"] = [metric_sim]
         param_map["MaximumNumberOfIterations"] = [translation_iter_max]
+        if erode_mask:
+            param_map["ErodeMask"] = ["true"]
         param_map_vector.append(param_map)
 
     affine_iter_max = settings["affine_iter_max"]
@@ -368,6 +382,8 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
         param_map = sitk.GetDefaultParameterMap("affine")
         param_map["Metric"] = [metric_sim]
         param_map["MaximumNumberOfIterations"] = [affine_iter_max]
+        if erode_mask:
+            param_map["ErodeMask"] = ["true"]
         param_map_vector.append(param_map)
 
     bspline_iter_max = settings["bspline_iter_max"]
@@ -380,6 +396,8 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None):
         # avoid conflict with voxel spacing
         del param_map["FinalGridSpacingInPhysicalUnits"]
         param_map["MaximumNumberOfIterations"] = [bspline_iter_max]
+        if erode_mask:
+            param_map["ErodeMask"] = ["true"]
 
         # fine tune the spacing for multi-resolution registration
         _config_reg_resolutions(
@@ -462,13 +480,19 @@ def register(fixed_file, moving_file_dir,
         moving_file_dir, config.RegNames.IMG_LABELS.value))
     moving_img = atlas_refiner.transpose_img(moving_img)
     labels_img = atlas_refiner.transpose_img(labels_img)
+
+    # TODO: implement mask option
+    fixed_mask = None
+    moving_mask = None
+    erode_mask = settings["erode_mask"]
     
     def reg(metric):
         # register images and turn off final bspline interpolation to avoid
         # overshooting the interpolation for the labels image 
         # (see Elastix manual section 4.3)
         img_reg, transformix = register_duo(
-            fixed_img, moving_img, name_prefix, metric)
+            fixed_img, moving_img, name_prefix, metric, fixed_mask,
+            moving_mask, erode_mask)
         param_map = transformix.GetTransformParameterMap()
         param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
         transformix.SetTransformParameterMap(param_map)
@@ -484,8 +508,13 @@ def register(fixed_file, moving_file_dir,
                     "fixed image.")
         # fall back to simply matching all world info
         # TODO: consider matching world info by default since output is same
-        sitk_io.match_world_info(fixed_img, moving_img)
-        sitk_io.match_world_info(fixed_img, labels_img)
+        imgs = [moving_img, labels_img]
+        if fixed_mask is not None:
+            imgs.append(fixed_mask)
+        if moving_mask is not None:
+            imgs.append(moving_mask)
+        for img in imgs:
+            sitk_io.match_world_info(fixed_img, img)
         img_moved, transformix_filter, transform_param_map = reg(metric_sim)
 
     # overlap stats comparing original and registered samples (eg histology)

@@ -82,10 +82,12 @@ class RegisterSettings(profiles.SettingsDict):
         self["expand_labels"] = None
 
         # atlas and labels rotation by ((angle0, axis0), ...), or None to
-        # avoid rotation, with axis numbers in z,y,x ordering
+        # avoid rotation, where an axis value of 0 is the z-axis, 1 is y, etc
         self["rotate"] = {
             "rotation": None,
-            "resize": False,
+            "resize": False,  # True to keep full image rather than clipping
+            # spline interpolation; 0 for labels (ignored for known labels imgs)
+            "order": 1,
         }
 
         # atlas thresholds for microscopy images

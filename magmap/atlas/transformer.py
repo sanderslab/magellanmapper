@@ -314,6 +314,33 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
     print("time elapsed (s): {}".format(time() - time_start))
 
 
+def rotate_img(roi, rotate=None, order=None):
+    """Rotate an ROI based on atlas profile settings.
+
+    Args:
+        roi (:obj:`np.ndarray`): Region of interst array (z,y,x[,c]).
+        rotate (dict): Dictionary of rotation settings in
+            :class:`magmap.settings.atlas_profile`. Defaults to None
+            to take the value from :attr:`config.register_settings`.
+        order (int): Spline interpolation order; defalts to None to use
+            the value from within ``rotate``. Should be 0 for labels.
+
+    Returns:
+        :obj:`np.ndarray`: The rotated image array.
+
+    """
+    if rotate is None:
+        rotate = config.register_settings["rotate"]
+    if order is None:
+        order = rotate["order"]
+    roi = np.copy(roi)
+    for rot in rotate["rotation"]:
+        print("rotating by", rot)
+        roi = cv_nd.rotate_nd(
+            roi, rot[0], rot[1], order=order, resize=rotate["resize"])
+    return roi
+
+
 def preprocess_img(image5d, preprocs, channel, out_path):
     """Pre-process an image in 3D.
 
@@ -343,12 +370,7 @@ def preprocess_img(image5d, preprocs, channel, out_path):
         elif preproc is profiles.PreProcessKeys.REMAP:
             roi = plot_3d.remap_intensity(roi, channel)
         elif preproc is profiles.PreProcessKeys.ROTATE:
-            rotate = config.register_settings["rotate"]
-            roi = np.copy(roi)
-            for rot in rotate["rotation"]:
-                print("rotating by", rot)
-                roi = cv_nd.rotate_nd(
-                    roi, rot[0], rot[1], order=0, resize=rotate["resize"])
+            roi = rotate_img(roi)
 
     # save to new file
     image5d = importer.roi_to_image5d(roi)

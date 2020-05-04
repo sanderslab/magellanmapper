@@ -317,7 +317,7 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
 
 
 def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
-                 fixed_mask=None, moving_mask=None, erode_mask=False):
+                 fixed_mask=None, moving_mask=None):
     """Register two images to one another using ``SimpleElastix``.
     
     Args:
@@ -333,7 +333,6 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
             to None.
         moving_mask (:obj:`sitk.Image`): Mask for ``moving_img``; defaults
             to None.
-        erode_mask (bool): True to erode mask; defaults to False.
     
     Returns:
         :obj:`SimpleITK.Image`, :obj:`sitk.TransformixImageFilter`: Tuple of
@@ -362,49 +361,40 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
     
     # set up parameter maps for translation, affine, and deformable regs
     settings = config.register_settings
-    if not metric_sim:
-        metric_sim = settings["metric_similarity"]
     param_map_vector = sitk.VectorOfParameterMap()
-
-    translation_iter_max = settings["translation_iter_max"]
-    if translation_iter_max:
-        # translation to shift and rotate
-        param_map = sitk.GetDefaultParameterMap("translation")
-        param_map["Metric"] = [metric_sim]
-        param_map["MaximumNumberOfIterations"] = [translation_iter_max]
+    for key in ("reg_translation", "reg_affine", "reg_bspline"):
+        params = settings[key]
+        if not params: continue
+        max_iter = params["max_iter"]
+        if not max_iter: continue
+        param_map = sitk.GetDefaultParameterMap(params["map_name"])
+        similarity = metric_sim
+        if similarity is None:
+            similarity = params["metric_similarity"]
+        if len(param_map["Metric"]) > 1:
+            param_map["Metric"] = [similarity, *param_map["Metric"][1:]]
+        else:
+            param_map["Metric"] = [similarity]
+        param_map["MaximumNumberOfIterations"] = [max_iter]
+        grid_spacing_sched = params["grid_spacing_schedule"]
+        if grid_spacing_sched:
+            # fine tune the spacing for multi-resolution registration
+            _config_reg_resolutions(
+                grid_spacing_sched, param_map, fixed_img.GetDimension())
+        else:
+            # num of resolutions is automatically set by spacing sched
+            param_map["NumberOfResolutions"] = [params["num_resolutions"]]
+        grid_space_voxels = params["grid_space_voxels"]
+        if grid_space_voxels:
+            param_map["FinalGridSpacingInVoxels"] = [grid_space_voxels]
+            # avoid conflict with voxel spacing
+            if "FinalGridSpacingInPhysicalUnits" in param_map:
+                del param_map["FinalGridSpacingInPhysicalUnits"]
+        erode_mask = params["erode_mask"]
         if erode_mask:
-            param_map["ErodeMask"] = ["true"]
-        param_map_vector.append(param_map)
+            param_map["ErodeMask"] = [erode_mask]
 
-    affine_iter_max = settings["affine_iter_max"]
-    if affine_iter_max:
-        # affine to sheer and scale
-        param_map = sitk.GetDefaultParameterMap("affine")
-        param_map["Metric"] = [metric_sim]
-        param_map["MaximumNumberOfIterations"] = [affine_iter_max]
-        if erode_mask:
-            param_map["ErodeMask"] = ["true"]
-        param_map_vector.append(param_map)
-
-    bspline_iter_max = settings["bspline_iter_max"]
-    if bspline_iter_max:
-        # bspline for non-rigid deformation
-        param_map = sitk.GetDefaultParameterMap("bspline")
-        param_map["Metric"] = [metric_sim, *param_map["Metric"][1:]]
-        param_map["FinalGridSpacingInVoxels"] = [
-            settings["bspline_grid_space_voxels"]]
-        # avoid conflict with voxel spacing
-        del param_map["FinalGridSpacingInPhysicalUnits"]
-        param_map["MaximumNumberOfIterations"] = [bspline_iter_max]
-        if erode_mask:
-            param_map["ErodeMask"] = ["true"]
-
-        # fine tune the spacing for multi-resolution registration
-        _config_reg_resolutions(
-            settings["grid_spacing_schedule"], param_map,
-            fixed_img.GetDimension())
-
-        if path is not None and settings["point_based"]:
+        if path is not None and params["point_based"]:
             # point-based registration added to b-spline, which takes point sets
             # found in name_prefix's folder; note that coordinates are from the
             # originally set fixed and moving images, not after transformation
@@ -419,12 +409,11 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
                 #param_map["Metric2Weight"] = ["0.5"]
                 elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
                 elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
-    
         param_map_vector.append(param_map)
 
     elastix_img_filter.SetParameterMap(param_map_vector)
     elastix_img_filter.PrintParameterMap()
-    transform = elastix_img_filter.Execute()
+    elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
     # prep filter to apply transformation to label files
@@ -482,7 +471,6 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     # TODO: implement mask option
     fixed_mask = None
     moving_mask = None
-    erode_mask = settings["erode_mask"]
 
     # transform and preprocess moving images
 
@@ -521,7 +509,8 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     moving_img = sitk_io.replace_sitk_with_numpy(moving_img, moving_img_np)
     moving_imgs = [moving_img, labels_img]
     if moving_mask is not None:
-        moving_mask = sitk_io.replace_sitk_with_numpy(moving_mask, moving_mask_np)
+        moving_mask = sitk_io.replace_sitk_with_numpy(
+            moving_mask, moving_mask_np)
         moving_imgs.append(moving_mask)
 
     rescale = config.register_settings["rescale"]
@@ -536,22 +525,21 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         # if moving_mask is not None:
         #     moving_mask.SetSpacing(moving_img_spacing)
     
-    def reg(metric):
+    def reg(metric=None):
         # register images and turn off final bspline interpolation to avoid
         # overshooting the interpolation for the labels image 
         # (see Elastix manual section 4.3)
         img_reg, transformix = register_duo(
             fixed_img, moving_img, name_prefix, metric, fixed_mask,
-            moving_mask, erode_mask)
+            moving_mask)
         param_map = transformix.GetTransformParameterMap()
         param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
         transformix.SetTransformParameterMap(param_map)
         return img_reg, transformix, param_map
 
     # perform registration
-    metric_sim = settings["metric_similarity"]
     try:
-        img_moved, transformix_filter, transform_param_map = reg(metric_sim)
+        img_moved, transformix_filter, transform_param_map = reg()
     except RuntimeError:
         libmag.warn("Could not perform registration. Will retry with"
                     "world info (spacing, origin, etc) set to that of the "
@@ -563,7 +551,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
             imgs.append(fixed_mask)
         for img in imgs:
             sitk_io.match_world_info(fixed_img, img)
-        img_moved, transformix_filter, transform_param_map = reg(metric_sim)
+        img_moved, transformix_filter, transform_param_map = reg()
 
     # overlap stats comparing original and registered samples (eg histology)
     print("DSC of original and registered sample images")
@@ -571,6 +559,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     dsc_sample = atlas_refiner.measure_overlap(
         fixed_img_orig, img_moved, transformed_thresh=thresh_mov)
     fallback = settings["metric_sim_fallback"]
+    metric_sim = "default"  # differs depending on reg type
     if fallback and dsc_sample < fallback[0]:
         print("reg DSC below threshold of {}, will re-register using {} "
               "similarity metric".format(*fallback))

@@ -10,6 +10,25 @@ from magmap.settings import profiles
 from magmap.settings.profiles import RegKeys
 
 
+class RegParamMap(dict):
+    """Registration parameter map dictionary initialized with required keys."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(self)
+        self["map_name"] = None
+        self["metric_similarity"] = "AdvancedMattesMutualInformation"
+        # fallback to alternate similarity metric if below DSC threshold as
+        # given by (threshold, alternate_metric)
+        self["max_iter"] = None
+        self["grid_space_voxels"] = None
+        self["num_resolutions"] = "4"
+        self["grid_spacing_schedule"] = None
+        # True to prevent artificial edges from entering ROI during smoothing,
+        # but leave False to use area around mask for the registration
+        # (see Elastix manual section 5.4)
+        self["erode_mask"] = None
+        self["point_based"] = False
+
+
 class RegisterSettings(profiles.SettingsDict):
 
     def __init__(self, *args, **kwargs):
@@ -18,27 +37,34 @@ class RegisterSettings(profiles.SettingsDict):
 
         # REGISTRATION SETTINGS
 
-        # registration main similarity metric
-        self["metric_similarity"] = "AdvancedMattesMutualInformation"
-        # fallback to alternate similarity metric if below DSC threshold as
-        # given by (threshold, alternate_metric)
-        self["metric_sim_fallback"] = None
+        # translation transform
+        reg_translation = RegParamMap()
+        reg_translation["map_name"] = "translation"
+        reg_translation["max_iter"] = "2048"
+        # reg_translation["num_resolutions"] = "8"
+        self["reg_translation"] = reg_translation
 
-        self["translation_iter_max"] = "2048"
-        self["affine_iter_max"] = "1024"
-        self["bspline_iter_max"] = "256"
-        self["bspline_grid_space_voxels"] = "50"
-        self["grid_spacing_schedule"] = None
+        # affine/scaling transform
+        reg_affine = RegParamMap()
+        reg_affine["map_name"] = "affine"
+        reg_affine["max_iter"] = "1024"
+        self["reg_affine"] = reg_affine
+
+        # b-spline transform
+        reg_bspline = RegParamMap()
+        reg_bspline["map_name"] = "bspline"
+        reg_bspline["max_iter"] = "256"
+        reg_bspline["grid_space_voxels"] = "50"
+        self["reg_bspline"] = reg_bspline
+
+        # similarity metric fallback given as ``(threshold_dsc, metric)``,
+        # where metric will be used if the DSC falls below the threshold
+        self["metric_sim_fallback"] = None
         self["groupwise_iter_max"] = "1024"
-        # True to prevent artificial edges from entering ROI during smoothing,
-        # but leave False to use area around mask for the registration
-        # (see Elastix manual section 5.4)
-        self["erode_mask"] = False
         self["resize_factor"] = 0.7
         self["preprocess"] = False
+        # True to use point-based registration during b-spline reg
         self["point_based"] = False
-        self["smooth"] = None  # smooth labels
-        self["crop_to_labels"] = False  # crop labels and atlas to non-0 labels
         self["curate"] = True  # carve image; in-paint if generating atlas
 
         # erase labels outside of ((x_start, x_end), (y_start, ...) ...)
@@ -53,6 +79,9 @@ class RegisterSettings(profiles.SettingsDict):
         # metrics; False to use only for metrics and cropping, etc
         # start (float): fractions of the total planes (0-1); use -1 to
         # set automatically, None to turn off the entire setting group
+
+        self["smooth"] = None  # smooth labels
+        self["crop_to_labels"] = False  # crop labels and atlas to non-0 labels
 
         # mirror labels onto the unlabeled hemisphere
         self["labels_mirror"] = {
@@ -201,34 +230,50 @@ class RegisterSettings(profiles.SettingsDict):
 
             # turn off bspline registrations
             "nobspline": {
-                "bspline_iter_max": None,
+                "reg_bspline": None,
             },
 
             # turn off affine and bspline registrations
             "noaffinebspline": {
-                "affine_iter_max": None,
-                "bspline_iter_max": None,
+                "reg_affine": None,
+                "reg_bspline": None,
             },
 
             # more aggressive parameters for finer tuning
             "finer": {
-                "bspline_iter_max": "512",
+                "reg_bspline": {"max_iter": "512"},
                 "holes_area": 5000,
             },
 
-            # Normalized Correlation Coefficient similarity metric for registration
+            # Normalized Correlation Coefficient similarity metric for
+            # registration
             "ncc": {
-                "metric_similarity": "AdvancedNormalizedCorrelation",
+                "reg_translation": {
+                    "metric_similarity": "AdvancedNormalizedCorrelation"},
+                "reg_affine": {
+                    "metric_similarity": "AdvancedNormalizedCorrelation"},
+                "reg_bspline": {
+                    "metric_similarity": "AdvancedNormalizedCorrelation",
+                    "grid_space_voxels": "60",
+                },
                 # fallback to MMI since it has been rather reliable
                 "metric_sim_fallback":
                     (0.85, "AdvancedMattesMutualInformation"),
-                "bspline_grid_space_voxels": "60",
             },
 
             # groupwise registration
             "groupwise": {
                 # larger bspline voxels to avoid over deformation of internal
                 # structures
+                "reg_bspline": {
+                    "grid_space_voxels": "130",
+                    # increased num of resolutions with anisotropic size
+                    # (x0, y0, z0, x1, y1, z1, x2, ...) and overall increased
+                    # spacing since it appears to improve internal alignment
+                    "grid_spacing_schedule": [
+                        "8", "8", "4", "4", "4", "2", "2", "2", "1",
+                        "1", "1", "1"],
+                },
                 "bspline_grid_space_voxels": "130",
 
                 # need to empirically determine
@@ -239,27 +284,22 @@ class RegisterSettings(profiles.SettingsDict):
                 # first image since this tissue may be necessary to register
                 # to other images that contain this variable region
                 "extend_borders": ((60, 180), (0, 200), (20, 110)),
-
-                # increased num of resolutions with overall increased spacing
-                # schedule since it appears to improve internal alignment
-                "grid_spacing_schedule": [
-                    "8", "8", "4", "4", "4", "2", "2", "2", "1", "1", "1", "1"],
             },
 
             # test registration function with all registrations turned off
             "testreg": {
-                "translation_iter_max": "0",  # need at least one reg
-                "affine_iter_max": None,
-                "bspline_iter_max": None,
+                "reg_translation": {"max_iter": "0"},  # need at least one reg
+                "reg_affine": None,
+                "reg_bspline": None,
                 "curate": False,
             },
 
             # test adding parameter maps for each type of registration
             # without actually performing any iterations
             "testnoiter": {
-                "translation_iter_max": "0",
-                "affine_iter_max": "0",
-                "bspline_iter_max": "0",
+                "reg_translation": {"max_iter": "0"},
+                "reg_affine": {"max_iter": "0"},
+                "reg_bspline": {"max_iter": "0"},
                 "curate": False,
             },
 

@@ -435,9 +435,8 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
     return transformed_img, transformix_img_filter
 
 
-def register(fixed_file, moving_file_dir,
-             show_imgs=True, write_imgs=True, name_prefix=None, 
-             new_atlas=False):
+def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
+             name_prefix=None, new_atlas=False):
     """Register an atlas and associated labels to a sample image 
     using the SimpleElastix library.
     
@@ -465,7 +464,8 @@ def register(fixed_file, moving_file_dir,
     chl = 0 if config.channel is None else config.channel
     fixed_img = _load_numpy_to_sitk(fixed_file, channel=chl)
     
-    # preprocessing; store original fixed image for overlap measure
+    # preprocess fixed image; store original fixed image for overlap measure
+    # TODO: assume fixed image is preprocessed before starting this reg?
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
         img_np = sitk.GetArrayFromImage(fixed_img)
@@ -478,13 +478,41 @@ def register(fixed_file, moving_file_dir,
     moving_img = sitk.ReadImage(moving_file)
     labels_img = sitk.ReadImage(os.path.join(
         moving_file_dir, config.RegNames.IMG_LABELS.value))
-    moving_img = atlas_refiner.transpose_img(moving_img)
-    labels_img = atlas_refiner.transpose_img(labels_img)
 
     # TODO: implement mask option
     fixed_mask = None
     moving_mask = None
     erode_mask = settings["erode_mask"]
+
+    # transform and preprocess moving images
+
+    # transpose moving images
+    moving_img = atlas_refiner.transpose_img(moving_img)
+    labels_img = atlas_refiner.transpose_img(labels_img)
+
+    # get Numpy arrays of moving images for preprocessing
+    moving_img_np = sitk.GetArrayFromImage(moving_img)
+    labels_img_np = sitk.GetArrayFromImage(labels_img)
+    moving_mask_np = None
+    if moving_mask is not None:
+        moving_mask_np = sitk.GetArrayFromImage(moving_mask)
+
+    rotate = config.register_settings["rotate"]
+    if rotate and rotate["rotation"] is not None:
+        # more granular 3D rotation than in prior transposition
+        moving_img_np = transformer.rotate_img(moving_img_np, rotate)
+        labels_img_np = transformer.rotate_img(labels_img_np, rotate, 0)
+        if moving_mask_np is not None:
+            moving_mask_np = transformer.rotate_img(moving_mask_np, rotate, 0)
+
+    # convert images back to sitk format
+    labels_img = sitk_io.replace_sitk_with_numpy(labels_img, labels_img_np)
+    moving_img = sitk_io.replace_sitk_with_numpy(moving_img, moving_img_np)
+    moving_imgs = [moving_img, labels_img]
+    if moving_mask is not None:
+        moving_mask = sitk_io.replace_sitk_with_numpy(moving_mask, moving_mask_np)
+        moving_imgs.append(moving_mask)
+
     
     def reg(metric):
         # register images and turn off final bspline interpolation to avoid
@@ -508,11 +536,9 @@ def register(fixed_file, moving_file_dir,
                     "fixed image.")
         # fall back to simply matching all world info
         # TODO: consider matching world info by default since output is same
-        imgs = [moving_img, labels_img]
+        imgs = list(moving_imgs)
         if fixed_mask is not None:
             imgs.append(fixed_mask)
-        if moving_mask is not None:
-            imgs.append(moving_mask)
         for img in imgs:
             sitk_io.match_world_info(fixed_img, img)
         img_moved, transformix_filter, transform_param_map = reg(metric_sim)

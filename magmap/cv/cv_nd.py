@@ -598,7 +598,7 @@ def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):
 
 
 def crop_to_labels(img_labels, img_ref, mask=None, dil_size=2, padding=5):
-    """Crop images to match labels volume.
+    """Crop images to match the extent of a labels volume.
     
     Both labels and reference images will be cropped to match the extent of 
     labels with a small padding region. Reference image pixels outside 
@@ -610,7 +610,8 @@ def crop_to_labels(img_labels, img_ref, mask=None, dil_size=2, padding=5):
             of ``img_labels``.
         mask (:obj:`np.ndarray`, optional): Binary array of same shape as 
             that of ``img_labels`` to use in place of it for determining 
-            the extent of cropping. Defaults to None.
+            the extent of cropping. Defaults to None. Will not be used
+            to mask out signal within the cropped in volume.
         dil_size (int, optional): Size of structuring element for dilating 
             the crop region; defaults to 2.
         padding (int, optional): Size of padding around the mask 

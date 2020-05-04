@@ -81,6 +81,10 @@ class RegisterSettings(profiles.SettingsDict):
         # to avoid expansion
         self["expand_labels"] = None
 
+        # crop atlas and intensity to fit a mask that excludes this sequence
+        # of labels; note that labels within this cropped region will remain
+        self["crop_out_labels"] = None
+
         # atlas and labels rotation by ((angle0, axis0), ...), or None to
         # avoid rotation, where an axis value of 0 is the z-axis, 1 is y, etc
         self["rotate"] = {

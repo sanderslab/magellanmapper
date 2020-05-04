@@ -497,6 +497,17 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     if moving_mask is not None:
         moving_mask_np = sitk.GetArrayFromImage(moving_mask)
 
+
+    crop_out_labels = config.register_settings["crop_out_labels"]
+    if crop_out_labels is not None:
+        # crop moving images to extent without given labels; note that
+        # these labels may still exist within the cropped image
+        mask = np.zeros_like(labels_img_np, dtype=np.uint8)
+        mask[labels_img_np != 0] = 1
+        mask[np.isin(labels_img_np, crop_out_labels)] = 0
+        labels_img_np, moving_img_np, _ = cv_nd.crop_to_labels(
+            labels_img_np, moving_img_np, mask, 0, 0)
+
     rotate = config.register_settings["rotate"]
     if rotate and rotate["rotation"] is not None:
         # more granular 3D rotation than in prior transposition

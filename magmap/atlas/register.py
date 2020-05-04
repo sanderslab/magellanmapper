@@ -524,6 +524,17 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         moving_mask = sitk_io.replace_sitk_with_numpy(moving_mask, moving_mask_np)
         moving_imgs.append(moving_mask)
 
+    rescale = config.register_settings["rescale"]
+    if rescale:
+        # rescale images as a factor of their spacing in case the scaling
+        # transformation in the affine-based registration is insufficient
+        moving_img_spacing = np.multiply(moving_img.GetSpacing(), rescale)
+        for img in moving_imgs:
+            img.SetSpacing(moving_img_spacing)
+        # moving_img.SetSpacing(moving_img_spacing)
+        # labels_img.SetSpacing(moving_img_spacing)
+        # if moving_mask is not None:
+        #     moving_mask.SetSpacing(moving_img_spacing)
     
     def reg(metric):
         # register images and turn off final bspline interpolation to avoid

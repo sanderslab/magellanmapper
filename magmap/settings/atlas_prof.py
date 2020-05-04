@@ -100,6 +100,8 @@ class RegisterSettings(profiles.SettingsDict):
 
         self["target_size"] = None  # x,y,z in exp orientation
 
+        self["rescale"] = None  # rescaling factor
+
         # carving and max size of small holes for removal, respectively
         self["carve_threshold"] = None
         self["holes_area"] = None

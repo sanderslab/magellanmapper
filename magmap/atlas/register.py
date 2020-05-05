@@ -485,7 +485,6 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     if moving_mask is not None:
         moving_mask_np = sitk.GetArrayFromImage(moving_mask)
 
-
     crop_out_labels = config.register_settings["crop_out_labels"]
     if crop_out_labels is not None:
         # crop moving images to extent without given labels; note that
@@ -578,32 +577,44 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         # than transformed moving img for some reason; assume transformed 
         # labels and moving image should match exactly, so replace labels 
         # with moving image's transformed spacing
-        labels_trans.SetSpacing(transformed_img_precur.GetSpacing())
-        print(labels_trans.GetSpacing())
-        print(fixed_img_orig.GetSpacing(), transformed_img_precur.GetSpacing())
+        labels_trans.SetSpacing(img_moved.GetSpacing())
         dsc = None
-        transformed_img_cur = transformed_img_precur
+        labels_trans_cur = None
+        transformed_img_cur = None
         if settings["curate"]:
-            labels_trans, transformed_img_cur = _curate_img(
-                fixed_img_orig, labels_trans, imgs=[transformed_img_precur], 
+            labels_trans_cur, transformed_img_cur = _curate_img(
+                fixed_img_orig, labels_trans, imgs=[img_moved],
                 inpaint=new_atlas)
             print("DSC of original and registered sample images after curation")
             dsc = atlas_refiner.measure_overlap(
                 fixed_img_orig, transformed_img_cur, 
                 transformed_thresh=settings["atlas_threshold"])
-        return labels_trans, transformed_img_cur, dsc
+        return labels_trans, labels_trans_cur, transformed_img_cur, dsc
 
-    transformed_img_precur = img_moved
-    truncate_labels = settings["truncate_labels"]
-    labels_img_full, img_moved, dsc_sample_curated = make_labels()
+    # apply same transformation to labels, +/- curation to carve the moving
+    # image where the fixed image does not exist or in-paint where it does
+    labels_moved, labels_moved_cur, img_moved_cur, dsc_sample_cur = (
+        make_labels())
+    img_moved_precur = None
+    if img_moved_cur is not None:
+        # save pre-curated moved image
+        img_moved_precur = img_moved
+        img_moved = img_moved_cur
+    labels_moved_precur = None
+    if labels_moved_cur is not None:
+        # save pre-curated moved labels
+        labels_moved_precur = labels_moved
+        labels_moved = labels_moved_cur
     imgs_write = {
         config.RegNames.IMG_EXP.value: fixed_img,
         config.RegNames.IMG_ATLAS.value: img_moved,
-        config.RegNames.IMG_ATLAS_PRECUR.value: transformed_img_precur,
-        config.RegNames.IMG_LABELS.value: labels_img_full,
+        config.RegNames.IMG_ATLAS_PRECUR.value: img_moved_precur,
+        config.RegNames.IMG_LABELS.value: labels_moved,
+        config.RegNames.IMG_LABELS_PRECUR.value: labels_moved_precur,
     }
+    truncate_labels = settings["truncate_labels"]
     if truncate_labels is not None:
-        labels_img_truc, _, _ = make_labels(truncate_labels)
+        labels_img_truc = make_labels(truncate_labels)[1]
         imgs_write[config.RegNames.IMG_LABELS_TRUNC.value] = labels_img_truc
 
     if show_imgs:
@@ -631,7 +642,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     
     # compare original atlas with registered labels taken as a whole
     dsc_labels = atlas_refiner.measure_overlap_combined_labels(
-        fixed_img_orig, labels_img_full)
+        fixed_img_orig, labels_moved)
     
     # measure compactness of fixed image
     fixed_img_orig_np = sitk.GetArrayFromImage(fixed_img_orig)
@@ -647,7 +658,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         config.AtlasMetrics.CONDITION: [np.nan], 
         config.AtlasMetrics.SIMILARITY_METRIC: [metric_sim],
         config.AtlasMetrics.DSC_ATLAS_SAMPLE: [dsc_sample], 
-        config.AtlasMetrics.DSC_ATLAS_SAMPLE_CUR: [dsc_sample_curated], 
+        config.AtlasMetrics.DSC_ATLAS_SAMPLE_CUR: [dsc_sample_cur],
         config.AtlasMetrics.DSC_ATLAS_LABELS: [dsc_labels], 
         config.SmoothingMetrics.COMPACTNESS: [compactness],
     }

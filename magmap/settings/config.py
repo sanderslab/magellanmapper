@@ -349,6 +349,7 @@ class RegNames(Enum):
     IMG_HEAT_MAP = "heat.mhd"
     IMG_ATLAS_EDGE = "atlasEdge.mhd"
     IMG_ATLAS_LOG = "atlasLoG.mhd"
+    IMG_LABELS_PRECUR = "annotationPrecur.mhd"
     IMG_LABELS_TRUNC = "annotationTrunc.mhd"
     IMG_LABELS_EDGE = "annotationEdge.mhd"
     IMG_LABELS_DIST = "annotationDist.mhd"

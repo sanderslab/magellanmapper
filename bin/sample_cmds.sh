@@ -95,7 +95,16 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # VIEW ORIGINAL IMAGE, BUILD TRUTH SETS
 
 # view original image
-#./run.py --img "$IMG" --microscope "$MIC" --offset 800,1150,250 --size 70,70,30 -v #--proc load #--savefig pdf
+# - use offset and size to start at a particular ROI position
+# - use the load flag to load previously saved whole-image blobs
+# - use savefig to automatically save ROI Editor figures
+#./run.py --img "$IMG" --microscope "$MIC" #--offset 800,1150,250 --size 70,70,30 -v #--proc load #--savefig pdf
+
+# view with overlaid registered labels
+# - reg suffixes are given as `atlas annotation borders` to load, where the
+#   atlas defaults to the main image (IMG)
+# - alphas are the opacities for the main image, labels, and region highlighter
+#./run.py --img "$IMG" --microscope lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes annotation=annotation.mhd --alphas 1,0.5,0.4
 
 # detect blobs within a sub-image and export the sub-image for portability
 #./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "$MIC" --saveroi
@@ -117,6 +126,14 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # view annotation (ie segmentation) truth set
 #./run.py --img "$IMG" -v --channel "$CHL" --proc load --subimg_offset "$OFFSET" --subimg_size "$SIZE" --microscope "lightsheet_contrast" --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"
+
+
+# EXPORT IMAGES
+
+# export animation of image and registered atlas labels through all z-planes
+# - slice is given as `start,stop,step`, where none = all
+# - prefix is for images registered to a different image path
+#./run_cli.py --img "$IMG_RESIZED" --proc animated --slice none,none,1 --microscope atlas --savefig mp4 --prefix "$IMG" --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd
 
 # export ROI after detections
 #./run.py --img "$IMG" -v --channel "$CHL" --proc export_rois --savefig pdf --truth_db view

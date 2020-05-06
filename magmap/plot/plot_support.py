@@ -53,16 +53,13 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
         nan_color (str): String of color to use for NaN values; defaults to
-            None to use "black".
+            None to leave these pixels empty.
         ignore_invis (bool): True to give None instead of an ``AxesImage``
             object that would be invisible; defaults to False.
     
     Returns:
         List of ``AxesImage`` objects.
     """
-    if not nan_color:
-        # default to black for NaN values
-        nan_color = "black"
     # assume that 3D array has a channel dimension
     multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
     img = []
@@ -91,7 +88,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
         cmap = None if cmaps is None else cmaps[chl]
         norm = None if norms is None else norms[chl]
         cmap = colormaps.get_cmap(cmap)
-        if cmap is not None:
+        if cmap is not None and nan_color:
             # given color for masked values such as NaNs to distinguish from 0
             cmap.set_bad(color=nan_color)
         # get setting corresponding to the channel index, or use the value

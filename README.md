@@ -1,4 +1,5 @@
 # MagellanMapper
+
 MagellanMapper is a graphical imaging informatics suite and pipeline for high-throughput, automated analysis of whole specimen. Its design philosophy is to make the raw 3D images as accessible as possible, simplify annotation from nuclei to atlases, and scale from the laptop to the cloud in cross-platform environments.
 
 ![ROI Editor and Atlas Editor screenshots](https://user-images.githubusercontent.com/1258953/77386821-c1c3ac80-6dc6-11ea-92eb-e32deeea6e5d.png)
@@ -115,77 +116,6 @@ See `bin/pipelines.sh` for additional sample commands for common scenarios, such
 
 ### Server
 
-#### Dependencies
-
-- `awscli`: AWS Command Line Interface for basic up/downloading of images and processed files S3. Install via Pip.
-- `boto3`: AWS Python client to manage EC2 instances.
-
-#### Launch a server
-
-You can launch a standard server, deploy MagellanMapper code, and run a pipeline. Note that typically login with graphical support (eg via `vncserver`) is required during installation for Mayavi and stitching in the standard setup, but you can alternatively run a lightweight install without GUI (see above).
-
-If you already have an AMI with MagellanMapper installed, you can launch a new instance of it via MagellanMapper:
-
-```
-python -u -m magmap.io.aws --ec2_start "Name" "ami-xxxxxxxx" "m5.4xlarge" \
-  "subnet-xxxxxxxx" "sg-xxxxxxxx" "UserName" 50,2000 [2]
-```
-
-- `Name` is your name of choice
-- `ami` is your previously saved AMI with MagellanMapper
-- `m5.4xlarge` is the instance type, which can be changed depending on your performance requirements
-- `subnet` is your subnet group
-- `sg` is your security group
-- `UserName` is the user name whose security key will be uploaded for SSH access
-- `50,2000` creates a 50GB swap and 2000GB data drive, which can be changed depending on your needs
-- `2` starts two instances (optional, defaults to 1)
-
-#### Setup server with MagellanMapper
-
-Deploy the MagellanMapper folder and supporting files:
-
-```
-bin/deploy.sh -p [path_to_your_aws_pem] -i [server_ip] \
-    -d [optional_file0] -d [optional_file1]
-```
-
-- This script by default will:
-  - Archive the MagellanMapper Git directory and `scp` it to the server, using your `.pem` file to access it
-  - Download and install ImageJ/Fiji onto the server
-  - Update Fiji and install BigStitcher for image stitching
-- To only update an existing MagellanMapper directory on the server, add `-u`
-- To add multiple files or folders such as `.aws` credentials, use the `-d` option as many times as you'd like
-
-Setup drives on a new server instance:
-
-```
-bin/setup_server.sh -d [path_to_data_device] -w [path_to_swap_device] \
-    -f [size_of_swap_file] -u [username]
-```
-
-- Format and mount data and swap drives
-- Create swap files
-
-#### Run MagellanMapper on server
-
-Log into your instance and run the MagellanMapper pipeline of choice.
-
-- SSH into your server instance, typically with port forwarding to allow VNC access:
-
-```
-ssh -L 5900:localhost:5900 -i [your_aws_pem] ec2-user@[your_server_ip]
-```
-
-- If necessary, start a graphical server (eg `vncserver`) to run ImageJ/Fiji for stitching or for Mayavi dependency setup
-- Setup drives: `bin/setup_server.sh -s`, where the `-s` flag can be removed on subsequent launches if the drives are already initialized
-- If MagellanMapper has not been installed, install it with `bin/setup_conda.sh` as above
-- Activate the Conda environment set up during installation
-- Run a pipeline, such as this command to fully process a multi-tile image with tile stitching, import to Numpy array, and cell detection, with AWS S3 import/export and Slack notifications along the way, followed by server clean-up/shutdown:
-
-```
-bin/process_nohup.sh -d "out_experiment.txt" -o -- bin/pipelines.sh \
-  -i "/data/HugeImage.czi" -a "my/s3/bucket" -n \
-  "https://hooks.slack.com/services/my/incoming/webhook" -p full -c
-```
+You can launch a standard server, deploy MagellanMapper code, and run a pipeline. See [tools for AWS cloud management](cloud_aws.sh) for more details. 
 
 Author: David Young, 2017, 2020, Stephan Sanders Lab

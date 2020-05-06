@@ -519,10 +519,6 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         moving_img_spacing = np.multiply(moving_img.GetSpacing(), rescale)
         for img in moving_imgs:
             img.SetSpacing(moving_img_spacing)
-        # moving_img.SetSpacing(moving_img_spacing)
-        # labels_img.SetSpacing(moving_img_spacing)
-        # if moving_mask is not None:
-        #     moving_mask.SetSpacing(moving_img_spacing)
     
     def reg(metric=None):
         # register images and turn off final bspline interpolation to avoid

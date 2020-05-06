@@ -482,7 +482,9 @@ class ROIEditor:
                     # invert region selection image to opacify areas outside
                     # of the region; if in MIP mode, will still only show 
                     # lowest plane
-                    imgs[img_i] = np.invert(imgs[img_i]).astype(float)
+                    region = np.invert(imgs[img_i]).astype(float)
+                    region[region == 0] = np.nan
+                    imgs[img_i] = region
             return asp, ori, {
                 "imgs": imgs, "cmaps": cmaps, "vmins": vmins, "vmaxs": vmaxs,
                 "alphas": alphas}

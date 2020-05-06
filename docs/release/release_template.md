@@ -14,7 +14,7 @@ Atlas refinement
 
 Atlas registration
 
-Nuclei detection
+Volumetric image processing
 
 I/O
 

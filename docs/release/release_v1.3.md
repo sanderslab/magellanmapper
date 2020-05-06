@@ -2,7 +2,11 @@
 
 ## MagellanMapper v1.3.0
 
+This release brings many changes to streamline the command-line interface (CLI). Please note that several options have changed, which may require updating custom scripts. The sample commands script (`bin/sample_cmds.sh`) has been updated to illustrate this usage.
 
+Summary of usage changes:
+- All command-line based entry points can be accessed through the CLI, which now has a run script named `run_cli.py`
+- Atlases should be fully imported before image registration, and the atlas's profile should no longer be typically given when registering an image
 
 ### Changes
 

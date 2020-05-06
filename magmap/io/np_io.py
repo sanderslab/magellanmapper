@@ -237,19 +237,22 @@ def setup_images(path=None, series=None, offset=None, size=None,
             atlas_suffix = config.RegNames.IMG_ATLAS.value
             print("main image is not set, falling back to registered "
                   "image with suffix", atlas_suffix)
+        # use prefix to get images registered to a different image, eg a
+        # downsampled version, or a different version of registered images
+        path = config.prefix if config.prefix else path
         if path and atlas_suffix is not None:
-            # will take the place of any previously loaded image5d
-            config.image5d = sitk_io.read_sitk_files(
-                path, reg_names=atlas_suffix)[None]
-            config.image5d_io = config.LoadIO.SITK
+            try:
+                # will take the place of any previously loaded image5d
+                config.image5d = sitk_io.read_sitk_files(
+                    path, reg_names=atlas_suffix)[None]
+                config.image5d_io = config.LoadIO.SITK
+            except FileNotFoundError as e:
+                print(e)
         
         annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
         if annotation_suffix is not None:
-            # load labels image, set up scaling, and load labels file, 
-            # using prefix for registered files if given
+            # load labels image, set up scaling, and load labels file
             try:
-                # TODO: consider also using prefix for atlas suffix
-                path = config.prefix if config.prefix else path
                 # TODO: need to support multichannel labels images
                 config.labels_img = sitk_io.read_sitk_files(
                     path, reg_names=annotation_suffix)

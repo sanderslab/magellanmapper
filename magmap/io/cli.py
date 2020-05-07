@@ -290,8 +290,8 @@ def main(process_args_only=False):
         choices=libmag.enum_names_aslist(config.Plot2DTypes),
         help="2D plot task; see config.Plot2DTypes")
     parser.add_argument(
-        "--reg_profile",
-        help="Register/atlas profile, which can be separated by underscores "
+        "--atlas_profile",
+        help="Atlas profile, which can be separated by underscores "
              "for multiple profiles and given as paths to custom profiles "
              "in YAML format. See docs/settings.md for more details.")
     parser.add_argument("--slice", help="Slice given as start,stop,step")
@@ -463,7 +463,7 @@ def main(process_args_only=False):
         print("Set zoom to {}".format(config.zoom))
 
     # set up ROI and register profiles
-    setup_profiles(args.roi_profile, args.reg_profile)
+    setup_profiles(args.roi_profile, args.atlas_profile)
 
     if args.plane is not None:
         config.plane = args.plane
@@ -718,7 +718,7 @@ def main(process_args_only=False):
         shutdown()
 
 
-def setup_profiles(mic_profiles, reg_profiles):
+def setup_profiles(mic_profiles, atlas_profiles):
     """Setup ROI and register profiles.
 
     If either profiles are None, only a default set of profile settings
@@ -727,7 +727,7 @@ def setup_profiles(mic_profiles, reg_profiles):
     Args:
         mic_profiles (List[str]): Sequence of ROI and atlas profiles
             to use for the corresponding channel.
-        reg_profiles (str): Register profiles.
+        atlas_profiles (str): Atlas profiles.
 
     """
     # initialize ROI profile settings and update with modifiers
@@ -745,12 +745,12 @@ def setup_profiles(mic_profiles, reg_profiles):
     print("Set default ROI profiles to {}"
           .format(config.roi_profile["settings_name"]))
 
-    # initialize registration profile settings and update with modifiers
-    config.register_settings = atlas_prof.RegisterSettings()
-    if reg_profiles is not None:
-        config.register_settings.update_settings(reg_profiles)
-    print("Set register settings to {}"
-          .format(config.register_settings["settings_name"]))
+    # initialize atlas profile and update with modifiers
+    config.atlas_profile = atlas_prof.RegisterSettings()
+    if atlas_profiles is not None:
+        config.atlas_profile.update_settings(atlas_profiles)
+    print("Set atlas profile to {}"
+          .format(config.atlas_profile["settings_name"]))
 
 
 def update_profiles():
@@ -763,7 +763,7 @@ def update_profiles():
     """
     for i, prof in enumerate(config.roi_profiles):
         prof.refresh_profile(True)
-    config.register_settings.refresh_profile(True)
+    config.atlas_profile.refresh_profile(True)
 
 
 def _iterate_file_processing(path, series, subimg_offsets, subimg_sizes):

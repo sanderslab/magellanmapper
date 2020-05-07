@@ -171,7 +171,7 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
 
     """
     if target_size is None:
-        target_size = config.register_settings["target_size"]
+        target_size = config.atlas_profile["target_size"]
     if plane is None and rescale is None and target_size is None:
         print("No transposition to perform, skipping")
         return
@@ -333,7 +333,7 @@ def rotate_img(roi, rotate=None, order=None):
 
     """
     if rotate is None:
-        rotate = config.register_settings["rotate"]
+        rotate = config.atlas_profile["rotate"]
     if order is None:
         order = rotate["order"]
     roi = np.copy(roi)

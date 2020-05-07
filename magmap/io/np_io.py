@@ -56,7 +56,7 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
 
     # get scaling from source image, which can be rescaled/resized image
     # since contains scaling image
-    load_size = config.register_settings["target_size"]
+    load_size = config.atlas_profile["target_size"]
     img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, load_size)
     scaling = None

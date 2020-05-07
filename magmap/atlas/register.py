@@ -360,7 +360,7 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
         elastix_img_filter.SetMovingMask(moving_mask)
     
     # set up parameter maps for translation, affine, and deformable regs
-    settings = config.register_settings
+    settings = config.atlas_profile
     param_map_vector = sitk.VectorOfParameterMap()
     for key in ("reg_translation", "reg_affine", "reg_bspline"):
         params = settings[key]
@@ -447,7 +447,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     start_time = time()
     if name_prefix is None:
         name_prefix = fixed_file
-    settings = config.register_settings
+    settings = config.atlas_profile
     
     # load fixed image, assumed to be experimental image
     chl = 0 if config.channel is None else config.channel
@@ -485,7 +485,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     if moving_mask is not None:
         moving_mask_np = sitk.GetArrayFromImage(moving_mask)
 
-    crop_out_labels = config.register_settings["crop_out_labels"]
+    crop_out_labels = config.atlas_profile["crop_out_labels"]
     if crop_out_labels is not None:
         # crop moving images to extent without given labels; note that
         # these labels may still exist within the cropped image
@@ -495,7 +495,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         labels_img_np, moving_img_np, _ = cv_nd.crop_to_labels(
             labels_img_np, moving_img_np, mask, 0, 0)
 
-    rotate = config.register_settings["rotate"]
+    rotate = config.atlas_profile["rotate"]
     if rotate and rotate["rotation"] is not None:
         # more granular 3D rotation than in prior transposition
         moving_img_np = transformer.rotate_img(moving_img_np, rotate)
@@ -512,7 +512,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
             moving_mask, moving_mask_np)
         moving_imgs.append(moving_mask)
 
-    rescale = config.register_settings["rescale"]
+    rescale = config.atlas_profile["rescale"]
     if rescale:
         # rescale images as a factor of their spacing in case the scaling
         # transformation in the affine-based registration is insufficient
@@ -733,7 +733,7 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
     moving_img = atlas_refiner.transpose_img(moving_img, plane, rotate)
     transformed_img, transformix_img_filter = register_duo(
         fixed_img, moving_img, prefix)
-    settings = config.register_settings
+    settings = config.atlas_profile
     print("DSC of original and registered sample images")
     dsc_sample = atlas_refiner.measure_overlap(
         fixed_img, transformed_img, fixed_thresh=settings["atlas_threshold"])
@@ -842,7 +842,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     start_time = time()
     if name_prefix is None:
         name_prefix = img_files[0]
-    target_size = config.register_settings["target_size"]
+    target_size = config.atlas_profile["target_size"]
     
     '''
     # TESTING: assuming first file is a raw groupwise registered image, 
@@ -928,7 +928,7 @@ def register_group(img_files, flip=None, show_imgs=True,
     #sitk.ProcessObject.SetGlobalDefaultCoordinateTolerance(100)
     img_combined = sitk.JoinSeries(img_vector)
     
-    settings = config.register_settings
+    settings = config.atlas_profile
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(img_combined)
     elastix_img_filter.SetMovingImage(img_combined)
@@ -1047,7 +1047,7 @@ def register_labels_to_atlas(path_fixed):
     elastix_img_filter.SetMovingImage(moving_sitk)
     
     # set up registration parameters
-    settings = config.register_settings
+    settings = config.atlas_profile
     param_map_vector = sitk.VectorOfParameterMap()
     # bspline for non-rigid deformation
     param_map = sitk.GetDefaultParameterMap("bspline")
@@ -1606,7 +1606,7 @@ def _test_curate_img(path, prefix):
     atlas_img = sitk_io.load_registered_img(
         prefix, config.RegNames.IMG_ATLAS.value, get_sitk=True)
     labels_img.SetSpacing(fixed_img.GetSpacing())
-    holes_area = config.register_settings["holes_area"]
+    holes_area = config.atlas_profile["holes_area"]
     result_imgs = _curate_img(
         fixed_img, labels_img, [atlas_img], inpaint=False, 
         holes_area=holes_area)
@@ -1741,7 +1741,7 @@ def main():
         df_histo_vs_orig[config.GENOTYPE_KEY] = "Histo Vs Orig Labels"
         
         # compare combined original vs smoothed labels
-        smooth = config.register_settings["smooth"]
+        smooth = config.atlas_profile["smooth"]
         df_unsm_vs_sm, dfs_smoothed = df_io.filter_dfs_on_vals(
             [dfs_baseline[1], df_smoothing], cols, 
             [None, (config.SmoothingMetrics.FILTER_SIZE.value, smooth)])
@@ -1839,10 +1839,10 @@ def main():
                 config.GROUPS_NUMERIC[geno] for geno in config.groups]
         # should generally leave uncombined for drawn labels to allow 
         # faster level building, where can combine sides
-        combine_sides = config.register_settings["combine_sides"]
+        combine_sides = config.atlas_profile["combine_sides"]
         if reg is config.RegisterTypes.VOL_STATS:
             # separate metrics for each sample
-            extra_metric_groups = config.register_settings[
+            extra_metric_groups = config.atlas_profile[
                 "extra_metric_groups"]
             volumes_by_id(
                 config.filenames, labels_ref_lookup, suffix=config.suffix, 

@@ -595,7 +595,7 @@ WARN_IMPORT_SCALEBAR = (
 # microscope profile settings and list of settings for each channel
 roi_profile = None
 roi_profiles = []
-register_settings = None
+atlas_profile = None
 
 
 def get_process_settings(i):

@@ -329,7 +329,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             # load original labels and setup colormaps
             np_io.setup_images()
         extend_edge(
-            img_np, img_ref_np, config.register_settings["atlas_threshold"], 
+            img_np, img_ref_np, config.atlas_profile["atlas_threshold"],
             None, edgei, edge["surr_size"], edge["smoothing_size"],
             edge["in_paint"], None, edge[profiles.RegKeys.MARKER_EROSION],
             edge[profiles.RegKeys.MARKER_EROSION_MIN],
@@ -525,11 +525,11 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                           [p[1] for p in prop_sizes[1:]]))
         prop_sizes = prop_sizes[-1:]
     elif edges is None and marker_erosion > 0:
-        log_sigma = config.register_settings["log_sigma"]
+        log_sigma = config.atlas_profile["log_sigma"]
         if log_sigma is not None:
             # generate an edge map based on reference image
-            thresh = (config.register_settings["atlas_threshold"] 
-                      if config.register_settings["log_atlas_thresh"] else None)
+            thresh = (config.atlas_profile["atlas_threshold"]
+                      if config.atlas_profile["log_atlas_thresh"] else None)
             atlas_log = cv_nd.laplacian_of_gaussian_img(
                 region_ref, sigma=log_sigma, thresh=thresh)
             edges = cv_nd.zero_crossing(atlas_log, 1).astype(np.uint8)
@@ -644,7 +644,7 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     Returns:
         Tuple of ``filter_size`` and a data frame of smoothing metrices.
     """
-    smoothing_mode = config.register_settings["smoothing_mode"]
+    smoothing_mode = config.atlas_profile["smoothing_mode"]
     smooth_labels(img_np, filter_size, smoothing_mode)
     df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np, spacing)
     df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
@@ -652,7 +652,7 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     df_io.print_data_frame(df_metrics)
     
     # curate back to lightly smoothed foreground of original labels
-    crop = config.register_settings["crop_to_orig"]
+    crop = config.atlas_profile["crop_to_orig"]
     crop_to_orig(img_np_orig, img_np, crop)
     
     print("\nMeasuring foreground overlap of labels after smoothing:")
@@ -1068,7 +1068,7 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
         if rotate % 2 != 0:
             spacing = libmag.swap_elements(spacing, 1, 2)
             origin = libmag.swap_elements(origin, 1, 2)
-    resize_factor = config.register_settings["resize_factor"]
+    resize_factor = config.atlas_profile["resize_factor"]
     if target_size is not None and resize_factor:
         # rescale based on xy dimensions of given and target image so that
         # they are not so far off from one another that scaling does not occur; 
@@ -1112,18 +1112,18 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
         and ``df_sm_raw``, a data frame of raw smoothing stats, or 
         None if smoothing was not performed.
     """
-    pre_plane = config.register_settings["pre_plane"]
-    mirror = config.register_settings["labels_mirror"]
+    pre_plane = config.atlas_profile["pre_plane"]
+    mirror = config.atlas_profile["labels_mirror"]
     is_mirror = mirror and mirror[profiles.RegKeys.ACTIVE]
-    edge = config.register_settings["labels_edge"]
+    edge = config.atlas_profile["labels_edge"]
     is_edge = edge and edge[profiles.RegKeys.ACTIVE]
-    expand = config.register_settings["expand_labels"]
-    rotate = config.register_settings["rotate"]
+    expand = config.atlas_profile["expand_labels"]
+    rotate = config.atlas_profile["rotate"]
     rotation = rotate["rotation"] if rotate else None
-    smooth = config.register_settings["smooth"]
-    crop = config.register_settings["crop_to_labels"]
-    affine = config.register_settings["affine"]
-    far_hem_neg = config.register_settings["make_far_hem_neg"]
+    smooth = config.atlas_profile["smooth"]
+    crop = config.atlas_profile["crop_to_labels"]
+    affine = config.atlas_profile["affine"]
+    far_hem_neg = config.atlas_profile["make_far_hem_neg"]
     
     if pre_plane:
         # images in the correct desired orientation may need to be 
@@ -1177,7 +1177,7 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
             img_atlas_np = cv_nd.affine_nd(img_atlas_np, **aff)
     if is_mirror and mirror["start"] is not None:
         # TODO: consider removing dup since not using
-        dup = config.register_settings["labels_dup"]
+        dup = config.atlas_profile["labels_dup"]
         img_atlas_np = mirror_planes(
             img_atlas_np, extis[1], start_dup=dup)
 
@@ -1218,11 +1218,11 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
         dsc = measure_overlap_combined_labels(
             sitk.GetImageFromArray(img_atlas_np[:extis[1]]), 
             sitk.GetImageFromArray(img_labels_np[:extis[1]]), 
-            config.register_settings["overlap_meas_add_lbls"])
+            config.atlas_profile["overlap_meas_add_lbls"])
         metrics[config.AtlasMetrics.DSC_ATLAS_LABELS_HEM] = [dsc]
         
         # meas frac of hemisphere that is unlabeled using "mirror" bounds
-        thresh = config.register_settings["atlas_threshold_all"]
+        thresh = config.atlas_profile["atlas_threshold_all"]
         thresh_atlas = img_atlas_np > thresh
         # some edge planes may be partially labeled
         lbl_edge = np.logical_and(
@@ -1305,7 +1305,7 @@ def import_atlas(atlas_dir, show=True, prefix=None):
         os.path.join(atlas_dir, config.RegNames.IMG_ATLAS.value))
     img_labels, _ = sitk_io.read_sitk(
         os.path.join(atlas_dir, config.RegNames.IMG_LABELS.value))
-    unit_factor = config.register_settings["unit_factor"]
+    unit_factor = config.atlas_profile["unit_factor"]
     if unit_factor:
         # adjust spacing to a different unit
         print("Adjusing atlas spacing by a factor of", unit_factor)
@@ -1328,9 +1328,9 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     name_prefix = os.path.join(target_dir, basename) + "."
     
     # set up condition
-    overlap_meas_add = config.register_settings["overlap_meas_add_lbls"]
-    edge = config.register_settings["labels_edge"]
-    mirror = config.register_settings["labels_mirror"]
+    overlap_meas_add = config.atlas_profile["overlap_meas_add_lbls"]
+    edge = config.atlas_profile["labels_edge"]
+    mirror = config.atlas_profile["labels_mirror"]
     if (edge and edge[profiles.RegKeys.ACTIVE]
             or mirror and mirror[profiles.RegKeys.ACTIVE]):
         cond = "extended" 
@@ -1352,7 +1352,7 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     img_atlas, img_labels, df_sm, df_sm_raw = match_atlas_labels(
         img_atlas, img_labels, metrics=metrics)
     
-    truncate = config.register_settings["truncate_labels"]
+    truncate = config.atlas_profile["truncate_labels"]
     if truncate:
         # truncate labels
         img_labels_np = truncate_labels(
@@ -1375,7 +1375,7 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     # compactness of whole atlas (non-label) image; use lower threshold for 
     # compactness measurement to minimize noisy surface artifacts
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
-    thresh = config.register_settings["atlas_threshold_all"]
+    thresh = config.atlas_profile["atlas_threshold_all"]
     thresh_atlas = img_atlas_np > thresh
     compactness, _, _ = cv_nd.compactness_3d(
         thresh_atlas, img_atlas.GetSpacing()[::-1])

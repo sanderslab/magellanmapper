@@ -102,7 +102,7 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
             for the plot legend.
 
     """
-    cluster_settings = config.register_settings[
+    cluster_settings = config.atlas_profile[
         profiles.RegKeys.METRICS_CLUSTER]
     knn_n = cluster_settings[profiles.RegKeys.KNN_N]
     if not knn_n:
@@ -191,7 +191,7 @@ class ClusterByLabel(object):
         # TODO: shift to separate func once load blobs without req labels img
 
         label_ids = np.unique(labels_img_np)
-        cluster_settings = config.register_settings[
+        cluster_settings = config.atlas_profile[
             profiles.RegKeys.METRICS_CLUSTER]
         eps = cluster_settings[profiles.RegKeys.DBSCAN_EPS]
         minpts = cluster_settings[profiles.RegKeys.DBSCAN_MINPTS]

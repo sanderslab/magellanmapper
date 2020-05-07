@@ -33,7 +33,7 @@ def _is_profile_mirrored():
     # check if profile is set for mirroring, though does not necessarily
     # mean that the image itself is mirrored; allows checking for 
     # simplification by operating on one half and mirroring to the other
-    mirror = config.register_settings["labels_mirror"]
+    mirror = config.atlas_profile["labels_mirror"]
     return (mirror and mirror[profiles.RegKeys.ACTIVE]
             and mirror["start"] is not None)
 
@@ -41,7 +41,7 @@ def _is_profile_mirrored():
 def _get_mirror_mult():
     # get the mirrored labels multiplier, which is -1 if set to neg labels
     # and 1 if otherwise
-    mirror = config.register_settings["labels_mirror"]
+    mirror = config.atlas_profile["labels_mirror"]
     mirror_mult = -1 if mirror and mirror["neg_labels"] else 1
     return mirror_mult
 
@@ -116,12 +116,12 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     atlas_sitk_edge = None
     labels_sitk_interior = None
     
-    log_sigma = config.register_settings["log_sigma"]
+    log_sigma = config.atlas_profile["log_sigma"]
     if log_sigma is not None and suffix is None:
         # generate LoG and edge-detected images for original image
         print("generating LoG edge-detected images with sigma", log_sigma)
-        thresh = (config.register_settings["atlas_threshold"] 
-                  if config.register_settings["log_atlas_thresh"] else None)
+        thresh = (config.atlas_profile["atlas_threshold"]
+                  if config.atlas_profile["log_atlas_thresh"] else None)
         atlas_log = cv_nd.laplacian_of_gaussian_img(
             atlas_np, sigma=log_sigma, labels_img=labels_img_np, thresh=thresh)
         atlas_sitk_log = sitk_io.replace_sitk_with_numpy(atlas_sitk, atlas_log)
@@ -134,13 +134,13 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         atlas_edge = sitk_io.load_registered_img(
             path_img, config.RegNames.IMG_ATLAS_EDGE.value)
 
-    erode = config.register_settings["erode_labels"]
+    erode = config.atlas_profile["erode_labels"]
     if erode["interior"]:
         # make map of label interiors for interior/border comparisons
         print("Eroding labels to generate interior labels image")
-        erosion = config.register_settings[
+        erosion = config.atlas_profile[
             profiles.RegKeys.EDGE_AWARE_REANNOTAION]
-        erosion_frac = config.register_settings["erosion_frac"]
+        erosion_frac = config.atlas_profile["erosion_frac"]
         interior, _ = erode_labels(
             labels_img_np, erosion, erosion_frac, 
             atlas and _is_profile_mirrored(), _get_mirror_mult())
@@ -296,7 +296,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
         labels_seg = segmenter.segment_from_labels(
             atlas_edge, markers, labels_img_np, exclude_labels=exclude_labels)
     
-    smoothing = config.register_settings["smooth"]
+    smoothing = config.atlas_profile["smooth"]
     if smoothing is not None:
         # smoothing by opening operation based on profile setting
         atlas_refiner.smooth_labels(
@@ -309,7 +309,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     
     # expand background to smoothed background of original labels to 
     # roughly match background while still allowing holes to be filled
-    crop = config.register_settings["crop_to_orig"]
+    crop = config.atlas_profile["crop_to_orig"]
     atlas_refiner.crop_to_orig(
         labels_img_np, labels_seg, crop)
     
@@ -355,9 +355,9 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     
     # erode all labels images into markers for watershed; not multiprocessed
     # since erosion is itself multiprocessed
-    erode = config.register_settings["erode_labels"]
-    erosion = config.register_settings[profiles.RegKeys.EDGE_AWARE_REANNOTAION]
-    erosion_frac = config.register_settings["erosion_frac"]
+    erode = config.atlas_profile["erode_labels"]
+    erosion = config.atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTAION]
+    erosion_frac = config.atlas_profile["erosion_frac"]
     mirrored = atlas and _is_profile_mirrored()
     mirror_mult = _get_mirror_mult()
     dfs_eros = []

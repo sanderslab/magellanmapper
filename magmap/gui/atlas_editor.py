@@ -190,9 +190,9 @@ class AtlasEditor:
         
         # setup plot editors for all 3 orthogonal directions
         max_sizes = None
-        downsample_io = config.register_settings["editor_downsample_io"]
+        downsample_io = config.atlas_profile["editor_downsample_io"]
         if downsample_io and config.image5d_io in downsample_io:
-            max_sizes = config.register_settings["editor_max_sizes"]
+            max_sizes = config.atlas_profile["editor_max_sizes"]
             if max_sizes:
                 max_sizes = max_sizes[::-1]
         for i, gs_viewer in enumerate(

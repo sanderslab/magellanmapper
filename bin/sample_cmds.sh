@@ -56,7 +56,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # downsample to size of atlas; the first option uses the target size in the
 # atlas profile, while the next options use a rescaling factor or specific
 # output size; use the plane option to transpose the output image
-#python -u -m magmap.io.cli --img "$IMG" --proc transform --reg_profile "$REG" #--plane xz
+#python -u -m magmap.io.cli --img "$IMG" --proc transform --atlas_profile "$REG" #--plane xz
 #python -u -m magmap.io.cli --img "$IMG" --proc transform --transform rescale=0.25
 #python -u -m magmap.io.cli --img "$IMG" --proc transform --size "$SHAPE_RESIZED"
 
@@ -65,7 +65,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # register imported atlas to downsampled image and view
 # - defaults to using channel 0; add `--channel x` to use channel x instead
-#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --flip 1 --register single --reg_profile "${REG}_raw" --no_show -v
+#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --flip 1 --register single --atlas_profile "${REG}_raw" --no_show -v
 #./run.py --img "$IMG_MHD" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd --offset 70,350,150
 
 # similar view of registered labels but overlaid on downsampled image
@@ -81,8 +81,8 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #./run.py --img "$IMG" --roi_profile lightsheet_contrast --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" --reg_suffixes heat.mhd annotation.mhd
 
 # volume metrics (level 13 includes hierarchical regions through this level)
-#./run_cli.py --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS"
-#./run_cli.py --img "$IMG" --register vol_stats --reg_profile lightsheet_finer --labels "$ABA_LABELS" 13
+#./run_cli.py --img "$IMG" --register vol_stats --atlas_profile lightsheet_finer --labels "$ABA_LABELS"
+#./run_cli.py --img "$IMG" --register vol_stats --atlas_profile lightsheet_finer --labels "$ABA_LABELS" 13
 
 # generate CSV of all atlas IDs with names; merge with hierarchical volumes CSV
 #./run_cli.py --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
@@ -142,7 +142,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # PIPELINES SCRIPT
 
 # image downsampling
-#bin/pipelines.sh -p transformation -i "$IMG" -z "$shape_resized" -- --reg_profile "$REG"
+#bin/pipelines.sh -p transformation -i "$IMG" -z "$shape_resized" -- --atlas_profile "$REG"
 
 
 # OTHER IMAGE TRANSFORMATIONS
@@ -150,7 +150,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # rotate an image along multiple axes as specified in custom profiles;
 # the first profile needs a "preprocess" key with a list of tasks, and
 # the second profile specifies the rotation (see `atlas_prof.py`)
-# ./run_cli.py --img "$IMG" --proc preprocess --roi_profile profiles/preproc.yaml --reg_profile profiles/rotate.yaml
+# ./run_cli.py --img "$IMG" --proc preprocess --roi_profile profiles/preproc.yaml --atlas_profile profiles/rotate.yaml
 
 
 # CUSTOM TASKS

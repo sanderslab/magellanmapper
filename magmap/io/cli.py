@@ -731,12 +731,12 @@ def setup_profiles(mic_profiles, atlas_profiles):
 
     """
     # initialize ROI profile settings and update with modifiers
-    config.roi_profile = roi_prof.ProcessSettings()
+    config.roi_profile = roi_prof.ROIProfile()
     config.roi_profiles.append(config.roi_profile)
     if mic_profiles is not None:
         for i, mic in enumerate(mic_profiles):
             settings = (config.roi_profile if i == 0
-                        else roi_prof.ProcessSettings())
+                        else roi_prof.ROIProfile())
             settings.update_settings(mic)
             if i > 0:
                 config.roi_profiles.append(settings)
@@ -746,7 +746,7 @@ def setup_profiles(mic_profiles, atlas_profiles):
           .format(config.roi_profile["settings_name"]))
 
     # initialize atlas profile and update with modifiers
-    config.atlas_profile = atlas_prof.RegisterSettings()
+    config.atlas_profile = atlas_prof.AtlasProfile()
     if atlas_profiles is not None:
         config.atlas_profile.update_settings(atlas_profiles)
     print("Set atlas profile to {}"
@@ -914,7 +914,7 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file
         # TODO: consider chunking option for larger images
-        profile = config.get_process_settings(0)
+        profile = config.get_roi_profile(0)
         out_path = config.prefix
         if not out_path:
             out_path = libmag.insert_before_ext(config.filename, "_preproc")

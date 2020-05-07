@@ -29,7 +29,7 @@ class RegParamMap(dict):
         self["point_based"] = False
 
 
-class RegisterSettings(profiles.SettingsDict):
+class AtlasProfile(profiles.SettingsDict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(self)

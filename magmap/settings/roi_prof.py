@@ -8,7 +8,7 @@ from magmap.settings import config
 from magmap.settings import profiles
 
 
-class ProcessSettings(profiles.SettingsDict):
+class ROIProfile(profiles.SettingsDict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(self)

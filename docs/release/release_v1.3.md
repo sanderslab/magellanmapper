@@ -14,6 +14,7 @@ Summary of usage changes:
 | `--roc` | `--grid_search` | Its main task is to perform Grid Search based hyperparameter tuning |
 | `--rescale` | `--transform rescale=x` | Grouped with other transformation tasks |
 | `--microscope` | `--roi_profile` | Specifies profiles to process by regions of interest |
+| `--reg_profile` | `--atlas_profile` | Specifies profiles for atlases |
 
 ### Changes
 

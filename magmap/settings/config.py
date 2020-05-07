@@ -598,7 +598,7 @@ roi_profiles = []
 atlas_profile = None
 
 
-def get_process_settings(i):
+def get_roi_profile(i):
     """Get the microscope profile for the given channel.
     
     Args:

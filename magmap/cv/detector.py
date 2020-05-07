@@ -102,7 +102,7 @@ def detect_blobs(roi, channel, exclude_border=None):
     blobs_all = []
     for i in channels:
         roi_detect = roi[..., i] if multichannel else roi
-        settings = config.get_process_settings(i)
+        settings = config.get_roi_profile(i)
         # scaling as a factor in pixel/um, where scaling of 1um/pixel  
         # corresponds to factor of 1, and 0.25um/pixel corresponds to
         # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
@@ -792,7 +792,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         "verifying blobs with tol {} leading to thresh {}, scaling {}, "
         "inner_padding {}".format(tol, thresh, scaling, inner_padding))
     
-    settings = config.get_process_settings(channel)
+    settings = config.get_roi_profile(channel)
     resize = settings["resize_blobs"]
     if resize:
         blobs = multiply_blob_rel_coords(blobs, resize)

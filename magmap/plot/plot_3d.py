@@ -78,7 +78,7 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
     roi_out = None
     for chl in channels:
         roi_show = roi[..., chl] if multichannel else roi
-        settings = config.get_process_settings(chl)
+        settings = config.get_roi_profile(chl)
         if clip_vmin == -1:
             clip_vmin = settings["clip_vmin"]
         if clip_vmax == -1:
@@ -124,7 +124,7 @@ def denoise_roi(roi, channel=None):
     roi_out = None
     for chl in channels:
         roi_show = roi[..., chl] if multichannel else roi
-        settings = config.get_process_settings(chl)
+        settings = config.get_roi_profile(chl)
         # find gross density
         saturated_mean = np.mean(roi_show)
         
@@ -275,7 +275,7 @@ def remap_intensity(roi, channel=None):
     roi_out = np.copy(roi)
     for chl in channels:
         roi_show = roi[..., chl] if multichannel else roi
-        settings = config.get_process_settings(chl)
+        settings = config.get_roi_profile(chl)
         lim = settings["adapt_hist_lim"]
         print("Performing adaptive histogram equalization on channel {}, "
               "clip limit {}".format(channel, lim))
@@ -465,7 +465,7 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
             x = np.reshape(x, roi_show.size)
             y = np.reshape(y, roi_show.size)
             z = np.reshape(z, roi_show.size)
-        settings = config.get_process_settings(chl)
+        settings = config.get_roi_profile(chl)
         
         # clear background points to see remaining structures
         thresh = 0

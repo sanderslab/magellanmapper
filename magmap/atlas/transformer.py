@@ -219,23 +219,26 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
         # TODO: generalize for more than 1 preceding dimension?
         if offset > 0:
             rescaled = rescaled[0]
-        #max_pixels = np.multiply(np.ones(3), 10)
         max_pixels = [100, 500, 500]
         sub_roi_size = None
         if target_size:
-            # fit image into even number of pixels per chunk by rounding up 
-            # number of chunks and resize each chunk by ratio of total 
-            # target size to chunk number
-            target_size = target_size[::-1] # change to z,y,x
+            # to avoid artifacts from thin chunks, fit image into even
+            # number of pixels per chunk by rounding up number of chunks
+            # and resizing each chunk by ratio of total size to chunk num
+            target_size = target_size[::-1]  # change to z,y,x
             shape = rescaled.shape[:3]
             num_chunks = np.ceil(np.divide(shape, max_pixels))
             max_pixels = np.ceil(
                 np.divide(shape, num_chunks)).astype(np.int)
             sub_roi_size = np.floor(
                 np.divide(target_size, num_chunks)).astype(np.int)
-            print("target_size: {}, num_chunks: {}, max_pixels: {}, "
-                  "sub_roi_size: {}"
-                  .format(target_size, num_chunks, max_pixels, sub_roi_size))
+            print("Resizing image of shape {} to target_size: {}, using "
+                  "num_chunks: {}, max_pixels: {}, sub_roi_size: {}"
+                  .format(rescaled.shape, target_size, num_chunks, max_pixels,
+                          sub_roi_size))
+        else:
+            print("Rescaling image of shape {} by factor of {}"
+                  .format(rescaled.shape, rescale))
         
         # rescale in chunks with multiprocessing
         sub_roi_slices, _ = chunking.stack_splitter(rescaled.shape, max_pixels)

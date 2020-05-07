@@ -5,12 +5,15 @@
 This release brings many changes to streamline the command-line interface (CLI). Please note that several options have changed, which may require updating custom scripts. The sample commands script (`bin/sample_cmds.sh`) has been updated to illustrate this usage.
 
 Summary of usage changes:
-- All command-line based entry points can be accessed through the CLI, which now has a run script named `run_cli.py`
-- Atlases should be fully imported before image registration, and the atlas's profile should no longer be typically given when registering an image
-- `--stats` is now `--df` for data frame tasks since many of these tasks are not stats-related
-- `--roc` is now `--grid_search` since its main task is to perform Grid Search based hyperparameter tuning
-- `--rescale` has been removed and integrated into the `transform` parameter (eg `--transform rescale=0.25`)
 
+| Old | New | Purpose |
+| --- | --- | --- |
+| `python -m magmap.xx.yy` | `run_cli.py` | All command-line based entry points can be accessed through the CLI using this script |
+| Use atlas profile for registration | No longer needed | Atlases should be fully imported before image registration, and the atlas's profile should no longer be typically given when registering an image |
+| `--stats` | `--df` | Run data-frame (eg CSV file) tasks |
+| `--roc` | `--grid_search` | Its main task is to perform Grid Search based hyperparameter tuning |
+| `--rescale` | `--transform rescale=x` | Grouped with other transformation tasks |
+| `--microscope` | `--roi_profile` | Specifies profiles to process by regions of interest |
 
 ### Changes
 

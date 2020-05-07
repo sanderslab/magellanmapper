@@ -496,7 +496,7 @@ if [[ $gui -eq 1 ]]; then
 
   # Load image and set ROI
   ./run.py --img "$IMG" --offset "$offset" --size "$size" --savefig pdf \
-    --microscope "${microscope[@]}"
+    --roi_profile "${microscope[@]}"
   
   exit 0
 fi
@@ -669,7 +669,7 @@ if [[ "$whole_img_proc" != "" ]]; then
   # image into multiple smaller stacks to minimize RAM usage and 
   # further chunking to run by multiprocessing for efficiency
   python -u -m magmap.io.cli --img "$clr_img" --proc detect \
-    --channel $channel --microscope "${microscope[@]}" "${EXTRA_ARGS[@]}"
+    --channel $channel --roi_profile "${microscope[@]}" "${EXTRA_ARGS[@]}"
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then
     # upload processed fils to S3

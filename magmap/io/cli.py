@@ -251,8 +251,8 @@ def main(process_args_only=False):
         "-v", "--verbose", action="store_true",
         help="Verbose output to assist with debugging")
     parser.add_argument(
-        "--microscope", nargs="*",
-        help="Microscope/ROI profile, which can be separated by underscores "
+        "--roi_profile", nargs="*",
+        help="ROI profile, which can be separated by underscores "
              "for multiple profiles and given as paths to custom profiles "
              "in YAML format. Multiple profile groups can be given, which "
              "will each be applied to the corresponding channel. See "
@@ -462,8 +462,8 @@ def main(process_args_only=False):
         config.zoom = args.zoom
         print("Set zoom to {}".format(config.zoom))
 
-    # set up microscope and register profiles
-    setup_profiles(args.microscope, args.reg_profile)
+    # set up ROI and register profiles
+    setup_profiles(args.roi_profile, args.reg_profile)
 
     if args.plane is not None:
         config.plane = args.plane
@@ -719,18 +719,18 @@ def main(process_args_only=False):
 
 
 def setup_profiles(mic_profiles, reg_profiles):
-    """Setup microscope/processing and register profiles.
+    """Setup ROI and register profiles.
 
     If either profiles are None, only a default set of profile settings
     will be generated.
 
     Args:
-        mic_profiles (List[str]): Sequence of microscope/processing profiles
+        mic_profiles (List[str]): Sequence of ROI and atlas profiles
             to use for the corresponding channel.
         reg_profiles (str): Register profiles.
 
     """
-    # initialize microscope profile settings and update with modifiers
+    # initialize ROI profile settings and update with modifiers
     config.process_settings = roi_prof.ProcessSettings()
     config.process_settings_list.append(config.process_settings)
     if mic_profiles is not None:
@@ -742,7 +742,7 @@ def setup_profiles(mic_profiles, reg_profiles):
                 config.process_settings_list.append(settings)
                 print("Added {} settings for channel {}".format(
                       config.process_settings_list[i]["settings_name"], i))
-    print("Set default microscope processing settings to {}"
+    print("Set default ROI profiles to {}"
           .format(config.process_settings["settings_name"]))
 
     # initialize registration profile settings and update with modifiers

@@ -292,7 +292,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     "could not load original labels image; colors may differ"
                     "differ from it")
     
-    load_rot90 = config.process_settings["load_rot90"]
+    load_rot90 = config.roi_profile["load_rot90"]
     if load_rot90 and config.image5d is not None:
         # rotate main image specified num of times x90deg after loading since 
         # need to rotate images output by deep learning toolkit
@@ -314,7 +314,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
     config.near_min = libmag.pad_seq(config.near_min, num_channels, 0)
     config.vmax_overview = libmag.pad_seq(
         config.vmax_overview, num_channels)
-    config.cmaps = list(config.process_settings["channel_colors"])
+    config.cmaps = list(config.roi_profile["channel_colors"])
     num_cmaps = len(config.cmaps)
     if num_cmaps < num_channels:
         # add colormap for each remaining channel, purposely inducing 

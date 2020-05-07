@@ -235,11 +235,11 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
     # prep chunking ROI into sub-ROIs with size based on segment_size, scaling
     # by physical units to make more independent of resolution
     time_detection_start = time()
-    settings = config.process_settings  # use default settings
+    settings = config.roi_profile  # use default settings
     scaling_factor = detector.calc_scaling_factor()
     print("microsope scaling factor based on resolutions: {}"
           .format(scaling_factor))
-    denoise_size = config.process_settings["denoise_size"]
+    denoise_size = config.roi_profile["denoise_size"]
     denoise_max_shape = None
     if denoise_size:
         # further subdivide each sub-ROI for local preprocessing
@@ -251,7 +251,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
     tol = np.multiply(overlap_base, settings["prune_tol_factor"]).astype(int)
     overlap_padding = np.copy(tol)
     overlap = np.copy(overlap_base)
-    exclude_border = config.process_settings["exclude_border"]
+    exclude_border = config.roi_profile["exclude_border"]
     if exclude_border is not None:
         # exclude border to avoid blob detector edge effects, where blobs
         # often collect at the faces of the sub-ROI;
@@ -268,7 +268,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
           .format(overlap, tol, overlap_padding, exclude_border))
     max_pixels = np.ceil(np.multiply(
         scaling_factor, 
-        config.process_settings["segment_size"])).astype(int)
+        config.roi_profile["segment_size"])).astype(int)
     print("preprocessing max shape: {}, detection max pixels: {}"
           .format(denoise_max_shape, max_pixels))
     sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(

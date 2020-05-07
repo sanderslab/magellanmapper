@@ -184,7 +184,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
     
     # use values from config if not already set
     # TODO: fill any missing value, not only when the whole setting is None
-    img_norm_setting = config.process_settings["norm"]
+    img_norm_setting = config.roi_profile["norm"]
     if channels is None:
         # channels are designators rather than lists of specific channels
         channels = [0] * num_imgs2d
@@ -307,7 +307,7 @@ def add_scale_bar(ax, downsample=None, plane=None):
         res *= downsample
     scale_bar = scalebar.ScaleBar(
         res, u'\u00b5m', scalebar.SI_LENGTH, box_alpha=0, 
-        color=config.process_settings["scale_bar_color"], location=3)
+        color=config.roi_profile["scale_bar_color"], location=3)
     ax.add_artist(scale_bar)
 
 

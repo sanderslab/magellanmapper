@@ -202,7 +202,7 @@ class PlotEditor:
     def show_overview(self):
         """Show the main 2D plane, taken as a z-plane."""
         # assume colorbar already shown if set and image previously displayed
-        colorbar = (config.process_settings["colorbar"]
+        colorbar = (config.roi_profile["colorbar"]
                     and len(self.axes.images) < 1)
         self.axes.clear()
         self.hline = None

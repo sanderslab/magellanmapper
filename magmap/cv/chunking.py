@@ -30,7 +30,7 @@ def set_mp_start_method(val=None):
 
     """
     if val is None:
-        val = config.process_settings["mp_start"]
+        val = config.roi_profile["mp_start"]
     avail_start_methods = mp.get_all_start_methods()
     if val not in avail_start_methods:
         val = avail_start_methods[0]

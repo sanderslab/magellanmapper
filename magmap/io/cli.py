@@ -731,19 +731,19 @@ def setup_profiles(mic_profiles, reg_profiles):
 
     """
     # initialize ROI profile settings and update with modifiers
-    config.process_settings = roi_prof.ProcessSettings()
-    config.process_settings_list.append(config.process_settings)
+    config.roi_profile = roi_prof.ProcessSettings()
+    config.roi_profiles.append(config.roi_profile)
     if mic_profiles is not None:
         for i, mic in enumerate(mic_profiles):
-            settings = (config.process_settings if i == 0
+            settings = (config.roi_profile if i == 0
                         else roi_prof.ProcessSettings())
             settings.update_settings(mic)
             if i > 0:
-                config.process_settings_list.append(settings)
+                config.roi_profiles.append(settings)
                 print("Added {} settings for channel {}".format(
-                      config.process_settings_list[i]["settings_name"], i))
+                      config.roi_profiles[i]["settings_name"], i))
     print("Set default ROI profiles to {}"
-          .format(config.process_settings["settings_name"]))
+          .format(config.roi_profile["settings_name"]))
 
     # initialize registration profile settings and update with modifiers
     config.register_settings = atlas_prof.RegisterSettings()
@@ -761,7 +761,7 @@ def update_profiles():
     :attr:`config.register_settings_list` will be checked to update.
 
     """
-    for i, prof in enumerate(config.process_settings_list):
+    for i, prof in enumerate(config.roi_profiles):
         prof.refresh_profile(True)
     config.register_settings.refresh_profile(True)
 

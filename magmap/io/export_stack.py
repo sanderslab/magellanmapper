@@ -156,7 +156,7 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
             pool.apply_async(process_fnc, args=(i, target_size)))
     
     # setup imshow parameters
-    colorbar = config.process_settings["colorbar"]
+    colorbar = config.roi_profile["colorbar"]
     cmaps_all = [config.cmaps, *cmaps_labels]
 
     img_size = None

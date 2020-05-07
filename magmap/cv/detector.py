@@ -93,7 +93,7 @@ def detect_blobs(roi, channel, exclude_border=None):
     # use 3D blob detection
     time_start = time()
     shape = roi.shape
-    isotropic = config.process_settings["isotropic"]
+    isotropic = config.roi_profile["isotropic"]
     if isotropic is not None:
         # interpolate for (near) isotropy during detection, using only the 
         # first process settings since applies to entire ROI

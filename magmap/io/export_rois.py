@@ -118,7 +118,7 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
                     blobs[:, 0:3], np.add(offset, border)[::-1])
             print("exporting ROI of shape {}".format(img3d.shape))
             
-            isotropic = config.process_settings["isotropic"]
+            isotropic = config.roi_profile["isotropic"]
             blobs_orig = blobs
             if isotropic is not None:
                 # interpolation for isotropy if set in first processing profile

@@ -47,7 +47,7 @@ def grid_search(roc_dict, keys, fnc, *fnc_args):
 
     """
     # gets the ROC settings
-    settings = config.process_settings
+    settings = config.roi_profile
     stats_dict = OrderedDict()
     file_summaries = []
     for key in keys:

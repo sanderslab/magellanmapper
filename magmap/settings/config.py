@@ -593,8 +593,8 @@ WARN_IMPORT_SCALEBAR = (
 # PROFILE SETTINGS
 
 # microscope profile settings and list of settings for each channel
-process_settings = None
-process_settings_list = []
+roi_profile = None
+roi_profiles = []
 register_settings = None
 
 
@@ -608,9 +608,9 @@ def get_process_settings(i):
         The profile settings for corresponding to the given channel number, 
         or the default profile if only one is available.
     """
-    settings = process_settings
-    if len(process_settings_list) > i:
-        settings = process_settings_list[i]
+    settings = roi_profile
+    if len(roi_profiles) > i:
+        settings = roi_profiles[i]
     return settings
 
 

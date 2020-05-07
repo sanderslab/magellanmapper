@@ -242,7 +242,7 @@ class Visualization(HasTraits):
         self._styles_2d = [Styles2D.SQUARE.value]
         # self._check_list_2d = [self._DEFAULTS_2D[1]]
         self._check_list_3d = [self._DEFAULTS_3D[2]]
-        if (config.process_settings["vis_3d"].lower()
+        if (config.roi_profile["vis_3d"].lower()
                 == self._DEFAULTS_3D[3].lower()):
             # check "surface" if set in profile
             self._check_list_3d.append(self._DEFAULTS_3D[3])
@@ -678,7 +678,7 @@ class Visualization(HasTraits):
         # default camera position after initiation, with distance based on 
         # ROI size and further zoomed out based on any isotropic factor resizing
         zoom_out = 4
-        isotropic_factor = config.process_settings["isotropic_vis"]
+        isotropic_factor = config.roi_profile["isotropic_vis"]
         if isotropic_factor is not None:
             # only use max dimension since this factor seems to influence the 
             # overall zoom the most
@@ -731,7 +731,7 @@ class Visualization(HasTraits):
             # on-the-fly blob detection, which includes border but not 
             # padding region; already in relative coordinates
             roi = self.roi
-            if config.process_settings["thresholding"]:
+            if config.roi_profile["thresholding"]:
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
             segs_all = detector.detect_blobs(roi, config.channel)
@@ -873,7 +873,7 @@ class Visualization(HasTraits):
             print("showing processed 2D images")
             # denoised ROI processed during 3D display
             roi = self.roi
-            if config.process_settings["thresholding"]:
+            if config.roi_profile["thresholding"]:
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
         elif config.image5d is None:

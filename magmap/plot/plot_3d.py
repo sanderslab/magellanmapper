@@ -172,7 +172,7 @@ def threshold(roi):
     Returns:
         The thresholded region.
     """
-    settings = config.process_settings
+    settings = config.roi_profile
     thresh_type = settings["thresholding"]
     size = settings["thresholding_size"]
     thresholded = roi
@@ -322,7 +322,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
     print("viewing 3D surface")
     pipeline = scene_mlab.pipeline
     scene_mlab.clf()
-    settings = config.process_settings
+    settings = config.roi_profile
     if flipud:
         # invert along z-axis to match handedness of Matplotlib with z up
         roi = np.flipud(roi)
@@ -675,7 +675,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
     """
     if segments.shape[0] <= 0:
         return None, None, 0
-    settings = config.process_settings
+    settings = config.roi_profile
     segs = np.copy(segments)
     if flipud:
         # invert along z-axis to match handedness of Matplotlib with z up

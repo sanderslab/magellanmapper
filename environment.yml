@@ -20,5 +20,5 @@ dependencies:
     - matplotlib-scalebar
     - PyQt5
     - simpleitk==1.2.0rc2.dev1162+g2a79d
-    - javabridge==1.0.18.post16+gc7ccaed
+    - javabridge==1.0.18.post16+g4526f53
     - python-bioformats==1.1.0

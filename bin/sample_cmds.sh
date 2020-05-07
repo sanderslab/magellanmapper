@@ -57,7 +57,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # atlas profile, while the next options use a rescaling factor or specific
 # output size; use the plane option to transpose the output image
 #python -u -m magmap.io.cli --img "$IMG" --proc transform --reg_profile "$REG" #--plane xz
-#python -u -m magmap.io.cli --img "$IMG" --proc transform --rescale 0.25
+#python -u -m magmap.io.cli --img "$IMG" --proc transform --transform rescale=0.25
 #python -u -m magmap.io.cli --img "$IMG" --proc transform --size "$SHAPE_RESIZED"
 
 # view downsampled image (assumes filename output using the first option)

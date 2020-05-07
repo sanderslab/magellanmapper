@@ -39,7 +39,6 @@ Command-line arguments in addition to those from attributes listed below:
         "1" or "true" are taken as True. The number of flags should 
         correspond to the number of images to register, such as several for 
         groupwise registration.
-    * rescale: Rescaling factor as a float value.
     * slice: ``stop`` or ``start,stop[,step]`` values to create a slice
         object, such as for animated GIF stack planes.
     * chunk_shape: Stack processing chunk shape given as integeres in z,y,x 
@@ -295,7 +294,6 @@ def main(process_args_only=False):
         help="Register/atlas profile, which can be separated by underscores "
              "for multiple profiles and given as paths to custom profiles "
              "in YAML format. See docs/settings.md for more details.")
-    parser.add_argument("--rescale", help="Rescaling factor")
     parser.add_argument("--slice", help="Slice given as start,stop,step")
     parser.add_argument("--delay", help="Animation delay in ms")
     parser.add_argument(
@@ -508,10 +506,7 @@ def main(process_args_only=False):
         # 2D plot type to process in plot_2d module
         config.plot_2d_type = args.plot_2d
         print("Set plot_2d type to {}".format(config.plot_2d_type))
-    
-    if args.rescale:
-        config.rescale = float(args.rescale)
-        print("Set rescale to {}".format(config.rescale))
+
     if args.slice:
         # specify a generic slice by command-line, assuming same order 
         # of arguments as for slice built-in function and interpreting 
@@ -892,7 +887,8 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         # transpose, rescale, and/or resize whole large image
         transformer.transpose_img(
             path, series, plane=config.plane, 
-            rescale=config.rescale, target_size=config.roi_size)
+            rescale=config.transform[config.Transforms.RESCALE],
+            target_size=config.roi_size)
         
     elif proc_type in (
             config.ProcessTypes.EXTRACT, config.ProcessTypes.ANIMATED):

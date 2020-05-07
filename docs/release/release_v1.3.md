@@ -9,6 +9,8 @@ Summary of usage changes:
 - Atlases should be fully imported before image registration, and the atlas's profile should no longer be typically given when registering an image
 - `--stats` is now `--df` for data frame tasks since many of these tasks are not stats-related
 - `--roc` is now `--grid_search` since its main task is to perform Grid Search based hyperparameter tuning
+- `--rescale` has been removed and integrated into the `transform` parameter (eg `--transform rescale=0.25`)
+
 
 ### Changes
 

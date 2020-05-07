@@ -626,12 +626,12 @@ if [[ "$transform_pathway" != "" ]]; then
       # Both rescale and transform an image from z-axis (xy plane)
       # to x-axis (yz plane) orientation
       python -u -m magmap.io.cli --img "$clr_img" --proc transform \
-        --rescale ${scale} --plane "$plane"
+        --transform rescale=${scale} --plane "$plane"
       img_transformed="${clr_img_base}_plane${plane}_scale${scale}.${EXT}"
     else
       # Rescale an image to downsample by the scale factor only
       python -u -m magmap.io.cli --img "$clr_img" --proc transform \
-        --rescale ${scale}
+        --transform rescale=${scale}
       img_transformed="${clr_img_base}_scale${scale}.${EXT}"
     fi
   elif [[ "$transform_pathway" = "${TRANSFORM_PATHWAYS[1]}" ]]; then
@@ -647,7 +647,7 @@ if [[ "$transform_pathway" != "" ]]; then
     # Export transformed image to an animated GIF or MP4 video 
     # (requires ImageMagick)
     python -u -m magmap.io.cli --img "$img_transformed" --proc animated \
-      --interval 5 --rescale 1.0 --savefig "$animation"
+      --interval 5 --transform rescale=1.0 --savefig "$animation"
   fi
   
   if [[ "$upload" != "${UPLOAD_TYPES[0]}" ]]; then

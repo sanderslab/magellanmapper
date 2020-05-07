@@ -182,6 +182,7 @@ Transforms = Enum(
         "ROTATE",  # rotate
         "FLIP_VERT",  # invert top to bottom
         "FLIP_HORIZ",  # invert left to right
+        "RESCALE",  # rescaling factor for an image shape
     )
 )
 transform = dict.fromkeys(Transforms, None)
@@ -261,7 +262,6 @@ max_scroll = 20  # max speed when scrolling through planes
 
 # STACK PROCESSING
 
-rescale = None  # rescale image
 slice_vals = None  # list of slice values to give directly to slice fn
 delay = None  # delay time between images
 # max pixels of sub-stacks for stack processing (z, y, x order), which can 

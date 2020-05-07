@@ -431,7 +431,7 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
             plotted_imgs = stack_to_ax_imgs(
                 ax, config.image5d, path_sub, offset=roi_offset,
                 roi_size=roi_size, slice_vals=config.slice_vals, 
-                rescale=config.rescale, 
+                rescale=config.transform[config.Transforms.RESCALE],
                 labels_imgs=(config.labels_img, config.borders_img), 
                 multiplane=animated, 
                 fit=(size is None or ncols * nrows == 1))

@@ -1676,7 +1676,7 @@ def main():
         # filename given is the prefix and uses the full flip array
         register_group(
             config.filenames[:-1], flip=config.flip, name_prefix=config.prefix, 
-            scale=config.rescale, show_imgs=show)
+            scale=config.transform[config.Transforms.RESCALE], show_imgs=show)
     
     elif reg is config.RegisterTypes.OVERLAYS:
         # overlay registered images in each orthogonal plane
@@ -1861,7 +1861,8 @@ def main():
         size = config.roi_sizes
         if size: size = size[0][::-1]
         export_regions.make_density_images_mp(
-            config.filenames, config.rescale, size, config.suffix)
+            config.filenames, config.transform[config.Transforms.RESCALE],
+            size, config.suffix)
     
     elif reg is config.RegisterTypes.MAKE_SUBSEGS:
         # make sub-segmentations for all images

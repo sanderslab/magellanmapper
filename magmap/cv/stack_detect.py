@@ -372,11 +372,11 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
                 libmag.warn(str(e))
     
     file_time_start = time()
-    if config.saveroi:
         # write sub-image, which is in ROI (3D) format
         outfile_subimg = open(filename_subimg, "wb")
         np.save(outfile_subimg, roi)
         outfile_subimg.close()
+    if config.save_subimg:
 
     # save blobs
     # TODO: only segments used; consider removing the rest except ver

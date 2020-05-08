@@ -27,7 +27,7 @@ Command-line arguments in addition to those from attributes listed below:
     * plane: Plane type (see :const:``config.PLANE``).
     * res: Resolution given as (x, y, z) in floating point (see
         cli.py, though order is natural here as command-line argument).
-    * saveroi: Save ROI from original image to file during stack processing.
+    * save_subimg: Save sub-image during stack processing.
     * register: Registration type. See :attr:``config.REGISTER_TYPES`` for 
         types of registration and :mod:``register`` for how to use these 
         types.
@@ -342,7 +342,7 @@ def main(process_args_only=False):
 
     # export arguments
     parser.add_argument(
-        "--saveroi", action="store_true",
+        "--save_subimg", action="store_true",
         help="Save sub-image as separate file")
     parser.add_argument("--slice", help="Slice given as start,stop,step")
     parser.add_argument("--delay", help="Animation delay in ms")
@@ -480,9 +480,9 @@ def main(process_args_only=False):
     if args.plane is not None:
         config.plane = args.plane
         print("Set plane to {}".format(config.plane))
-    if args.saveroi:
-        config.saveroi = args.saveroi
-        print("Set save ROI to file to ".format(config.saveroi))
+    if args.save_subimg:
+        config.save_subimg = args.save_subimg
+        print("Set to save the sub-image")
     if args.labels:
         # atlas labels as positional or dictionary-like args
         config.atlas_labels = args_to_dict(

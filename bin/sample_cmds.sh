@@ -107,7 +107,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #./run.py --img "$IMG" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes annotation=annotation.mhd --alphas 1,0.5,0.4
 
 # detect blobs within a sub-image and export the sub-image for portability
-#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" --saveroi
+#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" --save_subimg
 
 # view and build truth set for a sub-image; after pressing "Save blobs," the truth set will be in magmap.db
 #./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --roi_profile lightsheet_contrast --proc load #--savefig png

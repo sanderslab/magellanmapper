@@ -272,8 +272,8 @@ sub_stack_max_pixels = None
 
 # IMAGE EXPORT
 
-# flag to save ROI to file
-saveroi = False
+# flag to save a sub-image to file
+save_subimg = False
 
 #: List[float]: alpha levels for overlaid images (not channels), defaulting
 # to main image, labels image; set first value to 0 to prevent display/export

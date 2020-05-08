@@ -15,6 +15,7 @@ Summary of usage changes:
 | `--rescale` | `--transform rescale=x` | Grouped with other transformation tasks |
 | `--microscope` | `--roi_profile` | Specifies profiles to process by regions of interest |
 | `--reg_profile` | `--atlas_profile` | Specifies profiles for atlases |
+| `--saveroi` | `--save_subimg` | Consistency with "sub-images" as parts of images that can contain ROIs |
 
 ### Changes
 

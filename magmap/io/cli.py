@@ -71,11 +71,11 @@ import numpy as np
 
 from magmap.atlas import register
 from magmap.atlas import transformer
+from magmap.cloud import notify
 from magmap.gui import roi_editor
 from magmap.io import df_io
 from magmap.io import importer
 from magmap.io import libmag
-from magmap.io import notify
 from magmap.io import np_io
 from magmap.io import sqlite
 from magmap.stats import mlearn

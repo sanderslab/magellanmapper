@@ -264,10 +264,6 @@ max_scroll = 20  # max speed when scrolling through planes
 
 slice_vals = None  # list of slice values to give directly to slice fn
 delay = None  # delay time between images
-# max pixels of sub-stacks for stack processing (z, y, x order), which can 
-# be set from command-line and takes precedence over process settings to 
-# allow custom configurations depending on instance type
-sub_stack_max_pixels = None
 
 
 # IMAGE EXPORT

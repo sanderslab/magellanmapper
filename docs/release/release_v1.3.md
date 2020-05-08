@@ -16,6 +16,7 @@ Summary of usage changes:
 | `--microscope` | `--roi_profile` | Specifies profiles to process by regions of interest |
 | `--reg_profile` | `--atlas_profile` | Specifies profiles for atlases |
 | `--saveroi` | `--save_subimg` | Consistency with "sub-images" as parts of images that can contain ROIs |
+| `--chunk_size` | None | Obsolete |
 | `finer` atlas profile | None | Its settings are now default |
 
 ### Changes

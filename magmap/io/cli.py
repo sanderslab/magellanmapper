@@ -36,10 +36,6 @@ Command-line arguments in addition to those from attributes listed below:
         the ontology level for grouping volumes.
     * slice: ``stop`` or ``start,stop[,step]`` values to create a slice
         object, such as for animated GIF stack planes.
-    * chunk_shape: Stack processing chunk shape given as integeres in z,y,x 
-        order. This value will take precedence over the 
-        ``sub_stack_max_pixels`` entry in the :class:``ProcessSettings`` 
-        profile entry.
     * ec2_start: EC2 start instances parameters, used in 
         :function:``aws.start_instances``.
     * notify: Notification with up to three parameters for URL, message, and 
@@ -343,10 +339,6 @@ def main(process_args_only=False):
     parser.add_argument(
         "--groups", nargs="*", help="Group values corresponding to each image")
     parser.add_argument(
-        "--chunk_shape", nargs="*",
-        help="Maximum pixels for each chunk during block processing, "
-             "given in z,y,x")
-    parser.add_argument(
         "-v", "--verbose", action="store_true",
         help="Verbose output to assist with debugging")
     args = parser.parse_args()
@@ -526,14 +518,6 @@ def main(process_args_only=False):
     if args.groups:
         config.groups = args.groups
         print("Set groups to {}".format(config.groups))
-    if args.chunk_shape is not None:
-        # TODO: given as z,y,x for overall project order consistency; need 
-        # to consider whether to shift to x,y,z for user-input consistency or 
-        # to change user-input to z,y,x
-        chunk_shapes = _parse_coords(args.chunk_shape)
-        if len(chunk_shapes) > 0:
-            config.sub_stack_max_pixels = chunk_shapes[0]
-            print("Set chunk shape to {}".format(config.sub_stack_max_pixels))
     if args.ec2_start is not None:
         # start EC2 instances
         config.ec2_start = args_with_dict(args.ec2_start)

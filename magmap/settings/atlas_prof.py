@@ -53,7 +53,7 @@ class AtlasProfile(profiles.SettingsDict):
         # b-spline transform
         reg_bspline = RegParamMap()
         reg_bspline["map_name"] = "bspline"
-        reg_bspline["max_iter"] = "256"
+        reg_bspline["max_iter"] = "512"
         reg_bspline["grid_space_voxels"] = "50"
         self["reg_bspline"] = reg_bspline
 
@@ -237,12 +237,6 @@ class AtlasProfile(profiles.SettingsDict):
             "noaffinebspline": {
                 "reg_affine": None,
                 "reg_bspline": None,
-            },
-
-            # more aggressive parameters for finer tuning
-            "finer": {
-                "reg_bspline": {"max_iter": "512"},
-                "holes_area": 5000,
             },
 
             # Normalized Correlation Coefficient similarity metric for

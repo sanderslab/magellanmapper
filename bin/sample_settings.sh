@@ -18,7 +18,7 @@ ABA_SPEC=ontology1.json # replace with atlas label map file
 # - separate multiple profiles by "_"
 # - can include paths to custom profiles in YAML format
 MIC=lightsheet # add/replace additional microscope profiles
-REG=finer_abaccfv3 # add/replace register/atlas profiles
+REG=abaccfv3 # add/replace atlas profiles
 THEME=(--theme dark) # GUI theme
 
 # downsampling; change to target shape in x,y,z

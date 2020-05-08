@@ -142,8 +142,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
     filename_base = importer.filename_to_base(path, series)
     subimg_base = None
 
-    if load_subimage:
-        # load a saved sub-image file if available
+    if load_subimage and not config.save_subimg:
+        # load a saved sub-image file if available and not set to save one
         subimg_base = stack_detect.make_subimage_name(
             filename_base, offset, size)
         filename_subimg = libmag.combine_paths(

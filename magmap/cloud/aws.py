@@ -1,5 +1,5 @@
 # Interface with AWS
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2020
 """Connect MagellanMapper with AWS such as S3 and EC2.
 
 Attributes:
@@ -483,8 +483,8 @@ def delete_s3_file(bucket_name, key, hard=False, dryrun=False):
     return deleted_keys
 
 
-if __name__ == "__main__":
-    cli.main(True)
+def main():
+    """Perform AWS-related tasks."""
     if config.ec2_start:
         start_instances(*config.ec2_start[:-1], **config.ec2_start[-1])
     if config.ec2_list:
@@ -495,3 +495,9 @@ if __name__ == "__main__":
             list_instances(*config.ec2_list[:-1], **config.ec2_list[-1])
     if config.ec2_terminate:
         terminate_instances(config.ec2_terminate)
+
+
+if __name__ == "__main__":
+    print("Starting MagellanMapper AWS tasks...")
+    cli.main(True)
+    main()

@@ -708,6 +708,11 @@ def main(process_args_only=False):
         df_io.main()
     elif config.grid_search:
         _grid_search(series_list)
+    elif config.ec2_list or config.ec2_start or config.ec2_terminate:
+        # defer importing AWS module to avoid making its dependencies
+        # required for MagellanMapper
+        from magmap.cloud import aws
+        aws.main()
     else:
         # set up image and perform any whole image processing tasks
         _process_files(series_list)

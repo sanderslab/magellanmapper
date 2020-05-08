@@ -65,7 +65,8 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # register imported atlas to downsampled image and view
 # - defaults to using channel 0; add `--channel x` to use channel x instead
-#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --flip 1 --register single --atlas_profile "${REG}_raw" --no_show -v
+# - use the `transform` parameter for a 180 degree rotation (2 x 90 deg)
+#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --register single --atlas_profile "${REG}_raw" --no_show -v #--transform rotate=2
 #./run.py --img "$IMG_MHD" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd --offset 70,350,150
 
 # similar view of registered labels but overlaid on downsampled image

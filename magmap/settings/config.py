@@ -179,9 +179,9 @@ plot_labels = dict.fromkeys(PlotLabels, None)
 # image transformation keys for command-line parsing
 Transforms = Enum(
     "Transforms", (
-        "ROTATE",  # rotate
-        "FLIP_VERT",  # invert top to bottom
-        "FLIP_HORIZ",  # invert left to right
+        "ROTATE",  # num of times to rotate by 90 deg
+        "FLIP_VERT",  # 1 to invert top to bottom
+        "FLIP_HORIZ",  # 1 to invert left to right
         "RESCALE",  # rescaling factor for an image shape
     )
 )
@@ -454,9 +454,6 @@ MetricGroups = Enum(
         "POINT_CLOUD",  # nuclei as point clouds
     ]
 )
-
-# flip/rotate the image; the direction of change can be variable
-flip = None
 
 # groups, such as genotypes and sex or combos
 GROUPS_NUMERIC = {"WT": 0.0, "het": 0.5, "null":1.0}

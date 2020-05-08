@@ -34,11 +34,6 @@ Command-line arguments in addition to those from attributes listed below:
     * labels: Load annotation JSON file. The first argument is the path 
         to the JSON file. If a 2nd arguments is given, it is taken as an int of 
         the ontology level for grouping volumes.
-    * flip: Flags for flipping images horizontally for registration. 
-        "0" or "false" (case-insensivite) are taken as False, and 
-        "1" or "true" are taken as True. The number of flags should 
-        correspond to the number of images to register, such as several for 
-        groupwise registration.
     * slice: ``stop`` or ``start,stop[,step]`` values to create a slice
         object, such as for animated GIF stack planes.
     * chunk_shape: Stack processing chunk shape given as integeres in z,y,x 
@@ -316,9 +311,6 @@ def main(process_args_only=False):
         "--plane", type=str.lower, choices=config.PLANE,
         help="Planar orientation")
     parser.add_argument(
-        "--flip", nargs="*",
-        help="1 to rotate the corresponding image by 180 degrees")
-    parser.add_argument(
         "--no_show", action="store_true",
         help="Avoid showing images after completing the given task")
     parser.add_argument(
@@ -490,12 +482,6 @@ def main(process_args_only=False):
         config.load_labels = config.atlas_labels[config.AtlasLabels.PATH_REF]
         config.labels_level = config.atlas_labels[config.AtlasLabels.LEVEL]
         print("Set labels to {}".format(config.atlas_labels))
-
-    if args.flip:
-        config.flip = []
-        for flip in args.flip:
-            config.flip.append(_is_arg_true(flip))
-        print("Set flip to {}".format(config.flip))
 
     if args.transform is not None:
         # image transformations such as flipping, rotation;

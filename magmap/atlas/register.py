@@ -267,7 +267,8 @@ def _transform_labels(transformix_img_filter, labels_img, truncation=None):
         # amount of tissue or quality of imaging in these regions
         labels_img_np = sitk.GetArrayFromImage(labels_img)
         truncation = list(truncation)
-        if config.flip and config.flip[0]:
+        rotate = config.transform[config.Transforms.ROTATE]
+        if rotate and libmag.get_if_within(rotate, 0) >= 2:
             # assume labels were rotated 180deg around the z-axis, so 
             # need to flip y-axis fracs
             # TODO: take into account full transformations
@@ -678,7 +679,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
 
 
 def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
-                 plane=None, flip=False, prefix=None, suffix=None, show=True):
+                 plane=None, prefix=None, suffix=None, show=True):
     """Reverse registration from :meth:`register`, registering a sample
     image (moving image) to an atlas image (fixed image).
 
@@ -706,8 +707,6 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
         plane: Planar orientation to which the atlas will be transposed, 
             considering the atlas' original plane as "xy". Defaults to 
             None to avoid planar transposition.
-        flip: True if the moving files (does not apply to fixed file) should 
-            be flipped/rotated; defaults to False.
         prefix: Base path to use for output; defaults to None to 
             use ``moving_path`` instead.
         suffix: String to combine with ``moving_path`` to load images; 
@@ -729,8 +728,7 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
     
     # register the images and apply the transformation to any 
     # additional images previously registered to the moving path
-    rotate = 2 if flip else 0
-    moving_img = atlas_refiner.transpose_img(moving_img, plane, rotate)
+    moving_img = atlas_refiner.transpose_img(moving_img, plane)
     transformed_img, transformix_img_filter = register_duo(
         fixed_img, moving_img, prefix)
     settings = config.atlas_profile
@@ -748,7 +746,7 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
     if reg_names is not None:
         for reg_name in reg_names:
             img = sitk_io.load_registered_img(mod_path, reg_name, get_sitk=True)
-            img = atlas_refiner.transpose_img(img, plane, rotate)
+            img = atlas_refiner.transpose_img(img, plane)
             transformix_img_filter.SetMovingImage(img)
             transformix_img_filter.Execute()
             img_result = transformix_img_filter.GetResultImage()
@@ -821,15 +819,15 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
     return img_crop, i
 
 
-def register_group(img_files, flip=None, show_imgs=True, 
-             write_imgs=True, name_prefix=None, scale=None):
+def register_group(img_files, rotate=None, show_imgs=True,
+                   write_imgs=True, name_prefix=None, scale=None):
     """Group registers several images to one another.
     
     Args:
         img_files: Paths to image files to register.
-        flip: Boolean list corresponding to ``img_files`` flagging 
-            whether to flip the image or not; defaults to None, in which 
-            case no images will be flipped.
+        rotate (List[int]): List of number of 90 degree rotations for images
+            corresponding to ``img_files``; defaults to None, in which
+            case the `config.transform` rotate attribute will be used.
         show_imgs: True if the output images should be displayed; defaults to 
             True.
         write_imgs: True if the images should be written to file; defaults to 
@@ -842,6 +840,8 @@ def register_group(img_files, flip=None, show_imgs=True,
     start_time = time()
     if name_prefix is None:
         name_prefix = img_files[0]
+    if rotate is None:
+        rotate = config.transform[config.Transforms.ROTATE]
     target_size = config.atlas_profile["target_size"]
     
     '''
@@ -861,7 +861,6 @@ def register_group(img_files, flip=None, show_imgs=True,
     '''
     
     img_vector = sitk.VectorOfImage()
-    flip_img = False
     # image properties of 1st image, in SimpleITK format
     origin = None
     size_orig = None
@@ -869,16 +868,14 @@ def register_group(img_files, flip=None, show_imgs=True,
     start_y = None
     spacing = None
     img_np_template = None # first image, used as template for rest
-    for i in range(len(img_files)):
+    for i, img_file in enumerate(img_files):
         # load image, flipping if necessary and using transposed img if
         # specified, and extract only the channel from config setting
-        img_file = img_files[i]
         img_file = transformer.get_transposed_image_path(
             img_file, scale, target_size)
-        if flip is not None:
-            flip_img = flip[i]
+        rot = rotate and libmag.get_if_within(rotate, i, 0) >= 2
         chl = 0 if config.channel is None else config.channel
-        img = _load_numpy_to_sitk(img_file, flip_img, chl)
+        img = _load_numpy_to_sitk(img_file, rot, chl)
         size = img.GetSize()
         img_np = sitk.GetArrayFromImage(img)
         if img_np_template is None:
@@ -1094,7 +1091,7 @@ def register_labels_to_atlas(path_fixed):
 
 
 def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None, 
-                            flip=False, name_prefix=None, out_plane=None):
+                            rotate=None, name_prefix=None, out_plane=None):
     """Shows overlays of previously saved registered images.
     
     Should be run after :func:`register` has written out images in default
@@ -1105,7 +1102,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
         moving_file_dir: Moving files directory, from which the original
             atlas will be retrieved.
         plane: Orthogonal plane to flip the moving image.
-        flip: If true, will flip the fixed file first; defaults to False.
+        rotate (int): Number of 90 degree rotations; defaults to None.
         name_prefix: Path with base name where registered files are located; 
             defaults to None, in which case the fixed_file path will be used.
         out_plane: Output plane to view.
@@ -1122,7 +1119,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     print("Reading in {}".format(out_path))
     moving_sitk = sitk.ReadImage(out_path)
     moving_sitk = atlas_refiner.transpose_img(
-        moving_sitk, plane, 2 if flip else 0)
+        moving_sitk, plane, rotate)
     moving_img = sitk.GetArrayFromImage(moving_sitk)
     
     # get the registered atlas file, which should already be transposed
@@ -1640,9 +1637,6 @@ def main():
     if config.suffix is not None:
         print("Modifying registered filenames with suffix {}"
               .format(config.suffix))
-    flip = False
-    if config.flip is not None:
-        flip = config.flip[0]
     show = not config.no_show
     size = config.roi_sizes
     if size: size = size[0][:2]
@@ -1675,16 +1669,15 @@ def main():
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
         register_group(
-            config.filenames[:-1], flip=config.flip, name_prefix=config.prefix, 
+            config.filenames[:-1], name_prefix=config.prefix,
             scale=config.transform[config.Transforms.RESCALE], show_imgs=show)
     
     elif reg is config.RegisterTypes.OVERLAYS:
         # overlay registered images in each orthogonal plane
         for out_plane in config.PLANE:
             overlay_registered_imgs(
-                *config.filenames[0:2], plane=config.plane, 
-                flip=flip, name_prefix=config.prefix, 
-                out_plane=out_plane)
+                *config.filenames[0:2], plane=config.plane,
+                name_prefix=config.prefix, out_plane=out_plane)
     
     elif reg is config.RegisterTypes.EXPORT_REGIONS:
         # export regions IDs to CSV files
@@ -1896,7 +1889,7 @@ def main():
                         if config.reg_suffixes[key] is not None]
         register_rev(
             *config.filenames[:2], config.RegNames.IMG_EXP.value, suffixes, 
-            config.plane, flip, config.prefix, config.suffix, show)
+            config.plane, config.prefix, config.suffix, show)
 
     elif reg is config.RegisterTypes.MAKE_LABELS_LEVEL:
         # make a labels image grouped at the given level

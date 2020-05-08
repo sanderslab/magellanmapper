@@ -72,16 +72,14 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
         alpha /= np.sqrt(num_chls + 1)
 
     # transform image based on config parameters
-    # TODO: consider removing flip and using only transpose attribute
     rotate = config.transform[config.Transforms.ROTATE]
-    if rotate is not None or config.flip is not None and config.flip[0]:
-        if rotate is None:
-            # rotate image by 180 deg if first flip setting is True
-            rotate = 2
+    if rotate is not None:
         last_axis = img2d.ndim - 1
         if multichannel:
             last_axis -= 1
-        img2d = np.rot90(img2d, rotate, (last_axis - 1, last_axis))
+        # use first rotation value
+        img2d = np.rot90(
+            img2d, libmag.get_if_within(rotate, 0), (last_axis - 1, last_axis))
 
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d

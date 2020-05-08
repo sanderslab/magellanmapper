@@ -1008,7 +1008,7 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
             the value from :attr:`config.plane` will be taken.
         rotate: Number of times to rotate by 90 degrees; defaults to None, in
             which case the value will be automatically determined based on
-            :attr:`config.flip[0]` and ``plane``.
+            :attr:`config.transform` and ``plane``.
         target_size (List[int]): Size of target image, typically one to which
             ``img_sitk`` will be registered, in (x,y,z, SimpleITK standard)
              ordering.
@@ -1022,12 +1022,11 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
     """
     if plane is None:
         plane = config.plane
-    rotate_num = rotate
     if rotate is None:
-        rotate_num = 0
-        if config.flip and config.flip[0]:
-            # "flip" here is a 180 degree rotation
-            rotate_num = 2
+        # default to getting first rotation number
+        rotate = libmag.get_if_within(
+            config.transform[config.Transforms.ROTATE], 0)
+    rotate_num = rotate if rotate else 0
     if plane in config.PLANE[1:]:
         # assume rotation and inversion based on planar transposition
         # TODO: check if holds generally true for these planar transforms

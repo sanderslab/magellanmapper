@@ -1420,8 +1420,8 @@ def import_atlas(atlas_dir, show=True, prefix=None):
         sitk.Show(img_labels)
 
 
-def measure_overlap(img1, img2, thresh_img1=None,
-                    thresh_img2=None, add_to_img1_mask=None):
+def measure_overlap(img1, img2, thresh_img1=None, thresh_img2=None,
+                    add_to_img1_mask=None, return_masks=False):
     """Measure the Dice Similarity Coefficient (DSC) between two foreground 
     of two images.
     
@@ -1436,9 +1436,13 @@ def measure_overlap(img1, img2, thresh_img1=None,
             mask of ``img1``; defaults to None. Useful to treat as foreground
             regions that would be thresholded as background but included in
             labels.
+        return_masks (bool): True to return the thresholded, mask images
+            used for the overlap calculate; defaults to False.
     
     Returns:
-        The DSC of the foreground of the two given images.
+        float: The DSC of the foreground of the two given images. If
+        ``return_masks`` is True, also returns the masked images as
+        :obj:`np.ndarray` arrays.
     """
     # upper threshold does not seem be set with max despite docs for 
     # sitk.BinaryThreshold, so need to set with max explicitly
@@ -1458,9 +1462,9 @@ def measure_overlap(img1, img2, thresh_img1=None,
     # similar to simple binary thresholding via Numpy
     binary_img1 = sitk.BinaryThreshold(
         img1, thresh_img1, thresh_img1_up)
+    binary_img1_np = sitk.GetArrayFromImage(binary_img1)
     if add_to_img1_mask is not None:
         # add mask to foreground of img1
-        binary_img1_np = sitk.GetArrayFromImage(binary_img1)
         binary_img1_np[add_to_img1_mask] = True
         binary_img1 = sitk_io.replace_sitk_with_numpy(
             binary_img1, binary_img1_np)
@@ -1474,6 +1478,8 @@ def measure_overlap(img1, img2, thresh_img1=None,
     overlap_filter.Execute(binary_img1, binary_img2)
     total_dsc = overlap_filter.GetDiceCoefficient()
     print("foreground DSC: {}\n".format(total_dsc))
+    if return_masks:
+        return total_dsc, binary_img1_np, sitk.GetArrayFromImage(binary_img2)
     return total_dsc
 
 
@@ -1511,7 +1517,8 @@ def make_labels_fg(labels_sitk):
     return fg_img_sitk
 
 
-def measure_overlap_combined_labels(base_img, labels_img, add_lbls=None):
+def measure_overlap_combined_labels(base_img, labels_img, add_lbls=None,
+                                    return_masks=False):
     """Measures the overlap of a combined labels images to another image
 
     Should be 1.0 by definition when using ``labels_img`` to curate another
@@ -1523,6 +1530,8 @@ def measure_overlap_combined_labels(base_img, labels_img, add_lbls=None):
             values will be treated as foreground.
         add_lbls (List[int]): Sequence of labels in ``labels_img`` to add
             to the mask for ``base_img``; defaults to None.
+        return_masks (bool): True to return the thresholded, mask images
+            used for the overlap calculate; defaults to False.
 
     Returns:
         float: Dice Similarity Coefficient from :meth:`measure_overlap`.
@@ -1545,4 +1554,5 @@ def measure_overlap_combined_labels(base_img, labels_img, add_lbls=None):
                          labels_np_abs < lbl[1]], axis=0)] = True
     print("DSC of thresholded fixed image compared with combined labels:")
     return measure_overlap(
-        base_img, lbls_fg, thresh_img2=1, add_to_img1_mask=mask)
+        base_img, lbls_fg, thresh_img2=1, add_to_img1_mask=mask,
+        return_masks=return_masks)

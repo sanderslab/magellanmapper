@@ -700,21 +700,42 @@ def read_file(filename, series=None, load=True, z_max=-1,
 
 
 def import_dir(path, rgb_to_grayscale=True):
+    """Import a diretory of image files into a single image stack.
+
+    Each file is assumed to be a 2D plane in a volumetric image, ordered
+    alphabetically. All files in the folder will be imported.
+
+    Args:
+        path (str): Path to folder of image files to import.
+        rgb_to_grayscale (bool): Files with a three value third dimension
+            are assumed to be RGB and will be converted to grayscale;
+            defaults to True.
+
+    Returns:
+        :obj:`np.ndarray`: The imported image as a Numpy array.
+
+    """
     # allow import of arbitrarily large images
     Image.MAX_IMAGE_PIXELS = None
 
+    # all files in the given folder will be imported in alphabetical order
     files = sorted(glob.glob(path))
+    print("Importing files in directory {}:".format(path))
+    for f in files:
+        print(f)
     #files.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
     num_files = len(files)
     if num_files < 1:
         return None
+
+    # import all files, using the first file to set the output filename
+    # and array shape
     name = os.path.dirname(files[0])
     filename_image5d_npz, filename_info_npz = make_filenames(name + ".", 0)
     image5d = None
     lows = []
     highs = []
-    i = 0
-    for f in files:
+    for i, f in enumerate(files):
         print("importing {}".format(f))
         img = io.imread(f)
         if rgb_to_grayscale and img.ndim >= 3 and img.shape[2] == 3:
@@ -722,7 +743,6 @@ def import_dir(path, rgb_to_grayscale=True):
             print("converted from 3-channel (assuming RGB) to grayscale")
             img = color.rgb2gray(img)
         if image5d is None:
-            #image5d = np.empty((1, len(files), *img.shape))
             image5d = np.lib.format.open_memmap(
                 filename_image5d_npz, mode="w+", dtype=img.dtype, 
                 shape=(1, len(files), *img.shape))
@@ -730,7 +750,8 @@ def import_dir(path, rgb_to_grayscale=True):
         low, high = np.percentile(img, (0.5, 99.5))
         lows.append(low)
         highs.append(high)
-        i += 1
+
+    # save metadata and load for immediate use
     md = save_image_info(
         filename_info_npz, [name], [image5d.shape], config.resolutions,
         config.magnification, config.zoom, [min(lows)], [max(highs)])

@@ -536,8 +536,9 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   # fit properly, especially since unregistered tiles may be shifted to 
   # (0, 0, 0)
   bin/stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1 -j "$java_home"
-  python -u -m magmap.io.cli --img "$TIFF_DIR" --res "$resolutions" \
-    --mag "$magnification" --zoom "$zoom" -v --channel 0 --proc import_only
+  python -u -m magmap.io.cli -v --img "$TIFF_DIR" --channel 0 \
+    --proc import_only --set_meta resolutions="$resolutions" \
+    magnification="$magnification" zoom="$zoom" "${EXTRA_ARGS[@]}"
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
   
 elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
@@ -579,9 +580,9 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   
   # Import stacked TIFF file(s) into Numpy arrays for MagellanMapper
   start=$SECONDS
-  python -u -m magmap.io.cli --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
-    --res "$resolutions" --mag "$magnification" --zoom "$zoom" -v \
-    --proc import_only
+  python -u -m magmap.io.cli -v --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
+    --proc import_only --set_meta resolutions="$resolutions" \
+    magnification="$magnification" zoom="$zoom" "${EXTRA_ARGS[@]}"
   summary_msg+=("Stitched file import time: $((SECONDS - start)) s")
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi

@@ -108,6 +108,16 @@ cmaps = None
 
 # MICROSCOPY
 
+# metadata keys for command-line parsing
+MetaKeys = Enum(
+    "MetaKeys", (
+        "RESOLUTIONS",  # image resolutions in x,y,z
+        "MAGNIFICATION",  # objective magnification
+        "ZOOM",  # objective zoom
+    )
+)
+meta_dict = dict.fromkeys(MetaKeys, None)
+
 #: List[float]: Image resolutions as an array of dimensions (n, r),
 # where each resolution r is a tuple in (z, y, x) order
 resolutions = None

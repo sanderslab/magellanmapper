@@ -46,9 +46,9 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # initial import from TIF files
 # - filenames should have the format: name_ch_0.tif, name_ch_1.tif, etc
-# - change `res` to resolutions in x,y,z
-# - change `mag` to objective magnification
-#python -u -m magmap.io.cli --img "${IMG%.*}.tif" --proc import_only --res 10.52,10.52,10 --mag 0.63 -v
+# - change `resolutions` to image resolutions in x,y,z
+# - change `magnification` and `zoom` to microscope objective values
+#python -u -m magmap.io.cli --img "${IMG%.*}.tif" --proc import_only --set_meta resolutions=10.52,10.52,10 magnification=0.63 zoom=1.0 -v
 
 # view imported image
 #./run.py --img "$IMG"

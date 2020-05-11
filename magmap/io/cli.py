@@ -25,8 +25,6 @@ Command-line arguments in addition to those from attributes listed below:
     * padding_2d: Padding around the ROI given as (x, y, z) from which to 
         include segments and and show further 2D planes.
     * plane: Plane type (see :const:``config.PLANE``).
-    * res: Resolution given as (x, y, z) in floating point (see
-        cli.py, though order is natural here as command-line argument).
     * save_subimg: Save sub-image during stack processing.
     * register: Registration type. See :attr:``config.REGISTER_TYPES`` for 
         types of registration and :mod:``register`` for how to use these 
@@ -233,9 +231,6 @@ def main(process_args_only=False):
     parser.add_argument("--offset", nargs="*", help="ROI offset in x,y,z")
     parser.add_argument("--size", nargs="*", help="ROI size in x,y,z")
     parser.add_argument("--db", help="Database path")
-    parser.add_argument("--res", help="Resolutions in x,y,z")
-    parser.add_argument("--mag", help="Objective magnification")
-    parser.add_argument("--zoom", help="Objective zoom")
 
     # task arguments
     parser.add_argument(
@@ -300,6 +295,9 @@ def main(process_args_only=False):
     parser.add_argument(
         "--plot_labels", nargs="*",
         help="Plot label customizations; see config.PlotLabels for settings")
+    parser.add_argument(
+        "--set_meta", nargs="*",
+        help="Set metadata values; see config.MetaKeys for settings")
 
     # image and figure display arguments
     parser.add_argument("--padding_2d", help="Padding around ROIs in x,y,z")
@@ -442,21 +440,34 @@ def main(process_args_only=False):
     if config.proc_type and proc_type not in config.ProcessTypes:
         libmag.warn(
             "\"{}\" processing type not found".format(config.proc_type))
-    
-    if args.res is not None:
-        res_split = args.res.split(",")
-        if len(res_split) >= 3:
-            config.resolutions = [tuple(float(i) for i in res_split)[::-1]]
-            print("Set resolutions to {}".format(config.resolutions))
-        else:
-            print("Resolution ({}) should be given as 3 values (x, y, z)"
-                  .format(args.res))
-    if args.mag:
-        config.magnification = args.mag
-        print("Set magnification to {}".format(config.magnification))
-    if args.zoom:
-        config.zoom = args.zoom
-        print("Set zoom to {}".format(config.zoom))
+
+    if args.set_meta is not None:
+        # set individual metadata values, currently used for image import
+        # TODO: take precedence over loaded metadata archives
+        config.meta_dict = args_to_dict(
+            args.set_meta, config.MetaKeys, config.meta_dict, sep_vals="|")
+        print("Set metadata values to {}".format(config.meta_dict))
+        res = config.meta_dict[config.MetaKeys.RESOLUTIONS]
+        if res:
+            # set image resolutions, taken in x,y,z for each series and
+            # converting to a nested list of z,y,x
+            res_split = res.split(",")
+            if len(res_split) >= 3:
+                config.resolutions = [tuple(float(i) for i in res_split)[::-1]]
+                print("Set resolutions to {}".format(config.resolutions))
+            else:
+                print("Resolution ({}) should be given as 3 values (x, y, z)"
+                      .format(args.res))
+        mag = config.meta_dict[config.MetaKeys.MAGNIFICATION]
+        if mag:
+            # set objective magnification
+            config.magnification = mag
+            print("Set magnification to {}".format(config.magnification))
+        zoom = config.meta_dict[config.MetaKeys.ZOOM]
+        if zoom:
+            # set objective zoom
+            config.zoom = zoom
+            print("Set zoom to {}".format(config.zoom))
 
     # set up ROI and register profiles
     setup_profiles(args.roi_profile, args.atlas_profile)
@@ -476,8 +487,7 @@ def main(process_args_only=False):
         print("Set labels to {}".format(config.atlas_labels))
 
     if args.transform is not None:
-        # image transformations such as flipping, rotation;
-        # TODO: consider superseding the flip arg by incorporation here
+        # image transformations such as flipping, rotation
         config.transform = args_to_dict(
             args.transform, config.Transforms, config.transform)
         print("Set transformations to {}".format(config.transform))

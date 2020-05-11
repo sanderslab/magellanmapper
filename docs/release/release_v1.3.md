@@ -18,6 +18,9 @@ Summary of usage changes:
 | `--saveroi` | `--save_subimg` | Consistency with "sub-images" as parts of images that can contain ROIs |
 | `--chunk_size` | None | Obsolete |
 | `finer` atlas profile | None | Its settings are now default |
+| `res` | `--set_meta resolutions=x,y,z` | Grouped custom metadata settings into `--set_meta` |
+| `mag` | `--set_meta magnification=x.y` | Grouped custom metadata settings into `--set_meta` |
+| `zoom` | `--set_meta zoom=x,y,z` | Grouped custom metadata settings into `--set_meta` |
 
 ### Changes
 

@@ -257,7 +257,7 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
             result_img_for_overlap = sitk_io.replace_sitk_with_numpy(
                 img, result_img_np)
             atlas_refiner.measure_overlap(
-                fixed_img, result_img_for_overlap, transformed_thresh=1)
+                fixed_img, result_img_for_overlap, thresh_img2=1)
     return result_imgs
 
 
@@ -553,7 +553,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     print("DSC of original and registered sample images")
     thresh_mov = settings["atlas_threshold"]
     dsc_sample = atlas_refiner.measure_overlap(
-        fixed_img_orig, img_moved, transformed_thresh=thresh_mov)
+        fixed_img_orig, img_moved, thresh_img2=thresh_mov)
     fallback = settings["metric_sim_fallback"]
     metric_sim = "default"  # differs depending on reg type
     if fallback and dsc_sample < fallback[0]:
@@ -562,7 +562,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         metric_sim = fallback[1]
         img_moved, transformix_filter, transform_param_map = reg(metric_sim)
         dsc_sample = atlas_refiner.measure_overlap(
-            fixed_img_orig, img_moved, transformed_thresh=thresh_mov)
+            fixed_img_orig, img_moved, thresh_img2=thresh_mov)
     
     def make_labels(truncation=None):
         # apply the same transformation to labels via Transformix, with option
@@ -585,7 +585,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
             print("DSC of original and registered sample images after curation")
             dsc = atlas_refiner.measure_overlap(
                 fixed_img_orig, transformed_img_cur, 
-                transformed_thresh=settings["atlas_threshold"])
+                thresh_img2=settings["atlas_threshold"])
         return labels_trans, labels_trans_cur, transformed_img_cur, dsc
 
     # apply same transformation to labels, +/- curation to carve the moving
@@ -734,7 +734,7 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
     settings = config.atlas_profile
     print("DSC of original and registered sample images")
     dsc_sample = atlas_refiner.measure_overlap(
-        fixed_img, transformed_img, fixed_thresh=settings["atlas_threshold"])
+        fixed_img, transformed_img, thresh_img1=settings["atlas_threshold"])
     fallback = settings["metric_sim_fallback"]
     if fallback and dsc_sample < fallback[0]:
         print("reg DSC below threshold of {}, will re-register using {} "

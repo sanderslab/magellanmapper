@@ -41,6 +41,7 @@ except ImportError as e:
     warnings.warn(
         "Python-Bioformats could not be found, so there will be error when "
         "attempting to import images into Numpy format", ImportWarning)
+from PIL import Image
 from skimage import io
 
 # pixel type enumeration based on:
@@ -698,6 +699,9 @@ def read_file(filename, series=None, load=True, z_max=-1,
 
 
 def import_dir(path):
+    # allow import of arbitrarily large images
+    Image.MAX_IMAGE_PIXELS = None
+
     files = sorted(glob.glob(path))
     #files.sort(key=lambda f: int("".join(filter(str.isdigit, f))))
     num_files = len(files)

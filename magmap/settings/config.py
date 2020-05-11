@@ -431,7 +431,7 @@ RegisterTypes = Enum(
         "EXPORT_METRICS_COMPACTNESS",
         "PLOT_SMOOTHING_METRICS",
         "SMOOTHING_PEAKS",
-        "SMOOTHING_METRIC_AGGR",
+        "SMOOTHING_METRICS_AGGR",
         "MERGE_IMAGES",
         "MERGE_IMAGES_CHANNELS",
         "LABELS_DIFF",

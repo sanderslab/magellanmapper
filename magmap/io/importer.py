@@ -42,6 +42,7 @@ except ImportError as e:
         "Python-Bioformats could not be found, so there will be error when "
         "attempting to import images into Numpy format", ImportWarning)
 from PIL import Image
+from skimage import color
 from skimage import io
 
 # pixel type enumeration based on:
@@ -698,7 +699,7 @@ def read_file(filename, series=None, load=True, z_max=-1,
     return image5d
 
 
-def import_dir(path):
+def import_dir(path, rgb_to_grayscale=True):
     # allow import of arbitrarily large images
     Image.MAX_IMAGE_PIXELS = None
 
@@ -716,6 +717,10 @@ def import_dir(path):
     for f in files:
         print("importing {}".format(f))
         img = io.imread(f)
+        if rgb_to_grayscale and img.ndim >= 3 and img.shape[2] == 3:
+            # assume that 3-value 3rd channel images are RGB
+            print("converted from 3-channel (assuming RGB) to grayscale")
+            img = color.rgb2gray(img)
         if image5d is None:
             #image5d = np.empty((1, len(files), *img.shape))
             image5d = np.lib.format.open_memmap(

@@ -278,7 +278,7 @@ def remap_intensity(roi, channel=None):
         settings = config.get_roi_profile(chl)
         lim = settings["adapt_hist_lim"]
         print("Performing adaptive histogram equalization on channel {}, "
-              "clip limit {}".format(channel, lim))
+              "clip limit {}".format(chl, lim))
         equalized = []
         for plane in roi_show:
             # workaround for lack of current nD support in scikit-image CLAHE

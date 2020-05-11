@@ -531,6 +531,8 @@ class AtlasMetrics(Enum):
     SIMILARITY_METRIC = "Similarity_metric"
     LAT_UNLBL_VOL = "Lateral_unlabeled_volume"
     LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"
+    VOL_ATLAS = "Vol_atlas"
+    VOL_LABELS = "Vol_labels"
     OFFSET = "Offset"
     SIZE = "Size"
     CHANNEL = "Channel"

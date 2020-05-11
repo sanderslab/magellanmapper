@@ -1365,11 +1365,13 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    # DSC of atlas and labels
+    # DSC and total volumes of atlas and labels
     print("\nDSC after import:")
-    dsc = measure_overlap_combined_labels(
-        img_atlas, img_labels, overlap_meas_add)
+    dsc, atlas_mask, labels_mask = measure_overlap_combined_labels(
+        img_atlas, img_labels, overlap_meas_add, return_masks=True)
     metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
+    metrics[config.AtlasMetrics.VOL_ATLAS] = [np.sum(atlas_mask)]
+    metrics[config.AtlasMetrics.VOL_LABELS] = [np.sum(labels_mask)]
     
     # compactness of whole atlas (non-label) image; use lower threshold for 
     # compactness measurement to minimize noisy surface artifacts

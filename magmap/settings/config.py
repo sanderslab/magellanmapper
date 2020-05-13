@@ -182,9 +182,12 @@ PlotLabels = Enum(
         "HLINE",  # horizontal line, usually fn for each group
         "LEGEND_NAMES",  # names to display in legend
         "PADDING",  # figure tight layout padding
+        "SCALE_BAR",  # True to include a scale bar
     )
 )
+#: dict[Any]: Plot labels set from command-line.
 plot_labels = dict.fromkeys(PlotLabels, None)
+plot_labels[PlotLabels.SCALE_BAR] = True
 
 # image transformation keys for command-line parsing
 Transforms = Enum(
@@ -286,9 +289,6 @@ save_subimg = False
 # to main image, labels image; set first value to 0 to prevent display/export
 # of main image, which typically must be loaded.
 alphas = [1]
-
-# show scale bars
-scale_bar = True
 
 
 # DATABASE

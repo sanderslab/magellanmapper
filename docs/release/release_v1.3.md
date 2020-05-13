@@ -22,6 +22,7 @@ Summary of usage changes:
 | `--mag` | `--set_meta magnification=x.y` | Grouped custom metadata settings into `--set_meta` |
 | `--zoom` | `--set_meta zoom=x,y,z` | Grouped custom metadata settings into `--set_meta` |
 | `--no_show` | `--show 0` | Show with `1` |
+| `--no_scale_bar` | `--plot_labels scale_bar=1` | Grouped with other plot labels controls |
 
 ### Changes
 

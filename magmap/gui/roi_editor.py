@@ -618,7 +618,7 @@ class ROIEditor:
                 np.divide(patch_offset, downsample),
                 *np.divide(roi_size[0:2], downsample),
                 fill=False, edgecolor="yellow", linewidth=2))
-            if config.scale_bar:
+            if config.plot_labels[config.PlotLabels.SCALE_BAR]:
                 plot_support.add_scale_bar(ax_ov, downsample, plane)
             ax_ov.format_coord = pixel_display.PixelDisplay(
                 show["imgs2d"], ax_imgs, downsample, offsets,
@@ -769,7 +769,8 @@ class ROIEditor:
                     z == z_overview, border_full if show_border else None,
                     plane, roi_show, labels, blobs_truth_z, circles=circles,
                     aspect=aspect, grid=grid, cmap_labels=cmap_labels)
-                if i == 0 and j == 0 and config.scale_bar:
+                if (i == 0 and j == 0
+                        and config.plot_labels[config.PlotLabels.SCALE_BAR]):
                     plot_support.add_scale_bar(ax_z, plane=plane)
                 ax_z_list.append(ax_z)
 
@@ -907,7 +908,8 @@ class ROIEditor:
                     gs, i, j, image5d, channel, roi_size, zoom_offset,
                     None, segments, None, None, 1.0, z,
                     circles=self.CircleStyles.CIRCLES, roi=roi)
-                if i == 0 and j == 0 and config.scale_bar:
+                if (i == 0 and j == 0
+                        and config.plot_labels[config.PlotLabels.SCALE_BAR]):
                     plot_support.add_scale_bar(ax_z)
         gs.tight_layout(fig, pad=0.5)
         if show:

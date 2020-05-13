@@ -323,8 +323,6 @@ def main(process_args_only=False):
         help="Maximum intensity levels, which can be comma-delimited "
              "for multichannel images")
     parser.add_argument("--seed", help="Random number generator seed")
-    parser.add_argument(
-        "--no_scale_bar", action="store_true", help="Turn off scale bars")
 
     # export arguments
     parser.add_argument(
@@ -590,12 +588,7 @@ def main(process_args_only=False):
         # specify random number generator seed
         config.seed = int(args.seed)
         print("Set random number generator seed to", config.seed)
-    
-    if args.no_scale_bar:
-        # turn off scale bar display
-        config.scale_bar = False
-        print("Set scale bar display to {}".format(config.scale_bar))
-    
+
     if args.plot_labels is not None:
         # specify general plot labels
         config.plot_labels = args_to_dict(

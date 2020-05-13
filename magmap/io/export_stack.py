@@ -372,7 +372,8 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
     # export planes
     plotted_imgs = _build_stack(
         ax, extracted_planes, fnc, rescale, aspect=aspect, 
-        origin=origin, cmaps_labels=cmaps_labels, scale_bar=config.scale_bar)
+        origin=origin, cmaps_labels=cmaps_labels,
+        scale_bar=config.plot_labels[config.PlotLabels.SCALE_BAR])
     
     if fit and plotted_imgs:
         # fit frame to first plane's first available image

@@ -616,7 +616,9 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
 
     if show_imgs:
         # show individual SimpleITK images in default viewer
-        for img in imgs_write: sitk.Show(img)
+        for img in imgs_write.values():
+            if img is not None:
+                sitk.Show(img)
     
     if write_imgs:
         # write atlas and labels files

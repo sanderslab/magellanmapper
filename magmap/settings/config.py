@@ -266,7 +266,8 @@ rc_params_mpl2_img_interp = {
 
 # IMAGE VIEWING
 
-no_show = False
+#: bool: Show images after a task is performed, if applicable
+show = False
 max_scroll = 20  # max speed when scrolling through planes
 
 

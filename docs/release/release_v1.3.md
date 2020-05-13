@@ -21,6 +21,7 @@ Summary of usage changes:
 | `res` | `--set_meta resolutions=x,y,z` | Grouped custom metadata settings into `--set_meta` |
 | `mag` | `--set_meta magnification=x.y` | Grouped custom metadata settings into `--set_meta` |
 | `zoom` | `--set_meta zoom=x,y,z` | Grouped custom metadata settings into `--set_meta` |
+| `--no_show` | `--show 0` | Show with `1` |
 
 ### Changes
 

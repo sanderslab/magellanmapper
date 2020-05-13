@@ -66,7 +66,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # register imported atlas to downsampled image and view
 # - defaults to using channel 0; add `--channel x` to use channel x instead
 # - use the `transform` parameter for a 180 degree rotation (2 x 90 deg)
-#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --register single --atlas_profile "${REG}_raw" --no_show -v #--transform rotate=2
+#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --register single --atlas_profile "${REG}_raw" -v #--transform rotate=2
 #./run.py --img "$IMG_MHD" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd --offset 70,350,150
 
 # similar view of registered labels but overlaid on downsampled image
@@ -78,7 +78,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --roi_profile "$MIC"
 
 # make and view density image (heat map)
-#./run_cli.py -v --img "$IMG" --register make_density_images --no_show
+#./run_cli.py -v --img "$IMG" --register make_density_images
 #./run.py --img "$IMG" --roi_profile lightsheet_contrast --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" --reg_suffixes heat.mhd annotation.mhd
 
 # volume metrics (level 13 includes hierarchical regions through this level)
@@ -117,7 +117,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 #./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "lightsheet_contrast" --proc load --truth_db edit magmap.db
 
 # grid-search on single sub-image using the "test" ROC profile
-#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" --truth_db verify magmap.db --grid_search test --no_show
+#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" --truth_db verify magmap.db --grid_search test
 
 # view verifications for single offset
 #./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --roi_profile lightsheet_contrast --proc load --truth_db verified "${THEME[@]}"

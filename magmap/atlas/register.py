@@ -135,9 +135,9 @@ def _show_overlays(imgs, translation, fixed_file, plane):
     """
     cmaps = ["Blues", "Oranges", "prism"]
     #plot_2d.plot_overlays(imgs, z, cmaps, os.path.basename(fixed_file), aspect)
-    show = not config.no_show
     plot_2d.plot_overlays_reg(
-        *imgs, *cmaps, translation, os.path.basename(fixed_file), plane, show)
+        *imgs, *cmaps, translation, os.path.basename(fixed_file), plane,
+        config.show)
 
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
@@ -1639,7 +1639,6 @@ def main():
     if config.suffix is not None:
         print("Modifying registered filenames with suffix {}"
               .format(config.suffix))
-    show = not config.no_show
     size = config.roi_sizes
     if size: size = size[0][:2]
     # TODO: transition size -> fig_size
@@ -1665,14 +1664,15 @@ def main():
         new_atlas = reg is config.RegisterTypes.NEW_ATLAS
         register(
             *config.filenames[:2], name_prefix=config.prefix,
-            new_atlas=new_atlas, show_imgs=show)
+            new_atlas=new_atlas, show_imgs=config.show)
     
     elif reg is config.RegisterTypes.GROUP:
         # groupwise registration, which assumes that the last image 
         # filename given is the prefix and uses the full flip array
         register_group(
             config.filenames[:-1], name_prefix=config.prefix,
-            scale=config.transform[config.Transforms.RESCALE], show_imgs=show)
+            scale=config.transform[config.Transforms.RESCALE],
+            show_imgs=config.show)
     
     elif reg is config.RegisterTypes.OVERLAYS:
         # overlay registered images in each orthogonal plane
@@ -1699,7 +1699,7 @@ def main():
     
     elif reg is config.RegisterTypes.IMPORT_ATLAS:
         # import original atlas, mirroring if necessary
-        atlas_refiner.import_atlas(config.filename, show, config.prefix)
+        atlas_refiner.import_atlas(config.filename, config.show, config.prefix)
     
     elif reg is config.RegisterTypes.EXPORT_COMMON_LABELS:
         # export common labels
@@ -1765,12 +1765,12 @@ def main():
             (config.SmoothingMetrics.COMPACTION.value,
              config.SmoothingMetrics.DISPLACEMENT.value,
              config.SmoothingMetrics.SM_QUALITY.value), 
-            ("--", "--", "-"), lbls, title, size, show, "_quality")
+            ("--", "--", "-"), lbls, title, size, config.show, "_quality")
         plot_2d.plot_lines(
             config.filename, config.SmoothingMetrics.FILTER_SIZE.value, 
             (config.SmoothingMetrics.SA_VOL_FRAC.value,
              config.SmoothingMetrics.LABEL_LOSS.value), 
-            ("-", "-"), lbls, None, size, show, "_extras", ("C3", "C4"))
+            ("-", "-"), lbls, None, size, config.show, "_extras", ("C3", "C4"))
     
     elif reg is config.RegisterTypes.SMOOTHING_PEAKS:
         # find peak smoothing qualities without label loss and at a given
@@ -1808,7 +1808,7 @@ def main():
         atlas = reg is config.RegisterTypes.MAKE_EDGE_IMAGES
         for img_path in config.filenames:
             edge_seg.make_edge_images(
-                img_path, show, atlas, config.suffix, config.load_labels)
+                img_path, config.show, atlas, config.suffix, config.load_labels)
     
     elif reg is config.RegisterTypes.REG_LABELS_TO_ATLAS:
         # register labels to its underlying atlas
@@ -1821,7 +1821,8 @@ def main():
         # merge various forms of atlas segmentations
         atlas = reg is config.RegisterTypes.MERGE_ATLAS_SEGS
         edge_seg.merge_atlas_segmentations(
-            config.filenames, show=show, atlas=atlas, suffix=config.suffix)
+            config.filenames, show=config.show, atlas=atlas,
+            suffix=config.suffix)
     
     elif reg in (config.RegisterTypes.VOL_STATS,
                  config.RegisterTypes.VOL_COMPARE):
@@ -1872,7 +1873,8 @@ def main():
             # use suffix assigned to atlas
             suffix_exp = config.reg_suffixes[config.RegSuffixes.ATLAS]
             if suffix_exp: suffix = suffix_exp
-        sitk_io.merge_images(config.filenames, suffix, config.prefix, config.suffix)
+        sitk_io.merge_images(
+            config.filenames, suffix, config.prefix, config.suffix)
 
     elif reg is config.RegisterTypes.MERGE_IMAGES_CHANNELS:
         # combine separate experiments from all paths into separate channels
@@ -1891,12 +1893,12 @@ def main():
                         if config.reg_suffixes[key] is not None]
         register_rev(
             *config.filenames[:2], config.RegNames.IMG_EXP.value, suffixes, 
-            config.plane, config.prefix, config.suffix, show)
+            config.plane, config.prefix, config.suffix, config.show)
 
     elif reg is config.RegisterTypes.MAKE_LABELS_LEVEL:
         # make a labels image grouped at the given level
         export_regions.make_labels_level_img(
-            config.filename, config.labels_level, config.prefix, show)
+            config.filename, config.labels_level, config.prefix, config.show)
     
     elif reg is config.RegisterTypes.LABELS_DIFF:
         # generate labels difference images for various measurements 
@@ -1913,7 +1915,7 @@ def main():
         for metric in metrics:
             col_wt = vols.get_metric_weight_col(metric[0])
             export_regions.make_labels_diff_img(
-                config.filename, path_df, *metric, config.prefix, show, 
+                config.filename, path_df, *metric, config.prefix, config.show,
                 config.labels_level, col_wt=col_wt)
 
     elif reg is config.RegisterTypes.LABELS_DIFF_STATS:
@@ -1933,7 +1935,7 @@ def main():
             col_wt = vols.get_metric_weight_col(metric)
             export_regions.make_labels_diff_img(
                 config.filename, path_df, "vals.effect", None, config.prefix, 
-                show, meas_path_name=metric, col_wt=col_wt)
+                config.show, meas_path_name=metric, col_wt=col_wt)
     
     elif reg is config.RegisterTypes.COMBINE_COLS:
         # normalize the given columns to original values in a data frame 
@@ -1963,7 +1965,7 @@ def main():
         extra_cols = ("Sample", "Condition", vols.LabelMetrics.Volume.name)
         atlas_stats.meas_plot_zscores(
             config.filename, metric_cols, extra_cols, 
-            (vols.MetricCombos.HOMOGENEITY,), size, show)
+            (vols.MetricCombos.HOMOGENEITY,), size, config.show)
     
     elif reg is config.RegisterTypes.COEFVAR:
         # measure and export coefficient of variation for the given metrics 
@@ -1981,7 +1983,7 @@ def main():
         )
         atlas_stats.meas_plot_coefvar(
             config.filename, ["Region"], "Condition", "original", metric_cols, 
-            combos, vols.LabelMetrics.Volume.name, size, show)
+            combos, vols.LabelMetrics.Volume.name, size, config.show)
 
     elif reg is config.RegisterTypes.MELT_COLS:
         # melt columns specified in "groups" using ID columns from 
@@ -2009,7 +2011,7 @@ def main():
         # plot region development
         try:
             metric = vols.LabelMetrics[config.df_task].name
-            atlas_stats.plot_region_development(metric, size, show)
+            atlas_stats.plot_region_development(metric, size, config.show)
         except KeyError:
             libmag.warn(
                 "\"{}\" metric not found in {} for developmental plots"
@@ -2019,7 +2021,8 @@ def main():
         # plot lateral edge unlabeled fractions as both lines and bars
         cols = (config.AtlasMetrics.LAT_UNLBL_VOL.value,
                 config.AtlasMetrics.LAT_UNLBL_PLANES.value)
-        atlas_stats.plot_unlabeled_hemisphere(config.filename, cols, size, show)
+        atlas_stats.plot_unlabeled_hemisphere(
+            config.filename, cols, size, config.show)
 
     elif reg is config.RegisterTypes.PLOT_INTENS_NUC:
         # combine nuclei vs. intensity R stats and generate scatter plots
@@ -2028,7 +2031,7 @@ def main():
         # same label use for x/y and only in denominator
         unit = config.plot_labels[config.PlotLabels.X_UNIT]
         atlas_stats.plot_intensity_nuclei(
-            config.filenames, labels, fig_size, show, unit)
+            config.filenames, labels, fig_size, config.show, unit)
     
     elif reg is config.RegisterTypes.MEAS_IMPROVEMENT:
         # measure summary improvement/worsening stats by label from R stats
@@ -2067,7 +2070,7 @@ def main():
     elif reg is config.RegisterTypes.PLOT_KNNS:
         # plot k-nearest-neighbor distances for multiple paths
         clustering.plot_knns(
-            config.filenames, config.suffix, show,
+            config.filenames, config.suffix, config.show,
             config.plot_labels[config.PlotLabels.LEGEND_NAMES])
     
     elif reg is config.RegisterTypes.CLUSTER_BLOBS:
@@ -2082,7 +2085,8 @@ def main():
             if "scaling" in output:
                 scaling = output["scaling"]
         atlas_stats.plot_clusters_by_label(
-            config.filename, config.roi_offsets[0][2], config.suffix, show, scaling)
+            config.filename, config.roi_offsets[0][2], config.suffix,
+            config.show, scaling)
 
     else:
         print("Could not find register task:", reg)

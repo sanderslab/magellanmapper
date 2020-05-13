@@ -305,8 +305,8 @@ def main(process_args_only=False):
         "--plane", type=str.lower, choices=config.PLANE,
         help="Planar orientation")
     parser.add_argument(
-        "--no_show", action="store_true",
-        help="Avoid showing images after completing the given task")
+        "--show", nargs="?", const="1",
+        help="If applicable, show images after completing the given task")
     parser.add_argument(
         "--border", nargs="*",
         help="Border padding for ROI detection verifications in x,y,z")
@@ -518,9 +518,12 @@ def main(process_args_only=False):
     if args.delay:
         config.delay = int(args.delay)
         print("Set delay to {}".format(config.delay))
-    if args.no_show:
-        config.no_show = args.no_show
-        print("Set no show to {}".format(config.no_show))
+
+    if args.show:
+        # show images after task is performed, if supported
+        config.show = _is_arg_true(args.show)
+        print("Set show to {}".format(config.show))
+
     if args.border:
         borders = _parse_coords(args.border)
         config.border = borders[0]
@@ -809,7 +812,7 @@ def _grid_search(series_list):
         parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
         for stats_df in stats_dfs:
             # plot ROC curve
-            plot_2d.plot_roc(stats_df, not config.no_show)
+            plot_2d.plot_roc(stats_df, config.show)
 
 
 def _process_files(series_list):

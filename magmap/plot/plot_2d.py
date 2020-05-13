@@ -996,7 +996,6 @@ def main():
     # set up command-line args and plotting style
     setup_style("default")
     size = config.plot_labels[config.PlotLabels.SIZE]
-    show = not config.no_show
     
     plot_2d_type = libmag.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
@@ -1080,7 +1079,7 @@ def main():
 
         # set annotation array index as 0 since most often vary only
         # z-val, but switch or remove when varying other axes
-        plot_roc(pd.read_csv(config.filename), show, 0)
+        plot_roc(pd.read_csv(config.filename), config.show, 0)
     
     elif plot_2d_type is config.Plot2DTypes.SCATTER_PLOT:
         # scatter plot
@@ -1104,11 +1103,11 @@ def main():
         plot_scatter(
             config.filename, cols[1], cols[0], 
             cols_group=cols_group, labels=labels, title=title,
-            fig_size=size, show=show, suffix=config.suffix, 
+            fig_size=size, show=config.show, suffix=config.suffix,
             alpha=config.alphas[0] * 255)
     
     if ax is not None:
-        post_plot(ax, out_path, config.savefig, show)
+        post_plot(ax, out_path, config.savefig, config.show)
 
 
 if __name__ == "__main__":

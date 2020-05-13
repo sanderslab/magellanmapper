@@ -247,7 +247,7 @@ class PlotEditor:
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = pixel_display.PixelDisplay(
-            imgs2d, ax_imgs, self._downsample)
+            imgs2d, ax_imgs, self._downsample, cmap_labels=self.cmap_labels)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]
         

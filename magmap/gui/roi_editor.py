@@ -22,6 +22,7 @@ from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
 from skimage import transform
 
+from magmap.gui import pixel_display
 from magmap.plot import colormaps
 from magmap.settings import config
 from magmap.cv import detector
@@ -538,17 +539,20 @@ class ROIEditor:
                 vmins: Sequence of vmins corresponding to ``imgs``.
                 vmaxs: Sequence of vmins corresponding to ``imgs``.
             """
-            patch_offset = offset[0:2]
+            patch_offset = offset[:2]
             zoom = 1
             imgs = list(imgs)
+            # main overview image, on which other images may be overlaid
             img2d_ov = imgs[0]
             roi_end = np.add(offset, roi_size)
+            offsets = []
             if lev > 0:
                 # move origin progressively closer with each zoom level,
                 # a small fraction less than the offset
                 zoom = zoom_levels[lev]
                 ori = np.multiply(
-                    offset[:2], np.subtract(zoom, zoom_shift) / zoom).astype(int)
+                    offset[:2],
+                    np.subtract(zoom, zoom_shift) / zoom).astype(int)
                 zoom_shape = np.flipud(img2d_ov.shape[:2])
                 # progressively decrease size, zooming in for each level
                 size = (zoom_shape / zoom).astype(int)
@@ -566,7 +570,7 @@ class ROIEditor:
                         ori[o] -= end[o] - zoom_shape[o]
                 for img_i, img in enumerate(imgs):
                     if img is not None:
-                        # zoom extra images based on scaling to main image
+                        # zoom images based on scaling to main image
                         scale = np.divide(
                             img.shape[:2], img2d_ov.shape[:2])[::-1]
                         origin_scaled = np.multiply(ori, scale).astype(np.int)
@@ -574,6 +578,7 @@ class ROIEditor:
                         imgs[img_i] = img[
                             origin_scaled[1]:end_scaled[1],
                             origin_scaled[0]:end_scaled[0]]
+                        offsets.append(origin_scaled[::-1])
                 # zoom main image and position ROI patch
                 img2d_ov = img2d_ov[ori[1]:end[1], ori[0]:end[0]]
                 patch_offset = np.subtract(patch_offset, ori)
@@ -604,10 +609,10 @@ class ROIEditor:
                     # resize extra image to size of main image
                     img = transform.resize(
                         img, img2d_ov_ds.shape, order=0, anti_aliasing=False,
-                        preserve_range=True, mode="reflect")
+                        preserve_range=True, mode="reflect").astype(np.int)
                 for k, v in zip(keys, (img, cm, vmin, vmax, alp)):
                     show.setdefault(k, []).append(v)
-            plot_support.overlay_images(
+            ax_imgs = plot_support.overlay_images(
                 ax_ov, aspect, origin, ignore_invis=True, **show)
             ax_ov.add_patch(patches.Rectangle(
                 np.divide(patch_offset, downsample),
@@ -615,6 +620,9 @@ class ROIEditor:
                 fill=False, edgecolor="yellow", linewidth=2))
             if config.scale_bar:
                 plot_support.add_scale_bar(ax_ov, downsample, plane)
+            ax_ov.format_coord = pixel_display.PixelDisplay(
+                show["imgs2d"], ax_imgs, downsample, offsets,
+                libmag.get_if_within(cmaps, 1))
 
             # set title with total zoom including objective and plane number
             if config.zoom and config.magnification:

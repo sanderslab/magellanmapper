@@ -658,7 +658,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         config.AtlasMetrics.SIMILARITY_METRIC: [metric_sim],
         config.AtlasMetrics.DSC_ATLAS_SAMPLE: [dsc_sample], 
         config.AtlasMetrics.DSC_ATLAS_SAMPLE_CUR: [dsc_sample_cur],
-        config.AtlasMetrics.DSC_ATLAS_LABELS: [dsc_labels], 
+        config.AtlasMetrics.DSC_SAMPLE_LABELS: [dsc_labels],
         config.SmoothingMetrics.COMPACTNESS: [compactness],
     }
     df_path = libmag.combine_paths(

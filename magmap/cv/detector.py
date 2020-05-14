@@ -688,37 +688,38 @@ def remove_close_blobs_within_sorted_array(blobs, tol):
     return blobs_all
 
 
-def get_blobs_in_roi(blobs, offset, size, padding=(0, 0, 0), reverse=True):
+def get_blobs_in_roi(blobs, offset, size, margin=(0, 0, 0), reverse=True):
     """Get blobs within an ROI based on offset and size.
     
     Note that dimensions are in x,y,z for natural ordering but may 
     change for consistency with z,y,x ordering used throughout MagellanMapper.
     
     Args:
-        blobs: The blobs to retrieve, given as 2D array of 
+        blobs (:obj:`np.ndarray`): The blobs to retrieve, given as 2D array of
             ``[n, [z, row, column, radius, ...]]``.
-        offset: Offset coordinates in .
-        size: Size of ROI in x,y,z.
-        padding: Additional padding outside the ROI to include.
+        offset (List[int]): Offset coordinates in .
+        size (List[int]): Size of ROI in x,y,z.
+        margin (List[int]): Additional space outside the ROI to include
+            in x,y,z.
         reverse (bool): True to reverse the order of ``offset`` and ``size``,
             assuming that they are in x,y,z rather than z,y,x order.
             Defaults to True for backward compatibility with the ROI
             convention used here.
     
     Returns:
-        Tuple of blobs within the ROI and the mask used to retrieve 
-        these blobs.
+        :obj:`np.ndarray`, :obj:`np.ndarray`: Blobs within the ROI and the
+        mask used to retrieve these blobs.
     """
     if reverse:
         offset = offset[::-1]
         size = size[::-1]
     mask = np.all([
-        blobs[:, 0] >= offset[0] - padding[0],
-        blobs[:, 0] < offset[0] + size[0] + padding[0],
-        blobs[:, 1] >= offset[1] - padding[1], 
-        blobs[:, 1] < offset[1] + size[1] + padding[1],
-        blobs[:, 2] >= offset[2] - padding[2],
-        blobs[:, 2] < offset[2] + size[2] + padding[2]], axis=0)
+        blobs[:, 0] >= offset[0] - margin[0],
+        blobs[:, 0] < offset[0] + size[0] + margin[0],
+        blobs[:, 1] >= offset[1] - margin[1],
+        blobs[:, 1] < offset[1] + size[1] + margin[1],
+        blobs[:, 2] >= offset[2] - margin[2],
+        blobs[:, 2] < offset[2] + size[2] + margin[2]], axis=0)
     segs_all = blobs[mask]
     return segs_all, mask
 

@@ -181,7 +181,8 @@ PlotLabels = Enum(
         "ZOOM_SHIFT",  # shift plot offset when zooming into ROI
         "HLINE",  # horizontal line, usually fn for each group
         "LEGEND_NAMES",  # names to display in legend
-        "PADDING",  # figure tight layout padding
+        "PADDING",  # image padding, either as scalar or x,y,z
+        "MARGIN",  # image margin, either as scalar or x,y,z
         "SCALE_BAR",  # True to include a scale bar
     )
 )

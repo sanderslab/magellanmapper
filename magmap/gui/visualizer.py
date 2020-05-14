@@ -248,10 +248,10 @@ class Visualization(HasTraits):
             self._check_list_3d.append(self._DEFAULTS_3D[3])
         # self._structure_scale = self._structure_scale_high
 
-        # ROI padding for extracting previously detected blobs
-        self._padding = config.plot_labels[config.PlotLabels.PADDING]
-        if self._padding is None:
-            self._padding = (5, 5, 3)  # x,y,z
+        # ROI margin for extracting previously detected blobs
+        self._margin = config.plot_labels[config.PlotLabels.MARGIN]
+        if self._margin is None:
+            self._margin = (5, 5, 3)  # x,y,z
 
         # setup interface for image
         if config.filename:
@@ -744,7 +744,7 @@ class Visualization(HasTraits):
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
             segs_all, _ = detector.get_blobs_in_roi(
-                config.blobs, offset, roi_size, self._padding)
+                config.blobs, offset, roi_size, self._margin)
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)
@@ -891,7 +891,7 @@ class Visualization(HasTraits):
             # collect truth blobs from the truth DB if available
             blobs_truth_roi, _ = detector.get_blobs_in_roi(
                 config.truth_db.blobs_truth, curr_offset, curr_roi_size, 
-                self._padding)
+                self._margin)
             transpose = np.zeros(blobs_truth_roi.shape[1])
             transpose[0:3] = curr_offset[::-1]
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)

@@ -23,7 +23,7 @@ Summary of usage changes:
 | `--zoom` | `--set_meta zoom=x,y,z` | Grouped custom metadata settings into `--set_meta` |
 | `--no_show` | `--show 0` | Show with `1` |
 | `--no_scale_bar` | `--plot_labels scale_bar=1` | Grouped with other plot labels controls |
-| `--padding_2d` | `--plot_labels padding=x,y,z` | Grouped with other plot labels controls |
+| `--padding_2d` | `--plot_labels margin=x,y,z` | Grouped with other plot labels controls, adding `margin` as space outside the ROI |
 
 ### Changes
 

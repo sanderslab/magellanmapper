@@ -426,13 +426,13 @@ class ROIEditor:
         z_start = offset[2]
         z_planes = roi_size[2]
         # additional z's above/below
-        padding_stack = config.plot_labels[config.PlotLabels.PADDING]
-        if padding_stack is None:
+        margin = config.plot_labels[config.PlotLabels.MARGIN]
+        if margin is None:
             z_planes_padding = 3
         else:
             # assumes x,y,z order
-            z_planes_padding = libmag.get_if_within(padding_stack, 2, 3)
-        print("padding: {}, savefig: {}".format(padding_stack, config.savefig))
+            z_planes_padding = libmag.get_if_within(margin, 2, 3)
+        print("margin: {}, savefig: {}".format(margin, config.savefig))
         z_planes = z_planes + z_planes_padding * 2
 
         # position overview at bottom (default), middle, or top of stack

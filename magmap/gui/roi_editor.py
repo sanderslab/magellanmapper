@@ -30,8 +30,6 @@ from magmap.io import importer
 from magmap.io import libmag
 from magmap.plot import plot_support
 
-# TODO: may want to base on scaling factor instead
-padding = (5, 5, 3)  # human (x, y, z) order
 verify = False
 
 
@@ -314,8 +312,7 @@ class ROIEditor:
     def plot_2d_stack(self, fn_update_seg, title, filename, image5d, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
                       fn_close_listener, border=None, plane="xy",
-                      padding_stack=None, zoom_levels=1, zoom_shift=None,
-                      single_roi_row=False,
+                      zoom_levels=1, zoom_shift=None, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
                       grid=False, roi_cols=None, img_region=None,
@@ -343,8 +340,6 @@ class ROIEditor:
                 to None.
             plane: The plane to show in each 2D plot, with "xy" to show the
                 XY plane (default) and "xz" to show XZ plane.
-            padding_stack: The amount of padding in pixels, defaulting to the
-                padding attribute.
             zoom_levels (int, List[int]): Number of overview zoom levels to
                 include or sequence of zoom multipliers; defaults to 1.
             zoom_shift (List[float]): Sequence of x,y shift in zoomed plot
@@ -430,11 +425,16 @@ class ROIEditor:
         # mark z-planes to show
         z_start = offset[2]
         z_planes = roi_size[2]
+        # additional z's above/below
+        padding_stack = config.plot_labels[config.PlotLabels.PADDING]
         if padding_stack is None:
-            padding_stack = padding
-        z_planes_padding = padding_stack[2] # additional z's above/below
-        print("padding: {}, savefig: {}".format(padding, config.savefig))
+            z_planes_padding = 3
+        else:
+            # assumes x,y,z order
+            z_planes_padding = libmag.get_if_within(padding_stack, 2, 3)
+        print("padding: {}, savefig: {}".format(padding_stack, config.savefig))
         z_planes = z_planes + z_planes_padding * 2
+
         # position overview at bottom (default), middle, or top of stack
         z_overview = z_start # abs positioning
         if z_level == self.ZLevels.MIDDLE:

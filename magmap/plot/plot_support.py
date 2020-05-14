@@ -479,7 +479,7 @@ def fit_frame_to_image(fig, shape, aspect):
     if pad:
         # use neg padding to remove thin left border that sometimes appears;
         # NOTE: this setting will turn off constrained layout
-        fig.tight_layout(pad=pad)
+        fig.tight_layout(pad=libmag.get_if_within(pad, 0, 0))
     if aspect is None:
         aspect = 1
     img_size_inches = np.divide(shape, fig.dpi)  # convert to inches

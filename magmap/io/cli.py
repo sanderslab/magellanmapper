@@ -22,8 +22,6 @@ Command-line arguments in addition to those from attributes listed below:
     * load_labels: Path to labels reference file, which also serves as a flag 
         to load the labels image as well 
         (see :attr:`config.load_labels`).
-    * padding_2d: Padding around the ROI given as (x, y, z) from which to 
-        include segments and and show further 2D planes.
     * plane: Plane type (see :const:``config.PLANE``).
     * save_subimg: Save sub-image during stack processing.
     * register: Registration type. See :attr:``config.REGISTER_TYPES`` for 
@@ -300,7 +298,6 @@ def main(process_args_only=False):
         help="Set metadata values; see config.MetaKeys for settings")
 
     # image and figure display arguments
-    parser.add_argument("--padding_2d", help="Padding around ROIs in x,y,z")
     parser.add_argument(
         "--plane", type=str.lower, choices=config.PLANE,
         help="Planar orientation")
@@ -419,17 +416,6 @@ def main(process_args_only=False):
         print("Set ROI sizes to {}, current size {} (x,y,z)"
               .format(config.roi_sizes, config.roi_size))
 
-    if args.padding_2d is not None:
-        # TODO: consider removing or moving to profile
-        padding_split = args.padding_2d.split(",")
-        if len(padding_split) >= 3:
-            roi_editor.padding = tuple(int(i) for i in padding_split)
-            print("Set plot_2d.padding to {}".format(
-                roi_editor.padding))
-        else:
-            print("padding_2d ({}) should be given as 3 values (x, y, z)"
-                  .format(args.padding_2d))
-    
     # set up main processing mode
     if args.proc is not None:
         config.proc_type = args.proc

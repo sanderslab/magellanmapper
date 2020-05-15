@@ -546,7 +546,7 @@ class InterpolatePlanes:
         """
         if val is None:
             self._bounds = [None, None]
-        elif isinstance(val, int):
+        elif libmag.is_int(val):
             if val not in self._bounds:
                 self._bounds.append(val)
                 del self._bounds[0]

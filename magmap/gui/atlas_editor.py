@@ -407,7 +407,7 @@ class AtlasEditor:
             ed.intensity_spec = intensity
 
 
-def enable_btn(btn, enable=True, color=None):
+def enable_btn(btn, enable=True, color=None, max_color=0.99):
     """Display a button or other widget as enabled or disabled.
     
     Note that the button's active state will not change since doing so 
@@ -421,13 +421,19 @@ def enable_btn(btn, enable=True, color=None):
             hovercolor will be just above this value, while the disabled
             main and hovercolors will be just below this value. Defaults
             to None, which will use :attr:`config.widget_color`.
+        max_color (float): Max intensity value for hover color; defaults
+            to 0.99 to provide at least some contrast with white backgrounds.
     """
     if color is None:
         color = config.widget_color
     if enable:
         # "enable" button by changing to default grayscale color intensities
         btn.color = str(color)
-        btn.hovercolor = str(color + 0.1)
+        hover = color + 0.1
+        if hover > max_color:
+            # intensities > 1 appear to recycle, so clip to max allowable val
+            hover = max_color
+        btn.hovercolor = str(hover)
     else:
         # "disable" button by making darker and no hover response
         color_disabled = color - 0.2

@@ -45,7 +45,7 @@ def make_roi_paths(path, roi_id, channel, make_dirs=False):
         path_img_annot, path_img_annot_nifti
 
 
-def export_rois(db, image5d, channel, path, border=None, unit_factor=None, 
+def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 truth_mode=None, exp_name=None):
     """Export all ROIs from database.
     
@@ -57,8 +57,8 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
         image5d: The image with the ROIs.
         channel: Channel to export.
         path: Path with filename base from which to save the exported files.
-        border (List[int]): Border dimensions in (x,y,z) order to not 
-            include in the ROI; defaults to None.
+        padding (List[int]): Padding in x,y,z to exclude from the ROI;
+            defaults to None.
         unit_factor (float): Linear conversion factor for units (eg 1000.0
             to convert um to mm).
         truth_mode (:obj:`config.TruthDBModes`): Truth mode enum; defaults
@@ -70,8 +70,8 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
         :obj:`pd.DataFrame`: ROI metrics in a data frame.
     
     """
-    if border is not None:
-        border = np.array(border)
+    if padding is not None:
+        padding = np.array(padding)
     
     # convert volume base on scaling and unit factor
     phys_mult = np.prod(detector.calc_scaling_factor())
@@ -111,11 +111,11 @@ def export_rois(db, image5d, channel, path, border=None, unit_factor=None,
             blobs[:, 4] = -1
             
             # adjust ROI size and offset if border set
-            if border is not None:
-                size = np.subtract(img3d.shape[::-1], 2 * border)
-                img3d = plot_3d.prepare_roi(img3d, size, border)
+            if padding is not None:
+                size = np.subtract(img3d.shape[::-1], 2 * padding)
+                img3d = plot_3d.prepare_roi(img3d, size, padding)
                 blobs[:, 0:3] = np.subtract(
-                    blobs[:, 0:3], np.add(offset, border)[::-1])
+                    blobs[:, 0:3], np.add(offset, padding)[::-1])
             print("exporting ROI of shape {}".format(img3d.shape))
             
             isotropic = config.roi_profile["isotropic"]

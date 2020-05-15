@@ -305,9 +305,6 @@ def main(process_args_only=False):
         "--show", nargs="?", const="1",
         help="If applicable, show images after completing the given task")
     parser.add_argument(
-        "--border", nargs="*",
-        help="Border padding for ROI detection verifications in x,y,z")
-    parser.add_argument(
         "--alphas",
         help="Alpha opacity levels, which can be comma-delimited for "
              "multichannel images")
@@ -508,10 +505,6 @@ def main(process_args_only=False):
         config.show = _is_arg_true(args.show)
         print("Set show to {}".format(config.show))
 
-    if args.border:
-        borders = _parse_coords(args.border)
-        config.border = borders[0]
-        print("Set ROI export to clip to border: {}".format(config.border))
     if args.groups:
         config.groups = args.groups
         print("Set groups to {}".format(config.groups))
@@ -858,7 +851,8 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         from magmap.io import export_rois
         db = config.db if config.truth_db is None else config.truth_db
         export_rois.export_rois(
-            db, config.image5d, config.channel, filename_base, config.border, 
+            db, config.image5d, config.channel, filename_base,
+            config.plot_labels[config.PlotLabels.PADDING],
             config.unit_factor, config.truth_db_mode,
             os.path.basename(config.filename))
         

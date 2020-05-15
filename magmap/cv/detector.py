@@ -814,11 +814,12 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
         if resize is not None:
             # TODO: doesn't align with exported ROIs
+            padding = config.plot_labels[config.PlotLabels.PADDING]
             libmag.printv("shifting blobs in ROI by offset {}, border {}"
-                          .format(offset, config.border))
+                          .format(offset, padding))
             blobs_roi = shift_blob_rel_coords(blobs_roi, offset)
-            if config.border:
-                blobs_roi = shift_blob_rel_coords(blobs_roi, config.border)
+            if padding:
+                blobs_roi = shift_blob_rel_coords(blobs_roi, padding)
         blobs_inner, blobs_inner_mask = get_blobs_in_roi(
             blobs_roi, offset_inner, size_inner)
         blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)

@@ -24,6 +24,7 @@ Summary of usage changes:
 | `--no_show` | `--show 0` | Show with `1` |
 | `--no_scale_bar` | `--plot_labels scale_bar=1` | Grouped with other plot labels controls |
 | `--padding_2d` | `--plot_labels margin=x,y,z` | Grouped with other plot labels controls, adding `margin` as space outside the ROI |
+| `--border` | `--plot_labels padding=x,y,z` | Duplicated by the `padding` argument |
 
 ### Changes
 

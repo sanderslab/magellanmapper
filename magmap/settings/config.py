@@ -100,7 +100,6 @@ vmins = None  # cmd-line specified
 vmaxs = None
 # generated from near_max; overwritten at cmd-line
 vmax_overview = [None]
-border = None # clip ROI to border (x,y,z order)
 near_max = [-1.0] # auto-detected, max of clipped intensities of whole img
 near_min = [0.0]
 cmaps = None

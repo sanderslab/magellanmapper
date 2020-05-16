@@ -1338,7 +1338,7 @@ class Visualization(HasTraits):
             )
         ),
         handler=VisHandler(),
-        title="magmap",
+        title="MagellanMapper",
         resizable=True
     )
 

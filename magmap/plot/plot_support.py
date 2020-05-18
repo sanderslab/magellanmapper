@@ -476,10 +476,6 @@ def fit_frame_to_image(fig, shape, aspect):
         aspect: Aspect ratio of image.
     """
     pad = config.plot_labels[config.PlotLabels.PADDING]
-    if pad:
-        # use neg padding to remove thin left border that sometimes appears;
-        # NOTE: this setting will turn off constrained layout
-        fig.tight_layout(pad=libmag.get_if_within(pad, 0, 0))
     if aspect is None:
         aspect = 1
     img_size_inches = np.divide(shape, fig.dpi)  # convert to inches
@@ -490,6 +486,10 @@ def fit_frame_to_image(fig, shape, aspect):
     else:
         # multiply both sides by 1 / aspect => number > 1 to enlarge
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
+    if pad:
+        # use neg padding to remove thin left border that sometimes appears;
+        # NOTE: this setting will turn off constrained layout
+        fig.tight_layout(pad=libmag.get_if_within(pad, 0, 0))
     print("fig size: {}".format(fig.get_size_inches()))
 
 

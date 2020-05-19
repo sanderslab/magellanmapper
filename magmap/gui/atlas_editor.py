@@ -6,6 +6,7 @@
 import datetime
 
 from matplotlib import pyplot as plt
+from matplotlib import figure
 from matplotlib import gridspec
 from matplotlib.widgets import Slider, Button, TextBox
 
@@ -50,13 +51,14 @@ class AtlasEditor:
         interp_planes: Current :class:`InterpolatePlanes` object.
         interp_btn: Matplotlib button to initiate plane interpolation.
         save_btn: Matplotlib button to save the atlas.
+        fig (:obj:`figure.Figure`): Matplotlib figure.
     """
 
     _EDIT_BTN_LBLS = ("Edit", "Editing")
 
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
                  borders_img=None, fn_show_label_3d=None, title=None,
-                 fn_refresh_atlas_eds=None):
+                 fn_refresh_atlas_eds=None, fig=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself."""
         self.image5d = image5d
         self.labels_img = labels_img
@@ -67,6 +69,7 @@ class AtlasEditor:
         self.fn_show_label_3d = fn_show_label_3d
         self.title = title
         self.fn_refresh_atlas_eds = fn_refresh_atlas_eds
+        self.fig = fig
         
         self.plot_eds = {}
         self.alpha_slider = None
@@ -81,7 +84,11 @@ class AtlasEditor:
     def show_atlas(self):
         """Set up the atlas display with multiple orthogonal views."""
         # set up the figure
-        fig = plt.figure(self.title)
+        if self.fig is None:
+            fig = figure.Figure(self.title)
+            self.fig = fig
+        else:
+            fig = self.fig
         gs = gridspec.GridSpec(
             2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1))
         gs_viewers = gridspec.GridSpecFromSubplotSpec(
@@ -105,22 +112,22 @@ class AtlasEditor:
             1, 2, subplot_spec=gs[1, 0], width_ratios=(1, 1),
             wspace=0.15)
         self.alpha_slider = Slider(
-            plt.subplot(gs_controls[0, 0]), "Opacity", 0.0, 1.0,
+            fig.add_subplot(gs_controls[0, 0]), "Opacity", 0.0, 1.0,
             valinit=plot_editor.PlotEditor.ALPHA_DEFAULT)
         gs_controls_btns = gridspec.GridSpecFromSubplotSpec(
             1, 5, subplot_spec=gs_controls[0, 1], wspace=0.1)
         self.alpha_reset_btn = Button(
-            plt.subplot(gs_controls_btns[0, 0]), "Reset")
+            fig.add_subplot(gs_controls_btns[0, 0]), "Reset")
         self.interp_btn = Button(
-            plt.subplot(gs_controls_btns[0, 1]), "Fill Label")
+            fig.add_subplot(gs_controls_btns[0, 1]), "Fill Label")
         self.interp_planes = InterpolatePlanes(self.interp_btn)
         self.interp_planes.update_btn()
         self.save_btn = Button(
-            plt.subplot(gs_controls_btns[0, 2]), "Save")
+            fig.add_subplot(gs_controls_btns[0, 2]), "Save")
         self.edit_btn = Button(
-            plt.subplot(gs_controls_btns[0, 3]), "Edit")
+            fig.add_subplot(gs_controls_btns[0, 3]), "Edit")
         self.color_picker_box = TextBox(
-            plt.subplot(gs_controls_btns[0, 4]), None)
+            fig.add_subplot(gs_controls_btns[0, 4]), None)
 
         # adjust button colors based on theme and enabled status; note
         # that colors do not appear to refresh until fig mouseover
@@ -144,7 +151,7 @@ class AtlasEditor:
             
             # image plot with arrays transformed to this editor's 
             # orthogonal direction
-            ax = plt.subplot(gs_plot[1, 0])
+            ax = fig.add_subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
             plane = config.PLANE[axis]
             plot_support.max_plane(self.image5d[0], plane)
@@ -170,7 +177,7 @@ class AtlasEditor:
             if arrs_1d is not None and len(arrs_1d) > 0: scaling = arrs_1d[0]
             
             # slider through image planes
-            ax_scroll = plt.subplot(gs_plot[0, 0])
+            ax_scroll = fig.add_subplot(gs_plot[0, 0])
             plane_slider = Slider(
                 ax_scroll, plot_support.get_plane_axis(plane), 0, 
                 len(img3d_transposed) - 1, valfmt="%d", valinit=0, valstep=1)
@@ -218,7 +225,6 @@ class AtlasEditor:
         # extra padding for slider labels
         gs.tight_layout(fig)
         plt.ion()  # avoid the need for draw calls
-        plt.show()
 
     def _close(self, evt):
         """Handle figure close events by calling :attr:`fn_close_listener`

@@ -16,6 +16,7 @@ from enum import Enum
 from time import time
 
 import numpy as np
+from matplotlib import figure
 from matplotlib import gridspec
 from matplotlib import patches
 from matplotlib import pyplot as plt
@@ -262,6 +263,7 @@ class ROIEditor:
             2D plots, the 2D planes for the ROI.
         ZLevels (:obj:`Enum`): Enum denoting the possible positions of the
             z-plane shown in the overview plots.
+        fig (:obj:`figure.figure`): Matplotlib figure.
     """
     ROI_COLS = 9
 
@@ -304,6 +306,7 @@ class ROIEditor:
     def __init__(self):
         """Initialize the editor."""
         print("Initiating ROI Editor")
+        self.fig = None
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
@@ -316,7 +319,7 @@ class ROIEditor:
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
                       grid=False, roi_cols=None, img_region=None,
-                      max_intens_proj=False, labels_img=None):
+                      max_intens_proj=False, labels_img=None, fig=None):
         """Shows a figure of 2D plots to compare with the 3D plot.
 
         Args:
@@ -372,6 +375,8 @@ class ROIEditor:
                 projections through the ROI. Defaults to Faslse.
             labels_img (:obj:`np.ndarray`): Atlas labels image in z,y,x format;
                 defaults to None.
+            fig (:obj:`figure.Figure`): Matplotlib figure; defaults to None
+                to generate a new figure.
         """
         time_start = time()
 
@@ -387,7 +392,12 @@ class ROIEditor:
             # shift origin of zoomed plot so that ROI is near upper L corner
             zoom_shift = (1, 1)
 
-        fig = plt.figure()
+        # set up figure
+        if fig is None:
+            fig = figure.Figure()
+        fig.clear()
+        self.fig = fig
+
         # black text with transluscent background the color of the figure
         # background in case the title is a 2D plot
         fig.suptitle(title, color="black",
@@ -687,7 +697,7 @@ class ROIEditor:
         # overview images taken from the bottom plane of the offset, with
         # progressively zoomed overview images if set for additional zoom levels
         for level in range(num_zoom_levels):
-            ax = plt.subplot(gs[0, level])
+            ax = fig.add_subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
             show_overview(ax, level, **img2ds)
@@ -763,7 +773,7 @@ class ROIEditor:
 
                 # show the zoomed subplot with scale bar for the current z-plane
                 ax_z = self.show_subplot(
-                    gs_zoomed, i, j, image5d, channel, roi_size,
+                    fig, gs_zoomed, i, j, image5d, channel, roi_size,
                     zoom_offset, fn_update_seg,
                     segs_in, segs_out, segs_cmap, alpha, z_relative,
                     z == z_overview, border_full if show_border else None,
@@ -842,16 +852,13 @@ class ROIEditor:
         # show 3D screenshot if available
         if mlab_screenshot is not None:
             img3d = mlab_screenshot
-            ax = plt.subplot(gs[0, num_zoom_levels])
+            ax = fig.add_subplot(gs[0, num_zoom_levels])
             # auto to adjust size with less overlap
             ax.imshow(img3d)
             ax.set_aspect(img3d.shape[1] / img3d.shape[0])
             plot_support.hide_axes(ax)
         gs.tight_layout(fig, pad=0.5)
-        #gs_zoomed.tight_layout(fig, pad=0.5)
         plt.ion()
-        plt.show()
-        #fig.set_size_inches(*(fig.get_size_inches() * 1.5), True)
         plot_support.save_fig(filename, config.savefig)
         print("2D plot time: {}".format(time() - time_start))
 
@@ -905,7 +912,7 @@ class ROIEditor:
                 # shows the zoomed subplot with scale bar for the current
                 # z-plane with all segments
                 ax_z = self.show_subplot(
-                    gs, i, j, image5d, channel, roi_size, zoom_offset,
+                    fig, gs, i, j, image5d, channel, roi_size, zoom_offset,
                     None, segments, None, None, 1.0, z,
                     circles=self.CircleStyles.CIRCLES, roi=roi)
                 if (i == 0 and j == 0
@@ -916,15 +923,15 @@ class ROIEditor:
             plt.show()
         plot_support.save_fig(title, config.savefig)
 
-    def show_subplot(self, gs, row, col, image5d, channel, roi_size,
-                     offset,
-                     fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
+    def show_subplot(self, fig, gs, row, col, image5d, channel, roi_size,
+                     offset, fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
                      z_relative, highlight=False, border=None, plane="xy",
                      roi=None, labels=None, blobs_truth=None, circles=None,
                      aspect=None, grid=False, cmap_labels=None):
         """Shows subplots of the region of interest.
 
         Args:
+            fig (:obj:`figure.Figure`): Matplotlib figure.
             gs: Gridspec layout.
             row: Row number of the subplot in the layout.
             col: Column number of the subplot in the layout.
@@ -960,7 +967,7 @@ class ROIEditor:
             cmap_labels: :class:``colormaps.DiscreteColormap`` for labels;
                 defaults to None.
         """
-        ax = plt.subplot(gs[row, col])
+        ax = fig.add_subplot(gs[row, col])
         plot_support.hide_axes(ax)
         size = image5d.shape
         # swap columns if showing a different plane
@@ -983,7 +990,7 @@ class ROIEditor:
                 [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
         if z < 0 or z >= size[image5d_shape_offset]:
             print("skipping z-plane {}".format(z))
-            plt.imshow(np.zeros(roi_size[0:2]))
+            ax.imshow(np.zeros(roi_size[0:2]))
         else:
             # show the zoomed in 2D region
 

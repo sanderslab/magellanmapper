@@ -21,13 +21,19 @@ Examples:
 from enum import Enum
 import os
 
+import matplotlib
+matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
+from matplotlib import figure
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         Int, List, Array, Str, push_exception_handler,
                         Property, File)
-from traitsui.api import (View, Item, HGroup, VGroup, Handler, 
+from traitsui.api import (View, Item, HGroup, VGroup, Tabbed, Handler,
                           RangeEditor, HSplit, TabularEditor, CheckListEditor, 
                           FileEditor, TextEditor)
+from traitsui.basic_editor_factory import BasicEditorFactory
+from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
 from tvtk.pyface.scene_editor import SceneEditor
 from tvtk.pyface.scene_model import SceneModelError
@@ -52,6 +58,7 @@ from magmap.plot import plot_support
 from magmap.gui import roi_editor
 from magmap.cv import segmenter
 from magmap.io import sqlite
+
 
 # default ROI name
 _ROI_DEFAULT = "None selected"
@@ -99,6 +106,28 @@ def _fig_title(atlas_region, offset, roi_size):
     return "{}{} (series {})\noffset {}, ROI size {} [{}{}]".format(
         region, os.path.basename(config.filename), config.series, offset, 
         tuple(roi_size), tuple(roi_size_um), u'\u00b5m')
+
+
+class _MPLFigureEditor(Editor):
+    """Custom TraitsUI editor to handle Matplotlib figures."""
+    scrollable = True
+
+    def init(self, parent):
+        self.control = self._create_canvas(parent)
+        self.set_tooltip()
+
+    def update_editor(self):
+        pass
+
+    def _create_canvas(self, parent):
+        """Create canvas through the Matplotlib Qt backend."""
+        mpl_canvas = FigureCanvasQTAgg(self.value)
+        return mpl_canvas
+
+
+class MPLFigureEditor(BasicEditorFactory):
+    """Custom TraitsUI editor for a Matplotlib figure."""
+    klass = _MPLFigureEditor
 
 
 class VisHandler(Handler):
@@ -220,12 +249,8 @@ class Visualization(HasTraits):
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
     _camera_pos = None
-
-
-    # Mayavi 3D visualization panel
-    panel_vis = Item(
-        'scene', editor=SceneEditor(scene_class=MayaviScene),
-        height=600, width=600, show_label=False)
+    _roi_ed_fig = Instance(figure.Figure(), ())
+    _atlas_ed_fig = Instance(figure.Figure(), ())
 
     # ROI selector panel
     panel_roi_selector = VGroup(
@@ -308,17 +333,27 @@ class Visualization(HasTraits):
         ),
     )
 
-    # set up the GUI layout
+    # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
+    panel_figs = Tabbed(
+        Item("_roi_ed_fig", show_label=False, editor=MPLFigureEditor(),
+             width=1000, height=600),
+        Item("_atlas_ed_fig", show_label=False, editor=MPLFigureEditor()),
+        Item("scene", editor=SceneEditor(scene_class=MayaviScene),
+             show_label=False),
+    )
+
+    # set up the GUI layout; control the HSplit width ratio using a width
+    # for this whole view and a width for an item in panel_figs
     view = View(
         HSplit(
-            panel_vis,
-            panel_roi_selector
+            panel_roi_selector,
+            panel_figs,
         ),
+        width=1500,
         handler=VisHandler(),
         title="MagellanMapper",
         resizable=True
     )
-
 
     def __init__(self):
         """Initialize GUI."""
@@ -1019,6 +1054,7 @@ class Visualization(HasTraits):
             "labels_img": config.labels_img,
             "zoom_shift": config.plot_labels[config.PlotLabels.ZOOM_SHIFT],
             "roi_cols": roi_cols,
+            "fig": self._roi_ed_fig,
         }
         if self._styles_2d[0] == Styles2D.SQUARE_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
@@ -1070,7 +1106,7 @@ class Visualization(HasTraits):
             config.image5d, config.labels_img, config.channel, 
             self._curr_offset(), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
-            self._refresh_atlas_eds)
+            self._refresh_atlas_eds, self._atlas_ed_fig)
         self.atlas_eds.append(atlas_ed)
         atlas_ed.show_atlas()
 

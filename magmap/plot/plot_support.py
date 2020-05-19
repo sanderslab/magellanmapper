@@ -428,6 +428,9 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
         jump: Function to jump to a given plane; defaults to None.
         max_scroll: Max number of planes to scroll by mouse. Ignored during 
             jumps.
+
+    Returns:
+        int: Index of plane after scrolling.
     """
     step = 0
     if isinstance(event, backend_bases.MouseEvent):
@@ -436,7 +439,7 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
         if max_scroll is not None and abs(steps) > max_scroll:
             # cap scroll speed, preserving direction (sign)
             steps *= max_scroll / abs(steps)
-        step += int(steps) # decimal point num on some platforms
+        step += int(steps)  # decimal point num on some platforms
     elif isinstance(event, backend_bases.KeyEvent):
         # finer-grained movements through keyboard controls since the 
         # finest scroll movements may be > 1

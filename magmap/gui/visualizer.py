@@ -27,8 +27,8 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
-                        Int, List, Array, Str, push_exception_handler,
-                        Property, File)
+                        Int, List, Array, Str, Bool, Any,
+                        push_exception_handler, Property, File)
 from traitsui.api import (View, Item, HGroup, VGroup, Tabbed, Handler,
                           RangeEditor, HSplit, TabularEditor, CheckListEditor, 
                           FileEditor, TextEditor)
@@ -131,10 +131,22 @@ class MPLFigureEditor(BasicEditorFactory):
 
 
 class VisHandler(Handler):
-    """Simple handler for Visualization object events.
-    
-    Closes the JVM when the window is closed.
-    """
+    """Custom handler for Visualization object events."""
+
+    def init(self, info):
+        """Handle events after controls have been generated but prior to
+        theid display.
+
+        Args:
+            info (UIInfo): TraitsUI UI info.
+
+        Returns:
+            bool: True.
+
+        """
+        info.object.controls_created = True
+        return True
+
     def closed(self, info, is_ok):
         """Shuts down the application when the GUI is closed."""
         cli.shutdown()
@@ -186,6 +198,8 @@ class Visualization(HasTraits):
         segments: Array of segments; if None, defaults to a Numpy array
             of zeros with one row.
         segs_selected: List of indices of selected segments.
+        controls_created (Bool): True if the controls have been created;
+            defaults to False.
     """
     x_offset = Int
     y_offset = Int
@@ -198,7 +212,7 @@ class Visualization(HasTraits):
     btn_atlas_editor_trait = Button("Atlas Editor")
     btn_save_3d = Button("Save 3D Screenshot")
     btn_save_segments = Button("Save Blobs")
-    roi = None # combine with roi_array?
+    roi = None  # combine with roi_array?
     rois_selections_class = Instance(ListSelections)
     rois_check_list = Str
     _rois_dict = None
@@ -221,6 +235,7 @@ class Visualization(HasTraits):
     labels = None  # segmentation labels
     atlas_eds = []  # open atlas editors
     flipz = True  # True to invert 3D vis along z-axis
+    controls_created = Bool(False)
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
     _check_list_2d = List
@@ -977,6 +992,13 @@ class Visualization(HasTraits):
 
         """
         self.atlas_eds[self.atlas_eds.index(atlas_ed)] = None
+
+    @on_trait_change("controls_created")
+    def _post_controls_created(self):
+        # populate Matplotlib figures once controls have been created,
+        # at which point the figures will allow connections
+        self._btn_2d_trait_fired()
+        self._btn_atlas_editor_trait_fired()
 
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""

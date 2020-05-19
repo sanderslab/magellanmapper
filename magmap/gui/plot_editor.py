@@ -483,6 +483,8 @@ class PlotEditor:
                         label_x = x + 20
                     self.region_label.set_horizontalalignment(alignment)
                     self.region_label.set_position((label_x, y - 20))
+            # need explicit draw call for figs embedded in TraitsUI
+            self.axes.figure.canvas.draw_idle()
 
         self.last_loc = loc
         self.last_loc_data = loc_data

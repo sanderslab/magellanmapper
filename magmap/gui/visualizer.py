@@ -151,6 +151,34 @@ class VisHandler(Handler):
         """Shuts down the application when the GUI is closed."""
         cli.shutdown()
 
+    def object_tab_shown_changed(self, info):
+        """Change keyboard focus depending on the shown tab.
+
+        TraitsUI does not hand Matplotlib figures keyboard focus except
+        when the ``Item`` initially requests focus in ``has_focus``, and
+        even then the figure cannot regain focus once lost. As a workaround,
+        store the active figure in a Trait and request focus on the
+        figure from the underlying Qt widget.
+
+        Args:
+            info (UIInfo): TraitsUI UI info.
+
+        """
+        if info.object.tab_shown is None:
+            # into.object is the Visualization object
+            return
+
+        # get all Matplotlib figure canvases displayed via TraitsUI as
+        # Qt widgets
+        mpl_figs = info.ui.control.findChildren(
+            matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg)
+        for fig in mpl_figs:
+            print("fig", fig, fig.figure == info.object.tab_shown)
+            if fig.figure == info.object.tab_shown:
+                # shift keyboard focus to canvas matching the currently
+                # shown Matplotlib figure
+                fig.setFocus()
+
 
 class ListSelections(HasTraits):
     """Traits-enabled list of ROIs."""
@@ -200,6 +228,7 @@ class Visualization(HasTraits):
         segs_selected: List of indices of selected segments.
         controls_created (Bool): True if the controls have been created;
             defaults to False.
+        tab_shown (Any): The Matplotlib figure currently shown.
     """
     x_offset = Int
     y_offset = Int
@@ -236,6 +265,8 @@ class Visualization(HasTraits):
     atlas_eds = []  # open atlas editors
     flipz = True  # True to invert 3D vis along z-axis
     controls_created = Bool(False)
+    tab_shown = Any
+
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
     _check_list_2d = List
@@ -1000,6 +1031,21 @@ class Visualization(HasTraits):
         self._btn_2d_trait_fired()
         self._btn_atlas_editor_trait_fired()
 
+    def _add_mpl_fig_handlers(self, fig):
+        # add additional event handlers for Matplotlib figures
+        fig.canvas.mpl_connect("figure_enter_event", self._on_mpl_fig_enter)
+        fig.canvas.mpl_connect("figure_leave_event", self._on_mpl_fig_leave)
+
+    def _on_mpl_fig_enter(self, event):
+        # event handler for entering a figure, storing the figure as shown
+        print("entered fig", event.canvas.figure)
+        self.tab_shown = event.canvas.figure
+
+    def _on_mpl_fig_leave(self, event):
+        # event handler for leaving a figure, resetting the shown figure
+        print("left fig", event.canvas.figure)
+        self.tab_shown = None
+
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
         if (roi_editor.ROIEditor.CircleStyles(self._circles_2d[0])
@@ -1115,6 +1161,7 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
+        self._add_mpl_fig_handlers(roi_ed.fig)
 
     def _btn_atlas_editor_trait_fired(self):
         # atlas editor; need to retain ref or else instance callbacks 
@@ -1131,6 +1178,7 @@ class Visualization(HasTraits):
             self._refresh_atlas_eds, self._atlas_ed_fig)
         self.atlas_eds.append(atlas_ed)
         atlas_ed.show_atlas()
+        self._add_mpl_fig_handlers(atlas_ed.fig)
 
     def _refresh_atlas_eds(self, ed_ignore):
         """Callback handler to refresh all other Atlas Editors

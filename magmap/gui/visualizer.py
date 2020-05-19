@@ -221,6 +221,105 @@ class Visualization(HasTraits):
     _PREFIX_BOTH_SIDES = "+/-"
     _camera_pos = None
 
+
+    # Mayavi 3D visualization panel
+    panel_vis = Item(
+        'scene', editor=SceneEditor(scene_class=MayaviScene),
+        height=600, width=600, show_label=False)
+
+    # ROI selector panel
+    panel_roi_selector = VGroup(
+        VGroup(
+            HGroup(
+                Item("_filename", label="File", style="simple",
+                     editor=FileEditor(entries=10, allow_dir=False)),
+                Item("_channel", label="Channel",
+                     editor=RangeEditor(
+                         low_name="_channel_low",
+                         high_name="_channel_high",
+                         mode="spinner")),
+            ),
+            Item("rois_check_list", label="ROIs",
+                 editor=CheckListEditor(
+                     name="object.rois_selections_class.selections")),
+            Item("roi_array", label="Size (x,y,z)"),
+            Item("x_offset",
+                 editor=RangeEditor(
+                     low_name="x_low",
+                     high_name="x_high",
+                     mode="slider")),
+            Item("y_offset",
+                 editor=RangeEditor(
+                     low_name="y_low",
+                     high_name="y_high",
+                     mode="slider")),
+            Item("z_offset",
+                 editor=RangeEditor(
+                     low_name="z_low",
+                     high_name="z_high",
+                     mode="slider")),
+        ),
+        Item("_check_list_3d", style="custom", label="3D options",
+             editor=CheckListEditor(values=_DEFAULTS_3D, cols=4)),
+        HGroup(
+            Item("_check_list_2d", style="custom", label="2D options",
+                 editor=CheckListEditor(values=_DEFAULTS_2D, cols=1)),
+            VGroup(
+                Item("_circles_2d", style="simple", label="Circles",
+                     editor=CheckListEditor(
+                         values=[e.value for e in
+                                 roi_editor.ROIEditor.CircleStyles])),
+                Item("_planes_2d", style="simple", label="Plane",
+                     editor=CheckListEditor(
+                         values=_DEFAULTS_PLANES_2D)),
+                Item("_styles_2d", style="simple", label="2D styles",
+                     editor=CheckListEditor(
+                         values=[e.value for e in Styles2D])),
+            ),
+        ),
+        HGroup(
+            Item("btn_redraw_trait", show_label=False),
+            Item("btn_detect_trait", show_label=False),
+            Item("btn_2d_trait", show_label=False),
+            Item("btn_atlas_editor_trait", show_label=False)
+        ),
+        Item("scale_detections",
+             editor=RangeEditor(
+                 low_name="_scale_detections_low",
+                 high_name="_scale_detections_high",
+                 mode="slider")),
+        HGroup(
+            Item("_structure_scale", label="Level",
+                 editor=RangeEditor(
+                     low_name="_structure_scale_low",
+                     high_name="_structure_scale_high",
+                     mode="slider")),
+            Item("_region_id", label="Region",
+                 editor=TextEditor(
+                     auto_set=False, enter_set=True, evaluate=str)),
+        ),
+        VGroup(
+            Item("_segments", editor=segs_table, show_label=False),
+            Item("segs_feedback", style="custom", show_label=False),
+        ),
+        HGroup(
+            Item("btn_save_3d", show_label=False),
+            Item("btn_save_segments", show_label=False)
+        ),
+    )
+
+    # set up the GUI layout
+    view = View(
+        HSplit(
+            panel_vis,
+            panel_roi_selector
+        ),
+        handler=VisHandler(),
+        title="MagellanMapper",
+        resizable=True
+    )
+
+
     def __init__(self):
         """Initialize GUI."""
         HasTraits.__init__(self)
@@ -1250,103 +1349,6 @@ class Visualization(HasTraits):
             self._segments = []
         else:
             self._segments = val
-
-    # Mayavi 3D visualization panel
-    panel_vis = Item(
-        'scene', editor=SceneEditor(scene_class=MayaviScene),
-        height=600, width=600, show_label=False)
-
-    # ROI selector panel
-    panel_roi_selector = VGroup(
-        VGroup(
-            HGroup(
-                Item("_filename", label="File", style="simple",
-                     editor=FileEditor(entries=10, allow_dir=False)),
-                Item("_channel", label="Channel",
-                     editor=RangeEditor(
-                         low_name="_channel_low",
-                         high_name="_channel_high",
-                         mode="spinner")),
-            ),
-            Item("rois_check_list", label="ROIs",
-                 editor=CheckListEditor(
-                     name="object.rois_selections_class.selections")),
-            Item("roi_array", label="Size (x,y,z)"),
-            Item("x_offset",
-                 editor=RangeEditor(
-                     low_name="x_low",
-                     high_name="x_high",
-                     mode="slider")),
-            Item("y_offset",
-                 editor=RangeEditor(
-                     low_name="y_low",
-                     high_name="y_high",
-                     mode="slider")),
-            Item("z_offset",
-                 editor=RangeEditor(
-                     low_name="z_low",
-                     high_name="z_high",
-                     mode="slider")),
-        ),
-        Item("_check_list_3d", style="custom", label="3D options",
-             editor=CheckListEditor(values=_DEFAULTS_3D, cols=4)),
-        HGroup(
-            Item("_check_list_2d", style="custom", label="2D options",
-                 editor=CheckListEditor(values=_DEFAULTS_2D, cols=1)),
-            VGroup(
-                Item("_circles_2d", style="simple", label="Circles",
-                     editor=CheckListEditor(
-                         values=[e.value for e in
-                                 roi_editor.ROIEditor.CircleStyles])),
-                Item("_planes_2d", style="simple", label="Plane",
-                     editor=CheckListEditor(
-                         values=_DEFAULTS_PLANES_2D)),
-                Item("_styles_2d", style="simple", label="2D styles",
-                     editor=CheckListEditor(
-                         values=[e.value for e in Styles2D])),
-            ),
-        ),
-        HGroup(
-            Item("btn_redraw_trait", show_label=False),
-            Item("btn_detect_trait", show_label=False),
-            Item("btn_2d_trait", show_label=False),
-            Item("btn_atlas_editor_trait", show_label=False)
-        ),
-        Item("scale_detections",
-             editor=RangeEditor(
-                 low_name="_scale_detections_low",
-                 high_name="_scale_detections_high",
-                 mode="slider")),
-        HGroup(
-            Item("_structure_scale", label="Level",
-                 editor=RangeEditor(
-                     low_name="_structure_scale_low",
-                     high_name="_structure_scale_high",
-                     mode="slider")),
-            Item("_region_id", label="Region",
-                 editor=TextEditor(
-                     auto_set=False, enter_set=True, evaluate=str)),
-        ),
-        VGroup(
-            Item("_segments", editor=segs_table, show_label=False),
-            Item("segs_feedback", style="custom", show_label=False),
-        ),
-        HGroup(
-            Item("btn_save_3d", show_label=False),
-            Item("btn_save_segments", show_label=False)
-        ),
-    )
-
-    # set up the GUI layout
-    view = View(
-        HSplit(
-            panel_vis,
-            panel_roi_selector
-        ),
-        handler=VisHandler(),
-        title="MagellanMapper",
-        resizable=True
-    )
 
 
 if __name__ == "__main__":

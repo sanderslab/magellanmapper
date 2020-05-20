@@ -154,7 +154,7 @@ class VisHandler(Handler):
                 # Atlas Editor tab
                 if not info.object.atlas_eds:
                     print("initializing Atlas Editor")
-                    info.object.atlas_editor_fired()
+                    info.object.launch_atlas_editor()
             elif tab is ViewerTabs.MAYAVI:
                 # Mayavi tab
                 if not info.object.scene_3d_shown:
@@ -249,9 +249,9 @@ class Visualization(HasTraits):
         y_offset: Integer trait for y-offset.
         z_offset: Integer trait for z-offset.
         scene: The main scene
-        btn_redraw_trait: Button editor for drawing the reiong of 
+        btn_redraw: Button editor for drawing the reiong of
             interest.
-        btn_detect_trait: Button editor for segmenting the ROI.
+        btn_detect: Button editor for segmenting the ROI.
         roi: The ROI.
         segments: Array of segments; if None, defaults to a Numpy array
             of zeros with one row.
@@ -268,10 +268,8 @@ class Visualization(HasTraits):
     z_offset = Int
     roi_array = Array(Int, shape=(1, 3))
     scene = Instance(MlabSceneModel, ())
-    btn_redraw_trait = Button("Redraw")
-    btn_detect_trait = Button("Detect")
-    btn_2d_trait = Button("ROI Editor")
-    btn_atlas_editor = Button("Atlas Editor")
+    btn_redraw = Button("Redraw")
+    btn_detect = Button("Detect")
     btn_save_3d = Button("Save 3D Screenshot")
     btn_save_segments = Button("Save Blobs")
     roi = None  # combine with roi_array?
@@ -384,10 +382,8 @@ class Visualization(HasTraits):
             ),
         ),
         HGroup(
-            Item("btn_redraw_trait", show_label=False),
-            Item("btn_detect_trait", show_label=False),
-            Item("btn_2d_trait", show_label=False),
-            Item("btn_atlas_editor", show_label=False)
+            Item("btn_redraw", show_label=False),
+            Item("btn_detect", show_label=False),
         ),
         Item("scale_detections",
              editor=RangeEditor(
@@ -711,11 +707,8 @@ class Visualization(HasTraits):
         ROI will undergo full preprocessing in preparation for detection 
         and 2D filtered displays steps.
         """
-        # reload profiles if any profile files have changed
-        cli.update_profiles()
-        curr_offset, curr_roi_size, feedback = self._check_roi_position()
-
         # show raw 3D image unless selected not to
+        curr_offset, curr_roi_size, feedback = self._check_roi_position()
         if self._DEFAULTS_3D[2] in self._check_list_3d:
             # show region of interest based on raw image
             self.roi = plot_3d.prepare_roi(
@@ -733,16 +726,6 @@ class Visualization(HasTraits):
                 # 3D point rendering
                 self.scene_3d_shown = plot_3d.plot_3d_points(
                     self.roi, self.scene.mlab, config.channel, self.flipz)
-            
-            # process ROI in prep for showing filtered 2D view and segmenting
-            if not libmag.is_binary(self.roi):
-                self.roi = plot_3d.saturate_roi(
-                    self.roi, channel=config.channel)
-                self.roi = plot_3d.denoise_roi(self.roi, config.channel)
-            else:
-                libmag.printv(
-                    "binary image detected, will not preprocess")
-        
         else:
             self.scene.mlab.clf()
         
@@ -752,8 +735,7 @@ class Visualization(HasTraits):
         
         # show title from labels reference if available
         self._update_structure_level(curr_offset, curr_roi_size)
-        
-        self._reset_segments()
+
         if feedback:
             self.segs_feedback = " ".join(feedback)
             print(self.segs_feedback)
@@ -898,13 +880,20 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         self._update_structure_level(curr_offset, curr_roi_size)
-    
-    def _btn_redraw_trait_fired(self):
+
+    @on_trait_change("btn_redraw")
+    def _btn_redraw_fired(self):
+        """Redraw the selected viewer."""
+        # reload profiles if any profile files have changed and reset ROI
+        cli.update_profiles()
+        self.roi = None
+        self._reset_segments()
+
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is ViewerTabs.ROI_ED:
-            self._btn_2d_trait_fired()
+            self._launch_roi_editor()
         elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
-            self.atlas_editor_fired()
+            self.launch_atlas_editor()
         elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
             self.show_3d()
             self._post_3d_display()
@@ -957,12 +946,23 @@ class Visualization(HasTraits):
         """
         # segs is 0 for some reason if no parameter given in fired trait
         return segs is None or not isinstance(segs, np.ndarray)
-    
-    def _btn_detect_trait_fired(self, segs=None):
-        # collect segments in ROI and padding region, ensuring coordinates
-        # are relative to offset
+
+    @on_trait_change("btn_detect")
+    def _blob_detection_fired(self, segs=None):
+        # process ROI in prep for showing filtered 2D view and segmenting
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
+        self.roi = plot_3d.prepare_roi(config.image5d, roi_size, offset)
+        if not libmag.is_binary(self.roi):
+            self.roi = plot_3d.saturate_roi(
+                self.roi, channel=config.channel)
+            self.roi = plot_3d.denoise_roi(self.roi, config.channel)
+        else:
+            libmag.printv(
+                "binary image detected, will not preprocess")
+
+        # collect segments in ROI and padding region, ensuring coordinates
+        # are relative to offset
         if config.blobs is None:
             # on-the-fly blob detection, which includes border but not 
             # padding region; already in relative coordinates
@@ -1037,6 +1037,7 @@ class Visualization(HasTraits):
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
+        self._launch_roi_editor()
     
     @on_trait_change('scale_detections')
     def update_scale_detections(self):
@@ -1079,7 +1080,7 @@ class Visualization(HasTraits):
     def _post_controls_created(self):
         # populate Matplotlib figure once controls have been created,
         # at which point the figure will allow connections
-        self._btn_2d_trait_fired()
+        self._launch_roi_editor()
 
     def _add_mpl_fig_handlers(self, fig):
         # add additional event handlers for Matplotlib figures
@@ -1096,7 +1097,7 @@ class Visualization(HasTraits):
         print("left fig", event.canvas.figure)
         self.mpl_fig_active = None
 
-    def _btn_2d_trait_fired(self):
+    def _launch_roi_editor(self):
         """Handle ROI Editor button events."""
         if (roi_editor.ROIEditor.CircleStyles(self._circles_2d[0])
                 != roi_editor.ROIEditor.CircleStyles.NO_CIRCLES
@@ -1213,8 +1214,7 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=2)
         self._add_mpl_fig_handlers(roi_ed.fig)
 
-    @on_trait_change("btn_atlas_editor")
-    def atlas_editor_fired(self):
+    def launch_atlas_editor(self):
         # atlas editor; need to retain ref or else instance callbacks 
         # created within AtlasEditor will be garbage collected
         title = config.filename
@@ -1278,7 +1278,7 @@ class Visualization(HasTraits):
             if self.scene_3d_shown:
                 self.show_orientation_axes(self.flipz)
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
-            self._btn_detect_trait_fired(segs=blobs)
+            self._btn_detect_fired(segs=blobs)
             roi_editor.verify = True
         else:
             print("no roi found")

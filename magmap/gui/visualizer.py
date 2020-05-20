@@ -416,11 +416,12 @@ class Visualization(HasTraits):
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
     panel_figs = Tabbed(
-        Item("_roi_ed_fig", show_label=False, editor=MPLFigureEditor(),
-             width=1000, height=600),
-        Item("_atlas_ed_fig", show_label=False, editor=MPLFigureEditor()),
-        Item("scene", editor=SceneEditor(scene_class=MayaviScene),
-             show_label=False),
+        Item("_roi_ed_fig", label="ROI Editor", show_label=False,
+             editor=MPLFigureEditor(), width=1000, height=600),
+        Item("_atlas_ed_fig", label="Atlas Editor", show_label=False,
+             editor=MPLFigureEditor()),
+        Item("scene", label="3D Viewer", show_label=False,
+             editor=SceneEditor(scene_class=MayaviScene)),
     )
 
     # set up the GUI layout; control the HSplit width ratio using a width

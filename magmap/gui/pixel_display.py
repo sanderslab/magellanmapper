@@ -36,7 +36,7 @@ class PixelDisplay(object):
 
     def __call__(self, x, y):
         coord = (int(y), int(x))
-        rgb = ""
+        rgb = None
         output = []
         for i, img in enumerate(self.imgs):
             if any(np.less(coord, 0)) or any(np.greater_equal(coord, img.shape)):
@@ -71,5 +71,8 @@ class PixelDisplay(object):
                 "Image {}: x={}, y={}, z={}"
                 .format(i, orig_coord[1], orig_coord[0], z))
 
-        output.append(rgb)
-        return "; ".join(output)
+        # join output message
+        if rgb:
+            output.append(rgb)
+        msg = "; ".join(output)
+        return msg

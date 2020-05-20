@@ -691,7 +691,7 @@ class ROIEditor:
                     ax_ov = ax_overviews[lev]
                     ax_ov.clear()
                     show_overview(ax_ov, lev, **imgs)
-            fig.canvas.draw()
+            fig.canvas.draw_idle()
 
         def key_press(event):
             # respond to key presses
@@ -830,7 +830,7 @@ class ROIEditor:
                     except ValueError as e:
                         print(e)
                         print("not on a plot to select a point")
-                    fig.canvas.draw()
+                    fig.canvas.draw_idle()
                 elif event.key == "v":
                     _circle_last_picked_len = len(self._circle_last_picked)
                     if _circle_last_picked_len < 1:
@@ -855,7 +855,7 @@ class ROIEditor:
                         seg_new = fn_update_seg(seg_new)
                     self._plot_circle(
                         ax, seg_new, self._BLOB_LINEWIDTH, None, fn_update_seg)
-                    fig.canvas.draw()
+                    fig.canvas.draw_idle()
 
             fig.canvas.mpl_connect("button_release_event", on_btn_release)
             # reset circles window flag
@@ -871,6 +871,7 @@ class ROIEditor:
             plot_support.hide_axes(ax)
         gs.tight_layout(fig, pad=0.5)
         plt.ion()
+        fig.canvas.draw_idle()
         plot_support.save_fig(filename, config.savefig)
         print("2D plot time: {}".format(time() - time_start))
 

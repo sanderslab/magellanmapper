@@ -37,7 +37,7 @@ class PlotEditor:
                  aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
                  plane_slider, img3d_borders=None, cmap_borders=None, 
                  fn_show_label_3d=None, interp_planes=None,
-                 fn_update_intensity=None, max_size=None):
+                 fn_update_intensity=None, max_size=None, fn_status_bar=None):
         """Initialize the plot editor.
         
         Args:
@@ -71,6 +71,8 @@ class PlotEditor:
                 intensity value; defaults to None.
             max_size (int): Maximum size of either side of the 2D plane shown;
                 defaults to None.
+            fn_status_bar (func): Function to call during status bar updates
+                in :class:`pixel_display.PixelDisplay`; defaults to None.
 
         """
         self.axes = axes
@@ -100,6 +102,7 @@ class PlotEditor:
                 self._downsample = 1
             print("downsampling factor for plane {}: {}"
                   .format(self.plane, self._downsample))
+        self.fn_status_bar = fn_status_bar
         
         self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
@@ -486,6 +489,8 @@ class PlotEditor:
             # need explicit draw call for figs embedded in TraitsUI
             self.axes.figure.canvas.draw_idle()
 
+        if self.fn_status_bar:
+            self.fn_status_bar(self.axes.format_coord.get_msg(event))
         self.last_loc = loc
         self.last_loc_data = loc_data
     

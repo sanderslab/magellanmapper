@@ -52,13 +52,15 @@ class AtlasEditor:
         interp_btn: Matplotlib button to initiate plane interpolation.
         save_btn: Matplotlib button to save the atlas.
         fig (:obj:`figure.Figure`): Matplotlib figure.
+        fn_status_bar (func): Function to call during status bar updates
+            in :class:`pixel_display.PixelDisplay`; defaults to None.
     """
 
     _EDIT_BTN_LBLS = ("Edit", "Editing")
 
     def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
                  borders_img=None, fn_show_label_3d=None, title=None,
-                 fn_refresh_atlas_eds=None, fig=None):
+                 fn_refresh_atlas_eds=None, fig=None, fn_status_bar=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself."""
         self.image5d = image5d
         self.labels_img = labels_img
@@ -70,6 +72,7 @@ class AtlasEditor:
         self.title = title
         self.fn_refresh_atlas_eds = fn_refresh_atlas_eds
         self.fig = fig
+        self.fn_status_bar = fn_status_bar
         
         self.plot_eds = {}
         self.alpha_slider = None
@@ -192,7 +195,7 @@ class AtlasEditor:
                 fn_show_label_3d=self.fn_show_label_3d, 
                 interp_planes=self.interp_planes,
                 fn_update_intensity=self.update_color_picker,
-                max_size=max_size)
+                max_size=max_size, fn_status_bar=self.fn_status_bar)
             return plot_ed
         
         # setup plot editors for all 3 orthogonal directions

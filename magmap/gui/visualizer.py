@@ -169,7 +169,7 @@ class VisHandler(Handler):
             return
 
         # get all Matplotlib figure canvases displayed via TraitsUI as
-        # Qt widgets
+        # Qt widgets; the control is a _StickyDialog that extends QDialog
         mpl_figs = info.ui.control.findChildren(
             matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg)
         for fig in mpl_figs:
@@ -297,6 +297,7 @@ class Visualization(HasTraits):
     _camera_pos = None
     _roi_ed_fig = Instance(figure.Figure(), ())
     _atlas_ed_fig = Instance(figure.Figure(), ())
+    _status_bar_msg = Str()  # text for status bar
 
     # ROI selector panel
     panel_roi_selector = VGroup(
@@ -398,7 +399,8 @@ class Visualization(HasTraits):
         width=1500,
         handler=VisHandler(),
         title="MagellanMapper",
-        resizable=True
+        statusbar="_status_bar_msg",
+        resizable=True,
     )
 
     def __init__(self):
@@ -842,7 +844,17 @@ class Visualization(HasTraits):
         """
         print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, 
                                            self.z_offset))
-    
+
+    def update_status_bar_msg(self, msg):
+        """Update the message displayed in the status bar.
+
+        Args:
+            msg (str): Text to display. None will be ignored.
+
+        """
+        if msg:
+            self._status_bar_msg = msg
+
     '''
     @on_trait_change("roi_array")
     def _update_roi_array(self):
@@ -1111,7 +1123,7 @@ class Visualization(HasTraits):
             self.segs_cmap, self._roi_ed_close_listener,
             # additional args with defaults
             self._full_border(self.border), self._planes_2d[0].lower())
-        roi_ed = roi_editor.ROIEditor()
+        roi_ed = roi_editor.ROIEditor(self.update_status_bar_msg)
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
@@ -1175,7 +1187,8 @@ class Visualization(HasTraits):
             config.image5d, config.labels_img, config.channel, 
             self._curr_offset(), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
-            self._refresh_atlas_eds, self._atlas_ed_fig)
+            self._refresh_atlas_eds, self._atlas_ed_fig,
+            self.update_status_bar_msg)
         self.atlas_eds.append(atlas_ed)
         atlas_ed.show_atlas()
         self._add_mpl_fig_handlers(atlas_ed.fig)

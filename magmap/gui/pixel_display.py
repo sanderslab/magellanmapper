@@ -34,7 +34,34 @@ class PixelDisplay(object):
         self.offset = offset
         self.cmap_labels = cmap_labels
 
+    def get_msg(self, event):
+        """Get the pixel display message from a Matplotlib event.
+
+        Args:
+            event (:obj:`matplotlib.backend_bases.Event`): Matplotlib event.
+
+        Returns:
+            str: The message based on the data coordinates within the first
+            axes in :attr:`ax_imgs`. None if `event` is not within these axes.
+
+        """
+        if event.inaxes != self.ax_imgs[0][0].axes:
+            return None
+        return self.__call__(event.xdata, event.ydata)
+
     def __call__(self, x, y):
+        """Get the pixel display message.
+
+        Args:
+            x (int): x-data coordinate.
+            y (int): y-data coordinate.
+
+        Returns:
+            str: Message showing ``x,y`` coordinates, intensity values,
+            and corresponding RGB label for each overlaid image at the
+            given location.
+
+        """
         coord = (int(y), int(x))
         rgb = None
         output = []

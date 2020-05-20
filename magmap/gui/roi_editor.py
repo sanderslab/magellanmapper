@@ -264,6 +264,8 @@ class ROIEditor:
         ZLevels (:obj:`Enum`): Enum denoting the possible positions of the
             z-plane shown in the overview plots.
         fig (:obj:`figure.figure`): Matplotlib figure.
+        fn_status_bar (func): Function to call during status bar updates
+            in :class:`pixel_display.PixelDisplay`; defaults to None.
     """
     ROI_COLS = 9
 
@@ -303,10 +305,11 @@ class ROIEditor:
     #: int: padding for ROI within overview plots
     _ROI_PADDING = 10
 
-    def __init__(self):
+    def __init__(self, fn_status_bar=None):
         """Initialize the editor."""
         print("Initiating ROI Editor")
         self.fig = None
+        self.fn_status_bar = fn_status_bar
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
@@ -630,9 +633,15 @@ class ROIEditor:
                 fill=False, edgecolor="yellow", linewidth=2))
             if config.plot_labels[config.PlotLabels.SCALE_BAR]:
                 plot_support.add_scale_bar(ax_ov, downsample, plane)
+
+            # show pixel values for all overlaid images in status bar;
+            # need a custom listener for figs embedded in TraitsUI
             ax_ov.format_coord = pixel_display.PixelDisplay(
                 show["imgs2d"], ax_imgs, downsample, offsets,
                 libmag.get_if_within(cmaps, 1))
+            fig.canvas.mpl_connect(
+                "motion_notify_event",
+                lambda evt: self.fn_status_bar(ax_ov.format_coord.get_msg(evt)))
 
             # set title with total zoom including objective and plane number
             if config.zoom and config.magnification:

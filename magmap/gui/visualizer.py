@@ -18,7 +18,7 @@ Examples:
         $ python -m magmap.visualizer --img /path/to/file.czi
 """
 
-from enum import Enum
+from enum import Enum, auto
 import os
 
 import matplotlib
@@ -26,6 +26,7 @@ matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
+import PyQt5
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         Int, List, Array, Str, Bool, Any,
                         push_exception_handler, Property, File)
@@ -135,7 +136,7 @@ class VisHandler(Handler):
 
     def init(self, info):
         """Handle events after controls have been generated but prior to
-        theid display.
+        their display.
 
         Args:
             info (UIInfo): TraitsUI UI info.
@@ -144,14 +145,37 @@ class VisHandler(Handler):
             bool: True.
 
         """
+        def handle_tab_changed(i):
+            # set the enum for the currently selected tab and initialize
+            # viewers if necessary
+            tab = ViewerTabs(i + 1)  # enums auto-index starting from 1
+            print("Changed to tab", i, tab)
+            if tab is ViewerTabs.ATLAS_ED:
+                # Atlas Editor tab
+                if not info.object.atlas_eds:
+                    print("initializing Atlas Editor")
+                    info.object.atlas_editor_fired()
+            elif tab is ViewerTabs.MAYAVI:
+                # Mayavi tab
+                if not info.object.scene_3d_shown:
+                    print("initializing Mayavi 3D visualization")
+                    info.object.show_3d()
+            info.object.selected_viewer_tab = tab
+
+        # change Trait to flag completion of controls creation
         info.object.controls_created = True
+
+        # add a change listener for the viewer tab widget
+        tab_widgets = info.ui.control.findChildren(
+            PyQt5.QtWidgets.QTabWidget)
+        tab_widgets[0].currentChanged.connect(handle_tab_changed)
         return True
 
     def closed(self, info, is_ok):
         """Shuts down the application when the GUI is closed."""
         cli.shutdown()
 
-    def object_tab_shown_changed(self, info):
+    def object_mpl_fig_active_changed(self, info):
         """Change keyboard focus depending on the shown tab.
 
         TraitsUI does not hand Matplotlib figures keyboard focus except
@@ -164,7 +188,7 @@ class VisHandler(Handler):
             info (UIInfo): TraitsUI UI info.
 
         """
-        if info.object.tab_shown is None:
+        if info.object.mpl_fig_active is None:
             # into.object is the Visualization object
             return
 
@@ -173,8 +197,7 @@ class VisHandler(Handler):
         mpl_figs = info.ui.control.findChildren(
             matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg)
         for fig in mpl_figs:
-            print("fig", fig, fig.figure == info.object.tab_shown)
-            if fig.figure == info.object.tab_shown:
+            if fig.figure == info.object.mpl_fig_active:
                 # shift keyboard focus to canvas matching the currently
                 # shown Matplotlib figure
                 fig.setFocus()
@@ -207,6 +230,13 @@ class Styles2D(Enum):
     THIN_ROWS = "Thin rows"
 
 
+class ViewerTabs(Enum):
+    """Enumerations for viewer tabs."""
+    ROI_ED = auto()
+    ATLAS_ED = auto()
+    MAYAVI = auto()
+
+
 class Visualization(HasTraits):
     """GUI for choosing a region of interest and segmenting it.
     
@@ -228,7 +258,10 @@ class Visualization(HasTraits):
         segs_selected: List of indices of selected segments.
         controls_created (Bool): True if the controls have been created;
             defaults to False.
-        tab_shown (Any): The Matplotlib figure currently shown.
+        mpl_fig_active (Any): The Matplotlib figure currently shown.
+        scene_3d_shown (bool): True if the Mayavi 3D plot has been shown.
+        selected_viewer_tab (Enum): The Enum corresponding to the selected
+            tab in the viewer panel.
     """
     x_offset = Int
     y_offset = Int
@@ -238,7 +271,7 @@ class Visualization(HasTraits):
     btn_redraw_trait = Button("Redraw")
     btn_detect_trait = Button("Detect")
     btn_2d_trait = Button("ROI Editor")
-    btn_atlas_editor_trait = Button("Atlas Editor")
+    btn_atlas_editor = Button("Atlas Editor")
     btn_save_3d = Button("Save 3D Screenshot")
     btn_save_segments = Button("Save Blobs")
     roi = None  # combine with roi_array?
@@ -265,7 +298,9 @@ class Visualization(HasTraits):
     atlas_eds = []  # open atlas editors
     flipz = True  # True to invert 3D vis along z-axis
     controls_created = Bool(False)
-    tab_shown = Any
+    mpl_fig_active = Any
+    scene_3d_shown = False  # 3D Mayavi display shown
+    selected_viewer_tab = ViewerTabs.ROI_ED
 
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
@@ -284,7 +319,6 @@ class Visualization(HasTraits):
     _structure_scale_high = 20
     _region_id = Str
     _mlab_title = None
-    _scene_3d_shown = False  # 3D Mayavi display shown
     _circles_opened_type = None  # enum of circle style for opened 2D plots
     _opened_window_style = None  # 2D plots window style curr open
     _filename = File  # file browser
@@ -353,7 +387,7 @@ class Visualization(HasTraits):
             Item("btn_redraw_trait", show_label=False),
             Item("btn_detect_trait", show_label=False),
             Item("btn_2d_trait", show_label=False),
-            Item("btn_atlas_editor_trait", show_label=False)
+            Item("btn_atlas_editor", show_label=False)
         ),
         Item("scale_detections",
              editor=RangeEditor(
@@ -613,7 +647,7 @@ class Visualization(HasTraits):
                 "clrbrain3d".
             show_orientation: True to show orientation axes; defaults to True.
         """
-        if self._scene_3d_shown:
+        if self.scene_3d_shown:
             if config.savefig in config.FORMATS_3D:
                 path = "{}.{}".format(title, config.savefig)
                 libmag.backup_file(path)
@@ -693,10 +727,10 @@ class Visualization(HasTraits):
                 plot_3d.plot_3d_surface(
                     self.roi, self.scene.mlab, config.channel, segment, 
                     self.flipz)
-                self._scene_3d_shown = True
+                self.scene_3d_shown = True
             else:
                 # 3D point rendering
-                self._scene_3d_shown = plot_3d.plot_3d_points(
+                self.scene_3d_shown = plot_3d.plot_3d_points(
                     self.roi, self.scene.mlab, config.channel, self.flipz)
             
             # process ROI in prep for showing filtered 2D view and segmenting
@@ -739,7 +773,7 @@ class Visualization(HasTraits):
         self.roi_array = [shape[::-1]] # TODO: avoid decimal point
         self.z_offset, self.y_offset, self.x_offset = [
             slices[i].start for i in range(len(slices))]
-        self._scene_3d_shown = True
+        self.scene_3d_shown = True
         
         # show main image corresponding to label region
         if isinstance(label_id, (tuple, list)):
@@ -785,8 +819,6 @@ class Visualization(HasTraits):
                 self.z_offset = config.roi_offset[2]
             self.roi_array[0] = ([100, 100, 15] if config.roi_size is None
                                  else config.roi_size)
-            # show the default ROI
-            self.show_3d()
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {_ROI_DEFAULT: None}
@@ -867,8 +899,14 @@ class Visualization(HasTraits):
         self._update_structure_level(curr_offset, curr_roi_size)
     
     def _btn_redraw_trait_fired(self):
-        self.show_3d()
-        self._post_3d_display()
+        # redraw the currently selected viewer tab
+        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+            self._btn_2d_trait_fired()
+        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            self.atlas_editor_fired()
+        elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
+            self.show_3d()
+            self._post_3d_display()
     
     @on_trait_change("scene.activated")
     def _orient_camera(self):
@@ -883,7 +921,7 @@ class Visualization(HasTraits):
         view = self.scene.mlab.view(
             75, 140, np.max(self.roi_array[0]) * zoom_out)
         roll = self.scene.mlab.roll(-175)
-        if self._scene_3d_shown:
+        if self.scene_3d_shown:
             self.show_orientation_axes(self.flipz)
         #self.scene.mlab.outline() # affects zoom after segmenting
         #self.scene.mlab.axes() # need to adjust units to microns
@@ -1038,10 +1076,9 @@ class Visualization(HasTraits):
 
     @on_trait_change("controls_created")
     def _post_controls_created(self):
-        # populate Matplotlib figures once controls have been created,
-        # at which point the figures will allow connections
+        # populate Matplotlib figure once controls have been created,
+        # at which point the figure will allow connections
         self._btn_2d_trait_fired()
-        self._btn_atlas_editor_trait_fired()
 
     def _add_mpl_fig_handlers(self, fig):
         # add additional event handlers for Matplotlib figures
@@ -1051,12 +1088,12 @@ class Visualization(HasTraits):
     def _on_mpl_fig_enter(self, event):
         # event handler for entering a figure, storing the figure as shown
         print("entered fig", event.canvas.figure)
-        self.tab_shown = event.canvas.figure
+        self.mpl_fig_active = event.canvas.figure
 
     def _on_mpl_fig_leave(self, event):
         # event handler for leaving a figure, resetting the shown figure
         print("left fig", event.canvas.figure)
-        self.tab_shown = None
+        self.mpl_fig_active = None
 
     def _btn_2d_trait_fired(self):
         """Handle ROI Editor button events."""
@@ -1175,7 +1212,8 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=2)
         self._add_mpl_fig_handlers(roi_ed.fig)
 
-    def _btn_atlas_editor_trait_fired(self):
+    @on_trait_change("btn_atlas_editor")
+    def atlas_editor_fired(self):
         # atlas editor; need to retain ref or else instance callbacks 
         # created within AtlasEditor will be garbage collected
         title = config.filename
@@ -1236,7 +1274,7 @@ class Visualization(HasTraits):
             
             # redraw the original ROI and prepare verify mode
             self.show_3d()
-            if self._scene_3d_shown:
+            if self.scene_3d_shown:
                 self.show_orientation_axes(self.flipz)
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
             self._btn_detect_trait_fired(segs=blobs)

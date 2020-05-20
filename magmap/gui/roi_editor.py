@@ -140,7 +140,7 @@ class DraggableCircle:
         canvas = self.circle.figure.canvas
         ax = self.circle.axes
         self.circle.set_animated(True)
-        canvas.draw()
+        canvas.draw_idle()
         self._background = canvas.copy_from_bbox(self.circle.axes.bbox)
         ax.draw_artist(self.circle)
         canvas.blit(ax.bbox)
@@ -237,6 +237,7 @@ class DraggableCircle:
             self.segment[4] = i
             self.fn_update_seg(self.segment, seg_old)
             print("picked segment: {}".format(self.segment))
+        self.circle.figure.canvas.draw()
 
     def disconnect(self):
         """Disconnect event listeners.

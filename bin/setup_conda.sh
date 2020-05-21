@@ -117,16 +117,12 @@ msg+="\n  \"Executing transaction\" step because of additional "
 msg+="downloads/installs)..."
 eval "$(conda shell.bash hook)"
 if [[ "$check_env" == "" ]]; then
-  # create an empty environment before setting channel priority to 
-  # generate an env-specific .condarc file; Python version duplicated in 
-  # .yml for those who want to create env directly from .yml
+  # create an new environment
   echo "Creating new Conda environment from $config..."
-  conda create -y -n "$env_name" python=3.6
-  conda activate "$env_name"
-  conda config --env --set channel_priority strict # for mixed channels
   echo -e "$msg"
-  conda env update -f "$config"
+  conda env create -n "$env_name" -f "$config"
 else
+  # update an existing environment
   echo "$env_name already exists, will update"
   conda activate "$env_name"
   echo -e "$msg"

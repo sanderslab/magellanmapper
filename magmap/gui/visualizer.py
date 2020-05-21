@@ -1099,17 +1099,6 @@ class Visualization(HasTraits):
 
     def _launch_roi_editor(self):
         """Handle ROI Editor button events."""
-        if (roi_editor.ROIEditor.CircleStyles(self._circles_2d[0])
-                != roi_editor.ROIEditor.CircleStyles.NO_CIRCLES
-                and self._circles_opened_type
-                and self._circles_opened_type !=
-                roi_editor.ROIEditor.CircleStyles.NO_CIRCLES):
-            # prevent multiple editable windows from being opened 
-            # simultaneously to avoid unsynchronized state
-            self.segs_feedback = (
-                "Cannot show ROI Editor while another editable "
-                "plot is showing. Please choose \"No circles\" or redraw.")
-            return
         if (not self._circles_opened_type 
                 or self._circles_opened_type ==
                 roi_editor.ROIEditor.CircleStyles.NO_CIRCLES):

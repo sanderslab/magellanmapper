@@ -76,15 +76,20 @@ fi
 
 # check for Anaconda installation and download/install if not found
 if ! command -v "conda" &> /dev/null; then
+  echo "'conda' command from Anaconda/Miniconda not found"
   echo "Downloading and installing Miniconda..."
   PLATFORM=$os-$bit
   MINICONDA="Miniconda3-latest-$PLATFORM.${ext}"
-  CONDA_URL=https://repo.continuum.io/miniconda/$MINICONDA
+  CONDA_URL=https://repo.anaconda.com/miniconda/$MINICONDA
   if [[ "$os" == "MacOSX" ]]; then
     curl -O "$CONDA_URL"
   else
     wget "$CONDA_URL"
   fi
+
+  msg="\nDownloaded Miniconda, about to install. Please allow the"
+  msg+="installer to initialize \nMiniconda for 'conda' to run."
+  echo -e "$msg"
   chmod 755 "$MINICONDA"
   ./"$MINICONDA"
   # reload the bash environment, or exit if unable

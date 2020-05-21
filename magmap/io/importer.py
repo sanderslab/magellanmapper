@@ -591,25 +591,37 @@ def read_file(filename, series=None, load=True, z_max=-1,
         # import multipage TIFFs
         print("Loading multipage TIFF...")
         
-        # find files for each channel, defaulting to load all channels available
+        # find files for each channel, defaulting to load all channels
+        # available and allowing any TIFF-like extension
         name = os.path.basename(filename)
         channel_num = "*" if channel is None else "{}*".format(channel)
         tif_base = "{}{}{}".format(
             path_split[0], CHANNEL_SEPARATOR, channel_num)
         filenames = []
-        print("looking for TIFF files matching the format:", tif_base)
+        tif_searches = [tif_base]
+        print("Looking for TIFF files for multi-channel images matching "
+              "the format:", tif_base)
         matches = glob.glob(tif_base)
+        if not matches:
+            # fall back to matching any file with the same name regardless
+            # of extension, typically for single-channel images
+            tif_base = "{}.*".format(path_split[0])
+            tif_searches.append(tif_base)
+            print("Looking for TIFF files matching the format:", tif_base)
+            matches = glob.glob(tif_base)
         for match in matches:
+            # prune files to any TIFF-like name
             match_split = os.path.splitext(match)
             if match_split[1].lower() in _EXT_TIFFS:
                 filenames.append(match)
         filenames = sorted(filenames)
-        print("found matching TIFF files: ", filenames)
+        print("Found matching TIFF file(s), where each file will be imported "
+              "as a separate channel:", filenames)
         if not filenames:
             raise IOError(
-                "No filenames matching the format, \"{}\" with "
+                "No filenames matching the format(s), \"{}\" with "
                 "extensions of types {}".format(
-                    tif_base, ", ".join(_EXT_TIFFS)))
+                    tif_searches, ", ".join(_EXT_TIFFS)))
         num_files = len(filenames)
         
         # require resolution information as it will be necessary for 

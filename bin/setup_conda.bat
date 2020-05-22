@@ -21,19 +21,17 @@ IF ERRORLEVEL == 2 (
 )
 
 reg query "HKLM\Software\Microsoft\Windows NT\CurrentVersion" /v "BuildLabEx" | >nul find /i ".x86fre." && set "os_bit=32" || set "os_bit=64"
-ECHO "%os_bit%"
 IF "%os_bit%" == "64" (
   SET "conda_bit=x86_64"
 )
 SET "conda_out=Miniconda3-latest-Windows-%conda_bit%.exe"
 bitsadmin /transfer downloadconda /download /priority FOREGROUND https://repo.anaconda.com/miniconda/%conda_out% "%cd%/%conda_out%"
 
-ECHO Downloaded Miniconda, about to install. Please allow the installer to initialize Miniconda for 'conda' to run.
-".\%conda_out%"
-
-
-ECHO Please open the Anaconda Prompt from the Start Menu and rerun this script to continue installation of MagellanMapper.
-EXIT /b 0
+SET "conda_path=%USERPROFILE%\miniconda3"
+ECHO Downloaded Miniconda, installing to %conda_path%...
+CALL ".\%conda_out%" /S /D=%conda_path%
+CALL "%conda_path%\condabin\conda_hook.bat"
+CALL conda init
 
 :InstallMagMap
 ECHO Creating a Conda environment for MagellanMapper with all supporting packages

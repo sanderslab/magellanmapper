@@ -75,6 +75,7 @@ if [[ "$os" = "Windows" ]]; then
 fi
 
 # check for Anaconda installation and download/install if not found
+install_conda=""
 if ! command -v "conda" &> /dev/null; then
   echo "\"conda\" command from Anaconda/Miniconda not found"
   read -p "Download and install Miniconda (y/n)? " install_conda
@@ -137,9 +138,12 @@ if [[ "$check_env" == "" ]]; then
   exit 1
 fi
 
-msg="MagellanMapper environment setup complete!"
-msg+="\n** Please run \"conda activate $env_name\" or "
-msg+="\"source activate $env_name\""
-msg+="\n   depending on your Conda setup to enter the environment "
-msg+="for MagellanMapper **"
+open_shell=""
+if [[ "$install_conda" != "" ]]; then
+  open_shell="open a new terminal and "
+fi
+msg="MagellanMapper environment setup complete!\n"
+msg+="\n** Please ${open_shell}run \"conda activate $env_name\""
+msg+="\n   (or \"source activate $env_name\" in some setups) to enter"
+msg+="\n   the MagellanMapper environment **"
 echo -e "$msg"

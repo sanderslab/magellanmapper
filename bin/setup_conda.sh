@@ -76,9 +76,20 @@ fi
 
 # check for Anaconda installation and download/install if not found
 if ! command -v "conda" &> /dev/null; then
-  echo "'conda' command from Anaconda/Miniconda not found"
-  echo "Downloading and installing Miniconda..."
-  PLATFORM=$os-$bit
+  echo "\"conda\" command from Anaconda/Miniconda not found"
+  read -p "Download and install Miniconda (y/n)? " install_conda
+  case "${install_conda:0:1}" in
+    y|Y )
+      echo "Downloading and installing Miniconda..."
+    ;;
+    * )
+      echo "Will not install Miniconda, exiting"
+      exit 1
+    ;;
+  esac
+  
+  # download Miniconda for OS platform and bit
+  PLATFORM="$os-$bit"
   MINICONDA="Miniconda3-latest-$PLATFORM.${ext}"
   CONDA_URL=https://repo.anaconda.com/miniconda/$MINICONDA
   if [[ "$os" == "MacOSX" ]]; then
@@ -86,27 +97,16 @@ if ! command -v "conda" &> /dev/null; then
   else
     wget "$CONDA_URL"
   fi
-
-  msg="\nDownloaded Miniconda, about to install. Please allow the"
-  msg+="installer to initialize \nMiniconda for 'conda' to run."
+  
+  # install Miniconda and initialize
+  conda_path="$HOME/miniconda3"
+  msg="\nDownloaded Miniconda, installing to $conda_path..."
   echo -e "$msg"
   chmod 755 "$MINICONDA"
-  ./"$MINICONDA"
-  # reload the bash environment, or exit if unable
-  bash_profile=~/.bash_profile
-  if [[ ! -f $bash_profile ]]; then
-    bash_profile=~/.bashrc
-  fi
-  if [[ -f $bash_profile && "$os" != "Linux" ]]; then
-    # Ubuntu and likely other Linux platforms short-circuit sourcing 
-    # .bashrc non-interactively so unable to load without hacks
-    # TODO: check if base environment gets activated as not yet 
-    # by default as of Conda 4.4.10
-    source $bash_profile
-  else
-    echo "Please close and reopen your terminal, then rerun this script"
-    exit 0
-  fi
+  ./"$MINICONDA" -b -p "$conda_path"
+  eval "$("$conda_path"/bin/conda shell.bash hook)"
+  conda init
+  conda config --set auto_activate_base false
 fi
 
 # create or update Conda environment; warn of apparent hang since no 

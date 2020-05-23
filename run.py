@@ -1,8 +1,23 @@
 #! /usr/bin/env python
 # Simple startup script for MagellanMapper
 # Author: David Young, 2017, 2020
+"""Cross-platform environment activation and MagellanMapper launcher script.
+
+Launches MagellanMapper within a Conda or Venv environment. Environment
+activation is in this order:
+* If a Conda or Venv environment is already activate, launch in current
+  environment
+* Attempt to activate a Conda environment
+* Attempt to activate a Venv environment
+
+Conda activation assumes that the ``conda`` command is accessible, typically
+from a previous initialization through ``conda init`` (preferred) or
+by adding the ``conda`` binary directory to the ``PATH``.
+
+"""
 
 import os
+import platform
 import subprocess
 import sys
 
@@ -20,7 +35,13 @@ ARGS_VIS = [
     "python -u -c \"from magmap.gui import visualizer; visualizer.main()\" ",
 ]
 
-#: List[str]: Shell commands to activate a Conda environment
+# Conda hook for Windows Command Prompt
+_ARG_CONDA_HOOK_WIN = "conda_hook.bat"
+
+#: List[str]: Shell commands to activate a Conda environment.
+# add Conda hook for Bash shells to temporarily initialize Conda if
+# `conda init` was not run, allowing commands such as `conda activate`
+# TODO: add other shells
 ARGS_CONDA = [
     "eval \"$(conda shell.bash hook)\"",
     "conda activate {}".format(ENV_NAME),
@@ -102,6 +123,10 @@ def main(gui=True):
 
     args = ARGS_VIS if gui else ARGS_CLI
     args[0] += " ".join(sys.argv[1:])
+    if platform.system() == "Windows":
+        # replace Conda hook with Command Prompt shell hook
+        # TODO: check whether this hook command is necessary in Windows
+        ARGS_CONDA[0] = _ARG_CONDA_HOOK_WIN
     try:
         # activate Conda environment, assuming default name in setup script
         # and need to initialize shell, and launch MagellanMapper
@@ -111,6 +136,7 @@ def main(gui=True):
         try:
             # non-POSIX shells do not accept eval but may run without
             # initializing the Conda shell hook
+            print("Retrying Conda activation without shell hook")
             launch_subprocess(ARGS_CONDA[1:] + args, working_dir)
         except subprocess.CalledProcessError:
             try:

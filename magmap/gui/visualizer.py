@@ -1267,7 +1267,7 @@ class Visualization(HasTraits):
             if self.scene_3d_shown:
                 self.show_orientation_axes(self.flipz)
             blobs = sqlite.select_blobs(config.db.cur, roi["id"])
-            self._btn_detect_fired(segs=blobs)
+            self._blob_detection_fired(segs=blobs)
             roi_editor.verify = True
         else:
             print("no roi found")

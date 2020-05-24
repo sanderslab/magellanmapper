@@ -327,8 +327,8 @@ class Visualization(HasTraits):
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
     _camera_pos = None
-    _roi_ed_fig = Instance(figure.Figure(), ())
-    _atlas_ed_fig = Instance(figure.Figure(), ())
+    _roi_ed_fig = Instance(figure.Figure(constrained_layout=True), ())
+    _atlas_ed_fig = Instance(figure.Figure(constrained_layout=True), ())
     _status_bar_msg = Str()  # text for status bar
 
     # ROI selector panel

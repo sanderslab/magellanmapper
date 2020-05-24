@@ -534,8 +534,9 @@ class ROIEditor:
         else:
             # add column for screenshot
             top_cols += 1
-        gs = gridspec.GridSpec(2, top_cols, wspace=0.7, hspace=0.4,
-                               height_ratios=height_ratios)
+        gs = gridspec.GridSpec(
+            2, top_cols, wspace=0.7, hspace=0.4, height_ratios=height_ratios,
+            figure=fig)
 
         # overview subplotting
         ax_overviews = []  # overview axes
@@ -870,7 +871,6 @@ class ROIEditor:
             ax.imshow(img3d)
             ax.set_aspect(img3d.shape[1] / img3d.shape[0])
             plot_support.hide_axes(ax)
-        gs.tight_layout(fig, pad=0.5)
         plt.ion()
         fig.canvas.draw_idle()
         plot_support.save_fig(filename, config.savefig)

@@ -93,7 +93,7 @@ class AtlasEditor:
         else:
             fig = self.fig
         gs = gridspec.GridSpec(
-            2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1))
+            2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1), figure=fig)
         gs_viewers = gridspec.GridSpecFromSubplotSpec(
             2, 2, subplot_spec=gs[0, 0])
         
@@ -224,9 +224,7 @@ class AtlasEditor:
         
         # initialize planes in all plot editors
         self.update_coords(coord, config.PLANE[0])
-        
-        # extra padding for slider labels
-        gs.tight_layout(fig)
+
         plt.ion()  # avoid the need for draw calls
 
     def _close(self, evt):

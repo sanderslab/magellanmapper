@@ -6,7 +6,7 @@ import setuptools
 # optional dependencies to import files via BioFormats, which req Java 8+
 _EXTRAS_IMPORT = [
     # pre-built Javabridge with Python 3.6, Java 8
-    "javabridge==1.0.18.post16+g4526f53",
+    "javabridge==1.0.18.post21+g4526f53",
     "python-bioformats==1.1.0",
 ]
 _EXTRAS_AWS = ["boto3", "awscli"]

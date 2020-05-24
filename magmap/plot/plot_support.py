@@ -426,6 +426,7 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
         z_overview: Index of plane to show.
         max_size: Maximum number of planes.
         jump: Function to jump to a given plane; defaults to None.
+            Activated if present and the right arrow button is pressed.
         max_scroll: Max number of planes to scroll by mouse. Ignored during 
             jumps.
 
@@ -433,7 +434,13 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
         int: Index of plane after scrolling.
     """
     step = 0
-    if isinstance(event, backend_bases.MouseEvent):
+    if jump is not None and event.key == "right":
+        # jump to the given plane for Right arrow key presses +/- mouse press;
+        # allowing mouse press serves as workaround to get axes from mouse
+        # event, which is absent from key event if fig lost focus
+        z = jump(event)
+        if z: z_overview = z
+    elif isinstance(event, backend_bases.MouseEvent):
         # scroll movements are scaled from 0 for each event
         steps = event.step
         if max_scroll is not None and abs(steps) > max_scroll:
@@ -447,9 +454,6 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
             step += 1
         elif event.key == "down":
             step -= 1
-        elif jump is not None and event.key == "right":
-            z = jump(event)
-            if z: z_overview = z
     
     z_overview_new = z_overview + step
     #print("scroll step of {} to z {}".format(step, z_overview))

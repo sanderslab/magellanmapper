@@ -716,6 +716,12 @@ class ROIEditor:
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 
+        # WORKAROUND (2020-05-22): fig/axes lose focus sporadically in lower
+        # right canvas on Mac, during which axes are not associated with
+        # key events; however, mouse events still contain these axes, used
+        # here for jumping overview images to the corresponding axes
+        fig.canvas.mpl_connect("button_release_event", key_press)
+
         # zoomed-in views of z-planes spanning from just below to just above ROI
         segs_in = None
         segs_out = None

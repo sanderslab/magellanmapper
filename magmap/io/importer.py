@@ -247,26 +247,24 @@ def filename_to_base(filename, series=None, modifier=""):
     return path
 
 
-def deconstruct_np_filename(np_filename, ext="czi"):
-    """Deconstruct Numpy image filename to the appropriate image components.
+def deconstruct_np_filename(np_filename):
+    """Deconstruct Numpy image filename to the original name from which it
+    was based.
     
     Args:
-        np_filename: Numpy image filename, including series number.
-        ext: Original image's extension; defaults to "czi".
+        np_filename (str): Numpy image filename.
     
     Returns:
-        Tuple with ``filename`` as the path before the series section and 
-        ``series`` as the series number as an integer. Both elements default 
-        to None if the series component could not be found ``np_filename``.
+        str: The deconstructed filename, without suffixes and ending in a
+        period. If no matching suffix is found, simply returns ``np_filename``.
     """
-    series_reg = re.compile(r"\_[0-9]{5}")
-    series_fill = re.findall(series_reg, np_filename)
-    series = None
-    filename = None
-    if series_fill:
-        series = int(series_fill[0][1:])
-        filename = series_reg.split(np_filename)[0] + "." + ext
-    return filename, series
+    filename = np_filename
+    for suffix in (config.SUFFIX_IMAGE5D, config.SUFFIX_META):
+        suffix = "_{}".format(suffix)
+        if np_filename.endswith(suffix):
+            filename = "{}.".format(np_filename[:len(np_filename)-len(suffix)])
+            break
+    return filename
 
 
 def save_image_info(filename_info_npz, names, sizes, resolutions, 

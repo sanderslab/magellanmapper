@@ -828,18 +828,16 @@ class Visualization(HasTraits):
             # may ignore if only updating widget value, without triggering load
             self._ignore_filename = False
             return
-        filename, series = importer.deconstruct_np_filename(self._filename)
-        if filename is not None and series is not None:
+        filename = importer.deconstruct_np_filename(self._filename)
+        if filename is not None:
             config.filename = filename
-            config.series = series
-            print("Changed filename to {}, series to {}"
-                  .format(config.filename, config.series))
+            print("Changed filename to", config.filename)
             # TODO: consider loading processed images, blobs, etc
             np_io.setup_images(config.filename)
             self._setup_for_image()
+            self._btn_redraw_fired()
         else:
-            print("Could not parse filename {} and series {}"
-                  .format(filename, series))
+            print("Could not parse filename", self._filename)
     
     @on_trait_change("_channel")
     def update_channel(self):

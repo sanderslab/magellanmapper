@@ -805,7 +805,7 @@ class Visualization(HasTraits):
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {_ROI_DEFAULT: None}
-        if config.db is not None:
+        if config.db is not None and config.filename is not None:
             self._rois = config.db.get_rois(self._get_exp_name(config.filename))
         self.rois_selections_class = ListSelections()
         if self._rois is not None and len(self._rois) > 0:
@@ -1099,6 +1099,10 @@ class Visualization(HasTraits):
 
     def _launch_roi_editor(self):
         """Handle ROI Editor button events."""
+        if config.image5d is None:
+            print("Main image has not been loaded, cannot show ROI Editor")
+            return
+
         if (not self._circles_opened_type 
                 or self._circles_opened_type ==
                 roi_editor.ROIEditor.CircleStyles.NO_CIRCLES):
@@ -1123,10 +1127,6 @@ class Visualization(HasTraits):
             if config.roi_profile["thresholding"]:
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
-        elif config.image5d is None:
-            print("loading original image stack from file")
-            config.image5d = importer.read_file(config.filename, config.series)
-            img = config.image5d
         
         blobs_truth_roi = None
         if config.truth_db is not None:

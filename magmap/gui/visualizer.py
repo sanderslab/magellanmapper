@@ -828,12 +828,18 @@ class Visualization(HasTraits):
             # may ignore if only updating widget value, without triggering load
             self._ignore_filename = False
             return
-        filename = importer.deconstruct_np_filename(self._filename)
+        filename, offset, size = importer.deconstruct_np_filename(
+            self._filename)
         if filename is not None:
             config.filename = filename
             print("Changed filename to", config.filename)
+            if offset is not None and size is not None:
+                config.subimg_offsets = [offset]
+                config.subimg_sizes = [size]
+                print("Change sub-image offset to {}, size to {}"
+                      .format(config.subimg_offsets, config.subimg_sizes))
             # TODO: consider loading processed images, blobs, etc
-            np_io.setup_images(config.filename)
+            np_io.setup_images(config.filename, offset=offset, size=size)
             self._setup_for_image()
             self._btn_redraw_fired()
         else:

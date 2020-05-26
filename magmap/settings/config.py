@@ -139,6 +139,7 @@ ProcessTypes = Enum(
         "DETECT",  # whole image blob detection
         "LOAD", "EXTRACT",
         "EXPORT_ROIS", "TRANSFORM", "ANIMATED", "EXPORT_BLOBS",
+        "EXPORT_PLANES",  # export a 3D+ image to individual planes
         "PREPROCESS",  # pre-process whole image
     )
 )

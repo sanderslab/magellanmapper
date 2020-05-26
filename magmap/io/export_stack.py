@@ -15,8 +15,10 @@ from scipy import ndimage
 
 from magmap.plot import colormaps
 from magmap.settings import config
+from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
+from magmap.plot import plot_3d
 from magmap.plot import plot_support
 
 
@@ -485,6 +487,43 @@ def reg_planes_to_img(imgs, path=None, ax=None):
         ax_img.figure, ax_img.get_array().shape, aspect)
     if path:
         plot_support.save_fig(path, config.savefig)
+
+
+def export_planes(image5d, prefix, ext, channel=None):
+    """Export each plane and channel combination into separate 2D image files
+
+    Args:
+        image5d (:obj:`np.ndarray`): Image in ``t,z,y,x[,c]`` format.
+        prefix (str): Output path template.
+        ext (str): Save format given as an extension without period.
+        channel (int): Channel to save; defaults to None for all channels.
+
+    Returns:
+
+    """
+    output_dir = os.path.dirname(prefix)
+    basename = os.path.splitext(os.path.basename(prefix))[0]
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    roi = image5d[0]
+    # TODO: option for RGB(A) images, which skimage otherwise assumes
+    multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
+    num_digits = len(str(len(roi)))
+    for i, plane in enumerate(roi):
+        path = os.path.join(output_dir, "{}_{:0{}d}".format(basename, i, num_digits))
+        if multichannel:
+            for chl in channels:
+                # save each channel as separate file
+                plane_chl = plane[..., chl]
+                path_chl = "{}{}{}.{}".format(
+                    path, importer.CHANNEL_SEPARATOR, chl, ext)
+                print("Saving image plane {} to {}".format(i, path_chl))
+                io.imsave(path_chl, plane_chl)
+        else:
+            # save single channel plane
+            path = "{}.{}".format(path, ext)
+            print("Saving image plane {} to {}".format(i, path))
+            io.imsave(path, plane)
 
 
 if __name__ == "__main__":

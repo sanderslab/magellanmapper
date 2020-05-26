@@ -884,6 +884,12 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
             not config.grid_search, config.image5d_is_roi)
 
+    elif proc_type is config.ProcessTypes.EXPORT_PLANES:
+        # export each plane as a separate image file
+        from magmap.io import export_stack
+        export_stack.export_planes(
+            config.image5d, config.prefix, config.savefig, config.channel)
+
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file
         # TODO: consider chunking option for larger images

@@ -733,7 +733,7 @@ def read_file(filename, series=None, load=True, z_max=-1,
     return image5d
 
 
-def import_dir(path, rgb_to_grayscale=True):
+def import_dir(path, rgb_to_grayscale=True, prefix=None):
     """Import a diretory of image files into a single image stack.
 
     Each file is assumed to be a 2D plane in a volumetric image, ordered
@@ -747,6 +747,9 @@ def import_dir(path, rgb_to_grayscale=True):
         rgb_to_grayscale (bool): Files with a three value third dimension
             are assumed to be RGB and will be converted to grayscale;
             defaults to True.
+        prefix (str): Ouput base path; defaults to None to output to the
+            ``path`` directory, also using the directory name as the
+            image filename.
 
     Returns:
         :obj:`np.ndarray`: The imported image as a Numpy array.
@@ -795,7 +798,7 @@ def import_dir(path, rgb_to_grayscale=True):
     Image.MAX_IMAGE_PIXELS = None
 
     # all files in the given folder will be imported in alphabetical order
-    files = sorted(glob.glob(path))
+    files = sorted(glob.glob(os.path.join(path, "*")))
     print("Importing files in directory {}:".format(path))
     regex_chls = re.compile(r"{}[0-9]+".format(CHANNEL_SEPARATOR))
     chls = {}
@@ -811,14 +814,17 @@ def import_dir(path, rgb_to_grayscale=True):
     if num_files < 1:
         return None
 
-    # import all files, using the first file to set the output filename
-    # and array shape
-    name = os.path.dirname(files[0])
-    filename_image5d_npz, filename_info_npz = make_filenames(name + ".", 0)
+    if prefix:
+        name = prefix
+    else:
+        # default to using directory name as image output name
+        name = os.path.join(path, os.path.basename(path))
+    filename_image5d_npz, filename_info_npz = make_filenames(name + ".")
     image5d = None
     lows_chls = []
     highs_chls = []
     chl_keys = chls.keys()
+
     if chl_keys:
         for i, chl_files in enumerate(chls.values()):
             # import files for the given channel

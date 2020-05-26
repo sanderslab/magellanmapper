@@ -203,7 +203,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
         print("Loading main image")
         if os.path.isdir(path):
             # import directory of TIFF images
-            config.image5d = importer.import_dir(os.path.join(path, "*"))
+            config.image5d = importer.import_dir(path, prefix=config.prefix)
             config.image5d_io = config.LoadIO.NP
         elif path.endswith(sitk_io.EXTS_3D):
             try:

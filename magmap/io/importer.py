@@ -503,7 +503,7 @@ def assign_metadata(md):
 
 def read_file(filename, series=None, load=True, z_max=-1,
               offset=None, size=None, channel=None, return_info=False, 
-              import_if_absent=True, update_info=True):
+              import_if_absent=True, update_info=True, prefix=None):
     """Reads an image file into Numpy format or imports a file into this format.
     
     Loads a Numpy image if available as determined by 
@@ -539,6 +539,7 @@ def read_file(filename, series=None, load=True, z_max=-1,
             image if it does not exist; defaults to True.
         update_info: True if the associated image5d info file should be 
             updated; defaults to True.
+        prefix (str): Ouput base path; defaults to None to use ``filename``.
     
     Returns:
         image5d, the array of image data. If ``return_info`` is True, a 
@@ -683,6 +684,10 @@ def read_file(filename, series=None, load=True, z_max=-1,
                 # default to channel 0 if not specified by only single channel
                 channel = 0
         name = names[series]
+
+    if prefix:
+        # output files to a given prefix-based name
+        filename_image5d, filename_meta = make_filenames(prefix)
     near_mins = []
     near_maxs = []
     for img_path in filenames:

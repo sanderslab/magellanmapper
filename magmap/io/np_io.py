@@ -213,11 +213,12 @@ def setup_images(path=None, series=None, offset=None, size=None,
             except FileNotFoundError as e:
                 print(e)
         else:
-            # load or import from MagellanMapper Numpy format, using any path
-            # changes during attempting ROI load
+            # load or import from MagellanMapper Numpy format
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
+            prefix = (config.prefix
+                      if proc_type is config.ProcessTypes.IMPORT_ONLY else None)
             config.image5d = importer.read_file(
-                path, series, channel=config.channel, load=load)
+                path, series, channel=config.channel, load=load, prefix=prefix)
             config.image5d_io = config.LoadIO.NP
     
     if config.metadatas and config.metadatas[0]:

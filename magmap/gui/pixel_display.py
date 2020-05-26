@@ -66,7 +66,8 @@ class PixelDisplay(object):
         rgb = None
         output = []
         for i, img in enumerate(self.imgs):
-            if any(np.less(coord, 0)) or any(np.greater_equal(coord, img.shape)):
+            if any(np.less(coord, 0)) or any(
+                    np.greater_equal(coord, img.shape[:len(coord)])):
                 # no corresponding px for the image
                 z = "n/a"
             else:

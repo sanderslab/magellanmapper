@@ -244,7 +244,7 @@ class Visualization(HasTraits):
     image to view and segment.
     
     Attributes:
-        x_low, x_high, ...: Low and high values for each offset.
+        x_low, x_high, ... (Int): Low and high values for image coordinates.
         x_offset: Integer trait for x-offset.
         y_offset: Integer trait for y-offset.
         z_offset: Integer trait for z-offset.
@@ -263,10 +263,20 @@ class Visualization(HasTraits):
         selected_viewer_tab (Enum): The Enum corresponding to the selected
             tab in the viewer panel.
     """
+    # image coordinate limits
+    x_low = Int(0)
+    x_high = Int(100)
+    y_low = Int(0)
+    y_high = Int(100)
+    z_low = Int(0)
+    z_high = Int(100)
+
+    # ROI offset and shape
     x_offset = Int
     y_offset = Int
     z_offset = Int
     roi_array = Array(Int, shape=(1, 3))
+
     scene = Instance(MlabSceneModel, ())
     btn_redraw = Button("Redraw")
     btn_detect = Button("Detect")
@@ -437,15 +447,6 @@ class Visualization(HasTraits):
     def __init__(self):
         """Initialize GUI."""
         HasTraits.__init__(self)
-
-        # ROI offset default ranges, to be updated after loading image;
-        # separate variables to access for ranges in RangeEditor
-        self.x_low = 0
-        self.x_high = 100
-        self.y_low = 0
-        self.y_high = 100
-        self.z_low = 0
-        self.z_high = 100
 
         # default options setup
         self._set_border(True)
@@ -793,7 +794,6 @@ class Visualization(HasTraits):
             # true max, but currently convenient to display size and checked
             # elsewhere; "high_label" RangeEditor setting also does not
             # appear to be working
-            # TODO: does not appear to update on subsequent image loading
             self.z_high, self.y_high, self.x_high = size
             if config.roi_offset is not None:
                 # apply user-defined offsets

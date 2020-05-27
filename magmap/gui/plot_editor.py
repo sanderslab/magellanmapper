@@ -474,18 +474,27 @@ class PlotEditor:
                             ontology.get_label_name(atlas_label),
                             ontology.get_label_item(
                                 atlas_label, config.ABAKeys.ABA_ID.value))
-                    # minimize chance of text overflowing out of axes by 
-                    # word-wrapping and switching sides at vertical midline
+
+                    # minimize chance of text overflowing out of axes by
+                    # word-wrapping and switching sides at midlines
                     name = "\n".join(textwrap.wrap(name, 30))
                     self.region_label.set_text(name)
                     if x > self.img3d_labels.shape[2] / 2:
-                        alignment = "right"
+                        alignment_x = "right"
                         label_x = x - 20
                     else:
-                        alignment = "left"
+                        alignment_x = "left"
                         label_x = x + 20
-                    self.region_label.set_horizontalalignment(alignment)
-                    self.region_label.set_position((label_x, y - 20))
+                    if y > self.img3d_labels.shape[1] / 2:
+                        alignment_y = "top"
+                        label_y = y - 20
+                    else:
+                        alignment_y = "bottom"
+                        label_y = y + 20
+                    self.region_label.set_horizontalalignment(alignment_x)
+                    self.region_label.set_verticalalignment(alignment_y)
+                    self.region_label.set_position((label_x, label_y))
+
             # need explicit draw call for figs embedded in TraitsUI
             self.axes.figure.canvas.draw_idle()
 

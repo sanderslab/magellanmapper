@@ -337,8 +337,8 @@ class Visualization(HasTraits):
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
     _camera_pos = None
-    _roi_ed_fig = Instance(figure.Figure(constrained_layout=True), ())
-    _atlas_ed_fig = Instance(figure.Figure(constrained_layout=True), ())
+    _roi_ed_fig = Instance(figure.Figure, ())
+    _atlas_ed_fig = Instance(figure.Figure, ())
     _status_bar_msg = Str()  # text for status bar
 
     # ROI selector panel
@@ -472,6 +472,9 @@ class Visualization(HasTraits):
             # show image filename in file selector without triggering update
             self._ignore_filename = True
             self._filename = config.filename
+        # create figs after theme has been applied
+        self._roi_ed_fig = figure.Figure(constrained_layout=True)
+        self._atlas_ed_fig = figure.Figure(constrained_layout=True)
         self._setup_for_image()
 
     def _format_seg(self, seg):

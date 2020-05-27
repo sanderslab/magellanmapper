@@ -24,7 +24,8 @@ config = {
     "python_requires": ">=3.6",  # TODO: consider testing on earlier versions
     "install_requires": [
         "scikit-image", 
-        "matplotlib", 
+        "matplotlib",
+        "vtk<9.0.0",  # Mayavi 4.7.1 is not compatible with VTK 9
         "mayavi", 
         "pandas", 
         "PyQt5", 

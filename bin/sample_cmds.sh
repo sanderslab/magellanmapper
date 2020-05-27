@@ -35,124 +35,153 @@ fi
 setup_image_paths PREFIXES "$BASE"
 setup_atlas_paths PREFIXES "$ABA_DIR"
 
-# IMPORT, REGISTRATION, CELL DETECTION, AND STATS
+sample_tasks() {
+  # IMPORT, REGISTRATION, CELL DETECTION, AND STATS
 
-# initial import from original microscopy file
-# - replace `.czi` with the extension of your file
-# - use `pipelines.sh` instead for stitching multi-tile images
-#python -u -m magmap.io.cli --img "${IMG%.*}.czi" --proc import_only -v
+  # initial import from original microscopy file
+  # - replace `.czi` with the extension of your file
+  # - use `pipelines.sh` instead for stitching multi-tile images
+  python -u -m magmap.io.cli --img "${IMG%.*}.czi" --proc import_only -v
 
-# initial import from TIF files
-# - filenames should have the format: name_ch_0.tif, name_ch_1.tif, etc
-# - change `resolutions` to image resolutions in x,y,z
-# - change `magnification` and `zoom` to microscope objective values
-#python -u -m magmap.io.cli --img "${IMG%.*}.tif" --proc import_only --set_meta resolutions=10.52,10.52,10 magnification=0.63 zoom=1.0 -v
+  # initial import from TIF files
+  # - filenames should have the format: name_ch_0.tif, name_ch_1.tif, etc
+  # - change `resolutions` to image resolutions in x,y,z
+  # - change `magnification` and `zoom` to microscope objective values
+  python -u -m magmap.io.cli --img "${IMG%.*}.tif" --proc import_only \
+    --set_meta resolutions=10.52,10.52,10 magnification=0.63 zoom=1.0 -v
 
-# view imported image
-#./run.py --img "$IMG"
+  # view imported image
+  ./run.py --img "$IMG"
 
-# downsample to size of atlas; the first option uses the target size in the
-# atlas profile, while the next options use a rescaling factor or specific
-# output size; use the plane option to transpose the output image
-#python -u -m magmap.io.cli --img "$IMG" --proc transform --atlas_profile "$REG" #--plane xz
-#python -u -m magmap.io.cli --img "$IMG" --proc transform --transform rescale=0.25
-#python -u -m magmap.io.cli --img "$IMG" --proc transform --size "$SHAPE_RESIZED"
+  # downsample to size of atlas; the first option uses the target size in the
+  # atlas profile, while the next options use a rescaling factor or specific
+  # output size; use the plane option to transpose the output image
+  python -u -m magmap.io.cli --img "$IMG" --proc transform --atlas_profile "$REG" #--plane xz
+  python -u -m magmap.io.cli --img "$IMG" --proc transform --transform rescale=0.25
+  python -u -m magmap.io.cli --img "$IMG" --proc transform --size "$SHAPE_RESIZED"
 
-# view downsampled image (assumes filename output using the first option)
-#./run.py --img "$IMG_RESIZED"
+  # view downsampled image (assumes filename output using the first option)
+  ./run.py --img "$IMG_RESIZED"
 
-# register imported atlas to downsampled image and view
-# - defaults to using channel 0; add `--channel x` to use channel x instead
-# - use the `transform` parameter for a 180 degree rotation (2 x 90 deg)
-#./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" --register single --atlas_profile "${REG}_raw" -v #--transform rotate=2
-#./run.py --img "$IMG_MHD" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd --offset 70,350,150
+  # register imported atlas to downsampled image and view
+  # - defaults to using channel 0; add `--channel x` to use channel x instead
+  # - use the `transform` parameter for a 180 degree rotation (2 x 90 deg)
+  ./run_cli.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" \
+    --register single --atlas_profile "${REG}_raw" -v #--transform rotate=2
+  ./run.py --img "$IMG_MHD" --roi_profile lightsheet_atlas \
+    --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd
 
-# similar view of registered labels but overlaid on downsampled image
-# including all of its channels
-#./run.py --img "$IMG_RESIZED" --prefix "$IMG_MHD" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes annotation=annotation.mhd --offset 70,350,150
+  # similar view of registered labels but overlaid on downsampled image
+  # including all of its channels
+  ./run.py --img "$IMG_RESIZED" --prefix "$IMG_MHD" \
+    --roi_profile lightsheet_atlas --labels "$ABA_LABELS" \
+    --reg_suffixes annotation=annotation.mhd --offset 70,350,150
 
-# full image detection
-# - detects cells in channel set in variable `CHL`
-#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --roi_profile "$MIC"
+  # full image detection
+  # - detects cells in channel set in variable `CHL`
+  ./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --roi_profile "$MIC"
 
-# make and view density image (heat map)
-#./run_cli.py -v --img "$IMG" --register make_density_images
-#./run.py --img "$IMG" --roi_profile lightsheet_contrast --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" --reg_suffixes heat.mhd annotation.mhd
+  # make and view density image (heat map)
+  ./run_cli.py -v --img "$IMG" --register make_density_images
+  ./run.py --img "$IMG" --roi_profile lightsheet_contrast \
+    --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" \
+    --reg_suffixes heat.mhd annotation.mhd
 
-# volume metrics (level 13 includes hierarchical regions through this level)
-#./run_cli.py --img "$IMG" --register vol_stats --atlas_profile lightsheet_finer --labels "$ABA_LABELS"
-#./run_cli.py --img "$IMG" --register vol_stats --atlas_profile lightsheet_finer --labels "$ABA_LABELS" 13
+  # volume metrics (level 13 includes hierarchical regions through this level)
+  ./run_cli.py --img "$IMG" --register vol_stats \
+    --atlas_profile lightsheet_finer --labels "$ABA_LABELS"
+  ./run_cli.py --img "$IMG" --register vol_stats \
+    --atlas_profile lightsheet_finer --labels "$ABA_LABELS" 13
 
-# generate CSV of all atlas IDs with names; merge with hierarchical volumes CSV
-#./run_cli.py --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
-#./run_cli.py --df merge_csvs_cols --img "region_ids_$ABA_DIR.csv" "${IMG%.*}_volumes_level13.csv" --plot_labels id_col=Region --prefix "${IMG%.*}_volumes_level13_named.csv"
+  # generate CSV of all atlas IDs with names; merge with hierarchical volumes CSV
+  ./run_cli.py --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
+  ./run_cli.py --df merge_csvs_cols \
+    --img "region_ids_$ABA_DIR.csv" "${IMG%.*}_volumes_level13.csv" \
+    --plot_labels id_col=Region --prefix "${IMG%.*}_volumes_level13_named.csv"
 
-# turn on WT and basic.stats profiles (requires R 3.5+)
-#Rscript --verbose clrstats/run.R
+  # turn on WT and basic.stats profiles (requires R 3.5+)
+  Rscript --verbose clrstats/run.R
 
+  # VIEW ORIGINAL IMAGE, BUILD TRUTH SETS
 
-# VIEW ORIGINAL IMAGE, BUILD TRUTH SETS
+  # view original image
+  # - use offset and size to start at a particular ROI position
+  # - use the load flag to load previously saved whole-image blobs
+  # - use savefig to automatically save ROI Editor figures
+  ./run.py --img "$IMG" --roi_profile "$MIC" #--offset 800,1150,250 --size 70,70,30 -v #--proc load #--savefig pdf
 
-# view original image
-# - use offset and size to start at a particular ROI position
-# - use the load flag to load previously saved whole-image blobs
-# - use savefig to automatically save ROI Editor figures
-#./run.py --img "$IMG" --roi_profile "$MIC" #--offset 800,1150,250 --size 70,70,30 -v #--proc load #--savefig pdf
+  # view with overlaid registered labels
+  # - reg suffixes are given as `atlas annotation borders` to load, where the
+  #   atlas defaults to the main image (IMG)
+  # - alphas are the opacities for the main image, labels, and region highlighter
+  ./run.py --img "$IMG" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" \
+    --reg_suffixes annotation=annotation.mhd --alphas 1,0.5,0.4
 
-# view with overlaid registered labels
-# - reg suffixes are given as `atlas annotation borders` to load, where the
-#   atlas defaults to the main image (IMG)
-# - alphas are the opacities for the main image, labels, and region highlighter
-#./run.py --img "$IMG" --roi_profile lightsheet_atlas --labels "$ABA_LABELS" --reg_suffixes annotation=annotation.mhd --alphas 1,0.5,0.4
+  # detect blobs within a sub-image and export the sub-image for portability
+  ./run_cli.py --img "$IMG" --proc detect --channel "$CHL" \
+    --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" \
+    --save_subimg
 
-# detect blobs within a sub-image and export the sub-image for portability
-#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" --save_subimg
+  # view and build truth set for a sub-image; after pressing "Save blobs,"
+  # the truth set will be in magmap.db
+  ./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" \
+    --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" \
+    --roi_profile lightsheet_contrast --proc load #--savefig png
 
-# view and build truth set for a sub-image; after pressing "Save blobs," the truth set will be in magmap.db
-#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --roi_profile lightsheet_contrast --proc load #--savefig png
+  # edit saved truth set; load saved ROIs from the "ROIs" dropdown box,
+  # then press "ROI Editor"
+  ./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" \
+    --subimg_size "$SIZE" --roi_profile "lightsheet_contrast" --proc load \
+    --truth_db edit magmap.db
 
-# edit saved truth set; load saved ROIs from the "ROIs" dropdown box, then press "ROI Editor"
-#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "lightsheet_contrast" --proc load --truth_db edit magmap.db
+  # grid-search on single sub-image using the "test" ROC profile
+  ./run_cli.py --img "$IMG" --proc detect --channel "$CHL" \
+    --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" \
+    --truth_db verify magmap.db --grid_search test
 
-# grid-search on single sub-image using the "test" ROC profile
-#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" --truth_db verify magmap.db --grid_search test
+  # view verifications for single offset
+  ./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" \
+    --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" \
+    --roi_profile lightsheet_contrast --proc load --truth_db verified "${THEME[@]}"
 
-# view verifications for single offset
-#./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" --roi_profile lightsheet_contrast --proc load --truth_db verified "${THEME[@]}"
+  # test all OFFSETS with ROC curve
+  ./run_cli.py --img "$IMG" --proc detect --channel "$CHL" \
+    --offset ${OFFSETS_DONE[@]} --size $SIZE --roi_profile "$MIC" \
+    --truth_db "verify" --grid_search
 
-# test all OFFSETS with ROC curve
-#./run_cli.py --img "$IMG" --proc detect --channel "$CHL" --offset ${OFFSETS_DONE[@]} --size $SIZE --roi_profile "$MIC" --truth_db "verify" --grid_search
+  # view annotation (ie segmentation) truth set
+  ./run.py --img "$IMG" -v --channel "$CHL" --proc load \
+    --subimg_offset "$OFFSET" --subimg_size "$SIZE" \
+    --roi_profile "lightsheet_contrast" \
+    --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"
 
-# view annotation (ie segmentation) truth set
-#./run.py --img "$IMG" -v --channel "$CHL" --proc load --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "lightsheet_contrast" --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"
+  # EXPORT IMAGES
 
+  # export animation of image and registered atlas labels through all z-planes
+  # - slice is given as `start,stop,step`, where none = all
+  # - prefix is for images registered to a different image path
+  ./run_cli.py --img "$IMG_RESIZED" --proc animated --slice none,none,1 \
+    --roi_profile atlas --savefig mp4 --prefix "$IMG" --labels "$ABA_LABELS" \
+    --reg_suffixes exp.mhd annotation.mhd
 
-# EXPORT IMAGES
+  # export ROI after detections
+  ./run.py --img "$IMG" -v --channel "$CHL" --proc export_rois --savefig pdf \
+    --truth_db view
 
-# export animation of image and registered atlas labels through all z-planes
-# - slice is given as `start,stop,step`, where none = all
-# - prefix is for images registered to a different image path
-#./run_cli.py --img "$IMG_RESIZED" --proc animated --slice none,none,1 --roi_profile atlas --savefig mp4 --prefix "$IMG" --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd
+  # PIPELINES SCRIPT
 
-# export ROI after detections
-#./run.py --img "$IMG" -v --channel "$CHL" --proc export_rois --savefig pdf --truth_db view
+  # image downsampling
+  bin/pipelines.sh -p transformation -i "$IMG" -z "$shape_resized" \
+    -- --atlas_profile "$REG"
 
+  # OTHER IMAGE TRANSFORMATIONS
 
-# PIPELINES SCRIPT
-
-# image downsampling
-#bin/pipelines.sh -p transformation -i "$IMG" -z "$shape_resized" -- --atlas_profile "$REG"
-
-
-# OTHER IMAGE TRANSFORMATIONS
-
-# rotate an image along multiple axes as specified in custom profiles;
-# the first profile needs a "preprocess" key with a list of tasks, and
-# the second profile specifies the rotation (see `atlas_prof.py`)
-# ./run_cli.py --img "$IMG" --proc preprocess --roi_profile profiles/preproc.yaml --atlas_profile profiles/rotate.yaml
-
-
-# CUSTOM TASKS
+  # rotate an image along multiple axes as specified in custom profiles;
+  # the first profile needs a "preprocess" key with a list of tasks, and
+  # the second profile specifies the rotation (see `atlas_prof.py`)
+   ./run_cli.py --img "$IMG" --proc preprocess \
+    --roi_profile profiles/preproc.yaml --atlas_profile profiles/rotate.yaml
+}
 
 # This call will run the `custom_tasks` function in your settings script
 custom_tasks

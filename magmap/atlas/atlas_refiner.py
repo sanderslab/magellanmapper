@@ -1295,9 +1295,9 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     Args:
         atlas_dir (str): Path to atlas directory.
         show (bool): True to show the imported atlas.
-        prefix (str): Output path; defaults to None to ignore. If an existing
-            directory,``atlas_dir`` will still be used for the output
-            filename;otherwise, the basename will be used for this filename.
+        prefix (str): Output path; defaults to None to ignore. If ends with
+            a file separator,``atlas_dir`` will still be used for the output
+            filename; otherwise, the basename will be used for this filename.
     """
     # load atlas and corresponding labels
     img_atlas, path_atlas = sitk_io.read_sitk(
@@ -1315,13 +1315,12 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     target_dir = atlas_dir + "_import"
     basename = os.path.basename(atlas_dir)
     if prefix:
-        if os.path.isdir(prefix):
-            # use existing directory and keep atlas_dir as filename template
-            target_dir = prefix
-        else:
-            # split into dir and filename template
-            target_dir = os.path.dirname(prefix)
-            basename = os.path.basename(prefix)
+        # split prefix into dir and filename template; prefix_basename is
+        # empty if prefix ends with file separator
+        target_dir = os.path.dirname(prefix)
+        prefix_basename = os.path.basename(prefix)
+        if prefix_basename:
+            basename = prefix_basename
     df_base_path = os.path.join(target_dir, basename) + "_{}"
     df_metrics_path = df_base_path.format(config.PATH_ATLAS_IMPORT_METRICS)
     name_prefix = os.path.join(target_dir, basename) + "."

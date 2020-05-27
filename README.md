@@ -6,21 +6,15 @@ MagellanMapper is a graphical imaging informatics suite and pipeline for high-th
 
 ## Installation
 
-1. Download and unarchive MagellanMapper, or clone this repo (`git clone https://github.com/sanderslab/magellanmapper.git`)
-1. Navigate to the repo directtory and install MagellanMapper in a new Conda environment:
+1. Download and extract the MagellanMapper
+  * Get the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest)
+  * Or clone this repo: `git clone https://github.com/sanderslab/magellanmapper.git`
+1. Navigate to the MagellanMapper directory: `cd <path-to-magellanmapper>`
+1. Install MagellanMapper
+  * On Mac or Linux: `bin/setup_conda.sh`
+  * On Windows: `bin\setup_conda.bat`
   
-  ```
-  cd /path/to/magellanmapper
-  conda env create -n mag -f environment.yml
-  ```
-  
-  **Alternative**: On Mac or Linux (or a Bash shell in Windows), you can use our setup script, which will also install Minconda if necessary:
-  
-  ```
-  bin/setup_conda.sh
-  ```
-  
-See [Installation](docs/install.md) for more details, including installing without Conda such as Pip or Venv+Pip.
+See [Installation](docs/install.md) for more details, including installing without Conda such as by Pip or Venv+Pip.
   
 ## Run MagellanMapper
 
@@ -28,7 +22,7 @@ MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, re
 
 ```
 conda activate mag
-./run.py --img [path_to_your_image]
+./run.py --img <path-to-your-image>
 ```
 
 Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
@@ -117,5 +111,7 @@ See `bin/pipelines.sh` for additional sample commands for common scenarios, such
 ### Server
 
 You can launch a standard server, deploy MagellanMapper code, and run a pipeline. See [tools for AWS cloud management](cloud_aws.sh) for more details. 
+
+Licensed under the open-source [BSD-3 license](LICENSE.txt)
 
 Author: David Young, 2017, 2020, Stephan Sanders Lab

@@ -9,16 +9,14 @@
 #    Bash scripts or Windows Batch scripts and customized for your file paths.
 #
 # 2) Run this script directly after a few modifications:
-#    a) Copy `sample_settings.sh` to your own file and customize its settings
+#    a) Copy `sample_settings.sh` to your own file and customize its settings.
+#       Copying the file rather than editing it directly allows you
+#       to update the software without overwriting your changes.
 #    b) Copy desired commands below into `custom_tasks` in your settings file
 #    c) Run this script, pointing it to your custom settings file:
-#       `bin/sample_cmds.sh bin/my_settings.sh`
+#       `bin/sample_cmds.sh <path-to-your-settings-file>`
 #
-# 3) You can also uncomment (ie remove the "#" at line start) a desired command
-#    below to run in directly, but this file will need to be reset before
-#    any code repository updates.
-#
-# 4) For complete pipelines, see `pipelines.sh` instead.
+# 3) For complete pipelines, see `pipelines.sh` instead.
 
 # APPLY USER SETTINGS
 
@@ -156,6 +154,5 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 
 # CUSTOM TASKS
 
-# add your own commands here, or add them to this function in the your
-# script based on `sample_settings.sh` to minimize edits here
+# This call will run the `custom_tasks` function in your settings script
 custom_tasks

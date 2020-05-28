@@ -326,13 +326,13 @@ class PlotEditor:
                         # trigger text box update
                         self.fn_update_intensity(self.intensity)
                 else:
-                    # use user-specified intensity value, resetting it
-                    # afterward to allow updating with clicked intensities
+                    # apply user-specified intensity value; assume it will
+                    # be reset on mouse release
                     print("using specified intensity of", self.intensity_spec)
                     self.intensity = self.intensity_spec
                     self.intensity_shown = self.cmap_labels.convert_img_labels(
                         self.intensity)
-                    self.intensity_spec = None
+            
             elif event.key not in self._KEY_MODIFIERS:
                 # click without modifiers to update crosshairs and 
                 # corresponding planes
@@ -504,8 +504,10 @@ class PlotEditor:
         self.last_loc_data = loc_data
     
     def on_release(self, event):
-        """If labels were edited during the current mouse press, update 
-        plane interpolation values.
+        """Respond to mouse button release events.
+
+        If labels were edited during the current mouse press, update
+        plane interpolation values. Also reset any specified intensity value.
         
         Args:
             event: Key press event.
@@ -515,6 +517,13 @@ class PlotEditor:
                 self.interp_planes.update_plane(
                     self.plane, self.coord[0], self.intensity)
             self._editing = False
+
+        if self.intensity_spec is not None:
+            # reset all plot editors' specified intensity to allow updating
+            # with clicked intensities
+            self.intensity_spec = None
+            if self.fn_update_intensity:
+                self.fn_update_intensity(None)
     
     def on_key_press(self, event):
         """Change pen radius with bracket ([/]) buttons.

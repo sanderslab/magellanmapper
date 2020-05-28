@@ -389,29 +389,30 @@ class AtlasEditor:
         """Update the color picker :class:`TextBox` with the given value.
 
         Args:
-            val: Color value.
+            val (str): Color value. If None, only :meth:`color_picker_changed`
+                will be triggered.
         """
-        self.color_picker_box.set_val(val)
+        if val is None:
+            # updated picked color directly
+            self.color_picker_changed(val)
+        else:
+            # update text box, which triggers color_picker_changed
+            self.color_picker_box.set_val(val)
 
     def color_picker_changed(self, text):
         """Respond to color picker :class:`TextBox` changes by updating
-        the specified intensity value in all plot editors to an integer
-        of the given value if it is a number and the first editor does
-        not already have an intensity set to this value.
+        the specified intensity value in all plot editors.
 
         Args:
-            text: String of text box value.
+            text (str): String of text box value. Converted to an int if
+                non-empty.
         """
-        if not libmag.is_number(text): return
-        intensity = int(text)
+        intensity = text
+        if text:
+            if not libmag.is_number(intensity): return
+            intensity = int(intensity)
+        print("updating specified color to", intensity)
         for i, ed in enumerate(self.plot_eds.values()):
-            if i == 0:
-                if intensity == ed.intensity:
-                    # ignore if intensity already set, eg if
-                    # triggered by update_color_picker
-                    return
-                else:
-                    print("updating specified color to", text)
             ed.intensity_spec = intensity
 
 

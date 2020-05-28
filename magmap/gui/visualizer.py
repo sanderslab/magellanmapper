@@ -991,7 +991,7 @@ class Visualization(HasTraits):
                 roi_size, np.multiply(self.border, -1))
             self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
                 self.segments, self.scene.mlab, self.segs_in_mask, 
-                show_shadows, self.flipz)
+                show_shadows, roi_size[2] if self.flipz else 0)
             # reduce number of digits to make the slider more compact
             scale = float(libmag.format_num(scale, 4))
             self._scale_detections_high = scale * 2

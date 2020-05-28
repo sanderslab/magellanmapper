@@ -304,17 +304,20 @@ def _resize_glyphs_isotropic(settings, glyphs=None):
     return isotropic
 
 
-def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
+def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipz=False):
     """Plots areas with greater intensity as 3D surfaces.
     
     Args:
-        roi: Region of interest.
-        scene_mlab: ``MayaviScene.mlab`` attribute to draw the contour. Any 
+        roi (:obj:`np.ndarray`): Region of interest either as a 3D (z, y, x) or
+            4D (z, y, x, channel) ndarray.
+        scene_mlab (:mod:``mayavi.mlab``): Mayavi mlab module. Any
             current image will be cleared first.
-        segment: True to denoise and segment ``roi`` before displaying, 
+        channel (int): Channel to select, which can be None to indicate all
+            channels.
+        segment (bool): True to denoise and segment ``roi`` before displaying,
             which may remove artifacts that might otherwise lead to 
             spurious surfaces. Defaults to False.
-        flipud: True to invert blobs along z-axis to match handedness 
+        flipz: True to invert ``roi`` along z-axis to match handedness
             of Matplotlib with z progressing upward; defaults to False.
     """
     # Plot in Mayavi
@@ -323,9 +326,9 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
     pipeline = scene_mlab.pipeline
     scene_mlab.clf()
     settings = config.roi_profile
-    if flipud:
+    if flipz:
         # invert along z-axis to match handedness of Matplotlib with z up
-        roi = np.flipud(roi)
+        roi = roi[::-1]
     
     # saturate to remove noise and normalize values
     roi = saturate_roi(roi, channel=channel)
@@ -411,7 +414,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipud=False):
     print("time to render 3D surface: {}".format(time() - time_start))
 
 
-def plot_3d_points(roi, scene_mlab, channel, flipud=False):
+def plot_3d_points(roi, scene_mlab, channel, flipz=False):
     """Plots all pixels as points in 3D space.
     
     Points falling below a given threshold will be
@@ -419,17 +422,17 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     background to masses within the region of interest.
     
     Args:
-        roi: Region of interest either as a 3D (z, y, x) or 
+        roi (:obj:`np.ndarray`): Region of interest either as a 3D (z, y, x) or
             4D (z, y, x, channel) ndarray.
-        scene_mlab: ``MayaviScene.mlab`` attribute to draw the contour. Any 
+        scene_mlab (:mod:``mayavi.mlab``): Mayavi mlab module. Any
             current image will be cleared first.
-        channel: Channel to select, which can be None to indicate all 
+        channel (int): Channel to select, which can be None to indicate all
             channels.
-        flipud: True to invert blobs along z-axis to match handedness 
+        flipz (bool): True to invert blobs along z-axis to match handedness
             of Matplotlib with z progressing upward; defaults to False.
     
     Returns:
-        True if points were rendered, False if no points to render.
+        bool: True if points were rendered, False if no points to render.
     """
     print("plotting as 3D points")
     scene_mlab.clf()
@@ -441,15 +444,17 @@ def plot_3d_points(roi, scene_mlab, channel, flipud=False):
     roi = restoration.denoise_tv_chambolle(roi, weight=0.1)
     
     # separate parallel arrays for each dimension of all coordinates for
-    # Mayavi input format, with the ROI itself given as a 1D scalar array 
+    # Mayavi input format, with the ROI itself given as a 1D scalar array ;
+    # TODO: consider using np.mgrid to construct the x,y,z arrays
     time_start = time()
     shape = roi.shape
     z = np.ones((shape[0], shape[1] * shape[2]))
-    if flipud:
-        # invert along z-axis to match handedness of Matplotlib with z up
-        z *= -1
     for i in range(shape[0]):
         z[i] = z[i] * i
+    if flipz:
+        # invert along z-axis to match handedness of Matplotlib with z up
+        z *= -1
+        z += shape[0]
     y = np.ones((shape[0] * shape[1], shape[2]))
     for i in range(shape[0]):
         for j in range(shape[1]):
@@ -654,7 +659,7 @@ def _shadow_blob(x, y, z, cmap_indices, cmap, scale, mlab):
     return pts_shadows
 
 
-def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
+def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipz=None):
     """Shows 3D blob segments.
     
     Args:
@@ -665,8 +670,9 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
             surrounding the ROI.
         show_shadows: True if shadows of blobs should be depicted on planes 
             behind the blobs; defaults to False.
-        flipud: True to invert blobs along z-axis to match handedness 
-            of Matplotlib with z progressing upward; defaults to False.
+        flipz (int): Invert blobs and shift them by this amount along the
+            z-axis to match handedness of Matplotlib with z progressing
+            upward; defaults to False.
     
     Returns:
         A 3-element tuple containing ``pts_in``, the 3D points within the 
@@ -677,9 +683,11 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipud=False):
         return None, None, 0
     settings = config.roi_profile
     segs = np.copy(segments)
-    if flipud:
-        # invert along z-axis to match handedness of Matplotlib with z up
+    if flipz:
+        # invert along z-axis within the same original space, eg to match
+        # handedness of Matplotlib with z up
         segs[:, 0] *= -1
+        segs[:, 0] += flipz
     isotropic = _resize_glyphs_isotropic(settings)
     if isotropic is not None:
         # adjust position based on isotropic factor

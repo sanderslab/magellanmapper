@@ -86,29 +86,6 @@ def main():
     visualization.configure_traits()
     
 
-def _fig_title(atlas_region, offset, roi_size):
-    """Figure title parser.
-    
-    Arguments:
-        atlas_region: Name of the region in the atlas; if None, the region
-            will be ignored.
-        offset: (x, y, z) image offset
-        roi_size: (x, y, z) region of interest size
-    
-    Returns:
-        Figure title string.
-    """
-    region = ""
-    if atlas_region is not None:
-        region = "{} from ".format(atlas_region)
-    # cannot round to decimal places or else tuple will further round
-    roi_size_um = np.around(
-        np.multiply(roi_size, config.resolutions[0][::-1]))
-    return "{}{} (series {})\noffset {}, ROI size {} [{}{}]".format(
-        region, os.path.basename(config.filename), config.series, offset, 
-        tuple(roi_size), tuple(roi_size_um), u'\u00b5m')
-
-
 class _MPLFigureEditor(Editor):
     """Custom TraitsUI editor to handle Matplotlib figures."""
     scrollable = True
@@ -1147,14 +1124,12 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
-        title = _fig_title(ontology.get_label_name(self._atlas_label),
-                           curr_offset, curr_roi_size)
         filename_base = importer.filename_to_base(
             config.filename, config.series)
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
         stack_args = (
-            self.update_segment, title, filename_base, img, config.channel,
+            self.update_segment, filename_base, img, config.channel,
             curr_roi_size, curr_offset, self.segments, self.segs_in_mask,
             self.segs_cmap, self._roi_ed_close_listener,
             # additional args with defaults
@@ -1171,6 +1146,7 @@ class Visualization(HasTraits):
             "zoom_shift": config.plot_labels[config.PlotLabels.ZOOM_SHIFT],
             "roi_cols": roi_cols,
             "fig": self._roi_ed_fig,
+            "region_name": ontology.get_label_name(self._atlas_label),
         }
         if self._styles_2d[0] == Styles2D.SQUARE_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig

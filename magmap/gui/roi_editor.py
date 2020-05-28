@@ -316,20 +316,20 @@ class ROIEditor:
         self._draggable_circles = []
         self._circle_last_picked = []
 
-    def plot_2d_stack(self, fn_update_seg, title, filename, image5d, channel,
+    def plot_2d_stack(self, fn_update_seg, filename, image5d, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
                       fn_close_listener, border=None, plane="xy",
                       zoom_levels=1, zoom_shift=None, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
                       grid=False, roi_cols=None, img_region=None,
-                      max_intens_proj=False, labels_img=None, fig=None):
+                      max_intens_proj=False, labels_img=None, fig=None,
+                      region_name=None):
         """Shows a figure of 2D plots to compare with the 3D plot.
 
         Args:
             fn_update_seg (func): Callback when updating a 
                 :obj:`DraggableCircle`.
-            title (str): Figure title.
             filename (str): Path to use when saving the plot.
             image5d: Full Numpy array of the image stack.
             channel: Channel of the image to display.
@@ -381,6 +381,7 @@ class ROIEditor:
                 defaults to None.
             fig (:obj:`figure.Figure`): Matplotlib figure; defaults to None
                 to generate a new figure.
+            region_name (str): Name of atlas region for title; defaults to None.
         """
         time_start = time()
 
@@ -404,9 +405,12 @@ class ROIEditor:
 
         # black text with transluscent background the color of the figure
         # background in case the title is a 2D plot
-        fig.suptitle(title, color="black",
-                     bbox=dict(facecolor=fig.get_facecolor(), edgecolor="none",
-                               alpha=0.5))
+        fig.suptitle(
+            ROIEditor._fig_title(
+                region_name, os.path.basename(filename), offset, roi_size),
+            color="black", bbox=dict(
+                facecolor=fig.get_facecolor(), edgecolor="none", alpha=0.5))
+        
         # filename for export
         filename = plot_support.get_roi_path(
             os.path.basename(filename), offset, roi_size)
@@ -942,6 +946,32 @@ class ROIEditor:
         if show:
             plt.show()
         plot_support.save_fig(title, config.savefig)
+
+    @staticmethod
+    def _fig_title(atlas_region, name, offset, roi_size):
+        """Figure title parser.
+
+        Arguments:
+            atlas_region: Name of the region in the atlas; if None, the region
+                will be ignored.
+            offset: (x, y, z) image offset
+            roi_size: (x, y, z) region of interest size
+
+        Returns:
+            Figure title string.
+        """
+        region = ""
+        if atlas_region is not None:
+            region = "{} from ".format(atlas_region)
+        # cannot round to decimal places or else tuple will further round
+        roi_size_um = np.around(
+            np.multiply(roi_size, config.resolutions[0][::-1]))
+        series = ""
+        if config.series is not None:
+            series = " (series {})".format(config.series)
+        return "{}{}{}\nROI offset x={}, y={}, z={}; size {} ({}{})".format(
+            region, name, series, *offset[:3], str(tuple(roi_size)).strip("()"),
+            str(tuple(roi_size_um)).strip("()"), u'\u00b5m')
 
     def show_subplot(self, fig, gs, row, col, image5d, channel, roi_size,
                      offset, fn_update_seg, segs_in, segs_out, segs_cmap, alpha,

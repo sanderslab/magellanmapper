@@ -93,7 +93,8 @@ class AtlasEditor:
         else:
             fig = self.fig
         gs = gridspec.GridSpec(
-            2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1), figure=fig)
+            2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1), figure=fig,
+            left=0.06, right=0.94, bottom=0.02, top=0.98)
         gs_viewers = gridspec.GridSpecFromSubplotSpec(
             2, 2, subplot_spec=gs[0, 0])
         

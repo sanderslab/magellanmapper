@@ -474,7 +474,8 @@ class Visualization(HasTraits):
             self._filename = config.filename
         # create figs after theme has been applied
         self._roi_ed_fig = figure.Figure(constrained_layout=True)
-        self._atlas_ed_fig = figure.Figure(constrained_layout=True)
+        # no constrained layout because of performance impact
+        self._atlas_ed_fig = figure.Figure()
         self._setup_for_image()
 
     def _format_seg(self, seg):

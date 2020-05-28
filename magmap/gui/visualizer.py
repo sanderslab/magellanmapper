@@ -432,7 +432,7 @@ class Visualization(HasTraits):
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [Styles2D.SQUARE.value]
         # self._check_list_2d = [self._DEFAULTS_2D[1]]
-        self._check_list_3d = [self._DEFAULTS_3D[2]]
+        self._check_list_3d = [self._DEFAULTS_3D[2], self._DEFAULTS_3D[3]]
         if (config.roi_profile["vis_3d"].lower()
                 == self._DEFAULTS_3D[3].lower()):
             # check "surface" if set in profile

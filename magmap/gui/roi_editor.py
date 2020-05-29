@@ -311,6 +311,13 @@ class ROIEditor:
         print("Initiating ROI Editor")
         self.fig = None
         self.fn_status_bar = fn_status_bar
+
+        # initialize other instance attributes
+        self.filename = None
+        self.offset = None
+        self.roi_size = None
+        self.plane = None
+        self._z_overview = None
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
@@ -385,6 +392,11 @@ class ROIEditor:
         """
         time_start = time()
 
+        self.filename = filename
+        self.offset = offset
+        self.roi_size = roi_size
+        self.plane = plane
+
         if not roi_cols:
             roi_cols = self.ROI_COLS
 
@@ -426,10 +438,6 @@ class ROIEditor:
                 region_name, os.path.basename(filename), offset, roi_size),
             color="black", bbox=dict(
                 facecolor=fig.get_facecolor(), edgecolor="none", alpha=0.5))
-        
-        # filename for export
-        filename = plot_support.get_roi_path(
-            os.path.basename(filename), offset, roi_size)
 
         # adjust array order based on which plane to show
         border_full = np.copy(border)
@@ -471,6 +479,7 @@ class ROIEditor:
 
         # position overview at bottom (default), middle, or top of stack
         z_overview = z_start # abs positioning
+        self._z_overview = z_overview
         if z_level == self.ZLevels.MIDDLE:
             z_overview = (2 * z_start + z_planes) // 2
         elif z_level == self.ZLevels.TOP:
@@ -713,6 +722,7 @@ class ROIEditor:
                     ax_ov = ax_overviews[lev]
                     ax_ov.clear()
                     show_overview(ax_ov, lev, **imgs)
+            self._z_overview = z_overview
             update_subplot_border()
             fig.canvas.draw_idle()
 
@@ -734,7 +744,7 @@ class ROIEditor:
                 # support default save shortcuts on multiple platforms;
                 # ctrl-s will bring up save dialog from fig, but cmd/win-S
                 # will bypass
-                plot_support.save_fig(filename, config.savefig)
+                self.save_fig()
             else:
                 # default to scrolling commands for up/down/right arrows
                 scroll_overview(event)
@@ -913,7 +923,6 @@ class ROIEditor:
             plot_support.hide_axes(ax)
         plt.ion()
         fig.canvas.draw_idle()
-        plot_support.save_fig(filename, config.savefig)
         print("2D plot time: {}".format(time() - time_start))
 
     def plot_roi(self, roi, segments, channel, show=True, title=""):
@@ -976,6 +985,19 @@ class ROIEditor:
         if show:
             plt.show()
         plot_support.save_fig(title, config.savefig)
+
+    def save_fig(self):
+        """Save the figure to file, with path based on filename, ROI,
+        and overview plane shown.
+        """
+        if not self.fig:
+            print("ROI Editor not yet initialized, skipping save")
+            return
+        path = "{}_{}{}".format(plot_support.get_roi_path(
+            os.path.basename(self.filename), self.offset, self.roi_size),
+            plot_support.get_plane_axis(self.plane),
+            self._z_overview)
+        plot_support.save_fig(path, config.savefig, fig=self.fig)
 
     @staticmethod
     def _fig_title(atlas_region, name, offset, roi_size):

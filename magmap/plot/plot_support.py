@@ -613,21 +613,23 @@ def get_plane_axis(plane, get_index=False):
     return plane_axis
 
 
-def get_roi_path(path, offset, roi_size):
+def get_roi_path(path, offset, roi_size=None):
     """Get a string describing an ROI for an image at a given path.
     
     Args:
-        path: Path to include in string, without extension.
-        offset: Offset of ROI.
-        roi_size: Shape of ROI.
+        path (str): Path to include in string, without extension.
+        offset (List[int]): Offset of ROI.
+        roi_size (List[int]): Shape of ROI; defaults to None to ignore.
     
     Returns:
-        String with ``path`` without extension followed immediately by 
+        str: String with ``path`` without extension followed immediately by
         ``offset`` and ``roi_size`` as tuples, with all spaces removed.
     """
-    return "{}_offset{}x{}".format(
-        os.path.splitext(path)[0], tuple(offset), 
-        tuple(roi_size)).replace(" ", "")
+    size = ""
+    if roi_size is not None:
+        size = "x{}".format(tuple(roi_size))
+    return "{}_offset{}{}".format(
+        os.path.splitext(path)[0], tuple(offset), size).replace(" ", "")
 
 
 def save_fig(path, ext=None, modifier="", fig=None):

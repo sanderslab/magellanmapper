@@ -4,6 +4,7 @@
 """
 
 import datetime
+import os
 
 from matplotlib import pyplot as plt
 from matplotlib import figure
@@ -278,8 +279,11 @@ class AtlasEditor:
                 to the first element of :const:`magmap.config.PLANE`.
         """
         coord_rev = libmag.transpose_1d_rev(list(coord), plane_src)
-        for plane in config.PLANE:
+        for i, plane in enumerate(config.PLANE):
             coord_transposed = libmag.transpose_1d(list(coord_rev), plane)
+            if i == 0:
+                # update the offset based on the xy plane
+                self.offset = coord_transposed[::-1]
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed=None, update_atlas_eds=False):
@@ -365,6 +369,17 @@ class AtlasEditor:
         for ed in self.plot_eds.values(): ed.edited = False
         enable_btn(self.save_btn, False)
         print("Saved labels image at {}".format(datetime.datetime.now()))
+
+    def save_fig(self):
+        """Save the figure to file, with path based on filename, ROI,
+        and overview plane shown.
+        """
+        if not self.fig:
+            print("ROI Editor not yet initialized, skipping save")
+            return
+        path = plot_support.get_roi_path(
+            os.path.basename(self.title), self.offset)
+        plot_support.save_fig(path, config.savefig, fig=self.fig)
 
     def toggle_edit_mode(self, event):
         """Toggle editing mode, determining the current state from the

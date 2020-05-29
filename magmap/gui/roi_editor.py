@@ -713,7 +713,20 @@ class ROIEditor:
                     ax_ov = ax_overviews[lev]
                     ax_ov.clear()
                     show_overview(ax_ov, lev, **imgs)
+            update_subplot_border()
             fig.canvas.draw_idle()
+
+        def update_subplot_border():
+            # show a colored border around zoomed plot corresponding to
+            # overview plots
+            for axi, axz in enumerate(ax_z_list):
+                if axi + z_start - z_planes_padding == z_overview:
+                    # highlight border
+                    axz.patch.set_edgecolor("orange")
+                    axz.patch.set_linewidth(3)
+                else:
+                    # make border invisible
+                    axz.patch.set_linewidth(0)
 
         def key_press(event):
             # respond to key presses
@@ -821,6 +834,7 @@ class ROIEditor:
                         and config.plot_labels[config.PlotLabels.SCALE_BAR]):
                     plot_support.add_scale_bar(ax_z, plane=plane)
                 ax_z_list.append(ax_z)
+        update_subplot_border()
 
         if not circles == self.CircleStyles.NO_CIRCLES:
             # add points that were not segmented by ctrl-clicking on zoom plots

@@ -257,7 +257,7 @@ class Visualization(HasTraits):
     scene = Instance(MlabSceneModel, ())
     btn_redraw = Button("Redraw")
     btn_detect = Button("Detect")
-    btn_save_3d = Button("Save 3D Screenshot")
+    _btn_save_fig = Button("Save Figure")
     btn_save_segments = Button("Save Blobs")
     roi = None  # combine with roi_array?
     rois_selections_class = Instance(ListSelections)
@@ -392,7 +392,7 @@ class Visualization(HasTraits):
             Item("segs_feedback", style="custom", show_label=False),
         ),
         HGroup(
-            Item("btn_save_3d", show_label=False),
+            Item("_btn_save_fig", show_label=False),
             Item("btn_save_segments", show_label=False)
         ),
     )
@@ -449,7 +449,9 @@ class Visualization(HasTraits):
             # show image filename in file selector without triggering update
             self._ignore_filename = True
             self._filename = config.filename
+
         # create figs after theme has been applied
+        self._roi_ed = None
         self._roi_ed_fig = figure.Figure(constrained_layout=True)
         # no constrained layout because of performance impact
         self._atlas_ed_fig = figure.Figure()
@@ -1074,12 +1076,12 @@ class Visualization(HasTraits):
 
     def _on_mpl_fig_enter(self, event):
         # event handler for entering a figure, storing the figure as shown
-        print("entered fig", event.canvas.figure)
+        # print("entered fig", event.canvas.figure)
         self.mpl_fig_active = event.canvas.figure
 
     def _on_mpl_fig_leave(self, event):
         # event handler for leaving a figure, resetting the shown figure
-        print("left fig", event.canvas.figure)
+        # print("left fig", event.canvas.figure)
         self.mpl_fig_active = None
 
     def _launch_roi_editor(self):
@@ -1185,6 +1187,7 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
+        self._roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
 
     def launch_atlas_editor(self):
@@ -1217,12 +1220,25 @@ class Visualization(HasTraits):
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
 
-    def _btn_save_3d_fired(self):
-        # save 3D image with the currently set extension in config
-        screenshot = self.scene.mlab.screenshot(mode="rgba", antialiased=True)
-        path = plot_support.get_roi_path(
-            config.filename, self._curr_offset(), self.roi_array[0].astype(int))
-        plot_2d.plot_image(screenshot, path)
+    @on_trait_change("_btn_save_fig")
+    def _save_fig(self):
+        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+            if self._roi_ed is not None:
+                # save screenshot of current ROI Editor
+                self._roi_ed.save_fig()
+        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            if self.atlas_eds:
+                # save screenshot of first Atlas Editor
+                # TODO: find active editor
+                self.atlas_eds[0].save_fig()
+        elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
+            # save 3D image with the currently set extension in config
+            screenshot = self.scene.mlab.screenshot(
+                mode="rgba", antialiased=True)
+            path = plot_support.get_roi_path(
+                config.filename, self._curr_offset(),
+                self.roi_array[0].astype(int))
+            plot_2d.plot_image(screenshot, path)
     
     def _btn_save_segments_fired(self):
         # save blobs to database

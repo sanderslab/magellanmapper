@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # Sample settings for MagellanMapper tasks
-# Author: David Young, 2020
-
-# Copy this file to your own file and update with your own settings.
+# Copy this script to your own file and change it to your own settings.
 
 # choose file paths (relative to magellanmapper directory), channels, etc
 PREFIXES=(. ../data) # add additional data folders
@@ -43,7 +41,9 @@ offsets_test=($OFFSET)
 # current offset
 OFFSET="${OFFSETS[0]}"
 
+# Add custom commands here, such as those in `sample_cmds.sh`
 custom_tasks() {
   :
-  # add custom commands here
+  # for example, this command (without the "#") would open an image
+  #./run.py --img "$IMG"
 }

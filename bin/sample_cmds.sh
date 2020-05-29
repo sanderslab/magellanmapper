@@ -35,6 +35,8 @@ fi
 setup_image_paths PREFIXES "$BASE"
 setup_atlas_paths PREFIXES "$ABA_DIR"
 
+# Example commands to learn ways to use MagellanMapper. Copy these commands
+# into your own scripts, such as your custom settings script described above.
 sample_tasks() {
   # IMPORT, REGISTRATION, CELL DETECTION, AND STATS
 
@@ -93,8 +95,10 @@ sample_tasks() {
   ./run_cli.py --img "$IMG" --register vol_stats \
     --atlas_profile lightsheet_finer --labels "$ABA_LABELS" 13
 
-  # generate CSV of all atlas IDs with names; merge with hierarchical volumes CSV
+  # generate CSV of all atlas IDs with names
   ./run_cli.py --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"
+
+  # merge volume metrics CSV into this atlas names CSV to map IDs to names
   ./run_cli.py --df merge_csvs_cols \
     --img "region_ids_$ABA_DIR.csv" "${IMG%.*}_volumes_level13.csv" \
     --plot_labels id_col=Region --prefix "${IMG%.*}_volumes_level13_named.csv"
@@ -179,7 +183,7 @@ sample_tasks() {
   # rotate an image along multiple axes as specified in custom profiles;
   # the first profile needs a "preprocess" key with a list of tasks, and
   # the second profile specifies the rotation (see `atlas_prof.py`)
-   ./run_cli.py --img "$IMG" --proc preprocess \
+  ./run_cli.py --img "$IMG" --proc preprocess \
     --roi_profile profiles/preproc.yaml --atlas_profile profiles/rotate.yaml
 }
 

@@ -398,22 +398,15 @@ class ROIEditor:
                 # fallback to ROI size if default exceeds the full image size
                 size_min = roi_size[:2]
 
-            # use a power function between 0-1 to zoom increasingly
-            # faster toward the max zoom for the ROI shape
+            # zoom increasingly faster toward the max zoom for the ROI
+            # shape by using a power function scaling output from 1 to max
+            # zoom, excluding final value to allow greater zooming with
+            # increased zoom levels
             max_zoom = np.amin(np.divide(size_max, size_min))
-            # zoom_levels = (1 - 1 / (np.arange(zoom_levels) + 1)) * max_zoom
-            zoom_levels = np.power(
-                np.arange(zoom_levels) * (1 / zoom_levels), 2) * max_zoom
-            zoom_mask = zoom_levels < 1
-            num_under = np.sum(zoom_mask)
-            if num_under > 0:
-                # assuming monotonically increasing values, replace all values
-                # < 1 with linearly scaled values from 1 to the lowest
-                # value > 1
-                zoom_levels[zoom_mask] = np.linspace(
-                    1, np.amin(zoom_levels[zoom_levels > 1]), num_under,
-                    endpoint=False)
-            print("zoom_levels:", zoom_levels, "maxzoom:", max_zoom)
+            zoom_levels = np.power(np.linspace(
+                np.power(1 / max_zoom, 1 / 3), 1, zoom_levels, endpoint=False),
+                3) * max_zoom
+            print("zoom_levels:", zoom_levels, "max_zoom:", max_zoom)
 
         num_zoom_levels = len(zoom_levels)
         if zoom_shift is None:

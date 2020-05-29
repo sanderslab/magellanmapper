@@ -630,22 +630,33 @@ def get_roi_path(path, offset, roi_size):
         tuple(roi_size)).replace(" ", "")
 
 
-def save_fig(path, ext, modifier=""):
+def save_fig(path, ext=None, modifier="", fig=None):
     """Save figure, swapping in the given extension for the extension
     in the given path.
 
     Args:
-        path: Base path to use.
-        ext: Extension to swap into the extension in ``path``. If None,
-            the figure will not be saved.
-        modifier: Modifier string to append before the extension;
+        path (str): Base path to use.
+        ext (str): File format extension for saving, without period. Defaults
+            to None to use ``png``.
+        modifier (str): Modifier string to append before the extension;
             defaults to an empty string.
+        fig (:obj:`matplotlib.figure.Figure`): Figure; defaults to None
+            to use the current figure.
     """
-    if ext is not None and ext not in config.FORMATS_3D:
-        plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
-        libmag.backup_file(plot_path)
+    if ext in config.FORMATS_3D:
+        print("Extension \"{}\" is a 3D type, will skip saving 2D figure"
+              .format(ext))
+        return
+    if ext is None:
+        ext = "png"
+    plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
+    libmag.backup_file(plot_path)
+    if fig is None:
+        # save the current figure
         plt.savefig(plot_path)
-        print("exported figure to", plot_path)
+    else:
+        fig.savefig(plot_path)
+    print("exported figure to", plot_path)
 
 
 def setup_fig(nrows, ncols, size=None):

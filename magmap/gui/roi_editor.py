@@ -389,9 +389,32 @@ class ROIEditor:
             roi_cols = self.ROI_COLS
 
         if not np.ndim(zoom_levels):
-            # convert scalar to sequence of zoom multipliers
-            zoom_levels = np.power(np.arange(zoom_levels), 3)
-            zoom_levels[1:] += 3
+            # convert scalar to sequence of zoom multipliers for zooming into
+            # the ROI in overview plots; scale the zoom to a default of 3x
+            # the ROI shape
+            size_max = image5d.shape[2:4][::-1]
+            size_min = np.multiply(roi_size[:2], 3)
+            if any(np.greater(size_min, size_max)):
+                # fallback to ROI size if default exceeds the full image size
+                size_min = roi_size[:2]
+
+            # use a power function between 0-1 to zoom increasingly
+            # faster toward the max zoom for the ROI shape
+            max_zoom = np.amin(np.divide(size_max, size_min))
+            # zoom_levels = (1 - 1 / (np.arange(zoom_levels) + 1)) * max_zoom
+            zoom_levels = np.power(
+                np.arange(zoom_levels) * (1 / zoom_levels), 2) * max_zoom
+            zoom_mask = zoom_levels < 1
+            num_under = np.sum(zoom_mask)
+            if num_under > 0:
+                # assuming monotonically increasing values, replace all values
+                # < 1 with linearly scaled values from 1 to the lowest
+                # value > 1
+                zoom_levels[zoom_mask] = np.linspace(
+                    1, np.amin(zoom_levels[zoom_levels > 1]), num_under,
+                    endpoint=False)
+            print("zoom_levels:", zoom_levels, "maxzoom:", max_zoom)
+
         num_zoom_levels = len(zoom_levels)
         if zoom_shift is None:
             # shift origin of zoomed plot so that ROI is near upper L corner

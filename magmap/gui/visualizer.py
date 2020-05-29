@@ -1170,7 +1170,7 @@ class Visualization(HasTraits):
         elif self._styles_2d[0] == Styles2D.ZOOM3.value:
             # 3 level zoom overview plots with specific multipliers
             roi_ed.plot_2d_stack(
-                *stack_args, **stack_args_named, zoom_levels=(0, 4, 20))
+                *stack_args, **stack_args_named, zoom_levels=3)
         elif self._styles_2d[0] == Styles2D.ZOOM4.value:
             # 4 level zoom overview plots with default zoom multipliers
             roi_ed.plot_2d_stack(

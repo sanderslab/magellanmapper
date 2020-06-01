@@ -1301,22 +1301,32 @@ class Visualization(HasTraits):
         if config.labels_img is None:
             self.segs_feedback = "No labels image loaded to find region"
             return
-        
-        both_sides = self._region_id.startswith(self._PREFIX_BOTH_SIDES)
-        region_id = self._region_id
-        if both_sides:
-            # user can specify both sides to get corresponding pos and neg IDs
-            region_id = self._region_id[len(self._PREFIX_BOTH_SIDES):]
-        try:
-            region_id = int(region_id)
-        except ValueError:
-            # return if cannot convert to an integer
-            self.segs_feedback = (
-                "Region ID must be an integer n, or \"+/-n\" to get both sides"
-            )
-            return
+
+        # user-given region can be a comma-delimited list of region IDs
+        # in the labels reference dict
+        region_id_split = self._region_id.split(",")
+        region_ids = []
+        both_sides = []
+        for region_id in region_id_split:
+            # get IDs from all sub-regions contained within the given region
+            region_id = region_id.strip()
+            both = region_id.startswith(self._PREFIX_BOTH_SIDES)
+            both_sides.append(both)
+            if both:
+                # specify both sides to get corresponding pos and neg IDs
+                region_id = region_id[len(self._PREFIX_BOTH_SIDES):]
+            try:
+                region_id = int(region_id)
+            except ValueError:
+                # return if cannot convert to an integer
+                self.segs_feedback = (
+                    "Region ID must be an integer, or preceded by \"+/-n\" "
+                    "to include labels from both sides"
+                )
+                return
+            region_ids.append(region_id)
         centroid, self._img_region, region_ids = ontology.get_region_middle(
-            config. labels_ref_lookup, region_id, config.labels_img, 
+            config.labels_ref_lookup, region_ids, config.labels_img,
             config.labels_scaling, both_sides=both_sides)
         if centroid is None:
             self.segs_feedback = (

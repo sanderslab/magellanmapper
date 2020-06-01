@@ -505,7 +505,7 @@ def get_bbox_region(bbox, padding=0, img_shape=None):
         Tuple of the ROI shape and list of ROI slices containing the 
         start and end indices of the ROI along each axis.
     """
-    dims = len(bbox) // 2 # bbox has min vals for each dim, then maxes
+    dims = len(bbox) // 2  # bbox has min vals for each dim, then maxes
     shape = [bbox[i + dims] - bbox[i] for i in range(dims)]
     slices = []
     for i in range(dims):
@@ -563,6 +563,29 @@ def get_label_bbox(labels_img_np, label_id):
     bbox = None
     if len(props) >= 1: bbox = props[0].bbox
     return bbox
+
+
+def meas_region(mask, res):
+    """Measure the dimensions of a masked region.
+
+    Args:
+        mask (:obj:`np.ndarray`): Binary array as a region mask. Assumes
+            that this mask defines a single foreground region.
+        res (List[float]): Sequence of resolutions/spacing by dimension in
+            ``mask``.
+
+    Returns:
+        List[float], float, List: Dimensions of the bounding box of the
+        first region defined by ``mask`` in the physical units of ``res``;
+        total volume of the mask in physical units; the region properties
+        of ``mask`` as given by :meth:`measure.regionprops`.
+
+    """
+    props = measure.regionprops(mask.astype(np.int))
+    shape = get_bbox_region(props[0].bbox)[0]
+    meas = np.multiply(shape, res)
+    vol = np.prod(res) * np.sum(mask)
+    return meas, vol, props
 
 
 def get_thresholded_regionprops(img_np, threshold=10, sort_reverse=False):

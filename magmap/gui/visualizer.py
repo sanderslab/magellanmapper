@@ -1323,6 +1323,9 @@ class Visualization(HasTraits):
                 "Could not find the region corresponding to ID {}"
                 .format(self._region_id))
             return
+        meas, vol = cv_nd.meas_region(
+            self._img_region, config.resolutions[0])[:2]
+
         if self._DEFAULTS_3D[2] in self._check_list_3d:
             # in "raw" mode, simply center the current ROI on centroid, 
             # which may within a sub-label
@@ -1342,7 +1345,8 @@ class Visualization(HasTraits):
             # sync with atlas editor to point at center of region
             ed.update_coords(centroid)
         self.segs_feedback = (
-            "Found region ID {}".format(self._region_id))
+            "Found region ID {} of size x={}, y={}, z={} \u00b5m, "
+            "volume {} \u00b5m^3".format(self._region_id, *meas[::-1], vol))
     
     def _curr_offset(self):
         # get ROI offset in x,y,z; TODO: migrate to z,y,x

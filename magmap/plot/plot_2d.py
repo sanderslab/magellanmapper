@@ -531,7 +531,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                title=None, size=None, show=True, suffix=None, 
                colors=None, df=None, groups=None, ignore_invis=False, 
                units=None, marker=None, err_cols=None, prefix=None, save=True,
-               ax=None):
+               ax=None, col_annot=None):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -582,6 +582,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         save (bool): True to save the plot; defaults to True.
         ax (:obj:`matplotlib.image.Axes`: Image axes object; defaults to
             None to generate a new figure and subplot.
+        col_annot (str): Name of column for point annotations; defaults to
+            None. The first line will be annotated based on this column.
     
     Returns:
         :obj:`matplotlib.Axes`: Axes object.
@@ -616,8 +618,13 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         # simply repeat line style sets if groups exceed existing styles
         linestyles = linestyles * (len(groups) // (len(linestyles) + 1) + 1)
 
+    annots = None
+    if col_annot:
+        # get point annotations
+        annots = df[col_annot]
+
     # plot selected columns with corresponding styles
-    x = df[x_col]
+    xs = df[x_col]
     lines = []
     lines_groups = None if groups is None else []
     for i, col in enumerate(data_cols):
@@ -628,10 +635,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         if groups is None:
             if to_ignore(df_col): continue
             lines.extend(ax.plot(
-                x, df_col, color=colors[i], linestyle=linestyles[i],
+                xs, df_col, color=colors[i], linestyle=linestyles[i],
                 label=label, marker=marker))
             if df_err is not None:
-                ax.errorbar(x, df_col, df_err)
+                ax.errorbar(xs, df_col, df_err)
         else:
             # prioritize solid line for main legend
             labelj = linestyles.index("-") if "-" in linestyles else 0
@@ -640,10 +647,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                 df_group = df_col[group]
                 if to_ignore(df_group): continue
                 lines_group = ax.plot(
-                    x, df_group, color=colors[i], linestyle=linestyles[j],
+                    xs, df_group, color=colors[i], linestyle=linestyles[j],
                     label=label, marker=marker)
                 if df_err is not None:
-                    ax.errorbar(x, df_group, df_err[group])
+                    ax.errorbar(xs, df_group, df_err[group])
                 if j == labelj:
                     # add first line to main legend
                     lines.extend(lines_group)
@@ -653,6 +660,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                         ax.plot(
                             [], [], color="k", linestyle=linestyles[j],
                             label=group))
+        if i == 0 and annots is not None:
+            # annotate each point of first line based on annotation col
+            for x, y, annot in zip(xs, df_col, annots):
+                ax.annotate(annot, (x, y))
 
     # add legends, using "best" location for main legend unless also showing
     # a group legend, in which case locations are set explicitly
@@ -999,6 +1010,7 @@ def main():
     
     plot_2d_type = libmag.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
+    annot_col = config.plot_labels[config.PlotLabels.ANNOT_COL]
     marker = config.plot_labels[config.PlotLabels.MARKER]
     
     ax = None
@@ -1074,7 +1086,7 @@ def main():
             config.filename, x_col=x_cols, data_cols=data_cols,
             labels=labels, err_cols=err_cols, title=title, size=size,
             show=False, groups=config.groups, prefix=config.prefix,
-            suffix=config.suffix, marker=marker)
+            suffix=config.suffix, marker=marker, col_annot=annot_col)
 
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve
@@ -1103,7 +1115,7 @@ def main():
         if not title: title = "{} Vs. {}".format(*labels)
         
         plot_scatter(
-            config.filename, cols[1], cols[0], 
+            config.filename, cols[1], cols[0], annot_col,
             cols_group=cols_group, labels=labels, title=title,
             fig_size=size, show=config.show, suffix=config.suffix,
             alpha=config.alphas[0] * 255)

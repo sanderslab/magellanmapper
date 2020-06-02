@@ -178,6 +178,7 @@ PlotLabels = Enum(
         "WT_COL",  # weight column
         "ID_COL",  # ID column
         "ERR_COL",  # error column(s)
+        "ANNOT_COL",  # annotation column for each point
         "ZOOM_SHIFT",  # shift plot offset when zooming into ROI
         "HLINE",  # horizontal line, usually fn for each group
         "LEGEND_NAMES",  # names to display in legend

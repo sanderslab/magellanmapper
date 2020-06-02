@@ -747,18 +747,21 @@ def is_seq(val):
 
 
 def to_seq(val):
-    """Convert a value to a sequence if not already a sequence.
+    """Wrap a value in a sequence if not already a sequence or None.
     
     Args:
-        val: Value to convert.
+        val (Any): Value to wrap in a sequence.
 
     Returns:
-        A sequence of the value if it is not already a sequence, or
-        otherwise the sequence itself.
+        List: A sequence of the value if it is not already a sequence, or
+        otherwise the sequence itself. If ``val`` is None, ``val`` is
+        simply returned.
 
     """
     if not is_seq(val):
-        val = [val]
+        # wrap in a list if not already a sequence or None
+        if val is not None:
+            val = [val]
     return val
 
 

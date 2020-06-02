@@ -184,7 +184,7 @@ sample_tasks() {
   # the first profile needs a "preprocess" key with a list of tasks, and
   # the second profile specifies the rotation (see `atlas_prof.py`)
   ./run_cli.py --img "$IMG" --proc preprocess \
-    --roi_profile profiles/preproc.yaml --atlas_profile profiles/rotate.yaml
+    --roi_profile preproc.yaml --atlas_profile rotate.yaml
 }
 
 # This call will run the `custom_tasks` function in your settings script

@@ -47,7 +47,6 @@ def load_yaml(path, enums=None):
         docs = yaml.load_all(yaml_file, Loader=yaml.FullLoader)
         data = []
         for doc in docs:
-            print(doc)
             if enums:
                 doc = parse_enum(doc)
             data.append(doc)

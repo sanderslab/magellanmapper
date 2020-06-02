@@ -80,6 +80,11 @@ class SettingsDict(dict):
         If both the original and new setting are dictionaries, the original
         dictionary will be updated with rather than overwritten by the
         new setting.
+
+        The modifier may either match an existing profile in ``profiles``
+        or specify a path to a YAML configuration file. YAML filenames will
+        first be checked in :const:`config.PATH_PROFILES`, followed by
+        ``mod_name`` as the full path.
         
         Args:
             mod_name (str): Name of the modifier, which will be appended to
@@ -94,15 +99,23 @@ class SettingsDict(dict):
             sep (str): Separator between modifier elements.
         """
         if os.path.splitext(mod_name)[1].lower() in (".yml", ".yaml"):
-            if not os.path.exists(mod_name):
-                print(mod_name, "profile file not found, skipped")
-                return
-            self.timestamps[mod_name] = os.path.getmtime(mod_name)
-            yamls = yaml_io.load_yaml(mod_name, _PROFILE_ENUMS)
+            # load YAML files from profiles directory
+            mod_path = os.path.join(
+                config.PATH_PROFILES, os.path.basename(mod_name))
+            if not os.path.exists(mod_path):
+                # fall back to loading from given path
+                print("{} profile file not found, checking {}"
+                      .format(mod_path, mod_path))
+                mod_path = mod_name
+                if not os.path.exists(mod_path):
+                    print(mod_path, "profile file not found, skipped")
+                    return
+            self.timestamps[mod_path] = os.path.getmtime(mod_path)
+            yamls = yaml_io.load_yaml(mod_path, _PROFILE_ENUMS)
             mods = {}
             for yaml in yamls:
                 mods.update(yaml)
-            print("loaded {}:\n{}".format(mod_name, mods))
+            print("loaded {}:\n{}".format(mod_path, mods))
         else:
             # if name to check is given, must match modifier name to continue
             if mod_name not in profiles:

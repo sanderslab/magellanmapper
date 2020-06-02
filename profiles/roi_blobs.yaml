@@ -1,0 +1,16 @@
+---
+# 3D blob detection parameters
+# Copy this configuration template to a new file to customize settings
+
+# many of these settings are used in the method described here:
+# https://scikit-image.org/docs/dev/api/skimage.feature.html#skimage.feature.blob_log
+min_sigma_factor: 3 # make smaller to detect smaller blobs
+max_sigma_factor: 5 # make larger to detect larger blobs
+num_sigma: 10 # number of intermediate values between min/max
+detection_threshold: 0.1 # make smaller to detect lower intensity blobs
+overlap: 0.5 # overlap fraction from 0-1
+
+# pixels to exclude along border after blob detection to avoid clumping
+# along image borders
+exclude_border: null # sequence in z,y,x
+...

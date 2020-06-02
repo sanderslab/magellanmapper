@@ -73,7 +73,7 @@ class SettingsDict(dict):
         self.profiles = {}
         self.timestamps = {}
 
-    def add_modifier(self, mod_name, profiles, sep="_"):
+    def add_modifier(self, mod_name, profiles, sep):
         """Add a modifer dictionary, overwriting any existing settings 
         with values from this dictionary.
         
@@ -91,7 +91,7 @@ class SettingsDict(dict):
                 are dictionaries, the current dictionary will be updated
                 with the new values. Otherwise, the corresponding current
                 value will be replaced by the new value.
-            sep (str): Separator between modifier elements. Defaults to "_".
+            sep (str): Separator between modifier elements.
         """
         if os.path.splitext(mod_name)[1].lower() in (".yml", ".yaml"):
             if not os.path.exists(mod_name):
@@ -128,15 +128,16 @@ class SettingsDict(dict):
 
         Args:
             names_str (str): The name of the settings profile to apply,
-                with individual profiles separated by "_". Profiles will
+                with individual profiles separated by ",". Profiles will
                 be applied in order of appearance.
         """
-        profiles = names_str.split("_")
+        sep = ","
+        profiles = names_str.split(sep)
 
         for profile in profiles:
             # update default profile with any combo of modifiers, where the
             # order of the profile listing determines the precedence of settings
-            self.add_modifier(profile, self.profiles)
+            self.add_modifier(profile, self.profiles, sep)
 
         if config.verbose:
             print("settings for {}:\n{}".format(self["settings_name"], self))

@@ -999,6 +999,7 @@ def main():
     
     plot_2d_type = libmag.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
+    marker = config.plot_labels[config.PlotLabels.MARKER]
     
     ax = None
     out_path = None
@@ -1072,7 +1073,8 @@ def main():
         ax = plot_lines(
             config.filename, x_col=x_cols, data_cols=data_cols,
             labels=labels, err_cols=err_cols, title=title, size=size,
-            show=False, groups=config.groups, prefix=config.prefix)
+            show=False, groups=config.groups, prefix=config.prefix,
+            suffix=config.suffix, marker=marker)
 
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve

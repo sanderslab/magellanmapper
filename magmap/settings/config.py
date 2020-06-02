@@ -184,6 +184,7 @@ PlotLabels = Enum(
         "PADDING",  # image padding, either as scalar or x,y,z
         "MARGIN",  # image margin, either as scalar or x,y,z
         "SCALE_BAR",  # True to include a scale bar
+        "MARKER",  # Matplotlib marker style
     )
 )
 #: dict[Any]: Plot labels set from command-line.

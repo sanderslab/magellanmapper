@@ -649,22 +649,26 @@ class Visualization(HasTraits):
         #    self.scene.mlab.view(), self.scene.mlab.roll()))
 
     def _check_roi_position(self):
-        # ensure that cube dimensions don't exceed array
+        # ensure that ROI does not exceed image boundaries
         curr_roi_size = self.roi_array[0].astype(int)
         roi_size_orig = np.copy(curr_roi_size)
         curr_offset = list(self._curr_offset())
         offset_orig = np.copy(curr_offset)
         max_offset = (self.x_high, self.y_high, self.z_high)
+
         # keep offset within bounds
         for i, offset in enumerate(curr_offset):
             if offset >= max_offset[i]:
                 curr_offset[i] = max_offset[i] - 1
+            elif offset < 0:
+                curr_offset[i] = 0
         feedback = []
         if not np.all(np.equal(curr_offset, offset_orig)):
             self.x_offset, self.y_offset, self.z_offset = curr_offset
             feedback.append(
                 "Repositioned ROI from {} to {} to fit within max bounds of {}"
                 .format(offset_orig, curr_offset, max_offset))
+
         # keep size + offset within bounds
         for i, offset in enumerate(curr_offset):
             if offset + curr_roi_size[i] > max_offset[i]:
@@ -674,6 +678,7 @@ class Visualization(HasTraits):
             feedback.append(
                 "Resized ROI from {} to {} to fit within max bounds of {}"
                 .format(roi_size_orig, curr_roi_size, max_offset))
+
         print("using ROI offset {}, size of {} (x,y,z)"
               .format(curr_offset, curr_roi_size))
         return curr_offset, curr_roi_size, feedback
@@ -1332,13 +1337,14 @@ class Visualization(HasTraits):
             self._img_region, config.resolutions[0])[:2]
 
         if self._DEFAULTS_3D[2] in self._check_list_3d:
-            # in "raw" mode, simply center the current ROI on centroid, 
-            # which may within a sub-label
+            # in "raw" mode, simply center the current ROI on the label
+            # centroid, which may lie within a sub-label
             curr_roi_size = self.roi_array[0].astype(int)
             corner = np.subtract(
                 centroid, 
                 np.around(np.divide(curr_roi_size[::-1], 2)).astype(np.int))
             self.z_offset, self.y_offset, self.x_offset = corner
+            self._check_roi_position()
             self.show_3d()
         else:
             # in non-"raw" mode, show the full label including sub-labels 

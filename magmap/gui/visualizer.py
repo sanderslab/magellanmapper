@@ -742,10 +742,10 @@ class Visualization(HasTraits):
             label_mask = np.isin(config.labels_img[tuple(slices)], label_id)
         else:
             label_mask = config.labels_img[tuple(slices)] == label_id
-        self.roi = np.copy(config.image5d[0][slices])
+        self.roi = np.copy(config.image5d[0][tuple(slices)])
         self.roi[~label_mask] = 0
         plot_3d.plot_3d_surface(
-            self.roi, self.scene.mlab, config.channel, flipud=self.flipz)
+            self.roi, self.scene.mlab, config.channel, flipz=self.flipz)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
         name = os.path.splitext(os.path.basename(config.filename))[0]
         self._post_3d_display(

@@ -436,7 +436,7 @@ class ROIEditor:
         fig.suptitle(
             ROIEditor._fig_title(
                 region_name, os.path.basename(filename), offset, roi_size),
-            color="black", bbox=dict(
+            bbox=dict(
                 facecolor=fig.get_facecolor(), edgecolor="none", alpha=0.5))
 
         # adjust array order based on which plane to show
@@ -1091,8 +1091,8 @@ class ROIEditor:
                 [border[0:2],
                 [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
         if z < 0 or z >= size[image5d_shape_offset]:
-            print("skipping z-plane {}".format(z))
-            ax.imshow(np.zeros(roi_size[0:2]))
+            # draw empty, grey subplot out of image planes just for spacing
+            ax.imshow(np.zeros(roi_size[0:2]), alpha=0)
         else:
             # show the zoomed in 2D region
 

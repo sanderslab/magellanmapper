@@ -217,9 +217,14 @@ def setup_images(path=None, series=None, offset=None, size=None,
             load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
             prefix = (config.prefix
                       if proc_type is config.ProcessTypes.IMPORT_ONLY else None)
-            config.image5d = importer.read_file(
-                path, series, channel=config.channel, load=load, prefix=prefix)
-            config.image5d_io = config.LoadIO.NP
+            try:
+                config.image5d = importer.read_file(
+                    path, series, channel=config.channel, load=load,
+                    prefix=prefix)
+                config.image5d_io = config.LoadIO.NP
+            except FileNotFoundError:
+                print("Could not load {}, will fall back to any associated "
+                      "registered image".format(path))
     
     if config.metadatas and config.metadatas[0]:
         # assign metadata from alternate file if given to supersede settings

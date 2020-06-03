@@ -10,12 +10,7 @@ calling main().
 Examples:
     Launch the GUI with the given file at a particular size and offset::
         
-        $ ./run.py --img /path/to/file.czi --offset 30,50,205 \
-            --size 150,150,10
-    
-    Alternatively, this module can be run as a script::
-        
-        $ python -m magmap.visualizer --img /path/to/file.czi
+        ./run.py --img /path/to/file.czi --offset 30,50,205 --size 150,150,10
 """
 
 from enum import Enum, auto
@@ -783,7 +778,7 @@ class Visualization(HasTraits):
                 self.x_offset = config.roi_offset[0]
                 self.y_offset = config.roi_offset[1]
                 self.z_offset = config.roi_offset[2]
-            self.roi_array[0] = ([100, 100, 15] if config.roi_size is None
+            self.roi_array[0] = ([100, 100, 12] if config.roi_size is None
                                  else config.roi_size)
         
         # set up selector for loading past saved ROIs

@@ -1272,10 +1272,15 @@ class Visualization(HasTraits):
             self.x_offset, self.y_offset, self.z_offset = config.roi_offset
             
             # redraw the original ROI and prepare verify mode
+            blobs = sqlite.select_blobs(config.db.cur, roi["id"])
+            if len(blobs) > 0:
+                # change to single-channel if all blobs are from same channel
+                chls = np.unique(detector.get_blobs_channel(blobs))
+                if len(chls) == 1:
+                    self._channel = int(chls[0])
             self.show_3d()
             if self.scene_3d_shown:
                 self.show_orientation_axes(self.flipz)
-            blobs = sqlite.select_blobs(config.db.cur, roi["id"])
             self._blob_detection_fired(segs=blobs)
             roi_editor.verify = True
         else:

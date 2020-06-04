@@ -480,16 +480,17 @@ def select_blobs_confirmed(cur, confirmed):
     return _parse_blobs(cur.fetchall())
 
 
-def verification_stats(cur):
+def verification_stats(cur, treat_maybes=0):
     """Calculate accuracy metrics based on blob verification status in the
     database.
 
     Args:
         cur (:obj:`sqlite3.Cursor): Database cursor.
+        treat_maybes (int): 0 to ignore maybes; 1 to treat maybes as correct,
+            and 1 to treat maybes as incorrect.
 
     Returns:
-        List[str]: List of summary stats, where the first element excludes
-        maybes, and the second element includes maybes.
+        str: Summary of stats.
 
     """
     # selects experiment based on command-line arg and gathers all ROIs
@@ -525,31 +526,40 @@ def verification_stats(cur):
     true_pos = blobs_true_detected.shape[0]
     false_pos = blobs_false.shape[0]
     false_neg = all_pos - true_pos  # not detected but should have been
-    msgs = ["Detection stats:",
-            df_io.calc_sens_ppv(all_pos, true_pos, false_pos, false_neg)[2]]
-    
-    if config.verified_db is None:
-        # most conservative, where detections that are maybes are treated
-        # as false pos, and missed blobs that are maybes are treated as pos
+    if config.verified_db is not None or treat_maybes == 0:
+        msg = "Detection stats (ignoring maybes):\n{}".format(
+                df_io.calc_sens_ppv(all_pos, true_pos, false_pos, false_neg)[2])
+    else:
         blobs_maybe = blobs[blobs[:, 4] == 2]
         num_blobs_maybe = len(blobs_maybe)
-        if num_blobs_maybe > 0:
-            blobs_maybe_from_detected = blobs_maybe[
-                blobs_maybe[:, 3] >= config.POS_THRESH]
+        blobs_maybe_from_detected = blobs_maybe[
+            blobs_maybe[:, 3] >= config.POS_THRESH]
+        if treat_maybes == 1:
+            # most generous, where detections that are maybes are treated as
+            # true pos, and missed blobs that are maybes are treated as ignored
+            true_pos_from_maybe = len(blobs_maybe_from_detected)
+            all_pos_with_maybes = all_pos + true_pos_from_maybe
+            true_pos_with_maybes = true_pos + true_pos_from_maybe
+            false_pos_with_maybes = false_pos
+            false_neg_with_maybes = all_pos_with_maybes - true_pos_with_maybes
+            maybe_msg = "(treating maybes as correct)"
+        else:
+            # most conservative, where detections that are maybes are treated
+            # as false pos, and missed blobs that are maybes are treated as pos
             false_pos_from_maybe = len(blobs_maybe_from_detected)
             all_pos_with_maybes = (
                     all_pos + num_blobs_maybe - false_pos_from_maybe)
             true_pos_with_maybes = true_pos
             false_pos_with_maybes = false_pos + false_pos_from_maybe
             false_neg_with_maybes = all_pos_with_maybes - true_pos_with_maybes
+            maybe_msg = "(treating maybes as incorrect)"
 
-            # prints stats
-            msgs.append("Detection stats, treating maybes as incorrect:")
-            msgs.append(df_io.calc_sens_ppv(
-                all_pos_with_maybes, true_pos_with_maybes,
-                false_pos_with_maybes, false_neg_with_maybes)[2])
+        # prints stats
+        msg = "Detection stats {}:\n{}".format(maybe_msg, df_io.calc_sens_ppv(
+            all_pos_with_maybes, true_pos_with_maybes,
+            false_pos_with_maybes, false_neg_with_maybes)[2])
 
-    return msgs
+    return msg
 
 
 def get_roi_offset(roi):

@@ -525,40 +525,31 @@ def verification_stats(cur, treat_maybes=0):
     all_pos = blobs_pos.shape[0]
     true_pos = blobs_true_detected.shape[0]
     false_pos = blobs_false.shape[0]
-    false_neg = all_pos - true_pos  # not detected but should have been
     if config.verified_db is not None or treat_maybes == 0:
-        msg = "Detection stats (ignoring maybes):\n{}".format(
-                df_io.calc_sens_ppv(all_pos, true_pos, false_pos, false_neg)[2])
+        # ignore maybes
+        maybe_msg = "(ignoring maybes)"
     else:
         blobs_maybe = blobs[blobs[:, 4] == 2]
-        num_blobs_maybe = len(blobs_maybe)
-        blobs_maybe_from_detected = blobs_maybe[
+        blobs_maybe_detected = blobs_maybe[
             blobs_maybe[:, 3] >= config.POS_THRESH]
+        num_maybe_detected = len(blobs_maybe_detected)
         if treat_maybes == 1:
             # most generous, where detections that are maybes are treated as
             # true pos, and missed blobs that are maybes are treated as ignored
-            true_pos_from_maybe = len(blobs_maybe_from_detected)
-            all_pos_with_maybes = all_pos + true_pos_from_maybe
-            true_pos_with_maybes = true_pos + true_pos_from_maybe
-            false_pos_with_maybes = false_pos
-            false_neg_with_maybes = all_pos_with_maybes - true_pos_with_maybes
+            all_pos += num_maybe_detected
+            true_pos += num_maybe_detected
             maybe_msg = "(treating maybes as correct)"
         else:
             # most conservative, where detections that are maybes are treated
             # as false pos, and missed blobs that are maybes are treated as pos
-            false_pos_from_maybe = len(blobs_maybe_from_detected)
-            all_pos_with_maybes = (
-                    all_pos + num_blobs_maybe - false_pos_from_maybe)
-            true_pos_with_maybes = true_pos
-            false_pos_with_maybes = false_pos + false_pos_from_maybe
-            false_neg_with_maybes = all_pos_with_maybes - true_pos_with_maybes
+            all_pos += len(blobs_maybe) - num_maybe_detected
+            false_pos += num_maybe_detected
             maybe_msg = "(treating maybes as incorrect)"
 
-        # prints stats
-        msg = "Detection stats {}:\n{}".format(maybe_msg, df_io.calc_sens_ppv(
-            all_pos_with_maybes, true_pos_with_maybes,
-            false_pos_with_maybes, false_neg_with_maybes)[2])
-
+    # measure stats
+    false_neg = all_pos - true_pos  # not detected but should have been
+    msg = "Detection stats {}:\n{}".format(maybe_msg, df_io.calc_sens_ppv(
+        all_pos, true_pos, false_pos, false_neg)[2])
     return msg
 
 

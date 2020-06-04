@@ -912,6 +912,71 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     return (pos, true_pos, false_pos), fdbk
 
 
+def meas_detection_accuracy(blobs, verified=False, treat_maybes=0):
+    """Measure detection accuracy based on blob confirmation statuses.
+
+    Args:
+        blobs (:obj:`np.ndarray`): 2D array of blobs in the format,
+            ``[[z, row, column, radius, confirmation, truth, ...], ...]``.
+        verified (bool): True to assume that blobs have undergone verification.
+        treat_maybes (int): 0 to ignore maybes; 1 to treat maybes as correct,
+            and 1 to treat maybes as incorrect.
+
+    Returns:
+        float, float, str: Sensivity, positive predictive value (PPV), and
+        summary of stats as a string.
+
+    """
+    # basic stats based on confirmation status, ignoring maybes; "pos"
+    # here means actual positives, whereas "true pos" means correct
+    # detection, where radius <= 0 indicates that the blob was manually
+    # added rather than detected; "false pos" are incorrect detections
+    if verified:
+        # basic stats based on confirmation status, ignoring maybes
+        blobs_pos = blobs[blobs[:, 5] >= 0]  # all truth blobs
+        blobs_detected = blobs[blobs[:, 5] == -1]  # all non-truth blobs
+        blobs_true_detected = blobs_detected[blobs_detected[:, 4] == 1]
+        blobs_false = blobs[blobs[:, 4] == 0]
+    else:
+        blobs_pos = blobs[blobs[:, 4] == 1]
+        # TODO: consider just checking > 0
+        blobs_true_detected = blobs_pos[blobs_pos[:, 3] >= config.POS_THRESH]
+        blobs_false = blobs[blobs[:, 4] == 0]
+
+    # calculate sensitivity and PPV; no "true neg" detection so no
+    # specificity measurement
+    all_pos = blobs_pos.shape[0]
+    true_pos = blobs_true_detected.shape[0]
+    false_pos = blobs_false.shape[0]
+    if verified or treat_maybes == 0:
+        # ignore maybes
+        maybe_msg = "(ignoring maybes)"
+    else:
+        blobs_maybe = blobs[blobs[:, 4] == 2]
+        blobs_maybe_detected = blobs_maybe[
+            blobs_maybe[:, 3] >= config.POS_THRESH]
+        num_maybe_detected = len(blobs_maybe_detected)
+        if treat_maybes == 1:
+            # most generous, where detections that are maybes are treated as
+            # true pos, and missed blobs that are maybes are treated as ignored
+            all_pos += num_maybe_detected
+            true_pos += num_maybe_detected
+            maybe_msg = "(treating maybes as correct)"
+        else:
+            # most conservative, where detections that are maybes are treated
+            # as false pos, and missed blobs that are maybes are treated as pos
+            all_pos += len(blobs_maybe) - num_maybe_detected
+            false_pos += num_maybe_detected
+            maybe_msg = "(treating maybes as incorrect)"
+
+    # measure stats
+    false_neg = all_pos - true_pos  # not detected but should have been
+    sens, ppv, msg = df_io.calc_sens_ppv(
+        all_pos, true_pos, false_pos, false_neg)
+    msg = "Detection stats {}:\n{}".format(maybe_msg, msg)
+    return sens, ppv, msg
+
+
 def show_blobs_per_channel(blobs):
     """Show the number of blobs in each channel.
     

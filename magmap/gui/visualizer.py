@@ -511,7 +511,7 @@ class Visualization(HasTraits):
                 seg_db = detector.blob_for_db(seg)
                 if seg[4] == -1 and seg[3] < config.POS_THRESH:
                     # attempts to delete user added segments, where radius
-                    # assumed to be 0,that are no longer selected
+                    # assumed to be < 0, that are no longer selected
                     feedback.append(
                         "{} to delete (unselected user added or explicitly "
                         "deleted)".format(seg_db))
@@ -576,7 +576,16 @@ class Visualization(HasTraits):
         roi = sqlite.select_roi(config.db.cur, roi_id)
         self._append_roi(roi, self._rois_dict)
         self.rois_selections_class.selections = list(self._rois_dict.keys())
-        feedback.append(out)
+
+        # calculate basic accuracy stats
+        print(segs_transposed_np)
+        blob_stats = [detector.meas_detection_accuracy(
+            segs_transposed_np, treat_maybes=i)[2] for i in range(3)]
+        for i, blob_stat in enumerate(blob_stats):
+            feedback.insert(i, blob_stat)
+        feedback.extend(("\n", out))
+
+        # provide feedback on the blob insertion and stats
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str

@@ -389,7 +389,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
     Args:
         conn: The connection.
         cur: Connection's cursor.
-        blobs: Array of blobs arrays, assumed to be formatted accorind to 
+        blobs: Array of blobs arrays, assumed to be formatted according to
             :func:``detector.format_blob``. "Confirmed" is given as 
             -1 = unconfirmed, 0 = incorrect, 1 = correct.
     """
@@ -486,11 +486,12 @@ def verification_stats(cur, treat_maybes=0):
 
     Args:
         cur (:obj:`sqlite3.Cursor): Database cursor.
-        treat_maybes (int): 0 to ignore maybes; 1 to treat maybes as correct,
-            and 1 to treat maybes as incorrect.
+        treat_maybes (int): Pass to :meth:`detector.meas_detection_accurarcy`
+            for how to treat maybe flags.
 
     Returns:
-        str: Summary of stats.
+        float, float, str: Output from :meth:`detector.meas_detection_accurarcy`
+        for all blobs in an experiment matching ``exp_name``.
 
     """
     # selects experiment based on command-line arg and gathers all ROIs
@@ -503,54 +504,8 @@ def verification_stats(cur, treat_maybes=0):
         bb = select_blobs(cur, roi[0])
         blobs.extend(bb)
     blobs = np.array(blobs)
-    
-    if config.verified_db is None:
-        # basic stats based on confirmation status, ignoring maybes; "pos"
-        # here means actual positives, whereas "true pos" means correct
-        # detection, where radius <= 0 indicates that the blob was manually
-        # added rather than detected; "false pos" are incorrect detections
-        blobs_pos = blobs[blobs[:, 4] == 1]
-        # TODO: consider just checking > 0
-        blobs_true_detected = blobs_pos[blobs_pos[:, 3] >= config.POS_THRESH]
-        blobs_false = blobs[blobs[:, 4] == 0]
-    else:
-        # basic stats based on confirmation status, ignoring maybes
-        blobs_pos = blobs[blobs[:, 5] >= 0]  # all truth blobs
-        blobs_detected = blobs[blobs[:, 5] == -1]  # all non-truth blobs
-        blobs_true_detected = blobs_detected[blobs_detected[:, 4] == 1]
-        blobs_false = blobs[blobs[:, 4] == 0]
-
-    # calculate sensitivity and PPV; no "true neg" detection so no
-    # specificity measurement
-    all_pos = blobs_pos.shape[0]
-    true_pos = blobs_true_detected.shape[0]
-    false_pos = blobs_false.shape[0]
-    if config.verified_db is not None or treat_maybes == 0:
-        # ignore maybes
-        maybe_msg = "(ignoring maybes)"
-    else:
-        blobs_maybe = blobs[blobs[:, 4] == 2]
-        blobs_maybe_detected = blobs_maybe[
-            blobs_maybe[:, 3] >= config.POS_THRESH]
-        num_maybe_detected = len(blobs_maybe_detected)
-        if treat_maybes == 1:
-            # most generous, where detections that are maybes are treated as
-            # true pos, and missed blobs that are maybes are treated as ignored
-            all_pos += num_maybe_detected
-            true_pos += num_maybe_detected
-            maybe_msg = "(treating maybes as correct)"
-        else:
-            # most conservative, where detections that are maybes are treated
-            # as false pos, and missed blobs that are maybes are treated as pos
-            all_pos += len(blobs_maybe) - num_maybe_detected
-            false_pos += num_maybe_detected
-            maybe_msg = "(treating maybes as incorrect)"
-
-    # measure stats
-    false_neg = all_pos - true_pos  # not detected but should have been
-    msg = "Detection stats {}:\n{}".format(maybe_msg, df_io.calc_sens_ppv(
-        all_pos, true_pos, false_pos, false_neg)[2])
-    return msg
+    return detector.meas_detection_accuracy(
+        blobs, config.verified_db is not None, treat_maybes)
 
 
 def get_roi_offset(roi):

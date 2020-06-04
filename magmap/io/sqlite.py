@@ -480,12 +480,13 @@ def select_blobs_confirmed(cur, confirmed):
     return _parse_blobs(cur.fetchall())
 
 
-def verification_stats(cur, treat_maybes=0):
+def verification_stats(cur, exp_name, treat_maybes=0):
     """Calculate accuracy metrics based on blob verification status in the
     database.
 
     Args:
         cur (:obj:`sqlite3.Cursor): Database cursor.
+        exp_name (str): Experiment name in the database.
         treat_maybes (int): Pass to :meth:`detector.meas_detection_accurarcy`
             for how to treat maybe flags.
 
@@ -496,7 +497,7 @@ def verification_stats(cur, treat_maybes=0):
     """
     # selects experiment based on command-line arg and gathers all ROIs
     # and blobs within them
-    exp = select_experiment(cur, os.path.basename(config.filename))
+    exp = select_experiment(cur, exp_name)
     rois = select_rois(cur, exp[0][0])
     blobs = []
     for roi in rois:
@@ -682,7 +683,7 @@ def main():
         conn = config.verified_db.conn
         cur = config.verified_db.cur
     
-    #print(verification_stats(cur))
+    #print(verification_stats(cur, os.path.basename(config.filename))[2])
     #update_rois(cur, cli.offset, cli.roi_size)
     #merge_truth_dbs(config.filenames)
     #clean_up_blobs(config.truth_db)

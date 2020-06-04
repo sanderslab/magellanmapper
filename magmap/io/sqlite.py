@@ -504,22 +504,24 @@ def verification_stats(cur):
     blobs = np.array(blobs)
     
     if config.verified_db is None:
-        # basic stats based on confirmation status, ignoring maybes
-        blobs_true = blobs[blobs[:, 4] == 1] # all pos
-        # true pos, where radius <= 0 indicates that the blob was manually 
-        # added, not detected
-        blobs_true_detected = blobs_true[blobs_true[:, 3] < config.POS_THRESH]
-        # not detected neg, so no "true neg" but only false pos
-        blobs_false = blobs[blobs[:, 4] == 0] # false pos
+        # basic stats based on confirmation status, ignoring maybes; "pos"
+        # here means actual positives, whereas "true pos" means correct
+        # detection, where radius <= 0 indicates that the blob was manually
+        # added rather than detected; "false pos" are incorrect detections
+        blobs_pos = blobs[blobs[:, 4] == 1]
+        # TODO: consider just checking > 0
+        blobs_true_detected = blobs_pos[blobs_pos[:, 3] >= config.POS_THRESH]
+        blobs_false = blobs[blobs[:, 4] == 0]
     else:
         # basic stats based on confirmation status, ignoring maybes
-        blobs_true = blobs[blobs[:, 5] >= 0] # all truth blobs
-        blobs_detected = blobs[blobs[:, 5] == -1] # all non-truth blobs
-        # radius = 0 indicates that the blob was manually added, not detected
-        blobs_true_detected = blobs_detected[blobs_detected[:, 4] == 1] # true pos
-        # not detected neg, so no "true neg" but only false pos
-        blobs_false = blobs[blobs[:, 4] == 0] # false pos
-    all_pos = blobs_true.shape[0]
+        blobs_pos = blobs[blobs[:, 5] >= 0]  # all truth blobs
+        blobs_detected = blobs[blobs[:, 5] == -1]  # all non-truth blobs
+        blobs_true_detected = blobs_detected[blobs_detected[:, 4] == 1]
+        blobs_false = blobs[blobs[:, 4] == 0]
+
+    # calculate sensitivity and PPV; no "true neg" detection so no
+    # specificity measurement
+    all_pos = blobs_pos.shape[0]
     true_pos = blobs_true_detected.shape[0]
     false_pos = blobs_false.shape[0]
     false_neg = all_pos - true_pos  # not detected but should have been

@@ -905,13 +905,8 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     false_pos = len(blobs_rois[blobs_rois[:, 4] == 0])
     pos = len(blobs_truth_rois)
     false_neg = pos - true_pos
-    sens = float(true_pos) / pos if pos > 0 else np.nan
-    all_pos = true_pos + false_pos
-    ppv = float(true_pos) / all_pos if all_pos > 0 else np.nan
     print("Automated verification using tol {}:\n".format(tol))
-    fdbk = ("cells = {}\ndetected cells = {}\n"
-            "false pos cells = {}\nfalse neg cells = {}\nsensitivity = {}\n"
-            "PPV = {}\n".format(pos, true_pos, false_pos, false_neg, sens, ppv))
+    fdbk = df_io.calc_sens_ppv(pos, true_pos, false_pos, false_neg)[2]
     print(fdbk)
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
     return (pos, true_pos, false_pos), fdbk

@@ -13,6 +13,7 @@ import numpy as np
 
 from magmap.settings import config
 from magmap.cv import detector
+from magmap.io import df_io
 from magmap.io import libmag
 
 DB_NAME_BASE = "magmap"
@@ -479,7 +480,18 @@ def select_blobs_confirmed(cur, confirmed):
     return _parse_blobs(cur.fetchall())
 
 
-def verification_stats(conn, cur):
+def verification_stats(cur):
+    """Calculate accuracy metrics based on blob verification status in the
+    database.
+
+    Args:
+        cur (:obj:`sqlite3.Cursor): Database cursor.
+
+    Returns:
+        List[str]: List of summary stats, where the first element excludes
+        maybes, and the second element includes maybes.
+
+    """
     # selects experiment based on command-line arg and gathers all ROIs
     # and blobs within them
     exp = select_experiment(cur, os.path.basename(config.filename))
@@ -510,32 +522,32 @@ def verification_stats(conn, cur):
     all_pos = blobs_true.shape[0]
     true_pos = blobs_true_detected.shape[0]
     false_pos = blobs_false.shape[0]
-    false_neg = all_pos - true_pos # not detected but should have been
-    sens = float(true_pos) / all_pos
-    ppv = float(true_pos) / (true_pos + false_pos)
-    print("Stats:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
-          "false neg cells = {}\nsensitivity = {}\nPPV = {}\n"
-          .format(all_pos, true_pos, false_pos, false_neg, sens, ppv))
+    false_neg = all_pos - true_pos  # not detected but should have been
+    msgs = ["Detection stats:",
+            df_io.calc_sens_ppv(all_pos, true_pos, false_pos, false_neg)[2]]
     
     if config.verified_db is None:
-        # most conservative, where blobs tested pos that are only maybes are treated
+        # most conservative, where detections that are maybes are treated
         # as false pos, and missed blobs that are maybes are treated as pos
-        blobs_maybe = blobs[blobs[:, 4] == 2] # all unknown
-        # tested pos but only maybe in reality, so treated here as false pos
-        blobs_maybe_from_detected = blobs_maybe[np.nonzero(blobs_maybe[:, 3])]
-        false_pos_from_maybe = blobs_maybe_from_detected.shape[0]
-        # adds the maybes that were undetected
-        all_true_with_maybes = all_pos + blobs_maybe.shape[0] - false_pos_from_maybe
-        false_pos_with_maybes = false_pos + false_pos_from_maybe
-        false_neg_with_maybes = all_true_with_maybes - true_pos
-        sens_maybe_missed = float(true_pos) / all_true_with_maybes
-        ppv_maybe_missed = float(true_pos) / (true_pos + false_pos_with_maybes)
-        
-        # prints stats
-        print("Including maybes:\ncells = {}\ndetected cells = {}\nfalse pos cells = {}\n"
-              "false neg cells = {}\nsensitivity = {}\nPPV = {}"
-              .format(all_true_with_maybes, true_pos, false_pos_with_maybes, 
-                      false_neg_with_maybes, sens_maybe_missed, ppv_maybe_missed))
+        blobs_maybe = blobs[blobs[:, 4] == 2]
+        num_blobs_maybe = len(blobs_maybe)
+        if num_blobs_maybe > 0:
+            blobs_maybe_from_detected = blobs_maybe[
+                blobs_maybe[:, 3] >= config.POS_THRESH]
+            false_pos_from_maybe = len(blobs_maybe_from_detected)
+            all_pos_with_maybes = (
+                    all_pos + num_blobs_maybe - false_pos_from_maybe)
+            true_pos_with_maybes = true_pos
+            false_pos_with_maybes = false_pos + false_pos_from_maybe
+            false_neg_with_maybes = all_pos_with_maybes - true_pos_with_maybes
+
+            # prints stats
+            msgs.append("Detection stats, treating maybes as incorrect:")
+            msgs.append(df_io.calc_sens_ppv(
+                all_pos_with_maybes, true_pos_with_maybes,
+                false_pos_with_maybes, false_neg_with_maybes)[2])
+
+    return msgs
 
 
 def get_roi_offset(roi):
@@ -712,7 +724,7 @@ def main():
         conn = config.verified_db.conn
         cur = config.verified_db.cur
     
-    #verification_stats(conn, cur)
+    #print(verification_stats(cur))
     #update_rois(cur, cli.offset, cli.roi_size)
     #merge_truth_dbs(config.filenames)
     #clean_up_blobs(config.truth_db)

@@ -71,7 +71,7 @@ class GridSearchProfile(profiles.SettingsDict):
         # contains a sequence of values over which to perform a grid search to
         # generate a receiver operating characteristic curve
         self.profiles = OrderedDict([
-            ("test", OrderedDict([
+            ("gridtest", OrderedDict([
                 # test single value by iterating on value that should not affect
                 # detection ability
                 ("points_3d_thresh", [0.7]),

@@ -1,0 +1,34 @@
+---
+# Example registration profile
+# Copy this file and edit your copy for own custom registrations
+
+# translation transformation
+reg_translation:
+  metric_similarity: "AdvancedMattesMutualInformation"
+  max_iter: "2048"
+  grid_space_voxels: null
+  num_resolutions: "8"
+  grid_spacing_schedule: null
+  erode_mask: null
+  point_based: False
+
+# affine/scaling transformation
+reg_affine:
+  metric_similarity: "AdvancedMattesMutualInformation"
+  max_iter: "1024"
+  grid_space_voxels: null
+  num_resolutions: "4"
+  grid_spacing_schedule: null
+  erode_mask: null
+  point_based: False
+
+# bspline transformation
+reg_bspline:
+  metric_similarity: "AdvancedMattesMutualInformation"
+  max_iter: "512"
+  grid_space_voxels: null
+  num_resolutions: "50"
+  grid_spacing_schedule: null
+  erode_mask: null
+  point_based: False
+...

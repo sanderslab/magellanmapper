@@ -745,14 +745,24 @@ def _iterate_file_processing(path, series, subimg_offsets, subimg_sizes):
         path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
         series (int): Image series number.
-        subimg_offsets: 2D array of multiple offsets.
-        subimg_sizes: 2D array of multiple ROI sizes corresponding to offsets.
+        subimg_offsets (List[List[int]]): Nested list of sub-image offset sets
+            given as ``[[offset_z1, offset_y1, offset_x1], ...]``.
+        subimg_sizes (List[List[int]]): Nested list of sub-image size sets
+            given as ``[[offset_z1, offset_y1, offset_x1], ...]`` and
+            corresponding to ``subimg_offsets``.
     
     Returns:
         :obj:`np.ndarray`, str: Summed stats array and concatenated summaries.
     """
     stat = np.zeros(3)
+
+    # use whole image if sub-image parameters are not set
+    if subimg_offsets is None:
+        subimg_offsets = [None]
+    if subimg_sizes is None:
+        subimg_sizes = [None]
     roi_sizes_len = len(subimg_sizes)
+
     summaries = []
     for i in range(len(subimg_offsets)):
         size = (subimg_sizes[i] if roi_sizes_len > 1

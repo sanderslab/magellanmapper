@@ -24,7 +24,7 @@ Python stats and plots
 
 R stats and plots
 
-Code base
+Code base and docs
 
 ### Dependency Updates
 

@@ -1149,12 +1149,12 @@ class ROIEditor:
             if ((segs_in is not None or segs_out is not None)
                     and not circles == self.CircleStyles.NO_CIRCLES):
 
-                # shows truth blobs as solid circles
+                # shows truth blobs as blue circles
                 if blobs_truth is not None:
                     for blob in blobs_truth:
                         ax.add_patch(patches.Circle(
-                            (blob[2], blob[1]), radius=blob[3],
-                            facecolor=self._TRUTH_COLORS[blob[5]], alpha=1))
+                            (blob[2], blob[1]), radius=blob[3]/2,
+                            facecolor=self._TRUTH_COLORS[blob[5]], alpha=0.8))
 
                 segs_in = np.copy(segs_in)
                 if circles is None or circles == self.CircleStyles.CIRCLES:

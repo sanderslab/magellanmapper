@@ -1,0 +1,8 @@
+---
+# Example hyperparameter range of 3D detection sizes for grid searches
+# Copy this file and edit your copy for own custom searches
+
+# range of minimum and maximum sizes for blob detection
+min_sigma_factor: [2.5, 2.6, 2.7]
+max_sigma_factor: [2.8, 2.9, 3.0, 3.1, 3.2]
+...

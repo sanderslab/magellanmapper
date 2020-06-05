@@ -6,6 +6,8 @@ from collections import OrderedDict
 
 import numpy as np
 
+from magmap.settings import profiles
+
 
 def make_hyperparm_arr(start, stop, num_steps, num_col, coli, base=1):
     """Make a hyperparameter 2D array that varies across the first axis
@@ -37,49 +39,77 @@ def make_hyperparm_arr(start, stop, num_steps, num_col, coli, base=1):
     return arr
 
 
-#: OrderedDict[List[int]]: Nested dictionary where each sub-dictionary
-# contains a sequence of values over which to perform a grid search to
-# generate a receiver operating characteristic curve
-roc_dict = OrderedDict([
-    ("test", OrderedDict([
-        # test single value by iterating on value that should not affect
-        # detection ability
-        ("points_3d_thresh", [0.7]),
+class GridSearchProfile(profiles.SettingsDict):
+    """Grid search profile dictionary.
 
-        # unfused baseline
-        #("clip_vmax", 98.5),
-        #("clip_max", 0.5),
-        #("clip_vmax", np.arange(98.5, 99, 0.5)),
-        #("clip_max", np.arange(0.5, 0.6, 0.1)),
+    This dictionary is used to set up combinations of parameter values for
+    hyperparameter tuning. The dictionary is in the format:
+    ``self[profile_name]: {
+        hyperparam1: [param1_val1, param1_val2, ...],
+        hyperparm2: [param2_val1, param2_val2, ...], ...
+    }, ...``.
 
-        # test parameters
-        #("isotropic", make_hyperparm_arr(0.2, 1, 9, 3, 0),
-        #("isotropic", np.array([(0.96, 1, 1)])),
-        #("overlap", np.arange(0.1, 1.0, 0.1)),
-        #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
-        #("prune_tol_factor", make_hyperparm_arr(0.5, 1, 2, 0.9, 0)),
-        #("clip_min", np.arange(0.0, 0.2, 0.1)),
-        #("clip_vmax", np.arange(97, 100.5, 0.5)),
-        #("clip_max", np.arange(0.3, 0.7, 0.1)),
-        #("erosion_threshold", np.arange(0.16, 0.35, 0.02)),
-        #"denoise_size", np.arange(5, 25, 2)
-        #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
-        #("tot_var_denoise", (False, True)),
-        #("num_sigma", np.arange(5, 16, 1)),
-        #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
-        #("segment_size", np.arange(130, 160, 20)),
-    ])),
-    ("size5x", OrderedDict([
-        ("min_sigma_factor", np.arange(2, 2.71, 0.1)),
-        ("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
-    ])),
-    ("size4x", OrderedDict([
-        ("min_sigma_factor", np.arange(2.5, 3.51, 0.3)),
-        ("max_sigma_factor", np.arange(3.5, 4.51, 0.3)),
-    ])),
-    ("sizeiso", OrderedDict([
-        ("min_sigma_factor", np.arange(2, 3.1, 1)),
-        ("max_sigma_factor", np.arange(3, 4.1, 1)),
-        ("isotropic", make_hyperparm_arr(0.2, 1, 9, 3, 0)),
-    ])),
-])
+    Hyperparameter combinations can thus be accessed via profile names.
+    Unlike other :class:`profiles.SettingsDict` sub-classes, adding new
+    profile dicts does not update corresponding keys, but rather adds
+    the entire dict as the item value.
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        """Initialize a grid search dict of hyperparameter ranges.
+
+        Args:
+            *args:
+            **kwargs:
+        """
+        super().__init__(self)
+        self._add_mod_directly = True
+        self["settings_name"] = ""
+
+        #: OrderedDict[List[int]]: Nested dictionary where each sub-dictionary
+        # contains a sequence of values over which to perform a grid search to
+        # generate a receiver operating characteristic curve
+        self.profiles = OrderedDict([
+            ("test", OrderedDict([
+                # test single value by iterating on value that should not affect
+                # detection ability
+                ("points_3d_thresh", [0.7]),
+
+                # unfused baseline
+                #("clip_vmax", 98.5),
+                #("clip_max", 0.5),
+                #("clip_vmax", np.arange(98.5, 99, 0.5)),
+                #("clip_max", np.arange(0.5, 0.6, 0.1)),
+
+                # test parameters
+                #("isotropic", make_hyperparm_arr(0.2, 1, 9, 3, 0),
+                #("isotropic", np.array([(0.96, 1, 1)])),
+                #("overlap", np.arange(0.1, 1.0, 0.1)),
+                #("prune_tol_factor", np.array([(4, 1.3, 1.3)])),
+                #("prune_tol_factor", make_hyperparm_arr(0.5, 1, 2, 0.9, 0)),
+                #("clip_min", np.arange(0.0, 0.2, 0.1)),
+                #("clip_vmax", np.arange(97, 100.5, 0.5)),
+                #("clip_max", np.arange(0.3, 0.7, 0.1)),
+                #("erosion_threshold", np.arange(0.16, 0.35, 0.02)),
+                #"denoise_size", np.arange(5, 25, 2)
+                #("unsharp_strength", np.arange(0.0, 1.1, 0.1)),
+                #("tot_var_denoise", (False, True)),
+                #("num_sigma", np.arange(5, 16, 1)),
+                #("detection_threshold", np.arange(0.001, 0.01, 0.001)),
+                #("segment_size", np.arange(130, 160, 20)),
+            ])),
+            ("size5x", OrderedDict([
+                ("min_sigma_factor", np.arange(2, 2.71, 0.1)),
+                ("max_sigma_factor", np.arange(2.7, 3.21, 0.1)),
+            ])),
+            ("size4x", OrderedDict([
+                ("min_sigma_factor", np.arange(2.5, 3.51, 0.3)),
+                ("max_sigma_factor", np.arange(3.5, 4.51, 0.3)),
+            ])),
+            ("sizeiso", OrderedDict([
+                ("min_sigma_factor", np.arange(2, 3.1, 1)),
+                ("max_sigma_factor", np.arange(3, 4.1, 1)),
+                ("isotropic", make_hyperparm_arr(0.2, 1, 9, 3, 0)),
+            ])),
+        ])

@@ -11,7 +11,7 @@ Summary of usage changes:
 | `python -m magmap.xx.yy` | `run_cli.py` | All command-line based entry points can be accessed through the CLI using this script |
 | Use atlas profile for registration | No longer needed | Atlases should be fully imported before image registration, and the atlas's profile should no longer be typically given when registering an image |
 | `--stats` | `--df` | Run data-frame (eg CSV file) tasks |
-| `--roc` | `--grid_search` | Its main task is to perform Grid Search based hyperparameter tuning |
+| `--roc` | `--grid_search <name1>[,<name2>]` | Its main task is to perform Grid Search based hyperparameter tuning; specify profile names or YAML files |
 | `--rescale` | `--transform rescale=x` | Grouped with other transformation tasks |
 | `--microscope` | `--roi_profile` | Specifies profiles to process by regions of interest |
 | `--reg_profile` | `--atlas_profile` | Specifies profiles for atlases |

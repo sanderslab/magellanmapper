@@ -73,6 +73,10 @@ class SettingsDict(dict):
         self.profiles = {}
         self.timestamps = {}
 
+        #: bool: add a modifier directly as a value rather than updating
+        # this dict's settings with the corresponding keys
+        self._add_mod_directly = False
+
     def add_modifier(self, mod_name, profiles, sep):
         """Add a modifer dictionary, overwriting any existing settings 
         with values from this dictionary.
@@ -84,7 +88,9 @@ class SettingsDict(dict):
         The modifier may either match an existing profile in ``profiles``
         or specify a path to a YAML configuration file. YAML filenames will
         first be checked in :const:`config.PATH_PROFILES`, followed by
-        ``mod_name`` as the full path.
+        ``mod_name`` as the full path. If :attr:`_add_mod_directly` is True,
+        the value at ``mod_name`` will be added or replaced with the found
+        modifier value.
         
         Args:
             mod_name (str): Name of the modifier, which will be appended to
@@ -122,14 +128,20 @@ class SettingsDict(dict):
                 print(mod_name, "profile not found, skipped")
                 return
             mods = profiles[mod_name]
+
         self["settings_name"] += sep + mod_name
-        for key in mods.keys():
-            if isinstance(self[key], dict) and isinstance(mods[key], dict):
-                # update if both are dicts
-                self[key].update(mods[key])
-            else:
-                # replace with modified setting
-                self[key] = mods[key]
+        if self._add_mod_directly:
+            # add/replace the value at mod_name with the found value
+            self[mod_name] = mods
+        else:
+            for key in mods.keys():
+                if isinstance(self[key], dict) and isinstance(mods[key], dict):
+                    # if both current and new setting values are dicts,
+                    # update rather than replacing the current dict
+                    self[key].update(mods[key])
+                else:
+                    # replace the value at the setting with the modified val
+                    self[key] = mods[key]
 
     def update_settings(self, names_str):
         """Update processing profiles, including layering modifications upon

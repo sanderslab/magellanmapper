@@ -255,8 +255,7 @@ def main(process_args_only=False):
         "--notify", nargs="*",
         help="Notification message URL, message, and attachment strings")
     parser.add_argument(
-        "--grid_search", nargs="*",
-        help="Grid search hyperparameter tuning profile(s)")
+        "--grid_search", help="Grid search hyperparameter tuning profile(s)")
 
     # profile arguments
     parser.add_argument(
@@ -385,9 +384,14 @@ def main(process_args_only=False):
         config.verbose = args.verbose
         np.set_printoptions(linewidth=200, threshold=10000)
         print("Set verbose to {}".format(config.verbose))
+
     if args.grid_search:
-        config.grid_search = args.grid_search
-        print("Set ROC to {}".format(config.grid_search))
+        # parse grid search profiles
+        config.grid_search_profile = grid_search_prof.GridSearchProfile()
+        config.grid_search_profile.update_settings(args.grid_search)
+        print("Set grid search profile to {}"
+              .format(config.grid_search_profile["settings_name"]))
+        print(config.grid_search_profile)
 
     # parse sub-image offsets and sizes;
     # expects x,y,z input but stores as z,y,x by convention
@@ -673,7 +677,7 @@ def main(process_args_only=False):
         plot_2d.main()
     elif config.df_task:
         df_io.main()
-    elif config.grid_search:
+    elif config.grid_search_profile:
         _grid_search(series_list)
     elif config.ec2_list or config.ec2_start or config.ec2_terminate:
         # defer importing AWS module to avoid making its dependencies
@@ -788,7 +792,7 @@ def _grid_search(series_list):
         # process each series, typically a tile within an microscopy image
         # set or a single whole image
         stats_dict = mlearn.grid_search(
-            grid_search_prof.roc_dict, config.grid_search, _iterate_file_processing,
+            config.grid_search_profile, _iterate_file_processing,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
         parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
@@ -892,7 +896,7 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, config.image5d, subimg_offset, subimg_size,
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
-            not config.grid_search, config.image5d_is_roi)
+            not config.grid_search_profile, config.image5d_is_roi)
 
     elif proc_type is config.ProcessTypes.EXPORT_PLANES:
         # export each plane as a separate image file

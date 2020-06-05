@@ -627,8 +627,8 @@ def get_roi_profile(i):
     return settings
 
 
-#: List[str]: Receiver operating characteristic/grid search profiles.
-grid_search = None
+#: :obj:`settings.grid_search_prof.GridSearchProfile`: Grid search profile.
+grid_search_profile = None
 
 # default colors using 7-color palatte for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)

@@ -24,19 +24,17 @@ class GridSearchStats(Enum):
     FDR = "FDR"
 
 
-def grid_search(roc_dict, keys, fnc, *fnc_args):
+def grid_search(roc_dict, fnc, *fnc_args):
     """Perform a grid search for hyperparameter optimization.
 
-    Multiple grid searches can be performed by specifying multiples ``keys``.
+    A separate grid search will be performed for each item in ``roc_dict``.
     Note that currently each subsequent grid search will use the last
     settings from the prior search.
 
     Args:
         roc_dict (dict): Nested dictionary, where each sub-dictionary
             contains sequences of the format:
-            ``(:class:`profiles.ProcessSettings` parameter, (a, b, c, ...))``.
-        keys (List[str]): Sequence of keys in ``roc_dict`` to specify the
-            hyperparameters for the grid search(es).
+            ``(:class:`profiles.ROIProfile` parameter, (a, b, c, ...))``.
         fnc (func): Function to call during the grid search, which must
             return ``stats, summaries``.
         *fnc_args: Arguments to pass to ``fnc``.
@@ -50,13 +48,14 @@ def grid_search(roc_dict, keys, fnc, *fnc_args):
     settings = config.roi_profile
     stats_dict = OrderedDict()
     file_summaries = []
-    for key in keys:
-        # perform grid search based on the given dict of settings in roc_dict
+    for key, hyperparams in roc_dict.items():
+        # perform grid search on hyperparameter dict
         # TODO: consider whether to reset settings between grid searches
-        roc = roc_dict[key]
+        if not isinstance(hyperparams, dict):
+            continue
         iterable_keys = []  # hyperparameters to iterate through
         iterable_dict = OrderedDict() # group results
-        for key2, value2 in roc.items():
+        for key2, value2 in hyperparams.items():
             if np.isscalar(value2):
                 # set scalar values rather than iterating and processing
                 settings[key2] = value2
@@ -101,7 +100,7 @@ def grid_search(roc_dict, keys, fnc, *fnc_args):
                 iterable_dict[name] = (
                     stats, last_param_vals, key, parent_params)
         
-        grid_iterate(0, iterable_keys, roc, None, OrderedDict())
+        grid_iterate(0, iterable_keys, hyperparams, None, OrderedDict())
         stats_dict[key] = iterable_dict
     # summary of each file collected together
     for summary in file_summaries:

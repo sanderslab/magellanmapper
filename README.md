@@ -2,7 +2,7 @@
 
 MagellanMapper is a graphical imaging informatics suite and pipeline for high-throughput, automated analysis of whole specimen. Its design philosophy is to make the raw 3D images as accessible as possible, simplify annotation from nuclei to atlases, and scale from the laptop to the cloud in cross-platform environments.
 
-![ROI Editor and Atlas Editor screenshots](https://user-images.githubusercontent.com/1258953/77386821-c1c3ac80-6dc6-11ea-92eb-e32deeea6e5d.png)
+![ROI Editor and Atlas Editor screenshots](https://user-images.githubusercontent.com/1258953/83934132-f699aa00-a7e0-11ea-932c-0e58366d5061.png)
 
 ## Installation
 

@@ -63,13 +63,10 @@ _ROI_DEFAULT = "None selected"
 def main():
     """Starts the visualization GUI.
     
-    Also processes command-line arguments, sets up Matplotlib style, and
-    sets up exception handling.
+    Also processes command-line arguments and sets up exception handling.
     """
-    # set up command-line arguments, Matplotlib style in which the GUI
-    # has been tested, and show complete stacktraces for debugging.
+    # set up command-line arguments and show complete stacktraces for debugging
     cli.main()
-    plot_2d.setup_style()
     push_exception_handler(reraise_exceptions=True)
 
     # suppress output window on Windows but print errors to console
@@ -445,12 +442,36 @@ class Visualization(HasTraits):
             self._ignore_filename = True
             self._filename = config.filename
 
-        # create figs after theme has been applied
+        # create figs after applying Matplotlib style and theme
+        rc_params = None
+        if Visualization.is_dark_mode():
+            if len(config.rc_params) < 2:
+                # change figs theme if no themes have been added by the user
+                print("Dark mode detected; applying dark theme to "
+                      "Matplotlib figures")
+                rc_params = [config.Themes.DARK]
+        plot_2d.setup_style(rc_params=rc_params)
         self._roi_ed = None
         self._roi_ed_fig = figure.Figure(constrained_layout=True)
         # no constrained layout because of performance impact
         self._atlas_ed_fig = figure.Figure()
         self._setup_for_image()
+
+    @staticmethod
+    def is_dark_mode(max_rgb=100):
+        """Check whether dark mode is turned on.
+
+        Args:
+            max_rgb (int): Max allowed RGB value for the window palette
+                in dark mode; defaults to 100.
+
+        Returns:
+            bool: True if dark mode is on as inferred by the max RGB
+            value of the Qt application window.
+
+        """
+        palette = PyQt5.QtWidgets.QApplication.instance().palette()
+        return max(palette.color(palette.Window).getRgb()[:3]) < max_rgb
 
     def _format_seg(self, seg):
         """Formats the segment as a strong for feedback.

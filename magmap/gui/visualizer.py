@@ -188,6 +188,28 @@ class SegmentsArrayAdapter(TabularAdapter):
         return str(self.row)
 
 
+class ProfileCats(Enum):
+    """Profile categories enumeration."""
+    ROI = "ROI"
+    ATLAS = "Atlas"
+    GRID = "Grid Search"
+
+
+class ProfilesNamesList(HasTraits):
+    """Traits-enabled list of profile names."""
+    selections = List([""])
+
+
+class ProfilesArrayAdapter(TabularAdapter):
+    """Profiles TraitsUI table adapter."""
+    columns = [("Type", 0), ("Name", 1), ("Channel", 2)]
+    widths = {0: 0.2, 1: 0.7, 2: 0.1}
+
+    def get_width(self, object, trait, column):
+        """Specify column widths."""
+        return self.widths[column]
+
+
 class Styles2D(Enum):
     """Enumerations for 2D ROI GUI styles."""
     SQUARE = "Square"
@@ -232,6 +254,8 @@ class Visualization(HasTraits):
         selected_viewer_tab (Enum): The Enum corresponding to the selected
             tab in the viewer panel.
     """
+    # ROI selection
+
     # image coordinate limits
     x_low = Int(0)
     x_high = Int(100)
@@ -246,7 +270,6 @@ class Visualization(HasTraits):
     z_offset = Int
     roi_array = Array(Int, shape=(1, 3))
 
-    scene = Instance(MlabSceneModel, ())
     btn_redraw = Button("Redraw")
     btn_detect = Button("Detect")
     _btn_save_fig = Button("Save Figure")
@@ -272,10 +295,27 @@ class Visualization(HasTraits):
     segs_cmap = None
     segs_feedback = Str("Segments output")
     labels = None  # segmentation labels
+
+    # Profiles panel
+
+    _profiles_cats = List
+    _profiles_names = Instance(ProfilesNamesList)
+    _profiles_name = Str
+    _profiles_chls = Int
+    _profiles_table = TabularEditor(
+        adapter=ProfilesArrayAdapter(), editable=True, auto_resize_rows=True,
+        stretch_last_section=False)
+    _profiles = Array
+    _profiles_add_btn = Button("Add profile")
+    _profiles_load_btn = Button("Load profiles")
+
+    # Image viewers
+
     atlas_eds = []  # open atlas editors
     flipz = True  # True to invert 3D vis along z-axis
     controls_created = Bool(False)
     mpl_fig_active = Any
+    scene = Instance(MlabSceneModel, ())
     scene_3d_shown = False  # 3D Mayavi display shown
     selected_viewer_tab = ViewerTabs.ROI_ED
 
@@ -387,6 +427,37 @@ class Visualization(HasTraits):
             Item("_btn_save_fig", show_label=False),
             Item("btn_save_segments", show_label=False)
         ),
+        label="ROI",
+    )
+
+    # profiles panel
+    panel_profiles = VGroup(
+        HGroup(
+            Item("_profiles_cats", style="simple", label="Profile",
+                 editor=CheckListEditor(
+                     values=[e.value for e in ProfileCats], cols=1)),
+            Item("_profiles_name", label="Name",
+                 editor=CheckListEditor(
+                     name="object._profiles_names.selections")),
+            # Item("_profiles_names", style="simple", show_label=False,
+            #      editor=CheckListEditor(values=("",), cols=1)),
+            Item("_profiles_chls", label="Channel",
+                 editor=RangeEditor(
+                     low_name="_channel_low", high_name="_channel_high",
+                     mode="spinner")),
+        ),
+        HGroup(
+            Item("_profiles_add_btn", show_label=False),
+            Item("_profiles_load_btn", show_label=False),
+        ),
+        Item("_profiles", editor=_profiles_table, show_label=False),
+        label="Profiles",
+    )
+
+    # tabbed panel of options
+    panel_options = Tabbed(
+        panel_roi_selector,
+        panel_profiles,
     )
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
@@ -403,7 +474,7 @@ class Visualization(HasTraits):
     # for this whole view and a width for an item in panel_figs
     view = View(
         HSplit(
-            panel_roi_selector,
+            panel_options,
             panel_figs,
         ),
         width=1500,
@@ -430,6 +501,11 @@ class Visualization(HasTraits):
             # check "surface" if set in profile
             self._check_list_3d.append(self._DEFAULTS_3D[3])
         # self._structure_scale = self._structure_scale_high
+
+        # set up profiles selectors
+        self._profiles_cats = [ProfileCats.ROI.value]
+        self._update_profiles_names()
+        self._profiles = np.empty((0, 3))
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -1546,6 +1622,64 @@ class Visualization(HasTraits):
             self._segments = []
         else:
             self._segments = val
+
+    @on_trait_change("_profiles_cats")
+    def _update_profiles_names(self):
+        """Update the profile names dropdown box based on the selected
+        profiles category.
+        """
+        # get base profile matching category
+        cat = self._profiles_cats[0]
+        if cat == ProfileCats.ROI.value:
+            prof = config.roi_profile
+        elif cat == ProfileCats.ATLAS.value:
+            prof = config.atlas_profile
+        else:
+            prof = config.grid_search_profile
+
+        if prof:
+            # add profiles and matching configuration files
+            prof_names = list(prof.profiles.keys())
+            prof_names.extend(prof.get_files())
+        else:
+            # clear profile names
+            prof_names = []
+        # update dropdown box selections and choose the first item, required
+        # even though the item will appear to be selected by default
+        self._profiles_names = ProfilesNamesList()
+        self._profiles_names.selections = prof_names
+        self._profiles_name = prof_names[0]
+
+    @on_trait_change("_profiles_add_btn")
+    def _add_profile(self):
+        """Add the chosen profile to the profiles table."""
+        # construct profile from selected options
+        prof = [self._profiles_cats[0], self._profiles_name,
+                self._profiles_chls]
+        print("profile to add", prof)
+        self._profiles = np.vstack((self._profiles, prof))
+
+    @on_trait_change("_profiles_load_btn")
+    def _load_profiles(self):
+        """Load profiles based on profiles added to the table."""
+        print("profiles from table:\n", self._profiles)
+
+        # load ROI profiles to the given channel
+        roi_profs = []
+        profs = self._profiles[self._profiles[:, 0] == ProfileCats.ROI.value]
+        if len(profs) > 0:
+            print(profs, max(profs[:, 2].astype(int)))
+            for i in range(max(profs[:, 2].astype(int)) + 1):
+                roi_profs.append(",".join(profs[profs[:, 2] == str(i), 1]))
+
+        # load atlas and grid search profiles regardless of channel
+        atlas_profs = ",".join(
+            self._profiles[self._profiles[:, 0] == ProfileCats.ATLAS.value, 1])
+        grid_profs = ",".join(
+            self._profiles[self._profiles[:, 0] == ProfileCats.GRID.value, 1])
+
+        # set up all profiles
+        cli.setup_profiles(roi_profs, atlas_profs, grid_profs)
 
 
 if __name__ == "__main__":

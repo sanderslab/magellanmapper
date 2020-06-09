@@ -385,14 +385,6 @@ def main(process_args_only=False):
         np.set_printoptions(linewidth=200, threshold=10000)
         print("Set verbose to {}".format(config.verbose))
 
-    if args.grid_search:
-        # parse grid search profiles
-        config.grid_search_profile = grid_search_prof.GridSearchProfile()
-        config.grid_search_profile.update_settings(args.grid_search)
-        print("Set grid search profile to {}"
-              .format(config.grid_search_profile["settings_name"]))
-        print(config.grid_search_profile)
-
     # parse sub-image offsets and sizes;
     # expects x,y,z input but stores as z,y,x by convention
     if args.subimg_offset is not None:
@@ -455,7 +447,7 @@ def main(process_args_only=False):
             print("Set zoom to {}".format(config.zoom))
 
     # set up ROI and register profiles
-    setup_profiles(args.roi_profile, args.atlas_profile)
+    setup_profiles(args.roi_profile, args.atlas_profile, args.grid_search)
 
     if args.plane is not None:
         config.plane = args.plane
@@ -694,23 +686,24 @@ def main(process_args_only=False):
         shutdown()
 
 
-def setup_profiles(mic_profiles, atlas_profiles):
+def setup_profiles(roi_profiles, atlas_profiles, grid_search_profiles):
     """Setup ROI and register profiles.
 
     If either profiles are None, only a default set of profile settings
     will be generated.
 
     Args:
-        mic_profiles (List[str]): Sequence of ROI and atlas profiles
-            to use for the corresponding channel.
-        atlas_profiles (str): Atlas profiles.
+        roi_profiles (List[str]): Sequence of ROI and atlas profiles
+            strings to use for the corresponding channel.
+        atlas_profiles (str): Atlas profiles string.
+        grid_search_profiles (str): Grid search profiles string.
 
     """
     # initialize ROI profile settings and update with modifiers
     config.roi_profile = roi_prof.ROIProfile()
     config.roi_profiles.append(config.roi_profile)
-    if mic_profiles is not None:
-        for i, mic in enumerate(mic_profiles):
+    if roi_profiles is not None:
+        for i, mic in enumerate(roi_profiles):
             settings = (config.roi_profile if i == 0
                         else roi_prof.ROIProfile())
             settings.update_settings(mic)
@@ -727,6 +720,14 @@ def setup_profiles(mic_profiles, atlas_profiles):
         config.atlas_profile.update_settings(atlas_profiles)
     print("Set atlas profile to {}"
           .format(config.atlas_profile["settings_name"]))
+
+    if grid_search_profiles:
+        # parse grid search profiles
+        config.grid_search_profile = grid_search_prof.GridSearchProfile()
+        config.grid_search_profile.update_settings(grid_search_profiles)
+        print("Set grid search profile to {}"
+              .format(config.grid_search_profile["settings_name"]))
+        print(config.grid_search_profile)
 
 
 def update_profiles():

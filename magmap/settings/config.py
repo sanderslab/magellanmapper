@@ -602,9 +602,6 @@ WARN_IMPORT_SCALEBAR = (
 
 # PROFILE SETTINGS
 
-#: str: Path to profiles directory.
-PATH_PROFILES = "profiles"
-
 # microscope profile settings and list of settings for each channel
 roi_profile = None
 roi_profiles = []

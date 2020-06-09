@@ -9,6 +9,14 @@ from magmap.settings import profiles
 
 
 class ROIProfile(profiles.SettingsDict):
+    """ROI profile dictionary.
+
+    Attributes:
+        PATH_PREFIX (str): Prefix for ROI profile files.
+
+    """
+
+    PATH_PREFIX = "roi"
 
     def __init__(self, *args, **kwargs):
         super().__init__(self)
@@ -265,3 +273,23 @@ class ROIProfile(profiles.SettingsDict):
             },
 
         }
+
+    @staticmethod
+    def get_files(profiles_dir=None, filename_prefix=None):
+        """Get ROI profile files.
+
+        Args:
+            profiles_dir (str): Directory from which to get files; defaults
+                to None.
+            filename_prefix (str): Only get files starting with this string;
+                defaults to None to use :const:`PATH_PREFIX`.
+
+        Returns:
+            List[str]: List of files in ``profiles_dir`` matching the given
+            ``filename_prefix``.
+
+        """
+        if not filename_prefix:
+            filename_prefix = ROIProfile.PATH_PREFIX
+        return super(ROIProfile, ROIProfile).get_files(
+            profiles_dir, filename_prefix)

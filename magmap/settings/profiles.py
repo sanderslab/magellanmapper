@@ -7,6 +7,7 @@ Each profile has a default set of settings, which can be modified through
 given default settings. 
 """
 from enum import Enum, auto
+import glob
 import os
 
 from magmap.io import yaml_io
@@ -53,6 +54,7 @@ class SettingsDict(dict):
     this dictionary.
 
     Attributes:
+        PATH_PROFILES (str): Path to profiles directory.
         profiles (dict): Dictionary of profiles to modify the default
             values, where each key is the profile name and the value
             is a nested dictionary that will overwrite or update the
@@ -60,6 +62,8 @@ class SettingsDict(dict):
         timestamps (dict): Dictionary of profile files to last modified time.
 
     """
+    PATH_PROFILES = "profiles"
+    _EXT_YAML = (".yml", ".yaml")
 
     def __init__(self, *args, **kwargs):
         """Initialize a settings dictionary.
@@ -76,6 +80,29 @@ class SettingsDict(dict):
         #: bool: add a modifier directly as a value rather than updating
         # this dict's settings with the corresponding keys
         self._add_mod_directly = False
+
+    @staticmethod
+    def get_files(profiles_dir=None, filename_prefix=""):
+        """Get profile files.
+
+        Args:
+            profiles_dir (str): Directory from which to get files; defaults
+                to None to use :const:`PATH_PROFILES`.
+            filename_prefix (str): Only get files starting with this string;
+                defaults to an empty string.
+
+        Returns:
+            List[str]: List of files in ``profiles_dir`` matching the given
+            ``filename_prefix`` and ending with an extension in
+            :const:`_EXT_YAML`.
+
+        """
+        if not profiles_dir:
+            profiles_dir = SettingsDict.PATH_PROFILES
+        paths = glob.glob(os.path.join(
+            profiles_dir, "{}*".format(filename_prefix)))
+        return [p for p in paths
+                if os.path.splitext(p)[1].lower() in SettingsDict._EXT_YAML]
 
     def add_modifier(self, mod_name, profiles, sep):
         """Add a modifer dictionary, overwriting any existing settings 
@@ -104,10 +131,10 @@ class SettingsDict(dict):
                 value will be replaced by the new value.
             sep (str): Separator between modifier elements.
         """
-        if os.path.splitext(mod_name)[1].lower() in (".yml", ".yaml"):
+        if os.path.splitext(mod_name)[1].lower() in self._EXT_YAML:
             # load YAML files from profiles directory
             mod_path = os.path.join(
-                config.PATH_PROFILES, os.path.basename(mod_name))
+                self.PATH_PROFILES, os.path.basename(mod_name))
             if not os.path.exists(mod_path):
                 # fall back to loading from given path
                 print("{} profile file not found, checking {}"

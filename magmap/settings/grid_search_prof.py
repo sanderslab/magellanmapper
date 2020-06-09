@@ -54,7 +54,12 @@ class GridSearchProfile(profiles.SettingsDict):
     profile dicts does not update corresponding keys, but rather adds
     the entire dict as the item value.
 
+    Attributes:
+        PATH_PREFIX (str): Prefix for grid search profile files.
+
     """
+
+    PATH_PREFIX = "grid"
 
     def __init__(self, *args, **kwargs):
         """Initialize a grid search dict of hyperparameter ranges.
@@ -113,3 +118,24 @@ class GridSearchProfile(profiles.SettingsDict):
                 ("isotropic", make_hyperparm_arr(0.2, 1, 9, 3, 0)),
             ])),
         ])
+
+    @staticmethod
+    def get_files(profiles_dir=None, filename_prefix=None):
+        """Get grid search profile files.
+
+        Args:
+            profiles_dir (str): Directory from which to get files; defaults
+                to None.
+            filename_prefix (str): Only get files starting with this string;
+                defaults to None to use :const:`PATH_PREFIX`.
+
+        Returns:
+            List[str]: List of files in ``profiles_dir`` matching the given
+            ``filename_prefix``.
+
+        """
+        if not filename_prefix:
+            filename_prefix = GridSearchProfile.PATH_PREFIX
+        return super(GridSearchProfile, GridSearchProfile).get_files(
+            profiles_dir, filename_prefix)
+

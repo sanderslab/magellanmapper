@@ -303,8 +303,9 @@ join_array() {
 
 ############################################
 # Find directory that contains a matching file from a list of directories.
+# Prioritizes files ending with "npy" (eg "image5d.npy").
 # Globals:
-#   NONE
+#   PWD: Default echo value.
 # Arguments:
 #   1: Name of array with directory names.
 #   2: Start of file name to match.
@@ -321,7 +322,17 @@ find_prefix() {
   local name="$2"
   prefix=""
   for p in "${dirs[@]}"; do
+    for f in "$p/$name"*npy; do
+      # prioritize checking for NPY files (image5d)
+      if [[ -f "$f" ]]; then
+        echo "$p"
+        return 0
+      fi
+    done
+  done
+  for p in "${dirs[@]}"; do
     for f in "$p/$name"*; do
+      # fall back to any file extension
       if [[ -f "$f" ]]; then
         echo "$p"
         return 0

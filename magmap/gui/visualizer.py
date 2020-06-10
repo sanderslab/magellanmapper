@@ -305,7 +305,7 @@ class Visualization(HasTraits):
     _profiles_table = TabularEditor(
         adapter=ProfilesArrayAdapter(), editable=True, auto_resize_rows=True,
         stretch_last_section=False)
-    _profiles = Array
+    _profiles = List  # profiles table list
     _profiles_add_btn = Button("Add profile")
     _profiles_load_btn = Button("Load profiles")
 
@@ -505,7 +505,6 @@ class Visualization(HasTraits):
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
         self._update_profiles_names()
-        self._profiles = np.empty((0, 3))
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -1657,16 +1656,18 @@ class Visualization(HasTraits):
         prof = [self._profiles_cats[0], self._profiles_name,
                 self._profiles_chls]
         print("profile to add", prof)
-        self._profiles = np.vstack((self._profiles, prof))
+        self._profiles.append(prof)
 
     @on_trait_change("_profiles_load_btn")
     def _load_profiles(self):
         """Load profiles based on profiles added to the table."""
         print("profiles from table:\n", self._profiles)
+        # convert to Numpy array for fancy indexing
+        profs = np.array(self._profiles)
 
         # load ROI profiles to the given channel
         roi_profs = []
-        profs = self._profiles[self._profiles[:, 0] == ProfileCats.ROI.value]
+        profs = profs[profs[:, 0] == ProfileCats.ROI.value]
         if len(profs) > 0:
             print(profs, max(profs[:, 2].astype(int)))
             for i in range(max(profs[:, 2].astype(int)) + 1):
@@ -1674,9 +1675,9 @@ class Visualization(HasTraits):
 
         # load atlas and grid search profiles regardless of channel
         atlas_profs = ",".join(
-            self._profiles[self._profiles[:, 0] == ProfileCats.ATLAS.value, 1])
+            profs[profs[:, 0] == ProfileCats.ATLAS.value, 1])
         grid_profs = ",".join(
-            self._profiles[self._profiles[:, 0] == ProfileCats.GRID.value, 1])
+            profs[profs[:, 0] == ProfileCats.GRID.value, 1])
 
         # set up all profiles
         cli.setup_profiles(roi_profs, atlas_profs, grid_profs)

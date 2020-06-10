@@ -59,7 +59,6 @@ import numpy as np
 from magmap.atlas import register
 from magmap.atlas import transformer
 from magmap.cloud import notify
-from magmap.gui import roi_editor
 from magmap.io import df_io
 from magmap.io import importer
 from magmap.io import libmag
@@ -72,6 +71,7 @@ from magmap.settings import grid_search_prof
 from magmap.settings import roi_prof
 from magmap.cv import chunking
 from magmap.cv import stack_detect
+from magmap.plot import colormaps
 from magmap.plot import plot_2d
 
 
@@ -686,47 +686,55 @@ def main(process_args_only=False):
         shutdown()
 
 
-def setup_profiles(roi_profiles, atlas_profiles, grid_search_profiles):
-    """Setup ROI and register profiles.
+def setup_profiles(roi_profiles_names, atlas_profiles_names,
+                   grid_search_profiles_names):
+    """Setup ROI, atlas, and grid search profiles.
 
-    If either profiles are None, only a default set of profile settings
-    will be generated.
+    If a profile is None, only a default set of profile settings
+    will be generated. Also sets up colormaps based on ROI profiles. Any
+    previously set up profile will be replaced.
 
     Args:
-        roi_profiles (List[str]): Sequence of ROI and atlas profiles
-            strings to use for the corresponding channel.
-        atlas_profiles (str): Atlas profiles string.
-        grid_search_profiles (str): Grid search profiles string.
+        roi_profiles_names (List[str]): Sequence of ROI and atlas profiles
+            names to use for the corresponding channel.
+        atlas_profiles_names (str): Atlas profiles names.
+        grid_search_profiles_names (str): Grid search profiles names.
 
     """
     # initialize ROI profile settings and update with modifiers
     config.roi_profile = roi_prof.ROIProfile()
-    config.roi_profiles.append(config.roi_profile)
-    if roi_profiles is not None:
-        for i, mic in enumerate(roi_profiles):
-            settings = (config.roi_profile if i == 0
-                        else roi_prof.ROIProfile())
-            settings.update_settings(mic)
-            if i > 0:
+    config.roi_profiles = [config.roi_profile]
+    if roi_profiles_names is not None:
+        for i, roi_prof_name in enumerate(roi_profiles_names):
+            print("Updating ROI profile for channel", i)
+            if i == 0:
+                settings = config.roi_profile
+            else:
+                settings = roi_prof.ROIProfile()
                 config.roi_profiles.append(settings)
-                print("Added {} settings for channel {}".format(
-                      config.roi_profiles[i]["settings_name"], i))
-    print("Set default ROI profiles to {}"
-          .format(config.roi_profile["settings_name"]))
+            settings.update_settings(roi_prof_name)
+    for i, prof in enumerate(config.roi_profiles):
+        if i == 0:
+            print("Set default (channel 0) ROI profile: {}"
+                  .format(prof[prof.NAME_KEY]))
+        else:
+            print("Added channel {} ROI profile: {}".format(
+                  i, prof[prof.NAME_KEY]))
+    colormaps.setup_colormaps(np_io.get_num_channels(config.image5d))
 
     # initialize atlas profile and update with modifiers
     config.atlas_profile = atlas_prof.AtlasProfile()
-    if atlas_profiles is not None:
-        config.atlas_profile.update_settings(atlas_profiles)
+    if atlas_profiles_names is not None:
+        config.atlas_profile.update_settings(atlas_profiles_names)
     print("Set atlas profile to {}"
-          .format(config.atlas_profile["settings_name"]))
+          .format(config.atlas_profile[config.atlas_profile.NAME_KEY]))
 
-    if grid_search_profiles:
+    if grid_search_profiles_names:
         # parse grid search profiles
         config.grid_search_profile = grid_search_prof.GridSearchProfile()
-        config.grid_search_profile.update_settings(grid_search_profiles)
-        print("Set grid search profile to {}"
-              .format(config.grid_search_profile["settings_name"]))
+        config.grid_search_profile.update_settings(grid_search_profiles_names)
+        print("Set grid search profile to {}".format(
+            config.grid_search_profile[config.grid_search_profile.NAME_KEY]))
         print(config.grid_search_profile)
 
 

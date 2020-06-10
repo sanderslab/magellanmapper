@@ -61,6 +61,7 @@ class SettingsDict(dict):
             is a nested dictionary that will overwrite or update the
             current values.
         timestamps (dict): Dictionary of profile files to last modified time.
+        delimiter (str): Profile names delimiter; defaults to ``,``.
 
     """
     PATH_PROFILES = "profiles"
@@ -78,6 +79,7 @@ class SettingsDict(dict):
         self[self.NAME_KEY] = "default"
         self.profiles = {}
         self.timestamps = {}
+        self.delimiter = ","
 
         #: bool: add a modifier directly as a value rather than updating
         # this dict's settings with the corresponding keys
@@ -185,13 +187,12 @@ class SettingsDict(dict):
                 with individual profiles separated by ",". Profiles will
                 be applied in order of appearance.
         """
-        sep = ","
-        profiles = names_str.split(sep)
+        profiles = names_str.split(self.delimiter)
 
         for profile in profiles:
             # update default profile with any combo of modifiers, where the
             # order of the profile listing determines the precedence of settings
-            self.add_modifier(profile, self.profiles, sep)
+            self.add_modifier(profile, self.profiles, self.delimiter)
 
         if config.verbose:
             print("settings for {}:\n{}".format(self[self.NAME_KEY], self))

@@ -402,3 +402,26 @@ def get_cmap(cmap, n=None):
         # assume default colormaps have been initialized
         cmap = CMAPS[cmap]
     return cmap
+
+
+def setup_colormaps(num_channels):
+    """Set up colormaps based on the currently loaded main ROI profile.
+
+    Args:
+        num_channels (int): Number of channels in the main image; if the
+            main ROI profile does not define this many colormaps, new
+            colormaps will be randomly generated.
+
+    """
+    config.cmaps = list(config.roi_profile["channel_colors"])
+    num_cmaps = len(config.cmaps)
+    if num_cmaps < num_channels:
+        # add colormap for each remaining channel, purposely inducing
+        # int wraparound for greater color contrast
+        chls_diff = num_channels - num_cmaps
+        cmaps = discrete_colormap(
+            chls_diff, alpha=255, prioritize_default=False, seed=config.seed,
+            min_val=150) / 255.0
+        print("generating colormaps from RGBA colors:\n", cmaps)
+        for cmap in cmaps:
+            config.cmaps.append(make_dark_linear_cmap("", cmap))

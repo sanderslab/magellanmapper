@@ -314,21 +314,23 @@ def setup_images(path=None, series=None, offset=None, size=None,
     # add any additional image5d thresholds for multichannel images, such 
     # as those loaded without metadata for these settings
     colormaps.setup_cmaps()
-    num_channels = (1 if config.image5d is None or config.image5d.ndim <= 4 
-                    else config.image5d.shape[4])
+    num_channels = get_num_channels(config.image5d)
     config.near_max = libmag.pad_seq(config.near_max, num_channels, -1)
     config.near_min = libmag.pad_seq(config.near_min, num_channels, 0)
     config.vmax_overview = libmag.pad_seq(
         config.vmax_overview, num_channels)
-    config.cmaps = list(config.roi_profile["channel_colors"])
-    num_cmaps = len(config.cmaps)
-    if num_cmaps < num_channels:
-        # add colormap for each remaining channel, purposely inducing 
-        # int wraparound for greater color contrast
-        chls_diff = num_channels - num_cmaps
-        colors = colormaps.discrete_colormap(
-            chls_diff, alpha=255, prioritize_default=False, seed=config.seed, 
-            min_val=150) / 255.0
-        print("generating colormaps from RGBA colors:\n", colors)
-        for color in colors:
-            config.cmaps.append(colormaps.make_dark_linear_cmap("", color))
+    colormaps.setup_colormaps(num_channels)
+
+
+def get_num_channels(image5d):
+    """Get the number of channels in a 5D image.
+
+    Args:
+        image5d (:obj:`np.ndarray`): Numpy arry in the order, `t,z,y,x[,c]`.
+
+    Returns:
+        int: Number of channels inferred based on the presence and length
+        of the 5th dimension.
+
+    """
+    return 1 if image5d is None or image5d.ndim <= 4 else image5d.shape[4]

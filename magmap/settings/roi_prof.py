@@ -20,7 +20,7 @@ class ROIProfile(profiles.SettingsDict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(self)
-        self["settings_name"] = "default"
+        self[self.NAME_KEY] = "default"
 
         # visualization and plotting
 

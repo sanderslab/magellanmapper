@@ -55,6 +55,7 @@ class SettingsDict(dict):
 
     Attributes:
         PATH_PROFILES (str): Path to profiles directory.
+        NAME_KEY (str): Key for profile name.
         profiles (dict): Dictionary of profiles to modify the default
             values, where each key is the profile name and the value
             is a nested dictionary that will overwrite or update the
@@ -64,6 +65,7 @@ class SettingsDict(dict):
     """
     PATH_PROFILES = "profiles"
     _EXT_YAML = (".yml", ".yaml")
+    NAME_KEY = "settings_name"
 
     def __init__(self, *args, **kwargs):
         """Initialize a settings dictionary.
@@ -73,7 +75,7 @@ class SettingsDict(dict):
             **kwargs:
         """
         super().__init__(self)
-        self["settings_name"] = "default"
+        self[self.NAME_KEY] = "default"
         self.profiles = {}
         self.timestamps = {}
 
@@ -156,7 +158,7 @@ class SettingsDict(dict):
                 return
             mods = profiles[mod_name]
 
-        self["settings_name"] += sep + mod_name
+        self[self.NAME_KEY] += sep + mod_name
         if self._add_mod_directly:
             # add/replace the value at mod_name with the found value
             self[mod_name] = mods
@@ -192,7 +194,7 @@ class SettingsDict(dict):
             self.add_modifier(profile, self.profiles, sep)
 
         if config.verbose:
-            print("settings for {}:\n{}".format(self["settings_name"], self))
+            print("settings for {}:\n{}".format(self[self.NAME_KEY], self))
 
     def check_file_changed(self):
         """Check whether any profile files have changed since last loaded.
@@ -216,6 +218,6 @@ class SettingsDict(dict):
         """
         if not check_timestamp or self.check_file_changed():
             # applied profiles are stored in the settings name
-            profile_names = self["settings_name"]
+            profile_names = self[self.NAME_KEY]
             self.__init__()
             self.update_settings(profile_names)

@@ -505,6 +505,7 @@ class Visualization(HasTraits):
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
         self._update_profiles_names()
+        self._init_profiles()
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -1681,6 +1682,26 @@ class Visualization(HasTraits):
 
         # set up all profiles
         cli.setup_profiles(roi_profs, atlas_profs, grid_profs)
+
+    def _init_profiles(self):
+        """Initialize the profiles table based on the currently loaded profiles.
+        """
+        def add_profs(cat, prof, chl=0):
+            # add rows for the given profile category
+            if not prof:
+                return
+            for namei, name in enumerate(prof[prof.NAME_KEY].split(prof.delimiter)):
+                if namei == 0:
+                    # skip default profile, which is included by default
+                    continue
+                profs.append([cat, name, chl])
+
+        profs = []
+        for i, roi_prof in enumerate(config.roi_profiles):
+            add_profs(ProfileCats.ROI.value, roi_prof, i)
+        add_profs(ProfileCats.ATLAS.value, config.atlas_profile)
+        add_profs(ProfileCats.GRID.value, config.grid_search_profile)
+        self._profiles = profs
 
 
 if __name__ == "__main__":

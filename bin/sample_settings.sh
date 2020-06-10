@@ -11,11 +11,10 @@ ABA_DIR=ABA-CCFv3 # replace with atlas of choice
 ABA_SPEC=ontology1.json # replace with atlas label map file
 
 # profiles and theme (see docs/settings.md)
-# - microscope/ROI profiles are in magmap/settings/roi_prof.py
-# - register/atlas profiles are in magmap/settings/atlas_prof.py
-# - separate multiple profiles by "_"
-# - can include paths to custom profiles in YAML format
-MIC=lightsheet # add/replace additional microscope profiles
+# - separate multiple profiles by ","
+# - sample profiles in YAML format are in the "profiles" folder
+# - additional profiles defined in the "magmap/settings" folder
+MIC=lightsheet # add/replace additional ROI profiles
 REG=abaccfv3 # add/replace atlas profiles
 THEME=(--theme dark) # GUI theme
 

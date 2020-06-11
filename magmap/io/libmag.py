@@ -732,6 +732,27 @@ def dtype_within_range(min_val, max_val, integer=None, signed=None):
         "range {} through {}".format(integer, signed, min_val, max_val))
 
 
+def get_dtype_info(arr):
+    """Get the type information for the given array's data type.
+
+    Args:
+        arr (:obj:`np.ndarray`): Numpy array, assumed to be either an integer
+            or floating point array.
+
+    Returns:
+        :obj:`np.iinfo`, :obj:`np.finfo`: Numpy integer or floating point
+        information object.
+
+    """
+    try:
+        # assume integer
+        return np.iinfo(arr.dtype)
+    except ValueError:
+        pass
+    # get floating point info
+    return np.finfo(arr.dtype)
+
+
 def is_seq(val):
     """Check if a value is a non-string sequence.
     

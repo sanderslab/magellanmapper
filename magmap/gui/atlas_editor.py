@@ -6,6 +6,8 @@
 import datetime
 import os
 
+import numpy as np
+
 from matplotlib import pyplot as plt
 from matplotlib import figure
 from matplotlib import gridspec
@@ -306,6 +308,45 @@ class AtlasEditor:
         if update_atlas_eds and self.fn_refresh_atlas_eds is not None:
             # callback to synchronize other Atlas Editors
             self.fn_refresh_atlas_eds(self)
+
+    def get_img_display_settings(self, imgi, chl=None):
+        """Get display settings for the given image.
+
+        Args:
+            imgi (int): Index of image.
+            chl (int): Index of channel; defaults to None.
+
+        Returns:
+            float, flat, float, float, float: Vmin, vmax, brightness,
+            contrast, and alpha.
+
+        """
+        for plot_ed in self.plot_eds.values():
+            # assume that all plot editors are synchronized, so only need
+            # first editor available
+            return plot_ed.get_img_display_settings(imgi, chl)
+
+    def update_imgs_display(self, imgi, chl=None, minimum=np.nan,
+                            maximum=np.nan, brightness=None, contrast=None,
+                            alpha=None):
+        """Update dislayed image settings in all Plot Editors.
+
+        Args:
+            imgi (int): Index of image.
+            chl (int): Index of channel; defaults to None.
+            minimum (float): Vmin; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            maximum (float): Vmax; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            brightness (float): Brightness addend; defaults to None.
+            contrast (float): Contrast multiplier; defaults to None.
+            alpha (float): Opacity value; defalts to None.
+
+        """
+        for key in self.plot_eds:
+            ed = self.plot_eds[key]
+            ed.update_img_display(
+                imgi, chl, minimum, maximum, brightness, contrast, alpha)
 
     def scroll_overview(self, event):
         """Scroll images and crosshairs in all plot editors

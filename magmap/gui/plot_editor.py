@@ -315,7 +315,79 @@ class PlotEditor:
             # scale for the colormap before display
             self._ax_img_labels.set_data(self.cmap_labels.convert_img_labels(
                 self.img3d_labels[self.coord[0]]))
-    
+
+    def get_img_display_settings(self, imgi, chl=None):
+        """Get display settings for the given image.
+
+        Args:
+            imgi (int): Index of image.
+            chl (int): Index of channel; defaults to None.
+
+        Returns:
+            float, flat, float, float, float: Vmin, vmax, brightness,
+            contrast, and alpha.
+
+        """
+        if not self._plot_ax_imgs or len(self._plot_ax_imgs) <= imgi:
+            return
+        if chl is None:
+            chl = 0
+        plot_ax_img = self._plot_ax_imgs[imgi][chl]
+        return (*plot_ax_img.ax_img.get_clim(), plot_ax_img.brightness,
+                plot_ax_img.contrast, plot_ax_img.ax_img.get_alpha())
+
+    def update_img_display(self, imgi, chl=None, minimum=np.nan,
+                           maximum=np.nan, brightness=None, contrast=None,
+                           alpha=None):
+        """Update dislayed image settings.
+
+        Args:
+            imgi (int): Index of image.
+            chl (int): Index of channel; defaults to None.
+            minimum (float): Vmin; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            maximum (float): Vmax; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            brightness (float): Brightness addend; defaults to None.
+            contrast (float): Contrast multiplier; defaults to None.
+            alpha (float): Opacity value; defalts to None.
+
+        """
+        if not self._plot_ax_imgs or len(self._plot_ax_imgs) <= imgi:
+            return
+        if chl is None:
+            chl = 0
+        plot_ax_imgs = self._plot_ax_imgs[imgi]
+        for i, plot_ax_img in enumerate(plot_ax_imgs):
+            if i != chl: continue
+            if minimum is not np.nan or maximum is not np.nan:
+                # set vmin and vmax
+                clim = [minimum, maximum]
+                for j, (lim, ax_lim) in enumerate(zip(
+                        clim, plot_ax_img.ax_img.get_clim())):
+                    if lim is np.nan:
+                        # default to using current value
+                        clim[j] = ax_lim
+                if None not in clim and clim[0] > clim[1]:
+                    # ensure min is <= max
+                    clim[0] = clim[1]
+                plot_ax_img.ax_img.set_clim(clim)
+            if brightness is not None or contrast is not None:
+                data = plot_ax_img.ax_img.get_array()
+                info = libmag.get_dtype_info(data)
+                if brightness is not None:
+                    # shift original image array by brightness
+                    data[:] = np.clip(
+                        plot_ax_img.img + brightness, None, info.max)
+                if contrast is not None:
+                    # stretch original image array by contrast
+                    data[:] = np.clip(
+                        plot_ax_img.img * contrast, info.min, info.max)
+            if alpha is not None:
+                # adjust opacity
+                plot_ax_img.ax_img.set_alpha(alpha)
+        self.axes.figure.canvas.draw_idle()
+
     def alpha_updater(self, alpha):
         self.alpha = alpha
         if self._ax_img_labels is not None:

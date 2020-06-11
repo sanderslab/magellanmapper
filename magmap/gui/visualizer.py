@@ -134,6 +134,7 @@ class VisHandler(Handler):
                     print("initializing Mayavi 3D visualization")
                     info.object.show_3d()
             info.object.selected_viewer_tab = tab
+            info.object.update_imgadj_for_img()
 
         # change Trait to flag completion of controls creation
         info.object.controls_created = True
@@ -313,6 +314,23 @@ class Visualization(HasTraits):
     _profiles_add_btn = Button("Add profile")
     _profiles_load_btn = Button("Load profiles")
 
+    # Image adjustment panel
+
+    _imgadj_names = Instance(ProfilesNamesList)
+    _imgadj_name = Str
+    _imgadj_chls = Int
+    _imgadj_min = Float
+    _imgadj_min_low = Float
+    _imgadj_min_high = Float
+    _imgadj_max = Float
+    _imgadj_max_low = Float
+    _imgadj_max_high = Float
+    _imgadj_brightness = Float
+    _imgadj_brightness_low = Float
+    _imgadj_brightness_high = Float
+    _imgadj_contrast = Float
+    _imgadj_alpha = Float
+
     # Image viewers
 
     atlas_eds = []  # open atlas editors
@@ -443,8 +461,6 @@ class Visualization(HasTraits):
             Item("_profiles_name", label="Name",
                  editor=CheckListEditor(
                      name="object._profiles_names.selections")),
-            # Item("_profiles_names", style="simple", show_label=False,
-            #      editor=CheckListEditor(values=("",), cols=1)),
             Item("_profiles_chls", label="Channel",
                  editor=RangeEditor(
                      low_name="_channel_low", high_name="_channel_high",
@@ -458,10 +474,38 @@ class Visualization(HasTraits):
         label="Profiles",
     )
 
+    # image adjustment panel
+    panel_imgadj = VGroup(
+        HGroup(
+            Item("_imgadj_name", label="Image",
+                 editor=CheckListEditor(
+                     name="object._imgadj_names.selections")),
+            Item("_imgadj_chls", label="Channel",
+                 editor=RangeEditor(
+                     low_name="_channel_low", high_name="_channel_high",
+                     mode="spinner")),
+        ),
+        Item("_imgadj_min", label="Minimum", editor=RangeEditor(
+                 low_name="_imgadj_min_low", high_name="_imgadj_min_high",
+                 mode="slider")),
+        Item("_imgadj_max", label="Maximum", editor=RangeEditor(
+                 low_name="_imgadj_max_low", high_name="_imgadj_max_high",
+                 mode="slider")),
+        Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
+                 low_name="_imgadj_brightness_low",
+                 high_name="_imgadj_brightness_high", mode="slider")),
+        Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
+                 low=0.0, high=2.0, mode="slider")),
+        Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
+                 low=0.0, high=1.0, mode="slider")),
+        label="Adjust Image",
+    )
+
     # tabbed panel of options
     panel_options = Tabbed(
         panel_roi_selector,
         panel_profiles,
+        panel_imgadj,
     )
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
@@ -511,6 +555,17 @@ class Visualization(HasTraits):
         self._update_profiles_names()
         self._init_profiles()
 
+        # set up image adjustment
+        self._img3ds = {
+            "Main": config.image5d,
+            "Labels": config.labels_img,
+            "Borders": config.borders_img}
+        self._imgadj_names = ProfilesNamesList()
+        self._imgadj_names.selections = [
+            k for k in self._img3ds.keys() if self._img3ds[k] is not None]
+        if self._imgadj_names.selections:
+            self._imgadj_name = self._imgadj_names.selections[0]
+
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
         if self._margin is None:
@@ -536,6 +591,68 @@ class Visualization(HasTraits):
         # no constrained layout because of performance impact
         self._atlas_ed_fig = figure.Figure()
         self._setup_for_image()
+
+    @on_trait_change("_imgadj_name")
+    def _update_imgadj_limits(self):
+        img3d = self._img3ds.get(self._imgadj_name)
+        if img3d is None: return
+        info = libmag.get_dtype_info(img3d)
+        self._imgadj_min_low = info.min
+        self._imgadj_min_high = info.max
+        self._imgadj_max_low = info.min
+        self._imgadj_max_high = info.max
+        self._imgadj_brightness_low = info.min
+        self._imgadj_brightness_high = info.max
+
+    def update_imgadj_for_img(self):
+        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            if self.atlas_eds:
+                imgi = self._imgadj_names.selections.index(self._imgadj_name)
+                clim_min, clim_max, self._imgadj_brightness, \
+                    self._imgadj_contrast, self._imgadj_alpha = \
+                    self.atlas_eds[0].get_img_display_settings(
+                        imgi, self._imgadj_chls)
+                if clim_min is None:
+                    clim_min = 0
+                if clim_max is None:
+                    clim_max = self._imgadj_max_high
+                self._imgadj_min, self._imgadj_max = clim_min, clim_max
+
+    @on_trait_change("_imgadj_min")
+    def _adjust_img_min(self):
+        for atlas_ed in self.atlas_eds:
+            print("updating min", self._imgadj_min)
+            atlas_ed.update_imgs_display(
+                self._imgadj_names.selections.index(self._imgadj_name),
+                self._imgadj_chls, minimum=self._imgadj_min)
+
+    @on_trait_change("_imgadj_max")
+    def _adjust_img_max(self):
+        for atlas_ed in self.atlas_eds:
+            atlas_ed.update_imgs_display(
+                self._imgadj_names.selections.index(self._imgadj_name),
+                self._imgadj_chls, maximum=self._imgadj_max)
+
+    @on_trait_change("_imgadj_brightness")
+    def _adjust_img_brightness(self):
+        for atlas_ed in self.atlas_eds:
+            atlas_ed.update_imgs_display(
+                self._imgadj_names.selections.index(self._imgadj_name),
+                self._imgadj_chls, brightness=self._imgadj_brightness)
+
+    @on_trait_change("_imgadj_contrast")
+    def _adjust_img_contrast(self):
+        for atlas_ed in self.atlas_eds:
+            atlas_ed.update_imgs_display(
+                self._imgadj_names.selections.index(self._imgadj_name),
+                self._imgadj_chls, contrast=self._imgadj_contrast)
+
+    @on_trait_change("_imgadj_alpha")
+    def _adjust_img_alpha(self):
+        for atlas_ed in self.atlas_eds:
+            atlas_ed.update_imgs_display(
+                self._imgadj_names.selections.index(self._imgadj_name),
+                self._imgadj_chls, alpha=self._imgadj_alpha)
 
     @staticmethod
     def is_dark_mode(max_rgb=100):

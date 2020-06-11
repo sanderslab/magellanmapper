@@ -19,6 +19,28 @@ from magmap.atlas import ontology
 from magmap.plot import plot_support
 
 
+class PlotAxImg:
+    """Axes image storage class to contain additional information for
+    display such as brightness and contrast.
+
+    Attributes:
+        ax_img (List[List[:obj:`matplotlib.image.AxesImage`]]): Nested list
+            of displayed axes image in the format:
+            ``[[AxesImage0_ch0, AxesImage0_ch1, ...], ...]``.
+        brightness (float): Brightness addend; defaults to 0.0.
+        contrast (float): Contrast factor; defaults to 1.0.
+        img (:obj:`np.ndarray`): The original underlying image data,
+            copied to allow adjusting the array in ``ax_img`` while
+            retaining the original data.
+
+    """
+    def __init__(self, ax_img):
+        self.ax_img = ax_img
+        self.brightness = 0.0
+        self.contrast = 1.0
+        self.img = np.copy(self.ax_img.get_array())
+
+
 class PlotEditor:
     """Show a scrollable, editable plot of sequential planes in a 3D image.
 
@@ -125,11 +147,12 @@ class PlotEditor:
         self.coord = None
         self.xlim = None
         self.ylim = None
-        self.ax_img = None  # displayed labels image
         self.edited = False  # True if labels image was edited
         self.edit_mode = False  # True to edit with mouse motion
         self.region_label = None
-        
+
+        self._plot_ax_imgs = None
+        self._ax_img_labels = None  # displayed labels image
         # track label editing during mouse click/movement for plane interp
         self._editing = False
     
@@ -154,8 +177,8 @@ class PlotEditor:
             self.cidpress, self.cidrelease, self.cidmotion, self.cidenter,
             self.cidleave, self.cidkeypress]
         for listener in listeners:
-            if listener and self.ax_img is not None:
-                self.ax_img.figure.canvas.mpl_disconnect(listener)
+            if listener and self._ax_img_labels is not None:
+                self._ax_img_labels.figure.canvas.mpl_disconnect(listener)
         self.connected = False
 
     def update_coord(self, coord):
@@ -246,13 +269,15 @@ class PlotEditor:
         # reasons
         ax_imgs = plot_support.overlay_images(
             self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas,
-            check_single=(self.ax_img is None))
+            check_single=(self._ax_img_labels is None))
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = pixel_display.PixelDisplay(
             imgs2d, ax_imgs, self._downsample, cmap_labels=self.cmap_labels)
         self.plane_slider.set_val(self.coord[0])
-        if len(ax_imgs) > 1: self.ax_img = ax_imgs[1][0]
+        if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
+        self._plot_ax_imgs = [
+            [PlotAxImg(img) for img in imgs] for imgs in ax_imgs]
         
         if self.xlim is not None and self.ylim is not None:
             self.axes.set_xlim(self.xlim)
@@ -282,19 +307,19 @@ class PlotEditor:
     def update_plane_slider(self, val):
         self._update_overview(int(val))
     
-    def update_image(self):
+    def refresh_img3d_labels(self):
         """Replace the displayed labels image with underlying plane's data.
         """
-        if self.ax_img is not None:
+        if self._ax_img_labels is not None:
             # underlying plane may need to be translated to a linear
             # scale for the colormap before display
-            self.ax_img.set_data(self.cmap_labels.convert_img_labels(
+            self._ax_img_labels.set_data(self.cmap_labels.convert_img_labels(
                 self.img3d_labels[self.coord[0]]))
     
     def alpha_updater(self, alpha):
         self.alpha = alpha
-        if self.ax_img is not None:
-            self.ax_img.set_alpha(self.alpha)
+        if self._ax_img_labels is not None:
+            self._ax_img_labels.set_alpha(self.alpha)
         #print("set image alpha to {}".format(self.alpha))
     
     def on_press(self, event):
@@ -319,7 +344,7 @@ class PlotEditor:
                     # for painting, using values at current position for
                     # the underlying and displayed images
                     self.intensity = self.img3d_labels[tuple(coord)]
-                    self.intensity_shown = self.ax_img.get_array()[y, x]
+                    self.intensity_shown = self._ax_img_labels.get_array()[y, x]
                     print("got intensity {} at x,y,z = {},{},{}"
                           .format(self.intensity, *coord[::-1]))
                     if self.fn_update_intensity:
@@ -439,9 +464,9 @@ class PlotEditor:
                         # click in editing mode to overwrite images with pen
                         # of the current radius using chosen intensity for the
                         # underlying and displayed images
-                        if self.ax_img is not None:
+                        if self._ax_img_labels is not None:
                             # edit displayed image
-                            img = self.ax_img.get_array()
+                            img = self._ax_img_labels.get_array()
                             rr, cc = draw.circle(y, x, self.radius, img.shape)
                             img[rr, cc] = self.intensity_shown
 

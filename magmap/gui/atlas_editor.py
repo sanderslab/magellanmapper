@@ -299,7 +299,7 @@ class AtlasEditor:
         """
         for key in self.plot_eds:
             ed = self.plot_eds[key]
-            if ed != plot_ed: ed.update_image()
+            if ed != plot_ed: ed.refresh_img3d_labels()
             if ed.edited:
                 # display save button as enabled if any editor has been edited
                 enable_btn(self.save_btn)

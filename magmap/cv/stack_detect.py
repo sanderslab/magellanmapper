@@ -114,7 +114,7 @@ class StackDetector(object):
         if img_path:
             # reload command-line parameters and image metadata, which is
             # required if run from a spawned (not forked) process
-            cli.main(True)
+            cli.main(True, True)
             _, orig_info = importer.make_filenames(img_path)
             importer.load_metadata(orig_info)
         print("detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."

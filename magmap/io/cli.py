@@ -197,7 +197,7 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=","):
     return args_dict
 
 
-def main(process_args_only=False):
+def main(process_args_only=False, skip_dbs=False):
     """Starts the visualization GUI.
     
     Processes command-line arguments.
@@ -205,6 +205,7 @@ def main(process_args_only=False):
     Args:
         process_args_only (bool): Processes command-line arguments and
             returns; defaults to False.
+        skip_dbs (bool): True to skip loading databases; defaults to False.
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for MagellanMapper")
@@ -586,18 +587,65 @@ def main(process_args_only=False):
     if config.filename:
         filename_base = importer.filename_to_base(
             config.filename, config.series)
-
-    # Database prep
     
-    if args.db:
-        config.db_name = args.db
+    if not skip_dbs:
+        setup_dbs(filename_base, args.db, args.truth_db)
+    
+    # set multiprocessing start method
+    chunking.set_mp_start_method()
+
+    # POST-ARGUMENT PARSING
+
+    # return or transfer to other entry points if indicated
+    if process_args_only:
+        return
+    elif config.register_type:
+        register.main()
+    elif config.notify_url:
+        notify.main()
+    elif config.plot_2d_type:
+        plot_2d.main()
+    elif config.df_task:
+        df_io.main()
+    elif config.grid_search_profile:
+        _grid_search(series_list)
+    elif config.ec2_list or config.ec2_start or config.ec2_terminate:
+        # defer importing AWS module to avoid making its dependencies
+        # required for MagellanMapper
+        from magmap.cloud import aws
+        aws.main()
+    else:
+        # set up image and perform any whole image processing tasks
+        _process_files(series_list)
+
+    # unless loading images for GUI, exit directly since otherwise application 
+    # hangs if launched from module with GUI
+    if proc_type is not None and proc_type is not config.ProcessTypes.LOAD:
+        shutdown()
+
+
+def setup_dbs(filename_base, db_path=None, truth_db_config=None):
+    """Set up databases for the given image file if the given database has
+    not been set up already.
+    
+    Args:
+        filename_base (str): Image base path.
+        db_path (str): Main database path; defaults to None to use a default
+            path.
+        truth_db_config (List[str]): Sequence of truth database configuration
+            settings; defaults to None to not load truth-related databases.
+    
+    """
+    if db_path:
+        config.db_name = db_path
         print("Set database name to {}".format(config.db_name))
     
     # load "truth blobs" from separate database for viewing
-    if args.truth_db is not None:
+    if truth_db_config is not None:
         # set the truth database mode
         config.truth_db_params = args_to_dict(
-            args.truth_db, config.TruthDB, config.truth_db_params, sep_vals="|")
+            truth_db_config, config.TruthDB, config.truth_db_params,
+            sep_vals="|")
         mode = config.truth_db_params[config.TruthDB.MODE]
         config.truth_db_mode = libmag.get_enum(mode, config.TruthDBModes)
         libmag.printv(config.truth_db_params)
@@ -616,9 +664,10 @@ def main(process_args_only=False):
             print(e)
             print("Could not load truth DB from current image path")
     elif config.truth_db_mode is config.TruthDBModes.VERIFY:
-        # creates a new verified DB to store all ROC results
-        config.verified_db = sqlite.ClrDB()
-        config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
+        if not config.verified_db:
+            # creates a new verified DB to store all ROC results
+            config.verified_db = sqlite.ClrDB()
+            config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
         if truth_db_path:
             # load truth DB path to verify against if explicitly given
             try:
@@ -652,38 +701,6 @@ def main(process_args_only=False):
     if config.db is None:
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
-
-    # set multiprocessing start method
-    chunking.set_mp_start_method()
-
-    # POST-ARGUMENT PARSING
-
-    # return or transfer to other entry points if indicated
-    if process_args_only:
-        return
-    elif config.register_type:
-        register.main()
-    elif config.notify_url:
-        notify.main()
-    elif config.plot_2d_type:
-        plot_2d.main()
-    elif config.df_task:
-        df_io.main()
-    elif config.grid_search_profile:
-        _grid_search(series_list)
-    elif config.ec2_list or config.ec2_start or config.ec2_terminate:
-        # defer importing AWS module to avoid making its dependencies
-        # required for MagellanMapper
-        from magmap.cloud import aws
-        aws.main()
-    else:
-        # set up image and perform any whole image processing tasks
-        _process_files(series_list)
-
-    # unless loading images for GUI, exit directly since otherwise application 
-    # hangs if launched from module with GUI
-    if proc_type is not None and proc_type is not config.ProcessTypes.LOAD:
-        shutdown()
 
 
 def setup_profiles(roi_profiles_names, atlas_profiles_names,

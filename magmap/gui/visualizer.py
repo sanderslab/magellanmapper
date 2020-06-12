@@ -22,6 +22,10 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
 import PyQt5
+# adjust for HiDPI screens, necessary on Windows and Linux (not needed but
+# no apparent affect on MacOS)
+PyQt5.QtWidgets.QApplication.setAttribute(
+    PyQt5.QtCore.Qt.AA_EnableHighDpiScaling, True)
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         Int, List, Array, Str, Bool, Any,
                         push_exception_handler, Property, File)

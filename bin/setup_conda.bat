@@ -34,8 +34,9 @@ CALL "%conda_path%\condabin\conda_hook.bat"
 CALL conda init
 
 :InstallMagMap
-ECHO Creating a Conda environment for MagellanMapper with all supporting packages
-ECHO This may take awhile, especially during the 'Solving environment' and after the 'Executing transaction' steps
+ECHO Creating a Conda environment for MagellanMapper with all supporting packages.
+ECHO This may take awhile, especially during the 'Solving environment' and after the 'Executing transaction' steps.
+ECHO Clicking this window may cause it to pause; try pressing 'Esc' to recontinue.
 CALL conda env create -n mag -f environment.yml
 conda env list | >nul find /i "mag" && set "check_env=0" || set "check_env=1"
 IF "%check_env%" == "0" (

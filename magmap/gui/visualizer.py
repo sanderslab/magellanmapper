@@ -1301,6 +1301,9 @@ class Visualization(HasTraits):
         self._add_mpl_fig_handlers(roi_ed.fig)
 
     def launch_atlas_editor(self):
+        if config.image5d is None:
+            print("Main image has not been loaded, cannot show Atlas Editor")
+            return
         # atlas editor; need to retain ref or else instance callbacks 
         # created within AtlasEditor will be garbage collected
         title = config.filename

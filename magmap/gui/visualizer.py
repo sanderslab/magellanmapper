@@ -597,12 +597,19 @@ class Visualization(HasTraits):
         img3d = self._img3ds.get(self._imgadj_name)
         if img3d is None: return
         info = libmag.get_dtype_info(img3d)
+
+        # min/max based on data type range
         self._imgadj_min_low = info.min
         self._imgadj_min_high = info.max
         self._imgadj_max_low = info.min
         self._imgadj_max_high = info.max
-        self._imgadj_brightness_low = info.min
-        self._imgadj_brightness_high = info.max
+
+        # range brightness symmetrically to a fraction of data type range to
+        # give more slider precision; cannot used percentile or else the
+        # whole image will need to be loaded from disk
+        brightness_max = info.max // 5
+        self._imgadj_brightness_low = -brightness_max
+        self._imgadj_brightness_high = brightness_max
 
     def update_imgadj_for_img(self):
         if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:

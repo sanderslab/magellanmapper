@@ -378,7 +378,7 @@ class PlotEditor:
                 if brightness is not None:
                     # shift original image array by brightness
                     data[:] = np.clip(
-                        plot_ax_img.img + brightness, None, info.max)
+                        plot_ax_img.img + brightness, info.min, info.max)
                 if contrast is not None:
                     # stretch original image array by contrast
                     data[:] = np.clip(

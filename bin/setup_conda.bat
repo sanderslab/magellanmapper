@@ -46,3 +46,6 @@ IF "%check_env%" == "0" (
 )
 
 popd
+
+:: keep window open if user double-clicked this script to launch it
+pause

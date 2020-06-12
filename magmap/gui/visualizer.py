@@ -200,8 +200,8 @@ class ProfileCats(Enum):
     GRID = "Grid Search"
 
 
-class ProfilesNamesList(HasTraits):
-    """Traits-enabled list of profile names."""
+class TraitsList(HasTraits):
+    """Generic Traits-enabled list."""
     selections = List([""])
 
 
@@ -304,7 +304,7 @@ class Visualization(HasTraits):
     # Profiles panel
 
     _profiles_cats = List
-    _profiles_names = Instance(ProfilesNamesList)
+    _profiles_names = Instance(TraitsList)
     _profiles_name = Str
     _profiles_chls = Int
     _profiles_table = TabularEditor(
@@ -316,7 +316,7 @@ class Visualization(HasTraits):
 
     # Image adjustment panel
 
-    _imgadj_names = Instance(ProfilesNamesList)
+    _imgadj_names = Instance(TraitsList)
     _imgadj_name = Str
     _imgadj_chls = Int
     _imgadj_min = Float
@@ -560,7 +560,7 @@ class Visualization(HasTraits):
             "Main": config.image5d,
             "Labels": config.labels_img,
             "Borders": config.borders_img}
-        self._imgadj_names = ProfilesNamesList()
+        self._imgadj_names = TraitsList()
         self._imgadj_names.selections = [
             k for k in self._img3ds.keys() if self._img3ds[k] is not None]
         if self._imgadj_names.selections:
@@ -620,39 +620,36 @@ class Visualization(HasTraits):
 
     @on_trait_change("_imgadj_min")
     def _adjust_img_min(self):
-        for atlas_ed in self.atlas_eds:
-            print("updating min", self._imgadj_min)
-            atlas_ed.update_imgs_display(
-                self._imgadj_names.selections.index(self._imgadj_name),
-                self._imgadj_chls, minimum=self._imgadj_min)
+        self._adjust_displayed_imgs(minimum=self._imgadj_min)
 
     @on_trait_change("_imgadj_max")
     def _adjust_img_max(self):
-        for atlas_ed in self.atlas_eds:
-            atlas_ed.update_imgs_display(
-                self._imgadj_names.selections.index(self._imgadj_name),
-                self._imgadj_chls, maximum=self._imgadj_max)
+        self._adjust_displayed_imgs(maximum=self._imgadj_max)
 
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):
-        for atlas_ed in self.atlas_eds:
-            atlas_ed.update_imgs_display(
-                self._imgadj_names.selections.index(self._imgadj_name),
-                self._imgadj_chls, brightness=self._imgadj_brightness)
+        self._adjust_displayed_imgs(brightness=self._imgadj_brightness)
 
     @on_trait_change("_imgadj_contrast")
     def _adjust_img_contrast(self):
-        for atlas_ed in self.atlas_eds:
-            atlas_ed.update_imgs_display(
-                self._imgadj_names.selections.index(self._imgadj_name),
-                self._imgadj_chls, contrast=self._imgadj_contrast)
+        self._adjust_displayed_imgs(contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_alpha")
     def _adjust_img_alpha(self):
-        for atlas_ed in self.atlas_eds:
-            atlas_ed.update_imgs_display(
-                self._imgadj_names.selections.index(self._imgadj_name),
-                self._imgadj_chls, alpha=self._imgadj_alpha)
+        self._adjust_displayed_imgs(alpha=self._imgadj_alpha)
+
+    def _adjust_displayed_imgs(self, **kwargs):
+        """Adjust image display settings for the currently selected viewer.
+
+        Args:
+            **kwargs: Arguments to update the currently selected viewer.
+
+        """
+        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            for atlas_ed in self.atlas_eds:
+                atlas_ed.update_imgs_display(
+                    self._imgadj_names.selections.index(self._imgadj_name),
+                    self._imgadj_chls, **kwargs)
 
     @staticmethod
     def is_dark_mode(max_rgb=100):
@@ -1770,7 +1767,7 @@ class Visualization(HasTraits):
             prof_names = []
         # update dropdown box selections and choose the first item, required
         # even though the item will appear to be selected by default
-        self._profiles_names = ProfilesNamesList()
+        self._profiles_names = TraitsList()
         self._profiles_names.selections = prof_names
         self._profiles_name = prof_names[0]
 

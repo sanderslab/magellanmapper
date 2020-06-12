@@ -141,7 +141,7 @@ sample_tasks() {
   # grid-search on single sub-image using the "test" ROC profile
   ./run_cli.py --img "$IMG" --proc detect --channel "$CHL" \
     --subimg_offset "$OFFSET" --subimg_size "$SIZE" --roi_profile "$MIC" \
-    --truth_db verify magmap.db --grid_search test
+    --truth_db verify magmap.db --grid_search gridtest
 
   # view verifications for single offset
   ./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" \

@@ -115,15 +115,6 @@ class PlotEditor:
         self.fn_show_label_3d = fn_show_label_3d
         self.interp_planes = interp_planes
         self.fn_update_intensity = fn_update_intensity
-        self._downsample = 1
-        if max_size:
-            # calculate downsampling factor based on max size
-            img = self.img3d[0]
-            self._downsample = max(img.shape[:2]) // max_size
-            if self._downsample < 1:
-                self._downsample = 1
-            print("downsampling factor for plane {}: {}"
-                  .format(self.plane, self._downsample))
         self.fn_status_bar = fn_status_bar
         
         self.intensity = None  # picked intensity of underlying img3d_label
@@ -155,7 +146,27 @@ class PlotEditor:
         self._ax_img_labels = None  # displayed labels image
         # track label editing during mouse click/movement for plane interp
         self._editing = False
-    
+
+        # pre-compute image shapes, scales, and downsampling factors for
+        # each type of 3D image
+        self._img3d_scales = [None] * 3
+        self._downsample = [1] * 3
+        for i, img in enumerate(
+                (self.img3d, self.img3d_labels, self.img3d_borders)):
+            if img is None: continue
+            if i > 0:
+                lbls_scale = np.divide(img.shape[:3], self.img3d.shape[:3])
+                if not all(lbls_scale == 1):
+                    # replace with scale if not all 1
+                    self._img3d_scales[i] = lbls_scale
+            if max_size:
+                downsample = max(img.shape[1:3]) // max_size
+                if downsample > 1:
+                    # only downsample if factor is over 1
+                    self._downsample[i] = downsample
+        print("plane {} downsampling factors by image: {}"
+              .format(self.plane, self._downsample))
+
     def connect(self):
         """Connect events to functions.
         """
@@ -189,10 +200,11 @@ class PlotEditor:
         self.draw_crosslines()
 
     def translate_coord(self, coord, up=False):
-        """Translate coordinate based on downsampling factor.
+        """Translate coordinate based on downsampling factor of the main image.
 
         Coordinates sent to and received from the Atlas Editor are assumed to
-        be in the original image space.
+        be in the original image space. All overlaid images are assumed to be
+        resized to the shape of the main image.
 
         Args:
             coord (List[int]): Coordinates in z,y,x.
@@ -205,9 +217,9 @@ class PlotEditor:
         """
         coord_tr = np.copy(coord)
         if up:
-            coord_tr[1:] = np.multiply(coord_tr[1:], self._downsample)
+            coord_tr[1:] = np.multiply(coord_tr[1:], self._downsample[0])
         else:
-            coord_tr[1:] = np.divide(coord_tr[1:], self._downsample)
+            coord_tr[1:] = np.divide(coord_tr[1:], self._downsample[0])
         coord_tr = list(coord_tr.astype(np.int))
         # print("translated from {} to {}".format(coord, coord_tr))
         return coord_tr
@@ -225,7 +237,29 @@ class PlotEditor:
             # update positions of current crosshairs
             self.hline.set_ydata(coord[1])
             self.vline.set_xdata(coord[2])
-    
+
+    def _get_img2d(self, i, img):
+        """Get the 2D image from the given 3D image, scaling and downsampling
+        as necessary.
+
+        Args:
+            i (int): Index of 3D image in sequence of 3D images, assuming
+                order of ``(main_image, labels_img, borders_img)``.
+            img (:obj:`np.ndarray`): 3D image from which to extract a 2D plane.
+
+        Returns:
+            :obj:`np.ndarray`: 2D plane, downsampled if necessary.
+
+        """
+        z = self.coord[0]
+        if self._img3d_scales[i] is not None:
+            # rescale z-coordinate based on image scaling to the main image
+            z = int(z * self._img3d_scales[i][0])
+        # downsample to reduce access time; use same factor for both x and y
+        # to retain aspect ratio
+        downsample = self._downsample[i]
+        return img[z, ::downsample, ::downsample]
+
     def show_overview(self):
         """Show the main 2D plane, taken as a z-plane."""
         # assume colorbar already shown if set and image previously displayed
@@ -236,19 +270,19 @@ class PlotEditor:
         self.vline = None
         
         # prep main image in grayscale and labels with discrete colormap
-        imgs2d = [self.img3d[self.coord[0]]]
+        imgs2d = [self._get_img2d(0, self.img3d)]
         cmaps = [config.cmaps]
         alphas = [config.alphas[0]]
         
         if self.img3d_labels is not None:
-            imgs2d.append(self.img3d_labels[self.coord[0]])
+            imgs2d.append(self._get_img2d(1, self.img3d_labels))
             cmaps.append(self.cmap_labels)
             alphas.append(self.alpha)
         
         if self.img3d_borders is not None:
             # prep borders image, which may have an extra channels 
             # dimension for multiple sets of borders
-            img2d = self.img3d_borders[self.coord[0]]
+            img2d = self._get_img2d(2, self.img3d_borders)
             channels = img2d.ndim if img2d.ndim >= 3 else 1
             for i, channel in enumerate(range(channels - 1, -1, -1)):
                 # show first (original) borders image last so that its 
@@ -257,11 +291,6 @@ class PlotEditor:
                 imgs2d.append(img_add)
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
-
-        if self._downsample:
-            # downsample images to reduce access time
-            for i, img in enumerate(imgs2d):
-                imgs2d[i] = img[::self._downsample, ::self._downsample]
 
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single
@@ -273,7 +302,7 @@ class PlotEditor:
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = pixel_display.PixelDisplay(
-            imgs2d, ax_imgs, self._downsample, cmap_labels=self.cmap_labels)
+            imgs2d, ax_imgs, self._downsample[0], cmap_labels=self.cmap_labels)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
         self._plot_ax_imgs = [
@@ -544,7 +573,8 @@ class PlotEditor:
 
                             # edit underlying labels image
                             rr, cc = draw.circle(
-                                coord[1], coord[2], self.radius * self._downsample,
+                                coord[1], coord[2],
+                                self.radius * self._downsample[0],
                                 self.img3d_labels[self.coord[0]].shape)
                             self.img3d_labels[
                                 self.coord[0], rr, cc] = self.intensity

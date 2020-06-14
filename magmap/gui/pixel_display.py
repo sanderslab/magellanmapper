@@ -65,25 +65,30 @@ class PixelDisplay(object):
         coord = (int(y), int(x))
         rgb = None
         output = []
+        main_img_shape = self.imgs[0].shape[:2]
         for i, img in enumerate(self.imgs):
-            if any(np.less(coord, 0)) or any(
-                    np.greater_equal(coord, img.shape[:len(coord)])):
+            # scale coordinates from axes space, based on main image, to
+            # given image's space to get pixel from given image
+            scale = np.divide(img.shape[:2], main_img_shape)
+            coord_img = tuple(np.multiply(coord, scale).astype(int))
+            if any(np.less(coord_img, 0)) or any(
+                    np.greater_equal(coord_img, img.shape[:len(coord_img)])):
                 # no corresponding px for the image
-                z = "n/a"
+                px = "n/a"
             else:
                 # get the corresponding intensity value, truncating floats
-                z = img[coord]
+                px = img[coord_img]
                 if i == 1:
                     # for the label image, get its RGB value
                     ax_img = self.ax_imgs[i][0]
                     if self.cmap_labels:
                         label_rgb = self.cmap_labels(
-                            self.cmap_labels.convert_img_labels(z))
+                            self.cmap_labels.convert_img_labels(px))
                     else:
-                        label_rgb = ax_img.cmap(ax_img.norm(z))
+                        label_rgb = ax_img.cmap(ax_img.norm(px))
                     rgb = "RGB for label {}: {}".format(
-                        z, tuple(np.multiply(label_rgb[:3], 255).astype(int)))
-                if isinstance(z, float): z = "{:.4f}".format(z)
+                        px, tuple(np.multiply(label_rgb[:3], 255).astype(int)))
+                if isinstance(px, float): px = "{:.4f}".format(px)
 
             # re-upsample coordinates for any downsampling
             orig_coord = np.multiply(coord, self.downsample)
@@ -96,8 +101,8 @@ class PixelDisplay(object):
                     off = self.offset[i]
                 orig_coord = np.add(orig_coord, off)
             output.append(
-                "Image {}: x={}, y={}, z={}"
-                .format(i, orig_coord[1], orig_coord[0], z))
+                "Image {}: x={}, y={}, px={}"
+                .format(i, orig_coord[1], orig_coord[0], px))
 
         # join output message
         if rgb:

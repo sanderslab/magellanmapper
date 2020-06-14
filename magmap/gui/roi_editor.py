@@ -649,11 +649,6 @@ class ROIEditor:
                         # size to zoomed plots to emphasize the raw image
                         vmin = None
                         vmax = None
-                else:
-                    # resize extra image to size of main image
-                    img = transform.resize(
-                        img, img2d_ov_ds.shape, order=0, anti_aliasing=False,
-                        preserve_range=True, mode="reflect").astype(np.int)
                 for k, v in zip(keys, (img, cm, vmin, vmax, alp)):
                     show.setdefault(k, []).append(v)
             ax_imgs = plot_support.overlay_images(

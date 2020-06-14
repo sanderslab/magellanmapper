@@ -10,6 +10,7 @@ import numpy as np
 from matplotlib import backend_bases
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
+from skimage import transform
 
 from magmap.plot import colormaps
 from magmap.settings import config
@@ -133,7 +134,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         ax: Axes.
         aspect: Aspect ratio.
         origin: Image origin.
-        imgs2d: List of 2D images to display.
+        imgs2d (List[:obj:`np.ndarray`]): Sequence of 2D images to display,
+            where the first image may be 2D+channel.
         channels: A list of channels designators for each image, or None 
             to use :attr:``config.channel`` for the first image and 0 
             for all subsequent images.
@@ -223,8 +225,20 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
                 # convert all foreground to NaN to use the given color;
                 # assumes DiscreteColormap sets background as transparent
                 img[img != 0] = np.nan
-        if i == 0 and img_norm_setting:
-            img = libmag.normalize(img, *img_norm_setting)
+        print(img.shape, imgs2d[0].shape)
+        if i == 0:
+            if img_norm_setting:
+                # normalize main intensity image
+                img = libmag.normalize(img, *img_norm_setting)
+        elif not all(np.equal(img.shape[:2], imgs2d[0].shape[:2])):
+            # resize the image to the main image's shape if shapes differ in
+            # xy; assume that the given image is a labels image whose integer
+            # identity values should be preserved
+            shape = list(img.shape)
+            shape[:2] = imgs2d[0].shape[:2]
+            img = transform.resize(
+                img, shape, order=0, anti_aliasing=False,
+                preserve_range=True, mode="reflect").astype(np.int)
         if check_single and discrete and len(np.unique(img)) < 2:
             # WORAROUND: increment the last val of single unique val images
             # shown with a DiscreteColormap (or any ListedColormap) since

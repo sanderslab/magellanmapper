@@ -11,26 +11,35 @@ from magmap.io import libmag
 class PixelDisplay(object):
     """Custom image intensity display in :attr:``Axes.format_coord``.
 
+    Translates pixel coordinates from the axes space to the coordinates of
+    the corresponding original images, accounting for any image manipulations
+    such as downsampling images or resizing overlaid images to the main image.
+    Also translates offset images and colormap transformations.
+
     Attributes:
-        imgs (List[:obj:`np.ndarray`]): Sequence of images whose intensity
-            values will be displayed.
+        imgs (List[:obj:`np.ndarray`]): Sequence of 2D images whose intensity
+            values will be displayed. Assumes that images are given in the
+            order, ``(main_image[, labels_image[, next_image, ...]])``.
         ax_imgs (List[:obj:`matplotlib.image.AxesImage`]): Nested sequence of
             Matplotlib images corresponding to ``imgs``.
-        downsample (float): Downsampling factor; defaults to 1.
-        offset (List[int], List[List[int]]): Coordinate offset given as
-            a sequence of ``(y, x)`` or a nested sequence of offsets
-            corresponding to each image in ``imgs``; defaults to None.
+        shapes (List[int]), List[List[int]]: Original 2D image shapes to
+            translate downsampled and/or resized ``imgs`` to the original
+            image space, given as either a single sequence or nested sequence
+            corresponding to ``imgs``; defaults to None.
+        offset (List[int], List[List[int]]): Coordinates offset in the
+            original image space given as ``(y, x)`` or a nested sequence
+            of offsets corresponding to``imgs``; defaults to None.
         cmap_labels (:obj:`colormaps.DiscreteColormap`): Labels colormap
             to find the corresponding RGB value; defaults to None, in which
             case the corresponding colormap in ``ax_imgs`` will be used for
             the labels (index 1) will be used instead.
     """
 
-    def __init__(self, imgs, ax_imgs, downsample=1, offset=None,
+    def __init__(self, imgs, ax_imgs, shapes=None, offset=None,
                  cmap_labels=None):
         self.imgs = imgs
         self.ax_imgs = ax_imgs
-        self.downsample = downsample
+        self.shapes = shapes
         self.offset = offset
         self.cmap_labels = cmap_labels
 
@@ -90,14 +99,21 @@ class PixelDisplay(object):
                         px, tuple(np.multiply(label_rgb[:3], 255).astype(int)))
                 if isinstance(px, float): px = "{:.4f}".format(px)
 
-            # re-upsample coordinates for any downsampling
-            orig_coord = np.multiply(coord, self.downsample)
+            orig_coord = coord
+            if self.shapes:
+                # scale coordinates from axes space to given original image's
+                # space, accounting for any resizing and downsampling
+                shape = self.shapes
+                if libmag.is_seq(self.shapes[0]):
+                    # overlaid images may have different shapes
+                    shape = self.shapes[i]
+                scale = np.divide(shape[:2], main_img_shape)
+                orig_coord = tuple(np.multiply(coord, scale).astype(int))
             if self.offset:
-                # shift for a single offset
+                # shift for offset given in original image's space
                 off = self.offset
                 if libmag.is_seq(self.offset[0]):
-                    # use corresponding offset for the given image in case
-                    # overlaid images have different offsets
+                    # overlaid images may have different offsets
                     off = self.offset[i]
                 orig_coord = np.add(orig_coord, off)
             output.append(

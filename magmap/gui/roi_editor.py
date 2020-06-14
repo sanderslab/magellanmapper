@@ -586,6 +586,7 @@ class ROIEditor:
             patch_offset = offset[:2]
             zoom = 1
             imgs = list(imgs)
+            shapes = [None if img is None else img.shape for img in imgs]
             # main overview image, on which other images may be overlaid
             img2d_ov = imgs[0]
             roi_end = np.add(offset, roi_size)
@@ -663,7 +664,7 @@ class ROIEditor:
             # show pixel values for all overlaid images in status bar;
             # need a custom listener for figs embedded in TraitsUI
             ax_ov.format_coord = pixel_display.PixelDisplay(
-                show["imgs2d"], ax_imgs, downsample, offsets,
+                show["imgs2d"], ax_imgs, shapes, offsets,
                 libmag.get_if_within(cmaps, 1))
             fig.canvas.mpl_connect(
                 "motion_notify_event",

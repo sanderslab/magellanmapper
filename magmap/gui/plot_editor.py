@@ -149,11 +149,13 @@ class PlotEditor:
 
         # pre-compute image shapes, scales, and downsampling factors for
         # each type of 3D image
+        self._img3d_shapes = [None] * 3
         self._img3d_scales = [None] * 3
         self._downsample = [1] * 3
         for i, img in enumerate(
                 (self.img3d, self.img3d_labels, self.img3d_borders)):
             if img is None: continue
+            self._img3d_shapes[i] = img.shape
             if i > 0:
                 lbls_scale = np.divide(img.shape[:3], self.img3d.shape[:3])
                 if not all(lbls_scale == 1):
@@ -273,11 +275,13 @@ class PlotEditor:
         imgs2d = [self._get_img2d(0, self.img3d)]
         cmaps = [config.cmaps]
         alphas = [config.alphas[0]]
+        shapes = [self._img3d_shapes[0][1:3]]
         
         if self.img3d_labels is not None:
             imgs2d.append(self._get_img2d(1, self.img3d_labels))
             cmaps.append(self.cmap_labels)
             alphas.append(self.alpha)
+            shapes.append(self._img3d_shapes[1][1:3])
         
         if self.img3d_borders is not None:
             # prep borders image, which may have an extra channels 
@@ -291,6 +295,7 @@ class PlotEditor:
                 imgs2d.append(img_add)
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
+                shapes.append(self._img3d_shapes[2][1:3])
 
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single
@@ -302,7 +307,7 @@ class PlotEditor:
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = pixel_display.PixelDisplay(
-            imgs2d, ax_imgs, self._downsample[0], cmap_labels=self.cmap_labels)
+            imgs2d, ax_imgs, shapes, cmap_labels=self.cmap_labels)
         self.plane_slider.set_val(self.coord[0])
         if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
         self._plot_ax_imgs = [

@@ -206,7 +206,7 @@ class PlotEditor:
             self.show_overview()
         self.draw_crosslines()
 
-    def translate_coord(self, coord, up=False):
+    def translate_coord(self, coord, up=False, coord_slice=None):
         """Translate coordinate based on downsampling factor of the main image.
 
         Coordinates sent to and received from the Atlas Editor are assumed to
@@ -217,16 +217,24 @@ class PlotEditor:
             coord (List[int]): Coordinates in z,y,x.
             up (bool): True to upsample; defaults to False to adjust
                 coordinates for downsampled images.
+            coord_slice (slice): Slice of each set of coordinates to
+                transpose. Defaults to None, which gives a slice starting
+                at 1 so that the z-value will not be adjusted on the
+                assumption that downsampling is only performed in ``x,y``.
 
         Returns:
             List[int]: The translated coordinates.
 
         """
+        if coord_slice is None:
+            coord_slice = slice(1, None)
         coord_tr = np.copy(coord)
         if up:
-            coord_tr[1:] = np.multiply(coord_tr[1:], self._downsample[0])
+            coord_tr[coord_slice] = np.multiply(
+                coord_tr[coord_slice], self._downsample[0])
         else:
-            coord_tr[1:] = np.divide(coord_tr[1:], self._downsample[0])
+            coord_tr[coord_slice] = np.divide(
+                coord_tr[coord_slice], self._downsample[0])
         coord_tr = list(coord_tr.astype(np.int))
         # print("translated from {} to {}".format(coord, coord_tr))
         return coord_tr
@@ -354,7 +362,26 @@ class PlotEditor:
     
     def update_plane_slider(self, val):
         self._update_overview(int(val))
-    
+
+    def view_subimg(self, offset, size):
+        """View a sub-image.
+
+        Args:
+            offset (List[int]): Sub-image offset in ``y, x``.
+            size (List[int]): Sub-image size in ``y, x``.
+
+        """
+        coord_slice = slice(0, None)
+        off_trans = self.translate_coord(offset, coord_slice=coord_slice)
+        size_trans = self.translate_coord(size, coord_slice=coord_slice)
+        # print("view subimg offset", offset, "translated offset", off_trans,
+        #       "size", size, "translated size", size_trans)
+        self.axes.set_xlim(off_trans[1], off_trans[1] + size_trans[1])
+        # set "bottom" first, which is higher y-values
+        self.axes.set_ylim(off_trans[0] + size_trans[0], off_trans[0])
+        self.xlim = self.axes.get_xlim()
+        self.ylim = self.axes.get_ylim()
+
     def refresh_img3d_labels(self):
         """Replace the displayed labels image with underlying plane's data.
         """

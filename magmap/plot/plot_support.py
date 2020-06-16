@@ -24,6 +24,55 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 
+class ImageSyncMixin:
+    """Mixin class for synchronizing image display settings."""
+
+    @staticmethod
+    def get_img_display_settings(plot_eds, imgi, chl=None):
+        """Get display settings for the given image.
+
+        Args:
+            plot_eds (List[:obj:`magmap.gui.plot_editor.PlotEditor`]):
+                Sequence of Plot Editors. Only the first editor will be
+                used on the assumption that all the editors are synchronized.
+            imgi (int): Index of image.
+            chl (int): Index of channel; defaults to None.
+
+        Returns:
+            float, flat, float, float, float: Vmin, vmax, brightness,
+            contrast, and alpha. None if ``plot_eds`` evaluates to False.
+
+        """
+        if plot_eds:
+            return plot_eds[0].get_img_display_settings(imgi, chl)
+        return None
+
+    @staticmethod
+    def update_imgs_display(plot_eds, imgi, chl=None, minimum=np.nan,
+                            maximum=np.nan, brightness=None, contrast=None,
+                            alpha=None):
+        """Update dislayed image settings in all Plot Editors.
+
+        Args:
+            plot_eds (List[:obj:`magmap.gui.plot_editor.PlotEditor`]):
+                Sequence of Plot Editors. Only the first editor will be
+                used on the assumption that all the editors are synchronized.
+            imgi (int): Index of image.
+            chl (int): Index of channel; defaults to None.
+            minimum (float): Vmin; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            maximum (float): Vmax; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            brightness (float): Brightness addend; defaults to None.
+            contrast (float): Contrast multiplier; defaults to None.
+            alpha (float): Opacity value; defalts to None.
+
+        """
+        for ed in plot_eds:
+            ed.update_img_display(
+                imgi, chl, minimum, maximum, brightness, contrast, alpha)
+
+
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
                         vmin=None, vmax=None, origin=None, interpolation=None,
                         norms=None, nan_color=None, ignore_invis=False):

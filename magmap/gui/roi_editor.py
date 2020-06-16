@@ -247,7 +247,7 @@ class DraggableCircle:
         self.circle.figure.canvas.mpl_disconnect(self._cidpick)
 
 
-class ROIEditor:
+class ROIEditor(plot_support.ImageSyncMixin):
     """Graphical interface for viewing and annotating 3D ROIs through
     serial 2D planes.
 
@@ -859,6 +859,12 @@ class ROIEditor:
         plt.ion()
         fig.canvas.draw_idle()
         print("2D plot time: {}".format(time() - time_start))
+
+    def get_img_display_settings(self, imgi, **kwargs):
+        return super().get_img_display_settings(self._plot_eds, imgi, **kwargs)
+
+    def update_imgs_display(self, imgi, **kwargs):
+        return super().update_imgs_display(self._plot_eds, imgi, **kwargs)
 
     def plot_roi(self, roi, segments, channel, show=True, title=""):
         """Plot ROI as sequence of z-planes containing only the ROI itself.

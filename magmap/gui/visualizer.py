@@ -612,18 +612,33 @@ class Visualization(HasTraits):
         self._imgadj_brightness_high = brightness_max
 
     def update_imgadj_for_img(self):
-        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+        """Update image adjustment controls based on the currently selected
+        viewer.
+
+        """
+        # get the currently selected viewer
+        ed = None
+        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+            ed = self._roi_ed
+        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
             if self.atlas_eds:
-                imgi = self._imgadj_names.selections.index(self._imgadj_name)
-                clim_min, clim_max, self._imgadj_brightness, \
-                    self._imgadj_contrast, self._imgadj_alpha = \
-                    self.atlas_eds[0].get_img_display_settings(
-                        imgi, self._imgadj_chls)
-                if clim_min is None:
-                    clim_min = 0
-                if clim_max is None:
-                    clim_max = self._imgadj_max_high
-                self._imgadj_min, self._imgadj_max = clim_min, clim_max
+                ed = self.atlas_eds[0]
+        if ed is None: return
+
+        # get the display settings from the viewer
+        imgi = self._imgadj_names.selections.index(self._imgadj_name)
+        img_settings = ed.get_img_display_settings(
+                imgi, chl=self._imgadj_chls)
+        if img_settings is None: return
+
+        # populate controls with these display settings
+        clim_min, clim_max, self._imgadj_brightness, self._imgadj_contrast, \
+            self._imgadj_alpha = img_settings
+        if clim_min is None:
+            clim_min = 0
+        if clim_max is None:
+            clim_max = self._imgadj_max_high
+        self._imgadj_min, self._imgadj_max = clim_min, clim_max
 
     @on_trait_change("_imgadj_min")
     def _adjust_img_min(self):
@@ -652,11 +667,15 @@ class Visualization(HasTraits):
             **kwargs: Arguments to update the currently selected viewer.
 
         """
-        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
-            for atlas_ed in self.atlas_eds:
-                atlas_ed.update_imgs_display(
-                    self._imgadj_names.selections.index(self._imgadj_name),
-                    self._imgadj_chls, **kwargs)
+        eds = []
+        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+            eds.append(self._roi_ed)
+        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            eds.extend(self.atlas_eds)
+        for ed in eds:
+            ed.update_imgs_display(
+                self._imgadj_names.selections.index(self._imgadj_name),
+                chl=self._imgadj_chls, **kwargs)
 
     @staticmethod
     def is_dark_mode(max_rgb=100):
@@ -1299,6 +1318,7 @@ class Visualization(HasTraits):
         # populate Matplotlib figure once controls have been created,
         # at which point the figure will allow connections
         self._launch_roi_editor()
+        self.update_imgadj_for_img()
 
     def _add_mpl_fig_handlers(self, fig):
         # add additional event handlers for Matplotlib figures

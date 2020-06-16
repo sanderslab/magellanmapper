@@ -51,6 +51,7 @@ class PlotEditor:
         intensity_shown (int): Displayed intensity in the
             :obj:`matplotlib.AxesImage` corresponding to ``img3d_labels``.
         scale_bar (bool): True to add a scale bar; defaults to False.
+        enable_painting (bool): True to enable label painting; defaults to True.
 
     """
     ALPHA_DEFAULT = 0.5
@@ -144,6 +145,7 @@ class PlotEditor:
         self.edit_mode = False  # True to edit with mouse motion
         self.region_label = None
         self.scale_bar = False
+        self.enable_painting = True
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
@@ -507,7 +509,6 @@ class PlotEditor:
         
         loc = (x_fig, y_fig)
         if self.last_loc is not None and self.last_loc == loc:
-            #print("didn't move")
             return
         
         loc_data = (x, y)
@@ -560,25 +561,27 @@ class PlotEditor:
         else:
             # hover movements over image
             if 0 <= x < self.img3d.shape[2] and 0 <= y < self.img3d.shape[1]:
-                
-                if self.circle:
-                    # update pen circle position
-                    self.circle.center = x, y
-                    # does not appear to be necessary since text update already 
-                    # triggers a redraw, but this would also trigger if no text 
-                    # update
-                    self.circle.stale = True
-                else:
-                    # generate new circle if not yet present
-                    self.circle = patches.Circle(
-                        (x, y), radius=self.radius, linestyle=":", fill=False, 
-                        edgecolor="w")
-                    self.axes.add_patch(self.circle)
+
+                if self.enable_painting:
+                    if self.circle:
+                        # update pen circle position
+                        self.circle.center = x, y
+                        # does not appear to be necessary since text update already
+                        # triggers a redraw, but this would also trigger if no text
+                        # update
+                        self.circle.stale = True
+                    else:
+                        # generate new circle if not yet present
+                        self.circle = patches.Circle(
+                            (x, y), radius=self.radius, linestyle=":",
+                            fill=False, edgecolor="w")
+                        self.axes.add_patch(self.circle)
 
                 # re-translate downsampled coordinates to original space
                 coord = self.translate_coord([self.coord[0], y, x], up=True)
                 if event.button == 1:
-                    if self.edit_mode and self.intensity is not None:
+                    if (self.enable_painting and self.edit_mode
+                            and self.intensity is not None):
                         # click in editing mode to overwrite images with pen
                         # of the current radius using chosen intensity for the
                         # underlying and displayed images

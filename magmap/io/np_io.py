@@ -70,8 +70,7 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
         print("rescaled resolution for full-scale image:", res)
     elif scaled_shape is not None:
         # fall back to scaling based on comparison to original image
-        image5d = importer.read_file(
-            img_path_transposed, config.series)
+        image5d = importer.read_file(img_path_transposed, config.series)
         scaling = importer.calc_scaling(
             image5d, None, scaled_shape=scaled_shape)
         res = config.resolutions[0]
@@ -213,14 +212,19 @@ def setup_images(path=None, series=None, offset=None, size=None,
             except FileNotFoundError as e:
                 print(e)
         else:
-            # load or import from MagellanMapper Numpy format
-            load = proc_type is not config.ProcessTypes.IMPORT_ONLY  # re/import
-            prefix = (config.prefix
-                      if proc_type is config.ProcessTypes.IMPORT_ONLY else None)
             try:
-                config.image5d = importer.read_file(
-                    path, series, channel=config.channel, load=load,
-                    prefix=prefix)
+                # load or import from MagellanMapper Numpy format
+                import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
+                if not import_only:
+                    # load previously imported image
+                    config.image5d = importer.read_file(path, series)
+                if import_only or config.image5d is None:
+                    # re-import over existing image or import new image
+                    prefix = None
+                    if proc_type is config.ProcessTypes.IMPORT_ONLY:
+                        prefix = config.prefix
+                    config.image5d = importer.import_bioformats(
+                        path, series, channel=config.channel, prefix=prefix)
                 config.image5d_io = config.LoadIO.NP
             except FileNotFoundError:
                 print("Could not load {}, will fall back to any associated "

@@ -22,7 +22,10 @@ class TestImageStackProcessing(unittest.TestCase):
     
     def test_load_image(self):
         config.image5d = importer.read_file(
-            config.filename, config.series, channel=config.channel, load=False)
+            config.filename, config.series)
+        if config.image5d is None:
+            config.image5d = importer.import_bioformats(
+                config.filename, config.series, channel=config.channel)
         self.assertEqual(config.image5d.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):

@@ -501,27 +501,15 @@ def assign_metadata(md):
         print("could not find near_max")
 
 
-def read_file(filename, series=None, load=True, z_max=-1,
-              offset=None, size=None, channel=None, return_info=False, 
-              import_if_absent=True, update_info=True, prefix=None):
-    """Reads an image file into Numpy format or imports a file into this format.
-    
-    Loads a Numpy image if available as determined by 
-    :func:``make_filenames``. An offset and size can be given to load an 
-    only an ROI of the image. If the corresponding Numpy image cannot be 
-    found, one will be generated from the given source image. For TIFF images, 
-    multiple channels will assume to be stored in separate files with 
-    :const:``CHANNEL_SEPARATOR`` followed by an integer corresponding to the 
-    channel number (0-based indexing), eg "/path/to/image_ch_0.tif".
+def read_file(filename, series=None, offset=None, size=None, return_info=False,
+              update_info=True):
+    """Reads an image file in Numpy format.
+
+    An offset and size can be given to load an only an ROI of the image.
     
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
         series: Series index to load. Defaults to None, which will use 0.
-        load: If True, attempts to load a Numpy array from the same 
-            location and name except for ".npz" appended to the end 
-            (default). The array can be accessed as "output['image5d']".
-        z_max: Number of z-planes to load, or -1 if all should be loaded
-            (default).
         offset: Tuple of offset given as (x, y, z) from which to start
             loading z-plane (x, y ignored for now). If Numpy image info already 
             exists, this tuple will be used to load only an ROI of the image. 
@@ -530,85 +518,106 @@ def read_file(filename, series=None, load=True, z_max=-1,
         size: Tuple of ROI size given as (x, y, z). If Numpy image info already 
             exists, this tuple will be used to load only an ROI of the image. 
             Defaults to None.
-        channel: Channel number, currently used only to load a channel when 
-            a Numpy ROI image exists. Otherwise, all channels available will 
-            be imported into a new Numpy image. Defaults to None.
         return_info: True if the Numpy info file should be returned for a 
             dictionary of image properties; defaults to False.
-        import_if_absent: True if the image should be imported into a Numpy 
-            image if it does not exist; defaults to True.
         update_info: True if the associated image5d info file should be 
             updated; defaults to True.
-        prefix (str): Ouput base path; defaults to None to use ``filename``.
     
     Returns:
-        image5d, the array of image data. If ``return_info`` is True, a 
-        second value a dictionary of image properties will be returned.
+        :obj:`np.ndarray`, dict: The image array as a 5D array in the format,
+        ``t, z, y, x[, c]``. If ``return_info`` is True, a dictionary of
+        image properties will also be returned.
     """
+    if series is None:
+        series = 0
+    filename_image5d, filename_meta = make_filenames(
+        filename, series)
+    image5d_ver_num = -1
+    metadata = None
+    try:
+        # load image5d metadata; if updating, only fully load if curr ver
+        metadata, image5d_ver_num = load_metadata(filename_meta, update_info)
+
+        # load original image, using mem-mapped accessed for the image
+        # file to minimize memory requirement, only loading on-the-fly
+        image5d = np.load(filename_image5d, mmap_mode="r")
+        print("image5d shape: {}".format(image5d.shape))
+        if offset is not None and size is not None:
+            # simplifies to reducing the image to a subset as an ROI if
+            # offset and size given
+            image5d = plot_3d.prepare_roi(image5d, size, offset)
+            image5d = roi_to_image5d(image5d)
+
+        if update_info:
+            # if metadata < latest ver, update and load info
+            load_info = _update_image5d_np_ver(
+                image5d_ver_num, image5d, metadata, filename_meta)
+            if load_info:
+                # load updated archive
+                metadata, image5d_ver_num = load_metadata(filename_meta)
+        if return_info:
+            return image5d, metadata
+        return image5d
+    except IOError as e:
+        print(e)
+        if update_info and image5d_ver_num < IMAGE5D_NP_VER:
+            # set to update metadata but could not because image5d
+            # was not available;
+            # TODO: override option since older metadata vers may
+            # still work, or image5d may not be necessary for upgrade
+            raise IOError(
+                "image5d metadata is from an older version ({}, "
+                "current version {}) could not be loaded because "
+                "the original image filedoes not exist. Please "
+                "reopen with the original image file to update "
+                "the metadata.".format(image5d_ver_num, IMAGE5D_NP_VER))
+        if return_info:
+            return None, metadata
+        return None
+
+
+def import_bioformats(filename, series=None, z_max=-1, offset=0,
+                      channel=None, prefix=None, fn_feedback=None):
+    """Imports single or multiplane file(s) into Numpy format via Bioformats.
+
+    For TIFF images, multiple channels will assume to be stored in separate
+    files with :const:``CHANNEL_SEPARATOR`` followed by an integer
+    corresponding to the channel number (0-based indexing), eg
+    ``/path/to/image_ch_0.tif``.
+
+    Args:
+        filename: Image file, assumed to have metadata in OME XML format.
+        series: Series index to load. Defaults to None, which will use 0.
+        z_max: Number of z-planes to load, or -1 if all should be loaded
+            (default).
+        offset (int): z-plane offset from which to start importing.
+            Defaults to 0.
+        channel: Channel number, currently used only to load a channel when
+            a Numpy ROI image exists. Otherwise, all channels available will
+            be imported into a new Numpy image. Defaults to None.
+        prefix (str): Ouput base path; defaults to None to use ``filename``.
+        fn_feedback (func): Callback function to give feedback strings
+            during import; defaults to None.
+
+    Returns:
+        :obj:`np.ndarray`: The image array as a 5D array in the format,
+        ``t, z, y, x[, c]``.
+    """
+    if jb is None or bf is None:
+        libmag.warn(
+            "Python-Bioformats or Python-Javabridge not available, "
+            "multi-page images cannot be imported")
+        return None
+
+    time_start = time()
     if series is None:
         series = 0
     path_split = libmag.splitext(filename)
     ext = path_split[1].lower()
     filename_image5d, filename_meta = make_filenames(
         filename, series)
-    if load:
-        image5d_ver_num = -1
-        try:
-            time_start = time()
-            # load image5d metadata; if updating, only fully load if curr ver
-            output, image5d_ver_num = load_metadata(filename_meta, update_info)
-            
-            # load original image, using mem-mapped accessed for the image
-            # file to minimize memory requirement, only loading on-the-fly
-            image5d = np.load(filename_image5d, mmap_mode="r")
-            print("image5d shape: {}".format(image5d.shape))
-            if offset is not None and size is not None:
-                # simplifies to reducing the image to a subset as an ROI if 
-                # offset and size given
-                image5d = plot_3d.prepare_roi(image5d, size, offset)
-                image5d = roi_to_image5d(image5d)
-            
-            if update_info:
-                # if metadata < latest ver, update and load info
-                load_info = _update_image5d_np_ver(
-                    image5d_ver_num, image5d, output, filename_meta)
-                if load_info:
-                    # load updated archive
-                    output, image5d_ver_num = load_metadata(filename_meta)
-            if return_info:
-                return image5d, output
-            return image5d
-        except IOError as e:
-            print(e)
-            if import_if_absent:
-                print("will attempt to reload {}".format(filename))
-            else:
-                if update_info and image5d_ver_num < IMAGE5D_NP_VER:
-                    # set to update metadata but could not because image5d 
-                    # was not available; 
-                    # TODO: override option since older metadata vers may 
-                    # still work, or image5d may not be necessary for upgrade
-                    raise IOError(
-                        "image5d metadata is from an older version ({}, "
-                        "current version {}) could not be loaded because "
-                        "the original image filedoes not exist. Please "
-                        "reopen with the original image file to update "
-                        "the metadata.".format(image5d_ver_num, IMAGE5D_NP_VER))
-                if return_info:
-                    return None, output
-                return None
-    
-    if jb is None or bf is None:
-        libmag.warn(
-            "Python-Bioformats or Python-Javabridge not available, "
-            "multi-page images cannot be imported")
-        return None
-    
     start_jvm()
-    time_start = time()
     image5d = None
-    if offset is None:
-        offset = (0, 0, 0)  # (x, y, z)
     num_files = 1
     if ext in _EXT_TIFFS:
         # import multipage TIFFs
@@ -702,8 +711,11 @@ def read_file(filename, series=None, load=True, z_max=-1,
             print("adding {} to channel {}".format(img_path, channel_num))
         for t in range(shape[0]):
             for z in range(shape[1]):
-                print("loading planes from [{}, {}]".format(t, z))
-                img = rdr.read(z=(z + offset[2]), t=t, c=channel,
+                msg = "loading planes from [{}, {}]".format(t, z)
+                print(msg)
+                if fn_feedback:
+                    fn_feedback(msg)
+                img = rdr.read(z=(z + offset), t=t, c=channel,
                                series=series, rescale=False)
                 if image5d is None:
                     # open file as memmap to directly output to disk, which is much 
@@ -725,9 +737,7 @@ def read_file(filename, series=None, load=True, z_max=-1,
         near_mins, near_maxs = _calc_near_intensity_bounds(
             num_files, near_mins, near_maxs, lows, highs)
     print("file import time: {}".format(time() - time_start))
-    time_start = time()
     image5d.flush()  # may not be necessary but ensure contents to disk
-    print("flush time: {}".format(time() - time_start))
     #print("lows: {}, highs: {}".format(lows, highs))
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple

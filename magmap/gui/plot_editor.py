@@ -50,6 +50,7 @@ class PlotEditor:
             rather than chosen from the labels image.
         intensity_shown (int): Displayed intensity in the
             :obj:`matplotlib.AxesImage` corresponding to ``img3d_labels``.
+        scale_bar (bool): True to add a scale bar; defaults to False.
 
     """
     ALPHA_DEFAULT = 0.5
@@ -142,6 +143,7 @@ class PlotEditor:
         self.edited = False  # True if labels image was edited
         self.edit_mode = False  # True to edit with mouse motion
         self.region_label = None
+        self.scale_bar = False
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
@@ -315,6 +317,10 @@ class PlotEditor:
             self.plane_slider.set_val(self.coord[0])
         else:
             self._update_overview(self.coord[0])
+        if self.scale_bar:
+            plot_support.add_scale_bar(self.axes, self._downsample[0])
+
+        # store displayed images
         if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
         self._plot_ax_imgs = [
             [PlotAxImg(img) for img in imgs] for imgs in ax_imgs]

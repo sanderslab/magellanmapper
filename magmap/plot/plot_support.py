@@ -627,6 +627,30 @@ def get_plane_axis(plane, get_index=False):
     return plane_axis
 
 
+def setup_images_for_plane(plane, arrs_3d):
+    """Set up image arrays and scaling for the given planar orientation.
+
+    Args:
+        plane (str): Target planar orientation as one of :const:`config.PLANE`.
+        arrs_3d (List[:obj:`np.ndarray`]): Sequence of 3D arrays to transpose.
+
+    Returns:
+        List[:obj:`np.ndarray`], float, str, List[float]: Sequence of transposed
+        3D arrays; aspect ratio, or None if :attr:``detector.resolutions``
+        has not been set; origin, or None for default origin; and transposed
+        labels scaling.
+
+    """
+    scaling = config.labels_scaling
+    if scaling is not None:
+        scaling = [scaling]
+    arrs_3d_tr, arrs_1d = transpose_images(plane, arrs_3d, scaling)
+    aspect, origin = get_aspect_ratio(plane)
+    if arrs_1d is not None and len(arrs_1d) > 0:
+        scaling = arrs_1d[0]
+    return arrs_3d_tr, aspect, origin, scaling
+
+
 def get_roi_path(path, offset, roi_size=None):
     """Get a string describing an ROI for an image at a given path.
     
@@ -699,6 +723,25 @@ def show():
     :class:`matplotlib.pyplot`, which manages the event loop.
     """
     plt.show()
+
+
+def get_downsample_max_sizes():
+    """Get the maximum sizes by axis to keep an image within size limits
+    during downsampling as set in the current atlas profile based on whether
+    the images is loaded as a Numpy memmapped array or not.
+
+    Returns:
+        List[int]: Sequence of maximum sizes by axis set in the current profile
+        if it is also set to downsample images loaded by Numpy, otherwise None.
+
+    """
+    max_sizes = None
+    downsample_io = config.atlas_profile["editor_downsample_io"]
+    if downsample_io and config.image5d_io in downsample_io:
+        max_sizes = config.atlas_profile["editor_max_sizes"]
+        if max_sizes:
+            max_sizes = max_sizes[::-1]
+    return max_sizes
 
 
 if __name__ == "__main__":

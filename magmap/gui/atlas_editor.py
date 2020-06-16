@@ -156,32 +156,17 @@ class AtlasEditor:
                 height_ratios=(1, 10 + 14 * extra_rows), 
                 hspace=0.1/(extra_rows*1.4+1))
             
-            # image plot with arrays transformed to this editor's 
-            # orthogonal direction
+            # transform arrays to the given orthogonal direction
             ax = fig.add_subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
             plane = config.PLANE[axis]
-            plot_support.max_plane(self.image5d[0], plane)
-            arrs_3d = [self.image5d[0]]
-            if self.labels_img is not None:
-                # overlay borders if available
-                arrs_3d.append(self.labels_img)
-            if self.borders_img is not None:
-                # overlay borders if available
-                arrs_3d.append(self.borders_img)
-            scaling = config.labels_scaling
-            if scaling is not None: scaling = [scaling]
-            arrs_3d, arrs_1d = plot_support.transpose_images(
-                plane, arrs_3d, scaling)
-            aspect, origin = plot_support.get_aspect_ratio(plane)
+            arrs_3d, aspect, origin, scaling = \
+                plot_support.setup_images_for_plane(
+                    plane,
+                    (self.image5d[0], self.labels_img, self.borders_img))
             img3d_transposed = arrs_3d[0]
-            labels_img_transposed = None
-            if len(arrs_3d) >= 2:
-                labels_img_transposed = arrs_3d[1]
-            borders_img_transposed = None
-            if len(arrs_3d) >= 3:
-                borders_img_transposed = arrs_3d[2]
-            if arrs_1d is not None and len(arrs_1d) > 0: scaling = arrs_1d[0]
+            labels_img_transposed = libmag.get_if_within(arrs_3d, 1)
+            borders_img_transposed = libmag.get_if_within(arrs_3d, 2)
             
             # slider through image planes
             ax_scroll = fig.add_subplot(gs_plot[0, 0])
@@ -203,12 +188,7 @@ class AtlasEditor:
             return plot_ed
         
         # setup plot editors for all 3 orthogonal directions
-        max_sizes = None
-        downsample_io = config.atlas_profile["editor_downsample_io"]
-        if downsample_io and config.image5d_io in downsample_io:
-            max_sizes = config.atlas_profile["editor_max_sizes"]
-            if max_sizes:
-                max_sizes = max_sizes[::-1]
+        max_sizes = plot_support.get_downsample_max_sizes()
         for i, gs_viewer in enumerate(
                 (gs_viewers[:2, 0], gs_viewers[0, 1], gs_viewers[1, 1])):
             self.plot_eds[config.PLANE[i]] = setup_plot_ed(i, gs_viewer)

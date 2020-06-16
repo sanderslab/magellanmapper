@@ -1336,7 +1336,6 @@ class Visualization(HasTraits):
 
         # update verify flag
         roi_editor.verify = self._DEFAULTS_2D[1] in self._check_list_2d
-        img = config.image5d
         roi = None
         if self._DEFAULTS_2D[0] in self._check_list_2d:
             print("showing processed 2D images")
@@ -1362,20 +1361,20 @@ class Visualization(HasTraits):
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
         stack_args = (
-            self.update_segment, filename_base, img, config.channel,
+            self.update_segment, filename_base, config.channel,
             curr_roi_size, curr_offset, self.segments, self.segs_in_mask,
             self.segs_cmap, self._roi_ed_close_listener,
             # additional args with defaults
             self._full_border(self.border), self._planes_2d[0].lower())
-        roi_ed = roi_editor.ROIEditor(self.update_status_bar_msg)
+        roi_ed = roi_editor.ROIEditor(
+            config.image5d, config.labels_img, self._img_region,
+            self.show_label_3d, self.update_status_bar_msg)
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
             "roi": roi, "labels": self.labels, "blobs_truth": blobs_truth_roi, 
             "circles": roi_editor.ROIEditor.CircleStyles(self._circles_2d[0]),
-            "grid": grid, "img_region": self._img_region,
-            "max_intens_proj": max_intens_proj, 
-            "labels_img": config.labels_img,
+            "grid": grid, "max_intens_proj": max_intens_proj,
             "zoom_shift": config.plot_labels[config.PlotLabels.ZOOM_SHIFT],
             "roi_cols": roi_cols,
             "fig": self._roi_ed_fig,

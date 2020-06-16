@@ -21,9 +21,8 @@ from matplotlib import gridspec
 from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
-from skimage import transform
 
-from magmap.gui import pixel_display
+from magmap.gui import plot_editor
 from magmap.plot import colormaps
 from magmap.settings import config
 from magmap.cv import detector
@@ -265,6 +264,13 @@ class ROIEditor:
         ZLevels (:obj:`Enum`): Enum denoting the possible positions of the
             z-plane shown in the overview plots.
         fig (:obj:`figure.figure`): Matplotlib figure.
+        image5d (:obj:`np.ndarray`): Main image array in ``t,z,y,x[,c]``
+            format; defaults to None.
+        labels_img (:obj:`np.ndarray`): Atlas labels image in ``z,y,x`` format;
+            defaults to None.
+        img_region (:obj:`np.ndarray`): 3D boolean or binary array with the
+            selected region labeled as True or 1. Defaults to None, in
+            which case the region will be ignored.
         fn_status_bar (func): Function to call during status bar updates
             in :class:`pixel_display.PixelDisplay`; defaults to None.
     """
@@ -306,10 +312,20 @@ class ROIEditor:
     #: int: padding for ROI within overview plots
     _ROI_PADDING = 10
 
-    def __init__(self, fn_status_bar=None):
+    def __init__(self, image5d=None, labels_img=None, img_region=None,
+                 fn_show_label_3d=None, fn_status_bar=None):
         """Initialize the editor."""
         print("Initiating ROI Editor")
         self.fig = None
+        self.image5d = image5d
+        self.labels_img = labels_img
+        if img_region is not None:
+            # invert region selection image to opacify areas outside of the
+            # region; note that in MIP mode, will still only show lowest plane
+            img_region = np.invert(img_region).astype(float)
+            img_region[img_region == 0] = np.nan
+        self.img_region = img_region
+        self.fn_show_label_3d = fn_show_label_3d
         self.fn_status_bar = fn_status_bar
 
         # initialize other instance attributes
@@ -318,27 +334,26 @@ class ROIEditor:
         self.roi_size = None
         self.plane = None
         self._z_overview = None
+        self._plot_eds = []  # overview plots
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
         self._circle_last_picked = []
 
-    def plot_2d_stack(self, fn_update_seg, filename, image5d, channel,
+    def plot_2d_stack(self, fn_update_seg, filename, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
                       fn_close_listener, border=None, plane="xy",
                       zoom_levels=1, zoom_shift=None, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
-                      grid=False, roi_cols=None, img_region=None,
-                      max_intens_proj=False, labels_img=None, fig=None,
-                      region_name=None):
+                      grid=False, roi_cols=None, max_intens_proj=False,
+                      fig=None, region_name=None):
         """Shows a figure of 2D plots to compare with the 3D plot.
 
         Args:
             fn_update_seg (func): Callback when updating a 
                 :obj:`DraggableCircle`.
             filename (str): Path to use when saving the plot.
-            image5d: Full Numpy array of the image stack.
             channel: Channel of the image to display.
             roi_size: List of x,y,z dimensions of the ROI.
             offset: Tuple of x,y,z coordinates of the ROI.
@@ -377,15 +392,8 @@ class ROIEditor:
             grid (bool): True to overlay a grid on all plots.
             roi_cols (int): Number of columns per row to reserve for ROI plots;
                 defaults to None, in which case :attr:`ROI_COLS` will be used.
-            img_region: 3D boolean or binary array corresponding to a scaled
-                version of ``image5d`` with the selected region labeled as True
-                or 1. ``config.labels_scaling`` will be used to scale up this
-                region to overlay on overview images. Defaults to None, in which
-                case the region will be ignored.
             max_intens_proj: True to show overview images as local max intensity
                 projections through the ROI. Defaults to Faslse.
-            labels_img (:obj:`np.ndarray`): Atlas labels image in z,y,x format;
-                defaults to None.
             fig (:obj:`figure.Figure`): Matplotlib figure; defaults to None
                 to generate a new figure.
             region_name (str): Name of atlas region for title; defaults to None.
@@ -404,7 +412,7 @@ class ROIEditor:
             # convert scalar to sequence of zoom multipliers for zooming into
             # the ROI in overview plots; scale the zoom to a default of 3x
             # the ROI shape
-            size_max = image5d.shape[2:4][::-1]
+            size_max = self.image5d.shape[2:4][::-1]
             size_min = np.multiply(roi_size[:2], 3)
             if any(np.greater(size_min, size_max)):
                 # fallback to ROI size if default exceeds the full image size
@@ -485,55 +493,25 @@ class ROIEditor:
         elif z_level == self.ZLevels.TOP:
             z_overview = z_start + z_planes
         print("z_overview: {}".format(z_overview))
-        max_size = plot_support.max_plane(image5d[0], plane)
-        sym_colors = config.atlas_labels[config.AtlasLabels.SYMMETRIC_COLORS]
 
-        def prep_overview():
-            """Prep overview image planes based on chosen orientation.
-            """
-            # main overview image
-            z_range = z_overview
-            if max_intens_proj:
-                # max intensity projection (MIP) is local, through the entire
-                # ROI and thus not changing with scrolling
-                z_range = np.arange(z_start, z_start + roi_size[2])
-            img5d_2d, asp, ori = plot_support.extract_planes(
-                image5d, z_range, plane, max_intens_proj)
-            img5d_shape = image5d.shape[1:4]
-            imgs = [img5d_2d, labels_img, img_region]
-            cmaps = [config.cmaps, None, ("Greys",)]
-            # use image metadata vals for vmin/vmax main image; set explicitly
-            # for labels and region highlighter overlays
-            vmins = [config.near_min, None, 0.1]
-            vmaxs = [config.vmax_overview, None, 1]
-            # default to translucent labels and region images, overwriting
-            # with config values
-            alphas = [None, 0.5, 0.4]
-            alphas = libmag.pad_seq(config.alphas, len(alphas), alphas)
-            for img_i, img in enumerate(imgs):
-                if img_i == 0 or img is None: continue
-                # extract corresponding plane from image after scaling
-                scale = np.divide(img.shape, img5d_shape)
-                axis = plot_support.get_plane_axis(plane, True)
-                imgs[img_i], _, _ = plot_support.extract_planes(
-                    img, int(scale[axis] * z_overview), plane)
-                if img_i == 1:
-                    # add discrete colormap for labels image
-                    cmaps[img_i] = colormaps.get_labels_discrete_colormap(
-                        imgs[img_i], 0, dup_for_neg=True, 
-                        use_orig_labels=True, symmetric_colors=sym_colors)
-                elif img_i == 2:
-                    # invert region selection image to opacify areas outside
-                    # of the region; if in MIP mode, will still only show 
-                    # lowest plane
-                    region = np.invert(imgs[img_i]).astype(float)
-                    region[region == 0] = np.nan
-                    imgs[img_i] = region
-            return asp, ori, {
-                "imgs": imgs, "cmaps": cmaps, "vmins": vmins, "vmaxs": vmaxs,
-                "alphas": alphas}
-
-        aspect, origin, img2ds = prep_overview()
+        # set up images to overlay in overview plots
+        arrs3d = [self.image5d[0], self.labels_img]
+        if self.img_region is not None:
+            arrs3d.append(self.img_region)
+        arrs_3d, aspect, origin, scaling = plot_support.setup_images_for_plane(
+            plane, arrs3d)
+        scaling = config.labels_scaling
+        if scaling is not None: scaling = [scaling]
+        cmap_labels = None
+        if self.labels_img is not None:
+            # set up labels image discrete colormap
+            sym_colors = config.atlas_labels[config.AtlasLabels.SYMMETRIC_COLORS]
+            cmap_labels = colormaps.get_labels_discrete_colormap(
+                self.labels_img, 0, dup_for_neg=True, use_orig_labels=True,
+                symmetric_colors=sym_colors)
+        max_sizes = plot_support.get_downsample_max_sizes()
+        max_size = max_sizes[plot_support.get_plane_axis(
+            plane, get_index=True)] if max_sizes else None
 
         # plot layout depending on number of z-planes
         if single_roi_row:
@@ -555,7 +533,7 @@ class ROIEditor:
         top_cols = len(zoom_levels)
         height_ratios = (3, zoom_plot_rows)
         if mlab_screenshot is None:
-            main_img_shape = img2ds["imgs"][0].shape
+            main_img_shape = arrs_3d[0].shape[1:]
             if main_img_shape[1] > 2 * main_img_shape[0]:
                 # for wide layouts, prioritize the ROI plots, especially
                 # if only one overview column
@@ -571,26 +549,19 @@ class ROIEditor:
         ax_overviews = []  # overview axes
         ax_z_list = []  # zoom plot axes
 
-        def show_overview(ax_ov, lev, imgs, cmaps, vmins, vmaxs, alphas):
+        def show_overview(ax_ov, lev):
             """Show overview image with progressive zooming on the ROI for each
             zoom level.
 
             Args:
                 ax_ov: Subplot axes.
                 lev: Zoom level, where 0 is the original image.
-                imgs: Sequence of images to overlay.
-                cmaps: Sequence of colormaps corresponding to ``imgs``.
-                vmins: Sequence of vmins corresponding to ``imgs``.
-                vmaxs: Sequence of vmins corresponding to ``imgs``.
             """
-            patch_offset = offset[:2]
             zoom = 1
-            imgs = list(imgs)
-            shapes = [None if img is None else img.shape for img in imgs]
             # main overview image, on which other images may be overlaid
-            img2d_ov = imgs[0]
             roi_end = np.add(offset, roi_size)
-            offsets = []
+            offsets = []  # z,y,x
+            sizes = []  # z,y,x
             if lev > 0:
                 # move origin progressively closer with each zoom level,
                 # a small fraction less than the offset
@@ -598,7 +569,7 @@ class ROIEditor:
                 ori = np.multiply(
                     offset[:2],
                     np.subtract(zoom, zoom_shift) / zoom).astype(int)
-                zoom_shape = np.flipud(img2d_ov.shape[:2])
+                zoom_shape = np.flipud(arrs_3d[0].shape[1:3])
                 # progressively decrease size, zooming in for each level
                 size = (zoom_shape / zoom).astype(int)
                 end = np.add(ori, size)
@@ -613,64 +584,44 @@ class ROIEditor:
                 for o in range(len(ori)):
                     if end[o] > zoom_shape[o]:
                         ori[o] -= end[o] - zoom_shape[o]
-                for img_i, img in enumerate(imgs):
+                for img_i, img in enumerate(arrs_3d):
                     if img is not None:
                         # zoom images based on scaling to main image
                         scale = np.divide(
-                            img.shape[:2], img2d_ov.shape[:2])[::-1]
+                            img.shape[1:3], arrs_3d[0].shape[1:3])[::-1]
                         origin_scaled = np.multiply(ori, scale).astype(np.int)
                         end_scaled = np.multiply(end, scale).astype(np.int)
-                        imgs[img_i] = img[
-                            origin_scaled[1]:end_scaled[1],
-                            origin_scaled[0]:end_scaled[0]]
                         offsets.append(origin_scaled[::-1])
-                # zoom main image and position ROI patch
-                img2d_ov = img2d_ov[ori[1]:end[1], ori[0]:end[0]]
-                patch_offset = np.subtract(patch_offset, ori)
+                        sizes.append(np.subtract(end_scaled, origin_scaled)[::-1])
 
-            # downsample by taking interval to minimize values required to
-            # access per plane, which can improve performance considerably
-            downsample = np.max(
-                np.divide(img2d_ov.shape,
-                          self._DOWNSAMPLE_MAX_ELTS)).astype(np.int)
-            if downsample < 1:
-                downsample = 1
-            img2d_ov_ds = img2d_ov[::downsample, ::downsample]
-            imgs[0] = img2d_ov_ds
+            # create a Plot Editor for the overview image
+            num_arrs_3d = len(arrs_3d)
+            labels_img = None if num_arrs_3d <= 1 else arrs_3d[1]
+            img3d_extras = arrs_3d[2:] if num_arrs_3d > 2 else None
+            if img3d_extras is not None:
+                img3d_extras = [np.array(img) for img in img3d_extras]
+                print([img.shape for img in img3d_extras])
+            plot_ed = plot_editor.PlotEditor(
+                ax_ov, arrs_3d[0], labels_img, cmap_labels,
+                plane, aspect, origin,
+                lambda x, y: plot_ed.update_coord(x, show_crosslines=False),
+                scaling, max_size=max_size, fn_status_bar=self.fn_status_bar,
+                img3d_extras=img3d_extras,
+                fn_show_label_3d=self.fn_show_label_3d)
+            plot_ed.scale_bar = True
+            plot_ed.enable_painting = False
+            plot_ed.max_intens_proj = roi_size[2] if max_intens_proj else 0
+            plot_ed.set_roi(offset[1::-1], roi_size[1::-1])
+            plot_ed.update_coord((z_overview, ), show_crosslines=False)
+            if offsets and sizes:
+                # zoom toward ROI
+                plot_ed.view_subimg(offsets[0], sizes[0])
+            self._plot_eds.append(plot_ed)
+            update_overview_title(ax_ov, lev)
 
-            # show the zoomed 2D image along with rectangle highlighting the ROI
-            show = {"channels": None}
-            keys = ("imgs2d", "cmaps", "vmins", "vmaxs", "alphas")
-            for img_i, (img, cm, vmin, vmax, alp) in enumerate(
-                    zip(imgs, cmaps, vmins, vmaxs, alphas)):
-                if img is None: continue
-                if img_i == 0:
-                    if np.prod(img.shape[1:3]) < 2 * np.prod(roi_size[:2]):
-                        # remove normalization from overview image if close in
-                        # size to zoomed plots to emphasize the raw image
-                        vmin = None
-                        vmax = None
-                for k, v in zip(keys, (img, cm, vmin, vmax, alp)):
-                    show.setdefault(k, []).append(v)
-            ax_imgs = plot_support.overlay_images(
-                ax_ov, aspect, origin, ignore_invis=True, **show)
-            ax_ov.add_patch(patches.Rectangle(
-                np.divide(patch_offset, downsample),
-                *np.divide(roi_size[0:2], downsample),
-                fill=False, edgecolor="yellow", linewidth=2))
-            if config.plot_labels[config.PlotLabels.SCALE_BAR]:
-                plot_support.add_scale_bar(ax_ov, downsample, plane)
-
-            # show pixel values for all overlaid images in status bar;
-            # need a custom listener for figs embedded in TraitsUI
-            ax_ov.format_coord = pixel_display.PixelDisplay(
-                show["imgs2d"], ax_imgs, shapes, offsets,
-                libmag.get_if_within(cmaps, 1))
-            fig.canvas.mpl_connect(
-                "motion_notify_event",
-                lambda evt: self.fn_status_bar(ax_ov.format_coord.get_msg(evt)))
-
+        def update_overview_title(ax_ov, lev):
             # set title with total zoom including objective and plane number
+            zoom = zoom_levels[lev]
             if config.zoom and config.magnification:
                 # calculate total mag from objective zoom and mag
                 zoom_components = np.array(
@@ -683,7 +634,7 @@ class ROIEditor:
             else:
                 tot_zoom = "{}x of original".format(zoom)
             plot_support.set_overview_title(
-                ax_ov, plane, z_overview, tot_zoom, lev, max_intens_proj)
+                ax_ov, plane, self._z_overview, tot_zoom, lev, max_intens_proj)
 
         def jump(event):
             z_ov = None
@@ -701,24 +652,12 @@ class ROIEditor:
                     will be used for movements. For key events, up/down arrows
                     will be used.
             """
-            # no scrolling if MIP since already showing full ROI
-            if max_intens_proj:
-                print("skipping overview scrolling while showing max intensity "
-                      "projection")
-                return
-            nonlocal z_overview
-            z_overview_new = plot_support.scroll_plane(
-                event, z_overview, max_size, jump)
-            if z_overview_new != z_overview:
-                # move only if step registered and changing position
-                z_overview = z_overview_new
-                _, _, imgs = prep_overview()
-                for lev in range(num_zoom_levels):
-                    # prevent performance degradation
-                    ax_ov = ax_overviews[lev]
-                    ax_ov.clear()
-                    show_overview(ax_ov, lev, **imgs)
-            self._z_overview = z_overview
+            for edi, plot_ed in enumerate(self._plot_eds):
+                plot_ed.scroll_overview(event, only_in_axes=False, fn_jump=jump)
+                if edi == 0:
+                    # z-plane index should be same for all editors
+                    self._z_overview = plot_ed.coord[0]
+                update_overview_title(plot_ed.axes, edi)
             update_subplot_border()
             fig.canvas.draw_idle()
 
@@ -726,7 +665,7 @@ class ROIEditor:
             # show a colored border around zoomed plot corresponding to
             # overview plots
             for axi, axz in enumerate(ax_z_list):
-                if axi + z_start - z_planes_padding == z_overview:
+                if axi + z_start - z_planes_padding == self._z_overview:
                     # highlight border
                     axz.patch.set_edgecolor("orange")
                     axz.patch.set_linewidth(3)
@@ -751,7 +690,7 @@ class ROIEditor:
             ax = fig.add_subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
-            show_overview(ax, level, **img2ds)
+            show_overview(ax, level)
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 
@@ -825,12 +764,12 @@ class ROIEditor:
                 #print("blobs_truth_z:\n{}".format(blobs_truth_z))
 
                 # show border outlining area that will be saved in verify mode
-                show_border = (verify and z_relative >= border[2]
-                               and z_relative < roi_size[2] - border[2])
+                show_border = (verify and border[2] <= z_relative
+                               < roi_size[2] - border[2])
 
                 # show the zoomed subplot with scale bar for the current z-plane
                 ax_z = self.show_subplot(
-                    fig, gs_zoomed, i, j, image5d, channel, roi_size,
+                    fig, gs_zoomed, i, j, channel, roi_size,
                     zoom_offset, fn_update_seg,
                     segs_in, segs_out, segs_cmap, alpha, z_relative,
                     z == z_overview, border_full if show_border else None,
@@ -1021,7 +960,7 @@ class ROIEditor:
             region, name, series, *offset[:3], str(tuple(roi_size)).strip("()"),
             str(tuple(roi_size_um)).strip("()"), u'\u00b5m')
 
-    def show_subplot(self, fig, gs, row, col, image5d, channel, roi_size,
+    def show_subplot(self, fig, gs, row, col, channel, roi_size,
                      offset, fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
                      z_relative, highlight=False, border=None, plane="xy",
                      roi=None, labels=None, blobs_truth=None, circles=None,
@@ -1033,7 +972,6 @@ class ROIEditor:
             gs: Gridspec layout.
             row: Row number of the subplot in the layout.
             col: Column number of the subplot in the layout.
-            image5d: Full Numpy array of the image stack.
             channel: Channel of the image to display.
             roi_size: List of x,y,z dimensions of the ROI.
             offset: Tuple of x,y,z coordinates of the ROI.
@@ -1067,10 +1005,10 @@ class ROIEditor:
         """
         ax = fig.add_subplot(gs[row, col])
         plot_support.hide_axes(ax)
-        size = image5d.shape
+        size = self.image5d.shape
         # swap columns if showing a different plane
         plane_axis = plot_support.get_plane_axis(plane)
-        image5d_shape_offset = 1 if image5d.ndim >= 4 else 0
+        image5d_shape_offset = 1 if self.image5d.ndim >= 4 else 0
         if plane == config.PLANE[1]:
             # "xz" planes
             size = libmag.swap_elements(size, 0, 1, image5d_shape_offset)
@@ -1098,7 +1036,7 @@ class ROIEditor:
                 region = [offset[2],
                           slice(offset[1], offset[1] + roi_size[1]),
                           slice(offset[0], offset[0] + roi_size[0])]
-                roi = image5d[0]
+                roi = self.image5d[0]
                 #print("region: {}".format(region))
             else:
                 region = [z_relative, slice(0, roi_size[1]),

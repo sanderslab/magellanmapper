@@ -146,10 +146,9 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
             sitk.WriteImage(img3d_sitk, path_img_nifti, False)
-            roi_ed = roi_editor.ROIEditor()
+            roi_ed = roi_editor.ROIEditor(img3d)
             roi_ed.plot_roi(
-                img3d, blobs, channel, show=False, 
-                title=os.path.splitext(path_img)[0])
+                blobs, channel, show=False, title=os.path.splitext(path_img)[0])
             libmag.show_full_arrays()
             
             # export image and blobs, stripping blob flags and adjusting 
@@ -259,7 +258,8 @@ def _test_loading_rois(db, channel, path):
     roi_ed = roi_editor.ROIEditor()
     for img, blobs in zip(imgs, img_blobs):
         config.savefig = None
-        roi_ed.plot_roi(img, blobs, channel, show=True, title=path_base)
+        roi_ed.image5d = img
+        roi_ed.plot_roi(blobs, channel, show=True, title=path_base)
 
 
 def blobs_to_csv(blobs, path):

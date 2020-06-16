@@ -81,7 +81,10 @@ class PlotEditor:
                 plane to view.
             aspect (float): Aspect ratio.
             origin (str): Planar orientation, usually either "lower" or None.
-            fn_update_coords (function): Callback when updating coordinates.
+            fn_update_coords (function): Callback when updating coordinates,
+                typically mouse click events in x,y; takes two aruments,
+                the updated coordinates and ``plane`` to indicate the
+                coordinates' orientation.
             fn_refresh_images (function): Callback when refreshing the image.
                 Typically takes two arguments, this ``PlotEditor`` object
                 and a boolean where True will update synchronized
@@ -217,12 +220,22 @@ class PlotEditor:
                 self._ax_img_labels.figure.canvas.mpl_disconnect(listener)
         self.connected = False
 
-    def update_coord(self, coord):
+    def update_coord(self, coord, show_crosslines=True):
+        """Update the displayed image for the given coordinates.
+
+        Scroll to the given z-plane if changed and draw crosshairs to
+        indicated the corresponding ``x,y`` values.
+
+        Args:
+            coord (List[int]): Coordinates in ``(z, y, x)``.
+
+        """
         update_overview = self.coord is None or coord[0] != self.coord[0]
         self.coord = coord
         if update_overview:
             self.show_overview()
-        self.draw_crosslines()
+        if show_crosslines:
+            self.draw_crosslines()
 
     def translate_coord(self, coord, up=False, coord_slice=None):
         """Translate coordinate based on downsampling factor of the main image.
@@ -401,11 +414,11 @@ class PlotEditor:
             coord[0] = z_overview_new
             self.fn_update_coords(coord, self.plane)
     
-    def scroll_overview(self, event):
-        if event.inaxes != self.axes: return
+    def scroll_overview(self, event, only_in_axes=True, fn_jump=None):
+        if only_in_axes and event.inaxes != self.axes: return
         z_overview_new = plot_support.scroll_plane(
-            event, self.coord[0], self.img3d.shape[0], 
-            max_scroll=config.max_scroll)
+            event, self.coord[0], self.img3d.shape[0], fn_jump,
+            config.max_scroll)
         self._update_overview(z_overview_new)
     
     def update_plane_slider(self, val):

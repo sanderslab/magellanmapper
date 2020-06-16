@@ -152,6 +152,10 @@ class PlotEditor:
         # track label editing during mouse click/movement for plane interp
         self._editing = False
 
+        # ROI offset and size in z,y,x
+        self._roi_offset = None
+        self._roi_size = None
+
         # pre-compute image shapes, scales, and downsampling factors for
         # each type of 3D image
         self._img3d_shapes = [None] * 3
@@ -327,6 +331,7 @@ class PlotEditor:
             self.plane_slider.set_val(self.coord[0])
         else:
             self._update_overview(self.coord[0])
+        self._show_roi()
         if self.scale_bar:
             plot_support.add_scale_bar(self.axes, self._downsample[0])
 
@@ -381,6 +386,33 @@ class PlotEditor:
         self.axes.set_ylim(off_trans[0] + size_trans[0], off_trans[0])
         self.xlim = self.axes.get_xlim()
         self.ylim = self.axes.get_ylim()
+
+    def set_roi(self, offset, size):
+        """Define a region of interest to display.
+
+        The ROI will be shown by :meth:`_show_roi`.
+
+        Args:
+            offset (List[int]): ROI offset in ``y, x``.
+            size (List[int]): ROI size in ``y, x``.
+
+        """
+        coord_slice = slice(0, None)
+        self._roi_offset = self.translate_coord(offset, coord_slice=coord_slice)
+        self._roi_size = self.translate_coord(size, coord_slice=coord_slice)
+
+    def _show_roi(self):
+        """Show an ROI as an empty rectangular patch.
+
+        Will display only if :attr:`self._roi_offset` and
+        :attr:`self._roi_size` have been set.
+
+        """
+        if self._roi_offset is None or self._roi_size is None: return
+        self.axes.add_patch(patches.Rectangle(
+            self._roi_offset[::-1],
+            *self._roi_size[::-1],
+            fill=False, edgecolor="yellow", linewidth=2))
 
     def refresh_img3d_labels(self):
         """Replace the displayed labels image with underlying plane's data.

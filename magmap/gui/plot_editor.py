@@ -64,10 +64,11 @@ class PlotEditor:
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
-                 fn_update_intensity=None, max_size=None, fn_status_bar=None):
                  aspect, origin, fn_update_coords, fn_refresh_images=None,
                  scaling=None, plane_slider=None, img3d_borders=None,
                  cmap_borders=None, fn_show_label_3d=None, interp_planes=None,
+                 fn_update_intensity=None, max_size=None, fn_status_bar=None,
+                 img3d_extras=None):
         """Initialize the plot editor.
         
         Args:
@@ -103,6 +104,8 @@ class PlotEditor:
                 defaults to None.
             fn_status_bar (func): Function to call during status bar updates
                 in :class:`pixel_display.PixelDisplay`; defaults to None.
+            img3d_extras (List[:obj:`np.ndarray`]): Sequence of additional
+                intensity images to display; defaults to None.
 
         """
         self.axes = axes
@@ -125,6 +128,7 @@ class PlotEditor:
         self.interp_planes = interp_planes
         self.fn_update_intensity = fn_update_intensity
         self.fn_status_bar = fn_status_bar
+        self.img3d_extras = img3d_extras
         
         self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
@@ -165,11 +169,14 @@ class PlotEditor:
 
         # pre-compute image shapes, scales, and downsampling factors for
         # each type of 3D image
-        self._img3d_shapes = [None] * 3
-        self._img3d_scales = [None] * 3
-        self._downsample = [1] * 3
-        for i, img in enumerate(
-                (self.img3d, self.img3d_labels, self.img3d_borders)):
+        img3ds = [self.img3d, self.img3d_labels, self.img3d_borders]
+        if self.img3d_extras is not None:
+            img3ds.extend(self.img3d_extras)
+        num_img3ds = len(img3ds)
+        self._img3d_shapes = [None] * num_img3ds
+        self._img3d_scales = [None] * num_img3ds
+        self._downsample = [1] * num_img3ds
+        for i, img in enumerate(img3ds):
             if img is None: continue
             self._img3d_shapes[i] = img.shape
             if i > 0:
@@ -320,6 +327,7 @@ class PlotEditor:
         shapes = [self._img3d_shapes[0][1:3]]
         
         if self.img3d_labels is not None:
+            # prep labels with discrete colormap
             imgs2d.append(self._get_img2d(1, self.img3d_labels))
             cmaps.append(self.cmap_labels)
             alphas.append(self.alpha)
@@ -338,6 +346,15 @@ class PlotEditor:
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
                 shapes.append(self._img3d_shapes[2][1:3])
+
+        if self.img3d_extras is not None:
+            for i, img in enumerate(self.img3d_extras):
+                # prep additional intensity image
+                imgi = 3 + i
+                imgs2d.append(self._get_img2d(imgi, img))
+                cmaps.append(("Greys",))
+                alphas.append(0.4)
+                shapes.append(self._img3d_shapes[imgi][1:3])
 
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single
@@ -366,6 +383,7 @@ class PlotEditor:
             [PlotAxImg(img) for img in imgs] for imgs in ax_imgs]
         
         if self.xlim is not None and self.ylim is not None:
+            # restore pan/zoom view
             self.axes.set_xlim(self.xlim)
             self.axes.set_ylim(self.ylim)
         if not self.connected:

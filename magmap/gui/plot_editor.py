@@ -56,10 +56,10 @@ class PlotEditor:
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
     def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
-                 aspect, origin, fn_update_coords, fn_refresh_images, scaling, 
-                 plane_slider, img3d_borders=None, cmap_borders=None, 
-                 fn_show_label_3d=None, interp_planes=None,
                  fn_update_intensity=None, max_size=None, fn_status_bar=None):
+                 aspect, origin, fn_update_coords, fn_refresh_images=None,
+                 scaling=None, plane_slider=None, img3d_borders=None,
+                 cmap_borders=None, fn_show_label_3d=None, interp_planes=None,
         """Initialize the plot editor.
         
         Args:
@@ -109,7 +109,8 @@ class PlotEditor:
         self.fn_refresh_images = fn_refresh_images
         self.scaling = config.labels_scaling if scaling is None else scaling
         self.plane_slider = plane_slider
-        self.plane_slider.on_changed(self.update_plane_slider)
+        if self.plane_slider:
+            self.plane_slider.on_changed(self.update_plane_slider)
         self.img3d_borders = img3d_borders
         self.cmap_borders = cmap_borders
         self.fn_show_label_3d = fn_show_label_3d
@@ -308,7 +309,12 @@ class PlotEditor:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = pixel_display.PixelDisplay(
             imgs2d, ax_imgs, shapes, cmap_labels=self.cmap_labels)
-        self.plane_slider.set_val(self.coord[0])
+
+        # trigger actual display through slider or call update directly
+        if self.plane_slider:
+            self.plane_slider.set_val(self.coord[0])
+        else:
+            self._update_overview(self.coord[0])
         if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
         self._plot_ax_imgs = [
             [PlotAxImg(img) for img in imgs] for imgs in ax_imgs]
@@ -585,7 +591,10 @@ class PlotEditor:
                                 self.coord[0], rr, cc] = self.intensity
                             print("changed intensity at x,y,z = {},{},{} to {}"
                                   .format(*coord[::-1], self.intensity))
-                            self.fn_refresh_images(self, True)
+                            if self.fn_refresh_images is None:
+                                self.refresh_img3d_labels()
+                            else:
+                                self.fn_refresh_images(self, True)
                             self.edited = True
                             self._editing = True
                     else:

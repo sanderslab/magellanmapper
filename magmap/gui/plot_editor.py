@@ -50,8 +50,14 @@ class PlotEditor:
             rather than chosen from the labels image.
         intensity_shown (int): Displayed intensity in the
             :obj:`matplotlib.AxesImage` corresponding to ``img3d_labels``.
+        coord (List[int]): Coordinates in ``z, y, x``.
         scale_bar (bool): True to add a scale bar; defaults to False.
         enable_painting (bool): True to enable label painting; defaults to True.
+        max_intens_proj (int): Number of planes to include in a maximum
+            intensity projection; defaults to 0 for no projection. The
+            planes are taken starting from the given z-value in ``coord``,
+            limited by the number of planes available. Applied to the first
+            intensity image.
 
     """
     ALPHA_DEFAULT = 0.5
@@ -145,6 +151,7 @@ class PlotEditor:
         self.edit_mode = False  # True to edit with mouse motion
         self.region_label = None
         self.scale_bar = False
+        self.max_intens_proj = 0
         self.enable_painting = True
 
         self._plot_ax_imgs = None
@@ -257,7 +264,7 @@ class PlotEditor:
             self.hline.set_ydata(coord[1])
             self.vline.set_xdata(coord[2])
 
-    def _get_img2d(self, i, img):
+    def _get_img2d(self, i, img, max_intens=0):
         """Get the 2D image from the given 3D image, scaling and downsampling
         as necessary.
 
@@ -265,19 +272,37 @@ class PlotEditor:
             i (int): Index of 3D image in sequence of 3D images, assuming
                 order of ``(main_image, labels_img, borders_img)``.
             img (:obj:`np.ndarray`): 3D image from which to extract a 2D plane.
+            max_intens (int): Number of planes to incorporate for maximum
+                intensity projection; defaults to 0 to not perform this
+                projection.
 
         Returns:
             :obj:`np.ndarray`: 2D plane, downsampled if necessary.
 
         """
         z = self.coord[0]
+        z_scale = 1
         if self._img3d_scales[i] is not None:
             # rescale z-coordinate based on image scaling to the main image
-            z = int(z * self._img3d_scales[i][0])
+            z_scale = self._img3d_scales[i][0]
+            z = int(z * z_scale)
         # downsample to reduce access time; use same factor for both x and y
         # to retain aspect ratio
         downsample = self._downsample[i]
-        return img[z, ::downsample, ::downsample]
+        img = img[:, ::downsample, ::downsample]
+        if max_intens:
+            # max intensity projection (MIP) across the given number of
+            # planes available
+            z_stop = z + int(max_intens * z_scale)
+            num_z = len(img)
+            if z_stop > num_z:
+                z_stop = num_z
+            z_range = np.arange(z, z_stop)
+            img2d = plot_support.extract_planes(
+                img[None], z_range, max_intens_proj=True)[0]
+        else:
+            img2d = img[z]
+        return img2d
 
     def show_overview(self):
         """Show the main 2D plane, taken as a z-plane."""
@@ -288,8 +313,8 @@ class PlotEditor:
         self.hline = None
         self.vline = None
         
-        # prep main image in grayscale and labels with discrete colormap
-        imgs2d = [self._get_img2d(0, self.img3d)]
+        # prep 2D image from main image, assumed to be an intensity image
+        imgs2d = [self._get_img2d(0, self.img3d, self.max_intens_proj)]
         cmaps = [config.cmaps]
         alphas = [config.alphas[0]]
         shapes = [self._img3d_shapes[0][1:3]]

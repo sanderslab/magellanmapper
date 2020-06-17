@@ -1972,6 +1972,10 @@ class Visualization(HasTraits):
     def _import_files(self):
         """Import files based on paths in the import table.
         """
+        def update_filename():
+            # update image path and trigger loading the image
+            self._filename = self._import_prefix
+        
         # repopulate channel paths dict, including any user edits
         chl_paths = {}
         for row in self._import_paths:
@@ -1983,10 +1987,13 @@ class Visualization(HasTraits):
             config.magnification = self._import_mag
             config.zoom = self._import_zoom
             
-            # initialize import in separate thread
+            # initialize import in separate thread with a signal for
+            # loading thew newly imported image
+            self.load_image_signal = QtSignal()
+            self.load_image_signal.signal.connect(update_filename)
             import_thread = ImportThread(
                 self._import_mode, self._import_prefix, chl_paths,
-                self._update_import_feedback)
+                self._update_import_feedback, self.load_image_signal.signal)
             import_thread.start()
     
     @on_trait_change("_import_clear_btn")
@@ -2008,6 +2015,11 @@ class Visualization(HasTraits):
         self._import_feedback += "{}\n".format(val)
 
 
+class QtSignal(PyQt5.QtCore.QObject):
+    """Generic Qt signal."""
+    signal = PyQt5.QtCore.pyqtSignal()
+
+
 class ImportThread(Thread):
     """Thread for importing files into a Numpy array.
     
@@ -2019,16 +2031,21 @@ class ImportThread(Thread):
             to sequences of paths within the given channel.
         fn_feedback (func): Function taking a string to display feedback;
             defaults to None.
+        signal_success (:obj:`PyQt5.QtCore.pyqtBoundSignal`): Signal taking
+            no arguments, to be emitted upon successfull import; defaults
+            to None.
     
     """
     
-    def __init__(self, mode, prefix, chl_paths, fn_feedback=None):
+    def __init__(self, mode, prefix, chl_paths, fn_feedback=None,
+                 signal_success=None):
         """Initialize the import thread."""
         super().__init__()
         self.mode = mode
         self.prefix = prefix
         self.chl_paths = chl_paths
         self.fn_feedback = fn_feedback
+        self.signal_success = signal_success
 
     def run(self):
         """Import files based on the import mode and set up the image."""
@@ -2047,9 +2064,8 @@ class ImportThread(Thread):
             if image5d is not None:
                 # set up the image for immediate use within MagellanMapper
                 self.fn_feedback("Import completed, loading image\n")
-                config.filenames = [self.prefix]
-                config.filename = config.filenames[0]
-                np_io.setup_images(config.filename)
+                if self.signal_success:
+                    self.signal_success.emit()
             else:
                 self.fn_feedback(
                     "Could not complete import, please try again\n")

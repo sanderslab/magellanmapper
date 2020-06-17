@@ -176,6 +176,20 @@ class VisHandler(Handler):
                 # shift keyboard focus to canvas matching the currently
                 # shown Matplotlib figure
                 fig.setFocus()
+    
+    def object__import_feedback_changed(self, info):
+        """Scroll to the bottom of the import feedback text display
+        when the value is changed.
+        
+        Args:
+            info (UIInfo): TraitsUI UI info.
+
+
+        """
+        for ed in info.ui._editors:
+            if ed.name == "_import_feedback":
+                # scroll to end of text display
+                ed.control.moveCursor(PyQt5.QtGui.QTextCursor.End)
 
 
 class ListSelections(HasTraits):

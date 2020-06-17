@@ -15,6 +15,7 @@ Examples:
 
 from enum import Enum, auto
 import os
+from threading import Thread
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -215,6 +216,22 @@ class ProfilesArrayAdapter(TabularAdapter):
         return self.widths[column]
 
 
+class ImportFilesArrayAdapter(TabularAdapter):
+    """Import files TraitsUI table adapter."""
+    columns = [("File", 0), ("Channel", 1)]
+    widths = {0: 0.9, 1: 0.1}
+
+    def get_width(self, object, trait, column):
+        """Specify column widths."""
+        return self.widths[column]
+
+
+class ImportModes(Enum):
+    """Enumerations for import modes."""
+    DIR = auto()
+    MULTIPAGE = auto()
+
+
 class Styles2D(Enum):
     """Enumerations for 2D ROI GUI styles."""
     SQUARE = "Square"
@@ -330,6 +347,20 @@ class Visualization(HasTraits):
     _imgadj_brightness_high = Float
     _imgadj_contrast = Float
     _imgadj_alpha = Float
+
+    # Image import panel
+
+    _import_browser = File
+    _import_table = TabularEditor(
+        adapter=ImportFilesArrayAdapter(), editable=True, auto_resize_rows=True,
+        stretch_last_section=False)
+    _import_paths = List  # import paths table list
+    _import_btn = Button("Import files")
+    _import_res = Array(Float, shape=(1, 3))
+    _import_mag = Float(1.0)
+    _import_zoom = Float(1.0)
+    _import_prefix = Str
+    _import_feedback = Str
 
     # Image viewers
 
@@ -500,12 +531,37 @@ class Visualization(HasTraits):
                  low=0.0, high=1.0, mode="slider")),
         label="Adjust Image",
     )
+    
+    # import panel
+    panel_import = VGroup(
+        HGroup(
+            # prevent label from squeezing the width of rest of controls
+            Item("_import_browser", label="File", style="simple",
+                 editor=FileEditor(entries=10, allow_dir=True)),
+        ),
+        Item("_import_paths", editor=_import_table, show_label=False),
+        VGroup(
+            Item("_import_res", label="Resolutions (x,y,z)"),
+            HGroup(
+                Item("_import_mag", label="Objective mangification"),
+                Item("_import_zoom", label="Zoom"),
+            ),
+            label="Microscope Metadata",
+        ),
+        HGroup(
+            Item("_import_prefix", style="simple", label="Output path"),
+        ),
+        Item("_import_btn", show_label=False),
+        Item("_import_feedback", style="custom", show_label=False),
+        label="Import",
+    )
 
     # tabbed panel of options
     panel_options = Tabbed(
         panel_roi_selector,
         panel_profiles,
         panel_imgadj,
+        panel_import,
     )
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
@@ -565,6 +621,10 @@ class Visualization(HasTraits):
             k for k in self._img3ds.keys() if self._img3ds[k] is not None]
         if self._imgadj_names.selections:
             self._imgadj_name = self._imgadj_names.selections[0]
+
+        # set up image import
+        self._import_mode = None
+        self._import_res[0] = (1.0, 1.0, 1.0)
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -1849,6 +1909,105 @@ class Visualization(HasTraits):
         add_profs(ProfileCats.ATLAS.value, config.atlas_profile)
         add_profs(ProfileCats.GRID.value, config.grid_search_profile)
         self._profiles = profs
+
+    @on_trait_change("_import_browser")
+    def _add_import_file(self):
+        """Add a file or directory to import and populate the import table
+        with all related files.
+        """
+        if os.path.isdir(self._import_browser):
+            # gather files within the directory to import
+            self._import_mode = ImportModes.DIR
+            chl_paths = importer.setup_import_dir(self._import_browser)
+            base_path = os.path.join(
+                os.path.dirname(self._import_browser), "myvolume")
+        else:
+            # gather files matching the pattern of the selected file to import
+            self._import_mode = ImportModes.MULTIPAGE
+            chl_paths, base_path = importer.setup_import_bioformats(
+                self._import_browser)
+        
+        if chl_paths:
+            # populate the import table
+            data = []
+            for chl, paths in chl_paths.items():
+                for path in paths:
+                    data.append([path, chl])
+            self._import_paths = data
+            self._import_prefix = base_path
+        else:
+            self._import_mode = None
+
+    @on_trait_change("_import_btn")
+    def _import_files(self):
+        """Import files based on paths in the import table.
+        """
+        # repopulate channel paths dict, including any user edits
+        chl_paths = {}
+        for row in self._import_paths:
+            chl_paths.setdefault(row[1], []).append(row[0])
+        
+        if chl_paths:
+            # set metadata
+            config.resolutions = self._import_res.astype(float)
+            config.magnification = self._import_mag
+            config.zoom = self._import_zoom
+            
+            # initialize import in separate thread
+            import_thread = ImportThread(
+                self._import_mode, self._import_prefix, chl_paths,
+                self._update_import_feedback)
+            import_thread.start()
+
+    def _update_import_feedback(self, val):
+        """Update the import feedback text box.
+        
+        Args:
+            val (str): String to append as a new line.
+
+        """
+        self._import_feedback += "{}\n".format(val)
+
+
+class ImportThread(Thread):
+    """Thread for importing files into a Numpy array.
+    
+    Attributes:
+        mode (:obj:`ImportModes`): Import mode enum.
+        prefix (str): Destination base path from which the output path
+            will be constructed.
+        chl_paths (dict[int, List[str]]): Dictionary of channel numbers
+            to sequences of paths within the given channel.
+        fn_feedback (func): Function taking a string to display feedback;
+            defaults to None.
+    
+    """
+    
+    def __init__(self, mode, prefix, chl_paths, fn_feedback=None):
+        """Initialize the import thread."""
+        super().__init__()
+        self.mode = mode
+        self.prefix = prefix
+        self.chl_paths = chl_paths
+        self.fn_feedback = fn_feedback
+
+    def run(self):
+        """Import files based on the import mode and set up the image."""
+        image5d = None
+        if self.mode is ImportModes.DIR:
+            # import single plane files from a directory
+            image5d = importer.import_planes_to_stack(
+                self.chl_paths, self.prefix,
+                fn_feedback=self.fn_feedback)
+        elif self.mode is ImportModes.MULTIPAGE:
+            # import multi-plane files
+            image5d = importer.import_bioformats(
+                self.chl_paths, self.prefix, fn_feedback=self.fn_feedback)
+        if image5d is not None:
+            # set up the image for immediate use within MagellanMapper
+            config.filenames = [self.prefix]
+            config.filename = config.filenames[0]
+            np_io.setup_images(config.filename)
 
 
 if __name__ == "__main__":

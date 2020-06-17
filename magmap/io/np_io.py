@@ -201,8 +201,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
         # load or import the main image stack
         print("Loading main image")
         if os.path.isdir(path):
-            # import directory of TIFF images
-            config.image5d = importer.import_dir(path, prefix=config.prefix)
+            # import directory of single plane images to a volumetric stack
+            chls = importer.setup_import_dir(path)
+            config.image5d = importer.import_planes_to_stack(
+                chls, config.prefix)
             config.image5d_io = config.LoadIO.NP
         elif path.endswith(sitk_io.EXTS_3D):
             try:

@@ -748,8 +748,53 @@ def import_bioformats(filename, series=None, z_max=-1, offset=0,
     return image5d
 
 
-def import_dir(path, rgb_to_grayscale=True, prefix=None):
-    """Import a diretory of image files into a single image stack.
+def _parse_import_chls(paths):
+    """Sorts paths in channel format based on their channel number.
+    
+    Channel format is, ``<path>_ch_<n>``, where ``n`` is an integer. Paths
+    that are not in channel format default to channel 0.
+    
+    Args:
+        paths (List[str]): Sequence of paths.
+
+    Returns:
+        dict[int, List[str]]: Dictionary of channel numbers to sequences of
+        image file paths to import.
+
+    """
+    regex_chls = re.compile(r"{}[0-9]+".format(CHANNEL_SEPARATOR))
+    chls = {}
+    len_sep = len(CHANNEL_SEPARATOR)
+    for f in paths:
+        # extract channel identifier and group file by channel, defaulting
+        # to channel 0 if not in channel format
+        f_chls = re.findall(regex_chls, f)
+        chl = int(f_chls[0][len_sep:]) if f_chls else 0
+        chls.setdefault(chl, []).append(f)
+        print("chl: {}, path: {}".format(chl, f))
+    return chls
+
+
+def setup_import_dir(path):
+    """Setup import of image files in an entire directory.
+    
+    Args:
+        path (str): Path to directory.
+
+    Returns:
+        dict[int, List[str]]: Dictionary of channel numbers to sequences of
+        image file paths to import.
+
+    """
+    # all files in the given folder will be imported in alphabetical order
+    print("Importing files in directory {}:".format(path))
+    paths = sorted(glob.glob(os.path.join(path, "*")))
+    return _parse_import_chls(paths)
+
+
+def import_planes_to_stack(chls, prefix, rgb_to_grayscale=True,
+                           fn_feedback=None):
+    """Import single plane image files into a single volumetric image stack.
 
     Each file is assumed to be a 2D plane in a volumetric image, ordered
     alphabetically. All files in the folder will be imported. Files from
@@ -758,25 +803,28 @@ def import_dir(path, rgb_to_grayscale=True, prefix=None):
     files with these channel designators will be imported.
 
     Args:
-        path (str): Path to folder of image files to import.
-        rgb_to_grayscale (bool): Files with a three value third dimension
-            are assumed to be RGB and will be converted to grayscale;
-            defaults to True.
+        chls (dict[int, List[str]]): Dictionary of channel numbers to
+            sequences of image file paths to import.
         prefix (str): Ouput base path; defaults to None to output to the
             ``path`` directory, also using the directory name as the
             image filename.
+        rgb_to_grayscale (bool): Files with a three value third dimension
+            are assumed to be RGB and will be converted to grayscale;
+            defaults to True.
+        fn_feedback (func): Callback function to give feedback strings
+            during import; defaults to None.
 
     Returns:
         :obj:`np.ndarray`: The imported image as a Numpy array.
 
     """
-    def import_files(chli=None):
-        # import files for the given channel
+    def import_files():
+        # import files for the current channel
         lows = []
         highs = []
         img5d = image5d
         for filei, file in enumerate(chl_files):
-            print("importing {}".format(file))
+            libmag.printcb("importing {}".format(file), fn_feedback)
             img = io.imread(file)
             if rgb_to_grayscale and img.ndim >= 3 and img.shape[2] == 3:
                 # assume that 3-value 3rd channel images are RGB
@@ -787,15 +835,15 @@ def import_dir(path, rgb_to_grayscale=True, prefix=None):
                 # generate an array for all planes and channels based on
                 # dimensions of the first extracted plane and any channel keys
                 shape = [1, len(chl_files), *img.shape]
-                if chl_keys:
-                    shape.append(len(chl_keys))
+                if num_chls > 1:
+                    shape.append(num_chls)
                 img5d = np.lib.format.open_memmap(
                     filename_image5d_npz, mode="w+", dtype=img.dtype,
                     shape=tuple(shape))
 
             # insert plane, without using channel dimension if no channel
             # designators were found in file names
-            if chl_keys:
+            if num_chls > 1:
                 img5d[0, filei, ..., chli] = img
             else:
                 img5d[0, filei] = img
@@ -808,52 +856,33 @@ def import_dir(path, rgb_to_grayscale=True, prefix=None):
         lows_chls.append(min(lows))
         highs_chls.append(max(highs))
         return img5d
+    
+    # each key is assumed to represent a distinct channel
+    num_chls = len(chls.keys())
+    if num_chls < 1:
+        return None
 
     # allow import of arbitrarily large images
     Image.MAX_IMAGE_PIXELS = None
-
-    # all files in the given folder will be imported in alphabetical order
-    files = sorted(glob.glob(os.path.join(path, "*")))
-    print("Importing files in directory {}:".format(path))
-    regex_chls = re.compile(r"{}[0-9]+".format(CHANNEL_SEPARATOR))
-    chls = {}
-    len_sep = len(CHANNEL_SEPARATOR)
-    for f in files:
-        print(f)
-        f_chls = re.findall(regex_chls, f)
-        if f_chls:
-            # extract channel identifier and group file by channel
-            chl = f_chls[0][len_sep:]
-            chls.setdefault(chl, []).append(f)
-    num_files = len(files)
-    if num_files < 1:
-        return None
-
-    if prefix:
-        name = prefix
-    else:
-        # default to using directory name as image output name
-        name = os.path.join(path, os.path.basename(path))
-    filename_image5d_npz, filename_info_npz = make_filenames(name + ".")
+    
+    print("prefix", prefix)
+    filename_image5d_npz, filename_info_npz = make_filenames(prefix + ".")
+    libmag.printcb("Importing single-plane images into multiplane Numpy format "
+                   "file: {}".format(filename_image5d_npz), fn_feedback)
     image5d = None
     lows_chls = []
     highs_chls = []
-    chl_keys = chls.keys()
-
-    if chl_keys:
-        for i, chl_files in enumerate(chls.values()):
-            # import files for the given channel
-            image5d = import_files(i)
-    else:
-        # import all files as the same channel
-        chl_files = files
+    for chli, chl_files in chls.items():
+        # import files for the given channel
         image5d = import_files()
 
     # save metadata and load for immediate use
     md = save_image_info(
-        filename_info_npz, [name], [image5d.shape], config.resolutions,
+        filename_info_npz, [prefix], [image5d.shape], config.resolutions,
         config.magnification, config.zoom, lows_chls, highs_chls)
     assign_metadata(md)
+    libmag.printcb("Saved image to \"{}\" with the following metadata:\n{}"
+                   .format(filename_image5d_npz, md), fn_feedback)
     return image5d
 
 

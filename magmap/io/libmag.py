@@ -327,6 +327,19 @@ def printv_format(s, form):
         print(s.format(*form))
 
 
+def printcb(s, fn_callback):
+    """Print a string to the terminal and call a callback function.
+    
+    Args:
+        s (str): String to print and call in ``fn_callback``.
+        fn_callback (func): Callback function taking a string argument.
+
+    """
+    print(s)
+    if fn_callback:
+        fn_callback(s)
+
+
 def warn(msg, category=UserWarning, stacklevel=2):
     """Print a warning message.
     

@@ -633,17 +633,6 @@ class Visualization(HasTraits):
         self._update_profiles_names()
         self._init_profiles()
 
-        # set up image adjustment
-        self._img3ds = {
-            "Main": config.image5d,
-            "Labels": config.labels_img,
-            "Borders": config.borders_img}
-        self._imgadj_names = TraitsList()
-        self._imgadj_names.selections = [
-            k for k in self._img3ds.keys() if self._img3ds[k] is not None]
-        if self._imgadj_names.selections:
-            self._imgadj_name = self._imgadj_names.selections[0]
-
         # set up image import
         self._import_mode = None
         self._import_res[0] = (1.0, 1.0, 1.0)
@@ -673,6 +662,21 @@ class Visualization(HasTraits):
         # no constrained layout because of performance impact
         self._atlas_ed_fig = figure.Figure()
         self._setup_for_image()
+    
+    def _init_imgadj(self):
+        """Initialize image adjustment controls for the currently loaded images.
+        
+        """
+        # create entries for each possible image but only add existing images
+        self._img3ds = {
+            "Main": config.image5d,
+            "Labels": config.labels_img,
+            "Borders": config.borders_img}
+        self._imgadj_names = TraitsList()
+        self._imgadj_names.selections = [
+            k for k in self._img3ds.keys() if self._img3ds[k] is not None]
+        if self._imgadj_names.selections:
+            self._imgadj_name = self._imgadj_names.selections[0]
 
     @on_trait_change("_imgadj_name")
     def _update_imgadj_limits(self):
@@ -1118,6 +1122,9 @@ class Visualization(HasTraits):
             self.roi_array[0] = ([100, 100, 12] if config.roi_size is None
                                  else config.roi_size)
         
+        # set up image adjustment controls
+        self._init_imgadj()
+        
         # set up selector for loading past saved ROIs
         self._rois_dict = {_ROI_DEFAULT: None}
         if config.db is not None and config.filename is not None:
@@ -1128,9 +1135,9 @@ class Visualization(HasTraits):
                 self._append_roi(roi, self._rois_dict)
         self.rois_selections_class.selections = list(self._rois_dict.keys())
         self.rois_check_list = _ROI_DEFAULT
-
+    
     @on_trait_change("_filename")
-    def update_filename(self):
+    def _image_path_updated(self):
         """Update the selected filename and load the corresponding image.
         
         Since an original (eg .czi) image can be processed in so many 
@@ -1157,6 +1164,7 @@ class Visualization(HasTraits):
             np_io.setup_images(config.filename, offset=offset, size=size)
             self._setup_for_image()
             self._btn_redraw_fired()
+            self.update_imgadj_for_img()
         else:
             print("Could not parse filename", self._filename)
     

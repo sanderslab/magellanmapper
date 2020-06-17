@@ -227,9 +227,10 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
     in ``base_path``.
     
     Args:
-        base_path: Path whose dot-extension will be replaced by ``suffix``. 
-            If None, ``suffix`` will be returned. If a directory, will 
-            be simply joined with ``suffix``.
+        base_path (str): Path whose dot-extension will be replaced by
+            ``suffix``. If None, ``suffix`` will be returned. If a directory
+            as indicated by a trailing file separator, ``suffix`` will
+            simply be appended.
         suffix: Replacement including new extension.
         sep: Separator between ``base_path`` and ``suffix``.
         ext: Extension to add or substitute; defaults to None to use 
@@ -242,8 +243,10 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
         :func:``insert_before_ext`` to splice in ``suffix`` instead.
     """
     if not base_path: return suffix
-    if os.path.isdir(base_path):
-        path = os.path.join(base_path, suffix)
+    if not os.path.basename(base_path):
+        # empty basename from trailing file separator indicates base_path
+        # is a directory, where splitting out ext and adding sep are unnecessary
+        path = "{}{}".format(base_path, suffix)
     else:
         path = os.path.splitext(base_path)[0] + sep + suffix
     if ext: path = "{}.{}".format(os.path.splitext(path)[0], ext)

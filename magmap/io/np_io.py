@@ -222,13 +222,15 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     config.image5d = importer.read_file(path, series)
                 if import_only or config.image5d is None:
                     # re-import over existing image or import new image
-                    prefix = None
-                    if proc_type is config.ProcessTypes.IMPORT_ONLY:
-                        prefix = config.prefix
+                    chls, import_path = importer.setup_import_bioformats(
+                        path, config.channel)
+                    prefix = (import_path if config.prefix is None
+                              else config.prefix)
                     config.image5d = importer.import_bioformats(
-                        path, series, channel=config.channel, prefix=prefix)
+                        chls, prefix, series, channel=config.channel)
                 config.image5d_io = config.LoadIO.NP
-            except FileNotFoundError:
+            except FileNotFoundError as e:
+                print(e)
                 print("Could not load {}, will fall back to any associated "
                       "registered image".format(path))
     

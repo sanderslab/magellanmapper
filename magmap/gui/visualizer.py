@@ -658,8 +658,9 @@ class Visualization(HasTraits):
                 rc_params = [config.Themes.DARK]
         plot_2d.setup_style(rc_params=rc_params)
         self._roi_ed = None
-        self._roi_ed_fig = figure.Figure(constrained_layout=True)
-        # no constrained layout because of performance impact
+        # no constrained layout because of performance impact at least as of
+        # Matplotlib 3.2
+        self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
         self._setup_for_image()
     

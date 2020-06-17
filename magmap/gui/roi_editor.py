@@ -542,8 +542,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
             # add column for screenshot
             top_cols += 1
         gs = gridspec.GridSpec(
-            2, top_cols, wspace=0.7, hspace=0.4, height_ratios=height_ratios,
-            figure=fig)
+            2, top_cols, wspace=0.01, hspace=0.01, height_ratios=height_ratios,
+            figure=fig, left=0.01, right=0.99, bottom=0.01, top=0.99)
 
         # overview subplotting
         ax_overviews = []  # overview axes

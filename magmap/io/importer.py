@@ -77,8 +77,13 @@ _EXT_TIFFS = (".tif", ".tiff")
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
     
+    Can only start Javabridge once per session. Calling this function
+    repeatedly without stopping the JVM will have no effect, however.
+    To use the JVM in differ threads, use :meth:`jb.attach` and
+    :meth:`jb.detach`.
+    
     Args:
-        heap_size: JVM heap size, defaulting to 8G.
+        heap_size (str): JVM heap size, defaulting to 8G.
     """
     if not jb:
         libmag.warn("Python-Javabridge not available, cannot start JVM")
@@ -87,6 +92,11 @@ def start_jvm(heap_size="8G"):
 
 
 def stop_jvm():
+    """Stop the Javabridge JVM.
+    
+    Javabridge should only be started/stopped once per session.
+
+    """
     if not jb:
         libmag.warn("Python-Javabridge not available, cannot stop JVM")
         return
@@ -689,6 +699,7 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
     
     # initialize JVM for import via Bioformats
     start_jvm()
+    jb.attach()
     image5d = None
     near_mins = []
     near_maxs = []
@@ -762,6 +773,7 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                     image5d[t, z, :, :, chl] = img
                 else:
                     image5d[t, z] = img
+        rdr.close()
         near_mins, near_maxs = _calc_near_intensity_bounds(
             num_chls, near_mins, near_maxs, lows, highs)
     
@@ -778,6 +790,7 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
     libmag.printcb("Completed multiplane image import planes to \"{}\" "
                    "with metadata:\n{}"
                    .format(filename_image5d, md), fn_feedback)
+    jb.detach()
     return image5d
 
 

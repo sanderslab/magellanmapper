@@ -549,12 +549,16 @@ class Visualization(HasTraits):
     
     # import panel
     panel_import = VGroup(
-        HGroup(
-            # prevent label from squeezing the width of rest of controls
-            Item("_import_browser", label="File", style="simple",
-                 editor=FileEditor(entries=10, allow_dir=True)),
+        VGroup(
+            HGroup(
+                # prevent label from squeezing the width of rest of controls
+                Item("_import_browser", label="Select first file to import",
+                     style="simple",
+                     editor=FileEditor(entries=10, allow_dir=True)),
+            ),
+            Item("_import_paths", editor=_import_table, show_label=False),
+            label="Import file selection"
         ),
-        Item("_import_paths", editor=_import_table, show_label=False),
         VGroup(
             Item("_import_res", label="Resolutions (x,y,z)"),
             HGroup(

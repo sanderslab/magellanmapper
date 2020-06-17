@@ -12,7 +12,9 @@ activation is in this order:
 
 Conda activation assumes that the ``conda`` command is accessible, typically
 from a previous initialization through ``conda init`` (preferred) or
-by adding the ``conda`` binary directory to the ``PATH``.
+by adding the ``conda`` binary directory to the ``PATH``. Note that ``conda``
+may not be available in environments that do not load the full shell
+configuration such as Python launched via Finder in the MacOS platform.
 
 """
 
@@ -86,7 +88,8 @@ def launch_subprocess(args, working_dir=None):
         :class:`subprocess.CalledProcessError`.
 
     """
-    return subprocess.check_call("&&".join(args), shell=True, cwd=working_dir)
+    return subprocess.check_output(
+        "&&".join(args), shell=True, cwd=working_dir, stderr=subprocess.STDOUT)
 
 
 def launch_cli():
@@ -132,13 +135,15 @@ def main(gui=True):
         # and need to initialize shell, and launch MagellanMapper
         print("Attempting to activate Conda environment")
         launch_subprocess(ARGS_CONDA + args, working_dir)
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
+        print(e.output)
         try:
             # non-POSIX shells do not accept eval but may run without
             # initializing the Conda shell hook
             print("Retrying Conda activation without shell hook")
             launch_subprocess(ARGS_CONDA[1:] + args, working_dir)
         except subprocess.CalledProcessError:
+            print(e.output)
             try:
                 # if unable to activate Conda env, try Venv
                 print("Conda environment not available, trying Venv")
@@ -146,6 +151,7 @@ def main(gui=True):
                     ["source {}/{}/bin/activate".format(VENV_DIR, ENV_NAME)]
                     + args, working_dir)
             except subprocess.CalledProcessError:
+                print(e.output)
                 # as fallback, attempt to launch without activating
                 # an environment
                 print("Neither environment is available, attempting to launch "

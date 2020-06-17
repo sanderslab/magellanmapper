@@ -2021,20 +2021,26 @@ class ImportThread(Thread):
     def run(self):
         """Import files based on the import mode and set up the image."""
         image5d = None
-        if self.mode is ImportModes.DIR:
-            # import single plane files from a directory
-            image5d = importer.import_planes_to_stack(
-                self.chl_paths, self.prefix,
-                fn_feedback=self.fn_feedback)
-        elif self.mode is ImportModes.MULTIPAGE:
-            # import multi-plane files
-            image5d = importer.import_bioformats(
-                self.chl_paths, self.prefix, fn_feedback=self.fn_feedback)
-        if image5d is not None:
-            # set up the image for immediate use within MagellanMapper
-            config.filenames = [self.prefix]
-            config.filename = config.filenames[0]
-            np_io.setup_images(config.filename)
+        try:
+            if self.mode is ImportModes.DIR:
+                # import single plane files from a directory
+                image5d = importer.import_planes_to_stack(
+                    self.chl_paths, self.prefix,
+                    fn_feedback=self.fn_feedback)
+            elif self.mode is ImportModes.MULTIPAGE:
+                # import multi-plane files
+                image5d = importer.import_bioformats(
+                    self.chl_paths, self.prefix, fn_feedback=self.fn_feedback)
+        finally:
+            if image5d is not None:
+                # set up the image for immediate use within MagellanMapper
+                self.fn_feedback("Import completed, loading image\n")
+                config.filenames = [self.prefix]
+                config.filename = config.filenames[0]
+                np_io.setup_images(config.filename)
+            else:
+                self.fn_feedback(
+                    "Could not complete import, please try again\n")
 
 
 if __name__ == "__main__":

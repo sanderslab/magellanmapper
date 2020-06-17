@@ -356,6 +356,7 @@ class Visualization(HasTraits):
         stretch_last_section=False)
     _import_paths = List  # import paths table list
     _import_btn = Button("Import files")
+    _import_clear_btn = Button("Clear files")
     _import_res = Array(Float, shape=(1, 3))
     _import_mag = Float(1.0)
     _import_zoom = Float(1.0)
@@ -551,7 +552,10 @@ class Visualization(HasTraits):
         HGroup(
             Item("_import_prefix", style="simple", label="Output path"),
         ),
-        Item("_import_btn", show_label=False),
+        HGroup(
+            Item("_import_btn", show_label=False),
+            Item("_import_clear_btn", show_label=False),
+        ),
         Item("_import_feedback", style="custom", show_label=False),
         label="Import",
     )
@@ -1915,13 +1919,15 @@ class Visualization(HasTraits):
         """Add a file or directory to import and populate the import table
         with all related files.
         """
+        chl_paths = None
+        base_path = None
         if os.path.isdir(self._import_browser):
             # gather files within the directory to import
             self._import_mode = ImportModes.DIR
             chl_paths = importer.setup_import_dir(self._import_browser)
             base_path = os.path.join(
                 os.path.dirname(self._import_browser), "myvolume")
-        else:
+        elif self._import_browser:
             # gather files matching the pattern of the selected file to import
             self._import_mode = ImportModes.MULTIPAGE
             chl_paths, base_path = importer.setup_import_bioformats(
@@ -1935,8 +1941,6 @@ class Visualization(HasTraits):
                     data.append([path, chl])
             self._import_paths = data
             self._import_prefix = base_path
-        else:
-            self._import_mode = None
 
     @on_trait_change("_import_btn")
     def _import_files(self):
@@ -1958,6 +1962,15 @@ class Visualization(HasTraits):
                 self._import_mode, self._import_prefix, chl_paths,
                 self._update_import_feedback)
             import_thread.start()
+    
+    @on_trait_change("_import_clear_btn")
+    def _clear_import_files(self):
+        """Reset import setup.
+
+        """
+        self._import_browser = ""  # will reset table
+        self._import_paths = []
+        self._import_mode = None
 
     def _update_import_feedback(self, val):
         """Update the import feedback text box.

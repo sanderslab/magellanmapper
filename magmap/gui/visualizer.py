@@ -409,8 +409,8 @@ class Visualization(HasTraits):
     _filename = File  # file browser
     _ignore_filename = False  # ignore file update trigger
     _channel = Int  # channel number, 0-based
-    _channel_low = -1  # -1 used for None, which translates to "all"
-    _channel_high = 0
+    _channel_low = Int(-1)  # -1 used for None, which translates to "all"
+    _channel_high = Int
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
     _camera_pos = None
@@ -1098,23 +1098,24 @@ class Visualization(HasTraits):
         """
         if config.image5d is not None:
             # set up channel spinner based on number of channels available
-            if config.image5d.ndim >= 5:
+            shape = config.image5d.shape
+            if len(shape) >= 5:
                 # increase max channels based on channel dimension
-                self._channel_high = config.image5d.shape[4] - 1
+                self._channel_high = shape[4] - 1
+                self._channel_low = -1
             else:
                 # only one channel available
+                self._channel_high = 0
                 self._channel_low = 0
             # None channel defaults to all channels, represented in the channel
             # spinner here by -1
             self._channel = -1 if config.channel is None else config.channel
 
-            # dimension max values in pixels
-            size = config.image5d.shape[1:4]
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
             # elsewhere; "high_label" RangeEditor setting also does not
             # appear to be working
-            self.z_high, self.y_high, self.x_high = size
+            self.z_high, self.y_high, self.x_high = shape[1:4]
             if config.roi_offset is not None:
                 # apply user-defined offsets
                 self.x_offset = config.roi_offset[0]

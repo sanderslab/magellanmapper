@@ -697,10 +697,14 @@ class Visualization(HasTraits):
         brightness_max = info.max // 5
         self._imgadj_brightness_low = -brightness_max
         self._imgadj_brightness_high = brightness_max
-
+        
+        # update control values
+        self.update_imgadj_for_img()
+    
+    @on_trait_change("_imgadj_chls")
     def update_imgadj_for_img(self):
         """Update image adjustment controls based on the currently selected
-        viewer.
+        viewer and channel.
 
         """
         # get the currently selected viewer

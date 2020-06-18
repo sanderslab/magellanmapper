@@ -401,9 +401,8 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
                 print("bounds for plane {}: {}, {}".format(i, low, high))
                 lows.append(low)
                 highs.append(high)
-            num_channels = image5d.shape[4]
             near_mins, near_maxs = _calc_near_intensity_bounds(
-                num_channels, near_mins, near_maxs, lows, highs)
+                near_mins, near_maxs, lows, highs)
         info["near_min"] = near_mins
         info["near_max"] = near_maxs
         info["scaling"] = scaling
@@ -775,7 +774,8 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                     image5d[t, z] = img
         rdr.close()
         near_mins, near_maxs = _calc_near_intensity_bounds(
-            num_chls, near_mins, near_maxs, lows, highs)
+            near_mins, near_maxs,
+            lows, highs)
     
     # finalize import and save metadata
     image5d.flush()  # may not be necessary but ensure contents to disk
@@ -964,17 +964,18 @@ def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     return lows, highs
 
 
-def _calc_near_intensity_bounds(num_channels, near_mins, near_maxs, lows, 
-                                highs):
+def _calc_near_intensity_bounds(near_mins, near_maxs, lows, highs):
     # get the extremes from lists of near-min/max vals
-    if num_channels > 1:
-        # get min/max from list of 1-element arrays
-        near_mins.append(min(lows)[0])
-        near_maxs.append(max(highs)[0])
-    else:
-        # get min/max from columns of 2D array
-        near_mins = np.amin(np.array(lows), 0)
-        near_maxs = np.amax(np.array(highs), 0)
+    if lows:
+        num_channels = len(lows[0])
+        if num_channels <= 1:
+            # get min/max from list of 1-element arrays
+            near_mins.append(min(lows)[0])
+            near_maxs.append(max(highs)[0])
+        else:
+            # get min/max from columns of 2D array
+            near_mins = np.amin(np.array(lows), 0)
+            near_maxs = np.amax(np.array(highs), 0)
     return near_mins, near_maxs
 
 

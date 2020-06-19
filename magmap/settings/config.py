@@ -14,7 +14,6 @@ Attributes:
         "img=path/to/file" argument.
     series: The series for multi-stack files, using 0-based indexing. Set
         with "series=n" argument.
-    channel: The channel to view. Set with "channel=n" argument.
     load_labels: Path to the labels reference file, which also serves as a 
         flag to references label/annotation images.
     labels_img: Numpy array of a registered labels image, which should 

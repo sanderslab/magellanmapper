@@ -692,9 +692,6 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                    "may take awhile..."
                    .format(filename_image5d), fn_feedback)
     
-    if channel is not None and not libmag.is_seq(channel):
-        channel = [channel]
-    
     # initialize JVM for import via Bioformats
     start_jvm()
     jb.attach()

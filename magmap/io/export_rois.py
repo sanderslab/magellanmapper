@@ -55,7 +55,8 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
     Args:
         db: Database from which to export.
         image5d: The image with the ROIs.
-        channel: Channel to export.
+        channel (List[int]): Channels to export; currently only the first
+            channel is used.
         path: Path with filename base from which to save the exported files.
         padding (List[int]): Padding in x,y,z to exclude from the ROI;
             defaults to None.
@@ -72,6 +73,9 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
     """
     if padding is not None:
         padding = np.array(padding)
+    
+    # TODO: consider iterating through all channels
+    channel = channel[0] if channel else 0
     
     # convert volume base on scaling and unit factor
     phys_mult = np.prod(detector.calc_scaling_factor())

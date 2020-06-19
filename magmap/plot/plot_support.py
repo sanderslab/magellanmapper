@@ -236,7 +236,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
     img_norm_setting = config.roi_profile["norm"]
     if channels is None:
         # channels are designators rather than lists of specific channels
-        channels = [0] * num_imgs2d
+        channels = [[0]] * num_imgs2d
         channels[0] = config.channel
     _, channels_main = plot_3d.setup_channels(imgs2d[0], None, 2)
     # fill default values for each 2D image and config values for

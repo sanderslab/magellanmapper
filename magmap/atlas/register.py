@@ -430,6 +430,8 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     """Register an atlas and associated labels to a sample image 
     using the SimpleElastix library.
     
+    Uses the first channel in :attr:`config.channel` or the first image channel.
+    
     Args:
         fixed_file: The image to register, given as a Numpy archive file to 
             be read by :importer:`read_file`.
@@ -451,7 +453,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     settings = config.atlas_profile
     
     # load fixed image, assumed to be experimental image
-    chl = 0 if config.channel is None else config.channel
+    chl = config.channel[0] if config.channel else 0
     fixed_img = _load_numpy_to_sitk(fixed_file, channel=chl)
     
     # preprocess fixed image; store original fixed image for overlap measure
@@ -825,6 +827,9 @@ def register_group(img_files, rotate=None, show_imgs=True,
                    write_imgs=True, name_prefix=None, scale=None):
     """Group registers several images to one another.
     
+    Uses the first channel in :attr:`config.channel` or the first channel
+    in each image.
+    
     Args:
         img_files: Paths to image files to register.
         rotate (List[int]): List of number of 90 degree rotations for images
@@ -876,7 +881,7 @@ def register_group(img_files, rotate=None, show_imgs=True,
         img_file = transformer.get_transposed_image_path(
             img_file, scale, target_size)
         rot = rotate and libmag.get_if_within(rotate, i, 0) >= 2
-        chl = 0 if config.channel is None else config.channel
+        chl = config.channel[0] if config.channel else 0
         img = _load_numpy_to_sitk(img_file, rot, chl)
         size = img.GetSize()
         img_np = sitk.GetArrayFromImage(img)

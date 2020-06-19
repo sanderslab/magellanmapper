@@ -1113,7 +1113,7 @@ class Visualization(HasTraits):
                 self._channel_low = 0
             # None channel defaults to all channels, represented in the channel
             # spinner here by -1
-            self._channel = -1 if config.channel is None else config.channel
+            self._channel = config.channel[0] if config.channel else -1
 
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
@@ -1179,9 +1179,10 @@ class Visualization(HasTraits):
         """Update the selected channel, resetting the current state to 
         prevent displaying the old channel.
         """
-        config.channel = self._channel
-        if config.channel == -1:
+        if self._channel == -1:
             config.channel = None
+        else:
+            config.channel = [self._channel]
         self.rois_check_list = _ROI_DEFAULT
         self._reset_segments()
         print("Changed channel to {}".format(config.channel))

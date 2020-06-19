@@ -29,27 +29,28 @@ def setup_channels(roi, channel, dim_channel):
     """Setup channels array for the given ROI dimensions.
     
     Args:
-        roi: Region of interest, which is either a 3D or 4D array of 
-            [[z, y, x, (c)], ...].
-        channel: Channel to select, which can be None to indicate all 
-            channels.
-        dim_channel: Index of the channel dimension.
+        roi (:obj:`np.ndarray`): Region of interest, which is either a 3D
+            or 4D array in the formate ``[[z, y, x, (c)], ...]``.
+        channel (List[int]): Channels to select, which can be None to indicate
+            all channels.
+        dim_channel (int): Index of the channel dimension.
     
     Returns:
-        A tuple of ``multichannel``, a boolean value where True indicates that 
-        the ROI is multichannel (ie 4D), and ``channels``, an array of the 
-        channel indices of ROI to include.
+        bool, List[int]: A boolean value where True indicates that
+        the ROI is multichannel (ie 4D) and an array of the channel indices
+        of ``roi`` to include, which is the same as ``channel`` for
+        multichannel ROIs or only the first element if ``roi`` is single
+        channel.
     """
     multichannel = roi.ndim > dim_channel
-    channels = [0]
+    channels = channel
     if multichannel:
-        channels = (range(roi.shape[dim_channel]) 
-                    if channel is None else [channel])
-    '''
-    lib_clrbrain.printv(
-        "multichannel: {}, channels: {}, roi shape: {}, channel: {}"
-        .format(multichannel, channels, roi.shape, channel))
-    '''
+        if channel is None:
+            # None indicates all channels
+            channels = range(roi.shape[dim_channel])
+    else:
+        # only use the first given channel if ROI is single channel
+        channels = [0]
     return multichannel, channels
 
 

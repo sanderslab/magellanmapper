@@ -792,13 +792,15 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     # ctrl combo and this event is control
                     pass
                 elif event.key == "control" or event.key.startswith("ctrl"):
-                    seg_channel = channel
-                    if channel is None:
-                        # specify channel by key combos if displaying multiple
-                        # channels
-                        if event.key.endswith("+1"):
-                            # ctrl+1
-                            seg_channel = 1
+                    seg_channel = 0
+                    if channel:
+                        seg_channel = channel[0]
+                        if len(channel) > 1:
+                            # specify channel by key combos if displaying multiple
+                            # channels
+                            if event.key.endswith("+1"):
+                                # ctrl+1
+                                seg_channel = channel[1]
                     try:
                         axi = ax_z_list.index(ax)
                         if (axi != -1 and z_planes_padding <= axi

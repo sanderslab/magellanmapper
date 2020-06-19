@@ -272,9 +272,21 @@ def replace_rel_with_abs_blob_coords(blobs):
 
 
 def blobs_in_channel(blobs, channel):
+    """Get blobs in the given channels
+    
+    Args:
+        blobs (:obj:`np.ndarray`): Blobs in the format,
+            ``[[z, y, x, r, c, ...], ...]``.
+        channel (List[int]): Sequence of channels to include.
+
+    Returns:
+        :obj:`np.ndarray`: A view of the blobs in the channel, or all
+        blobs if ``channel`` is None.
+
+    """
     if channel is None:
         return blobs
-    return blobs[get_blobs_channel(blobs) == channel]
+    return blobs[np.isin(get_blobs_channel(blobs), channel)]
 
 
 def blob_for_db(blob):
@@ -774,7 +786,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         output_db: Database in which to save the verification flags, typical
             the database in :attr:``config.verified_db``.
         exp_id: Experiment ID in ``output_db``.
-        channel: Filter ``blobs_truth`` by this channel.
+        channel (List[int]): Filter ``blobs_truth`` by this channel.
     """
     blobs_truth = blobs_in_channel(blobs_truth, channel)
     blobs_truth_rois = None
@@ -793,11 +805,10 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         "verifying blobs with tol {} leading to thresh {}, scaling {}, "
         "inner_padding {}".format(tol, thresh, scaling, inner_padding))
     
-    settings = config.get_roi_profile(channel)
-    resize = settings["resize_blobs"]
+    # resize blobs based only on first profile
+    resize = config.get_roi_profile(0)["resize_blobs"]
     if resize:
         blobs = multiply_blob_rel_coords(blobs, resize)
-        #tol = np.multiply(resize, tol).astype(np.int)
         libmag.printv("resized blobs by {}:\n{}".format(resize, blobs))
 
     for roi in rois:

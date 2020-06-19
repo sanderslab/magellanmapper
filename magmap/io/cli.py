@@ -221,7 +221,7 @@ def main(process_args_only=False, skip_dbs=False):
              "corresponding to each image")
     parser.add_argument("--prefix", help="Path prefix")
     parser.add_argument("--suffix", help="Filename suffix")
-    parser.add_argument("--channel", type=int, help="Channel index")
+    parser.add_argument("--channel", nargs="*", type=int, help="Channel index")
     parser.add_argument("--series", help="Series index")
     parser.add_argument(
         "--subimg_offset", nargs="*", help="Sub-image offset in x,y,z")
@@ -351,13 +351,8 @@ def main(process_args_only=False, skip_dbs=False):
             config.metadatas.append(md)
 
     if args.channel is not None:
-        # set the channel; currently supports a single channel or -1 for all
-        # TODO: consider allowing array to support multiple but not 
-        # necessarily all channels; would need to match num of profiles and 
-        # index based on order channels
+        # set the channels
         config.channel = args.channel
-        if config.channel == -1:
-            config.channel = None
         print("Set channel to {}".format(config.channel))
     
     series_list = [config.series]  # list of series

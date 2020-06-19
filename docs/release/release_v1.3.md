@@ -1,5 +1,34 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.1 (beta)
+
+This beta release contains multiple new control panels to adjust profiles, brightness/contrast, and image file import. These controls allow users to control MagellanMapper more graphically and reduces the need to restart for new settings.
+
+### Changes
+
+Installation
+- Keep Windows setup script open after installing by double-click to view instructions and any error messages
+- MacOS/Linux Conda setup script renamed to allow double-click launch on MacOS and to further distinguish from the Windows setup script
+
+GUI
+- Control panels
+  - Profiles panel: select, refresh, and reload profiles
+  - Image adjustment panel: change brightness, contrast, and opacity
+  - Image import panel: view and adjust matched files before import, add metadata, load immediately after import
+- Select subset of channels instead of only all or single channels
+- Zoom and pane functions in the ROI Editor overview image plots
+- Adapts to high resolution (HiDPI) screens
+- Consistent dark theme applied automatically when the system dark theme is used (depends on PyQt detection)
+- Fixed crash when opening the Atlas Editor tab without an image loaded
+- Fixed performance regression in ROI Editor
+
+CLI
+- `--channel` command-line parameter accepts multiple arguments
+- Sample commands script prioritizes finding Numpy image files
+- More error output from run scripts
+- Fixed attempting to run MagellanMapper in the Conda base environment
+
+
 ## MagellanMapper v1.3.0
 
 This release brings many changes to streamline both the graphical and command-line interfaces. Please note that several options have changed, which may require updating custom scripts. The sample commands script (`bin/sample_cmds.sh`) has been updated to illustrate this usage.
@@ -25,6 +54,7 @@ Summary of usage changes:
 | `--no_scale_bar` | `--plot_labels scale_bar=1` | Grouped with other plot labels controls |
 | `--padding_2d` | `--plot_labels margin=x,y,z` | Grouped with other plot labels controls, adding `margin` as space outside the ROI |
 | `--border` | `--plot_labels padding=x,y,z` | Duplicated by the `padding` argument |
+| `--channel c1` | `--channel c1 [c2...]` | Accepts multiple channels (v1.3.1) |
 
 ### Changes
 

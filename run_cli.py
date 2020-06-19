@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # Simple CLI startup wrapper script for MagellanMapper
 # Author: David Young, 2020
 

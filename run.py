@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 # Simple startup script for MagellanMapper
 # Author: David Young, 2017, 2020
 """Cross-platform environment activation and MagellanMapper launcher script.

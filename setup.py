@@ -16,9 +16,9 @@ config = {
     "name": "magellanmapper", 
     "description": "3D atlas analysis and annotation",
     "author": "David Young",
-    "url": "URL",
+    "url": "https://github.com/sanderslab/magellanmapper",
     "author_email": "david@textflex.com",
-    "version": "1.3.0",
+    "version": "1.3.1",
     "packages": setuptools.find_packages(),
     "scripts": [], 
     "python_requires": ">=3.6",  # TODO: consider testing on earlier versions

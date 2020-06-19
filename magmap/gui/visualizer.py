@@ -1925,6 +1925,10 @@ class Visualization(HasTraits):
     def _load_profiles(self):
         """Load profiles based on profiles added to the table."""
         print("profiles from table:\n", self._profiles)
+        if not self._profiles:
+            # no profiles in the table to load
+            return
+        
         # convert to Numpy array for fancy indexing
         profs = np.array(self._profiles)
 

@@ -290,6 +290,13 @@ class Visualization(HasTraits):
         selected_viewer_tab (Enum): The Enum corresponding to the selected
             tab in the viewer panel.
     """
+    # File selection
+
+    _filename = File  # file browser
+    _ignore_filename = False  # ignore file update trigger
+    _channel_names = Instance(TraitsList)
+    _channel = List  # selected channels, 0-based
+    
     # ROI selection
 
     # image coordinate limits
@@ -337,7 +344,7 @@ class Visualization(HasTraits):
     _profiles_cats = List
     _profiles_names = Instance(TraitsList)
     _profiles_name = Str
-    _profiles_chls = Int
+    _profiles_chls = List
     _profiles_table = TabularEditor(
         adapter=ProfilesArrayAdapter(), editable=True, auto_resize_rows=True,
         stretch_last_section=False)
@@ -349,7 +356,8 @@ class Visualization(HasTraits):
 
     _imgadj_names = Instance(TraitsList)
     _imgadj_name = Str
-    _imgadj_chls = Int
+    _imgadj_chls_names = Instance(TraitsList)
+    _imgadj_chls = Str
     _imgadj_min = Float
     _imgadj_min_low = Float
     _imgadj_min_high = Float
@@ -406,11 +414,6 @@ class Visualization(HasTraits):
     _mlab_title = None
     _circles_opened_type = None  # enum of circle style for opened 2D plots
     _opened_window_style = None  # 2D plots window style curr open
-    _filename = File  # file browser
-    _ignore_filename = False  # ignore file update trigger
-    _channel = Int  # channel number, 0-based
-    _channel_low = Int(-1)  # -1 used for None, which translates to "all"
-    _channel_high = Int
     _img_region = None
     _PREFIX_BOTH_SIDES = "+/-"
     _camera_pos = None
@@ -424,12 +427,10 @@ class Visualization(HasTraits):
             HGroup(
                 Item("_filename", label="File", style="simple",
                      editor=FileEditor(entries=10, allow_dir=False)),
-                Item("_channel", label="Channel",
-                     editor=RangeEditor(
-                         low_name="_channel_low",
-                         high_name="_channel_high",
-                         mode="spinner")),
             ),
+            Item("_channel", label="Channels", style="custom",
+                 editor=CheckListEditor(
+                     name="object._channel_names.selections", cols=8)),
             Item("rois_check_list", label="ROIs",
                  editor=CheckListEditor(
                      name="object.rois_selections_class.selections")),
@@ -507,11 +508,10 @@ class Visualization(HasTraits):
             Item("_profiles_name", label="Name",
                  editor=CheckListEditor(
                      name="object._profiles_names.selections")),
-            Item("_profiles_chls", label="Channel",
-                 editor=RangeEditor(
-                     low_name="_channel_low", high_name="_channel_high",
-                     mode="spinner")),
         ),
+        Item("_profiles_chls", label="Channels", style="custom",
+             editor=CheckListEditor(
+                 name="object._channel_names.selections", cols=8)),
         HGroup(
             Item("_profiles_add_btn", show_label=False),
             Item("_profiles_load_btn", show_label=False),
@@ -527,9 +527,8 @@ class Visualization(HasTraits):
                  editor=CheckListEditor(
                      name="object._imgadj_names.selections")),
             Item("_imgadj_chls", label="Channel",
-                 editor=RangeEditor(
-                     low_name="_channel_low", high_name="_channel_high",
-                     mode="spinner")),
+                 editor=CheckListEditor(
+                     name="object._imgadj_chls_names.selections")),
         ),
         Item("_imgadj_min", label="Minimum", editor=RangeEditor(
                  low_name="_imgadj_min_low", high_name="_imgadj_min_high",
@@ -663,7 +662,23 @@ class Visualization(HasTraits):
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
         self._setup_for_image()
-    
+
+    def _init_channels(self):
+        """Initialize channel check boxes for the currently loaded main image.
+
+        """
+        self._channel_names = TraitsList()
+        # 1 channel if no separate channel dimension
+        num_chls = (1 if config.image5d is None or config.image5d.ndim < 5
+                    else config.image5d.shape[4])
+        self._channel_names.selections = [str(i) for i in range(num_chls)]
+        
+        # pre-select channels for both main and profiles selector from config
+        # if available or all channels
+        self._channel = ([str(c) for c in config.channel] if config.channel
+                         else self._channel_names.selections)
+        self._profiles_chls = self._channel
+
     def _init_imgadj(self):
         """Initialize image adjustment controls for the currently loaded images.
         
@@ -678,6 +693,11 @@ class Visualization(HasTraits):
             k for k in self._img3ds.keys() if self._img3ds[k] is not None]
         if self._imgadj_names.selections:
             self._imgadj_name = self._imgadj_names.selections[0]
+        
+        # only channel options are channels selected in main channel selector
+        self._imgadj_chls_names = TraitsList()
+        self._imgadj_chls_names.selections = self._channel
+        self._imgadj_chls = self._imgadj_chls_names.selections[0]
 
     @on_trait_change("_imgadj_name")
     def _update_imgadj_limits(self):
@@ -707,6 +727,11 @@ class Visualization(HasTraits):
         viewer and channel.
 
         """
+        if not self._imgadj_chls:
+            # resetting image adjustment channel names triggers update as
+            # empty array
+            return
+        
         # get the currently selected viewer
         ed = None
         if self.selected_viewer_tab is ViewerTabs.ROI_ED:
@@ -719,7 +744,7 @@ class Visualization(HasTraits):
         # get the display settings from the viewer
         imgi = self._imgadj_names.selections.index(self._imgadj_name)
         img_settings = ed.get_img_display_settings(
-                imgi, chl=self._imgadj_chls)
+                imgi, chl=int(self._imgadj_chls))
         if img_settings is None: return
 
         # populate controls with these display settings
@@ -766,7 +791,7 @@ class Visualization(HasTraits):
         for ed in eds:
             ed.update_imgs_display(
                 self._imgadj_names.selections.index(self._imgadj_name),
-                chl=self._imgadj_chls, **kwargs)
+                chl=int(self._imgadj_chls), **kwargs)
 
     @staticmethod
     def is_dark_mode(max_rgb=100):
@@ -1100,26 +1125,13 @@ class Visualization(HasTraits):
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.
         """
+        self._init_channels()
         if config.image5d is not None:
-            # set up channel spinner based on number of channels available
-            shape = config.image5d.shape
-            if len(shape) >= 5:
-                # increase max channels based on channel dimension
-                self._channel_high = shape[4] - 1
-                self._channel_low = -1
-            else:
-                # only one channel available
-                self._channel_high = 0
-                self._channel_low = 0
-            # None channel defaults to all channels, represented in the channel
-            # spinner here by -1
-            self._channel = config.channel[0] if config.channel else -1
-
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
             # elsewhere; "high_label" RangeEditor setting also does not
             # appear to be working
-            self.z_high, self.y_high, self.x_high = shape[1:4]
+            self.z_high, self.y_high, self.x_high = config.image5d.shape[1:4]
             if config.roi_offset is not None:
                 # apply user-defined offsets
                 self.x_offset = config.roi_offset[0]
@@ -1179,10 +1191,16 @@ class Visualization(HasTraits):
         """Update the selected channel, resetting the current state to 
         prevent displaying the old channel.
         """
-        if self._channel == -1:
-            config.channel = None
-        else:
-            config.channel = [self._channel]
+        if not self._channel:
+            # resetting channel names triggers channel update as empty array
+            return
+        config.channel = [int(n) for n in self._channel]
+        if self._imgadj_chls_names:
+            # limit image adjustment channel options to currently selected
+            # channels in main channel selector
+            self._imgadj_chls_names.selections = self._channel
+            if self._imgadj_chls_names.selections:
+                self._imgadj_chls = self._imgadj_chls_names.selections[0]
         self.rois_check_list = _ROI_DEFAULT
         self._reset_segments()
         print("Changed channel to {}".format(config.channel))
@@ -1618,7 +1636,7 @@ class Visualization(HasTraits):
                 # change to single-channel if all blobs are from same channel
                 chls = np.unique(detector.get_blobs_channel(blobs))
                 if len(chls) == 1:
-                    self._channel = int(chls[0])
+                    self._channel = [str(int(chls[0]))]
             self.show_3d()
             if self.scene_3d_shown:
                 self.show_orientation_axes(self.flipz)
@@ -1898,10 +1916,10 @@ class Visualization(HasTraits):
     def _add_profile(self):
         """Add the chosen profile to the profiles table."""
         # construct profile from selected options
-        prof = [self._profiles_cats[0], self._profiles_name,
-                self._profiles_chls]
-        print("profile to add", prof)
-        self._profiles.append(prof)
+        for chl in self._profiles_chls:
+            prof = [self._profiles_cats[0], self._profiles_name, chl]
+            print("profile to add", prof)
+            self._profiles.append(prof)
 
     @on_trait_change("_profiles_load_btn")
     def _load_profiles(self):
@@ -1934,7 +1952,8 @@ class Visualization(HasTraits):
             # add rows for the given profile category
             if not prof:
                 return
-            for namei, name in enumerate(prof[prof.NAME_KEY].split(prof.delimiter)):
+            for namei, name in enumerate(
+                    prof[prof.NAME_KEY].split(prof.delimiter)):
                 if namei == 0:
                     # skip default profile, which is included by default
                     continue

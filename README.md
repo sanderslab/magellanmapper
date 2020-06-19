@@ -35,9 +35,9 @@ See [Settings](docs/settings.md) for how to customize settings to your image fil
 
 To try out functions with some sample images, download any of these files:
 
-- [Sample region of nuclei at 4x](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.zip)
-- [Sample downsampled tissue cleared whole brain](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)
-- [Allen Developing Mouse Brain Atlas E18.5](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/ADMBA-E18pt5.zip)
+- [Sample region of nuclei at 4x (`sample_region.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.zip)
+- [Sample downsampled tissue cleared whole brain (`sample_brain.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)
+- [Allen Developing Mouse Brain Atlas E18.5 (`ADMBA-E18pt5`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/ADMBA-E18pt5.zip)
 
 ## 3D viewer
 

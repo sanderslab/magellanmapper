@@ -29,6 +29,9 @@ ENV_NAME = "mag"
 #: str: Directory with Venvs directories.
 VENV_DIR = "../venvs"
 
+#: str: Conda environment variable for the currently activated environment name.
+_CONDA_ENV_KEY = "CONDA_DEFAULT_ENV"
+
 #: List[str]: Shell commands to launch CLI.
 ARGS_CLI = ["python -u -c \"from magmap.io import cli; cli.main()\" "]
 
@@ -51,17 +54,19 @@ ARGS_CONDA = [
 
 
 def is_conda_activated():
-    """Check whether a Conda environment is active.
-
-    Simply checks whether any environment is active to allow flexibility
-    in case the given environment does not have the exact same name as
-    :const:`ENV_NAME`.
+    """Check whether the MagellanMapper Conda environment is active.
+    
+    The environment name does not have to exactly match :const:`ENV_NAME`
+    but at least start with this name to provide some flexibility for
+    different versions of this environment, such as ``mag2``.
 
     Returns:
-        True if a Conda environment is currently activated.
+        bool: True if a Conda environment starting with the name
+        :const:`ENV_NAME` is currently activated.
 
     """
-    return "CONDA_PREFIX" in os.environ
+    return (_CONDA_ENV_KEY in os.environ
+            and os.environ[_CONDA_ENV_KEY].startswith(ENV_NAME))
 
 
 def is_venv_activated():

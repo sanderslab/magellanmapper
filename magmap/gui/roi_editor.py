@@ -13,6 +13,7 @@ Attributes:
 import math
 import os
 from enum import Enum
+import re
 from time import time
 
 import numpy as np
@@ -784,6 +785,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if not circles == self.CircleStyles.NO_CIRCLES:
             # add points that were not segmented by ctrl-clicking on zoom plots
             # as long as not in "no circles" mode
+            regex_key_chl = re.compile(r"\+[0-9]+$")
+            
             def on_btn_release(event):
                 ax = event.inaxes
                 print("event key: {}".format(event.key))
@@ -792,15 +795,21 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     # ctrl combo and this event is control
                     pass
                 elif event.key == "control" or event.key.startswith("ctrl"):
-                    seg_channel = 0
                     if channel:
                         seg_channel = channel[0]
-                        if len(channel) > 1:
-                            # specify channel by key combos if displaying multiple
-                            # channels
-                            if event.key.endswith("+1"):
-                                # ctrl+1
-                                seg_channel = channel[1]
+                        num_chls = len(channel)
+                        if num_chls > 1:
+                            chl_matches = re.search(regex_key_chl, event.key)
+                            if chl_matches:
+                                # ctrl+n to specify the n-th channel
+                                chl = int(chl_matches[0])
+                                if chl < num_chls:
+                                    seg_channel = channel[chl]
+                                else:
+                                    print("selected channel index {} not within"
+                                          " range up to index {}"
+                                          .format(chl, num_chls - 1))
+                                    return
                     try:
                         axi = ax_z_list.index(ax)
                         if (axi != -1 and z_planes_padding <= axi

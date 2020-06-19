@@ -1924,6 +1924,9 @@ class Visualization(HasTraits):
     @on_trait_change("_profiles_load_btn")
     def _load_profiles(self):
         """Load profiles based on profiles added to the table."""
+        # update profile names list
+        self._update_profiles_names()
+        
         print("profiles from table:\n", self._profiles)
         if not self._profiles:
             # no profiles in the table to load

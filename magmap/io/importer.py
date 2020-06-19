@@ -585,7 +585,7 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
         return None
 
 
-def setup_import_bioformats(filename, channel=None):
+def setup_import_bioformats(filename):
     """Find matching file for import via Bioformats.
 
     For TIFF images, multiple channels will assume to be stored in separate
@@ -595,9 +595,6 @@ def setup_import_bioformats(filename, channel=None):
 
     Args:
         filename: Image file, assumed to have metadata in OME XML format.
-        channel: Channel number, currently used only to load a channel when
-            a Numpy ROI image exists. Otherwise, all channels available will
-            be imported into a new Numpy image. Defaults to None.
 
     Returns:
         dict[int, List[str]], str: Dictionary of channel numbers to sequences
@@ -618,9 +615,7 @@ def setup_import_bioformats(filename, channel=None):
             base_path = base_path[:iter_ind[-1]]
         
         # get all files matching channel format
-        channel_num = "*" if channel is None else "{}*".format(channel)
-        tif_base = "{}{}{}".format(
-            base_path, CHANNEL_SEPARATOR, channel_num)
+        tif_base = "{}{}*".format(base_path, CHANNEL_SEPARATOR)
         filenames = []
         tif_searches = [tif_base]
         print("Looking for TIFF files for multi-channel images matching "
@@ -662,19 +657,20 @@ def setup_import_bioformats(filename, channel=None):
 def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                       channel=None, fn_feedback=None):
     """Imports single or multiplane file(s) into Numpy format via Bioformats.
+    
+    This import currently supports either single-channel, multi-file TIFFs
+    or other formats assumed to be multi-channel, single files.
 
     Args:
         chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
             sequences of image file paths to import.
         prefix (str): Ouput base path.
-        series: Series index to load. Defaults to None, which will use 0.
-        z_max: Number of z-planes to load, or -1 if all should be loaded
-            (default).
+        series (int): Series index to load. Defaults to None, which will use 0.
+        z_max (int): Number of z-planes to load; defaults to -1 to load all.
         offset (int): z-plane offset from which to start importing.
             Defaults to 0.
-        channel: Channel number, currently used only to load a channel when
-            a Numpy ROI image exists. Otherwise, all channels available will
-            be imported into a new Numpy image. Defaults to None.
+        channel (List[int]): Sequence of channel indices to import; defaults
+            to None to import all channels.
         fn_feedback (func): Callback function to give feedback strings
             during import; defaults to None.
 
@@ -696,24 +692,28 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                    "may take awhile..."
                    .format(filename_image5d), fn_feedback)
     
+    if channel is not None and not libmag.is_seq(channel):
+        channel = [channel]
+    
     # initialize JVM for import via Bioformats
     start_jvm()
     jb.attach()
     image5d = None
     near_mins = []
     near_maxs = []
-    num_chls = len(chl_paths.keys()) if channel is None else 1
-    chl_load = channel if channel else 0
+    chls_load = [0]  # default to assuming each file is single channel
     name = os.path.basename(prefix)
     shape = None
+    chli = 0
     for chl, paths in chl_paths.items():
         # assume only one file per channel, ignoring others in same channel
         img_path = paths[0]
         path_split = libmag.splitext(img_path)
         ext = path_split[1].lower()
         if ext in _EXT_TIFFS:
-            # skip if channel parameter set and not current channel
-            if channel is not None and chl != channel: continue
+            # TIFF channels are specified by the dict; skip if current channel
+            # is not in set channel parameter
+            if channel and chl not in channel: continue
         
         if shape is None:
             # set up output image shape
@@ -725,57 +725,62 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                         .format(img_path))
                 sizes, dtype = find_sizes(img_path)
                 shape = list(sizes[0])
-                shape[-1] = num_chls
+                shape[-1] = len(channel) if channel else len(chl_paths.keys())
             else:
-                # get metadata from file itself; if multichannel, its
+                # get metadata from non-TIFF file itself; if multichannel, its
                 # channels overrides channel dictionary channels, though any
                 # subsequent files will simply overwrite the array
                 names, sizes, config.resolutions, config.magnification, \
                     config.zoom, pixel_type = parse_ome_raw(img_path)
-                shape = sizes[series]
+                shape = list(sizes[series])
                 name = names[series]
-                num_chls = shape[-1]
-                if channel is None:
-                    chl_load = None
+                if channel:
+                    # set channels based on channel parameter
+                    chls_load = channel
+                    shape[-1] = len(channel)
+                else:
+                    chls_load = range(shape[-1])
             if z_max != -1:
                 shape[1] = z_max
-            if num_chls == 1 or channel is not None:
+            if shape[-1] == 1:
                 # remove channel dimension if only single channel
                 shape = shape[:-1]
-                num_chls = 1
             shape = tuple(shape)
         
         # import by channel plane
         rdr = bf.ImageReader(img_path, perform_init=True)
-        lows = []
-        highs = []
-        for t in range(shape[0]):
-            for z in range(shape[1]):
-                libmag.printcb("loading planes from time {}, z {}, channel {}"
-                               .format(t, z, chl_load), fn_feedback)
-                img = rdr.read(z=(z + offset), t=t, c=chl_load,
-                               series=series, rescale=False)
-                if image5d is None:
-                    # open file as memmap to directly output to disk, which is
-                    # much faster than outputting to RAM and saving to disk
-                    image5d = np.lib.format.open_memmap(
-                        filename_image5d, mode="w+", dtype=img.dtype,
-                        shape=shape)
-                    print("setting image5d array for series {} with shape: {}"
-                          .format(series, image5d.shape))
-                # near max/min bounds per channel for the given plane
-                low, high = calc_intensity_bounds(img, dim_channel=2)
-                lows.append(low)
-                highs.append(high)
-                if num_chls > 1 and chl_load is not None:
-                    # squeeze plane inside if separate file per channel
-                    image5d[t, z, :, :, chl] = img
-                else:
-                    image5d[t, z] = img
+        len_shape = len(shape)
+        for chl_load in chls_load:
+            lows = []
+            highs = []
+            for t in range(shape[0]):
+                for z in range(shape[1]):
+                    libmag.printcb(
+                        "loading planes from time {}, z {}, channel {}"
+                        .format(t, z, chl_load), fn_feedback)
+                    img = rdr.read(z=(z + offset), t=t, c=chl_load,
+                                   series=series, rescale=False)
+                    if image5d is None:
+                        # open file as memmap to directly output to disk,
+                        # much faster than outputting to RAM first
+                        image5d = np.lib.format.open_memmap(
+                            filename_image5d, mode="w+", dtype=img.dtype,
+                            shape=shape)
+                        print("setting image5d array for series {} with shape: "
+                              "{}".format(series, image5d.shape))
+                    # near max/min bounds per channel for the given plane
+                    low, high = calc_intensity_bounds(img, dim_channel=2)
+                    lows.append(low)
+                    highs.append(high)
+                    if len_shape >= 5:
+                        # squeeze plane inside if separate file per channel
+                        image5d[t, z, :, :, chli] = img
+                    else:
+                        image5d[t, z] = img
+            near_mins, near_maxs = _calc_near_intensity_bounds(
+                near_mins, near_maxs, lows, highs)
+            chli += 1
         rdr.close()
-        near_mins, near_maxs = _calc_near_intensity_bounds(
-            near_mins, near_maxs,
-            lows, highs)
     
     # finalize import and save metadata
     image5d.flush()  # may not be necessary but ensure contents to disk

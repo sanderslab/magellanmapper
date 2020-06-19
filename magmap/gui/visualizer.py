@@ -556,7 +556,7 @@ class Visualization(HasTraits):
                      editor=FileEditor(entries=10, allow_dir=True)),
             ),
             Item("_import_paths", editor=_import_table, show_label=False),
-            label="Import file selection"
+            label="Import File Selection"
         ),
         VGroup(
             Item("_import_res", label="Resolutions (x,y,z)"),
@@ -2009,7 +2009,7 @@ class Visualization(HasTraits):
         
         if chl_paths:
             # set metadata
-            config.resolutions = self._import_res.astype(float)
+            config.resolutions = [self._import_res[0].astype(float)[::-1]]
             config.magnification = self._import_mag
             config.zoom = self._import_zoom
             

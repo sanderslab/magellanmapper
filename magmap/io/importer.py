@@ -658,8 +658,9 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                       channel=None, fn_feedback=None):
     """Imports single or multiplane file(s) into Numpy format via Bioformats.
     
-    This import currently supports either single-channel, multi-file TIFFs
-    or other formats assumed to be multi-channel, single files.
+    For multichannel images, this import currently supports either a single
+    file with multiple channels or multiple files each containing a single
+    channel.
 
     Args:
         chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
@@ -699,44 +700,53 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
     near_mins = []
     near_maxs = []
     chls_load = [0]  # default to assuming each file is single channel
+    num_chl_keys = len(chl_paths.keys())
     name = os.path.basename(prefix)
     shape = None
     chli = 0
     for chl, paths in chl_paths.items():
         # assume only one file per channel, ignoring others in same channel
         img_path = paths[0]
-        path_split = libmag.splitext(img_path)
-        ext = path_split[1].lower()
-        if ext in _EXT_TIFFS:
-            # TIFF channels are specified by the dict; skip if current channel
-            # is not in set channel parameter
-            if channel and chl not in channel: continue
+        if num_chl_keys > 1 and channel and chl not in channel:
+            # skip if separate files for each channel current channel is not
+            # in set channel parameter
+            continue
         
         if shape is None:
             # set up output image shape
-            if ext in _EXT_TIFFS:
+            try:
+                # get embedded metadata
+                names, sizes, config.resolutions, config.magnification, \
+                    config.zoom, pixel_type = parse_ome_raw(img_path)
+                shape = list(sizes[series])
+                name = names[series]
+            except jb.JavaException as err:
+                print(err)
                 if config.resolutions is None:
                     # resolutions required for scaling, detections, etc
                     raise IOError(
                         "Could not import {}. Please specify resolutions."
                         .format(img_path))
+                # get a more limited subset of metadata
+                # TODO: see if necessary or improved performance
                 sizes, dtype = find_sizes(img_path)
                 shape = list(sizes[0])
-                shape[-1] = len(channel) if channel else len(chl_paths.keys())
-            else:
-                # get metadata from non-TIFF file itself; if multichannel, its
-                # channels overrides channel dictionary channels, though any
-                # subsequent files will simply overwrite the array
-                names, sizes, config.resolutions, config.magnification, \
-                    config.zoom, pixel_type = parse_ome_raw(img_path)
-                shape = list(sizes[series])
-                name = names[series]
+            
+            if num_chl_keys == 1:
+                # if channels dict specifies only one channel, check if first
+                # file itself specifies multiple channels
                 if channel:
                     # set channels based on channel parameter
                     chls_load = channel
                     shape[-1] = len(channel)
                 else:
+                    # if multichannel, its channels overrides channel dictionary
+                    # channels, though any subsequent files will simply
+                    # overwrite the array
                     chls_load = range(shape[-1])
+            else:
+                # for multi-file, assume only one channel per file
+                shape[-1] = len(channel) if channel else num_chl_keys
             if z_max != -1:
                 shape[1] = z_max
             if shape[-1] == 1:

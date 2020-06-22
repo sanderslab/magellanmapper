@@ -11,7 +11,7 @@ MagellanMapper is a graphical imaging informatics suite and pipeline for high-th
   * Or clone this repo: `git clone https://github.com/sanderslab/magellanmapper.git`
 1. Navigate to the MagellanMapper directory: `cd <path-to-magellanmapper>`
 1. Install MagellanMapper
-  * On Mac or Linux: `bin/setup_conda.sh`
+  * On Mac or Linux: `bin/setup_conda`
   * On Windows: `bin\setup_conda.bat`
   
 See [Installation](docs/install.md) for more details, including installing without Conda such as by Pip or Venv+Pip.
@@ -22,10 +22,10 @@ MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, re
 
 ```
 conda activate mag
-./run.py --img <path-to-your-image>
+python run.py
 ```
 
-Proprietary image formats such as `.czi` will be imported automatically via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
+In the "Import" tab, you can import files from standard image formats such as TIFF or proprietary microscopy formats such as CZI. These files are imported via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
 
 You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details. [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. It can also be modified and called directly.
 

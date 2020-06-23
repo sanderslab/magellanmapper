@@ -222,10 +222,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     config.image5d = importer.read_file(path, series)
                 if import_only or config.image5d is None:
                     # re-import over existing image or import new image
-                    chls, import_path = importer.setup_import_bioformats(path)
+                    chls, import_path = importer.setup_import_multipage(path)
                     prefix = (import_path if config.prefix is None
                               else config.prefix)
-                    config.image5d = importer.import_bioformats(
+                    config.image5d = importer.import_multiplane_images(
                         chls, prefix, series, channel=config.channel)
                 config.image5d_io = config.LoadIO.NP
             except FileNotFoundError as e:

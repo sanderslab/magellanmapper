@@ -24,9 +24,9 @@ class TestImageStackProcessing(unittest.TestCase):
         config.image5d = importer.read_file(
             config.filename, config.series)
         if config.image5d is None:
-            chls, import_path = importer.setup_import_bioformats(
+            chls, import_path = importer.setup_import_multipage(
                 config.filename)
-            config.image5d = importer.import_bioformats(
+            config.image5d = importer.import_multiplane_images(
                 chls, import_path, channel=config.channel)
         self.assertEqual(config.image5d.shape, (1, 51, 200, 200, 2))
     

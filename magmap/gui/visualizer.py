@@ -1989,7 +1989,7 @@ class Visualization(HasTraits):
         elif self._import_browser:
             # gather files matching the pattern of the selected file to import
             self._import_mode = ImportModes.MULTIPAGE
-            chl_paths, base_path = importer.setup_import_bioformats(
+            chl_paths, base_path = importer.setup_import_multipage(
                 self._import_browser)
         
         if chl_paths:
@@ -2091,8 +2091,8 @@ class ImportThread(Thread):
                     fn_feedback=self.fn_feedback)
             elif self.mode is ImportModes.MULTIPAGE:
                 # import multi-plane files
-                image5d = importer.import_bioformats(
                     self.chl_paths, self.prefix, fn_feedback=self.fn_feedback)
+                image5d = importer.import_multiplane_images(
         finally:
             if image5d is not None:
                 # set up the image for immediate use within MagellanMapper

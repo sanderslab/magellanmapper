@@ -599,8 +599,8 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
         return None
 
 
-def setup_import_bioformats(filename):
-    """Find matching file for import via Bioformats.
+def setup_import_multipage(filename):
+    """Find matching files for multipage image import.
 
     For TIFF images, multiple channels will assume to be stored in separate
     files with :const:``CHANNEL_SEPARATOR`` followed by an integer
@@ -668,13 +668,15 @@ def setup_import_bioformats(filename):
     return chl_paths, base_path
 
 
-def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
-                      channel=None, fn_feedback=None):
-    """Imports single or multiplane file(s) into Numpy format via Bioformats.
+def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
+                             channel=None, fn_feedback=None, shape=None):
+    """Imports single or multiplane file(s) into Numpy format.
     
     For multichannel images, this import currently supports either a single
     file with multiple channels or multiple files each containing a single
-    channel.
+    channel. Files will be loaded by Bioformats, with fallback by Numpy
+    as RAW files. Output files are written plane-by-plane to memory-mapped
+    files to bypass keeping the full input or output image in RAM.
 
     Args:
         chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
@@ -688,6 +690,8 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
             to None to import all channels.
         fn_feedback (func): Callback function to give feedback strings
             during import; defaults to None.
+        shape (List[int]): Output image shape; defaults to None to determine
+            by ``chl_paths`` and the first image.
 
     Returns:
         :obj:`np.ndarray`: The image array as a 5D array in the format,
@@ -716,7 +720,6 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
     chls_load = [0]  # default to assuming each file is single channel
     num_chl_keys = len(chl_paths.keys())
     name = os.path.basename(prefix)
-    shape = None
     chli = 0
     for chl, paths in chl_paths.items():
         # assume only one file per channel, ignoring others in same channel
@@ -769,32 +772,50 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
                 shape[-1] = len(channel) if channel else num_chl_keys
             if z_max != -1:
                 shape[1] = z_max
-            if shape[-1] == 1:
-                # remove channel dimension if only single channel
-                shape = shape[:-1]
-            shape = tuple(shape)
         
-        # import by channel plane
-        rdr = bf.ImageReader(img_path, perform_init=True)
+        rdr = None
+        img_raw = None
+        if image5d is None:
+            if shape[-1] == 1:
+                shape = shape[:-1]  # remove channel dim if single channel
+            shape = tuple(shape)
+        try:
+            # open image with Python-Bioformats
+            rdr = bf.ImageReader(img_path, perform_init=True)
+        except (jb.JavaException, AttributeError) as err:
+            print(err)
+            # fall back to opening as a RAW 3D image file
+            # TODO: generalize data type
+            img_raw = np.memmap(
+                img_path, dtype="<i2", shape=shape[1:], mode="r")
         len_shape = len(shape)
         for chl_load in chls_load:
             lows = []
             highs = []
             for t in range(shape[0]):
                 for z in range(shape[1]):
+                    # import by channel plane
                     libmag.printcb(
                         "loading planes from time {}, z {}, channel {}"
                         .format(t, z, chl_load), fn_feedback)
-                    img = rdr.read(z=(z + offset), t=t, c=chl_load,
-                                   series=series, rescale=False)
+                    if rdr is not None:
+                        # read plane with Bioformats reader
+                        img = rdr.read(z=(z + offset), t=t, c=chl_load,
+                                       series=series, rescale=False)
+                    else:
+                        # access plane from RAW memmapped file
+                        img = img_raw[z]
+                    
                     if image5d is None:
-                        # open file as memmap to directly output to disk,
-                        # much faster than outputting to RAM first
+                        # open output file as memmap to directly write to disk,
+                        # much faster than outputting to RAM first; supports
+                        # NPY directly, unlike np.memmap
                         image5d = np.lib.format.open_memmap(
                             filename_image5d, mode="w+", dtype=img.dtype,
                             shape=shape)
                         print("setting image5d array for series {} with shape: "
                               "{}".format(series, image5d.shape))
+                    
                     # near max/min bounds per channel for the given plane
                     low, high = calc_intensity_bounds(img, dim_channel=2)
                     lows.append(low)
@@ -807,7 +828,10 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
             near_mins, near_maxs = _calc_near_intensity_bounds(
                 near_mins, near_maxs, lows, highs)
             chli += 1
-        rdr.close()
+        if rdr is not None:
+            rdr.close()
+        if img_raw is not None:
+            img_raw.flush()
     
     # finalize import and save metadata
     image5d.flush()  # may not be necessary but ensure contents to disk

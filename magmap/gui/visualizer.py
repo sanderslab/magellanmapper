@@ -32,7 +32,7 @@ from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         push_exception_handler, Property, File)
 from traitsui.api import (View, Item, HGroup, VGroup, Tabbed, Handler,
                           RangeEditor, HSplit, TabularEditor, CheckListEditor, 
-                          FileEditor, TextEditor)
+                          FileEditor, TextEditor, ArrayEditor)
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -379,9 +379,10 @@ class Visualization(HasTraits):
     _import_paths = List  # import paths table list
     _import_btn = Button("Import files")
     _import_clear_btn = Button("Clear files")
-    _import_res = Array(Float, shape=(1, 3))
+    _import_res = Array(np.float, shape=(1, 3))
     _import_mag = Float(1.0)
     _import_zoom = Float(1.0)
+    _import_shape = Array(np.int, shape=(1, 5), editor=ArrayEditor(width=-40))
     _import_prefix = Str
     _import_feedback = Str
 
@@ -566,8 +567,12 @@ class Visualization(HasTraits):
             ),
             label="Microscope Metadata",
         ),
-        HGroup(
-            Item("_import_prefix", style="simple", label="Output path"),
+        VGroup(
+            Item("_import_shape", label="Shape (chl, x, y, z, time)"),
+            HGroup(
+                Item("_import_prefix", style="simple", label="Path"),
+            ),
+            label="Output image file"
         ),
         HGroup(
             Item("_import_btn", show_label=False),
@@ -634,7 +639,7 @@ class Visualization(HasTraits):
 
         # set up image import
         self._import_mode = None
-        self._import_res[0] = (1.0, 1.0, 1.0)
+        self._import_res = np.ones((1, 3))
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -2020,13 +2025,19 @@ class Visualization(HasTraits):
             config.magnification = self._import_mag
             config.zoom = self._import_zoom
             
+            # get shape if not default
+            shape = self._import_shape[0].astype(int)[::-1]
+            if all(np.equal(shape, 0)):
+                shape = None
+            
             # initialize import in separate thread with a signal for
             # loading thew newly imported image
             self.load_image_signal = QtSignal()
             self.load_image_signal.signal.connect(update_filename)
             import_thread = ImportThread(
                 self._import_mode, self._import_prefix, chl_paths,
-                self._update_import_feedback, self.load_image_signal.signal)
+                self._update_import_feedback, self.load_image_signal.signal,
+                shape)
             import_thread.start()
     
     @on_trait_change("_import_clear_btn")
@@ -2037,6 +2048,8 @@ class Visualization(HasTraits):
         self._import_browser = ""  # will reset table
         self._import_paths = []
         self._import_mode = None
+        self._import_res = np.ones((1, 3))
+        self._import_shape = np.zeros((1, 5), dtype=np.int)
 
     def _update_import_feedback(self, val):
         """Update the import feedback text box.
@@ -2071,7 +2084,7 @@ class ImportThread(Thread):
     """
     
     def __init__(self, mode, prefix, chl_paths, fn_feedback=None,
-                 signal_success=None):
+                 signal_success=None, shape=None):
         """Initialize the import thread."""
         super().__init__()
         self.mode = mode
@@ -2079,6 +2092,7 @@ class ImportThread(Thread):
         self.chl_paths = chl_paths
         self.fn_feedback = fn_feedback
         self.signal_success = signal_success
+        self.shape = shape
 
     def run(self):
         """Import files based on the import mode and set up the image."""
@@ -2091,8 +2105,9 @@ class ImportThread(Thread):
                     fn_feedback=self.fn_feedback)
             elif self.mode is ImportModes.MULTIPAGE:
                 # import multi-plane files
-                    self.chl_paths, self.prefix, fn_feedback=self.fn_feedback)
                 image5d = importer.import_multiplane_images(
+                    self.chl_paths, self.prefix, fn_feedback=self.fn_feedback,
+                    shape=self.shape)
         finally:
             if image5d is not None:
                 # set up the image for immediate use within MagellanMapper

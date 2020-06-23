@@ -167,25 +167,39 @@ def parse_ome_raw(filename):
             # microscope info
             for grandchild in child:
                 if grandchild.tag.endswith("Detector"):
-                    zoom = float(grandchild.attrib["Zoom"])
+                    zoom = grandchild.attrib.get("Zoom")
+                    if zoom is not None:
+                        zoom = float(zoom)
                 elif grandchild.tag.endswith("Objective"):
-                    magnification = float(grandchild.attrib["NominalMagnification"])
-            print("zoom: {}, magnification: {}".format(zoom, magnification))
+                    magnification = grandchild.attrib["NominalMagnification"]
+                    if magnification is not None:
+                        magnification = float(magnification)
         elif child.tag.endswith("Image"):
             # image file info
             names.append(child.attrib["Name"])
             for grandchild in child:
                 if grandchild.tag.endswith("Pixels"):
                     att = grandchild.attrib
-                    sizes.append(tuple([int(att[t]) for t in size_tags]))
-                    resolutions.append(tuple([float(att[t]) for t in res_tags]))
+                    try:
+                        # get image shape for each series
+                        sizes.append(tuple(
+                            [int(att[t]) for t in size_tags]))
+                    except KeyError:
+                        print("Could not find image sizes metadata")
+                    try:
+                        # get image resolutions for each series
+                        resolutions.append(tuple(
+                            [float(att[t]) for t in res_tags]))
+                    except KeyError:
+                        print("Could not find image resolution metadata")
                     # assumes pixel type is same for all images
                     if pixel_type is None:
-                        pixel_type = att["Type"]
-                        print("pixel_type: {}".format(pixel_type))
+                        pixel_type = att.get("Type")
     print("names: {}".format(names))
     print("sizes: {}".format(sizes))
     print("resolutions: {}".format(resolutions))
+    print("zoom: {}, magnification: {}".format(zoom, magnification))
+    print("pixel_type: {}".format(pixel_type))
     return names, sizes, resolutions, magnification, zoom, pixel_type
 
 
@@ -715,9 +729,15 @@ def import_bioformats(chl_paths, prefix, series=None, z_max=-1, offset=0,
         if shape is None:
             # set up output image shape
             try:
-                # get embedded metadata
-                names, sizes, config.resolutions, config.magnification, \
-                    config.zoom, pixel_type = parse_ome_raw(img_path)
+                # get available embedded metadata via Bioformats
+                names, sizes, res, mag, zoom, pixel_type = parse_ome_raw(
+                    img_path)
+                if res:
+                    config.resolutions = res
+                if mag is not None:
+                    config.magnification = mag
+                if zoom is not None:
+                    config.zoom = zoom
                 shape = list(sizes[series])
                 name = names[series]
             except jb.JavaException as err:

@@ -669,7 +669,8 @@ def setup_import_multipage(filename):
 
 
 def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
-                             channel=None, fn_feedback=None, shape=None):
+                             channel=None, fn_feedback=None, shape=None,
+                             data_type=None):
     """Imports single or multiplane file(s) into Numpy format.
     
     For multichannel images, this import currently supports either a single
@@ -692,6 +693,8 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
             during import; defaults to None.
         shape (List[int]): Output image shape; defaults to None to determine
             by ``chl_paths`` and the first image.
+        data_type (str, :obj:`np.dtype`): Data type as a string or data
+            type object; defaults to None.
 
     Returns:
         :obj:`np.ndarray`: The image array as a 5D array in the format,
@@ -787,7 +790,7 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
             # fall back to opening as a RAW 3D image file
             # TODO: generalize data type
             img_raw = np.memmap(
-                img_path, dtype="<i2", shape=shape[1:], mode="r")
+                img_path, dtype=data_type, shape=shape[1:], mode="r")
         len_shape = len(shape)
         for chl_load in chls_load:
             lows = []

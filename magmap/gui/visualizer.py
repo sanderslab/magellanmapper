@@ -13,6 +13,7 @@ Examples:
         ./run.py --img /path/to/file.czi --offset 30,50,205 --size 150,150,10
 """
 
+from collections import OrderedDict
 from enum import Enum, auto
 import os
 from threading import Thread
@@ -383,6 +384,21 @@ class Visualization(HasTraits):
     _import_mag = Float(1.0)
     _import_zoom = Float(1.0)
     _import_shape = Array(np.int, shape=(1, 5), editor=ArrayEditor(width=-40))
+    # map bits to bytes for constructing Numpy data type
+    _IMPORT_BITS = OrderedDict((
+        ("8", "1"), ("16", "2"), ("32", "3"), ("64", "4")))
+    _import_bit = List
+    # map numerical signage and precision to Numpy data type
+    _IMPORT_DATA_TYPES = OrderedDict((
+        ("Unsigned integer", "u"),
+        ("Signed integer", "i"),
+        ("Floating point", "f"),
+    ))
+    _import_data_type = List
+    # map byte order name to Numpy symbol
+    _IMPORT_BYTE_ORDERS = OrderedDict((
+        ("Little endian", "<"), ("Big endian", ">")))
+    _import_byte_order = List
     _import_prefix = Str
     _import_feedback = Str
 
@@ -572,6 +588,17 @@ class Visualization(HasTraits):
             HGroup(
                 Item("_import_prefix", style="simple", label="Path"),
             ),
+            HGroup(
+                Item("_import_bit", style="simple", label="Data Bit",
+                     editor=CheckListEditor(
+                         values=tuple(_IMPORT_BITS.keys()), cols=1)),
+                Item("_import_data_type", style="simple", show_label=False,
+                     editor=CheckListEditor(
+                         values=tuple(_IMPORT_DATA_TYPES.keys()), cols=1)),
+                Item("_import_byte_order", style="simple", show_label=False,
+                     editor=CheckListEditor(
+                         values=tuple(_IMPORT_BYTE_ORDERS.keys()), cols=1)),
+            ),
             label="Output image file"
         ),
         HGroup(
@@ -640,6 +667,9 @@ class Visualization(HasTraits):
         # set up image import
         self._import_mode = None
         self._import_res = np.ones((1, 3))
+        self._import_bit = [tuple(self._IMPORT_BITS.keys())[0]]
+        self._import_data_type = [tuple(self._IMPORT_DATA_TYPES.keys())[0]]
+        self._import_byte_order = [tuple(self._IMPORT_BYTE_ORDERS.keys())[0]]
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -2024,6 +2054,10 @@ class Visualization(HasTraits):
             config.resolutions = [self._import_res[0].astype(float)[::-1]]
             config.magnification = self._import_mag
             config.zoom = self._import_zoom
+            data_type = "".join(
+                (self._IMPORT_BYTE_ORDERS[self._import_byte_order[0]],
+                 self._IMPORT_DATA_TYPES[self._import_data_type[0]],
+                 self._IMPORT_BITS[self._import_bit[0]]))
             
             # get shape if not default
             shape = self._import_shape[0].astype(int)[::-1]
@@ -2037,7 +2071,7 @@ class Visualization(HasTraits):
             import_thread = ImportThread(
                 self._import_mode, self._import_prefix, chl_paths,
                 self._update_import_feedback, self.load_image_signal.signal,
-                shape)
+                shape, data_type)
             import_thread.start()
     
     @on_trait_change("_import_clear_btn")
@@ -2080,11 +2114,13 @@ class ImportThread(Thread):
         signal_success (:obj:`PyQt5.QtCore.pyqtBoundSignal`): Signal taking
             no arguments, to be emitted upon successfull import; defaults
             to None.
+        data_type (str, :obj:`np.dtype`): Output image data type; defaults
+            to None.
     
     """
     
     def __init__(self, mode, prefix, chl_paths, fn_feedback=None,
-                 signal_success=None, shape=None):
+                 signal_success=None, shape=None, data_type=None):
         """Initialize the import thread."""
         super().__init__()
         self.mode = mode
@@ -2093,6 +2129,7 @@ class ImportThread(Thread):
         self.fn_feedback = fn_feedback
         self.signal_success = signal_success
         self.shape = shape
+        self.data_type = data_type
 
     def run(self):
         """Import files based on the import mode and set up the image."""
@@ -2107,7 +2144,7 @@ class ImportThread(Thread):
                 # import multi-plane files
                 image5d = importer.import_multiplane_images(
                     self.chl_paths, self.prefix, fn_feedback=self.fn_feedback,
-                    shape=self.shape)
+                    shape=self.shape, data_type=self.data_type)
         finally:
             if image5d is not None:
                 # set up the image for immediate use within MagellanMapper

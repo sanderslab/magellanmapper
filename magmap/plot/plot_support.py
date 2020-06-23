@@ -274,7 +274,6 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
                 # convert all foreground to NaN to use the given color;
                 # assumes DiscreteColormap sets background as transparent
                 img[img != 0] = np.nan
-        print(img.shape, imgs2d[0].shape)
         if i == 0:
             if img_norm_setting:
                 # normalize main intensity image

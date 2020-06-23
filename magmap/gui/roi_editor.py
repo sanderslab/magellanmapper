@@ -601,7 +601,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             img3d_extras = arrs_3d[2:] if num_arrs_3d > 2 else None
             if img3d_extras is not None:
                 img3d_extras = [np.array(img) for img in img3d_extras]
-                print([img.shape for img in img3d_extras])
             plot_ed = plot_editor.PlotEditor(
                 ax_ov, arrs_3d[0], labels_img, cmap_labels,
                 plane, aspect, origin,

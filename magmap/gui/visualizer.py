@@ -379,6 +379,7 @@ class Visualization(HasTraits):
         stretch_last_section=False)
     _import_paths = List  # import paths table list
     _import_btn = Button("Import files")
+    _import_btn_enabled = Bool
     _import_clear_btn = Button("Clear import")
     _import_res = Array(np.float, shape=(1, 3))
     _import_mag = Float(1.0)
@@ -397,7 +398,7 @@ class Visualization(HasTraits):
     _import_data_type = List
     # map byte order name to Numpy symbol
     _IMPORT_BYTE_ORDERS = OrderedDict((
-        ("Little endian", "<"), ("Big endian", ">")))
+        ("Default", "="), ("Little endian", "<"), ("Big endian", ">")))
     _import_byte_order = List
     _import_prefix = Str
     _import_feedback = Str
@@ -602,7 +603,7 @@ class Visualization(HasTraits):
             label="Output image file"
         ),
         HGroup(
-            Item("_import_btn", show_label=False),
+            Item("_import_btn", show_label=False, enabled_when="_import_btn_enabled"),
             Item("_import_clear_btn", show_label=False),
         ),
         Item("_import_feedback", style="custom", show_label=False),
@@ -2009,21 +2010,74 @@ class Visualization(HasTraits):
         """Add a file or directory to import and populate the import table
         with all related files.
         """
+
+        def setup_import(md):
+            # populate the import metadata and output fields based on
+            # extracted values
+            res = md[config.MetaKeys.RESOLUTIONS]
+            if res is not None:
+                self._import_res = [res[0][::-1]]
+            mag = md[config.MetaKeys.MAGNIFICATION]
+            if mag is not None:
+                self._import_mag = mag
+            zoom = md[config.MetaKeys.ZOOM]
+            if zoom is not None:
+                self._import_zoom = zoom
+            shape = md[config.MetaKeys.SHAPE]
+            if shape is not None:
+                self._import_shape = [shape[::-1]]
+            
+            # set data type related dropdowns based on each character of
+            # the type-string of the Numpy data type object
+            dtype_str = md[config.MetaKeys.DTYPE]
+            try:
+                dtype_str = np.dtype(dtype_str).str
+                byte_orders = libmag.get_dict_keys_from_val(
+                    self._IMPORT_BYTE_ORDERS, dtype_str[0])
+                if byte_orders:
+                    self._import_byte_order = [byte_orders[0]]
+                data_types = libmag.get_dict_keys_from_val(
+                    self._IMPORT_DATA_TYPES, dtype_str[1])
+                if data_types:
+                    self._import_data_type = [data_types[0]]
+                bits = libmag.get_dict_keys_from_val(
+                    self._IMPORT_BITS, dtype_str[2])
+                if bits:
+                    self._import_bit = [bits[0]]
+            except TypeError:
+                print("Could not find data type for {}".format(dtype_str))
+            
+            # signal ready import
+            self._update_import_feedback("Ready to import")
+            self._import_btn_enabled = True
+        
+        # reset import fields
         self._clear_import_files(False)
         chl_paths = None
         base_path = None
+        
         if os.path.isdir(self._import_browser):
             # gather files within the directory to import
             self._import_mode = ImportModes.DIR
             chl_paths = importer.setup_import_dir(self._import_browser)
             base_path = os.path.join(
                 os.path.dirname(self._import_browser), "myvolume")
+            self._import_btn_enabled = True
+        
         elif self._import_browser:
             # gather files matching the pattern of the selected file to import
             self._import_mode = ImportModes.MULTIPAGE
             chl_paths, base_path = importer.setup_import_multipage(
                 self._import_browser)
-        
+            
+            # extract metadata in separate thread given delay from Java
+            # initialization for Bioformats
+            self._update_import_feedback(
+                "Gathering metadata related to {}, please wait"
+                "...".format(self._import_browser))
+            import_setup_thread = SetupImportThread(chl_paths, setup_import)
+            import_setup_thread.start()
+
         if chl_paths:
             # populate the import table
             data = []
@@ -2032,7 +2086,7 @@ class Visualization(HasTraits):
                     data.append([path, chl])
             self._import_paths = data
             self._import_prefix = base_path
-
+    
     @on_trait_change("_import_btn")
     def _import_files(self):
         """Import files based on paths in the import table.
@@ -2048,27 +2102,26 @@ class Visualization(HasTraits):
         
         if chl_paths:
             # set metadata
-            config.resolutions = [self._import_res[0].astype(float)[::-1]]
-            config.magnification = self._import_mag
-            config.zoom = self._import_zoom
-            data_type = "".join(
-                (self._IMPORT_BYTE_ORDERS[self._import_byte_order[0]],
-                 self._IMPORT_DATA_TYPES[self._import_data_type[0]],
-                 self._IMPORT_BITS[self._import_bit[0]]))
-            
-            # get shape if not default
-            shape = self._import_shape[0].astype(int)[::-1]
-            if all(np.equal(shape, 0)):
-                shape = None
+            series = 0 if config.series is None else config.series
+            md = {
+                config.MetaKeys.RESOLUTIONS: self._import_res[series].astype(
+                    float)[::-1],
+                config.MetaKeys.MAGNIFICATION: self._import_mag,
+                config.MetaKeys.ZOOM: self._import_zoom,
+                config.MetaKeys.DTYPE:  "".join(
+                    (self._IMPORT_BYTE_ORDERS[self._import_byte_order[0]],
+                     self._IMPORT_DATA_TYPES[self._import_data_type[0]],
+                     self._IMPORT_BITS[self._import_bit[0]])),
+                config.MetaKeys.SHAPE: self._import_shape[0].astype(int)[::-1],
+            }
             
             # initialize import in separate thread with a signal for
             # loading thew newly imported image
             self.load_image_signal = QtSignal()
             self.load_image_signal.signal.connect(update_filename)
             import_thread = ImportThread(
-                self._import_mode, self._import_prefix, chl_paths,
-                self._update_import_feedback, self.load_image_signal.signal,
-                shape, data_type)
+                self._import_mode, self._import_prefix, chl_paths, md,
+                self._update_import_feedback, self.load_image_signal.signal)
             import_thread.start()
     
     @on_trait_change("_import_clear_btn")
@@ -2090,6 +2143,7 @@ class Visualization(HasTraits):
         self._import_bit = [tuple(self._IMPORT_BITS.keys())[0]]
         self._import_data_type = [tuple(self._IMPORT_DATA_TYPES.keys())[0]]
         self._import_byte_order = [tuple(self._IMPORT_BYTE_ORDERS.keys())[0]]
+        self._import_btn_enabled = False
 
     def _update_import_feedback(self, val):
         """Update the import feedback text box.
@@ -2106,6 +2160,32 @@ class QtSignal(PyQt5.QtCore.QObject):
     signal = PyQt5.QtCore.pyqtSignal()
 
 
+class SetupImportThread(PyQt5.QtCore.QThread):
+    """Thread for setting up file import by extracting image metadata.
+
+    Attributes:
+        chl_paths (dict[int, List[str]]): Dictionary of channel numbers
+            to sequences of paths within the given channel.
+        fn_success (func): Signal taking
+            no arguments, to be emitted upon successfull import; defaults
+            to None.
+
+    """
+    
+    signal = PyQt5.QtCore.pyqtSignal(object)
+    
+    def __init__(self, chl_paths, fn_success):
+        """Initialize the import thread."""
+        super().__init__()
+        self.chl_paths = chl_paths
+        self.signal.connect(fn_success)
+    
+    def run(self):
+        """Set up image import metadata."""
+        md = importer.setup_import_metadata(self.chl_paths)
+        self.signal.emit(md)
+
+
 class ImportThread(Thread):
     """Thread for importing files into a Numpy array.
     
@@ -2115,27 +2195,25 @@ class ImportThread(Thread):
             will be constructed.
         chl_paths (dict[int, List[str]]): Dictionary of channel numbers
             to sequences of paths within the given channel.
+        import_md (dict[:obj:`config.MetaKeys`]): Import metadata dictionary.
         fn_feedback (func): Function taking a string to display feedback;
             defaults to None.
         signal_success (:obj:`PyQt5.QtCore.pyqtBoundSignal`): Signal taking
             no arguments, to be emitted upon successfull import; defaults
             to None.
-        data_type (str, :obj:`np.dtype`): Output image data type; defaults
-            to None.
     
     """
     
-    def __init__(self, mode, prefix, chl_paths, fn_feedback=None,
-                 signal_success=None, shape=None, data_type=None):
+    def __init__(self, mode, prefix, chl_paths, import_md, fn_feedback=None,
+                 signal_success=None):
         """Initialize the import thread."""
         super().__init__()
         self.mode = mode
         self.prefix = prefix
         self.chl_paths = chl_paths
+        self.import_md = import_md
         self.fn_feedback = fn_feedback
         self.signal_success = signal_success
-        self.shape = shape
-        self.data_type = data_type
 
     def run(self):
         """Import files based on the import mode and set up the image."""
@@ -2149,8 +2227,8 @@ class ImportThread(Thread):
             elif self.mode is ImportModes.MULTIPAGE:
                 # import multi-plane files
                 image5d = importer.import_multiplane_images(
-                    self.chl_paths, self.prefix, fn_feedback=self.fn_feedback,
-                    shape=self.shape, data_type=self.data_type)
+                    self.chl_paths, self.prefix, self.import_md,
+                    fn_feedback=self.fn_feedback)
         finally:
             if image5d is not None:
                 # set up the image for immediate use within MagellanMapper

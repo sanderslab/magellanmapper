@@ -664,9 +664,63 @@ def setup_import_multipage(filename):
     return chl_paths, base_path
 
 
-def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
-                             channel=None, fn_feedback=None, shape=None,
-                             data_type=None):
+def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
+    """Extract metadata and determine output image shape for importing
+    multipage file(s).
+    
+    Args:
+        chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
+            sequences of image file paths to import.
+        channel (List[int]): Sequence of channel indices to import; defaults
+            to None to import all channels.
+        series (int): Series index to load. Defaults to None, which will use 0.
+        z_max (int): Number of z-planes to load; defaults to -1 to load all.
+
+    Returns:
+        dict[:obj:`config.MetaKeys`]: Dictionary of metadata.
+
+    """
+    print("Extracting metadata for image import, may take awhile...")
+    start_jvm()
+    jb.attach()
+    if series is None:
+        series = 0
+    num_chl_keys = len(chl_paths.keys())
+    path = tuple(chl_paths.values())[0][0]
+    md = dict.fromkeys(config.MetaKeys)
+    try:
+        # get available embedded metadata via Bioformats
+        names, sizes, md[config.MetaKeys.RESOLUTIONS], \
+            md[config.MetaKeys.MAGNIFICATION], \
+            md[config.MetaKeys.ZOOM], md[config.MetaKeys.DTYPE] = \
+            parse_ome_raw(path)
+        shape = list(sizes[series])
+    except jb.JavaException as err:
+        print(err)
+        # TODO: see if necessary or improved performance
+        sizes, dtype = find_sizes(path)
+        if dtype:
+            md[config.MetaKeys.DTYPE] = dtype.name
+        shape = list(sizes[0])
+
+    if num_chl_keys == 1:
+        if channel:
+            # when channels dict specifies only one channel, set channels
+            # based on channel parameter if set
+            shape[-1] = len(channel)
+    else:
+        # for multi-file, assume only one channel per file
+        shape[-1] = len(channel) if channel else num_chl_keys
+    if z_max != -1:
+        shape[1] = z_max
+    md[config.MetaKeys.SHAPE] = shape
+    jb.detach()
+    
+    return md
+
+
+def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0,
+                             channel=None, fn_feedback=None):
     """Imports single or multiplane file(s) into Numpy format.
     
     For multichannel images, this import currently supports either a single
@@ -679,18 +733,16 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
         chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
             sequences of image file paths to import.
         prefix (str): Ouput base path.
+        import_md (dict[:obj:`config.MetaKeys`]): Import metadata dictionary,
+            used to set up the shape, data type (for RAW file import), and
+            output image metadata (resolutions, zoom, magnification).
         series (int): Series index to load. Defaults to None, which will use 0.
-        z_max (int): Number of z-planes to load; defaults to -1 to load all.
         offset (int): z-plane offset from which to start importing.
             Defaults to 0.
         channel (List[int]): Sequence of channel indices to import; defaults
             to None to import all channels.
         fn_feedback (func): Callback function to give feedback strings
             during import; defaults to None.
-        shape (List[int]): Output image shape; defaults to None to determine
-            by ``chl_paths`` and the first image.
-        data_type (str, :obj:`np.dtype`): Data type as a string or data
-            type object; defaults to None.
 
     Returns:
         :obj:`np.ndarray`: The image array as a 5D array in the format,
@@ -705,6 +757,7 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
     time_start = time()
     if series is None:
         series = 0
+    shape = import_md[config.MetaKeys.SHAPE]
     filename_image5d, filename_meta = make_filenames(prefix, series)
     libmag.printcb("Initializing multiplane image import planes to \"{}\", "
                    "may take awhile..."
@@ -718,6 +771,14 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
     near_maxs = []
     chls_load = [0]  # default to assuming each file is single channel
     num_chl_keys = len(chl_paths.keys())
+    if num_chl_keys == 1:
+        if channel:
+            # when channels dict specifies only one channel, load channels
+            # based on channel parameter if set
+            chls_load = channel
+        else:
+            # allow multiple channels to be loaded from single file
+            chls_load = range(shape[-1])
     name = os.path.basename(prefix)
     chli = 0
     for chl, paths in chl_paths.items():
@@ -727,50 +788,6 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
             # skip if separate files for each channel current channel is not
             # in set channel parameter
             continue
-        
-        if shape is None:
-            # set up output image shape
-            try:
-                # get available embedded metadata via Bioformats
-                names, sizes, res, mag, zoom, pixel_type = parse_ome_raw(
-                    img_path)
-                if res:
-                    config.resolutions = res
-                if mag is not None:
-                    config.magnification = mag
-                if zoom is not None:
-                    config.zoom = zoom
-                shape = list(sizes[series])
-                name = names[series]
-            except jb.JavaException as err:
-                print(err)
-                if config.resolutions is None:
-                    # resolutions required for scaling, detections, etc
-                    raise IOError(
-                        "Could not import {}. Please specify resolutions."
-                        .format(img_path))
-                # get a more limited subset of metadata
-                # TODO: see if necessary or improved performance
-                sizes, dtype = find_sizes(img_path)
-                shape = list(sizes[0])
-            
-            if num_chl_keys == 1:
-                # if channels dict specifies only one channel, check if first
-                # file itself specifies multiple channels
-                if channel:
-                    # set channels based on channel parameter
-                    chls_load = channel
-                    shape[-1] = len(channel)
-                else:
-                    # if multichannel, its channels overrides channel dictionary
-                    # channels, though any subsequent files will simply
-                    # overwrite the array
-                    chls_load = range(shape[-1])
-            else:
-                # for multi-file, assume only one channel per file
-                shape[-1] = len(channel) if channel else num_chl_keys
-            if z_max != -1:
-                shape[1] = z_max
         
         rdr = None
         img_raw = None
@@ -786,7 +803,8 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
             # fall back to opening as a RAW 3D image file
             # TODO: generalize data type
             img_raw = np.memmap(
-                img_path, dtype=data_type, shape=shape[1:], mode="r")
+                img_path, dtype=import_md[config.MetaKeys.DTYPE],
+                shape=shape[1:], mode="r")
         len_shape = len(shape)
         for chl_load in chls_load:
             lows = []
@@ -839,8 +857,10 @@ def import_multiplane_images(chl_paths, prefix, series=None, z_max=-1, offset=0,
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
     md = save_image_info(
-        filename_meta, [name], [shape], [config.resolutions[series]],
-        config.magnification, config.zoom, near_mins, near_maxs)
+        filename_meta, [name], [shape],
+        [import_md[config.MetaKeys.RESOLUTIONS]],
+        import_md[config.MetaKeys.MAGNIFICATION],
+        import_md[config.MetaKeys.ZOOM], near_mins, near_maxs)
     assign_metadata(md)
     libmag.printcb("Completed multiplane image import planes to \"{}\" "
                    "with metadata:\n{}"

@@ -26,8 +26,9 @@ class TestImageStackProcessing(unittest.TestCase):
         if config.image5d is None:
             chls, import_path = importer.setup_import_multipage(
                 config.filename)
+            import_md = importer.setup_import_metadata(chls, config.channel)
             config.image5d = importer.import_multiplane_images(
-                chls, import_path, channel=config.channel)
+                chls, import_path, import_md, channel=config.channel)
         self.assertEqual(config.image5d.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):

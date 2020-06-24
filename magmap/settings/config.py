@@ -112,6 +112,8 @@ MetaKeys = Enum(
         "RESOLUTIONS",  # image resolutions in x,y,z
         "MAGNIFICATION",  # objective magnification
         "ZOOM",  # objective zoom
+        "SHAPE",  # output image shape
+        "DTYPE",  # data type as a string
     )
 )
 meta_dict = dict.fromkeys(MetaKeys, None)

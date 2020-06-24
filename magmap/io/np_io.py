@@ -225,8 +225,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     chls, import_path = importer.setup_import_multipage(path)
                     prefix = (import_path if config.prefix is None
                               else config.prefix)
+                    import_md = importer.setup_import_metadata(
+                        chls, config.channel, series)
                     config.image5d = importer.import_multiplane_images(
-                        chls, prefix, series, channel=config.channel)
+                        chls, prefix, import_md, series, channel=config.channel)
                 config.image5d_io = config.LoadIO.NP
             except FileNotFoundError as e:
                 print(e)

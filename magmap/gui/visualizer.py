@@ -667,6 +667,7 @@ class Visualization(HasTraits):
 
         # set up image import
         self._clear_import_files(False)
+        self._import_thread = None  # prevent prematurely destroying threads
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -2075,8 +2076,8 @@ class Visualization(HasTraits):
             self._update_import_feedback(
                 "Gathering metadata related to {}, please wait"
                 "...".format(self._import_browser))
-            import_setup_thread = SetupImportThread(chl_paths, setup_import)
-            import_setup_thread.start()
+            self._import_thread = SetupImportThread(chl_paths, setup_import)
+            self._import_thread.start()
 
         if chl_paths:
             # populate the import table
@@ -2117,12 +2118,10 @@ class Visualization(HasTraits):
             
             # initialize import in separate thread with a signal for
             # loading thew newly imported image
-            self.load_image_signal = QtSignal()
-            self.load_image_signal.signal.connect(update_filename)
-            import_thread = ImportThread(
+            self._import_thread = ImportThread(
                 self._import_mode, self._import_prefix, chl_paths, md,
-                self._update_import_feedback, self.load_image_signal.signal)
-            import_thread.start()
+                self._update_import_feedback, update_filename)
+            self._import_thread.start()
     
     @on_trait_change("_import_clear_btn")
     def _clear_import_files(self, clear_import_browser=True):
@@ -2155,11 +2154,6 @@ class Visualization(HasTraits):
         self._import_feedback += "{}\n".format(val)
 
 
-class QtSignal(PyQt5.QtCore.QObject):
-    """Generic Qt signal."""
-    signal = PyQt5.QtCore.pyqtSignal()
-
-
 class SetupImportThread(PyQt5.QtCore.QThread):
     """Thread for setting up file import by extracting image metadata.
 
@@ -2186,7 +2180,7 @@ class SetupImportThread(PyQt5.QtCore.QThread):
         self.signal.emit(md)
 
 
-class ImportThread(Thread):
+class ImportThread(PyQt5.QtCore.QThread):
     """Thread for importing files into a Numpy array.
     
     Attributes:
@@ -2198,14 +2192,15 @@ class ImportThread(Thread):
         import_md (dict[:obj:`config.MetaKeys`]): Import metadata dictionary.
         fn_feedback (func): Function taking a string to display feedback;
             defaults to None.
-        signal_success (:obj:`PyQt5.QtCore.pyqtBoundSignal`): Signal taking
-            no arguments, to be emitted upon successfull import; defaults
-            to None.
+        fn_success (func): Function taking no arguments to be called upon
+            successfull import; defaults to None.
     
     """
     
+    signal = PyQt5.QtCore.pyqtSignal()
+    
     def __init__(self, mode, prefix, chl_paths, import_md, fn_feedback=None,
-                 signal_success=None):
+                 fn_success=None):
         """Initialize the import thread."""
         super().__init__()
         self.mode = mode
@@ -2213,7 +2208,9 @@ class ImportThread(Thread):
         self.chl_paths = chl_paths
         self.import_md = import_md
         self.fn_feedback = fn_feedback
-        self.signal_success = signal_success
+        self.fn_success = fn_success
+        if fn_success:
+            self.signal.connect(fn_success)
 
     def run(self):
         """Import files based on the import mode and set up the image."""
@@ -2233,8 +2230,8 @@ class ImportThread(Thread):
             if image5d is not None:
                 # set up the image for immediate use within MagellanMapper
                 self.fn_feedback("Import completed, loading image\n")
-                if self.signal_success:
-                    self.signal_success.emit()
+                if self.fn_success:
+                    self.signal.emit()
             else:
                 self.fn_feedback(
                     "Could not complete import, please try again\n")

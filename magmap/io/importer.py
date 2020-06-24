@@ -602,13 +602,15 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
 def setup_import_multipage(filename):
     """Find matching files for multipage image import.
 
-    For TIFF images, multiple channels will assume to be stored in separate
-    files with :const:``CHANNEL_SEPARATOR`` followed by an integer
-    corresponding to the channel number (0-based indexing), eg
-    ``/path/to/image_ch_0.tif``.
+    Multiple channels are assumed to be stored in separate files with
+    :const:``CHANNEL_SEPARATOR`` followed by an integer corresponding to
+    the channel number (0-based indexing), eg ``/path/to/image_ch_0.tif``.
+    If no matches are found, ``filename`` will be taken directly.
 
     Args:
-        filename: Image file, assumed to have metadata in OME XML format.
+        filename (str): Path to image file to import. Files for separate
+        channels with names based on this path will first be checked,
+        falling back to use this name directly.
 
     Returns:
         dict[int, List[str]], str: Dictionary of channel numbers to sequences
@@ -618,49 +620,43 @@ def setup_import_multipage(filename):
     path_split = libmag.splitext(filename)
     ext = path_split[1].lower()
     base_path = path_split[0]
-    if ext in _EXT_TIFFS:
-        # import multipage TIFFs, finding separate files for each channel
-        print("Loading multipage TIFF...")
-        
-        # if selected file is in channel format, deconstruct it to remove chl
-        reg_iter = re.finditer(r"{}[0-9]+".format(CHANNEL_SEPARATOR), base_path)
-        iter_ind = [m.start(0) for m in reg_iter]
-        if len(iter_ind) > 0:
-            base_path = base_path[:iter_ind[-1]]
-        
-        # get all files matching channel format
-        tif_base = "{}{}*".format(base_path, CHANNEL_SEPARATOR)
-        filenames = []
-        tif_searches = [tif_base]
-        print("Looking for TIFF files for multi-channel images matching "
-              "the format:", tif_base)
-        matches = glob.glob(tif_base)
-        
-        if not matches:
-            # fall back to matching any file with the same name regardless
-            # of extension, typically for single-channel images
-            tif_base = "{}.*".format(base_path)
-            tif_searches.append(tif_base)
-            print("Looking for TIFF files matching the format:", tif_base)
-            matches = glob.glob(tif_base)
-        
-        for match in matches:
-            # prune files to any TIFF-like name
-            match_split = os.path.splitext(match)
-            if match_split[1].lower() in _EXT_TIFFS:
-                filenames.append(match)
-        filenames = sorted(filenames)
-        print("Found matching TIFF file(s), where each file will be imported "
+    
+    # find separate files for each channel; if selected file is in channel
+    # format, deconstruct it to remove chl
+    reg_iter = re.finditer(r"{}[0-9]+".format(CHANNEL_SEPARATOR), base_path)
+    iter_ind = [m.start(0) for m in reg_iter]
+    if len(iter_ind) > 0:
+        base_path = base_path[:iter_ind[-1]]
+    
+    # get all files matching channel format
+    path_base = "{}{}*".format(base_path, CHANNEL_SEPARATOR)
+    filenames = []
+    tif_searches = [path_base]
+    print("Looking for files for multi-channel images matching "
+          "the format:", path_base)
+    matches = glob.glob(path_base)
+    
+    if not matches:
+        # fall back to matching any file with the same name regardless
+        # of extension, typically for single-channel images
+        path_base = "{}.*".format(base_path)
+        tif_searches.append(path_base)
+        print("Looking for TIFF files matching the format:", path_base)
+        matches = glob.glob(path_base)
+    
+    for match in matches:
+        # prune files to matching extensions
+        match_split = os.path.splitext(match)
+        if match_split[1].lower() == ext:
+            filenames.append(match)
+    filenames = sorted(filenames)
+    
+    if filenames:
+        print("Found matching file(s), where each file will be imported "
               "as a separate channel:", filenames)
-        if not filenames:
-            raise IOError(
-                "No filenames matching the format(s), \"{}\" with "
-                "extensions of types {}".format(
-                    tif_searches, ", ".join(_EXT_TIFFS)))
-
     else:
         # default to taking the file directly
-        print("Loading {} file...".format(ext))
+        print("Found single file {}".format(filename))
         filenames = [filename]
     
     # parse to dict by channel

@@ -379,7 +379,7 @@ class Visualization(HasTraits):
         stretch_last_section=False)
     _import_paths = List  # import paths table list
     _import_btn = Button("Import files")
-    _import_clear_btn = Button("Clear files")
+    _import_clear_btn = Button("Clear import")
     _import_res = Array(np.float, shape=(1, 3))
     _import_mag = Float(1.0)
     _import_zoom = Float(1.0)
@@ -665,11 +665,7 @@ class Visualization(HasTraits):
         self._init_profiles()
 
         # set up image import
-        self._import_mode = None
-        self._import_res = np.ones((1, 3))
-        self._import_bit = [tuple(self._IMPORT_BITS.keys())[0]]
-        self._import_data_type = [tuple(self._IMPORT_DATA_TYPES.keys())[0]]
-        self._import_byte_order = [tuple(self._IMPORT_BYTE_ORDERS.keys())[0]]
+        self._clear_import_files(False)
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -2013,6 +2009,7 @@ class Visualization(HasTraits):
         """Add a file or directory to import and populate the import table
         with all related files.
         """
+        self._clear_import_files(False)
         chl_paths = None
         base_path = None
         if os.path.isdir(self._import_browser):
@@ -2075,15 +2072,24 @@ class Visualization(HasTraits):
             import_thread.start()
     
     @on_trait_change("_import_clear_btn")
-    def _clear_import_files(self):
+    def _clear_import_files(self, clear_import_browser=True):
         """Reset import setup.
+        
+        Args:
+            clear_import_browser (bool): True to clear the import browser
+                path; defaults to True. Should be False when clearing settings
+                triggered by setting a new import path.
 
         """
-        self._import_browser = ""  # will reset table
+        if clear_import_browser:
+            self._import_browser = ""  # will reset table
         self._import_paths = []
         self._import_mode = None
         self._import_res = np.ones((1, 3))
         self._import_shape = np.zeros((1, 5), dtype=np.int)
+        self._import_bit = [tuple(self._IMPORT_BITS.keys())[0]]
+        self._import_data_type = [tuple(self._IMPORT_DATA_TYPES.keys())[0]]
+        self._import_byte_order = [tuple(self._IMPORT_BYTE_ORDERS.keys())[0]]
 
     def _update_import_feedback(self, val):
         """Update the import feedback text box.

@@ -878,6 +878,20 @@ def get_enum(s, enum_class):
     return enum
 
 
+def get_dict_keys_from_val(d, val):
+    """Get keys whose value in a dictionary match a given value.
+    
+    Args:
+        d (dict): Dictionary from which to get keys.
+        val (Any): Value whose matching keys will be extracted.
+
+    Returns:
+        List[Any]: List of keys whose values match ``val`` in ``d``.
+
+    """
+    return [k for k, v in d.items() if v == val]
+
+
 def scale_slice(sl, scale, size):
     """Scale slice values by a given factor.
     

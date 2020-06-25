@@ -913,18 +913,15 @@ def setup_import_dir(path):
     return _parse_import_chls(paths)
 
 
-def import_planes_to_stack(chls, prefix, rgb_to_grayscale=True,
+def import_planes_to_stack(chl_paths, prefix, rgb_to_grayscale=True,
                            fn_feedback=None):
     """Import single plane image files into a single volumetric image stack.
 
-    Each file is assumed to be a 2D plane in a volumetric image, ordered
-    alphabetically. All files in the folder will be imported. Files from
-    different channesl should have `_ch_<n>` just before the extension,
-    where `n` is the channel number. If any such file is found, only
-    files with these channel designators will be imported.
+    Each file in ``chl_paths`` is assumed to be a 2D plane in a volumetric
+    image with either a single channel or an RGB channel.
 
     Args:
-        chls (dict[int, List[str]]): Dictionary of channel numbers to
+        chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
             sequences of image file paths to import.
         prefix (str): Ouput base path; defaults to None to output to the
             ``path`` directory, also using the directory name as the
@@ -949,6 +946,7 @@ def import_planes_to_stack(chls, prefix, rgb_to_grayscale=True,
             img = io.imread(file)
             if rgb_to_grayscale and img.ndim >= 3 and img.shape[2] == 3:
                 # assume that 3-value 3rd channel images are RGB
+                # TODO: remove rgb_to_grayscale since must give single channel?
                 print("converted from 3-channel (assuming RGB) to grayscale")
                 img = color.rgb2gray(img)
 
@@ -979,7 +977,7 @@ def import_planes_to_stack(chls, prefix, rgb_to_grayscale=True,
         return img5d
     
     # each key is assumed to represent a distinct channel
-    num_chls = len(chls.keys())
+    num_chls = len(chl_paths.keys())
     if num_chls < 1:
         return None
 
@@ -993,9 +991,11 @@ def import_planes_to_stack(chls, prefix, rgb_to_grayscale=True,
     image5d = None
     lows_chls = []
     highs_chls = []
-    for chli, chl_files in chls.items():
+    chli = 0
+    for chl_files in chl_paths.values():
         # import files for the given channel
         image5d = import_files()
+        chli += 1
 
     # save metadata and load for immediate use
     md = save_image_info(

@@ -1202,7 +1202,7 @@ class Visualization(HasTraits):
         from the Numpy image filename. Processed files (eg ROIs, blobs) 
         will not be loaded for now.
         """
-        if self._ignore_filename:
+        if self._ignore_filename or not self._filename:
             # may ignore if only updating widget value, without triggering load
             self._ignore_filename = False
             return
@@ -2101,6 +2101,7 @@ class Visualization(HasTraits):
         """
         def update_filename():
             # update image path and trigger loading the image
+            self._filename = ""
             self._filename = self._import_prefix
         
         # repopulate channel paths dict, including any user edits

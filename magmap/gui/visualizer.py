@@ -2026,7 +2026,7 @@ class Visualization(HasTraits):
             # extracted values
             res = md[config.MetaKeys.RESOLUTIONS]
             if res is not None:
-                self._import_res = [res[0][::-1]]
+                self._import_res = [res[::-1]]
             mag = md[config.MetaKeys.MAGNIFICATION]
             if mag is not None:
                 self._import_mag = mag

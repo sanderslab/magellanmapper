@@ -206,7 +206,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             if allow_import:
                 # import directory of single plane images to a volumetric stack
                 chls, import_md = importer.setup_import_dir(path)
-                import_md[config.MetaKeys.RESOLUTIONS] = config.resolutions
+                import_md[config.MetaKeys.RESOLUTIONS] = config.resolutions[0]
                 import_md[config.MetaKeys.MAGNIFICATION] = config.magnification
                 import_md[config.MetaKeys.ZOOM] = config.zoom
                 config.image5d = importer.import_planes_to_stack(

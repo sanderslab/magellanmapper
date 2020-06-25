@@ -387,10 +387,11 @@ class Visualization(HasTraits):
     _import_shape = Array(np.int, shape=(1, 5), editor=ArrayEditor(width=-40))
     # map bits to bytes for constructing Numpy data type
     _IMPORT_BITS = OrderedDict((
-        ("8", "1"), ("16", "2"), ("32", "3"), ("64", "4")))
+        ("Bit", ""), ("8", "1"), ("16", "2"), ("32", "3"), ("64", "4")))
     _import_bit = List
     # map numerical signage and precision to Numpy data type
     _IMPORT_DATA_TYPES = OrderedDict((
+        ("Data type", ""),
         ("Unsigned integer", "u"),
         ("Signed integer", "i"),
         ("Floating point", "f"),

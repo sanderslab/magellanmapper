@@ -707,10 +707,14 @@ class Visualization(HasTraits):
                     else config.image5d.shape[4])
         self._channel_names.selections = [str(i) for i in range(num_chls)]
         
-        # pre-select channels for both main and profiles selector from config
-        # if available or all channels
-        self._channel = ([str(c) for c in config.channel] if config.channel
-                         else self._channel_names.selections)
+        # pre-select channels for both main and profiles selector
+        if self._channel is None and config.channel:
+            # use config if setting for first time
+            self._channel = [
+                str(c) for i, c in enumerate(config.channel) if i < num_chls]
+        else:
+            # select all channels
+            self._channel = self._channel_names.selections
         self._profiles_chls = self._channel
 
     def _init_imgadj(self):

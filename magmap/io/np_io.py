@@ -202,9 +202,12 @@ def setup_images(path=None, series=None, offset=None, size=None,
         print("Loading main image")
         if os.path.isdir(path):
             # import directory of single plane images to a volumetric stack
-            chls = importer.setup_import_dir(path)
+            chls, import_md = importer.setup_import_dir(path)
+            import_md[config.MetaKeys.RESOLUTIONS] = config.resolutions
+            import_md[config.MetaKeys.MAGNIFICATION] = config.magnification
+            import_md[config.MetaKeys.ZOOM] = config.zoom
             config.image5d = importer.import_planes_to_stack(
-                chls, config.prefix)
+                chls, config.prefix, import_md)
             config.image5d_io = config.LoadIO.NP
         elif path.endswith(sitk_io.EXTS_3D):
             try:

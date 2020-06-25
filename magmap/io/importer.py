@@ -901,21 +901,37 @@ def _parse_import_chls(paths):
 def setup_import_dir(path):
     """Setup import of image files in an entire directory.
     
+    All files in the folder will be gathered. Files from different channesl
+    should have `_ch_<n>` just before the extension, where `n` is the
+    channel number. Files without these channel designators will be
+    assumed to be in channel 0.
+    
     Args:
         path (str): Path to directory.
 
     Returns:
-        dict[int, List[str]]: Dictionary of channel numbers to sequences of
-        image file paths to import.
+        dict[int, List[str]], dict[:obj:`config.MetaKeys`]: Ordered dictionary
+        of channel numbers to sequences of image file paths to import and
+        dictionary of metadata.
 
     """
     # all files in the given folder will be imported in alphabetical order
     print("Importing files in directory {}:".format(path))
     paths = sorted(glob.glob(os.path.join(path, "*")))
-    return _parse_import_chls(paths)
+    
+    # set shape and data type based on first image in first channel
+    chl_paths = _parse_import_chls(paths)
+    chl_files = tuple(chl_paths.values())[0]
+    path = chl_files[0]
+    md = dict.fromkeys(config.MetaKeys)
+    img = io.imread(path)
+    md[config.MetaKeys.SHAPE] = [
+        1, len(chl_files), *img.shape[:2], len(chl_paths.keys())]
+    md[config.MetaKeys.DTYPE] = img.dtype.str
+    return chl_paths, md
 
 
-def import_planes_to_stack(chl_paths, prefix, rgb_to_grayscale=True,
+def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
                            fn_feedback=None):
     """Import single plane image files into a single volumetric image stack.
 
@@ -928,6 +944,10 @@ def import_planes_to_stack(chl_paths, prefix, rgb_to_grayscale=True,
         prefix (str): Ouput base path; defaults to None to output to the
             ``path`` directory, also using the directory name as the
             image filename.
+        import_md (dict[:obj:`config.MetaKeys`]): Import metadata dictionary,
+            used for output image metadata (resolutions, zoom, magnification).
+            Shape and data type are ignored since they are determined
+            during import in case these values may have changed.
         rgb_to_grayscale (bool): Files with a three value third dimension
             are assumed to be RGB and will be converted to grayscale;
             defaults to True.
@@ -1001,8 +1021,10 @@ def import_planes_to_stack(chl_paths, prefix, rgb_to_grayscale=True,
 
     # save metadata and load for immediate use
     md = save_image_info(
-        filename_info_npz, [prefix], [image5d.shape], config.resolutions,
-        config.magnification, config.zoom, lows_chls, highs_chls)
+        filename_info_npz, [prefix], [image5d.shape],
+        [import_md[config.MetaKeys.RESOLUTIONS]],
+        import_md[config.MetaKeys.MAGNIFICATION],
+        import_md[config.MetaKeys.ZOOM], lows_chls, highs_chls)
     assign_metadata(md)
     libmag.printcb("Saved image to \"{}\" with the following metadata:\n{}"
                    .format(filename_image5d_npz, md), fn_feedback)

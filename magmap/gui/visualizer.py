@@ -2065,7 +2065,9 @@ class Visualization(HasTraits):
         if os.path.isdir(self._import_browser):
             # gather files within the directory to import
             self._import_mode = ImportModes.DIR
-            chl_paths = importer.setup_import_dir(self._import_browser)
+            chl_paths, import_md = importer.setup_import_dir(
+                self._import_browser)
+            setup_import(import_md)
             base_path = os.path.join(
                 os.path.dirname(self._import_browser), "myvolume")
             self._import_btn_enabled = True
@@ -2224,7 +2226,7 @@ class ImportThread(PyQt5.QtCore.QThread):
             if self.mode is ImportModes.DIR:
                 # import single plane files from a directory
                 image5d = importer.import_planes_to_stack(
-                    self.chl_paths, self.prefix,
+                    self.chl_paths, self.prefix, self.import_md,
                     fn_feedback=self.fn_feedback)
             elif self.mode is ImportModes.MULTIPAGE:
                 # import multi-plane files

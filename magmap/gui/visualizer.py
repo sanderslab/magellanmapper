@@ -1090,6 +1090,10 @@ class Visualization(HasTraits):
         ROI will undergo full preprocessing in preparation for detection 
         and 2D filtered displays steps.
         """
+        if config.image5d is None:
+            print("Main image has not been loaded, cannot show 3D Viewer")
+            return
+        
         # show raw 3D image unless selected not to
         curr_offset, curr_roi_size, feedback = self._check_roi_position()
         if self._DEFAULTS_3D[2] in self._check_list_3d:

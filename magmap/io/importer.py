@@ -73,6 +73,7 @@ IMAGE5D_NP_VER = 14  # image5d Numpy saved array version number
 
 CHANNEL_SEPARATOR = "_ch_"
 _EXT_TIFFS = (".tif", ".tiff")
+_KEY_ANY_CHANNEL = "1+"  # 1+ channel files
 
 
 def start_jvm(heap_size="8G"):
@@ -606,7 +607,9 @@ def setup_import_multipage(filename):
     Multiple channels are assumed to be stored in separate files with
     :const:``CHANNEL_SEPARATOR`` followed by an integer corresponding to
     the channel number (0-based indexing), eg ``/path/to/image_ch_0.tif``.
-    If no matches are found, ``filename`` will be taken directly.
+    If any such file is found, only files with these channel designators
+    will be taken. If none are found, ``filename`` will be taken directly.
+
 
     Args:
         filename (str): Path to image file to import. Files for separate
@@ -638,14 +641,6 @@ def setup_import_multipage(filename):
           "the format:", path_base)
     matches = glob.glob(path_base)
     
-    if not matches:
-        # fall back to matching any file with the same name regardless
-        # of extension, typically for single-channel images
-        path_base = "{}.*".format(base_path)
-        tif_searches.append(path_base)
-        print("Looking for TIFF files matching the format:", path_base)
-        matches = glob.glob(path_base)
-    
     for match in matches:
         # prune files to matching extensions
         match_split = os.path.splitext(match)
@@ -654,15 +649,16 @@ def setup_import_multipage(filename):
     filenames = sorted(filenames)
     
     if filenames:
+        # get dict of channels by files
         print("Found matching file(s), where each file will be imported "
               "as a separate channel:", filenames)
+        chl_paths = _parse_import_chls(filenames)
     else:
-        # default to taking the file directly
+        # take file directly with key specifying it could have multiple channels
         print("Found single file {}".format(filename))
-        filenames = [filename]
+        chl_paths = {_KEY_ANY_CHANNEL: [filename]}
     
     # parse to dict by channel
-    chl_paths = _parse_import_chls(filenames)
     return chl_paths, base_path
 
 
@@ -687,7 +683,6 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
     jb.attach()
     if series is None:
         series = 0
-    num_chl_keys = len(chl_paths.keys())
     path = tuple(chl_paths.values())[0][0]
     md = dict.fromkeys(config.MetaKeys)
     try:
@@ -704,21 +699,39 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
         if dtype:
             md[config.MetaKeys.DTYPE] = dtype.name
         shape = list(sizes[0])
-
-    if num_chl_keys == 1:
-        if channel:
-            # when channels dict specifies only one channel, set channels
-            # based on channel parameter if set
-            shape[-1] = len(channel)
-    else:
-        # for multi-file, assume only one channel per file
-        shape[-1] = len(channel) if channel else num_chl_keys
+    
+    shape = _update_shape_for_channels(shape, chl_paths, channel)
     if z_max != -1:
         shape[1] = z_max
     md[config.MetaKeys.SHAPE] = shape
     jb.detach()
     
     return md
+
+
+def _update_shape_for_channels(shape, chl_paths, channel):
+    """Change image shape to match specified number of channels.
+    
+    Args:
+        shape (List[int]): Image shape, with last dimenion for channels.
+        chl_paths (dict): Dictionary of channels by files.
+        channel (List[int]): Sequence of channels to keep.
+
+    Returns:
+        List[int]: Copy of ``shape`` with channel size adjusted.
+
+    """
+    shape_up = list(shape)
+    if _KEY_ANY_CHANNEL in chl_paths:
+        # file present with unspecified channel, potentially multichannel,
+        # with shape assumed to be based on this file
+        if channel:
+            # limit channels to set parameter
+            shape_up[-1] = len(channel)
+    else:
+        # assume only one channel per file
+        shape_up[-1] = len(channel) if channel else len(chl_paths.keys())
+    return shape_up
 
 
 def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0,
@@ -759,7 +772,6 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
     time_start = time()
     if series is None:
         series = 0
-    shape = import_md[config.MetaKeys.SHAPE]
     filename_image5d, filename_meta = make_filenames(prefix, series)
     libmag.printcb("Initializing multiplane image import planes to \"{}\", "
                    "may take awhile..."
@@ -768,28 +780,31 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
     # initialize JVM for import via Bioformats
     start_jvm()
     jb.attach()
+    
+    # set up channels in case chl_paths was updated after shape determination
+    # and to get channels to extract from each file
+    shape = _update_shape_for_channels(
+        import_md[config.MetaKeys.SHAPE], chl_paths, channel)
+    if _KEY_ANY_CHANNEL in chl_paths:
+        # unspecified channel file, potentially multichannel, takes
+        # precedence over all other files
+        chls_load = channel if channel else range(shape[-1])
+        chl_paths = {_KEY_ANY_CHANNEL: chl_paths[_KEY_ANY_CHANNEL]}
+    else:
+        # assuming each file is single channel and skip if channel not in
+        # channel parameter
+        chls_load = [0]
+        chl_paths = OrderedDict(
+            [(k, v) for k, v in chl_paths.items()
+             if not channel or k in channel])
+
     image5d = None
     near_mins = []
     near_maxs = []
-    chls_load = [0]  # default to assuming each file is single channel
-    num_chl_keys = len(chl_paths.keys())
-    if num_chl_keys == 1:
-        if channel:
-            # when channels dict specifies only one channel, load channels
-            # based on channel parameter if set
-            chls_load = channel
-        else:
-            # allow multiple channels to be loaded from single file
-            chls_load = range(shape[-1])
-    name = os.path.basename(prefix)
     chli = 0
     for chl, paths in chl_paths.items():
         # assume only one file per channel, ignoring others in same channel
         img_path = paths[0]
-        if num_chl_keys > 1 and channel and chl not in channel:
-            # skip if separate files for each channel current channel is not
-            # in set channel parameter
-            continue
         
         rdr = None
         img_raw = None
@@ -859,7 +874,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
     md = save_image_info(
-        filename_meta, [name], [shape],
+        filename_meta, [os.path.basename(prefix)], [shape],
         [import_md[config.MetaKeys.RESOLUTIONS]],
         import_md[config.MetaKeys.MAGNIFICATION],
         import_md[config.MetaKeys.ZOOM], near_mins, near_maxs)

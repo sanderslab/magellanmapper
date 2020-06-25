@@ -550,8 +550,13 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
     
     Returns:
         :obj:`np.ndarray`, dict: The image array as a 5D array in the format,
-        ``t, z, y, x[, c]``. If ``return_info`` is True, a dictionary of
-        image properties will also be returned.
+        ``t, z, y, x[, c]``, or None if it could not be loaded.
+        If ``return_info`` is True, a dictionary of image properties will
+        also be returned.
+    
+    Raises:
+        FileNotFoundError: If metadata was set to be updated, but the
+        main image could not be found to update the metadata.
     """
     if series is None:
         series = 0
@@ -585,14 +590,14 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
         return image5d
     except IOError as e:
         print(e)
-        if update_info and image5d_ver_num < IMAGE5D_NP_VER:
+        if update_info and -1 < image5d_ver_num < IMAGE5D_NP_VER:
             # set to update metadata but could not because image5d
             # was not available;
             # TODO: override option since older metadata vers may
             # still work, or image5d may not be necessary for upgrade
-            raise IOError(
+            raise FileNotFoundError(
                 "image5d metadata is from an older version ({}, "
-                "current version {}) could not be loaded because "
+                "current version {}) and could not be loaded because "
                 "the original image filedoes not exist. Please "
                 "reopen with the original image file to update "
                 "the metadata.".format(image5d_ver_num, IMAGE5D_NP_VER))

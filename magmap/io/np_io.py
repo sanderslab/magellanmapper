@@ -114,7 +114,7 @@ def _check_np_none(val):
 
 
 def setup_images(path=None, series=None, offset=None, size=None,
-                 proc_mode=None):
+                 proc_mode=None, allow_import=True):
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -129,6 +129,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
         size (List[int]): Sub-image shape given in z,y,x; defaults to None.
         proc_mode (str): Processing mode, which should be a key in 
             :class:`config.ProcessTypes`, case-insensitive; defaults to None.
+        allow_import (bool): True to allow importing the image if it
+            cannot be loaded; defaults to True.
     
     """
     # LOAD MAIN IMAGE
@@ -201,14 +203,15 @@ def setup_images(path=None, series=None, offset=None, size=None,
         # load or import the main image stack
         print("Loading main image")
         if os.path.isdir(path):
-            # import directory of single plane images to a volumetric stack
-            chls, import_md = importer.setup_import_dir(path)
-            import_md[config.MetaKeys.RESOLUTIONS] = config.resolutions
-            import_md[config.MetaKeys.MAGNIFICATION] = config.magnification
-            import_md[config.MetaKeys.ZOOM] = config.zoom
-            config.image5d = importer.import_planes_to_stack(
-                chls, config.prefix, import_md)
-            config.image5d_io = config.LoadIO.NP
+            if allow_import:
+                # import directory of single plane images to a volumetric stack
+                chls, import_md = importer.setup_import_dir(path)
+                import_md[config.MetaKeys.RESOLUTIONS] = config.resolutions
+                import_md[config.MetaKeys.MAGNIFICATION] = config.magnification
+                import_md[config.MetaKeys.ZOOM] = config.zoom
+                config.image5d = importer.import_planes_to_stack(
+                    chls, config.prefix, import_md)
+                config.image5d_io = config.LoadIO.NP
         elif path.endswith(sitk_io.EXTS_3D):
             try:
                 # attempt to format supported by SimpleITK and prepend time axis
@@ -223,7 +226,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 if not import_only:
                     # load previously imported image
                     config.image5d = importer.read_file(path, series)
-                if import_only or config.image5d is None:
+                if allow_import and (import_only or config.image5d is None):
                     # re-import over existing image or import new image
                     chls, import_path = importer.setup_import_multipage(path)
                     prefix = (import_path if config.prefix is None

@@ -14,6 +14,7 @@ Attributes:
         save array format.
 """
 
+from collections import OrderedDict
 import os
 from time import time
 import glob
@@ -613,8 +614,9 @@ def setup_import_multipage(filename):
         falling back to use this name directly.
 
     Returns:
-        dict[int, List[str]], str: Dictionary of channel numbers to sequences
-        of image file paths to import, and the base path of the extracted files.
+        dict[Any, List[str]], str: Ordered dictionary of channel numbers to
+        sequences of image file paths to import, and the base path of the
+        extracted files.
     
     """
     path_split = libmag.splitext(filename)
@@ -669,8 +671,8 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
     multipage file(s).
     
     Args:
-        chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
-            sequences of image file paths to import.
+        chl_paths (dict[Any, List[str]]): Ordered dictionary of channel
+            numbers to sequences of image file paths to import.
         channel (List[int]): Sequence of channel indices to import; defaults
             to None to import all channels.
         series (int): Series index to load. Defaults to None, which will use 0.
@@ -730,8 +732,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
     files to bypass keeping the full input or output image in RAM.
 
     Args:
-        chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
-            sequences of image file paths to import.
+        chl_paths (dict[Any, List[str]]): Ordered dictionary of channel
+            numbers to sequences of image file paths to import.
         prefix (str): Ouput base path.
         import_md (dict[:obj:`config.MetaKeys`]): Import metadata dictionary,
             used to set up the shape, data type (for RAW file import), and
@@ -879,12 +881,12 @@ def _parse_import_chls(paths):
         paths (List[str]): Sequence of paths.
 
     Returns:
-        dict[int, List[str]]: Dictionary of channel numbers to sequences of
-        image file paths to import.
+        dict[int, List[str]]: Ordered dictionary of channel numbers to
+        sequences of image file paths to import.
 
     """
     regex_chls = re.compile(r"{}[0-9]+".format(CHANNEL_SEPARATOR))
-    chls = {}
+    chls = OrderedDict()
     len_sep = len(CHANNEL_SEPARATOR)
     for f in paths:
         # extract channel identifier and group file by channel, defaulting
@@ -921,8 +923,8 @@ def import_planes_to_stack(chl_paths, prefix, rgb_to_grayscale=True,
     image with either a single channel or an RGB channel.
 
     Args:
-        chl_paths (dict[int, List[str]]): Dictionary of channel numbers to
-            sequences of image file paths to import.
+        chl_paths (dict[int, List[str]]): Ordered dictionary of channel
+            numbers to sequences of image file paths to import.
         prefix (str): Ouput base path; defaults to None to output to the
             ``path`` directory, also using the directory name as the
             image filename.

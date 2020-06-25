@@ -2102,7 +2102,7 @@ class Visualization(HasTraits):
             self._filename = self._import_prefix
         
         # repopulate channel paths dict, including any user edits
-        chl_paths = {}
+        chl_paths = OrderedDict()
         for row in self._import_paths:
             chl_paths.setdefault(row[1], []).append(row[0])
         

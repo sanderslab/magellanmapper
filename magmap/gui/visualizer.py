@@ -2071,25 +2071,30 @@ class Visualization(HasTraits):
             if shape is not None:
                 self._import_shape = [shape[::-1]]
             
-            # set data type related dropdowns based on each character of
-            # the type-string of the Numpy data type object
             dtype_str = md[config.MetaKeys.DTYPE]
-            try:
-                dtype_str = np.dtype(dtype_str).str
-                byte_orders = libmag.get_dict_keys_from_val(
-                    self._IMPORT_BYTE_ORDERS, dtype_str[0])
-                if byte_orders:
-                    self._import_byte_order = [byte_orders[0]]
-                data_types = libmag.get_dict_keys_from_val(
-                    self._IMPORT_DATA_TYPES, dtype_str[1])
-                if data_types:
-                    self._import_data_type = [data_types[0]]
-                bits = libmag.get_dict_keys_from_val(
-                    self._IMPORT_BITS, dtype_str[2])
-                if bits:
-                    self._import_bit = [bits[0]]
-            except TypeError:
-                print("Could not find data type for {}".format(dtype_str))
+            if dtype_str:
+                # set data type related dropdowns based on each character of
+                # the type-string of the Numpy data type object
+                try:
+                    dtype_str = np.dtype(dtype_str).str
+                    len_dtype_str = len(dtype_str)
+                    if len_dtype_str > 0:
+                        byte_orders = libmag.get_dict_keys_from_val(
+                            self._IMPORT_BYTE_ORDERS, dtype_str[0])
+                        if byte_orders:
+                            self._import_byte_order = [byte_orders[0]]
+                    if len_dtype_str > 1:
+                        data_types = libmag.get_dict_keys_from_val(
+                            self._IMPORT_DATA_TYPES, dtype_str[1])
+                        if data_types:
+                            self._import_data_type = [data_types[0]]
+                    if len_dtype_str > 2:
+                        bits = libmag.get_dict_keys_from_val(
+                            self._IMPORT_BITS, dtype_str[2])
+                        if bits:
+                            self._import_bit = [bits[0]]
+                except TypeError:
+                    print("Could not find data type for {}".format(dtype_str))
             
             # signal ready import
             self._update_import_feedback("Ready to import")

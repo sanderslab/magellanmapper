@@ -667,6 +667,19 @@ def setup_import_multipage(filename):
     return chl_paths, base_path
 
 
+def _is_raw(path):
+    """Check if a path is a RAW file based on extension.
+    
+    Args:
+        path (str): Path to check
+
+    Returns:
+        bool: True if ``path``'s extension is RAW, case insensitive.
+
+    """
+    return os.path.splitext(path)[1].lower() == ".raw"
+
+
 def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
     """Extract metadata and determine output image shape for importing
     multipage file(s).
@@ -680,16 +693,22 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
         z_max (int): Number of z-planes to load; defaults to -1 to load all.
 
     Returns:
-        dict[:obj:`config.MetaKeys`]: Dictionary of metadata.
+        dict[:obj:`config.MetaKeys`]: Dictionary of metadata. RAW files will
+        simply return a metadata dictionary populated with None values.
 
     """
     print("Extracting metadata for image import, may take awhile...")
-    start_jvm()
-    jb.attach()
     if series is None:
         series = 0
     path = tuple(chl_paths.values())[0][0]
     md = dict.fromkeys(config.MetaKeys)
+    if _is_raw(path):
+        # RAW files will need to have metadata supplied manually; return
+        # based on this extension to avoid startup time for Javabridge
+        return md
+
+    start_jvm()
+    jb.attach()
     try:
         # get available embedded metadata via Bioformats
         names, sizes, res, md[config.MetaKeys.MAGNIFICATION], \

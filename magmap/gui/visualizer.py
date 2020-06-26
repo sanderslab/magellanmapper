@@ -413,7 +413,7 @@ class Visualization(HasTraits):
     _import_bit = List
     # map numerical signage and precision to Numpy data type
     _IMPORT_DATA_TYPES = OrderedDict((
-        ("Data type", ""),
+        ("Type", ""),
         ("Unsigned integer", "u"),
         ("Signed integer", "i"),
         ("Floating point", "f"),
@@ -421,7 +421,7 @@ class Visualization(HasTraits):
     _import_data_type = List
     # map byte order name to Numpy symbol
     _IMPORT_BYTE_ORDERS = OrderedDict((
-        ("Default", "="), ("Little endian", "<"), ("Big endian", ">")))
+        ("Default order", "="), ("Little endian", "<"), ("Big endian", ">")))
     _import_byte_order = List
     _import_prefix = Str
     _import_feedback = Str
@@ -2096,9 +2096,15 @@ class Visualization(HasTraits):
                 except TypeError:
                     print("Could not find data type for {}".format(dtype_str))
             
-            # signal ready import
-            self._update_import_feedback("Ready to import")
-            self._import_btn_enabled = True
+            if shape and dtype_str:
+                # signal ready import
+                self._update_import_feedback(
+                    "Ready to import. Please check microscope metadata "
+                    "and edit if necessary.")
+            else:
+                self._update_import_feedback(
+                    "Please enter at least image output and data type "
+                    "before importing.")
         
         # reset import fields
         self._clear_import_files(False)
@@ -2137,6 +2143,30 @@ class Visualization(HasTraits):
                     data.append([path, chl])
             self._import_paths = data
             self._import_prefix = base_path
+    
+    @on_trait_change("_import_shape")
+    def _validate_import_readiness(self):
+        """Activate import button once shape and required data type fields
+        have beeen entered.
+        
+        """
+        self._import_btn_enabled = (
+                not np.equal(self._import_shape, 0).any()
+                and self._import_bit
+                and self._import_data_type
+                and "" not in (
+                    self._IMPORT_BITS[self._import_bit[0]],
+                    self._IMPORT_DATA_TYPES[self._import_data_type[0]]))
+    
+    @on_trait_change("_import_bit")
+    def _import_bit_changed(self):
+        """Validate import readiness when the data bit field changes."""
+        self._validate_import_readiness()
+    
+    @on_trait_change("_import_data_type")
+    def _import_data_type_changed(self):
+        """Validate import readiness when the data type field changes."""
+        self._validate_import_readiness()
     
     @on_trait_change("_import_btn")
     def _import_files(self):

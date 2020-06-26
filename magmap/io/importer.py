@@ -769,8 +769,8 @@ def _update_shape_for_channels(shape, chl_paths, channel):
     return shape_up
 
 
-def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0,
-                             channel=None, fn_feedback=None):
+def import_multiplane_images(chl_paths, prefix, import_md, series=None,
+                             offset=0, channel=None, fn_feedback=None):
     """Imports single or multiplane file(s) into Numpy format.
     
     For multichannel images, this import currently supports either a single
@@ -812,10 +812,6 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
                    "may take awhile..."
                    .format(filename_image5d), fn_feedback)
     
-    # initialize JVM for import via Bioformats
-    start_jvm()
-    jb.attach()
-    
     # set up channels in case chl_paths was updated after shape determination
     # and to get channels to extract from each file
     shape = _update_shape_for_channels(
@@ -833,6 +829,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
             [(k, v) for k, v in chl_paths.items()
              if not channel or k in channel])
 
+    jb_attached = False
     image5d = None
     near_mins = []
     near_maxs = []
@@ -841,22 +838,31 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
         # assume only one file per channel, ignoring others in same channel
         img_path = paths[0]
         
-        rdr = None
-        img_raw = None
         if image5d is None:
             if shape[-1] == 1:
                 shape = shape[:-1]  # remove channel dim if single channel
             shape = tuple(shape)
-        try:
-            # open image with Python-Bioformats
-            rdr = bf.ImageReader(img_path, perform_init=True)
-        except (jb.JavaException, AttributeError) as err:
-            print(err)
-            # fall back to opening as a RAW 3D image file
-            # TODO: generalize data type
+        
+        # set up image reader
+        rdr = None
+        img_raw = None
+        if not _is_raw(img_path):
+            # open non-RAW image with Python-Bioformats
+            try:
+                if not jb_attached:
+                    # start JVM and attach to current thread
+                    start_jvm()
+                    jb.attach()
+                    jb_attached = True
+                rdr = bf.ImageReader(img_path, perform_init=True)
+            except (jb.JavaException, AttributeError) as err:
+                print(err)
+        if rdr is None:
+            # open image file as a RAW 3D array
             img_raw = np.memmap(
                 img_path, dtype=import_md[config.MetaKeys.DTYPE],
                 shape=shape[1:], mode="r")
+        
         len_shape = len(shape)
         for chl_load in chls_load:
             lows = []
@@ -867,13 +873,13 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
                     libmag.printcb(
                         "loading planes from time {}, z {}, channel {}"
                         .format(t, z, chl_load), fn_feedback)
-                    if rdr is not None:
+                    if img_raw is not None:
+                        # access plane from RAW memmapped file
+                        img = img_raw[z]
+                    else:
                         # read plane with Bioformats reader
                         img = rdr.read(z=(z + offset), t=t, c=chl_load,
                                        series=series, rescale=False)
-                    else:
-                        # access plane from RAW memmapped file
-                        img = img_raw[z]
                     
                     if image5d is None:
                         # open output file as memmap to directly write to disk,
@@ -917,7 +923,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None, offset=0
     libmag.printcb("Completed multiplane image import planes to \"{}\" "
                    "with metadata:\n{}"
                    .format(filename_image5d, md), fn_feedback)
-    jb.detach()
+    if jb_attached:
+        jb.detach()
     return image5d
 
 

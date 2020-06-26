@@ -141,9 +141,9 @@ class VisHandler(Handler):
         # change Trait to flag completion of controls creation
         info.object.controls_created = True
 
-        # add a change listener for the viewer tab widget
-        tab_widgets = info.ui.control.findChildren(
-            PyQt5.QtWidgets.QTabWidget)
+        # add a change listener for the viewer tab widget, which is the
+        # first found widget
+        tab_widgets = info.ui.control.findChildren(PyQt5.QtWidgets.QTabWidget)
         tab_widgets[0].currentChanged.connect(handle_tab_changed)
         return True
 
@@ -191,6 +191,19 @@ class VisHandler(Handler):
             if ed.name == "_import_feedback":
                 # scroll to end of text display
                 ed.control.moveCursor(PyQt5.QtGui.QTextCursor.End)
+    
+    def object_select_controls_tab_changed(self, info):
+        """Select the given tab specified by
+        :attr:`Visualization.select_controls_tab`.
+        
+        Args:
+            info (UIInfo): TraitsUI UI info.
+
+        """
+        # the tab widget is the second found QTabWidget; subtract one since
+        # Enums auto-increment from 1
+        tab_widgets = info.ui.control.findChildren(PyQt5.QtWidgets.QTabWidget)
+        tab_widgets[1].setCurrentIndex(info.object.select_controls_tab - 1)
 
 
 class ListSelections(HasTraits):
@@ -258,6 +271,13 @@ class Styles2D(Enum):
     THIN_ROWS = "Thin rows"
 
 
+class ControlsTabs(Enum):
+    ROI = auto()
+    PROFILES = auto()
+    ADJUST = auto()
+    IMPORT = auto()
+
+
 class ViewerTabs(Enum):
     """Enumerations for viewer tabs."""
     ROI_ED = auto()
@@ -290,6 +310,8 @@ class Visualization(HasTraits):
         scene_3d_shown (bool): True if the Mayavi 3D plot has been shown.
         selected_viewer_tab (Enum): The Enum corresponding to the selected
             tab in the viewer panel.
+        select_controls_tab (int): Enum value from :class:`ControlsTabs` to
+            select the controls panel tab.
     """
     # File selection
 
@@ -413,6 +435,7 @@ class Visualization(HasTraits):
     scene = Instance(MlabSceneModel, ())
     scene_3d_shown = False  # 3D Mayavi display shown
     selected_viewer_tab = ViewerTabs.ROI_ED
+    select_controls_tab = Int(-1)
 
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
@@ -1207,9 +1230,11 @@ class Visualization(HasTraits):
         will not be loaded for now.
         """
         if self._ignore_filename or not self._filename:
-            # may ignore if only updating widget value, without triggering load
+            # ignore if only updating widget value, without triggering load
             self._ignore_filename = False
             return
+        
+        # load image if possible without allowing import
         filename, offset, size = importer.deconstruct_np_filename(
             self._filename)
         if filename is not None:
@@ -1221,12 +1246,21 @@ class Visualization(HasTraits):
                 print("Change sub-image offset to {}, size to {}"
                       .format(config.subimg_offsets, config.subimg_sizes))
             # TODO: consider loading processed images, blobs, etc
-            np_io.setup_images(config.filename, offset=offset, size=size)
+            np_io.setup_images(
+                config.filename, offset=offset, size=size, allow_import=False)
             self._setup_for_image()
             self._btn_redraw_fired()
             self.update_imgadj_for_img()
         else:
             print("Could not parse filename", self._filename)
+        
+        if config.image5d is None:
+            # initiate import setup and direct user to import panel
+            print("Could not open {}, directing to import panel"
+                  .format(self._filename))
+            # must assign before changing tab or else _filename is empty
+            self._import_browser = self._filename
+            self.select_controls_tab = ControlsTabs.IMPORT.value
     
     @on_trait_change("_channel")
     def update_channel(self):

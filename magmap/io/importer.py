@@ -709,6 +709,7 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
 
     start_jvm()
     jb.attach()
+    shape = None
     try:
         # get available embedded metadata via Bioformats
         names, sizes, res, md[config.MetaKeys.MAGNIFICATION], \
@@ -719,16 +720,25 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
         shape = list(sizes[series])
     except jb.JavaException as err:
         print(err)
-        # TODO: see if necessary or improved performance
-        sizes, dtype = find_sizes(path)
-        if dtype:
-            md[config.MetaKeys.DTYPE] = dtype.name
-        shape = list(sizes[0])
     
-    shape = _update_shape_for_channels(shape, chl_paths, channel)
-    if z_max != -1:
-        shape[1] = z_max
-    md[config.MetaKeys.SHAPE] = shape
+    if shape is None:
+        try:
+            # fall back to getting a subset of metadata, also through Bioformats
+            # TODO: see if necessary or improves performance
+            sizes, dtype = find_sizes(path)
+            if dtype:
+                md[config.MetaKeys.DTYPE] = dtype.name
+            shape = list(sizes[0])
+        except (jb.JavaException, AttributeError) as err:
+            # Python-Bioformats (v1.1) attempts to access currently non-existing
+            # message attribute in JavaException from Javabridge (v1.0.18)
+            print(err)
+    
+    if shape:
+        shape = _update_shape_for_channels(shape, chl_paths, channel)
+        if z_max != -1:
+            shape[1] = z_max
+        md[config.MetaKeys.SHAPE] = shape
     jb.detach()
     
     return md

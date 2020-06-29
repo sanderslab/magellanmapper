@@ -90,18 +90,22 @@ def match_world_info(source, target):
     target.SetDirection(direction)
 
 
-def read_sitk(path):
+def read_sitk(path, dryrun=False):
     """Read an image file into :class:``sitk.Image`` format, checking for 
     alternative supported extensions if necessary.
     
     Args:
-        path: Path, including prioritized extension to check first.
+        path (str): Path, including prioritized extension to check first.
+        dryrun (bool): True to load the image; defaults to False. Use False
+            to test whether an path to load is found.
     
     Returns:
-        Tuple of the :class:``sitk.Image`` object located at ``path`` 
-        and the found extension. If a file at ``path`` cannot be found, 
-        its extension is replaced successively with remaining extensions 
-        in :const:``EXTS_3D`` until a file is found.
+        :obj:`sitk.Image`, str: Image object located at ``path`` with
+        the found extension, or None if unable to load; and the loaded path,
+        or None if no matching, existing path is found. If a file at
+        ``path`` cannot be found, its extension is replaced successively
+        with remaining extensions in :const:``EXTS_3D`` until a file is found.
+    
     """
     # prioritize given extension
     path_split = libmag.splitext(path)
@@ -115,11 +119,12 @@ def read_sitk(path):
     for ext in exts:
         img_path = path_split[0] + ext
         if os.path.exists(img_path):
-            print("loading image from {}".format(img_path))
-            img_sitk = sitk.ReadImage(img_path)
+            if not dryrun:
+                print("Loading image with SimpleITK:", img_path)
+                img_sitk = sitk.ReadImage(img_path)
             path_loaded = img_path
             break
-    if img_sitk is None:
+    if not dryrun and img_sitk is None:
         print("could not find image from {} and extensions {}"
               .format(path_split[0], exts))
     return img_sitk, path_loaded

@@ -247,39 +247,37 @@ def setup_images(path=None, series=None, offset=None, size=None,
         # TODO: access metadata directly from given image5d's dict to allow
         # loading multiple image5d images simultaneously
         importer.assign_metadata(config.metadatas[0])
-
-    if config.load_labels is not None:
-        # load registered files including labels
-        
-        # main image is currently required since many parameters depend on it
-        atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
-        if atlas_suffix is None and config.image5d is None:
-            # fallback to atlas if main image not already loaded
-            atlas_suffix = config.RegNames.IMG_ATLAS.value
-            print("main image is not set, falling back to registered "
-                  "image with suffix", atlas_suffix)
-        # use prefix to get images registered to a different image, eg a
-        # downsampled version, or a different version of registered images
-        path = config.prefix if config.prefix else path
-        if path and atlas_suffix is not None:
-            try:
-                # will take the place of any previously loaded image5d
-                config.image5d = sitk_io.read_sitk_files(
-                    path, reg_names=atlas_suffix)[None]
-                config.image5d_io = config.LoadIO.SITK
-            except FileNotFoundError as e:
-                print(e)
-        
-        annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
-        if annotation_suffix is not None:
-            # load labels image, set up scaling, and load labels file
-            try:
-                # TODO: need to support multichannel labels images
-                config.labels_img = sitk_io.read_sitk_files(
-                    path, reg_names=annotation_suffix)
-                if config.image5d is not None:
-                    config.labels_scaling = importer.calc_scaling(
-                        config.image5d, config.labels_img)
+    
+    # main image is currently required since many parameters depend on it
+    atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
+    if atlas_suffix is None and config.image5d is None:
+        # fallback to atlas if main image not already loaded
+        atlas_suffix = config.RegNames.IMG_ATLAS.value
+        print("main image is not set, falling back to registered "
+              "image with suffix", atlas_suffix)
+    # use prefix to get images registered to a different image, eg a
+    # downsampled version, or a different version of registered images
+    path = config.prefix if config.prefix else path
+    if path and atlas_suffix is not None:
+        try:
+            # will take the place of any previously loaded image5d
+            config.image5d = sitk_io.read_sitk_files(
+                path, reg_names=atlas_suffix)[None]
+            config.image5d_io = config.LoadIO.SITK
+        except FileNotFoundError as e:
+            print(e)
+    
+    annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
+    if annotation_suffix is not None:
+        # load labels image, set up scaling, and load labels file
+        try:
+            # TODO: need to support multichannel labels images
+            config.labels_img = sitk_io.read_sitk_files(
+                path, reg_names=annotation_suffix)
+            if config.image5d is not None:
+                config.labels_scaling = importer.calc_scaling(
+                    config.image5d, config.labels_img)
+            if config.load_labels is not None:
                 labels_ref = ontology.load_labels_ref(config.load_labels)
                 if isinstance(labels_ref, pd.DataFrame):
                     # parse CSV files loaded into data frame
@@ -289,29 +287,30 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     # parse dict from ABA JSON file
                     config.labels_ref_lookup = (
                         ontology.create_aba_reverse_lookup(labels_ref))
-            except FileNotFoundError as e:
-                print(e)
-        
-        borders_suffix = config.reg_suffixes[config.RegSuffixes.BORDERS]
-        if borders_suffix is not None:
-            # load borders image, which can also be another labels image
-            try:
-                config.borders_img = sitk_io.read_sitk_files(
-                    path, reg_names=borders_suffix)
-            except FileNotFoundError as e:
-                print(e)
-        
-        if config.atlas_labels[config.AtlasLabels.ORIG_COLORS]:
-            # load original labels image from same directory as ontology 
-            # file for consistent ID-color mapping, even if labels are missing
-            try:
-                config.labels_img_orig = sitk_io.load_registered_img(
-                    config.load_labels, config.RegNames.IMG_LABELS.value)
-            except FileNotFoundError as e:
-                print(e)
-                libmag.warn(
-                    "could not load original labels image; colors may differ"
-                    "differ from it")
+        except FileNotFoundError as e:
+            print(e)
+    
+    borders_suffix = config.reg_suffixes[config.RegSuffixes.BORDERS]
+    if borders_suffix is not None:
+        # load borders image, which can also be another labels image
+        try:
+            config.borders_img = sitk_io.read_sitk_files(
+                path, reg_names=borders_suffix)
+        except FileNotFoundError as e:
+            print(e)
+    
+    if (config.atlas_labels[config.AtlasLabels.ORIG_COLORS]
+            and config.load_labels is not None):
+        # load original labels image from same directory as ontology
+        # file for consistent ID-color mapping, even if labels are missing
+        try:
+            config.labels_img_orig = sitk_io.load_registered_img(
+                config.load_labels, config.RegNames.IMG_LABELS.value)
+        except FileNotFoundError as e:
+            print(e)
+            libmag.warn(
+                "could not load original labels image; colors may differ"
+                "differ from it")
     
     load_rot90 = config.roi_profile["load_rot90"]
     if load_rot90 and config.image5d is not None:

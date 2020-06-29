@@ -574,17 +574,18 @@ class Visualization(HasTraits):
         ),
         Item("_imgadj_min", label="Minimum", editor=RangeEditor(
                  low_name="_imgadj_min_low", high_name="_imgadj_min_high",
-                 mode="slider")),
+                 mode="slider", format="%.4g")),
         Item("_imgadj_max", label="Maximum", editor=RangeEditor(
                  low_name="_imgadj_max_low", high_name="_imgadj_max_high",
-                 mode="slider")),
+                 mode="slider", format="%.4g")),
         Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
                  low_name="_imgadj_brightness_low",
-                 high_name="_imgadj_brightness_high", mode="slider")),
+                 high_name="_imgadj_brightness_high", mode="slider",
+                 format="%.4g")),
         Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
-                 low=0.0, high=2.0, mode="slider")),
+                 low=0.0, high=2.0, mode="slider", format="%.3g")),
         Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
-                 low=0.0, high=1.0, mode="slider")),
+                 low=0.0, high=1.0, mode="slider", format="%.3g")),
         label="Adjust Image",
     )
     

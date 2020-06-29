@@ -33,7 +33,7 @@ from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         push_exception_handler, Property, File)
 from traitsui.api import (View, Item, HGroup, VGroup, Tabbed, Handler,
                           RangeEditor, HSplit, TabularEditor, CheckListEditor, 
-                          FileEditor, TextEditor, ArrayEditor)
+                          FileEditor, TextEditor, ArrayEditor, BooleanEditor)
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -384,9 +384,11 @@ class Visualization(HasTraits):
     _imgadj_min = Float
     _imgadj_min_low = Float
     _imgadj_min_high = Float
+    _imgadj_min_auto = Bool
     _imgadj_max = Float
     _imgadj_max_low = Float
     _imgadj_max_high = Float
+    _imgadj_max_auto = Bool
     _imgadj_brightness = Float
     _imgadj_brightness_low = Float
     _imgadj_brightness_high = Float
@@ -572,12 +574,18 @@ class Visualization(HasTraits):
                  editor=CheckListEditor(
                      name="object._imgadj_chls_names.selections")),
         ),
-        Item("_imgadj_min", label="Minimum", editor=RangeEditor(
-                 low_name="_imgadj_min_low", high_name="_imgadj_min_high",
-                 mode="slider", format="%.4g")),
-        Item("_imgadj_max", label="Maximum", editor=RangeEditor(
-                 low_name="_imgadj_max_low", high_name="_imgadj_max_high",
-                 mode="slider", format="%.4g")),
+        HGroup(
+            Item("_imgadj_min", label="Minimum", editor=RangeEditor(
+                     low_name="_imgadj_min_low", high_name="_imgadj_min_high",
+                     mode="slider", format="%.4g")),
+            Item("_imgadj_min_auto", label="Auto", editor=BooleanEditor()),
+        ),
+        HGroup(
+            Item("_imgadj_max", label="Maximum", editor=RangeEditor(
+                     low_name="_imgadj_max_low", high_name="_imgadj_max_high",
+                     mode="slider", format="%.4g")),
+            Item("_imgadj_max_auto", label="Auto", editor=BooleanEditor()),
+        ),
         Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
                  low_name="_imgadj_brightness_low",
                  high_name="_imgadj_brightness_high", mode="slider",
@@ -719,6 +727,10 @@ class Visualization(HasTraits):
         # Matplotlib 3.2
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
+        
+        # set up image adjustment during image setup
+        self._imgadj_min_ignore_update = False
+        self._imgadj_max_ignore_update = False
         self._setup_for_image()
 
     def _init_channels(self):
@@ -815,36 +827,88 @@ class Visualization(HasTraits):
         img_settings = ed.get_img_display_settings(
                 imgi, chl=int(self._imgadj_chls))
         if img_settings is None: return
-        clim_min, clim_max, min_inten, max_inten, self._imgadj_brightness, \
-            self._imgadj_contrast, self._imgadj_alpha = img_settings
-        if clim_min is None:
-            clim_min = 0
-        if clim_max is None:
-            clim_max = self._imgadj_max_high
+        norm, inten_lim, self._imgadj_brightness, self._imgadj_contrast, \
+            self._imgadj_alpha = img_settings
 
         # ensure that limits are beyond at least current plane's limits
-        if min_inten < self._imgadj_max_low:
-            low_thresh = min(min_inten, clim_min)
+        low_thresh = inten_lim[0] if norm.vmin is None else min(
+            inten_lim[0], norm.vmin)
+        if inten_lim[0] < self._imgadj_max_low:
             low = 2 * low_thresh if low_thresh < 0 else 0
             self._imgadj_min_low = low
             self._imgadj_max_low = low
-        if max_inten > self._imgadj_max_high:
-            high = 2 * max(max_inten, clim_max)
+        high_thresh = inten_lim[1] if norm.vmax is None else max(
+            inten_lim[1], norm.vmax)
+        if inten_lim[1] > self._imgadj_max_high:
+            high = 2 * high_thresh if high_thresh > 0 else 0
             self._imgadj_min_high = high
             self._imgadj_max_high = high
             self._imgadj_brightness_low = -high
             self._imgadj_brightness_high = high
         
         # populate controls with display settings
-        self._imgadj_min, self._imgadj_max = clim_min, clim_max
+        if norm.vmin is None:
+            self._imgadj_min_auto = True
+        else:
+            self._imgadj_min = norm.vmin
+            self._imgadj_min_auto = False
+        if norm.vmax is None:
+            self._imgadj_max_auto = True
+        else:
+            self._imgadj_max = norm.vmax
+            self._imgadj_max_auto = False
+
+    def _set_inten_min_to_curr(self, plot_ax_img):
+        # set min intensity to current image value
+        if plot_ax_img is not None:
+            self._imgadj_min_ignore_update = True
+            vmin = plot_ax_img.ax_img.norm.vmin
+            if vmin > self._imgadj_min_high:
+                self._imgadj_min_high = vmin
+            self._imgadj_min = vmin
+
+    def _set_inten_max_to_curr(self, plot_ax_img):
+        # set max intensity to current image value
+        if plot_ax_img is not None:
+            self._imgadj_max_ignore_update = True
+            vmax = plot_ax_img.ax_img.norm.vmax
+            if vmax > self._imgadj_max_high:
+                self._imgadj_max_high = vmax
+            self._imgadj_max = vmax
 
     @on_trait_change("_imgadj_min")
     def _adjust_img_min(self):
-        self._adjust_displayed_imgs(minimum=self._imgadj_min)
+        if self._imgadj_min_ignore_update:
+            self._imgadj_min_ignore_update = False
+            return
+        self._imgadj_min_auto = False
+        plot_ax_img = self._adjust_displayed_imgs(minimum=self._imgadj_min)
+        # intensity max may have been adjusted to remain >= min
+        self._set_inten_max_to_curr(plot_ax_img)
+    
+    @on_trait_change("_imgadj_min_auto")
+    def _adjust_img_min_auto(self):
+        min_inten = None if self._imgadj_min_auto else self._imgadj_min
+        plot_ax_img = self._adjust_displayed_imgs(minimum=min_inten)
+        self._set_inten_min_to_curr(plot_ax_img)
+        self._set_inten_max_to_curr(plot_ax_img)
 
     @on_trait_change("_imgadj_max")
     def _adjust_img_max(self):
-        self._adjust_displayed_imgs(maximum=self._imgadj_max)
+        if self._imgadj_max_ignore_update:
+            self._imgadj_max_ignore_update = False
+            return
+        self._imgadj_max_auto = False
+        plot_ax_img = self._adjust_displayed_imgs(maximum=self._imgadj_max)
+        # intensity min may have been adjusted to remain <= max
+        self._set_inten_min_to_curr(plot_ax_img)
+
+    @on_trait_change("_imgadj_max_auto")
+    def _adjust_img_max_auto(self):
+        max_inten = None if self._imgadj_max_auto else self._imgadj_max
+        plot_ax_img = self._adjust_displayed_imgs(maximum=max_inten)
+        self._set_inten_min_to_curr(plot_ax_img)
+        self._set_inten_max_to_curr(plot_ax_img)
 
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):
@@ -863,6 +927,11 @@ class Visualization(HasTraits):
 
         Args:
             **kwargs: Arguments to update the currently selected viewer.
+        
+        Returns:
+            :obj:`magmap.plot_editor.PlotAxImg`: The last updated axes image
+            plot, assumed to have the same values as all the other
+            updated plots.
 
         """
         eds = []
@@ -870,10 +939,12 @@ class Visualization(HasTraits):
             eds.append(self._roi_ed)
         elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
             eds.extend(self.atlas_eds)
+        plot_ax_img = None
         for ed in eds:
-            ed.update_imgs_display(
+            plot_ax_img = ed.update_imgs_display(
                 self._imgadj_names.selections.index(self._imgadj_name),
                 chl=int(self._imgadj_chls), **kwargs)
+        return plot_ax_img
 
     @staticmethod
     def is_dark_mode(max_rgb=100):

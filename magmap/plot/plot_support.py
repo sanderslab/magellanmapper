@@ -66,11 +66,16 @@ class ImageSyncMixin:
             brightness (float): Brightness addend; defaults to None.
             contrast (float): Contrast multiplier; defaults to None.
             alpha (float): Opacity value; defalts to None.
+        
+        Returns:
+            :obj:`magmap.plot_editor.PlotAxImg`: The updated axes image plot.
 
         """
+        plot_ax_img = None
         for ed in plot_eds:
-            ed.update_img_display(
+            plot_ax_img = ed.update_img_display(
                 imgi, chl, minimum, maximum, brightness, contrast, alpha)
+        return plot_ax_img
 
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,

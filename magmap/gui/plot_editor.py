@@ -487,9 +487,10 @@ class PlotEditor:
             chl (int): Index of channel; defaults to None.
 
         Returns:
-            float, float, float, float, float, float, float: Vmin, vmax,
-            minimum intensity of the data plane, maximum intensity,
-            brightness, contrast, and alpha for the currently displayed plane.
+            :obj:`matplotlib.cm.Normalize`, (float, float), float, float, float:
+            Normalization instance, tuple of min min/max intensity of the
+            data plane, brightness, contrast, and alpha for the currently
+            displayed plane.
 
         """
         if not self._plot_ax_imgs or len(self._plot_ax_imgs) <= imgi:
@@ -497,8 +498,8 @@ class PlotEditor:
         if chl is None:
             chl = 0
         plot_ax_img = self._plot_ax_imgs[imgi][chl]
-        return (*plot_ax_img.ax_img.get_clim(),
-                np.amin(plot_ax_img.img), np.amax(plot_ax_img.img),
+        return (plot_ax_img.ax_img.norm,
+                (np.amin(plot_ax_img.img), np.amax(plot_ax_img.img)),
                 plot_ax_img.brightness,
                 plot_ax_img.contrast, plot_ax_img.ax_img.get_alpha())
 
@@ -517,42 +518,52 @@ class PlotEditor:
             brightness (float): Brightness addend; defaults to None.
             contrast (float): Contrast multiplier; defaults to None.
             alpha (float): Opacity value; defalts to None.
+        
+        Returns:
+            :obj:`PlotAxImg`: The updated axes image plot.
 
         """
         if not self._plot_ax_imgs or len(self._plot_ax_imgs) <= imgi:
             return
         if chl is None:
             chl = 0
-        plot_ax_imgs = self._plot_ax_imgs[imgi]
-        for i, plot_ax_img in enumerate(plot_ax_imgs):
-            if i != chl: continue
-            if minimum is not np.nan or maximum is not np.nan:
-                # set vmin and vmax
-                clim = [minimum, maximum]
-                for j, (lim, ax_lim) in enumerate(zip(
-                        clim, plot_ax_img.ax_img.get_clim())):
-                    if lim is np.nan:
-                        # default to using current value
-                        clim[j] = ax_lim
-                if None not in clim and clim[0] > clim[1]:
-                    # ensure min is <= max
-                    clim[0] = clim[1]
-                plot_ax_img.ax_img.set_clim(clim)
-            if brightness is not None or contrast is not None:
-                data = plot_ax_img.ax_img.get_array()
-                info = libmag.get_dtype_info(data)
-                if brightness is not None:
-                    # shift original image array by brightness
-                    data[:] = np.clip(
-                        plot_ax_img.img + brightness, info.min, info.max)
-                if contrast is not None:
-                    # stretch original image array by contrast
-                    data[:] = np.clip(
-                        plot_ax_img.img * contrast, info.min, info.max)
-            if alpha is not None:
-                # adjust opacity
-                plot_ax_img.ax_img.set_alpha(alpha)
+        plot_ax_img = self._plot_ax_imgs[imgi][chl]
+        if minimum is not np.nan or maximum is not np.nan:
+            # set vmin and vmax; use norm rather than get_clim since norm
+            # holds the actual limits
+            clim = [minimum, maximum]
+            norm = plot_ax_img.ax_img.norm
+            for j, (lim, ax_lim) in enumerate(zip(
+                    clim, (norm.vmin, norm.vmax))):
+                if lim is np.nan:
+                    # default to using current value
+                    clim[j] = ax_lim
+            if None not in clim and clim[0] > clim[1]:
+                # ensure min is <= max
+                clim[0] = clim[1]
+            # directly update norm rather than clim so that None vals are
+            # not skipped for auto-scaling
+            norm.vmin, norm.vmax = clim
+            plot_ax_img.ax_img.autoscale_None()
+            if norm.vmin > norm.vmax:
+                # auto-scaling may cause vmin to exceed vmax
+                norm.vmin = norm.vmax
+        if brightness is not None or contrast is not None:
+            data = plot_ax_img.ax_img.get_array()
+            info = libmag.get_dtype_info(data)
+            if brightness is not None:
+                # shift original image array by brightness
+                data[:] = np.clip(
+                    plot_ax_img.img + brightness, info.min, info.max)
+            if contrast is not None:
+                # stretch original image array by contrast
+                data[:] = np.clip(
+                    plot_ax_img.img * contrast, info.min, info.max)
+        if alpha is not None:
+            # adjust opacity
+            plot_ax_img.ax_img.set_alpha(alpha)
         self.axes.figure.canvas.draw_idle()
+        return plot_ax_img
 
     def alpha_updater(self, alpha):
         self.alpha = alpha

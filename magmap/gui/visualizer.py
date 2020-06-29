@@ -767,18 +767,25 @@ class Visualization(HasTraits):
         if img3d is None: return
         info = libmag.get_dtype_info(img3d)
 
-        # min/max based on data type range
-        self._imgadj_min_low = info.min
-        self._imgadj_min_high = info.max
-        self._imgadj_max_low = info.min
-        self._imgadj_max_high = info.max
+        # min/max based on near min/max pre-calculated from whole image
+        # including all channels, falling back to data type range; cannot
+        # used percentile or else need to load whole image from disk
+        min_inten = 0
+        if config.near_min is not None:
+            min_near_min = min(config.near_min)
+            if min_near_min < 0:
+                # set min to 0 unless near min is < 0
+                min_inten = 2 * min_near_min
+        max_inten = (info.max if config.near_max is None
+                     else max(config.near_max) * 2)
+        self._imgadj_min_low = min_inten
+        self._imgadj_min_high = max_inten
+        self._imgadj_max_low = min_inten
+        self._imgadj_max_high = max_inten
 
-        # range brightness symmetrically to a fraction of data type range to
-        # give more slider precision; cannot used percentile or else the
-        # whole image will need to be loaded from disk
-        brightness_max = info.max // 5
-        self._imgadj_brightness_low = -brightness_max
-        self._imgadj_brightness_high = brightness_max
+        # range brightness symmetrically to max limit
+        self._imgadj_brightness_low = -max_inten
+        self._imgadj_brightness_high = max_inten
         
         # update control values
         self.update_imgadj_for_img()
@@ -808,14 +815,27 @@ class Visualization(HasTraits):
         img_settings = ed.get_img_display_settings(
                 imgi, chl=int(self._imgadj_chls))
         if img_settings is None: return
-
-        # populate controls with these display settings
-        clim_min, clim_max, self._imgadj_brightness, self._imgadj_contrast, \
-            self._imgadj_alpha = img_settings
+        clim_min, clim_max, min_inten, max_inten, self._imgadj_brightness, \
+            self._imgadj_contrast, self._imgadj_alpha = img_settings
         if clim_min is None:
             clim_min = 0
         if clim_max is None:
             clim_max = self._imgadj_max_high
+
+        # ensure that limits are beyond at least current plane's limits
+        if min_inten < self._imgadj_max_low:
+            low_thresh = min(min_inten, clim_min)
+            low = 2 * low_thresh if low_thresh < 0 else 0
+            self._imgadj_min_low = low
+            self._imgadj_max_low = low
+        if max_inten > self._imgadj_max_high:
+            high = 2 * max(max_inten, clim_max)
+            self._imgadj_min_high = high
+            self._imgadj_max_high = high
+            self._imgadj_brightness_low = -high
+            self._imgadj_brightness_high = high
+        
+        # populate controls with display settings
         self._imgadj_min, self._imgadj_max = clim_min, clim_max
 
     @on_trait_change("_imgadj_min")

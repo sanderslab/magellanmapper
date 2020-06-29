@@ -487,8 +487,9 @@ class PlotEditor:
             chl (int): Index of channel; defaults to None.
 
         Returns:
-            float, flat, float, float, float: Vmin, vmax, brightness,
-            contrast, and alpha.
+            float, float, float, float, float, float, float: Vmin, vmax,
+            minimum intensity of the data plane, maximum intensity,
+            brightness, contrast, and alpha for the currently displayed plane.
 
         """
         if not self._plot_ax_imgs or len(self._plot_ax_imgs) <= imgi:
@@ -496,7 +497,9 @@ class PlotEditor:
         if chl is None:
             chl = 0
         plot_ax_img = self._plot_ax_imgs[imgi][chl]
-        return (*plot_ax_img.ax_img.get_clim(), plot_ax_img.brightness,
+        return (*plot_ax_img.ax_img.get_clim(),
+                np.amin(plot_ax_img.img), np.amax(plot_ax_img.img),
+                plot_ax_img.brightness,
                 plot_ax_img.contrast, plot_ax_img.ax_img.get_alpha())
 
     def update_img_display(self, imgi, chl=None, minimum=np.nan,

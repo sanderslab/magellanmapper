@@ -539,15 +539,21 @@ class PlotEditor:
                     # default to using current value
                     clim[j] = ax_lim
             if None not in clim and clim[0] > clim[1]:
-                # ensure min is <= max
-                clim[0] = clim[1]
+                # ensure min is <= max, setting to the currently adjusted val
+                if minimum is np.nan:
+                    clim[0] = clim[1]
+                else:
+                    clim[1] = clim[0]
             # directly update norm rather than clim so that None vals are
             # not skipped for auto-scaling
             norm.vmin, norm.vmax = clim
             plot_ax_img.ax_img.autoscale_None()
             if norm.vmin > norm.vmax:
                 # auto-scaling may cause vmin to exceed vmax
-                norm.vmin = norm.vmax
+                if minimum is np.nan:
+                    norm.vmin = norm.vmax
+                else:
+                    norm.vmax = norm.vmin
         if brightness is not None or contrast is not None:
             data = plot_ax_img.ax_img.get_array()
             info = libmag.get_dtype_info(data)

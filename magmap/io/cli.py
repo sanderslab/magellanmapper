@@ -451,13 +451,10 @@ def main(process_args_only=False, skip_dbs=False):
     if args.save_subimg:
         config.save_subimg = args.save_subimg
         print("Set to save the sub-image")
+    
     if args.labels:
-        # atlas labels as positional or dictionary-like args
-        config.atlas_labels = args_to_dict(
-            args.labels, config.AtlasLabels, config.atlas_labels)
-        config.load_labels = config.atlas_labels[config.AtlasLabels.PATH_REF]
-        config.labels_level = config.atlas_labels[config.AtlasLabels.LEVEL]
-        print("Set labels to {}".format(config.atlas_labels))
+        # set up atlas labels
+        setup_labels(args.labels)
 
     if args.transform is not None:
         # image transformations such as flipping, rotation
@@ -761,6 +758,22 @@ def update_profiles():
     for i, prof in enumerate(config.roi_profiles):
         prof.refresh_profile(True)
     config.atlas_profile.refresh_profile(True)
+
+
+def setup_labels(labels_arg):
+    """Set up atlas labels.
+    
+    Args:
+        labels_arg (str): Path to labels reference file, such as a labels
+            ontology file.
+
+    """
+    # atlas labels as positional or dictionary-like args
+    config.atlas_labels = args_to_dict(
+        labels_arg, config.AtlasLabels, config.atlas_labels)
+    config.load_labels = config.atlas_labels[config.AtlasLabels.PATH_REF]
+    config.labels_level = config.atlas_labels[config.AtlasLabels.LEVEL]
+    print("Set labels to {}".format(config.atlas_labels))
 
 
 def _iterate_file_processing(path, series, subimg_offsets, subimg_sizes):

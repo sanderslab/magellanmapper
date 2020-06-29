@@ -43,23 +43,24 @@ from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
-from magmap.gui import atlas_editor
+from magmap.atlas import ontology
 from magmap.cv import chunking
-from magmap.io import cli
-from magmap.settings import config
 from magmap.cv import cv_nd
 from magmap.cv import detector
+from magmap.cv import segmenter
 from magmap.cv import stack_detect
+from magmap.gui import atlas_editor
+from magmap.gui import roi_editor
+from magmap.io import cli
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap.atlas import ontology
-from magmap.plot import plot_3d
-from magmap.plot import plot_2d
-from magmap.plot import plot_support
-from magmap.gui import roi_editor
-from magmap.cv import segmenter
+from magmap.io import sitk_io
 from magmap.io import sqlite
+from magmap.plot import plot_2d
+from magmap.plot import plot_3d
+from magmap.plot import plot_support
+from magmap.settings import config
 
 
 # default ROI name
@@ -319,6 +320,12 @@ class Visualization(HasTraits):
     _ignore_filename = False  # ignore file update trigger
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
+    _main_img_name = Str
+    _main_img_names = Instance(TraitsList)
+    _labels_img_name = Str
+    _labels_img_names = Instance(TraitsList)
+    _labels_ref_path = File
+    _reload_btn = Button("Reload")
     
     # ROI selection
 
@@ -468,32 +475,54 @@ class Visualization(HasTraits):
     # ROI selector panel
     panel_roi_selector = VGroup(
         VGroup(
-            HGroup(
-                Item("_filename", label="File", style="simple",
-                     editor=FileEditor(entries=10, allow_dir=False)),
+            VGroup(
+                HGroup(
+                    Item("_filename", label="File", style="simple",
+                         editor=FileEditor(entries=10, allow_dir=False)),
+                ),
+                Item("_channel", label="Channels", style="custom",
+                     editor=CheckListEditor(
+                         name="object._channel_names.selections", cols=8)),
+                label="Image path",
             ),
-            Item("_channel", label="Channels", style="custom",
-                 editor=CheckListEditor(
-                     name="object._channel_names.selections", cols=8)),
-            Item("rois_check_list", label="ROIs",
-                 editor=CheckListEditor(
-                     name="object.rois_selections_class.selections")),
-            Item("roi_array", label="Size (x,y,z)"),
-            Item("x_offset",
-                 editor=RangeEditor(
-                     low_name="x_low",
-                     high_name="x_high",
-                     mode="slider")),
-            Item("y_offset",
-                 editor=RangeEditor(
-                     low_name="y_low",
-                     high_name="y_high",
-                     mode="slider")),
-            Item("z_offset",
-                 editor=RangeEditor(
-                     low_name="z_low",
-                     high_name="z_high",
-                     mode="slider")),
+            VGroup(
+                HGroup(
+                    Item("_main_img_name", label="Main image",
+                         editor=CheckListEditor(
+                             name="object._main_img_names.selections")),
+                    Item("_reload_btn", show_label=False),
+                ),
+                HGroup(
+                    Item("_labels_img_name", label="Labels",
+                         editor=CheckListEditor(
+                             name="object._labels_img_names.selections")),
+                    Item("_labels_ref_path", label="Reference", style="simple",
+                         editor=FileEditor(entries=10, allow_dir=False)),
+                ),
+                label="Registered Images",
+            ),
+            VGroup(
+                Item("rois_check_list", label="ROIs",
+                     editor=CheckListEditor(
+                         name="object.rois_selections_class.selections")),
+                Item("roi_array", label="Size (x,y,z)"),
+                Item("x_offset",
+                     editor=RangeEditor(
+                         low_name="x_low",
+                         high_name="x_high",
+                         mode="slider")),
+                Item("y_offset",
+                     editor=RangeEditor(
+                         low_name="y_low",
+                         high_name="y_high",
+                         mode="slider")),
+                Item("z_offset",
+                     editor=RangeEditor(
+                         low_name="z_low",
+                         high_name="z_high",
+                         mode="slider")),
+                label="Region of Interest",
+            ),
         ),
         Item("_check_list_3d", style="custom", label="3D options",
              editor=CheckListEditor(values=_DEFAULTS_3D, cols=4)),
@@ -728,9 +757,15 @@ class Visualization(HasTraits):
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
         
-        # set up image adjustment during image setup
+        # set up rest of image adjustment during image setup
         self._imgadj_min_ignore_update = False
         self._imgadj_max_ignore_update = False
+        
+        # set up rest of registered images during image setup
+        self._main_img_names = TraitsList()
+        self._labels_img_names = TraitsList()
+        
+        # set up image
         self._setup_for_image()
 
     def _init_channels(self):
@@ -1296,8 +1331,41 @@ class Visualization(HasTraits):
                 self.z_offset = config.roi_offset[2]
             self.roi_array[0] = ([100, 100, 12] if config.roi_size is None
                                  else config.roi_size)
-        
-        # set up image adjustment controls
+            
+            # find matching registered images to populate dropdowns
+            self._main_img_names.selections = [config.SUFFIX_IMAGE5D]
+            for reg_name in config.RegNames:
+                # check for potential matches and add if existing
+                reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
+                    config.filename, reg_name.value), dryrun=True)[1]
+                if reg_path:
+                    self._main_img_names.selections.append(reg_name.value)
+            # show without extension since exts may differ
+            self._main_img_names.selections = [
+                os.path.splitext(s)[0] for s in self._main_img_names.selections]
+            self._labels_img_names.selections = list(
+                self._main_img_names.selections)
+            self._labels_img_names.selections[0] = ""
+            
+            # set registered names based on loaded images, defaulting to
+            # image5d and no labels
+            main_suffix = self._main_img_names.selections[0]
+            labels_suffix = self._labels_img_names.selections[0]
+            if config.reg_suffixes:
+                suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
+                if suffix:
+                    suffix = os.path.splitext(suffix)[0]
+                    if suffix in self._main_img_names.selections:
+                        main_suffix = suffix
+                suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
+                if suffix:
+                    suffix = os.path.splitext(suffix)[0]
+                    if suffix in self._labels_img_names.selections:
+                        labels_suffix = suffix
+            self._main_img_name = main_suffix
+            self._labels_img_name = labels_suffix
+
+            # set up image adjustment controls
         self._init_imgadj()
         
         # set up selector for loading past saved ROIs
@@ -1353,6 +1421,28 @@ class Visualization(HasTraits):
             # must assign before changing tab or else _filename is empty
             self._import_browser = self._filename
             self.select_controls_tab = ControlsTabs.IMPORT.value
+    
+    @on_trait_change("_reload_btn")
+    def _reload_images(self):
+        """Reload images to include registered images."""
+        # update registered suffixes dict with selections
+        reg_suffixes = {}
+        if self._main_img_names.selections.index(self._main_img_name) != 0:
+            reg_suffixes[config.RegSuffixes.ATLAS] = "{}.".format(
+                self._main_img_name)
+        if self._labels_img_names.selections.index(self._labels_img_name) != 0:
+            reg_suffixes[config.RegSuffixes.ANNOTATION] = "{}.".format(
+                self._labels_img_name)
+        config.reg_suffixes.update(reg_suffixes)
+        
+        if self._labels_ref_path:
+            # set up labels
+            cli.setup_labels([self._labels_ref_path])
+        
+        # re-setup image
+        filename = self._filename
+        self._filename = ""
+        self._filename = filename
     
     @on_trait_change("_channel")
     def update_channel(self):

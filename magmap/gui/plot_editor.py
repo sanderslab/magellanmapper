@@ -747,7 +747,7 @@ class PlotEditor:
                         self.coord = coord
                         self.fn_update_coords(self.coord, self.plane)
                 
-                if self.img3d_labels is not None:
+                if self.img3d_labels is not None and config.labels_ref_lookup:
                     # show atlas label name
                     atlas_label = ontology.get_label(
                         coord, self.img3d_labels, config.labels_ref_lookup, 

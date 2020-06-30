@@ -1570,6 +1570,10 @@ class Visualization(HasTraits):
 
     @on_trait_change("btn_detect")
     def _blob_detection_fired(self, segs=None):
+        if config.image5d is None:
+            print("Main image has not been loaded, cannot show detect blobs")
+            return
+        
         # process ROI in prep for showing filtered 2D view and segmenting
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)

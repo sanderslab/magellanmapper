@@ -912,6 +912,7 @@ class Visualization(HasTraits):
             self._imgadj_min_ignore_update = True
             vmin = plot_ax_img.ax_img.norm.vmin
             if vmin > self._imgadj_min_high:
+                # ensure that min limit contains vmin
                 self._imgadj_min_high = vmin
             self._imgadj_min = vmin
 
@@ -921,7 +922,12 @@ class Visualization(HasTraits):
             self._imgadj_max_ignore_update = True
             vmax = plot_ax_img.ax_img.norm.vmax
             if vmax > self._imgadj_max_high:
+                # ensure that max limit contains vmax
                 self._imgadj_max_high = vmax
+            elif (0 <= vmax < 0.1 * self._imgadj_max_high
+                  and self._imgadj_max_high >= 0):
+                # reduce max limit if vmax is very small compared to limit
+                self._imgadj_max_high = 10 * vmax
             self._imgadj_max = vmax
 
     @on_trait_change("_imgadj_min")

@@ -133,7 +133,9 @@ proc_npz=""
 ############################################
 # Check for existing files in MagellanMapper Numpy format
 # Globals:
-#   $OUT_DIR
+#   OUT_DIR
+#   S3_DIR
+#   summary_msg
 # Arguments:
 #   1: Filename style, passed to setup_clrbrain_filenames
 # Returns:
@@ -143,24 +145,33 @@ get_image_files() {
   setup_clrbrain_filenames "$clr_img_base" "$1"
   echo -n "Looking for ${image5d_npz}..."
   if [[ ! -e "$image5d_npz" ]]; then
-    # Get stitched image files from S3
-    start=$SECONDS
-    name="${image5d_npz%.*}"
-    name="$(basename "$name").${compression}"
-    echo "could not find locally, attempting to download $name from S3..."
-    mkdir "$OUT_DIR"
-    get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"
-    if [[ "$?" -eq 0 ]]; then
-      # try getting individual .npz files if archive not present
-      echo -n "Could not find compressed files, attempting to download "
-      echo "uncompressed files..."
-      for npz in "$image5d_npz" "$info_npz"; do
-        echo "...attempting to download ${npz}..."
-        aws s3 cp "${s3_exp_path}/$(basename "$npz")" "$OUT_DIR"
-      done
+    if [[ -n "$S3_DIR" ]]; then
+      # get stitched image files from S3 if S3_DIR was given
+      local start=$SECONDS
+      local name
+      name="${image5d_npz%.*}"
+      name="$(basename "$name").${compression}"
+      echo "could not find locally, attempting to download $name from S3..."
+      mkdir "$OUT_DIR"
+      get_compressed_file "${s3_exp_path}/${name}" "$OUT_DIR"
+      if [[ "$?" -eq 0 ]]; then
+        # try getting individual .npz files if archive not present
+        echo -n "Could not find compressed files, attempting to download "
+        echo "uncompressed files..."
+        for npz in "$image5d_npz" "$info_npz"; do
+          echo "...attempting to download ${npz}..."
+          aws s3 cp "${s3_exp_path}/$(basename "$npz")" "$OUT_DIR"
+        done
+      fi
+      if [[ -e "$image5d_npz" ]]; then
+        summary_msg+=("MagellanMapper image download and decompression time: ")
+        summary_msg+=("$((SECONDS - start)) s")
+      else
+        echo "$image5d_npz not found on S3"
+      fi
+    else
+      echo "not found"
     fi
-    summary_msg+=(
-      "MagellanMapper image download and decompression time: $((SECONDS - start)) s")
   else
     echo "found"
   fi

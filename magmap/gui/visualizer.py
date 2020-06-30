@@ -273,7 +273,9 @@ class Styles2D(Enum):
 
 
 class ControlsTabs(Enum):
+    """Enumerations for controls tabs."""
     ROI = auto()
+    DETECT = auto()
     PROFILES = auto()
     ADJUST = auto()
     IMPORT = auto()
@@ -352,6 +354,8 @@ class Visualization(HasTraits):
     rois_check_list = Str
     _rois_dict = None
     _rois = None
+    _roi_feedback = Str()
+    
     _segments = Array
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
@@ -543,15 +547,6 @@ class Visualization(HasTraits):
             ),
         ),
         HGroup(
-            Item("btn_redraw", show_label=False),
-            Item("btn_detect", show_label=False),
-        ),
-        Item("scale_detections",
-             editor=RangeEditor(
-                 low_name="_scale_detections_low",
-                 high_name="_scale_detections_high",
-                 mode="slider")),
-        HGroup(
             Item("_structure_scale", label="Level",
                  editor=RangeEditor(
                      low_name="_structure_scale_low",
@@ -561,15 +556,30 @@ class Visualization(HasTraits):
                  editor=TextEditor(
                      auto_set=False, enter_set=True, evaluate=str)),
         ),
+        Item("_roi_feedback", style="custom", show_label=False),
+        HGroup(
+            Item("btn_redraw", show_label=False),
+            Item("_btn_save_fig", show_label=False),
+        ),
+        label="ROI",
+    )
+    
+    # blob detections panel
+    panel_detect = VGroup(
+        HGroup(
+            Item("btn_detect", show_label=False),
+            Item("btn_save_segments", show_label=False),
+        ),
+        Item("scale_detections",
+             editor=RangeEditor(
+                 low_name="_scale_detections_low",
+                 high_name="_scale_detections_high",
+                 mode="slider")),
         VGroup(
             Item("_segments", editor=segs_table, show_label=False),
             Item("segs_feedback", style="custom", show_label=False),
         ),
-        HGroup(
-            Item("_btn_save_fig", show_label=False),
-            Item("btn_save_segments", show_label=False)
-        ),
-        label="ROI",
+        label="Detect",
     )
 
     # profiles panel
@@ -641,7 +651,7 @@ class Visualization(HasTraits):
         VGroup(
             Item("_import_res", label="Resolutions (x,y,z)"),
             HGroup(
-                Item("_import_mag", label="Objective mangification"),
+                Item("_import_mag", label="Objective magnification"),
                 Item("_import_zoom", label="Zoom"),
             ),
             label="Microscope Metadata",
@@ -675,6 +685,7 @@ class Visualization(HasTraits):
     # tabbed panel of options
     panel_options = Tabbed(
         panel_roi_selector,
+        panel_detect,
         panel_profiles,
         panel_imgadj,
         panel_import,
@@ -1279,7 +1290,7 @@ class Visualization(HasTraits):
         self._update_structure_level(curr_offset, curr_roi_size)
 
         if feedback:
-            self.segs_feedback = " ".join(feedback)
+            self._roi_feedback = " ".join(feedback)
             print(self.segs_feedback)
     
     def show_label_3d(self, label_id):
@@ -1673,7 +1684,7 @@ class Visualization(HasTraits):
             self.save_segs()
             self._reset_segments()
             self._circles_2d = [roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
-            self.segs_feedback = "Reset circles after saving full annotations"
+            self._roi_feedback = "Reset circles after saving full annotations"
 
     def _atlas_ed_close_listener(self, evt, atlas_ed):
         """Handle Atlas Editor close events.
@@ -1721,11 +1732,11 @@ class Visualization(HasTraits):
             self._circles_opened_type = roi_editor.ROIEditor.CircleStyles(
                 self._circles_2d[0])
         self._opened_window_style = self._styles_2d[0]
-        self.segs_feedback = ""
+        self._roi_feedback = ""
         
         # shows 2D plots
         curr_offset, curr_roi_size, feedback = self._check_roi_position()
-        self.segs_feedback = " ".join(feedback)
+        self._roi_feedback = " ".join(feedback)
 
         # update verify flag
         roi_editor.verify = self._DEFAULTS_2D[1] in self._check_list_2d
@@ -1930,7 +1941,7 @@ class Visualization(HasTraits):
         """
         print("region ID: {}".format(self._region_id))
         if config.labels_img is None:
-            self.segs_feedback = "No labels image loaded to find region"
+            self._roi_feedback = "No labels image loaded to find region"
             return
 
         # user-given region can be a comma-delimited list of region IDs
@@ -1950,7 +1961,7 @@ class Visualization(HasTraits):
                 region_id = int(region_id)
             except ValueError:
                 # return if cannot convert to an integer
-                self.segs_feedback = (
+                self._roi_feedback = (
                     "Region ID must be an integer, or preceded by \"+/-n\" "
                     "to include labels from both sides"
                 )
@@ -1960,7 +1971,7 @@ class Visualization(HasTraits):
             config.labels_ref_lookup, region_ids, config.labels_img,
             config.labels_scaling, both_sides=both_sides)
         if centroid is None:
-            self.segs_feedback = (
+            self._roi_feedback = (
                 "Could not find the region corresponding to ID {}"
                 .format(self._region_id))
             return
@@ -1986,7 +1997,7 @@ class Visualization(HasTraits):
             if ed is None: continue
             # sync with atlas editor to point at center of region
             ed.update_coords(centroid)
-        self.segs_feedback = (
+        self._roi_feedback = (
             "Found region ID {} of size x={}, y={}, z={} \u00b5m, "
             "volume {} \u00b5m^3".format(self._region_id, *meas[::-1], vol))
     

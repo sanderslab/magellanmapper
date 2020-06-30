@@ -942,6 +942,12 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         from magmap.io import export_stack
         export_stack.export_planes(
             config.image5d, config.prefix, config.savefig, config.channel)
+    
+    elif proc_type is config.ProcessTypes.EXPORT_RAW:
+        # export the main image as a raw data file
+        out_path = libmag.combine_paths(config.filename, ".raw", sep="")
+        libmag.backup_file(out_path)
+        np_io.write_raw_file(config.image5d, out_path)
 
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file

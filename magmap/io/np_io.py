@@ -365,3 +365,21 @@ def get_num_channels(image5d):
 
     """
     return 1 if image5d is None or image5d.ndim <= 4 else image5d.shape[4]
+
+
+def write_raw_file(arr, path):
+    """Write an array to a RAW data file.
+    
+    The array will be output directly to disk through a memmapped object.
+    
+    Args:
+        arr (:obj:`np.ndarray`): Array to write.
+        path (str): Output path.
+
+    """
+    print("Writing array of shape {}, type {} for {}"
+          .format(arr.shape, arr.dtype, path))
+    out_file = np.memmap(path, dtype=arr.dtype, mode="w+", shape=arr.shape)
+    out_file[:] = arr[:]
+    del out_file  # flushes to disk
+    print("Finished writing", path)

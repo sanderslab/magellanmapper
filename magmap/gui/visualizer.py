@@ -834,8 +834,10 @@ class Visualization(HasTraits):
             if min_near_min < 0:
                 # set min to 0 unless near min is < 0
                 min_inten = 2 * min_near_min
-        max_inten = (info.max if config.near_max is None
-                     else max(config.near_max) * 2)
+        # default near max is an array of -1; assume that measured near
+        # max values are positive
+        max_near_max = -1 if config.near_max is None else max(config.near_max)
+        max_inten = info.max if max_near_max < 0 else max_near_max * 2
         self._imgadj_min_low = min_inten
         self._imgadj_min_high = max_inten
         self._imgadj_max_low = min_inten
@@ -987,6 +989,7 @@ class Visualization(HasTraits):
             eds.extend(self.atlas_eds)
         plot_ax_img = None
         for ed in eds:
+            if not ed: continue
             plot_ax_img = ed.update_imgs_display(
                 self._imgadj_names.selections.index(self._imgadj_name),
                 chl=int(self._imgadj_chls), **kwargs)

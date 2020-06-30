@@ -99,8 +99,15 @@ vmins = None  # cmd-line specified
 vmaxs = None
 # generated from near_max; overwritten at cmd-line
 vmax_overview = [None]
-near_max = [-1.0] # auto-detected, max of clipped intensities of whole img
+
+#: List[float]: Auto-detected near maximum of clipped intensities from the
+# whole image.
+near_max = [-1.0]  # TODO: consider making None\
+
+#: List[float]: Auto-detected near minimum of clipped intensities from the
+# whole image.
 near_min = [0.0]
+
 cmaps = None
 
 

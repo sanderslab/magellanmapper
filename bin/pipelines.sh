@@ -575,12 +575,12 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   # Rename output file(s)
   FUSED="fused_tp_0"
   for f in "${OUT_DIR}/${FUSED}"*.tif; do
-    mv "$f" "${f/$FUSED/$OUT_NAME_BASE}";
+    mv -v "$f" "${f/$FUSED/$OUT_NAME_BASE}";
   done
   
   # Import stacked TIFF file(s) into Numpy arrays for MagellanMapper
   start=$SECONDS
-  python -u -m magmap.io.cli -v --img "${OUT_DIR}/${OUT_NAME_BASE}.tiff" \
+  python -u -m magmap.io.cli -v --img "${OUT_DIR}/${OUT_NAME_BASE}.tif" \
     --proc import_only --set_meta resolutions="$resolutions" \
     magnification="$magnification" zoom="$zoom" "${EXTRA_ARGS[@]}"
   summary_msg+=("Stitched file import time: $((SECONDS - start)) s")

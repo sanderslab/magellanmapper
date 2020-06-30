@@ -133,6 +133,24 @@ def setup_images(path=None, series=None, offset=None, size=None,
             cannot be loaded; defaults to True.
     
     """
+    def add_metadata():
+        # add metadata stored in config or the meta dict from command-line
+        # args if available
+        md = {
+            # command-line params stored in config
+            config.MetaKeys.RESOLUTIONS: (
+                config.resolutions[0] if config.resolutions else None),
+            config.MetaKeys.MAGNIFICATION: config.magnification,
+            
+            # command-line params only stored in the dict
+            config.MetaKeys.ZOOM: config.zoom,
+            config.MetaKeys.SHAPE: config.meta_dict[config.MetaKeys.SHAPE],
+            config.MetaKeys.DTYPE: config.meta_dict[config.MetaKeys.DTYPE],
+        }
+        for key, val in md.items():
+            if import_md[key] is None:
+                import_md[key] = val
+    
     # LOAD MAIN IMAGE
     
     # reset image5d
@@ -206,9 +224,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             if allow_import:
                 # import directory of single plane images to a volumetric stack
                 chls, import_md = importer.setup_import_dir(path)
-                import_md[config.MetaKeys.RESOLUTIONS] = config.resolutions[0]
-                import_md[config.MetaKeys.MAGNIFICATION] = config.magnification
-                import_md[config.MetaKeys.ZOOM] = config.zoom
+                add_metadata()
                 config.image5d = importer.import_planes_to_stack(
                     chls, config.prefix, import_md)
                 config.image5d_io = config.LoadIO.NP
@@ -233,6 +249,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                               else config.prefix)
                     import_md = importer.setup_import_metadata(
                         chls, config.channel, series)
+                    add_metadata()
                     config.image5d = importer.import_multiplane_images(
                         chls, prefix, import_md, series, channel=config.channel)
                 config.image5d_io = config.LoadIO.NP

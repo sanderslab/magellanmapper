@@ -441,6 +441,11 @@ def main(process_args_only=False, skip_dbs=False):
             # set objective zoom
             config.zoom = zoom
             print("Set zoom to {}".format(config.zoom))
+        shape = config.meta_dict[config.MetaKeys.SHAPE]
+        if shape:
+            # parse shape, storing only in dict
+            config.meta_dict[config.MetaKeys.SHAPE] = [
+                int(n) for n in shape.split(",")[::-1]]
 
     # set up ROI and register profiles
     setup_profiles(args.roi_profile, args.atlas_profile, args.grid_search)

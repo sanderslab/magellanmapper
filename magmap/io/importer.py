@@ -641,7 +641,6 @@ def setup_import_multipage(filename):
     # get all files matching channel format
     path_base = "{}{}*".format(base_path, CHANNEL_SEPARATOR)
     filenames = []
-    tif_searches = [path_base]
     print("Looking for files for multi-channel images matching "
           "the format:", path_base)
     matches = glob.glob(path_base)
@@ -660,7 +659,7 @@ def setup_import_multipage(filename):
         chl_paths = _parse_import_chls(filenames)
     else:
         # take file directly with key specifying it could have multiple channels
-        print("Found single file {}".format(filename))
+        print("Using the given single file {}".format(filename))
         chl_paths = {_KEY_ANY_CHANNEL: [filename]}
     
     # parse to dict by channel
@@ -875,7 +874,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                         .format(t, z, chl_load), fn_feedback)
                     if img_raw is not None:
                         # access plane from RAW memmapped file
-                        img = img_raw[z]
+                        img = (img_raw[z, ..., chl_load] if len_shape >= 5
+                               else img_raw[z])
                     else:
                         # read plane with Bioformats reader
                         img = rdr.read(z=(z + offset), t=t, c=chl_load,

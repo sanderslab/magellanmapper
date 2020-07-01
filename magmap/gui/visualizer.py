@@ -491,13 +491,13 @@ class Visualization(HasTraits):
             ),
             VGroup(
                 HGroup(
-                    Item("_main_img_name", label="Main image",
+                    Item("_main_img_name", label="Main image", springy=True,
                          editor=CheckListEditor(
                              name="object._main_img_names.selections")),
                     Item("_reload_btn", show_label=False),
                 ),
                 HGroup(
-                    Item("_labels_img_name", label="Labels",
+                    Item("_labels_img_name", label="Labels", springy=True,
                          editor=CheckListEditor(
                              name="object._labels_img_names.selections")),
                     Item("_labels_ref_path", label="Reference", style="simple",

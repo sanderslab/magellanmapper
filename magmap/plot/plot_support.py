@@ -190,9 +190,9 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         origin: Image origin.
         imgs2d (List[:obj:`np.ndarray`]): Sequence of 2D images to display,
             where the first image may be 2D+channel.
-        channels: A list of channels designators for each image, or None 
-            to use :attr:``config.channel`` for the first image and 0 
-            for all subsequent images.
+        channels (List[List[int]): A nested list of channels to display for
+            each image, or None to use :attr:``config.channel`` for the
+            first image and 0 for all subsequent images.
         cmaps: Either a single colormap for all images or a list of 
             colormaps corresponding to each image. Colormaps of type 
             :class:`colormaps.DiscreteColormap` will have their 
@@ -224,41 +224,22 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
     ax_imgs = []
     num_imgs2d = len(imgs2d)
     if num_imgs2d < 1: return None
-    
-    def fill(fill_with, chls, filled=None, pad=None):
-        # make a sequence with vals corresponding to each 2D image, where 
-        # the first val is another seq whose values correspond to each of 
-        # the channels in that image, starting with fill_with
-        if filled is None:
-            filled = [pad] * num_imgs2d
-        if fill_with is not None:
-            # TODO: extend support for multichannel padding beyond 1st image
-            filled[0] = libmag.pad_seq(list(fill_with), len(chls), pad)
-        return filled
-    
-    # use values from config if not already set
-    # TODO: fill any missing value, not only when the whole setting is None
+
+    # fill default values for each set of 2D images
     img_norm_setting = config.roi_profile["norm"]
     if channels is None:
-        # channels are designators rather than lists of specific channels
+        # list of first channel for each set of 2D images except config
+        # channels for main (first) image
         channels = [[0]] * num_imgs2d
         channels[0] = config.channel
     _, channels_main = plot_3d.setup_channels(imgs2d[0], None, 2)
-    # fill default values for each 2D image and config values for
-    # each channel of the first 2D image
     if vmins is None:
-        vmins = fill(config.vmins, channels_main)
+        vmins = [None] * num_imgs2d
     if vmaxs is None:
-        vmaxs = config.vmax_overview
-        if config.vmaxs is None and img_norm_setting:
-            vmaxs = [max(img_norm_setting)]
-        vmaxs = fill(vmaxs, channels_main)
+        vmaxs = [None] * num_imgs2d
     if alphas is None:
         # start with config alphas and pad the remaining values
         alphas = libmag.pad_seq(config.alphas, num_imgs2d, 0.9)
-    alphas = fill(
-        config.plot_labels[config.PlotLabels.ALPHAS_CHL], channels_main, 
-        alphas, 0.5)
 
     for i in range(num_imgs2d):
         # generate a multichannel display image for each 2D image
@@ -279,7 +260,22 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
                 # convert all foreground to NaN to use the given color;
                 # assumes DiscreteColormap sets background as transparent
                 img[img != 0] = np.nan
+        alpha = alphas[i]
+        vmin = vmins[i]
+        vmax = vmaxs[i]
         if i == 0:
+            # first image is the main intensity image, potentially multichannel
+            len_chls_main = len(channels_main)
+            alphas_chl = config.plot_labels[config.PlotLabels.ALPHAS_CHL]
+            if alpha is None and alphas_chl is not None:
+                alpha = libmag.pad_seq(list(alphas_chl), len_chls_main, 0.5)
+            if vmin is None and config.vmins is not None:
+                vmin = libmag.pad_seq(list(config.vmins), len_chls_main)
+            if vmax is None:
+                vmax_fill = config.vmax_overview
+                if config.vmaxs is None and img_norm_setting:
+                    vmax_fill = [max(img_norm_setting)]
+                vmax = libmag.pad_seq(list(vmax_fill), len_chls_main)
             if img_norm_setting:
                 # normalize main intensity image
                 img = libmag.normalize(img, *img_norm_setting)
@@ -299,9 +295,9 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
             # for unknown reasons
             img[-1, -1] += 1
         ax_img = imshow_multichannel(
-            ax, img, channels[i], cmap, aspect, alphas[i], vmin=vmins[i], 
-            vmax=vmaxs[i], origin=origin, interpolation="none",
-            norms=norm, nan_color=nan_color, ignore_invis=ignore_invis)
+            ax, img, channels[i], cmap, aspect, alpha, vmin,
+            vmax, origin, interpolation="none", norms=norm,
+            nan_color=nan_color, ignore_invis=ignore_invis)
         ax_imgs.append(ax_img)
     return ax_imgs
 

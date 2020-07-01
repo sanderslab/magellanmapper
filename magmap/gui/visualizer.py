@@ -915,12 +915,18 @@ class Visualization(HasTraits):
             self._imgadj_min_low = low
             self._imgadj_max_low = low
         
+        high = None
         if inten_lim[1] > self._imgadj_max_high:
             # ensure that upper limit is beyond current plane's limits;
             # cap at 0 if current high is < 0 in case image is fully neg
             high_thresh = inten_lim[1] if norm.vmax is None else max(
                 inten_lim[1], norm.vmax)
             high = 2 * high_thresh if high_thresh > 0 else 0
+        elif (0 < inten_lim[1] < 0.1 * self._imgadj_max_high
+              and self._imgadj_max_high >= 0):
+            # reduce upper limit if current max is comparatively very small
+            high = 10 * inten_lim[1]
+        if high is not None:
             # make brightness symmetric around upper limit
             self._imgadj_min_high = high
             self._imgadj_max_high = high
@@ -932,9 +938,7 @@ class Visualization(HasTraits):
         if plot_ax_img is not None:
             self._imgadj_min_ignore_update = True
             vmin = plot_ax_img.ax_img.norm.vmin
-            if vmin > self._imgadj_min_high:
-                # ensure that min limit contains vmin
-                self._imgadj_min_high = vmin
+            self._adapt_imgadj_limits(plot_ax_img)
             self._imgadj_min = vmin
 
     def _set_inten_max_to_curr(self, plot_ax_img):
@@ -942,13 +946,7 @@ class Visualization(HasTraits):
         if plot_ax_img is not None:
             self._imgadj_max_ignore_update = True
             vmax = plot_ax_img.ax_img.norm.vmax
-            if vmax > self._imgadj_max_high:
-                # ensure that max limit contains vmax
-                self._imgadj_max_high = vmax
-            elif (0 <= vmax < 0.1 * self._imgadj_max_high
-                  and self._imgadj_max_high >= 0):
-                # reduce max limit if vmax is very small compared to limit
-                self._imgadj_max_high = 10 * vmax
+            self._adapt_imgadj_limits(plot_ax_img)
             self._imgadj_max = vmax
 
     @on_trait_change("_imgadj_min")

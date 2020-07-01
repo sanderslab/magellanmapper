@@ -338,6 +338,12 @@ class PlotEditor:
         cmaps = [config.cmaps]
         alphas = [config.alphas[0]]
         shapes = [self._img3d_shapes[0][1:3]]
+        vmaxs = [None]
+        vmins = [None]
+        if self._plot_ax_imgs:
+            # use settings from previously displayed images if available
+            vmaxs[0] = [a.ax_img.norm.vmax for a in self._plot_ax_imgs[0]]
+            vmins[0] = [a.ax_img.norm.vmin for a in self._plot_ax_imgs[0]]
         
         if self.img3d_labels is not None:
             # prep labels with discrete colormap
@@ -345,6 +351,8 @@ class PlotEditor:
             cmaps.append(self.cmap_labels)
             alphas.append(self.alpha)
             shapes.append(self._img3d_shapes[1][1:3])
+            vmaxs.append(None)
+            vmins.append(None)
         
         if self.img3d_borders is not None:
             # prep borders image, which may have an extra channels 
@@ -359,6 +367,8 @@ class PlotEditor:
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
                 shapes.append(self._img3d_shapes[2][1:3])
+                vmaxs.append(None)
+                vmins.append(None)
 
         if self.img3d_extras is not None:
             for i, img in enumerate(self.img3d_extras):
@@ -368,6 +378,8 @@ class PlotEditor:
                 cmaps.append(("Greys",))
                 alphas.append(0.4)
                 shapes.append(self._img3d_shapes[imgi][1:3])
+                vmaxs.append(None)
+                vmins.append(None)
 
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single
@@ -375,7 +387,7 @@ class PlotEditor:
         # reasons
         ax_imgs = plot_support.overlay_images(
             self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas,
-            check_single=(self._ax_img_labels is None))
+            vmins, vmaxs, check_single=(self._ax_img_labels is None))
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = pixel_display.PixelDisplay(

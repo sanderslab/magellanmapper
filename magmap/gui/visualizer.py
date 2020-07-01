@@ -1415,7 +1415,7 @@ class Visualization(HasTraits):
             return
         
         # load image if possible without allowing import
-        filename, offset, size = importer.deconstruct_np_filename(
+        filename, offset, size, reg_suffixes = importer.deconstruct_np_filename(
             self._filename)
         if filename is not None:
             config.filename = filename
@@ -1426,6 +1426,8 @@ class Visualization(HasTraits):
                 print("Change sub-image offset to {}, size to {}"
                       .format(config.subimg_offsets, config.subimg_sizes))
             # TODO: consider loading processed images, blobs, etc
+            if reg_suffixes:
+                config.reg_suffixes.update(reg_suffixes)
             np_io.setup_images(
                 config.filename, offset=offset, size=size, allow_import=False)
             self._setup_for_image()

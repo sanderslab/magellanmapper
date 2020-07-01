@@ -491,7 +491,7 @@ class PlotEditor:
             self._ax_img_labels.set_data(self.cmap_labels.convert_img_labels(
                 self.img3d_labels[self.coord[0]]))
 
-    def get_img_display_settings(self, imgi, chl=None):
+    def get_displayed_img(self, imgi, chl=None):
         """Get display settings for the given image.
 
         Args:
@@ -499,21 +499,15 @@ class PlotEditor:
             chl (int): Index of channel; defaults to None.
 
         Returns:
-            :obj:`matplotlib.cm.Normalize`, (float, float), float, float, float:
-            Normalization instance, tuple of min min/max intensity of the
-            data plane, brightness, contrast, and alpha for the currently
-            displayed plane.
+            :obj:`PlotAxImg`: The currently displayed image.
 
         """
-        if not self._plot_ax_imgs or len(self._plot_ax_imgs) <= imgi:
-            return
-        if chl is None:
-            chl = 0
-        plot_ax_img = self._plot_ax_imgs[imgi][chl]
-        return (plot_ax_img.ax_img.norm,
-                (np.amin(plot_ax_img.img), np.amax(plot_ax_img.img)),
-                plot_ax_img.brightness,
-                plot_ax_img.contrast, plot_ax_img.ax_img.get_alpha())
+        plot_ax_img = None
+        if self._plot_ax_imgs and imgi < len(self._plot_ax_imgs):
+            if chl is None:
+                chl = 0
+            plot_ax_img = self._plot_ax_imgs[imgi][chl]
+        return plot_ax_img
 
     def update_img_display(self, imgi, chl=None, minimum=np.nan,
                            maximum=np.nan, brightness=None, contrast=None,
@@ -535,11 +529,9 @@ class PlotEditor:
             :obj:`PlotAxImg`: The updated axes image plot.
 
         """
-        if not self._plot_ax_imgs or len(self._plot_ax_imgs) <= imgi:
-            return
-        if chl is None:
-            chl = 0
-        plot_ax_img = self._plot_ax_imgs[imgi][chl]
+        plot_ax_img = self.get_displayed_img(imgi, chl)
+        if not plot_ax_img:
+            return None
         if minimum is not np.nan or maximum is not np.nan:
             # set vmin and vmax; use norm rather than get_clim since norm
             # holds the actual limits

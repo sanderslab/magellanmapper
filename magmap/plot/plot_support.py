@@ -39,12 +39,12 @@ class ImageSyncMixin:
             chl (int): Index of channel; defaults to None.
 
         Returns:
-            float, flat, float, float, float: Vmin, vmax, brightness,
-            contrast, and alpha. None if ``plot_eds`` evaluates to False.
+            :obj:`magmap.gui.plot_editor.PlotAxImg`: The currently
+                displayed image, or None if ``plot_eds`` is empty.
 
         """
         if plot_eds:
-            return plot_eds[0].get_img_display_settings(imgi, chl)
+            return plot_eds[0].get_displayed_img(imgi, chl)
         return None
 
     @staticmethod

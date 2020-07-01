@@ -872,27 +872,14 @@ class Visualization(HasTraits):
 
         # get the display settings from the viewer
         imgi = self._imgadj_names.selections.index(self._imgadj_name)
-        img_settings = ed.get_img_display_settings(
+        plot_ax_img = ed.get_img_display_settings(
                 imgi, chl=int(self._imgadj_chls))
-        if img_settings is None: return
-        norm, inten_lim, self._imgadj_brightness, self._imgadj_contrast, \
-            self._imgadj_alpha = img_settings
-
-        # ensure that limits are beyond at least current plane's limits
-        low_thresh = inten_lim[0] if norm.vmin is None else min(
-            inten_lim[0], norm.vmin)
-        if inten_lim[0] < self._imgadj_max_low:
-            low = 2 * low_thresh if low_thresh < 0 else 0
-            self._imgadj_min_low = low
-            self._imgadj_max_low = low
-        high_thresh = inten_lim[1] if norm.vmax is None else max(
-            inten_lim[1], norm.vmax)
-        if inten_lim[1] > self._imgadj_max_high:
-            high = 2 * high_thresh if high_thresh > 0 else 0
-            self._imgadj_min_high = high
-            self._imgadj_max_high = high
-            self._imgadj_brightness_low = -high
-            self._imgadj_brightness_high = high
+        if plot_ax_img is None: return
+        norm = plot_ax_img.ax_img.norm
+        self._imgadj_brightness = plot_ax_img.brightness
+        self._imgadj_contrast = plot_ax_img.contrast
+        self._imgadj_alpha = plot_ax_img.ax_img.get_alpha()
+        self._adapt_imgadj_limits(plot_ax_img)
         
         # populate controls with display settings
         if norm.vmin is None:
@@ -905,7 +892,41 @@ class Visualization(HasTraits):
         else:
             self._imgadj_max = norm.vmax
             self._imgadj_max_auto = False
+    
+    def _adapt_imgadj_limits(self, plot_ax_img):
+        """Adapt image adjustment slider limits based on values in the
+        given plotted image.
+        
+        Args:
+            plot_ax_img (:obj:`magmap.gui.plot_editor.PlotAxImg`): Plotted
+                image.
 
+        """
+        if plot_ax_img is None: return
+        norm = plot_ax_img.ax_img.norm
+        inten_lim = (np.amin(plot_ax_img.img), np.amax(plot_ax_img.img))
+
+        if inten_lim[0] < self._imgadj_max_low:
+            # ensure that lower limit is beyond current plane's limits;
+            # bottom out at 0 unless current low is < 0
+            low_thresh = inten_lim[0] if norm.vmin is None else min(
+                inten_lim[0], norm.vmin)
+            low = 2 * low_thresh if low_thresh < 0 else 0
+            self._imgadj_min_low = low
+            self._imgadj_max_low = low
+        
+        if inten_lim[1] > self._imgadj_max_high:
+            # ensure that upper limit is beyond current plane's limits;
+            # cap at 0 if current high is < 0 in case image is fully neg
+            high_thresh = inten_lim[1] if norm.vmax is None else max(
+                inten_lim[1], norm.vmax)
+            high = 2 * high_thresh if high_thresh > 0 else 0
+            # make brightness symmetric around upper limit
+            self._imgadj_min_high = high
+            self._imgadj_max_high = high
+            self._imgadj_brightness_low = -high
+            self._imgadj_brightness_high = high
+    
     def _set_inten_min_to_curr(self, plot_ax_img):
         # set min intensity to current image value
         if plot_ax_img is not None:

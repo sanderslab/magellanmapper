@@ -10,6 +10,11 @@ activation is in this order:
 * Attempt to activate a Conda environment
 * Attempt to activate a Venv environment
 
+Executing this script as a text file (ie not through Python directly)
+assumes that the ``python`` command is accessible without a Python
+environment. Use ``bin/runaltpy.sh`` instead if only ``python3`` is
+available (eg on Linux) or ``python`` is only available through Conda.
+
 Conda activation assumes that the ``conda`` command is accessible, typically
 from a previous initialization through ``conda init`` (preferred) or
 by adding the ``conda`` binary directory to the ``PATH``. Note that ``conda``
@@ -79,21 +84,31 @@ def is_venv_activated():
             (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix))
 
 
-def launch_subprocess(args, working_dir=None):
+def launch_subprocess(args, working_dir=None, sys_shell=False):
     """Launch a subprocess with multiple commands strung together by
     logical ands.
 
     Args:
         args (List): List of shell commands.
         working_dir (str): Working directory path; defaults to None.
+        sys_shell (bool): True to launch the subprocess in the system shell;
+            otherwise, ``args`` will be run in an interactive Bash shell.
+            Defaults to False.
 
     Returns:
         int: 0 if the return code was 0; otherwise, raises a
         :class:`subprocess.CalledProcessError`.
 
     """
-    return subprocess.check_output(
-        "&&".join(args), shell=True, cwd=working_dir, stderr=subprocess.STDOUT)
+    subproc_args = {
+        "args": "&&".join(args),
+        "cwd": working_dir,
+        "shell": sys_shell,
+        "stderr": subprocess.STDOUT,
+    }
+    if not sys_shell:
+        subproc_args["args"] = ["bash", "-i", "-c", subproc_args["args"]]
+    return subprocess.check_output(**subproc_args)
 
 
 def launch_magmap():
@@ -122,23 +137,26 @@ def main():
         # launch MagellanMapper if environment is already active
         launch_magmap()
         return
-
+    
+    use_sys_shell = False
     if platform.system() == "Windows":
         # replace Conda hook with Command Prompt shell hook
         # TODO: check whether this hook command is necessary in Windows
         ARGS_CONDA[0] = _ARG_CONDA_HOOK_WIN
+        use_sys_shell = True
     try:
         # activate Conda environment, assuming default name in setup script
         # and need to initialize shell, and launch MagellanMapper
         print("Attempting to activate Conda environment")
-        launch_subprocess(ARGS_CONDA + ARGS_MAGMAP, working_dir)
+        launch_subprocess(ARGS_CONDA + ARGS_MAGMAP, working_dir, use_sys_shell)
     except subprocess.CalledProcessError as e:
         print(e.output)
         try:
             # non-POSIX shells do not accept eval but may run without
             # initializing the Conda shell hook
             print("Retrying Conda activation without shell hook")
-            launch_subprocess(ARGS_CONDA[1:] + ARGS_MAGMAP, working_dir)
+            launch_subprocess(
+                ARGS_CONDA[1:] + ARGS_MAGMAP, working_dir, use_sys_shell)
         except subprocess.CalledProcessError:
             print(e.output)
             try:
@@ -146,7 +164,7 @@ def main():
                 print("Conda environment not available, trying Venv")
                 launch_subprocess(
                     ["source {}/{}/bin/activate".format(VENV_DIR, ENV_NAME)]
-                    + ARGS_MAGMAP, working_dir)
+                    + ARGS_MAGMAP, working_dir, use_sys_shell)
             except subprocess.CalledProcessError:
                 print(e.output)
                 # as fallback, attempt to launch without activating

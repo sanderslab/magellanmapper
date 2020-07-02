@@ -70,10 +70,9 @@ _ROI_DEFAULT = "None selected"
 def main():
     """Starts the visualization GUI.
     
-    Also processes command-line arguments and sets up exception handling.
+    Also sets up exception handling.
     """
-    # set up command-line arguments and show complete stacktraces for debugging
-    cli.main()
+    # show complete stacktraces for debugging
     push_exception_handler(reraise_exceptions=True)
 
     # suppress output window on Windows but print errors to console
@@ -2547,4 +2546,5 @@ class ImportThread(PyQt5.QtCore.QThread):
 
 if __name__ == "__main__":
     print("Starting visualizer...")
+    cli.main()
     main()

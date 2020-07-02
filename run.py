@@ -32,12 +32,11 @@ VENV_DIR = "../venvs"
 #: str: Conda environment variable for the currently activated environment name.
 _CONDA_ENV_KEY = "CONDA_DEFAULT_ENV"
 
-#: List[str]: Shell commands to launch CLI.
-ARGS_CLI = ["python -u -c \"from magmap.io import cli; cli.main()\" "]
-
-#: List[str]: Shell commands to launch the main GUI.
-ARGS_VIS = [
-    "python -u -c \"from magmap.gui import visualizer; visualizer.main()\" ",
+#: List[str]: Shell commands to launch the MagellanMapper.
+ARGS_MAGMAP = [
+    "python -u -c \"from magmap.io import cli; cli.main(); "
+    "from magmap.gui import visualizer; visualizer.main()\" {}"
+    .format(" ".join(sys.argv[1:])),
 ]
 
 # Conda hook for Windows Command Prompt
@@ -97,40 +96,33 @@ def launch_subprocess(args, working_dir=None):
         "&&".join(args), shell=True, cwd=working_dir, stderr=subprocess.STDOUT)
 
 
-def launch_cli():
-    """Launch the command-line interface."""
+def launch_magmap():
+    """Launch MagellanMapper.
+    
+    First launch the CLI to process user arguments, which will shut down
+    the process afterward if a CLI task has been selected. If the process
+    remains alive, the GUI will be launched.
+    
+    """
     from magmap.io import cli
     cli.main()
-
-
-def launch_vis():
-    """Launch the main graphical user interface."""
     from magmap.gui import visualizer
     visualizer.main()
 
 
-def main(gui=True):
-    """Launch the main MagellanMapper GUI.
+def main():
+    """Launch MagellanMapper with environment activation.
 
     If necessary, attempt to activate a virtual environment created
     by MagellanMapper.
-
-    Args:
-        gui (bool): True to start the main GUI; defaults to True. If False,
-            the CLI will be started instead.
 
     """
     working_dir = os.path.dirname(os.path.abspath(__file__))
     if is_conda_activated() or is_venv_activated():
         # launch MagellanMapper if environment is already active
-        if gui:
-            launch_vis()
-        else:
-            launch_cli()
+        launch_magmap()
         return
 
-    args = ARGS_VIS if gui else ARGS_CLI
-    args[0] += " ".join(sys.argv[1:])
     if platform.system() == "Windows":
         # replace Conda hook with Command Prompt shell hook
         # TODO: check whether this hook command is necessary in Windows
@@ -139,14 +131,14 @@ def main(gui=True):
         # activate Conda environment, assuming default name in setup script
         # and need to initialize shell, and launch MagellanMapper
         print("Attempting to activate Conda environment")
-        launch_subprocess(ARGS_CONDA + args, working_dir)
+        launch_subprocess(ARGS_CONDA + ARGS_MAGMAP, working_dir)
     except subprocess.CalledProcessError as e:
         print(e.output)
         try:
             # non-POSIX shells do not accept eval but may run without
             # initializing the Conda shell hook
             print("Retrying Conda activation without shell hook")
-            launch_subprocess(ARGS_CONDA[1:] + args, working_dir)
+            launch_subprocess(ARGS_CONDA[1:] + ARGS_MAGMAP, working_dir)
         except subprocess.CalledProcessError:
             print(e.output)
             try:
@@ -154,14 +146,14 @@ def main(gui=True):
                 print("Conda environment not available, trying Venv")
                 launch_subprocess(
                     ["source {}/{}/bin/activate".format(VENV_DIR, ENV_NAME)]
-                    + args, working_dir)
+                    + ARGS_MAGMAP, working_dir)
             except subprocess.CalledProcessError:
                 print(e.output)
                 # as fallback, attempt to launch without activating
                 # an environment
                 print("Neither environment is available, attempting to launch "
                       "without environment")
-                launch_vis()
+                launch_magmap()
 
 
 if __name__ == "__main__":

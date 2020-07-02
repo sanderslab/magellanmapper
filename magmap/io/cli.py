@@ -593,10 +593,11 @@ def main(process_args_only=False, skip_dbs=False):
 
     # POST-ARGUMENT PARSING
 
-    # return or transfer to other entry points if indicated
     if process_args_only:
         return
-    elif config.register_type:
+    
+    # if command-line driven task specified, start task and shut down
+    if config.register_type:
         register.main()
     elif config.notify_url:
         notify.main()
@@ -612,13 +613,12 @@ def main(process_args_only=False, skip_dbs=False):
         from magmap.cloud import aws
         aws.main()
     else:
-        # set up image and perform any whole image processing tasks
+        # set up image and perform any whole image processing tasks;
+        # do not shut down if not a command-line proc task
         _process_files(series_list)
-
-    # unless loading images for GUI, exit directly since otherwise application 
-    # hangs if launched from module with GUI
-    if proc_type is not None and proc_type is not config.ProcessTypes.LOAD:
-        shutdown()
+        if proc_type is None or proc_type is config.ProcessTypes.LOAD:
+            return
+    shutdown()
 
 
 def setup_dbs(filename_base, db_path=None, truth_db_config=None):

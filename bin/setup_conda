@@ -74,7 +74,9 @@ if [[ "$os" = "Windows" ]]; then
   ext="ext"
 fi
 
-# check for Anaconda installation and download/install if not found
+# check if python is present in the system, before Conda activation
+sys_python_present="$(command -v python)"
+
 install_conda=""
 if ! command -v "conda" &> /dev/null; then
   echo "\"conda\" command from Anaconda/Miniconda not found"
@@ -138,11 +140,14 @@ if [[ "$check_env" == "" ]]; then
   exit 1
 fi
 
-
-# create a shortcut without extension to launch through file browser
+# copy launch script without extension to launch through file browser
 start_path=MagellanMapper
-if [[ ! -e "$start_path" ]]; then
-  ln run.py "$start_path"
+if [[ -n "$sys_python_present" ]]; then
+  # run script expects system python to be present
+  cp -f run.py "$start_path"
+else
+  # use wrapper for system python3 or python available only through Conda
+  cp -f bin/runaltpy.sh "$start_path"
 fi
 
 open_shell=""

@@ -342,7 +342,7 @@ class Visualization(HasTraits):
     x_offset = Int
     y_offset = Int
     z_offset = Int
-    roi_array = Array(Int, shape=(1, 3))
+    roi_array = Array(Int, shape=(1, 3), editor=ArrayEditor(format_str="%0d"))
 
     btn_redraw = Button("Redraw")
     btn_detect = Button("Detect")
@@ -418,7 +418,8 @@ class Visualization(HasTraits):
     _import_res = Array(np.float, shape=(1, 3))
     _import_mag = Float(1.0)
     _import_zoom = Float(1.0)
-    _import_shape = Array(np.int, shape=(1, 5), editor=ArrayEditor(width=-40))
+    _import_shape = Array(np.int, shape=(1, 5), editor=ArrayEditor(
+        width=-40, format_str="%0d"))
     # map bits to bytes for constructing Numpy data type
     _IMPORT_BITS = OrderedDict((
         ("Bit", ""), ("8", "1"), ("16", "2"), ("32", "3"), ("64", "4")))

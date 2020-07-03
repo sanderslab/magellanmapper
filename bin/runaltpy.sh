@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Simple wrapper script to launch MagellanMapper if `python3` is available
-# but `python` is not, or `python` is only available through Conda
+# Simple Bash wrapper script to launch MagellanMapper without relying on
+# the python binary specified in the run script shebang line
 # Author: David Young, 2020
 
 # assumes run.py is in current directory
-if command -v python3 &> /dev/null; then
-  # launch run script directly, allowing it to manage Conda
+if command -v python &> /dev/null; then
+  # launch run script directly from python, allowing it to manage Conda
+  python run.py
+elif command -v python3 &> /dev/null; then
+  # use python3 instead
   python3 run.py
 else
   # attempt launch through python installed with Conda, using base env

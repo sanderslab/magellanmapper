@@ -74,9 +74,6 @@ if [[ "$os" = "Windows" ]]; then
   ext="ext"
 fi
 
-# check if python is present in the system, before Conda activation
-sys_python_present="$(command -v python)"
-
 # check for Conda installation
 conda=conda
 if ! command -v "$conda" &> /dev/null; then
@@ -152,15 +149,12 @@ if [[ "$check_env" == "" ]]; then
   exit 1
 fi
 
-# copy launch script without extension to launch through file browser
+# generate a simple Bash script entry point to run script without extension
+# to launch through file browser
 start_path=MagellanMapper
-if [[ -n "$sys_python_present" ]]; then
-  # run script expects system python to be present
-  cp -f run.py "$start_path"
-else
-  # use wrapper for system python3 or python available only through Conda
-  cp -f bin/runaltpy.sh "$start_path"
-fi
+echo '#!/usr/bin/env bash' > "$start_path"
+echo 'cd "$(dirname "$0")" && bin/runaltpy.sh' >> "$start_path"
+chmod 755 "$start_path"
 
 open_shell=""
 if [[ "$install_conda" != "" ]]; then

@@ -1367,8 +1367,8 @@ class Visualization(HasTraits):
                 self.x_offset = config.roi_offset[0]
                 self.y_offset = config.roi_offset[1]
                 self.z_offset = config.roi_offset[2]
-            self.roi_array[0] = ([100, 100, 12] if config.roi_size is None
-                                 else config.roi_size)
+            self.roi_array = ([[100, 100, 12]] if config.roi_size is None
+                              else [config.roi_size])
             
             # find matching registered images to populate dropdowns
             self._main_img_names.selections = [config.SUFFIX_IMAGE5D]

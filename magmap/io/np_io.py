@@ -225,8 +225,12 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 # import directory of single plane images to a volumetric stack
                 chls, import_md = importer.setup_import_dir(path)
                 add_metadata()
+                prefix = config.prefix
+                if not prefix:
+                    prefix = os.path.join(
+                        os.path.dirname(path), importer.DEFAULT_IMG_STACK_NAME)
                 config.image5d = importer.import_planes_to_stack(
-                    chls, config.prefix, import_md)
+                    chls, prefix, import_md)
                 config.image5d_io = config.LoadIO.NP
         elif path.endswith(sitk_io.EXTS_3D):
             try:
@@ -245,8 +249,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 if allow_import and (import_only or config.image5d is None):
                     # re-import over existing image or import new image
                     chls, import_path = importer.setup_import_multipage(path)
-                    prefix = (import_path if config.prefix is None
-                              else config.prefix)
+                    prefix = config.prefix if config.prefix else import_path
                     import_md = importer.setup_import_metadata(
                         chls, config.channel, series)
                     add_metadata()

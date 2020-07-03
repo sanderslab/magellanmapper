@@ -71,8 +71,12 @@ PIXEL_DTYPE = {
 #     avoids storing object array, which requires loading by pickling
 IMAGE5D_NP_VER = 14  # image5d Numpy saved array version number
 
+#: str: String preceding channel number for multi-channel image import.
 CHANNEL_SEPARATOR = "_ch_"
-_EXT_TIFFS = (".tif", ".tiff")
+
+#: str: Default filename base for directory import image output.
+DEFAULT_IMG_STACK_NAME = "myvolume"
+
 _KEY_ANY_CHANNEL = "1+"  # 1+ channel files
 
 

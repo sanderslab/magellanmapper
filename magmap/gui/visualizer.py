@@ -2344,7 +2344,8 @@ class Visualization(HasTraits):
                 self._import_browser)
             setup_import(import_md)
             base_path = os.path.join(
-                os.path.dirname(self._import_browser), "myvolume")
+                os.path.dirname(self._import_browser),
+                importer.DEFAULT_IMG_STACK_NAME)
             self._import_btn_enabled = True
         
         elif self._import_browser:

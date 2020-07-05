@@ -6,34 +6,47 @@ MagellanMapper is a graphical imaging informatics suite and pipeline for high-th
 
 ## Installation
 
-1. Download and extract the MagellanMapper
-  * Get the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest)
-  * Or clone this repo: `git clone https://github.com/sanderslab/magellanmapper.git`
-1. Navigate to the MagellanMapper directory: `cd <path-to-magellanmapper>`
-1. Install MagellanMapper
-  * On Mac or Linux: `bin/setup_conda`
-  * On Windows: `bin\setup_conda.bat`
+1. Download MagellanMapper
+    - Get the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest) and unzip/extract it
+    - Or clone this repo: `git clone https://github.com/sanderslab/magellanmapper.git`
+1. Install MagellanMapper using this script in the `magellanmapper` folder
+    - On Mac or Linux: `bin/setup_conda`
+    - On Windows: `bin\setup_conda.bat`
   
-See [Installation](docs/install.md) for more details, including installing without Conda such as by Pip or Venv+Pip.
+See [Installation](docs/install.md) for more details, including installation without Conda, using Pip or Venv+Pip instead.
   
 ## Run MagellanMapper
 
-MagellanMapper can be run as a GUI or headlessly for desktop or server tasks, respectively. To start MagellanMapper, run (assuming a Conda environment named `mag`):
+### From a file browser
+
+**On Mac or Linux**: Run the `MagellanMapper` file created during Conda setup.
+- On Mac, it may be necessary to right-click and "Open with" the Terminal app
+- On Files in Linux, it may be necessary to go to Preferences, select the Behavior tab, and choose to "Run" or "Ask" when executing text files
+
+**On Windows**: Run `run.py` through Python.
+- It may be necessary to right-click, choose "Open with", and browse to the Conda `pythonw.exe` file to open `run.py`
+- If a security warning displays, click on "More info" and "Run anyway" to launch the file 
+
+### From a terminal
+ 
+Assuming you ran the Conda setup script to create an environment named `mag`, run:
 
 ```
 conda activate mag
-python run.py
+python <path-to-magellanmapper>/run.py
 ```
 
-In the "Import" tab, you can import files from standard image formats such as TIFF or proprietary microscopy formats such as CZI. These files are imported via Bioformats into a Numpy array format before loading it in the GUI. This format allows on-the-fly loading to reduce memory requirements and initial loading time. Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import.
+MagellanMapper can be run as a GUI as described above or headlessly for automated tasks. [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details. See [Settings](docs/settings.md) for how to customize settings to your image files.
 
-You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details. [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. It can also be modified and called directly.
+### Image file import
 
-See [Settings](docs/settings.md) for how to customize settings to your image files.
+Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) are opened with SimpleITK/SimpleElastix and do not require separate import. For standard image formats such as TIFF or proprietary microscopy formats such as CZI, MagellanMapper imports these files into a standard Numpy format, which allows on-the-fly loading to reduce memory requirements and initial loading time.
+
+In the "Import" tab, you can select files, view and update metadata, and import them into a Numpy array.
 
 ### Sample 3D data
 
-To try out functions with some sample images, download any of these files:
+To try out functions with sample images, download any of these files:
 
 - [Sample region of nuclei at 4x (`sample_region.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.zip)
 - [Sample downsampled tissue cleared whole brain (`sample_brain.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)

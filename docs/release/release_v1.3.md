@@ -1,5 +1,51 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.2 (beta)
+
+This beta release streamlines scripts to install and run MagellanMapper through a file browser, without requiring a terminal. Registered images can now be loaded and overlaid through the GUI. The image import panel auto-populates available metadata, and RAW format images can be imported. Image intensity controls better adapt to the current image.
+
+### Changes
+
+Installation
+- Conda setup script for Bash (eg Mac/Linux)
+  - Creates a `MagellanMapper` launch script that auto-detects more `python` installations to launch `run.py` (ie when only `python3` is available or if `python` is only available through Conda)
+  - Better able to find existing Conda installations before attempting to install Conda
+- `run_cli.py` has been re-integrated into `run.py` and removed
+
+GUI
+- Select registered images and labels in the ROI panel
+  - Control the main intensity image, showing all available images registered to the current image
+  - Selector for a registered labels/annotation image
+  - Selector a labels reference file
+- Import panel
+  - Brings the user to the import panel when unable to load a file
+  - Auto-populates metadata when available from the image file
+  - Added output image shape and data type fields 
+  - Turn on all channel after when displaying a newly imported image
+  - Fixed re-displaying an image re-imported to the same output path
+- Image adjusment panel
+  - Adapts the intensity range to the current image to allow finer adjustments
+  - Option for auto-intensities
+  - Fixed settings to persist when scrolling among planes
+  - Fixed slider sizes by capping the size of number labels
+  - Fixed intensity slider ranges for images that were not imported into Numpy format
+- Blob detector controls have been moved to a separate "Detect" panel
+- Fixed crash when selecting the 3D Viewer tab or detecting blobs without a loaded image
+- Fixed updating ROI size when loading an image through the GUI
+- Fixed decimal point display in integere
+
+I/O
+- Support for importing RAW image format files
+- Export images to RAW format (`--proc export_raw`)
+- Support for both TIFF and non-TIFF format files through Bioformats
+- Fixed support for incomplete metadata
+- Fixed importing images while skipping channels
+- Fixed import when unable to load the main image
+
+Server pipelines
+- Fixed to not attempt download from S3 if an S3 directory was not set
+
+
 ## MagellanMapper v1.3.1 (beta)
 
 This beta release contains multiple new control panels to adjust profiles, brightness/contrast, and image file import. These controls allow users to control MagellanMapper more graphically and reduces the need to restart for new settings.

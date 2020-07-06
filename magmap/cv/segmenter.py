@@ -94,7 +94,8 @@ def segment_rw(roi, channel, beta=50.0, vmin=0.6, vmax=0.65, remove_small=None,
             # derive markers from blobs
             markers = _markers_from_blobs(roi_segment, blobs)
         
-        # perform the segmentation
+        # perform the segmentation; conjugate gradient with multigrid
+        # preconditioner option (cg_mg), which is faster but req pyamg
         walker = segmentation.random_walker(
             roi_segment, markers, beta=beta, mode="cg_mg")
         

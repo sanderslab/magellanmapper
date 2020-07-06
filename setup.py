@@ -9,6 +9,8 @@ _EXTRAS_IMPORT = [
     "javabridge==1.0.18.post21+g4526f53",
     "python-bioformats==1.1.0",
 ]
+
+# optional dependencies for AWS interaction
 _EXTRAS_AWS = ["boto3", "awscli"]
 
 # installation configuration
@@ -21,7 +23,7 @@ config = {
     "version": "1.3.3",
     "packages": setuptools.find_packages(),
     "scripts": [], 
-    "python_requires": ">=3.6",  # TODO: consider testing on earlier versions
+    "python_requires": ">=3.6",  # may work on earlier versions
     "install_requires": [
         "scikit-image", 
         "matplotlib",
@@ -37,7 +39,7 @@ config = {
         "aws": _EXTRAS_AWS, 
         "all": [
             "matplotlib_scalebar", 
-            "pyamg",
+            "pyamg",  # for Random-Walker segmentation "cg_mg" mode
             "openpyxl",  # for Pandas export to Excel files
             *_EXTRAS_IMPORT,  
             *_EXTRAS_AWS, 

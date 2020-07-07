@@ -876,6 +876,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
         # set up image reader
         rdr = None
         img_raw = None
+        libmag.printcb(
+            "Loading file {} for import".format(img_path), fn_feedback)
         if not _is_raw(img_path):
             # open non-RAW image with Python-Bioformats
             try:

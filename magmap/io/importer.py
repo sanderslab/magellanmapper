@@ -762,7 +762,7 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
             print(err)
     
     if shape:
-        shape = _update_shape_for_channels(shape, chl_paths, channel)
+        shape = _update_shape_for_channels(shape, chl_paths, channel)[1]
         if z_max != -1:
             shape[1] = z_max
         md[config.MetaKeys.SHAPE] = shape
@@ -780,20 +780,23 @@ def _update_shape_for_channels(shape, chl_paths, channel):
         channel (List[int]): Sequence of channels to keep.
 
     Returns:
-        List[int]: Copy of ``shape`` with channel size adjusted.
+        List[int], List[int]: Shape for input files; shape for output file
+        as a copy of ``shape`` with channel size adjusted.
 
     """
-    shape_up = list(shape)
+    shape_out = list(shape)
+    shape_in = shape_out
     if _KEY_ANY_CHANNEL in chl_paths:
         # file present with unspecified channel, potentially multichannel,
         # with shape assumed to be based on this file
         if channel:
             # limit channels to set parameter
-            shape_up[-1] = len(channel)
+            shape_out[-1] = len(channel)
     else:
-        # assume only one channel per file
-        shape_up[-1] = len(channel) if channel else len(chl_paths.keys())
-    return shape_up
+        # assume only one channel per input file
+        shape_out[-1] = len(channel) if channel else len(chl_paths.keys())
+        shape_in = shape_out[:-1]
+    return shape_in, shape_out
 
 
 def import_multiplane_images(chl_paths, prefix, import_md, series=None,
@@ -841,7 +844,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
     
     # set up channels in case chl_paths was updated after shape determination
     # and to get channels to extract from each file
-    shape = _update_shape_for_channels(
+    shape_in, shape = _update_shape_for_channels(
         import_md[config.MetaKeys.SHAPE], chl_paths, channel)
     if _KEY_ANY_CHANNEL in chl_paths:
         # unspecified channel file, potentially multichannel, takes
@@ -888,9 +891,10 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
             # open image file as a RAW 3D array
             img_raw = np.memmap(
                 img_path, dtype=import_md[config.MetaKeys.DTYPE],
-                shape=shape[1:], mode="r")
+                shape=tuple(shape_in[1:]), mode="r")
         
         len_shape = len(shape)
+        len_shape_in = len(shape_in)
         for chl_load in chls_load:
             lows = []
             highs = []
@@ -902,7 +906,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                         .format(t, z, chl_load), fn_feedback)
                     if img_raw is not None:
                         # access plane from RAW memmapped file
-                        img = (img_raw[z, ..., chl_load] if len_shape >= 5
+                        img = (img_raw[z, ..., chl_load] if len_shape_in >= 5
                                else img_raw[z])
                     else:
                         # read plane with Bioformats reader

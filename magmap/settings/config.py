@@ -199,6 +199,7 @@ PlotLabels = Enum(
         "MARGIN",  # image margin, either as scalar or x,y,z
         "SCALE_BAR",  # True to include a scale bar
         "MARKER",  # Matplotlib marker style
+        "DROP_DUPS",  # drop duplicates
     )
 )
 #: dict[Any]: Plot labels set from command-line.

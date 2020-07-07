@@ -471,15 +471,17 @@ def add_cols_df(df, cols):
     return df
 
 
-def join_dfs(dfs, id_col):
+def join_dfs(dfs, id_col, drop_dups=False):
     """Join data frames by an ID column.
     
     Args:
         dfs (List[:obj:`pd.DataFrame`]): Sequence of data frames to join.
         id_col (str): Index column.
+        drop_dups (bool): True to drop duplicates of ``id_col``; defaults
+            to False.
 
     Returns:
-        Data frame after joining after serially joining data frames.
+        :obj:`pd.DataFrame`: Data frame after serially joining data frames.
 
     """
     df_out = None
@@ -489,16 +491,19 @@ def join_dfs(dfs, id_col):
         else:
             df_out = df_out.join(df.set_index(id_col), rsuffix="_{}".format(i))
     df_out = df_out.reset_index()
+    if drop_dups:
+        # keep only first match
+        df_out = df_out.drop_duplicates(id_col)
     return df_out
     
 
-def melt_cols(df, id_cols, melt_cols, var_name=None):
+def melt_cols(df, id_cols, cols_to_melt, var_name=None):
     """Melt down a given set of columns to rows.
     
     Args:
         df: Pandas data frame.
         id_cols: List of column names to treat as IDs.
-        melt_cols: List of column names to pivot into separate rows.
+        cols_to_melt: List of column names to pivot into separate rows.
         var_name: Name of column with the melted column names; defaults 
             to None to use the default name.
     
@@ -506,7 +511,7 @@ def melt_cols(df, id_cols, melt_cols, var_name=None):
        Data frame with columns melted into rows.
     """
     df_melted = df.melt(
-        id_vars=id_cols, value_vars=melt_cols, var_name=var_name)
+        id_vars=id_cols, value_vars=cols_to_melt, var_name=var_name)
     return df_melted
 
 
@@ -705,7 +710,9 @@ def main():
         # join multiple CSV files based on a given index column into single
         # CSV file
         dfs = [pd.read_csv(f) for f in config.filenames]
-        df = join_dfs(dfs, config.plot_labels[config.PlotLabels.ID_COL])
+        df = join_dfs(
+            dfs, config.plot_labels[config.PlotLabels.ID_COL],
+            config.plot_labels[config.PlotLabels.DROP_DUPS])
         out_path = config.prefix
         if not out_path:
             out_path = libmag.insert_before_ext(

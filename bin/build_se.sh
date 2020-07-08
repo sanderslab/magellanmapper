@@ -76,12 +76,12 @@ source "${base_dir}/libclr.sh"
 detect_platform
 compiler_c="gcc"
 compiler_cpp="g++"
-if [[ "$os" = "MacOSX" ]]; then
+if [[ "$OS_NAME" = "MacOSX" ]]; then
   compiler_c=clang
   compiler_cpp=clang++
 fi
 msg="will use $compiler_c C compiler and $compiler_cpp C++ compiler "
-msg+="for $os platform"
+msg+="for $OS_NAME platform"
 echo -e "$msg"
 
 if [[ ! -d "$se_dir" ]]; then

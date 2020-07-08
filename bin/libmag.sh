@@ -43,9 +43,9 @@ backup_file() {
 ############################################
 # Detect computer platform including OS and bit.
 # Globals:
-#   os: Operating system, which is one of Windows, MacOSX, or Linux.
-#   os_ver: OS version, identified for Mac.
-#   bit: Architecture with bit, such as x86 or x86_64
+#   OS_NAME: Operating system, which is one of Windows, MacOSX, or Linux.
+#   OS_VER: OS version, identified for Mac.
+#   BIT: Architecture with bit, such as x86 or x86_64
 # Arguments:
 #   NONE
 # Returns:
@@ -57,30 +57,33 @@ detect_platform() {
   system="$(uname -a)"
   
   # detect operating system
-  os=""
-  os_ver=""
+  OS_NAME=""
+  OS_VER=""
   if [[ "$system" =~ "CYGWIN" ]] || [[ "$system" =~ "WINDOWS" ]]; then
-    os="Windows"
+    OS_NAME="Windows"
   elif [[ "$system" =~ "Darwin" ]]; then
-    os="MacOSX"
-    os_ver="$(/usr/bin/sw_vers -productVersion)"
+    OS_NAME="MacOSX"
+    OS_VER="$(/usr/bin/sw_vers -productVersion)"
   elif [[ "$system" =~ "Linux" ]]; then
-    os="Linux"
+    OS_NAME="Linux"
   fi
-  if [[ -z "$os" ]]; then
+  if [[ -z "$OS_NAME" ]]; then
     echo "Could not detect OS"
   else
-    readonly os
-    readonly os_ver
+    readonly OS_NAME
+    export OS_NAME
+    readonly OS_VER
+    export OS_VER
   fi
   
   # detect bit
-  bit="x86"
+  BIT="x86"
   if [[ "$system" =~ "x86_64" ]]; then
-    bit="x86_64"
+    BIT="x86_64"
   fi
-  readonly bit
-  echo "found $os platform with $bit bit"
+  readonly BIT
+  export BIT
+  echo "found $OS_NAME platform with $BIT bit"
 }
 
 ############################################

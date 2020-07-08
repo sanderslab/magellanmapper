@@ -98,14 +98,14 @@ detect_platform
 # Fiji.app folder is in the standard Mac Applications directory (Mac)
 # or in the MagellanMapper parent directory (Windows/Linux)
 bit_short="64"
-if [[ "$bit" =~ "32" ]]; then
+if [[ "$BIT" =~ "32" ]]; then
   bit_short="32"
 fi
-if [[ "$os" = "Windows" ]]; then
+if [[ "$OS_NAME" = "Windows" ]]; then
   ij="../Fiji.app/ImageJ-win$bit_short"
-elif [[ "$os" = "MacOSX" ]]; then
+elif [[ "$OS_NAME" = "MacOSX" ]]; then
   ij="/Applications/Fiji.app/Contents/MacOS/ImageJ-macosx"
-elif [[ "$os" = "Linux" ]]; then
+elif [[ "$OS_NAME" = "Linux" ]]; then
   ij="../Fiji.app/ImageJ-linux$bit_short"
 fi
 
@@ -117,7 +117,7 @@ if [[ "$stitch" == "${STITCH_TYPES[1]}" ]]; then
   mem=$((mem/100))
 elif [[ "$stitch" == "${STITCH_TYPES[2]}" ]]; then
   # BigStitcher plugin, which is more memory efficient
-  if [[ "$os" = "MacOSX" ]]; then
+  if [[ "$OS_NAME" = "MacOSX" ]]; then
     mem=$(sysctl -a | awk '/hw.memsize\:/ {print $2}')
     mem=$((mem/1024))
   else

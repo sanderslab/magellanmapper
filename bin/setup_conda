@@ -70,7 +70,7 @@ source bin/libmag.sh
 # find platform for Anaconda
 detect_platform
 ext="sh"
-if [[ "$os" = "Windows" ]]; then
+if [[ "$OS_NAME" = "Windows" ]]; then
   ext="ext"
 fi
 
@@ -101,10 +101,10 @@ if ! command -v "$conda" &> /dev/null; then
   esac
   
   # download Miniconda for OS platform and bit
-  PLATFORM="$os-$bit"
+  PLATFORM="$OS_NAME-$BIT"
   MINICONDA="Miniconda3-latest-$PLATFORM.${ext}"
   CONDA_URL=https://repo.anaconda.com/miniconda/$MINICONDA
-  if [[ "$os" == "MacOSX" ]]; then
+  if [[ "$OS_NAME" = "MacOSX" ]]; then
     curl -O "$CONDA_URL"
   else
     wget "$CONDA_URL"

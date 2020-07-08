@@ -54,7 +54,7 @@ source bin/libmag.sh
 # find platform for Anaconda
 detect_platform
 ext="sh"
-if [[ "$os" = "Windows" ]]; then
+if [[ "$OS_NAME" = "Windows" ]]; then
   ext="ext"
 fi
 

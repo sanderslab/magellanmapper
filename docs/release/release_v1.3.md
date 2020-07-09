@@ -1,5 +1,21 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.3
+
+This is a bug fix release for Conda setup.
+
+### Changes
+
+Installation
+- Fix Conda setup when `conda` is not found, including new installations
+- Fix setting up a Conda environment when another matching environment is found from a different Conda installation
+
+I/O
+- Fix import of multi-file, single-channel RAW images
+
+Python stats and plots
+- Option to drop duplicates when joining data frames using the new `--plot_labels drop_dups=<0|1>` command-line argument
+
 ## MagellanMapper v1.3.2 (beta)
 
 This beta release streamlines scripts to install and run MagellanMapper through a file browser, without requiring a terminal. Registered images can now be loaded and overlaid through the GUI. The image import panel auto-populates available metadata, and RAW format images can be imported. Image intensity controls better adapt to the current image.

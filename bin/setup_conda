@@ -118,7 +118,7 @@ if ! command -v "$conda" &> /dev/null; then
   chmod 755 "$MINICONDA"
   ./"$MINICONDA" -b -p "$conda_path"
   eval "$("$conda_path"/bin/conda shell.bash hook)"
-  conda init
+  conda init --all
   conda config --set auto_activate_base false
 else
   eval "$("$conda" shell.bash hook)"

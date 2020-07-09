@@ -77,11 +77,12 @@ fi
 # check for Conda installation
 conda=conda
 if ! command -v "$conda" &> /dev/null; then
-  # run in interactive bash session in case .bashrc only loads that way
+  # set Conda in interactive bash session since .bashrc may only be processed
+  # this way; start with env var set up during Conda initialization
   conda="$(bash -i -c 'echo $CONDA_EXE')"
   if ! command -v "$conda" &> /dev/null; then
-    # check if conda has not been initialized but added to path
-    conda="$(bash -i -c 'which conda')"
+    # try setting Conda from path if not initialized
+    conda="$(bash -i -c 'type -P conda')"
   fi
 fi
 

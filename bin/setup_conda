@@ -128,17 +128,20 @@ msg="Installing dependencies (may take awhile and appear to hang after the"
 msg+="\n  \"Executing transaction\" step because of additional "
 msg+="downloads/installs)..."
 eval "$("$conda" shell.bash hook)"
-if [[ "$check_env" == "" ]]; then
-  # create an new environment
-  echo "Creating new Conda environment from $config..."
-  echo -e "$msg"
-  "$conda" env create -n "$env_name" -f "$config"
-else
-  # update an existing environment
+if [[ -n "$check_env" ]]; then
+  # activate the existing env, assigning $CONDA_DEFAULT_ENV, and update
   echo "$env_name already exists, will update"
   conda activate "$env_name"
   echo -e "$msg"
   "$conda" env update -f "$config"
+fi
+
+if [[ "$CONDA_DEFAULT_ENV" != "$env_name" ]]; then
+  # create a new environment if env not activated, including if env found
+  # but not activatable because from another Conda install
+  echo "Creating new Conda environment from $config..."
+  echo -e "$msg"
+  "$conda" env create -n "$env_name" -f "$config"
 fi
 
 # check that the environment was created and activate it

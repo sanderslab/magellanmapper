@@ -117,23 +117,24 @@ if ! command -v "$conda" &> /dev/null; then
   chmod 755 "$MINICONDA"
   ./"$MINICONDA" -b -p "$conda_path"
   eval "$("$conda_path"/bin/conda shell.bash hook)"
-  "$conda" init
-  "$conda" config --set auto_activate_base false
+  conda init
+  conda config --set auto_activate_base false
+else
+  eval "$("$conda" shell.bash hook)"
 fi
 
 # create or update Conda environment; warn of apparent hang since no 
 # progress monitor displays during installs by environment spec
-check_env="$("$conda" env list | grep -w "$env_name")"
+check_env="$(conda env list | grep -w "$env_name")"
 msg="Installing dependencies (may take awhile and appear to hang after the"
 msg+="\n  \"Executing transaction\" step because of additional "
 msg+="downloads/installs)..."
-eval "$("$conda" shell.bash hook)"
 if [[ -n "$check_env" ]]; then
   # activate the existing env, assigning $CONDA_DEFAULT_ENV, and update
   echo "$env_name already exists, will update"
   conda activate "$env_name"
   echo -e "$msg"
-  "$conda" env update -f "$config"
+  conda env update -f "$config"
 fi
 
 if [[ "$CONDA_DEFAULT_ENV" != "$env_name" ]]; then
@@ -141,12 +142,12 @@ if [[ "$CONDA_DEFAULT_ENV" != "$env_name" ]]; then
   # but not activatable because from another Conda install
   echo "Creating new Conda environment from $config..."
   echo -e "$msg"
-  "$conda" env create -n "$env_name" -f "$config"
+  conda env create -n "$env_name" -f "$config"
 fi
 
 # check that the environment was created and activate it
-echo "Checking and activating conda environment..."
-check_env="$("$conda" env list | grep -w "$env_name")"
+echo "Confirming $env_name Conda environment..."
+check_env="$(conda env list | grep -w "$env_name")"
 if [[ "$check_env" == "" ]]; then
   echo "$env_name could not be found, exiting."
   exit 1

@@ -6,23 +6,33 @@ MagellanMapper can be installed many different ways dependening on one's Python 
 
 Conda greatly simplifies installation by managing all supporting packages, such as Java and packages that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
 
-After downloading MagellanMapper, create a new Conda environment with all dependent packages installed using this command from the repo folder:
+After downloading MagellanMapper, create a new Conda environment with all dependent packages using a provided script for your platform.
+
+**Mac, Linux**:
+
+```
+bin/setup_conda [-n name] [-s spec]
+```
+
+**Windows**:
+
+```
+bin/setup_conda.bat
+```
+
+These setup scripts perform full installation including Conda if not already present. Specifically, it will install:
+
+- [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python, if not already present based on the `conda` command
+- A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
+- Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
+
+Alternatively, those who already have Conda installed can set up an envirionment directly based on the environment spec:
 
 ```
 conda env create -n mag -f environment.yml
 ```
 
-**Convenient alternative**: On Mac, Linux, or a Bash shell in Windows, this setup script perform this full installation including installing Conda if not already present:
-
-```
-bin/setup_conda.sh [-n name] [-s spec]
-```
-
-This script will install:
-
-- If not already present: [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python
-- A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
-- Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
+See the [Readme](../README.md#run-magellanmapper) for instructions on running MagellanMapper.
 
 ## Option 2: Install through Venv+Pip
 

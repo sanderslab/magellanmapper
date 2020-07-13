@@ -25,16 +25,18 @@ See [Installation](docs/install.md) for more details, including installation wit
 
 **On Windows**: Run `run.py` through Python.
 - It may be necessary to right-click, choose "Open with", and browse to the Conda `pythonw.exe` file to open `run.py`
-- If a security warning displays, click on "More info" and "Run anyway" to launch the file 
+- If a security warning displays, click on "More info" and "Run anyway" to launch the file
+
+Note that during the first run, there may be a delay of up to several minutes from antivirus scanning for the new Python interpreter location in the new environment. Subsequent launches are typically much faster.
 
 ### From a terminal
- 
-Assuming you ran the Conda setup script to create an environment named `mag`, run:
 
 ```
 conda activate mag
 python <path-to-magellanmapper>/run.py
 ```
+
+This approach is recommended when running command-line tasks or for debugging output. Replace `mag` if you gave the environment a different name.
 
 MagellanMapper can be run as a GUI as described above or headlessly for automated tasks. [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See below for more details. See [Settings](docs/settings.md) for how to customize settings to your image files.
 

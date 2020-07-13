@@ -684,6 +684,76 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 # default to scrolling commands for up/down/right arrows
                 scroll_overview(event)
 
+        def on_btn_release(event):
+            # respond to mouse button presses for DraggableCircle management
+            inax = event.inaxes
+            print("event key: {}".format(event.key))
+            if event.key is None:
+                # for some reason becomes none if previous event was
+                # ctrl combo and this event is control
+                pass
+            elif event.key == "control" or event.key.startswith("ctrl"):
+                seg_channel = None
+                if channel:
+                    seg_channel = channel[0]
+                    num_chls = len(channel)
+                    if num_chls > 1:
+                        chl_matches = re.search(regex_key_chl, event.key)
+                        if chl_matches:
+                            # ctrl+n to specify the n-th channel
+                            chl = int(chl_matches[0])
+                            if chl < num_chls:
+                                seg_channel = channel[chl]
+                            else:
+                                print("selected channel index {} not within"
+                                      " range up to index {}"
+                                      .format(chl, num_chls - 1))
+                                return
+                try:
+                    axi = ax_z_list.index(inax)
+                    if (axi != -1 and z_planes_padding <= axi
+                            < z_planes - z_planes_padding):
+                        seg = np.array([[axi - z_planes_padding,
+                                         event.ydata.astype(int),
+                                         event.xdata.astype(int), -5]])
+                        seg = detector.format_blobs(seg, seg_channel)
+                        detector.shift_blob_abs_coords(seg, offset[::-1])
+                        detector.update_blob_confirmed(seg, 1)
+                        seg = fn_update_seg(seg[0])
+                        # adds a circle to denote the new segment
+                        patch = self._plot_circle(
+                            inax, seg, self._BLOB_LINEWIDTH, "-",
+                            fn_update_seg)
+                except ValueError as e:
+                    print(e)
+                    print("not on a plot to select a point")
+                fig.canvas.draw_idle()
+            elif event.key == "v":
+                _circle_last_picked_len = len(self._circle_last_picked)
+                if _circle_last_picked_len < 1:
+                    print("No previously picked circle to paste")
+                    return
+                moved_item = self._circle_last_picked[
+                    _circle_last_picked_len - 1]
+                circle, move_type = moved_item
+                axi = ax_z_list.index(inax)
+                dz = axi - z_planes_padding - circle.segment[0]
+                seg_old = np.copy(circle.segment)
+                seg_new = np.copy(circle.segment)
+                seg_new[0] += dz
+                if move_type == DraggableCircle.CUT:
+                    print("Pasting a cut segment")
+                    self._draggable_circles.remove(circle)
+                    self._circle_last_picked.remove(moved_item)
+                    seg_new = fn_update_seg(seg_new, seg_old)
+                else:
+                    print("Pasting a copied in segment")
+                    detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
+                    seg_new = fn_update_seg(seg_new)
+                self._plot_circle(
+                    inax, seg_new, self._BLOB_LINEWIDTH, None, fn_update_seg)
+                fig.canvas.draw_idle()
+
         # overview images taken from the bottom plane of the offset, with
         # progressively zoomed overview images if set for additional zoom levels
         for level in range(num_zoom_levels):
@@ -786,74 +856,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             # as long as not in "no circles" mode
             regex_key_chl = re.compile(r"\+[0-9]+$")
             
-            def on_btn_release(event):
-                ax = event.inaxes
-                print("event key: {}".format(event.key))
-                if event.key is None:
-                    # for some reason becomes none if previous event was
-                    # ctrl combo and this event is control
-                    pass
-                elif event.key == "control" or event.key.startswith("ctrl"):
-                    if channel:
-                        seg_channel = channel[0]
-                        num_chls = len(channel)
-                        if num_chls > 1:
-                            chl_matches = re.search(regex_key_chl, event.key)
-                            if chl_matches:
-                                # ctrl+n to specify the n-th channel
-                                chl = int(chl_matches[0])
-                                if chl < num_chls:
-                                    seg_channel = channel[chl]
-                                else:
-                                    print("selected channel index {} not within"
-                                          " range up to index {}"
-                                          .format(chl, num_chls - 1))
-                                    return
-                    try:
-                        axi = ax_z_list.index(ax)
-                        if (axi != -1 and z_planes_padding <= axi
-                                < z_planes - z_planes_padding):
-                            seg = np.array([[axi - z_planes_padding,
-                                             event.ydata.astype(int),
-                                             event.xdata.astype(int), -5]])
-                            seg = detector.format_blobs(seg, seg_channel)
-                            detector.shift_blob_abs_coords(seg, offset[::-1])
-                            detector.update_blob_confirmed(seg, 1)
-                            seg = fn_update_seg(seg[0])
-                            # adds a circle to denote the new segment
-                            patch = self._plot_circle(
-                                ax, seg, self._BLOB_LINEWIDTH, "-",
-                                fn_update_seg)
-                    except ValueError as e:
-                        print(e)
-                        print("not on a plot to select a point")
-                    fig.canvas.draw_idle()
-                elif event.key == "v":
-                    _circle_last_picked_len = len(self._circle_last_picked)
-                    if _circle_last_picked_len < 1:
-                        print("No previously picked circle to paste")
-                        return
-                    moved_item = self._circle_last_picked[
-                        _circle_last_picked_len - 1]
-                    circle, move_type = moved_item
-                    axi = ax_z_list.index(ax)
-                    dz = axi - z_planes_padding - circle.segment[0]
-                    seg_old = np.copy(circle.segment)
-                    seg_new = np.copy(circle.segment)
-                    seg_new[0] += dz
-                    if move_type == DraggableCircle.CUT:
-                        print("Pasting a cut segment")
-                        self._draggable_circles.remove(circle)
-                        self._circle_last_picked.remove(moved_item)
-                        seg_new = fn_update_seg(seg_new, seg_old)
-                    else:
-                        print("Pasting a copied in segment")
-                        detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
-                        seg_new = fn_update_seg(seg_new)
-                    self._plot_circle(
-                        ax, seg_new, self._BLOB_LINEWIDTH, None, fn_update_seg)
-                    fig.canvas.draw_idle()
-
             fig.canvas.mpl_connect("button_release_event", on_btn_release)
             # reset circles window flag
             fig.canvas.mpl_connect("close_event", fn_close_listener)

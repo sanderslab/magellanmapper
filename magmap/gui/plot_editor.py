@@ -169,6 +169,7 @@ class PlotEditor:
         # ROI offset and size in z,y,x
         self._roi_offset = None
         self._roi_size = None
+        self._roi_patch_preview = None
 
         # pre-compute image shapes, scales, and downsampling factors for
         # each type of 3D image
@@ -228,6 +229,7 @@ class PlotEditor:
 
         Args:
             coord (List[int]): Coordinates in ``(z, y, x)``.
+            show_crosslines (bool): True to show crosslines; defaults to True.
 
         """
         update_overview = self.coord is None or coord[0] != self.coord[0]
@@ -398,7 +400,7 @@ class PlotEditor:
             self.plane_slider.set_val(self.coord[0])
         else:
             self._update_overview(self.coord[0])
-        self._show_roi()
+        self.show_roi(self._roi_offset, self._roi_size)
         if self.scale_bar:
             plot_support.add_scale_bar(self.axes, self._downsample[0])
 
@@ -469,18 +471,30 @@ class PlotEditor:
         self._roi_offset = self.translate_coord(offset, coord_slice=coord_slice)
         self._roi_size = self.translate_coord(size, coord_slice=coord_slice)
 
-    def _show_roi(self):
+    def show_roi(self, offset, size, preview=False):
         """Show an ROI as an empty rectangular patch.
 
-        Will display only if :attr:`self._roi_offset` and
-        :attr:`self._roi_size` have been set.
+        Args:
+            offset (List[int]): ROI offset in ``y, x``.
+            size (List[int]): ROI size in ``y, x``.
+            preview (bool): True if the ROI should be displayed as a preview,
+                which is lighter and transient, removed when another preview
+                ROI is displayed.
 
         """
-        if self._roi_offset is None or self._roi_size is None: return
-        self.axes.add_patch(patches.Rectangle(
-            self._roi_offset[::-1],
-            *self._roi_size[::-1],
-            fill=False, edgecolor="yellow", linewidth=2))
+        if offset is None or size is None: return
+        linewidth = 1 if preview else 2
+        linestyle = "--" if preview else "-"
+        alpha = 0.5 if preview else 1
+        patch = patches.Rectangle(
+            offset[::-1], *size[::-1], fill=False, edgecolor="yellow",
+            linewidth=linewidth, linestyle=linestyle, alpha=alpha)
+        if preview:
+            # remove prior preview and store new preview
+            if self._roi_patch_preview:
+                self._roi_patch_preview.remove()
+            self._roi_patch_preview = patch
+        self.axes.add_patch(patch)
 
     def refresh_img3d_labels(self):
         """Replace the displayed labels image with underlying plane's data.

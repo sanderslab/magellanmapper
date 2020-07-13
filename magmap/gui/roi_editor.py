@@ -274,6 +274,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
             which case the region will be ignored.
         fn_status_bar (func): Function to call during status bar updates
             in :class:`pixel_display.PixelDisplay`; defaults to None.
+        max_intens_proj: True to show overview images as local max intensity
+            projections through the ROI. Defaults to Faslse.
+        zoom_shift (List[float]): Sequence of x,y shift in zoomed plot
+            origin when zooming into ROI; defaults to None.
     """
     ROI_COLS = 9
 
@@ -334,6 +338,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.offset = None
         self.roi_size = None
         self.plane = None
+        self.max_intens_proj = False
+        self.zoom_shift = None
         self._z_overview = None
         self._plot_eds = []  # overview plots
         
@@ -341,25 +347,40 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self._draggable_circles = []
         self._circle_last_picked = []
 
-    def _show_overview(self, ax_ov, lev, arrs_3d, cmap_labels, plane, aspect,
-                       origin, scaling, max_size, max_intens_proj, zoom_levels,
-                       zoom_shift):
+    def _show_overview(self, ax_ov, lev, zoom_levels, arrs_3d, cmap_labels,
+                       plane, aspect, origin, scaling, max_size):
         """Show overview image with progressive zooming on the ROI for each
-        zoom level.
+        zoom level, displayed in a a :class:`PlotEditor`.
+        
+        Shifts the zoom based on :attr:`zoom_shift`, defaulting to ``(1, 1)``
+        if None.
 
         Args:
             ax_ov: Subplot axes.
-            lev: Zoom level, where 0 is the original image.
+            lev: Zoom level index, where 0 is the original image.
+            zoom_levels (List[float]): Sequence of zoom levels.
+            arrs_3d (List[:obj:`np.ndarray`]): Sequence of 3D arrays to
+                overlay.
+            cmap_labels (:obj:`colors.ListedColormap`): Atlas labels colormap.
+            plane (str): One of :attr:`config.PLANE` specifying the orthogonal
+                plane to view.
+            aspect (float): Aspect ratio.
+            origin (str): Planar orientation, usually either "lower" or None.
+            scaling (List[float]): Scaling/spacing in z,y,x.
+            max_size (int): Maximum size of either side of the 2D plane shown;
+                defaults to None.
         """
-        zoom = 1
         # main overview image, on which other images may be overlaid
         roi_end = np.add(self.offset, self.roi_size)
         offsets = []  # z,y,x
         sizes = []  # z,y,x
+        zoom = zoom_levels[lev]
         if lev > 0:
             # move origin progressively closer with each zoom level,
             # a small fraction less than the offset
-            zoom = zoom_levels[lev]
+            
+            # default to shifting origin so that ROI is near upper L corner
+            zoom_shift = (1, 1) if self.zoom_shift is None else self.zoom_shift
             ori = np.multiply(
                 self.offset[:2],
                 np.subtract(zoom, zoom_shift) / zoom).astype(int)
@@ -403,20 +424,30 @@ class ROIEditor(plot_support.ImageSyncMixin):
             fn_show_label_3d=self.fn_show_label_3d)
         plot_ed.scale_bar = True
         plot_ed.enable_painting = False
-        plot_ed.max_intens_proj = self.roi_size[2] if max_intens_proj else 0
+        plot_ed.max_intens_proj = self.roi_size[2] if self.max_intens_proj else 0
         plot_ed.set_roi(self.offset[1::-1], self.roi_size[1::-1])
         plot_ed.update_coord((self._z_overview, ), show_crosslines=False)
         if offsets and sizes:
             # zoom toward ROI
             plot_ed.view_subimg(offsets[0], sizes[0])
         self._plot_eds.append(plot_ed)
-        self._update_overview_title(
-            ax_ov, lev, zoom_levels, plane, max_intens_proj)
+        self._update_overview_title(ax_ov, lev, zoom, plane)
 
-    def _update_overview_title(self, ax_ov, lev, zoom_levels, plane,
-                               max_intens_proj):
-        # set title with total zoom including objective and plane number
-        zoom = zoom_levels[lev]
+    def _update_overview_title(self, ax_ov, lev, zoom, plane):
+        """Set title with total zoom including objective and plane number.
+        
+        Args:
+            ax_ov: Subplot axes.
+            lev: Zoom level, where 0 is the original image.
+            zoom (float): Microscope total zoom. Overridden by
+                :attr:`config.zoom` and :attr:`config.magnification` if they
+                both exist.
+            plane (str): One of :attr:`config.PLANE` specifying the orthogonal
+                plane to view.
+
+        Returns:
+
+        """
         if config.zoom and config.magnification:
             # calculate total mag from objective zoom and mag
             zoom_components = np.array(
@@ -429,16 +460,15 @@ class ROIEditor(plot_support.ImageSyncMixin):
         else:
             tot_zoom = "{}x of original".format(zoom)
         plot_support.set_overview_title(
-            ax_ov, plane, self._z_overview, tot_zoom, lev, max_intens_proj)
+            ax_ov, plane, self._z_overview, tot_zoom, lev, self.max_intens_proj)
 
     def plot_2d_stack(self, fn_update_seg, filename, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
                       fn_close_listener, border=None, plane="xy",
-                      zoom_levels=1, zoom_shift=None, single_roi_row=False,
+                      zoom_levels=1, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
-                      grid=False, roi_cols=None, max_intens_proj=False,
-                      fig=None, region_name=None):
+                      grid=False, roi_cols=None, fig=None, region_name=None):
         """Shows a figure of 2D plots to compare with the 3D plot.
 
         Args:
@@ -462,9 +492,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 XY plane (default) and "xz" to show XZ plane.
             zoom_levels (int, List[int]): Number of overview zoom levels to
                 include or sequence of zoom multipliers; defaults to 1.
-            zoom_shift (List[float]): Sequence of x,y shift in zoomed plot
-                origin when zooming into ROI; defaults to None, which will
-                use ``(1, 1)``.
             single_roi_row: True if the ROI-sized plots should be
                 displayed on a single row; defaults to False.
             z_level: Position of the z-plane shown in the overview plots,
@@ -483,8 +510,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             grid (bool): True to overlay a grid on all plots.
             roi_cols (int): Number of columns per row to reserve for ROI plots;
                 defaults to None, in which case :attr:`ROI_COLS` will be used.
-            max_intens_proj: True to show overview images as local max intensity
-                projections through the ROI. Defaults to Faslse.
             fig (:obj:`figure.Figure`): Matplotlib figure; defaults to None
                 to generate a new figure.
             region_name (str): Name of atlas region for title; defaults to None.
@@ -520,9 +545,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             print("zoom_levels:", zoom_levels, "max_zoom:", max_zoom)
 
         num_zoom_levels = len(zoom_levels)
-        if zoom_shift is None:
-            # shift origin of zoomed plot so that ROI is near upper L corner
-            zoom_shift = (1, 1)
 
         # set up figure
         if fig is None:
@@ -661,7 +683,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     # z-plane index should be same for all editors
                     self._z_overview = plot_ed.coord[0]
                 self._update_overview_title(
-                    plot_ed.axes, edi, zoom_levels, plane, max_intens_proj)
+                    plot_ed.axes, edi, zoom_levels[edi], plane)
             update_subplot_border()
             fig.canvas.draw_idle()
 
@@ -764,9 +786,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
             ax = fig.add_subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
-            self._show_overview(ax, level, arrs_3d, cmap_labels, plane, aspect,
-                                origin, scaling, max_size, max_intens_proj,
-                                zoom_levels, zoom_shift)
+            self._show_overview(
+                ax, level, zoom_levels, arrs_3d, cmap_labels, plane, aspect,
+                origin, scaling, max_size)
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 

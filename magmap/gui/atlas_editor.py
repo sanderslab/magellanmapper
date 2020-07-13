@@ -57,6 +57,8 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         fig (:obj:`figure.Figure`): Matplotlib figure.
         fn_status_bar (func): Function to call during status bar updates
             in :class:`pixel_display.PixelDisplay`; defaults to None.
+        fn_update_coords (func): Handler for coordinate updates, which
+            takes coordinates in z-plane orientation; defaults to None.
     """
 
     _EDIT_BTN_LBLS = ("Edit", "Editing")
@@ -86,6 +88,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         self.save_btn = None
         self.edit_btn = None
         self.color_picker_box = None
+        self.fn_update_coords = None
         
     def show_atlas(self):
         """Set up the atlas display with multiple orthogonal views."""
@@ -266,6 +269,8 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             if i == 0:
                 # update the offset based on the xy plane
                 self.offset = coord_transposed[::-1]
+                if self.fn_update_coords:
+                    self.fn_update_coords(coord_transposed)
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed=None, update_atlas_eds=False):

@@ -1819,6 +1819,7 @@ class Visualization(HasTraits):
             self.show_label_3d, self.update_status_bar_msg)
         roi_ed.max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
         roi_ed.zoom_shift = config.plot_labels[config.PlotLabels.ZOOM_SHIFT]
+        roi_ed.fn_update_coords = self.set_offset
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
@@ -1887,6 +1888,7 @@ class Visualization(HasTraits):
             self._refresh_atlas_eds, self._atlas_ed_fig,
             self.update_status_bar_msg)
         self.atlas_eds.append(atlas_ed)
+        atlas_ed.fn_update_coords = self.set_offset
         atlas_ed.show_atlas()
         self._add_mpl_fig_handlers(atlas_ed.fig)
 
@@ -2049,6 +2051,15 @@ class Visualization(HasTraits):
     def _curr_offset(self):
         # get ROI offset in x,y,z; TODO: migrate to z,y,x
         return self.x_offset, self.y_offset, self.z_offset
+    
+    def set_offset(self, offset):
+        """Set the offset sliders.
+        
+        Args:
+            offset (List[int]): Offset in z,y,x.
+
+        """
+        self.z_offset, self.y_offset, self.x_offset = offset
     
     def _full_border(self, border=None):
         """Gets the full border array, typically based on 

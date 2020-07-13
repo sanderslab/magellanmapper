@@ -340,6 +340,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.plane = None
         self.max_intens_proj = False
         self.zoom_shift = None
+        self.fn_update_coords = None
         self._z_overview = None
         self._plot_eds = []  # overview plots
         
@@ -349,7 +350,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self._ax_subplots = []
 
     def _show_overview(self, ax_ov, lev, zoom_levels, arrs_3d, cmap_labels,
-                       plane, aspect, origin, scaling, max_size):
+                       aspect, origin, scaling, max_size):
         """Show overview image with progressive zooming on the ROI for each
         zoom level, displayed in a a :class:`PlotEditor`.
         
@@ -363,14 +364,20 @@ class ROIEditor(plot_support.ImageSyncMixin):
             arrs_3d (List[:obj:`np.ndarray`]): Sequence of 3D arrays to
                 overlay.
             cmap_labels (:obj:`colors.ListedColormap`): Atlas labels colormap.
-            plane (str): One of :attr:`config.PLANE` specifying the orthogonal
-                plane to view.
             aspect (float): Aspect ratio.
             origin (str): Planar orientation, usually either "lower" or None.
             scaling (List[float]): Scaling/spacing in z,y,x.
             max_size (int): Maximum size of either side of the 2D plane shown;
                 defaults to None.
         """
+        def update_coords(coord, plane):
+            # update displayed overview plot for the given coordinates
+            plot_ed.update_coord(coord, show_crosslines=False)
+            if self.fn_update_coords:
+                # trigger callback with coordinates in z-plane orientation
+                coord_zax = libmag.transpose_1d_rev(list(coord), plane)
+                self.fn_update_coords(coord_zax)
+        
         # main overview image, on which other images may be overlaid
         roi_end = np.add(self.offset, self.roi_size)
         offsets = []  # z,y,x
@@ -418,8 +425,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             img3d_extras = [np.array(img) for img in img3d_extras]
         plot_ed = plot_editor.PlotEditor(
             ax_ov, arrs_3d[0], labels_img, cmap_labels,
-            plane, aspect, origin,
-            lambda x, y: plot_ed.update_coord(x, show_crosslines=False),
+            self.plane, aspect, origin, update_coords,
             scaling, max_size=max_size, fn_status_bar=self.fn_status_bar,
             img3d_extras=img3d_extras,
             fn_show_label_3d=self.fn_show_label_3d)
@@ -427,14 +433,14 @@ class ROIEditor(plot_support.ImageSyncMixin):
         plot_ed.enable_painting = False
         plot_ed.max_intens_proj = self.roi_size[2] if self.max_intens_proj else 0
         plot_ed.set_roi(self.offset[1::-1], self.roi_size[1::-1])
-        plot_ed.update_coord((self._z_overview, ), show_crosslines=False)
+        update_coords((self._z_overview, *self.offset[1::-1]), self.plane)
         if offsets and sizes:
             # zoom toward ROI
             plot_ed.view_subimg(offsets[0], sizes[0])
         self._plot_eds.append(plot_ed)
-        self._update_overview_title(ax_ov, lev, zoom, plane)
-
-    def _update_overview_title(self, ax_ov, lev, zoom, plane):
+        self._update_overview_title(ax_ov, lev, zoom)
+    
+    def _update_overview_title(self, ax_ov, lev, zoom):
         """Set title with total zoom including objective and plane number.
         
         Args:
@@ -443,10 +449,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             zoom (float): Microscope total zoom. Overridden by
                 :attr:`config.zoom` and :attr:`config.magnification` if they
                 both exist.
-            plane (str): One of :attr:`config.PLANE` specifying the orthogonal
-                plane to view.
-
-        Returns:
 
         """
         if config.zoom and config.magnification:
@@ -461,11 +463,12 @@ class ROIEditor(plot_support.ImageSyncMixin):
         else:
             tot_zoom = "{}x of original".format(zoom)
         plot_support.set_overview_title(
-            ax_ov, plane, self._z_overview, tot_zoom, lev, self.max_intens_proj)
+            ax_ov, self.plane, self._z_overview, tot_zoom, lev,
+            self.max_intens_proj)
 
     def plot_2d_stack(self, fn_update_seg, filename, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
-                      fn_close_listener, border=None, plane="xy",
+                      fn_close_listener, border=None, plane=config.PLANE[0],
                       zoom_levels=1, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
@@ -684,7 +687,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     # z-plane index should be same for all editors
                     self._z_overview = plot_ed.coord[0]
                 self._update_overview_title(
-                    plot_ed.axes, edi, zoom_levels[edi], plane)
+                    plot_ed.axes, edi, zoom_levels[edi])
             update_subplot_border()
             fig.canvas.draw_idle()
 
@@ -788,8 +791,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
             self._show_overview(
-                ax, level, zoom_levels, arrs_3d, cmap_labels, plane, aspect,
-                origin, scaling, max_size)
+                ax, level, zoom_levels, arrs_3d, cmap_labels, aspect, origin,
+                scaling, max_size)
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 

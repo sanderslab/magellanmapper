@@ -446,7 +446,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             ROIEditor._fig_title(
                 region_name, os.path.basename(filename), offset, roi_size),
             bbox=dict(
-                facecolor=fig.get_facecolor(), edgecolor="none", alpha=0.5))
+                facecolor="xkcd:silver", edgecolor="none", alpha=0.5))
 
         # adjust array order based on which plane to show
         border_full = np.copy(border)
@@ -544,7 +544,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             top_cols += 1
         gs = gridspec.GridSpec(
             2, top_cols, wspace=0.01, hspace=0.01, height_ratios=height_ratios,
-            figure=fig, left=0.01, right=0.99, bottom=0.01, top=0.99)
+            figure=fig, left=0.01, right=0.99, bottom=0.01, top=0.93)
 
         # overview subplotting
         ax_overviews = []  # overview axes
@@ -972,7 +972,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         series = ""
         if config.series is not None:
             series = " (series {})".format(config.series)
-        return "{}{}{}\nROI offset x={}, y={}, z={}; size {} ({}{})".format(
+        return "{}{}{} ROI at x={}, y={}, z={}; size {}px ({}{})".format(
             region, name, series, *offset[:3], str(tuple(roi_size)).strip("()"),
             str(tuple(roi_size_um)).strip("()"), u'\u00b5m')
 

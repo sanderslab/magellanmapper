@@ -346,6 +346,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
         self._circle_last_picked = []
+        self._ax_subplots = []
 
     def _show_overview(self, ax_ov, lev, zoom_levels, arrs_3d, cmap_labels,
                        plane, aspect, origin, scaling, max_size):
@@ -659,13 +660,13 @@ class ROIEditor(plot_support.ImageSyncMixin):
 
         # overview subplotting
         ax_overviews = []  # overview axes
-        ax_z_list = []  # zoom plot axes
+        self._ax_subplots = []  # zoom plot axes
 
         def jump(event):
             z_ov = None
-            if event.inaxes in ax_z_list:
+            if event.inaxes in self._ax_subplots:
                 # right-arrow to jump to z-plane of given zoom plot
-                z_ov = (ax_z_list.index(event.inaxes) + z_start
+                z_ov = (self._ax_subplots.index(event.inaxes) + z_start
                         - z_planes_padding)
             return z_ov
 
@@ -690,7 +691,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         def update_subplot_border():
             # show a colored border around zoomed plot corresponding to
             # overview plots
-            for axi, axz in enumerate(ax_z_list):
+            for axi, axz in enumerate(self._ax_subplots):
                 if axi + z_start - z_planes_padding == self._z_overview:
                     # highlight border
                     axz.patch.set_edgecolor("orange")
@@ -736,7 +737,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                       .format(chl, num_chls - 1))
                                 return
                 try:
-                    axi = ax_z_list.index(inax)
+                    axi = self._ax_subplots.index(inax)
                     if (axi != -1 and z_planes_padding <= axi
                             < z_planes - z_planes_padding):
                         seg = np.array([[axi - z_planes_padding,
@@ -762,7 +763,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 moved_item = self._circle_last_picked[
                     _circle_last_picked_len - 1]
                 circle, move_type = moved_item
-                axi = ax_z_list.index(inax)
+                axi = self._ax_subplots.index(inax)
                 dz = axi - z_planes_padding - circle.segment[0]
                 seg_old = np.copy(circle.segment)
                 seg_new = np.copy(circle.segment)
@@ -876,7 +877,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 if (i == 0 and j == 0
                         and config.plot_labels[config.PlotLabels.SCALE_BAR]):
                     plot_support.add_scale_bar(ax_z, plane=plane)
-                ax_z_list.append(ax_z)
+                self._ax_subplots.append(ax_z)
         update_subplot_border()
 
         if not circles == self.CircleStyles.NO_CIRCLES:
@@ -1302,4 +1303,20 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if radius < config.POS_THRESH:
             radius *= -1
         return radius
+    
+    def set_circle_visibility(self, visible):
+        """Set the visibility of detection circles.
+        
+        Args:
+            visible (bool): True to make the circles visible, False for
+                invisibility.
 
+        """
+        for circle in self._draggable_circles:
+            # change the visibility of selectable circles
+            circle.circle.set_visible(visible)
+        for ax in self._ax_subplots:
+            for collection in ax.collections:
+                # change the visibility of colored circle collections
+                collection.set_visible(visible)
+        self.fig.canvas.draw_idle()

@@ -345,9 +345,7 @@ class Visualization(HasTraits):
     roi_array = Array(Int, shape=(1, 3), editor=ArrayEditor(format_str="%0d"))
 
     btn_redraw = Button("Redraw")
-    btn_detect = Button("Detect")
     _btn_save_fig = Button("Save Figure")
-    btn_save_segments = Button("Save Blobs")
     roi = None  # combine with roi_array?
     rois_selections_class = Instance(ListSelections)
     rois_check_list = Str
@@ -355,6 +353,11 @@ class Visualization(HasTraits):
     _rois = None
     _roi_feedback = Str()
     
+    # Detect panel
+    
+    btn_detect = Button("Detect")
+    btn_save_segments = Button("Save Blobs")
+    _segs_visible = Bool(True)
     _segments = Array
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
@@ -569,6 +572,7 @@ class Visualization(HasTraits):
         HGroup(
             Item("btn_detect", show_label=False),
             Item("btn_save_segments", show_label=False),
+            Item("_segs_visible", label="Visible", editor=BooleanEditor()),
         ),
         Item("scale_detections",
              editor=RangeEditor(
@@ -1605,6 +1609,7 @@ class Visualization(HasTraits):
             return
         
         # process ROI in prep for showing filtered 2D view and segmenting
+        self._segs_visible = True
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
         self.roi = plot_3d.prepare_roi(config.image5d, roi_size, offset)
@@ -1693,6 +1698,12 @@ class Visualization(HasTraits):
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
         self._launch_roi_editor()
+    
+    @on_trait_change("_segs_visible")
+    def _update_blob_visibility(self):
+        """Change blob visibilty based on toggle check box."""
+        if self._roi_ed:
+            self._roi_ed.set_circle_visibility(self._segs_visible)
     
     @on_trait_change('scale_detections')
     def update_scale_detections(self):

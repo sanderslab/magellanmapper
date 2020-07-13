@@ -341,6 +341,96 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self._draggable_circles = []
         self._circle_last_picked = []
 
+    def _show_overview(self, ax_ov, lev, arrs_3d, cmap_labels, plane, aspect,
+                       origin, scaling, max_size, max_intens_proj, zoom_levels,
+                       zoom_shift):
+        """Show overview image with progressive zooming on the ROI for each
+        zoom level.
+
+        Args:
+            ax_ov: Subplot axes.
+            lev: Zoom level, where 0 is the original image.
+        """
+        zoom = 1
+        # main overview image, on which other images may be overlaid
+        roi_end = np.add(self.offset, self.roi_size)
+        offsets = []  # z,y,x
+        sizes = []  # z,y,x
+        if lev > 0:
+            # move origin progressively closer with each zoom level,
+            # a small fraction less than the offset
+            zoom = zoom_levels[lev]
+            ori = np.multiply(
+                self.offset[:2],
+                np.subtract(zoom, zoom_shift) / zoom).astype(int)
+            zoom_shape = np.flipud(arrs_3d[0].shape[1:3])
+            # progressively decrease size, zooming in for each level
+            size = (zoom_shape / zoom).astype(int)
+            end = np.add(ori, size)
+            # if ROI exceeds bounds of zoomed plot, shift plot
+            for o in range(len(ori)):
+                roi_end_padded = roi_end[o] + self._ROI_PADDING
+                if end[o] < roi_end_padded:
+                    diff = roi_end_padded - end[o]
+                    ori[o] += diff
+                    end[o] += diff
+            # keep the zoomed area within the full 2D image
+            for o in range(len(ori)):
+                if end[o] > zoom_shape[o]:
+                    ori[o] -= end[o] - zoom_shape[o]
+            for img_i, img in enumerate(arrs_3d):
+                if img is not None:
+                    # zoom images based on scaling to main image
+                    scale = np.divide(
+                        img.shape[1:3], arrs_3d[0].shape[1:3])[::-1]
+                    origin_scaled = np.multiply(ori, scale).astype(np.int)
+                    end_scaled = np.multiply(end, scale).astype(np.int)
+                    offsets.append(origin_scaled[::-1])
+                    sizes.append(np.subtract(end_scaled, origin_scaled)[::-1])
+
+        # create a Plot Editor for the overview image
+        num_arrs_3d = len(arrs_3d)
+        labels_img = None if num_arrs_3d <= 1 else arrs_3d[1]
+        img3d_extras = arrs_3d[2:] if num_arrs_3d > 2 else None
+        if img3d_extras is not None:
+            img3d_extras = [np.array(img) for img in img3d_extras]
+        plot_ed = plot_editor.PlotEditor(
+            ax_ov, arrs_3d[0], labels_img, cmap_labels,
+            plane, aspect, origin,
+            lambda x, y: plot_ed.update_coord(x, show_crosslines=False),
+            scaling, max_size=max_size, fn_status_bar=self.fn_status_bar,
+            img3d_extras=img3d_extras,
+            fn_show_label_3d=self.fn_show_label_3d)
+        plot_ed.scale_bar = True
+        plot_ed.enable_painting = False
+        plot_ed.max_intens_proj = self.roi_size[2] if max_intens_proj else 0
+        plot_ed.set_roi(self.offset[1::-1], self.roi_size[1::-1])
+        plot_ed.update_coord((self._z_overview, ), show_crosslines=False)
+        if offsets and sizes:
+            # zoom toward ROI
+            plot_ed.view_subimg(offsets[0], sizes[0])
+        self._plot_eds.append(plot_ed)
+        self._update_overview_title(
+            ax_ov, lev, zoom_levels, plane, max_intens_proj)
+
+    def _update_overview_title(self, ax_ov, lev, zoom_levels, plane,
+                               max_intens_proj):
+        # set title with total zoom including objective and plane number
+        zoom = zoom_levels[lev]
+        if config.zoom and config.magnification:
+            # calculate total mag from objective zoom and mag
+            zoom_components = np.array(
+                [config.zoom, config.magnification, zoom]).astype(np.float)
+            # use abs since the default mag and zoom were previously -1.0
+            tot_zoom = "{}x".format(
+                libmag.compact_float(abs(np.prod(zoom_components)), 1))
+        elif lev == 0:
+            tot_zoom = "original magnification"
+        else:
+            tot_zoom = "{}x of original".format(zoom)
+        plot_support.set_overview_title(
+            ax_ov, plane, self._z_overview, tot_zoom, lev, max_intens_proj)
+
     def plot_2d_stack(self, fn_update_seg, filename, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
                       fn_close_listener, border=None, plane="xy",
@@ -487,13 +577,12 @@ class ROIEditor(plot_support.ImageSyncMixin):
         z_planes = z_planes + z_planes_padding * 2
 
         # position overview at bottom (default), middle, or top of stack
-        z_overview = z_start # abs positioning
-        self._z_overview = z_overview
+        self._z_overview = z_start # abs positioning
         if z_level == self.ZLevels.MIDDLE:
-            z_overview = (2 * z_start + z_planes) // 2
+            self._z_overview = (2 * z_start + z_planes) // 2
         elif z_level == self.ZLevels.TOP:
-            z_overview = z_start + z_planes
-        print("z_overview: {}".format(z_overview))
+            self._z_overview = z_start + z_planes
+        print("z_overview: {}".format(self._z_overview))
 
         # set up images to overlay in overview plots
         arrs3d = [self.image5d[0], self.labels_img]
@@ -550,92 +639,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
         ax_overviews = []  # overview axes
         ax_z_list = []  # zoom plot axes
 
-        def show_overview(ax_ov, lev):
-            """Show overview image with progressive zooming on the ROI for each
-            zoom level.
-
-            Args:
-                ax_ov: Subplot axes.
-                lev: Zoom level, where 0 is the original image.
-            """
-            zoom = 1
-            # main overview image, on which other images may be overlaid
-            roi_end = np.add(offset, roi_size)
-            offsets = []  # z,y,x
-            sizes = []  # z,y,x
-            if lev > 0:
-                # move origin progressively closer with each zoom level,
-                # a small fraction less than the offset
-                zoom = zoom_levels[lev]
-                ori = np.multiply(
-                    offset[:2],
-                    np.subtract(zoom, zoom_shift) / zoom).astype(int)
-                zoom_shape = np.flipud(arrs_3d[0].shape[1:3])
-                # progressively decrease size, zooming in for each level
-                size = (zoom_shape / zoom).astype(int)
-                end = np.add(ori, size)
-                # if ROI exceeds bounds of zoomed plot, shift plot
-                for o in range(len(ori)):
-                    roi_end_padded = roi_end[o] + self._ROI_PADDING
-                    if end[o] < roi_end_padded:
-                        diff = roi_end_padded - end[o]
-                        ori[o] += diff
-                        end[o] += diff
-                # keep the zoomed area within the full 2D image
-                for o in range(len(ori)):
-                    if end[o] > zoom_shape[o]:
-                        ori[o] -= end[o] - zoom_shape[o]
-                for img_i, img in enumerate(arrs_3d):
-                    if img is not None:
-                        # zoom images based on scaling to main image
-                        scale = np.divide(
-                            img.shape[1:3], arrs_3d[0].shape[1:3])[::-1]
-                        origin_scaled = np.multiply(ori, scale).astype(np.int)
-                        end_scaled = np.multiply(end, scale).astype(np.int)
-                        offsets.append(origin_scaled[::-1])
-                        sizes.append(np.subtract(end_scaled, origin_scaled)[::-1])
-
-            # create a Plot Editor for the overview image
-            num_arrs_3d = len(arrs_3d)
-            labels_img = None if num_arrs_3d <= 1 else arrs_3d[1]
-            img3d_extras = arrs_3d[2:] if num_arrs_3d > 2 else None
-            if img3d_extras is not None:
-                img3d_extras = [np.array(img) for img in img3d_extras]
-            plot_ed = plot_editor.PlotEditor(
-                ax_ov, arrs_3d[0], labels_img, cmap_labels,
-                plane, aspect, origin,
-                lambda x, y: plot_ed.update_coord(x, show_crosslines=False),
-                scaling, max_size=max_size, fn_status_bar=self.fn_status_bar,
-                img3d_extras=img3d_extras,
-                fn_show_label_3d=self.fn_show_label_3d)
-            plot_ed.scale_bar = True
-            plot_ed.enable_painting = False
-            plot_ed.max_intens_proj = roi_size[2] if max_intens_proj else 0
-            plot_ed.set_roi(offset[1::-1], roi_size[1::-1])
-            plot_ed.update_coord((z_overview, ), show_crosslines=False)
-            if offsets and sizes:
-                # zoom toward ROI
-                plot_ed.view_subimg(offsets[0], sizes[0])
-            self._plot_eds.append(plot_ed)
-            update_overview_title(ax_ov, lev)
-
-        def update_overview_title(ax_ov, lev):
-            # set title with total zoom including objective and plane number
-            zoom = zoom_levels[lev]
-            if config.zoom and config.magnification:
-                # calculate total mag from objective zoom and mag
-                zoom_components = np.array(
-                    [config.zoom, config.magnification, zoom]).astype(np.float)
-                # use abs since the default mag and zoom were previously -1.0
-                tot_zoom = "{}x".format(
-                    libmag.compact_float(abs(np.prod(zoom_components)), 1))
-            elif lev == 0:
-                tot_zoom = "original magnification"
-            else:
-                tot_zoom = "{}x of original".format(zoom)
-            plot_support.set_overview_title(
-                ax_ov, plane, self._z_overview, tot_zoom, lev, max_intens_proj)
-
         def jump(event):
             z_ov = None
             if event.inaxes in ax_z_list:
@@ -657,7 +660,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 if edi == 0:
                     # z-plane index should be same for all editors
                     self._z_overview = plot_ed.coord[0]
-                update_overview_title(plot_ed.axes, edi)
+                self._update_overview_title(
+                    plot_ed.axes, edi, zoom_levels, plane, max_intens_proj)
             update_subplot_border()
             fig.canvas.draw_idle()
 
@@ -760,7 +764,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
             ax = fig.add_subplot(gs[0, level])
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
-            show_overview(ax, level)
+            self._show_overview(ax, level, arrs_3d, cmap_labels, plane, aspect,
+                                origin, scaling, max_size, max_intens_proj,
+                                zoom_levels, zoom_shift)
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
 
@@ -842,7 +848,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     fig, gs_zoomed, i, j, channel, roi_size,
                     zoom_offset, fn_update_seg,
                     segs_in, segs_out, segs_cmap, alpha, z_relative,
-                    z == z_overview, border_full if show_border else None,
+                    z == self._z_overview, border_full if show_border else None,
                     plane, roi_show, labels, blobs_truth_z, circles=circles,
                     aspect=aspect, grid=grid, cmap_labels=cmap_labels)
                 if (i == 0 and j == 0

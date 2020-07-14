@@ -1322,8 +1322,7 @@ class Visualization(HasTraits):
         self._update_structure_level(curr_offset, curr_roi_size)
 
         if feedback:
-            self._roi_feedback = " ".join(feedback)
-            print(self.segs_feedback)
+            self._update_roi_feedback(" ".join(feedback), print_out=True)
     
     def show_label_3d(self, label_id):
         """Show 3D region of main image corresponding to label ID.
@@ -1777,11 +1776,10 @@ class Visualization(HasTraits):
             self._circles_opened_type = roi_editor.ROIEditor.CircleStyles(
                 self._circles_2d[0])
         self._opened_window_style = self._styles_2d[0]
-        self._roi_feedback = ""
         
         # shows 2D plots
         curr_offset, curr_roi_size, feedback = self._check_roi_position()
-        self._roi_feedback = " ".join(feedback)
+        self._update_roi_feedback(" ".join(feedback))
 
         # update verify flag
         roi_editor.verify = self._DEFAULTS_2D[1] in self._check_list_2d
@@ -2483,6 +2481,19 @@ class Visualization(HasTraits):
 
         """
         self._import_feedback += "{}\n".format(val)
+
+    def _update_roi_feedback(self, val, print_out=False):
+        """Update the ROI panel feedback text box.
+
+        Args:
+            val (str): String to append as a new line.
+            print_out (bool): True to print to console as well; defaults
+                to False.
+
+        """
+        if print_out:
+            print(val)
+        self._roi_feedback += "{}\n".format(val)
 
 
 class SetupImportThread(PyQt5.QtCore.QThread):

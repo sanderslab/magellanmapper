@@ -157,6 +157,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
     config.image5d = None
     config.image5d_is_roi = False
     load_subimage = offset is not None and size is not None
+    
+    # reset label images
+    config.labels_img = None
+    config.borders_img = None
 
     filename_base = importer.filename_to_base(path, series)
     subimg_base = None

@@ -2373,6 +2373,18 @@ class Visualization(HasTraits):
                     "Please enter at least image output and data type "
                     "before importing.")
         
+        for suffix in (config.SUFFIX_IMAGE5D, config.SUFFIX_META,
+                       config.SUFFIX_SUBIMG):
+            if self._import_browser.endswith(suffix):
+                # file already imported; initiate load and change to ROI panel
+                self._update_roi_feedback(
+                    "{} is already imported, loading image"
+                    .format(self._import_browser))
+                # must assign before tab change or else _import_browser is empty
+                self._filename = self._import_browser
+                self.select_controls_tab = ControlsTabs.ROI.value
+                return
+        
         # reset import fields
         self._clear_import_files(False)
         chl_paths = None

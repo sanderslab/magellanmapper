@@ -178,6 +178,30 @@ class VisHandler(Handler):
                 # shown Matplotlib figure
                 fig.setFocus()
     
+    @staticmethod
+    def scroll_to_bottom(eds, ed_name):
+        """Scroll to the bottom of the given Qt editor.
+
+        Args:
+            eds (List): Sequence of Qt editors.
+            ed_name (str): Name of editor to scroll.
+
+        """
+        for ed in eds:
+            if ed.name == ed_name:
+                # scroll to end of text display
+                ed.control.moveCursor(PyQt5.QtGui.QTextCursor.End)
+    
+    def object__roi_feedback_changed(self, info):
+        """Scroll to the bottom of the ROI feedback text display
+        when the value is changed.
+
+        Args:
+            info (UIInfo): TraitsUI UI info.
+
+        """
+        self.scroll_to_bottom(info.ui._editors, "_roi_feedback")
+
     def object__import_feedback_changed(self, info):
         """Scroll to the bottom of the import feedback text display
         when the value is changed.
@@ -185,12 +209,8 @@ class VisHandler(Handler):
         Args:
             info (UIInfo): TraitsUI UI info.
 
-
         """
-        for ed in info.ui._editors:
-            if ed.name == "_import_feedback":
-                # scroll to end of text display
-                ed.control.moveCursor(PyQt5.QtGui.QTextCursor.End)
+        self.scroll_to_bottom(info.ui._editors, "_import_feedback")
     
     def object_select_controls_tab_changed(self, info):
         """Select the given tab specified by

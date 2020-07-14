@@ -17,6 +17,8 @@ def load_yaml(path, enums=None):
             followed by a period, the corresponding Enum will be used.
 
     Returns:
+        List[dict]: Sequence of parsed dictionaries for each document within
+        a YAML file.
 
     """
     def parse_enum_val(val):
@@ -32,11 +34,13 @@ def load_yaml(path, enums=None):
         out = {}
         for key, val in d.items():
             if isinstance(val, dict):
-                # parse nested dictionaries
+                # recursively parse nested dictionaries
                 val = parse_enum(val)
             elif libmag.is_seq(val):
+                # parse vals within lists
                 val = [parse_enum_val(v) for v in val]
             else:
+                # parse a single val
                 val = parse_enum_val(val)
             key = parse_enum_val(key)
             out[key] = val

@@ -43,13 +43,13 @@ sample_tasks() {
   # initial import from original microscopy file
   # - replace `.czi` with the extension of your file
   # - use `pipelines.sh` instead for stitching multi-tile images
-  python -u -m magmap.io.cli --img "${IMG%.*}.czi" --proc import_only -v
+  ./run.py --img "${IMG%.*}.czi" --proc import_only -v
 
   # initial import from TIF files
   # - filenames should have the format: name_ch_0.tif, name_ch_1.tif, etc
   # - change `resolutions` to image resolutions in x,y,z
   # - change `magnification` and `zoom` to microscope objective values
-  python -u -m magmap.io.cli --img "${IMG%.*}.tif" --proc import_only \
+  ./run.py --img "${IMG%.*}.tif" --proc import_only \
     --set_meta resolutions=10.52,10.52,10 magnification=0.63 zoom=1.0 -v
 
   # view imported image
@@ -58,9 +58,9 @@ sample_tasks() {
   # downsample to size of atlas; the first option uses the target size in the
   # atlas profile, while the next options use a rescaling factor or specific
   # output size; use the plane option to transpose the output image
-  python -u -m magmap.io.cli --img "$IMG" --proc transform --atlas_profile "$REG" #--plane xz
-  python -u -m magmap.io.cli --img "$IMG" --proc transform --transform rescale=0.25
-  python -u -m magmap.io.cli --img "$IMG" --proc transform --size "$SHAPE_RESIZED"
+  ./run.py --img "$IMG" --proc transform --atlas_profile "$REG" #--plane xz
+  ./run.py --img "$IMG" --proc transform --transform rescale=0.25
+  ./run.py --img "$IMG" --proc transform --size "$SHAPE_RESIZED"
 
   # view downsampled image (assumes filename output using the first option)
   ./run.py --img "$IMG_RESIZED"

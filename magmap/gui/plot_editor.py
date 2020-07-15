@@ -163,6 +163,7 @@ class PlotEditor:
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
+        self._channels = None  # displayed channels list
         # track label editing during mouse click/movement for plane interp
         self._editing = False
 
@@ -337,6 +338,7 @@ class PlotEditor:
         
         # prep 2D image from main image, assumed to be an intensity image
         imgs2d = [self._get_img2d(0, self.img3d, self.max_intens_proj)]
+        self._channels = [config.channel]
         cmaps = [config.cmaps]
         alphas = [config.alphas[0]]
         shapes = [self._img3d_shapes[0][1:3]]
@@ -350,6 +352,7 @@ class PlotEditor:
         if self.img3d_labels is not None:
             # prep labels with discrete colormap
             imgs2d.append(self._get_img2d(1, self.img3d_labels))
+            self._channels.append([0])
             cmaps.append(self.cmap_labels)
             alphas.append(self.alpha)
             shapes.append(self._img3d_shapes[1][1:3])
@@ -366,6 +369,7 @@ class PlotEditor:
                 # colormap values take precedence to highlight original bounds
                 img_add = img2d[..., channel] if channels > 1 else img2d
                 imgs2d.append(img_add)
+                self._channels.append([0])
                 cmaps.append(self.cmap_borders[channel])
                 alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
                 shapes.append(self._img3d_shapes[2][1:3])
@@ -377,6 +381,7 @@ class PlotEditor:
                 # prep additional intensity image
                 imgi = 3 + i
                 imgs2d.append(self._get_img2d(imgi, img))
+                self._channels.append([0])
                 cmaps.append(("Greys",))
                 alphas.append(0.4)
                 shapes.append(self._img3d_shapes[imgi][1:3])
@@ -388,8 +393,8 @@ class PlotEditor:
         # value since they fail to update on subsequent updates for unclear
         # reasons
         ax_imgs = plot_support.overlay_images(
-            self.axes, self.aspect, self.origin, imgs2d, None, cmaps, alphas,
-            vmins, vmaxs, check_single=(self._ax_img_labels is None))
+            self.axes, self.aspect, self.origin, imgs2d, self._channels, cmaps,
+            alphas, vmins, vmaxs, check_single=(self._ax_img_labels is None))
         if colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         self.axes.format_coord = pixel_display.PixelDisplay(
@@ -520,6 +525,11 @@ class PlotEditor:
         if self._plot_ax_imgs and imgi < len(self._plot_ax_imgs):
             if chl is None:
                 chl = 0
+            if self._channels:
+                # translate channel to index of displayed channels
+                if chl not in self._channels[imgi]:
+                    return None
+                chl = self._channels[imgi].index(chl)
             plot_ax_img = self._plot_ax_imgs[imgi][chl]
         return plot_ax_img
 

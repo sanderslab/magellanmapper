@@ -1516,7 +1516,7 @@ class Visualization(HasTraits):
         if not self._channel:
             # resetting channel names triggers channel update as empty array
             return
-        config.channel = [int(n) for n in self._channel]
+        config.channel = sorted([int(n) for n in self._channel])
         if self._imgadj_chls_names:
             # limit image adjustment channel options to currently selected
             # channels in main channel selector

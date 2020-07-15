@@ -8,8 +8,9 @@ dependencies:
   - pyamg
   - pandas
   - scikit-image
+  - scikit-learn
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - simpleitk==1.2.0rc2.dev1162+g2a79d
-    - "git+https://github.com/LeeKamentsky/python-javabridge.git"
+    - javabridge==1.0.18.post21+g4526f53
     - python-bioformats==1.1.0

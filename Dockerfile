@@ -8,15 +8,14 @@ SHELL ["/bin/bash", "--login", "-c"]
 ENV BASE_DIR /app
 RUN mkdir $BASE_DIR
 WORKDIR $BASE_DIR
-COPY environment.yml run.py setup.py LICENSE.txt ./
+
+# set up Conda environment for MagellanMapper
+COPY environment.yml ./
+RUN conda env create -n mag environment.yml && conda init bash \
+    && echo "conda activate mag" >> ~/.bashrc
+
+# copy in rest of MagellanMapper files
+COPY run.py setup.py LICENSE.txt ./
 COPY magmap/ ./magmap/
 COPY bin/ ./bin/
 COPY stitch/ ./stitch/
-COPY profiles/ ./profiles/
-
-# create basic Conda env, initialize Conda, and set to activate env on login
-#RUN conda create -n test01 python=3.6 && conda init bash \
-#    && echo "conda activate test01" >> ~/.bashrc
-
-RUN conda env create -n mag environment.yml && conda init bash \
-    && echo "conda activate mag" >> ~/.bashrc

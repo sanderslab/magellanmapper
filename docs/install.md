@@ -128,6 +128,34 @@ If you would prefer to build SimpleElastix yourself, we have provided a couple b
 
 As an alternative, the SimpleITK package can provide much of the same functionality except for our image registration pipeline.
 
+
+## Uninstallation
+
+### Uninstall MagellanMapper
+
+To uninstall MagallanMapper, simply remove the MagellanMapper folder. This folder may be named `magellanmapper` if you downloaded it from Git, `magellanmapper-x.y.z` if you downloaded a specific release, or `magellanmapper-master` if you downloaded the latest ZIP file.
+
+### Uninstall Conda environment
+
+To uninstall the Conda environment created by the setup script:
+
+```
+conda remove -n mag --all
+```
+
+Replace `mag` with the name of the environment you created if you used a custom name.
+
+### Uninstall Conda
+
+This command will remove the Conda initialization from shell profiles:
+
+```
+conda init --reverse
+```
+
+Conda can be uninstalled following the [Conda uninstallation directions](https://docs.anaconda.com/anaconda/install/uninstall/), which typically involves simply removing the Conda folder, usually located at `<home-path>/miniconda3`.
+
+
 ## Tested Platforms
 
 MagellanMapper has been built and tested to build on:

@@ -16,18 +16,16 @@ Examples:
 from collections import OrderedDict
 from enum import Enum, auto
 import os
-from threading import Thread
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
-import PyQt5
+from PyQt5 import QtWidgets, QtCore, QtGui
 # adjust for HiDPI screens, necessary on Windows and Linux (not needed but
 # no apparent affect on MacOS)
-PyQt5.QtWidgets.QApplication.setAttribute(
-    PyQt5.QtCore.Qt.AA_EnableHighDpiScaling, True)
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         Int, List, Array, Str, Bool, Any,
                         push_exception_handler, Property, File)
@@ -143,7 +141,7 @@ class VisHandler(Handler):
 
         # add a change listener for the viewer tab widget, which is the
         # first found widget
-        tab_widgets = info.ui.control.findChildren(PyQt5.QtWidgets.QTabWidget)
+        tab_widgets = info.ui.control.findChildren(QtWidgets.QTabWidget)
         tab_widgets[0].currentChanged.connect(handle_tab_changed)
         return True
 
@@ -190,7 +188,7 @@ class VisHandler(Handler):
         for ed in eds:
             if ed.name == ed_name:
                 # scroll to end of text display
-                ed.control.moveCursor(PyQt5.QtGui.QTextCursor.End)
+                ed.control.moveCursor(QtGui.QTextCursor.End)
     
     def object__roi_feedback_changed(self, info):
         """Scroll to the bottom of the ROI feedback text display
@@ -222,7 +220,7 @@ class VisHandler(Handler):
         """
         # the tab widget is the second found QTabWidget; subtract one since
         # Enums auto-increment from 1
-        tab_widgets = info.ui.control.findChildren(PyQt5.QtWidgets.QTabWidget)
+        tab_widgets = info.ui.control.findChildren(QtWidgets.QTabWidget)
         tab_widgets[1].setCurrentIndex(info.object.select_controls_tab - 1)
 
 
@@ -1057,7 +1055,7 @@ class Visualization(HasTraits):
             value of the Qt application window.
 
         """
-        palette = PyQt5.QtWidgets.QApplication.instance().palette()
+        palette = QtWidgets.QApplication.instance().palette()
         return max(palette.color(palette.Window).getRgb()[:3]) < max_rgb
 
     def _format_seg(self, seg):
@@ -2528,7 +2526,7 @@ class Visualization(HasTraits):
         self._roi_feedback += "{}\n".format(val)
 
 
-class SetupImportThread(PyQt5.QtCore.QThread):
+class SetupImportThread(QtCore.QThread):
     """Thread for setting up file import by extracting image metadata.
 
     Attributes:
@@ -2540,7 +2538,7 @@ class SetupImportThread(PyQt5.QtCore.QThread):
 
     """
     
-    signal = PyQt5.QtCore.pyqtSignal(object)
+    signal = QtCore.pyqtSignal(object)
     
     def __init__(self, chl_paths, fn_success):
         """Initialize the import thread."""
@@ -2554,7 +2552,7 @@ class SetupImportThread(PyQt5.QtCore.QThread):
         self.signal.emit(md)
 
 
-class ImportThread(PyQt5.QtCore.QThread):
+class ImportThread(QtCore.QThread):
     """Thread for importing files into a Numpy array.
     
     Attributes:
@@ -2571,7 +2569,7 @@ class ImportThread(PyQt5.QtCore.QThread):
     
     """
     
-    signal = PyQt5.QtCore.pyqtSignal()
+    signal = QtCore.pyqtSignal()
     
     def __init__(self, mode, prefix, chl_paths, import_md, fn_feedback=None,
                  fn_success=None):

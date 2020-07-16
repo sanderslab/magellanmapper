@@ -743,8 +743,10 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
             md[config.MetaKeys.ZOOM], md[config.MetaKeys.DTYPE] = \
             parse_ome_raw(path)
         # unlike config.resolutions, keep only single list for simplicity
-        md[config.MetaKeys.RESOLUTIONS] = res[series]
-        shape = list(sizes[series])
+        if res and len(res) > series:
+            md[config.MetaKeys.RESOLUTIONS] = res[series]
+        if sizes and len(sizes) > series:
+            shape = list(sizes[series])
     except jb.JavaException as err:
         print(err)
     

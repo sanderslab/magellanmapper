@@ -277,7 +277,7 @@ def filename_to_base(filename, series=None, modifier=""):
     return path
 
 
-def deconstruct_np_filename(np_filename):
+def deconstruct_np_filename(np_filename, sep="_"):
     """Deconstruct Numpy or registered image filename to the original name
     from which it was based.
 
@@ -287,6 +287,7 @@ def deconstruct_np_filename(np_filename):
     
     Args:
         np_filename (str): Numpy image filename.
+        sep (str): Separator for any registration suffixes; defaults to "_".
     
     Returns:
         str, str, str, dict[str, str]: ``filename``, the deconstructed
@@ -328,14 +329,16 @@ def deconstruct_np_filename(np_filename):
             break
     if base_path is None:
         for suffix in config.RegNames:
-            # identify whether path is to a registered image file
+            # identify whether path is to a registered image file by checking
+            # for an extension-less suffix just before the filename ext
             suffix = suffix.value
-            suffixi = np_filename.rfind(libmag.get_filename_without_ext(suffix))
-            if suffixi != -1:
-                # strip suffix to get base path, also removing separator if
-                # basename is non-empty (ie not a dir)
+            suffix_noext = libmag.get_filename_without_ext(suffix)
+            suffixi = np_filename.rfind(suffix_noext)
+            if suffixi != -1 and os.path.splitext(np_filename)[0].endswith(
+                    suffix_noext):
+                # strip suffix and any ending separator to get base path
                 filename = np_filename[:suffixi]
-                base_path = (filename[:-1] if os.path.basename(filename)
+                base_path = (filename[:-1] if filename.endswith(sep)
                              else filename)
                 reg_suffixes = {config.RegSuffixes.ATLAS: suffix}
                 break

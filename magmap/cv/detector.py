@@ -935,9 +935,13 @@ def meas_detection_accuracy(blobs, verified=False, treat_maybes=0):
 
     Returns:
         float, float, str: Sensivity, positive predictive value (PPV), and
-        summary of stats as a string.
+        summary of stats as a string. If ``blobs`` is None or empty, returns
+        None for each of these values.
 
     """
+    if blobs is None or len(blobs) < 1:
+        return None, None, None
+    
     # basic stats based on confirmation status, ignoring maybes; "pos"
     # here means actual positives, whereas "true pos" means correct
     # detection, where radius <= 0 indicates that the blob was manually

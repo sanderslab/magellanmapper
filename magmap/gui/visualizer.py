@@ -1188,7 +1188,8 @@ class Visualization(HasTraits):
         blob_stats = [detector.meas_detection_accuracy(
             segs_transposed_np, treat_maybes=i)[2] for i in range(3)]
         for i, blob_stat in enumerate(blob_stats):
-            feedback.insert(i, blob_stat)
+            if blob_stat is not None:
+                feedback.insert(i, blob_stat)
         feedback.extend(("\n", out))
 
         # provide feedback on the blob insertion and stats

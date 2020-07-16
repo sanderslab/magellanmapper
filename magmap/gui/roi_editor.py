@@ -278,6 +278,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
             projections through the ROI. Defaults to Faslse.
         zoom_shift (List[float]): Sequence of x,y shift in zoomed plot
             origin when zooming into ROI; defaults to None.
+        fn_update_coords (func): Function to call when updating coordinates
+            in the overview plots; defaults to None.
+        fn_redraw (func): Function to call when double-clicking in an
+            overview plot; defaults to None.
     """
     ROI_COLS = 9
 
@@ -341,6 +345,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.max_intens_proj = False
         self.zoom_shift = None
         self.fn_update_coords = None
+        self.fn_redraw = None
         self._z_overview = None
         self._plot_eds = []  # overview plots
         
@@ -467,7 +472,22 @@ class ROIEditor(plot_support.ImageSyncMixin):
         plot_support.set_overview_title(
             ax_ov, self.plane, self._z_overview, tot_zoom, lev,
             self.max_intens_proj)
+    
+    def _redraw(self, event):
+        """Trigger :attr:`fn_redraw` if the event was a double-clock that
+        took place in a Plot Editor.
+        
+        Args:
+            event (:obj:`matplotlib.backend_bases.MouseEvent`): Mouse event.
 
+        """
+        if not self.fn_redraw: return
+        for ed in self._plot_eds:
+            if ed.axes == event.inaxes:
+                if event.dblclick:
+                    self.fn_redraw()
+                break
+    
     def plot_2d_stack(self, fn_update_seg, filename, channel,
                       roi_size, offset, segments, mask_in, segs_cmap,
                       fn_close_listener, border=None, plane=config.PLANE[0],
@@ -803,6 +823,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
         # key events; however, mouse events still contain these axes, used
         # here for jumping overview images to the corresponding axes
         fig.canvas.mpl_connect("button_release_event", key_press)
+        
+        if self.fn_redraw:
+            # handle potential redraws
+            fig.canvas.mpl_connect("button_press_event", self._redraw)
 
         # zoomed-in views of z-planes spanning from just below to just above ROI
         segs_in = None

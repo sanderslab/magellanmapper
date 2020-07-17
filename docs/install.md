@@ -63,7 +63,7 @@ The extra URL provides pre-built custom (with [certain requirements](#custom-pre
 pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 ```
 
-### Option 4: Even more installation methods
+## Option 4: Even more installation methods
 
 You can also install MagellanMapper these ways in the shell and Python environment of your choice:
 
@@ -137,7 +137,7 @@ To uninstall MagallanMapper, simply remove the MagellanMapper folder. This folde
 
 ### Uninstall Conda environment
 
-To uninstall the Conda environment created by the setup script:
+To keep the Conda installation but uninstall the Conda environment created by the `setup_conda[.bat]` scripts:
 
 ```
 conda remove -n mag --all
@@ -147,13 +147,15 @@ Replace `mag` with the name of the environment you created if you used a custom 
 
 ### Uninstall Conda
 
-This command will remove the Conda initialization from shell profiles:
+First, this command will remove the Conda initialization from shell profiles:
 
 ```
 conda init --reverse
 ```
 
-Conda can be uninstalled following the [Conda uninstallation directions](https://docs.anaconda.com/anaconda/install/uninstall/), which typically involves simply removing the Conda folder, usually located at `<home-path>/miniconda3`.
+Next, uninstalling the Conda installation typically involves simply removing the Conda folder, usually located at `<home-path>/miniconda3`. Removing this folder will also remove the environment created by the setup scripts.
+
+For more details on uninstall Conda, see the [Conda uninstallation directions](https://docs.anaconda.com/anaconda/install/uninstall/).
 
 
 ## Tested Platforms
@@ -161,7 +163,7 @@ Conda can be uninstalled following the [Conda uninstallation directions](https:/
 MagellanMapper has been built and tested to build on:
 
 - MacOS, tested on 10.11-10.15
-- Linux, tested on RHEL 7.4-7.5, Ubuntu 18.04-19.10
+- Linux, tested on RHEL 7.4-7.5, Ubuntu 18.04-20.04
 - Windows, tested on Windows 10 (see below for details) in various environments:
   - Native command-prompt and PowerShell
   - Via built-in Windows Subsystem for Linux (WSL), tested on Ubuntu 18.04 and an X Server

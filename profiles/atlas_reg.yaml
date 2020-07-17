@@ -7,7 +7,7 @@ reg_translation:
   metric_similarity: "AdvancedMattesMutualInformation"
   max_iter: "2048"
   grid_space_voxels: null
-  num_resolutions: "8"
+  num_resolutions: "4"
   grid_spacing_schedule: null
   erode_mask: null
   point_based: False
@@ -26,8 +26,8 @@ reg_affine:
 reg_bspline:
   metric_similarity: "AdvancedMattesMutualInformation"
   max_iter: "512"
-  grid_space_voxels: null
-  num_resolutions: "50"
+  grid_space_voxels: "50"
+  num_resolutions: "4"
   grid_spacing_schedule: null
   erode_mask: null
   point_based: False

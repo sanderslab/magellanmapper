@@ -49,7 +49,6 @@ class AtlasProfile(profiles.SettingsDict):
         reg_translation = RegParamMap()
         reg_translation["map_name"] = "translation"
         reg_translation["max_iter"] = "2048"
-        # reg_translation["num_resolutions"] = "8"
         self["reg_translation"] = reg_translation
 
         # affine/scaling transform

@@ -619,7 +619,8 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
         if return_info:
             return image5d, metadata
         return image5d
-    except IOError as e:
+    except OSError as e:
+        print("Could not load image files for", filename)
         print(e)
         if update_info and -1 < image5d_ver_num < IMAGE5D_NP_VER:
             # set to update metadata but could not because image5d
@@ -628,10 +629,9 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             # still work, or image5d may not be necessary for upgrade
             raise FileNotFoundError(
                 "image5d metadata is from an older version ({}, "
-                "current version {}) and could not be loaded because "
-                "the original image filedoes not exist. Please "
-                "reopen with the original image file to update "
-                "the metadata.".format(image5d_ver_num, IMAGE5D_NP_VER))
+                "current version {}) and could not be updated because "
+                "the original image5d file was not found."
+                .format(image5d_ver_num, IMAGE5D_NP_VER))
         if return_info:
             return None, metadata
         return None

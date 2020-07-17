@@ -20,25 +20,28 @@ from magmap.plot import plot_3d
 
 
 def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
-    """Load blobs from an archive and compute scaling.
+    """Load blobs from an archive.
+    
+    Scaling can be computed to translate blob coordinates into another
+    space, such as a heat map for a downsampled image.
     
     Args:
         img_path (str): Base path to blobs.
         check_scaling (bool): True to check scaling, in which case
             the scaling factor and scaled resolutions will be returned.
             Defaults to False.
-        scaled_shape (List): Shape of image to calculate scaling factor
+        scaled_shape (List): Shape of image to calculate scaling factor if
             this factor cannot be found from a transposed file's metadata;
             defaults to None.
         scale (int, float): Scalar scaling factor, used to find a
-            transposed file; defaults to None.
+            rescaled file; defaults to None. To find a resized file instead,
+            set an atlas profile with the resizing factor.
 
     Returns:
-        :obj:`np.ndarray`, List, List: Array of blobs If ``check_scaling``
-        is True, also returns sequence of scaling
-        factors to a scaled or resized image, or None if not loaded or given;
-        and the resolutions of the full-sized image in which the blobs
-        were detected. 
+        :obj:`np.ndarray`, List, List: Array of blobs. If ``check_scaling``
+        is True, also returns sequence of scaling factors to a scaled or
+        resized image, or None if not loaded or given, and the resolutions
+        of the full-sized image in which the blobs were detected.
 
     """
     # load blobs and display counts
@@ -54,14 +57,15 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
     if not check_scaling:
         return blobs
 
-    # get scaling from source image, which can be rescaled/resized image
-    # since contains scaling image
+    # get scaling and resolutions from blob space to that of a down/upsampled
+    # image space
     load_size = config.atlas_profile["target_size"]
     img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, load_size)
     scaling = None
     res = None
     if scale is not None or load_size is not None:
+        # retrieve scaling from a rescaled/resized image
         _, img_info = importer.read_file(
             img_path_transposed, config.series, return_info=True)
         scaling = img_info["scaling"]

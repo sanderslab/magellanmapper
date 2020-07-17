@@ -77,19 +77,17 @@ from magmap.plot import plot_2d
 
 def _parse_coords(arg, rev=False):
     # parse a list of strings into 3D coordinates
-    coords = list(arg)  # copy list to avoid altering the arg itself
-    n = 0
-    for coord in coords:
+    coords = []  # copy list to avoid altering the arg itself
+    for coord in arg:
         coord_split = coord.split(",")
         if len(coord_split) >= 3:
             coord = tuple(int(i) for i in coord_split)
             if rev:
                 coord = coord[::-1]
+            coords.append(coord)
         else:
             print("Coordinates ({}) should be given as 3 values (x, y, z)"
                   .format(coord))
-        coords[n] = coord
-        n += 1
     return coords
 
 
@@ -396,12 +394,14 @@ def main(process_args_only=False, skip_dbs=False):
     # expects x,y,z input and output
     if args.offset is not None:
         config.roi_offsets = _parse_coords(args.offset)
-        config.roi_offset = config.roi_offsets[0]
+        if config.roi_offsets:
+            config.roi_offset = config.roi_offsets[0]
         print("Set ROI offsets to {}, current offset {} (x,y,z)"
               .format(config.roi_offsets, config.roi_offset))
     if args.size is not None:
         config.roi_sizes = _parse_coords(args.size)
-        config.roi_size = config.roi_sizes[0]
+        if config.roi_sizes:
+            config.roi_size = config.roi_sizes[0]
         print("Set ROI sizes to {}, current size {} (x,y,z)"
               .format(config.roi_sizes, config.roi_size))
 

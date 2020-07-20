@@ -267,7 +267,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
             # first image is the main intensity image, potentially multichannel
             len_chls_main = len(channels_main)
             alphas_chl = config.plot_labels[config.PlotLabels.ALPHAS_CHL]
-            if alpha is None and alphas_chl is not None:
+            if alphas_chl is not None:
                 alpha = libmag.pad_seq(list(alphas_chl), len_chls_main, 0.5)
             if vmin is None and config.vmins is not None:
                 vmin = libmag.pad_seq(list(config.vmins), len_chls_main)
@@ -289,7 +289,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
                 img, shape, order=0, anti_aliasing=False,
                 preserve_range=True, mode="reflect").astype(np.int)
         if check_single and discrete and len(np.unique(img)) < 2:
-            # WORAROUND: increment the last val of single unique val images
+            # WORKAROUND: increment the last val of single unique val images
             # shown with a DiscreteColormap (or any ListedColormap) since
             # they otherwise fail to update on subsequent imshow calls
             # for unknown reasons

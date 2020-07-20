@@ -62,7 +62,7 @@ From the ROI selection controls, two different 2D editors can be opened. All but
 
 ## Nuclei Annotation Editor
 
-The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Press on `Detect` to detect nuclei in the current ROI, then `Plot 2D` to open the figure.
+The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Select the `ROI Editor` tab to view the editor. Press the `Redraw` button to redraw the editor at the selected ROI. To detect and display nuclei in the ROI, select the `Detect` tab and press the `Detect` button.
 
 - Click on dotted lines to cycle the nuclei detection flags from incorrect (red), correct (green), or questionable (yellow)
 - `Shift+click` and drag to move the circle's position
@@ -80,17 +80,17 @@ The multi-level 2D plotter is geared toward simplifying annotation for nuclei. P
 
 The multi-planar image plotter allows simplified viewing and editing of annotation labels for an atlas. Existing labels can be painted into adjacent areas, and synchronized planar viewing allows visualization of changes in each plane with realtime updates.
 
-The atlas image must have an associated annotation image. Use the `--labels` flage to specify a labels `.json` file. Change the `2D plot styles` dropdown to `Atlas editor` and press `Plot 2D` to open the editor.
+To view the editor, select the `Atlas Editor` tab. The `Redraw` button in the `ROI` tab of the left panel will redraw the editor if necessary. The `Registered images` section allows selecting any available annotations and label reference files to overlay.
 
 - Mouseover over any label to see the region name
 - `Left-click` to move the crosshairs and the corresponding planes
 - Scroll or arrow `up`/`down` to move planes in the current plot
-- `Right-click` or `Ctrl+left-click` + mouse-up/down to zoom
-- `Middle-click` or `Shift+left-click` + mouse drag to pan
+- `Right-click` or `Ctrl+left-click` while moving the mouse up/down to zoom
+- `Middle-click` or `Shift+left-click` while dragging the mouse to pan
 - `a` to toggle between 0 and full labels alpha (opacity)
 - `shift+a` to halve alpha (press `a` twice to return to original alpha)
 
-Press on the "Edit" button to start painting labels:
+Press on the "Edit" button to start painting labels using these controls:
 
 - `Left-click` to pick a color, then drag to paint over a new area
 - `Alt+Left-click` to use the last picked color instead

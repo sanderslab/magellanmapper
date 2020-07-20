@@ -405,7 +405,7 @@ class PlotEditor:
             self.plane_slider.set_val(self.coord[0])
         else:
             self._update_overview(self.coord[0])
-        self.show_roi(self._roi_offset, self._roi_size)
+        self.show_roi()
         if self.scale_bar:
             plot_support.add_scale_bar(self.axes, self._downsample[0])
 
@@ -462,32 +462,36 @@ class PlotEditor:
         self.xlim = self.axes.get_xlim()
         self.ylim = self.axes.get_ylim()
 
-    def set_roi(self, offset, size):
-        """Define a region of interest to display.
-
-        The ROI will be shown by :meth:`_show_roi`.
-
-        Args:
-            offset (List[int]): ROI offset in ``y, x``.
-            size (List[int]): ROI size in ``y, x``.
-
-        """
-        coord_slice = slice(0, None)
-        self._roi_offset = self.translate_coord(offset, coord_slice=coord_slice)
-        self._roi_size = self.translate_coord(size, coord_slice=coord_slice)
-
-    def show_roi(self, offset, size, preview=False):
+    def show_roi(self, offset=None, size=None, preview=False):
         """Show an ROI as an empty rectangular patch.
+        
+        If ``offset`` and ``size`` cannot be retrieved, no ROI will be shown.
 
         Args:
-            offset (List[int]): ROI offset in ``y, x``.
-            size (List[int]): ROI size in ``y, x``.
+            offset (List[int]): ROI offset in ``y, x``. Defaults to None
+                to use the saved ROI offset if available.
+            size (List[int]): ROI size in ``y, x``. Defaults to None
+                to use the saved ROI size if available.
             preview (bool): True if the ROI should be displayed as a preview,
                 which is lighter and transient, removed when another preview
-                ROI is displayed.
+                ROI is displayed. Defaults to False. If False, ROI parameters
+                for a displayed ROI will be shown.
 
         """
+        # translate coordinates if given; otherwise, use stored coordinates
+        coord_slice = slice(0, None)
+        if offset is None:
+            offset = self._roi_offset
+        else:
+            offset = self.translate_coord(offset, coord_slice=coord_slice)
+        if size is None:
+            size = self._roi_size
+        else:
+            size = self.translate_coord(size, coord_slice=coord_slice)
         if offset is None or size is None: return
+        
+        # generate and display ROI patch as empty rectangle, with lighter
+        # border for preview ROI
         linewidth = 1 if preview else 2
         linestyle = "--" if preview else "-"
         alpha = 0.5 if preview else 1
@@ -499,6 +503,10 @@ class PlotEditor:
             if self._roi_patch_preview:
                 self._roi_patch_preview.remove()
             self._roi_patch_preview = patch
+        else:
+            # store coordinates
+            self._roi_offset = offset
+            self._roi_size = size
         self.axes.add_patch(patch)
 
     def refresh_img3d_labels(self):

@@ -439,8 +439,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
         plot_ed.scale_bar = True
         plot_ed.enable_painting = False
         plot_ed.max_intens_proj = self.roi_size[2] if self.max_intens_proj else 0
-        plot_ed.set_roi(self.offset[1::-1], self.roi_size[1::-1])
         update_coords((self._z_overview, *self.offset[1::-1]), self.plane)
+        plot_ed.show_roi(self.offset[1::-1], self.roi_size[1::-1])
         if offsets and sizes:
             # zoom toward ROI
             plot_ed.view_subimg(offsets[0], sizes[0])

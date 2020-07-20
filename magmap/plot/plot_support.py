@@ -484,8 +484,7 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
     
     Args:
         event: Mouse or key event. For mouse events, scroll step sizes 
-            will be used for movements. For key events, up/down arrows 
-            will be used.
+            will be used for movements. For key events, arrows will be used.
         z_overview: Index of plane to show.
         max_size: Maximum number of planes.
         jump: Function to jump to a given plane; defaults to None.
@@ -497,25 +496,26 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
         int: Index of plane after scrolling.
     """
     step = 0
-    if jump is not None and event.key == "right":
-        # jump to the given plane for Right arrow key presses +/- mouse press;
-        # allowing mouse press serves as workaround to get axes from mouse
-        # event, which is absent from key event if fig lost focus
-        z = jump(event)
-        if z: z_overview = z
-    elif isinstance(event, backend_bases.MouseEvent):
-        # scroll movements are scaled from 0 for each event
-        steps = event.step
-        if max_scroll is not None and abs(steps) > max_scroll:
-            # cap scroll speed, preserving direction (sign)
-            steps *= max_scroll / abs(steps)
-        step += int(steps)  # decimal point num on some platforms
+    if isinstance(event, backend_bases.MouseEvent):
+        if jump is not None and event.button == 3:
+            # jump to the given plane for right-button mouse press; using a
+            # mouse event also serves as workaround to get axes as they are
+            # absent from key event if fig lost focus as happens sporadically
+            z = jump(event)
+            if z: z_overview = z
+        else:
+            # scroll movements are scaled from 0 for each event
+            steps = event.step
+            if max_scroll is not None and abs(steps) > max_scroll:
+                # cap scroll speed, preserving direction (sign)
+                steps *= max_scroll / abs(steps)
+            step += int(steps)  # decimal point num on some platforms
     elif isinstance(event, backend_bases.KeyEvent):
         # finer-grained movements through keyboard controls since the 
         # finest scroll movements may be > 1
-        if event.key == "up":
+        if event.key in ("up", "right"):
             step += 1
-        elif event.key == "down":
+        elif event.key in ("down", "left"):
             step -= 1
     
     z_overview_new = z_overview + step

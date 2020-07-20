@@ -71,8 +71,10 @@ The multi-level 2D plotter is geared toward simplifying annotation for nuclei. P
 - `"v"+click` in another z-plane to duplicate that circle in the corresponding position in that plane
 - `"x"+click` to cut the circle
 - `"d"+click` to delete the circle
-- Arrow `up/down` to change the overview plots' z-plane
-- `Right-arrow+click` (or just `right-arrow` in some cases) on an ROI plot to jump to the corresponding z-plane in the overview plots
+- Arrow `up/right` to increase and `down/left` to decrease the overview plots' z-plane
+- `Right-click` on an ROI plane to jump to the corresponding z-plane in the overview plots
+- `Left-click` in an overview plot to preview the ROI at that position
+- Double `right-click` in an overview plot to redraw the editor at that ROI
 
 ## Atlas Editor
 

@@ -815,13 +815,14 @@ class ROIEditor(plot_support.ImageSyncMixin):
             self._show_overview(
                 ax, level, zoom_levels, arrs_3d, cmap_labels, aspect, origin,
                 scaling, max_size)
+        
+        # attach overview plot navigation handlers: 1) mouse scroll, 2) arrow
+        # key, and 3) right-click in zoomed plot to jump to that plane in the
+        # overview plots; note that fig/axes lose focus sporadically in lower
+        # right canvas on Mac, at which time axes are not associated with
+        # key events but are with mouse events
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
-
-        # WORKAROUND (2020-05-22): fig/axes lose focus sporadically in lower
-        # right canvas on Mac, during which axes are not associated with
-        # key events; however, mouse events still contain these axes, used
-        # here for jumping overview images to the corresponding axes
         fig.canvas.mpl_connect("button_release_event", key_press)
         
         if self.fn_redraw:

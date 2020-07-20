@@ -614,8 +614,7 @@ class PlotEditor:
         #print("set image alpha to {}".format(self.alpha))
     
     def on_press(self, event):
-        """Pick intensities by mouse clicking on a given pixel.
-        """
+        """Respond to mouse press events."""
         if event.inaxes != self.axes: return
         x = int(event.xdata)
         y = int(event.ydata)
@@ -627,6 +626,7 @@ class PlotEditor:
         
         if event.button == 1:
             if self.edit_mode and self.img3d_labels is not None:
+                # label painting in edit mode
                 if event.key is not None and "alt" in event.key:
                     print("using previously picked intensity instead,",
                           self.intensity)

@@ -474,18 +474,18 @@ class ROIEditor(plot_support.ImageSyncMixin):
             self.max_intens_proj)
     
     def _redraw(self, event):
-        """Trigger :attr:`fn_redraw` if the event was a double-clock that
-        took place in a Plot Editor.
+        """Trigger :attr:`fn_redraw` if the event was a right button
+        double-clck that took place in a Plot Editor.
         
         Args:
             event (:obj:`matplotlib.backend_bases.MouseEvent`): Mouse event.
 
         """
-        if not self.fn_redraw: return
+        if not self.fn_redraw or not event.dblclick or not event.button == 3:
+            return
         for ed in self._plot_eds:
             if ed.axes == event.inaxes:
-                if event.dblclick:
-                    self.fn_redraw()
+                self.fn_redraw()
                 break
     
     def plot_2d_stack(self, fn_update_seg, filename, channel,

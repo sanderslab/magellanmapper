@@ -5,9 +5,19 @@ FROM continuumio/miniconda3
 
 # run with login Bash shell to allow Conda init
 SHELL ["/bin/bash", "--login", "-c"]
+
+# set up non-root user and allow access to Conda installation folder
+ARG username=mag
+RUN mkdir /home/$username && groupadd -r $username \
+    && useradd -r -s /bin/false -g $username $username \
+    && chown -R $username:$username /home/$username \
+    && chown -R $username:$username /opt/conda/
+
+# set up appliction base diretory and change to non-root user
 ENV BASE_DIR /app
-RUN mkdir $BASE_DIR
+RUN mkdir $BASE_DIR && chown -R $username:$username $BASE_DIR
 WORKDIR $BASE_DIR
+USER $username
 
 # set up Conda environment for MagellanMapper
 COPY environment.yml ./

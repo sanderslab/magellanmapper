@@ -1408,19 +1408,23 @@ class Visualization(HasTraits):
                 self._main_img_names.selections)
             self._labels_img_names.selections[0] = ""
             
-            # set registered names based on loaded images, defaulting to
+            # set any registered names based on loaded images, defaulting to
             # image5d and no labels
             main_suffix = self._main_img_names.selections[0]
             labels_suffix = self._labels_img_names.selections[0]
             if config.reg_suffixes:
+                # use registered suffixes without ext, using first suffix
+                # of each type
                 suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
                 if suffix:
-                    suffix = os.path.splitext(suffix)[0]
+                    suffix = os.path.splitext(
+                        libmag.get_if_within(suffix, 0, ""))[0]
                     if suffix in self._main_img_names.selections:
                         main_suffix = suffix
                 suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
                 if suffix:
-                    suffix = os.path.splitext(suffix)[0]
+                    suffix = os.path.splitext(
+                        libmag.get_if_within(suffix, 0, ""))[0]
                     if suffix in self._labels_img_names.selections:
                         labels_suffix = suffix
             self._main_img_name = main_suffix

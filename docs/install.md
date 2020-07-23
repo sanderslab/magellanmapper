@@ -135,27 +135,31 @@ As an alternative, the SimpleITK package can provide much of the same functional
 
 To uninstall MagallanMapper, simply remove the MagellanMapper folder. This folder may be named `magellanmapper` if you downloaded it from Git, `magellanmapper-x.y.z` if you downloaded a specific release, or `magellanmapper-master` if you downloaded the latest ZIP file.
 
-### Uninstall Conda environment
+### Conda uninstalls
 
-To keep the Conda installation but uninstall the Conda environment created by the `setup_conda[.bat]` scripts:
+#### Option 1: Uninstall Conda environment only
+
+This command will uninstall only the Conda environment created by the `setup_conda[.bat]` scripts while keeping the Conda installation:
 
 ```
 conda remove -n mag --all
 ```
 
-Replace `mag` with the name of the environment you created if you used a custom name.
+If you created an environment with a custom name, replace `mag` with this name.
 
-### Uninstall Conda
+###$ Optino 2: Uninstall Conda fully
 
-First, this command will remove the Conda initialization from shell profiles:
+1. Remove the Conda initialization from shell profiles:
 
-```
-conda init --reverse
-```
+    ```
+    conda init --reverse
+    ```
 
-Next, uninstalling the Conda installation typically involves simply removing the Conda folder, usually located at `<home-path>/miniconda3`. Removing this folder will also remove the environment created by the setup scripts.
+1. Uninstall Conda, which will also remove the environment created by the setup scripts.
+    - Mac and Linux: Remove the Conda folder, typically `<home-path>/miniconda3`.
+    - Windows: Run the Anaconda or Miniconda uninstaller from Windows Settings > Apps.
 
-For more details on uninstall Conda, see the [Conda uninstallation directions](https://docs.anaconda.com/anaconda/install/uninstall/).
+For more details on uninstalling Conda, see the [Conda uninstallation directions](https://docs.anaconda.com/anaconda/install/uninstall/).
 
 
 ## Tested Platforms

@@ -1,5 +1,42 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.4
+
+This release eases ROI setup and fixes a number of channel, import, and installer issues.
+
+### Changes
+
+Installation
+- The Conda setup script will initialize all shells for Conda, which fixes activation in `zsh` on macOS
+- Initial Docker integration
+- Fixed Conda light environment specification for the custom Javabridge pacakge
+
+GUI
+- ROI controls synchronize with the ROI and Atlas Editors
+- ROI Editor
+    - Preview a new ROI by clicking on a desired position in any overview plot
+    - Redraw by double right-clicking in any overview plot
+    - Changed the shortcut to jump to the plane of a given ROI plot: right-click the plot (instead of right-arrow + left-click)
+    - Option to toggle detection circle visibility
+    - Fixed ROI Editor title spacing
+- Fixed channel indexing when selecting a subset of channels
+- Fixed resetting labels images when loading a new image
+- Fixed loading image filenames that partially match registered suffixes
+- Fixed saving blobs when no blobs have been detected
+
+CLI
+- Fixed to apply alpha channel parameter when overlaying images
+
+Atlas registration
+- Fixed YAML atlas profile template for b-spline registration settings
+
+I/O
+- Selecting an imported file in the Import tab loads the file instead
+- Fixed handling incomplete metadata during import
+
+Code base and docs
+- Provided uninstallation directions
+
 ## MagellanMapper v1.3.3
 
 This is a bug fix release for Conda setup.

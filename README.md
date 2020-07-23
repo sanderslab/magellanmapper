@@ -12,16 +12,18 @@ MagellanMapper is a graphical imaging informatics suite and pipeline for high-th
 1. Install MagellanMapper using this script in the `magellanmapper` folder, which also installs Conda if not found
     - On Mac or Linux: `bin/setup_conda`
     - On Windows: `bin\setup_conda.bat`
-  
-See [Installation](docs/install.md) for more details, including installation without Conda, using Pip or Venv+Pip instead.
+
+### Install Notes
+- On Mac, it may be necessary to right-click and "Open with" the Terminal app
+- On Files in Linux, it may be necessary to go to "Preferences," select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files
+- See [Installation](docs/install.md) for more details, including installation without Conda, using Pip or Venv+Pip instead
   
 ## Run MagellanMapper
 
 ### From a file browser
 
 **On Mac or Linux**: Run the `MagellanMapper` file created during Conda setup.
-- On Mac, it may be necessary to right-click and "Open with" the Terminal app
-- On Files in Linux, it may be necessary to go to Preferences, select the Behavior tab, and choose to "Run" or "Ask" when executing text files
+- See [Install Notes](#install-notes) above running this file from a file browser
 
 **On Windows**: Run `run.py` through Python.
 - It may be necessary to right-click, choose "Open with", and browse to the Conda `pythonw.exe` file to open `run.py`

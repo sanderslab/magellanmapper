@@ -20,12 +20,12 @@ WORKDIR $BASE_DIR
 USER $username
 
 # set up Conda environment for MagellanMapper
-COPY environment.yml ./
+COPY --chown=$username:$username environment.yml ./
 RUN conda env create -n mag environment.yml && conda init bash \
     && echo "conda activate mag" >> ~/.bashrc
 
 # copy in rest of MagellanMapper files
-COPY run.py setup.py LICENSE.txt ./
-COPY magmap/ ./magmap/
-COPY bin/ ./bin/
-COPY stitch/ ./stitch/
+COPY --chown=$username:$username run.py setup.py LICENSE.txt ./
+COPY --chown=$username:$username magmap/ ./magmap/
+COPY --chown=$username:$username bin/ ./bin/
+COPY --chown=$username:$username stitch/ ./stitch/

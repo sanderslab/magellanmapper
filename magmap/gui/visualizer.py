@@ -339,7 +339,7 @@ class Visualization(HasTraits):
     _ignore_filename = False  # ignore file update trigger
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
-    _main_img_name = Str
+    _main_img_name = List
     _main_img_names = Instance(TraitsList)
     _labels_img_name = Str
     _labels_img_names = Instance(TraitsList)
@@ -513,8 +513,9 @@ class Visualization(HasTraits):
             VGroup(
                 HGroup(
                     Item("_main_img_name", label="Main image", springy=True,
+                         style="custom",
                          editor=CheckListEditor(
-                             name="object._main_img_names.selections")),
+                             name="object._main_img_names.selections", cols=2)),
                     Item("_reload_btn", show_label=False),
                 ),
                 HGroup(
@@ -1410,24 +1411,27 @@ class Visualization(HasTraits):
             
             # set any registered names based on loaded images, defaulting to
             # image5d and no labels
-            main_suffix = self._main_img_names.selections[0]
+            main_suffixes = []
             labels_suffix = self._labels_img_names.selections[0]
             if config.reg_suffixes:
                 # use registered suffixes without ext, using first suffix
                 # of each type
-                suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
-                if suffix:
-                    suffix = os.path.splitext(
-                        libmag.get_if_within(suffix, 0, ""))[0]
-                    if suffix in self._main_img_names.selections:
-                        main_suffix = suffix
+                suffixes = config.reg_suffixes[config.RegSuffixes.ATLAS]
+                if suffixes:
+                    if not libmag.is_seq(suffixes):
+                        suffixes = [suffixes]
+                    for suffix in suffixes:
+                        suffix = os.path.splitext(suffix)[0]
+                        if suffix in self._main_img_names.selections:
+                            main_suffixes.append(suffix)
                 suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
                 if suffix:
                     suffix = os.path.splitext(
                         libmag.get_if_within(suffix, 0, ""))[0]
                     if suffix in self._labels_img_names.selections:
                         labels_suffix = suffix
-            self._main_img_name = main_suffix
+            self._main_img_name = (main_suffixes if main_suffixes else
+                                   [self._main_img_names.selections[0]])
             self._labels_img_name = labels_suffix
 
             # set up image adjustment controls
@@ -1494,9 +1498,15 @@ class Visualization(HasTraits):
         """Reload images to include registered images."""
         # update registered suffixes dict with selections
         reg_suffixes = {}
-        if self._main_img_names.selections.index(self._main_img_name) != 0:
-            reg_suffixes[config.RegSuffixes.ATLAS] = "{}.".format(
-                self._main_img_name)
+        atlas_suffixes = []
+        for suffix in self._main_img_name:
+            if (suffix in self._main_img_names.selections
+                    and self._main_img_names.selections.index(suffix) != 0):
+                atlas_suffixes.append("{}.".format(suffix))
+        if atlas_suffixes:
+            if len(atlas_suffixes) <= 1:
+                atlas_suffixes = atlas_suffixes[0]
+            reg_suffixes[config.RegSuffixes.ATLAS] = atlas_suffixes
         if self._labels_img_names.selections.index(self._labels_img_name) != 0:
             reg_suffixes[config.RegSuffixes.ANNOTATION] = "{}.".format(
                 self._labels_img_name)

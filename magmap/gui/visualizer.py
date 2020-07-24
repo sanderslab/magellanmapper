@@ -512,7 +512,7 @@ class Visualization(HasTraits):
             ),
             VGroup(
                 HGroup(
-                    Item("_main_img_name", label="Main image", springy=True,
+                    Item("_main_img_name", label="Intensity", springy=True,
                          style="custom",
                          editor=CheckListEditor(
                              name="object._main_img_names.selections", cols=2)),
@@ -1395,7 +1395,7 @@ class Visualization(HasTraits):
                               else [config.roi_size])
             
             # find matching registered images to populate dropdowns
-            self._main_img_names.selections = [config.SUFFIX_IMAGE5D]
+            self._main_img_names.selections = []
             for reg_name in config.RegNames:
                 # check for potential matches and add if existing
                 reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
@@ -1407,7 +1407,7 @@ class Visualization(HasTraits):
                 os.path.splitext(s)[0] for s in self._main_img_names.selections]
             self._labels_img_names.selections = list(
                 self._main_img_names.selections)
-            self._labels_img_names.selections[0] = ""
+            self._labels_img_names.selections.insert(0, "")
             
             # set any registered names based on loaded images, defaulting to
             # image5d and no labels
@@ -1430,8 +1430,7 @@ class Visualization(HasTraits):
                         libmag.get_if_within(suffix, 0, ""))[0]
                     if suffix in self._labels_img_names.selections:
                         labels_suffix = suffix
-            self._main_img_name = (main_suffixes if main_suffixes else
-                                   [self._main_img_names.selections[0]])
+            self._main_img_name = main_suffixes
             self._labels_img_name = labels_suffix
 
             # set up image adjustment controls
@@ -1497,17 +1496,22 @@ class Visualization(HasTraits):
     def _reload_images(self):
         """Reload images to include registered images."""
         # update registered suffixes dict with selections
-        reg_suffixes = {}
+        reg_suffixes = {
+            config.RegSuffixes.ATLAS: None,
+            config.RegSuffixes.ANNOTATION: None,
+        }
         atlas_suffixes = []
         for suffix in self._main_img_name:
-            if (suffix in self._main_img_names.selections
-                    and self._main_img_names.selections.index(suffix) != 0):
-                atlas_suffixes.append("{}.".format(suffix))
+            # add empty extension for each selected atlas suffix
+            atlas_suffixes.append("{}.".format(suffix))
         if atlas_suffixes:
-            if len(atlas_suffixes) <= 1:
+            if len(atlas_suffixes) == 1:
+                # reduce to str if only one element
                 atlas_suffixes = atlas_suffixes[0]
             reg_suffixes[config.RegSuffixes.ATLAS] = atlas_suffixes
+        
         if self._labels_img_names.selections.index(self._labels_img_name) != 0:
+            # add if not the empty first selection
             reg_suffixes[config.RegSuffixes.ANNOTATION] = "{}.".format(
                 self._labels_img_name)
         config.reg_suffixes.update(reg_suffixes)

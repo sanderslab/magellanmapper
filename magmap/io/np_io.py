@@ -228,19 +228,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
     if path and config.image5d is None:
         # load or import the main image stack
         print("Loading main image")
-        if os.path.isdir(path):
-            if allow_import:
-                # import directory of single plane images to a volumetric stack
-                chls, import_md = importer.setup_import_dir(path)
-                add_metadata()
-                prefix = config.prefix
-                if not prefix:
-                    prefix = os.path.join(
-                        os.path.dirname(path), importer.DEFAULT_IMG_STACK_NAME)
-                config.image5d = importer.import_planes_to_stack(
-                    chls, prefix, import_md)
-                config.image5d_io = config.LoadIO.NP
-        elif path.endswith(sitk_io.EXTS_3D):
+        if path.endswith(sitk_io.EXTS_3D):
             try:
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
@@ -254,15 +242,32 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 if not import_only:
                     # load previously imported image
                     config.image5d = importer.read_file(path, series)
-                if allow_import and (import_only or config.image5d is None):
+                if allow_import:
                     # re-import over existing image or import new image
-                    chls, import_path = importer.setup_import_multipage(path)
-                    prefix = config.prefix if config.prefix else import_path
-                    import_md = importer.setup_import_metadata(
-                        chls, config.channel, series)
-                    add_metadata()
-                    config.image5d = importer.import_multiplane_images(
-                        chls, prefix, import_md, series, channel=config.channel)
+                    if os.path.isdir(path) and all(
+                            [r is None for r in config.reg_suffixes.values()]):
+                        # import directory of single plane images to single
+                        # stack if no register suffixes are set
+                        chls, import_md = importer.setup_import_dir(path)
+                        add_metadata()
+                        prefix = config.prefix
+                        if not prefix:
+                            prefix = os.path.join(
+                                os.path.dirname(path),
+                                importer.DEFAULT_IMG_STACK_NAME)
+                        config.image5d = importer.import_planes_to_stack(
+                            chls, prefix, import_md)
+                    elif import_only or config.image5d is None:
+                        # import multi-plane image
+                        chls, import_path = importer.setup_import_multipage(
+                            path)
+                        prefix = config.prefix if config.prefix else import_path
+                        import_md = importer.setup_import_metadata(
+                            chls, config.channel, series)
+                        add_metadata()
+                        config.image5d = importer.import_multiplane_images(
+                            chls, prefix, import_md, series,
+                            channel=config.channel)
                 config.image5d_io = config.LoadIO.NP
             except FileNotFoundError as e:
                 print(e)

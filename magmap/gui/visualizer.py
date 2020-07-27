@@ -807,6 +807,8 @@ class Visualization(HasTraits):
         """Initialize channel check boxes for the currently loaded main image.
 
         """
+        # reset channel check boxes, storing selected channels beforehand
+        chls_pre = list(self._channel)
         self._channel_names = TraitsList()
         # 1 channel if no separate channel dimension
         num_chls = (1 if config.image5d is None or config.image5d.ndim < 5
@@ -814,10 +816,10 @@ class Visualization(HasTraits):
         self._channel_names.selections = [str(i) for i in range(num_chls)]
         
         # pre-select channels for both main and profiles selector
-        if self._channel is None and config.channel:
-            # use config if setting for first time
-            self._channel = [
-                str(c) for i, c in enumerate(config.channel) if i < num_chls]
+        if not chls_pre and config.channel:
+            # use config if all chls were unchecked, eg if setting for 1st time
+            self._channel = sorted([
+                str(c) for i, c in enumerate(config.channel) if i < num_chls])
         else:
             # select all channels
             self._channel = self._channel_names.selections

@@ -672,7 +672,7 @@ class Visualization(HasTraits):
             label="Import File Selection"
         ),
         VGroup(
-            Item("_import_res", label="Resolutions (x,y,z)"),
+            Item("_import_res", label="Resolutions (x,y,z)", format_str="%.4g"),
             HGroup(
                 Item("_import_mag", label="Objective magnification"),
                 Item("_import_zoom", label="Zoom"),
@@ -698,7 +698,8 @@ class Visualization(HasTraits):
             label="Output image file"
         ),
         HGroup(
-            Item("_import_btn", show_label=False, enabled_when="_import_btn_enabled"),
+            Item("_import_btn", show_label=False,
+                 enabled_when="_import_btn_enabled"),
             Item("_import_clear_btn", show_label=False),
         ),
         Item("_import_feedback", style="custom", show_label=False),

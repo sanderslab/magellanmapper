@@ -228,15 +228,12 @@ def setup_images(path=None, series=None, offset=None, size=None,
     if path and config.image5d is None:
         # load or import the main image stack
         print("Loading main image")
-        if path.endswith(sitk_io.EXTS_3D):
-            try:
+        try:
+            if path.endswith(sitk_io.EXTS_3D):
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
                 config.image5d_io = config.LoadIO.SITK
-            except FileNotFoundError as e:
-                print(e)
-        else:
-            try:
+            else:
                 # load or import from MagellanMapper Numpy format
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
                 if not import_only:
@@ -269,10 +266,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
                             chls, prefix, import_md, series,
                             channel=config.channel)
                 config.image5d_io = config.LoadIO.NP
-            except FileNotFoundError as e:
-                print(e)
-                print("Could not load {}, will fall back to any associated "
-                      "registered image".format(path))
+        except FileNotFoundError as e:
+            print(e)
+            print("Could not load {}, will fall back to any associated "
+                  "registered image".format(path))
     
     if config.metadatas and config.metadatas[0]:
         # assign metadata from alternate file if given to supersede settings

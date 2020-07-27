@@ -1876,17 +1876,15 @@ class Visualization(HasTraits):
         if self._styles_2d[0] == Styles2D.SQUARE_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
             screenshot = self.scene.mlab.screenshot(
-                mode="rgba", antialiased=True)
+                mode="rgba", antialiased=True) if self.scene_3d_shown else None
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.SINGLE_ROW.value:
             # single row
-            screenshot = self.scene.mlab.screenshot(
-                mode="rgba", antialiased=True)
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2, 
                 single_roi_row=True, 
-                z_level=roi_ed.ZLevels.MIDDLE, mlab_screenshot=screenshot)
+                z_level=roi_ed.ZLevels.MIDDLE)
         elif self._styles_2d[0] == Styles2D.WIDE.value:
             # layout for wide ROIs, which shows only one overview plot
             stack_args_named["roi_cols"] = 7

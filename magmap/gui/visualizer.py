@@ -1435,6 +1435,10 @@ class Visualization(HasTraits):
                         labels_suffix = suffix
             self._main_img_name = main_suffixes
             self._labels_img_name = labels_suffix
+            
+            if config.load_labels:
+                # populate labels reference path field
+                self._labels_ref_path = config.load_labels
 
             # set up image adjustment controls
         self._init_imgadj()

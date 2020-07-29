@@ -389,6 +389,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
     Args:
         conn: The connection.
         cur: Connection's cursor.
+        roi_id (int): ROI ID.
         blobs: Array of blobs arrays, assumed to be formatted according to
             :func:``detector.format_blob``. "Confirmed" is given as 
             -1 = unconfirmed, 0 = incorrect, 1 = correct.
@@ -401,7 +402,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
         #print("blob type:\n{}".format(blob.dtype))
         blobs_list.append(blob_entry)
         if detector.get_blob_confirmed(blob) == 1:
-            confirmed = confirmed + 1
+            confirmed += 1
     #print(match_elements(_COLS_BLOBS, ", ", "?"))
     cur.executemany("INSERT OR REPLACE INTO blobs ({}) VALUES ({})"
                     .format(_COLS_BLOBS, match_elements(
@@ -416,6 +417,7 @@ def delete_blobs(conn, cur, roi_id, blobs):
     Args:
         conn: The connection.
         cur: Connection's cursor.
+        roi_id (int): ROI ID.
         blobs: Array of blobs arrays, assumed to be formatted accorind to 
             :func:``detector.format_blob``.
     
@@ -428,7 +430,7 @@ def delete_blobs(conn, cur, roi_id, blobs):
         print("attempting to delete blob {}".format(blob))
         cur.execute("DELETE FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
                     "AND x = ? AND channel = ?", blob_entry)
-        count =  cur.rowcount
+        count = cur.rowcount
         if count > 0:
             deleted += count
             print("deleted blob {}".format(blob))
@@ -439,22 +441,20 @@ def delete_blobs(conn, cur, roi_id, blobs):
 
 def _parse_blobs(rows):
     blobs = np.empty((len(rows), 7))
-    rowi = 0
-    for row in rows:
-        blobs[rowi] = [
+    for i, row in enumerate(rows):
+        blobs[i] = [
             row["z"], row["y"], row["x"], row["radius"], row["confirmed"], 
             row["truth"], row["channel"]
         ]
-        rowi += 1
     return blobs
 
 
 def select_blobs(cur, roi_id):
-    """Selects ROIs from the given experiment
+    """Selects blobs from the given ROI.
     
     Args:
         cur: Connection's cursor.
-        experiment_id: ID of the experiment.
+        roi_id (int): ROI ID.
     
     Returns:
         Blobs in the given ROI.
@@ -469,7 +469,7 @@ def select_blobs_confirmed(cur, confirmed):
     
     Args:
         cur: Connection's cursor.
-        experiment_id: ID of the experiment.
+        confirmed (int): Blob confirmation status.
     
     Returns:
         Blobs in the given ROI.

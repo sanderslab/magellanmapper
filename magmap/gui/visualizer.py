@@ -1605,6 +1605,8 @@ class Visualization(HasTraits):
             self.launch_atlas_editor()
         elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
             self.show_3d()
+            if len(self.segments) > 0:
+                self.show_3d_blobs()
             self._post_3d_display()
     
     @on_trait_change("scene.activated")
@@ -1716,17 +1718,7 @@ class Visualization(HasTraits):
             # convert segments to visualizer table format and plot
             self.segments = detector.shift_blob_abs_coords(
                 segs_all, offset[::-1])
-            show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
-            _, self.segs_in_mask = detector.get_blobs_in_roi(
-                self.segments, np.zeros(3), 
-                roi_size, np.multiply(self.border, -1))
-            self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
-                self.segments, self.scene.mlab, self.segs_in_mask, 
-                show_shadows, roi_size[2] if self.flipz else 0)
-            # reduce number of digits to make the slider more compact
-            scale = float(libmag.format_num(scale, 4))
-            self._scale_detections_high = scale * 2
-            self.scale_detections = scale
+            self.show_3d_blobs()
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]
@@ -1753,7 +1745,21 @@ class Visualization(HasTraits):
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
-        self._launch_roi_editor()
+        self.redraw_selected_viewer(clear=False)
+    
+    def show_3d_blobs(self):
+        roi_size = self.roi_array[0].astype(int)
+        show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
+        _, self.segs_in_mask = detector.get_blobs_in_roi(
+            self.segments, np.zeros(3),
+            roi_size, np.multiply(self.border, -1))
+        self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
+            self.segments, self.scene.mlab, self.segs_in_mask,
+            show_shadows, roi_size[2] if self.flipz else 0)
+        # reduce number of digits to make the slider more compact
+        scale = float(libmag.format_num(scale, 4))
+        self._scale_detections_high = scale * 2
+        self.scale_detections = scale
     
     @on_trait_change("_segs_visible")
     def _update_blob_visibility(self):
@@ -1983,7 +1989,8 @@ class Visualization(HasTraits):
         self.save_segs()
     
     @on_trait_change('rois_check_list')
-    def update_roi(self):
+    def load_roi(self):
+        """Load an ROI from database, including all blobs."""
         print("got {}".format(self.rois_check_list))
         if self.rois_check_list not in ("", _ROI_DEFAULT):
             # get chosen ROI to reconstruct original ROI size and offset 
@@ -2007,9 +2014,6 @@ class Visualization(HasTraits):
                 chls = np.unique(detector.get_blobs_channel(blobs))
                 if len(chls) == 1:
                     self._channel = [str(int(chls[0]))]
-            self.show_3d()
-            if self.scene_3d_shown:
-                self.show_orientation_axes(self.flipz)
             self._blob_detection_fired(segs=blobs)
             roi_editor.verify = True
         else:

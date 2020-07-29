@@ -365,7 +365,7 @@ class Visualization(HasTraits):
     btn_redraw = Button("Redraw")
     _btn_save_fig = Button("Save Figure")
     roi = None  # combine with roi_array?
-    rois_selections_class = Instance(ListSelections)
+    _rois_selections = Instance(ListSelections)
     rois_check_list = Str
     _rois_dict = None
     _rois = None
@@ -530,7 +530,7 @@ class Visualization(HasTraits):
             VGroup(
                 Item("rois_check_list", label="ROIs",
                      editor=CheckListEditor(
-                         name="object.rois_selections_class.selections")),
+                         name="object._rois_selections.selections")),
                 Item("roi_array", label="Size (x,y,z)"),
                 Item("x_offset",
                      editor=RangeEditor(
@@ -1185,7 +1185,7 @@ class Visualization(HasTraits):
             config.db.conn, config.db.cur, roi_id, segs_transposed)
         roi = sqlite.select_roi(config.db.cur, roi_id)
         self._append_roi(roi, self._rois_dict)
-        self.rois_selections_class.selections = list(self._rois_dict.keys())
+        self._rois_selections.selections = list(self._rois_dict.keys())
 
         # calculate basic accuracy stats
         print(segs_transposed_np)
@@ -1447,11 +1447,11 @@ class Visualization(HasTraits):
         self._rois_dict = {_ROI_DEFAULT: None}
         if config.db is not None and config.filename is not None:
             self._rois = config.db.get_rois(self._get_exp_name(config.filename))
-        self.rois_selections_class = ListSelections()
+        self._rois_selections = ListSelections()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
                 self._append_roi(roi, self._rois_dict)
-        self.rois_selections_class.selections = list(self._rois_dict.keys())
+        self._rois_selections.selections = list(self._rois_dict.keys())
         self.rois_check_list = _ROI_DEFAULT
     
     @on_trait_change("_filename")

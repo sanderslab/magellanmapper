@@ -122,18 +122,19 @@ class VisHandler(Handler):
             # set the enum for the currently selected tab and initialize
             # viewers if necessary
             tab = ViewerTabs(i + 1)  # enums auto-index starting from 1
+            info.object.selected_viewer_tab = tab
             print("Changed to tab", i, tab)
             if tab is ViewerTabs.ATLAS_ED:
                 # Atlas Editor tab
                 if not info.object.atlas_eds:
                     print("initializing Atlas Editor")
-                    info.object.launch_atlas_editor()
+                    info.object.redraw_selected_viewer(clear=False)
             elif tab is ViewerTabs.MAYAVI:
                 # Mayavi tab
                 if not info.object.scene_3d_shown:
                     print("initializing Mayavi 3D visualization")
-                    info.object.show_3d()
-            info.object.selected_viewer_tab = tab
+                    info.object.redraw_selected_viewer(clear=False)
+                    info.object.orient_camera()
             info.object.update_imgadj_for_img()
 
         # change Trait to flag completion of controls creation
@@ -1486,7 +1487,7 @@ class Visualization(HasTraits):
             np_io.setup_images(
                 config.filename, offset=offset, size=size, allow_import=False)
             self._setup_for_image()
-            self._btn_redraw_fired()
+            self.redraw_selected_viewer()
             self.update_imgadj_for_img()
         else:
             print("Could not parse filename", self._filename)
@@ -1580,12 +1581,22 @@ class Visualization(HasTraits):
         self._update_structure_level(curr_offset, curr_roi_size)
 
     @on_trait_change("btn_redraw")
-    def _btn_redraw_fired(self):
-        """Redraw the selected viewer."""
+    def _redraw_fired(self):
+        """Respond to redraw button presses."""
+        self.redraw_selected_viewer()
+    
+    def redraw_selected_viewer(self, clear=True):
+        """Redraw the selected viewer.
+        
+        Args:
+            clear (bool): True to clear the ROI and blobs; defaults to True.
+        
+        """
         # reload profiles if any profile files have changed and reset ROI
         cli.update_profiles()
-        self.roi = None
-        self._reset_segments()
+        if clear:
+            self.roi = None
+            self._reset_segments()
 
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is ViewerTabs.ROI_ED:
@@ -1597,9 +1608,11 @@ class Visualization(HasTraits):
             self._post_3d_display()
     
     @on_trait_change("scene.activated")
-    def _orient_camera(self):
-        # default camera position after initiation, with distance based on 
-        # ROI size and further zoomed out based on any isotropic factor resizing
+    def orient_camera(self):
+        """Provide a default camera orientation, with distance based on ROI
+        size and further zoomed out based on any isotropic factor resizing.
+
+        """
         zoom_out = 4
         isotropic_factor = config.roi_profile["isotropic_vis"]
         if isotropic_factor is not None:
@@ -1862,7 +1875,7 @@ class Visualization(HasTraits):
         roi_ed.max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
         roi_ed.zoom_shift = config.plot_labels[config.PlotLabels.ZOOM_SHIFT]
         roi_ed.fn_update_coords = self.set_offset
-        roi_ed.fn_redraw = self._btn_redraw_fired
+        roi_ed.fn_redraw = self.redraw_selected_viewer
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {

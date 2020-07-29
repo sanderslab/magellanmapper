@@ -1098,7 +1098,7 @@ class Visualization(HasTraits):
         if config.subimg_offsets and config.subimg_sizes:
             exp_name = stack_detect.make_subimage_name(
                 exp_name, config.subimg_offsets[0], config.subimg_sizes[0])
-        return exp_name
+        return os.path.splitext(exp_name)[0]
 
     def save_segs(self):
         """Saves segments to database.

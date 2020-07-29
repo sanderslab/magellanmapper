@@ -333,7 +333,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         # but should make customizable
         if verify:
             db_path_base = None
-            exp_name = os.path.basename(config.filename)
+            exp_name = os.path.splitext(os.path.basename(config.filename))[0]
             try:
                 if config.truth_db is None:
                     # find and load truth DB based on filename and subimage

@@ -20,7 +20,7 @@ DB_NAME_BASE = "magmap"
 DB_NAME_VERIFIED = "{}_verified.db".format(DB_NAME_BASE)
 DB_NAME_MERGED = "{}_merged.db".format(DB_NAME_BASE)
 DB_SUFFIX_TRUTH = "_truth.db"
-DB_VERSION = 3
+DB_VERSION = 4
 
 _COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
 
@@ -44,6 +44,7 @@ def _create_db(path):
     _create_table_experiments(cur)
     _create_table_rois(cur)
     _create_table_blobs(cur)
+    _create_table_blob_matches(cur)
     
     # store DB version information
     insert_about(conn, cur, DB_VERSION, datetime.datetime.now())
@@ -78,6 +79,18 @@ def _create_table_blobs(cur):
                                     "confirmed INTEGER, truth INTEGER, "
                                     "channel INTEGER, "
                 "UNIQUE (roi_id, x, y, z, truth, channel))")
+
+
+def _create_table_blob_matches(cur):
+    cur.execute("CREATE TABLE blob_matches ("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "roi_id INTEGER, blob1 INTEGER, blob2 INTEGER, dist REAL, "
+                "FOREIGN KEY (roi_id) REFERENCES rois (id) "
+                "ON UPDATE CASCADE ON DElETE CASCADE, "
+                "FOREIGN KEY (blob1) REFERENCES blobs (id) "
+                "ON UPDATE CASCADE ON DElETE CASCADE,"
+                "FOREIGN KEY (blob2) REFERENCES blobs (id) "
+                "ON UPDATE CASCADE ON DElETE CASCADE)")
 
 
 def upgrade_db(conn, cur):
@@ -123,6 +136,10 @@ def upgrade_db(conn, cur):
         cur.execute("INSERT INTO blobs (" + cols + ", channel) SELECT " 
                     + cols + ", 0 FROM tmp_blobs")
         cur.execute("DROP TABLE tmp_blobs")
+    
+    if db_ver < 4:
+        print("upgrading DB version from {} to 4".format(db_ver))
+        _create_table_blob_matches(cur)
     
     # record database upgrade version and time
     insert_about(conn, cur, DB_VERSION, datetime.datetime.now())

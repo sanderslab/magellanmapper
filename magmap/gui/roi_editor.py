@@ -286,6 +286,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
             in the overview plots; defaults to None.
         fn_redraw (func): Function to call when double-clicking in an
             overview plot; defaults to None.
+        blob_matches (List[:obj:`magmap.io.sqlite.BlobMatch`]): Sequence
+            of blob matches; defaults to None.
     """
     ROI_COLS = 9
 
@@ -350,6 +352,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.zoom_shift = None
         self.fn_update_coords = None
         self.fn_redraw = None
+        self.blob_matches = None
         self._z_overview = None
         
         # store DraggableCircles objects to prevent premature garbage collection
@@ -1249,6 +1252,19 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     for seg in segments_z:
                         self._plot_circle(
                             ax, seg, self._BLOB_LINEWIDTH, None, fn_update_seg)
+                
+                if self.blob_matches is not None:
+                    # show blob matches by corresponding number labels
+                    for i, match in enumerate(self.blob_matches):
+                        for j, blob in enumerate((match.blob1, match.blob2)):
+                            blob_rel = np.subtract(blob[:3], offset[::-1])
+                            if blob_rel[0] != 0: continue
+                            # add label with number; italicize if 1st blob
+                            style = "italic" if j == 0 else "normal"
+                            ax.text(blob_rel[2], blob_rel[1], i, color="k",
+                                    alpha=0.8, style=style,
+                                    horizontalalignment="center",
+                                    verticalalignment="center")
 
             # adds a simple border to highlight the border of the ROI
             if border is not None:

@@ -833,6 +833,7 @@ class Visualization(HasTraits):
             self._check_list_3d.append(self._DEFAULTS_3D[3])
         # self._structure_scale = self._structure_scale_high
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
+        self._blob_matches = None
 
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
@@ -1309,6 +1310,7 @@ class Visualization(HasTraits):
         """Resets the saved segments.
         """
         self.segments = None
+        self._blob_matches = None
         self.segs_pts = None
         self.segs_in_mask = None
         self.labels = None
@@ -2005,6 +2007,7 @@ class Visualization(HasTraits):
         roi_ed.zoom_shift = config.plot_labels[config.PlotLabels.ZOOM_SHIFT]
         roi_ed.fn_update_coords = self.set_offset
         roi_ed.fn_redraw = self.redraw_selected_viewer
+        roi_ed.blob_matches = self._blob_matches
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
@@ -2210,12 +2213,14 @@ class Visualization(HasTraits):
             self.x_offset, self.y_offset, self.z_offset = config.roi_offset
             
             # redraw the original ROI and prepare verify mode
-            blobs = sqlite.select_blobs(config.db.cur, roi["id"])
+            roi_id = roi["id"]
+            blobs = sqlite.select_blobs(config.db.cur, roi_id)
             if len(blobs) > 0:
                 # change to single-channel if all blobs are from same channel
                 chls = np.unique(detector.get_blobs_channel(blobs))
                 if len(chls) == 1:
                     self._channel = [str(int(chls[0]))]
+            self._blob_matches = config.db.select_blob_matches(roi_id)
             self.detect_blobs(blobs)
             roi_editor.verify = True
         else:

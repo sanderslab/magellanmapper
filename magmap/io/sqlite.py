@@ -23,6 +23,20 @@ DB_SUFFIX_TRUTH = "_truth.db"
 DB_VERSION = 4
 
 _COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
+_COLS_BLOB_MATCHES = "roi_id, blob1, blob2, dist"
+
+
+class BlobMatch:
+    """Blob match storage class."""
+    def __init__(self, match_id, roi_id, blob1_id, blob1, blob2_id, blob2,
+                 dist):
+        self.match_id = match_id
+        self.roi_id = roi_id
+        self.blob1_id = blob1_id
+        self.blob1 = blob1
+        self.blob2_id = blob2_id
+        self.blob2 = blob2
+        self.dist = dist
 
 
 def _create_db(path):
@@ -806,6 +820,29 @@ class ClrDB:
         self.conn.commit()
         return ids
     
+    def select_blob_matches(self, roi_id):
+        """Select blob matches for the given ROI.
+        
+        Args:
+            roi_id (int): ROI ID.
+
+        Returns:
+            List[:obj:`BlobMatch`]: List of blob matches.
+
+        """
+        self.cur.execute(
+            "SELECT {}, id FROM blob_matches WHERE roi_id = ?"
+            .format(_COLS_BLOB_MATCHES), (roi_id,))
+        matches = []
+        for row in self.cur.fetchall():
+            blob1_id = row["blob1"]
+            blob2_id = row["blob2"]
+            matches.append(BlobMatch(
+                row["id"], row["roi_id"], blob1_id,
+                self.select_blob_by_id(blob1_id)[0], blob2_id,
+                self.select_blob_by_id(blob2_id)[0], row["dist"]))
+        return matches
+        
 
 def main():
     """Run main SQLite access commands after loading CLI."""

@@ -438,18 +438,39 @@ def _find_closest_blobs(blobs, blobs_master, tol):
                 break
     if config.verbose:
         # show sorted list of matches to compare between runs
-        _show_blob_matches(
+        _match_blobs(
             blobs, blobs_master, close, close_master, np.zeros(len(blobs)))
     return np.array(close_master, dtype=int), np.array(close, dtype=int)
 
 
-def _show_blob_matches(blobs, blobs_master, close, close_master, dists):
+def _match_blobs(blobs, blobs_master, close, close_master, dists):
+    """Group matches between blobs.
+    
+    Args:
+        blobs (:obj:`np.ndarray`): Blobs as a 2D array of
+            ``[n, [z, row, column, ...]]``.
+        blobs_master (:obj:`np.ndarray`): Array in same format as ``blobs``
+            from a master list.
+        close (List[int]): Sequence of indices of ``blobs``.
+        close_master (List[int]): Sequence of indices of ``blobs_master``
+            matching the corresponding values in ``close``.
+        dists (List[float]): Sequence of distances corresponding to the
+            matches in ``close`` and ``close_master``.
+
+    Returns:
+        List[List]]: Sequence of matches, which each consist of
+        ``blob_master, blob, distance``.
+
+    """
     # show sorted list of matches between blobs and master blobs
-    found_master = blobs_master[close_master, :3]
+    found_master = blobs_master[close_master]
     found_master, sort = sort_blobs(found_master)
-    found = blobs[close, :3][sort]
-    print("closest matches found (truth, detected, distance):")
-    for f, fm, d in zip(found, found_master, dists[sort]): print(fm, f, d)
+    found = blobs[close][sort]
+    matches = []
+    for f, fm, d in zip(found, found_master, dists[sort]):
+        match = (fm, f, d)
+        matches.append(match)
+    return matches
 
 
 def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
@@ -861,6 +882,12 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         blobs_outer[found_out, 4] = 1
         blobs_inner_plus = np.concatenate((blobs_inner, blobs_outer[found_out]))
 
+        matches_inner = _match_blobs(
+            blobs_inner, blobs_truth_roi, found, found_truth, dists)
+        matches_outer = _match_blobs(
+            blobs_outer, blobs_truth_inner_missed, found_out,
+            found_truth_out, dists_out)
+        matches = [*matches_inner, *matches_outer]
         if config.verbose:
             '''
             print("blobs_roi:\n{}".format(blobs_roi))
@@ -881,14 +908,14 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
             print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
             print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
             '''
-            
-            print("\nInner ROI:")
-            _show_blob_matches(
-                blobs_inner, blobs_truth_roi, found, found_truth, dists)
-            print("\nOuter ROI:")
-            _show_blob_matches(
-                blobs_outer, blobs_truth_inner_missed, found_out, 
-                found_truth_out, dists_out)
+
+            print("Closest matches found (truth, detected, distance):")
+            msgs = ("\n- Inner ROI:", "\n- Outer ROI:")
+            for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
+                print(msg)
+                for match in matches_sub:
+                    print(match[0], match[1], match[2])
+            print()
         
         # store blobs in separate verified DB
         roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id,

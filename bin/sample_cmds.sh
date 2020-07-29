@@ -84,12 +84,14 @@ sample_tasks() {
   ./run.py --img "$IMG" --proc detect --channel "$CHL" --roi_profile "$MIC"
 
   # make and view density image (heat map)
+  # TODO: not yet working on Windows
   ./run.py -v --img "$IMG" --register make_density_images
   ./run.py --img "$IMG" --roi_profile lightsheet,contrast \
     --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" \
     --reg_suffixes heat.mhd annotation.mhd
 
   # volume metrics (level 13 includes hierarchical regions through this level)
+  # TODO: not yet working on Windows
   ./run.py --img "$IMG" --register vol_stats \
     --atlas_profile lightsheet,finer --labels "$ABA_LABELS"
   ./run.py --img "$IMG" --register vol_stats \
@@ -150,8 +152,8 @@ sample_tasks() {
 
   # test all OFFSETS with ROC curve
   ./run.py --img "$IMG" --proc detect --channel "$CHL" \
-    --offset ${OFFSETS_DONE[@]} --size $SIZE --roi_profile "$MIC" \
-    --truth_db "verify" --grid_search
+    --subimg_offset ${OFFSETS_DONE[@]} --subimg_size $SIZE --roi_profile "$MIC" \
+    --truth_db "verify" --grid_search gridtest
 
   # view annotation (ie segmentation) truth set
   ./run.py --img "$IMG" -v --channel "$CHL" --proc load \
@@ -181,8 +183,9 @@ sample_tasks() {
   # OTHER IMAGE TRANSFORMATIONS
 
   # rotate an image along multiple axes as specified in custom profiles;
-  # the first profile needs a "preprocess" key with a list of tasks, and
-  # the second profile specifies the rotation (see `atlas_prof.py`)
+  # 1) create an ROI profile file with a "preprocess" key giving a list of tasks
+  # 2) create an atlas profile file specifying the rotation parameters
+  #    (see `atlas_prof.py`)
   ./run.py --img "$IMG" --proc preprocess \
     --roi_profile preproc.yaml --atlas_profile rotate.yaml
 }

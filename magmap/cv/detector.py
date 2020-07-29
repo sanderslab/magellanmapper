@@ -926,6 +926,8 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
                             blobs_inner_plus)
         sqlite.insert_blobs(output_db.conn, output_db.cur, roi_id,
                             blobs_truth_inner_plus)
+        output_db.insert_blob_matches(roi_id, matches)
+        
         true_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 1])
         false_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 0])
         false_neg = len(blobs_truth_inner_plus) - true_pos

@@ -778,6 +778,34 @@ class ClrDB:
                 .format(_COLS_BLOBS), (blob_id,))
         return self._get_blob(self.cur.fetchall())
 
+    def insert_blob_matches(self, roi_id, matches):
+        """Insert blob matches.
+        
+        Args:
+            roi_id (int): ROI ID.
+            matches: Blob matches.
+
+        Returns:
+            List[int]: List of blob match IDs.
+
+        """
+        ids = []
+        for match in matches:
+            blob1, blob1_id = self.select_blob(roi_id, match[0])
+            blob2, blob2_id = self.select_blob(roi_id, match[1])
+            if blob1_id and blob2_id:
+                self.cur.execute(
+                    "INSERT INTO blob_matches ({}) "
+                    "VALUES (?, ?, ?, ?)".format(_COLS_BLOB_MATCHES),
+                    (roi_id, blob1_id, blob2_id, match[2]))
+                ids.append(self.cur.lastrowid)
+                print("Blob match inserted for ROI ID {}, blob 1 ID {}, "
+                      "blob 2 ID {}".format(roi_id, blob1_id, blob2_id))
+            else:
+                print("Could not find blobs for match:", match)
+        self.conn.commit()
+        return ids
+    
 
 def main():
     """Run main SQLite access commands after loading CLI."""

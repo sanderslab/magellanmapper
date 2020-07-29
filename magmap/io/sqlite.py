@@ -440,13 +440,26 @@ def delete_blobs(conn, cur, roi_id, blobs):
 
 
 def _parse_blobs(rows):
+    """Parse blobs to Numpy arrow.
+    
+    Args:
+        rows (List[:obj:`sqlite3.Row`]): Sequence of rows.
+
+    Returns:
+        :obj:`np.ndarray`, List[int]: Blobs as a Numpy array. List of
+        blob IDs if available.
+
+    """
     blobs = np.empty((len(rows), 7))
+    ids = []
     for i, row in enumerate(rows):
         blobs[i] = [
             row["z"], row["y"], row["x"], row["radius"], row["confirmed"], 
             row["truth"], row["channel"]
         ]
-    return blobs
+        if "id" in row.keys():
+            ids.append(row["id"])
+    return blobs, ids
 
 
 def select_blobs(cur, roi_id):
@@ -461,7 +474,7 @@ def select_blobs(cur, roi_id):
     """
     cur.execute(
         "SELECT {} FROM blobs WHERE roi_id = ?".format(_COLS_BLOBS), (roi_id, ))
-    return _parse_blobs(cur.fetchall())
+    return _parse_blobs(cur.fetchall())[0]
 
 
 def select_blobs_confirmed(cur, confirmed):
@@ -477,7 +490,7 @@ def select_blobs_confirmed(cur, confirmed):
     cur.execute(
         "SELECT {} FROM blobs WHERE confirmed = ?".format(_COLS_BLOBS), 
         (confirmed, ))
-    return _parse_blobs(cur.fetchall())
+    return _parse_blobs(cur.fetchall())[0]
 
 
 def verification_stats(cur, exp_name, treat_maybes=0):
@@ -670,6 +683,60 @@ class ClrDB:
         if len(exps) > 0:
             rois = select_rois(self.cur, exps[0]["id"])
         return rois
+    
+    @staticmethod
+    def _get_blob(rows):
+        """Get a single blob from a row.
+        
+        Args:
+            rows (List[:obj:`sqlite3.Row`]): Sequence of rows.
+
+        Returns:
+            :obj:`np.ndarray`, int: The blob as a 1D array. The blob ID if
+            available. If more than one row is given, only the first row's
+            contents is returned.
+
+        """
+        blobs, ids = _parse_blobs(rows)
+        if len(blobs) > 0:
+            blob_id = ids[0] if ids else None
+            return blobs[0], blob_id
+        return None, None
+    
+    def select_blob(self, roi_id, blob):
+        """Select a blob based on position and status.
+        
+        Args:
+            roi_id (int): ROI ID.
+            blob (:obj:`np.ndarray`): Blob as a 1D array of
+                ``z, y, x, r, confirmed, truth, channel``.
+
+        Returns:
+            :obj:`np.ndarray`, int: The blob as a 1D array. The blob ID if
+            available. If more than one blow is found, only the first blob
+            is returned.
+
+        """
+        self.cur.execute(
+            "SELECT {}, id FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
+            "AND x = ? AND confirmed = ? AND truth = ? AND channel = ?"
+            .format(_COLS_BLOBS), (roi_id, *blob[:3], *blob[4:7]))
+        return self._get_blob(self.cur.fetchall())
+
+    def select_blob_by_id(self, blob_id):
+        """Select a blob by ID.
+        
+        Args:
+            blob_id (int): Blob ID.
+
+        Returns:
+            :obj:`np.ndarray`, int: The blob as a 1D array.
+
+        """
+        self.cur.execute(
+            "SELECT {}, id FROM blobs WHERE id = ?"
+                .format(_COLS_BLOBS), (blob_id,))
+        return self._get_blob(self.cur.fetchall())
 
 
 def main():

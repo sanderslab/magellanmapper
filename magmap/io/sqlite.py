@@ -345,7 +345,7 @@ def select_rois(cur, exp_id):
     return rows
 
 
-def update_rois(cur, offset, size):
+def update_rois(conn, cur, offset, size):
     """Updates ROI positions and size.
     
     Args:

@@ -853,12 +853,14 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         found_out, found_truth_out, dists_out = find_closest_blobs_cdist(
             blobs_outer, blobs_truth_inner_missed, thresh, scaling)
         blobs_truth_inner_missed[found_truth_out, 5] = 1
+        
+        # combine inner and outer groups
         blobs_truth_inner_plus = np.concatenate(
             (blobs_truth_roi[blobs_truth_roi[:, 5] == 1], 
              blobs_truth_inner_missed))
-        blobs_roi_extra = blobs_outer[found_out]
-        blobs_roi_extra[:, 4] = 1
-        blobs_inner_plus = np.concatenate((blobs_inner, blobs_roi_extra))
+        blobs_outer[found_out, 4] = 1
+        blobs_inner_plus = np.concatenate((blobs_inner, blobs_outer[found_out]))
+
         if config.verbose:
             '''
             print("blobs_roi:\n{}".format(blobs_roi))

@@ -19,7 +19,7 @@ import os
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui

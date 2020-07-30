@@ -15,6 +15,7 @@ dependencies:
   - boto3
   - awscli
   - openjdk=8
+  - pyqt
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - matplotlib-scalebar

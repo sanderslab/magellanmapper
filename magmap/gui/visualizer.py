@@ -124,16 +124,16 @@ class VisHandler(Handler):
             tab = ViewerTabs(i + 1)  # enums auto-index starting from 1
             info.object.selected_viewer_tab = tab
             print("Changed to tab", i, tab)
-            if tab is ViewerTabs.ATLAS_ED:
-                # Atlas Editor tab
-                if not info.object.atlas_eds:
-                    print("initializing Atlas Editor")
-                    info.object.redraw_selected_viewer(clear=False)
-            elif tab is ViewerTabs.MAYAVI:
-                # Mayavi tab
-                if not info.object.scene_3d_shown:
-                    print("initializing Mayavi 3D visualization")
-                    info.object.redraw_selected_viewer(clear=False)
+            if (info.object.stale_viewers[tab]
+                    or tab is ViewerTabs.ROI_ED and not info.object.roi_ed
+                    or tab is ViewerTabs.ATLAS_ED and not info.object.atlas_eds
+                    or tab is ViewerTabs.MAYAVI
+                    and not info.object.scene_3d_shown):
+                # redraw if the tab is stale, or the corresponding viewer
+                # has not been shown before
+                info.object.redraw_selected_viewer(clear=False)
+                if tab is ViewerTabs.MAYAVI:
+                    # initialize the camera orientation
                     info.object.orient_camera()
             info.object.update_imgadj_for_img()
 
@@ -333,6 +333,10 @@ class Visualization(HasTraits):
             tab in the viewer panel.
         select_controls_tab (int): Enum value from :class:`ControlsTabs` to
             select the controls panel tab.
+        stale_viewers (dict[:obj:`ViewerTabs`, bool]): Dictionary of viewer
+            tab Enums to boolean value, where True indicates that the
+            viewer's display is stale and should be refreshed when shown.
+            Defaults to all viewers set to True.
     """
     # File selection
 
@@ -787,7 +791,7 @@ class Visualization(HasTraits):
                       "Matplotlib figures")
                 rc_params = [config.Themes.DARK]
         plot_2d.setup_style(rc_params=rc_params)
-        self._roi_ed = None
+        self.roi_ed = None
         # no constrained layout because of performance impact at least as of
         # Matplotlib 3.2
         self._roi_ed_fig = figure.Figure()
@@ -891,7 +895,7 @@ class Visualization(HasTraits):
         # get the currently selected viewer
         ed = None
         if self.selected_viewer_tab is ViewerTabs.ROI_ED:
-            ed = self._roi_ed
+            ed = self.roi_ed
         elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
             if self.atlas_eds:
                 ed = self.atlas_eds[0]
@@ -1036,7 +1040,7 @@ class Visualization(HasTraits):
         """
         eds = []
         if self.selected_viewer_tab is ViewerTabs.ROI_ED:
-            eds.append(self._roi_ed)
+            eds.append(self.roi_ed)
         elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
             eds.extend(self.atlas_eds)
         plot_ax_img = None
@@ -1347,6 +1351,7 @@ class Visualization(HasTraits):
 
         if feedback:
             self._update_roi_feedback(" ".join(feedback), print_out=True)
+        self.stale_viewers[ViewerTabs.MAYAVI] = False
     
     def show_label_3d(self, label_id):
         """Show 3D region of main image corresponding to label ID.
@@ -1383,6 +1388,8 @@ class Visualization(HasTraits):
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.
         """
+        self.stale_viewers = dict.fromkeys(ViewerTabs, True)
+        print("stale", self.stale_viewers)
         self._init_channels()
         if config.image5d is not None:
             # TODO: consider subtracting 1 to avoid max offset being 1 above
@@ -1764,8 +1771,8 @@ class Visualization(HasTraits):
     @on_trait_change("_segs_visible")
     def _update_blob_visibility(self):
         """Change blob visibilty based on toggle check box."""
-        if self._roi_ed:
-            self._roi_ed.set_circle_visibility(self._segs_visible)
+        if self.roi_ed:
+            self.roi_ed.set_circle_visibility(self._segs_visible)
     
     @on_trait_change('scale_detections')
     def update_scale_detections(self):
@@ -1927,8 +1934,9 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
-        self._roi_ed = roi_ed
+        self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
+        self.stale_viewers[ViewerTabs.ROI_ED] = False
 
     def launch_atlas_editor(self):
         if config.image5d is None:
@@ -1951,6 +1959,7 @@ class Visualization(HasTraits):
         atlas_ed.fn_update_coords = self.set_offset
         atlas_ed.show_atlas()
         self._add_mpl_fig_handlers(atlas_ed.fig)
+        self.stale_viewers[ViewerTabs.ATLAS_ED] = False
 
     def _refresh_atlas_eds(self, ed_ignore):
         """Callback handler to refresh all other Atlas Editors
@@ -1967,9 +1976,9 @@ class Visualization(HasTraits):
     @on_trait_change("_btn_save_fig")
     def _save_fig(self):
         if self.selected_viewer_tab is ViewerTabs.ROI_ED:
-            if self._roi_ed is not None:
+            if self.roi_ed is not None:
                 # save screenshot of current ROI Editor
-                self._roi_ed.save_fig()
+                self.roi_ed.save_fig()
         elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
             if self.atlas_eds:
                 # save screenshot of first Atlas Editor

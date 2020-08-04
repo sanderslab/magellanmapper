@@ -289,8 +289,9 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     if symmetric_colors:
         # invert latter half onto former half, assuming that corresponding
         # labels are mirrored (eg -5, 3, 0, 3, 5), with background centered as 0
-        mid = len(cmap) // 2
-        cmap[:mid] = cmap[:mid:-1] + dup_offset
+        cmap_len = len(cmap)
+        mid = cmap_len // 2
+        cmap[:mid] = cmap[:cmap_len-mid-1:-1] + dup_offset
     cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones

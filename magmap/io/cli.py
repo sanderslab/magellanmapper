@@ -422,15 +422,19 @@ def main(process_args_only=False, skip_dbs=False):
         print("Set metadata values to {}".format(config.meta_dict))
         res = config.meta_dict[config.MetaKeys.RESOLUTIONS]
         if res:
-            # set image resolutions, taken in x,y,z for each series and
+            # set image resolutions, taken as a single set of x,y,z and
             # converting to a nested list of z,y,x
             res_split = res.split(",")
             if len(res_split) >= 3:
-                config.resolutions = [tuple(float(i) for i in res_split)[::-1]]
+                res_float = tuple(float(i) for i in res_split)[::-1]
+                config.resolutions = [res_float]
                 print("Set resolutions to {}".format(config.resolutions))
             else:
-                print("Resolution ({}) should be given as 3 values (x, y, z)"
-                      .format(args.res))
+                res_float = None
+                print("Resolution ({}) should be given as 3 values (x,y,z)"
+                      .format(res))
+            # store single set of resolutions, similar to input
+            config.meta_dict[config.MetaKeys.RESOLUTIONS] = res_float
         mag = config.meta_dict[config.MetaKeys.MAGNIFICATION]
         if mag:
             # set objective magnification

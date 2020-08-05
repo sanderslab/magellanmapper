@@ -138,21 +138,19 @@ def setup_images(path=None, series=None, offset=None, size=None,
     
     """
     def add_metadata():
-        # add metadata stored in config or the meta dict from command-line
-        # args if available
+        # override metadata set from command-line metadata args if available
         md = {
-            # command-line params stored in config
-            config.MetaKeys.RESOLUTIONS: (
-                config.resolutions[0] if config.resolutions else None),
-            config.MetaKeys.MAGNIFICATION: config.magnification,
-            
-            # command-line params only stored in the dict
-            config.MetaKeys.ZOOM: config.zoom,
+            config.MetaKeys.RESOLUTIONS: config.meta_dict[
+                config.MetaKeys.RESOLUTIONS],
+            config.MetaKeys.MAGNIFICATION: config.meta_dict[
+                config.MetaKeys.MAGNIFICATION],
+            config.MetaKeys.ZOOM: config.meta_dict[config.MetaKeys.ZOOM],
             config.MetaKeys.SHAPE: config.meta_dict[config.MetaKeys.SHAPE],
             config.MetaKeys.DTYPE: config.meta_dict[config.MetaKeys.DTYPE],
         }
         for key, val in md.items():
-            if import_md[key] is None:
+            if val is not None:
+                # explicitly set metadata takes precedence over extracted vals
                 import_md[key] = val
     
     # LOAD MAIN IMAGE

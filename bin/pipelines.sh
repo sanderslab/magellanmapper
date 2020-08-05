@@ -42,12 +42,13 @@ Arguments:
 # "/data/exp_yyyy-mm-dd/WT-cortex.czi"
 IMG="/path/to/your/image"
 
-# lens objective settings
-# TODO: option to gather automatically by importing metadata from
-# original file, though can take awhile for large files
-resolutions="0.913,0.913,4.935"
-magnification="5.0"
-zoom="1.0"
+# microscope objective settings
+# leave empty to use metadata extracted by stitcher into TIFFs
+# TODO: option to import all metadata from original file, though can take
+# awhile for large files
+resolutions=""
+magnification=""
+zoom=""
 
 # parent path of image directory in cloud such as AWS S3, excluding the 
 # protocol ("s3://"); eg "MyName/ClearingExps"
@@ -530,6 +531,23 @@ fi
 
 clr_img="$IMG"
 start_stitching=$SECONDS
+
+# set metadata for image import
+meta=(--set_meta)
+if [[ -n "$resolutions" ]]; then
+  meta+=("resolutions=$resolutions")
+fi
+if [[ -n "$magnification" ]]; then
+  meta+=("magnification=$magnification")
+fi
+if [[ -n "$zoom" ]]; then
+  meta+=("zoom=$zoom")
+fi
+if [[ "${#meta[@]}" -lt 2 ]]; then
+  # reset metadata if no args given
+  meta=()
+fi
+
 if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   # ALTERNATIVE 1: Stitching plugin (old)
   
@@ -548,8 +566,7 @@ if [[ "$stitch_pathway" = "${STITCH_PATHWAYS[0]}" ]]; then
   # (0, 0, 0)
   bin/stitch.sh -f "$IMG" -o "$TIFF_DIR" -s "stitching" -w 1 -j "$java_home"
   python -u -m magmap.io.cli -v --img "$TIFF_DIR" --channel 0 \
-    --proc import_only --set_meta resolutions="$resolutions" \
-    magnification="$magnification" zoom="$zoom" "${EXTRA_ARGS[@]}"
+    --proc import_only "${meta[@]}" "${EXTRA_ARGS[@]}"
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
   
 elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
@@ -592,8 +609,7 @@ elif [[ "$stitch_pathway" = "${STITCH_PATHWAYS[1]}" ]]; then
   # Import stacked TIFF file(s) into Numpy arrays for MagellanMapper
   start=$SECONDS
   python -u -m magmap.io.cli -v --img "${OUT_DIR}/${OUT_NAME_BASE}.tif" \
-    --proc import_only --set_meta resolutions="$resolutions" \
-    magnification="$magnification" zoom="$zoom" "${EXTRA_ARGS[@]}"
+    --proc import_only "${meta[@]}" "${EXTRA_ARGS[@]}"
   summary_msg+=("Stitched file import time: $((SECONDS - start)) s")
   clr_img="${OUT_DIR}/${OUT_NAME_BASE}.${EXT}"
 fi

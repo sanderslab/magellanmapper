@@ -1,5 +1,48 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.5
+
+This release streamlines refreshing and overlaying images through the GUI. Workarounds are also provided for several installation/dependency issues.
+
+### Changes
+
+GUI
+- Multiple intensity images can be selected through the GUI to overlay
+- Refreshes images in each viewer after a new image has been loaded
+- Selecting an ROI dropdown menu entry updates the current viewer
+- Fixed retaining prior images and resolutions from previously loaded image during the session
+- Fixed setting the initially displayed channel from the command-line
+- Fixed to show the labels reference file if loaded from command-line
+- Fixed loading ROI Editor layouts with 3D screenshots if the 3D viewer had not been opened yet 
+- Fixed 3D viewer orientation when opening the tab for the first time during a session
+- Fixed blob detections to appear in both the ROI Editor and 3D viewer
+
+CLI
+- Simplify loading only images by registration suffix to allow specifying a directory as such: `--img <dir> --reg_suffixes [atlas-img] [annotation-img]`
+
+I/O
+- Resolutions are easier to read with fewer decimal places shown
+- Filenames are saved in the database experiments table without extension to allow more naming flexibility
+- Fixed applying objective magnification and zoom metadata to multi-plane image imports
+
+Server pipelines
+- Removed default microscope objective metadata now that metadata is extracted from input files when possible
+
+Python stats and plots
+- Fixed loading discrete, symmetric colormaps with an even number of colors
+
+### Dependency Updates
+
+#### Python Dependency Changes
+
+- PyQt is now specified explicitly for Conda environment installs to avoid installing an older release (ie was installing v5.9 instead of v5.12)
+- Matplotlib v3.2 is installed because of performance slowdown especially during mouseover of images when using the latest current release (v3.3)
+- Fixed `setup.py` to include PyYAML (dependency introduced in MagellanMapper v1.2.1)
+
+#### Server dependency Changes
+
+- `Dockerfile`s are included, with one version based on Miniconda3 and another on Ubuntu 18.04
+
 ## MagellanMapper v1.3.4
 
 This release eases ROI setup and fixes a number of channel, import, and installer issues.

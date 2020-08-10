@@ -11,6 +11,7 @@ import numpy as np
 from scipy import optimize
 from scipy.spatial import distance
 from skimage.feature import blob_log
+from skimage import morphology
 
 from magmap.settings import config
 from magmap.cv import cv_nd
@@ -1023,6 +1024,60 @@ def meas_detection_accuracy(blobs, verified=False, treat_maybes=0):
         all_pos, true_pos, false_pos, false_neg)
     msg = "Detection stats {}:\n{}".format(maybe_msg, msg)
     return sens, ppv, msg
+
+
+def colocalize_blobs(roi, blobs):
+    """Co-localize blobs from different channels based on surrounding
+    intensities.
+    
+    Thresholds for detection are first identified in each channel by taking
+    the blobs in the given channel, finding the surrounding intensities,
+    and taking a low (5th) percentile. Then for each channel, the
+    surrounding intensities of blobs in that channel are compared with
+    the thresholds in the other channels. Blobs exceeding any given
+    threshold are considered to co-localize in that channel.
+    
+    Args:
+        roi (:obj:`np.ndarray`): Region of interest as a 3D+channel array.
+        blobs (:obj:`np.ndarray`): Blobs as a 2D array in the format
+            ``[n, [z, y, x, radius, confirmation, truth, channel...]]``.
+
+    Returns:
+        List[List[int]]: Nested list containing lists of channels for each
+        blob in which signal is present in those channels at the same
+        location.
+
+    """
+    threshs = []
+    selem = morphology.ball(2)
+    for chl in range(roi.shape[3]):
+        # set a low percentile of intensities surrounding all blobs in channel
+        # as threshold for that channel
+        mask = np.zeros(roi.shape[:3], dtype=int)
+        mask[tuple(libmag.coords_for_indexing(blobs[:, :3].astype(int)))] = 1
+        mask = morphology.binary_dilation(mask, selem=selem)
+        threshs.append(np.percentile(roi[mask, chl], 5))
+    
+    channels = np.unique(get_blobs_channel(blobs)).astype(int)
+    colocs = [[] for _ in blobs]
+    for chl in channels:
+        # label a mask with blob indices surrounding each blob
+        blobs_chl_mask = np.isin(get_blobs_channel(blobs), chl)
+        mask = np.ones(roi.shape[:3], dtype=int) * -1
+        blobs_range = np.where(blobs_chl_mask)[0]
+        mask[tuple(libmag.coords_for_indexing(
+            blobs[blobs_chl_mask, :3].astype(int)))] = blobs_range
+        mask = morphology.dilation(mask, selem=selem)
+        for chl_other in channels:
+            for blobi in blobs_range:
+                mask_blob = mask == blobi
+                if np.mean(roi[mask_blob, chl_other]) > threshs[chl_other]:
+                    # intensities in another channel around blob's position
+                    # is above that channel's threshold
+                    colocs[blobi].append(chl_other)
+    for blob, coloc in zip(blobs, colocs):
+        print(blob, coloc)
+    return colocs
 
 
 def show_blobs_per_channel(blobs):

@@ -286,8 +286,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
             in the overview plots; defaults to None.
         fn_redraw (func): Function to call when double-clicking in an
             overview plot; defaults to None.
-        blob_matches (List[:obj:`magmap.io.sqlite.BlobMatch`]): Sequence
-            of blob matches; defaults to None.
+        blobs (:obj:`magmap.cv.detector.Blobs`]): Blobs object; defaults
+            to None. Blobs should have coordinates relative to the ROI
+            and may include blobs from adjacent regions.
     """
     ROI_COLS = 9
 
@@ -352,7 +353,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.zoom_shift = None
         self.fn_update_coords = None
         self.fn_redraw = None
-        self.blob_matches = None
+        self.blobs = None
         self._z_overview = None
         
         # store DraggableCircles objects to prevent premature garbage collection
@@ -495,7 +496,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 break
     
     def plot_2d_stack(self, fn_update_seg, filename, channel,
-                      roi_size, offset, segments, mask_in, segs_cmap,
+                      roi_size, offset, mask_in, blobs_cmap,
                       fn_close_listener, border=None, plane=config.PLANE[0],
                       zoom_levels=1, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
@@ -510,13 +511,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
             channel: Channel of the image to display.
             roi_size: List of x,y,z dimensions of the ROI.
             offset: Tuple of x,y,z coordinates of the ROI.
-            segments: Numpy array of segments to display in the subplot, which
-                can be None. Segments are generally given as an (n, 4)
-                dimension array, where each segment is in (z, y, x, radius), and
-                coordinates are relative to ``offset``.
-                This array can include adjacent segments as well.
             mask_in: Boolean mask of ``segments`` within the ROI.
-            segs_cmap: Colormap for segments inside the ROI.
+            blobs_cmap: Colormap for blobs inside the ROI.
             fn_close_listener: Handle figure close events.
             border: Border dimensions in pixels given as (x, y, z); defaults
                 to None.
@@ -595,26 +591,27 @@ class ROIEditor(plot_support.ImageSyncMixin):
         # adjust array order based on which plane to show
         border_full = np.copy(border)
         border[2] = 0
+        blobs = self.blobs.blobs if self.blobs else None
         if plane == config.PLANE[1]:
             # "xz" planes; flip y-z to give y-planes instead of z
             roi_size = libmag.swap_elements(roi_size, 1, 2)
             offset = libmag.swap_elements(offset, 1, 2)
             border = libmag.swap_elements(border, 1, 2)
             border_full = libmag.swap_elements(border_full, 1, 2)
-            if segments is not None and len(segments) > 0:
-                segments[:, [0, 1]] = segments[:, [1, 0]]
+            if blobs is not None and len(blobs) > 0:
+                blobs[:, [0, 1]] = blobs[:, [1, 0]]
         elif plane == config.PLANE[2]:
             # "yz" planes; roll backward to flip x-z and x-y
             roi_size = libmag.roll_elements(roi_size, -1)
             offset = libmag.roll_elements(offset, -1)
             border = libmag.roll_elements(border, -1)
             border_full = libmag.roll_elements(border_full, -1)
-            print("orig segments:\n{}".format(segments))
-            if segments is not None and len(segments) > 0:
+            print("orig blobs:\n{}".format(blobs))
+            if blobs is not None and len(blobs) > 0:
                 # roll forward since segments in zyx order
-                segments[:, [0, 2]] = segments[:, [2, 0]]
-                segments[:, [1, 2]] = segments[:, [2, 1]]
-                print("rolled segments:\n{}".format(segments))
+                blobs[:, [0, 2]] = blobs[:, [2, 0]]
+                blobs[:, [1, 2]] = blobs[:, [2, 1]]
+                print("rolled blobs:\n{}".format(blobs))
         print("2D border: {}".format(border))
 
         # mark z-planes to show
@@ -748,9 +745,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 # ctrl combo and this event is control
                 pass
             elif event.key == "control" or event.key.startswith("ctrl"):
-                seg_channel = None
+                blob_channel = None
                 if channel:
-                    seg_channel = channel[0]
+                    blob_channel = channel[0]
                     num_chls = len(channel)
                     if num_chls > 1:
                         chl_matches = re.search(regex_key_chl, event.key)
@@ -758,7 +755,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                             # ctrl+n to specify the n-th channel
                             chl = int(chl_matches[0])
                             if chl < num_chls:
-                                seg_channel = channel[chl]
+                                blob_channel = channel[chl]
                             else:
                                 print("selected channel index {} not within"
                                       " range up to index {}"
@@ -768,16 +765,16 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     axi = self._ax_subplots.index(inax)
                     if (axi != -1 and z_planes_padding <= axi
                             < z_planes - z_planes_padding):
-                        seg = np.array([[axi - z_planes_padding,
+                        blob = np.array([[axi - z_planes_padding,
                                          event.ydata.astype(int),
                                          event.xdata.astype(int), -5]])
-                        seg = detector.format_blobs(seg, seg_channel)
-                        detector.shift_blob_abs_coords(seg, offset[::-1])
-                        detector.update_blob_confirmed(seg, 1)
-                        seg = fn_update_seg(seg[0])
+                        blob = detector.format_blobs(blob, blob_channel)
+                        detector.shift_blob_abs_coords(blob, offset[::-1])
+                        detector.update_blob_confirmed(blob, 1)
+                        blob = fn_update_seg(blob[0])
                         # adds a circle to denote the new segment
                         patch = self._plot_circle(
-                            inax, seg, self._BLOB_LINEWIDTH, "-",
+                            inax, blob, self._BLOB_LINEWIDTH, "-",
                             fn_update_seg)
                 except ValueError as e:
                     print(e)
@@ -833,25 +830,25 @@ class ROIEditor(plot_support.ImageSyncMixin):
             fig.canvas.mpl_connect("button_press_event", self._redraw)
 
         # zoomed-in views of z-planes spanning from just below to just above ROI
-        segs_in = None
-        segs_out = None
-        if (circles != self.CircleStyles.NO_CIRCLES and segments is not None
-                and len(segments) > 0):
+        blobs_in = None
+        blobs_out = None
+        if (circles != self.CircleStyles.NO_CIRCLES and blobs is not None
+                and len(blobs) > 0):
             # separate segments inside from outside the ROI
             if mask_in is not None:
-                segs_in = segments[mask_in]
-                segs_out = segments[np.invert(mask_in)]
+                blobs_in = blobs[mask_in]
+                blobs_out = blobs[np.invert(mask_in)]
             # separate out truth blobs
-            if segments.shape[1] >= 6:
+            if blobs.shape[1] >= 6:
                 if blobs_truth is None:
-                    blobs_truth = segments[segments[:, 5] >= 0]
+                    blobs_truth = blobs[blobs[:, 5] >= 0]
                 print("blobs_truth:\n{}".format(blobs_truth))
                 # non-truth blobs have truth flag unset (-1)
-                if segs_in is not None:
-                    segs_in = segs_in[segs_in[:, 5] == -1]
-                if segs_out is not None:
-                    segs_out = segs_out[segs_out[:, 5] == -1]
-                #print("segs_in:\n{}".format(segs_in))
+                if blobs_in is not None:
+                    blobs_in = blobs_in[blobs_in[:, 5] == -1]
+                if blobs_out is not None:
+                    blobs_out = blobs_out[blobs_out[:, 5] == -1]
+                #print("blobs_in:\n{}".format(blobs_in))
 
         # selected or newly added patches since difficult to get patch from
         # collection,and they don't appear to be individually editable
@@ -903,7 +900,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 ax_z = self.show_subplot(
                     fig, gs_zoomed, i, j, channel, roi_size,
                     zoom_offset, fn_update_seg,
-                    segs_in, segs_out, segs_cmap, alpha, z_relative,
+                    blobs_in, blobs_out, blobs_cmap, alpha, z_relative,
                     z == self._z_overview, border_full if show_border else None,
                     plane, roi_show, labels, blobs_truth_z, circles=circles,
                     aspect=aspect, grid=grid, cmap_labels=cmap_labels)
@@ -977,7 +974,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 cols = col_remainder
             # show zoomed in plots and highlight one at offset z
             for j in range(cols):
-                # z relative to the start of the ROI, since segs relative to ROI
+                # z relative to start of ROI, since blobs are relative to ROI
                 z = i * zoom_plot_cols + j
                 zoom_offset[2] = z
 
@@ -1253,9 +1250,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
                         self._plot_circle(
                             ax, seg, self._BLOB_LINEWIDTH, None, fn_update_seg)
                 
-                if self.blob_matches is not None:
+                if (self.blobs is not None
+                        and self.blobs.blob_matches is not None):
                     # show blob matches by corresponding number labels
-                    for i, match in enumerate(self.blob_matches):
+                    for i, match in enumerate(self.blobs.blob_matches):
                         for j, blob in enumerate((match.blob1, match.blob2)):
                             blob_rel = np.subtract(blob[:3], offset[::-1])
                             if blob_rel[0] != 0: continue

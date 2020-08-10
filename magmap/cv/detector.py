@@ -30,6 +30,27 @@ CONFIRMATION = {
 }
 
 
+class Blobs:
+    """Blob storage class.
+    
+    Attributes:
+        blobs (:obj:`np.ndarray`): 2D Numpy array of blobs in the format
+            ``[[z, y, x, radius, ...], ...]``; defaults to None.
+        blob_matches (:obj:`magmap.io.sqlite.BlobMatch`): Sequence of blob
+            matches; defaults to None.
+        colocalizations (:obj:`np.ndarray`): 2D Numpy array of same length
+            as ``blobs`` with a column for each channel, where 0 = no
+            signal and 1 = signal at the corresponding blob's location
+            in the given and channel; defaults to None.
+    
+    """
+    
+    def __init__(self):
+        self.blobs = None
+        self.blob_matches = None
+        self.colocalizations = None
+
+
 def calc_scaling_factor():
     """Calculates the tolerance based on the resolutions, using the 
     first resolution.

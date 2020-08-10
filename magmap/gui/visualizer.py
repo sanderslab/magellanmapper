@@ -834,6 +834,7 @@ class Visualization(HasTraits):
         # self._structure_scale = self._structure_scale_high
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
         self._blob_matches = None
+        self.blobs = detector.Blobs()
 
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
@@ -1310,7 +1311,7 @@ class Visualization(HasTraits):
         """Resets the saved segments.
         """
         self.segments = None
-        self._blob_matches = None
+        self.blobs = detector.Blobs()
         self.segs_pts = None
         self.segs_in_mask = None
         self.labels = None
@@ -1843,6 +1844,7 @@ class Visualization(HasTraits):
             # convert segments to visualizer table format and plot
             self.segments = detector.shift_blob_abs_coords(
                 segs_all, offset[::-1])
+            self.blobs.blobs = self.segments
             self.show_3d_blobs()
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
@@ -1996,7 +1998,7 @@ class Visualization(HasTraits):
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
         stack_args = (
             self.update_segment, filename_base, config.channel,
-            curr_roi_size, curr_offset, self.segments, self.segs_in_mask,
+            curr_roi_size, curr_offset, self.segs_in_mask,
             self.segs_cmap, self._roi_ed_close_listener,
             # additional args with defaults
             self._full_border(self.border), self._planes_2d[0].lower())
@@ -2007,7 +2009,7 @@ class Visualization(HasTraits):
         roi_ed.zoom_shift = config.plot_labels[config.PlotLabels.ZOOM_SHIFT]
         roi_ed.fn_update_coords = self.set_offset
         roi_ed.fn_redraw = self.redraw_selected_viewer
-        roi_ed.blob_matches = self._blob_matches
+        roi_ed.blobs = self.blobs
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
@@ -2220,7 +2222,7 @@ class Visualization(HasTraits):
                 chls = np.unique(detector.get_blobs_channel(blobs))
                 if len(chls) == 1:
                     self._channel = [str(int(chls[0]))]
-            self._blob_matches = config.db.select_blob_matches(roi_id)
+            self.blobs.blob_matches = config.db.select_blob_matches(roi_id)
             self.detect_blobs(blobs)
             roi_editor.verify = True
         else:

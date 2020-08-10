@@ -354,12 +354,22 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.fn_update_coords = None
         self.fn_redraw = None
         self.blobs = None
+        self._blobs_coloc_text = None
         self._z_overview = None
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
         self._circle_last_picked = []
         self._ax_subplots = []
+
+        # additional z's above/below
+        margin = config.plot_labels[config.PlotLabels.MARGIN]
+        if margin is None:
+            self._z_planes_padding = 3
+        else:
+            # assumes x,y,z order
+            self._z_planes_padding = libmag.get_if_within(margin, 2, 3)
+        print("margin: {}, savefig: {}".format(margin, config.savefig))
 
     def _show_overview(self, ax_ov, lev, zoom_levels, arrs_3d, cmap_labels,
                        aspect, origin, scaling, max_size):
@@ -617,15 +627,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         # mark z-planes to show
         z_start = offset[2]
         z_planes = roi_size[2]
-        # additional z's above/below
-        margin = config.plot_labels[config.PlotLabels.MARGIN]
-        if margin is None:
-            z_planes_padding = 3
-        else:
-            # assumes x,y,z order
-            z_planes_padding = libmag.get_if_within(margin, 2, 3)
-        print("margin: {}, savefig: {}".format(margin, config.savefig))
-        z_planes = z_planes + z_planes_padding * 2
+        z_planes = z_planes + self._z_planes_padding * 2
 
         # position overview at bottom (default), middle, or top of stack
         self._z_overview = z_start # abs positioning
@@ -692,7 +694,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             if event.inaxes in self._ax_subplots:
                 # right-arrow to jump to z-plane of given zoom plot
                 z_ov = (self._ax_subplots.index(event.inaxes) + z_start
-                        - z_planes_padding)
+                        - self._z_planes_padding)
             return z_ov
 
         def scroll_overview(event):
@@ -717,7 +719,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             # show a colored border around zoomed plot corresponding to
             # overview plots
             for axi, axz in enumerate(self._ax_subplots):
-                if axi + z_start - z_planes_padding == self._z_overview:
+                if axi + z_start - self._z_planes_padding == self._z_overview:
                     # highlight border
                     axz.patch.set_edgecolor("orange")
                     axz.patch.set_linewidth(3)
@@ -763,9 +765,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                 return
                 try:
                     axi = self._ax_subplots.index(inax)
-                    if (axi != -1 and z_planes_padding <= axi
-                            < z_planes - z_planes_padding):
-                        blob = np.array([[axi - z_planes_padding,
+                    if (axi != -1 and self._z_planes_padding <= axi
+                            < z_planes - self._z_planes_padding):
+                        blob = np.array([[axi - self._z_planes_padding,
                                          event.ydata.astype(int),
                                          event.xdata.astype(int), -5]])
                         blob = detector.format_blobs(blob, blob_channel)
@@ -789,7 +791,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     _circle_last_picked_len - 1]
                 circle, move_type = moved_item
                 axi = self._ax_subplots.index(inax)
-                dz = axi - z_planes_padding - circle.segment[0]
+                dz = axi - self._z_planes_padding - circle.segment[0]
                 seg_old = np.copy(circle.segment)
                 seg_new = np.copy(circle.segment)
                 seg_new[0] += dz
@@ -870,8 +872,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 cols = col_remainder
             # show zoomed in plots and highlight one at offset z
             for j in range(cols):
-                # z relative to the start of ROI, since segs are relative to ROI
-                z_relative = i * zoom_plot_cols + j - z_planes_padding
+                # z relative to the start of ROI, since blobs are relative to ROI
+                z_relative = i * zoom_plot_cols + j - self._z_planes_padding
                 # absolute z value, relative to start of image5d
                 z = z_start + z_relative
                 zoom_offset = (offset[0], offset[1], z)
@@ -1355,6 +1357,45 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if radius < config.POS_THRESH:
             radius *= -1
         return radius
+    
+    def show_colocalized_blobs(self, visible):
+        """Show blob co-localization by overlaying text showing all the
+        channels with signal at each blob's position.
+        
+        Args:
+            visible (bool): True to make the co-localization text visible.
+
+        """
+        if self._blobs_coloc_text:
+            for text in self._blobs_coloc_text:
+                # change existing label's visibility
+                text.set_visible(visible)
+        
+        else:
+            if (not visible or self.blobs is None or self.blobs.blobs is None
+                    or self.blobs.colocalizations is None):
+                return
+            # show labels for each blob
+            self._blobs_coloc_text = []
+            for i, ax in enumerate(self._ax_subplots):
+                # get blobs at given z-val relative to ROI, shifting  for
+                # plots in the padding region above and below the ROI
+                z = i - self._z_planes_padding
+                if i < 0: continue
+                mask = self.blobs.blobs[:, 0] == z
+                blobs = self.blobs.blobs[mask]
+                colocs = self.blobs.colocalizations[mask]
+                
+                for j, (blob, coloc) in enumerate(zip(blobs, colocs)):
+                    # overlay the channels with signal at given blob position
+                    self._blobs_coloc_text.append(ax.text(
+                        blob[2], blob[1],
+                        ",".join([str(c) for c in np.where(coloc > 0)[0]]),
+                        color="C{}".format(
+                            int(detector.get_blob_channel(blob))),
+                        alpha=0.8, horizontalalignment="center",
+                        verticalalignment="center"))
+        self.fig.canvas.draw_idle()
     
     def set_circle_visibility(self, visible):
         """Set the visibility of detection circles.

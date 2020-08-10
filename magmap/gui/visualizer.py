@@ -402,9 +402,10 @@ class Visualization(HasTraits):
     # Detect panel
     
     btn_detect = Button("Detect")
+    _colocalize_visible = Bool(False)
     btn_save_segments = Button("Save Blobs")
     _segs_visible = Bool(True)
-    _segments = Array
+    _segments = Array  # table of blobs
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
     _scale_detections_high = Float  # needs to be trait to dynamically update
@@ -666,6 +667,8 @@ class Visualization(HasTraits):
             Item("btn_detect", show_label=False),
             Item("btn_save_segments", show_label=False),
             Item("_segs_visible", label="Visible", editor=BooleanEditor()),
+            Item("_colocalize_visible", label="Co-localize",
+                 editor=BooleanEditor()),
         ),
         Item("scale_detections",
              editor=RangeEditor(
@@ -1791,6 +1794,7 @@ class Visualization(HasTraits):
         if config.image5d is None:
             print("Main image has not been loaded, cannot show detect blobs")
             return
+        self._reset_segments()
         
         # process ROI in prep for showing filtered 2D view and segmenting
         self._segs_visible = True
@@ -1873,6 +1877,8 @@ class Visualization(HasTraits):
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.scene.mlab.outline()
         self.redraw_selected_viewer(clear=False)
+        if self._colocalize_visible:
+            self._colocalize_blobs()
     
     def show_3d_blobs(self):
         roi_size = self.roi_array[0].astype(int)
@@ -1887,7 +1893,23 @@ class Visualization(HasTraits):
         scale = float(libmag.format_num(scale, 4))
         self._scale_detections_high = scale * 2
         self.scale_detections = scale
-    
+
+    @on_trait_change("_colocalize_visible")
+    def _colocalize_blobs(self):
+        """Toggle blob co-localization label visibility.
+        
+        Return immediately if blobs have not been detected. Find and display
+        co-localizations if they have not been found yet. Turn off the
+        labels if the visibility flag is set to False.
+
+        """
+        if self.blobs.blobs is None: return
+        if self.blobs.colocalizations is None:
+            self.blobs.colocalizations = detector.colocalize_blobs(
+                self.roi, self.blobs.blobs)
+        if self.roi_ed:
+            self.roi_ed.show_colocalized_blobs(self._colocalize_visible)
+        
     @on_trait_change("_segs_visible")
     def _update_blob_visibility(self):
         """Change blob visibilty based on toggle check box."""

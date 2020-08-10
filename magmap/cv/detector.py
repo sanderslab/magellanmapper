@@ -1061,12 +1061,13 @@ def colocalize_blobs(roi, blobs):
     Args:
         roi (:obj:`np.ndarray`): Region of interest as a 3D+channel array.
         blobs (:obj:`np.ndarray`): Blobs as a 2D array in the format
-            ``[n, [z, y, x, radius, confirmation, truth, channel...]]``.
+            ``[[z, y, x, radius, confirmation, truth, channel...], ...]``.
 
     Returns:
-        List[List[int]]: Nested list containing lists of channels for each
-        blob in which signal is present in those channels at the same
-        location.
+        :obj:`np.ndarray`: 2D Numpy array of same length as ``blobs`` with
+        a column for each channel where 1 indicates that the corresponding
+        blob has signal is present in the given channels at the blob's
+        location, and 0 indicates insufficient signal.
 
     """
     threshs = []
@@ -1080,7 +1081,7 @@ def colocalize_blobs(roi, blobs):
         threshs.append(np.percentile(roi[mask, chl], 5))
     
     channels = np.unique(get_blobs_channel(blobs)).astype(int)
-    colocs = [[] for _ in blobs]
+    colocs = np.zeros((blobs.shape[0], len(channels)), dtype=np.uint8)
     for chl in channels:
         # label a mask with blob indices surrounding each blob
         blobs_chl_mask = np.isin(get_blobs_channel(blobs), chl)
@@ -1095,9 +1096,7 @@ def colocalize_blobs(roi, blobs):
                 if np.mean(roi[mask_blob, chl_other]) > threshs[chl_other]:
                     # intensities in another channel around blob's position
                     # is above that channel's threshold
-                    colocs[blobi].append(chl_other)
-    for blob, coloc in zip(blobs, colocs):
-        print(blob, coloc)
+                    colocs[blobi, chl_other] = 1
     return colocs
 
 

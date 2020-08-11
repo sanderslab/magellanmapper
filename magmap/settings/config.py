@@ -75,7 +75,9 @@ subimg_sizes = None
 
 image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
-blobs = None  # blobs
+
+#: obj:`magmap.cv.detector.Blobs`: Blobs object.
+blobs = None
 
 #: :obj:`np.ndarray`: 2D array of shapes per time point in
 # ``[n_time_point, n_shape]`` format in case image5d is not available

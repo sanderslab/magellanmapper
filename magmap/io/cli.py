@@ -968,7 +968,7 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
     elif proc_type is config.ProcessTypes.EXPORT_BLOBS:
         # export blobs to CSV file
         from magmap.io import export_rois
-        export_rois.blobs_to_csv(config.blobs, filename_base)
+        export_rois.blobs_to_csv(config.blobs.blobs, filename_base)
         
     elif proc_type is config.ProcessTypes.DETECT:
         # detect blobs in the full image

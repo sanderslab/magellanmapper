@@ -1823,7 +1823,7 @@ class Visualization(HasTraits):
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
             segs_all, _ = detector.get_blobs_in_roi(
-                config.blobs, offset, roi_size, self._margin)
+                config.blobs.blobs, offset, roi_size, self._margin)
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)

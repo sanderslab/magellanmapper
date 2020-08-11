@@ -45,10 +45,11 @@ class Blobs:
     
     """
     
-    def __init__(self):
-        self.blobs = None
-        self.blob_matches = None
-        self.colocalizations = None
+    def __init__(self, blobs=None, blob_matches=None, colocalizations=None):
+        """Initialize blobs storage object."""
+        self.blobs = blobs
+        self.blob_matches = blob_matches
+        self.colocalizations = colocalizations
 
 
 def calc_scaling_factor():

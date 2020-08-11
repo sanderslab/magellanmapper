@@ -127,10 +127,10 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
             libmag.warn("unable to load nuclei coordinates for", img_path)
             continue
         # convert to physical units and display k-nearest-neighbors for nuclei
-        blobs = np.multiply(blobs[:, :3], res)
+        blobs_phys = np.multiply(blobs.blobs[:, :3], res)
         # TESTING: given the same blobs, simply shift
         #blobs = np.multiply(blobs[i*10000000:, :3], res)
-        _, _, dfs = knn_dist(blobs, knn_n, 2, 1000000, False)
+        _, _, dfs = knn_dist(blobs_phys, knn_n, 2, 1000000, False)
         if names is None:
             # default to naming from filename
             names_disp.append(os.path.basename(mod_path))
@@ -264,8 +264,8 @@ def cluster_blobs(img_path, suffix=None):
         return
     
     # append label IDs to blobs and scale to make isotropic
-    blobs = ClusterByLabel.cluster_by_label(
-        blobs[:, :3], labels_img_np, scaling, res)
-    print(blobs)
+    blobs_clus = ClusterByLabel.cluster_by_label(
+        blobs.blobs[:, :3], labels_img_np, scaling, res)
+    print(blobs_clus)
     out_path = libmag.combine_paths(mod_path, config.SUFFIX_BLOB_CLUSTERS)
-    np.save(out_path, blobs)
+    np.save(out_path, blobs_clus)

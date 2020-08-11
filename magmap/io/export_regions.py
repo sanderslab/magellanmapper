@@ -217,7 +217,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     print("using scaling: {}".format(scaling))
     # annotate blobs based on position
     blobs_ids, coord_scaled = ontology.get_label_ids_from_position(
-        blobs[:, :3], labels_img, scaling, 
+        blobs.blobs[:, :3], labels_img, scaling,
         return_coord_scaled=True)
     print("blobs_ids: {}".format(blobs_ids))
     

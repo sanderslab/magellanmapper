@@ -49,10 +49,10 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
     print("Loading blobs from", path)
     with np.load(path) as archive:
         info = read_np_archive(archive)
-        blobs = info["segments"]
-        print("loaded {} blobs".format(len(blobs)))
+        blobs = detector.Blobs(info["segments"])
+        print("Loaded {} blobs".format(len(blobs.blobs)))
         if config.verbose:
-            detector.show_blobs_per_channel(blobs)
+            detector.show_blobs_per_channel(blobs.blobs)
             print(info)
     if not check_scaling:
         return blobs
@@ -211,10 +211,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     print("Unable to load blobs file based on {}, will try "
                           "from {}".format(subimg_base, filename_base))
                     config.blobs = load_blobs(filename_base)
-                    config.blobs, _ = detector.get_blobs_in_roi(
-                        config.blobs, offset, size, reverse=False)
+                    config.blobs.blobs, _ = detector.get_blobs_in_roi(
+                        config.blobs.blobs, offset, size, reverse=False)
                     detector.shift_blob_rel_coords(
-                        config.blobs, np.multiply(offset, -1))
+                        config.blobs.blobs, np.multiply(offset, -1))
             else:
                 # load full image blobs
                 config.blobs = load_blobs(filename_base)

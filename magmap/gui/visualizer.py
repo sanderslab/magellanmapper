@@ -1811,6 +1811,7 @@ class Visualization(HasTraits):
 
         # collect segments in ROI and padding region, ensuring coordinates
         # are relative to offset
+        colocs = None
         if config.blobs is None:
             # on-the-fly blob detection, which includes border but not 
             # padding region; already in relative coordinates
@@ -1822,8 +1823,12 @@ class Visualization(HasTraits):
         else:
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
-            segs_all, _ = detector.get_blobs_in_roi(
+            segs_all, mask = detector.get_blobs_in_roi(
                 config.blobs.blobs, offset, roi_size, self._margin)
+            if config.blobs.colocalizations is not None:
+                # get corresponding blob co-localizations
+                colocs = config.blobs.colocalizations[mask]
+            
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)
@@ -1849,6 +1854,8 @@ class Visualization(HasTraits):
             self.segments = detector.shift_blob_abs_coords(
                 segs_all, offset[::-1])
             self.blobs.blobs = self.segments
+            if colocs is not None:
+                self.blobs.colocalizations = colocs
             self.show_3d_blobs()
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:

@@ -53,6 +53,12 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
         print("Loaded {} blobs".format(len(blobs.blobs)))
         if config.verbose:
             detector.show_blobs_per_channel(blobs.blobs)
+        if "colocs" in info:
+            blobs.colocalizations = info["colocs"]
+            if blobs.colocalizations is not None:
+                print("Loaded blob co-localizations for {} channels"
+                      .format(blobs.colocalizations.shape[1]))
+        if config.verbose:
             print(info)
     if not check_scaling:
         return blobs

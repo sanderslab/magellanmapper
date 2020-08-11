@@ -236,7 +236,7 @@ def shift_blob_rel_coords(blobs, offset):
 
 
 def shift_blob_abs_coords(blobs, offset):
-    blobs[..., -1*len(offset):] += offset
+    blobs[..., 7:7+len(offset)] += offset
     return blobs
 
 
@@ -249,9 +249,9 @@ def multiply_blob_rel_coords(blobs, factor):
 
 def multiply_blob_abs_coords(blobs, factor):
     if blobs is not None:
-        start = -1*len(factor)
-        abs_coords = blobs[..., start:] * factor
-        blobs[..., start:] = abs_coords.astype(np.int)
+        abs_slice = slice(7, 7 + len(factor))
+        abs_coords = blobs[..., abs_slice] * factor
+        blobs[..., abs_slice] = abs_coords.astype(np.int)
     return blobs
 
 

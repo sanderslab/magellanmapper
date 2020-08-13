@@ -41,7 +41,7 @@ while getopts hid:s: opt; do
       ;;
     s)
       se_dir="$OPTARG"
-      echo "Changed SimpleElastix directory to se_dir"
+      echo "Changed SimpleElastix directory to $se_dir"
       ;;
     i)
       install_wrapper=1
@@ -92,6 +92,10 @@ if [[ ! -d "$se_dir" ]]; then
   echo "Cloning SimpleElastix git repo to ${se_dir}..."
   git clone https://github.com/SuperElastix/SimpleElastix.git "$se_dir"
 fi
+# get absolute path of SimpleElastix directory
+cd "$se_dir" || { echo "Unable to find folder $se_dir, exiting"; exit 1; }
+se_dir="$(pwd)"
+cd - || exit 1
 
 if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
   # build SimpleElastix if not set to install or if the package doesn't exist

@@ -102,10 +102,10 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
   backup_file "$build_dir"
   mkdir "$build_dir"
   cd "$build_dir" || { echo "Unable to enter $build_dir, exiting"; exit 1; }
-  
+
   echo "Building SimpleElastix"
-  # run SuperBuild with flags to find clang on later Mac versions, 
-  # turn off all wrappers except the default Python wrapper, and 
+  # run SuperBuild with flags to find clang on later Mac versions,
+  # turn off all wrappers except the default Python wrapper, and
   # turn off virtual environment creation
   cmake -DCMAKE_CXX_COMPILER:STRING=/usr/bin/$compiler_cpp \
     -DCMAKE_C_COMPILER:STRING=/usr/bin/$compiler_c \
@@ -114,14 +114,22 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
     -DWRAP_TCL:BOOL=OFF -DWRAP_CSHARP:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF \
     -DBUILD_TESTING:BOOL=OFF -DSimpleITK_PYTHON_USE_VIRTUALENV:BOOL=OFF \
     "${se_dir}/SuperBuild"
-  
+
   # can change to -j1 for debugging to avoid multiple processes
   make -j4
+
+  # build distributions
+  echo "Generating source and platform wheel distributions..."
+  cd "$PKG" || { echo "$PKG does not exist, exiting"; exit 1; }
+  python Packaging/setup.py sdist
+  python Packaging/setup.py bdist_wheel
+  cd - || exit 1
 fi
+
 
 if [ $install_wrapper -eq 1 ]
 then
-  # install the newly or previously Python wrapper
+  # install the newly or previously built Python wrapper
   echo "Installing Python wrapper..."
   pkg_dir="${build_dir}/${PKG}"
   cd "$pkg_dir" || { echo "$pkg_dir does not exist, exiting"; exit 1; }

@@ -11,6 +11,9 @@ Turns off virtual environment creation to avoid conflicts with Anaconda.
 Also includes flags to turn off all wrappers except Python and all 
 example and test configurations.
 
+See here for more build details:
+https://github.com/sanderslab/magellanmapper/blob/master/docs/install.md#simpleelastix-dependency
+
 Arguments:
   -h: Show help and exit.
   -d [path]: Set a build directory path. Relative paths are relative to 
@@ -55,7 +58,7 @@ while getopts hid:s: opt; do
   esac
 done
 
-echo "Building SimpleElastix..."
+echo "Initating build of SimpleElastix..."
 
 # base directory is script's parent directory, and default repo and build dirs 
 # are in parent directory of base dir
@@ -70,7 +73,7 @@ if [[ -z "$build_dir" ]]; then
 fi
 
 # load dependencies
-source "${base_dir}/libclr.sh"
+source "${base_dir}/bin/libmag.sh"
 
 # find platform to determine compilers
 detect_platform

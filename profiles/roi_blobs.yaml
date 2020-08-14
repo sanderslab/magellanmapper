@@ -8,7 +8,7 @@ min_sigma_factor: 3 # make smaller to detect smaller blobs
 max_sigma_factor: 5 # make larger to detect larger blobs
 num_sigma: 10 # number of intermediate values between min/max
 detection_threshold: 0.1 # make smaller to detect lower intensity blobs
-overlap: 0.5 # overlap fraction from 0-1
+overlap: 0.5 # blob overlap fraction from 0-1; remove blob if above overlap
 
 # pixels to exclude along border after blob detection to avoid clumping
 # along image borders

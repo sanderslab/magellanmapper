@@ -4,6 +4,7 @@
 
 Convert regions from ontology files or atlases to data frames.
 """
+import itertools
 import os
 import csv
 from collections import OrderedDict
@@ -17,7 +18,7 @@ from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology
-from magmap.cv import chunking, cv_nd
+from magmap.cv import chunking, cv_nd, detector
 from magmap.io import df_io
 from magmap.io import sitk_io
 from magmap.plot import colormaps
@@ -169,7 +170,7 @@ def export_common_labels(img_paths, output_path):
 
 
 def make_density_image(img_path, scale=None, shape=None, suffix=None, 
-                       labels_img_sitk=None):
+                       labels_img_sitk=None, channel=None):
     """Make a density image based on associated blobs.
     
     Uses the shape of the registered labels image by default to set 
@@ -190,12 +191,23 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
             defaults to None, in which case the registered labels image file 
             corresponding to ``img_path`` with any ``suffix`` modifier 
             will be opened.
+        channel (List[int]): Sequence of channels to include in density image;
+            defaults to None to use all channels.
     
     Returns:
-        Tuple of the density image as a Numpy array in the same shape as 
-        the opened image; Numpy array of blob IDs; and the original 
-        ``img_path`` to track such as for multiprocessing.
+        :obj:`np.ndarray`, str: The density image as a Numpy array in the
+        same shape as the opened image and the original and ``img_path``
+        to track such as for multiprocessing.
     """
+    def make_heat_map():
+        # build heat map to store densities per label px and save to file
+        _, coord_scaled = ontology.get_label_ids_from_position(
+            blobs_chl[:, :3], labels_img, scaling,
+            return_coord_scaled=True)
+        print("coords", coord_scaled)
+        return cv_nd.build_heat_map(labels_img.shape, coord_scaled)
+    
+    # set up paths and get labels image
     mod_path = img_path
     if suffix is not None:
         mod_path = libmag.insert_before_ext(img_path, suffix)
@@ -203,6 +215,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
         labels_img_sitk = sitk_io.load_registered_img(
             mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_img = sitk.GetArrayFromImage(labels_img_sitk)
+    
     # load blobs
     blobs, scaling, _ = np_io.load_blobs(
         img_path, True, labels_img.shape, scale)
@@ -215,23 +228,26 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
         labels_img = np.zeros(shape, dtype=labels_img.dtype)
         labels_img_sitk.SetSpacing(labels_spacing[::-1])
     print("using scaling: {}".format(scaling))
-    # annotate blobs based on position
-    blobs_ids, coord_scaled = ontology.get_label_ids_from_position(
-        blobs.blobs[:, :3], labels_img, scaling,
-        return_coord_scaled=True)
-    print("blobs_ids: {}".format(blobs_ids))
     
-    # build heat map to store densities per label px and save to file
-    heat_map = cv_nd.build_heat_map(labels_img.shape, coord_scaled)
-    out_path = sitk_io.reg_out_path(
-        mod_path, config.RegNames.IMG_HEAT_MAP.value)
-    print("writing {}".format(out_path))
-    heat_map_sitk = sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)
-    sitk.WriteImage(heat_map_sitk, out_path, False)
-    return heat_map, blobs_ids, img_path
+    # annotate blobs based on position
+    blobs_chl = blobs.blobs
+    if channel is not None:
+        blobs_chl = blobs_chl[np.isin(detector.get_blobs_channel(
+            blobs_chl), channel)]
+    heat_map = make_heat_map()
+    print("heat map", heat_map.shape, heat_map.dtype)
+    imgs_write = {
+        config.RegNames.IMG_HEAT_MAP.value:
+            sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)}
+    
+    
+    # write images to file
+    sitk_io.write_reg_images(imgs_write, mod_path)
+    return heat_map, img_path
 
 
-def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
+def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None,
+                           channel=None):
     """Make density images for a list of files as a multiprocessing 
     wrapper for :func:``make_density_image``
     
@@ -246,6 +262,8 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
         suffix (str): Modifier to append to end of ``img_path`` basename for
             registered image files that were output to a modified name; 
             defaults to None.
+        channel (List[int]): Sequence of channels to include in density image;
+            defaults to None to use all channels.
     """
     start_time = time()
     pool = chunking.get_mp_pool()
@@ -253,9 +271,10 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
     for img_path in img_paths:
         print("making image", img_path)
         pool_results.append(pool.apply_async(
-            make_density_image, args=(img_path, scale, shape, suffix)))
+            make_density_image,
+            args=(img_path, scale, shape, suffix, None, channel)))
     for result in pool_results:
-        _, _, path = result.get()
+        _, path = result.get()
         print("finished {}".format(path))
     pool.close()
     pool.join()

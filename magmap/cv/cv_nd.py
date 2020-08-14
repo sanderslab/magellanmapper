@@ -795,17 +795,20 @@ def build_heat_map(shape, coords):
             and m = number of coordinate dimensions.
     
     Returns:
-        An image of shape ``shape`` with values corresponding 
-        to the number of point occurrences at each pixel.
+        :obj:`np.ndaarry`: An image of shape ``shape`` with values
+        corresponding to the number of point occurrences at each pixel.
     """
-    # get counts of points at the same coordinate as a measure of density
-    coords_unique, coords_count = np.unique(
-        coords, return_counts=True, axis=0)
-    coordsi = libmag.coords_for_indexing(coords_unique)
-    dtype = libmag.dtype_within_range(
-        0, np.amax(coords_count), True, False)
-    heat_map = np.zeros(shape, dtype=dtype)
-    heat_map[tuple(coordsi)] = coords_count
+    if coords is not None and len(coords) > 0:
+        # get counts of points at the same coordinate as a measure of density
+        coords_unique, coords_count = np.unique(
+            coords, return_counts=True, axis=0)
+        coordsi = libmag.coords_for_indexing(coords_unique)
+        dtype = libmag.dtype_within_range(0, np.amax(coords_count), True, False)
+        heat_map = np.zeros(shape, dtype=dtype)
+        heat_map[tuple(coordsi)] = coords_count
+    else:
+        # generate an array with small int type if no coords are available
+        heat_map = np.zeros(shape, dtype=np.uint8)
     return heat_map
 
 

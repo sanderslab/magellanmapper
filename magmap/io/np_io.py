@@ -38,10 +38,11 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
             set an atlas profile with the resizing factor.
 
     Returns:
-        :obj:`np.ndarray`, List, List: Array of blobs. If ``check_scaling``
-        is True, also returns sequence of scaling factors to a scaled or
-        resized image, or None if not loaded or given, and the resolutions
-        of the full-sized image in which the blobs were detected.
+        :obj:`magmap.cv.detector.Blobs`[, List, List]: Blobs object.
+        If ``check_scaling`` is True, also returns sequence of scaling
+        factors to a scaled or resized image, or None if not loaded or
+        given, and the resolutions of the full-sized image in which the
+        blobs were detected.
 
     """
     # load blobs and display counts
@@ -49,10 +50,12 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
     print("Loading blobs from", path)
     with np.load(path) as archive:
         info = read_np_archive(archive)
-        blobs = detector.Blobs(info["segments"])
-        print("Loaded {} blobs".format(len(blobs.blobs)))
-        if config.verbose:
-            detector.show_blobs_per_channel(blobs.blobs)
+        blobs = detector.Blobs()
+        if "segments" in info:
+            blobs.blobs = info["segments"]
+            print("Loaded {} blobs".format(len(blobs.blobs)))
+            if config.verbose:
+                detector.show_blobs_per_channel(blobs.blobs)
         if "colocs" in info:
             blobs.colocalizations = info["colocs"]
             if blobs.colocalizations is not None:

@@ -1812,7 +1812,7 @@ class Visualization(HasTraits):
         # collect segments in ROI and padding region, ensuring coordinates
         # are relative to offset
         colocs = None
-        if config.blobs is None:
+        if config.blobs is None or config.blobs.blobs is None:
             # on-the-fly blob detection, which includes border but not 
             # padding region; already in relative coordinates
             roi = self.roi

@@ -37,14 +37,18 @@ RUN wget https://ftp.gnu.org/gnu/glibc/glibc-2.27.tar.gz \
 USER $username
 
 # set up Conda environment for MagellanMapper
-COPY --chown=$username:$username bin/ ./bin/
 COPY --chown=$username:$username environment.yml ./
-RUN echo "y" | bin/setup_conda && echo "conda activate mag" >> ~/.bashrc \
-    && /home/$username/miniconda3/bin/conda clean --all \
+COPY --chown=$username:$username bin/setup_conda bin/libmag.sh ./bin/
+RUN echo "y" | bin/setup_conda \
+    && echo "conda activate mag" >> ~/.bashrc \
+    && eval "$(/home/"$username"/miniconda3/bin/conda shell.bash hook)" \
+    && conda clean --all \
     && rm -rf /home/$username/.cache/pip \
     && rm Miniconda3-latest-Linux-x86_64.sh
 
-# copy in rest of MagellanMapper files
-COPY --chown=$username:$username run.py setup.py LICENSE.txt ./
-COPY --chown=$username:$username magmap/ ./magmap/
-COPY --chown=$username:$username stitch/ ./stitch/
+# extract application contents from a git archive to use only files in
+# the repository; copy after Conda setup to avoid triggering rebuilding
+# prior layers for code updates
+COPY --chown=$username:$username magellanmapper_gitarc.tar.gz ./
+RUN tar xzvf magellanmapper_gitarc.tar.gz \
+    && rm magellanmapper_gitarc.tar.gz

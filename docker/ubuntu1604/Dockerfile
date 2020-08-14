@@ -5,13 +5,16 @@ FROM ubuntu:16.04
 
 # run with login Bash shell to allow Conda init
 SHELL ["/bin/bash", "--login", "-c"]
-
-# set up non-root user and allow access to Conda installation folder
 ENV BASE_DIR /app
+# set up non-root user with sudo access
 ARG username=magellan
-RUN mkdir /home/$username && groupadd -r $username \
+RUN mkdir /home/$username \
+    && groupadd -r $username \
     && useradd -r -s /bin/false -g $username $username \
-    && chown -R $username:$username /home/$username && mkdir $BASE_DIR \
+    && echo "$username:$username" | chpasswd \
+    && usermod -aG sudo $username \
+    && chown -R $username:$username /home/$username \
+    && mkdir $BASE_DIR \
     && chown -R $username:$username $BASE_DIR
 
 # install wget to download Miniconda

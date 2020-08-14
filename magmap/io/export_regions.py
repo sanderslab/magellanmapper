@@ -240,6 +240,29 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
         config.RegNames.IMG_HEAT_MAP.value:
             sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)}
     
+    if blobs.colocalizations is not None:
+        blob_chls = range(blobs.colocalizations.shape[1])
+        blob_chls_len = len(blob_chls)
+        if blob_chls_len > 1:
+            # get all channel combos that include given channels
+            combos = []
+            for r in range(2, blob_chls_len + 1):
+                combos.extend(
+                    [tuple(c) for c in itertools.combinations(blob_chls, r)
+                     if all([h in c for h in channel])])
+            
+            # create heat map for each co-localization combo as a separate
+            # channel in output image
+            heat_colocs = []
+            for combo in combos:
+                print("combo", combo)
+                blobs_chl = blobs.blobs[np.all(np.equal(
+                    blobs.colocalizations[:, combo], 1), axis=1)]
+                heat_colocs.append(make_heat_map())
+            heat_colocs = np.stack(heat_colocs, axis=3)
+            imgs_write[config.RegNames.IMG_HEAT_COLOC.value] = \
+                sitk_io.replace_sitk_with_numpy(
+                    labels_img_sitk, heat_colocs)
     
     # write images to file
     sitk_io.write_reg_images(imgs_write, mod_path)

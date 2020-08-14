@@ -384,6 +384,7 @@ class RegNames(Enum):
     IMG_GROUPED = "grouped.mhd"
     IMG_BORDERS = "borders.mhd"  # TODO: consider removing
     IMG_HEAT_MAP = "heat.mhd"
+    IMG_HEAT_COLOC = "heatColoc.mhd"
     IMG_ATLAS_EDGE = "atlasEdge.mhd"
     IMG_ATLAS_LOG = "atlasLoG.mhd"
     IMG_LABELS_PRECUR = "annotationPrecur.mhd"

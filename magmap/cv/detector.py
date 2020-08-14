@@ -114,7 +114,6 @@ def detect_blobs(roi, channel, exclude_border=None):
         Array of detected blobs, each given as 
             (z, row, column, radius, confirmation).
     """
-    # use 3D blob detection
     time_start = time()
     shape = roi.shape
     isotropic = config.roi_profile["isotropic"]
@@ -122,11 +121,12 @@ def detect_blobs(roi, channel, exclude_border=None):
         # interpolate for (near) isotropy during detection, using only the 
         # first process settings since applies to entire ROI
         roi = cv_nd.make_isotropic(roi, isotropic)
+    
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     blobs_all = []
-    for i in channels:
-        roi_detect = roi[..., i] if multichannel else roi
-        settings = config.get_roi_profile(i)
+    for chl in channels:
+        roi_detect = roi[..., chl] if multichannel else roi
+        settings = config.get_roi_profile(chl)
         # scaling as a factor in pixel/um, where scaling of 1um/pixel  
         # corresponds to factor of 1, and 0.25um/pixel corresponds to
         # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
@@ -154,7 +154,7 @@ def detect_blobs(roi, channel, exclude_border=None):
             libmag.printv("no blobs detected")
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
-        blobs = format_blobs(blobs_log, i)
+        blobs = format_blobs(blobs_log, chl)
         #print(blobs)
         blobs_all.append(blobs)
     if not blobs_all:
@@ -1071,18 +1071,21 @@ def colocalize_blobs(roi, blobs):
         location, and 0 indicates insufficient signal.
 
     """
+    if blobs is None or roi is None or len(roi.shape) < 4:
+        return None
     threshs = []
     selem = morphology.ball(2)
     for chl in range(roi.shape[3]):
-        # set a low percentile of intensities surrounding all blobs in channel
-        # as threshold for that channel
+        # set a percentile of intensities surrounding all blobs in channel
+        # as threshold for that channel, or the whole ROI if no blobs
         mask = np.zeros(roi.shape[:3], dtype=int)
         mask[tuple(libmag.coords_for_indexing(blobs[:, :3].astype(int)))] = 1
         mask = morphology.binary_dilation(mask, selem=selem)
-        threshs.append(np.percentile(roi[mask, chl], 5))
+        roi_mask = roi if np.sum(mask) < 1 else roi[mask, chl]
+        threshs.append(np.percentile(roi_mask, 50))
     
     channels = np.unique(get_blobs_channel(blobs)).astype(int)
-    colocs = np.zeros((blobs.shape[0], len(channels)), dtype=np.uint8)
+    colocs = np.zeros((blobs.shape[0], roi.shape[3]), dtype=np.uint8)
     for chl in channels:
         # label a mask with blob indices surrounding each blob
         blobs_chl_mask = np.isin(get_blobs_channel(blobs), chl)
@@ -1094,10 +1097,17 @@ def colocalize_blobs(roi, blobs):
         for chl_other in channels:
             for blobi in blobs_range:
                 mask_blob = mask == blobi
-                if np.mean(roi[mask_blob, chl_other]) > threshs[chl_other]:
+                blob_avg = np.mean(roi[mask_blob, chl_other])
+                if config.verbose:
+                    print(blobi, get_blob_channel(blobs[blobi]),
+                          blobs[blobi, :3], blob_avg, threshs[chl_other])
+                if blob_avg > threshs[chl_other]:
                     # intensities in another channel around blob's position
                     # is above that channel's threshold
                     colocs[blobi, chl_other] = 1
+    if config.verbose:
+        for i, (blob, coloc) in enumerate(zip(blobs, colocs)):
+            print(i, get_blob_channel(blob), blob[:3], coloc)
     return colocs
 
 

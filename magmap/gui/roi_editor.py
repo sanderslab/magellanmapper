@@ -23,6 +23,7 @@ from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
 
+from magmap.gui import pixel_display
 from magmap.gui import plot_editor
 from magmap.plot import colormaps
 from magmap.settings import config
@@ -1080,6 +1081,11 @@ class ROIEditor(plot_support.ImageSyncMixin):
             cmap_labels: :class:``colormaps.DiscreteColormap`` for labels;
                 defaults to None.
         """
+        def on_motion(event):
+            if event.inaxes == ax:
+                # update status bar based on position in axes
+                self.fn_status_bar(ax.format_coord.get_msg(event))
+        
         ax = fig.add_subplot(gs[row, col])
         plot_support.hide_axes(ax)
         size = self.image5d.shape
@@ -1129,7 +1135,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 roi = roi[tuple(region + [slice(None)])]
             else:
                 roi = roi[tuple(region)]
-            #print("roi shape: {}".format(roi.shape))
+            #print("roi shape:", roi.shape)
 
             if highlight:
                 # highlight borders of z plane at bottom of ROI
@@ -1143,8 +1149,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
 
             # show the ROI, which is now a 2D zoomed image
-            plot_support.imshow_multichannel(
-                ax, roi, channel, config.cmaps, aspect, alpha)
+            ax_imgs = [plot_support.imshow_multichannel(
+                ax, roi, channel, config.cmaps, aspect, alpha)]
             #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
 
             # show labels if provided and within ROI
@@ -1258,7 +1264,14 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                                fill=False, edgecolor="yellow",
                                                linestyle="dashed",
                                                linewidth=self._BLOB_LINEWIDTH))
-
+            
+            if self.fn_status_bar:
+                # set up status bar pixel display for mouseover
+                imgs2d = [roi if channel is None or len(roi.shape) < 3
+                          else roi[..., tuple(channel)]]
+                ax.format_coord = pixel_display.PixelDisplay(
+                    imgs2d, ax_imgs, offset=offset[1::-1])
+                fig.canvas.mpl_connect("motion_notify_event", on_motion)
         return ax
 
     def _circle_collection(self, segments, edgecolor, facecolor, linewidth):

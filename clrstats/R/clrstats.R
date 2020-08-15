@@ -440,7 +440,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       region.name <- df.region.nonnan$RegionName[1]
       if (is.na(region.name)) {
         title <- region
-        if (is.factor(title)) title <- as.character(title)
+        if (is.factor(title) | is.integer(title)) title <- as.character(title)
       } else {
         title <- paste0(region.name, " (", region, ")")
       }

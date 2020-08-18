@@ -1084,10 +1084,11 @@ def colocalize_blobs(roi, blobs):
         # set a percentile of intensities surrounding all blobs in channel
         # as threshold for that channel, or the whole ROI if no blobs
         mask = np.zeros(roi.shape[:3], dtype=int)
-        mask[tuple(libmag.coords_for_indexing(blobs_roi[:, :3].astype(int)))] = 1
+        mask[tuple(libmag.coords_for_indexing(
+            blobs_in_channel(blobs_roi, chl)[:, :3].astype(int)))] = 1
         mask = morphology.binary_dilation(mask, selem=selem)
         roi_mask = roi if np.sum(mask) < 1 else roi[mask, chl]
-        threshs.append(np.percentile(roi_mask, 50))
+        threshs.append(np.percentile(roi_mask, 15))
     
     channels = np.unique(get_blobs_channel(blobs_roi)).astype(int)
     colocs_roi = np.zeros((blobs_roi.shape[0], roi.shape[3]), dtype=np.uint8)

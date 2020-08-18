@@ -308,9 +308,21 @@ def merge_split_stack2(sub_rois, overlap, offset, output):
 
 
 def merge_blobs(blob_rois):
-    # combine all blobs into a master list so that each overlapping region
-    # will contain all blobs from all sub-ROIs that had blobs in those regions,
-    # obviating the need to pair sub-ROIs with one another
+    """Combine all blobs into a master list so that each overlapping region
+    will contain all blobs from all sub-ROIs that had blobs in those regions,
+    obviating the need to pair sub-ROIs with one another.
+    
+    Args:
+        blob_rois (:obj:`np.ndarray`): Blob from each sub-region defined by
+            :meth:`stack_splitter`. Blobs are assumed to be a 2D array
+            in the format ``[[z, y, x, ...], ...]``.
+
+    Returns:
+        :obj:`np.ndarray`: Merged blobs in 2D format of the format,
+        ``[[z, y, x, ..., sub_roi_z, sub_roi_y, sub_roi_x], ...]``, where
+        sub-ROI coordinates have been added as the final columns.
+
+    """
     blobs_all = []
     for z in range(blob_rois.shape[0]):
         for y in range(blob_rois.shape[1]):

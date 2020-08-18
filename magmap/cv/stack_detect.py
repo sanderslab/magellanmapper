@@ -512,7 +512,10 @@ class StackPruner(object):
     
     Attributes:
         blobs_to_prune: List of tuples to be passed to 
-            :meth:``detector.remove_close_blobs_within_sorted_array``.
+            :meth:``detector.remove_close_blobs``. The final colums should
+            have the coordinates of the sub-ROI in ``z, y, x`` order as
+            given by :meth:`chunking.merge_blobs`.
+    
     """
     blobs_to_prune = None
     
@@ -534,17 +537,29 @@ class StackPruner(object):
             i (int): Index in :attr:``blobs_to_prune``.
         
         Returns:
-            The results from 
-            :meth:``detector.remove_close_blobs_within_sorted_array``.
+            The results from :meth:`prune_overlap`.
         """
         return cls.prune_overlap(i, cls.blobs_to_prune[i])
 
     @classmethod
     def prune_overlap(cls, i, pruner):
+        """Prune overlapping blobs.
+        
+        Args:
+            i (int): Index of :attr:``blobs_to_prune``.
+            pruner: Corresponding value from :attr:``blobs_to_prune``.
+
+        Returns:
+            :obj:`np.ndarray`, tuple: Blobs after pruning and pruning ratio
+            metrics.
+
+        """
         blobs, axis, tol, blobs_next = pruner
-        axis_col = 10 + axis
         #print("orig blobs in axis {}, i {}\n{}".format(axis, i, blobs))
         if blobs is None: return None, None
+        
+        # assume that final columns hold sub-ROI coordinates in z,y,x order
+        axis_col = blobs.shape[1] - 3 + axis
         num_blobs_orig = len(blobs)
         print("num_blobs_orig in axis {}, {}: {}"
               .format(axis, i, num_blobs_orig))
@@ -583,10 +598,13 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
             ``overlap``. Defaults to None to use ``tol`` as padding.
     
     Returns:
-        Tuple of all blobs as a Numpy array and a data frame of 
-        pruning stats, or None for both if no blobs are in the ``seg_rois``.
+        :obj:`np.ndarray`, :obj:`pd.DataFrame`: All blobs as a Numpy array
+        and a data frame of pruning stats, or None for both if no blobs are
+        in the ``seg_rois``.
+    
     """
-    # collects all blobs in master array to group all overlapping regions
+    # collect all blobs in master array to group all overlapping regions,
+    # with sub-ROI coordinates as last 3 columns
     blobs_merged = chunking.merge_blobs(seg_rois)
     if blobs_merged is None:
         return None, None
@@ -727,7 +745,9 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
                 blobs = np.concatenate((blobs_all_non_ol, blobs_all_ol))
         # build up list from each channel
         blobs_all.append(blobs)
-    blobs_all = np.vstack(blobs_all)
+    
+    # merge blobs into Numpy array and remove sub-ROI coordinate columns
+    blobs_all = np.vstack(blobs_all)[:, :-3]
     print("total blobs after pruning:", len(blobs_all))
     
     # export blob ratios as data frame

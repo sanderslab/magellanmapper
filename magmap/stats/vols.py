@@ -193,7 +193,7 @@ def make_labels_edge(labels_img_np):
     # reference the labels image as a global variable
     LabelToEdge.set_labels_img_np(labels_img_np)
     
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for label_id in label_ids:
         pool_results.append(
@@ -801,7 +801,7 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
     
     metrics = {}
     grouping[config.AtlasMetrics.SIDE.value] = None
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     if label_ids is None:
         label_ids = np.unique(labels_img_np)
@@ -1048,7 +1048,7 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
     
     metrics = {}
     grouping[config.AtlasMetrics.SIDE.value] = None
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for label_id in label_ids:
         # include corresponding labels from opposite sides while skipping 

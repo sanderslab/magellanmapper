@@ -381,7 +381,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
                 mod_path)
         dfs_eros.append(df)
     
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for img_path, df in zip(img_paths, dfs_eros):
         print("setting up atlas segmentation merge for", img_path)

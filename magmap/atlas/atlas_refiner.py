@@ -677,7 +677,7 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes, spacing=None):
     Returns:
         Data frame of combined metrics from smoothing for each filter size.
     """
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for n in filter_sizes:
         pool_results.append(

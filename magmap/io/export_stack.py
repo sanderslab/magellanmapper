@@ -150,7 +150,7 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
         print("building stack for channel: {}".format(config.channel))
         target_size = target_size[:-1]
     StackPlaneIO.set_data(images)
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for i in range(num_images):
         # add rotation argument if necessary

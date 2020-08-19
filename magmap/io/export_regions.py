@@ -249,7 +249,7 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
             defaults to None.
     """
     start_time = time()
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for img_path in img_paths:
         print("making image", img_path)

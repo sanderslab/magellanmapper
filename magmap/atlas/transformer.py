@@ -246,7 +246,7 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
         if is_fork:
             Downsampler.set_data(rescaled)
         sub_rois = np.zeros_like(sub_roi_slices)
-        pool = mp.Pool()
+        pool = mp.Pool(processes=config.cpus)
         pool_results = []
         for z in range(sub_roi_slices.shape[0]):
             for y in range(sub_roi_slices.shape[1]):

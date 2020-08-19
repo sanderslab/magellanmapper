@@ -65,7 +65,7 @@ def show_instances(instances, get_ip=False):
     """
     # show instance info in multiprocessing to allow waiting for 
     # each instance to start running
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for instance in instances:
         pool_results.append(

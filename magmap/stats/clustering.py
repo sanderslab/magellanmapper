@@ -203,7 +203,7 @@ class ClusterByLabel(object):
             cls.blobs[:, 4] = labels
         else:
             # cluster by individual label
-            pool = mp.Pool()
+            pool = mp.Pool(processes=config.cpus)
             pool_results = []
             for label_id in label_ids:
                 # add rotation argument if necessary

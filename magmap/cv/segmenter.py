@@ -411,7 +411,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
           "and target fraction {}"
           .format(filter_size, min_filter_size, target_frac))
     LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     for label_id in labels_unique:
         if label_id == 0: continue
@@ -704,7 +704,7 @@ def sub_segment_labels(labels_img_np, atlas_edge):
     # reference the labels image as a global variable
     SubSegmenter.set_images(labels_img_np, atlas_edge)
     
-    pool = mp.Pool()
+    pool = mp.Pool(processes=config.cpus)
     pool_results = []
     label_ids = np.unique(labels_img_np)
     max_val = np.amax(labels_img_np) * (config.SUB_SEG_MULT + 1)

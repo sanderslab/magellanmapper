@@ -520,13 +520,15 @@ class Visualization(HasTraits):
                     Item("_main_img_name", label="Intensity", springy=True,
                          style="custom",
                          editor=CheckListEditor(
-                             name="object._main_img_names.selections", cols=2)),
+                             name="object._main_img_names.selections", cols=2,
+                             format_func=lambda x: x)),
                     Item("_reload_btn", show_label=False),
                 ),
                 HGroup(
                     Item("_labels_img_name", label="Labels", springy=True,
                          editor=CheckListEditor(
-                             name="object._labels_img_names.selections")),
+                             name="object._labels_img_names.selections",
+                             format_func=lambda x: x)),
                     Item("_labels_ref_path", label="Reference", style="simple",
                          editor=FileEditor(entries=10, allow_dir=False)),
                 ),
@@ -556,21 +558,26 @@ class Visualization(HasTraits):
             ),
         ),
         Item("_check_list_3d", style="custom", label="3D options",
-             editor=CheckListEditor(values=_DEFAULTS_3D, cols=4)),
+             editor=CheckListEditor(
+                 values=_DEFAULTS_3D, cols=4, format_func=lambda x: x)),
         HGroup(
             Item("_check_list_2d", style="custom", label="2D options",
-                 editor=CheckListEditor(values=_DEFAULTS_2D, cols=1)),
+                 editor=CheckListEditor(
+                     values=_DEFAULTS_2D, cols=1, format_func=lambda x: x)),
             VGroup(
                 Item("_circles_2d", style="simple", label="Circles",
                      editor=CheckListEditor(
                          values=[e.value for e in
-                                 roi_editor.ROIEditor.CircleStyles])),
+                                 roi_editor.ROIEditor.CircleStyles],
+                         format_func=lambda x: x)),
                 Item("_planes_2d", style="simple", label="Plane",
                      editor=CheckListEditor(
-                         values=_DEFAULTS_PLANES_2D)),
+                         values=_DEFAULTS_PLANES_2D,
+                         format_func=lambda x: x)),
                 Item("_styles_2d", style="simple", label="2D styles",
                      editor=CheckListEditor(
-                         values=[e.value for e in Styles2D])),
+                         values=[e.value for e in Styles2D],
+                         format_func=lambda x: x)),
             ),
         ),
         HGroup(
@@ -615,10 +622,12 @@ class Visualization(HasTraits):
         HGroup(
             Item("_profiles_cats", style="simple", label="Profile",
                  editor=CheckListEditor(
-                     values=[e.value for e in ProfileCats], cols=1)),
+                     values=[e.value for e in ProfileCats], cols=1,
+                     format_func=lambda x: x)),
             Item("_profiles_name", label="Name",
                  editor=CheckListEditor(
-                     name="object._profiles_names.selections")),
+                     name="object._profiles_names.selections",
+                     format_func=lambda x: x)),
         ),
         Item("_profiles_chls", label="Channels", style="custom",
              editor=CheckListEditor(

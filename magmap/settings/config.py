@@ -31,6 +31,9 @@ from enum import Enum, auto
 verbose = False
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
+#: int: Number of CPUs for multiprocessing tasks; defaults to None to
+# use the number determined by the CPU count.
+cpus = None
 
 
 # IMAGE FILES

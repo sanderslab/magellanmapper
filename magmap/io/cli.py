@@ -228,6 +228,10 @@ def main(process_args_only=False, skip_dbs=False):
     parser.add_argument("--offset", nargs="*", help="ROI offset in x,y,z")
     parser.add_argument("--size", nargs="*", help="ROI size in x,y,z")
     parser.add_argument("--db", help="Database path")
+    parser.add_argument(
+        "--cpus",
+        help="Maximum number of CPUs/processes to use for multiprocessing "
+             "tasks. Use \"none\" or 0 to auto-detect this number (default).")
 
     # task arguments
     parser.add_argument(
@@ -404,7 +408,14 @@ def main(process_args_only=False, skip_dbs=False):
             config.roi_size = config.roi_sizes[0]
         print("Set ROI sizes to {}, current size {} (x,y,z)"
               .format(config.roi_sizes, config.roi_size))
-
+    
+    if args.cpus is not None:
+        # set maximum number of CPUs
+        config.cpus = (None if args.cpus.lower() in ("none", "0")
+                       else int(args.cpus))
+        print("Set maximum number of CPUs for multiprocessing tasks to",
+              config.cpus)
+    
     # set up main processing mode
     if args.proc is not None:
         config.proc_type = args.proc

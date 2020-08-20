@@ -2447,40 +2447,45 @@ class Visualization(HasTraits):
         self._clear_import_files(False)
         chl_paths = None
         base_path = None
-        
-        if os.path.isdir(self._import_browser):
-            # gather files within the directory to import
-            self._import_mode = ImportModes.DIR
-            chl_paths, import_md = importer.setup_import_dir(
-                self._import_browser)
-            setup_import(import_md)
-            base_path = os.path.join(
-                os.path.dirname(self._import_browser),
-                importer.DEFAULT_IMG_STACK_NAME)
-            self._import_btn_enabled = True
-        
-        elif self._import_browser:
-            # gather files matching the pattern of the selected file to import
-            self._import_mode = ImportModes.MULTIPAGE
-            chl_paths, base_path = importer.setup_import_multipage(
-                self._import_browser)
-            
-            # extract metadata in separate thread given delay from Java
-            # initialization for Bioformats
-            self._update_import_feedback(
-                "Gathering metadata related to {}, please wait"
-                "...".format(self._import_browser))
-            self._import_thread = SetupImportThread(chl_paths, setup_import)
-            self._import_thread.start()
 
-        if chl_paths:
-            # populate the import table
-            data = []
-            for chl, paths in chl_paths.items():
-                for path in paths:
-                    data.append([path, chl])
-            self._import_paths = data
-            self._import_prefix = base_path
+        try:
+            if os.path.isdir(self._import_browser):
+                # gather files within the directory to import
+                self._import_mode = ImportModes.DIR
+                chl_paths, import_md = importer.setup_import_dir(
+                    self._import_browser)
+                setup_import(import_md)
+                base_path = os.path.join(
+                    os.path.dirname(self._import_browser),
+                    importer.DEFAULT_IMG_STACK_NAME)
+                self._import_btn_enabled = True
+            
+            elif self._import_browser:
+                # gather files matching the pattern of the selected file to import
+                self._import_mode = ImportModes.MULTIPAGE
+                chl_paths, base_path = importer.setup_import_multipage(
+                    self._import_browser)
+                
+                # extract metadata in separate thread given delay from Java
+                # initialization for Bioformats
+                self._update_import_feedback(
+                    "Gathering metadata related to {}, please wait"
+                    "...".format(self._import_browser))
+                self._import_thread = SetupImportThread(chl_paths, setup_import)
+                self._import_thread.start()
+    
+            if chl_paths:
+                # populate the import table
+                data = []
+                for chl, paths in chl_paths.items():
+                    for path in paths:
+                        data.append([path, chl])
+                self._import_paths = data
+                self._import_prefix = base_path
+        except FileNotFoundError:
+            self._update_import_feedback(
+                "File to import does not exist: {}\nPlease try another file"
+                .format(self._import_browser))
     
     @on_trait_change("_import_shape")
     def _validate_import_readiness(self):

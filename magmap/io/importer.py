@@ -657,6 +657,10 @@ def setup_import_multipage(filename):
         sequences of image file paths to import, and the base path of the
         extracted files.
     
+    Raises:
+        FileNotFoundError: No existing files related to ``filename`` could
+        be found.
+    
     """
     path_split = libmag.splitext(filename)
     ext = path_split[1].lower()
@@ -673,7 +677,7 @@ def setup_import_multipage(filename):
     path_base = "{}{}*".format(base_path, CHANNEL_SEPARATOR)
     filenames = []
     print("Looking for files for multi-channel images matching "
-          "the format:", path_base)
+          "the format: {}{}".format(path_base, ext))
     matches = glob.glob(path_base)
     
     for match in matches:
@@ -691,6 +695,11 @@ def setup_import_multipage(filename):
     else:
         # take file directly with key specifying it could have multiple channels
         print("Using the given single file {}".format(filename))
+        if not os.path.exists(filename):
+            # if no related files to filename could be found, filename must
+            # itself exist
+            raise FileNotFoundError(
+                "Multipage file to import does not exist:", filename)
         chl_paths = {_KEY_ANY_CHANNEL: [filename]}
     
     # parse to dict by channel

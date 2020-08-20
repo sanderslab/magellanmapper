@@ -137,12 +137,11 @@ class SettingsDict(dict):
         """
         if os.path.splitext(mod_name)[1].lower() in self._EXT_YAML:
             # load YAML files from profiles directory
-            mod_path = os.path.join(
-                self.PATH_PROFILES, os.path.basename(mod_name))
+            mod_path = os.path.join(self.PATH_PROFILES, mod_name)
             if not os.path.exists(mod_path):
-                # fall back to loading from given path
+                # fall back to loading directly from given path
                 print("{} profile file not found, checking {}"
-                      .format(mod_path, mod_path))
+                      .format(mod_path, mod_name))
                 mod_path = mod_name
                 if not os.path.exists(mod_path):
                     print(mod_path, "profile file not found, skipped")

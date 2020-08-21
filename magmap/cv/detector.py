@@ -1048,7 +1048,7 @@ def meas_detection_accuracy(blobs, verified=False, treat_maybes=0):
     return sens, ppv, msg
 
 
-def colocalize_blobs(roi, blobs):
+def colocalize_blobs(roi, blobs, thresh=None):
     """Co-localize blobs from different channels based on surrounding
     intensities.
     
@@ -1063,6 +1063,10 @@ def colocalize_blobs(roi, blobs):
         roi (:obj:`np.ndarray`): Region of interest as a 3D+channel array.
         blobs (:obj:`np.ndarray`): Blobs as a 2D array in the format
             ``[[z, y, x, radius, confirmation, truth, channel...], ...]``.
+        thresh (int, float, str): Threshold percentile of intensities from
+            pixels surrounding each blob in the given channel. Use "min"
+            to instead take the mininimum average intensity of all blobs
+            in the channel. Defaults to None to use "min".
 
     Returns:
         :obj:`np.ndarray`: 2D Numpy array of same length as ``blobs`` with
@@ -1073,6 +1077,8 @@ def colocalize_blobs(roi, blobs):
     """
     if blobs is None or roi is None or len(roi.shape) < 4:
         return None
+    if thresh is None:
+        thresh = "min"
     threshs = []
     selem = morphology.ball(2)
     
@@ -1080,34 +1086,51 @@ def colocalize_blobs(roi, blobs):
     # surrounds, but ROI is not available for them
     blobs_roi, blobs_roi_mask = get_blobs_in_roi(
         blobs, (0, 0, 0), roi.shape[:3], reverse=False)
-    for chl in range(roi.shape[3]):
-        # set a percentile of intensities surrounding all blobs in channel
-        # as threshold for that channel, or the whole ROI if no blobs
-        mask = np.zeros(roi.shape[:3], dtype=int)
-        mask[tuple(libmag.coords_for_indexing(
-            blobs_in_channel(blobs_roi, chl)[:, :3].astype(int)))] = 1
-        mask = morphology.binary_dilation(mask, selem=selem)
-        roi_mask = roi if np.sum(mask) < 1 else roi[mask, chl]
-        threshs.append(np.percentile(roi_mask, 15))
+    blobs_chl = get_blobs_channel(blobs_roi)
+    blobs_range_chls = []
     
-    channels = np.unique(get_blobs_channel(blobs_roi)).astype(int)
-    colocs_roi = np.zeros((blobs_roi.shape[0], roi.shape[3]), dtype=np.uint8)
-    for chl in channels:
+    # get labeled masks of blobs for each channel and threshold intensities
+    mask_roi = np.ones(roi.shape[:3], dtype=int)
+    mask_roi_chls = []
+    for chl in range(roi.shape[3]):
         # label a mask with blob indices surrounding each blob
-        blobs_chl_mask = np.isin(get_blobs_channel(blobs_roi), chl)
-        mask = np.ones(roi.shape[:3], dtype=int) * -1
+        blobs_chl_mask = np.isin(blobs_chl, chl)
         blobs_range = np.where(blobs_chl_mask)[0]
+        blobs_range_chls.append(blobs_range)
+        mask = np.copy(mask_roi) * -1
         mask[tuple(libmag.coords_for_indexing(
             blobs_roi[blobs_chl_mask, :3].astype(int)))] = blobs_range
         mask = morphology.dilation(mask, selem=selem)
+        mask_roi_chls.append(mask)
+        
+        if thresh == "min":
+            # set minimum average surrounding intensity of all blobs as thresh
+            threshs.append(
+                None if len(blobs_range) == 0 else np.amin([
+                    np.mean(roi[mask == b, chl]) for b in blobs_range]))
+        else:
+            # set a percentile of intensities surrounding all blobs in channel
+            # as threshold for that channel, or the whole ROI if no blobs
+            mask_blobs = mask >= 0
+            roi_mask = roi if np.sum(mask_blobs) < 1 else roi[mask_blobs, chl]
+            threshs.append(np.percentile(roi_mask, thresh))
+
+    channels = np.unique(get_blobs_channel(blobs_roi)).astype(int)
+    colocs_roi = np.zeros((blobs_roi.shape[0], roi.shape[3]), dtype=np.uint8)
+    for chl in channels:
+        # get labeled mask of blobs in the given channel
+        mask = mask_roi_chls[chl]
+        blobs_range = blobs_range_chls[chl]
         for chl_other in channels:
+            if threshs[chl_other] is None: continue
             for blobi in blobs_range:
+                # find surrounding intensity of blob in another channel
                 mask_blob = mask == blobi
                 blob_avg = np.mean(roi[mask_blob, chl_other])
                 if config.verbose:
                     print(blobi, get_blob_channel(blobs_roi[blobi]),
                           blobs_roi[blobi, :3], blob_avg, threshs[chl_other])
-                if blob_avg > threshs[chl_other]:
+                if blob_avg >= threshs[chl_other]:
                     # intensities in another channel around blob's position
                     # is above that channel's threshold
                     colocs_roi[blobi, chl_other] = 1

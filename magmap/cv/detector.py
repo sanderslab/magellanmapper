@@ -1079,9 +1079,8 @@ def _test_blob_close_sorted():
     print("pruned:\n{}".format(blobs))
 
 
-if __name__ == "__main__":
-    print("Detector tests...")
-    #_test_blob_close_sorted()
+def _test_blob_autoverifier():
+    _test_blob_close_sorted()
     a = np.array([[0, 1, 1], [1, 1, 1], [2, 1, 1]])
     b = np.array([[1, 1, 1], [2, 1, 1], [3, 1, 1], [4, 2, 0]])
     _test_blob_verification(a, b, 1)
@@ -1089,3 +1088,7 @@ if __name__ == "__main__":
     a = np.array([[24, 52, 346], [20, 55, 252]])
     b = np.array([[24, 54, 351]])
     _test_blob_verification(a, b, 6)
+
+
+if __name__ == "__main__":
+    print("Detector tests...")

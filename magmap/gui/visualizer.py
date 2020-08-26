@@ -784,6 +784,10 @@ class Visualization(HasTraits):
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
         if self._margin is None:
             self._margin = (5, 5, 3)  # x,y,z
+        
+        # store ROI offset for currently drawn plot in case user previews a
+        # new ROI offset, which shifts the current offset sliders
+        self._drawn_offset = self._curr_offset()
 
         # setup interface for image
         if config.filename:
@@ -1181,7 +1185,7 @@ class Visualization(HasTraits):
             config.db.conn, config.db.cur, exp_name, None)
         roi_id, out = sqlite.select_or_insert_roi(
             config.db.conn, config.db.cur, exp_id, config.series, 
-            np.add(self._curr_offset(), self.border).tolist(), 
+            np.add(self._drawn_offset, self.border).tolist(),
             np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
         sqlite.delete_blobs(
             config.db.conn, config.db.cur, roi_id, segs_to_delete)
@@ -1610,6 +1614,7 @@ class Visualization(HasTraits):
         """
         # reload profiles if any profile files have changed and reset ROI
         cli.update_profiles()
+        self._drawn_offset = self._curr_offset()
         if clear:
             self.roi = None
             self._reset_segments()

@@ -1795,6 +1795,7 @@ class Visualization(HasTraits):
             print("Main image has not been loaded, cannot show detect blobs")
             return
         self._reset_segments()
+        cli.update_profiles()
         
         # process ROI in prep for showing filtered 2D view and segmenting
         self._segs_visible = True

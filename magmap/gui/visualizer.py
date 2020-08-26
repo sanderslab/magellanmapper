@@ -1823,6 +1823,7 @@ class Visualization(HasTraits):
         else:
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
+            # TODO: set segs_all to None rather than empty list if no blobs?
             segs_all, mask = detector.get_blobs_in_roi(
                 config.blobs.blobs, offset, roi_size, self._margin)
             if config.blobs.colocalizations is not None:
@@ -1882,12 +1883,13 @@ class Visualization(HasTraits):
                 blobs=blobs, remove_small=min_size)
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
-        self.scene.mlab.outline()
         self.redraw_selected_viewer(clear=False)
         if self._colocalize_visible:
             self._colocalize_blobs()
     
     def show_3d_blobs(self):
+        """Show blobs as spheres in 3D viewer."""
+        # get blobs in ROI and display as spheres in Mayavi viewer
         roi_size = self.roi_array[0].astype(int)
         show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
         _, self.segs_in_mask = detector.get_blobs_in_roi(
@@ -1896,10 +1898,15 @@ class Visualization(HasTraits):
         self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
             self.segments, self.scene.mlab, self.segs_in_mask,
             show_shadows, roi_size[2] if self.flipz else 0)
+        
         # reduce number of digits to make the slider more compact
         scale = float(libmag.format_num(scale, 4))
         self._scale_detections_high = scale * 2
         self.scale_detections = scale
+        
+        if self.segments is not None and len(self.segments) > 0:
+            # show plot outline for emphasis
+            self.scene.mlab.outline()
 
     @on_trait_change("_colocalize_visible")
     def _colocalize_blobs(self):

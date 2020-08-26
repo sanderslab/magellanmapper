@@ -40,7 +40,8 @@ class ROIProfile(profiles.SettingsDict):
         self["clip_vmax"] = 99.5
         self["clip_min"] = 0.2  # min/max clip after stretching, range 0-1
         self["clip_max"] = 1.0
-        # mult by config.near_max for lower threshold of global max
+        # config.near_max multiplier for global max threshold; lower to inc
+        # sensitivity; need to dec blob sizes if inc
         self["max_thresh_factor"] = 0.5
         self["tot_var_denoise"] = None  # weight (eg skimage default 0.1)
         self["unsharp_strength"] = 0.3  # unsharp filter (sharpens images)

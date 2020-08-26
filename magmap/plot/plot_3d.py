@@ -66,11 +66,12 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
         clip_vmax (float): Percent for upper clipping. Defaults to -1
             to use the profile setting.
         max_thresh_factor (float): Multiplier of :attr:`config.near_max`
-            for ROI's scaled maximum value. If ``vmax`` is at ``clip_vmax``
-            is below this product, ``vmax`` will be set to this product.
-            Defaults to -1 to use the profile setting.
-        channel (int): Channel index of ``roi`` to saturate. Defaults to None
-            to use all channels.
+            for ROI's scaled maximum value. If the max data range value
+            adjusted through``clip_vmax``is below this product, this max
+            value will be set to this product. Defaults to -1 to use the
+            profile setting.
+        channel (List[int]): Sequence of channel indices in ``roi`` to
+            saturate. Defaults to None to use all channels.
     
     Returns:
         Saturated region of interest.
@@ -90,8 +91,8 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
         vmin, vmax = np.percentile(roi_show, (clip_vmin, clip_vmax))
         libmag.printv(
             "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[chl])
-        # ensures that vmax is at least 50% of near max value of image5d
-        max_thresh = config.near_max[chl] * settings["max_thresh_factor"]
+        # adjust the near max value derived globally from image5d for the chl
+        max_thresh = config.near_max[chl] * max_thresh_factor
         if vmax < max_thresh:
             vmax = max_thresh
             libmag.printv("adjusted vmax to {}".format(vmax))
@@ -117,6 +118,8 @@ def denoise_roi(roi, channel=None):
         roi: Region of interest as a 3D (z, y, x) array. Note that 4D arrays 
             with channels are not allowed as the Scikit-Image gaussian filter 
             only accepts specifically 3 channels, presumably for RGB.
+        channel (List[int]): Sequence of channel indices in ``roi`` to
+            saturate. Defaults to None to use all channels.
     
     Returns:
         Denoised region of interest.

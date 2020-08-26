@@ -348,8 +348,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
                         # exp may have been named by ROI
                         print("{} experiment name not found, will try with"
                               "ROI offset/size".format(exp_name))
-                        exp_name = make_subimage_name(
-                            os.path.basename(config.filename), offset, size)
+                        exp_name = make_subimage_name(exp_name, offset, size)
                         rois = config.truth_db.get_rois(exp_name)
                     if rois is None:
                         raise LookupError(

@@ -198,17 +198,18 @@ def insert_experiment(conn, cur, name, date):
     return cur.lastrowid
 
 
-def select_experiment(cur, name):
+def select_experiment(cur, name=None):
     """Selects an experiment from the given name.
     
     Args:
-        cur: Connection's cursor.
-        name: Name of the experiment. If None, all experiments will be 
-            returned.
+        cur (:obj:`sqlite3.Cursor): Connection's cursor.
+        name (str): Name of the experiment. Defaults to None to get all
+            experiments.
     
     Returns:
-        All of the experiments with the given name, an empty list 
-            if none are found, or all experiments if ``name`` is None.
+        List[:obj:`sqlite3.Row`]: Sequence of all the experiment rows with
+        the given name.
+    
     """
     cols = "id, name, date"
     #print("looking for exp: {}".format(name))
@@ -332,11 +333,15 @@ def select_or_insert_roi(conn, cur, exp_id, series, offset, size):
 
 
 def select_rois(cur, exp_id):
-    """Selects ROIs from the given experiment
+    """Selects ROIs from the given experiment.
     
     Args:
-        cur: Connection's cursor.
-        experiment_id: ID of the experiment.
+        cur (:obj:`sqlite3.Cursor): Connection's cursor.
+        exp_id (int): ID of the experiment.
+    
+    Returns:
+        List[:obj:`sqlite3.Row`]: Sequence of all ROIs for the experiment.
+    
     """
     cur.execute("SELECT id, experiment_id, series, "
                 "offset_x, offset_y, offset_z, size_x, size_y, "
@@ -677,12 +682,30 @@ class ClrDB:
         self.blobs_truth = select_blobs_confirmed(self.cur, 1)
         libmag.printv("truth blobs:\n{}".format(self.blobs_truth))
     
-    def get_rois(self, filename):
-        exps = select_experiment(self.cur, filename)
-        rois = None
-        if len(exps) > 0:
-            rois = select_rois(self.cur, exps[0]["id"])
-        return rois
+    def get_rois(self, exp_name, ignore_ext=True):
+        """Get all ROIs for the given experiment.
+        
+        Args:
+            exp_name (str): Name of experiment.
+            ignore_ext (bool): True to ignore any extension in ``exp_name``
+                and experiment names stored in the database; defaults to True.
+
+        Returns:
+            List[:obj:`sqlite3.Row`]: Sequence of all ROIs for the experiment.
+
+        """
+        # get all experiments
+        exps = select_experiment(self.cur)
+        if ignore_ext:
+            exp_name = os.path.splitext(exp_name)[0]
+        for exp in exps:
+            # check for matching experiment by name
+            name = exp["name"]
+            if ignore_ext:
+                name = os.path.splitext(name)[0]
+            if name == exp_name:
+                return select_rois(self.cur, exp["id"])
+        return None
     
     @staticmethod
     def _get_blob(rows):

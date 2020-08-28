@@ -1687,15 +1687,22 @@ class Visualization(HasTraits):
         if self._camera_pos is None or self._camera_pos["roll"] != roll:
             self._camera_pos = {"view": self.scene.mlab.view(), "roll": roll}
             print("camera:", self._camera_pos)
-        
-    def _is_segs_none(self, segs):
-        """Checks if segs is equivalent to None.
-        """
-        # segs is 0 for some reason if no parameter given in fired trait
-        return segs is None or not isinstance(segs, np.ndarray)
 
     @on_trait_change("btn_detect")
-    def _blob_detection_fired(self, segs=None):
+    def _blob_detection_fired(self):
+        """Detect blobs when triggered by a button."""
+        self.detect_blobs()
+    
+    def detect_blobs(self, segs=None):
+        """Detect blobs within the current ROI.
+        
+        Args:
+            segs (:obj:`np.ndarray`): Blobs to display, typically loaded
+                from a database. Defaults to None, in which case blobs will
+                be taken from a :attr:`config.blobs` if available or detected
+                directly from the image.
+
+        """
         if config.image5d is None:
             print("Main image has not been loaded, cannot show detect blobs")
             return
@@ -1735,9 +1742,9 @@ class Visualization(HasTraits):
                 segs_all, config.channel)
         print("segs_all:\n{}".format(segs_all))
         
-        if not self._is_segs_none(segs):
-            # if segs provided (eg from ROI), use only these segs within 
-            # the ROI and add segs from the padding area outside the ROI
+        if segs is not None:
+            # segs are typically loaded from DB for a sub-ROI within the
+            # current ROI, so fill in the padding area from segs_all
             _, segs_in_mask = detector.get_blobs_in_roi(
                 segs_all, np.zeros(3), 
                 roi_size, np.multiply(self.border, -1))

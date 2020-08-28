@@ -350,11 +350,13 @@ class PlotEditor:
             vmins[0] = [a.ax_img.norm.vmin for a in self._plot_ax_imgs[0]]
         
         if self.img3d_labels is not None:
-            # prep labels with discrete colormap
+            # prep labels with discrete colormap and prior alpha if available
             imgs2d.append(self._get_img2d(1, self.img3d_labels))
             self._channels.append([0])
             cmaps.append(self.cmap_labels)
-            alphas.append(self.alpha)
+            alphas.append(
+                self._ax_img_labels.get_alpha() if self._ax_img_labels
+                else self.alpha)
             shapes.append(self._img3d_shapes[1][1:3])
             vmaxs.append(None)
             vmins.append(None)

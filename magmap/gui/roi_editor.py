@@ -1257,11 +1257,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     # show blob matches by corresponding number labels
                     for i, match in enumerate(self.blobs.blob_matches):
                         for j, blob in enumerate((match.blob1, match.blob2)):
-                            blob_rel = np.subtract(blob[:3], offset[::-1])
-                            if blob_rel[0] != 0: continue
+                            if blob[0] != z_relative: continue
                             # add label with number; italicize if 1st blob
                             style = "italic" if j == 0 else "normal"
-                            ax.text(blob_rel[2], blob_rel[1], i, color="k",
+                            ax.text(blob[2], blob[1], i, color="k",
                                     alpha=0.8, style=style,
                                     horizontalalignment="center",
                                     verticalalignment="center")

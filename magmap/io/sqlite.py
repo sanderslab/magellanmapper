@@ -37,6 +37,18 @@ class BlobMatch:
         self.blob2_id = blob2_id
         self.blob2 = blob2
         self.dist = dist
+    
+    def shift_blobs(self, offset):
+        """Shift coordinates of blobs by offset.
+        
+        Args:
+            offset (List[int]): Sequence of coordinates by which to shift
+                the corresponding elements from the start of :attr:`blob1`
+                and :attr:`blob2`.
+
+        """
+        self.blob1 = detector.shift_blob_rel_coords(self.blob1, offset)
+        self.blob2 = detector.shift_blob_rel_coords(self.blob2, offset)
 
 
 def _create_db(path):

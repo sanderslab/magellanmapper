@@ -2265,6 +2265,11 @@ class Visualization(HasTraits):
             
             # get matches between blobs, such as verifications
             blob_matches = config.db.select_blob_matches(roi_id)
+            offset = [n * -1 for n in config.roi_offset[::-1]]
+            for match in blob_matches:
+                match.shift_blobs(offset)
+            
+            # display blobs
             self.detect_blobs(segs=blobs, blob_matches=blob_matches)
             roi_editor.verify = True
         else:

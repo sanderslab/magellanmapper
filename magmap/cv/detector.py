@@ -230,9 +230,24 @@ def set_blob_abs_coords(blobs, coords):
     return blobs
 
 
-def shift_blob_rel_coords(blobs, offset):
-    blobs[..., :3] += offset
-    return blobs
+def shift_blob_rel_coords(blob, offset):
+    """Shift blob relative coordinates by offset.
+    
+    Args:
+        blob (List): Either a sequence starting with blob coordinates,
+            typically in ``z, y, x, ...``, or a sequence of blobs.
+        offset (List[int]): Sequence of coordinates by which to shift
+            the corresponding elements from the start of ``blob``.
+
+    Returns:
+        List: The shifted blob or sequence of blobs.
+
+    """
+    if blob.ndim > 1:
+        blob[..., :len(offset)] += offset
+    else:
+        blob[:len(offset)] += offset
+    return blob
 
 
 def shift_blob_abs_coords(blobs, offset):

@@ -811,6 +811,7 @@ class Visualization(HasTraits):
         self._atlas_ed_fig = figure.Figure()
         
         # set up rest of image adjustment during image setup
+        self._img3ds = None
         self._imgadj_min_ignore_update = False
         self._imgadj_max_ignore_update = False
         
@@ -857,17 +858,34 @@ class Visualization(HasTraits):
             k for k in self._img3ds.keys() if self._img3ds[k] is not None]
         if self._imgadj_names.selections:
             self._imgadj_name = self._imgadj_names.selections[0]
+        self._setup_imgadj_channels()
+
+    def _setup_imgadj_channels(self):
+        """Set up channels in the image adjustment panel for the given image."""
+        img3d = self._img3ds.get(self._imgadj_name) if self._img3ds else None
+        if self._imgadj_name == "Main":
+            # limit image adjustment channel options to currently selected
+            # channels in ROI panel channel selector for main image
+            chls = self._channel
+        elif img3d is not None:
+            # use all channels, or 1 if no channel dimension
+            chls = [str(n) for n in (
+                range(0, 1 if len(img3d.shape) < 4 else img3d.shape[3]))]
+        else:
+            chls = []
         
-        # only channel options are channels selected in main channel selector
+        # populate channels dropdown and select first channel
         self._imgadj_chls_names = TraitsList()
-        self._imgadj_chls_names.selections = self._channel
-        self._imgadj_chls = self._imgadj_chls_names.selections[0]
+        self._imgadj_chls_names.selections = chls
+        if self._imgadj_chls_names.selections:
+            self._imgadj_chls = self._imgadj_chls_names.selections[0]
 
     @on_trait_change("_imgadj_name")
     def _update_imgadj_limits(self):
         img3d = self._img3ds.get(self._imgadj_name)
         if img3d is None: return
         info = libmag.get_dtype_info(img3d)
+        self._setup_imgadj_channels()
 
         # min/max based on near min/max pre-calculated from whole image
         # including all channels, falling back to data type range; cannot
@@ -1461,7 +1479,7 @@ class Visualization(HasTraits):
                 # populate labels reference path field
                 self._labels_ref_path = config.load_labels
 
-            # set up image adjustment controls
+        # set up image adjustment controls
         self._init_imgadj()
         
         # set up selector for loading past saved ROIs
@@ -1562,12 +1580,7 @@ class Visualization(HasTraits):
             # resetting channel names triggers channel update as empty array
             return
         config.channel = sorted([int(n) for n in self._channel])
-        if self._imgadj_chls_names:
-            # limit image adjustment channel options to currently selected
-            # channels in main channel selector
-            self._imgadj_chls_names.selections = self._channel
-            if self._imgadj_chls_names.selections:
-                self._imgadj_chls = self._imgadj_chls_names.selections[0]
+        self._setup_imgadj_channels()
         self.rois_check_list = _ROI_DEFAULT
         self._reset_segments()
         print("Changed channel to {}".format(config.channel))

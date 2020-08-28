@@ -312,6 +312,16 @@ class AtlasEditorOptions(Enum):
     SHOW_LABELS = "Labels"
 
 
+class BlobsVisibilityOptions(Enum):
+    """Enumerations for blob visibility options."""
+    VISIBLE = "Visible"
+
+
+class ColocalizeOptions(Enum):
+    """Enumerations for co-localization options."""
+    INTENSITY = "Intensity"
+
+
 class ControlsTabs(Enum):
     """Enumerations for controls tabs."""
     ROI = auto()
@@ -402,9 +412,9 @@ class Visualization(HasTraits):
     # Detect panel
     
     btn_detect = Button("Detect")
-    _colocalize_visible = Bool(False)
     btn_save_segments = Button("Save Blobs")
-    _segs_visible = Bool(True)
+    _segs_visible = List  # blob visibility options
+    _colocalize = List  # blob co-localization options
     _segments = Array  # table of blobs
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
@@ -666,9 +676,18 @@ class Visualization(HasTraits):
         HGroup(
             Item("btn_detect", show_label=False),
             Item("btn_save_segments", show_label=False),
-            Item("_segs_visible", label="Visible", editor=BooleanEditor()),
-            Item("_colocalize_visible", label="Co-localize",
-                 editor=BooleanEditor()),
+        ),
+        HGroup(
+            Item("_segs_visible", style="custom", show_label=False,
+                 editor=CheckListEditor(
+                     values=[e.value for e in BlobsVisibilityOptions],
+                     cols=len(BlobsVisibilityOptions),
+                     format_func=lambda x: x)),
+            Item("_colocalize", style="custom", label="Co-localize by",
+                 editor=CheckListEditor(
+                     values=[e.value for e in ColocalizeOptions],
+                     cols=len(ColocalizeOptions),
+                     format_func=lambda x: x)),
         ),
         Item("scale_detections",
              editor=RangeEditor(
@@ -878,6 +897,7 @@ class Visualization(HasTraits):
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
         self._atlas_ed_options = [AtlasEditorOptions.SHOW_LABELS.value]
+        self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # set up rest of image adjustment during image setup
         self._img3ds = None
@@ -1801,7 +1821,7 @@ class Visualization(HasTraits):
         cli.update_profiles()
         
         # process ROI in prep for showing filtered 2D view and segmenting
-        self._segs_visible = True
+        self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
         self.roi = plot_3d.prepare_roi(config.image5d, offset, roi_size)
@@ -1889,7 +1909,7 @@ class Visualization(HasTraits):
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.redraw_selected_viewer(clear=False)
-        if self._colocalize_visible:
+        if ColocalizeOptions.INTENSITY.value in self._colocalize:
             self._colocalize_blobs()
     
     def show_3d_blobs(self):
@@ -1913,7 +1933,7 @@ class Visualization(HasTraits):
             # show plot outline for emphasis
             self.scene.mlab.outline()
 
-    @on_trait_change("_colocalize_visible")
+    @on_trait_change("_colocalize")
     def _colocalize_blobs(self):
         """Toggle blob co-localization label visibility.
         
@@ -1927,13 +1947,15 @@ class Visualization(HasTraits):
             self.blobs.colocalizations = detector.colocalize_blobs(
                 self.roi, self.blobs.blobs)
         if self.roi_ed:
-            self.roi_ed.show_colocalized_blobs(self._colocalize_visible)
+            self.roi_ed.show_colocalized_blobs(
+                ColocalizeOptions.INTENSITY.value in self._colocalize)
         
     @on_trait_change("_segs_visible")
     def _update_blob_visibility(self):
         """Change blob visibilty based on toggle check box."""
         if self.roi_ed:
-            self.roi_ed.set_circle_visibility(self._segs_visible)
+            self.roi_ed.set_circle_visibility(
+                BlobsVisibilityOptions.VISIBLE.value in self._segs_visible)
     
     @on_trait_change('scale_detections')
     def update_scale_detections(self):

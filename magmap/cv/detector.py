@@ -826,43 +826,25 @@ def get_blobs_interior(blobs, shape, pad_start, pad_end):
             blobs[:, 2] < shape[2] - pad_end[2]], axis=0)]
 
 
-def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
-    """Compares blobs from detections with truth blobs, prioritizing the inner 
-    portion of ROIs to avoid missing detections because of edge effects
-    while also adding matches between a blob in the inner ROI and another
-    blob in the remaining portion of the ROI.
-    
-    Saves the verifications to a separate database with a name in the same
-    format as saved processed files but with "_verified.db" at the end.
-    Prints basic statistics on the verification.
-    
-    Note that blobs are found from ROI parameters rather than loading from 
-    database, so blobs recorded within these ROI bounds but from different 
-    ROIs will be included in the verification.
+def setup_match_blobs_roi(blobs, tol):
+    """Set up tolerances for matching blobs in an ROI.
     
     Args:
-        rois: Rows of ROIs from sqlite database.
-        blobs: The blobs to be checked for accuracy, given as 2D 
-            array of [n, [z, row, column, radius, ...]].
-        blobs_truth: The list by which to check for accuracy, in the same
-            format as blobs.
-        tol: Tolerance as z,y,x of floats specifying padding for the inner
-            ROI and used to generate a single tolerance distance within
-            which a detected and ground truth blob will be considered
-            potential matches.
-        output_db: Database in which to save the verification flags, typical
-            the database in :attr:``config.verified_db``.
-        exp_id: Experiment ID in ``output_db``.
-        channel (List[int]): Filter ``blobs_truth`` by this channel.
+        blobs (:obj:`np.ndarray`): Sequence of blobs to resize if the
+            first ROI profile (:attr:`config.roi_profiles`) ``resize_blobs``
+            value is given.
+        tol (List[int, float]): Sequence of tolerances.
+
+    Returns:
+        float, List[float], List[float], List[float], :obj:`np.ndarray`:
+        Distance map threshold, scaling normalized by ``tol``, ROI padding
+        shape, resize sequence retrieved from ROI profile, and ``blobs``
+        after any resizing.
+
     """
-    blobs_truth = blobs_in_channel(blobs_truth, channel)
-    blobs_truth_rois = None
-    blobs_rois = None
-    rois_falsehood = []
-    
-    # convert tolerance seq to scaling and single number distance 
-    # threshold for point distance map, which assumes isotropy; use 
-    # custom tol rather than calculating isotropy since may need to give 
+    # convert tolerance seq to scaling and single number distance
+    # threshold for point distance map, which assumes isotropy; use
+    # custom tol rather than calculating isotropy since may need to give
     # greater latitude along a given axis, such as poorer res in z
     thresh = np.amax(tol)  # similar to longest radius from the tol bounding box
     scaling = thresh / tol
@@ -877,91 +859,171 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     if resize:
         blobs = multiply_blob_rel_coords(blobs, resize)
         libmag.printv("resized blobs by {}:\n{}".format(resize, blobs))
+    
+    return thresh, scaling, inner_padding, resize, blobs
 
+
+def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
+                    inner_padding, resize):
+    """Match blobs from two sets of blobs in an ROI, prioritizing the inner
+    portion of ROIs to avoid missing detections because of edge effects
+    while also adding matches between a blob in the inner ROI and another
+    blob in the remaining portion of the ROI.
+    
+    Args:
+        blobs (:obj:`np.ndarray`): The blobs to be matched against
+            ``blobs_base``, given as 2D array of
+            ``[[z, row, column, radius, ...], ...]``.
+        blobs_base (:obj:`np.ndarray`): The blobs to which ``blobs`` will
+            be matched, in the same format as ``blobs``.
+        offset (List[int]): ROI offset from which to select blobs in x,y,z.
+        size (List[int]): ROI size in x,y,z.
+        thresh (float): Distance map threshold
+        scaling (List[float]): Scaling normalized by ``tol``.
+        inner_padding (List[float]): ROI padding shape.
+        resize (List[float]): resize sequence retrieved from ROI profile.
+    
+    Returns:
+        :obj:`np.ndarray`, :obj:`np.ndarray`, List[int], List[int], List[List]:
+        Array of blobs from ``blobs``; corresponding array from ``blobs_base``
+        matching blobs in ``blobs``; offset of the inner portion of the ROI
+        in absolute coordinates of x,y,z; shape of this inner portion of the
+        ROI; and list of blob matches, each given as a tuple of
+        ``blob_master, blob, distance``.
+    
+    """
+    # get all blobs in inner and total ROI
+    offset_inner = np.add(offset, inner_padding)
+    size_inner = np.subtract(size, inner_padding * 2)
+    libmag.printv(
+        "offset: {}, offset_inner: {}, size: {}, size_inner: {}"
+        .format(offset, offset_inner, size, size_inner))
+    blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
+    if resize is not None:
+        # TODO: doesn't align with exported ROIs
+        padding = config.plot_labels[config.PlotLabels.PADDING]
+        libmag.printv("shifting blobs in ROI by offset {}, border {}"
+                      .format(offset, padding))
+        blobs_roi = shift_blob_rel_coords(blobs_roi, offset)
+        if padding:
+            blobs_roi = shift_blob_rel_coords(blobs_roi, padding)
+    blobs_inner, blobs_inner_mask = get_blobs_in_roi(
+        blobs_roi, offset_inner, size_inner)
+    blobs_base_roi, _ = get_blobs_in_roi(blobs_base, offset, size)
+    blobs_base_inner, blobs_base_inner_mask = get_blobs_in_roi(
+        blobs_base_roi, offset_inner, size_inner)
+    
+    # compare blobs from inner region of ROI with all base blobs,
+    # prioritizing the closest matches
+    found, found_base, dists = find_closest_blobs_cdist(
+        blobs_inner, blobs_base_roi, thresh, scaling)
+    blobs_inner[:, 4] = 0
+    blobs_inner[found, 4] = 1
+    blobs_base_roi[blobs_base_inner_mask, 5] = 0
+    blobs_base_roi[found_base, 5] = 1
+    
+    # add any base blobs missed in the inner ROI by comparing with
+    # test blobs from outer ROI
+    blobs_base_inner_missed = blobs_base_roi[blobs_base_roi[:, 5] == 0]
+    blobs_outer = blobs_roi[np.invert(blobs_inner_mask)]
+    found_out, found_base_out, dists_out = find_closest_blobs_cdist(
+        blobs_outer, blobs_base_inner_missed, thresh, scaling)
+    blobs_base_inner_missed[found_base_out, 5] = 1
+    
+    # combine inner and outer groups
+    blobs_truth_inner_plus = np.concatenate(
+        (blobs_base_roi[blobs_base_roi[:, 5] == 1],
+         blobs_base_inner_missed))
+    blobs_outer[found_out, 4] = 1
+    blobs_inner_plus = np.concatenate((blobs_inner, blobs_outer[found_out]))
+
+    matches_inner = _match_blobs(
+        blobs_inner, blobs_base_roi, found, found_base, dists)
+    matches_outer = _match_blobs(
+        blobs_outer, blobs_base_inner_missed, found_out,
+        found_base_out, dists_out)
+    matches = [*matches_inner, *matches_outer]
+    if config.verbose:
+        '''
+        print("blobs_roi:\n{}".format(blobs_roi))
+        print("blobs_inner:\n{}".format(blobs_inner))
+        print("blobs_base_inner:\n{}".format(blobs_base_inner))
+        print("blobs_base_roi:\n{}".format(blobs_base_roi))
+        print("found inner:\n{}"
+              .format(blobs_inner[found]))
+        print("truth found:\n{}"
+              .format(blobs_base_roi[found_base]))
+        print("blobs_outer:\n{}".format(blobs_outer))
+        print("blobs_base_inner_missed:\n{}"
+              .format(blobs_base_inner_missed))
+        print("truth blobs detected by an outside blob:\n{}"
+              .format(blobs_base_inner_missed[found_base_out]))
+        print("all those outside detection blobs:\n{}"
+              .format(blobs_roi_extra))
+        print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
+        print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
+        '''
+
+        print("Closest matches found (truth, detected, distance):")
+        msgs = ("\n- Inner ROI:", "\n- Outer ROI:")
+        for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
+            print(msg)
+            for match in matches_sub:
+                print(match[0], match[1], match[2])
+        print()
+    
+    return blobs_inner_plus, blobs_truth_inner_plus, offset_inner, size_inner, \
+        matches
+
+
+def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
+    """Verify blobs in ROIs by comparing detected blobs with truth sets
+    of blobs stored in a database.
+    
+    Save the verifications to a separate database with a name in the same
+    format as saved processed files but with "_verified.db" at the end.
+    Prints basic statistics on the verification.
+    
+    Note that blobs are found from ROI parameters rather than loading from 
+    database, so blobs recorded within these ROI bounds but from different 
+    ROIs will be included in the verification.
+    
+    Args:
+        rois: Rows of ROIs from sqlite database.
+        blobs (:obj:`np.ndarray`): The blobs to be checked for accuracy,
+            given as 2D array of ``[[z, row, column, radius, ...], ...]``.
+        blobs_truth (:obj:`np.ndarray`): The list by which to check for
+            accuracy, in the same format as blobs.
+        tol: Tolerance as z,y,x of floats specifying padding for the inner
+            ROI and used to generate a single tolerance distance within
+            which a detected and ground truth blob will be considered
+            potential matches.
+        output_db: Database in which to save the verification flags, typical
+            the database in :attr:``config.verified_db``.
+        exp_id: Experiment ID in ``output_db``.
+        channel (List[int]): Filter ``blobs_truth`` by this channel.
+    
+    Returns:
+        Tuple, str: Tuple of ``pos, true_pos, false_pos`` stats and
+        feedback as a string.
+    
+    """
+    blobs_truth = blobs_in_channel(blobs_truth, channel)
+    blobs_truth_rois = None
+    blobs_rois = None
+    rois_falsehood = []
+    thresh, scaling, inner_padding, resize, blobs = setup_match_blobs_roi(
+        blobs, tol)
+    
     for roi in rois:
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
         size = (roi["size_x"], roi["size_y"], roi["size_z"])
         series = roi["series"]
         
-        # get all detected and truth blobs for inner and total ROI
-        offset_inner = np.add(offset, inner_padding)
-        size_inner = np.subtract(size, inner_padding * 2)
-        libmag.printv(
-            "offset: {}, offset_inner: {}, size: {}, size_inner: {}"
-            .format(offset, offset_inner, size, size_inner))
-        blobs_roi, _ = get_blobs_in_roi(blobs, offset, size)
-        if resize is not None:
-            # TODO: doesn't align with exported ROIs
-            padding = config.plot_labels[config.PlotLabels.PADDING]
-            libmag.printv("shifting blobs in ROI by offset {}, border {}"
-                          .format(offset, padding))
-            blobs_roi = shift_blob_rel_coords(blobs_roi, offset)
-            if padding:
-                blobs_roi = shift_blob_rel_coords(blobs_roi, padding)
-        blobs_inner, blobs_inner_mask = get_blobs_in_roi(
-            blobs_roi, offset_inner, size_inner)
-        blobs_truth_roi, _ = get_blobs_in_roi(blobs_truth, offset, size)
-        blobs_truth_inner, blobs_truth_inner_mask = get_blobs_in_roi(
-            blobs_truth_roi, offset_inner, size_inner)
-        
-        # compare inner region of detected cells with all truth ROIs, where
-        # closest blob detector prioritizes the closest matches
-        found, found_truth, dists = find_closest_blobs_cdist(
-            blobs_inner, blobs_truth_roi, thresh, scaling)
-        blobs_inner[:, 4] = 0
-        blobs_inner[found, 4] = 1
-        blobs_truth_roi[blobs_truth_inner_mask, 5] = 0
-        blobs_truth_roi[found_truth, 5] = 1
-        
-        # add any truth blobs missed in the inner ROI by comparing with 
-        # outer ROI of detected blobs
-        blobs_truth_inner_missed = blobs_truth_roi[blobs_truth_roi[:, 5] == 0]
-        blobs_outer = blobs_roi[np.invert(blobs_inner_mask)]
-        found_out, found_truth_out, dists_out = find_closest_blobs_cdist(
-            blobs_outer, blobs_truth_inner_missed, thresh, scaling)
-        blobs_truth_inner_missed[found_truth_out, 5] = 1
-        
-        # combine inner and outer groups
-        blobs_truth_inner_plus = np.concatenate(
-            (blobs_truth_roi[blobs_truth_roi[:, 5] == 1], 
-             blobs_truth_inner_missed))
-        blobs_outer[found_out, 4] = 1
-        blobs_inner_plus = np.concatenate((blobs_inner, blobs_outer[found_out]))
-
-        matches_inner = _match_blobs(
-            blobs_inner, blobs_truth_roi, found, found_truth, dists)
-        matches_outer = _match_blobs(
-            blobs_outer, blobs_truth_inner_missed, found_out,
-            found_truth_out, dists_out)
-        matches = [*matches_inner, *matches_outer]
-        if config.verbose:
-            '''
-            print("blobs_roi:\n{}".format(blobs_roi))
-            print("blobs_inner:\n{}".format(blobs_inner))
-            print("blobs_truth_inner:\n{}".format(blobs_truth_inner))
-            print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
-            print("found inner:\n{}"
-                  .format(blobs_inner[found]))
-            print("truth found:\n{}"
-                  .format(blobs_truth_roi[found_truth]))
-            print("blobs_outer:\n{}".format(blobs_outer))
-            print("blobs_truth_inner_missed:\n{}"
-                  .format(blobs_truth_inner_missed))
-            print("truth blobs detected by an outside blob:\n{}"
-                  .format(blobs_truth_inner_missed[found_truth_out]))
-            print("all those outside detection blobs:\n{}"
-                  .format(blobs_roi_extra))
-            print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
-            print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
-            '''
-
-            print("Closest matches found (truth, detected, distance):")
-            msgs = ("\n- Inner ROI:", "\n- Outer ROI:")
-            for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
-                print(msg)
-                for match in matches_sub:
-                    print(match[0], match[1], match[2])
-            print()
+        blobs_inner_plus, blobs_truth_inner_plus, offset_inner, size_inner, \
+            matches = match_blobs_roi(
+                blobs, blobs_truth, offset, size, thresh, scaling,
+                inner_padding, resize)
         
         # store blobs in separate verified DB
         roi_id, _ = sqlite.insert_roi(output_db.conn, output_db.cur, exp_id,
@@ -1163,6 +1225,40 @@ def colocalize_blobs(roi, blobs, thresh=None):
         for i, (blob, coloc) in enumerate(zip(blobs_roi, colocs)):
             print(i, get_blob_channel(blob), blob[:3], coloc)
     return colocs
+
+
+def colocalize_blobs_match(blobs, offset, size, tol):
+    """Co-localize blobs in separate channels but the same ROI by finding
+    optimal blob matches.
+
+    Args:
+        blobs (:obj:`np.ndarray`): Blobs from separate channels.
+        offset (List[int]): ROI offset given as x,y,z.
+        size (List[int]): ROI shape given as x,y,z.
+        tol (List[float]): Tolerances for matching given as x,y,z
+
+    Returns:
+        Dict[Tuple, List]: Dictionary where keys are tuples of the two
+        channels compared and values are a list of blob matches.
+
+    """
+    if blobs is None:
+        return None
+    thresh, scaling, inner_padding, resize, blobs = setup_match_blobs_roi(
+        blobs, tol)
+    matches_chls = {}
+    channels = np.unique(get_blobs_channel(blobs)).astype(int)
+    for chl in channels:
+        blobs_chl = blobs_in_channel(blobs, chl)
+        for chl_other in channels:
+            if chl >= chl_other: continue
+            blobs_chl_other = blobs_in_channel(blobs, chl_other)
+            blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
+            size_inner, matches = match_blobs_roi(
+                blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
+                inner_padding, resize)
+            matches_chls[(chl, chl_other)] = matches
+    return matches_chls
 
 
 def show_blobs_per_channel(blobs):

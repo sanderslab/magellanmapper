@@ -319,7 +319,9 @@ class BlobsVisibilityOptions(Enum):
 
 class ColocalizeOptions(Enum):
     """Enumerations for co-localization options."""
+    DEFAULT = ""
     INTENSITY = "Intensity"
+    MATCHES = "Matches"
 
 
 class ControlsTabs(Enum):
@@ -683,10 +685,9 @@ class Visualization(HasTraits):
                      values=[e.value for e in BlobsVisibilityOptions],
                      cols=len(BlobsVisibilityOptions),
                      format_func=lambda x: x)),
-            Item("_colocalize", style="custom", label="Co-localize by",
+            Item("_colocalize", label="Co-localize by", springy=True,
                  editor=CheckListEditor(
                      values=[e.value for e in ColocalizeOptions],
-                     cols=len(ColocalizeOptions),
                      format_func=lambda x: x)),
         ),
         Item("scale_detections",
@@ -1844,6 +1845,21 @@ class Visualization(HasTraits):
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
             segs_all = detector.detect_blobs(roi, config.channel)
+            
+            if ColocalizeOptions.MATCHES.value in self._colocalize:
+                # match blobs between two channels
+                verify_tol = np.multiply(
+                    chunking.calc_overlap(),
+                    config.roi_profile["verify_tol_factor"])
+                matches = detector.colocalize_blobs_match(
+                    segs_all, np.zeros(3, dtype=int), roi_size, verify_tol)
+                if matches:
+                    blob_matches = []
+                    for match in matches[tuple(matches.keys())[0]]:
+                        blob_matches.append(sqlite.BlobMatch(
+                            None, None, None, match[0], None, match[1],
+                            match[2]))
+                    self.blobs.blob_matches = blob_matches
         else:
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs

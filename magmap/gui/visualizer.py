@@ -1830,15 +1830,16 @@ class Visualization(HasTraits):
             # TODO: set segs_all to None rather than empty list if no blobs?
             segs_all, mask = detector.get_blobs_in_roi(
                 config.blobs.blobs, offset, roi_size, self._margin)
-            if config.blobs.colocalizations is not None:
-                # get corresponding blob co-localizations
-                colocs = config.blobs.colocalizations[mask]
             
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)
-            segs_all = detector.blobs_in_channel(
-                segs_all, config.channel)
+            segs_all, mask_chl = detector.blobs_in_channel(
+                segs_all, config.channel, return_mask=True)
+            if config.blobs.colocalizations is not None and segs is None:
+                # get corresponding blob co-localizations unless showing
+                # blobs from database, which do not have colocs
+                colocs = config.blobs.colocalizations[mask][mask_chl]
         print("segs_all:\n{}".format(segs_all))
         
         if segs is not None:

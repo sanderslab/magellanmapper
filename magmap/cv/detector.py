@@ -310,22 +310,28 @@ def replace_rel_with_abs_blob_coords(blobs):
     return blobs
 
 
-def blobs_in_channel(blobs, channel):
+def blobs_in_channel(blobs, channel, return_mask=False):
     """Get blobs in the given channels
     
     Args:
         blobs (:obj:`np.ndarray`): Blobs in the format,
             ``[[z, y, x, r, c, ...], ...]``.
         channel (List[int]): Sequence of channels to include.
+        return_mask (bool): True to return the mask of blobs in ``channel``.
 
     Returns:
         :obj:`np.ndarray`: A view of the blobs in the channel, or all
         blobs if ``channel`` is None.
 
     """
-    if channel is None:
-        return blobs
-    return blobs[np.isin(get_blobs_channel(blobs), channel)]
+    blobs_chl = blobs
+    mask = None
+    if channel is not None:
+        mask = np.isin(get_blobs_channel(blobs), channel)
+        blobs_chl = blobs[mask]
+    if return_mask:
+        return blobs_chl, mask
+    return blobs_chl
 
 
 def blob_for_db(blob):

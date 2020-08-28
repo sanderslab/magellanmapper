@@ -192,7 +192,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
             corresponding to ``img_path`` with any ``suffix`` modifier 
             will be opened.
         channel (List[int]): Sequence of channels to include in density image;
-            defaults to None to use all channels.
+            defaults to None to combine blobs from all channels.
     
     Returns:
         :obj:`np.ndarray`, str: The density image as a Numpy array in the
@@ -246,10 +246,11 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
         if blob_chls_len > 1:
             # get all channel combos that include given channels
             combos = []
+            chls = blob_chls if channel is None else channel
             for r in range(2, blob_chls_len + 1):
                 combos.extend(
                     [tuple(c) for c in itertools.combinations(blob_chls, r)
-                     if all([h in c for h in channel])])
+                     if all([h in c for h in chls])])
             
             # create heat map for each co-localization combo as a separate
             # channel in output image

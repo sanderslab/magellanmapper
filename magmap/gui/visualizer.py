@@ -1852,7 +1852,8 @@ class Visualization(HasTraits):
                     chunking.calc_overlap(),
                     config.roi_profile["verify_tol_factor"])
                 matches = detector.colocalize_blobs_match(
-                    segs_all, np.zeros(3, dtype=int), roi_size, verify_tol)
+                    segs_all, np.zeros(3, dtype=int), roi_size, verify_tol,
+                    np.zeros(3, dtype=int))
                 if matches:
                     blob_matches = []
                     for match in matches[tuple(matches.keys())[0]]:

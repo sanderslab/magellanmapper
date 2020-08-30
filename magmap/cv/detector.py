@@ -1230,7 +1230,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
     return colocs
 
 
-def colocalize_blobs_match(blobs, offset, size, tol):
+def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     """Co-localize blobs in separate channels but the same ROI by finding
     optimal blob matches.
 
@@ -1239,6 +1239,8 @@ def colocalize_blobs_match(blobs, offset, size, tol):
         offset (List[int]): ROI offset given as x,y,z.
         size (List[int]): ROI shape given as x,y,z.
         tol (List[float]): Tolerances for matching given as x,y,z
+        inner_padding (List[int]): ROI padding given as x,y,z; defaults
+            to None to use the padding based on ``tol``.
 
     Returns:
         Dict[Tuple, List]: Dictionary where keys are tuples of the two
@@ -1247,8 +1249,10 @@ def colocalize_blobs_match(blobs, offset, size, tol):
     """
     if blobs is None:
         return None
-    thresh, scaling, inner_padding, resize, blobs = setup_match_blobs_roi(
+    thresh, scaling, inner_pad, resize, blobs = setup_match_blobs_roi(
         blobs, tol)
+    if inner_padding is None:
+        inner_padding = inner_pad
     matches_chls = {}
     channels = np.unique(get_blobs_channel(blobs)).astype(int)
     for chl in channels:
@@ -1257,9 +1261,9 @@ def colocalize_blobs_match(blobs, offset, size, tol):
             if chl >= chl_other: continue
             blobs_chl_other = blobs_in_channel(blobs, chl_other)
             blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
-            size_inner, matches = match_blobs_roi(
-                blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
-                inner_padding, resize)
+                size_inner, matches = match_blobs_roi(
+                    blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
+                    inner_padding, resize)
             matches_chls[(chl, chl_other)] = matches
     return matches_chls
 

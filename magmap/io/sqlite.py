@@ -112,11 +112,11 @@ def _create_table_blob_matches(cur):
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                 "roi_id INTEGER, blob1 INTEGER, blob2 INTEGER, dist REAL, "
                 "FOREIGN KEY (roi_id) REFERENCES rois (id) "
-                "ON UPDATE CASCADE ON DElETE CASCADE, "
+                "ON UPDATE CASCADE ON DELETE CASCADE, "
                 "FOREIGN KEY (blob1) REFERENCES blobs (id) "
-                "ON UPDATE CASCADE ON DElETE CASCADE,"
+                "ON UPDATE CASCADE ON DELETE CASCADE,"
                 "FOREIGN KEY (blob2) REFERENCES blobs (id) "
-                "ON UPDATE CASCADE ON DElETE CASCADE)")
+                "ON UPDATE CASCADE ON DELETE CASCADE)")
 
 
 def upgrade_db(conn, cur):
@@ -197,6 +197,8 @@ def start_db(path=None, new_db=False):
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
         print("Loaded database from {}".format(path))
+    # add foreign key constraint support
+    conn.execute("PRAGMA foreign_keys=ON")
     upgrade_db(conn, cur)
     return conn, cur
 

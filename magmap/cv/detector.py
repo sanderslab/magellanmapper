@@ -864,7 +864,7 @@ def setup_match_blobs_roi(blobs, tol):
 
 
 def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
-                    inner_padding, resize):
+                    inner_padding, resize=None):
     """Match blobs from two sets of blobs in an ROI, prioritizing the inner
     portion of ROIs to avoid missing detections because of edge effects
     while also adding matches between a blob in the inner ROI and another
@@ -881,7 +881,8 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
         thresh (float): Distance map threshold
         scaling (List[float]): Scaling normalized by ``tol``.
         inner_padding (List[float]): ROI padding shape.
-        resize (List[float]): resize sequence retrieved from ROI profile.
+        resize (List[float]): Resize sequence retrieved from ROI profile;
+            defaults to None.
     
     Returns:
         :obj:`np.ndarray`, :obj:`np.ndarray`, List[int], List[int], List[List]:
@@ -969,7 +970,9 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
         for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
             print(msg)
             for match in matches_sub:
-                print(match[0], match[1], match[2])
+                print("Blob1:", match[0][:3], "chl", get_blob_channel(match[0]),
+                      "Blob2:", match[1][:3], "chl", get_blob_channel(match[1]),
+                      "dist:", match[2])
         print()
     
     return blobs_inner_plus, blobs_truth_inner_plus, offset_inner, size_inner, \

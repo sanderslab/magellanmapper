@@ -494,24 +494,17 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
         array of corresponding distances for these matches. Only matches 
         within the given tolerance will be included.
     """
+    blobs_scaled = blobs
+    blobs_master_scaled = blobs_master
     if scaling is not None:
         # scale blobs and tolerance by given factor, eg for isotropy
         len_scaling = len(scaling)
-        '''
-        blobs_orig = blobs[:, :3]
-        blobs_master_orig = blobs_master[:, :3]
-        '''
-        blobs = np.multiply(blobs[:, :len_scaling], scaling)
-        blobs_master = np.multiply(blobs_master[:, :len_scaling], scaling)
+        blobs_scaled = np.multiply(blobs[:, :len_scaling], scaling)
+        blobs_master_scaled = np.multiply(blobs_master[:, :len_scaling], scaling)
     
     # find Euclidean distances between each pair of points and determine 
     # the optimal assignments using the Hungarian algorithm
-    dists = distance.cdist(blobs, blobs_master)
-    '''
-    for i, b in enumerate(blobs_orig):
-        for j, bm in enumerate(blobs_master_orig):
-            if np.array_equal(bm, (21, 16, 23)): print(bm, b, dists[i, j])
-    '''
+    dists = distance.cdist(blobs_scaled, blobs_master_scaled)
     rowis, colis = optimize.linear_sum_assignment(dists)
     
     dists_closest = dists[rowis, colis]
@@ -519,6 +512,14 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
         # filter out matches beyond the given threshold distance
         print("only keeping blob matches within threshold distance of", thresh)
         dists_in = dists_closest < thresh
+        if config.verbose:
+            for blob, blob_sc, blob_base, blob_base_sc, dist, dist_in in zip(
+                    blobs[rowis], blobs_scaled[rowis], blobs_master[colis],
+                    blobs_master_scaled[colis], dists_closest,
+                    dists_in):
+                print("blob: {} (scaled {}), base: {} ({}), dist: {}, in? {}"
+                      .format(blob[:3], blob_sc[:3], blob_base[:3],
+                              blob_base_sc[:3], dist, dist_in))
         rowis = rowis[dists_in]
         colis = colis[dists_in]
         dists_closest = dists_closest[dists_in]

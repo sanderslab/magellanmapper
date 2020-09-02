@@ -979,6 +979,16 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
             config.truth_db_mode is config.TruthDBModes.VERIFY, 
             not config.grid_search_profile, config.image5d_is_roi, coloc)
 
+    elif proc_type is config.ProcessTypes.COLOC_MATCH:
+        # colocalize blobs in separate channels by matching blobs
+        if config.blobs is not None and config.blobs.blobs is not None:
+            shape = (config.image5d.shape[1:] if subimg_size is None
+                     else subimg_size)
+            stack_detect.StackColocalizer.colocalize_stack(
+                shape, config.blobs.blobs)
+        else:
+            print("No blobs loaded to colocalize, skipping")
+
     elif proc_type is config.ProcessTypes.EXPORT_PLANES:
         # export each plane as a separate image file
         from magmap.io import export_stack

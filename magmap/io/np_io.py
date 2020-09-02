@@ -205,7 +205,9 @@ def setup_images(path=None, series=None, offset=None, size=None,
                   .format(filename_subimg))
 
     proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
-    if proc_type in (config.ProcessTypes.LOAD, config.ProcessTypes.EXPORT_ROIS,
+    if proc_type in (config.ProcessTypes.LOAD,
+                     config.ProcessTypes.COLOC_MATCH,
+                     config.ProcessTypes.EXPORT_ROIS,
                      config.ProcessTypes.EXPORT_BLOBS,
                      config.ProcessTypes.DETECT):
         # load a blobs archive

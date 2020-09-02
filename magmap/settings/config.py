@@ -150,7 +150,8 @@ ProcessTypes = Enum(
     "ProcessTypes", (
         "IMPORT_ONLY",
         "DETECT",  # whole image blob detection
-        "DETECT_COLOC",  # detection with co-localization
+        "DETECT_COLOC",  # detection with colocalization by intensity
+        "COLOC_MATCH",  # colocalization by blob matching
         "LOAD",
         "EXTRACT",
         "EXPORT_ROIS",

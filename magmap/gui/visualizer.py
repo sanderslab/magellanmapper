@@ -53,11 +53,8 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
 from magmap.atlas import ontology
-from magmap.cv import chunking
-from magmap.cv import cv_nd
-from magmap.cv import detector
-from magmap.cv import segmenter
-from magmap.cv import stack_detect
+from magmap.cv import (
+    chunking, colocalizer, cv_nd, detector, segmenter, stack_detect)
 from magmap.gui import atlas_editor
 from magmap.gui import roi_editor
 from magmap.io import cli
@@ -1851,7 +1848,7 @@ class Visualization(HasTraits):
                 verify_tol = np.multiply(
                     chunking.calc_overlap(),
                     config.roi_profile["verify_tol_factor"])
-                matches = detector.colocalize_blobs_match(
+                matches = colocalizer.colocalize_blobs_match(
                     segs_all, np.zeros(3, dtype=int), roi_size, verify_tol,
                     np.zeros(3, dtype=int))
                 if matches:
@@ -1961,7 +1958,7 @@ class Visualization(HasTraits):
         """
         if self.blobs.blobs is None: return
         if self.blobs.colocalizations is None:
-            self.blobs.colocalizations = detector.colocalize_blobs(
+            self.blobs.colocalizations = colocalizer.colocalize_blobs(
                 self.roi, self.blobs.blobs)
         if self.roi_ed:
             self.roi_ed.show_colocalized_blobs(

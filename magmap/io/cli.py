@@ -59,6 +59,7 @@ import numpy as np
 from magmap.atlas import register
 from magmap.atlas import transformer
 from magmap.cloud import notify
+from magmap.cv import chunking, colocalizer, stack_detect
 from magmap.io import df_io
 from magmap.io import importer
 from magmap.io import libmag
@@ -69,8 +70,6 @@ from magmap.settings import atlas_prof
 from magmap.settings import config
 from magmap.settings import grid_search_prof
 from magmap.settings import roi_prof
-from magmap.cv import chunking
-from magmap.cv import stack_detect
 from magmap.plot import colormaps
 from magmap.plot import plot_2d
 
@@ -984,7 +983,7 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         if config.blobs is not None and config.blobs.blobs is not None:
             shape = (config.image5d.shape[1:] if subimg_size is None
                      else subimg_size)
-            stack_detect.StackColocalizer.colocalize_stack(
+            colocalizer.StackColocalizer.colocalize_stack(
                 shape, config.blobs.blobs)
         else:
             print("No blobs loaded to colocalize, skipping")

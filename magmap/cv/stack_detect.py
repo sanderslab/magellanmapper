@@ -13,8 +13,7 @@ from time import time
 import numpy as np
 import pandas as pd
 
-from magmap.cv import chunking
-from magmap.cv import detector
+from magmap.cv import chunking, colocalizer, detector
 from magmap.io import cli
 from magmap.io import df_io
 from magmap.io import importer
@@ -169,7 +168,7 @@ class StackDetector(object):
         segments = detector.detect_blobs(sub_roi, config.channel, exclude)
         if coloc and segments is not None:
             # co-localize blobs and append to blobs array
-            colocs = detector.colocalize_blobs(sub_roi, segments)
+            colocs = colocalizer.colocalize_blobs(sub_roi, segments)
             segments = np.hstack((segments, colocs))
         #print("segs before (offset: {}):\n{}".format(offset, segments))
         if segments is not None:
@@ -787,141 +786,3 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
     return blobs_all, df
 
 
-class StackColocalizer(object):
-    """Colocalize blobs from different channels in a full image stack
-    with multiprocessing.
-    
-    """
-    blobs = None
-    match_tol = None
-    
-    @classmethod
-    def colocalize_block(cls, coord, offset, shape, blobs=None,
-                         tol=None, setup_cli=False):
-        """Colocalize blobs from different channels within a block.
-        
-        Args:
-            coord (Tuple[int]): Block coordinate.
-            offset (List[int]): Block offset within the full image in z,y,x.
-            shape (List[int]): Block shape in z,y,x.
-            blobs (:obj:`np.ndarray`): 2D blobs array; defaults to None to
-                use :attr:`blobs`.
-            tol (List[float]): Tolerance for colocalizing blobs; defaults
-                to None to use :attr:`match_tol`.
-            setup_cli (bool): True to set up CLI arguments, typically for
-                a spawned (rather than forked) environment; defaults to False.
-
-        Returns:
-            Tuple[int], dict[Tuple[int], Tuple]: ``coord`` for tracking
-            multiprocessing and the dictionary of matches.
-
-        """
-        if blobs is None:
-            blobs = cls.blobs
-        if tol is None:
-            tol = cls.match_tol
-        if setup_cli:
-            cli.main(True, True)
-        matches = detector.colocalize_blobs_match(blobs, offset, shape, tol)
-        return coord, matches
-    
-    @classmethod
-    def colocalize_stack(cls, shape, blobs):
-        """Entry point to colocalizing blobs within a stack.
-        
-        Args:
-            shape (List[int]): Image shape in z,y,x.
-            blobs (:obj:`np.ndarray`): 2D Numpy array of blobs.
-
-        Returns:
-            dict[Tuple[int], Tuple]: The dictionary of matches.
-
-        """
-        # set up ROI blocks from which to select blobs in each block
-        sub_roi_slices, sub_rois_offsets, _, _, _, overlap_base, _, _ \
-            = setup_blocks(config.roi_profile, shape)
-        match_tol = np.multiply(
-            overlap_base, config.roi_profile["verify_tol_factor"])
-
-        is_fork = chunking.is_fork()
-        if is_fork:
-            # set shared data in forked multiprocessing
-            cls.blobs = blobs
-            cls.match_tol = match_tol
-        pool = mp.Pool(processes=config.cpus)
-        pool_results = []
-        for z in range(sub_roi_slices.shape[0]):
-            for y in range(sub_roi_slices.shape[1]):
-                for x in range(sub_roi_slices.shape[2]):
-                    coord = (z, y, x)
-                    offset = sub_rois_offsets[coord]
-                    slices = sub_roi_slices[coord]
-                    shape = [s.stop - s.start for s in slices]
-                    if is_fork:
-                        # use variables stored as class attributes
-                        pool_results.append(pool.apply_async(
-                            StackColocalizer.colocalize_block,
-                            args=(coord, offset, shape)))
-                    else:
-                        # pickle full set of variables
-                        pool_results.append(pool.apply_async(
-                            StackColocalizer.colocalize_block,
-                            args=(coord, offset, shape,
-                                  detector.get_blobs_in_roi(
-                                      blobs, offset, shape)[0], match_tol,
-                                  True)))
-
-        # store blobs in dict with channel combos as keys
-        matches_all = {}
-        for result in pool_results:
-            coord, matches = result.get()
-            count = 0
-            for key, val in matches.items():
-                if key in matches_all:
-                    matches_all[key].extend(val)
-                else:
-                    matches_all[key] = val
-                count += len(val)
-            print("adding {} matches from block at {} of {}"
-                  .format(count, coord, np.add(sub_roi_slices.shape, -1)))
-
-        pool.close()
-        pool.join()
-        
-        # prune duplicates by taking matches with shortest distance
-        for matchi in range(2):
-            for key in matches_all.keys():
-                # convert matches for channel-combo to ndarray to extract
-                # blobs by column
-                matches = np.array(matches_all[key])
-                matches_uniq, matches_i, matches_inv, matches_cts = np.unique(
-                    np.array(matches[:, matchi].tolist(), dtype=int)[:, :3],
-                    axis=0, return_index=True, return_inverse=True,
-                    return_counts=True)
-                if np.sum(matches_cts > 1) > 0:
-                    # prune if at least one blob has been matched to multiple
-                    # other blobs
-                    singles = matches[matches_i[matches_cts == 1]]
-                    dups = []
-                    for i, ct in enumerate(matches_cts):
-                        # include non-duplicates to retain index
-                        if ct <= 1: continue
-                        # get indices in orig matches at given uniq array index
-                        # and take match with lowest dist
-                        matches_mult = matches[matches_inv == i]
-                        min_dist = np.amin(matches_mult[:, 2])
-                        num_matches = len(matches_mult)
-                        if config.verbose and num_matches > 1:
-                            print("pruning from", num_matches,
-                                  "matches of dist:", matches_mult[:, 2])
-                        matches_mult = matches_mult[
-                            matches_mult[:, 2] == min_dist]
-                        dups.append(matches_mult[0])
-                    matches_all[key] = np.vstack((singles, dups))
-                if config.verbose:
-                    print("Colocalization matches for channels", key)
-                    for match in matches_all[key]:
-                        print("Blob1 {}, Blob2 {}, dist {}".format(
-                            match[0][:3], match[1][:3], match[2]))
-        
-        return matches_all

@@ -820,21 +820,36 @@ class ClrDB:
         
         Args:
             roi_id (int): ROI ID.
-            matches: Blob matches.
+            matches (Any): Blob matches as ``[[blob1, blob2, dist], ...]``
+                or a sequence of :obj:`BlobMatch` objects.
 
         Returns:
             List[int]: List of blob match IDs.
 
         """
+        def get_blob_id(blob, blob_id):
+            # get blob ID by selecting blob if given ID is None
+            return (self.select_blob(roi_id, blob)[1] if blob_id is None
+                    else blob_id)
+        
+        if matches is None: return None
         ids = []
         for match in matches:
-            blob1, blob1_id = self.select_blob(roi_id, match[0])
-            blob2, blob2_id = self.select_blob(roi_id, match[1])
+            if isinstance(match, BlobMatch):
+                # get blob IDs from object
+                blob1_id = get_blob_id(match.blob1, match.blob1_id)
+                blob2_id = get_blob_id(match.blob2, match.blob2_id)
+                dist = match.dist
+            else:
+                # get blob IDs by selecting blob
+                blob1_id = self.select_blob(roi_id, match[0])[1]
+                blob2_id = self.select_blob(roi_id, match[1])[1]
+                dist = match[2]
             if blob1_id and blob2_id:
                 self.cur.execute(
                     "INSERT INTO blob_matches ({}) "
                     "VALUES (?, ?, ?, ?)".format(_COLS_BLOB_MATCHES),
-                    (roi_id, blob1_id, blob2_id, match[2]))
+                    (roi_id, blob1_id, blob2_id, dist))
                 ids.append(self.cur.lastrowid)
                 print("Blob match inserted for ROI ID {}, blob 1 ID {}, "
                       "blob 2 ID {}".format(roi_id, blob1_id, blob2_id))

@@ -1233,6 +1233,7 @@ class Visualization(HasTraits):
         print("segments", self.segments)
         segs_transposed = []
         segs_to_delete = []
+        offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         print("Preparing to insert segments to database with border widths {}"
               .format(self.border))
@@ -1306,6 +1307,15 @@ class Visualization(HasTraits):
         # insert blobs into DB and save ROI in GUI
         sqlite.insert_blobs(
             config.db.conn, config.db.cur, roi_id, segs_transposed)
+        
+        # insert blob matches
+        if self.blobs.blob_matches is not None:
+            for match in self.blobs.blob_matches:
+                detector.shift_blob_rel_coords(match.blob1, offset[::-1])
+                detector.shift_blob_rel_coords(match.blob2, offset[::-1])
+            config.db.insert_blob_matches(roi_id, self.blobs.blob_matches)
+        
+        # add ROI to selection dropdown
         roi = sqlite.select_roi(config.db.cur, roi_id)
         self._append_roi(roi, self._rois_dict)
         self._rois_selections.selections = list(self._rois_dict.keys())

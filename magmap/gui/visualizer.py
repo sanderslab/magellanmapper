@@ -1236,7 +1236,11 @@ class Visualization(HasTraits):
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str
-    
+
+    def _btn_save_segments_fired(self):
+        """Handler to save blobs to database when triggered by Trait."""
+        self.save_segs()
+
     def _reset_segments(self):
         """Resets the saved segments.
         """
@@ -2027,10 +2031,6 @@ class Visualization(HasTraits):
                 self.roi_array[0].astype(int))
             plot_2d.plot_image(screenshot, path)
     
-    def _btn_save_segments_fired(self):
-        # save blobs to database
-        self.save_segs()
-    
     @on_trait_change('rois_check_list')
     def load_roi(self):
         """Load an ROI from database, including all blobs."""
@@ -2259,25 +2259,25 @@ class Visualization(HasTraits):
             self._flag_seg_for_deletion(seg)
             self._force_seg_refresh(segi, show=True)
         elif segment_old is not None:
-            # update abs coordinates of new segment based on relative coords 
-            # since the new segment will typically only update relative coords
+            # new blob's abs coords are not shifted, so shift new blob's abs
+            # coordinates by relative coords' diff between old and new blobs
             # TODO: consider requiring new seg to already have abs coord updated
             self._segs_moved.append(segment_old)
             diff = np.subtract(seg[:3], segment_old[:3])
             detector.shift_blob_abs_coords(seg, diff)
             segi = self._get_vis_segments_index(segment_old)
             if segi == -1:
-                # check if deleted segment if not found
+                # try to find old blob from deleted blobs
                 self._flag_seg_for_deletion(segment_old)
                 segi = self._get_vis_segments_index(segment_old)
             if segi != -1:
-                # update an existing segment if found
+                # replace corresponding blob entry in table
                 self.segments[segi] = seg
                 print("updated seg: {}".format(seg))
                 self._force_seg_refresh(segi, show=True)
         else:
             # add a new segment to the visualizer table
-            segs = [seg] # for concatenation
+            segs = [seg]  # for concatenation
             if self.segments is None or len(self.segments) == 0:
                 # copy since the object may be changed elsewhere; cast to 
                 # float64 since original type causes an incorrect database 

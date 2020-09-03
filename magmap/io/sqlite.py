@@ -28,8 +28,10 @@ _COLS_BLOB_MATCHES = "roi_id, blob1, blob2, dist"
 
 class BlobMatch:
     """Blob match storage class."""
-    def __init__(self, match_id, roi_id, blob1_id, blob1, blob2_id, blob2,
-                 dist):
+    
+    def __init__(self, match_id=None, roi_id=None, blob1_id=None, blob1=None,
+                 blob2_id=None, blob2=None, dist=None):
+        """Initialize blob match object."""
         self.match_id = match_id
         self.roi_id = roi_id
         self.blob1_id = blob1_id
@@ -37,6 +39,13 @@ class BlobMatch:
         self.blob2_id = blob2_id
         self.blob2 = blob2
         self.dist = dist
+    
+    def __repr__(self):
+        """Output a string representation with major attributes."""
+        return ("match_id {}, roi_id {}, blob1 {}, blob1_id {}, blob2 {},"
+                "blob2_id {}, dist {}".format(
+                    self.match_id, self.roi_id, self.blob1, self.blob1_id,
+                    self.blob2, self.blob2_id, self.dist))
     
     def shift_blobs(self, offset):
         """Shift coordinates of blobs by offset.

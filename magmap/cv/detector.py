@@ -275,9 +275,31 @@ def get_blob_confirmed(blob):
     return blob[4]
 
 
-def update_blob_confirmed(blob, confirmed):
-    blob[..., 4] = confirmed
+def set_blob_col(blob, col, val):
+    """Set the value for the given column of a blob or blobs.
+
+    Args:
+        blob (:obj:`np.ndarray`): 1D blob array or 2D array of blobs.
+        col (int): Column index in ``blob``.
+        val (int): Truth value.
+
+    """
+    if blob.ndim > 1:
+        blob[..., col] = val
+    else:
+        blob[col] = val
     return blob
+
+
+def set_blob_confirmed(blob, val):
+    """Set the confirmed flag of a blob or blobs.
+
+    Args:
+        blob (:obj:`np.ndarray`): 1D blob array or 2D array of blobs.
+        val (int): Confirmed flag.
+
+    """
+    set_blob_col(blob, 4, val)
 
 
 def get_blob_truth(blob):
@@ -296,12 +318,34 @@ def get_blob_truth(blob):
     return blob[5]
 
 
+def set_blob_truth(blob, val):
+    """Set the truth flag of a blob or blobs.
+
+    Args:
+        blob (:obj:`np.ndarray`): 1D blob array or 2D array of blobs.
+        val (int): Truth value.
+
+    """
+    set_blob_col(blob, 5, val)
+
+
 def get_blob_channel(blob):
     return blob[6]
 
 
 def get_blobs_channel(blobs):
     return blobs[:, 6]
+
+
+def set_blob_channel(blob, val):
+    """Set the channel of a blob or blobs.
+
+    Args:
+        blob (:obj:`np.ndarray`): 1D blob array or 2D array of blobs.
+        val (int): Channel value.
+
+    """
+    set_blob_col(blob, 6, val)
 
 
 def replace_rel_with_abs_blob_coords(blobs):

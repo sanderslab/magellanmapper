@@ -772,7 +772,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                          event.xdata.astype(int), -5]])
                         blob = detector.format_blobs(blob, blob_channel)
                         detector.shift_blob_abs_coords(blob, offset[::-1])
-                        detector.update_blob_confirmed(blob, 1)
+                        detector.set_blob_confirmed(blob, 1)
                         blob = fn_update_seg(blob[0])
                         # adds a circle to denote the new segment
                         patch = self._plot_circle(

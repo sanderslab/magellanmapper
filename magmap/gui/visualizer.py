@@ -2498,7 +2498,7 @@ class Visualization(HasTraits):
     
     def _flag_seg_for_deletion(self, seg):
         seg[3] = -1 * abs(seg[3])
-        detector.update_blob_confirmed(seg, -1)
+        detector.set_blob_confirmed(seg, -1)
     
     def update_segment(self, segment_new, segment_old=None, remove=False):
         """Update this class object's segments list with a new or updated 

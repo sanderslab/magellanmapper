@@ -276,13 +276,24 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     matches_chls = {}
     channels = np.unique(detector.get_blobs_channel(blobs)).astype(int)
     for chl in channels:
+        # pair channels
         blobs_chl = detector.blobs_in_channel(blobs, chl)
         for chl_other in channels:
+            # prevent duplicates by skipping other channels below given channel
             if chl >= chl_other: continue
+            # find colocalizations between blobs from one channel to blobs
+            # in another channel
             blobs_chl_other = detector.blobs_in_channel(blobs, chl_other)
             blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
                 size_inner, matches = detector.match_blobs_roi(
                     blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
                     inner_padding, resize)
-            matches_chls[(chl, chl_other)] = matches
+            
+            # reset truth and confirmation flags from matcher
+            chl_combo = (chl, chl_other)
+            for match in matches:
+                for i, c in enumerate(chl_combo):
+                    detector.set_blob_truth(match[i], -1)
+                    detector.set_blob_confirmed(match[i], -1)
+            matches_chls[chl_combo] = matches
     return matches_chls

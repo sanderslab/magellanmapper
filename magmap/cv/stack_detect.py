@@ -7,7 +7,6 @@ processing.
 """
 
 from enum import Enum
-import multiprocessing as mp
 import os
 from time import time
 
@@ -446,7 +445,7 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
     if is_fork:
         StackDetector.set_data(
             img, last_coord, denoise_max_shape, exclude_border)
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for z in range(sub_roi_slices.shape[0]):
         for y in range(sub_roi_slices.shape[1]):
@@ -663,7 +662,7 @@ def _prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offset
             is_fork = chunking.is_fork()
             if is_fork:
                 StackPruner.set_data(blobs_to_prune)
-            pool = mp.Pool(processes=config.cpus)
+            pool = chunking.get_mp_pool()
             pool_results = []
             for j in range(len(blobs_to_prune)):
                 if is_fork:

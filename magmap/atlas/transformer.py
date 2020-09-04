@@ -4,14 +4,12 @@
 and image transposition.
 """
 
-import multiprocessing as mp
 from time import time
 
 import numpy as np
 from skimage import transform
 
-from magmap.cv import chunking
-from magmap.cv import cv_nd
+from magmap.cv import chunking, cv_nd
 from magmap.settings import config
 from magmap.settings import profiles
 from magmap.io import importer
@@ -246,7 +244,7 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
         if is_fork:
             Downsampler.set_data(rescaled)
         sub_rois = np.zeros_like(sub_roi_slices)
-        pool = mp.Pool(processes=config.cpus)
+        pool = chunking.get_mp_pool()
         pool_results = []
         for z in range(sub_roi_slices.shape[0]):
             for y in range(sub_roi_slices.shape[1]):

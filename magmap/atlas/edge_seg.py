@@ -2,7 +2,6 @@
 # Author: David Young, 2019
 """Re-segment atlases based on edge detections.
 """
-import multiprocessing as mp
 import os
 from time import time
 
@@ -12,9 +11,8 @@ import numpy as np
 from magmap.atlas import atlas_refiner
 from magmap.settings import config
 from magmap.io import libmag
-from magmap.cv import cv_nd
+from magmap.cv import chunking, cv_nd, segmenter
 from magmap.settings import profiles
-from magmap.cv import segmenter
 from magmap.io import sitk_io
 from magmap.stats import vols
 
@@ -381,7 +379,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
                 mod_path)
         dfs_eros.append(df)
     
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for img_path, df in zip(img_paths, dfs_eros):
         print("setting up atlas segmentation merge for", img_path)

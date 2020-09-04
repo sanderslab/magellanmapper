@@ -2,7 +2,6 @@
 # Author: David Young, 2019
 """Refine atlases in 3D.
 """
-import multiprocessing as mp
 import os
 from collections import OrderedDict
 
@@ -14,8 +13,7 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
-from magmap.cv import cv_nd
-from magmap.cv import segmenter
+from magmap.cv import chunking, cv_nd, segmenter
 from magmap.io import df_io
 from magmap.io import export_stack
 from magmap.io import importer
@@ -677,7 +675,7 @@ def _smoothing_mp(img_np, img_np_orig, filter_sizes, spacing=None):
     Returns:
         Data frame of combined metrics from smoothing for each filter size.
     """
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for n in filter_sizes:
         pool_results.append(

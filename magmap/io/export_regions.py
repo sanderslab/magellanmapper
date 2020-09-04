@@ -6,7 +6,6 @@ Convert regions from ontology files or atlases to data frames.
 """
 import os
 import csv
-import multiprocessing as mp
 from collections import OrderedDict
 from time import time
 
@@ -18,7 +17,7 @@ from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology
-from magmap.cv import cv_nd
+from magmap.cv import chunking, cv_nd
 from magmap.io import df_io
 from magmap.io import sitk_io
 from magmap.plot import colormaps
@@ -249,7 +248,7 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None):
             defaults to None.
     """
     start_time = time()
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for img_path in img_paths:
         print("making image", img_path)

@@ -6,13 +6,13 @@ Intended to be higher-level, relatively atlas-agnostic measurements.
 """
 
 from enum import Enum
-import multiprocessing as mp
 from time import time
 
 import numpy as np
 import pandas as pd
 from skimage import measure
 
+from magmap.cv import chunking
 from magmap.stats import clustering
 from magmap.settings import config
 from magmap.io import libmag
@@ -193,7 +193,7 @@ def make_labels_edge(labels_img_np):
     # reference the labels image as a global variable
     LabelToEdge.set_labels_img_np(labels_img_np)
     
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for label_id in label_ids:
         pool_results.append(
@@ -801,7 +801,7 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
     
     metrics = {}
     grouping[config.AtlasMetrics.SIDE.value] = None
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     if label_ids is None:
         label_ids = np.unique(labels_img_np)
@@ -1048,7 +1048,7 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
     
     metrics = {}
     grouping[config.AtlasMetrics.SIDE.value] = None
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for label_id in label_ids:
         # include corresponding labels from opposite sides while skipping 

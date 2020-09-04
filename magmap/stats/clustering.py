@@ -3,13 +3,13 @@
 """Clustering measurements."""
 
 import os
-import multiprocessing as mp
 
 import numpy as np
 import pandas as pd
 from sklearn import cluster
 from sklearn import neighbors
 
+from magmap.cv import chunking
 from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
@@ -203,7 +203,7 @@ class ClusterByLabel(object):
             cls.blobs[:, 4] = labels
         else:
             # cluster by individual label
-            pool = mp.Pool(processes=config.cpus)
+            pool = chunking.get_mp_pool()
             pool_results = []
             for label_id in label_ids:
                 # add rotation argument if necessary

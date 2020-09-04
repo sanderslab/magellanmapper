@@ -6,7 +6,6 @@ Attributes:
 """
 
 import os
-import multiprocessing as mp
 from pprint import pprint
 
 import boto3
@@ -15,6 +14,7 @@ import botocore
 from boto3.exceptions import RetriesExceededError, S3UploadFailedError
 from botocore.exceptions import ClientError
 
+from magmap.cv import chunking
 from magmap.io import cli
 from magmap.io import df_io
 from magmap.io import libmag
@@ -65,7 +65,7 @@ def show_instances(instances, get_ip=False):
     """
     # show instance info in multiprocessing to allow waiting for 
     # each instance to start running
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for instance in instances:
         pool_results.append(

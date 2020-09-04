@@ -3,7 +3,6 @@
 """Segment regions based on blobs, labels, and underlying features.
 """
 
-import multiprocessing as mp
 from time import time
 
 import numpy as np
@@ -15,8 +14,7 @@ from skimage import measure
 from skimage import morphology
 
 from magmap.settings import config
-from magmap.cv import cv_nd
-from magmap.cv import detector
+from magmap.cv import chunking, cv_nd, detector
 from magmap.io import libmag
 from magmap.plot import plot_3d
 from magmap.io import df_io
@@ -411,7 +409,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
           "and target fraction {}"
           .format(filter_size, min_filter_size, target_frac))
     LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for label_id in labels_unique:
         if label_id == 0: continue
@@ -704,7 +702,7 @@ def sub_segment_labels(labels_img_np, atlas_edge):
     # reference the labels image as a global variable
     SubSegmenter.set_images(labels_img_np, atlas_edge)
     
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     label_ids = np.unique(labels_img_np)
     max_val = np.amax(labels_img_np) * (config.SUB_SEG_MULT + 1)

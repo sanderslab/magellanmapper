@@ -53,6 +53,24 @@ def is_fork():
     return mp.get_start_method(False) == "fork"
 
 
+def get_mp_pool():
+    """Get a multiprocessing ``Pool`` object, configured based on ``config``
+    settings.
+    
+    Returns:
+        :obj:`multiprocessing.Pool`: Pool object with number of processes
+        and max tasks per process determined by command-line and the main
+        (first) ROI profile settings.
+
+    """
+    prof = config.get_roi_profile(0)
+    max_tasks = None if not prof else prof["mp_max_tasks"]
+    print("Setting up multiprocessing pool with {} processes (None uses all "
+          "available)\nand max tasks of {} before replacing processes (None "
+          "does not replace processes)".format(config.cpus, max_tasks))
+    return mp.Pool(processes=config.cpus, maxtasksperchild=max_tasks)
+
+
 def calc_overlap():
     """Calculate overlap based on scaling factor and :const:``OVERLAP_FACTOR``.
     

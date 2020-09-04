@@ -67,6 +67,10 @@ class ROIProfile(profiles.SettingsDict):
         # multiprocessing start method; if method not available for the given
         # platform, the default method for the platform will be used instead
         self["mp_start"] = "fork"  # fork, spawn, or forkserver
+        # max tasks per child process; use smaller integers (eg 1) to replace
+        # worker processes and free their resources after fewer tasks
+        self["mp_max_tasks"] = None  # does not replace workers
+        
         self["segment_size"] = 500  # detection ROI max size along longest edge
         # max size along longest edge for denoising blocks within
         # segmentation blobs; None turns off preprocessing in stack proc;

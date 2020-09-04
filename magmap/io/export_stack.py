@@ -5,7 +5,6 @@
 
 import os
 import glob
-import multiprocessing as mp
 
 import numpy as np
 from skimage import transform
@@ -13,6 +12,7 @@ from skimage import io
 from matplotlib import animation
 from scipy import ndimage
 
+from magmap.cv import chunking
 from magmap.plot import colormaps
 from magmap.settings import config
 from magmap.io import importer
@@ -150,7 +150,7 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
         print("building stack for channel: {}".format(config.channel))
         target_size = target_size[:-1]
     StackPlaneIO.set_data(images)
-    pool = mp.Pool(processes=config.cpus)
+    pool = chunking.get_mp_pool()
     pool_results = []
     for i in range(num_images):
         # add rotation argument if necessary

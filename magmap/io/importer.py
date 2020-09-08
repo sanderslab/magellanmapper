@@ -290,7 +290,7 @@ def filename_to_base(filename, series=None, modifier=""):
     return path
 
 
-def deconstruct_np_filename(np_filename, sep="_"):
+def deconstruct_np_filename(np_filename, sep="_", keep_subimg=False):
     """Deconstruct Numpy or registered image filename to the original name
     from which it was based.
 
@@ -301,6 +301,7 @@ def deconstruct_np_filename(np_filename, sep="_"):
     Args:
         np_filename (str): Numpy image filename.
         sep (str): Separator for any registration suffixes; defaults to "_".
+        keep_subimg (bool): True to keep the sub-image part of the name.
     
     Returns:
         str, str, str, dict[str, str]: ``filename``, the deconstructed
@@ -318,6 +319,8 @@ def deconstruct_np_filename(np_filename, sep="_"):
     offset = None
     size = None
     reg_suffixes = None
+    if np_filename is None:
+        return base_path, offset, size, reg_suffixes
     len_np_filename = len(np_filename)
     for suffix in (config.SUFFIX_IMAGE5D, config.SUFFIX_META,
                    config.SUFFIX_SUBIMG):
@@ -337,7 +340,8 @@ def deconstruct_np_filename(np_filename, sep="_"):
                     coords = [c.strip("()").split(",")[::-1] for c in coords]
                     coords = [tuple(int(s) for s in c) for c in coords]
                     offset, size = coords[:2]
-                    filename = filename[:len(filename)-len(subimg)]
+                    if not keep_subimg:
+                        filename = filename[:len(filename)-len(subimg)]
             base_path = "{}.".format(filename)
             break
     if base_path is None:

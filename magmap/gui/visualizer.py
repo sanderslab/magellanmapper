@@ -1213,16 +1213,6 @@ class Visualization(HasTraits):
            roi["size_y"], roi["size_z"])
         rois_dict[label] = roi
 
-    @staticmethod
-    def _get_exp_name(path):
-        # get the experiment name as the basename, adding any sub-image
-        # offset/size parameters if currently set
-        exp_name = os.path.basename(path)
-        if config.subimg_offsets and config.subimg_sizes:
-            exp_name = stack_detect.make_subimage_name(
-                exp_name, config.subimg_offsets[0], config.subimg_sizes[0])
-        return os.path.splitext(exp_name)[0]
-
     def save_segs(self):
         """Saves segments to database.
         
@@ -1286,7 +1276,8 @@ class Visualization(HasTraits):
             feedback.append("\nDeleting segments:")
             for seg in segs_to_delete:
                 feedback.append(self._format_seg(seg))
-        exp_name = self._get_exp_name(config.filename)
+        exp_name = sqlite.get_exp_name(
+            config.img5d.path_img if config.img5d else None)
         exp_id = sqlite.select_or_insert_experiment(
             config.db.conn, config.db.cur, exp_name, None)
         roi_id, out = sqlite.select_or_insert_roi(
@@ -1597,8 +1588,10 @@ class Visualization(HasTraits):
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {_ROI_DEFAULT: None}
-        if config.db is not None and config.filename is not None:
-            self._rois = config.db.get_rois(self._get_exp_name(config.filename))
+        img5d = config.img5d
+        if config.db is not None and img5d and img5d.path_img is not None:
+            self._rois = config.db.get_rois(sqlite.get_exp_name(
+                img5d.path_img))
         self._rois_selections = ListSelections()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:

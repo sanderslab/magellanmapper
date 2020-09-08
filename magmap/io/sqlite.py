@@ -13,8 +13,7 @@ import numpy as np
 
 from magmap.settings import config
 from magmap.cv import detector
-from magmap.io import df_io
-from magmap.io import libmag
+from magmap.io import importer, libmag
 
 DB_NAME_BASE = "magmap"
 DB_NAME_VERIFIED = "{}_verified.db".format(DB_NAME_BASE)
@@ -232,6 +231,24 @@ def select_about(conn, cur):
     cur.execute("SELECT * FROM about")
     rows = cur.fetchall()
     return rows
+
+
+def get_exp_name(path):
+    """Get experiment name formatted for the database.
+    
+    Args:
+        path (str): Path to format, typically the loaded image5d path.
+
+    Returns:
+        str: ``path`` deconstructed to remove image suffixes and any extension
+        while preserving the sub-image string.
+
+    """
+    path_decon = importer.deconstruct_np_filename(
+        path, keep_subimg=True)[0]
+    if path_decon:
+        path_decon = os.path.splitext(os.path.basename(path_decon))[0]
+    return path_decon
 
 
 def insert_experiment(conn, cur, name, date):

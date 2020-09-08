@@ -386,7 +386,6 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         # but should make customizable
         if verify:
             db_path_base = None
-            exp_name = os.path.splitext(os.path.basename(config.filename))[0]
             try:
                 if config.truth_db is None:
                     # find and load truth DB based on filename and subimage
@@ -394,15 +393,17 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
                     print("about to verify with truth db from {}"
                           .format(db_path_base))
                     sqlite.load_truth_db(db_path_base)
-                if config.truth_db is not None:
+                if config.truth_db is not None and config.img5d:
                     # truth DB may contain multiple experiments for different
                     # subimages; series not included in exp name since in ROI
+                    exp_name = sqlite.get_exp_name(config.img5d.path_img)
                     rois = config.truth_db.get_rois(exp_name)
                     if rois is None:
-                        # exp may have been named by ROI
-                        print("{} experiment name not found, will try with"
-                              "ROI offset/size".format(exp_name))
-                        exp_name = make_subimage_name(exp_name, offset, size)
+                        # exp may have been named without sub-image
+                        # TODO: consider removing
+                        print("{} experiment name not found, will try without "
+                              "sub-image offset/size".format(exp_name))
+                        exp_name = importer.deconstruct_np_filename(exp_name)[0]
                         rois = config.truth_db.get_rois(exp_name)
                     if rois is None:
                         raise LookupError(

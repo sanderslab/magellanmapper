@@ -19,6 +19,24 @@ from magmap.atlas import transformer
 from magmap.plot import plot_3d
 
 
+class Image5d:
+    """Main image storage.
+    
+    Attributes:
+        img (:obj:`np.ndarray`): 5D Numpy array in the format ``t,z,y,x,c``;
+            defaults to None.
+        path_img (str): Path from which ``img`` was loaded; defaults to None.
+        path_meta (str): Path from which metadata for ``img`` was loaded;
+            defaults to None.
+    
+    """
+    def __init__(self, img=None, path_img=None, path_meta=None):
+        """Construct an Image5d object."""
+        self.img = img
+        self.path_img = path_img
+        self.path_meta = path_meta
+
+
 def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
     """Load blobs from an archive.
     

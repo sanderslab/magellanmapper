@@ -75,6 +75,7 @@ subimg_sizes = None
 
 image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
+image5d_path = None  # path to loaded image5d
 
 #: obj:`magmap.cv.detector.Blobs`: Blobs object.
 blobs = None

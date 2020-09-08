@@ -185,6 +185,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
     # reset image5d
     config.image5d = None
     config.image5d_is_roi = False
+    config.image5d_path = None
     load_subimage = offset is not None and size is not None
     config.resolutions = None
     
@@ -209,6 +210,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             config.image5d = importer.roi_to_image5d(config.image5d)
             config.image5d_is_roi = True
             config.image5d_io = config.LoadIO.NP
+            config.image5d_path = filename_subimg
             print("Loaded sub-image from {} with shape {}"
                   .format(filename_subimg, config.image5d.shape))
 
@@ -262,6 +264,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
                 config.image5d_io = config.LoadIO.SITK
+                config.image5d_path = path
             else:
                 # load or import from MagellanMapper Numpy format
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
@@ -269,6 +272,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     # load previously imported image
                     img5d = importer.read_file(path, series)
                     config.image5d = img5d.img
+                    config.image5d_path = img5d.path_img
                 if allow_import:
                     # re-import over existing image or import new image
                     if os.path.isdir(path) and all(
@@ -285,6 +289,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                         img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
                         config.image5d = img5d.img
+                        config.image5d_path = img5d.path_img
                     elif import_only or config.image5d is None:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
@@ -297,6 +302,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                             chls, prefix, import_md, series,
                             channel=config.channel)
                         config.image5d = img5d.img
+                        config.image5d_path = img5d.path_img
                 config.image5d_io = config.LoadIO.NP
         except FileNotFoundError as e:
             print(e)

@@ -7,7 +7,6 @@ import multiprocessing as mp
 import numpy as np
 from skimage import morphology
 
-import magmap.cv
 from magmap.cv import chunking, detector, stack_detect
 from magmap.io import libmag, cli
 from magmap.settings import config
@@ -48,8 +47,7 @@ class StackColocalizer(object):
             tol = cls.match_tol
         if setup_cli:
             cli.main(True, True)
-        matches = magmap.cv.colocalizer.colocalize_blobs_match(
-            blobs, offset, shape, tol)
+        matches = colocalize_blobs_match(blobs, offset, shape, tol)
         return coord, matches
     
     @classmethod

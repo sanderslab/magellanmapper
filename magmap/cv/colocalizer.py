@@ -8,7 +8,7 @@ import numpy as np
 from skimage import morphology
 
 from magmap.cv import chunking, detector, stack_detect
-from magmap.io import libmag, cli
+from magmap.io import cli, libmag, sqlite
 from magmap.settings import config
 
 
@@ -295,3 +295,25 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
                     detector.set_blob_confirmed(match[i], -1)
             matches_chls[chl_combo] = matches
     return matches_chls
+
+
+def insert_matches(db, offset, shape, matches):
+    """Insert matches into database.
+    
+    Args:
+        db (:obj:`sqlite.ClrDB`): Database object.
+        offset (List[int]): ROI offset in z,y,x.
+        shape (List[int]): ROI shape in z,y,x.
+        matches (Dict, Tuple): Dictionary of matches.
+
+    """
+    exp_name = sqlite.get_exp_name(
+        config.img5d.path_img if config.img5d else None)
+    exp_id = sqlite.select_or_insert_experiment(
+        db.conn, db.cur, exp_name, None)
+    roi_id = sqlite.select_or_insert_roi(
+        db.conn, db.cur, exp_id, config.series, offset, shape[::-1])[0]
+    for match in matches.values():
+        blobs = [b for m in match for b in m[:2]]
+        sqlite.insert_blobs(db.conn, db.cur, roi_id, blobs)
+        config.db.insert_blob_matches(roi_id, match)

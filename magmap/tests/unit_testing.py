@@ -21,14 +21,16 @@ class TestImageStackProcessing(unittest.TestCase):
         cli.setup_profiles(["lightsheet,4xnuc"], None, None)
     
     def test_load_image(self):
-        config.image5d = importer.read_file(
+        img5d = importer.read_file(
             config.filename, config.series)
+        config.image5d = img5d.img
         if config.image5d is None:
             chls, import_path = importer.setup_import_multipage(
                 config.filename)
             import_md = importer.setup_import_metadata(chls, config.channel)
-            config.image5d = importer.import_multiplane_images(
+            img5d = importer.import_multiplane_images(
                 chls, import_path, import_md, channel=config.channel)
+            config.image5d = img5d.img
         self.assertEqual(config.image5d.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):

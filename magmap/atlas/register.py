@@ -181,7 +181,8 @@ def _load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
     Returns:
         The image in SimpleITK format.
     """
-    image5d = importer.read_file(numpy_file, config.series)
+    img5d = importer.read_file(numpy_file, config.series)
+    image5d = img5d.img
     roi = image5d[0, ...]  # not using time dimension
     if channel is not None and len(roi.shape) >= 4:
         roi = roi[..., channel]
@@ -1127,8 +1128,9 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     # get the experiment file
     if name_prefix is None:
         name_prefix = fixed_file
-    image5d = importer.read_file(fixed_file, config.series)
-    roi = image5d[0, ...] # not using time dimension
+    img5d = importer.read_file(fixed_file, config.series)
+    image5d = img5d.img
+    roi = image5d[0, ...]  # not using time dimension
     
     # get the atlas file and transpose it to match the orientation of the 
     # experiment image
@@ -1620,8 +1622,8 @@ def _test_labels_lookup():
     
     # get a list of IDs corresponding to each blob
     blobs = np.array([[300, 5000, 3000], [350, 5500, 4500], [400, 6000, 5000]])
-    image5d = importer.read_file(config.filename, config.series)
-    scaling = importer.calc_scaling(image5d, labels_img)
+    img5d = importer.read_file(config.filename, config.series)
+    scaling = importer.calc_scaling(img5d.img, labels_img)
     ids, coord_scaled = ontology.get_label_ids_from_position(
         blobs[:, 0:3], labels_img, scaling, return_coord_scaled=True)
     print("blob IDs:\n{}".format(ids))
@@ -1649,8 +1651,8 @@ def _test_region_from_id():
             img = sitk.GetArrayFromImage(img)
             image5d = img[None]
         else:
-            image5d = importer.read_file(config.filename, config.series)
-        scaling = importer.calc_scaling(image5d, labels_img)
+            img5d = importer.read_file(config.filename, config.series)
+        scaling = importer.calc_scaling(img5d.img, labels_img)
         print("loaded experiment image from {}".format(config.filename))
     ref = ontology.load_labels_ref(config.load_labels)
     id_dict = ontology.create_aba_reverse_lookup(ref)

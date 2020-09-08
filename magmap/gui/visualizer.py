@@ -2962,20 +2962,20 @@ class ImportThread(QtCore.QThread):
 
     def run(self):
         """Import files based on the import mode and set up the image."""
-        image5d = None
+        img5d = None
         try:
             if self.mode is ImportModes.DIR:
                 # import single plane files from a directory
-                image5d = importer.import_planes_to_stack(
+                img5d = importer.import_planes_to_stack(
                     self.chl_paths, self.prefix, self.import_md,
                     fn_feedback=self.fn_feedback)
             elif self.mode is ImportModes.MULTIPAGE:
                 # import multi-plane files
-                image5d = importer.import_multiplane_images(
+                img5d = importer.import_multiplane_images(
                     self.chl_paths, self.prefix, self.import_md,
                     fn_feedback=self.fn_feedback)
         finally:
-            if image5d is not None:
+            if img5d is not None:
                 # set up the image for immediate use within MagellanMapper
                 self.fn_feedback("Import completed, loading image\n")
                 if self.fn_success:

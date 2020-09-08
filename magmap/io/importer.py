@@ -444,8 +444,9 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         # assumed that 2nd filename given is the original file from which to 
         # calculate exact scaling
         if len(config.filenames) > 1:
-            image5d_orig = read_file(
+            img5d = read_file(
                 config.filenames[1], config.series, update_info=False)
+            image5d_orig = img5d.img
             scaling = calc_scaling(image5d_orig, image5d)
             # image5d is a scaled, smaller image, so bounds will be 
             # calculated since the calculation requires loading full image 
@@ -593,10 +594,9 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             updated; defaults to True.
     
     Returns:
-        :obj:`np.ndarray`, dict: The image array as a 5D array in the format,
-        ``t, z, y, x[, c]``, or None if it could not be loaded.
-        If ``return_info`` is True, a dictionary of image properties will
-        also be returned.
+        :obj:`np_io.Image5d`, dict: The 5D image object, or None if it could
+        not be loaded. If ``return_info`` is True, a dictionary of image
+        properties will also be returned.
     
     Raises:
         FileNotFoundError: If metadata was set to be updated, but the
@@ -629,9 +629,10 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             if load_info:
                 # load updated archive
                 metadata, image5d_ver_num = load_metadata(filename_meta)
+        img5d = np_io.Image5d(image5d, filename_image5d, filename_meta)
         if return_info:
-            return image5d, metadata
-        return image5d
+            return img5d, metadata
+        return img5d
     except OSError as e:
         print("Could not load image files for", filename)
         print(e)
@@ -852,8 +853,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
             during import; defaults to None.
 
     Returns:
-        :obj:`np.ndarray`: The image array as a 5D array in the format,
-        ``t, z, y, x[, c]``.
+        :obj:`np_io.Image5d: The 5D image object.
+    
     """
     if not is_javabridge_loaded():
         return None
@@ -983,7 +984,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                    .format(filename_image5d, md), fn_feedback)
     if jb_attached:
         jb.detach()
-    return image5d
+    return np_io.Image5d(image5d, filename_image5d, filename_meta)
 
 
 def _parse_import_chls(paths):
@@ -1070,7 +1071,7 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
             during import; defaults to None.
 
     Returns:
-        :obj:`np.ndarray`: The imported image as a Numpy array.
+        :obj:`np_io.Image5d: The 5D image object.
 
     """
     def import_files():
@@ -1143,7 +1144,7 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
     assign_metadata(md)
     libmag.printcb("Saved image to \"{}\" with the following metadata:\n{}"
                    .format(filename_image5d_npz, md), fn_feedback)
-    return image5d
+    return np_io.Image5d(image5d, filename_image5d_npz, filename_info_npz)
 
 
 def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):

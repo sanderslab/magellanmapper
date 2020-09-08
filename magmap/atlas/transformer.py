@@ -177,7 +177,8 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
     time_start = time()
     # even if loaded already, reread to get image metadata
     # TODO: consider saving metadata in config and retrieving from there
-    image5d, info = importer.read_file(filename, series, return_info=True)
+    img5d, info = importer.read_file(filename, series, return_info=True)
+    image5d = img5d.img
     sizes = info["sizes"]
     
     # make filenames based on transpositions

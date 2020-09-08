@@ -101,9 +101,9 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
         print("rescaled resolution for full-scale image:", res)
     elif scaled_shape is not None:
         # fall back to scaling based on comparison to original image
-        image5d = importer.read_file(img_path_transposed, config.series)
+        img5d = importer.read_file(img_path_transposed, config.series)
         scaling = importer.calc_scaling(
-            image5d, None, scaled_shape=scaled_shape)
+            img5d.img, None, scaled_shape=scaled_shape)
         res = config.resolutions[0]
         print("using scaling compared to full image:", scaling)
         print("resolution from full-scale image:", res)
@@ -267,7 +267,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
                 if not import_only:
                     # load previously imported image
-                    config.image5d = importer.read_file(path, series)
+                    img5d = importer.read_file(path, series)
+                    config.image5d = img5d.img
                 if allow_import:
                     # re-import over existing image or import new image
                     if os.path.isdir(path) and all(
@@ -281,8 +282,9 @@ def setup_images(path=None, series=None, offset=None, size=None,
                             prefix = os.path.join(
                                 os.path.dirname(path),
                                 importer.DEFAULT_IMG_STACK_NAME)
-                        config.image5d = importer.import_planes_to_stack(
+                        img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
+                        config.image5d = img5d.img
                     elif import_only or config.image5d is None:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
@@ -291,9 +293,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
                         import_md = importer.setup_import_metadata(
                             chls, config.channel, series)
                         add_metadata()
-                        config.image5d = importer.import_multiplane_images(
+                        img5d = importer.import_multiplane_images(
                             chls, prefix, import_md, series,
                             channel=config.channel)
+                        config.image5d = img5d.img
                 config.image5d_io = config.LoadIO.NP
         except FileNotFoundError as e:
             print(e)

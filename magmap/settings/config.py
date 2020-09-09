@@ -358,7 +358,9 @@ verified_db = None  # automated verifications DB
 # atlas label keys for command-line parsing
 AtlasLabels = Enum(
     "AtlasLabels", (
-        "PATH_REF", "LEVEL", "ID",
+        "PATH_REF",  # path to labels reference file
+        "LEVEL",  # level of label
+        "ID",  # label ID
         # generate colormap based on original colors, even if some are missing
         "ORIG_COLORS",
         # use symmetric colors, assuming symmetric label values from neg to

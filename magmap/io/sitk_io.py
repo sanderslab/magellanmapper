@@ -264,26 +264,26 @@ def load_registered_img(img_path, reg_name, get_sitk=False, return_path=False):
     return (reg_img, reg_img_path) if return_path else reg_img
 
 
-def find_atlas_labels(load_labels, max_level, labels_ref_lookup):
+def find_atlas_labels(load_labels, drawn_labels_only, labels_ref_lookup):
     """Find atlas label IDs from the labels directory.
     
     Args:
-        load_labels: Path to labels directory.
-        max_level: Labels level, where None indicates that only the 
-            drawn labels should be found, whereas an int level will 
-            cause the full set of labels from ``labels_ref_lookup`` 
-            to be taken.
-        labels_ref_lookup: Labels reverse lookup dictionary of 
+        load_labels (str): Path to labels directory.
+        drawn_labels_only (bool): True to load the atlas in the ``load_labels``
+            folder to collect only labels drawn in this atlas; False to use
+            all labels in ``labels_ref_lookup``.
+        labels_ref_lookup (dict): Labels reverse lookup dictionary of
             label IDs to labels.
     
     Returns:
-        Sequence of label IDs.
+        List: Sequence of label IDs.
+    
     """
     orig_atlas_dir = os.path.dirname(load_labels)
     orig_labels_path = os.path.join(
         orig_atlas_dir, config.RegNames.IMG_LABELS.value)
     # need all labels from a reference as registered image may have lost labels
-    if max_level is None and os.path.exists(orig_labels_path):
+    if drawn_labels_only and os.path.exists(orig_labels_path):
         # use all drawn labels in original labels image
         config.labels_img_orig = load_registered_img(
             config.load_labels, config.RegNames.IMG_LABELS.value)

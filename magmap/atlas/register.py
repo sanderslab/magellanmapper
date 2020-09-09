@@ -1227,7 +1227,7 @@ def make_label_ids_set(labels_ref_lookup, max_level, combine_sides):
 
     """
     label_ids = sitk_io.find_atlas_labels(
-        config.load_labels, max_level, labels_ref_lookup)
+        config.load_labels, max_level is None, labels_ref_lookup)
     if not combine_sides:
         # include opposite side as separate labels; otherwise, defer to 
         # ontology (max_level flag) or labels metrics to get labels from 
@@ -1758,12 +1758,15 @@ def main():
         ref = ontology.load_labels_ref(config.load_labels)
         labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
         
-        # export region IDs and parents at given level to CSV
+        # export region IDs and parents at given level to CSV, using only
+        # the atlas' labels if orig colors is true
         path = "region_ids"
         if config.filename:
             path = "{}_{}".format(path, config.filename)
         export_regions.export_region_ids(
-            labels_ref_lookup, path, config.labels_level)
+            labels_ref_lookup, path, config.labels_level,
+            config.atlas_labels[config.AtlasLabels.ORIG_COLORS])
+        
         # export region IDs to network file
         export_regions.export_region_network(
             labels_ref_lookup, "region_network")

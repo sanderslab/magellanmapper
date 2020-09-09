@@ -25,7 +25,8 @@ from magmap.plot import colormaps
 from magmap.stats import vols
 
 
-def export_region_ids(labels_ref_lookup, path, level):
+def export_region_ids(labels_ref_lookup, path, level=None,
+                      drawn_labels_only=False):
     """Export region IDs from annotation reference reverse mapped dictionary 
     to CSV and Excel files.
 
@@ -40,10 +41,12 @@ def export_region_ids(labels_ref_lookup, path, level):
             parents of any child will be reached prior to the child.
         path: Path to output CSV file; if does not end with ``.csv``, it will 
             be added.
-        level: Level at which to find parent for each label. If None, 
-            a parent level of -1 will be used, and label IDs will be 
-            taken from the labels image rather than the full set of 
-            labels from the ``labels_ref_lookup``.
+        level: Level at which to find parent for each label; defaults to None
+            to get the immediate parent.
+        drawn_labels_only (bool): True to export only the drawn labels for
+            atlas labels in the same folder as ``labels_ref_lookup``.
+            Defaults to False to use the full set of labels in
+            ``labels_ref_lookup``
     
     Returns:
         Pandas data frame of the region IDs and corresponding names.
@@ -57,14 +60,13 @@ def export_region_ids(labels_ref_lookup, path, level):
     ext = ".csv"
     path_csv = path if path.endswith(ext) else path + ext
     
-    # find parents for label at the given level
-    parent_level = -1 if level is None else level
-    label_parents = ontology.labels_to_parent(labels_ref_lookup, parent_level)
+    # find ancestor for each label at the given level
+    label_parents = ontology.labels_to_parent(labels_ref_lookup, level)
     
     cols = ["Region", "RegionAbbr", "RegionName", "Level", "Parent"]
     data = OrderedDict()
     label_ids = sitk_io.find_atlas_labels(
-        config.load_labels, level, labels_ref_lookup)
+        config.load_labels, drawn_labels_only, labels_ref_lookup)
     cm = colormaps.get_labels_discrete_colormap(None, 0, use_orig_labels=True)
     rgbs = cm.cmap_labels
     if rgbs is not None:

@@ -276,8 +276,13 @@ def get_children_from_id(labels_ref_lookup, label_id, incl_parent=True,
     return region_ids
 
 
-def labels_to_parent(labels_ref_lookup, level=None):
+def labels_to_parent(labels_ref_lookup, level=None,
+                     allow_parent_same_level=False):
     """Generate a dictionary mapping label IDs to parent IDs at a given level.
+    
+    Parents are considered to be "below" (numerically lower level) their
+    children, or at least at the same level if ``allow_parent_same_level``
+    is True.
     
     Args:
         labels_ref_lookup (dict): The labels reference lookup, assumed to be an
@@ -285,13 +290,15 @@ def labels_to_parent(labels_ref_lookup, level=None):
             to look up by ID while preserving key order to ensure that 
             parents of any child will be reached prior to the child.
         level (int): Level at which to find parent for each label; defaults to
-            None to get the parent immediately above the given label.
+            None to get the parent immediately below the given label.
+        allow_parent_same_level (bool): True to allow selecting a parent at
+            the same level as the label; False to require the parent to be
+            at least one level below. Defaults to False.
     
     Returns:
         dict: Dictionary of label IDs to parent IDs at the given level. Labels
-        at the given level will be assigned to their own ID, and labels above
-        (numerically lower) or without a parent at the level will be 
-        given a default level of 0.
+        at the given level will be assigned to their own ID, and labels below
+        or without a parent at the level will be given a default level of 0.
     
     """
     # similar to volumes_dict_level_grouping but without checking for neg 
@@ -316,8 +323,10 @@ def labels_to_parent(labels_ref_lookup, level=None):
                     # (numerically higher) level
                     parent_level = labels_ref_lookup[
                         parent][NODE][config.ABAKeys.LEVEL.value]
-                    if parent_level <= target_level:
-                        # use first parent below target level
+                    if (parent_level <= target_level
+                            or allow_parent_same_level
+                            and parent_level == label_level):
+                        # use first parent below (or at least at) target level
                         parent_at_level = parent
                         break
             else:

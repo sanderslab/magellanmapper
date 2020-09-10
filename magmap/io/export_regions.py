@@ -61,7 +61,8 @@ def export_region_ids(labels_ref_lookup, path, level=None,
     path_csv = path if path.endswith(ext) else path + ext
     
     # find ancestor for each label at the given level
-    label_parents = ontology.labels_to_parent(labels_ref_lookup, level)
+    label_parents = ontology.labels_to_parent(
+        labels_ref_lookup, level, allow_parent_same_level=True)
     
     cols = ["Region", "RegionAbbr", "RegionName", "Level", "Parent"]
     data = OrderedDict()

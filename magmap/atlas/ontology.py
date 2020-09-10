@@ -322,6 +322,16 @@ def labels_to_parent(labels_ref_lookup, level=None):
                         break
             else:
                 print("No parents at level", label_level, "for label", label_id)
+        
+        parent_ref = label[NODE][config.ABAKeys.PARENT_ID.value]
+        try:
+            # check for discrepancies between parent listed in ontology file
+            # and derived from parsed parent IDs
+            assert parent_ref == parent_at_level
+        except AssertionError:
+            print("Parent at level {} or lower for label {} does not match"
+                  "parent listed in reference file, {}"
+                  .format(target_level, label_id, parent_at_level, parent_ref))
         label_parents[label_id] = parent_at_level
     return label_parents
 

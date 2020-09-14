@@ -129,7 +129,8 @@ def args_with_dict(args):
     return parsed
 
 
-def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=","):
+def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=",",
+                 default=None):
     """Parse arguments list with positional and keyword-based arguments 
     into an enum-keyed dictionary.
     
@@ -147,11 +148,15 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=","):
             ``keys_enum``; defaults to None, which will assign an empty dict.
         sep_args (str): Separator between arguments and values; defaults to "=".
         sep_vals (str): Separator within values; defaults to ",".
+        default (str): Default value for each argument. Effectively turns off
+            positional argument assignments since all args become
+            ``<keyword>=<default>``. Defaults to None.
     
     Returns:
         dict: Dictionary filled with arguments. Values that contain commas
         will be split into comma-delimited lists. All values will be 
         converted to ints if possible.
+    
     """
     if args_dict is None:
         args_dict = {}
@@ -159,6 +164,9 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=","):
     num_enums = len(keys_enum)
     for i, arg in enumerate(args):
         arg_split = arg.split(sep_args)
+        if default and len(arg_split) < 2:
+            # add default value unless another value is given
+            arg_split.append(default)
         len_arg_split = len(arg_split)
         # assume by position until any keyword given
         by_position = by_position and len_arg_split < 2
@@ -249,6 +257,9 @@ def main(process_args_only=False, skip_dbs=False):
         "--cpus",
         help="Maximum number of CPUs/processes to use for multiprocessing "
              "tasks. Use \"none\" or 0 to auto-detect this number (default).")
+    parser.add_argument(
+        "--load", nargs="*",
+        help="Load associated data files; see config.LoadData for settings")
 
     # task arguments
     parser.add_argument(
@@ -439,7 +450,14 @@ def main(process_args_only=False, skip_dbs=False):
                        else int(args.cpus))
         print("Set maximum number of CPUs for multiprocessing tasks to",
               config.cpus)
-    
+
+    if args.load is not None:
+        # flag loading data sources, specified by the source alone to use a
+        # default path for it, or giving a path as a sub-arg
+        config.load_data = args_to_dict(
+            args.load, config.LoadData, config.load_data, default="1")
+        print("Set to load the data types: {}".format(config.load_data))
+
     # set up main processing mode
     if args.proc is not None:
         config.proc_type = args.proc

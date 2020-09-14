@@ -96,6 +96,19 @@ class LoadIO(Enum):
 #: :obj:`LoadIO`: I/O source for image5d array.
 image5d_io = None
 
+
+class LoadData(Enum):
+    """Enumerations for specifying data to load."""
+    BLOBS = auto()
+    BLOB_MATCHES = auto()
+
+
+#: dict[:obj:`LoadData`, Any]: Data sources to load, where values that evaluate
+# to True indicate to load the file.
+# TODO: support specifying sources by paths
+load_data = dict.fromkeys(LoadData, None)
+
+
 prefix = None # alternate path
 suffix = None # modifier to existing base path
 

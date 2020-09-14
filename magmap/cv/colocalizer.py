@@ -47,7 +47,7 @@ class StackColocalizer(object):
             tol = cls.match_tol
         if setup_cli:
             cli.main(True, True)
-        matches = colocalize_blobs_match(blobs, offset, shape, tol)
+        matches = colocalize_blobs_match(blobs, offset[::-1], shape[::-1], tol)
         return coord, matches
     
     @classmethod

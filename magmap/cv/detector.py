@@ -598,9 +598,10 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
     dists_closest = dists[rowis, colis]
     if thresh is not None:
         # filter out matches beyond the given threshold distance
-        print("only keeping blob matches within threshold distance of", thresh)
         dists_in = dists_closest < thresh
         if config.verbose:
+            print("only keeping blob matches within threshold distance of",
+                  thresh)
             for blob, blob_sc, blob_base, blob_base_sc, dist, dist_in in zip(
                     blobs[rowis], blobs_scaled[rowis], blobs_master[colis],
                     blobs_master_scaled[colis], dists_closest,

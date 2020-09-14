@@ -297,6 +297,27 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     return matches_chls
 
 
+def _get_roi_id(db, offset, shape):
+    """Get database ROI ID for the given ROI position within the main image5d.
+    
+    Args:
+        db (:obj:`sqlite.ClrDB`): Database object.
+        offset (List[int]): ROI offset in z,y,x.
+        shape (List[int]): ROI shape in z,y,x.
+
+    Returns:
+        int: ROI ID or found or inserted ROI.
+
+    """
+    exp_name = sqlite.get_exp_name(
+        config.img5d.path_img if config.img5d else None)
+    exp_id = sqlite.select_or_insert_experiment(
+        db.conn, db.cur, exp_name, None)
+    roi_id = sqlite.select_or_insert_roi(
+        db.conn, db.cur, exp_id, config.series, offset, shape)[0]
+    return roi_id
+
+
 def insert_matches(db, offset, shape, matches):
     """Insert matches into database.
     
@@ -307,13 +328,42 @@ def insert_matches(db, offset, shape, matches):
         matches (Dict, Tuple): Dictionary of matches.
 
     """
-    exp_name = sqlite.get_exp_name(
-        config.img5d.path_img if config.img5d else None)
-    exp_id = sqlite.select_or_insert_experiment(
-        db.conn, db.cur, exp_name, None)
-    roi_id = sqlite.select_or_insert_roi(
-        db.conn, db.cur, exp_id, config.series, offset, shape[::-1])[0]
+    roi_id = _get_roi_id(db, offset, shape[::-1])
     for match in matches.values():
         blobs = [b for m in match for b in m[:2]]
         sqlite.insert_blobs(db.conn, db.cur, roi_id, blobs)
         config.db.insert_blob_matches(roi_id, match)
+
+
+def select_matches(db, offset, shape, channels):
+    """Select blob matches for the given region from a database.
+    
+    Args:
+        db (:obj:`sqlite.ClrDB`): Database object.
+        offset (List[int]): ROI offset in z,y,x.
+        shape (List[int]): ROI shape in z,y,x.
+        channels (List[int]): List of channels.
+
+    Returns:
+        Dict[str, List[:obj:`magmap.io.sqlit.BlobMatch`]: Dictionary where
+        keys are tuples of the two channels compared and values are a list
+        of blob matches.
+
+    """
+    roi_id = _get_roi_id(db, (0, 0, 0), config.image5d.shape[3:0:-1])
+    blobs, blob_ids = db.select_blobs_by_position(
+        roi_id, offset[::-1], shape[::-1])
+    blob_ids = np.array(blob_ids)
+    matches = {}
+    for chl in channels:
+        # pair channels
+        for chl_other in channels:
+            if chl >= chl_other: continue
+            # select matches for blobs in the given first channel of the pair
+            # of channels, assuming chls were paired this way during insertion
+            match = db.select_blob_matches_by_blob_id(
+                roi_id, 1, blob_ids[detector.get_blobs_channel(blobs) == chl])
+            match = [m for m in match
+                     if detector.get_blob_channel(m.blob2) == chl_other]
+            matches[(chl, chl_other)] = match
+    return matches

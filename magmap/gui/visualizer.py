@@ -1873,7 +1873,19 @@ class Visualization(HasTraits):
             segs_all = detector.format_blobs(segs_all)
             segs_all, mask_chl = detector.blobs_in_channel(
                 segs_all, config.channel, return_mask=True)
-            if config.blobs.colocalizations is not None and segs is None:
+            if ColocalizeOptions.MATCHES.value in self._colocalize:
+                # get blob matches from whole-image match colocalization
+                matches = colocalizer.select_matches(
+                    config.db, offset[::-1], roi_size[::-1], config.channel)
+                self.blobs.blob_matches = []
+                for val in matches.values():
+                    self.blobs.blob_matches.extend(val)
+                shift = [n * -1 for n in offset[::-1]]
+                for match in self.blobs.blob_matches:
+                    match.shift_blobs(shift)
+            elif (ColocalizeOptions.INTENSITY.value in self._colocalize
+                  and config.blobs.colocalizations is not None
+                  and segs is None):
                 # get corresponding blob co-localizations unless showing
                 # blobs from database, which do not have colocs
                 colocs = config.blobs.colocalizations[mask][mask_chl]

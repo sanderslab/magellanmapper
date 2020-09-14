@@ -41,10 +41,10 @@ class BlobMatch:
     
     def __repr__(self):
         """Output a string representation with major attributes."""
-        return ("match_id {}, roi_id {}, blob1 {}, blob1_id {}, blob2 {},"
-                "blob2_id {}, dist {}".format(
-                    self.match_id, self.roi_id, self.blob1, self.blob1_id,
-                    self.blob2, self.blob2_id, self.dist))
+        return ("match_id {}, roi_id {}, dist {}\nblob1 (id {}) {}\n"
+                "blob2 (id {}) {}".format(
+                    self.match_id, self.roi_id, self.dist, self.blob1_id,
+                    self.blob1, self.blob2_id, self.blob2))
     
     def shift_blobs(self, offset):
         """Shift coordinates of blobs by offset.
@@ -894,12 +894,34 @@ class ClrDB:
                     "VALUES (?, ?, ?, ?)".format(_COLS_BLOB_MATCHES),
                     (roi_id, blob1_id, blob2_id, dist))
                 ids.append(self.cur.lastrowid)
-                print("Blob match inserted for ROI ID {}, blob 1 ID {}, "
-                      "blob 2 ID {}".format(roi_id, blob1_id, blob2_id))
+                if config.verbose:
+                    print("Blob match inserted for ROI ID {}, blob 1 ID {}, "
+                          "blob 2 ID {}".format(roi_id, blob1_id, blob2_id))
             else:
                 print("Could not find blobs for match:", match)
         self.conn.commit()
+        print("Blob matches inserted:", len(ids))
         return ids
+    
+    def _parse_blob_matches(self, rows):
+        """Parse blob match selection.
+        
+        Args:
+            rows (List[:obj:`sqlite3.Row`]): Sequence of rows.
+
+        Returns:
+            List[:obj:`BlobMatch`]: List of blob matches.
+
+        """
+        matches = []
+        for row in rows:
+            blob1_id = row["blob1"]
+            blob2_id = row["blob2"]
+            matches.append(BlobMatch(
+                row["id"], row["roi_id"], blob1_id,
+                self.select_blob_by_id(blob1_id)[0], blob2_id,
+                self.select_blob_by_id(blob2_id)[0], row["dist"]))
+        return matches
     
     def select_blob_matches(self, roi_id):
         """Select blob matches for the given ROI.
@@ -914,16 +936,39 @@ class ClrDB:
         self.cur.execute(
             "SELECT {}, id FROM blob_matches WHERE roi_id = ?"
             .format(_COLS_BLOB_MATCHES), (roi_id,))
+        return self._parse_blob_matches(self.cur.fetchall())
+
+    def select_blob_matches_by_blob_id(self, row_id, blobn, blob_ids):
+        """Select blob matches corresponding to the given blob IDs in the
+        given blob column.
+
+        Args:
+            blobn (int): 1 or 2 to indicate the first or second blob column,
+                respectively.
+            blob_ids (List[int]): Blob IDs.
+
+        Returns:
+            List[:obj:`BlobMatch`]: List of blob matches.
+
+        """
         matches = []
-        for row in self.cur.fetchall():
-            blob1_id = row["blob1"]
-            blob2_id = row["blob2"]
-            matches.append(BlobMatch(
-                row["id"], row["roi_id"], blob1_id,
-                self.select_blob_by_id(blob1_id)[0], blob2_id,
-                self.select_blob_by_id(blob2_id)[0], row["dist"]))
+        if isinstance(blob_ids, np.ndarray):
+            blob_ids = blob_ids.tolist()
+        max_params = 990  # max params of 999 in sqlite < v3.32.0
+        for i in range(len(blob_ids) // max_params + 1):
+            # select blob matches by block to avoid exceeding sqlite parameter
+            # limit
+            ids = blob_ids[i*max_params:(i+1)*max_params]
+            ids.insert(0, row_id)
+            self.cur.execute(
+                "SELECT {}, id FROM blob_matches WHERE roi_id = ?"
+                "AND blob{} IN ({})"
+                .format(_COLS_BLOB_MATCHES, blobn,
+                        ",".join("?" * (len(ids) - 1))),
+                ids)
+            matches.extend(self._parse_blob_matches(self.cur.fetchall()))
         return matches
-        
+
 
 def main():
     """Run main SQLite access commands after loading CLI."""

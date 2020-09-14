@@ -832,6 +832,32 @@ class ClrDB:
                 .format(_COLS_BLOBS), (blob_id,))
         return self._get_blob(self.cur.fetchall())
 
+    def select_blobs_by_position(self, roi_id, offset, size):
+        """Select blobs from the given region defined by offset and size.
+        
+        An ROI ID is still required in cases blobs have been inserted from
+        overlapping ROIs.
+
+        Args:
+            roi_id (int): ROI ID.
+            offset (List[int]): Offset in x,y,z as absolute coordinates.
+            size (List[int]): Size in x,y,z.
+
+        Returns:
+            :obj:`np.ndarray`, List[int]: Blobs in the given ROI defined
+            by coordinates. List of blob IDs if available.
+        
+        """
+        # convert ROI parameters to boundaries and flatten; str required for
+        # comparison for some reason
+        bounds = zip(offset, np.add(offset, size))
+        bounds = [str(b) for bound in bounds for b in bound]
+        self.cur.execute(
+            "SELECT {}, id FROM blobs WHERE roi_id = ? AND x >= ? AND x < ? "
+            "AND y >= ? AND y < ? AND z >= ? AND z < ?"
+            .format(_COLS_BLOBS), (roi_id, *bounds))
+        return _parse_blobs(self.cur.fetchall())
+
     def insert_blob_matches(self, roi_id, matches):
         """Insert blob matches.
         

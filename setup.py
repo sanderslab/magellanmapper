@@ -10,6 +10,12 @@ _EXTRAS_IMPORT = [
     "python-bioformats==1.1.0",
 ]
 
+# optional dependencies for Pandas
+_EXTRAS_PANDAS = [
+    "openpyxl",  # export to Excel files
+    "jinja2",  # style output
+]
+
 # optional dependencies for AWS interaction
 _EXTRAS_AWS = ["boto3", "awscli"]
 
@@ -37,11 +43,12 @@ config = {
     ], 
     "extras_require": {
         "import": _EXTRAS_IMPORT, 
-        "aws": _EXTRAS_AWS, 
+        "aws": _EXTRAS_AWS,
+        "pandas_plus": _EXTRAS_PANDAS,
         "all": [
             "matplotlib_scalebar", 
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
-            "openpyxl",  # for Pandas export to Excel files
+            *_EXTRAS_PANDAS,
             *_EXTRAS_IMPORT,  
             *_EXTRAS_AWS, 
         ]

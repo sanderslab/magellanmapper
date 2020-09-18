@@ -1,5 +1,46 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.6
+
+This release focuses on usability fixes. New settings settings and build tools have been added to support older Linux platforms.
+
+### Changes
+
+Installation
+- `Dockerfile` based on Ubuntu 16.04 added to support running on older platforms
+
+GUI
+- Status bar shows pixel values in zoomed ROI plots
+- Fixed upper/lower case in check box labels
+- Fixed saving ROIs to use the original ROI offset
+- Fixed resetting the labels opacity when scrolling through planes
+- Fixed updating channels in the image adjustment panel for the current image type
+
+CLI
+- `--cpus <n>` command-line argument to specify the maximum number of CPUs to use for multiprocessing tasks
+- ROI profile setting (`mp_max_tasks`) to set the maximum tasks per process, which can reduce memory usage considerably
+
+Volumetric image processing
+- Density heat maps default to using the whole image
+- Fixed ROI saturation to use the `max_thresh_factor` ROI profile setting
+
+I/O
+- Better information when a file could not be found for import
+- Specifying the `profiles` directory is no longer necessary when loading YAML profile files, including those in sub-directories
+- Experiment names in the database now ignore any file extension
+
+### Dependency Updates
+
+#### Python Dependency Changes
+
+- SimpleElastix compilation
+  - `Dockerfile` to build for older platforms
+  - Allow directory to be given as a relative path in the build script
+  - Fixed loading a library in the script
+- Install Matplotlib >= 3.3.2 now that the performance regression starting in 3.3.0 has been fixed
+- Additional Pandas dependencies can be installed by specifying the `pandas_plus` group (installed by default in the setup scripts)
+
+
 ## MagellanMapper v1.3.5
 
 This release streamlines refreshing and overlaying images through the GUI. Workarounds are also provided for several installation/dependency issues.

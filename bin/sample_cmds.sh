@@ -2,6 +2,11 @@
 # Sample commands for MagellanMapper tasks
 # Author: David Young, 2020
 
+# WARNING (2020-09-18): We are brainstorming ways to reorganize the sample
+# scripts with the goal of exposing MagellanMapper functionality, keeping
+# commands up to date, and minimize setup required by the user. Any and all
+# feedback is welcome!
+
 # This script provides examples of commands for performing various tasks in
 # MagellanMapper. You can use the script in various ways:
 #

@@ -31,8 +31,9 @@ config = {
     "scripts": [], 
     "python_requires": ">=3.6",  # may work on earlier versions
     "install_requires": [
-        "scikit-image", 
-        "matplotlib<3.3",  # PlotEditor performance regression with 3.3
+        "scikit-image",
+        # PlotEditor performance regression with 3.3.0-3.3.1
+        "matplotlib != 3.3.0, != 3.3.1",
         "vtk<9.0.0",  # Mayavi 4.7.1 is not compatible with VTK 9
         "mayavi", 
         "pandas", 

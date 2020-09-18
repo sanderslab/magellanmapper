@@ -80,6 +80,21 @@ DEFAULT_IMG_STACK_NAME = "myvolume"
 _KEY_ANY_CHANNEL = "1+"  # 1+ channel files
 
 
+def is_javabridge_loaded():
+    """Check if Javabridge and Python-Bioformats have been loaded.
+    
+    Returns:
+        bool: True if the modules have both been loaded, False otherwise.
+
+    """
+    if jb is None or bf is None:
+        libmag.warn(
+            "Python-Bioformats or Python-Javabridge not available, "
+            "multi-page images cannot be imported")
+        return False
+    return True
+
+
 def start_jvm(heap_size="8G"):
     """Starts the JVM for Python-Bioformats.
     
@@ -741,7 +756,7 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
         series = 0
     path = tuple(chl_paths.values())[0][0]
     md = dict.fromkeys(config.MetaKeys)
-    if _is_raw(path):
+    if _is_raw(path) or not is_javabridge_loaded():
         # RAW files will need to have metadata supplied manually; return
         # based on this extension to avoid startup time for Javabridge
         return md
@@ -842,10 +857,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
         :obj:`np.ndarray`: The image array as a 5D array in the format,
         ``t, z, y, x[, c]``.
     """
-    if jb is None or bf is None:
-        libmag.warn(
-            "Python-Bioformats or Python-Javabridge not available, "
-            "multi-page images cannot be imported")
+    if not is_javabridge_loaded():
         return None
 
     time_start = time()

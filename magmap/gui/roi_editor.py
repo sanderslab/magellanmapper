@@ -10,6 +10,7 @@ Attributes:
         extra segments.
 """
 
+from collections import OrderedDict
 import math
 import os
 from enum import Enum
@@ -356,11 +357,12 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.blobs = None
         self._blobs_coloc_text = None
         self._z_overview = None
+        self._channel = None  # list of channel lists
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
         self._circle_last_picked = []
-        self._ax_subplots = []
+        self._ax_subplots = OrderedDict()  # PlotAxImg for each zoomed plot
 
         # additional z's above/below
         margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -558,6 +560,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.offset = offset
         self.roi_size = roi_size
         self.plane = plane
+        self._channel = [channel]
 
         if not roi_cols:
             roi_cols = self.ROI_COLS
@@ -630,7 +633,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         z_planes = z_planes + self._z_planes_padding * 2
 
         # position overview at bottom (default), middle, or top of stack
-        self._z_overview = z_start # abs positioning
+        self._z_overview = z_start  # abs positioning
         if z_level == self.ZLevels.MIDDLE:
             self._z_overview = (2 * z_start + z_planes) // 2
         elif z_level == self.ZLevels.TOP:
@@ -687,13 +690,14 @@ class ROIEditor(plot_support.ImageSyncMixin):
 
         # overview subplotting
         ax_overviews = []  # overview axes
-        self._ax_subplots = []  # zoom plot axes
+        self._ax_subplots = OrderedDict()  # zoom plot axes
 
         def jump(event):
             z_ov = None
-            if event.inaxes in self._ax_subplots:
+            subplots = list(self._ax_subplots.keys())
+            if event.inaxes in subplots:
                 # right-arrow to jump to z-plane of given zoom plot
-                z_ov = (self._ax_subplots.index(event.inaxes) + z_start
+                z_ov = (subplots.index(event.inaxes) + z_start
                         - self._z_planes_padding)
             return z_ov
 
@@ -718,7 +722,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         def update_subplot_border():
             # show a colored border around zoomed plot corresponding to
             # overview plots
-            for axi, axz in enumerate(self._ax_subplots):
+            for axi, axz in enumerate(self._ax_subplots.keys()):
                 if axi + z_start - self._z_planes_padding == self._z_overview:
                     # highlight border
                     axz.patch.set_edgecolor("orange")
@@ -742,6 +746,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             # respond to mouse button presses for DraggableCircle management
             inax = event.inaxes
             print("event key: {}".format(event.key))
+            subplots = list(self._ax_subplots.keys())
             if event.key is None:
                 # for some reason becomes none if previous event was
                 # ctrl combo and this event is control
@@ -764,7 +769,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                       .format(chl, num_chls - 1))
                                 return
                 try:
-                    axi = self._ax_subplots.index(inax)
+                    axi = subplots.index(inax)
                     if (axi != -1 and self._z_planes_padding <= axi
                             < z_planes - self._z_planes_padding):
                         blob = np.array([[axi - self._z_planes_padding,
@@ -790,7 +795,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 moved_item = self._circle_last_picked[
                     _circle_last_picked_len - 1]
                 circle, move_type = moved_item
-                axi = self._ax_subplots.index(inax)
+                axi = subplots.index(inax)
                 dz = axi - self._z_planes_padding - circle.segment[0]
                 seg_old = np.copy(circle.segment)
                 seg_new = np.copy(circle.segment)
@@ -826,6 +831,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
         fig.canvas.mpl_connect("button_release_event", key_press)
+        # fig.canvas.mpl_connect("draw_event", lambda x: print("redraw"))
         
         if self.fn_redraw:
             # handle potential redraws
@@ -899,7 +905,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                < roi_size[2] - border[2])
 
                 # show the zoomed subplot with scale bar for the current z-plane
-                ax_z = self.show_subplot(
+                ax_z, ax_z_imgs = self.show_subplot(
                     fig, gs_zoomed, i, j, channel, roi_size,
                     zoom_offset, fn_update_seg,
                     blobs_in, blobs_out, blobs_cmap, alpha, z_relative,
@@ -909,7 +915,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 if (i == 0 and j == 0
                         and config.plot_labels[config.PlotLabels.SCALE_BAR]):
                     plot_support.add_scale_bar(ax_z, plane=plane)
-                self._ax_subplots.append(ax_z)
+                self._ax_subplots[ax_z] = ax_z_imgs
         update_subplot_border()
 
         if not circles == self.CircleStyles.NO_CIRCLES:
@@ -932,6 +938,43 @@ class ROIEditor(plot_support.ImageSyncMixin):
         plt.ion()
         fig.canvas.draw_idle()
         print("2D plot time: {}".format(time() - time_start))
+    
+    def update_imgs_display(self, imgi, **kwargs):
+        """Update images with the given display settings.
+        
+        Args:
+            imgi (int): Index of image group.
+            **kwargs: Arguments to pass to the updater.
+
+        Returns:
+            :obj:`plot_editor.PlotAxImg`: Updated plotted image.
+
+        """
+        # update overview images
+        plot_ax_img = super().update_imgs_display(imgi, **kwargs)
+        
+        if "chl" in kwargs:
+            # use channel when getting plotted image
+            chl = kwargs["chl"]
+            del kwargs["chl"]
+        else:
+            chl = None
+        alpha = kwargs["alpha"] if "alpha" in kwargs else None
+        num_subplots = len(self._ax_subplots)
+        for i, plot_ax_imgs in enumerate(self._ax_subplots.values()):
+            # get zoomed image; halve alpha for ROI padding planes
+            img = plot_editor.PlotEditor.get_plot_ax_img(
+                plot_ax_imgs, imgi, self._channel, chl)
+            alpha_subplot = alpha
+            if alpha and (i < self._z_planes_padding
+                          or i >= num_subplots - self._z_planes_padding):
+                alpha_subplot /= 2
+            kwargs["alpha"] = alpha_subplot
+            
+            # update zoomed image
+            plot_editor.PlotEditor.update_plot_ax_img_display(
+                img, **kwargs)
+        return plot_ax_img
     
     def plot_roi(self, roi, segments, channel, show=True, title=""):
         """Plot ROI as sequence of z-planes containing only the ROI itself.
@@ -1106,7 +1149,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
         if z < 0 or z >= size[image5d_shape_offset]:
             # draw empty, grey subplot out of image planes just for spacing
-            ax.imshow(np.zeros(roi_size[0:2]), alpha=0)
+            ax_imgs = [[ax.imshow(np.zeros(roi_size[0:2]), alpha=0)]]
         else:
             # show the zoomed in 2D region
 
@@ -1282,7 +1325,11 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 ax.format_coord = pixel_display.PixelDisplay(
                     imgs2d, ax_imgs, offset=offset[1::-1])
                 fig.canvas.mpl_connect("motion_notify_event", on_motion)
-        return ax
+        plot_ax_imgs = None
+        if ax_imgs and ax_imgs[0]:
+            plot_ax_imgs = [[plot_editor.PlotAxImg(img) for img in imgs]
+                            for imgs in ax_imgs]
+        return ax, plot_ax_imgs
 
     def _circle_collection(self, segments, edgecolor, facecolor, linewidth):
         """Draws a patch collection of circles for segments.
@@ -1376,7 +1423,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 return
             # show labels for each blob
             self._blobs_coloc_text = []
-            for i, ax in enumerate(self._ax_subplots):
+            for i, ax in enumerate(self._ax_subplots.keys()):
                 # get blobs at given z-val relative to ROI, shifting  for
                 # plots in the padding region above and below the ROI
                 z = i - self._z_planes_padding
@@ -1407,7 +1454,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         for circle in self._draggable_circles:
             # change the visibility of selectable circles
             circle.circle.set_visible(visible)
-        for ax in self._ax_subplots:
+        for ax in self._ax_subplots.keys():
             for collection in ax.collections:
                 # change the visibility of colored circle collections
                 collection.set_visible(visible)

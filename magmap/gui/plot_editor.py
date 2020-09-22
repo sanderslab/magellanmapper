@@ -524,38 +524,58 @@ class PlotEditor:
             # scale for the colormap before display
             self._ax_img_labels.set_data(self.cmap_labels.convert_img_labels(
                 self.img3d_labels[self.coord[0]]))
+    
+    @staticmethod
+    def get_plot_ax_img(plot_ax_imgs, imgi, channels=None, chl=None):
+        """Get a plotted image based on image group and channel.
+
+        Args:
+            plot_ax_imgs (List[List[:obj:`PlotAxImg`]]): Plotted image objects,
+                organized as
+                ``[[img0_chl0, img0_chl1, ...], [img1_chl0, ...], ....]``.
+            imgi (int): Index of image group in ``plot_ax_imgs``.
+            channels (List[List[int]]): List of channel lists corresponding
+                to ``plot_ax_imgs``; defalts to None to use ``chl`` directly.
+            chl (int): Index of channel within the selected image group;
+                defaults to None to use the first channel.
+
+        Returns:
+            :obj:`PlotAxImg`: The selected plotted image.
+
+        """
+        plot_ax_img = None
+        if plot_ax_imgs and imgi < len(plot_ax_imgs):
+            if chl is None:
+                chl = 0
+            if channels:
+                # translate channel to index of displayed channels
+                if chl not in channels[imgi]:
+                    return None
+                chl = channels[imgi].index(chl)
+            plot_ax_img = plot_ax_imgs[imgi][chl]
+        return plot_ax_img
 
     def get_displayed_img(self, imgi, chl=None):
         """Get display settings for the given image.
 
         Args:
-            imgi (int): Index of image.
-            chl (int): Index of channel; defaults to None.
+            imgi (int): Index of image group.
+            chl (int): Index of channel within the group; defaults to None.
 
         Returns:
             :obj:`PlotAxImg`: The currently displayed image.
 
         """
-        plot_ax_img = None
-        if self._plot_ax_imgs and imgi < len(self._plot_ax_imgs):
-            if chl is None:
-                chl = 0
-            if self._channels:
-                # translate channel to index of displayed channels
-                if chl not in self._channels[imgi]:
-                    return None
-                chl = self._channels[imgi].index(chl)
-            plot_ax_img = self._plot_ax_imgs[imgi][chl]
-        return plot_ax_img
-
-    def update_img_display(self, imgi, chl=None, minimum=np.nan,
-                           maximum=np.nan, brightness=None, contrast=None,
-                           alpha=None):
-        """Update dislayed image settings.
+        return self.get_plot_ax_img(
+            self._plot_ax_imgs, imgi, self._channels, chl)
+    
+    @staticmethod
+    def update_plot_ax_img_display(plot_ax_img, minimum=np.nan, maximum=np.nan,
+                                   brightness=None, contrast=None, alpha=None):
+        """Update plotted image display settings.
 
         Args:
-            imgi (int): Index of image.
-            chl (int): Index of channel; defaults to None.
+            plot_ax_img (:obj:`PlotAxImg`): Plotted image.
             minimum (float): Vmin; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
             maximum (float): Vmax; can be None for auto setting; defaults
@@ -568,7 +588,6 @@ class PlotEditor:
             :obj:`PlotAxImg`: The updated axes image plot.
 
         """
-        plot_ax_img = self.get_displayed_img(imgi, chl)
         if not plot_ax_img:
             return None
         if minimum is not np.nan or maximum is not np.nan:
@@ -611,10 +630,41 @@ class PlotEditor:
         if alpha is not None:
             # adjust opacity
             plot_ax_img.ax_img.set_alpha(alpha)
-        self.axes.figure.canvas.draw_idle()
         return plot_ax_img
 
+    def update_img_display(self, imgi, chl=None, minimum=np.nan,
+                           maximum=np.nan, brightness=None, contrast=None,
+                           alpha=None):
+        """Update dislayed image settings.
+
+        Args:
+            imgi (int): Index of image.
+            chl (int): Index of channel; defaults to None.
+            minimum (float): Vmin; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            maximum (float): Vmax; can be None for auto setting; defaults
+                to ``np.nan`` to ignore.
+            brightness (float): Brightness addend; defaults to None.
+            contrast (float): Contrast multiplier; defaults to None.
+            alpha (float): Opacity value; defalts to None.
+        
+        Returns:
+            :obj:`PlotAxImg`: The updated axes image plot.
+
+        """
+        plot_ax_img = self.get_displayed_img(imgi, chl)
+        plot_ax_img = self.update_plot_ax_img_display(
+            plot_ax_img, minimum, maximum, brightness, contrast, alpha)
+        self.axes.figure.canvas.draw_idle()
+        return plot_ax_img
+    
     def alpha_updater(self, alpha):
+        """Update labels image opacity level.
+        
+        Params:
+            alpha (float): Alpha level.
+        
+        """
         self.alpha = alpha
         if self._ax_img_labels is not None:
             self._ax_img_labels.set_alpha(self.alpha)

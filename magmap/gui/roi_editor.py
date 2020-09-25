@@ -1303,8 +1303,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
                             if blob[0] != z_relative: continue
                             # add label with number; italicize if 1st blob
                             style = "italic" if j == 0 else "normal"
-                            ax.text(blob[2], blob[1], i, color="k",
-                                    alpha=0.8, style=style,
+                            ax.text(blob[2], blob[1], i, color="w",
+                                    alpha=0.5, style=style,
                                     horizontalalignment="center",
                                     verticalalignment="center")
 

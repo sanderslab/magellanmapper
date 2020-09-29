@@ -137,7 +137,7 @@ To uninstall MagallanMapper, simply remove the MagellanMapper folder. This folde
 
 ### Conda uninstalls
 
-#### Option 1: Uninstall Conda environment only
+#### Option 1: Only uninstall Conda environment
 
 This command will uninstall only the Conda environment created by the `setup_conda[.bat]` scripts while keeping the Conda installation:
 
@@ -147,7 +147,7 @@ conda remove -n mag --all
 
 If you created an environment with a custom name, replace `mag` with this name.
 
-###$ Optino 2: Uninstall Conda fully
+#### Option 2: Fully uninstall Conda
 
 1. Remove the Conda initialization from shell profiles:
 

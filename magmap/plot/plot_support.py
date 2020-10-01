@@ -722,29 +722,36 @@ def get_roi_path(path, offset, roi_size=None):
 def save_fig(path, ext=None, modifier="", fig=None):
     """Save figure, swapping in the given extension for the extension
     in the given path.
+    
+    Dots per inch is set by :attr:`config.plot_labels[config.PlotLabels.DPI]`.
+    Backs up any existing file before saving.
 
     Args:
         path (str): Base path to use.
         ext (str): File format extension for saving, without period. Defaults
-            to None to use ``png``.
+            to None to use ``png``. If extension is in
+            :const:`config.FORMATS_3D`, the figure will not be saved.
         modifier (str): Modifier string to append before the extension;
             defaults to an empty string.
         fig (:obj:`matplotlib.figure.Figure`): Figure; defaults to None
             to use the current figure.
+    
     """
     if ext in config.FORMATS_3D:
         print("Extension \"{}\" is a 3D type, will skip saving 2D figure"
               .format(ext))
         return
+    
+    # set up output path, defaulting to PNG format, and backup any existing file
     if ext is None:
         ext = "png"
     plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
     libmag.backup_file(plot_path)
-    if fig is None:
-        # save the current figure
-        plt.savefig(plot_path)
-    else:
-        fig.savefig(plot_path)
+    
+    # save the current or given figure with config DPI
+    save_fn = plt.savefig if fig is None else fig.savefig
+    dpi = config.plot_labels[config.PlotLabels.DPI]
+    save_fn(plot_path, dpi=dpi)
     print("exported figure to", plot_path)
 
 

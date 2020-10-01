@@ -203,6 +203,7 @@ PlotLabels = Enum(
         "SCALE_BAR",  # True to include a scale bar
         "MARKER",  # Matplotlib marker style
         "DROP_DUPS",  # drop duplicates
+        "DPI",  # dots per inch
     )
 )
 #: dict[Any]: Plot labels set from command-line.

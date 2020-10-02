@@ -16,6 +16,8 @@ dependencies:
   - awscli
   - openjdk=8
   - pyqt
+  - pyface
+  - traitsui
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - matplotlib-scalebar

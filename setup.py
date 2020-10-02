@@ -37,7 +37,9 @@ config = {
         "vtk<9.0.0",  # Mayavi 4.7.1 is not compatible with VTK 9
         "mayavi", 
         "pandas", 
-        "PyQt5", 
+        "PyQt5",
+        "pyface",
+        "traitsui",
         "scikit-learn",
         "simpleitk==1.2.0rc2.dev1162+g2a79d",  # pre-built SimpleElastix
         "PyYAML",

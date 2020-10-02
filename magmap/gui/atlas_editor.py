@@ -67,6 +67,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                  borders_img=None, fn_show_label_3d=None, title=None,
                  fn_refresh_atlas_eds=None, fig=None, fn_status_bar=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself."""
+        super().__init__()
         self.image5d = image5d
         self.labels_img = labels_img
         self.channel = channel
@@ -378,21 +379,6 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         return "{}.{}".format(plot_support.get_roi_path(
             os.path.basename(self.title), self.offset), ext)
     
-    def save_fig(self, path=None):
-        """Save the figure to file.
-        
-        Args:
-            path (str): Save path; defaults to None to use the path from
-                :meth:`get_save_path`.
-        
-        """
-        if not self.fig:
-            print("ROI Editor not yet initialized, skipping save")
-            return
-        if path is None:
-            path = self.get_save_path()
-        plot_support.save_fig(path, fig=self.fig)
-
     def toggle_edit_mode(self, event):
         """Toggle editing mode, determining the current state from the
         first :class:`magmap.plot_editor.PlotEditor` and switching to the 

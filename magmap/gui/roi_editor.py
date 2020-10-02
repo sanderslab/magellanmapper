@@ -325,8 +325,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
     def __init__(self, image5d=None, labels_img=None, img_region=None,
                  fn_show_label_3d=None, fn_status_bar=None):
         """Initialize the editor."""
+        super().__init__()
         print("Initiating ROI Editor")
-        self.fig = None
         self.image5d = image5d
         self.labels_img = labels_img
         if img_region is not None:
@@ -1014,17 +1014,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             plot_support.get_plane_axis(self.plane),
             self._z_overview, ext)
     
-    def save_fig(self, path=None):
-        """Save the figure to file, with path based on filename, ROI,
-        and overview plane shown.
-        """
-        if not self.fig:
-            print("ROI Editor not yet initialized, skipping save")
-            return
-        if path is None:
-            path = self.get_save_path()
-        plot_support.save_fig(path, fig=self.fig)
-
     @staticmethod
     def _fig_title(atlas_region, name, offset, roi_size):
         """Figure title parser.

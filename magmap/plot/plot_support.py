@@ -25,7 +25,10 @@ except ImportError as e:
 
 
 class ImageSyncMixin:
-    """Mixin class for synchronizing image display settings."""
+    """Mixin class for synchronizing editors with Matplotlib figures."""
+    
+    def __init__(self):
+        self.fig = None
 
     @staticmethod
     def get_img_display_settings(plot_eds, imgi, chl=None):
@@ -76,6 +79,20 @@ class ImageSyncMixin:
             plot_ax_img = ed.update_img_display(
                 imgi, chl, minimum, maximum, brightness, contrast, alpha)
         return plot_ax_img
+    
+    def save_fig(self, path):
+        """Save the figure to file, with path based on filename, ROI,
+        and overview plane shown.
+        
+        Args:
+            path (str): Save path.
+        
+        """
+        if not self.fig:
+            print("Figure not yet initialized, skipping save")
+            return
+        # use module save fig function
+        save_fig(path, fig=self.fig)
 
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,

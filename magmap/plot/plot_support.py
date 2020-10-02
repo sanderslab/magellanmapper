@@ -729,7 +729,8 @@ def save_fig(path, ext=None, modifier="", fig=None):
     Args:
         path (str): Base path to use.
         ext (str): File format extension for saving, without period. Defaults
-            to None to use ``png``. If extension is in
+            to None to use the extension in ``path`` if available, or ``png``
+            ``path`` does not have an extension. If extension is in
             :const:`config.FORMATS_3D`, the figure will not be saved.
         modifier (str): Modifier string to append before the extension;
             defaults to an empty string.
@@ -742,9 +743,11 @@ def save_fig(path, ext=None, modifier="", fig=None):
               .format(ext))
         return
     
-    # set up output path, defaulting to PNG format, and backup any existing file
+    # set up output path and backup any existing file
     if ext is None:
-        ext = "png"
+        # extract extension from path if not given directly, defaulting to PNG
+        ext = os.path.splitext(path)[1]
+        ext = ext[1:] if ext else "png"
     plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
     libmag.backup_file(plot_path)
     

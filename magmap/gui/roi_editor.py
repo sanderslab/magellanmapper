@@ -998,19 +998,32 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if show:
             plt.show()
         plot_support.save_fig(title, config.savefig)
+    
+    def get_save_path(self):
+        """Get default figure save based on ROI offset, shape, plane axis,
+        z-plane of overview image, and extension based on
+        :attr:`config.savefig`, or "png"
+        
+        Returns:
+            str: Figure save path.
 
-    def save_fig(self):
+        """
+        ext = config.savefig if config.savefig else "png"
+        return "{}_{}{}.{}".format(plot_support.get_roi_path(
+            os.path.basename(self.filename), self.offset, self.roi_size),
+            plot_support.get_plane_axis(self.plane),
+            self._z_overview, ext)
+    
+    def save_fig(self, path=None):
         """Save the figure to file, with path based on filename, ROI,
         and overview plane shown.
         """
         if not self.fig:
             print("ROI Editor not yet initialized, skipping save")
             return
-        path = "{}_{}{}".format(plot_support.get_roi_path(
-            os.path.basename(self.filename), self.offset, self.roi_size),
-            plot_support.get_plane_axis(self.plane),
-            self._z_overview)
-        plot_support.save_fig(path, config.savefig, fig=self.fig)
+        if path is None:
+            path = self.get_save_path()
+        plot_support.save_fig(path, fig=self.fig)
 
     @staticmethod
     def _fig_title(atlas_region, name, offset, roi_size):

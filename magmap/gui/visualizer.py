@@ -26,6 +26,8 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 # adjust for HiDPI screens, necessary on Windows and Linux (not needed but
 # no apparent affect on MacOS)
 QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+# import PyFace components after HiDPI adjustment
+from pyface.api import FileDialog, OK
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         Int, List, Array, Str, Bool, Any,
                         push_exception_handler, Property, File)
@@ -2010,26 +2012,63 @@ class Visualization(HasTraits):
         for ed in self.atlas_eds:
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
+    
+    @staticmethod
+    def _get_save_path(default_path):
+        """Get a save path from the user through a file dialog.
+        
+        Args:
+            default_path (str): Default path to display in the dialog.
 
+        Returns:
+            str: Chosen path.
+        
+        Raises:
+            FileNotFoundError: User canceled file selection.
+
+        """
+        # open a PyFace file dialog in save mode
+        save_dialog = FileDialog(action="save as", default_path=default_path)
+        if save_dialog.open() == OK:
+            # get user selected path
+            return save_dialog.path
+        else:
+            # user canceled file selection
+            raise FileNotFoundError("User canceled file selection")
+    
     @on_trait_change("_btn_save_fig")
     def _save_fig(self):
-        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
-            if self.roi_ed is not None:
-                # save screenshot of current ROI Editor
-                self.roi_ed.save_fig()
-        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
-            if self.atlas_eds:
-                # save screenshot of first Atlas Editor
-                # TODO: find active editor
-                self.atlas_eds[0].save_fig()
-        elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
-            # save 3D image with the currently set extension in config
-            screenshot = self.scene.mlab.screenshot(
-                mode="rgba", antialiased=True)
-            path = plot_support.get_roi_path(
-                config.filename, self._curr_offset(),
-                self.roi_array[0].astype(int))
-            plot_2d.plot_image(screenshot, path)
+        """Save the figure in the currently selected viewer."""
+        path = None
+        try:
+            if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+                if self.roi_ed is not None:
+                    # save screenshot of current ROI Editor
+                    path = self._get_save_path(self.roi_ed.get_save_path())
+                    self.roi_ed.save_fig(path)
+            elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+                if self.atlas_eds:
+                    # save screenshot of first Atlas Editor
+                    # TODO: find active editor
+                    path = self._get_save_path(self.atlas_eds[0].get_save_path())
+                    self.atlas_eds[0].save_fig(path)
+            elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
+                if config.filename:
+                    # save 3D image with extension in config
+                    screenshot = self.scene.mlab.screenshot(
+                        mode="rgba", antialiased=True)
+                    ext = config.savefig if config.savefig else "png"
+                    path = "{}.{}".format(plot_support.get_roi_path(
+                        config.filename, self._curr_offset(),
+                        self.roi_array[0].astype(int)), ext)
+                    path = self._get_save_path(path)
+                    plot_2d.plot_image(screenshot, path)
+            if not path:
+                # notify that no figure is active to save
+                self._roi_feedback = "Please open a figure to save"
+        except FileNotFoundError as e:
+            # user canceled path selection
+            print(e)
     
     @on_trait_change('rois_check_list')
     def load_roi(self):

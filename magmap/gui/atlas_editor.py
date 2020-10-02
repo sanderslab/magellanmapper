@@ -365,17 +365,33 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         for ed in self.plot_eds.values(): ed.edited = False
         enable_btn(self.save_btn, False)
         print("Saved labels image at {}".format(datetime.datetime.now()))
+    
+    def get_save_path(self):
+        """Get figure save path based on filename, ROI, and overview plane
+         shown.
+        
+        Returns:
+            str: Figure save path.
 
-    def save_fig(self):
-        """Save the figure to file, with path based on filename, ROI,
-        and overview plane shown.
+        """
+        ext = config.savefig if config.savefig else "png"
+        return "{}.{}".format(plot_support.get_roi_path(
+            os.path.basename(self.title), self.offset), ext)
+    
+    def save_fig(self, path=None):
+        """Save the figure to file.
+        
+        Args:
+            path (str): Save path; defaults to None to use the path from
+                :meth:`get_save_path`.
+        
         """
         if not self.fig:
             print("ROI Editor not yet initialized, skipping save")
             return
-        path = plot_support.get_roi_path(
-            os.path.basename(self.title), self.offset)
-        plot_support.save_fig(path, config.savefig, fig=self.fig)
+        if path is None:
+            path = self.get_save_path()
+        plot_support.save_fig(path, fig=self.fig)
 
     def toggle_edit_mode(self, event):
         """Toggle editing mode, determining the current state from the

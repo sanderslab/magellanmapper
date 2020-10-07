@@ -378,10 +378,11 @@ setup_image_paths() {
 ############################################
 # Set up atlas image file paths.
 # Globals:
-#   ABA_SPEC: Atlas mapping/specification filename in atalas directory.
+#   ABA_SPEC: Atlas mapping/specification filename in atlas directory.
 #   ABA_PATH: Main atlas directory path.
 #   ABA_LABELS: Path to atlas labels map file.
-#   ABA_IMPORT_DIR: Path to atlas imported from ABA_PATH.
+#   ABA_IMPORT_DIR: Path to atlas imported from ABA_PATH, assumed to have
+#     the same name as ABA_PATH but "_import" appended.
 # Arguments:
 #   1: Name of array with names of directories that may hold the atlas dir.
 #   2: Atlas directory name.

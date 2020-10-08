@@ -32,16 +32,30 @@ try:
     import javabridge as jb
 except ImportError as e:
     jb = None
-    warnings.warn(
-        "Python-Javabridge could not be found, so there will be error when "
-        "attempting to import images into Numpy format", ImportWarning)
+    warnings.warn("Python-Javabridge could not be found", ImportWarning, 2)
+except ValueError:
+    jb = None
+    warnings.warn("Java could not be initialized", ResourceWarning, 2)
+finally:
+    if not jb:
+        warnings.warn(
+            "Python-Javabridge could not be intialized, so there will be "
+            "error when attempting to import images into Numpy format",
+            stacklevel=3)
 try:
     import bioformats as bf
 except ImportError as e:
     bf = None
-    warnings.warn(
-        "Python-Bioformats could not be found, so there will be error when "
-        "attempting to import images into Numpy format", ImportWarning)
+    warnings.warn("Python-Bioformats could not be found", ImportWarning)
+except ValueError:
+    bf = None
+    warnings.warn("Java could not be initialized", ResourceWarning)
+finally:
+    if not bf:
+        warnings.warn(
+            "Python-Bioformats could not be intialized, so there will be "
+            "error when attempting to import images into Numpy format",
+            stacklevel=2)
 from PIL import Image
 from skimage import color
 from skimage import io

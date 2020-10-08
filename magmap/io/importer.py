@@ -30,32 +30,16 @@ from magmap.io import libmag
 import numpy as np
 try:
     import javabridge as jb
-except ImportError as e:
-    jb = None
-    warnings.warn("Python-Javabridge could not be found", ImportWarning, 2)
-except ValueError:
-    jb = None
-    warnings.warn("Java could not be initialized", ResourceWarning, 2)
-finally:
-    if not jb:
-        warnings.warn(
-            "Python-Javabridge could not be intialized, so there will be "
-            "error when attempting to import images into Numpy format",
-            stacklevel=3)
-try:
     import bioformats as bf
-except ImportError as e:
+except (ImportError, ValueError) as e:
+    # Javabridge gives a JVMNotFoundException that extends ValueError if
+    # Java cannot be initialized
+    jb = None
     bf = None
-    warnings.warn("Python-Bioformats could not be found", ImportWarning)
-except ValueError:
-    bf = None
-    warnings.warn("Java could not be initialized", ResourceWarning)
-finally:
-    if not bf:
-        warnings.warn(
-            "Python-Bioformats could not be intialized, so there will be "
-            "error when attempting to import images into Numpy format",
-            stacklevel=2)
+    warnings.warn(
+        "{} could not be found, so there will be error when attempting to "
+        "import images into Numpy format".format(
+            e.name if isinstance(e, ImportError) else "Java"), UserWarning, 2)
 from PIL import Image
 from skimage import color
 from skimage import io

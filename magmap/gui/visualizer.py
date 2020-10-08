@@ -23,9 +23,18 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
-# adjust for HiDPI screens, necessary on Windows and Linux (not needed but
-# no apparent affect on MacOS)
+
+# adjust for HiDPI screens before QGuiApplication is created, necessary
+# on Windows and Linux (not needed but no apparent affect on MacOS)
 QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+try:
+    # use policy introduced in Qt 5.14 to account for non-integer factor
+    # scaling, eg 150%, which avoids excessive window size upscaling
+    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(
+        QtCore.Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor)
+except AttributeError:
+    pass
+
 # import PyFace components after HiDPI adjustment
 from pyface.api import FileDialog, OK
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,

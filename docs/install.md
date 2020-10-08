@@ -266,6 +266,19 @@ Additional errors:
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04
 - PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
 
+### Display issues
+
+#### Window is too large for screen
+
+- On high-definition (HiDPI) desktops where display scaling is set to a non-integer factor (eg 150%), the window may expand beyond the size of small screens
+- This problem is fixed with Qt >= 5.14
+- Workaround 1: Use the Venv instead of the Conda install script. As of 2020-10-08, PyQt5/Qt 5.12 is the latest verion available on Conda, but >= 5.14 is available on Pip, including installation using `bin/setup_venv.sh`.
+- Workaround 2: Replace PyQt5/Qt from Conda with Pip versions.
+    1. Activate the Conda environment: `conda activate mag`
+    1. Uninstall Conda packages: `conda uninstall --force pyqt qt`
+    1. Install Pip packages: `pip install PyQt5`
+- Note that these workarounds are unlikely to work for small, non-HiDPI screens
+
 ### Long load times
 
 - In our experience, initial load times can be very slow on MacOS 10.15 (Catalina) but improve on subsequent loads

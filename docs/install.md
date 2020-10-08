@@ -281,7 +281,22 @@ Additional errors:
 
 ### Long load times
 
+#### Initial software launch on macOS
+
 - In our experience, initial load times can be very slow on MacOS 10.15 (Catalina) but improve on subsequent loads
+
+#### Bioformats/Java initialization
+
+- Image imports that require Bioformats/Java are slower to initialize in the Conda pathway because it uses an older Java version (Java 8) for backward compatibility
+- Workaround:
+    - Install a newer Java version
+    - Change the `JAVA_HOME` environment variable to point to it (see [below](#java-installation-for-python-bioformatsjavabridge))
+    - Optional: Uninstall Java from the Conda environment to avoid overriding the `JAVA_HOME` variable when activating the environment
+        - Activate the Conda environment: `conda activate mag`
+        - Uninstall Java: `conda uninstall --force openjdk`
+
+#### Image loading
+
 - Images often take longer to display when first displayed because of time reading from disk, but the same part of the image shows faster on subsequent loads during the same session
 - Viewing an image from the `yz` plane can be very slow because of how the image is accessed from disk
 

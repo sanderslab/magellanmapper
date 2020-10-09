@@ -288,10 +288,11 @@ Additional errors:
 #### Bioformats/Java initialization
 
 - Image imports that require Bioformats/Java are slower to initialize in the Conda pathway because it uses an older Java version (Java 8) for backward compatibility
-- Workaround: Upgrade Java in the Conda environment, first uninstalling the old Java since direct upgrade would require many package changes
-    - Activate the Conda environment: `conda activate mag`
-    - Uninstall Java 8: `conda uninstall --force openjdk`
-    - Install latest Java: `conda install -c conda-forge openjdk`
+- After initialization, import speed is generally similar as with newer Java versions
+- Workaround: Replace the Conda environment with the latest Java version
+    - Open the `environment.yml` file and change `openjdk=8` to simply `openjdk`
+    - [Uninstall](#option-1-only-uninstall-conda-environment) the Conda environment
+    - [Set up](#recommended-install-in-a-conda-environment) a new Conda environment
 
 #### Image loading
 

@@ -65,7 +65,7 @@ class DiscreteColormap(colors.ListedColormap):
     """
     def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
                  min_val=0, max_val=255, min_any=0, background=None,
-                 dup_for_neg=False, symmetric_colors=False):
+                 dup_for_neg=False, symmetric_colors=False, cmap_labels=None):
         """Generate discrete colormap for labels using 
         :func:``discrete_colormap``.
         
@@ -96,6 +96,8 @@ class DiscreteColormap(colors.ListedColormap):
                 mirrored labels map. Defaults to False.
             symmetric_colors (bool): True to make symmetric colors, assuming
                 symmetric labels centered on 0; defaults to False.
+            cmap_labels (List[str]): Sequence of colors as Matplotlib color
+                strings or RGB(A) hex (eg "#0fab24ff") strings.
         """
         self.norm = None
         self.cmap_labels = None
@@ -134,9 +136,14 @@ class DiscreteColormap(colors.ListedColormap):
             # TODO: may have occasional colormap inaccuracies from this bug:
             # https://github.com/matplotlib/matplotlib/issues/9937;
             self.norm = colors.BoundaryNorm(bounds, num_colors)
-        self.cmap_labels = discrete_colormap(
-            num_colors, alpha, False, seed, min_val, max_val, min_any,
-            symmetric_colors, jitter=20, mode=DiscreteModes.RANDOMN)
+        if cmap_labels is None:
+            # auto-generate colors for the number of labels
+            self.cmap_labels = discrete_colormap(
+                num_colors, alpha, False, seed, min_val, max_val, min_any,
+                symmetric_colors, jitter=20, mode=DiscreteModes.RANDOMN)
+        else:
+            # generate RGBA colors from supplied color strings
+            self.cmap_labels = colors.to_rgba_array(cmap_labels) * max_val
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)

@@ -204,6 +204,7 @@ PlotLabels = Enum(
         "MARKER",  # Matplotlib marker style
         "DROP_DUPS",  # drop duplicates
         "DPI",  # dots per inch
+        "NAN_COLOR",  # color for NaN values (Matplotlib or RGBA string)
     )
 )
 #: dict[Any]: Plot labels set from command-line.
@@ -355,8 +356,8 @@ AtlasLabels = Enum(
         # use symmetric colors, assuming symmetric label values from neg to
         # pos, centered on 0 (eg -5, -3, 0, 3, 5)
         "SYMMETRIC_COLORS",
-        # show labels as binary image with transparent background and given
-        # color (eg "black" or "white") as foreground
+        # sequence of colors as ``[background, foreground]``, where colors are
+        # Matplotlib colors or RGB(A) hex values, to show labels as binary image
         "BINARY",
     )
 )

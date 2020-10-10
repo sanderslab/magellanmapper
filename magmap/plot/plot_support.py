@@ -270,14 +270,14 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
             # get normalization factor for discrete colormaps and convert
             # the image for this scaling
             norm = [cmap.norm]
-            img = cmap.convert_img_labels(img)
-            cmap = [cmap]
             nan_color = config.atlas_labels[config.AtlasLabels.BINARY]
             if nan_color:
                 # convert all foreground to NaN to use the given color;
                 # assumes DiscreteColormap sets background as transparent
                 img = img.astype(np.float)
                 img[img != 0] = np.nan
+            img = cmap.convert_img_labels(img)
+            cmap = [cmap]
         alpha = alphas[i]
         vmin = vmins[i]
         vmax = vmaxs[i]

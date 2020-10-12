@@ -194,8 +194,10 @@ class DiscreteColormap(colors.ListedColormap):
             or ``img`` unchanged if :attr:`img_labels` is None.
 
         """
-        return (img if self.img_labels is None
-                else np.searchsorted(self.img_labels, img))
+        conv = img
+        if self.img_labels is not None:
+            conv = np.searchsorted(self.img_labels, img)
+        return conv
 
 
 def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
@@ -380,6 +382,46 @@ def get_borders_colormap(borders_img, labels_img, cmap_labels):
             # of labels while still ensuring a transparent background
             cmap_borders = [get_labels_discrete_colormap(borders_img, 0)]
     return cmap_borders
+
+
+def make_binary_cmap(binary_colors):
+    """Make a binary discrete colormap.
+    
+    Args:
+        binary_colors (List[str]): Sequence of colors as
+            ``[background, foreground]``.
+
+    Returns:
+        :obj:`DiscreteColormap`: Discrete colormap with labels of ``[0, 1]``
+        mapped to ``binary_colors``.
+
+    """
+    return DiscreteColormap([0, 1], cmap_labels=binary_colors)
+
+
+def setup_labels_cmap(labels_img):
+    """Set up a colormap for a labels image.
+    
+    If :attr:`config.atlas_labels[config.AtlasLabels.BINARY]` is set,
+    its value will be used to construct a binary colormap, where 0 is assumed
+    to be background, and 1 is foreground.
+    
+    Args:
+        labels_img (:obj:`np.ndarray`): Labels image.
+
+    Returns:
+        :obj:`DiscreteColormap`: Discrete colormap for the given labels.
+
+    """
+    binary_colors = config.atlas_labels[config.AtlasLabels.BINARY]
+    if binary_colors:
+        cmap_labels = make_binary_cmap(binary_colors)
+    else:
+        cmap_labels = get_labels_discrete_colormap(
+            labels_img, 0, dup_for_neg=True, use_orig_labels=True,
+            symmetric_colors=config.atlas_labels[
+                config.AtlasLabels.SYMMETRIC_COLORS])
+    return cmap_labels
 
 
 def get_cmap(cmap, n=None):

@@ -644,10 +644,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         cmap_labels = None
         if self.labels_img is not None:
             # set up labels image discrete colormap
-            sym_colors = config.atlas_labels[config.AtlasLabels.SYMMETRIC_COLORS]
-            cmap_labels = colormaps.get_labels_discrete_colormap(
-                self.labels_img, 0, dup_for_neg=True, use_orig_labels=True,
-                symmetric_colors=sym_colors)
+            cmap_labels = colormaps.setup_labels_cmap(self.labels_img)
         max_sizes = plot_support.get_downsample_max_sizes()
         max_size = max_sizes[plot_support.get_plane_axis(
             plane, get_index=True)] if max_sizes else None

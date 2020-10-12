@@ -245,11 +245,7 @@ def _setup_labels_cmaps(imgs, cmaps_labels=None):
     if num_imgs > 1:
         # 2nd image is main labels image, but use original set of 
         # labels if available
-        sym_colors = config.atlas_labels[config.AtlasLabels.SYMMETRIC_COLORS]
-        cmaps_labels.append(
-            colormaps.get_labels_discrete_colormap(
-                imgs[1], 0, dup_for_neg=True, use_orig_labels=True,
-                symmetric_colors=sym_colors))
+        cmaps_labels.append(colormaps.setup_labels_cmap(imgs[1]))
     if num_imgs > 2:
         # subsequent image's colormap is based on first labels 
         # if possible

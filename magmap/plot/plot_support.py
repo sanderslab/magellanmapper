@@ -267,14 +267,12 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         nan_color = config.plot_labels[config.PlotLabels.NAN_COLOR]
         discrete = isinstance(cmap, colormaps.DiscreteColormap)
         if discrete:
-            # get normalization factor for discrete colormaps and convert
-            # the image for this scaling
-            binary_colors = config.atlas_labels[config.AtlasLabels.BINARY]
-            if binary_colors:
-                # binarize image
+            if config.atlas_labels[config.AtlasLabels.BINARY]:
+                # binarize copy of labels image plane
+                img = np.copy(img)
                 img[img != 0] = 1
-                cmap = colormaps.DiscreteColormap(
-                    [0, 1], cmap_labels=binary_colors)
+            # get normalization factor for discrete colormaps and convert
+            # the image for this indexing
             img = cmap.convert_img_labels(img)
             norm = [cmap.norm]
             cmap = [cmap]

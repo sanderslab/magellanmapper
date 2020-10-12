@@ -906,9 +906,9 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         # "compaction": fraction of reduced compactness
         compaction = (compact_orig - compact_sm) / compact_orig
         
-        # "displacement": fraction of displaced volume
-        displ = (np.sum(np.logical_and(mask_smoothed, ~mask_orig)) 
-                 * spacing_prod / vol_orig)
+        # "displacement": fraction of volume that is displaced
+        displ = (np.sum(np.logical_and(mask_smoothed, ~mask_orig))
+                 * spacing_prod / vol_sm) if vol_sm > 0 else np.nan
         
         # "smoothing quality": difference of compaction and displacement
         sm_qual = compaction - displ

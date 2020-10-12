@@ -195,6 +195,23 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=","):
     return args_dict
 
 
+def _get_args_dict_help(msg, keys):
+    """Get the help message for command-line arguments that are converted
+    to a dictionary.
+    
+    Args:
+        msg (str): Message to prepend to the help message.
+        keys (Enum): Keys as an Enumeration.
+
+    Returns:
+        str: Help message with available keys.
+
+    """
+    return ("{} Available keys follow this order until the first "
+            "key=value pair is given: {}".format(
+                msg, libmag.enum_names_aslist(keys)))
+
+
 def main(process_args_only=False, skip_dbs=False):
     """Starts the visualization GUI.
     
@@ -285,16 +302,23 @@ def main(process_args_only=False, skip_dbs=False):
         help="Truth database; see config.TruthDB for settings and "
              "config.TruthDBModes for modes")
     parser.add_argument(
-        "--labels", nargs="*", help="Atlas labels; see config.AtlasLabels")
+        "--labels", nargs="*",
+        help=_get_args_dict_help(
+            "Atlas labels; see config.AtlasLabels.", config.AtlasLabels))
     parser.add_argument(
-        "--transform", nargs="*", help="Image transformations")
+        "--transform", nargs="*",
+        help=_get_args_dict_help(
+            "Image transformations; see config.Transforms.", config.Transforms))
     parser.add_argument(
         "--reg_suffixes", nargs="*",
-        help="Registered image suffixes; see config.RegSuffixes for settings"
-             "and config.RegNames for values")
+        help=_get_args_dict_help(
+            "Registered image suffixes; see config.RegSuffixes for keys "
+            "and config.RegNames for values", config.RegSuffixes))
     parser.add_argument(
         "--plot_labels", nargs="*",
-        help="Plot label customizations; see config.PlotLabels for settings")
+        help=_get_args_dict_help(
+            "Plot label customizations; see config.PlotLabels ",
+            config.PlotLabels))
     parser.add_argument(
         "--set_meta", nargs="*",
         help="Set metadata values; see config.MetaKeys for settings")

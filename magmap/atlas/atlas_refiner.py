@@ -644,8 +644,8 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     """
     smoothing_mode = config.atlas_profile["smoothing_mode"]
     smooth_labels(img_np, filter_size, smoothing_mode)
-    df_metrics, df_raw = label_smoothing_metric(img_np_orig, img_np, spacing)
-    df_metrics[config.SmoothingMetrics.FILTER_SIZE.value] = [filter_size]
+    df_metrics, df_raw = label_smoothing_metric(
+        img_np_orig, img_np, filter_size, spacing)
     print("\nAggregated smoothing metrics, weighted by original volume")
     df_io.print_data_frame(df_metrics)
     
@@ -848,7 +848,8 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
           .format(weighted_size_ratio))
 
 
-def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
+def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
+                           spacing=None):
     """Measure degree of appropriate smoothing, defined as smoothing that 
     retains the general shape and placement of the region.
     
@@ -861,6 +862,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         orig_img_np: Unsmoothed labels image as Numpy array.
         smoothed_img_np: Smoothed labels image as Numpy array, which 
             should be of the same shape as ``original_img_np``.
+        filter_size (float): Structuring element size for smoothing, used
+            here only to include in output data frame; defaults to None.
         spacing (List[float]): Sequence of voxel spacing in same order 
             as for ``img_np``; defaults to None.
     
@@ -918,7 +921,8 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, spacing=None):
         sa_to_vol_ratio = sa_to_vol_smoothed / sa_to_vol_orig
         
         label_metrics = {
-            config.AtlasMetrics.REGION: label_id, 
+            config.AtlasMetrics.REGION: label_id,
+            config.SmoothingMetrics.FILTER_SIZE: filter_size,
             config.SmoothingMetrics.COMPACTION: compaction, 
             config.SmoothingMetrics.DISPLACEMENT: displ, 
             config.SmoothingMetrics.SM_QUALITY: sm_qual, 
@@ -959,6 +963,7 @@ def aggr_smoothing_metrics(df_pxs):
 
     """
     keys = [
+        config.SmoothingMetrics.FILTER_SIZE,
         config.SmoothingMetrics.COMPACTION,
         config.SmoothingMetrics.DISPLACEMENT,
         config.SmoothingMetrics.SM_QUALITY,

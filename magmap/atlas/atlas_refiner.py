@@ -1406,9 +1406,9 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     if df_sm is not None:
         # write smoothing metrics to CSV with identifier columns
         df_smoothing_path = df_base_path.format(config.PATH_SMOOTHING_METRICS)
-        df_sm[config.AtlasMetrics.SAMPLE.value] = basename
-        df_sm[config.AtlasMetrics.REGION.value] = config.REGION_ALL
-        df_sm[config.AtlasMetrics.CONDITION.value] = "smoothed"
+        df_sm.insert(0, config.AtlasMetrics.SAMPLE.value, basename)
+        df_sm.insert(0, config.AtlasMetrics.REGION.value, config.REGION_ALL)
+        df_sm.insert(0, config.AtlasMetrics.CONDITION.value, "smoothed")
         df_sm.loc[
             df_sm[config.SmoothingMetrics.FILTER_SIZE.value] == 0,
             config.AtlasMetrics.CONDITION.value] = "unsmoothed"

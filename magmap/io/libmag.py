@@ -473,12 +473,14 @@ def is_number(val):
         return False
 
 
-def format_num(val, digits=1):
+def format_num(val, digits=1, allow_scinot=True):
     """Format a value to a given number of digits if the value is a number.
     
     Args:
-        val: The value to format.
-        digits: Maximum number of digits to keep; defaults to 3.
+        val (float): The value to format.
+        digits (int): Maximum number of digits to keep; defaults to 1.
+        allow_scinot (bool): True to allow scientific notation in output;
+            defaults to True;
     
     Returns:
         A formatted string with the number of digits reduced to ``digits`` 
@@ -487,8 +489,59 @@ def format_num(val, digits=1):
     formatted = val
     if is_number(val):
         if isinstance(val, str): val = float(val)
-        formatted = ("{:." + str(digits) + "g}").format(float(val))
+        format_char = "g" if allow_scinot else "f"
+        formatted = ("{:." + str(digits) + format_char + "}").format(float(val))
     return formatted
+
+
+def truncate_decimal_digit(val, repeats=3, trim_near=False):
+    """Truncate floats that may have gained unintended decimal point digits
+    because of floating point representation.
+
+    Floating point representation may cause a number input as 3.0 to be
+    displayed as 3.0000000000000004, for example. To remove the
+    unintended numbers, assume that consecutive repeats of a given digit
+    indicates the place at which the decimal points can be truncated.
+
+    Repeated 0's immediately after the decimal point in values between 0-1
+    (eg. 0.00000000012 will be retained on the assumption that the repeated
+    0's are intended for the small value.
+
+    Args:
+        val (float): Number to truncate.
+        repeats (int): Number of consecutive decimal digits repeats at which
+            to truncate `val`; defaults to 3. Only the first digit of the
+            repeated value stretch is retained.
+        trim_near (bool): True to remove even this first digit if the repeated
+            value is "near", ie 0 or 9, which are assumed to be floating
+            point errors (eg 3.0000001 or 2.999999998); defaults to False.
+
+    Returns:
+        str: String representation of ``val`` with truncated decimals.
+
+    """
+    # convert to string, which will remove all but last trailing 0 decimals
+    val_str = str(val)
+    val_str_split = val_str.split(".")
+    if len(val_str_split) > 1:
+        last = None
+        n = 0
+        for i, s in enumerate(val_str_split[1]):
+            if s == last:
+                # increment consecutively repeated value
+                n += 1
+                if n >= repeats:
+                    # retain the first instance of the value that is repeated
+                    # unless trimming "near" (likely floating point error) vals
+                    extra = 1 if trim_near and last in "09" else 2
+                    return format_num(val, i - n + extra, allow_scinot=False)
+            elif val_str_split[0] != "0" or not (last is None and s == "0"):
+                # track a new potentially repeated value as long as not 0
+                # at start of value between 0-1 since these 0's may
+                # intentionally indicate a small value
+                last = s
+                n = 1
+    return val_str
 
 
 def convert_bin_magnitude(val, orders):

@@ -1936,7 +1936,10 @@ def main():
         )
         for metric in metrics:
             path_df = "{}_{}.csv".format("vols_stats", metric)
-            if not os.path.exists(path_df): continue
+            if not os.path.exists(path_df):
+                print("{} does not exist for labels difference stats, skipping"
+                      .format(metric))
+                continue
             col_wt = vols.get_metric_weight_col(metric)
             export_regions.make_labels_diff_img(
                 config.filename, path_df, "vals.effect", None, config.prefix, 

@@ -1782,20 +1782,33 @@ def main():
         # filter size
         dfs = {}
         dfs_noloss = []
+        key_filt = config.SmoothingMetrics.FILTER_SIZE.value
         for path in config.filenames:
+            # load smoothing metrics CSV file and find peak smoothing qualities
+            # without label loss across filter sizes
             df = pd.read_csv(path)
+            df_peak = atlas_stats.smoothing_peak(df, 0, None)
+            dfs_noloss.append(df_peak)
+            
+            # round extraneous decimals that may be introduced from floats
+            df[key_filt] = df[key_filt].map(libmag.truncate_decimal_digit)
             filter_sizes = np.unique(
                 df[config.SmoothingMetrics.FILTER_SIZE.value])
             for filter_size in filter_sizes:
-                # smoothing quality at the given filter size
+                # extract smoothing quality at the given filter size
                 dfs.setdefault(filter_size, []).append(
                     atlas_stats.smoothing_peak(df, None, filter_size))
-            # peak smoothing qualities without label loss across filter sizes
-            dfs_noloss.append(atlas_stats.smoothing_peak(df, 0, None))
+        
         for key in dfs:
+            # save metrics across atlases for given filter size
             df_io.data_frames_to_csv(
                 dfs[key], "smoothing_filt{}.csv".format(key))
-        df_io.data_frames_to_csv(dfs_noloss, "smoothing_peaks.csv")
+        
+        # round peak filter sizes after extraction since sizes are now strings
+        df_peaks = df_io.data_frames_to_csv(dfs_noloss)
+        df_peaks[key_filt] = df_peaks[key_filt].map(
+            libmag.truncate_decimal_digit)
+        df_io.data_frames_to_csv(df_peaks, "smoothing_peaks.csv")
 
     elif reg is config.RegisterTypes.SMOOTHING_METRICS_AGGR:
         # re-aggregate smoothing metrics from raw stats

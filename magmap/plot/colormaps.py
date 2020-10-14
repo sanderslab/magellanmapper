@@ -12,7 +12,8 @@ from matplotlib import colors
 from magmap.settings import config
 from magmap.io import libmag
 
-# default colormaps, with keys backed by config.Cmaps enums
+#: Dict[:class:`config.Cmaps`, :obj:`colors.LinearSegmentedColormap`]:
+# Default colormaps.
 CMAPS = {}
 
 
@@ -123,7 +124,7 @@ class DiscreteColormap(colors.ListedColormap):
             # for large gaps between successive labels; offset bounds to
             # encompass each label and avoid off-by-one errors that appear
             # when viewing images with additional extreme labels; float32
-            # gives unsymmetric colorsfor large values in mirrored atlases
+            # gives unsymmetric colors for large values in mirrored atlases
             # despite remaining within range for unclear reasons, fixed by
             # using float64 instead
             labels_offset = 0.5

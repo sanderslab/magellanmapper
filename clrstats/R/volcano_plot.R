@@ -109,7 +109,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     #text(x.lbl, y.lbl, label=lbls, cex=0.2)
     #thigmophobe.labels(x.lbl, y.lbl, label=lbls, cex=0.2)
     #pointLabel(x.lbl, y.lbl, label=lbls, cex=0.2)
-    addTextLabels::addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.5, lwd=0.2)
+    basicPlotteR::addTextLabels(x.lbl, y.lbl, label=lbls, cex=0.5, lwd=0.2)
   }
   
   # write to PDF file

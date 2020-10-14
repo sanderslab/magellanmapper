@@ -4,7 +4,7 @@
 # library to avoid overlapping text labels
 #install.packages("devtools")
 #library("devtools")
-#install_github("JosephCrispell/addTextLabels")
+#install_github("JosephCrispell/basicPlotteR")
 
 # To run stats:
 # - Select profiles in runStats
@@ -817,7 +817,7 @@ setupConfig <- function(name=NULL) {
   } else if (name == "clustering") {
     # nuclei clustering
     setupConfig("wt")
-    config.env$Measurements <- kMeas[c(24:25)]
+    config.env$Measurements <- kMeas[24:25]
     
   } else if (name == "geno") {
     # compare across multiple genotypes

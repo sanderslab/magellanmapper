@@ -320,7 +320,7 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       points(x.vals, vals.group, pch=pch, col=colors.group, 
              bg=colors.group, cex=pt.cex)
       if (show.labels) {
-        addTextLabels::addTextLabels(
+        basicPlotteR::addTextLabels(
           x.vals, vals.group, label=vals.groups[[i]]$samples, cex=0.5, lwd=0.2)
       }
       

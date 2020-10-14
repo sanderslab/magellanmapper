@@ -645,7 +645,7 @@ class AtlasProfile(profiles.SettingsDict):
 
             # test label smoothing over range
             "smoothtest": {
-                "smooth": (0, 1, 2, 3, 4, 5, 6, 7),
+                "smooth": (0, 1, 2, 3, 4, 5, 6, 7, 8),
                 # "smooth": (0, ),
             },
 

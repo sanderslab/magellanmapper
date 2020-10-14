@@ -6,6 +6,12 @@
 #   Rscript --verbose clrstats/run.R
 # Adjust profiles in clrstats.R before running
 
-setwd("clrstats")
+kWorkDir <- "clrstats"
+if (dir.exists(kWorkDir)) {
+  # change working directory
+  setwd(kWorkDir)
+}
+
+# load all source changes and run stats
 devtools::load_all(file.path(getwd(), "R"))
 runStats()

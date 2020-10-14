@@ -47,6 +47,7 @@ LabelMetrics = Enum(
         # overlap metrics
         "VolDSC", "NucDSC",  # volume/nuclei Dice Similarity Coefficient
         "VolOut", "NucOut",  # volume/nuclei shifted out of orig position
+        "VolAlt",  # alternate volume, eg smoothed volume
         # point cloud measurements
         "NucCluster",  # number of nuclei clusters
         "NucClusNoise",  # number of nuclei that do not fit into a cluster
@@ -90,10 +91,12 @@ WT_METRICS = (
     LabelMetrics.EdgeDistMean, 
 )
 
+
 def _coef_var(df):
     # calculate coefficient of variation from data frame columns, 
     # where first column is std and second is mean
     return np.divide(df.iloc[:, 0], df.iloc[:, 1])
+
 
 class MetricCombos(Enum):
     """Combinations of metrics.
@@ -121,7 +124,8 @@ class MetricCombos(Enum):
         "CoefVarNuclei", 
         (LabelMetrics.VarNuclei, LabelMetrics.MeanNuclei), 
         _coef_var)
-    
+
+
 class LabelToEdge(object):
     """Convert a label to an edge with class methods as an encapsulated 
     way to use in multiprocessing without requirement for global variables.
@@ -170,6 +174,7 @@ class LabelToEdge(object):
             borders = cv_nd.perimeter_nd(label_mask_region)
         return label_id, slices, borders
 
+
 def make_labels_edge(labels_img_np):
     """Convert labels image into label borders image.
     
@@ -210,6 +215,7 @@ def make_labels_edge(labels_img_np):
     print("time elapsed to make labels edge:", time() - start_time)
     
     return labels_edge
+
 
 class MeasureLabel(object):
     """Measure metrics within image labels in a way that allows 
@@ -690,7 +696,7 @@ def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None,
                        extra_keys=None):
     # parse volume metrics into physical units and nuclei density
     physical_mult = None if spacing is None else np.prod(spacing)
-    keys = [LabelMetrics.Volume]
+    keys = [LabelMetrics.Volume, LabelMetrics.VolAlt]
     if extra_keys is not None:
         keys.extend(extra_keys)
     
@@ -913,7 +919,7 @@ class MeasureLabelOverlap(object):
         df: Pandas data frame with a row for each sub-region.
     """
     _OVERLAP_METRICS = (
-        LabelMetrics.Volume, LabelMetrics.Nuclei, 
+        LabelMetrics.Volume, LabelMetrics.VolAlt, LabelMetrics.Nuclei,
         LabelMetrics.VolDSC, LabelMetrics.NucDSC,
         LabelMetrics.VolOut, LabelMetrics.NucOut,
     )
@@ -956,12 +962,12 @@ class MeasureLabelOverlap(object):
             # collective region
             label_masks = [np.isin(l, label_ids) for l in cls.labels_imgs]
             label_vol = np.sum(label_masks[0])
+            label_vol_alt = np.sum(label_masks[1])
             vol_dsc = df_io.meas_dice(label_masks[0], label_masks[1])
             
             # sum up volume and nuclei count in the new version outside of
-            # the original version; assume that volume no longer occupied by
-            # new version will be accounted for by the other labels that
-            # reoccupied that volume
+            # the original version; assume that remaining original volume
+            # will be accounted for by the other labels that reoccupy it
             mask_out = np.logical_and(label_masks[1], ~label_masks[0])
             vol_out = np.sum(mask_out)
             if cls.heat_map is not None:
@@ -976,6 +982,7 @@ class MeasureLabelOverlap(object):
                 cls.df[LabelMetrics.Region.name].isin(label_ids)]
             label_vols = labels[LabelMetrics.Volume.name]
             label_vol = np.nansum(label_vols)
+            label_vol_alt = np.nansum(labels[LabelMetrics.VolAlt.name])
             vol_dscs = labels[LabelMetrics.VolDSC.name]
             
             vol_dsc = df_io.weight_mean(vol_dscs, label_vols)
@@ -991,6 +998,7 @@ class MeasureLabelOverlap(object):
         if label_vol > 0:
             # update dict with metric values
             metrics[LabelMetrics.Volume] = label_vol
+            metrics[LabelMetrics.VolAlt] = label_vol_alt
             metrics[LabelMetrics.Nuclei] = nuclei
             metrics[LabelMetrics.VolDSC] = vol_dsc
             metrics[LabelMetrics.NucDSC] = nuc_dsc

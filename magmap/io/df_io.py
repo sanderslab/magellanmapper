@@ -18,6 +18,16 @@ from magmap.io import cli
 from magmap.io import libmag
 
 
+#: dict[:class:`config.DFTasks`, func]: Dictionary of data frame tasks
+# and function to apply.
+_ARITHMETIC_TASKS = {
+    config.DFTasks.SUM_COLS: np.add,
+    config.DFTasks.SUBTRACT_COLS: np.subtract,
+    config.DFTasks.MULTIPLY_COLS: np.multiply,
+    config.DFTasks.DIVIDE_COLS: np.divide,
+}
+
+
 def weight_mean(vals, weights):
     """Calculate the weighted arithmetic mean.
     
@@ -152,6 +162,21 @@ def df_subtract(df0, df1, axis=1, fill_value=0):
 
     """
     return df0.subtract(df1, axis=axis, fill_value=fill_value)
+
+
+def func_to_paired_cols(df, col1, col2, fn, name):
+    """Perform a function such as an arithmetic operation on a pair of columns.
+    
+    Args:
+        df (:obj:`pd.DataFrame`): Data frame, which will be modified in-place.
+        col1 (str): Name of first column.
+        col2 (int): Name of second column.
+        fn (func): Function that takes the columns from `col1` and `col2`
+            as separate arguments.
+        name (str): Name of new column in `df` to insert the results from `fn`.
+
+    """
+    df[name] = fn(df[col1], df[col2])
 
 
 def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
@@ -789,12 +814,32 @@ def main():
             out_path = libmag.insert_before_ext(config.filename, "_norm")
         data_frames_to_csv(df, out_path)
 
-    if df_task is config.DFTasks.MERGE_EXCELS:
+    elif df_task is config.DFTasks.MERGE_EXCELS:
         # merge multiple Excel files into single Excel file, with each
         # original Excel file as a separate sheet in the combined file
         merge_excels(
             config.filenames, config.prefix,
             config.plot_labels[config.PlotLabels.LEGEND_NAMES])
+    
+    elif df_task in _ARITHMETIC_TASKS:
+        # perform arithmetic operations on pairs of columns in a data frame
+        df = pd.read_csv(config.filename)
+        fn = _ARITHMETIC_TASKS[df_task]
+        for col_x, col_y, col_id in zip(
+                libmag.to_seq(config.plot_labels[config.PlotLabels.X_COL]),
+                libmag.to_seq(config.plot_labels[config.PlotLabels.Y_COL]),
+                libmag.to_seq(config.plot_labels[config.PlotLabels.ID_COL])):
+            # perform the arithmetic operation specified by the specific
+            # task on the pair of columns, inserting the results in a new
+            # column specified by ID
+            func_to_paired_cols(df, col_x, col_y, fn, col_id)
+        
+        # output modified data frame to CSV file
+        out_path = config.prefix
+        if not out_path:
+            suffix = config.suffix if config.suffix else ""
+            out_path = libmag.insert_before_ext(config.filename, suffix)
+        data_frames_to_csv(df, out_path)
 
 
 if __name__ == "__main__":

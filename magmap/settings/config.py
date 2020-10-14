@@ -529,6 +529,10 @@ DFTasks = Enum(
         "ADD_CSV_COLS",  # add columns with values to CSV
         "NORMALIZE",  # normalize metrics to a base condition within a CSV
         "MERGE_EXCELS",  # merge Excel files into sheets of single Excel file
+        "SUM_COLS",  # sum columns
+        "SUBTRACT_COLS",  # subtract columns
+        "MULTIPLY_COLS",  # multiply columns
+        "DIVIDE_COLS",  # divide columns
     ]
 )
 

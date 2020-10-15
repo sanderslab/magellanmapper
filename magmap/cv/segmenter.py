@@ -466,7 +466,9 @@ def mask_atlas(atlas, labels_img):
 
 
 def segment_from_labels(edges, markers, labels_img, atlas_img=None,
-                        exclude_labels=None):
+                        exclude_labels=None,
+                        mask_filt=config.SmoothingModes.opening,
+                        mask_filt_size=2):
     """Segment an image using markers from a labels image.
     
     Labels images may have been generally manually and thus may not 
@@ -492,11 +494,20 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None,
             used as a mask.
         exclude_labels (List[int]): Sequence of labels to exclude from the
             segmentation; defaults to None.
+        mask_filt (:obj:`config.SmoothingModes`): Enumeration for a filter
+            mode to use for the watershed mask; defaults to
+            :obj:`config.SmoothingModes.opening`. Ignored if ``atlas_img``
+            or both ``atlas_img`` and ``labels_img`` are given to generate
+            the mask.
+        mask_filt_size (int): Size of structuring element for the filter
+            specified by ``mask_filt``; defaults to 2.
     
     Returns:
         :obj:`np.ndarray`: Segmented image of the same shape as ``img`` with
         the same number of labels as in ``markers``.
+    
     """
+    # generate mask for watershed
     if atlas_img is not None and labels_img is not None:
         # broad mask from both atlas and labels
         mask = mask_atlas(atlas_img, labels_img)
@@ -506,10 +517,20 @@ def segment_from_labels(edges, markers, labels_img, atlas_img=None,
             atlas_img, thresh=filters.threshold_otsu(atlas_img), 
             holes_area=5000)
     else:
-        # default to using labels, opening them up small holes to prevent 
-        # spillover across artifacts that may bridge them
-        fn_selem = cv_nd.get_selem(labels_img.ndim)
-        mask = morphology.binary_opening(labels_img != 0, fn_selem(2))
+        # default to using label foreground
+        mask = labels_img != 0
+        fn_mask = None
+        if mask_filt is config.SmoothingModes.opening:
+            # default filter opens the mask to prevent spillover across
+            # artifacts that may bridge otherwise separate structures
+            fn_mask = morphology.binary_opening
+        elif mask_filt is config.SmoothingModes.closing:
+            fn_mask = morphology.binary_closing
+        if fn_mask and mask_filt_size:
+            print("Filtering watershed mask with {}, size {}"
+                  .format(fn_mask, mask_filt_size))
+            mask = fn_mask(mask, cv_nd.get_selem(labels_img.ndim)(
+                mask_filt_size))
     
     exclude = None
     if exclude_labels is not None:
@@ -543,7 +564,7 @@ def watershed_distance(foreground, markers=None, num_peaks=np.inf,
             distance transform.
         num_peaks: Number of peaks to include when generating markers; 
             defaults to infinity.
-        compactness: Compactness factor for watershed; defaults to 0.
+        compactness (float): Compactness factor for watershed; defaults to 0.
         mask: Boolean or binary array of same size as ``foreground`` 
             where True or 1 pixels will be filled by the watershed; 
             defaults to None to fill the whole image.

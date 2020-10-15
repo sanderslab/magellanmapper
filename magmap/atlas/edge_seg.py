@@ -278,6 +278,14 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     sym_axis = atlas_refiner.find_symmetric_axis(atlas_img_np)
     mirrorred = atlas and sym_axis >= 0
     len_half = None
+    seg_args = {"exclude_labels": exclude_labels}
+    edge_prof = config.atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTAION]
+    if edge_prof:
+        edge_filt = edge_prof[profiles.RegKeys.WATERSHED_MASK_FILTER]
+        if edge_filt and len(edge_filt) > 1:
+            # watershed mask filter settings from atlas profile
+            seg_args["mask_filt"] = edge_filt[0]
+            seg_args["mask_filt_size"] = edge_filt[1]
     if mirrorred:
         # segment only half of image, assuming symmetry
         len_half = atlas_img_np.shape[sym_axis] // 2
@@ -285,14 +293,14 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
         slices[sym_axis] = slice(len_half)
         sl = tuple(slices)
         labels_seg = segmenter.segment_from_labels(
-            atlas_edge[sl], markers[sl], labels_img_np[sl],
-            exclude_labels=exclude_labels)
+            atlas_edge[sl], markers[sl], labels_img_np[sl], **seg_args)
     else:
         # segment the full image, including excluded labels on the opposite side
         exclude_labels = exclude_labels.tolist().extend(
             (mirror_mult * exclude_labels).tolist())
+        seg_args["exclude_labels"] = exclude_labels
         labels_seg = segmenter.segment_from_labels(
-            atlas_edge, markers, labels_img_np, exclude_labels=exclude_labels)
+            atlas_edge, markers, labels_img_np, **seg_args)
     
     smoothing = config.atlas_profile["smooth"]
     if smoothing is not None:

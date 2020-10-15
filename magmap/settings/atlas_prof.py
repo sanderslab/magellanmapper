@@ -171,6 +171,7 @@ class AtlasProfile(profiles.SettingsDict):
         self[RegKeys.EDGE_AWARE_REANNOTAION] = {
             RegKeys.MARKER_EROSION: 8,  # filter size for labels to markers
             RegKeys.MARKER_EROSION_MIN: 1,  # None for default, 0 for no min
+            RegKeys.WATERSHED_MASK_FILTER: (config.SmoothingModes.opening, 2),
         }
         self["erosion_frac"] = 0.5  # target size as frac of orig; can be None
         self["erode_labels"] = {"markers": True, "interior": False}

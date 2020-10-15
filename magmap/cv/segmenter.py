@@ -336,7 +336,12 @@ class LabelToMarkerErosion(object):
             size_ratio = region_size_filtered / region_size
             thresh = 0.2 if target_frac is None else target_frac
             chosen_selem_size = selem_size
-            if size_ratio > thresh: break
+            if region_size_filtered < region_size and size_ratio > thresh:
+                # stop eroding if underwent some erosion but stayed above
+                # threshold size; skimage erosion treats border outside image
+                # as True, so images may not undergo erosion and should
+                # continue until lowest filter size is taken (eg NaN)
+                break
 
         if not np.isnan(chosen_selem_size):
             print("label {}: changed num of pixels from {} to {} "

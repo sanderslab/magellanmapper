@@ -498,9 +498,13 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling,
         in the region ensures that the returned coordinate will reside within 
         the region itself, including non-contingous regions that may be 
         intermixed with coordinates not part of the region.
+        If ``labels_ref_lookup`` is None, all values are None.
+    
     """
-    # gather IDs for label and all its children; combine regions from multiple
-    # IDs into a single conglomerate region
+    if not labels_ref_lookup:
+        return None, None, None
+    
+    # gather IDs for label, including children and opposite sides
     if not libmag.is_seq(label_id):
         label_id = [label_id]
     if not libmag.is_seq(both_sides):

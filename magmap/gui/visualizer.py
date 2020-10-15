@@ -301,6 +301,12 @@ class Styles2D(Enum):
     THIN_ROWS = "Thin rows"
 
 
+class RegionOptions(Enum):
+    """Enumerations for region options."""
+    BOTH_SIDES = "Both sides"
+    INCL_CHILDREN = "Include children"
+
+
 class ControlsTabs(Enum):
     """Enumerations for controls tabs."""
     ROI = auto()
@@ -498,11 +504,15 @@ class Visualization(HasTraits):
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List  # ROI editor circle styles
     _styles_2d = List
+    
+    # atlas labels
     _atlas_label = None
     _structure_scale = Int  # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
     _region_id = Str
+    _region_options = List
+    
     _mlab_title = None
     _circles_opened_type = None  # enum of circle style for opened 2D plots
     _opened_window_style = None  # 2D plots window style curr open
@@ -592,14 +602,20 @@ class Visualization(HasTraits):
             ),
         ),
         HGroup(
-            Item("_structure_scale", label="Level",
+            Item("_structure_scale", label="Atlas ontology level",
                  editor=RangeEditor(
                      low_name="_structure_scale_low",
                      high_name="_structure_scale_high",
                      mode="slider")),
+        ),
+        HGroup(
             Item("_region_id", label="Region",
                  editor=TextEditor(
                      auto_set=False, enter_set=True, evaluate=str)),
+            Item("_region_options", style="custom", show_label=False,
+                 editor=CheckListEditor(
+                     values=[e.value for e in RegionOptions], cols=2,
+                     format_func=lambda x: x)),
         ),
         Item("_roi_feedback", style="custom", show_label=False),
         HGroup(
@@ -781,6 +797,7 @@ class Visualization(HasTraits):
             # check "surface" if set in profile
             self._check_list_3d.append(self._DEFAULTS_3D[3])
         # self._structure_scale = self._structure_scale_high
+        self._region_options = [RegionOptions.INCL_CHILDREN.value]
 
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
@@ -2148,11 +2165,12 @@ class Visualization(HasTraits):
         for region_id in region_id_split:
             # get IDs from all sub-regions contained within the given region
             region_id = region_id.strip()
-            both = region_id.startswith(self._PREFIX_BOTH_SIDES)
-            both_sides.append(both)
-            if both:
-                # specify both sides to get corresponding pos and neg IDs
+            # specify both sides to get corresponding pos and neg IDs
+            both = RegionOptions.BOTH_SIDES.value in self._region_options
+            if region_id.startswith(self._PREFIX_BOTH_SIDES):
+                both = True
                 region_id = region_id[len(self._PREFIX_BOTH_SIDES):]
+            both_sides.append(both)
             try:
                 region_id = int(region_id)
             except ValueError:
@@ -2163,9 +2181,11 @@ class Visualization(HasTraits):
                 )
                 return
             region_ids.append(region_id)
+        incl_chil = RegionOptions.INCL_CHILDREN.value in self._region_options
         centroid, self._img_region, region_ids = ontology.get_region_middle(
             config.labels_ref_lookup, region_ids, config.labels_img,
-            config.labels_scaling, both_sides=both_sides)
+            config.labels_scaling, both_sides=both_sides,
+            incl_children=incl_chil)
         if centroid is None:
             self._roi_feedback = (
                 "Could not find the region corresponding to ID {}"

@@ -389,6 +389,11 @@ class AtlasProfile(profiles.SettingsDict):
                     "rotation": ((-4, 1), (-2, 2)),
                     "resize": False,
                 },
+                RegKeys.EDGE_AWARE_REANNOTAION: {
+                    # use a small closing filter avoid label loss
+                    RegKeys.WATERSHED_MASK_FILTER: (
+                        config.SmoothingModes.closing, 1),
+                },
                 "crop_to_labels": True,
                 "smooth": 2,
             },

@@ -23,7 +23,13 @@ from magmap.io import df_io
 # metric keys and column names
 LabelMetrics = Enum(
     "LabelMetrics", [
-        "Region", "Volume", "Intensity", "Nuclei", 
+        "Region",
+        "Volume",  # volume, converted to physical units
+        "VolAlt",  # alternate volume, eg smoothed volume
+        "VolPx",  # volume in pixels
+        "VolAltPx",  # alternate volume in pixels
+        "Intensity",
+        "Nuclei",
         # densities; "Density" = nuclei density
         # TODO: change density to nuclei density
         # TODO: consider changing enum for KEY: name format
@@ -47,7 +53,6 @@ LabelMetrics = Enum(
         # overlap metrics
         "VolDSC", "NucDSC",  # volume/nuclei Dice Similarity Coefficient
         "VolOut", "NucOut",  # volume/nuclei shifted out of orig position
-        "VolAlt",  # alternate volume, eg smoothed volume
         # point cloud measurements
         "NucCluster",  # number of nuclei clusters
         "NucClusNoise",  # number of nuclei that do not fit into a cluster
@@ -919,9 +924,15 @@ class MeasureLabelOverlap(object):
         df: Pandas data frame with a row for each sub-region.
     """
     _OVERLAP_METRICS = (
-        LabelMetrics.Volume, LabelMetrics.VolAlt, LabelMetrics.Nuclei,
-        LabelMetrics.VolDSC, LabelMetrics.NucDSC,
-        LabelMetrics.VolOut, LabelMetrics.NucOut,
+        LabelMetrics.Volume,
+        LabelMetrics.VolPx,
+        LabelMetrics.VolAlt,
+        LabelMetrics.VolAltPx,
+        LabelMetrics.Nuclei,
+        LabelMetrics.VolDSC,
+        LabelMetrics.NucDSC,
+        LabelMetrics.VolOut,
+        LabelMetrics.NucOut,
     )
     
     # images and data frame
@@ -996,9 +1007,12 @@ class MeasureLabelOverlap(object):
                 nuc_out = np.nansum(labels[LabelMetrics.NucOut.name])
         
         if label_vol > 0:
-            # update dict with metric values
+            # update dict with metric values; px vals will not get converted
+            # to physical units
             metrics[LabelMetrics.Volume] = label_vol
+            metrics[LabelMetrics.VolPx] = label_vol
             metrics[LabelMetrics.VolAlt] = label_vol_alt
+            metrics[LabelMetrics.VolAltPx] = label_vol_alt
             metrics[LabelMetrics.Nuclei] = nuclei
             metrics[LabelMetrics.VolDSC] = vol_dsc
             metrics[LabelMetrics.NucDSC] = nuc_dsc

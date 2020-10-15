@@ -216,6 +216,31 @@ def _get_children(labels_ref_lookup, label_id, children_all=[]):
     return children_all
 
 
+def _mirror_label_ids(label_ids, combine=False):
+    """Mirror label IDs, assuming that a "mirrored" ID is the negative
+    of the given ID.
+    
+    Args:
+        label_ids (Union[int, List[int]]): Single ID or sequence of IDs.
+        combine (bool): True to return a list of ``label_ids`` along with
+            their mirrored IDs; defaults to False to return on the mirrored IDs.
+
+    Returns:
+        Union[int, List[int]]: A single mirrored ID if ``label_ids`` is
+        one ID and ``combine`` is False, or a list of IDs.
+
+    """
+    if libmag.is_seq(label_ids):
+        mirrored = [-1 * n for n in label_ids]
+        if combine:
+            mirrored = list(label_ids).extend(mirrored)
+    else:
+        mirrored = -1 * label_ids
+        if combine:
+            mirrored = [label_ids, mirrored]
+    return mirrored
+
+
 def get_children_from_id(labels_ref_lookup, label_id, incl_parent=True, 
                          both_sides=False):
     """Get the children of a given atlas ID.
@@ -237,9 +262,9 @@ def get_children_from_id(labels_ref_lookup, label_id, incl_parent=True,
     children_all = [id_abs] if incl_parent else []
     region_ids = _get_children(labels_ref_lookup, id_abs, children_all)
     if both_sides:
-        region_ids.extend([-1 * n for n in region_ids])
+        region_ids.extend(_mirror_label_ids(region_ids))
     elif label_id < 0:
-        region_ids = [-1 * n for n in region_ids]
+        region_ids = _mirror_label_ids(region_ids)
     #print("region IDs: {}".format(region_ids))
     return region_ids
 

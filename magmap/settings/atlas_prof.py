@@ -418,6 +418,10 @@ class AtlasProfile(profiles.SettingsDict):
                     "rotation": ((-4, 1),),
                     "resize": False,
                 },
+                RegKeys.EDGE_AWARE_REANNOTAION: {
+                    # turn off filtering to avoid label loss
+                    RegKeys.WATERSHED_MASK_FILTER: (None, 0),
+                },
                 "crop_to_labels": True,
                 "smooth": 2,
             },

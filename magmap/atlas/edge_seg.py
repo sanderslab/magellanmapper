@@ -74,13 +74,17 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
             different labels. Defaults to None.
     """
     
-    # load atlas image, assumed to be a histology image
-    if atlas:
-        print("generating edge images for atlas")
-        atlas_suffix = config.RegNames.IMG_ATLAS.value
-    else:
-        print("generating edge images for experiment/sample image")
-        atlas_suffix = config.RegNames.IMG_EXP.value
+    # load intensity image from which to detect edges
+    atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
+    if not atlas_suffix:
+        if atlas:
+            # atlases default to using the atlas volume image
+            print("generating edge images for atlas")
+            atlas_suffix = config.RegNames.IMG_ATLAS.value
+        else:
+            # otherwise, use the experimental image
+            print("generating edge images for experiment/sample image")
+            atlas_suffix = config.RegNames.IMG_EXP.value
     
     # adjust image path with suffix
     mod_path = path_img

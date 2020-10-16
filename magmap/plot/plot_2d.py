@@ -698,7 +698,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                  names_group=None, labels=None, units=None, xlim=None, 
                  ylim=None, title=None, fig_size=None, show=True, suffix=None, 
                  df=None, xy_line=False, col_size=None, size_mult=5,
-                 annot_arri=None, alpha=None, legend_loc="best"):
+                 annot_arri=None, alpha=None, legend_loc="best",
+                 scale_x=None, scale_y=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -745,6 +746,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             in which case 255 will be used.
         legend_loc (str): Legend location, which should be one of
             :attr:``plt.legend.loc`` values; defaults to "best".
+        scale_x (str): Scale mode for :meth:`plot_support.scale_axes` x-axis;
+            defaults to None to ignore.
+        scale_y (str): Scale mode for y-axis; defaults to None to ignore.
+    
     """
     def plot():
         # plot a paired sequence of x/y's and annotate
@@ -753,7 +758,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             marker=markers[i])
         if col_annot:
             # annotate each point with val from annotation col
-            for x, y, annot in zip(xs, ys, df_group[col_annot]):
+            for xan, yan, annot in zip(xs, ys, df_group[col_annot]):
                 if annot_arri is not None:
                     # attempt to convert string into array to extract
                     # the given values
@@ -761,7 +766,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                     if annot_arr is not None:
                         annot = annot_arr[annot_arri]
                 ax.annotate(
-                    "{}".format(libmag.format_num(annot, 3)), (x, y))
+                    "{}".format(libmag.format_num(annot, 3)), (xan, yan))
     
     # load data frame from CSV and setup figure
     if df is None:
@@ -844,8 +849,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         xy_line = np.linspace(*ax.get_xlim())
         ax.plot(xy_line, xy_line)
     
-    # set labels and title if given
+    # set labels and title if given; scale axes, which must follow scientific
+    # notation since non-linear formatters are not compatible with scinot
     plot_support.set_scinot(ax, lbls=labels, units=units)
+    plot_support.scale_axes(ax, scale_x, scale_y)
     if title: ax.set_title(title)
     
     # tighten layout before creating legend to avoid compressing the graph 
@@ -1012,6 +1019,8 @@ def main():
         config.plot_2d_type, config.Plot2DTypes)
     annot_col = config.plot_labels[config.PlotLabels.ANNOT_COL]
     marker = config.plot_labels[config.PlotLabels.MARKER]
+    scale_x = config.plot_labels[config.PlotLabels.X_SCALE]
+    scale_y = config.plot_labels[config.PlotLabels.Y_SCALE]
     
     ax = None
     out_path = None
@@ -1118,7 +1127,7 @@ def main():
             config.filename, cols[1], cols[0], annot_col,
             cols_group=cols_group, labels=labels, title=title,
             fig_size=size, show=config.show, suffix=config.suffix,
-            alpha=config.alphas[0] * 255)
+            alpha=config.alphas[0] * 255, scale_x=scale_x, scale_y=scale_y)
     
     if ax is not None:
         post_plot(ax, out_path, config.savefig, config.show)

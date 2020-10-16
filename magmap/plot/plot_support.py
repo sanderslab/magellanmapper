@@ -550,6 +550,24 @@ def hide_axes(ax):
     ax.get_yaxis().set_visible(False)
 
 
+def scale_axes(ax, scale_x=None, scale_y=None):
+    """Scale axes.
+    
+    Args:
+        ax (:obj:`matplotlib.axes.Axes`): Matplotlib axes.
+        scale_x (str): Matplotlib scale mode, eg "linear", "log", "symlog"
+            (to include negative values), and "logit", for the x-axis.
+            Defaults to None to ignore.
+        scale_y (str): Matplotlib scale mode for the y-axis. Defaults to
+            None to ignore.
+
+    """
+    if scale_x:
+        ax.set_xscale(scale_x)
+    if scale_y:
+        ax.set_yscale(scale_y)
+
+
 def fit_frame_to_image(fig, shape, aspect):
     """Compress figure to fit image only.
 

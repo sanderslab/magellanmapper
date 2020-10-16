@@ -185,7 +185,8 @@ PlotLabels = Enum(
     "PlotLabels", (
         "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT", 
         "X_LIM", "Y_LIM",  # (min, max) for x-, y-axes
-        "X_TICK_LABELS", "Y_TICK_LABELS", 
+        "X_TICK_LABELS", "Y_TICK_LABELS",  # labels for axis tick marks
+        "X_SCALE", "Y_SCALE",  # scaling, eg "log", "linear" (see Matplotlib)
         "SIZE",  # in x,y 
         "LAYOUT",  # subplot layout in num of columns, rows
         "ALPHAS_CHL",  # alphas for main image's channels

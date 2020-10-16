@@ -533,3 +533,55 @@ def plot_clusters_by_label(path, z, suffix=None, show=True, scaling=None):
                 alpha=alpha)
     plot_support.save_fig(mod_path, config.savefig, "_clusplot")
     if show: plot_support.show()
+
+
+def meas_dice(mask1, mask2, img=None):
+    """Measure Dice Similarity Coefficient (DSC) between two images.
+    
+    Args:
+        mask1 (:obj:`np.ndarray`): Mask of first image.
+        mask2 (:obj:`np.ndarray`): Mask of second image with same shape as
+            that of ``mask2``.
+        img (:obj:`np.ndarray`): Intensity image whose values within each
+            mask will be summed, of the same shape as that of the masks;
+            defaults to None.
+
+    Returns:
+        :float: DSC between the two images, either based directly on the
+        mask volumes or weighted by intensities of ``img`` if given.
+
+    """
+    union = np.logical_and(mask1, mask2)
+    if img is None:
+        # use direct volume of masks
+        out = (mask1, mask2)
+    else:
+        # weight volumes by underlying intensity
+        union = img[union]
+        out = (img[mask1], img[mask2])
+    denom = np.sum([np.sum(o) for o in out])
+    dsc = np.nan if denom == 0 else 2.0 * np.sum(union) / denom
+    return dsc
+
+
+def calc_sens_ppv(pos, true_pos, false_pos, false_neg):
+    """Calculate sensitivity and positive predictive value (PPV), typically
+    for assessing detection accuracy.
+
+    Args:
+        pos (int): Number of positives.
+        true_pos (int): Number of correct detections.
+        false_pos (int): Number of incorrect detections.
+        false_neg (int): Number of missed detections.
+
+    Returns:
+        float, float, str: Sensitivity, PPV, and summary string.
+
+    """
+    sens = float(true_pos) / pos if pos > 0 else np.nan
+    all_pos = true_pos + false_pos
+    ppv = float(true_pos) / all_pos if all_pos > 0 else np.nan
+    msg = ("objects: {}\ndetected objects: {}\n"
+           "false pos: {}\nfalse neg: {}\nsensitivity: {}\n"
+           "PPV: {}\n".format(pos, true_pos, false_pos, false_neg, sens, ppv))
+    return sens, ppv, msg

@@ -13,7 +13,7 @@ import pandas as pd
 from skimage import measure
 
 from magmap.cv import chunking
-from magmap.stats import clustering
+from magmap.stats import atlas_stats, clustering
 from magmap.settings import config
 from magmap.io import libmag
 from magmap.atlas import ontology
@@ -974,7 +974,7 @@ class MeasureLabelOverlap(object):
             label_masks = [np.isin(l, label_ids) for l in cls.labels_imgs]
             label_vol = np.sum(label_masks[0])
             label_vol_alt = np.sum(label_masks[1])
-            vol_dsc = df_io.meas_dice(label_masks[0], label_masks[1])
+            vol_dsc = atlas_stats.meas_dice(label_masks[0], label_masks[1])
             
             # sum up volume and nuclei count in the new version outside of
             # the original version; assume that remaining original volume
@@ -983,7 +983,7 @@ class MeasureLabelOverlap(object):
             vol_out = np.sum(mask_out)
             if cls.heat_map is not None:
                 nuclei = np.sum(cls.heat_map[label_masks[0]])
-                nuc_dsc = df_io.meas_dice(
+                nuc_dsc = atlas_stats.meas_dice(
                     label_masks[0], label_masks[1], cls.heat_map)
                 nuc_out = np.sum(cls.heat_map[mask_out])
         else:

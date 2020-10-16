@@ -18,6 +18,7 @@ from magmap.io import libmag
 from magmap.plot import plot_3d
 from magmap.io import sqlite
 from magmap.io import df_io
+from magmap.stats import atlas_stats
 
 # blob confirmation flags
 CONFIRMATION = {
@@ -947,7 +948,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     pos = len(blobs_truth_rois)
     false_neg = pos - true_pos
     print("Automated verification using tol {}:\n".format(tol))
-    fdbk = df_io.calc_sens_ppv(pos, true_pos, false_pos, false_neg)[2]
+    fdbk = atlas_stats.calc_sens_ppv(pos, true_pos, false_pos, false_neg)[2]
     print(fdbk)
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
     return (pos, true_pos, false_pos), fdbk
@@ -1016,7 +1017,7 @@ def meas_detection_accuracy(blobs, verified=False, treat_maybes=0):
 
     # measure stats
     false_neg = all_pos - true_pos  # not detected but should have been
-    sens, ppv, msg = df_io.calc_sens_ppv(
+    sens, ppv, msg = atlas_stats.calc_sens_ppv(
         all_pos, true_pos, false_pos, false_neg)
     msg = "Detection stats {}:\n{}".format(maybe_msg, msg)
     return sens, ppv, msg

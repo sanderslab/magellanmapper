@@ -723,10 +723,7 @@ def main():
             [df], None, 
             [(config.plot_labels[config.PlotLabels.X_COL],
               config.plot_labels[config.PlotLabels.Y_COL])])
-        out_path = config.prefix
-        if not out_path:
-            out_path = "filtered.csv"
-        data_frames_to_csv(df_filt, out_path)
+        data_frames_to_csv(df_filt, libmag.make_out_path())
 
     elif df_task is config.DFTasks.ADD_CSV_COLS:
         # add columns with corresponding values for all rows, where 
@@ -783,11 +780,7 @@ def main():
             func_to_paired_cols(df, col_x, col_y, fn, col_id)
         
         # output modified data frame to CSV file
-        out_path = config.prefix
-        if not out_path:
-            suffix = config.suffix if config.suffix else ""
-            out_path = libmag.insert_before_ext(config.filename, suffix)
-        data_frames_to_csv(df, out_path)
+        data_frames_to_csv(df, libmag.make_out_path())
 
 
 if __name__ == "__main__":

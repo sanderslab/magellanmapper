@@ -254,6 +254,28 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
     return path
 
 
+def make_out_path(base_path=None):
+    """Make output path based on prefix and suffix settings.
+    
+    Args:
+        base_path (str): Base path from which to construct the output path
+            if :attr:`config.prefix` is not available. Defaults to None
+            to use :attr:`config.filename`.
+
+    Returns:
+        str: :attr:`config.prefix` if available, otherwise ``base_path``
+            with :attr:`config.suffix` inserted before the extension.
+
+    """
+    if not base_path:
+        base_path = config.filename
+    out_path = config.prefix
+    if not out_path:
+        suffix = config.suffix if config.suffix else ""
+        out_path = insert_before_ext(base_path, suffix)
+    return out_path
+
+
 def remove_file(path):
     """Remove a file with error catching.
 

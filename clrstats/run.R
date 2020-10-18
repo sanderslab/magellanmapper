@@ -7,6 +7,7 @@
 # Adjust profiles in clrstats.R before running
 
 kWorkDir <- "clrstats"
+dir.start <- getwd()
 if (dir.exists(kWorkDir)) {
   # change working directory
   setwd(kWorkDir)
@@ -14,4 +15,9 @@ if (dir.exists(kWorkDir)) {
 
 # load all source changes and run stats
 devtools::load_all(file.path(getwd(), "R"))
-runStats()
+tryCatch({
+  runStats()
+}, finally={
+  # return to original directory
+  setwd(dir.start)
+})

@@ -1109,7 +1109,8 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
     The intensity values of labels will be replaced by the given metric 
     of the chosen measurement, such as the mean of the densities. If 
     multiple conditions exist, the difference of metrics for the first 
-    two conditions will be taken.
+    two conditions will be taken under the assumption that the values for
+    each condition are in matching order.
     
     Args:
         labels_img: Labels image as a Numpy array in x,y,z.
@@ -1156,16 +1157,17 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
         conds = sorted(np.unique(df_cond), reverse=reverse)
 
     if col_wt is not None:
-        # make weightings by getting the given column for the first 
-        # condition and normalizing it to its maximum value, or using 
-        # the whole column if no conditions exist
+        # weight given column for the first condition and normalizing it to
+        # its maximum value, or use the whole column if no conditions exist
         print("weighting stats by", col_wt)
         wts = df.loc[df_cond == conds[0], col_wt] if conds else df[col_wt]
         wts /= max(wts)
         if conds:
             for cond in conds:
+                # use raw values to avoid multiplying by index; assumes
+                # matching order of values between conditions
                 df.loc[df_cond == cond, meas] = np.multiply(
-                    df.loc[df_cond == cond, meas], wts)
+                    df.loc[df_cond == cond, meas].values, wts.values)
         else:
             df.loc[:, meas] *= wts
     
@@ -1187,9 +1189,10 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
                 for cond in conds:
                     # gather separate metrics for each condition
                     df_region_cond = df_region[df_region["Condition"] == cond]
-                    #print(df_region_cond.to_csv())
-                    print(region, cond, fn_avg(df_region_cond[meas]))
-                    avgs.append(fn_avg(df_region_cond[meas]))
+                    # print(df_region_cond)
+                    reg_avg = fn_avg(df_region_cond[meas])
+                    # print(region, cond, reg_avg)
+                    avgs.append(reg_avg)
                 # TODO: consider making order customizable
                 diff = avgs[1] - avgs[0]
             else:

@@ -745,6 +745,7 @@ setupConfig <- function(name=NULL) {
     setupConfig("square")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
     config.env$Measurements <- kMeas[8]
+    config.env$GroupCol <- "Condition"
     
   } else if (name == "smoothing") {
     # smoothing quality comparison between Gaussian and opening filter methods
@@ -880,8 +881,12 @@ runStats <- function(stat.type=NULL) {
   # Args:
   #   stat.type: One of kStatTypes specifying stat processing typest. 
   #     Defaults to NULL to use kStatTypes[1].
-  
-  print(paste("running stats of type", stat.type))
+
+  if (is.null(stat.type)) {
+    message("Running general stats")
+  } else {
+    message("Running stats of type", stat.type)
+  }
   
   # setup configuration environment
   setupConfig()

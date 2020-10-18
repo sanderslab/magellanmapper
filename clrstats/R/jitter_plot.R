@@ -243,9 +243,16 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   }
   
   # draw main plot
-  plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n", 
-       xlim=range(mins[1], maxes[1] - 0.5), ylim=range(mins[2], maxes[2]), 
+  tryCatch({
+  plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n",
+       xlim=range(mins[1], maxes[1] - 0.5), ylim=range(mins[2], maxes[2]),
        bty="n", las=1)
+  }, error=function(e) {
+    message(paste(
+      "Error while creating main plot for jitter plot. If figure margins are ",
+      "too large, try increasing the size of your graphics window"))
+    message(e)
+  })
   
   # subgroup legend, moved outside of plot and positioned at top right 
   # before shifting a full plot unit to sit below the plot
@@ -351,19 +358,20 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       group.last <- vals.group
       i <- i + 1
     }
+
     if (show.sample.legend) {
       # add sample legend
       if (is.null(legend.subgroups)) {
         legend.sample <- legend(
-          "topleft", inset=c(0, 1), xpd=TRUE, legend=samples.unique, lty=1, 
+          "topleft", inset=c(0, 1), xpd=TRUE, legend=samples.unique, lty=1,
           col=colors, ncol=ncol, text.width=legend.text.width)
       } else {
-        # place below group legend to label colors, with manually 
+        # place below group legend to label colors, with manually
         # drawn rectangle to enclose group legend as well
         group.rect <- legend.subgroups$rect
         legend.sample <- legend(
-          x=group.rect$left, y=(group.rect$top-0.7*group.rect$h), 
-          legend=samples.unique, lty=1, col=colors, xpd=TRUE, bty="n", 
+          x=group.rect$left, y=(group.rect$top-0.7*group.rect$h),
+          legend=samples.unique, lty=1, col=colors, xpd=TRUE, bty="n",
           ncol=ncol, text.width=legend.text.width)
         sample.rect <- legend.sample$rect
         rect(sample.rect$left, sample.rect$top - sample.rect$h,

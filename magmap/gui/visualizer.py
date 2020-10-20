@@ -1388,7 +1388,7 @@ class Visualization(HasTraits):
         if self._DEFAULTS_3D[2] in self._check_list_3d:
             # show region of interest based on raw image
             self.roi = plot_3d.prepare_roi(
-                config.image5d, curr_roi_size, curr_offset)
+                config.image5d, curr_offset, curr_roi_size)
             
             if self._DEFAULTS_3D[3] in self._check_list_3d:
                 # surface rendering, segmenting to clean up image 
@@ -1743,7 +1743,7 @@ class Visualization(HasTraits):
         self._segs_visible = True
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
-        self.roi = plot_3d.prepare_roi(config.image5d, roi_size, offset)
+        self.roi = plot_3d.prepare_roi(config.image5d, offset, roi_size)
         if not libmag.is_binary(self.roi):
             self.roi = plot_3d.saturate_roi(
                 self.roi, channel=config.channel)

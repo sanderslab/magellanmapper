@@ -351,7 +351,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             and not config.image5d_is_roi):
         # crop full image to bounds of sub-image
         config.image5d = plot_3d.prepare_subimg(
-            config.image5d, size, offset)[None]
+            config.image5d, offset, size)[None]
         config.image5d_is_roi = True
 
     # add any additional image5d thresholds for multichannel images, such 

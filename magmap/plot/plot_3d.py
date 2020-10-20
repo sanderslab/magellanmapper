@@ -574,16 +574,16 @@ def plot_2d_shadows(roi, vis):
     img2d_mlab.actor.orientation = [90, 0, 0]
 
 
-def prepare_subimg(image5d, size, offset):
+def prepare_subimg(image5d, offset, size):
     """Extracts a subimage from a larger image.
     
     Args:
         image5d: Image array as a 5D array (t, z, y, x, c), or 4D if  
             no separate channel dimension exists as with most one channel 
             images.
-        size: Size of the region of interest as (z, y, x).
         offset: Tuple of offset given as (z, y, x) for the region
             of interest. Defaults to (0, 0, 0).
+        size: Size of the region of interest as (z, y, x).
     
     Returns:
         The sub-imge without separate time dimension as a 3D (or 4-D
@@ -597,7 +597,7 @@ def prepare_subimg(image5d, size, offset):
     return image5d[0, cube_slices[0], cube_slices[1], cube_slices[2]]
 
 
-def prepare_roi(image5d, roi_size, roi_offset):
+def prepare_roi(image5d, roi_offset, roi_size):
     """Extracts a region of interest (ROI).
 
     Calls :meth:`prepare_subimage` but expects size and offset variables to
@@ -607,9 +607,9 @@ def prepare_roi(image5d, roi_size, roi_offset):
         image5d: Image array as a 5D array (t, z, y, x, c), or 4D if
             no separate channel dimension exists as with most one channel
             images.
-        roi_size: Size of the region of interest as (x, y, z).
         roi_offset: Tuple of offset given as (x, y, z) for the region
             of interest. Defaults to (0, 0, 0).
+        roi_size: Size of the region of interest as (x, y, z).
 
     Returns:
         The region of interest without separate time dimension as a 3D
@@ -617,7 +617,7 @@ def prepare_roi(image5d, roi_size, roi_offset):
         array if channel dimension exists.
     """
     libmag.printv("preparing ROI at x,y,z:")
-    return prepare_subimg(image5d, roi_size[::-1], roi_offset[::-1])
+    return prepare_subimg(image5d, roi_offset[::-1], roi_size[::-1])
 
 
 def show_surface_labels(segments, vis):

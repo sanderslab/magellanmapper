@@ -619,7 +619,7 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
         if offset is not None and size is not None:
             # simplifies to reducing the image to a subset as an ROI if
             # offset and size given
-            image5d = plot_3d.prepare_roi(image5d, size, offset)
+            image5d = plot_3d.prepare_roi(image5d, offset, size)
             image5d = roi_to_image5d(image5d)
 
         if update_info:

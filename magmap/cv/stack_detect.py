@@ -228,7 +228,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         # treat the full image as the ROI
         roi = image5d[0]
     else:
-        roi = plot_3d.prepare_subimg(image5d, size, offset)
+        roi = plot_3d.prepare_subimg(image5d, offset, size)
     _, channels = plot_3d.setup_channels(roi, config.channel, 3)
     
     # prep chunking ROI into sub-ROIs with size based on segment_size, scaling

@@ -181,6 +181,9 @@ class AtlasProfile(profiles.SettingsDict):
         # size used to open up the background before cropping, 0 to use
         # the original background as-is, or False not to crop
         self["crop_to_orig"] = 1
+        
+        # crop labels images to foreground of first labels image
+        self["crop_to_ground_truth"] = False
 
         # type of label smoothing
         self["smoothing_mode"] = config.SmoothingModes.opening

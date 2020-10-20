@@ -1510,6 +1510,19 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
                            for img in labels_imgs]
             if heat_map is not None:
                 heat_map = plot_3d.prepare_roi(heat_map, offset, roi_size, 3)
+        if config.atlas_profile["crop_to_ground_truth"]:
+            # ground truth may only contain a subset of labels or parts of
+            # labels; compare only this extent of labels in other images
+            print("Treating first labels image as ground truth, cropping "
+                  "all subsequent images' foreground to that of first image")
+            mask = None
+            for i, labels_img in enumerate(labels_imgs):
+                if i == 0:
+                    mask = labels_img > 0
+                else:
+                    labels_img[~mask] = 0
+            if mask is not None and heat_map is not None:
+                heat_map[~mask] = 0
     
     # sample metadata
     sample = libmag.get_filename_without_ext(img_paths[0])

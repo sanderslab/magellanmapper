@@ -1447,7 +1447,8 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
 
 
 def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
-                          groups=None, max_level=None, combine_sides=True):
+                          groups=None, max_level=None, combine_sides=True,
+                          offset=None, roi_size=None):
     """Compare metrics for volumes metrics for each label ID between different
     sets of atlases.
 
@@ -1463,6 +1464,10 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
             Defaults to None to take labels at face value only.
         combine_sides: True to combine corresponding labels from opposite 
             sides of the sample; defaults to True.
+        offset (List[int]): ROI offset in ``x,y,z``; defaults to None to use
+            the whole image.
+        roi_size (List[int]): ROI shape in ``x,y,z``; defaults to None to use
+            the whole image.
 
     Returns:
         :obj:`pd.DataFrame`: Pandas data frame with volume-related metrics.
@@ -1497,6 +1502,14 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
                 img_paths[0], config.RegNames.IMG_HEAT_MAP.value)
         except FileNotFoundError as e:
             libmag.warn("will ignore nuclei stats")
+        if offset is not None and roi_size is not None:
+            # extract an ROI from all images
+            print("Comparing overlap within ROI given by offset {}, shape {} "
+                  "(x,y,z)".format(offset, roi_size))
+            labels_imgs = [plot_3d.prepare_roi(img, offset, roi_size, 3)
+                           for img in labels_imgs]
+            if heat_map is not None:
+                heat_map = plot_3d.prepare_roi(heat_map, offset, roi_size, 3)
     
     # sample metadata
     sample = libmag.get_filename_without_ext(img_paths[0])
@@ -1868,7 +1881,8 @@ def main():
             volumes_by_id_compare(
                 config.filenames, labels_ref_lookup, 
                 unit_factor=config.unit_factor, groups=groups,
-                max_level=config.labels_level, combine_sides=combine_sides)
+                max_level=config.labels_level, combine_sides=combine_sides,
+                offset=config.roi_offset, roi_size=config.roi_size)
 
     elif reg is config.RegisterTypes.MAKE_DENSITY_IMAGES:
         # make density images

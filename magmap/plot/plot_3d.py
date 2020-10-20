@@ -574,50 +574,61 @@ def plot_2d_shadows(roi, vis):
     img2d_mlab.actor.orientation = [90, 0, 0]
 
 
-def prepare_subimg(image5d, offset, size):
+def prepare_subimg(image5d, offset, size, ndim_base=5):
     """Extracts a subimage from a larger image.
     
     Args:
-        image5d: Image array as a 5D array (t, z, y, x, c), or 4D if  
-            no separate channel dimension exists as with most one channel 
-            images.
-        offset: Tuple of offset given as (z, y, x) for the region
-            of interest. Defaults to (0, 0, 0).
-        size: Size of the region of interest as (z, y, x).
+        image5d (:obj:`np.ndarray`): 5D image array in the order,
+            ``t,z,y,x[,c]``, where the final dimension is optional as with
+            many one channel images.
+        offset (List[int]): Tuple of offset given as ``z,y,x`` for the region
+            of interest. Defaults to ``(0, 0, 0)``.
+        size (List[int]): Size of the region of interest as ``z,y,x``.
+        ndim_base (int): Number of dimensions on which ``image5d`` is based.
+            Typically 3 or 5, defaulting to 5 as ``t,z,y,x[,c]``.
+            If 3, the ``t`` dimension is removed.
     
     Returns:
-        The sub-imge without separate time dimension as a 3D (or 4-D
-        array if channel dimension exists) array.
+        :obj:`np.ndarray`: The sub-imge without separate time dimension as
+        a 3D (or 4-D array if channel dimension exists) array.
+    
     """
     cube_slices = [slice(o, o + s) for o, s in zip(offset, size)]
     libmag.printv("preparing sub-image at offset: {}, size: {}, slices: {}"
                   .format(offset, size, cube_slices))
     
-    # cube with corner at offset, side of cube_len
-    return image5d[0, cube_slices[0], cube_slices[1], cube_slices[2]]
+    # cube with corner at offset and shape given by size
+    img = image5d
+    if ndim_base >= 5:
+        # remove time axis
+        img = image5d[0]
+    return img[cube_slices[0], cube_slices[1], cube_slices[2]]
 
 
-def prepare_roi(image5d, roi_offset, roi_size):
+def prepare_roi(image5d, roi_offset, roi_size, ndim_base=5):
     """Extracts a region of interest (ROI).
 
     Calls :meth:`prepare_subimage` but expects size and offset variables to
     be in x,y,z order following this software's legacy convention.
 
     Args:
-        image5d: Image array as a 5D array (t, z, y, x, c), or 4D if
-            no separate channel dimension exists as with most one channel
-            images.
-        roi_offset: Tuple of offset given as (x, y, z) for the region
-            of interest. Defaults to (0, 0, 0).
-        roi_size: Size of the region of interest as (x, y, z).
+        image5d (:obj:`np.ndarray`): 5D image array in the order,
+            ``t,z,y,x[,c]``, where the final dimension is optional as with
+            many one channel images.
+        roi_offset (List[int]): Tuple of offset given as ``x,y,z`` for the region
+            of interest. Defaults to ``(0, 0, 0)``.
+        roi_size (List[int]): Size of the region of interest as ``x,y,z``.
+        ndim_base (int): Number of dimensions on which ``image5d`` is based.
+            Typically 3 or 5, defaulting to 5 as ``t,z,y,x[,c]``.
+            If 3, the ``t`` dimension is removed.
 
     Returns:
-        The region of interest without separate time dimension as a 3D
-        if ``image5d`` is 4D, without a separate channel dimension, or 4-D
-        array if channel dimension exists.
+        :obj:`np.ndarray`: The region of interest without separate time
+        dimension as a 3D (or 4-D array if channel dimension exists) array.
+    
     """
     libmag.printv("preparing ROI at x,y,z:")
-    return prepare_subimg(image5d, roi_offset[::-1], roi_size[::-1])
+    return prepare_subimg(image5d, roi_offset[::-1], roi_size[::-1], ndim_base)
 
 
 def show_surface_labels(segments, vis):

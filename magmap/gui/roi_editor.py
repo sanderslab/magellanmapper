@@ -729,7 +729,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 # support default save shortcuts on multiple platforms;
                 # ctrl-s will bring up save dialog from fig, but cmd/win-S
                 # will bypass
-                self.save_fig()
+                self.save_fig(self.get_save_path())
             else:
                 # default to scrolling commands for up/down/right arrows
                 scroll_overview(event)

@@ -5,6 +5,7 @@
 
 import os
 from collections import OrderedDict
+from enum import Enum
 import json
 
 import numpy as np
@@ -18,6 +19,12 @@ PARENT_IDS = "parent_ids"
 MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
+
+
+class LabelColumns(Enum):
+    """Label data frame columns enumeration."""
+    FROM_LABEL = "FromLabel"
+    TO_LABEL = "ToLabel"
 
 
 def load_labels_ref(path):
@@ -602,3 +609,33 @@ def rel_to_abs_ages(rel_ages, gestation=19):
             age += gestation
         ages[val] = age
     return ages
+
+
+def replace_labels(labels_img, df, clear=False):
+    """Replace labels based on a data frame.
+    
+    Args:
+        labels_img (:obj:`np.ndarray`): Labels image array whose values
+            will be converted in-place.
+        df (:obj:`pd.DataFrame`): Pandas data frame with from and to columns
+            specified by :class:`LabelColumns` values.
+        clear (bool): True to clear all other label values.
+
+    Returns:
+        :obj:`np.ndarray`: ``labels_img`` with values replaced in-place.
+
+    """
+    labels_img_orig = labels_img
+    if clear:
+        # clear all labels, replacing based on copy
+        labels_img_orig = np.copy(labels_img)
+        labels_img[:] = 0
+    from_labels = df[LabelColumns.FROM_LABEL.value]
+    to_labels = df[LabelColumns.TO_LABEL.value]
+    for to_label in to_labels.unique():
+        # replace all labels matching the given target label
+        to_convert = from_labels.loc[to_labels == to_label]
+        print("Converting labels from {} to {}"
+              .format(to_convert.values, to_label))
+        labels_img[np.isin(labels_img_orig, to_convert)] = to_label
+    return labels_img

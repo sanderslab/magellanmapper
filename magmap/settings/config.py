@@ -211,6 +211,7 @@ PlotLabels = Enum(
 #: dict[Any]: Plot labels set from command-line.
 plot_labels = dict.fromkeys(PlotLabels, None)
 plot_labels[PlotLabels.SCALE_BAR] = True
+plot_labels[PlotLabels.DPI] = 150.0
 
 # image transformation keys for command-line parsing
 Transforms = Enum(

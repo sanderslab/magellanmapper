@@ -234,7 +234,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                     self.alpha_slider.set_val(self.alpha_last)
                 self.alpha_last = None
             else:
-                # make transluscenct, saving alpha if not already saved 
+                # make translucent, saving alpha if not already saved
                 # during a halve-opacity event
                 if self.alpha_last is None:
                     self.alpha_last = self.alpha_slider.val
@@ -252,6 +252,11 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         elif event.key == "w":
             # shortcut to toggle editing mode
             self.toggle_edit_mode(event)
+        elif event.key == "ctrl+s" or event.key == "cmd+s":
+            # support default save shortcuts on multiple platforms;
+            # ctrl-s will bring up save dialog from fig, but cmd/win-S
+            # will bypass
+            self.save_fig(self.get_save_path())
     
     def update_coords(self, coord, plane_src=config.PLANE[0]):
         """Update all plot editors with given coordinates.

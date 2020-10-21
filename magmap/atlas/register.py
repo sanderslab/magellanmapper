@@ -1451,6 +1451,11 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
                           offset=None, roi_size=None):
     """Compare metrics for volumes metrics for each label ID between different
     sets of atlases.
+    
+    Label identities can be translated using CSV files specified in the
+    :attr:`config.atlas_labels[config.AtlasLabels.TRANSLATE_LABELS` value
+    to compare labels from different atlases or groups of labels that do
+    not fit exclusively into a single super-structure.
 
     Args:
         img_paths: Sequence of images to compare.
@@ -1523,6 +1528,23 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
                     labels_img[~mask] = 0
             if mask is not None and heat_map is not None:
                 heat_map[~mask] = 0
+        
+        paths_translate = config.atlas_labels[
+            config.AtlasLabels.TRANSLATE_LABELS]
+        if paths_translate:
+            # load data frames corresponding to the labels image to convert
+            # label IDs, clearing all other labels
+            if not libmag.is_seq(paths_translate):
+                paths_translate = [paths_translate]
+            for labels_img, path_translate in zip(labels_imgs, paths_translate):
+                if os.path.exists(path_translate):
+                    # translate labels based on the given data frame
+                    ontology.replace_labels(
+                        labels_imgs[0], pd.read_csv(path_translate), clear=True)
+                elif path_translate:
+                    # warn if path does not exist; empty string can skip image
+                    libmag.warn("{} does not exist, skipping label translation"
+                                .format(paths_translate))
     
     # sample metadata
     sample = libmag.get_filename_without_ext(img_paths[0])

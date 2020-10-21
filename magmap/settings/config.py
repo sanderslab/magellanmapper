@@ -360,6 +360,9 @@ AtlasLabels = Enum(
         # sequence of colors as ``[background, foreground]``, where colors are
         # Matplotlib colors or RGB(A) hex values, to show labels as binary image
         "BINARY",
+        # path to CSV file to translate labels
+        # (see :meth:`ontology.replace_labels`)
+        "TRANSLATE_LABELS",
     )
 )
 # default to load original labels image if available for ID-color mapping

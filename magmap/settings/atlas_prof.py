@@ -165,15 +165,17 @@ class AtlasProfile(profiles.SettingsDict):
         # useful when ventricular spaces are labeled
         self["log_atlas_thresh"] = False
 
-        # edge-aware reannotation: labels erosion for watershed seeds/markers
-        # in resegmentation; also used to demarcate the interior of regions;
-        # can turn on/off with erode_labels
+        # edge-aware reannotation: label erosion to generate watershed
+        # seeds/markers for resegmentation; also used to demarcate the interior
+        # of regions for metrics; can turn on/off with erode_labels
         self[RegKeys.EDGE_AWARE_REANNOTAION] = {
             RegKeys.MARKER_EROSION: 8,  # filter size for labels to markers
             RegKeys.MARKER_EROSION_MIN: 1,  # None for default, 0 for no min
             RegKeys.WATERSHED_MASK_FILTER: (config.SmoothingModes.opening, 2),
         }
-        self["erosion_frac"] = 0.5  # target size as frac of orig; can be None
+        # target eroded size as frac of orig, used when generating interiors
+        # of regions but not for watershed seeds; can be None
+        self["erosion_frac"] = 0.5
         self["erode_labels"] = {"markers": True, "interior": False}
 
         # crop labels back to their original background after smoothing

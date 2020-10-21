@@ -494,8 +494,6 @@ def export_planes(image5d, prefix, ext, channel=None):
         ext (str): Save format given as an extension without period.
         channel (int): Channel to save; defaults to None for all channels.
 
-    Returns:
-
     """
     output_dir = os.path.dirname(prefix)
     basename = os.path.splitext(os.path.basename(prefix))[0]
@@ -506,7 +504,8 @@ def export_planes(image5d, prefix, ext, channel=None):
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     num_digits = len(str(len(roi)))
     for i, plane in enumerate(roi):
-        path = os.path.join(output_dir, "{}_{:0{}d}".format(basename, i, num_digits))
+        path = os.path.join(output_dir, "{}_{:0{}d}".format(
+            basename, i, num_digits))
         if multichannel:
             for chl in channels:
                 # save each channel as separate file

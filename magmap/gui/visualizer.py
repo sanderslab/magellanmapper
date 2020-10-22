@@ -1883,6 +1883,7 @@ class Visualization(HasTraits):
                 shift = [n * -1 for n in offset[::-1]]
                 for match in self.blobs.blob_matches:
                     match.shift_blobs(shift)
+                print("loaded blob matches:\n", self.blobs.blob_matches)
             elif (ColocalizeOptions.INTENSITY.value in self._colocalize
                   and config.blobs.colocalizations is not None
                   and segs is None):

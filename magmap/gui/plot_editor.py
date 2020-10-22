@@ -686,7 +686,7 @@ class PlotEditor:
         
         loc_data = (x, y)
         if event.button == 2 or (event.button == 1 and event.key == "shift"):
-            # pan by middle-click or shift+click during mouseover
+            # pan by middle-click or shift+left-click during mouseover
             
             # use data coordinates so same part of image stays under mouse
             dx = x - self.last_loc_data[0]
@@ -698,7 +698,7 @@ class PlotEditor:
             self.axes.figure.canvas.draw_idle()
             self.xlim = self.axes.get_xlim()
             self.ylim = self.axes.get_ylim()
-            # data itself moved, so update location aong with movement
+            # data itself moved, so update location along with movement
             loc_data = (x - dx, y - dy)
             
         elif event.button == 3 or (

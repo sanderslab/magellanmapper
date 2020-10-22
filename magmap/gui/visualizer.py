@@ -576,28 +576,31 @@ class Visualization(HasTraits):
                      mode="slider")),
             label="Region of Interest",
         ),
-        Item("_check_list_3d", style="custom", label="3D options",
-             editor=CheckListEditor(
-                 values=_DEFAULTS_3D, cols=4, format_func=lambda x: x)),
-        HGroup(
-            Item("_check_list_2d", style="custom", label="2D options",
+        VGroup(
+            Item("_check_list_3d", style="custom", label="3D Viewer",
                  editor=CheckListEditor(
-                     values=_DEFAULTS_2D, cols=1, format_func=lambda x: x)),
-            VGroup(
-                Item("_circles_2d", style="simple", label="Circles",
+                     values=_DEFAULTS_3D, cols=4, format_func=lambda x: x)),
+            HGroup(
+                Item("_check_list_2d", style="custom", label="ROI Editor",
                      editor=CheckListEditor(
-                         values=[e.value for e in
-                                 roi_editor.ROIEditor.CircleStyles],
-                         format_func=lambda x: x)),
-                Item("_planes_2d", style="simple", label="Plane",
-                     editor=CheckListEditor(
-                         values=_DEFAULTS_PLANES_2D,
-                         format_func=lambda x: x)),
-                Item("_styles_2d", style="simple", label="2D styles",
-                     editor=CheckListEditor(
-                         values=[e.value for e in Styles2D],
-                         format_func=lambda x: x)),
+                         values=_DEFAULTS_2D, cols=1, format_func=lambda x: x)),
+                VGroup(
+                    Item("_circles_2d", style="simple", label="Circles",
+                         editor=CheckListEditor(
+                             values=[e.value for e in
+                                     roi_editor.ROIEditor.CircleStyles],
+                             format_func=lambda x: x)),
+                    Item("_planes_2d", style="simple", label="Plane",
+                         editor=CheckListEditor(
+                             values=_DEFAULTS_PLANES_2D,
+                             format_func=lambda x: x)),
+                    Item("_styles_2d", style="simple", label="2D styles",
+                         editor=CheckListEditor(
+                             values=[e.value for e in Styles2D],
+                             format_func=lambda x: x)),
+                ),
             ),
+            label="Viewer Options",
         ),
         HGroup(
             Item("_structure_scale", label="Atlas ontology level",

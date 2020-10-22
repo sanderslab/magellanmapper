@@ -1507,6 +1507,7 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
                 img_paths[0], config.RegNames.IMG_HEAT_MAP.value)
         except FileNotFoundError as e:
             libmag.warn("will ignore nuclei stats")
+       
         if offset is not None and roi_size is not None:
             # extract an ROI from all images
             print("Comparing overlap within ROI given by offset {}, shape {} "
@@ -1515,11 +1516,11 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
                            for img in labels_imgs]
             if heat_map is not None:
                 heat_map = plot_3d.prepare_roi(heat_map, offset, roi_size, 3)
-        if config.atlas_profile["crop_to_ground_truth"]:
-            # ground truth may only contain a subset of labels or parts of
-            # labels; compare only this extent of labels in other images
-            print("Treating first labels image as ground truth, cropping "
-                  "all subsequent images' foreground to that of first image")
+        
+        if config.atlas_profile["crop_to_first_image"]:
+            # an image may only contain a subset of labels or parts of labels;
+            # allow cropping to compare only this extent in other images
+            print("Crop all images to foreground of first image")
             mask = None
             for i, labels_img in enumerate(labels_imgs):
                 if i == 0:

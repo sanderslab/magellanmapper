@@ -680,6 +680,10 @@ def main():
     # process stats based on command-line argument
     
     df_task = libmag.get_enum(config.df_task, config.DFTasks)
+    id_col = config.plot_labels[config.PlotLabels.ID_COL]
+    x_col = config.plot_labels[config.PlotLabels.X_COL]
+    y_col = config.plot_labels[config.PlotLabels.Y_COL]
+    group_col = config.plot_labels[config.PlotLabels.GROUP_COL]
 
     if df_task is config.DFTasks.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
@@ -690,8 +694,7 @@ def main():
         # CSV file
         dfs = [pd.read_csv(f) for f in config.filenames]
         df = join_dfs(
-            dfs, config.plot_labels[config.PlotLabels.ID_COL],
-            config.plot_labels[config.PlotLabels.DROP_DUPS])
+            dfs, id_col, config.plot_labels[config.PlotLabels.DROP_DUPS])
         out_path = config.prefix
         if not out_path:
             out_path = libmag.insert_before_ext(
@@ -704,10 +707,8 @@ def main():
         dfs = [pd.read_csv(f) for f in config.filenames]
         labels = libmag.to_seq(
             config.plot_labels[config.PlotLabels.X_LABEL])
-        extra_cols = libmag.to_seq(
-            config.plot_labels[config.PlotLabels.X_COL])
-        data_cols = libmag.to_seq(
-            config.plot_labels[config.PlotLabels.Y_COL])
+        extra_cols = libmag.to_seq(x_col)
+        data_cols = libmag.to_seq(y_col)
         df = append_cols(
             dfs, labels, extra_cols=extra_cols, data_cols=data_cols)
         out_path = config.prefix
@@ -725,10 +726,7 @@ def main():
         # "X_COL" = name of column on which to filter, and 
         # "Y_COL" = values in this column for which rows should be kept
         df = pd.read_csv(config.filename)
-        df_filt, _ = filter_dfs_on_vals(
-            [df], None, 
-            [(config.plot_labels[config.PlotLabels.X_COL],
-              config.plot_labels[config.PlotLabels.Y_COL])])
+        df_filt, _ = filter_dfs_on_vals([df], None, [(x_col, y_col)])
         data_frames_to_csv(df_filt, libmag.make_out_path())
 
     elif df_task is config.DFTasks.ADD_CSV_COLS:
@@ -737,8 +735,7 @@ def main():
         # "Y_COL" = value(s) for corresponding cols
         df = pd.read_csv(config.filename)
         cols = {k: v for k, v in zip(
-            libmag.to_seq(config.plot_labels[config.PlotLabels.X_COL]),
-            libmag.to_seq(config.plot_labels[config.PlotLabels.Y_COL]))}
+            libmag.to_seq(x_col), libmag.to_seq(y_col))}
         df = add_cols_df(df, cols)
         out_path = config.prefix
         if not out_path:
@@ -755,10 +752,7 @@ def main():
         # "WT_COL" = extra columns to keep
         df = pd.read_csv(config.filename)
         df = normalize_df(
-            df, config.plot_labels[config.PlotLabels.ID_COL],
-            config.plot_labels[config.PlotLabels.X_COL],
-            config.plot_labels[config.PlotLabels.Y_COL], 
-            config.plot_labels[config.PlotLabels.GROUP_COL],
+            df, id_col, x_col, y_col, group_col,
             config.plot_labels[config.PlotLabels.WT_COL])
         out_path = config.prefix
         if not out_path:
@@ -777,9 +771,8 @@ def main():
         df = pd.read_csv(config.filename)
         fn = _ARITHMETIC_TASKS[df_task]
         for col_x, col_y, col_id in zip(
-                libmag.to_seq(config.plot_labels[config.PlotLabels.X_COL]),
-                libmag.to_seq(config.plot_labels[config.PlotLabels.Y_COL]),
-                libmag.to_seq(config.plot_labels[config.PlotLabels.ID_COL])):
+                libmag.to_seq(x_col), libmag.to_seq(y_col),
+                libmag.to_seq(id_col)):
             # perform the arithmetic operation specified by the specific
             # task on the pair of columns, inserting the results in a new
             # column specified by ID

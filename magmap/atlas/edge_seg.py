@@ -10,10 +10,9 @@ import numpy as np
 
 from magmap.atlas import atlas_refiner
 from magmap.settings import config
-from magmap.io import libmag
 from magmap.cv import chunking, cv_nd, segmenter
 from magmap.settings import profiles
-from magmap.io import sitk_io
+from magmap.io import df_io, libmag, sitk_io
 from magmap.stats import vols
 
 
@@ -389,6 +388,8 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
             sitk_io.write_reg_images(
                 {config.RegNames.IMG_LABELS_MARKERS.value: labels_sitk_markers},
                 mod_path)
+            df_io.data_frames_to_csv(
+                df, "{}_markers.csv".format(os.path.splitext(mod_path)[0]))
         dfs_eros.append(df)
     
     pool = chunking.get_mp_pool()

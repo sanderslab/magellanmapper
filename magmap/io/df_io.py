@@ -386,13 +386,15 @@ def append_cols(dfs, labels, fn_col=None, extra_cols=None, data_cols=None):
     """Append columns from a group of data frames, optionally filtering
     to keep only columns matching criteria.
     
-    Assumes that each data frame contains identical samples and ordering.
+    Appends columns based on simple concatenation. Typically used when
+    each data frame contains identical samples and ordering.
     All columns will be kept from the first data frame.
     
     Args:
         dfs (List[:obj:`pd.DataFrame`]: Sequence of data frames.
-        labels (List[str]): Labels corresponding to data frame in ``dfs``
-             to prepend to columns before appending.
+        labels (List[str]): Sequence of strings corresponding to data frames
+            in ``dfs``, where each string will be prepended to all column
+            names from the given data frame.
         fn_col (func): Function by which to filter columns; defaults to
             None to keep all columns. Take precedence over ``data_cols``.
         extra_cols (List[str]): List of additional columns to keep from the
@@ -401,7 +403,11 @@ def append_cols(dfs, labels, fn_col=None, extra_cols=None, data_cols=None):
             defaults to None to keep all columns.
 
     Returns:
-        The combined data frame
+        :obj:`pd.DataFrame`: The combined data frame.
+    
+    See Also:
+        :meth:`join_dfs`: Join data frames by column based on a specified
+            ID column.
 
     """
     for i, (df, label) in enumerate(zip(dfs, labels)):
@@ -693,8 +699,8 @@ def main():
         data_frames_to_csv(df, out_path)
 
     elif df_task is config.DFTasks.APPEND_CSVS_COLS:
-        # join multiple CSV files based on a given index column into single
-        # CSV file
+        # concatenate multiple CSV files into single CSV file by appending
+        # selected columns from the given files
         dfs = [pd.read_csv(f) for f in config.filenames]
         labels = libmag.to_seq(
             config.plot_labels[config.PlotLabels.X_LABEL])

@@ -526,57 +526,55 @@ class Visualization(HasTraits):
     # ROI selector panel
     panel_roi_selector = VGroup(
         VGroup(
-            VGroup(
-                HGroup(
-                    Item("_filename", label="File", style="simple",
-                         editor=FileEditor(entries=10, allow_dir=False)),
-                ),
-                Item("_channel", label="Channels", style="custom",
+            HGroup(
+                Item("_filename", label="File", style="simple",
+                     editor=FileEditor(entries=10, allow_dir=False)),
+            ),
+            Item("_channel", label="Channels", style="custom",
+                 editor=CheckListEditor(
+                     name="object._channel_names.selections", cols=8)),
+            label="Image path",
+        ),
+        VGroup(
+            HGroup(
+                Item("_main_img_name", label="Intensity", springy=True,
+                     style="custom",
                      editor=CheckListEditor(
-                         name="object._channel_names.selections", cols=8)),
-                label="Image path",
+                         name="object._main_img_names.selections", cols=2,
+                         format_func=lambda x: x)),
+                Item("_reload_btn", show_label=False),
             ),
-            VGroup(
-                HGroup(
-                    Item("_main_img_name", label="Intensity", springy=True,
-                         style="custom",
-                         editor=CheckListEditor(
-                             name="object._main_img_names.selections", cols=2,
-                             format_func=lambda x: x)),
-                    Item("_reload_btn", show_label=False),
-                ),
-                HGroup(
-                    Item("_labels_img_name", label="Labels", springy=True,
-                         editor=CheckListEditor(
-                             name="object._labels_img_names.selections",
-                             format_func=lambda x: x)),
-                    Item("_labels_ref_path", label="Reference", style="simple",
-                         editor=FileEditor(entries=10, allow_dir=False)),
-                ),
-                label="Registered Images",
-            ),
-            VGroup(
-                Item("rois_check_list", label="ROIs",
+            HGroup(
+                Item("_labels_img_name", label="Labels", springy=True,
                      editor=CheckListEditor(
-                         name="object._rois_selections.selections")),
-                Item("roi_array", label="Size (x,y,z)"),
-                Item("x_offset",
-                     editor=RangeEditor(
-                         low_name="x_low",
-                         high_name="x_high",
-                         mode="slider")),
-                Item("y_offset",
-                     editor=RangeEditor(
-                         low_name="y_low",
-                         high_name="y_high",
-                         mode="slider")),
-                Item("z_offset",
-                     editor=RangeEditor(
-                         low_name="z_low",
-                         high_name="z_high",
-                         mode="slider")),
-                label="Region of Interest",
+                         name="object._labels_img_names.selections",
+                         format_func=lambda x: x)),
+                Item("_labels_ref_path", label="Reference", style="simple",
+                     editor=FileEditor(entries=10, allow_dir=False)),
             ),
+            label="Registered Images",
+        ),
+        VGroup(
+            Item("rois_check_list", label="ROIs",
+                 editor=CheckListEditor(
+                     name="object._rois_selections.selections")),
+            Item("roi_array", label="Size (x,y,z)"),
+            Item("x_offset",
+                 editor=RangeEditor(
+                     low_name="x_low",
+                     high_name="x_high",
+                     mode="slider")),
+            Item("y_offset",
+                 editor=RangeEditor(
+                     low_name="y_low",
+                     high_name="y_high",
+                     mode="slider")),
+            Item("z_offset",
+                 editor=RangeEditor(
+                     low_name="z_low",
+                     high_name="z_high",
+                     mode="slider")),
+            label="Region of Interest",
         ),
         Item("_check_list_3d", style="custom", label="3D options",
              editor=CheckListEditor(

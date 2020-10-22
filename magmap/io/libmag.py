@@ -495,6 +495,24 @@ def is_number(val):
         return False
 
 
+def is_nan(val):
+    """Check if a value can be cast to NaN.
+    
+    Args:
+        val (Any): Value or sequence of values to check.
+
+    Returns:
+        Any: True if the value can be cast to ``np.nan``; False if not
+            or any error, including strings that do cannot be cast to float;
+            or sequence of booleans if ``val`` is a sequence.
+
+    """
+    try:
+        return np.isnan(np.array(val).astype(float))
+    except (ValueError, TypeError):
+        return False
+        
+
 def format_num(val, digits=1, allow_scinot=True):
     """Format a value to a given number of digits if the value is a number.
     

@@ -293,7 +293,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
     )
 
     class CircleStyles(Enum):
-        CIRCLES = "Circles"
+        CIRCLES = "Blob circles"
         REPEAT_CIRCLES = "Repeat circles"
         NO_CIRCLES = "No circles"
         FULL_ANNOTATION = "Full annotation"

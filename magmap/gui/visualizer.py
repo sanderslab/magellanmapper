@@ -292,7 +292,7 @@ class ImportModes(Enum):
 
 class Styles2D(Enum):
     """Enumerations for 2D ROI GUI styles."""
-    SQUARE = "Square"
+    SQUARE = "Square layout"
     SQUARE_3D = "Square with 3D"
     SINGLE_ROW = "Single row"
     WIDE = "Wide region"
@@ -582,29 +582,28 @@ class Visualization(HasTraits):
             label="Region of Interest",
         ),
         VGroup(
+            Item("_check_list_2d", style="custom", label="ROI Editor",
+                 editor=CheckListEditor(
+                     values=_DEFAULTS_2D, cols=5, format_func=lambda x: x)),
+            HGroup(
+                Item("_circles_2d", style="simple", show_label=False,
+                     editor=CheckListEditor(
+                         values=[e.value for e in
+                                 roi_editor.ROIEditor.CircleStyles],
+                         format_func=lambda x: x)),
+                Item("_planes_2d", style="simple", show_label=False,
+                     editor=CheckListEditor(
+                         values=_DEFAULTS_PLANES_2D,
+                         format_func=lambda x: "Plane {}".format(x.upper()))),
+                Item("_styles_2d", style="simple", show_label=False,
+                     springy=True,
+                     editor=CheckListEditor(
+                         values=[e.value for e in Styles2D],
+                         format_func=lambda x: x)),
+            ),
             Item("_check_list_3d", style="custom", label="3D Viewer",
                  editor=CheckListEditor(
                      values=_DEFAULTS_3D, cols=4, format_func=lambda x: x)),
-            HGroup(
-                Item("_check_list_2d", style="custom", label="ROI Editor",
-                     editor=CheckListEditor(
-                         values=_DEFAULTS_2D, cols=1, format_func=lambda x: x)),
-                VGroup(
-                    Item("_circles_2d", style="simple", label="Circles",
-                         editor=CheckListEditor(
-                             values=[e.value for e in
-                                     roi_editor.ROIEditor.CircleStyles],
-                             format_func=lambda x: x)),
-                    Item("_planes_2d", style="simple", label="Plane",
-                         editor=CheckListEditor(
-                             values=_DEFAULTS_PLANES_2D,
-                             format_func=lambda x: x)),
-                    Item("_styles_2d", style="simple", label="2D styles",
-                         editor=CheckListEditor(
-                             values=[e.value for e in Styles2D],
-                             format_func=lambda x: x)),
-                ),
-            ),
             label="Viewer Options",
         ),
         HGroup(

@@ -495,12 +495,17 @@ class Visualization(HasTraits):
 
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
-    _check_list_2d = List
+    _check_list_2d = List(
+        desc="Filtered: show filtered image after detection\n"
+             "Border: margin around ROIs\n"
+             "Seg: segment blobs\n"
+             "Grid: overlay a grid\n"
+             "MIP: maximum intensity projection")
     _DEFAULTS_2D = [
-        "Filtered", "Border zone", "Segmentation", "Grid", "Max inten proj"]
+        "Filtered", "Border", "Seg", "Grid", "MIP"]
     _planes_2d = List
     _border_on = False  # remembers last border selection
-    _DEFAULT_BORDER = np.zeros(3) # default ROI border size
+    _DEFAULT_BORDER = np.zeros(3)  # default ROI border size
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List  # ROI editor circle styles
     _styles_2d = List

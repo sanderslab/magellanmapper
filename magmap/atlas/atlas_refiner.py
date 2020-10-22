@@ -166,9 +166,9 @@ def check_mirrorred(img_np, mirror_mult=1, axis=0):
     """Check whether a given image, typically a labels image, is symmetric.
     
     Args:
-        img_np (:obj:`np.ndarray`): Numpy array of image, typically a labels
-            image, where symmetry will be detected based on equality of two
-            halves split by the image's last dimension.
+        img_np (:class:`numpy.ndarray`): Numpy array of image, typically a
+            labels image, where symmetry will be detected based on equality
+            of two halves split by the image's last dimension.
         mirror_mult (int): Number by which to divide the 2nd half before
             checking for symmetry; defaults to 1. Typically a number 
             used to generate the 2nd half when mirroring.
@@ -491,7 +491,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         marker_erosion_use_min (bool): Flag for using the minimum filter
             size if reached, passed to
             :func:`segmenter.labels_to_markers_erosion`; defaults to False.
-        save_steps (True): True to output intermediate steps as images,
+        save_steps (bool): True to output intermediate steps as images,
             saving to the extension set in :attr:`config.savefig`; defaults
             to False.
     """
@@ -864,7 +864,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
             should be of the same shape as ``original_img_np``.
         filter_size (float): Structuring element size for smoothing, used
             here only to include in output data frame; defaults to None.
-        spacing (List[float]): Sequence of voxel spacing in same order 
+        spacing (list[float]): Sequence of voxel spacing in same order
             as for ``img_np``; defaults to None.
     
     Returns:
@@ -956,10 +956,10 @@ def aggr_smoothing_metrics(df_pxs):
     weighted by the original volume.
     
     Args:
-        df_pxs (:obj:`pd.DataFrame`): Data frame with raw stats by label.
+        df_pxs (:class:`pandas.DataFrame`): Data frame with raw stats by label.
 
     Returns:
-        :obj:`pd.DataFrame`: Data frame of aggregated stats.
+        :class:`pandas.DataFrame`: Data frame of aggregated stats.
 
     """
     keys = [
@@ -1014,7 +1014,7 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
             :attr:`config.transform` and ``plane``.
         target_size (List[int]): Size of target image, typically one to which
             ``img_sitk`` will be registered, in (x,y,z, SimpleITK standard)
-             ordering.
+            ordering.
         flipud (bool): True to invert the z-axis after transposition;
             defaults to None, in which case it will be based on ``plane``.
     

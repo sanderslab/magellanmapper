@@ -241,7 +241,7 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
         Merged path.
     
     See Also:
-        :func:``insert_before_ext`` to splice in ``suffix`` instead.
+        :func:`insert_before_ext` to splice in ``suffix`` instead.
     """
     if not base_path: return suffix
     if not os.path.basename(base_path):

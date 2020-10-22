@@ -31,7 +31,8 @@ sys.path.insert(0, os.path.abspath('..'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
+extensions = [
+    'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon']
@@ -172,10 +173,14 @@ texinfo_documents = [
 ]
 
 
-
-
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'https://docs.python.org/': None,
+    'https://numpy.org/doc/stable/': None,
+    'https://docs.scipy.org/doc/scipy/reference': None,
+    'https://matplotlib.org': None,
+    'https://pandas.pydata.org/pandas-docs/stable/': None,
+}
 
 
 # -- Options for Napoleon (Google style) parsing -------------------------

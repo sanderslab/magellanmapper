@@ -674,6 +674,40 @@ def merge_excels(paths, out_path, names=None):
             df.to_excel(writer, sheet_name=name, index=False)
 
 
+def replace_vals(df, vals_from, vals_to, cols=None):
+    """Replace values in a data frame for the given columns.
+    
+    Args:
+        df (:obj:`pd.DataFrame`): Pandas data frame.
+        vals_from (Any): Value or sequence of values to be replaced.
+        vals_to (Any): Corresponding value or sequence of values to
+            ``vals_from`` with which to replace.
+        cols (Union[str, List[str]]): Column name or sequence of names
+            to replace values; defaults to None to replace values in all
+            columns.
+
+    Returns:
+        :obj:`pd.DataFrame`: Data frame with values replaced.
+
+    """
+    # convert arguments to lists
+    if cols is None or not libmag.is_seq(cols):
+        cols = [cols]
+    if not libmag.is_seq(vals_to):
+        vals_to = [vals_to]
+    if not libmag.is_seq(vals_from):
+        vals_from = [vals_from]
+    
+    # parse NaN strings
+    vals_from = [np.nan if libmag.is_nan(v) else v for v in vals_from]
+    for col in cols:
+        # replace values in specific columns, or whole data frame if no
+        # columns are given
+        df_col = df[col] if col else df
+        df = df_col.replace(vals_from, vals_to)
+    return df
+
+
 def main():
     """Process stats based on command-line mode."""
     
@@ -779,6 +813,15 @@ def main():
             func_to_paired_cols(df, col_x, col_y, fn, col_id)
         
         # output modified data frame to CSV file
+        data_frames_to_csv(df, libmag.make_out_path())
+    
+    elif df_task is config.DFTasks.REPLACE_VALS:
+        # replace values in a CSV file
+        # X_COL: replace from these values
+        # Y_COL: replace to these values
+        # GROUP_COL: columns to replace
+        df = pd.read_csv(config.filename)
+        df = replace_vals(df, x_col, y_col, group_col)
         data_frames_to_csv(df, libmag.make_out_path())
 
 

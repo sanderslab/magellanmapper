@@ -538,6 +538,7 @@ DFTasks = Enum(
         "SUBTRACT_COLS",  # subtract columns
         "MULTIPLY_COLS",  # multiply columns
         "DIVIDE_COLS",  # divide columns
+        "REPLACE_VALS",  # replace values
     ]
 )
 

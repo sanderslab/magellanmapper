@@ -79,6 +79,7 @@ def _parse_coords(arg, rev=False):
     # parse a list of strings into 3D coordinates
     coords = []  # copy list to avoid altering the arg itself
     for coord in arg:
+        if not coord: continue
         coord_split = coord.split(",")
         if len(coord_split) >= 3:
             coord = tuple(int(i) for i in coord_split)

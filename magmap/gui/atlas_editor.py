@@ -6,8 +6,6 @@
 import datetime
 import os
 
-import numpy as np
-
 from matplotlib import pyplot as plt
 from matplotlib import figure
 from matplotlib import gridspec
@@ -45,9 +43,9 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             Atlas Editors to synchronize them; defaults to None.
             Typically takes one argument, this ``AtlasEditor`` object
             to refreshing it. Defaults to None.
-        plot_eds: Dictionary of :class:`magmap.plot_editor.PlotEditor`, with 
-            key specified by one of :const:`magmap.config.PLANE` 
-            plane orientations.
+        plot_eds (dict[str, :class:`PlotEditor`]): Dictionary of keys
+            specified by one of :const:`magmap.config.PLANE` plane
+            orientations to Plot Editors.
         alpha_slider: Matplotlib alpha slider control.
         alpha_reset_btn: Maplotlib button for resetting alpha transparency.
         alpha_last: Float specifying the previous alpha value.
@@ -166,22 +164,20 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                 plot_support.setup_images_for_plane(
                     plane,
                     (self.image5d[0], self.labels_img, self.borders_img))
-            img3d_transposed = arrs_3d[0]
-            labels_img_transposed = libmag.get_if_within(arrs_3d, 1)
-            borders_img_transposed = libmag.get_if_within(arrs_3d, 2)
+            img3d_tr, labels_img_tr, borders_img_tr = arrs_3d
             
             # slider through image planes
             ax_scroll = fig.add_subplot(gs_plot[0, 0])
             plane_slider = Slider(
                 ax_scroll, plot_support.get_plane_axis(plane), 0, 
-                len(img3d_transposed) - 1, valfmt="%d", valinit=0, valstep=1)
+                len(img3d_tr) - 1, valfmt="%d", valinit=0, valstep=1)
             
             # plot editor
             max_size = max_sizes[axis] if max_sizes else None
             plot_ed = plot_editor.PlotEditor(
-                ax, img3d_transposed, labels_img_transposed, cmap_labels, 
+                ax, img3d_tr, labels_img_tr, cmap_labels,
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
-                scaling, plane_slider, img3d_borders=borders_img_transposed, 
+                scaling, plane_slider, img3d_borders=borders_img_tr,
                 cmap_borders=cmap_borders, 
                 fn_show_label_3d=self.fn_show_label_3d, 
                 interp_planes=self.interp_planes,

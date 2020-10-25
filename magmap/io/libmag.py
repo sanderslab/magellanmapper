@@ -827,14 +827,15 @@ def is_seq(val):
     """Check if a value is a non-string sequence.
     
     Arg:
-        val: Value to check.
+        val (Any): Value to check.
     
     Returns:
-        True if the value is a list, tuple, or Numpy array.
+        bool: True if the value is a list, tuple, or Numpy array.
     """
     # Numpy rec instead of isscalar to handle more cases such as 0d Numpy
-    # arrays and third-party objects
-    return np.ndim(val) != 0
+    # arrays and third-party objects, first checking if list/tuple to
+    # avoid converting them to an ndarray
+    return isinstance(val, (list, tuple)) or np.ndim(val) != 0
 
 
 def to_seq(val):

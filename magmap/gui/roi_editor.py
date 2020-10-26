@@ -444,7 +444,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         plot_ed.show_roi(self.offset[1::-1], self.roi_size[1::-1])
         if offsets and sizes:
             # zoom toward ROI
-            plot_ed.view_subimg(offsets[0], sizes[0])
+            plot_ed.view_subimg(offsets[0], sizes[0], reverse_y=True)
         self._plot_eds.append(plot_ed)
         self._update_overview_title(ax_ov, lev, zoom)
     

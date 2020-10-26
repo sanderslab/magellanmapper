@@ -512,6 +512,12 @@ class Visualization(HasTraits):
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List  # ROI editor circle styles
     _styles_2d = List
+    # select to zoom Atlas Ed into the ROI, with crosshairs at center of ROI
+    # if ROI Center box also selected; unselect to zoom out to whole image
+    _atlas_ed_zoom = Bool(
+        tooltip="Select: zoom into ROI; select Center to center ROI on "
+                "crosshairs\n"
+                "Unselect: zoom out to full image")
     
     # atlas labels
     _atlas_label = None
@@ -607,6 +613,11 @@ class Visualization(HasTraits):
                      editor=CheckListEditor(
                          values=[e.value for e in Styles2D],
                          format_func=lambda x: x)),
+            ),
+            HGroup(
+                Item(label="Atlas Editor:"),
+                Item("_atlas_ed_zoom", label="Zoom to ROI",
+                     editor=BooleanEditor()),
             ),
             Item("_check_list_3d", style="custom", label="3D Viewer",
                  editor=CheckListEditor(
@@ -1347,14 +1358,25 @@ class Visualization(HasTraits):
         #print("reset selected ROI to {}".format(self.rois_check_list))
         #print("view: {}\nroll: {}".format(
         #    self.scene.mlab.view(), self.scene.mlab.roll()))
+    
+    def _get_max_offset(self):
+        """Get the maximum image offset based on the ROI controls
+        
+        Tyypically the same as the shape of the main image.
+        
+        Returns:
+            tuple[int]: Tuple of ``x,y,z``.
 
+        """
+        return self.x_high, self.y_high, self.z_high
+    
     def _check_roi_position(self):
         # ensure that ROI does not exceed image boundaries
         curr_roi_size = self.roi_array[0].astype(int)
         roi_size_orig = np.copy(curr_roi_size)
         curr_offset = list(self._curr_offset())
         offset_orig = np.copy(curr_offset)
-        max_offset = (self.x_high, self.y_high, self.z_high)
+        max_offset = self._get_max_offset()
 
         # keep offset within bounds
         for i, offset in enumerate(curr_offset):
@@ -2054,6 +2076,30 @@ class Visualization(HasTraits):
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
     
+    
+    @on_trait_change("_atlas_ed_zoom")
+    def _zoom_atlas_ed(self):
+        """Zoom the Atlas Editor into the ROI.
+        
+        The ROI offset is normally at the crosshairs unless the ROI offset
+        is treated as the ROI center, in which case the crosshairs remain
+        in the same place but the retrieved offset is shifted to the ROI's
+        upper left corner.
+        
+        """
+        # assume that the first Atlas Editor is to be zoomed
+        if not self.atlas_eds: return
+        atlas_ed = self.atlas_eds[0]
+        if self._atlas_ed_zoom:
+            # zoom into the ROI
+            offset = self._curr_offset()
+            shape = self.roi_array[0].astype(int)
+        else:
+            # zoom out to the full image
+            offset = np.zeros(3, dtype=int)
+            shape = self._get_max_offset()
+        atlas_ed.view_subimg(offset[::-1], shape[::-1])
+
     @staticmethod
     def _get_save_path(default_path):
         """Get a save path from the user through a file dialog.

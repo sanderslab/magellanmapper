@@ -1673,6 +1673,9 @@ class Visualization(HasTraits):
         if self.selected_viewer_tab is ViewerTabs.ROI_ED:
             self._launch_roi_editor()
         elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            if self.atlas_eds:
+                # TODO: re-support multiple Atlas Editor windows
+                self.atlas_eds = []
             self.launch_atlas_editor()
         elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
             self.show_3d()

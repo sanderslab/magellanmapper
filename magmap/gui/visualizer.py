@@ -383,6 +383,7 @@ class Visualization(HasTraits):
     y_offset = Int
     z_offset = Int
     roi_array = Array(Int, shape=(1, 3), editor=ArrayEditor(format_str="%0d"))
+    _roi_center = Bool(tooltip="Treat the offset as the center of the ROI")
 
     btn_redraw = Button("Redraw")
     _btn_save_fig = Button("Save Figure")
@@ -563,7 +564,11 @@ class Visualization(HasTraits):
             Item("rois_check_list", label="ROIs",
                  editor=CheckListEditor(
                      name="object._rois_selections.selections")),
-            Item("roi_array", label="Size (x,y,z)"),
+            HGroup(
+                Item("roi_array", label="Size (x,y,z)"),
+                Item("_roi_center", label="Center",
+                     editor=BooleanEditor()),
+            ),
             Item("x_offset",
                  editor=RangeEditor(
                      low_name="x_low",
@@ -2025,7 +2030,7 @@ class Visualization(HasTraits):
             title += " ({})".format(len(self.atlas_eds) + 1)
         atlas_ed = atlas_editor.AtlasEditor(
             config.image5d, config.labels_img, config.channel, 
-            self._curr_offset(), self._atlas_ed_close_listener,
+            self._curr_offset(center=False), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,
             self.update_status_bar_msg)
@@ -2225,17 +2230,40 @@ class Visualization(HasTraits):
             "Found region ID {} of size x={}, y={}, z={} \u00b5m, "
             "volume {} \u00b5m^3".format(self._region_id, *meas[::-1], vol))
     
-    def _curr_offset(self):
-        # get ROI offset in x,y,z; TODO: migrate to z,y,x
-        return self.x_offset, self.y_offset, self.z_offset
+    def _curr_offset(self, center=None):
+        """Get ROI offset based on the slider controls.
+        
+        Args:
+            center (bool): True if the slider controls point to the center
+                of the ROI; False if they refer to the upper left corner.
+                Defaults to None, in which case the center value is
+                determined base on the :attr:`_roi_center` control.
+
+        Returns:
+            list[int]: Offset in ``x,y,z``.
+
+        """
+        # TODO: migrate to z,y,x
+        offset = self.x_offset, self.y_offset, self.z_offset
+        if center or (center is None and self._roi_center):
+            offset = plot_3d.roi_center_to_offset(
+                offset, self.roi_array[0].astype(int))
+        return offset
     
-    def set_offset(self, offset):
+    def set_offset(self, offset, center=None):
         """Set the offset sliders.
         
         Args:
-            offset (List[int]): Offset in z,y,x.
+            offset (List[int]): Offset in ``z,y,x``.
+            center (bool): True if ``offset`` points to the center
+                of the ROI; False if it refers to the upper left corner.
+                Defaults to None, in which case the center value is
+                determined base on the :attr:`_roi_center` control.
 
         """
+        if center or (center is None and self._roi_center):
+            offset = plot_3d.roi_center_to_offset(
+                offset, self.roi_array[0].astype(int)[::-1], reverse=True)
         self.z_offset, self.y_offset, self.x_offset = offset
     
     def _full_border(self, border=None):

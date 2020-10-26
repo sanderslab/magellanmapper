@@ -267,10 +267,10 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         for i, plane in enumerate(config.PLANE):
             coord_transposed = libmag.transpose_1d(list(coord_rev), plane)
             if i == 0:
-                # update the offset based on the xy plane
                 self.offset = coord_transposed[::-1]
                 if self.fn_update_coords:
-                    self.fn_update_coords(coord_transposed)
+                    # update offset based on xy plane, without centering
+                    self.fn_update_coords(coord_transposed, False)
             self.plot_eds[plane].update_coord(coord_transposed)
     
     def refresh_images(self, plot_ed=None, update_atlas_eds=False):

@@ -87,6 +87,8 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         self.color_picker_box = None
         self.fn_update_coords = None
         
+        self._labels_img_sitk = None  # for saving labels image
+        
     def show_atlas(self):
         """Set up the atlas display with multiple orthogonal views."""
         # set up the figure
@@ -357,16 +359,25 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             print(e)
     
     def save_atlas(self, event):
-        """Save atlas labels.
+        """Save atlas labels using the registered image suffix given by
+        :attr:`config.reg_suffixes[config.RegSuffixes.ANNOTATION]`.
         
         Args:
             event: Button event, currently not used.
+        
         """
         # only save if at least one editor has been edited
         if not any([ed.edited for ed in self.plot_eds.values()]): return
-        sitk_io.load_registered_img(
-            config.filename, config.RegNames.IMG_LABELS.value, 
-            replace=config.labels_img)
+        
+        # save to the labels reg suffix; use sitk Image if loaded and store
+        # any Image loaded during saving
+        reg_name = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
+        if self._labels_img_sitk is None:
+            self._labels_img_sitk = config.labels_img_sitk
+        self._labels_img_sitk = sitk_io.write_registered_image(
+            self.labels_img, config.filename, reg_name, self._labels_img_sitk,
+            overwrite=True)
+        
         # reset edited flag in all editors and show save button as disabled
         for ed in self.plot_eds.values(): ed.edited = False
         enable_btn(self.save_btn, False)

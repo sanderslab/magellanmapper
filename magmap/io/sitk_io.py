@@ -217,8 +217,7 @@ def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
     return img_np
 
 
-def load_registered_img(img_path, reg_name, get_sitk=False, replace=None,
-                        return_path=False):
+def load_registered_img(img_path, reg_name, get_sitk=False, return_path=False):
     """Load atlas-based image that has been registered to another image.
     
     Args:
@@ -229,9 +228,6 @@ def load_registered_img(img_path, reg_name, get_sitk=False, replace=None,
         get_sitk: True if the image should be returned as a SimpleITK image; 
             defaults to False, in which case the corresponding Numpy array will 
             be extracted instead.
-        replace: Numpy image with which to replace and overwrite the loaded 
-            image. Defaults to None, in which case no replacement will take 
-            place.
         return_path (bool): True to return the path from which the image
             was loaded; defaults to False.
     
@@ -256,10 +252,6 @@ def load_registered_img(img_path, reg_name, get_sitk=False, replace=None,
             raise FileNotFoundError(
                 "could not find registered image from {} and {}"
                 .format(img_path, os.path.splitext(reg_name)[0]))
-    if replace is not None:
-        reg_img = replace_sitk_with_numpy(reg_img, replace)
-        sitk.WriteImage(reg_img, reg_img_path, False)
-        print("replaced {} with current registered image".format(reg_img_path))
     if not get_sitk:
         reg_img = sitk.GetArrayFromImage(reg_img)
     return (reg_img, reg_img_path) if return_path else reg_img
@@ -296,6 +288,69 @@ def find_atlas_labels(load_labels, max_level, labels_ref_lookup):
         # labels or if original labels image isn't present
         label_ids = list(labels_ref_lookup.keys())
     return label_ids
+
+
+def write_registered_image(img_np, img_path, reg_name, img_sitk=None,
+                           load_reg_names=None, overwrite=False):
+    """Write a Numpy array as a registered 3D image file through SimpleITK.
+    
+    Args:
+        img_np (:class:`numpy.ndarray`): Image array to write.
+        img_path (str): Base path from which to construct output path.
+        reg_name (str): Registered image suffix, which will also specify the
+            output file format.
+        img_sitk (:class:`sitk.Image`): SimpleITK Image object to use as
+            a template for image metadata; defaults to None, in which case
+            a registered image will be loaded through ``load_reg_names``.
+        load_reg_names (List[str]): Sequence of registered image suffixes
+            from which to load a template image for metdata. Names are
+            checked until the first image loads successfully. Defaults to
+            None to use the atlas volume followed by the experimental image.
+            If ``img_sitk`` is None and no registered image can be found,
+            writing will be aborted.
+        overwrite (bool): True to overwrite any existing image at the output
+            path; defaults to False.
+
+    Returns:
+        :class:`sitk.Image`: The saved image as a SimpleITK Image object.'
+    
+    Raises:
+        FileExistsError: if ``overwrite`` is false and existing file is at
+            the output path.
+        FileNotFoundError: if template image cannot be found.
+
+    """
+    reg_img_path = reg_out_path(img_path, reg_name)
+    if not overwrite and os.path.exists(reg_img_path):
+        # avoid overwriting existing file
+        raise FileExistsError(
+            "{} already exists, will not overwrite".format(reg_img_path))
+    
+    if img_sitk is None:
+        # TODO: consider constructing SimpleITK object from existing metadata
+        if load_reg_names is None:
+            # default to using basic intensity images
+            load_reg_names = (config.RegNames.IMG_ATLAS,
+                              config.RegNames.IMG_EXP)
+        for name in load_reg_names:
+            try:
+                # attempt to load another registered image to use as a
+                # template for metadata
+                img_sitk = load_registered_img(
+                    img_path, name.value, get_sitk=True)
+                break
+            except FileNotFoundError:
+                pass
+    
+    if img_sitk:
+        # copy the template and replace its array with the given array to save
+        reg_img = replace_sitk_with_numpy(img_sitk, img_np)
+        sitk.WriteImage(reg_img, reg_img_path, False)
+        print("wrote {} with current registered image".format(reg_img_path))
+        return reg_img
+    else:
+        raise FileNotFoundError(
+            "Unable to find a template file to save", reg_img_path)
 
 
 def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None,

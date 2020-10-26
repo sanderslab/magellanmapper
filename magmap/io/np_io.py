@@ -299,15 +299,27 @@ def setup_images(path=None, series=None, offset=None, size=None,
     
     annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
     if annotation_suffix is not None:
-        # load labels image, set up scaling, and load labels file
         try:
+            # load labels image
             # TODO: need to support multichannel labels images
             config.labels_img, config.labels_img_sitk = sitk_io.read_sitk_files(
                 path, reg_names=annotation_suffix, return_sitk=True)
+        except FileNotFoundError as e:
+            print(e)
             if config.image5d is not None:
-                config.labels_scaling = importer.calc_scaling(
-                    config.image5d, config.labels_img)
+                # create a blank labels images for custom annotation; colormap
+                # can be generated for the original labels loaded below
+                config.labels_img = np.zeros(
+                    config.image5d.shape[1:4], dtype=int)
+                print("Created blank labels image from main image")
+        if config.image5d is not None and config.labels_img is not None:
+            # set up scaling factors by dimension between intensity and
+            # labels images
+            config.labels_scaling = importer.calc_scaling(
+                config.image5d, config.labels_img)
+        try:
             if config.load_labels is not None:
+                # load labels reference file
                 labels_ref = ontology.load_labels_ref(config.load_labels)
                 if isinstance(labels_ref, pd.DataFrame):
                     # parse CSV files loaded into data frame

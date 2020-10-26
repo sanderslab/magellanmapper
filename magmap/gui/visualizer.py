@@ -493,15 +493,17 @@ class Visualization(HasTraits):
     scene_3d_shown = False  # 3D Mayavi display shown
     selected_viewer_tab = ViewerTabs.ROI_ED
     select_controls_tab = Int(-1)
-
+    
+    # Viewer options
+    
     _check_list_3d = List
     _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
     _check_list_2d = List(
-        desc="Filtered: show filtered image after detection\n"
-             "Border: margin around ROIs\n"
-             "Seg: segment blobs\n"
-             "Grid: overlay a grid\n"
-             "MIP: maximum intensity projection")
+        tooltip="Filtered: show filtered image after detection\n"
+                "Border: margin around ROIs\n"
+                "Seg: segment blobs\n"
+                "Grid: overlay a grid\n"
+                "MIP: maximum intensity projection")
     _DEFAULTS_2D = [
         "Filtered", "Border", "Seg", "Grid", "MIP"]
     _planes_2d = List

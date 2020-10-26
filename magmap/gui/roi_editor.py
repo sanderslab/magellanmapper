@@ -260,6 +260,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
     Overlays detected blobs as :class:``DraggableCircle`` objects to
     flag, reposition, or add/subtract annotations.
 
+    :attr:`plot_eds` are dictionaries where keys are zoom levels and values
+    are Plot Editors.
+    
     Attributes:
         ROI_COLS (int): Default number of columns for the "zoomed-in"
             2D plots, the 2D planes for the ROI.
@@ -348,7 +351,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.fn_update_coords = None
         self.fn_redraw = None
         self._z_overview = None
-        self._plot_eds = []  # overview plots
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
@@ -445,7 +447,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if offsets and sizes:
             # zoom toward ROI
             plot_ed.view_subimg(offsets[0], sizes[0], reverse_y=True)
-        self._plot_eds.append(plot_ed)
+        self.plot_eds[zoom] = plot_ed
         self._update_overview_title(ax_ov, lev, zoom)
     
     def _update_overview_title(self, ax_ov, lev, zoom):
@@ -484,7 +486,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         """
         if not self.fn_redraw or not event.dblclick or not event.button == 3:
             return
-        for ed in self._plot_eds:
+        for ed in self.plot_eds.values():
             if ed.axes == event.inaxes:
                 self.fn_redraw()
                 break
@@ -701,7 +703,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     will be used for movements. For key events, up/down arrows
                     will be used.
             """
-            for edi, plot_ed in enumerate(self._plot_eds):
+            for edi, plot_ed in enumerate(self.plot_eds.values()):
                 plot_ed.scroll_overview(event, only_in_axes=False, fn_jump=jump)
                 if edi == 0:
                     # z-plane index should be same for all editors
@@ -928,13 +930,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         plt.ion()
         fig.canvas.draw_idle()
         print("2D plot time: {}".format(time() - time_start))
-
-    def get_img_display_settings(self, imgi, **kwargs):
-        return super().get_img_display_settings(self._plot_eds, imgi, **kwargs)
-
-    def update_imgs_display(self, imgi, **kwargs):
-        return super().update_imgs_display(self._plot_eds, imgi, **kwargs)
-
+    
     def plot_roi(self, roi, segments, channel, show=True, title=""):
         """Plot ROI as sequence of z-planes containing only the ROI itself.
 

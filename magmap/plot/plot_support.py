@@ -3,6 +3,7 @@
 """Shared plotting functions with the MagellanMapper package.
 """
 
+from collections import OrderedDict
 import os
 import warnings
 
@@ -25,19 +26,26 @@ except ImportError as e:
 
 
 class ImageSyncMixin:
-    """Mixin class for synchronizing editors with Matplotlib figures."""
+    """Mixin class for synchronizing editors with Matplotlib figures.
+    
+    Attributes:
+        fig (:class:`matplotlib.figure.Figure`): Matplotlib figure.
+        plot_eds (dict[Any, :class:`magmap.gui.plot_editor.PlotEditor`]):
+            Dictionary of plot editors.
+    
+    """
     
     def __init__(self):
         self.fig = None
+        self.plot_eds = OrderedDict()
 
-    @staticmethod
-    def get_img_display_settings(plot_eds, imgi, chl=None):
+    def get_img_display_settings(self, imgi, chl=None):
         """Get display settings for the given image.
+        
+        Only settings from the first editor will be retrieved on the
+        assumption that all the editors are synchronized.
 
         Args:
-            plot_eds (List[:obj:`magmap.gui.plot_editor.PlotEditor`]):
-                Sequence of Plot Editors. Only the first editor will be
-                used on the assumption that all the editors are synchronized.
             imgi (int): Index of image.
             chl (int): Index of channel; defaults to None.
 
@@ -46,20 +54,16 @@ class ImageSyncMixin:
                 displayed image, or None if ``plot_eds`` is empty.
 
         """
-        if plot_eds:
-            return plot_eds[0].get_displayed_img(imgi, chl)
+        if self.plot_eds:
+            return tuple(self.plot_eds.values())[0].get_displayed_img(imgi, chl)
         return None
 
-    @staticmethod
-    def update_imgs_display(plot_eds, imgi, chl=None, minimum=np.nan,
+    def update_imgs_display(self, imgi, chl=None, minimum=np.nan,
                             maximum=np.nan, brightness=None, contrast=None,
                             alpha=None):
         """Update dislayed image settings in all Plot Editors.
 
         Args:
-            plot_eds (List[:obj:`magmap.gui.plot_editor.PlotEditor`]):
-                Sequence of Plot Editors. Only the first editor will be
-                used on the assumption that all the editors are synchronized.
             imgi (int): Index of image.
             chl (int): Index of channel; defaults to None.
             minimum (float): Vmin; can be None for auto setting; defaults
@@ -75,7 +79,7 @@ class ImageSyncMixin:
 
         """
         plot_ax_img = None
-        for ed in plot_eds:
+        for ed in self.plot_eds.values():
             plot_ax_img = ed.update_img_display(
                 imgi, chl, minimum, maximum, brightness, contrast, alpha)
         return plot_ax_img

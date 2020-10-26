@@ -24,6 +24,9 @@ class AtlasEditor(plot_support.ImageSyncMixin):
     """Graphical interface to view an atlas in multiple orthogonal 
     dimensions and edit atlas labels.
     
+    :attr:`plot_eds` are dictionaries of keys specified by one of
+    :const:`magmap.config.PLANE` plane orientations to Plot Editors.
+    
     Attributes:
         image5d: Numpy image array in t,z,y,x,[c] format.
         labels_img: Numpy image array in z,y,x format.
@@ -43,16 +46,12 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             Atlas Editors to synchronize them; defaults to None.
             Typically takes one argument, this ``AtlasEditor`` object
             to refreshing it. Defaults to None.
-        plot_eds (dict[str, :class:`PlotEditor`]): Dictionary of keys
-            specified by one of :const:`magmap.config.PLANE` plane
-            orientations to Plot Editors.
         alpha_slider: Matplotlib alpha slider control.
         alpha_reset_btn: Maplotlib button for resetting alpha transparency.
         alpha_last: Float specifying the previous alpha value.
         interp_planes: Current :class:`InterpolatePlanes` object.
         interp_btn: Matplotlib button to initiate plane interpolation.
         save_btn: Matplotlib button to save the atlas.
-        fig (:obj:`figure.Figure`): Matplotlib figure.
         fn_status_bar (func): Function to call during status bar updates
             in :class:`pixel_display.PixelDisplay`; defaults to None.
         fn_update_coords (func): Handler for coordinate updates, which
@@ -78,7 +77,6 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         self.fig = fig
         self.fn_status_bar = fn_status_bar
         
-        self.plot_eds = {}
         self.alpha_slider = None
         self.alpha_reset_btn = None
         self.alpha_last = None
@@ -310,15 +308,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         if update_atlas_eds and self.fn_refresh_atlas_eds is not None:
             # callback to synchronize other Atlas Editors
             self.fn_refresh_atlas_eds(self)
-
-    def get_img_display_settings(self, imgi, **kwargs):
-        return super().get_img_display_settings(
-            list(self.plot_eds.values()), imgi, **kwargs)
-
-    def update_imgs_display(self, imgi, **kwargs):
-        return super().update_imgs_display(
-            self.plot_eds.values(), imgi, **kwargs)
-
+    
     def scroll_overview(self, event):
         """Scroll images and crosshairs in all plot editors
         

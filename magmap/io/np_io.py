@@ -163,6 +163,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
     
     # reset label images
     config.labels_img = None
+    config.labels_img_sitk = None
     config.borders_img = None
 
     filename_base = importer.filename_to_base(path, series)
@@ -301,8 +302,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
         # load labels image, set up scaling, and load labels file
         try:
             # TODO: need to support multichannel labels images
-            config.labels_img = sitk_io.read_sitk_files(
-                path, reg_names=annotation_suffix)
+            config.labels_img, config.labels_img_sitk = sitk_io.read_sitk_files(
+                path, reg_names=annotation_suffix, return_sitk=True)
             if config.image5d is not None:
                 config.labels_scaling = importer.calc_scaling(
                     config.image5d, config.labels_img)

@@ -153,7 +153,7 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
     return img_sitk, loaded_path
 
 
-def read_sitk_files(filename_sitk, reg_names=None):
+def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
     """Read files through SimpleITK and export to Numpy array format, 
     loading associated metadata.
 
@@ -161,14 +161,20 @@ def read_sitk_files(filename_sitk, reg_names=None):
         filename_sitk: Path to file in a format that can be read by SimpleITK.
         reg_names: Path or sequence of paths of registered names. Can 
             be a registered suffix or a full path. Defaults to None.
+        return_sitk (bool): True to return the loaded SimpleITK Image object.
 
     Returns:
-        Image array in MagellanMapper image5d format. Associated metadata will 
-        have been loaded into module-level variables.
+        :class:`numpy.ndarray`: Image array in Numpy 3D format (or 4D if
+        multi-channel). Associated metadata is loaded into :module:`config`
+        attributes.
+        
+        If ``return_sitk`` is True, also returns the first loaded image
+        in SimpleITK format.
 
     Raises:
         ``FileNotFoundError`` if ``filename_sitk`` cannot be found, after 
         attempting to load metadata from ``filename_np``.
+    
     """
     # load image via SimpleITK
     img_sitk = None
@@ -206,6 +212,8 @@ def read_sitk_files(filename_sitk, reg_names=None):
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(config.resolutions))
     
+    if return_sitk:
+        return img_np, img_sitk
     return img_np
 
 

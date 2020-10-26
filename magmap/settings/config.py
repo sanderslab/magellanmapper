@@ -399,6 +399,7 @@ class RegNames(Enum):
 # reference atlas labels
 load_labels = None
 labels_img = None  # in Numpy format
+labels_img_sitk = None  # in SimpleITK format
 labels_img_orig = None  # in Numpy format
 labels_scaling = None
 labels_ref_lookup = None
